@@ -1,0 +1,335 @@
+/* ============================================================================
+   am-topbar
+   Layout: [mobile-toggle] [brand] [search (center, flex:1)] [actions]
+   ============================================================================ */
+
+.am-topbar {
+    height: var(--am-topbar-height);
+    background-color: var(--am-color-bg-base);
+    border-bottom: 1px solid var(--am-color-border);
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    flex-shrink: 0;
+}
+
+.am-topbar__left {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: flex-start;
+    min-width: 0;
+}
+
+.am-topbar__center {
+    flex: 0 1 28rem;
+    display: flex;
+    align-items: center;
+    padding: 0 0.75rem;
+}
+
+.am-topbar__right {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    justify-content: flex-end;
+}
+
+/* ------------------------------------------------------------------ */
+/* Mobile menu toggle — hidden on desktop                              */
+/* ------------------------------------------------------------------ */
+
+.am-topbar__menu-toggle {
+    all: unset;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: var(--am-radius-md);
+    cursor: pointer;
+    color: var(--am-color-text-muted);
+    flex-shrink: 0;
+
+    &:hover {
+        background-color: var(--am-color-bg-subtle);
+        color: var(--am-color-text-default);
+    }
+
+    &:focus-visible {
+        /* focus: global :focus-visible rule in base.css */
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Brand — mobile only (desktop brand lives in sidebar)               */
+/* ------------------------------------------------------------------ */
+
+.am-topbar__brand {
+    display: none;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--am-color-text-default);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Search bar                                                           */
+/* ------------------------------------------------------------------ */
+
+.am-topbar__search {
+    width: 100%;
+}
+
+.am-topbar__search-btn {
+    all: unset;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    height: 2rem;
+    padding: 0 0.75rem;
+    border-radius: var(--am-radius-md);
+    border: 1px solid var(--am-color-border);
+    background-color: var(--am-color-bg-muted);
+    color: var(--am-color-text-placeholder);
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition:
+        border-color var(--am-duration-base) var(--am-easing),
+        box-shadow var(--am-duration-base) var(--am-easing),
+        background-color var(--am-duration-base) var(--am-easing);
+
+    &:hover {
+        border-color: var(--am-color-border-strong);
+        background-color: var(--am-color-bg-subtle);
+    }
+
+    &:focus-visible {
+        outline-offset: -1px;
+    }
+}
+
+.am-topbar__search-icon {
+    flex-shrink: 0;
+}
+
+.am-topbar__search-placeholder {
+    flex: 1;
+    text-align: left;
+}
+
+.am-topbar__search-kbd {
+    font-family: inherit;
+    font-size: 0.75rem;
+    padding: 0.125rem 0.375rem;
+    border-radius: var(--am-radius-sm);
+    background-color: var(--am-color-bg-subtle);
+    border: 1px solid var(--am-color-border-strong);
+    color: var(--am-color-text-muted);
+    flex-shrink: 0;
+    line-height: 1.4;
+}
+
+/* ------------------------------------------------------------------ */
+/* Right actions cluster                                               */
+/* ------------------------------------------------------------------ */
+
+
+.am-topbar__action-btn {
+    all: unset;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: var(--am-radius-md);
+    cursor: pointer;
+    color: var(--am-color-text-muted);
+    transition:
+        background-color var(--am-duration-base) var(--am-easing),
+        color var(--am-duration-base) var(--am-easing);
+
+    &:hover {
+        background-color: var(--am-color-bg-subtle);
+        color: var(--am-color-text-default);
+    }
+
+    &:focus-visible {
+        /* focus: global :focus-visible rule in base.css */
+    }
+}
+
+.am-topbar__action-btn--create {
+    /* Same appearance as other action buttons — no primary fill */
+}
+
+/* ------------------------------------------------------------------ */
+/* User menu button                                                     */
+/* ------------------------------------------------------------------ */
+
+.am-topbar__user-btn {
+    all: unset;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background-color: var(--am-color-interactive-bg);
+    color: var(--am-color-text-secondary);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background-color var(--am-duration-base) var(--am-easing);
+
+    &:hover {
+        background-color: var(--am-color-interactive-bg-hover);
+    }
+
+    &:focus-visible {
+        /* focus: global :focus-visible rule in base.css */
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Dropdown menus (shared between quick-create and user menu)          */
+/* ------------------------------------------------------------------ */
+
+.am-topbar__menu-positioner {
+    z-index: 50;
+}
+
+.am-topbar__menu-popup {
+    background-color: var(--am-color-bg-base);
+    border: 1px solid var(--am-color-border);
+    border-radius: var(--am-radius-lg);
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.08),
+        0 2px 4px -2px rgba(0, 0, 0, 0.06),
+        0 0 0 1px rgba(0, 0, 0, 0.04);
+    min-width: 11rem;
+    padding: 0.25rem;
+    outline: none;
+}
+
+.am-topbar__menu-section-heading {
+    padding: 0.375rem 0.75rem 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--am-color-text-muted);
+}
+
+.am-topbar__menu-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding: 0.5rem 0.75rem;
+}
+
+.am-topbar__menu-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--am-color-text-default);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.am-topbar__menu-email {
+    font-size: 0.8125rem;
+    color: var(--am-color-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.am-topbar__menu-separator {
+    height: 1px;
+    background-color: var(--am-color-border);
+    margin: 0.25rem 0;
+}
+
+.am-topbar__menu-item {
+    all: unset;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.4375rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--am-color-text-default);
+    border-radius: var(--am-radius-md);
+    cursor: pointer;
+    user-select: none;
+    text-decoration: none;
+    transition:
+        background-color var(--am-duration-fast) var(--am-easing),
+        color var(--am-duration-fast) var(--am-easing);
+}
+
+.am-topbar__menu-item[data-highlighted] {
+    background-color: var(--am-color-bg-subtle);
+    color: var(--am-color-text-default);
+    outline: none;
+}
+
+.am-topbar__menu-item--danger {
+    color: var(--am-color-danger);
+}
+
+.am-topbar__menu-item--danger[data-highlighted] {
+    background-color: var(--am-color-danger-bg);
+    color: var(--am-color-danger);
+}
+
+.am-topbar__menu-item-icon {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    color: inherit;
+}
+
+/* ------------------------------------------------------------------ */
+/* Mobile overrides                                                     */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 767px) {
+    .am-topbar {
+        padding: 0 0.75rem;
+    }
+
+    .am-topbar__menu-toggle {
+        display: flex;
+    }
+
+    .am-topbar__brand {
+        display: block;
+    }
+
+    /* Collapse search to icon-only on very small screens */
+    .am-topbar__search-placeholder,
+    .am-topbar__search-kbd {
+        display: none;
+    }
+
+    .am-topbar__search-btn {
+        width: 2.25rem;
+        padding: 0;
+        justify-content: center;
+        flex: 0 0 auto;
+    }
+
+    .am-topbar__center {
+        flex: 0 0 auto;
+        padding: 0;
+    }
+
+    .am-topbar__search {
+        flex: 0;
+        margin: 0;
+    }
+}

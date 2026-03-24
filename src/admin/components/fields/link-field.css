@@ -1,0 +1,25 @@
+.am-link-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    border: 1px solid var(--am-color-border);
+    border-radius: var(--am-radius-md);
+    background: var(--am-color-bg-subtle);
+}
+
+.am-link-field__row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.am-link-field__label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--am-color-text-default);
+}
+
+.am-link-field__select {
+    width: 100%;
+}

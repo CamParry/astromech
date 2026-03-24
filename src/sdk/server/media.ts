@@ -1,0 +1,135 @@
+import { eq, desc, like, and, not, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { mediaTable } from '@/db/schema.js';
+import { getDb } from '@/db/registry.js';
+import { getStorageDriver } from '@/storage/registry.js';
+import type { Media, JsonObject, MediaListParams, MediaListResult } from '@/types/index.js';
+
+export const mediaApi = {
+    async all(): Promise<Media[]> {
+        const db = getDb();
+        const rows = await db.select().from(mediaTable).orderBy(desc(mediaTable.createdAt));
+        return rows as Media[];
+    },
+
+    async list(params?: MediaListParams): Promise<MediaListResult> {
+        const db = getDb();
+        const page = params?.page ?? 1;
+        const perPage = params?.perPage ?? 20;
+        const offset = (page - 1) * perPage;
+
+        const conditions: SQL[] = [];
+
+        if (params?.search) {
+            conditions.push(like(mediaTable.filename, `%${params.search}%`));
+        }
+
+        if (params?.type && params.type !== 'all') {
+            if (params.type === 'images') {
+                conditions.push(like(mediaTable.mimeType, 'image/%'));
+            } else if (params.type === 'videos') {
+                conditions.push(like(mediaTable.mimeType, 'video/%'));
+            } else if (params.type === 'documents') {
+                conditions.push(
+                    sql`(${mediaTable.mimeType} LIKE 'application/%' OR ${mediaTable.mimeType} LIKE 'text/%')`
+                );
+            } else if (params.type === 'other') {
+                conditions.push(
+                    not(
+                        sql`(${mediaTable.mimeType} LIKE 'image/%' OR ${mediaTable.mimeType} LIKE 'video/%' OR ${mediaTable.mimeType} LIKE 'application/%' OR ${mediaTable.mimeType} LIKE 'text/%')`
+                    )
+                );
+            }
+        }
+
+        const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+        const [rows, countRows] = await Promise.all([
+            db
+                .select()
+                .from(mediaTable)
+                .where(where)
+                .orderBy(desc(mediaTable.createdAt))
+                .limit(perPage)
+                .offset(offset),
+            db
+                .select({ count: sql<number>`count(*)` })
+                .from(mediaTable)
+                .where(where),
+        ]);
+
+        const total = countRows[0]?.count ?? 0;
+
+        return { items: rows as Media[], total, page, perPage };
+    },
+
+    async get(id: string): Promise<Media | null> {
+        const db = getDb();
+        const rows = await db.select().from(mediaTable).where(eq(mediaTable.id, id)).limit(1);
+        return rows.length > 0 ? (rows[0]! as Media) : null;
+    },
+
+    async upload(file: File): Promise<Media> {
+        const db = getDb();
+        const driver = getStorageDriver();
+        if (!driver) throw new Error('Storage driver not configured');
+
+        const id = crypto.randomUUID();
+        const ext = file.name.split('.').pop() ?? '';
+        const path = ext ? `${id}.${ext}` : id;
+
+        const url = await driver.upload(file, path);
+
+        const rows = await db
+            .insert(mediaTable)
+            .values({
+                id,
+                filename: file.name,
+                mimeType: file.type,
+                size: file.size,
+                url,
+            })
+            .returning();
+
+        if (rows.length > 0 && rows[0]) {
+            return rows[0] as Media;
+        }
+
+        throw new Error('Failed to upload media');
+    },
+
+    async update(id: string, data: Partial<{ alt: string; fields: JsonObject }>): Promise<Media> {
+        const db = getDb();
+        const rows = await db
+            .update(mediaTable)
+            .set({
+                ...(data.alt !== undefined && { alt: data.alt }),
+                ...(data.fields !== undefined && { fields: data.fields }),
+                updatedAt: new Date(),
+            })
+            .where(eq(mediaTable.id, id))
+            .returning();
+
+        if (rows.length > 0 && rows[0]) {
+            return rows[0] as Media;
+        }
+
+        throw new Error('Failed to update media');
+    },
+
+    async delete(id: string): Promise<void> {
+        const db = getDb();
+        const driver = getStorageDriver();
+
+        if (driver) {
+            const rows = await db.select().from(mediaTable).where(eq(mediaTable.id, id)).limit(1);
+            if (rows[0]) {
+                // Derive storage path from URL (last segment: `{uuid}.{ext}`)
+                const path = rows[0].url.split('/').slice(-1)[0]!;
+                await driver.delete(path);
+            }
+        }
+
+        await db.delete(mediaTable).where(eq(mediaTable.id, id));
+    },
+};

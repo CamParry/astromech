@@ -1,0 +1,18 @@
+.am-range-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.am-range-field__header {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.am-range-field__value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--am-color-text-default);
+    min-width: 2.5rem;
+    text-align: right;
+}

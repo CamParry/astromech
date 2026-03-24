@@ -1,0 +1,216 @@
+:root {
+    /* ------------------------------------------------------------------ */
+    /* Primitive tokens — Neutral (Stone: warm undertone)                  */
+    /* ------------------------------------------------------------------ */
+    --am-color-neutral-0: oklch(1 0 0);
+    --am-color-neutral-50: oklch(0.985 0.001 106.424);
+    --am-color-neutral-100: oklch(0.97 0.001 106.424);
+    --am-color-neutral-200: oklch(0.923 0.003 48.717);
+    --am-color-neutral-300: oklch(0.869 0.005 56.366);
+    --am-color-neutral-400: oklch(0.709 0.01 56.996);
+    --am-color-neutral-500: oklch(0.553 0.013 58.071);
+    --am-color-neutral-600: oklch(0.444 0.011 73.639);
+    --am-color-neutral-700: oklch(0.374 0.01 67.558);
+    --am-color-neutral-800: oklch(0.268 0.007 34.298);
+    --am-color-neutral-900: oklch(0.216 0.006 56.043);
+    --am-color-neutral-950: oklch(0.145 0.005 49.604);
+    --am-color-neutral-1000: oklch(0 0 0);
+
+    /* ------------------------------------------------------------------ */
+    /* Primitive tokens — Primary (Orange)                                 */
+    /* ------------------------------------------------------------------ */
+    --am-color-primary-50: oklch(0.98 0.016 73.684);
+    --am-color-primary-100: oklch(0.954 0.038 75.164);
+    --am-color-primary-200: oklch(0.901 0.076 70.697);
+    --am-color-primary-300: oklch(0.837 0.128 66.29);
+    --am-color-primary-400: oklch(0.75 0.183 55.934);
+    --am-color-primary-500: oklch(0.705 0.213 47.604);
+    --am-color-primary-600: oklch(0.646 0.222 41.116);
+    --am-color-primary-700: oklch(0.553 0.195 38.402);
+    --am-color-primary-800: oklch(0.47 0.157 37.304);
+    --am-color-primary-900: oklch(0.408 0.123 38.172);
+    --am-color-primary-950: oklch(0.266 0.079 36.259);
+
+    /* ------------------------------------------------------------------ */
+    /* Primitive tokens — Success (Emerald)                                */
+    /* ------------------------------------------------------------------ */
+    --am-color-success-50: oklch(0.979 0.021 166.113);
+    --am-color-success-100: oklch(0.95 0.052 163.051);
+    --am-color-success-200: oklch(0.905 0.093 164.15);
+    --am-color-success-300: oklch(0.845 0.143 164.978);
+    --am-color-success-400: oklch(0.765 0.177 163.223);
+    --am-color-success-500: oklch(0.696 0.17 162.48);
+    --am-color-success-600: oklch(0.596 0.145 163.225);
+    --am-color-success-700: oklch(0.508 0.118 165.612);
+    --am-color-success-800: oklch(0.432 0.095 166.913);
+    --am-color-success-900: oklch(0.378 0.077 168.94);
+    --am-color-success-950: oklch(0.262 0.051 172.552);
+
+    /* ------------------------------------------------------------------ */
+    /* Primitive tokens — Warning (Amber)                                  */
+    /* ------------------------------------------------------------------ */
+    --am-color-warning-50: oklch(0.987 0.022 95.277);
+    --am-color-warning-100: oklch(0.962 0.059 95.617);
+    --am-color-warning-200: oklch(0.924 0.12 95.746);
+    --am-color-warning-300: oklch(0.879 0.169 91.605);
+    --am-color-warning-400: oklch(0.828 0.189 84.429);
+    --am-color-warning-500: oklch(0.769 0.188 70.08);
+    --am-color-warning-600: oklch(0.666 0.179 58.318);
+    --am-color-warning-700: oklch(0.555 0.163 48.998);
+    --am-color-warning-800: oklch(0.473 0.137 46.201);
+    --am-color-warning-900: oklch(0.414 0.112 45.904);
+    --am-color-warning-950: oklch(0.279 0.077 45.635);
+
+    /* ------------------------------------------------------------------ */
+    /* Primitive tokens — Danger (Red)                                     */
+    /* ------------------------------------------------------------------ */
+    --am-color-danger-50: oklch(0.971 0.013 17.38);
+    --am-color-danger-100: oklch(0.936 0.032 17.717);
+    --am-color-danger-200: oklch(0.885 0.062 18.334);
+    --am-color-danger-300: oklch(0.808 0.114 19.571);
+    --am-color-danger-400: oklch(0.704 0.191 22.216);
+    --am-color-danger-500: oklch(0.637 0.237 25.331);
+    --am-color-danger-600: oklch(0.577 0.245 27.325);
+    --am-color-danger-700: oklch(0.505 0.213 27.518);
+    --am-color-danger-800: oklch(0.444 0.177 26.899);
+    --am-color-danger-900: oklch(0.396 0.141 25.723);
+    --am-color-danger-950: oklch(0.258 0.092 26.042);
+
+    /* ------------------------------------------------------------------ */
+    /* Semantic tokens — Light theme                                        */
+    /* ------------------------------------------------------------------ */
+    --am-color-bg-base: var(--am-color-neutral-0);
+    --am-color-bg-muted: var(--am-color-neutral-50);
+    --am-color-bg-subtle: var(--am-color-neutral-100);
+    --am-color-text-default: var(--am-color-neutral-900);
+    --am-color-text-muted: var(--am-color-neutral-500);
+    --am-color-text-placeholder: var(--am-color-neutral-400);
+    --am-color-border: var(--am-color-neutral-200);
+    --am-color-border-strong: var(--am-color-neutral-300);
+    --am-color-primary: var(--am-color-primary-600);
+    /* Text */
+    --am-color-text-secondary: var(--am-color-neutral-600);
+    /* Danger */
+    --am-color-danger: var(--am-color-danger-600);
+    --am-color-danger-emphasis: var(--am-color-danger-700);
+    --am-color-danger-bg: var(--am-color-danger-50);
+    --am-color-danger-border: var(--am-color-danger-200);
+    /* Success */
+    --am-color-success: var(--am-color-success-600);
+    --am-color-success-bg: var(--am-color-success-50);
+    /* Warning */
+    --am-color-warning: var(--am-color-warning-900);
+    --am-color-warning-bg: var(--am-color-warning-50);
+    --am-color-warning-border: var(--am-color-warning-400);
+    /* Primary interactive states */
+    --am-color-primary-subtle: var(--am-color-primary-50);
+    --am-color-primary-subtle-hover: var(--am-color-primary-100);
+    --am-color-primary-emphasis: var(--am-color-primary-700);
+    /* Interactive chrome */
+    --am-color-interactive-bg: var(--am-color-neutral-200);
+    --am-color-interactive-bg-hover: var(--am-color-neutral-300);
+
+    /* ------------------------------------------------------------------ */
+    /* Component tokens                                                     */
+    /* ------------------------------------------------------------------ */
+    --am-space: 0.25rem;
+    --am-radius-sm: 2px;
+    --am-radius-md: 4px;
+    --am-radius-lg: 8px;
+    --am-radius-full: 9999px;
+    --am-sidebar-width: 14rem;
+    --am-sidebar-width-collapsed: (3.25rem + 1px);
+    --am-topbar-height: 3.5rem;
+    --am-input-height: 2.25rem;
+    --am-button-height-sm: 2rem;
+    --am-toolbar-item-height: var(--am-button-height-md);
+    --am-button-height-md: 2.25rem;
+    --am-button-height-lg: 2.75rem;
+    --am-panel-padding: 1.5rem;
+
+    /* Focus outline — applied globally via :focus-visible in base.css */
+    --am-focus-color: var(--am-color-primary-500);
+    --am-focus-offset: 2px;
+
+    /* Transition durations */
+    --am-duration-fast: 100ms;
+    --am-duration-base: 150ms;
+    --am-duration-slow: 200ms;
+    --am-easing: ease;
+}
+
+/* ------------------------------------------------------------------ */
+/* Dark theme — explicit data-theme attribute                           */
+/* In dark mode: bg-muted is the darkest canvas, bg-base is the        */
+/* surface (cards, sidebar, topbar) sitting on top of it.              */
+/* ------------------------------------------------------------------ */
+[data-theme='dark'] {
+    --am-color-bg-base: var(--am-color-neutral-900);
+    --am-color-bg-muted: var(--am-color-neutral-950);
+    --am-color-bg-subtle: var(--am-color-neutral-800);
+    --am-color-text-default: var(--am-color-neutral-50);
+    --am-color-text-muted: var(--am-color-neutral-300);
+    --am-color-text-placeholder: var(--am-color-neutral-500);
+    --am-color-border: var(--am-color-neutral-800);
+    --am-color-border-strong: var(--am-color-neutral-700);
+    --am-color-primary: var(--am-color-primary-400);
+    --am-color-text-secondary: var(--am-color-neutral-400);
+    --am-color-danger: var(--am-color-danger-400);
+    --am-color-danger-emphasis: var(--am-color-danger-300);
+    --am-color-danger-bg: var(--am-color-danger-950);
+    --am-color-danger-border: var(--am-color-danger-800);
+    --am-color-success: var(--am-color-success-400);
+    --am-color-success-bg: var(--am-color-success-950);
+    --am-color-warning: var(--am-color-warning-300);
+    --am-color-warning-bg: var(--am-color-warning-950);
+    --am-color-warning-border: var(--am-color-warning-700);
+    --am-color-primary-subtle: var(--am-color-primary-950);
+    --am-color-primary-subtle-hover: var(--am-color-primary-900);
+    --am-color-primary-emphasis: var(--am-color-primary-300);
+    --am-color-interactive-bg: var(--am-color-neutral-700);
+    --am-color-interactive-bg-hover: var(--am-color-neutral-600);
+}
+
+/* ------------------------------------------------------------------ */
+/* Dark theme — system preference (only when no explicit override)     */
+/* ------------------------------------------------------------------ */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+        --am-color-bg-base: var(--am-color-neutral-900);
+        --am-color-bg-muted: var(--am-color-neutral-950);
+        --am-color-bg-subtle: var(--am-color-neutral-800);
+        --am-color-text-default: var(--am-color-neutral-50);
+        --am-color-text-muted: var(--am-color-neutral-300);
+        --am-color-text-placeholder: var(--am-color-neutral-500);
+        --am-color-border: var(--am-color-neutral-800);
+        --am-color-border-strong: var(--am-color-neutral-700);
+        --am-color-primary: var(--am-color-primary-400);
+        --am-color-text-secondary: var(--am-color-neutral-400);
+        --am-color-danger: var(--am-color-danger-400);
+        --am-color-danger-emphasis: var(--am-color-danger-300);
+        --am-color-danger-bg: var(--am-color-danger-950);
+        --am-color-danger-border: var(--am-color-danger-800);
+        --am-color-success: var(--am-color-success-400);
+        --am-color-success-bg: var(--am-color-success-950);
+        --am-color-warning: var(--am-color-warning-300);
+        --am-color-warning-bg: var(--am-color-warning-950);
+        --am-color-warning-border: var(--am-color-warning-700);
+        --am-color-primary-subtle: var(--am-color-primary-950);
+        --am-color-primary-subtle-hover: var(--am-color-primary-900);
+        --am-color-primary-emphasis: var(--am-color-primary-300);
+        --am-color-interactive-bg: var(--am-color-neutral-700);
+        --am-color-interactive-bg-hover: var(--am-color-neutral-600);
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Reduced motion — disable all transitions                            */
+/* ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}

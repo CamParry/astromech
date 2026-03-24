@@ -1,0 +1,15 @@
+@import './partials/reset.css';
+@import './partials/theme.css';
+@import './partials/base.css';
+@import './partials/layout.css';
+@import './partials/auth.css';
+@import './partials/topbar.css';
+@import './partials/sidebar.css';
+@import './partials/page.css';
+@import './partials/panels.css';
+@import './partials/buttons.css';
+@import './partials/forms.css';
+@import './partials/fields.css';
+@import './partials/tables.css';
+@import './partials/utils.css';
+@import './partials/ui-components.css';

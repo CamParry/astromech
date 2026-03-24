@@ -1,0 +1,32 @@
+.am-group-field {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--am-color-border);
+    border-radius: var(--am-radius-md);
+    background: var(--am-color-bg-subtle);
+}
+
+.am-group-field__item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.am-group-field__label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--am-color-text-default);
+}
+
+.am-group-field__required {
+    color: var(--am-color-danger-600);
+    margin-left: 0.125rem;
+}
+
+.am-group-field__description {
+    font-size: 0.75rem;
+    color: var(--am-color-text-muted);
+    margin: 0;
+}

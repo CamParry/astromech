@@ -1,0 +1,13 @@
+.am-text-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 0.25rem;
+    padding: 0 0.75rem;
+    font-size: 1rem;
+    line-height: 1;
+    height: 2.5rem;
+    gap: 0.5rem;
+    background-color: var(--am-color-bg-base);
+    border: 1px solid var(--am-color-neutral-400);
+}

@@ -1,0 +1,88 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+/* ------------------------------------------------------------------ */
+/* Global focus styles — consistent outline across all interactive     */
+/* elements. Individual components should NOT override this with       */
+/* box-shadow or outline: none.                                        */
+/* ------------------------------------------------------------------ */
+
+:focus {
+    outline: none; /* remove browser default — :focus-visible handles it */
+}
+
+:focus-visible {
+    outline: 2px solid var(--am-focus-color);
+    outline-offset: var(--am-focus-offset);
+}
+
+html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+body {
+    font-family: 'Inter Variable', 'Inter', sans-serif;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--am-color-text-default);
+    background-color: var(--am-color-bg-muted);
+    margin: 0;
+}
+
+/* Headings */
+
+h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--am-color-text-default);
+}
+
+h1 { font-size: 1.875rem; } /* 30px */
+h2 { font-size: 1.5rem;   } /* 24px */
+h3 { font-size: 1.25rem;  } /* 20px */
+h4 { font-size: 1.125rem; } /* 18px */
+h5 { font-size: 1rem;     } /* 16px */
+h6 { font-size: 0.875rem; } /* 14px */
+
+/* Paragraphs and inline */
+
+p {
+    margin: 0;
+}
+
+a {
+    color: var(--am-color-primary);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Lists */
+
+ul, ol {
+    margin: 0;
+    padding: 0;
+}
+
+/* Helper text scale */
+
+.am-text-xs   { font-size: 0.75rem;   line-height: 1.4; } /* 12px */
+.am-text-sm   { font-size: 0.875rem;  line-height: 1.5; } /* 14px */
+.am-text-base { font-size: 1rem;      line-height: 1.5; } /* 16px */
+.am-text-lg   { font-size: 1.125rem;  line-height: 1.5; } /* 18px */
+.am-text-xl   { font-size: 1.25rem;   line-height: 1.4; } /* 20px */
+.am-text-2xl  { font-size: 1.5rem;    line-height: 1.3; } /* 24px */
+.am-text-3xl  { font-size: 1.875rem;  line-height: 1.25;} /* 30px */
+
+.am-text-muted   { color: var(--am-color-text-muted); }
+.am-font-medium  { font-weight: 500; }
+.am-font-semibold{ font-weight: 600; }

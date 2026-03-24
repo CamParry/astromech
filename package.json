@@ -1,0 +1,129 @@
+{
+    "name": "astromech",
+    "version": "0.0.1",
+    "type": "module",
+    "sideEffects": false,
+    "description": "A lightweight, fast Astro-based CMS integration",
+    "author": "Cam",
+    "license": "MIT",
+    "keywords": [
+        "astro-integration",
+        "withastro",
+        "cms",
+        "headless-cms",
+        "content-management"
+    ],
+    "workspaces": [
+        "demo"
+    ],
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        },
+        "./server": {
+            "types": "./dist/sdk/server/index.d.ts",
+            "default": "./dist/sdk/server/index.js"
+        },
+        "./client": {
+            "types": "./dist/sdk/client/index.d.ts",
+            "default": "./dist/sdk/client/index.js"
+        },
+        "./sdk/server": {
+            "types": "./dist/sdk/server/index.d.ts",
+            "default": "./dist/sdk/server/index.js"
+        },
+        "./sdk/client": {
+            "types": "./dist/sdk/client/index.d.ts",
+            "default": "./dist/sdk/client/index.js"
+        },
+        "./middleware": {
+            "types": "./dist/middleware.d.ts",
+            "default": "./dist/middleware.js"
+        },
+        "./routes/auth-handler.ts": "./src/routes/auth-handler.ts",
+        "./routes/api.ts": "./src/routes/api.ts",
+        "./admin/shell.astro": "./src/admin/shell.astro",
+        "./ui": {
+            "types": "./dist/admin/components/ui/index.d.ts",
+            "default": "./dist/admin/components/ui/index.js"
+        },
+        "./db/schema": {
+            "types": "./dist/db/schema.d.ts",
+            "default": "./dist/db/schema.js"
+        }
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "files": [
+        "dist",
+        "src"
+    ],
+    "scripts": {
+        "dev": "tsup --watch",
+        "build": "tsup",
+        "typecheck": "tsc --noEmit",
+        "lint": "eslint src",
+        "format": "prettier --write src",
+        "format:check": "prettier --check src",
+        "test": "vitest",
+        "test:run": "vitest run",
+        "db:generate": "drizzle-kit generate",
+        "db:migrate": "drizzle-kit migrate",
+        "db:push": "drizzle-kit push",
+        "seed": "tsx scripts/seed.ts",
+        "changeset": "changeset",
+        "version": "changeset version",
+        "release": "npm run build && changeset publish"
+    },
+    "dependencies": {
+        "@base-ui/react": "^1.3.0",
+        "@fontsource-variable/inter": "^5.2.8",
+        "@libsql/client": "^0.17.2",
+        "@tanstack/react-form": "^1.28.5",
+        "@tanstack/react-query": "^5.94.5",
+        "@tanstack/react-router": "^1.168.1",
+        "@tiptap/core": "^3.0.0",
+        "@tiptap/pm": "^3.0.0",
+        "@tiptap/react": "^3.0.0",
+        "@tiptap/starter-kit": "^3.0.0",
+        "better-auth": "^1.5.5",
+        "date-fns": "^4.1.0",
+        "dotenv": "^17.3.1",
+        "drizzle-orm": "^0.45.1",
+        "hono": "^4.12.8",
+        "i18next": "^25.10.3",
+        "lodash-es": "^4.17.21",
+        "lucide-react": "^0.577.0",
+        "react": "^19.0.0",
+        "react-colorful": "^5.6.1",
+        "react-dom": "^19.0.0",
+        "react-i18next": "^16.6.0",
+        "zod": "^4.3.6"
+    },
+    "peerDependencies": {
+        "astro": "^6.0.8"
+    },
+    "devDependencies": {
+        "@changesets/changelog-github": "^0.5.2",
+        "@changesets/cli": "^2.30.0",
+        "@cloudflare/workers-types": "^4.20260214.0",
+        "@types/lodash-es": "^4.17.12",
+        "@types/node": "^25.5.0",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "astro": "^6.0.8",
+        "drizzle-kit": "^0.31.10",
+        "eslint": "^10.1.0",
+        "prettier": "3.8.1",
+        "prettier-plugin-astro": "0.14.1",
+        "tsup": "^8.0.0",
+        "tsx": "^4.21.0",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.57.1",
+        "vitest": "^4.1.0"
+    },
+    "engines": {
+        "node": ">=20.0.0"
+    }
+}

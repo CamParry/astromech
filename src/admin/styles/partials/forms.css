@@ -1,0 +1,35 @@
+.form {
+    max-width: 44rem;
+    margin-inline: auto;
+}
+
+/* Two-column form layout */
+.form-layout {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    gap: 2rem;
+}
+
+.form-layout-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    min-width: 0; /* Prevent grid blowout */
+}
+
+.form-layout-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    min-width: 0; /* Prevent grid blowout */
+}
+
+@media (max-width: 768px) {
+    .form-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .form-layout-sidebar {
+        order: -1; /* Move sidebar above main on mobile */
+    }
+}

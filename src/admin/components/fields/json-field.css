@@ -1,0 +1,39 @@
+.am-json-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.am-json-field__textarea {
+    width: 100%;
+    font-family: ui-monospace, monospace;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    padding: 0.5rem 0.625rem;
+    border: 1px solid var(--am-color-border);
+    border-radius: var(--am-radius-md);
+    background: var(--am-color-bg-base);
+    color: var(--am-color-text-default);
+    resize: vertical;
+    min-height: 7.5rem;
+    box-sizing: border-box;
+}
+
+.am-json-field__textarea:focus {
+    outline: none;
+    border-color: var(--am-color-primary);
+    box-shadow: 0 0 0 2px var(--am-color-primary-100);
+}
+
+.am-json-field__textarea--error {
+    border-color: var(--am-color-danger-600);
+}
+
+.am-json-field__textarea--error:focus {
+    box-shadow: 0 0 0 2px var(--am-color-danger-100);
+}
+
+.am-json-field__error {
+    font-size: 0.75rem;
+    color: var(--am-color-danger-600);
+}

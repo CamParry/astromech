@@ -1,0 +1,25 @@
+---
+/**
+ * Astromech Admin Shell
+ *
+ * A bare-bones SSR page that serves as the SPA mount point.
+ * All admin UI routing is handled client-side by TanStack Router.
+ *
+ * Registered at `${adminRoute}/[...path]` by Astromech's route registration.
+ */
+import AdminApp from './main.tsx';
+export const prerender = false;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="robots" content="noindex, nofollow" />
+        <title>Astromech CMS</title>
+    </head>
+    <body>
+        <AdminApp client:only="react" />
+    </body>
+</html>
