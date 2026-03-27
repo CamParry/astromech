@@ -20,6 +20,7 @@ type RepeaterItemProps = {
     required: boolean;
     fields: FieldDefinition[];
     name: string;
+    disabled?: boolean;
     onMoveUp: (index: number) => void;
     onMoveDown: (index: number) => void;
     onRemove: (index: number) => void;
@@ -33,6 +34,7 @@ function RepeaterItem({
     required,
     fields,
     name,
+    disabled,
     onMoveUp,
     onMoveDown,
     onRemove,
@@ -46,33 +48,39 @@ function RepeaterItem({
             <div className="am-repeater__item-header">
                 <span className="am-repeater__item-title">{t('fields.repeaterItem', { number: index + 1 })}</span>
                 <div className="am-repeater__item-controls">
-                    <button
-                        type="button"
-                        onClick={() => onMoveUp(index)}
-                        disabled={index === 0}
-                        className="am-repeater__btn am-repeater__btn--icon"
-                        aria-label={t('fields.repeaterMoveUp')}
-                    >
-                        <ChevronUp size={16} />
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => onMoveDown(index)}
-                        disabled={index === itemsLength - 1}
-                        className="am-repeater__btn am-repeater__btn--icon"
-                        aria-label={t('fields.repeaterMoveDown')}
-                    >
-                        <ChevronDown size={16} />
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => onRemove(index)}
-                        disabled={itemsLength === 1 && required}
-                        className="am-repeater__btn am-repeater__btn--icon am-repeater__btn--remove"
-                        aria-label={t('fields.repeaterRemove')}
-                    >
-                        <Trash2 size={16} />
-                    </button>
+                    {!disabled && (
+                        <button
+                            type="button"
+                            onClick={() => onMoveUp(index)}
+                            disabled={index === 0}
+                            className="am-repeater__btn am-repeater__btn--icon"
+                            aria-label={t('fields.repeaterMoveUp')}
+                        >
+                            <ChevronUp size={16} />
+                        </button>
+                    )}
+                    {!disabled && (
+                        <button
+                            type="button"
+                            onClick={() => onMoveDown(index)}
+                            disabled={index === itemsLength - 1}
+                            className="am-repeater__btn am-repeater__btn--icon"
+                            aria-label={t('fields.repeaterMoveDown')}
+                        >
+                            <ChevronDown size={16} />
+                        </button>
+                    )}
+                    {!disabled && (
+                        <button
+                            type="button"
+                            onClick={() => onRemove(index)}
+                            disabled={itemsLength === 1 && required}
+                            className="am-repeater__btn am-repeater__btn--icon am-repeater__btn--remove"
+                            aria-label={t('fields.repeaterRemove')}
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    )}
                     <Collapsible.Trigger
                         className="am-repeater__btn am-repeater__btn--icon"
                         aria-label={open ? t('fields.repeaterCollapse') : t('fields.repeaterExpand')}
@@ -90,6 +98,7 @@ function RepeaterItem({
                             value={item[subField.name]}
                             name={`${name}[${index}].${subField.name}`}
                             onChange={onFieldChange}
+                            {...(disabled !== undefined ? { disabled } : {})}
                         />
                     ))}
                 </div>
@@ -98,7 +107,7 @@ function RepeaterItem({
     );
 }
 
-export function RepeaterField({ name, value, field, required, onChange }: BaseFieldProps) {
+export function RepeaterField({ name, value, field, required, onChange, disabled }: BaseFieldProps) {
     const { t } = useTranslation();
     const fields = field.fields || [];
     const arrayValue = Array.isArray(value) ? value : [];
@@ -164,19 +173,22 @@ export function RepeaterField({ name, value, field, required, onChange }: BaseFi
                     required={required ?? false}
                     fields={fields}
                     name={name}
+                    {...(disabled !== undefined ? { disabled } : {})}
                     onMoveUp={handleMoveUp}
                     onMoveDown={handleMoveDown}
                     onRemove={handleRemove}
                     onFieldChange={(fieldName, fieldValue) => handleItemFieldChange(index, fieldName, fieldValue)}
                 />
             ))}
-            <button
-                type="button"
-                onClick={handleAdd}
-                className="am-repeater__btn am-repeater__btn--add"
-            >
-                {t('fields.repeaterAddItem')}
-            </button>
+            {!disabled && (
+                <button
+                    type="button"
+                    onClick={handleAdd}
+                    className="am-repeater__btn am-repeater__btn--add"
+                >
+                    {t('fields.repeaterAddItem')}
+                </button>
+            )}
         </div>
     );
 }

@@ -2,7 +2,7 @@
  * SDK Type Generator
  *
  * Generates a .d.ts file from the resolved Astromech config so that
- * `Astromech.collections.posts.get()` returns a typed entity specific
+ * `Astromech.collections.posts.get()` returns a typed entry specific
  * to the `posts` collection.
  */
 
@@ -86,6 +86,9 @@ function fieldToTsType(field: FieldDefinition): string | null {
         case 'repeater':
             return "import('astromech').JsonValue[]";
 
+        case 'blocks':
+            return "Array<{ type: string; disabled?: boolean; [key: string]: import('astromech').JsonValue | undefined }>";
+
         case 'link':
             return '{ url: string; label: string; target?: string }';
 
@@ -124,9 +127,9 @@ function fieldToRelationType(
         single = "import('astromech').Media";
     } else if (knownCollections.has(field.target)) {
         const pascal = toPascalCase(field.target);
-        single = `import('astromech').TypedEntity<${pascal}Fields>`;
+        single = `import('astromech').TypedEntry<${pascal}Fields>`;
     } else {
-        single = "import('astromech').Entity";
+        single = "import('astromech').Entry";
     }
 
     return isMultiple ? `${single}[]` : single;
@@ -160,12 +163,17 @@ function generateCollectionTypes(
                 // Recurse into container children with a prefixed name
                 if (field.fields && field.fields.length > 0) {
                     collectFields(
-                        field.fields.map((child) => ({ ...child, name: `${prefix}${field.name}_${child.name}` })),
+                        field.fields.map((child) => ({
+                            ...child,
+                            name: `${prefix}${field.name}_${child.name}`,
+                        })),
                         ''
                     );
                 }
             } else {
-                allFields.push(prefix ? { ...field, name: `${prefix}${field.name}` } : field);
+                allFields.push(
+                    prefix ? { ...field, name: `${prefix}${field.name}` } : field
+                );
             }
         }
     }
@@ -216,7 +224,11 @@ export function generateSdkTypes(config: ResolvedConfig): string {
     const knownCollections = new Set(collectionKeys);
 
     const blocks = collectionKeys.map((key) =>
-        generateCollectionTypes(key, config.collections[key]!.fieldGroups, knownCollections)
+        generateCollectionTypes(
+            key,
+            config.collections[key]!.fieldGroups,
+            knownCollections
+        )
     );
 
     const augmentationLines = blocks

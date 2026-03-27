@@ -3,9 +3,9 @@
  */
 
 import type {
-    Entity,
-    EntityStatus,
-    EntityVersion,
+    Entry,
+    EntryStatus,
+    EntryVersion,
     JsonObject,
     JsonValue,
     Media,
@@ -50,51 +50,55 @@ export type WhereFilters = Record<string, unknown>;
 
 export type TranslationInfo = {
     locale: string;
-    entityId: string;
+    entryId: string;
     slug: string | null;
-    status: EntityStatus;
+    status: EntryStatus;
 };
 
 export type CollectionApi = {
-    all(options?: QueryOptions): Promise<Entity[]>;
+    all(options?: QueryOptions): Promise<Entry[]>;
     paginate(
         perPage: number,
         page: number,
         options?: QueryOptions
-    ): Promise<PaginationResult<Entity>>;
-    get(id: string, options?: QueryOptions): Promise<Entity | null>;
-    where(filters: WhereFilters, options?: QueryOptions): Promise<Entity[]>;
+    ): Promise<PaginationResult<Entry>>;
+    get(id: string, options?: QueryOptions): Promise<Entry | null>;
+    where(filters: WhereFilters, options?: QueryOptions): Promise<Entry[]>;
     create(data: {
         title: string;
         slug?: string;
         fields?: JsonObject;
-        status?: EntityStatus;
+        status?: EntryStatus;
         publishAt?: Date | null;
-    }): Promise<Entity>;
+    }): Promise<Entry>;
     update(
         id: string,
         data: Partial<{
             title: string;
             slug: string;
             fields: JsonObject;
-            status: EntityStatus;
+            status: EntryStatus;
             publishAt: Date | null;
         }>
-    ): Promise<Entity>;
+    ): Promise<Entry>;
     trash(id: string): Promise<void>;
-    duplicate(id: string): Promise<Entity>;
-    trashed(options?: QueryOptions): Promise<Entity[]>;
-    restore(id: string): Promise<Entity>;
+    duplicate(id: string): Promise<Entry>;
+    trashed(options?: QueryOptions): Promise<Entry[]>;
+    restore(id: string): Promise<Entry>;
     delete(id: string): Promise<void>;
     emptyTrash(): Promise<void>;
-    versions(id: string): Promise<EntityVersion[]>;
-    restoreVersion(id: string, versionId: string): Promise<Entity>;
+    versions(id: string): Promise<EntryVersion[]>;
+    restoreVersion(id: string, versionId: string): Promise<Entry>;
     translations(id: string): Promise<TranslationInfo[]>;
-    translate(
-        id: string,
+    createTranslation(
+        sourceId: string,
         locale: string,
-        data?: Partial<{ title: string; fields: JsonObject }>
-    ): Promise<Entity>;
+        options?: { copyFields?: boolean }
+    ): Promise<Entry>;
+    getTranslation(sourceId: string, locale: string): Promise<Entry | null>;
+    publish(id: string): Promise<Entry>;
+    unpublish(id: string): Promise<Entry>;
+    schedule(id: string, publishAt: Date): Promise<Entry>;
 };
 
 // ============================================================================

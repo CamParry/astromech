@@ -1,5 +1,5 @@
 /**
- * Collection entity create page.
+ * Collection entry create page.
  *
  * Two-column layout with field groups in main/sidebar positions.
  * Includes title, optional slug, and a status panel.
@@ -14,7 +14,6 @@ import {
     Panel,
     Breadcrumb,
     Input,
-    Select,
     useToast,
     Page,
     PageHeader,
@@ -24,64 +23,9 @@ import {
     FormLayoutSidebar,
 } from '../../components/ui/index';
 import { FieldInput } from '../../components/fields/field-input';
+import { PublishPanel } from '../../components/entries/PublishPanel';
 import { Astromech } from '../../../sdk/client/index.js';
-import { useEntityForm } from '../../hooks/index.js';
-import type { EntityStatus } from '../../../types/index.js';
-
-// ============================================================================
-// Status panel
-// ============================================================================
-
-type StatusPanelProps = {
-    status: EntityStatus;
-    publishAt: string;
-    onStatusChange: (s: EntityStatus) => void;
-    onPublishAtChange: (v: string) => void;
-    statusOptions: { value: string; label: string }[];
-    statusPanelTitle: string;
-    statusFieldLabel: string;
-    publishAtLabel: string;
-};
-
-function StatusPanel({
-    status,
-    publishAt,
-    onStatusChange,
-    onPublishAtChange,
-    statusOptions,
-    statusPanelTitle,
-    statusFieldLabel,
-    publishAtLabel,
-}: StatusPanelProps): React.ReactElement {
-    return (
-        <Panel title={statusPanelTitle}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div className="am-field">
-                    <label className="am-field__label">{statusFieldLabel}</label>
-                    <Select
-                        value={status}
-                        onValueChange={(v) => onStatusChange((v ?? 'draft') as EntityStatus)}
-                        options={statusOptions}
-                    />
-                </div>
-
-                {status === 'scheduled' && (
-                    <div className="am-field">
-                        <label className="am-field__label" htmlFor="entity-publish-at">
-                            {publishAtLabel}
-                        </label>
-                        <Input
-                            id="entity-publish-at"
-                            type="datetime-local"
-                            value={publishAt}
-                            onChange={(e) => onPublishAtChange(e.target.value)}
-                        />
-                    </div>
-                )}
-            </div>
-        </Panel>
-    );
-}
+import { useEntryForm, usePermissions } from '../../hooks/index.js';
 
 // ============================================================================
 // Page
@@ -92,8 +36,18 @@ export function CollectionCreatePage(): React.ReactElement {
     const navigate = useNavigate();
     const { toast } = useToast();
     const { t } = useTranslation();
+    const { canCreate } = usePermissions();
 
     const collectionConfig = adminConfig.collections[collection];
+
+    if (!canCreate(collection)) {
+        toast({
+            message: t('permissions.forbidden'),
+            variant: 'error',
+        });
+        void navigate({ to: '/collections/$collection', params: { collection } });
+        return <></>;
+    }
     const single = collectionConfig?.single ?? collection;
     const plural = collectionConfig?.plural ?? collection;
     const hasSlug = collectionConfig?.slug != null;
@@ -102,21 +56,18 @@ export function CollectionCreatePage(): React.ReactElement {
     const mainGroups = fieldGroups.filter((g) => g.location === 'main');
     const sidebarGroups = fieldGroups.filter((g) => g.location === 'sidebar');
 
-    const statusOptions = [
-        { value: 'draft', label: t('collections.draft') },
-        { value: 'published', label: t('collections.published') },
-        { value: 'scheduled', label: t('collections.scheduled') },
-    ];
-
-    const { form, saveMutation, handleSave, handlePublish } = useEntityForm({
+    const { form, saveMutation, handleSave, handlePublish } = useEntryForm({
         hasSlug,
         saveFn: (payload) => Astromech.collections[collection]!.create(payload),
         publishFn: (payload) => Astromech.collections[collection]!.create(payload),
-        onSuccess: (entity) => {
-            toast({ message: t('collections.created', { name: single }), variant: 'success' });
+        onSuccess: (entry) => {
+            toast({
+                message: t('collections.created', { name: single }),
+                variant: 'success',
+            });
             void navigate({
                 to: '/collections/$collection/$id',
-                params: { collection, id: entity.id },
+                params: { collection, id: entry.id },
             });
         },
     });
@@ -159,19 +110,27 @@ export function CollectionCreatePage(): React.ReactElement {
                             name="title"
                             validators={{
                                 onChange: ({ value }) =>
-                                    value.trim() === '' ? t('collections.titleRequired') : undefined,
+                                    value.trim() === ''
+                                        ? t('collections.titleRequired')
+                                        : undefined,
                             }}
                         >
                             {(field) => (
                                 <div className="am-field">
-                                    <label className="am-field__label" htmlFor="entity-title">
-                                        {t('collections.titleField')} <span className="am-field__required">*</span>
+                                    <label
+                                        className="am-field__label"
+                                        htmlFor="entry-title"
+                                    >
+                                        {t('collections.titleField')}{' '}
+                                        <span className="am-field__required">*</span>
                                     </label>
                                     <Input
-                                        id="entity-title"
+                                        id="entry-title"
                                         type="text"
                                         value={field.state.value}
-                                        onChange={(e) => field.handleChange(e.target.value)}
+                                        onChange={(e) =>
+                                            field.handleChange(e.target.value)
+                                        }
                                         onBlur={field.handleBlur}
                                         placeholder={`${single} title`}
                                         required
@@ -188,15 +147,23 @@ export function CollectionCreatePage(): React.ReactElement {
                         {hasSlug && (
                             <form.Field name="slug">
                                 {(field) => (
-                                    <div className="am-field" style={{ marginTop: '1rem' }}>
-                                        <label className="am-field__label" htmlFor="entity-slug">
+                                    <div
+                                        className="am-field"
+                                        style={{ marginTop: '1rem' }}
+                                    >
+                                        <label
+                                            className="am-field__label"
+                                            htmlFor="entry-slug"
+                                        >
                                             {t('collections.slugField')}
                                         </label>
                                         <Input
-                                            id="entity-slug"
+                                            id="entry-slug"
                                             type="text"
                                             value={field.state.value}
-                                            onChange={(e) => field.handleChange(e.target.value)}
+                                            onChange={(e) =>
+                                                field.handleChange(e.target.value)
+                                            }
                                             onBlur={field.handleBlur}
                                             placeholder="auto-generated-from-title"
                                             pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
@@ -211,7 +178,9 @@ export function CollectionCreatePage(): React.ReactElement {
                         <Panel
                             key={group.name}
                             title={group.label}
-                            {...(group.description !== undefined && { description: group.description })}
+                            {...(group.description !== undefined && {
+                                description: group.description,
+                            })}
                         >
                             <div className="am-field-list">
                                 {group.fields.map((field) => (
@@ -221,7 +190,9 @@ export function CollectionCreatePage(): React.ReactElement {
                                                 <label className="am-field__label">
                                                     {field.label ?? field.name}
                                                     {field.required === true && (
-                                                        <span className="am-field__required">*</span>
+                                                        <span className="am-field__required">
+                                                            *
+                                                        </span>
                                                     )}
                                                 </label>
                                                 {field.description !== undefined && (
@@ -254,15 +225,15 @@ export function CollectionCreatePage(): React.ReactElement {
                         {(statusField) => (
                             <form.Field name="publishAt">
                                 {(publishAtField) => (
-                                    <StatusPanel
+                                    <PublishPanel
                                         status={statusField.state.value}
                                         publishAt={publishAtField.state.value}
-                                        onStatusChange={(s) => statusField.handleChange(s)}
-                                        onPublishAtChange={(v) => publishAtField.handleChange(v)}
-                                        statusOptions={statusOptions}
-                                        statusPanelTitle={t('collections.statusPanel')}
-                                        statusFieldLabel={t('collections.statusField')}
-                                        publishAtLabel={t('collections.publishAtField')}
+                                        onStatusChange={(s) =>
+                                            statusField.handleChange(s)
+                                        }
+                                        onPublishAtChange={(v) =>
+                                            publishAtField.handleChange(v)
+                                        }
                                     />
                                 )}
                             </form.Field>
@@ -273,7 +244,9 @@ export function CollectionCreatePage(): React.ReactElement {
                         <Panel
                             key={group.name}
                             title={group.label}
-                            {...(group.description !== undefined && { description: group.description })}
+                            {...(group.description !== undefined && {
+                                description: group.description,
+                            })}
                         >
                             <div className="am-field-list">
                                 {group.fields.map((field) => (
@@ -283,7 +256,9 @@ export function CollectionCreatePage(): React.ReactElement {
                                                 <label className="am-field__label">
                                                     {field.label ?? field.name}
                                                     {field.required === true && (
-                                                        <span className="am-field__required">*</span>
+                                                        <span className="am-field__required">
+                                                            *
+                                                        </span>
                                                     )}
                                                 </label>
                                                 {field.description !== undefined && (

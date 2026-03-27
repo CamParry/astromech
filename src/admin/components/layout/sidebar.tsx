@@ -53,30 +53,7 @@ import {
 } from 'lucide-react';
 import adminConfig from 'virtual:astromech/admin-config';
 import { useUI } from '../../context/ui.js';
-
-// ============================================================================
-// Types
-// ============================================================================
-
-type NavItem = {
-    labelKey: string;
-    to: string;
-    icon: React.ReactNode;
-};
-
-// ============================================================================
-// Nav items
-// ============================================================================
-
-const PRIMARY_NAV: NavItem[] = [
-    { labelKey: 'nav.dashboard', to: '/', icon: <LayoutDashboard size={16} /> },
-    { labelKey: 'nav.media', to: '/media', icon: <Image size={16} /> },
-];
-
-const BOTTOM_NAV: NavItem[] = [
-    { labelKey: 'nav.users', to: '/users', icon: <Users size={16} /> },
-    { labelKey: 'nav.settings', to: '/settings', icon: <Settings size={16} /> },
-];
+import { usePermissions } from '../../hooks/index.js';
 
 // ============================================================================
 // NavLink
@@ -116,6 +93,7 @@ function NavLink({ to, children, exact = false }: NavLinkProps) {
 export function Sidebar() {
     const { t } = useTranslation();
     const { sidebarOpen, toggleSidebar, setSidebarOpen } = useUI();
+    const { canReadMedia, canReadUsers, canReadSettings } = usePermissions();
     const collections = Object.entries(adminConfig.collections);
 
     return (
@@ -146,18 +124,28 @@ export function Sidebar() {
                 {/* Primary nav */}
                 <nav className="am-sidebar__nav" aria-label={t('nav.primary')}>
                     <ul className="am-sidebar__nav-list" role="list">
-                        {PRIMARY_NAV.map((item) => (
-                            <li key={item.to}>
-                                <NavLink to={item.to} exact={item.to === '/'}>
+                        <li key="/">
+                            <NavLink to="/" exact>
+                                <span className="am-sidebar__nav-icon">
+                                    <LayoutDashboard size={16} />
+                                </span>
+                                <span className="am-sidebar__nav-label">
+                                    {t('nav.dashboard')}
+                                </span>
+                            </NavLink>
+                        </li>
+                        {canReadMedia() && (
+                            <li key="/media">
+                                <NavLink to="/media">
                                     <span className="am-sidebar__nav-icon">
-                                        {item.icon}
+                                        <Image size={16} />
                                     </span>
                                     <span className="am-sidebar__nav-label">
-                                        {t(item.labelKey)}
+                                        {t('nav.media')}
                                     </span>
                                 </NavLink>
                             </li>
-                        ))}
+                        )}
                     </ul>
                 </nav>
 
@@ -194,16 +182,30 @@ export function Sidebar() {
                 aria-label={t('nav.system')}
             >
                 <ul className="am-sidebar__nav-list" role="list">
-                    {BOTTOM_NAV.map((item) => (
-                        <li key={item.to}>
-                            <NavLink to={item.to}>
-                                <span className="am-sidebar__nav-icon">{item.icon}</span>
+                    {canReadUsers() && (
+                        <li key="/users">
+                            <NavLink to="/users">
+                                <span className="am-sidebar__nav-icon">
+                                    <Users size={16} />
+                                </span>
                                 <span className="am-sidebar__nav-label">
-                                    {t(item.labelKey)}
+                                    {t('nav.users')}
                                 </span>
                             </NavLink>
                         </li>
-                    ))}
+                    )}
+                    {canReadSettings() && (
+                        <li key="/settings">
+                            <NavLink to="/settings">
+                                <span className="am-sidebar__nav-icon">
+                                    <Settings size={16} />
+                                </span>
+                                <span className="am-sidebar__nav-label">
+                                    {t('nav.settings')}
+                                </span>
+                            </NavLink>
+                        </li>
+                    )}
                 </ul>
                 <button
                     type="button"

@@ -3,7 +3,7 @@
     "version": "0.0.1",
     "type": "module",
     "sideEffects": false,
-    "description": "A lightweight, fast Astro-based CMS integration",
+    "description": "A lightweight, fast headless CMS",
     "author": "Cam",
     "license": "MIT",
     "keywords": [
@@ -20,6 +20,10 @@
         ".": {
             "types": "./dist/index.d.ts",
             "default": "./dist/index.js"
+        },
+        "./astro": {
+            "types": "./dist/adapters/astro.d.ts",
+            "default": "./dist/adapters/astro.js"
         },
         "./server": {
             "types": "./dist/sdk/server/index.d.ts",
@@ -71,13 +75,16 @@
         "db:generate": "drizzle-kit generate",
         "db:migrate": "drizzle-kit migrate",
         "db:push": "drizzle-kit push",
-        "seed": "tsx scripts/seed.ts",
+        "db:seed": "tsx scripts/seed.ts",
         "changeset": "changeset",
         "version": "changeset version",
         "release": "npm run build && changeset publish"
     },
     "dependencies": {
         "@base-ui/react": "^1.3.0",
+        "@dnd-kit/core": "^6.3.1",
+        "@dnd-kit/sortable": "^8.0.0",
+        "@dnd-kit/utilities": "^3.2.2",
         "@fontsource-variable/inter": "^5.2.8",
         "@libsql/client": "^0.17.2",
         "@tanstack/react-form": "^1.28.5",

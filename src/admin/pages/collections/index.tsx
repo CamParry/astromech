@@ -1,62 +1,59 @@
 /**
- * Collection entity list page.
+ * Collection entry list page.
  *
- * Shows a searchable, filterable, paginated table or grid of entities for a
+ * Shows a searchable, filterable, paginated table or grid of entries for a
  * collection. Supports bulk selection and row-level actions (edit, duplicate,
  * trash/restore). Per-collection view preference is persisted to localStorage.
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { useSelection, useStoredView } from '../../hooks/index.js';
-import { ToggleGroup, useConfirm } from '../../components/ui/index.js';
-import { useParams, Link, useNavigate } from '@tanstack/react-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
+import { formatDate } from '@/support/dates.js';
+import { Menu } from '@base-ui/react/menu';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import {
-    PlusIcon,
-    MoreHorizontalIcon,
-    LayoutListIcon,
-    LayoutGridIcon,
     Check,
-    SlidersHorizontal,
-    Pencil,
-    Copy,
-    Trash2,
-    RotateCcw,
-    Globe,
-    EyeOff,
     ChevronDown,
+    Copy,
     LayoutGrid,
     LayoutList,
+    MoreHorizontalIcon,
+    Pencil,
+    PlusIcon,
+    RotateCcw,
+    SlidersHorizontal,
+    Trash2,
 } from 'lucide-react';
-import { Menu } from '@base-ui/react/menu';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
+import { Astromech } from '../../../sdk/client/index.js';
+import type { Entry } from '../../../types/index.js';
+import type { DropdownItem } from '../../components/ui/dropdown.js';
 import {
-    Button,
     Badge,
-    Spinner,
-    EmptyState,
-    Toolbar,
-    ToolbarLeft,
-    ToolbarRight,
-    SearchInput,
-    Table,
-    Dropdown,
+    Button,
     Checkbox,
-    useToast,
+    Dropdown,
+    EmptyState,
     Page,
     PageContent,
     PageHeader,
     PageTitle,
-    useContextMenu,
     Pagination,
+    SearchInput,
+    Spinner,
+    Table,
+    ToggleGroup,
+    Toolbar,
+    ToolbarLeft,
+    ToolbarRight,
+    useConfirm,
+    useContextMenu,
+    useToast,
 } from '../../components/ui/index.js';
-import { Astromech } from '../../../sdk/client/index.js';
-import { queryKeys } from '../../hooks/useQueryKeys.js';
-import type { Entity } from '../../../types/index.js';
-import { formatDate } from '@/support/dates.js';
-import type { DropdownItem } from '../../components/ui/dropdown.js';
 import type { SortDirection } from '../../components/ui/table.js';
+import { useSelection, useViewMode, usePermissions } from '../../hooks/index.js';
+import { queryKeys } from '../../hooks/use-query-keys.js';
 
 // ============================================================================
 // Types
@@ -79,29 +76,7 @@ function statusVariant(status: string): 'draft' | 'published' | 'scheduled' | 'd
     return 'default';
 }
 
-function storageKey(collection: string): string {
-    return `am-view-${collection}`;
-}
-
-function readStoredView(collection: string, defaultView: ViewMode): ViewMode {
-    try {
-        const stored = localStorage.getItem(storageKey(collection));
-        if (stored === 'list' || stored === 'grid') return stored;
-    } catch {
-        // localStorage may be unavailable (SSR, private browsing)
-    }
-    return defaultView;
-}
-
-function writeStoredView(collection: string, view: ViewMode): void {
-    try {
-        localStorage.setItem(storageKey(collection), view);
-    } catch {
-        // ignore
-    }
-}
-
-const ALL_COLUMNS = ['title', 'status', 'slug', 'updatedAt'] as const;
+const ALL_COLUMNS = ['title', 'status', 'slug', 'locale', 'updatedAt'] as const;
 
 function colStorageKey(collection: string): string {
     return `am-cols-${collection}`;
@@ -138,9 +113,10 @@ const PER_PAGE = 20;
 // ============================================================================
 
 type RowActionsProps = {
-    entity: Entity;
+    entry: Entry;
     isTrash: boolean;
     collection: string;
+    canDelete: boolean;
     onRestore: (id: string) => void;
     onConfirmDelete: (id: string, force: boolean) => void;
     onDuplicate: (id: string) => void;
@@ -155,65 +131,74 @@ type RowActionsProps = {
 
 function buildRowItems(props: RowActionsProps): DropdownItem[] {
     const {
-        entity,
+        entry,
         isTrash,
         collection,
+        canDelete,
         onRestore,
         onConfirmDelete,
         onDuplicate,
         rowLabels,
     } = props;
     if (isTrash) {
-        return [
+        const items: DropdownItem[] = [
             {
                 label: rowLabels.restore,
-                onClick: () => onRestore(entity.id),
+                onClick: () => onRestore(entry.id),
                 icon: <RotateCcw size={14} />,
             },
-            {
+        ];
+        if (canDelete) {
+            items.push({
                 label: rowLabels.deletePermanently,
                 variant: 'danger' as const,
-                onClick: () => onConfirmDelete(entity.id, true),
+                onClick: () => onConfirmDelete(entry.id, true),
                 icon: <Trash2 size={14} />,
-            },
-        ];
+            });
+        }
+        return items;
     }
-    return [
+    const items: DropdownItem[] = [
         {
             label: rowLabels.edit,
-            href: `/collections/${collection}/${entity.id}`,
+            href: `/collections/${collection}/${entry.id}`,
             icon: <Pencil size={14} />,
         },
         {
             label: rowLabels.duplicate,
-            onClick: () => onDuplicate(entity.id),
+            onClick: () => onDuplicate(entry.id),
             icon: <Copy size={14} />,
         },
-        {
+    ];
+    if (canDelete) {
+        items.push({
             label: rowLabels.moveToTrash,
             variant: 'danger' as const,
-            onClick: () => onConfirmDelete(entity.id, false),
+            onClick: () => onConfirmDelete(entry.id, false),
             icon: <Trash2 size={14} />,
-        },
-    ];
+        });
+    }
+    return items;
 }
 
 // ============================================================================
 // Table row with context menu
 // ============================================================================
 
-type EntityTableRowProps = RowActionsProps & {
+type EntryTableRowProps = RowActionsProps & {
     selected: boolean;
     onToggleSelect: (id: string) => void;
     adminColumns: { field: string; label?: string; sortable?: boolean }[];
     navigate: (opts: { to: string; params: { collection: string; id: string } }) => void;
     visibleColumns: Set<string>;
+    translationCount?: number | undefined;
 };
 
-function EntityTableRow({
-    entity,
+function EntryTableRow({
+    entry,
     isTrash,
     collection,
+    canDelete,
     onRestore,
     onConfirmDelete,
     onDuplicate,
@@ -223,12 +208,14 @@ function EntityTableRow({
     navigate,
     visibleColumns,
     rowLabels,
-}: EntityTableRowProps): React.ReactElement {
+    translationCount,
+}: EntryTableRowProps): React.ReactElement {
     const { t } = useTranslation();
     const items = buildRowItems({
-        entity,
+        entry,
         isTrash,
         collection,
+        canDelete,
         onRestore,
         onConfirmDelete,
         onDuplicate,
@@ -239,14 +226,14 @@ function EntityTableRow({
     return (
         <>
             <Table.Row
-                key={entity.id}
+                key={entry.id}
                 onContextMenu={onContextMenu}
                 onClick={
                     !isTrash
                         ? () =>
                               void navigate({
                                   to: '/collections/$collection/$id',
-                                  params: { collection, id: entity.id },
+                                  params: { collection, id: entry.id },
                               })
                         : undefined
                 }
@@ -255,35 +242,46 @@ function EntityTableRow({
                 <Table.Td onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                         checked={selected}
-                        onChange={() => onToggleSelect(entity.id)}
+                        onChange={() => onToggleSelect(entry.id)}
                     />
                 </Table.Td>
                 {visibleColumns.has('title') && (
                     <Table.Td>
-                        {isTrash ? (
-                            <span className="am-text-muted">{entity.title}</span>
-                        ) : (
-                            <Link
-                                to="/collections/$collection/$id"
-                                params={{ collection, id: entity.id }}
-                                className="am-link"
-                            >
-                                {entity.title}
-                            </Link>
-                        )}
+                        <span
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.375rem',
+                            }}
+                        >
+                            {isTrash ? (
+                                <span className="am-text-muted">{entry.title}</span>
+                            ) : (
+                                <Link
+                                    to="/collections/$collection/$id"
+                                    params={{ collection, id: entry.id }}
+                                    className="am-link"
+                                >
+                                    {entry.title}
+                                </Link>
+                            )}
+                            {translationCount != null && translationCount > 0 && (
+                                <Badge variant="neutral">+{translationCount}</Badge>
+                            )}
+                        </span>
                     </Table.Td>
                 )}
                 {visibleColumns.has('status') && (
                     <Table.Td>
-                        <Badge variant={statusVariant(entity.status)}>
-                            {entity.status}
+                        <Badge variant={statusVariant(entry.status)}>
+                            {entry.status}
                         </Badge>
                     </Table.Td>
                 )}
                 {visibleColumns.has('slug') && (
                     <Table.Td>
                         <span className="am-text-mono am-text-muted">
-                            {entity.slug ?? '—'}
+                            {entry.slug ?? '—'}
                         </span>
                     </Table.Td>
                 )}
@@ -292,14 +290,14 @@ function EntityTableRow({
                     .map((col) => (
                         <Table.Td key={col.field}>
                             {String(
-                                (entity.fields as Record<string, unknown>)[col.field] ??
+                                (entry.fields as Record<string, unknown>)[col.field] ??
                                     '—'
                             )}
                         </Table.Td>
                     ))}
                 {visibleColumns.has('updatedAt') && (
                     <Table.Td className="am-text-sm am-text-muted">
-                        {formatDate(entity.updatedAt)}
+                        {formatDate(entry.updatedAt)}
                     </Table.Td>
                 )}
                 <Table.Td onClick={(e) => e.stopPropagation()}>
@@ -319,27 +317,29 @@ function EntityTableRow({
 // Grid card with context menu
 // ============================================================================
 
-type EntityCardProps = RowActionsProps & {
+type EntryCardProps = RowActionsProps & {
     gridFields: { field: string; label?: string }[];
     navigate: (opts: { to: string; params: { collection: string; id: string } }) => void;
 };
 
-function EntityCard({
-    entity,
+function EntryCard({
+    entry,
     isTrash,
     collection,
+    canDelete,
     onRestore,
     onConfirmDelete,
     onDuplicate,
     gridFields,
     navigate,
     rowLabels,
-}: EntityCardProps): React.ReactElement {
+}: EntryCardProps): React.ReactElement {
     const { t } = useTranslation();
     const items = buildRowItems({
-        entity,
+        entry,
         isTrash,
         collection,
+        canDelete,
         onRestore,
         onConfirmDelete,
         onDuplicate,
@@ -351,7 +351,7 @@ function EntityCard({
         if (isTrash) return;
         void navigate({
             to: '/collections/$collection/$id',
-            params: { collection, id: entity.id },
+            params: { collection, id: entry.id },
         });
     }
 
@@ -375,21 +375,21 @@ function EntityCard({
 
                 {isTrash ? (
                     <span className="am-collection-card__title am-text-muted">
-                        {entity.title}
+                        {entry.title}
                     </span>
                 ) : (
                     <Link
                         to="/collections/$collection/$id"
-                        params={{ collection, id: entity.id }}
+                        params={{ collection, id: entry.id }}
                         className="am-collection-card__title"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {entity.title}
+                        {entry.title}
                     </Link>
                 )}
 
                 <div className="am-collection-card__meta">
-                    <Badge variant={statusVariant(entity.status)}>{entity.status}</Badge>
+                    <Badge variant={statusVariant(entry.status)}>{entry.status}</Badge>
                 </div>
 
                 {gridFields.map((gf) => (
@@ -399,8 +399,7 @@ function EntityCard({
                         </span>
                         <span>
                             {String(
-                                (entity.fields as Record<string, unknown>)[gf.field] ??
-                                    '—'
+                                (entry.fields as Record<string, unknown>)[gf.field] ?? '—'
                             )}
                         </span>
                     </div>
@@ -421,6 +420,7 @@ export function CollectionIndexPage(): React.ReactElement {
     const { toast } = useToast();
     const { t } = useTranslation();
     const queryClient = useQueryClient();
+    const { canCreate, canDelete } = usePermissions();
 
     // collection is a valid router param — always present in configured collections
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -445,7 +445,7 @@ export function CollectionIndexPage(): React.ReactElement {
     //     readStoredView(collection, defaultView)
     // );
 
-    const [viewMode, setViewMode] = useStoredView(`collection:${collection}`);
+    const [viewMode, setViewMode] = useViewMode(`collection:${collection}`, defaultView);
 
     const [sort, setSort] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(
         null
@@ -476,9 +476,9 @@ export function CollectionIndexPage(): React.ReactElement {
 
     const isTrash = statusFilter === 'trashed';
 
-    // Fetch entities (normal or trashed)
+    // Fetch entries (normal or trashed)
     const { data: listData, isLoading } = useQuery({
-        queryKey: queryKeys.entities.list(collection, {
+        queryKey: queryKeys.entries.list(collection, {
             statusFilter,
             page,
             search,
@@ -501,14 +501,14 @@ export function CollectionIndexPage(): React.ReactElement {
         },
     });
 
-    const entities = listData?.data ?? [];
+    const entries = listData?.data ?? [];
     const pagination = listData?.pagination;
     const totalPages = pagination?.totalPages ?? 1;
     const totalItems = pagination?.total ?? 0;
 
-    const sortedEntities = React.useMemo(() => {
-        if (!sort) return entities;
-        return [...entities].sort((a, b) => {
+    const sortedEntries = React.useMemo(() => {
+        if (!sort) return entries;
+        return [...entries].sort((a, b) => {
             let aVal: unknown;
             let bVal: unknown;
             if (sort.key === 'title') {
@@ -527,18 +527,41 @@ export function CollectionIndexPage(): React.ReactElement {
                 ? aStr.localeCompare(bStr)
                 : bStr.localeCompare(aStr);
         });
-    }, [entities, sort]);
+    }, [entries, sort]);
 
     const { checkedIds, toggle, toggleAll, allChecked, someChecked, reset } =
-        useSelection(sortedEntities);
+        useSelection(sortedEntries);
     const confirm = useConfirm();
+
+    // Translation counts — only when collection has translatable enabled
+    const hasI18n = collectionConfig?.translatable === true;
+    const translationQueries = useQueries({
+        queries: sortedEntries.map((entry) => ({
+            queryKey: ['entry-translations', collection, entry.id],
+            queryFn: () => Astromech.collections[collection]!.translations(entry.id),
+            enabled: hasI18n,
+        })),
+    });
+    // Map entryId -> translation count
+    const translationCountMap = React.useMemo(() => {
+        const map = new Map<string, number>();
+        if (!hasI18n) return map;
+        sortedEntries.forEach((entry, i) => {
+            const result = translationQueries[i];
+            if (result?.data != null) {
+                map.set(entry.id, result.data.length);
+            }
+        });
+        return map;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hasI18n, sortedEntries, translationQueries]);
 
     // Mutations
     const trashMutation = useMutation({
         mutationFn: ({ id }: { id: string }) => api.trash(id),
         onSuccess: () => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entities.all(collection),
+                queryKey: queryKeys.entries.all(collection),
             });
             toast({
                 message: t('collections.movedToTrash', { name: single }),
@@ -558,7 +581,7 @@ export function CollectionIndexPage(): React.ReactElement {
         mutationFn: ({ id }: { id: string }) => api.delete(id),
         onSuccess: () => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entities.all(collection),
+                queryKey: queryKeys.entries.all(collection),
             });
             toast({
                 message: t('collections.permanentlyDeleted', { name: single }),
@@ -576,9 +599,9 @@ export function CollectionIndexPage(): React.ReactElement {
 
     const duplicateMutation = useMutation({
         mutationFn: ({ id }: { id: string }) => api.duplicate(id),
-        onSuccess: (entity) => {
+        onSuccess: (entry) => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entities.all(collection),
+                queryKey: queryKeys.entries.all(collection),
             });
             toast({
                 message: t('collections.duplicated', { name: single }),
@@ -586,7 +609,7 @@ export function CollectionIndexPage(): React.ReactElement {
             });
             void navigate({
                 to: '/collections/$collection/$id',
-                params: { collection, id: entity.id },
+                params: { collection, id: entry.id },
             });
         },
         onError: (err) => {
@@ -602,7 +625,7 @@ export function CollectionIndexPage(): React.ReactElement {
         mutationFn: ({ id }: { id: string }) => api.restore(id),
         onSuccess: () => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entities.all(collection),
+                queryKey: queryKeys.entries.all(collection),
             });
             toast({
                 message: t('collections.restored', { name: single }),
@@ -625,7 +648,7 @@ export function CollectionIndexPage(): React.ReactElement {
         },
         onSuccess: () => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entities.all(collection),
+                queryKey: queryKeys.entries.all(collection),
             });
             reset();
             toast({ message: t('collections.bulkPublished'), variant: 'success' });
@@ -638,7 +661,7 @@ export function CollectionIndexPage(): React.ReactElement {
         },
         onSuccess: () => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entities.all(collection),
+                queryKey: queryKeys.entries.all(collection),
             });
             reset();
             toast({ message: t('collections.bulkUnpublished'), variant: 'success' });
@@ -651,7 +674,7 @@ export function CollectionIndexPage(): React.ReactElement {
         },
         onSuccess: () => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entities.all(collection),
+                queryKey: queryKeys.entries.all(collection),
             });
             reset();
             toast({ message: t('collections.bulkTrashed'), variant: 'success' });
@@ -664,7 +687,7 @@ export function CollectionIndexPage(): React.ReactElement {
         },
         onSuccess: () => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entities.all(collection),
+                queryKey: queryKeys.entries.all(collection),
             });
             reset();
             toast({ message: t('collections.bulkDeleted'), variant: 'success' });
@@ -682,7 +705,7 @@ export function CollectionIndexPage(): React.ReactElement {
             void Promise.all(ids.map((id) => restoreMutation.mutateAsync({ id }))).then(
                 () => {
                     void queryClient.invalidateQueries({
-                        queryKey: queryKeys.entities.all(collection),
+                        queryKey: queryKeys.entries.all(collection),
                     });
                     reset();
                     toast({ message: t('collections.bulkRestored'), variant: 'success' });
@@ -766,17 +789,19 @@ export function CollectionIndexPage(): React.ReactElement {
             <Page>
                 <PageHeader>
                     <PageTitle>{plural}</PageTitle>
-                    <Link to="/collections/$collection/new" params={{ collection }}>
-                        <Button icon={<PlusIcon size={16} />}>
-                            {t('collections.new', { name: single })}
-                        </Button>
-                    </Link>
+                    {canCreate(collection) && (
+                        <Link to="/collections/$collection/new" params={{ collection }}>
+                            <Button icon={<PlusIcon size={16} />}>
+                                {t('collections.new', { name: single })}
+                            </Button>
+                        </Link>
+                    )}
                 </PageHeader>
 
                 <PageContent>
                     <Toolbar>
                         <ToolbarLeft>
-                            {someChecked && (
+                            {someChecked && canDelete(collection) && (
                                 <Dropdown
                                     label={`${t('media.bulkActions')} (${checkedIds.size})`}
                                     variant="secondary"
@@ -997,22 +1022,24 @@ export function CollectionIndexPage(): React.ReactElement {
                                     </Menu.Positioner>
                                 </Menu.Portal>
                             </Menu.Root>
-                            <ToggleGroup
-                                value={viewMode}
-                                onValueChange={setViewMode}
-                                items={[
-                                    {
-                                        value: 'grid',
-                                        icon: <LayoutGrid size={15} />,
-                                        label: t('common.gridView'),
-                                    },
-                                    {
-                                        value: 'list',
-                                        icon: <LayoutList size={15} />,
-                                        label: t('common.listView'),
-                                    },
-                                ]}
-                            />
+                            {showViewToggle && (
+                                <ToggleGroup
+                                    value={viewMode}
+                                    onValueChange={setViewMode}
+                                    items={[
+                                        {
+                                            value: 'grid',
+                                            icon: <LayoutGrid size={15} />,
+                                            label: t('common.gridView'),
+                                        },
+                                        {
+                                            value: 'list',
+                                            icon: <LayoutList size={15} />,
+                                            label: t('common.listView'),
+                                        },
+                                    ]}
+                                />
+                            )}
                         </ToolbarRight>
                     </Toolbar>
 
@@ -1029,7 +1056,7 @@ export function CollectionIndexPage(): React.ReactElement {
                                 >
                                     <Spinner />
                                 </div>
-                            ) : entities.length === 0 ? (
+                            ) : entries.length === 0 ? (
                                 <EmptyState
                                     title={t('collections.empty', {
                                         name: plural.toLowerCase(),
@@ -1060,12 +1087,13 @@ export function CollectionIndexPage(): React.ReactElement {
                                 />
                             ) : (
                                 <div className="am-collection-grid">
-                                    {sortedEntities.map((entity) => (
-                                        <EntityCard
-                                            key={entity.id}
-                                            entity={entity}
+                                    {sortedEntries.map((entry) => (
+                                        <EntryCard
+                                            key={entry.id}
+                                            entry={entry}
                                             isTrash={isTrash}
                                             collection={collection}
+                                            canDelete={canDelete(collection)}
                                             onRestore={handleRestore}
                                             onConfirmDelete={handleConfirmDelete}
                                             onDuplicate={handleDuplicate}
@@ -1142,7 +1170,7 @@ export function CollectionIndexPage(): React.ReactElement {
                                     <Table.Empty colSpan={colSpan}>
                                         <Spinner />
                                     </Table.Empty>
-                                ) : entities.length === 0 ? (
+                                ) : entries.length === 0 ? (
                                     <Table.Empty colSpan={colSpan}>
                                         <EmptyState
                                             title={t('collections.empty', {
@@ -1174,21 +1202,25 @@ export function CollectionIndexPage(): React.ReactElement {
                                         />
                                     </Table.Empty>
                                 ) : (
-                                    sortedEntities.map((entity) => (
-                                        <EntityTableRow
-                                            key={entity.id}
-                                            entity={entity}
+                                    sortedEntries.map((entry) => (
+                                        <EntryTableRow
+                                            key={entry.id}
+                                            entry={entry}
                                             isTrash={isTrash}
                                             collection={collection}
+                                            canDelete={canDelete(collection)}
                                             onRestore={handleRestore}
                                             onConfirmDelete={handleConfirmDelete}
                                             onDuplicate={handleDuplicate}
-                                            selected={checkedIds.has(entity.id)}
+                                            selected={checkedIds.has(entry.id)}
                                             onToggleSelect={toggle}
                                             adminColumns={adminColumns}
                                             navigate={navigateCompat}
                                             visibleColumns={visibleColumns}
                                             rowLabels={rowLabels}
+                                            translationCount={translationCountMap.get(
+                                                entry.id
+                                            )}
                                         />
                                     ))
                                 )}

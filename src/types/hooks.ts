@@ -2,47 +2,47 @@
  * Hook system types — context types, HookRegistry, HookHandlers
  */
 
-import type { Entity, EntityStatus, JsonObject, Media, User } from './domain.js';
+import type { Entry, EntryStatus, JsonObject, Media, User } from './domain.js';
 
 // ============================================================================
 // Hook Context Types
 // ============================================================================
 
-export type EntityCreateContext = {
+export type EntryCreateContext = {
     collection: string;
     data: {
         title: string;
         slug?: string;
         locale?: string;
         fields: JsonObject;
-        status?: EntityStatus;
+        status?: EntryStatus;
         publishAt?: Date | null;
         _translateFrom?: string;
     };
     user: User | null;
 };
 
-export type EntityAfterCreateContext = EntityCreateContext & {
-    entity: Entity;
+export type EntryAfterCreateContext = EntryCreateContext & {
+    entry: Entry;
 };
 
-export type EntityUpdateContext = {
+export type EntryUpdateContext = {
     collection: string;
-    entity: Entity;
+    entry: Entry;
     data: Partial<{
         title: string;
         slug: string;
         locale: string;
         fields: JsonObject;
-        status: EntityStatus;
+        status: EntryStatus;
         publishAt: Date | null;
     }>;
     user: User | null;
 };
 
-export type EntityDeleteContext = {
+export type EntryDeleteContext = {
     collection: string;
-    entity: Entity;
+    entry: Entry;
     user: User | null;
     force: boolean;
 };
@@ -87,12 +87,12 @@ export type HookRegistry = {
 };
 
 export type HookHandlers = {
-    'entity:beforeCreate': (ctx: EntityCreateContext) => Promise<void> | void;
-    'entity:afterCreate': (ctx: EntityAfterCreateContext) => Promise<void> | void;
-    'entity:beforeUpdate': (ctx: EntityUpdateContext) => Promise<void> | void;
-    'entity:afterUpdate': (ctx: EntityUpdateContext) => Promise<void> | void;
-    'entity:beforeDelete': (ctx: EntityDeleteContext) => Promise<void> | void;
-    'entity:afterDelete': (ctx: EntityDeleteContext) => Promise<void> | void;
+    'entry:beforeCreate': (ctx: EntryCreateContext) => Promise<void> | void;
+    'entry:afterCreate': (ctx: EntryAfterCreateContext) => Promise<void> | void;
+    'entry:beforeUpdate': (ctx: EntryUpdateContext) => Promise<void> | void;
+    'entry:afterUpdate': (ctx: EntryUpdateContext) => Promise<void> | void;
+    'entry:beforeDelete': (ctx: EntryDeleteContext) => Promise<void> | void;
+    'entry:afterDelete': (ctx: EntryDeleteContext) => Promise<void> | void;
     'media:beforeUpload': (ctx: MediaUploadContext) => Promise<void> | void;
     'media:afterUpload': (ctx: MediaUploadContext) => Promise<void> | void;
     'media:beforeDelete': (ctx: MediaDeleteContext) => Promise<void> | void;

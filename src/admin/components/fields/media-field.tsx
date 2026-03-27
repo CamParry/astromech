@@ -1,11 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, ChevronUp, File, FileText, Music, RefreshCw, Video, X } from 'lucide-react';
+import {
+    ChevronDown,
+    ChevronUp,
+    File,
+    FileText,
+    Music,
+    RefreshCw,
+    Video,
+    X,
+} from 'lucide-react';
 import type { BaseFieldProps } from '@/types/index.js';
 import { formatValueForInput } from '@/utils/field-formatters';
 import { Astromech } from '../../../sdk/client/index.js';
-import { queryKeys } from '../../hooks/useQueryKeys.js';
+import { queryKeys } from '../../hooks/use-query-keys.js';
 import { Modal } from '@/admin/components/ui/modal';
 import { Spinner } from '@/admin/components/ui/spinner';
 import { UploadZone } from '@/admin/components/ui/upload-zone';
@@ -24,7 +33,8 @@ type MediaItem = {
 function FileTypeIcon({ mimeType, size = 28 }: { mimeType: string; size?: number }) {
     if (mimeType.startsWith('video/')) return <Video size={size} />;
     if (mimeType.startsWith('audio/')) return <Music size={size} />;
-    if (mimeType === 'application/pdf' || mimeType.includes('text')) return <FileText size={size} />;
+    if (mimeType === 'application/pdf' || mimeType.includes('text'))
+        return <FileText size={size} />;
     return <File size={size} />;
 }
 
@@ -39,13 +49,15 @@ function MediaThumb({ item, className = '' }: { item: MediaItem; className?: str
         );
     }
     return (
-        <div className={`am-media-picker__thumb am-media-picker__thumb--placeholder ${className}`}>
+        <div
+            className={`am-media-picker__thumb am-media-picker__thumb--placeholder ${className}`}
+        >
             <FileTypeIcon mimeType={item.mimeType} />
         </div>
     );
 }
 
-export function MediaField({ name, value, required, field, onChange }: BaseFieldProps) {
+export function MediaField({ name, value, required, field, onChange, disabled }: BaseFieldProps) {
     const { t } = useTranslation();
     const multiple = field.multiple === true;
     const accept = typeof field.accept === 'string' ? field.accept : undefined;
@@ -55,8 +67,12 @@ export function MediaField({ name, value, required, field, onChange }: BaseField
     // For single: value is a string id or null
     // For multiple: value is an array of string ids
     const initialIds: string[] = multiple
-        ? Array.isArray(value) ? (value as string[]) : []
-        : typeof value === 'string' && value ? [value] : [];
+        ? Array.isArray(value)
+            ? (value as string[])
+            : []
+        : typeof value === 'string' && value
+          ? [value]
+          : [];
 
     const [selectedIds, setSelectedIds] = useState<string[]>(initialIds);
     const [selectedItems, setSelectedItems] = useState<MediaItem[]>([]);
@@ -68,8 +84,12 @@ export function MediaField({ name, value, required, field, onChange }: BaseField
     // Load existing selected items
     useEffect(() => {
         const ids = multiple
-            ? Array.isArray(value) ? (value as string[]) : []
-            : typeof value === 'string' && value ? [value] : [];
+            ? Array.isArray(value)
+                ? (value as string[])
+                : []
+            : typeof value === 'string' && value
+              ? [value]
+              : [];
 
         if (ids.length === 0) {
             setSelectedIds([]);
@@ -164,7 +184,10 @@ export function MediaField({ name, value, required, field, onChange }: BaseField
         for (const file of files) {
             try {
                 const media = await Astromech.media.upload(file);
-                queryClient.setQueryData<MediaItem[]>(queryKeys.media.all(), (prev) => [media, ...(prev ?? [])]);
+                queryClient.setQueryData<MediaItem[]>(queryKeys.media.all(), (prev) => [
+                    media,
+                    ...(prev ?? []),
+                ]);
                 toast({ message: `${file.name} uploaded.`, variant: 'success' });
             } catch (err) {
                 toast({ message: `Failed to upload ${file.name}`, variant: 'error' });
@@ -185,69 +208,81 @@ export function MediaField({ name, value, required, field, onChange }: BaseField
                         {selectedItems.map((item, index) => (
                             <div key={item.id} className="am-media-picker__multi-item">
                                 <MediaThumb item={item} />
-                                <button
-                                    type="button"
-                                    className="am-media-picker__multi-remove"
-                                    onClick={() => handleRemove(item.id)}
-                                    aria-label={t('fields.mediaRemoveItemLabel', { filename: item.filename })}
-                                >
-                                    <X size={12} />
-                                </button>
-                                <div className="am-media-picker__multi-reorder">
+                                {!disabled && (
                                     <button
                                         type="button"
-                                        className="am-media-picker__reorder-btn"
-                                        onClick={() => handleMoveUp(item.id)}
-                                        disabled={index === 0}
-                                        aria-label={t('fields.mediaMoveLeft')}
+                                        className="am-media-picker__multi-remove"
+                                        onClick={() => handleRemove(item.id)}
+                                        aria-label={t('fields.mediaRemoveItemLabel', {
+                                            filename: item.filename,
+                                        })}
                                     >
-                                        <ChevronUp size={12} />
+                                        <X size={12} />
                                     </button>
-                                    <button
-                                        type="button"
-                                        className="am-media-picker__reorder-btn"
-                                        onClick={() => handleMoveDown(item.id)}
-                                        disabled={index === selectedItems.length - 1}
-                                        aria-label={t('fields.mediaMoveRight')}
-                                    >
-                                        <ChevronDown size={12} />
-                                    </button>
-                                </div>
-                                <span className="am-media-picker__multi-name">{item.filename}</span>
+                                )}
+                                {!disabled && (
+                                    <div className="am-media-picker__multi-reorder">
+                                        <button
+                                            type="button"
+                                            className="am-media-picker__reorder-btn"
+                                            onClick={() => handleMoveUp(item.id)}
+                                            disabled={index === 0}
+                                            aria-label={t('fields.mediaMoveLeft')}
+                                        >
+                                            <ChevronUp size={12} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="am-media-picker__reorder-btn"
+                                            onClick={() => handleMoveDown(item.id)}
+                                            disabled={index === selectedItems.length - 1}
+                                            aria-label={t('fields.mediaMoveRight')}
+                                        >
+                                            <ChevronDown size={12} />
+                                        </button>
+                                    </div>
+                                )}
+                                <span className="am-media-picker__multi-name">
+                                    {item.filename}
+                                </span>
                             </div>
                         ))}
-                        <button
-                            type="button"
-                            className="am-media-picker__multi-add"
-                            onClick={() => setPickerOpen(true)}
-                        >
-                            {t('fields.mediaAdd')}
-                        </button>
+                        {!disabled && (
+                            <button
+                                type="button"
+                                className="am-media-picker__multi-add"
+                                onClick={() => setPickerOpen(true)}
+                            >
+                                {t('fields.mediaAdd')}
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <div className="am-media-picker__preview">
                         <MediaThumb item={selectedItems[0]!} />
-                        <div className="am-media-picker__overlay">
-                            <button
-                                type="button"
-                                className="am-media-picker__overlay-btn"
-                                onClick={() => setPickerOpen(true)}
-                                aria-label={t('fields.mediaChangeLabel')}
-                            >
-                                <RefreshCw size={13} />
-                            </button>
-                            <button
-                                type="button"
-                                className="am-media-picker__overlay-btn am-media-picker__overlay-btn--danger"
-                                onClick={() => handleRemove(selectedIds[0]!)}
-                                aria-label={t('fields.mediaRemoveLabel')}
-                            >
-                                <X size={13} />
-                            </button>
-                        </div>
+                        {!disabled && (
+                            <div className="am-media-picker__overlay">
+                                <button
+                                    type="button"
+                                    className="am-media-picker__overlay-btn"
+                                    onClick={() => setPickerOpen(true)}
+                                    aria-label={t('fields.mediaChangeLabel')}
+                                >
+                                    <RefreshCw size={13} />
+                                </button>
+                                <button
+                                    type="button"
+                                    className="am-media-picker__overlay-btn am-media-picker__overlay-btn--danger"
+                                    onClick={() => handleRemove(selectedIds[0]!)}
+                                    aria-label={t('fields.mediaRemoveLabel')}
+                                >
+                                    <X size={13} />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )
-            ) : (
+            ) : !disabled ? (
                 <button
                     type="button"
                     className="am-btn am-btn--secondary am-btn--sm"
@@ -255,7 +290,7 @@ export function MediaField({ name, value, required, field, onChange }: BaseField
                 >
                     {t('fields.mediaChoose')}
                 </button>
-            )}
+            ) : null}
 
             {error && <p className="am-media-picker__error">{error}</p>}
 
@@ -273,7 +308,13 @@ export function MediaField({ name, value, required, field, onChange }: BaseField
                 size="lg"
                 footer={
                     multiple ? (
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                        <div
+                            style={{
+                                display: 'flex',
+                                justifyContent: 'flex-end',
+                                gap: '0.5rem',
+                            }}
+                        >
                             <button
                                 type="button"
                                 className="am-btn am-btn--secondary am-btn--sm"
@@ -286,7 +327,9 @@ export function MediaField({ name, value, required, field, onChange }: BaseField
                                 className="am-btn am-btn--primary am-btn--sm"
                                 onClick={() => setPickerOpen(false)}
                             >
-                                {selectedIds.length > 0 ? t('common.select', { count: selectedIds.length }) : t('common.done')}
+                                {selectedIds.length > 0
+                                    ? t('common.select', { count: selectedIds.length })
+                                    : t('common.done')}
                             </button>
                         </div>
                     ) : undefined
@@ -296,7 +339,11 @@ export function MediaField({ name, value, required, field, onChange }: BaseField
                     <UploadZone
                         onUpload={handleUpload}
                         disabled={isUploading}
-                        label={isUploading ? t('fields.mediaUploading') : t('fields.mediaUploadLabel')}
+                        label={
+                            isUploading
+                                ? t('fields.mediaUploading')
+                                : t('fields.mediaUploadLabel')
+                        }
                         {...(accept !== undefined ? { accept } : {})}
                         multiple
                     />
@@ -306,7 +353,9 @@ export function MediaField({ name, value, required, field, onChange }: BaseField
                         <Spinner />
                     </div>
                 ) : !libraryItems || libraryItems.length === 0 ? (
-                    <p className="am-media-picker__modal-empty">{t('fields.mediaNoItems')}</p>
+                    <p className="am-media-picker__modal-empty">
+                        {t('fields.mediaNoItems')}
+                    </p>
                 ) : (
                     <div className="am-media-picker__modal-grid">
                         {libraryItems.map((item) => (
@@ -315,7 +364,9 @@ export function MediaField({ name, value, required, field, onChange }: BaseField
                                 type="button"
                                 className={
                                     'am-media-picker__modal-item' +
-                                    (selectedIds.includes(item.id) ? ' am-media-picker__modal-item--selected' : '')
+                                    (selectedIds.includes(item.id)
+                                        ? ' am-media-picker__modal-item--selected'
+                                        : '')
                                 }
                                 onClick={() => handleSelect(item)}
                             >
@@ -327,10 +378,15 @@ export function MediaField({ name, value, required, field, onChange }: BaseField
                                     />
                                 ) : (
                                     <div className="am-media-picker__modal-thumb am-media-picker__modal-thumb--placeholder">
-                                        <FileTypeIcon mimeType={item.mimeType} size={24} />
+                                        <FileTypeIcon
+                                            mimeType={item.mimeType}
+                                            size={24}
+                                        />
                                     </div>
                                 )}
-                                <span className="am-media-picker__modal-name">{item.filename}</span>
+                                <span className="am-media-picker__modal-name">
+                                    {item.filename}
+                                </span>
                             </button>
                         ))}
                     </div>

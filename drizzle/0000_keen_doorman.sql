@@ -15,7 +15,7 @@ CREATE TABLE `accounts` (
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE TABLE `entities` (
+CREATE TABLE `entries` (
 	`id` text PRIMARY KEY NOT NULL,
 	`collection` text NOT NULL,
 	`locale` text,
@@ -26,9 +26,36 @@ CREATE TABLE `entities` (
 	`published_at` integer,
 	`deleted_at` integer,
 	`created_at` integer NOT NULL,
-	`updated_at` integer NOT NULL
+	`updated_at` integer NOT NULL,
+	`created_by` text,
+	`updated_by` text,
+	`translation_of` text,
+	FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`updated_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE INDEX `idx_entries_collection` ON `entries` (`collection`);--> statement-breakpoint
+CREATE INDEX `idx_entries_slug` ON `entries` (`collection`,`slug`);--> statement-breakpoint
+CREATE INDEX `idx_entries_status` ON `entries` (`collection`,`status`);--> statement-breakpoint
+CREATE INDEX `idx_entries_locale` ON `entries` (`collection`,`locale`,`status`);--> statement-breakpoint
+CREATE INDEX `idx_entries_deleted` ON `entries` (`deleted_at`);--> statement-breakpoint
+CREATE INDEX `idx_entries_translation_of` ON `entries` (`translation_of`);--> statement-breakpoint
+CREATE TABLE `entry_versions` (
+	`id` text PRIMARY KEY NOT NULL,
+	`entry_id` text NOT NULL,
+	`version_number` integer NOT NULL,
+	`title` text NOT NULL,
+	`slug` text,
+	`fields` text,
+	`relations` text,
+	`status` text,
+	`created_at` integer NOT NULL,
+	`created_by` text,
+	FOREIGN KEY (`entry_id`) REFERENCES `entries`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE INDEX `idx_versions_entry` ON `entry_versions` (`entry_id`,`version_number`);--> statement-breakpoint
 CREATE TABLE `media` (
 	`id` text PRIMARY KEY NOT NULL,
 	`filename` text NOT NULL,
@@ -60,6 +87,15 @@ CREATE TABLE `relationships` (
 --> statement-breakpoint
 CREATE INDEX `idx_rel_source` ON `relationships` (`source_id`,`source_type`,`name`);--> statement-breakpoint
 CREATE INDEX `idx_rel_target` ON `relationships` (`target_id`,`target_type`);--> statement-breakpoint
+CREATE TABLE `roles` (
+	`slug` text PRIMARY KEY NOT NULL,
+	`name` text NOT NULL,
+	`permissions` text NOT NULL,
+	`is_built_in` integer DEFAULT false NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE `sessions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`expires_at` integer NOT NULL,

@@ -1,11 +1,11 @@
 /**
- * Collection entity edit page.
+ * Collection entry edit page.
  *
  * Two-column layout: sticky action bar, main content fields left, metadata sidebar right.
  */
 
-import React, { useEffect } from 'react';
-import { useParams, useNavigate } from '@tanstack/react-router';
+import React from 'react';
+import { useParams, useNavigate, Link } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui/react/menu';
@@ -17,7 +17,6 @@ import {
     Panel,
     Breadcrumb,
     Input,
-    Select,
     PageLoading,
     useToast,
     useConfirm,
@@ -27,35 +26,30 @@ import {
     FormLayoutContent,
     FormLayoutMain,
     FormLayoutSidebar,
+    PageContent,
 } from '../../components/ui/index';
 import { FieldInput } from '../../components/fields/field-input';
+import { LocaleSwitcher } from '../../components/translations/LocaleSwitcher';
+import { PublishPanel } from '../../components/entries/PublishPanel';
 import { Astromech } from '../../../sdk/client/index.js';
-import { useEntityForm } from '../../hooks/index.js';
+import { useEntryForm, usePermissions } from '../../hooks/index.js';
 import { queryKeys } from '../../hooks/index.js';
-import type { EntityStatus } from '../../../types/index.js';
-
-// ============================================================================
-// Types
-// ============================================================================
-
-type FormValues = {
-    title: string;
-    slug: string;
-    status: EntityStatus;
-    publishAt: string;
-    fields: Record<string, unknown>;
-};
+import type { EntryStatus } from '../../../types/index.js';
 
 // ============================================================================
 // Status badge
 // ============================================================================
 
-type StatusBadgeProps = { status: EntityStatus };
+type StatusBadgeProps = { status: EntryStatus };
 
 function StatusBadge({ status }: StatusBadgeProps): React.ReactElement {
     const { t } = useTranslation();
     const variant =
-        status === 'published' ? 'success' : status === 'scheduled' ? 'warning' : 'neutral';
+        status === 'published'
+            ? 'success'
+            : status === 'scheduled'
+              ? 'warning'
+              : 'neutral';
     const label =
         status === 'published'
             ? t('collections.published')
@@ -63,61 +57,6 @@ function StatusBadge({ status }: StatusBadgeProps): React.ReactElement {
               ? t('collections.scheduled')
               : t('collections.draft');
     return <Badge variant={variant}>{label}</Badge>;
-}
-
-// ============================================================================
-// Status panel
-// ============================================================================
-
-type StatusPanelProps = {
-    status: EntityStatus;
-    publishAt: string;
-    onStatusChange: (s: EntityStatus) => void;
-    onPublishAtChange: (v: string) => void;
-    statusOptions: { value: string; label: string }[];
-    statusPanelTitle: string;
-    statusFieldLabel: string;
-    publishAtLabel: string;
-};
-
-function StatusPanel({
-    status,
-    publishAt,
-    onStatusChange,
-    onPublishAtChange,
-    statusOptions,
-    statusPanelTitle,
-    statusFieldLabel,
-    publishAtLabel,
-}: StatusPanelProps): React.ReactElement {
-    return (
-        <Panel title={statusPanelTitle}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div className="am-field">
-                    <label className="am-field__label">{statusFieldLabel}</label>
-                    <Select
-                        value={status}
-                        onValueChange={(v) => onStatusChange((v ?? 'draft') as EntityStatus)}
-                        options={statusOptions}
-                    />
-                </div>
-
-                {status === 'scheduled' && (
-                    <div className="am-field">
-                        <label className="am-field__label" htmlFor="entity-publish-at">
-                            {publishAtLabel}
-                        </label>
-                        <Input
-                            id="entity-publish-at"
-                            type="datetime-local"
-                            value={publishAt}
-                            onChange={(e) => onPublishAtChange(e.target.value)}
-                        />
-                    </div>
-                )}
-            </div>
-        </Panel>
-    );
 }
 
 // ============================================================================
@@ -135,60 +74,82 @@ export function CollectionEditPage(): React.ReactElement {
     const queryClient = useQueryClient();
     const navigate = useNavigate();
 
+    const { canUpdate } = usePermissions();
     const collectionConfig = adminConfig.collections[collection];
     const single = collectionConfig?.single ?? collection;
     const plural = collectionConfig?.plural ?? collection;
     const hasSlug = collectionConfig?.slug != null;
     const fieldGroups = collectionConfig?.fieldGroups ?? [];
+    const mainGroups = fieldGroups.filter((g) => g.location !== 'sidebar');
+    const sidebarGroups = fieldGroups.filter((g) => g.location === 'sidebar');
 
-    const statusOptions = [
-        { value: 'draft' as EntityStatus, label: t('collections.draft') },
-        { value: 'published' as EntityStatus, label: t('collections.published') },
-        { value: 'scheduled' as EntityStatus, label: t('collections.scheduled') },
-    ];
+    const isReadOnly = !canUpdate(collection);
 
-    const { data: entity, isLoading } = useQuery({
-        queryKey: queryKeys.entities.detail(collection, id),
+    const { data: entry, isLoading } = useQuery({
+        queryKey: queryKeys.entries.detail(collection, id),
         queryFn: () => Astromech.collections[collection]!.get(id),
     });
 
-    const { form, saveMutation, handleSave, handlePublish } = useEntityForm({
-        hasSlug,
-        saveFn: (payload) => Astromech.collections[collection]!.update(id, payload),
-        publishFn: (payload) => Astromech.collections[collection]!.update(id, payload),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({ queryKey: queryKeys.entities.detail(collection, id) });
-            void queryClient.invalidateQueries({ queryKey: queryKeys.entities.all(collection) });
-            toast({ message: t('collections.updated', { name: single }), variant: 'success' });
-        },
+    // Versioning
+    const hasVersioning = collectionConfig?.versioning === true;
+    const { data: versions } = useQuery({
+        queryKey: queryKeys.entries.versions(collection, id),
+        queryFn: () => Astromech.collections[collection]!.versions(id),
+        enabled: hasVersioning,
+    });
+    const versionCount = versions?.length ?? 0;
+
+    // Translations
+    const hasI18n = collectionConfig?.translatable === true;
+    const sourceId = entry?.translationOf ?? id;
+    const { data: translations } = useQuery({
+        queryKey: queryKeys.entries.translations(collection, sourceId),
+        queryFn: () => Astromech.collections[collection]!.translations(sourceId),
+        enabled: hasI18n && entry != null,
     });
 
-    // Populate form from fetched entity
-    useEffect(() => {
-        if (entity == null) return;
-        form.reset({
-            title: entity.title,
-            slug: entity.slug ?? '',
-            status: entity.status,
+    const { form, saveMutation, handleSave } = useEntryForm({
+        defaultValues: {
+            title: entry?.title ?? '',
+            slug: entry?.slug ?? '',
+            status: entry?.status ?? ('draft' as EntryStatus),
             publishAt:
-                entity.publishedAt != null
-                    ? new Date(entity.publishedAt).toISOString().slice(0, 16)
+                entry?.publishedAt != null
+                    ? new Date(entry.publishedAt).toISOString().slice(0, 16)
                     : '',
-            fields: (entity.fields as Record<string, unknown>) ?? {},
-        } satisfies FormValues);
-    // form is stable (useForm returns a stable object), entity is the only reactive dep
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [entity]);
+            fields: (entry?.fields as Record<string, unknown>) ?? {},
+        },
+        hasSlug,
+        readOnly: isReadOnly,
+        saveFn: (data) => Astromech.collections[collection]!.update(id, data),
+        publishFn: (data) => Astromech.collections[collection]!.update(id, data),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({
+                queryKey: queryKeys.entries.detail(collection, id),
+            });
+            void queryClient.invalidateQueries({
+                queryKey: queryKeys.entries.all(collection),
+            });
+            toast({
+                message: t('collections.updated', { name: single }),
+                variant: 'success',
+            });
+        },
+    });
 
     const deleteMutation = useMutation({
         mutationFn: () => Astromech.collections[collection]!.trash(id),
         onSuccess: () => {
             void navigate({ to: `/collections/${collection}` });
-            toast({ message: t('collections.movedToTrash', { name: single }), variant: 'success' });
+            toast({
+                message: t('collections.movedToTrash', { name: single }),
+                variant: 'success',
+            });
         },
         onError: (err) => {
             toast({
-                message: err instanceof Error ? err.message : t('collections.deleteFailed'),
+                message:
+                    err instanceof Error ? err.message : t('collections.deleteFailed'),
                 variant: 'error',
             });
         },
@@ -199,17 +160,22 @@ export function CollectionEditPage(): React.ReactElement {
             const values = form.state.values;
             return Astromech.collections[collection]!.create({
                 title: `${values.title || single} (copy)`,
-                fields: (values.fields ?? {}) as import('../../../types/index.js').JsonObject,
+                fields: (values.fields ??
+                    {}) as import('../../../types/index.js').JsonObject,
                 status: 'draft',
             });
         },
-        onSuccess: (newEntity) => {
-            void navigate({ to: `/collections/${collection}/${newEntity.id}` });
-            toast({ message: t('collections.duplicated', { name: single }), variant: 'success' });
+        onSuccess: (newEntry) => {
+            void navigate({ to: `/collections/${collection}/${newEntry.id}` });
+            toast({
+                message: t('collections.duplicated', { name: single }),
+                variant: 'success',
+            });
         },
         onError: (err) => {
             toast({
-                message: err instanceof Error ? err.message : t('collections.duplicateFailed'),
+                message:
+                    err instanceof Error ? err.message : t('collections.duplicateFailed'),
                 variant: 'error',
             });
         },
@@ -217,7 +183,7 @@ export function CollectionEditPage(): React.ReactElement {
 
     function resolvePreviewUrl(
         template: string,
-        ent: { slug: string | null; fields: Record<string, unknown> },
+        ent: { slug: string | null; fields: Record<string, unknown> }
     ): string {
         return template.replace(/\{(\w+)\}/g, (_, key) => {
             if (key === 'slug') return ent.slug ?? '';
@@ -235,17 +201,23 @@ export function CollectionEditPage(): React.ReactElement {
                 <Breadcrumb
                     items={[
                         { label: plural, to: `/collections/${collection}` },
-                        { label: t('collections.editTitle', { title: entity?.title ?? single }) },
+                        {
+                            label: t('collections.editTitle', {
+                                title: entry?.title ?? single,
+                            }),
+                        },
                     ]}
                 />
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    {form.state.isDirty && (
-                        <span className="am-form-layout__dirty-indicator">{t('common.unsavedChanges')}</span>
+                    {!isReadOnly && form.state.isDirty && (
+                        <span className="am-form-layout__dirty-indicator">
+                            {t('common.unsavedChanges')}
+                        </span>
                     )}
-                    {entity != null && <StatusBadge status={entity.status} />}
-                    {collectionConfig?.previewUrl && entity?.status === 'published' && (
+                    {entry != null && <StatusBadge status={entry.status} />}
+                    {collectionConfig?.previewUrl && entry?.status === 'published' && (
                         <a
-                            href={resolvePreviewUrl(collectionConfig.previewUrl, entity)}
+                            href={resolvePreviewUrl(collectionConfig.previewUrl, entry)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="am-btn am-btn--ghost am-btn--sm"
@@ -254,232 +226,296 @@ export function CollectionEditPage(): React.ReactElement {
                             {t('common.view')}
                         </a>
                     )}
-                    {entity?.status !== 'published' && (
+                    {!isReadOnly && (
                         <Button
-                            variant="secondary"
-                            onClick={handlePublish}
-                            disabled={saveMutation.isPending}
+                            variant="primary"
+                            onClick={handleSave}
+                            loading={saveMutation.isPending}
                         >
-                            {t('common.publish')}
+                            {t('common.update')}
                         </Button>
                     )}
-                    <Button
-                        variant="primary"
-                        onClick={handleSave}
-                        loading={saveMutation.isPending}
-                    >
-                        {t('common.update')}
-                    </Button>
-                    <Menu.Root>
-                        <Menu.Trigger
-                            className="am-btn am-btn--secondary am-btn--md am-btn--icon"
-                            aria-label={t('collections.moreActions')}
-                        >
-                            <MoreHorizontal size={14} />
-                        </Menu.Trigger>
-                        <Menu.Portal>
-                            <Menu.Positioner
-                                className="am-topbar__menu-positioner"
-                                sideOffset={6}
-                                align="end"
+                    {hasI18n && entry != null && (
+                        <LocaleSwitcher
+                            sourceId={sourceId}
+                            currentEntryId={id}
+                            collection={collection}
+                            translations={translations ?? []}
+                            allLocales={adminConfig.locales}
+                            defaultLocale={adminConfig.defaultLocale}
+                            compact
+                        />
+                    )}
+                    {!isReadOnly && (
+                        <Menu.Root>
+                            <Menu.Trigger
+                                className="am-btn am-btn--secondary am-btn--md am-btn--icon"
+                                aria-label={t('collections.moreActions')}
                             >
-                                <Menu.Popup className="am-topbar__menu-popup">
-                                    <Menu.Item
-                                        className="am-topbar__menu-item"
-                                        onClick={() => duplicateMutation.mutate()}
-                                        disabled={duplicateMutation.isPending}
-                                    >
-                                        <span className="am-topbar__menu-item-icon"><Copy size={14} /></span>
-                                        {t('common.duplicate')}
-                                    </Menu.Item>
-                                    <Menu.Separator className="am-topbar__menu-separator" />
-                                    <Menu.Item
-                                        className="am-topbar__menu-item am-topbar__menu-item--danger"
-                                        onClick={() => confirm({
-                                            title: t('collections.confirmDeleteTitle'),
-                                            description: t('collections.confirmDeleteMessage', { name: single.toLowerCase() }),
-                                            confirmLabel: t('collections.confirmDeleteLabel'),
-                                            onConfirm: () => deleteMutation.mutate(),
-                                        })}
-                                    >
-                                        <span className="am-topbar__menu-item-icon"><Trash2 size={14} /></span>
-                                        {t('common.delete')}
-                                    </Menu.Item>
-                                </Menu.Popup>
-                            </Menu.Positioner>
-                        </Menu.Portal>
-                    </Menu.Root>
+                                <MoreHorizontal size={14} />
+                            </Menu.Trigger>
+                            <Menu.Portal>
+                                <Menu.Positioner
+                                    className="am-topbar__menu-positioner"
+                                    sideOffset={6}
+                                    align="end"
+                                >
+                                    <Menu.Popup className="am-topbar__menu-popup">
+                                        <Menu.Item
+                                            className="am-topbar__menu-item"
+                                            onClick={() => duplicateMutation.mutate()}
+                                            disabled={duplicateMutation.isPending}
+                                        >
+                                            <span className="am-topbar__menu-item-icon">
+                                                <Copy size={14} />
+                                            </span>
+                                            {t('common.duplicate')}
+                                        </Menu.Item>
+                                        <Menu.Separator className="am-topbar__menu-separator" />
+                                        <Menu.Item
+                                            className="am-topbar__menu-item am-topbar__menu-item--danger"
+                                            onClick={() =>
+                                                confirm({
+                                                    title: t(
+                                                        'collections.confirmDeleteTitle'
+                                                    ),
+                                                    description: t(
+                                                        'collections.confirmDeleteMessage',
+                                                        { name: single.toLowerCase() }
+                                                    ),
+                                                    confirmLabel: t(
+                                                        'collections.confirmDeleteLabel'
+                                                    ),
+                                                    onConfirm: () =>
+                                                        deleteMutation.mutate(),
+                                                })
+                                            }
+                                        >
+                                            <span className="am-topbar__menu-item-icon">
+                                                <Trash2 size={14} />
+                                            </span>
+                                            {t('common.delete')}
+                                        </Menu.Item>
+                                    </Menu.Popup>
+                                </Menu.Positioner>
+                            </Menu.Portal>
+                        </Menu.Root>
+                    )}
                 </div>
             </PageHeader>
 
-            <FormLayout>
-                <FormLayoutContent>
-                    {/* Main column */}
-                    <FormLayoutMain>
-                        {/* Title */}
-                        <Panel>
-                            <form.Field
-                                name="title"
-                                validators={{
-                                    onChange: ({ value }) =>
-                                        value.trim() === '' ? t('collections.titleRequired') : undefined,
-                                }}
-                            >
-                                {(field) => (
-                                    <div className="am-field">
-                                        <label className="am-field__label" htmlFor="entity-title">
-                                            {t('collections.titleField')} <span className="am-field__required">*</span>
-                                        </label>
-                                        <Input
-                                            id="entity-title"
-                                            type="text"
-                                            value={field.state.value}
-                                            onChange={(e) => field.handleChange(e.target.value)}
-                                            onBlur={field.handleBlur}
-                                            required
-                                        />
-                                        {field.state.meta.errors.length > 0 && (
-                                            <p className="am-field__error">
-                                                {field.state.meta.errors[0]}
-                                            </p>
-                                        )}
+            <PageContent>
+                {isReadOnly && (
+                    <div className="am-banner am-banner--info" style={{ marginBottom: '1rem' }}>
+                        {t('permissions.readOnly')}
+                    </div>
+                )}
+                <FormLayout>
+                    <FormLayoutContent>
+                        <FormLayoutMain>
+                            <Panel>
+                                <form.Field
+                                    name="title"
+                                    validators={{
+                                        onChange: ({ value }) =>
+                                            value.trim() === ''
+                                                ? t('collections.titleRequired')
+                                                : undefined,
+                                    }}
+                                >
+                                    {(field) => (
+                                        <div className="am-field">
+                                            <label
+                                                className="am-field__label"
+                                                htmlFor="entry-title"
+                                            >
+                                                {t('collections.titleField')}{' '}
+                                                <span className="am-field__required">
+                                                    *
+                                                </span>
+                                            </label>
+                                            <Input
+                                                id="entry-title"
+                                                type="text"
+                                                value={field.state.value}
+                                                onChange={(e) =>
+                                                    field.handleChange(e.target.value)
+                                                }
+                                                onBlur={field.handleBlur}
+                                                required
+                                            />
+                                            {field.state.meta.errors.length > 0 && (
+                                                <p className="am-field__error">
+                                                    {field.state.meta.errors[0]}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                </form.Field>
+                            </Panel>
+
+                            {mainGroups.map((group) => (
+                                <Panel
+                                    key={group.name}
+                                    title={group.label}
+                                    {...(group.description !== undefined && {
+                                        description: group.description,
+                                    })}
+                                >
+                                    <div className="am-field-list">
+                                        {group.fields.map((field) => (
+                                            <form.Field key={field.name} name="fields">
+                                                {(f) => (
+                                                    <div className="am-field">
+                                                        <label className="am-field__label">
+                                                            {field.label ?? field.name}
+                                                            {field.required === true && (
+                                                                <span className="am-field__required">
+                                                                    *
+                                                                </span>
+                                                            )}
+                                                        </label>
+                                                        {field.description !==
+                                                            undefined && (
+                                                            <p className="am-field__hint">
+                                                                {field.description}
+                                                            </p>
+                                                        )}
+                                                        <FieldInput
+                                                            field={field}
+                                                            value={
+                                                                f.state.value[field.name]
+                                                            }
+                                                            onChange={(_name, value) =>
+                                                                f.handleChange({
+                                                                    ...f.state.value,
+                                                                    [field.name]: value,
+                                                                })
+                                                            }
+                                                            disabled={isReadOnly}
+                                                        />
+                                                    </div>
+                                                )}
+                                            </form.Field>
+                                        ))}
                                     </div>
+                                </Panel>
+                            ))}
+                        </FormLayoutMain>
+
+                        <FormLayoutSidebar>
+                            <form.Field name="status">
+                                {(statusField) => (
+                                    <form.Field name="publishAt">
+                                        {(publishAtField) => (
+                                            <PublishPanel
+                                                status={statusField.state.value}
+                                                publishAt={publishAtField.state.value}
+                                                publishedAt={entry?.publishedAt}
+                                                onStatusChange={(s) =>
+                                                    statusField.handleChange(s)
+                                                }
+                                                onPublishAtChange={(v) =>
+                                                    publishAtField.handleChange(v)
+                                                }
+                                                readOnly={isReadOnly}
+                                            />
+                                        )}
+                                    </form.Field>
                                 )}
                             </form.Field>
-                        </Panel>
 
-                        {mainGroups.map((group) => (
-                            <Panel
-                                key={group.name}
-                                title={group.label}
-                                {...(group.description !== undefined && {
-                                    description: group.description,
-                                })}
-                            >
-                                <div className="am-field-list">
-                                    {group.fields.map((field) => (
-                                        <form.Field key={field.name} name="fields">
-                                            {(f) => (
-                                                <div className="am-field">
-                                                    <label className="am-field__label">
-                                                        {field.label ?? field.name}
-                                                        {field.required === true && (
-                                                            <span className="am-field__required">
-                                                                *
-                                                            </span>
-                                                        )}
-                                                    </label>
-                                                    {field.description !== undefined && (
-                                                        <p className="am-field__hint">
-                                                            {field.description}
-                                                        </p>
-                                                    )}
-                                                    <FieldInput
-                                                        field={field}
-                                                        value={f.state.value[field.name]}
-                                                        onChange={(_name, value) =>
-                                                            f.handleChange({
-                                                                ...f.state.value,
-                                                                [field.name]: value,
-                                                            })
-                                                        }
-                                                    />
-                                                </div>
-                                            )}
-                                        </form.Field>
-                                    ))}
-                                </div>
-                            </Panel>
-                        ))}
-                    </FormLayoutMain>
-
-                    {/* Sidebar column */}
-                    <FormLayoutSidebar>
-                        <form.Field name="status">
-                            {(statusField) => (
-                                <form.Field name="publishAt">
-                                    {(publishAtField) => (
-                                        <StatusPanel
-                                            status={statusField.state.value}
-                                            publishAt={publishAtField.state.value}
-                                            onStatusChange={(s) => statusField.handleChange(s)}
-                                            onPublishAtChange={(v) => publishAtField.handleChange(v)}
-                                            statusOptions={statusOptions}
-                                            statusPanelTitle={t('collections.statusPanel')}
-                                            statusFieldLabel={t('collections.statusField')}
-                                            publishAtLabel={t('collections.publishAtField')}
-                                        />
+                            {hasSlug && (
+                                <form.Field name="slug">
+                                    {(field) => (
+                                        <Panel title={t('collections.slugPanel')}>
+                                            <div className="am-field">
+                                                <Input
+                                                    id="entry-slug"
+                                                    type="text"
+                                                    value={field.state.value}
+                                                    onChange={(e) =>
+                                                        field.handleChange(e.target.value)
+                                                    }
+                                                    onBlur={field.handleBlur}
+                                                    pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                                                />
+                                            </div>
+                                        </Panel>
                                     )}
                                 </form.Field>
                             )}
-                        </form.Field>
 
-                        {hasSlug && (
-                            <form.Field name="slug">
-                                {(field) => (
-                                    <Panel title={t('collections.slugPanel')}>
-                                        <div className="am-field">
-                                            <Input
-                                                id="entity-slug"
-                                                type="text"
-                                                value={field.state.value}
-                                                onChange={(e) => field.handleChange(e.target.value)}
-                                                onBlur={field.handleBlur}
-                                                pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
-                                            />
-                                        </div>
-                                    </Panel>
-                                )}
-                            </form.Field>
-                        )}
-
-                        {sidebarGroups.map((group) => (
-                            <Panel
-                                key={group.name}
-                                title={group.label}
-                                {...(group.description !== undefined && {
-                                    description: group.description,
-                                })}
-                            >
-                                <div className="am-field-list">
-                                    {group.fields.map((field) => (
-                                        <form.Field key={field.name} name="fields">
-                                            {(f) => (
-                                                <div className="am-field">
-                                                    <label className="am-field__label">
-                                                        {field.label ?? field.name}
-                                                        {field.required === true && (
-                                                            <span className="am-field__required">
-                                                                *
-                                                            </span>
+                            {sidebarGroups.map((group) => (
+                                <Panel
+                                    key={group.name}
+                                    title={group.label}
+                                    {...(group.description !== undefined && {
+                                        description: group.description,
+                                    })}
+                                >
+                                    <div className="am-field-list">
+                                        {group.fields.map((field) => (
+                                            <form.Field key={field.name} name="fields">
+                                                {(f) => (
+                                                    <div className="am-field">
+                                                        <label className="am-field__label">
+                                                            {field.label ?? field.name}
+                                                            {field.required === true && (
+                                                                <span className="am-field__required">
+                                                                    *
+                                                                </span>
+                                                            )}
+                                                        </label>
+                                                        {field.description !==
+                                                            undefined && (
+                                                            <p className="am-field__hint">
+                                                                {field.description}
+                                                            </p>
                                                         )}
-                                                    </label>
-                                                    {field.description !== undefined && (
-                                                        <p className="am-field__hint">
-                                                            {field.description}
-                                                        </p>
-                                                    )}
-                                                    <FieldInput
-                                                        field={field}
-                                                        value={f.state.value[field.name]}
-                                                        onChange={(_name, value) =>
-                                                            f.handleChange({
-                                                                ...f.state.value,
-                                                                [field.name]: value,
-                                                            })
-                                                        }
-                                                    />
-                                                </div>
-                                            )}
-                                        </form.Field>
-                                    ))}
-                                </div>
-                            </Panel>
-                        ))}
-                    </FormLayoutSidebar>
-                </FormLayoutContent>
-            </FormLayout>
-
+                                                        <FieldInput
+                                                            field={field}
+                                                            value={
+                                                                f.state.value[field.name]
+                                                            }
+                                                            onChange={(_name, value) =>
+                                                                f.handleChange({
+                                                                    ...f.state.value,
+                                                                    [field.name]: value,
+                                                                })
+                                                            }
+                                                            disabled={isReadOnly}
+                                                        />
+                                                    </div>
+                                                )}
+                                            </form.Field>
+                                        ))}
+                                    </div>
+                                </Panel>
+                            ))}
+                            {hasVersioning && (
+                                <Panel>
+                                    {versionCount > 0 ? (
+                                        <Link
+                                            to="/collections/$collection/$id/versions"
+                                            params={{ collection, id }}
+                                            className="am-link am-text-sm"
+                                        >
+                                            {t('versions.revisionsLink', {
+                                                count: versionCount,
+                                            })}
+                                        </Link>
+                                    ) : (
+                                        <span className="am-text-sm am-text-muted">
+                                            {t('versions.noRevisionsYet')}
+                                        </span>
+                                    )}
+                                </Panel>
+                            )}
+                        </FormLayoutSidebar>
+                    </FormLayoutContent>
+                </FormLayout>
+            </PageContent>
         </Page>
     );
 }

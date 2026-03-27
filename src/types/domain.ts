@@ -1,5 +1,5 @@
 /**
- * Core domain types — entities, users, media, settings, roles, relationships
+ * Core domain types — entries, users, media, settings, roles, relationships
  */
 
 // ============================================================================
@@ -11,19 +11,20 @@ export type JsonObject = { [key: string]: JsonValue };
 export type JsonArray = JsonValue[];
 
 // ============================================================================
-// Entities
+// Entries
 // ============================================================================
 
-export type EntityStatus = 'draft' | 'published' | 'scheduled';
+export type EntryStatus = 'draft' | 'published' | 'scheduled';
 
-export type Entity = {
+export type Entry = {
     id: string;
     collection: string;
-    locale?: string | null;
+    locale: string;
+    translationOf: string | null;
     slug: string | null;
     title: string;
     fields: JsonObject;
-    status: EntityStatus;
+    status: EntryStatus;
     publishedAt: Date | null;
     deletedAt: Date | null;
     createdAt: Date;
@@ -32,13 +33,15 @@ export type Entity = {
     // updatedBy: string | null;
 };
 
-export type EntityVersion = {
+export type EntryVersion = {
     id: string;
-    entityId: string;
+    entryId: string;
     versionNumber: number;
     title: string;
-    fields: JsonObject;
-    status: EntityStatus;
+    slug: string | null;
+    fields: JsonObject | null;
+    relations: Record<string, string | string[]> | null;
+    status: EntryStatus | null;
     createdAt: Date;
     createdBy: string | null;
 };
@@ -47,7 +50,7 @@ export type EntityVersion = {
 // Relationships
 // ============================================================================
 
-export type ResourceType = 'entity' | 'user' | 'media';
+export type ResourceType = 'entry' | 'user' | 'media';
 
 export type Relationship = {
     id: string;
@@ -84,18 +87,19 @@ export type Media = {
 // ============================================================================
 
 export type Permission =
-    | 'entity:create:*'
-    | `entity:create:${string}`
-    | 'entity:read:*'
-    | `entity:read:${string}`
-    | 'entity:update:*'
-    | `entity:update:${string}`
-    | 'entity:delete:*'
-    | `entity:delete:${string}`
-    | 'entity:publish:*'
-    | `entity:publish:${string}`
+    | 'entry:create:*'
+    | `entry:create:${string}`
+    | 'entry:read:*'
+    | `entry:read:${string}`
+    | 'entry:update:*'
+    | `entry:update:${string}`
+    | 'entry:delete:*'
+    | `entry:delete:${string}`
+    | 'entry:publish:*'
+    | `entry:publish:${string}`
     | 'media:upload'
     | 'media:delete'
+    | 'media:read'
     | 'settings:read'
     | 'settings:update'
     | 'users:read'
@@ -103,15 +107,14 @@ export type Permission =
     | 'users:update'
     | 'users:delete'
     | 'admin:access'
-    | '*';
+    | '*'
+    | (string & {});
 
 export type Role = {
     slug: string;
     name: string;
     permissions: Permission[];
     isBuiltIn: boolean;
-    createdAt: Date;
-    updatedAt: Date;
 };
 
 export type User = {
@@ -121,6 +124,7 @@ export type User = {
     emailVerified: boolean;
     image: string | null;
     fields: JsonObject | null;
+    roleSlug: string;
     createdAt: Date;
     updatedAt: Date;
 };

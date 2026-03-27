@@ -2,7 +2,7 @@
  * Field system types — field definitions, validation, groups
  */
 
-import type { Entity } from './domain.js';
+import type { Entry } from './domain.js';
 
 // ============================================================================
 // Field Types
@@ -23,6 +23,7 @@ export type FieldType =
     | 'json'
     | 'group'
     | 'repeater'
+    | 'blocks'
     | 'email'
     | 'url'
     | 'color'
@@ -40,6 +41,13 @@ export type SelectOption = {
     label: string;
 };
 
+export type BlockDefinition = {
+    type: string;
+    label: string;
+    icon?: string;
+    fields: FieldDefinition[];
+};
+
 export type ValidationRule =
     | { required: true }
     | { minLength: number }
@@ -49,7 +57,7 @@ export type ValidationRule =
     | { pattern: string; message?: string }
     | { email: true }
     | { url: true }
-    | { custom: (value: unknown, entity: Entity) => string | null };
+    | { custom: (value: unknown, entry: Entry) => string | null };
 
 export type FieldDefinition = {
     name: string;
@@ -75,6 +83,7 @@ export type FieldDefinition = {
     collapsed?: boolean;
     tab?: string;
     accept?: string;
+    blocks?: BlockDefinition[];
 
     // Translation support
     translatable?: boolean;
@@ -89,6 +98,7 @@ export type BaseFieldProps = {
     field: FieldDefinition;
     required?: boolean;
     onChange: (name: string, value: unknown) => void;
+    disabled?: boolean;
 };
 
 // ============================================================================

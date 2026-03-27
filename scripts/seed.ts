@@ -1,7 +1,7 @@
 /**
  * Seed script — populates the dev database with comprehensive demo data.
  *
- * Clears all entities, relationships, and media on each run (idempotent).
+ * Clears all entries, relationships, and media on each run (idempotent).
  * Preserves users — checks by email and creates if missing.
  *
  * Uses better-auth's own hashPassword so no extra dependencies are required.
@@ -15,7 +15,9 @@ import { eq, sql } from 'drizzle-orm';
 import { hashPassword } from 'better-auth/crypto';
 import * as schema from '../src/db/schema.js';
 
-const db = drizzle({ connection: { url: process.env.DATABASE_URL ?? 'file:./demo/database.db' } });
+const db = drizzle({
+    connection: { url: process.env.DATABASE_URL ?? 'file:./demo/database.db' },
+});
 
 const PASSWORD = 'password';
 const now = new Date();
@@ -64,7 +66,7 @@ type RelationshipInput = {
     sourceId: string;
     name: string;
     targetId: string;
-    targetType: 'entity' | 'user' | 'media';
+    targetType: 'entry' | 'user' | 'media';
     position: number;
 };
 
@@ -74,7 +76,7 @@ async function insertRelationships(rows: RelationshipInput[]): Promise<void> {
         rows.map((r) => ({
             id: crypto.randomUUID(),
             sourceId: r.sourceId,
-            sourceType: 'entity' as const,
+            sourceType: 'entry' as const,
             name: r.name,
             targetId: r.targetId,
             targetType: r.targetType,
@@ -95,9 +97,9 @@ async function seed(): Promise<void> {
     // Clear existing data (keep users)
     // -------------------------------------------------------------------------
     await db.delete(schema.relationshipsTable).where(sql`1=1`);
-    await db.delete(schema.entitiesTable).where(sql`1=1`);
+    await db.delete(schema.entriesTable).where(sql`1=1`);
     await db.delete(schema.mediaTable).where(sql`1=1`);
-    console.log('✓ Cleared entities, relationships, and media\n');
+    console.log('✓ Cleared entries, relationships, and media\n');
 
     // -------------------------------------------------------------------------
     // Users
@@ -267,7 +269,7 @@ async function seed(): Promise<void> {
     const catBusinessId = crypto.randomUUID();
     const catTutorialId = crypto.randomUUID();
 
-    await db.insert(schema.entitiesTable).values([
+    await db.insert(schema.entriesTable).values([
         {
             id: catTechnologyId,
             collection: 'categories',
@@ -320,7 +322,7 @@ async function seed(): Promise<void> {
     const tagTypescriptId = crypto.randomUUID();
     const tagReactId = crypto.randomUUID();
 
-    await db.insert(schema.entitiesTable).values([
+    await db.insert(schema.entriesTable).values([
         {
             id: tagAstromechId,
             collection: 'tags',
@@ -381,7 +383,7 @@ async function seed(): Promise<void> {
     const pageAboutId = crypto.randomUUID();
     const pageContactId = crypto.randomUUID();
 
-    await db.insert(schema.entitiesTable).values([
+    await db.insert(schema.entriesTable).values([
         {
             id: pageHomeId,
             collection: 'pages',
@@ -466,7 +468,7 @@ async function seed(): Promise<void> {
             sourceId: pageHomeId,
             name: 'category',
             targetId: catTechnologyId,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 0,
         },
         // About: author → editor, og_image → hero-banner
@@ -505,7 +507,7 @@ async function seed(): Promise<void> {
     const post5Id = crypto.randomUUID();
     const post6Id = crypto.randomUUID();
 
-    await db.insert(schema.entitiesTable).values([
+    await db.insert(schema.entriesTable).values([
         {
             id: post1Id,
             collection: 'posts',
@@ -605,21 +607,21 @@ async function seed(): Promise<void> {
             sourceId: post1Id,
             name: 'category',
             targetId: catTutorialId,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 0,
         },
         {
             sourceId: post1Id,
             name: 'tags',
             targetId: tagAstromechId,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 0,
         },
         {
             sourceId: post1Id,
             name: 'tags',
             targetId: tagWebDevId,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 1,
         },
         {
@@ -642,21 +644,21 @@ async function seed(): Promise<void> {
             sourceId: post2Id,
             name: 'category',
             targetId: catTechnologyId,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 0,
         },
         {
             sourceId: post2Id,
             name: 'tags',
             targetId: tagTypescriptId,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 0,
         },
         {
             sourceId: post2Id,
             name: 'tags',
             targetId: tagWebDevId,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 1,
         },
         {
@@ -679,21 +681,21 @@ async function seed(): Promise<void> {
             sourceId: post3Id,
             name: 'category',
             targetId: catDesignId,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 0,
         },
         {
             sourceId: post3Id,
             name: 'tags',
             targetId: tagCssId,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 0,
         },
         {
             sourceId: post3Id,
             name: 'tags',
             targetId: tagWebDevId,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 1,
         },
         {
@@ -716,21 +718,21 @@ async function seed(): Promise<void> {
             sourceId: post4Id,
             name: 'category',
             targetId: catBusinessId,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 0,
         },
         {
             sourceId: post4Id,
             name: 'tags',
             targetId: tagAstromechId,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 0,
         },
         {
             sourceId: post4Id,
             name: 'tags',
             targetId: tagTypescriptId,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 1,
         },
         {
@@ -753,21 +755,21 @@ async function seed(): Promise<void> {
             sourceId: post5Id,
             name: 'category',
             targetId: catTechnologyId,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 0,
         },
         {
             sourceId: post5Id,
             name: 'tags',
             targetId: tagReactId,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 0,
         },
         {
             sourceId: post5Id,
             name: 'tags',
             targetId: tagTypescriptId,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 1,
         },
         {
@@ -790,21 +792,21 @@ async function seed(): Promise<void> {
             sourceId: post6Id,
             name: 'category',
             targetId: catTutorialId,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 0,
         },
         {
             sourceId: post6Id,
             name: 'tags',
             targetId: tagWebDevId,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 0,
         },
         {
             sourceId: post6Id,
             name: 'tags',
             targetId: tagAstromechId,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 1,
         },
         {
@@ -823,7 +825,7 @@ async function seed(): Promise<void> {
     const showcaseFullId = crypto.randomUUID();
     const showcaseMinimalId = crypto.randomUUID();
 
-    await db.insert(schema.entitiesTable).values([
+    await db.insert(schema.entriesTable).values([
         {
             id: showcaseFullId,
             collection: 'showcase',
@@ -919,18 +921,278 @@ async function seed(): Promise<void> {
             sourceId: showcaseFullId,
             name: 'related_posts',
             targetId: post1Id,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 0,
         },
         {
             sourceId: showcaseFullId,
             name: 'related_posts',
             targetId: post2Id,
-            targetType: 'entity',
+            targetType: 'entry',
             position: 1,
         },
     ]);
     console.log('✓ Created 2 showcase entries\n');
+
+    // -------------------------------------------------------------------------
+    // French translations (pages + posts)
+    // -------------------------------------------------------------------------
+    const pageHomeFrId = crypto.randomUUID();
+    const pageAboutFrId = crypto.randomUUID();
+    const post1FrId = crypto.randomUUID();
+    const post2FrId = crypto.randomUUID();
+    const post3FrId = crypto.randomUUID();
+
+    await db.insert(schema.entriesTable).values([
+        // --- Pages ---
+        {
+            id: pageHomeFrId,
+            collection: 'pages',
+            slug: 'accueil',
+            title: 'Accueil',
+            locale: 'fr',
+            translationOf: pageHomeId,
+            fields: {
+                sections: [
+                    {
+                        title: 'Bienvenue sur Astromech',
+                        content:
+                            '<h2>Le CMS pour les développeurs modernes</h2><p>Construisez rapidement, déployez partout.</p>',
+                        layout: 'full-width',
+                    },
+                    {
+                        title: 'Fonctionnalités',
+                        content:
+                            '<p>Tout ce dont vous avez besoin en un seul package.</p>',
+                        layout: 'two-column',
+                    },
+                ],
+                // Non-translatable fields copied from source
+                template: 'landing',
+                theme_color: '#6366f1',
+                noindex: false,
+            },
+            status: 'published',
+            createdAt: now,
+            updatedAt: now,
+        },
+        {
+            id: pageAboutFrId,
+            collection: 'pages',
+            slug: 'a-propos',
+            title: 'À propos',
+            locale: 'fr',
+            translationOf: pageAboutId,
+            fields: {
+                sections: [
+                    {
+                        title: 'Notre histoire',
+                        content:
+                            '<p>Astromech a été conçu pour les développeurs qui veulent un CMS qui travaille avec eux, et non contre eux.</p>',
+                        layout: 'full-width',
+                    },
+                ],
+                // Non-translatable fields copied from source
+                template: 'default',
+                theme_color: '#0ea5e9',
+                noindex: false,
+            },
+            status: 'published',
+            createdAt: now,
+            updatedAt: now,
+        },
+        // --- Posts ---
+        {
+            id: post1FrId,
+            collection: 'posts',
+            slug: 'premiers-pas-avec-astromech',
+            title: 'Premiers pas avec Astromech',
+            locale: 'fr',
+            translationOf: post1Id,
+            fields: {
+                body: "<p>Astromech est un CMS léger et orienté développeur, construit sur Astro et Cloudflare Workers. La mise en route ne prend que quelques minutes — installez l'intégration, configurez vos collections, et vous êtes prêt à gérer votre contenu.</p><p>Contrairement aux plateformes CMS traditionnelles, Astromech stocke votre contenu dans une base de données SQLite sur Cloudflare D1 et le sert depuis la périphérie du réseau, offrant des temps de réponse inférieurs à la milliseconde dans le monde entier. Votre schéma vit dans le code, versionné aux côtés de votre projet.</p><p>Dans ce guide, nous allons installer Astromech, définir votre première collection, et interroger le contenu depuis vos pages Astro en utilisant le SDK serveur.</p>",
+                excerpt:
+                    "Une introduction pas à pas à l'installation et à la configuration d'Astromech dans votre projet Astro.",
+            },
+            status: 'published',
+            createdAt: now,
+            updatedAt: now,
+        },
+        {
+            id: post2FrId,
+            collection: 'posts',
+            slug: 'developper-avec-typescript-et-astro',
+            title: 'Développer avec TypeScript et Astro',
+            locale: 'fr',
+            translationOf: post2Id,
+            fields: {
+                body: "<p>TypeScript et Astro forment un duo naturel. La syntaxe des composants Astro se compile en HTML sans JavaScript par défaut, tandis que TypeScript offre la sécurité des types et les outils IDE qui rendent les grandes bases de code maintenables dans le temps.</p><p>Astromech va encore plus loin en générant automatiquement des clients SDK entièrement typés à partir de la configuration de vos collections. Chaque appel à <code>Astromech.collections.posts.all()</code> connaît précisément la forme de vos champs — aucune définition de type manuelle n'est requise.</p><p>Nous explorerons les patterns TypeScript utilisés dans Astromech, notamment les unions discriminantes pour les types de champs, la vérification stricte des valeurs nulles, et comment l'architecture dual-client sépare proprement le code serveur du code navigateur.</p>",
+                excerpt:
+                    'Comment TypeScript et Astro fonctionnent ensemble, et comment Astromech exploite les deux pour une sécurité des types de bout en bout.',
+            },
+            status: 'published',
+            createdAt: now,
+            updatedAt: now,
+        },
+        {
+            id: post3FrId,
+            collection: 'posts',
+            slug: 'architecture-css-pour-les-grands-projets',
+            title: 'Architecture CSS pour les grands projets',
+            locale: 'fr',
+            translationOf: post3Id,
+            fields: {
+                body: "<p>Faire évoluer le CSS est l'un des problèmes les plus difficiles du développement front-end. Sans une architecture claire, les feuilles de style deviennent un enchevêtrement ingérable de surcharges et de guerres de spécificité. BEM, l'approche utility-first et les CSS Modules résolvent chacun une partie du problème.</p><p>L'interface d'administration d'Astromech utilise une approche hybride : la nomenclature BEM pour la structure des composants, les propriétés personnalisées CSS pour la thématisation, et les styles de composants scopés pour éviter les fuites. Cela nous donne l'explicité de BEM sans la verbosité qui vient de la lutte contre la cascade.</p><p>Nous verrons comment structurer votre CSS pour un projet qui doit passer de cinq à cinquante écrans sans réécriture complète.</p>",
+                excerpt:
+                    "Stratégies pratiques pour structurer le CSS dans les grands projets Astro, basées sur les leçons tirées de la construction d'Astromech.",
+            },
+            status: 'published',
+            createdAt: now,
+            updatedAt: now,
+        },
+    ]);
+
+    await insertRelationships([
+        // Home FR: same author and category as source
+        {
+            sourceId: pageHomeFrId,
+            name: 'author',
+            targetId: adminId,
+            targetType: 'user',
+            position: 0,
+        },
+        {
+            sourceId: pageHomeFrId,
+            name: 'category',
+            targetId: catTechnologyId,
+            targetType: 'entry',
+            position: 0,
+        },
+        // About FR: same author and og_image as source
+        {
+            sourceId: pageAboutFrId,
+            name: 'author',
+            targetId: editorId,
+            targetType: 'user',
+            position: 0,
+        },
+        {
+            sourceId: pageAboutFrId,
+            name: 'og_image',
+            targetId: mediaHeroBannerId,
+            targetType: 'media',
+            position: 0,
+        },
+        // Post 1 FR: same featured_image (non-translatable), category, tags, author
+        {
+            sourceId: post1FrId,
+            name: 'featured_image',
+            targetId: mediaTechArticleId,
+            targetType: 'media',
+            position: 0,
+        },
+        {
+            sourceId: post1FrId,
+            name: 'category',
+            targetId: catTutorialId,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: post1FrId,
+            name: 'tags',
+            targetId: tagAstromechId,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: post1FrId,
+            name: 'tags',
+            targetId: tagWebDevId,
+            targetType: 'entry',
+            position: 1,
+        },
+        {
+            sourceId: post1FrId,
+            name: 'author',
+            targetId: adminId,
+            targetType: 'user',
+            position: 0,
+        },
+        // Post 2 FR: same featured_image, category, tags, author
+        {
+            sourceId: post2FrId,
+            name: 'featured_image',
+            targetId: mediaHeroBannerId,
+            targetType: 'media',
+            position: 0,
+        },
+        {
+            sourceId: post2FrId,
+            name: 'category',
+            targetId: catTechnologyId,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: post2FrId,
+            name: 'tags',
+            targetId: tagTypescriptId,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: post2FrId,
+            name: 'tags',
+            targetId: tagWebDevId,
+            targetType: 'entry',
+            position: 1,
+        },
+        {
+            sourceId: post2FrId,
+            name: 'author',
+            targetId: editorId,
+            targetType: 'user',
+            position: 0,
+        },
+        // Post 3 FR: same featured_image, category, tags, author
+        {
+            sourceId: post3FrId,
+            name: 'featured_image',
+            targetId: mediaDesignShowcaseId,
+            targetType: 'media',
+            position: 0,
+        },
+        {
+            sourceId: post3FrId,
+            name: 'category',
+            targetId: catDesignId,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: post3FrId,
+            name: 'tags',
+            targetId: tagCssId,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: post3FrId,
+            name: 'tags',
+            targetId: tagWebDevId,
+            targetType: 'entry',
+            position: 1,
+        },
+        {
+            sourceId: post3FrId,
+            name: 'author',
+            targetId: authorId,
+            targetType: 'user',
+            position: 0,
+        },
+    ]);
+    console.log('✓ Created 5 French translations (2 pages, 3 posts)\n');
 
     // -------------------------------------------------------------------------
     // Summary
@@ -942,8 +1204,8 @@ async function seed(): Promise<void> {
     console.log('  Media         8  items');
     console.log('  Categories    4  (Technology, Design, Business, Tutorial)');
     console.log('  Tags          5  (Astromech, Web Dev, CSS, TypeScript, React)');
-    console.log('  Pages         3  (1 draft, 2 published)');
-    console.log('  Posts         6  (1 draft, 5 published)');
+    console.log('  Pages         3  (1 draft, 2 published) + 2 French translations');
+    console.log('  Posts         6  (1 draft, 5 published) + 3 French translations');
     console.log('  Showcase      2  (1 draft, 1 published)');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('  Login: admin@astromech.dev / password');

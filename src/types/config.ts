@@ -23,6 +23,19 @@ export type StorageDriver = {
     getUrl: (path: string) => string;
 };
 
+export type EmailMessage = {
+    to: string;
+    from: string;
+    subject: string;
+    html: string;
+    text?: string;
+};
+
+export type EmailDriver = {
+    name: string;
+    send(message: EmailMessage): Promise<void>;
+};
+
 // ============================================================================
 // Collections
 // ============================================================================
@@ -39,9 +52,14 @@ export type AdminColumn = {
     sortable?: boolean;
 };
 
+export type VersioningConfig = {
+    maxVersions?: number;
+};
+
 export type CollectionConfig = {
     fieldGroups: FieldGroup[];
-    versioning?: boolean;
+    versioning?: boolean | VersioningConfig;
+    translatable?: boolean;
     slug?: SlugConfig;
     single: string;
     plural: string;
@@ -83,8 +101,15 @@ export type AstromechConfig = {
     media?: MediaConfig;
     users?: UsersConfig;
     roles?: Record<string, RoleConfig>;
+    defaultRole?: string;
     plugins?: AstromechPlugin[];
     trash?: TrashConfig;
+    email?: {
+        driver: EmailDriver;
+        from: string;
+    };
+    locales?: string[];
+    defaultLocale?: string;
 };
 
 export type ResolvedConfig = Omit<AstromechConfig, 'plugins' | 'db'> & {
@@ -101,10 +126,14 @@ export type ResolvedConfig = Omit<AstromechConfig, 'plugins' | 'db'> & {
 export type AdminConfig = {
     adminRoute: string;
     apiRoute: string;
+    locales: string[];
+    defaultLocale: string;
+    roles: Array<{ slug: string; name: string }>;
     collections: Record<string, {
         single: string;
         plural: string;
         versioning: boolean;
+        translatable: boolean;
         slug: SlugConfig | null;
         adminColumns: AdminColumn[];
         fieldGroups: FieldGroup[];

@@ -1,5 +1,5 @@
 /**
- * Shared form logic for collection entity create and edit pages.
+ * Shared form logic for collection entry create and edit pages.
  *
  * Owns: useForm setup, buildPayload, save/publish mutations, Cmd+S shortcut,
  * beforeunload dirty-state guard, and toast error handling.
@@ -14,76 +14,82 @@ import { useMutation } from '@tanstack/react-query';
 import type { UseMutationResult } from '@tanstack/react-query';
 import { useHotkeys } from './index.js';
 import { useToast } from '../components/ui/index.js';
-import type { Entity, EntityStatus, JsonObject } from '../../types/index.js';
+import type { Entry, EntryStatus, JsonObject } from '../../types/index.js';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type EntityFormValues = {
+export type EntryFormValues = {
     title: string;
     slug: string;
-    status: EntityStatus;
+    status: EntryStatus;
     publishAt: string;
     fields: Record<string, unknown>;
 };
 
-export type EntityPayload = {
+export type EntryPayload = {
     title: string;
     slug?: string;
     fields: JsonObject;
-    status: EntityStatus;
+    status: EntryStatus;
     publishAt?: Date | null;
 };
 
-type UseEntityFormOptions = {
+type UseEntryFormOptions = {
     /** Whether this collection has a slug field. */
     hasSlug: boolean;
     /** Initial form values; defaults to empty/draft. */
-    initialValues?: Partial<EntityFormValues>;
+    defaultValues?: Partial<EntryFormValues>;
     /**
      * The mutation function for the "save" action (save as draft / update).
-     * Receives the built payload; must return a Promise<Entity>.
+     * Receives the built payload; must return a Promise<Entry>.
      */
-    saveFn: (payload: EntityPayload) => Promise<Entity>;
+    saveFn: (payload: EntryPayload) => Promise<Entry>;
     /**
      * The mutation function for the "publish" action.
-     * Receives the built payload (status forced to 'published'); must return a Promise<Entity>.
+     * Receives the built payload (status forced to 'published'); must return a Promise<Entry>.
      */
-    publishFn: (payload: EntityPayload) => Promise<Entity>;
-    /** Called after either mutation succeeds, with the returned entity. */
-    onSuccess?: (entity: Entity) => void;
+    publishFn: (payload: EntryPayload) => Promise<Entry>;
+    /** Called after either mutation succeeds, with the returned entry. */
+    onSuccess?: (entry: Entry) => void;
+    /** When true, save and publish actions become no-ops. */
+    readOnly?: boolean;
 };
 
 // ============================================================================
 // Hook
 // ============================================================================
 
-export function useEntityForm({
+export function useEntryForm({
     hasSlug,
-    initialValues,
+    defaultValues,
     saveFn,
     publishFn,
     onSuccess,
-}: UseEntityFormOptions) {
+    readOnly = false,
+}: UseEntryFormOptions) {
     const { toast } = useToast();
 
     const form = useForm({
         defaultValues: {
-            title: initialValues?.title ?? '',
-            slug: initialValues?.slug ?? '',
-            status: initialValues?.status ?? ('draft' as EntityStatus),
-            publishAt: initialValues?.publishAt ?? '',
-            fields: initialValues?.fields ?? ({} as Record<string, unknown>),
+            title: defaultValues?.title ?? '',
+            slug: defaultValues?.slug ?? '',
+            status: defaultValues?.status ?? ('draft' as EntryStatus),
+            publishAt: defaultValues?.publishAt ?? '',
+            fields: defaultValues?.fields ?? ({} as Record<string, unknown>),
         },
         onSubmit: ({ value }) => {
             saveMutation.mutate(buildPayload(value));
         },
     });
 
-    function buildPayload(values: EntityFormValues, overrideStatus?: EntityStatus): EntityPayload {
+    function buildPayload(
+        values: EntryFormValues,
+        overrideStatus?: EntryStatus
+    ): EntryPayload {
         const status = overrideStatus ?? values.status;
-        const payload: EntityPayload = {
+        const payload: EntryPayload = {
             title: values.title,
             fields: values.fields as JsonObject,
             status,
@@ -97,16 +103,16 @@ export function useEntityForm({
         return payload;
     }
 
-    const saveMutation: UseMutationResult<Entity, Error, EntityPayload> = useMutation<
-        Entity,
+    const saveMutation: UseMutationResult<Entry, Error, EntryPayload> = useMutation<
+        Entry,
         Error,
-        EntityPayload
+        EntryPayload
     >({
         mutationFn: saveFn,
-        onSuccess: (entity) => {
+        onSuccess: (entry) => {
             // Reset dirty state without changing values
             form.reset(form.state.values);
-            onSuccess?.(entity);
+            onSuccess?.(entry);
         },
         onError: (err) => {
             toast({
@@ -116,15 +122,15 @@ export function useEntityForm({
         },
     });
 
-    const publishMutation: UseMutationResult<Entity, Error, EntityPayload> = useMutation<
-        Entity,
+    const publishMutation: UseMutationResult<Entry, Error, EntryPayload> = useMutation<
+        Entry,
         Error,
-        EntityPayload
+        EntryPayload
     >({
         mutationFn: publishFn,
-        onSuccess: (entity) => {
+        onSuccess: (entry) => {
             form.reset(form.state.values);
-            onSuccess?.(entity);
+            onSuccess?.(entry);
         },
         onError: (err) => {
             toast({
@@ -135,10 +141,12 @@ export function useEntityForm({
     });
 
     function handleSave(): void {
+        if (readOnly) return;
         void form.handleSubmit();
     }
 
     function handlePublish(): void {
+        if (readOnly) return;
         publishMutation.mutate(buildPayload(form.state.values, 'published'));
     }
 
@@ -148,9 +156,8 @@ export function useEntityForm({
     isPendingRef.current = saveMutation.isPending;
 
     useHotkeys('mod+s', () => {
-        if (!isPendingRef.current) {
-            void form.handleSubmit();
-        }
+        if (readOnly || isPendingRef.current) return;
+        void form.handleSubmit();
     });
 
     // Warn on browser tab close when there are unsaved changes
@@ -161,8 +168,8 @@ export function useEntityForm({
         }
         window.addEventListener('beforeunload', handleBeforeUnload);
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    // form is stable; isDirty is read via the ref on the stable form object
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // form is stable; isDirty is read via the ref on the stable form object
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return {
@@ -172,8 +179,9 @@ export function useEntityForm({
         handleSave,
         handlePublish,
         buildPayload,
+        readOnly,
     };
 }
 
-/** The return type of `useEntityForm`, derived from the hook itself. */
-export type UseEntityFormReturn = ReturnType<typeof useEntityForm>;
+/** The return type of `useEntryForm`, derived from the hook itself. */
+export type UseEntryFormReturn = ReturnType<typeof useEntryForm>;

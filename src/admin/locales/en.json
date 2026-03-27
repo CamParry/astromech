@@ -82,7 +82,7 @@
         "collections": "Collections",
         "recentActivity": "Recent Activity",
         "noContentYet": "No content yet",
-        "noContentDescription": "Create your first entity to see recent activity here.",
+        "noContentDescription": "Create your first entry to see recent activity here.",
         "updated": "Updated {{date}}"
     },
     "collections": {
@@ -128,11 +128,11 @@
         "bulkPublishSelected": "Publish",
         "bulkUnpublishSelected": "Unpublish",
         "bulkMoveToTrash": "Move to trash",
-        "bulkPublished": "Entities published.",
-        "bulkUnpublished": "Entities unpublished.",
-        "bulkTrashed": "Entities moved to trash.",
-        "bulkDeleted": "Entities permanently deleted.",
-        "bulkRestored": "Entities restored.",
+        "bulkPublished": "Entries published.",
+        "bulkUnpublished": "Entries unpublished.",
+        "bulkTrashed": "Entries moved to trash.",
+        "bulkDeleted": "Entries permanently deleted.",
+        "bulkRestored": "Entries restored.",
         "searchPlaceholder": "Search {{name}}…",
         "statusFilter": "Status: {{status}}",
         "columnTitle": "Title",
@@ -171,7 +171,14 @@
         "deleteFailed": "Delete failed",
         "confirmDeleteTitle": "Delete user?",
         "confirmDeleteMessage": "Are you sure you want to delete {{name}}? This action cannot be undone.",
-        "confirmDeleteFallback": "This action cannot be undone."
+        "confirmDeleteFallback": "This action cannot be undone.",
+        "roleField": "Role",
+        "createTitle": "New User",
+        "createUser": "New User"
+    },
+    "permissions": {
+        "readOnly": "You have read-only access to this collection.",
+        "forbidden": "You don't have permission to access this page."
     },
     "settings": {
         "title": "Settings",
@@ -237,9 +244,20 @@
         "mediaRemoveItemLabel": "Remove {{filename}}",
         "mediaMoveLeft": "Move left",
         "mediaMoveRight": "Move right",
-        "mediaLoadFailed": "Failed to load media"
+        "mediaLoadFailed": "Failed to load media",
+        "blocksEmpty": "No blocks yet. Add your first block.",
+        "blocksAddBlock": "Add Block",
+        "blocksPickerLabel": "Choose a block type",
+        "blocksDragHandle": "Drag to reorder",
+        "blocksCollapse": "Collapse block",
+        "blocksExpand": "Expand block",
+        "blocksRemove": "Remove block",
+        "blocksDuplicate": "Duplicate block",
+        "blocksDisable": "Disable block",
+        "blocksEnable": "Enable block",
+        "blocksDisabledBadge": "Disabled"
     },
-    "entity": {
+    "entry": {
         "new": "New {{name}}",
         "edit": "Edit {{name}}",
         "created": "{{name}} created",
@@ -295,6 +313,31 @@
         "filterVideos": "Videos",
         "filterDocuments": "Documents",
         "filterOther": "Other"
+    },
+    "versions": {
+        "revisionsLink_one": "{{count}} revision",
+        "revisionsLink_other": "{{count}} revisions",
+        "noRevisionsYet": "No revisions yet",
+        "pageTitle": "Version History",
+        "backToEdit": "Back to edit",
+        "version": "Version #{{number}}",
+        "restoreButton": "Restore this version",
+        "currentState": "This is the current state of the entry.",
+        "firstVersion": "Initial version — no previous state to compare.",
+        "noChanges": "No changes compared to the previous version.",
+        "selectVersion": "Select a version to compare.",
+        "noVersions": "No versions recorded yet.",
+        "restored": "Version restored.",
+        "restoreFailed": "Restore failed.",
+        "confirmRestoreTitle": "Restore version #{{number}}?",
+        "confirmRestoreMessage": "The current state will be saved as a new revision before restoring.",
+        "confirmRestoreLabel": "Restore"
+    },
+    "translations": {
+        "panelTitle": "Translations",
+        "locale": "Locale",
+        "viewSource": "View source",
+        "createFailed": "Failed to create translation"
     },
     "errors": {
         "notFound": "Page not found",

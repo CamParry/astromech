@@ -8,9 +8,9 @@
 import type {
     AstromechClient,
     CollectionApi,
-    Entity,
-    EntityStatus,
-    EntityVersion,
+    Entry,
+    EntryStatus,
+    EntryVersion,
     JsonObject,
     JsonValue,
     Media,
@@ -158,9 +158,9 @@ function createCollectionApi(collectionId: string): CollectionApi {
     const basePath = `/collections/${collectionId}`;
 
     return {
-        async all(options?: QueryOptions): Promise<Entity[]> {
+        async all(options?: QueryOptions): Promise<Entry[]> {
             const sort = Array.isArray(options?.sort) ? options.sort[0] : options?.sort;
-            return apiFetch<Entity[]>(basePath, {
+            return apiFetch<Entry[]>(basePath, {
                 params: {
                     populate: options?.populate?.join(','),
                     locale: options?.locale,
@@ -175,9 +175,9 @@ function createCollectionApi(collectionId: string): CollectionApi {
             perPage: number,
             page: number,
             options?: QueryOptions
-        ): Promise<PaginationResult<Entity>> {
+        ): Promise<PaginationResult<Entry>> {
             const sort = Array.isArray(options?.sort) ? options.sort[0] : options?.sort;
-            return apiFetch<PaginationResult<Entity>>(basePath, {
+            return apiFetch<PaginationResult<Entry>>(basePath, {
                 params: {
                     perPage,
                     page,
@@ -190,8 +190,8 @@ function createCollectionApi(collectionId: string): CollectionApi {
             });
         },
 
-        async get(id: string, options?: QueryOptions): Promise<Entity | null> {
-            const res = await apiFetch<{ data: Entity } | null>(`${basePath}/${id}`, {
+        async get(id: string, options?: QueryOptions): Promise<Entry | null> {
+            const res = await apiFetch<{ data: Entry } | null>(`${basePath}/${id}`, {
                 params: {
                     populate: options?.populate?.join(','),
                     locale: options?.locale,
@@ -200,8 +200,8 @@ function createCollectionApi(collectionId: string): CollectionApi {
             return res?.data ?? null;
         },
 
-        async where(filters: WhereFilters, options?: QueryOptions): Promise<Entity[]> {
-            return apiFetch<Entity[]>(`${basePath}/query`, {
+        async where(filters: WhereFilters, options?: QueryOptions): Promise<Entry[]> {
+            return apiFetch<Entry[]>(`${basePath}/query`, {
                 method: 'POST',
                 body: { filters, options },
             });
@@ -211,10 +211,10 @@ function createCollectionApi(collectionId: string): CollectionApi {
             title: string;
             slug?: string;
             fields?: JsonObject;
-            status?: EntityStatus;
+            status?: EntryStatus;
             publishAt?: Date | null;
-        }): Promise<Entity> {
-            const res = await apiFetch<{ data: Entity }>(basePath, {
+        }): Promise<Entry> {
+            const res = await apiFetch<{ data: Entry }>(basePath, {
                 method: 'POST',
                 body: data,
             });
@@ -227,11 +227,11 @@ function createCollectionApi(collectionId: string): CollectionApi {
                 title: string;
                 slug: string;
                 fields: JsonObject;
-                status: EntityStatus;
+                status: EntryStatus;
                 publishAt: Date | null;
             }>
-        ): Promise<Entity> {
-            const res = await apiFetch<{ data: Entity }>(`${basePath}/${id}`, {
+        ): Promise<Entry> {
+            const res = await apiFetch<{ data: Entry }>(`${basePath}/${id}`, {
                 method: 'PUT',
                 body: data,
             });
@@ -244,23 +244,23 @@ function createCollectionApi(collectionId: string): CollectionApi {
             });
         },
 
-        async duplicate(id: string): Promise<Entity> {
-            const res = await apiFetch<{ data: Entity }>(`${basePath}/${id}/duplicate`, {
+        async duplicate(id: string): Promise<Entry> {
+            const res = await apiFetch<{ data: Entry }>(`${basePath}/${id}/duplicate`, {
                 method: 'POST',
             });
             return res.data;
         },
 
-        async trashed(options?: QueryOptions): Promise<Entity[]> {
-            return apiFetch<Entity[]>(`${basePath}/trashed`, {
+        async trashed(options?: QueryOptions): Promise<Entry[]> {
+            return apiFetch<Entry[]>(`${basePath}/trashed`, {
                 params: {
                     locale: options?.locale,
                 },
             });
         },
 
-        async restore(id: string): Promise<Entity> {
-            const res = await apiFetch<{ data: Entity }>(`${basePath}/${id}/restore`, {
+        async restore(id: string): Promise<Entry> {
+            const res = await apiFetch<{ data: Entry }>(`${basePath}/${id}/restore`, {
                 method: 'POST',
             });
             return res.data;
@@ -278,29 +278,63 @@ function createCollectionApi(collectionId: string): CollectionApi {
             });
         },
 
-        async versions(id: string): Promise<EntityVersion[]> {
-            return apiFetch<EntityVersion[]>(`${basePath}/${id}/versions`);
+        async versions(id: string): Promise<EntryVersion[]> {
+            const res = await apiFetch<{ data: EntryVersion[] }>(`${basePath}/${id}/versions`);
+            return res.data;
         },
 
-        async restoreVersion(id: string, versionId: string): Promise<Entity> {
-            const res = await apiFetch<{ data: Entity }>(`${basePath}/${id}/versions/${versionId}/restore`, {
+        async restoreVersion(id: string, versionId: string): Promise<Entry> {
+            const res = await apiFetch<{ data: Entry }>(`${basePath}/${id}/versions/${versionId}/restore`, {
                 method: 'POST',
             });
             return res.data;
         },
 
         async translations(id: string): Promise<TranslationInfo[]> {
-            return apiFetch<TranslationInfo[]>(`${basePath}/${id}/translations`);
+            const res = await apiFetch<{ data: TranslationInfo[] }>(`${basePath}/${id}/translations`);
+            return res.data;
         },
 
-        async translate(
-            id: string,
+        async createTranslation(
+            sourceId: string,
             locale: string,
-            data?: Partial<{ title: string; fields: JsonObject }>
-        ): Promise<Entity> {
-            const res = await apiFetch<{ data: Entity }>(`${basePath}/${id}/translations/${locale}`, {
+            options?: { copyFields?: boolean }
+        ): Promise<Entry> {
+            const res = await apiFetch<{ data: Entry }>(`${basePath}/${sourceId}/translations`, {
                 method: 'POST',
-                body: data,
+                body: { locale, ...options },
+            });
+            return res.data;
+        },
+
+        async getTranslation(sourceId: string, locale: string): Promise<Entry | null> {
+            try {
+                const res = await apiFetch<{ data: Entry }>(`${basePath}/${sourceId}/translations/${locale}`);
+                return res.data;
+            } catch (err) {
+                if (err instanceof AstromechApiError && err.status === 404) return null;
+                throw err;
+            }
+        },
+
+        async publish(id: string): Promise<Entry> {
+            const res = await apiFetch<{ data: Entry }>(`${basePath}/${id}/publish`, {
+                method: 'POST',
+            });
+            return res.data;
+        },
+
+        async unpublish(id: string): Promise<Entry> {
+            const res = await apiFetch<{ data: Entry }>(`${basePath}/${id}/unpublish`, {
+                method: 'POST',
+            });
+            return res.data;
+        },
+
+        async schedule(id: string, publishAt: Date): Promise<Entry> {
+            const res = await apiFetch<{ data: Entry }>(`${basePath}/${id}/schedule`, {
+                method: 'POST',
+                body: { publishAt: publishAt.toISOString() },
             });
             return res.data;
         },

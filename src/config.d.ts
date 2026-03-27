@@ -4,26 +4,7 @@ declare module 'virtual:astromech/config' {
 }
 
 declare module 'virtual:astromech/admin-config' {
-    import type { FieldGroup, AdminColumn, SlugConfig } from './types';
-
-    type AdminCollectionConfig = {
-        single: string;
-        plural: string;
-        versioning: boolean;
-        slug: SlugConfig | null;
-        adminColumns: AdminColumn[];
-        fieldGroups: FieldGroup[];
-        views?: ('list' | 'grid')[];
-        defaultView?: 'list' | 'grid';
-        gridFields?: { field: string; label?: string }[];
-        previewUrl: string | null;
-    };
-
-    type AdminConfig = {
-        adminRoute: string;
-        apiRoute: string;
-        collections: Record<string, AdminCollectionConfig>;
-    };
+    import type { AdminConfig } from './types';
 
     const config: AdminConfig;
     export default config;

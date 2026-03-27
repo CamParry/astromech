@@ -9,16 +9,9 @@ import React, { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from '@tanstack/react-form';
 import { useTranslation } from 'react-i18next';
-import {
-    Button,
-    Input,
-    Modal,
-    Spinner,
-    useConfirm,
-    useToast,
-} from '../ui/index.js';
+import { Button, Input, Modal, Spinner, useConfirm, useToast } from '../ui/index.js';
 import { Astromech } from '../../../sdk/client/index.js';
-import { queryKeys } from '../../hooks/useQueryKeys.js';
+import { queryKeys } from '../../hooks/use-query-keys.js';
 import { formatBytes } from '@/support/bytes.js';
 import { formatDatetime } from '@/support/dates.js';
 import { FileTypeIcon } from '@/admin/utils/media.js';
@@ -27,6 +20,8 @@ export type MediaDetailModalProps = {
     mediaId: string | null;
     onClose: () => void;
     onDeleted: () => void;
+    canDelete?: boolean;
+    canUpload?: boolean;
 };
 
 type FormValues = {
@@ -34,7 +29,13 @@ type FormValues = {
     title: string;
 };
 
-export function MediaDetailModal({ mediaId, onClose, onDeleted }: MediaDetailModalProps): React.ReactElement {
+export function MediaDetailModal({
+    mediaId,
+    onClose,
+    onDeleted,
+    canDelete = true,
+    canUpload = true,
+}: MediaDetailModalProps): React.ReactElement {
     const { t } = useTranslation();
     const { toast } = useToast();
     const confirm = useConfirm();
@@ -63,19 +64,24 @@ export function MediaDetailModal({ mediaId, onClose, onDeleted }: MediaDetailMod
                 title: '',
             });
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [item?.id]);
 
     const updateMutation = useMutation({
         mutationFn: (data: { alt: string }) => Astromech.media.update(mediaId!, data),
         onSuccess: () => {
-            void queryClient.invalidateQueries({ queryKey: queryKeys.media.detail(mediaId!) });
+            void queryClient.invalidateQueries({
+                queryKey: queryKeys.media.detail(mediaId!),
+            });
             void queryClient.invalidateQueries({ queryKey: queryKeys.media.all() });
             form.reset(form.state.values);
             toast({ message: t('media.saved'), variant: 'success' });
         },
         onError: (err) => {
-            toast({ message: err instanceof Error ? err.message : t('media.saveFailed'), variant: 'error' });
+            toast({
+                message: err instanceof Error ? err.message : t('media.saveFailed'),
+                variant: 'error',
+            });
         },
     });
 
@@ -87,41 +93,51 @@ export function MediaDetailModal({ mediaId, onClose, onDeleted }: MediaDetailMod
             onDeleted();
         },
         onError: (err) => {
-            toast({ message: err instanceof Error ? err.message : t('media.deleteFailed'), variant: 'error' });
+            toast({
+                message: err instanceof Error ? err.message : t('media.deleteFailed'),
+                variant: 'error',
+            });
         },
     });
 
     const open = mediaId !== null;
 
-    const headerActions = item == null ? null : (
-        <>
-            <Button
-                variant="danger"
-                size="sm"
-                onClick={() => confirm({
-                    title: t('media.deleteConfirmLabel'),
-                    description: t('media.bulkDeleteDescription'),
-                    confirmLabel: t('common.delete'),
-                    onConfirm: () => deleteMutation.mutate(),
-                })}
-                disabled={deleteMutation.isPending}
-            >
-                {t('common.delete')}
-            </Button>
-            <Button variant="secondary" size="sm" onClick={onClose}>
-                {t('common.cancel')}
-            </Button>
-            <Button
-                variant="primary"
-                size="sm"
-                onClick={() => void form.handleSubmit()}
-                disabled={!form.state.isDirty}
-                loading={updateMutation.isPending}
-            >
-                {t('common.save')}
-            </Button>
-        </>
-    );
+    const headerActions =
+        item == null ? null : (
+            <>
+                {canDelete && (
+                    <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() =>
+                            confirm({
+                                title: t('media.deleteConfirmLabel'),
+                                description: t('media.bulkDeleteDescription'),
+                                confirmLabel: t('common.delete'),
+                                onConfirm: () => deleteMutation.mutate(),
+                            })
+                        }
+                        disabled={deleteMutation.isPending}
+                    >
+                        {t('common.delete')}
+                    </Button>
+                )}
+                <Button variant="secondary" size="sm" onClick={onClose}>
+                    {t('common.cancel')}
+                </Button>
+                {canUpload && (
+                    <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => void form.handleSubmit()}
+                        disabled={!form.state.isDirty}
+                        loading={updateMutation.isPending}
+                    >
+                        {t('common.save')}
+                    </Button>
+                )}
+            </>
+        );
 
     return (
         <Modal
@@ -166,12 +182,16 @@ export function MediaDetailModal({ mediaId, onClose, onDeleted }: MediaDetailMod
                                 </div>
                                 <div className="am-media-modal__meta-row">
                                     <dt>{t('media.metaType')}</dt>
-                                    <dd className="am-text-mono am-media-modal__mime">{item.mimeType}</dd>
+                                    <dd className="am-text-mono am-media-modal__mime">
+                                        {item.mimeType}
+                                    </dd>
                                 </div>
                                 {item.width != null && item.height != null && (
                                     <div className="am-media-modal__meta-row">
                                         <dt>{t('media.metaDimensions')}</dt>
-                                        <dd>{item.width} &times; {item.height}</dd>
+                                        <dd>
+                                            {item.width} &times; {item.height}
+                                        </dd>
                                     </div>
                                 )}
                             </dl>

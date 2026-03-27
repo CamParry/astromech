@@ -18,6 +18,8 @@ export type AuthUser = {
     name: string;
     email: string;
     image: string | null;
+    roleSlug: string;
+    permissions: string[];
 };
 
 type AuthContextValue = {
@@ -41,22 +43,47 @@ type AuthProviderProps = {
     children: React.ReactNode;
 };
 
+type MeResponse = {
+    data: {
+        user: {
+            id: string;
+            name: string;
+            email: string;
+            image: string | null;
+            roleSlug: string;
+        };
+        role: {
+            slug: string;
+            name: string;
+            permissions: string[];
+            isBuiltIn: boolean;
+        };
+    };
+};
+
 export function AuthProvider({ children }: AuthProviderProps) {
     const [user, setUser] = useState<AuthUser | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        fetch(`${__ASTROMECH_API_ROUTE__}/auth/get-session`, {
+    async function fetchMe(): Promise<void> {
+        const res = await fetch(`${__ASTROMECH_API_ROUTE__}/me`, {
             credentials: 'include',
-        })
-            .then(async (res) => {
-                if (!res.ok) {
-                    setUser(null);
-                    return;
-                }
-                const data = (await res.json()) as { user?: AuthUser } | null;
-                setUser(data?.user ?? null);
-            })
+        });
+
+        if (!res.ok) {
+            setUser(null);
+            return;
+        }
+
+        const { data } = (await res.json()) as MeResponse;
+        setUser({
+            ...data.user,
+            permissions: data.role.permissions,
+        });
+    }
+
+    useEffect(() => {
+        fetchMe()
             .catch(() => {
                 setUser(null);
             })
@@ -78,8 +105,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             throw new Error(data.message ?? 'Login failed');
         }
 
-        const data = (await res.json()) as { user?: AuthUser };
-        setUser(data.user ?? null);
+        await fetchMe();
     }
 
     async function logout(): Promise<void> {

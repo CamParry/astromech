@@ -4,15 +4,15 @@
  */
 
 /**
- * Fields stored at entity level (not in fields JSON)
+ * Fields stored at entry level (not in fields JSON)
  */
-export const ENTITY_LEVEL_FIELDS = [
-	'status',
-	'publishedAt',
-	'title',
-	'slug',
-	'createdAt',
-	'updatedAt',
+export const ENTRY_LEVEL_FIELDS = [
+    'status',
+    'publishedAt',
+    'title',
+    'slug',
+    'createdAt',
+    'updatedAt',
 ] as const;
 
 /**
@@ -24,22 +24,23 @@ export const READ_ONLY_FIELDS = ['createdAt', 'updatedAt'] as const;
  * Map field types to component names
  */
 export const FIELD_COMPONENTS = {
-	text: 'TextField',
-	textarea: 'TextareaField',
-	richtext: 'RichtextField',
-	number: 'NumberField',
-	boolean: 'BooleanField',
-	date: 'DateField',
-	datetime: 'DatetimeField',
-	select: 'SelectField',
-	multiselect: 'MultiselectField',
-	media: 'MediaField',
-	relationship: 'RelationshipField',
-	repeater: 'RepeaterField',
-	email: 'EmailField',
-	url: 'UrlField',
-	color: 'ColorField',
-	slug: 'SlugField',
+    text: 'TextField',
+    textarea: 'TextareaField',
+    richtext: 'RichtextField',
+    number: 'NumberField',
+    boolean: 'BooleanField',
+    date: 'DateField',
+    datetime: 'DatetimeField',
+    select: 'SelectField',
+    multiselect: 'MultiselectField',
+    media: 'MediaField',
+    relationship: 'RelationshipField',
+    repeater: 'RepeaterField',
+    blocks: 'BlocksField',
+    email: 'EmailField',
+    url: 'UrlField',
+    color: 'ColorField',
+    slug: 'SlugField',
 } as const;
 
 /**
@@ -48,22 +49,22 @@ export const FIELD_COMPONENTS = {
 export const IMPLEMENTED_TYPES = Object.keys(FIELD_COMPONENTS);
 
 /**
- * Check if field is entity-level
+ * Check if field is entry-level
  */
-export function isEntityField(fieldName: string): boolean {
-	return (ENTITY_LEVEL_FIELDS as readonly string[]).includes(fieldName);
+export function isEntryField(fieldName: string): boolean {
+    return (ENTRY_LEVEL_FIELDS as readonly string[]).includes(fieldName);
 }
 
 /**
  * Check if field is read-only
  */
 export function isReadOnlyField(fieldName: string): boolean {
-	return (READ_ONLY_FIELDS as readonly string[]).includes(fieldName);
+    return (READ_ONLY_FIELDS as readonly string[]).includes(fieldName);
 }
 
 /**
  * Get input name for form submission
  */
 export function getInputName(fieldName: string): string {
-	return isEntityField(fieldName) ? fieldName : `fields.${fieldName}`;
+    return isEntryField(fieldName) ? fieldName : `fields.${fieldName}`;
 }

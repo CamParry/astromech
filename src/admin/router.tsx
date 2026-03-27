@@ -12,8 +12,8 @@
  *   /reset-password  → Reset password
  *   /setup       → First-run setup wizard
  *   /collections/:collection         → Collection list
- *   /collections/:collection/new     → New entity
- *   /collections/:collection/:id     → Edit entity
+ *   /collections/:collection/new     → New entry
+ *   /collections/:collection/:id     → Edit entry
  *   /media       → Media library
  *   /users       → Users list
  *   /settings    → Settings
@@ -28,6 +28,7 @@ import {
     Navigate,
 } from '@tanstack/react-router';
 import { AuthProvider, useAuth } from './context/auth.js';
+import { usePermissions } from './hooks/index.js';
 import { ThemeProvider } from './context/theme.js';
 import { UIProvider } from './context/ui.js';
 import { ToastProvider } from './components/ui/toast.js';
@@ -42,7 +43,9 @@ import { DashboardPage } from './pages/dashboard.js';
 import { CollectionIndexPage } from './pages/collections/index.js';
 import { CollectionCreatePage } from './pages/collections/create.js';
 import { CollectionEditPage } from './pages/collections/edit.js';
+import { CollectionVersionsPage } from './pages/collections/versions.js';
 import { UsersIndexPage } from './pages/users/index.js';
+import { UserCreatePage } from './pages/users/create.js';
 import { UserEditPage } from './pages/users/edit.js';
 import { MediaIndexPage } from './pages/media/index.js';
 import { MediaEditPage } from './pages/media/edit.js';
@@ -85,7 +88,9 @@ const authLayoutRoute = createRoute({
             return (
                 <div className="am-auth">
                     <div className="am-auth__card">
-                        <div className="am-auth__brand"><span className="am-auth__logo">Astromech</span></div>
+                        <div className="am-auth__brand">
+                            <span className="am-auth__logo">Astromech</span>
+                        </div>
                         <p className="am-auth__message">Loading…</p>
                     </div>
                 </div>
@@ -137,14 +142,17 @@ const protectedLayoutRoute = createRoute({
     id: 'protected-layout',
     component: function ProtectedLayout() {
         const { user, isLoading } = useAuth();
+        const { hasAdminAccess } = usePermissions();
 
         if (isLoading) {
-            return (
-                <div className="am-loading" />
-            );
+            return <div className="am-loading" />;
         }
 
         if (user === null) {
+            return <Navigate to="/login" />;
+        }
+
+        if (!hasAdminAccess()) {
             return <Navigate to="/login" />;
         }
 
@@ -184,10 +192,22 @@ const collectionEditRoute = createRoute({
     component: CollectionEditPage,
 });
 
+const collectionVersionsRoute = createRoute({
+    getParentRoute: () => protectedLayoutRoute,
+    path: '/collections/$collection/$id/versions',
+    component: CollectionVersionsPage,
+});
+
 const usersIndexRoute = createRoute({
     getParentRoute: () => protectedLayoutRoute,
     path: '/users',
     component: UsersIndexPage,
+});
+
+const userCreateRoute = createRoute({
+    getParentRoute: () => protectedLayoutRoute,
+    path: '/users/new',
+    component: UserCreatePage,
 });
 
 const userEditRoute = createRoute({
@@ -243,8 +263,10 @@ const routeTree = rootRoute.addChildren([
         dashboardRoute,
         collectionIndexRoute,
         collectionCreateRoute,
+        collectionVersionsRoute,
         collectionEditRoute,
         usersIndexRoute,
+        userCreateRoute,
         userEditRoute,
         mediaIndexRoute,
         mediaEditRoute,

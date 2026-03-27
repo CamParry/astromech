@@ -52,9 +52,9 @@ export function UploadButton({
             />
             <Button
                 variant={variant}
-                size={size}
-                disabled={disabled}
-                loading={loading}
+                {...(size !== undefined && { size })}
+                {...(disabled !== undefined && { disabled })}
+                {...(loading !== undefined && { loading })}
                 onClick={() => inputRef.current?.click()}
             >
                 {children ?? (

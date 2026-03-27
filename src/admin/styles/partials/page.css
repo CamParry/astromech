@@ -5,10 +5,10 @@
 .am-page {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
 }
 
 .am-page__header {
+    position: sticky;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -17,8 +17,7 @@
     top: 0;
     z-index: 20;
     background-color: var(--am-color-bg-muted);
-    padding-top: 0rem;
-    padding-bottom: 1rem;
+    padding: 2rem 2rem 0;
 }
 
 .am-page__title {
@@ -35,15 +34,16 @@
     color: var(--am-color-text-muted);
 }
 
-/* ============================================================================
-   Loading state
-   ============================================================================ */
-
 .am-page-content {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    padding: 2rem;
 }
+
+/* ============================================================================
+   Loading state
+   ============================================================================ */
 
 .am-loading {
     display: flex;

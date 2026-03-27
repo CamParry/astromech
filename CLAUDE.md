@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Astromech is a lightweight TypeScript CMS Astro integration. Admin panel at `/admin`.
+Astromech is a lightweight TypeScript CMS. Built to work well across runtimes but designed for Astro + Cloudflare. Build on TanStack Router and Hono.
 
 ## Sub-agents
 

@@ -30,6 +30,7 @@ Astromech is an Astro integration that provides a complete CMS experience. It in
 ## Infrastructure Strategy
 
 **Primary Target: Cloudflare**
+
 - **Runtime:** Cloudflare Workers
 - **Database:** D1 (SQLite-compatible)
 - **File Storage:** R2 (S3-compatible)
@@ -50,7 +51,7 @@ astromech/
 │   │   ├── hooks.ts        # Hook registry and dispatcher
 │   │   ├── permissions.ts  # Permission checking utilities
 │   │   ├── collections.ts
-│   │   ├── entities.ts
+│   │   ├── entries.ts
 │   │   ├── users.ts
 │   │   ├── roles.ts
 │   │   ├── media.ts
@@ -81,6 +82,7 @@ astromech/
 Using [Better Auth](https://www.better-auth.com/) with session-based authentication.
 
 **Why Better Auth:**
+
 - Framework-agnostic, works with Astro
 - Built-in D1/SQLite support
 - Drizzle ORM integration
@@ -88,23 +90,25 @@ Using [Better Auth](https://www.better-auth.com/) with session-based authenticat
 - Extensible via plugins (2FA, passkeys, etc.)
 
 **Integration:**
+
 ```typescript
 // src/auth/index.ts
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 
 export const auth = betterAuth({
-  database: drizzleAdapter(db),
-  session: {
-    cookieCache: {
-      enabled: true,
-      strategy: 'compact',
+    database: drizzleAdapter(db),
+    session: {
+        cookieCache: {
+            enabled: true,
+            strategy: 'compact',
+        },
     },
-  },
 });
 ```
 
 **Routes injected:**
+
 - `/api/cms/auth/[...all]` - Better Auth handler
 
 **Astro middleware** populates `context.locals.user` and `context.locals.session`.
@@ -119,78 +123,78 @@ Roles are named groups of permissions. Permissions are granular actions that can
 
 ```
 <resource>:<action>              # e.g., media:upload
-<resource>:<action>:<collection> # e.g., entity:update:posts
-<resource>:<action>:*            # e.g., entity:read:* (all collections)
+<resource>:<action>:<collection> # e.g., entry:update:posts
+<resource>:<action>:*            # e.g., entry:read:* (all collections)
 ```
 
 ### Built-in Permissions
 
 ```typescript
 type Permission =
-  // Entity permissions (can be collection-scoped)
-  | 'entity:create:*' | `entity:create:${string}`
-  | 'entity:read:*'   | `entity:read:${string}`
-  | 'entity:update:*' | `entity:update:${string}`
-  | 'entity:delete:*' | `entity:delete:${string}`
-  | 'entity:publish:*'| `entity:publish:${string}`  // Change draft→published
+    // Entry permissions (can be collection-scoped)
+    | 'entry:create:*'
+    | `entry:create:${string}`
+    | 'entry:read:*'
+    | `entry:read:${string}`
+    | 'entry:update:*'
+    | `entry:update:${string}`
+    | 'entry:delete:*'
+    | `entry:delete:${string}`
+    | 'entry:publish:*'
+    | `entry:publish:${string}` // Change draft→published
 
-  // Media permissions
-  | 'media:upload'
-  | 'media:delete'
+    // Media permissions
+    | 'media:upload'
+    | 'media:delete'
 
-  // Settings permissions
-  | 'settings:read'
-  | 'settings:update'
+    // Settings permissions
+    | 'settings:read'
+    | 'settings:update'
 
-  // User management
-  | 'users:read'
-  | 'users:create'
-  | 'users:update'
-  | 'users:delete'
+    // User management
+    | 'users:read'
+    | 'users:create'
+    | 'users:update'
+    | 'users:delete'
 
-  // Admin access
-  | 'admin:access';   // Can access admin UI
+    // Admin access
+    | 'admin:access'; // Can access admin UI
 ```
 
 ### Built-in Roles
 
 ```typescript
 const builtInRoles = {
-  admin: {
-    name: 'Admin',
-    permissions: ['*'],  // Wildcard = all permissions
-  },
-  editor: {
-    name: 'Editor',
-    permissions: [
-      'admin:access',
-      'entity:create:*',
-      'entity:read:*',
-      'entity:update:*',
-      'entity:publish:*',
-      'media:upload',
-      'settings:read',
-    ],
-  },
-  author: {
-    name: 'Author',
-    permissions: [
-      'admin:access',
-      'entity:create:*',
-      'entity:read:*',
-      'entity:update:*',  // Can update, but not publish
-      'media:upload',
-    ],
-  },
-  viewer: {
-    name: 'Viewer',
-    permissions: [
-      'admin:access',
-      'entity:read:*',
-      'media:read',
-      'settings:read',
-    ],
-  },
+    admin: {
+        name: 'Admin',
+        permissions: ['*'], // Wildcard = all permissions
+    },
+    editor: {
+        name: 'Editor',
+        permissions: [
+            'admin:access',
+            'entry:create:*',
+            'entry:read:*',
+            'entry:update:*',
+            'entry:publish:*',
+            'media:upload',
+            'settings:read',
+        ],
+    },
+    author: {
+        name: 'Author',
+        permissions: [
+            'admin:access',
+            'entry:create:*',
+            'entry:read:*',
+            'entry:update:*', // Can update, but not publish
+            'media:upload',
+        ],
+    },
+    viewer: {
+        name: 'Viewer',
+        permissions: ['admin:access', 'entry:read:*', 'media:read', 'settings:read'],
+    },
 };
 ```
 
@@ -200,21 +204,21 @@ Custom roles can be defined in config or created via admin UI:
 
 ```typescript
 astromech({
-  // ...
-  roles: {
-    blog_editor: {
-      name: 'Blog Editor',
-      permissions: [
-        'admin:access',
-        'entity:create:posts',
-        'entity:read:posts',
-        'entity:update:posts',
-        'entity:publish:posts',
-        'entity:read:categories',  // Read-only for categories
-        'media:upload',
-      ],
+    // ...
+    roles: {
+        blog_editor: {
+            name: 'Blog Editor',
+            permissions: [
+                'admin:access',
+                'entry:create:posts',
+                'entry:read:posts',
+                'entry:update:posts',
+                'entry:publish:posts',
+                'entry:read:categories', // Read-only for categories
+                'media:upload',
+            ],
+        },
     },
-  },
 });
 ```
 
@@ -223,18 +227,20 @@ astromech({
 ```typescript
 // In service layer
 function canUserPerform(user: User, permission: string): boolean {
-  const role = getRoleBySlug(user.roleSlug);
-  return role.permissions.includes('*') ||
-         role.permissions.includes(permission) ||
-         role.permissions.includes(permission.replace(/:[^:]+$/, ':*'));
+    const role = getRoleBySlug(user.roleSlug);
+    return (
+        role.permissions.includes('*') ||
+        role.permissions.includes(permission) ||
+        role.permissions.includes(permission.replace(/:[^:]+$/, ':*'))
+    );
 }
 
 // Usage in hooks
-hooks.on('entity:beforeUpdate', async (ctx) => {
-  const permission = `entity:update:${ctx.collection.slug}`;
-  if (!canUserPerform(ctx.user, permission)) {
-    throw new ForbiddenError(`Missing permission: ${permission}`);
-  }
+hooks.on('entry:beforeUpdate', async (ctx) => {
+    const permission = `entry:update:${ctx.collection.slug}`;
+    if (!canUserPerform(ctx.user, permission)) {
+        throw new ForbiddenError(`Missing permission: ${permission}`);
+    }
 });
 ```
 
@@ -245,7 +251,7 @@ hooks.on('entity:beforeUpdate', async (ctx) => {
 ### Strategy
 
 - **Core:** Internal localization for admin UI strings (i18next)
-- **Multi-language content:** Plugin (not core) for translating entities
+- **Multi-language content:** Plugin (not core) for translating entries
 
 ### Implementation
 
@@ -261,33 +267,35 @@ src/
 ```
 
 **Locale file structure:**
+
 ```json
 // locales/en/admin.json
 {
-  "dashboard": {
-    "title": "Dashboard",
-    "welcome": "Welcome, {{name}}"
-  },
-  "collections": {
-    "title": "Collections",
-    "empty": "No items yet",
-    "create": "Create {{collection}}"
-  },
-  "entity": {
-    "status": {
-      "draft": "Draft",
-      "published": "Published"
+    "dashboard": {
+        "title": "Dashboard",
+        "welcome": "Welcome, {{name}}"
     },
-    "actions": {
-      "save": "Save",
-      "publish": "Publish",
-      "delete": "Delete"
+    "collections": {
+        "title": "Collections",
+        "empty": "No items yet",
+        "create": "Create {{collection}}"
+    },
+    "entry": {
+        "status": {
+            "draft": "Draft",
+            "published": "Published"
+        },
+        "actions": {
+            "save": "Save",
+            "publish": "Publish",
+            "delete": "Delete"
+        }
     }
-  }
 }
 ```
 
 **Usage in React admin:**
+
 ```typescript
 import { useTranslation } from 'react-i18next';
 
@@ -317,103 +325,112 @@ import { seoPlugin } from '@astromech/seo-plugin';
 import { redirectsPlugin } from '@astromech/redirects-plugin';
 
 export default defineConfig({
-  integrations: [
-    astromech({
-      database: d1Adapter({ binding: 'DB' }),
-      storage: r2Adapter({ binding: 'BUCKET' }),
-      adminRoute: '/admin',
-      apiRoute: '/api/cms',
+    integrations: [
+        astromech({
+            database: d1Adapter({ binding: 'DB' }),
+            storage: r2Adapter({ binding: 'BUCKET' }),
+            adminRoute: '/admin',
+            apiRoute: '/api/cms',
 
-      collections: {
-        pages: {
-          fieldGroups: [
-            {
-              name: 'content',
-              label: 'Content',
-              location: 'main',
-              priority: 0,
-              fields: [
-                { name: 'body', type: 'richtext' },
-                { name: 'featured_image', type: 'media' },
-              ],
+            collections: {
+                pages: {
+                    fieldGroups: [
+                        {
+                            name: 'content',
+                            label: 'Content',
+                            location: 'main',
+                            priority: 0,
+                            fields: [
+                                { name: 'body', type: 'richtext' },
+                                { name: 'featured_image', type: 'media' },
+                            ],
+                        },
+                    ],
+                },
+                posts: {
+                    versioning: true,
+                    fieldGroups: [
+                        {
+                            name: 'content',
+                            label: 'Content',
+                            location: 'main',
+                            priority: 0,
+                            fields: [
+                                { name: 'body', type: 'richtext' },
+                                { name: 'excerpt', type: 'textarea' },
+                            ],
+                        },
+                        {
+                            name: 'taxonomy',
+                            label: 'Taxonomy',
+                            location: 'sidebar',
+                            priority: 10,
+                            fields: [
+                                {
+                                    name: 'category',
+                                    type: 'relation',
+                                    target: 'categories',
+                                    inverse: 'posts',
+                                },
+                                {
+                                    name: 'tags',
+                                    type: 'relation',
+                                    target: 'tags',
+                                    multiple: true,
+                                    inverse: 'posts',
+                                },
+                            ],
+                        },
+                    ],
+                },
+                categories: {
+                    fieldGroups: [
+                        {
+                            name: 'content',
+                            label: 'Content',
+                            location: 'main',
+                            priority: 0,
+                            fields: [{ name: 'description', type: 'textarea' }],
+                        },
+                    ],
+                },
             },
-          ],
-        },
-        posts: {
-          versioning: true,
-          fieldGroups: [
-            {
-              name: 'content',
-              label: 'Content',
-              location: 'main',
-              priority: 0,
-              fields: [
-                { name: 'body', type: 'richtext' },
-                { name: 'excerpt', type: 'textarea' },
-              ],
-            },
-            {
-              name: 'taxonomy',
-              label: 'Taxonomy',
-              location: 'sidebar',
-              priority: 10,
-              fields: [
-                { name: 'category', type: 'relation', target: 'categories', inverse: 'posts' },
-                { name: 'tags', type: 'relation', target: 'tags', multiple: true, inverse: 'posts' },
-              ],
-            },
-          ],
-        },
-        categories: {
-          fieldGroups: [
-            {
-              name: 'content',
-              label: 'Content',
-              location: 'main',
-              priority: 0,
-              fields: [
-                { name: 'description', type: 'textarea' },
-              ],
-            },
-          ],
-        },
-      },
 
-      // Plugins with declarative targeting
-      plugins: [
-        seoPlugin({
-          targets: ['pages', 'posts'],
-          sitemap: true,
+            // Plugins with declarative targeting
+            plugins: [
+                seoPlugin({
+                    targets: ['pages', 'posts'],
+                    sitemap: true,
+                }),
+                redirectsPlugin({
+                    generateOnSlugChange: true,
+                }),
+            ],
         }),
-        redirectsPlugin({
-          generateOnSlugChange: true,
-        }),
-      ],
-    }),
-  ],
+    ],
 });
 ```
 
 ---
 
-## Entity Model
+## Entry Model
 
-All entities share a common base structure:
+All entries share a common base structure:
 
 ```typescript
-interface Entity {
-  id: string;              // UUID
-  collectionId: string;    // Reference to collection
-  slug: string | null;     // URL-friendly identifier (auto-generated or manual)
-  title: string;
-  fields: JsonObject;      // Collection-specific fields as JSON
-  status: 'draft' | 'published' | 'scheduled';
-  publishAt: Date | null;  // Scheduled publish date (null = immediate)
-  deletedAt: Date | null;  // Soft delete timestamp (null = not deleted)
-  createdAt: Date;
-  updatedAt: Date;
-  createdBy: string;       // User ID
-  updatedBy: string;       // User ID
+interface Entry {
+    id: string; // UUID
+    collectionId: string; // Reference to collection
+    slug: string | null; // URL-friendly identifier (auto-generated or manual)
+    title: string;
+    fields: JsonObject; // Collection-specific fields as JSON
+    status: 'draft' | 'published' | 'scheduled';
+    publishAt: Date | null; // Scheduled publish date (null = immediate)
+    deletedAt: Date | null; // Soft delete timestamp (null = not deleted)
+    createdAt: Date;
+    updatedAt: Date;
+    createdBy: string; // User ID
+    updatedBy: string; // User ID
 }
 ```
 
@@ -425,44 +442,44 @@ Fields define the structure of collection data. Each field has a type that deter
 
 ### Built-in Field Types
 
-| Type | Description | Stored As |
-|------|-------------|-----------|
-| `text` | Single-line text input | `string` |
-| `textarea` | Multi-line text input | `string` |
-| `richtext` | WYSIWYG editor (HTML or JSON) | `string` |
-| `number` | Numeric input (int or float) | `number` |
-| `boolean` | Toggle/checkbox | `boolean` |
-| `date` | Date picker | `string` (ISO 8601) |
-| `datetime` | Date and time picker | `string` (ISO 8601) |
-| `select` | Dropdown with predefined options | `string` |
-| `multiselect` | Multiple selection | `string[]` |
-| `media` | Reference to media item | `string` (media ID) |
-| `relation` | Reference to another entity | `string` (entity ID) |
-| `json` | Raw JSON data | `object` |
-| `group` | Nested group of fields | `object` |
-| `repeater` | Repeatable group of fields | `array` |
+| Type          | Description                      | Stored As           |
+| ------------- | -------------------------------- | ------------------- |
+| `text`        | Single-line text input           | `string`            |
+| `textarea`    | Multi-line text input            | `string`            |
+| `richtext`    | WYSIWYG editor (HTML or JSON)    | `string`            |
+| `number`      | Numeric input (int or float)     | `number`            |
+| `boolean`     | Toggle/checkbox                  | `boolean`           |
+| `date`        | Date picker                      | `string` (ISO 8601) |
+| `datetime`    | Date and time picker             | `string` (ISO 8601) |
+| `select`      | Dropdown with predefined options | `string`            |
+| `multiselect` | Multiple selection               | `string[]`          |
+| `media`       | Reference to media item          | `string` (media ID) |
+| `relation`    | Reference to another entry       | `string` (entry ID) |
+| `json`        | Raw JSON data                    | `object`            |
+| `group`       | Nested group of fields           | `object`            |
+| `repeater`    | Repeatable group of fields       | `array`             |
 
 ### Field Definition
 
 ```typescript
 type FieldDefinition = {
-  name: string;           // Unique field identifier
-  type: FieldType;
-  label?: string;         // Display label (defaults to name)
-  required?: boolean;     // Default: false
-  defaultValue?: unknown;
-  validation?: ValidationRule[];
+    name: string; // Unique field identifier
+    type: FieldType;
+    label?: string; // Display label (defaults to name)
+    required?: boolean; // Default: false
+    defaultValue?: unknown;
+    validation?: ValidationRule[];
 
-  // Type-specific options
-  options?: SelectOption[];        // For select/multiselect
-  target?: string;                 // For relation (collection slug)
-  multiple?: boolean;              // For relation (one-to-many)
-  fields?: FieldDefinition[];      // For group/repeater
-  min?: number;                    // For number/repeater
-  max?: number;                    // For number/repeater
+    // Type-specific options
+    options?: SelectOption[]; // For select/multiselect
+    target?: string; // For relation (collection slug)
+    multiple?: boolean; // For relation (one-to-many)
+    fields?: FieldDefinition[]; // For group/repeater
+    min?: number; // For number/repeater
+    max?: number; // For number/repeater
 
-  // Translation support (requires translations plugin)
-  translatable?: boolean;          // Default: true (set false for shared fields like relations)
+    // Translation support (requires translations plugin)
+    translatable?: boolean; // Default: true (set false for shared fields like relations)
 };
 ```
 
@@ -472,39 +489,50 @@ Fields are defined within field groups. Here's an example showing various field 
 
 ```typescript
 fieldGroups: [
-  {
-    name: 'content',
-    label: 'Content',
-    location: 'main',
-    priority: 0,
-    fields: [
-      { name: 'body', type: 'richtext', required: true },
-      { name: 'excerpt', type: 'textarea', validation: [{ maxLength: 300 }] },
-      { name: 'featured_image', type: 'media' },
-      { name: 'published_date', type: 'datetime' },
-      { name: 'is_featured', type: 'boolean', defaultValue: false },
-      {
-        name: 'author_info',
-        type: 'group',
+    {
+        name: 'content',
+        label: 'Content',
+        location: 'main',
+        priority: 0,
         fields: [
-          { name: 'bio_override', type: 'textarea' },
-          { name: 'show_author', type: 'boolean', defaultValue: true },
+            { name: 'body', type: 'richtext', required: true },
+            { name: 'excerpt', type: 'textarea', validation: [{ maxLength: 300 }] },
+            { name: 'featured_image', type: 'media' },
+            { name: 'published_date', type: 'datetime' },
+            { name: 'is_featured', type: 'boolean', defaultValue: false },
+            {
+                name: 'author_info',
+                type: 'group',
+                fields: [
+                    { name: 'bio_override', type: 'textarea' },
+                    { name: 'show_author', type: 'boolean', defaultValue: true },
+                ],
+            },
         ],
-      },
-    ],
-  },
-  {
-    name: 'taxonomy',
-    label: 'Taxonomy',
-    location: 'sidebar',
-    priority: 10,
-    fields: [
-      { name: 'category', type: 'relation', target: 'categories', inverse: 'posts' },
-      { name: 'tags', type: 'relation', target: 'tags', multiple: true, inverse: 'posts' },
-      { name: 'author', type: 'relation', target: 'users', inverse: 'posts' },
-    ],
-  },
-]
+    },
+    {
+        name: 'taxonomy',
+        label: 'Taxonomy',
+        location: 'sidebar',
+        priority: 10,
+        fields: [
+            {
+                name: 'category',
+                type: 'relation',
+                target: 'categories',
+                inverse: 'posts',
+            },
+            {
+                name: 'tags',
+                type: 'relation',
+                target: 'tags',
+                multiple: true,
+                inverse: 'posts',
+            },
+            { name: 'author', type: 'relation', target: 'users', inverse: 'posts' },
+        ],
+    },
+];
 ```
 
 ---
@@ -517,19 +545,19 @@ Field groups organize fields into logical UI sections with control over position
 
 ```typescript
 interface FieldGroup {
-  name: string;              // Unique identifier (e.g., 'seo', 'content')
-  label: string;             // Display label in admin UI
+    name: string; // Unique identifier (e.g., 'seo', 'content')
+    label: string; // Display label in admin UI
 
-  // UI positioning
-  location: 'main' | 'sidebar';  // Which zone in admin UI
-  priority?: number;             // Lower = renders first (default: 10)
+    // UI positioning
+    location: 'main' | 'sidebar'; // Which zone in admin UI
+    priority?: number; // Lower = renders first (default: 10)
 
-  // Optional UI settings
-  collapsed?: boolean;       // Start collapsed in UI (default: false)
-  description?: string;      // Help text shown below group label
+    // Optional UI settings
+    collapsed?: boolean; // Start collapsed in UI (default: false)
+    description?: string; // Help text shown below group label
 
-  // The fields in this group
-  fields: FieldDefinition[];
+    // The fields in this group
+    fields: FieldDefinition[];
 }
 ```
 
@@ -539,81 +567,95 @@ Field groups are defined inline within each collection, media, or users config. 
 
 ```typescript
 astromech({
-  collections: {
-    posts: {
-      versioning: true,
-      fieldGroups: [
-        {
-          name: 'content',
-          label: 'Content',
-          location: 'main',
-          priority: 0,
-          fields: [
-            { name: 'body', type: 'richtext', required: true },
-            { name: 'excerpt', type: 'textarea' },
-          ],
+    collections: {
+        posts: {
+            versioning: true,
+            fieldGroups: [
+                {
+                    name: 'content',
+                    label: 'Content',
+                    location: 'main',
+                    priority: 0,
+                    fields: [
+                        { name: 'body', type: 'richtext', required: true },
+                        { name: 'excerpt', type: 'textarea' },
+                    ],
+                },
+                {
+                    name: 'taxonomy',
+                    label: 'Taxonomy',
+                    location: 'sidebar',
+                    priority: 10,
+                    fields: [
+                        {
+                            name: 'category',
+                            type: 'relation',
+                            target: 'categories',
+                            inverse: 'posts',
+                        },
+                        {
+                            name: 'tags',
+                            type: 'relation',
+                            target: 'tags',
+                            multiple: true,
+                            inverse: 'posts',
+                        },
+                        {
+                            name: 'author',
+                            type: 'relation',
+                            target: 'users',
+                            inverse: 'posts',
+                        },
+                    ],
+                },
+            ],
         },
-        {
-          name: 'taxonomy',
-          label: 'Taxonomy',
-          location: 'sidebar',
-          priority: 10,
-          fields: [
-            { name: 'category', type: 'relation', target: 'categories', inverse: 'posts' },
-            { name: 'tags', type: 'relation', target: 'tags', multiple: true, inverse: 'posts' },
-            { name: 'author', type: 'relation', target: 'users', inverse: 'posts' },
-          ],
+        pages: {
+            fieldGroups: [
+                {
+                    name: 'content',
+                    label: 'Content',
+                    location: 'main',
+                    priority: 0,
+                    fields: [{ name: 'body', type: 'richtext' }],
+                },
+            ],
         },
-      ],
     },
-    pages: {
-      fieldGroups: [
-        {
-          name: 'content',
-          label: 'Content',
-          location: 'main',
-          priority: 0,
-          fields: [
-            { name: 'body', type: 'richtext' },
-          ],
-        },
-      ],
+
+    // Custom fields for media items
+    media: {
+        fieldGroups: [
+            {
+                name: 'metadata',
+                label: 'Metadata',
+                location: 'main',
+                priority: 0,
+                fields: [
+                    { name: 'photographer', type: 'text' },
+                    { name: 'copyright', type: 'text' },
+                    { name: 'alt_text', type: 'text' },
+                ],
+            },
+        ],
     },
-  },
 
-  // Custom fields for media items
-  media: {
-    fieldGroups: [
-      {
-        name: 'metadata',
-        label: 'Metadata',
-        location: 'main',
-        priority: 0,
-        fields: [
-          { name: 'photographer', type: 'text' },
-          { name: 'copyright', type: 'text' },
-          { name: 'alt_text', type: 'text' },
+    // Custom profile fields for users
+    users: {
+        fieldGroups: [
+            {
+                name: 'profile',
+                label: 'Profile',
+                location: 'main',
+                priority: 0,
+                fields: [
+                    { name: 'bio', type: 'textarea' },
+                    { name: 'avatar', type: 'relation', target: 'media' },
+                ],
+            },
         ],
-      },
-    ],
-  },
-
-  // Custom profile fields for users
-  users: {
-    fieldGroups: [
-      {
-        name: 'profile',
-        label: 'Profile',
-        location: 'main',
-        priority: 0,
-        fields: [
-          { name: 'bio', type: 'textarea' },
-          { name: 'avatar', type: 'relation', target: 'media' },
-        ],
-      },
-    ],
-    // No relations key needed - inverse defined on the field that creates the relation
-  },
+        // No relations key needed - inverse defined on the field that creates the relation
+    },
 });
 ```
 
@@ -648,15 +690,15 @@ The system provides one built-in group that cannot be removed:
 
 ### Storage
 
-Field groups are a **configuration/UI concept only**. Fields from all groups are stored flat in the entity's `fields` JSON column:
+Field groups are a **configuration/UI concept only**. Fields from all groups are stored flat in the entry's `fields` JSON column:
 
 ```json
 {
-  "body": "<p>Blog post content...</p>",
-  "meta_title": "My SEO Title",
-  "meta_description": "Description for search engines",
-  "is_featured": true,
-  "featured_order": 5
+    "body": "<p>Blog post content...</p>",
+    "meta_title": "My SEO Title",
+    "meta_description": "Description for search engines",
+    "is_featured": true,
+    "featured_order": 5
 }
 ```
 
@@ -664,51 +706,46 @@ Field groups are a **configuration/UI concept only**. Fields from all groups are
 
 ## Field Validation
 
-Validation rules are applied before saving an entity. Failed validation returns structured errors.
+Validation rules are applied before saving an entry. Failed validation returns structured errors.
 
 ### Built-in Validators
 
 ```typescript
 type ValidationRule =
-  | { required: true }
-  | { minLength: number }
-  | { maxLength: number }
-  | { min: number }                    // For numbers
-  | { max: number }                    // For numbers
-  | { pattern: string; message?: string }  // Regex
-  | { email: true }
-  | { url: true }
-  | { custom: (value: unknown, entity: Entity) => string | null };  // Return error message or null
+    | { required: true }
+    | { minLength: number }
+    | { maxLength: number }
+    | { min: number } // For numbers
+    | { max: number } // For numbers
+    | { pattern: string; message?: string } // Regex
+    | { email: true }
+    | { url: true }
+    | { custom: (value: unknown, entry: Entry) => string | null }; // Return error message or null
 ```
 
 ### Validation in Config
 
 ```typescript
 fields: [
-  {
-    name: 'email',
-    type: 'text',
-    required: true,
-    validation: [
-      { email: true },
-    ],
-  },
-  {
-    name: 'age',
-    type: 'number',
-    validation: [
-      { min: 0 },
-      { max: 150 },
-    ],
-  },
-  {
-    name: 'slug',
-    type: 'text',
-    validation: [
-      { pattern: '^[a-z0-9-]+$', message: 'Slug must be lowercase with hyphens' },
-    ],
-  },
-]
+    {
+        name: 'email',
+        type: 'text',
+        required: true,
+        validation: [{ email: true }],
+    },
+    {
+        name: 'age',
+        type: 'number',
+        validation: [{ min: 0 }, { max: 150 }],
+    },
+    {
+        name: 'slug',
+        type: 'text',
+        validation: [
+            { pattern: '^[a-z0-9-]+$', message: 'Slug must be lowercase with hyphens' },
+        ],
+    },
+];
 ```
 
 ### Validation Response
@@ -729,15 +766,15 @@ fields: [
 
 ## Relations
 
-Relations link entities across collections. Relations are stored in a dedicated table for efficient querying with proper indexes.
+Relations link entries across collections. Relations are stored in a dedicated table for efficient querying with proper indexes.
 
 ### Relation Types
 
-| Type | Config | Description |
-|------|--------|-------------|
-| **One-to-one** | `multiple: false` (default) | Single reference (post → author) |
-| **One-to-many** | `multiple: true` | Multiple references (post → tags) |
-| **Many-to-many** | `multiple: true` + inverse | Bidirectional (posts ↔ tags) |
+| Type             | Config                      | Description                       |
+| ---------------- | --------------------------- | --------------------------------- |
+| **One-to-one**   | `multiple: false` (default) | Single reference (post → author)  |
+| **One-to-many**  | `multiple: true`            | Multiple references (post → tags) |
+| **Many-to-many** | `multiple: true` + inverse  | Bidirectional (posts ↔ tags)      |
 
 ### Configuration
 
@@ -768,14 +805,14 @@ collections: {
 Reserved names `users` and `media` refer to system resources. All other names are collection slugs.
 
 ```typescript
-// Entity → Entity (collection name)
+// Entry → Entry (collection name)
 { name: 'category', type: 'relation', target: 'categories', inverse: 'posts' }
 
-// Entity → User (reserved name)
+// Entry → User (reserved name)
 { name: 'author', type: 'relation', target: 'users', inverse: 'posts' }
 { name: 'reviewers', type: 'relation', target: 'users', multiple: true }
 
-// Entity → Media (reserved name)
+// Entry → Media (reserved name)
 { name: 'featured_image', type: 'relation', target: 'media' }
 { name: 'attachments', type: 'relation', target: 'media', multiple: true }
 ```
@@ -800,29 +837,30 @@ const userPosts = await user.posts();  // Computed from relationships table
 ### Relationships Table
 
 Relations are stored in a dedicated polymorphic `relationships` table instead of JSON fields for:
+
 - **Indexing:** Efficient lookups in both directions
-- **Polymorphic:** Supports entity↔entity, entity↔user, user↔entity relations
+- **Polymorphic:** Supports entry↔entry, entry↔user, user↔entry relations
 - **Ordering:** Support for ordered relations (e.g., featured posts order)
-- **Translations:** Links localized entity rows via `_translations` reserved name
+- **Translations:** Links localized entry rows via `_translations` reserved name
 
 ```typescript
 // Resource types that can participate in relations
-type ResourceType = 'entity' | 'user' | 'media';
+type ResourceType = 'entry' | 'user' | 'media';
 
 export const relationships = sqliteTable('relationships', {
-  id: text('id').primaryKey(),                        // UUID
+    id: text('id').primaryKey(), // UUID
 
-  // Source (the resource that "has" the relation)
-  sourceId: text('source_id').notNull(),              // UUID
-  sourceType: text('source_type', { enum: ['entity', 'user', 'media'] }).notNull(),
-  name: text('name').notNull(),                       // e.g., 'author', 'category', '_translations'
+    // Source (the resource that "has" the relation)
+    sourceId: text('source_id').notNull(), // UUID
+    sourceType: text('source_type', { enum: ['entry', 'user', 'media'] }).notNull(),
+    name: text('name').notNull(), // e.g., 'author', 'category', '_translations'
 
-  // Target (the resource being referenced)
-  targetId: text('target_id').notNull(),              // UUID
-  targetType: text('target_type', { enum: ['entity', 'user', 'media'] }).notNull(),
+    // Target (the resource being referenced)
+    targetId: text('target_id').notNull(), // UUID
+    targetType: text('target_type', { enum: ['entry', 'user', 'media'] }).notNull(),
 
-  position: integer('position').default(0),           // For ordered relations
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    position: integer('position').default(0), // For ordered relations
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
 // Composite indexes for efficient querying:
@@ -831,17 +869,19 @@ export const relationships = sqliteTable('relationships', {
 ```
 
 **Reserved relationship names:**
-- `_translations` - Links default locale entity to its translations
+
+- `_translations` - Links default locale entry to its translations
 
 ### Relation Examples
 
-**Entity → User (with inverse):**
+**Entry → User (with inverse):**
+
 ```typescript
 // posts collection config
 { name: 'author', type: 'relation', target: 'users', inverse: 'posts' }
 
 // Creates relationship row:
-// source: entity/posts/post-123, field: author
+// source: entry/posts/post-123, field: author
 // target: user/user-456
 
 // The inverse 'posts' is now available on users:
@@ -849,7 +889,8 @@ const user = await Astromech.users.get(userId);
 const userPosts = await user.posts();  // Computed from relationships table
 ```
 
-**Entity → Entity (with inverse):**
+**Entry → Entry (with inverse):**
+
 ```typescript
 // posts collection config
 { name: 'category', type: 'relation', target: 'categories', inverse: 'posts' }
@@ -863,45 +904,49 @@ const categoryPosts = await category.posts();
 ### How Relations Work
 
 **Creating a relation:**
+
 ```typescript
 await Astromech.collections.posts.update(postId, {
-  fields: {
-    category: categoryId,           // One-to-one: single ID
-    tags: [tag1Id, tag2Id, tag3Id], // One-to-many: array of IDs
-  },
+    fields: {
+        category: categoryId, // One-to-one: single ID
+        tags: [tag1Id, tag2Id, tag3Id], // One-to-many: array of IDs
+    },
 });
-// Internally: inserts/updates rows in entity_relationships table
+// Internally: inserts/updates rows in entry_relationships table
 ```
 
 **Querying with populate:**
+
 ```typescript
 const post = await Astromech.collections.posts.get(id, {
-  populate: ['category', 'tags', 'author'],
+    populate: ['category', 'tags', 'author'],
 });
 
-// post.fields.category → full Category entity
-// post.fields.tags → array of full Tag entities
-// post.fields.author → full Author entity
+// post.fields.category → full Category entry
+// post.fields.tags → array of full Tag entries
+// post.fields.author → full Author entry
 ```
 
 **Inverse queries (efficient via index):**
+
 ```typescript
 const author = await Astromech.collections.authors.get(authorId, {
-  populate: ['posts'],
+    populate: ['posts'],
 });
-// author.fields.posts → array of Post entities (uses idx_rel_target)
+// author.fields.posts → array of Post entries (uses idx_rel_target)
 ```
 
 **Filtering by relation:**
+
 ```typescript
 // Find posts in a specific category
 const posts = await Astromech.collections.posts.where({
-  'category.id': categoryId,
+    'category.id': categoryId,
 });
 
 // Find posts tagged with a specific tag
 const posts = await Astromech.collections.posts.where({
-  'tags.id': { contains: tagId },
+    'tags.id': { contains: tagId },
 });
 ```
 
@@ -942,7 +987,7 @@ Configurable per field:
 
 ## Slug Generation
 
-Slugs provide URL-friendly identifiers for entities.
+Slugs provide URL-friendly identifiers for entries.
 
 ### Behavior
 
@@ -971,12 +1016,12 @@ collections: {
 ```typescript
 // Internal slug generation
 function generateSlug(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')  // Remove accents
-    .replace(/[^a-z0-9]+/g, '-')       // Replace non-alphanumeric with hyphens
-    .replace(/^-|-$/g, '');            // Trim leading/trailing hyphens
+    return text
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove accents
+        .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
+        .replace(/^-|-$/g, ''); // Trim leading/trailing hyphens
 }
 ```
 
@@ -984,26 +1029,26 @@ function generateSlug(text: string): string {
 
 ## Scheduled Publishing
 
-Entities can be scheduled to publish at a future date.
+Entries can be scheduled to publish at a future date.
 
 ### Behavior
 
 - Set `status: 'scheduled'` and `publishAt: Date`
 - A background job (or on-request check) transitions to `published` when `publishAt` passes
-- Scheduled entities are not returned by default queries (same as drafts)
+- Scheduled entries are not returned by default queries (same as drafts)
 
 ### API Usage
 
 ```typescript
 // Schedule a post
 await Astromech.collections.posts.update(id, {
-  status: 'scheduled',
-  publishAt: new Date('2025-02-01T09:00:00Z'),
+    status: 'scheduled',
+    publishAt: new Date('2025-02-01T09:00:00Z'),
 });
 
 // Query scheduled posts
 const scheduled = await Astromech.collections.posts.where({
-  status: 'scheduled',
+    status: 'scheduled',
 });
 ```
 
@@ -1014,22 +1059,20 @@ On SSR request, check for due scheduled items:
 ```typescript
 // In hooks (runs on each request)
 hooks.on('api:beforeRequest', async (ctx) => {
-  await publishScheduledEntities();
+    await publishScheduledEntries();
 });
 
-async function publishScheduledEntities() {
-  const due = await db.query.entities.findMany({
-    where: and(
-      eq(entities.status, 'scheduled'),
-      lte(entities.publishAt, new Date())
-    ),
-  });
+async function publishScheduledEntries() {
+    const due = await db.query.entries.findMany({
+        where: and(eq(entries.status, 'scheduled'), lte(entries.publishAt, new Date())),
+    });
 
-  for (const entity of due) {
-    await db.update(entities)
-      .set({ status: 'published', publishAt: null })
-      .where(eq(entities.id, entity.id));
-  }
+    for (const entry of due) {
+        await db
+            .update(entries)
+            .set({ status: 'published', publishAt: null })
+            .where(eq(entries.id, entry.id));
+    }
 }
 ```
 
@@ -1037,12 +1080,12 @@ async function publishScheduledEntities() {
 
 ## Soft Deletes / Trash
 
-Deleted entities are moved to trash instead of being permanently removed.
+Deleted entries are moved to trash instead of being permanently removed.
 
 ### Behavior
 
 - Delete sets `deletedAt` timestamp instead of removing row
-- Deleted entities excluded from normal queries
+- Deleted entries excluded from normal queries
 - Trash can be viewed, restored, or permanently deleted
 - Optional: Auto-purge after N days
 
@@ -1069,10 +1112,10 @@ await Astromech.collections.posts.emptyTrash();
 
 ```typescript
 astromech({
-  trash: {
-    enabled: true,           // Default: true
-    retentionDays: 30,       // Auto-purge after 30 days (0 = never)
-  },
+    trash: {
+        enabled: true, // Default: true
+        retentionDays: 30, // Auto-purge after 30 days (0 = never)
+    },
 });
 ```
 
@@ -1080,7 +1123,7 @@ astromech({
 
 ```typescript
 // Normal queries exclude trashed
-const posts = await Astromech.collections.posts.all();  // deletedAt IS NULL
+const posts = await Astromech.collections.posts.all(); // deletedAt IS NULL
 
 // Include trashed
 const allPosts = await Astromech.collections.posts.all({ withTrashed: true });
@@ -1093,31 +1136,34 @@ const trashedPosts = await Astromech.collections.posts.trashed();
 
 ## Translations
 
-Multi-language content is handled via the translations plugin, which uses separate entity rows per locale linked through the `relationships` table.
+Multi-language content is handled via the translations plugin, which uses separate entry rows per locale linked through the `relationships` table.
 
 ### How It Works
 
-Each locale is a separate entity row with:
+Each locale is a separate entry row with:
+
 - Its own `id`, `slug`, `status`, and version history
 - Linked to other locales via the `relationships` table using `name: '_translations'`
 - The `defaultLocale` from plugin config determines the canonical/primary locale
 
 **Translation linking via relationships:**
+
 ```typescript
-// Default locale entity → translation relationship
+// Default locale entry → translation relationship
 {
   id: 'rel-uuid-1',
-  sourceId: 'post-123',      // Default locale (en-GB) entity
-  sourceType: 'entity',
+  sourceId: 'post-123',      // Default locale (en-GB) entry
+  sourceType: 'entry',
   name: '_translations',     // Reserved name for translation links
   targetId: 'post-456',      // Spanish translation
-  targetType: 'entity',
+  targetType: 'entry',
 }
 ```
 
-**Entity rows:**
+**Entry rows:**
+
 ```typescript
-// Primary entity (English - matches defaultLocale)
+// Primary entry (English - matches defaultLocale)
 {
   id: 'post-123',
   locale: 'en-GB',
@@ -1141,38 +1187,40 @@ Each locale is a separate entity row with:
 Fields can be marked as translatable or shared:
 
 ```typescript
-fieldGroups: [{
-  name: 'content',
-  fields: [
-    { name: 'body', type: 'richtext' },                                    // translatable: true (default)
-    { name: 'author', type: 'relation', target: 'users', translatable: false },  // Shared across locales
-    { name: 'published_date', type: 'date', translatable: false },         // Shared across locales
-  ],
-}]
+fieldGroups: [
+    {
+        name: 'content',
+        fields: [
+            { name: 'body', type: 'richtext' }, // translatable: true (default)
+            { name: 'author', type: 'relation', target: 'users', translatable: false }, // Shared across locales
+            { name: 'published_date', type: 'date', translatable: false }, // Shared across locales
+        ],
+    },
+];
 ```
 
-When a non-translatable field is updated on the default locale entity, hooks propagate the change to all translations.
+When a non-translatable field is updated on the default locale entry, hooks propagate the change to all translations.
 
 ### API Methods
 
 ```typescript
-// Get all translations for an entity (for language switcher)
-const translations = await Astromech.collections.posts.translations(entityId);
-// Returns: [{ locale: 'en-GB', entityId: '...', slug: 'hello', status: 'published' }, ...]
+// Get all translations for an entry (for language switcher)
+const translations = await Astromech.collections.posts.translations(entryId);
+// Returns: [{ locale: 'en-GB', entryId: '...', slug: 'hello', status: 'published' }, ...]
 
-// Get entity in a specific locale
-const spanishPost = await Astromech.collections.posts.get(entityId, { locale: 'es' });
+// Get entry in a specific locale
+const spanishPost = await Astromech.collections.posts.get(entryId, { locale: 'es' });
 
-// Create a translation from an existing entity
-const frenchPost = await Astromech.collections.posts.translate(entityId, 'fr', {
-  title: 'Bonjour le monde',
-  fields: { body: '...' },
+// Create a translation from an existing entry
+const frenchPost = await Astromech.collections.posts.translate(entryId, 'fr', {
+    title: 'Bonjour le monde',
+    fields: { body: '...' },
 });
 
 // Query with locale filter
 const publishedSpanish = await Astromech.collections.posts.where({
-  locale: 'es',
-  status: 'published',
+    locale: 'es',
+    status: 'published',
 });
 ```
 
@@ -1194,24 +1242,25 @@ See PLUGINS.md for the translations plugin configuration.
 When versioning is enabled for a collection, each save creates a new version record.
 
 ```typescript
-interface EntityVersion {
-  id: string;              // Version UUID
-  entityId: string;        // Parent entity ID
-  versionNumber: number;   // Sequential version number
-  title: string;
-  fields: JsonObject;
-  status: 'draft' | 'published';
-  createdAt: Date;
-  createdBy: string;
+interface EntryVersion {
+    id: string; // Version UUID
+    entryId: string; // Parent entry ID
+    versionNumber: number; // Sequential version number
+    title: string;
+    fields: JsonObject;
+    status: 'draft' | 'published';
+    createdAt: Date;
+    createdBy: string;
 }
 ```
 
 **Behavior:**
-- `entity` table holds the **current/live** version
-- `entity_versions` table stores **all historical versions**
-- On save: current entity → new version record, then update entity
-- Restore: copy version data back to entity, increment version
-- Published entities can have draft versions (changes not yet published)
+
+- `entry` table holds the **current/live** version
+- `entry_versions` table stores **all historical versions**
+- On save: current entry → new version record, then update entry
+- Restore: copy version data back to entry, increment version
+- Published entries can have draft versions (changes not yet published)
 
 **Alternative considered:** Event sourcing was too complex for the initial implementation. The separate versions table provides rollback and audit capabilities without the complexity.
 
@@ -1224,20 +1273,20 @@ Astromech generates TypeScript types from collection definitions:
 ```typescript
 // Generated: astromech.d.ts
 declare module 'astromech' {
-  interface Collections {
-    pages: {
-      id: string;
-      slug: string | null;
-      title: string;
-      status: 'draft' | 'published';
-      fields: {
-        content: string;
-        featured_image: Media | null;
-      };
-      createdAt: Date;
-      updatedAt: Date;
-    };
-  }
+    interface Collections {
+        pages: {
+            id: string;
+            slug: string | null;
+            title: string;
+            status: 'draft' | 'published';
+            fields: {
+                content: string;
+                featured_image: Media | null;
+            };
+            createdAt: Date;
+            updatedAt: Date;
+        };
+    }
 }
 ```
 
@@ -1247,10 +1296,10 @@ declare module 'astromech' {
 
 Two clients with identical interfaces:
 
-| Client | Import | Use Case |
-|--------|--------|----------|
+| Client     | Import             | Use Case                    |
+| ---------- | ------------------ | --------------------------- |
 | **Server** | `astromech/server` | Astro pages, endpoints, SSR |
-| **Client** | `astromech/client` | React admin, external apps |
+| **Client** | `astromech/client` | React admin, external apps  |
 
 ```
 ┌─────────────────┐     ┌─────────────────┐
@@ -1288,8 +1337,8 @@ Direct database access via service layer. Used in Astro server-side code.
 import { Astromech } from 'astromech/server';
 
 const post = await Astromech.collections.posts.where({
-  slug: Astro.params.slug,
-  status: 'published'
+    slug: Astro.params.slug,
+    status: 'published',
 });
 ```
 
@@ -1303,8 +1352,8 @@ import { Astromech } from 'astromech/client';
 
 const posts = await Astromech.collections.posts.all();
 const post = await Astromech.collections.posts.update(1, {
-  title: 'Updated Title',
-  fields: { content: '...' },
+    title: 'Updated Title',
+    fields: { content: '...' },
 });
 ```
 
@@ -1349,39 +1398,40 @@ Core features are built using the same hook system available to plugins. This ke
 
 ```typescript
 interface HookRegistry {
-  // Entity lifecycle
-  'entity:beforeCreate': (ctx: EntityCreateContext) => Promise<void>;
-  'entity:afterCreate': (ctx: EntityCreateContext) => Promise<void>;
-  'entity:beforeUpdate': (ctx: EntityUpdateContext) => Promise<void>;
-  'entity:afterUpdate': (ctx: EntityUpdateContext) => Promise<void>;
-  'entity:beforeDelete': (ctx: EntityDeleteContext) => Promise<void>;
-  'entity:afterDelete': (ctx: EntityDeleteContext) => Promise<void>;
+    // Entry lifecycle
+    'entry:beforeCreate': (ctx: EntryCreateContext) => Promise<void>;
+    'entry:afterCreate': (ctx: EntryCreateContext) => Promise<void>;
+    'entry:beforeUpdate': (ctx: EntryUpdateContext) => Promise<void>;
+    'entry:afterUpdate': (ctx: EntryUpdateContext) => Promise<void>;
+    'entry:beforeDelete': (ctx: EntryDeleteContext) => Promise<void>;
+    'entry:afterDelete': (ctx: EntryDeleteContext) => Promise<void>;
 
-  // Media lifecycle
-  'media:beforeUpload': (ctx: MediaUploadContext) => Promise<void>;
-  'media:afterUpload': (ctx: MediaUploadContext) => Promise<void>;
-  'media:beforeDelete': (ctx: MediaDeleteContext) => Promise<void>;
+    // Media lifecycle
+    'media:beforeUpload': (ctx: MediaUploadContext) => Promise<void>;
+    'media:afterUpload': (ctx: MediaUploadContext) => Promise<void>;
+    'media:beforeDelete': (ctx: MediaDeleteContext) => Promise<void>;
 
-  // Auth lifecycle
-  'auth:afterLogin': (ctx: AuthContext) => Promise<void>;
-  'auth:afterLogout': (ctx: AuthContext) => Promise<void>;
+    // Auth lifecycle
+    'auth:afterLogin': (ctx: AuthContext) => Promise<void>;
+    'auth:afterLogout': (ctx: AuthContext) => Promise<void>;
 
-  // API lifecycle
-  'api:beforeRequest': (ctx: ApiRequestContext) => Promise<void>;
-  'api:afterRequest': (ctx: ApiResponseContext) => Promise<void>;
+    // API lifecycle
+    'api:beforeRequest': (ctx: ApiRequestContext) => Promise<void>;
+    'api:afterRequest': (ctx: ApiResponseContext) => Promise<void>;
 
-  // Admin UI
-  'admin:registerRoutes': (ctx: AdminRouteContext) => void;
+    // Admin UI
+    'admin:registerRoutes': (ctx: AdminRouteContext) => void;
 }
 ```
 
 **Usage in core (versioning as example):**
+
 ```typescript
 // Versioning is a core feature, but implemented as a hook
-hooks.on('entity:beforeUpdate', async (ctx) => {
-  if (ctx.collection.versioning) {
-    await createVersion(ctx.entity);
-  }
+hooks.on('entry:beforeUpdate', async (ctx) => {
+    if (ctx.collection.versioning) {
+        await createVersion(ctx.entry);
+    }
 });
 ```
 
@@ -1395,25 +1445,25 @@ Plugins are npm packages that provide field groups, collections, hooks, routes, 
 
 ```typescript
 interface AstromechPlugin {
-  name: string;
+    name: string;
 
-  // Declarative field groups (merged at init-time)
-  fieldGroups?: {
-    targets: string[] | '*' | { include?: string[]; exclude?: string[] };
-    groups: FieldGroup[];
-  }[];
+    // Declarative field groups (merged at init-time)
+    fieldGroups?: {
+        targets: string[] | '*' | { include?: string[]; exclude?: string[] };
+        groups: FieldGroup[];
+    }[];
 
-  // New collections this plugin creates
-  collections?: Record<string, CollectionConfig>;
+    // New collections this plugin creates
+    collections?: Record<string, CollectionConfig>;
 
-  // Runtime lifecycle hooks
-  setup?: (hooks: HookRegistry, ctx: AstromechContext) => void;
+    // Runtime lifecycle hooks
+    setup?: (hooks: HookRegistry, ctx: AstromechContext) => void;
 
-  // Routes (admin pages, API endpoints, public routes)
-  routes?: Route[];
+    // Routes (admin pages, API endpoints, public routes)
+    routes?: Route[];
 
-  // Middleware
-  middleware?: Middleware[];
+    // Middleware
+    middleware?: Middleware[];
 }
 ```
 
@@ -1421,19 +1471,21 @@ interface AstromechPlugin {
 
 ```typescript
 // All collections
-targets: '*'
+targets: '*';
 
 // Specific collections
-targets: ['pages', 'posts']
+targets: ['pages', 'posts'];
 
 // System resources
-targets: ['media', 'users']
+targets: ['media', 'users'];
 
 // Exclude pattern
-targets: { exclude: ['redirects'] }
+targets: {
+    exclude: ['redirects'];
+}
 
 // Mixed
-targets: ['pages', 'posts', 'media']
+targets: ['pages', 'posts', 'media'];
 ```
 
 ### How Plugins Are Processed
@@ -1454,40 +1506,48 @@ This is **not** runtime hook registration - it's declarative configuration mergi
 import type { AstromechPlugin, FieldGroup } from 'astromech';
 
 export function seoPlugin(options: {
-  targets?: string[];
-  sitemap?: boolean;
+    targets?: string[];
+    sitemap?: boolean;
 }): AstromechPlugin {
-  return {
-    name: 'seo',
-
-    fieldGroups: [{
-      targets: options.targets ?? '*',
-      groups: [{
+    return {
         name: 'seo',
-        label: 'SEO',
-        location: 'sidebar',
-        priority: 10,
-        collapsed: true,
-        fields: [
-          { name: 'meta_title', type: 'text', label: 'Meta Title' },
-          { name: 'meta_description', type: 'textarea', label: 'Meta Description' },
-          { name: 'og_image', type: 'media', label: 'Social Image' },
+
+        fieldGroups: [
+            {
+                targets: options.targets ?? '*',
+                groups: [
+                    {
+                        name: 'seo',
+                        label: 'SEO',
+                        location: 'sidebar',
+                        priority: 10,
+                        collapsed: true,
+                        fields: [
+                            { name: 'meta_title', type: 'text', label: 'Meta Title' },
+                            {
+                                name: 'meta_description',
+                                type: 'textarea',
+                                label: 'Meta Description',
+                            },
+                            { name: 'og_image', type: 'media', label: 'Social Image' },
+                        ],
+                    },
+                ],
+            },
         ],
-      }],
-    }],
 
-    routes: options.sitemap ? [
-      { path: '/sitemap.xml', handler: sitemapHandler },
-    ] : [],
+        routes: options.sitemap
+            ? [{ path: '/sitemap.xml', handler: sitemapHandler }]
+            : [],
 
-    setup(hooks) {
-      if (options.sitemap) {
-        hooks.on('entity:afterCreate', regenerateSitemap);
-        hooks.on('entity:afterUpdate', regenerateSitemap);
-        hooks.on('entity:afterDelete', regenerateSitemap);
-      }
-    },
-  };
+        setup(hooks) {
+            if (options.sitemap) {
+                hooks.on('entry:afterCreate', regenerateSitemap);
+                hooks.on('entry:afterUpdate', regenerateSitemap);
+                hooks.on('entry:afterDelete', regenerateSitemap);
+            }
+        },
+    };
 }
 ```
 
@@ -1498,47 +1558,64 @@ export function seoPlugin(options: {
 import type { AstromechPlugin } from 'astromech';
 
 export function redirectsPlugin(options: {
-  generateOnSlugChange?: boolean;
+    generateOnSlugChange?: boolean;
 }): AstromechPlugin {
-  return {
-    name: 'redirects',
+    return {
+        name: 'redirects',
 
-    // Plugin creates its own collection
-    collections: {
-      redirects: {
-        fieldGroups: [{
-          name: 'redirect',
-          label: 'Redirect',
-          location: 'main',
-          priority: 0,
-          fields: [
-            { name: 'from', type: 'text', required: true, label: 'From Path' },
-            { name: 'to', type: 'text', required: true, label: 'To Path' },
-            { name: 'type', type: 'select', options: ['301', '302'], defaultValue: '301' },
-          ],
-        }],
-      },
-    },
+        // Plugin creates its own collection
+        collections: {
+            redirects: {
+                fieldGroups: [
+                    {
+                        name: 'redirect',
+                        label: 'Redirect',
+                        location: 'main',
+                        priority: 0,
+                        fields: [
+                            {
+                                name: 'from',
+                                type: 'text',
+                                required: true,
+                                label: 'From Path',
+                            },
+                            {
+                                name: 'to',
+                                type: 'text',
+                                required: true,
+                                label: 'To Path',
+                            },
+                            {
+                                name: 'type',
+                                type: 'select',
+                                options: ['301', '302'],
+                                defaultValue: '301',
+                            },
+                        ],
+                    },
+                ],
+            },
+        },
 
-    // Middleware for handling redirects
-    middleware: [redirectMiddleware],
+        // Middleware for handling redirects
+        middleware: [redirectMiddleware],
 
-    setup(hooks, ctx) {
-      if (options.generateOnSlugChange) {
-        hooks.on('entity:beforeUpdate', async (entityCtx) => {
-          const oldSlug = entityCtx.entity.slug;
-          const newSlug = entityCtx.data.slug;
-          if (oldSlug && newSlug && oldSlug !== newSlug) {
-            await ctx.collections.redirects.create({
-              from: `/${oldSlug}`,
-              to: `/${newSlug}`,
-              type: '301',
-            });
-          }
-        });
-      }
-    },
-  };
+        setup(hooks, ctx) {
+            if (options.generateOnSlugChange) {
+                hooks.on('entry:beforeUpdate', async (entryCtx) => {
+                    const oldSlug = entryCtx.entry.slug;
+                    const newSlug = entryCtx.data.slug;
+                    if (oldSlug && newSlug && oldSlug !== newSlug) {
+                        await ctx.collections.redirects.create({
+                            from: `/${oldSlug}`,
+                            to: `/${newSlug}`,
+                            type: '301',
+                        });
+                    }
+                });
+            }
+        },
+    };
 }
 ```
 
@@ -1549,20 +1626,20 @@ export function redirectsPlugin(options: {
 import type { AstromechPlugin } from 'astromech';
 
 export function imageOptimizerPlugin(options?: {
-  quality?: number;
-  maxWidth?: number;
+    quality?: number;
+    maxWidth?: number;
 }): AstromechPlugin {
-  return {
-    name: 'image-optimizer',
+    return {
+        name: 'image-optimizer',
 
-    setup(hooks) {
-      hooks.on('media:afterUpload', async (ctx) => {
-        if (ctx.media.mimeType.startsWith('image/')) {
-          await optimizeImage(ctx.media, options);
-        }
-      });
-    },
-  };
+        setup(hooks) {
+            hooks.on('media:afterUpload', async (ctx) => {
+                if (ctx.media.mimeType.startsWith('image/')) {
+                    await optimizeImage(ctx.media, options);
+                }
+            });
+        },
+    };
 }
 ```
 
@@ -1574,29 +1651,33 @@ import { redirectsPlugin } from '@astromech/redirects-plugin';
 import { imageOptimizerPlugin } from '@astromech/image-optimizer';
 
 astromech({
-  collections: {
-    pages: {
-      fieldGroups: [/* user-defined content fields */],
+    collections: {
+        pages: {
+            fieldGroups: [
+                /* user-defined content fields */
+            ],
+        },
+        posts: {
+            versioning: true,
+            fieldGroups: [
+                /* user-defined content fields */
+            ],
+        },
     },
-    posts: {
-      versioning: true,
-      fieldGroups: [/* user-defined content fields */],
-    },
-  },
 
-  plugins: [
-    seoPlugin({
-      targets: ['pages', 'posts'],
-      sitemap: true,
-    }),
-    redirectsPlugin({
-      generateOnSlugChange: true,
-    }),
-    imageOptimizerPlugin({
-      quality: 80,
-      maxWidth: 2000,
-    }),
-  ],
+    plugins: [
+        seoPlugin({
+            targets: ['pages', 'posts'],
+            sitemap: true,
+        }),
+        redirectsPlugin({
+            generateOnSlugChange: true,
+        }),
+        imageOptimizerPlugin({
+            quality: 80,
+            maxWidth: 2000,
+        }),
+    ],
 });
 ```
 
@@ -1609,22 +1690,24 @@ Server-rendered Astro pages with React islands for interactive components.
 **Architecture Pattern:** Astro + React Islands (not a full SPA)
 
 **Why Islands:**
+
 - Performance: ~30-40KB bundle (only interactive parts) vs 65-100KB for full SPA
 - Progressive Enhancement: Simple forms work without JavaScript
 - Development Velocity: Keep working Astro templates, add React only where needed
 - Alignment: Exactly what Astro was designed for
 
 **Field Type Strategy:**
+
 - Simple field types use native HTML inputs (text, number, date, select, boolean, etc.)
 - Complex field types use React components with `client:load` hydration:
-  - `richtext` - TipTap editor
-  - `media` - Upload picker with preview
-  - `relation` - Searchable combobox
-  - `repeater` - Add/remove/reorder controls
-  - `multiselect` - Multi-select dropdown
-  - `json` - Monaco editor (lazy loaded, future)
-  - `builder` - Block-based editor (future)
-  - `group` - Collapsible sections
+    - `richtext` - TipTap editor
+    - `media` - Upload picker with preview
+    - `relation` - Searchable combobox
+    - `repeater` - Add/remove/reorder controls
+    - `multiselect` - Multi-select dropdown
+    - `json` - Monaco editor (lazy loaded, future)
+    - `builder` - Block-based editor (future)
+    - `group` - Collapsible sections
 
 **Form Submission:** Progressive enhancement with HTML forms + POST. Islands update hidden inputs on change. Server handles submission (no fetch API needed initially). Can add optimistic updates later without rewrite.
 
@@ -1640,7 +1723,7 @@ admin/
 ├── pages/
 │   ├── Dashboard.tsx
 │   ├── CollectionList.tsx
-│   ├── EntityEdit.tsx
+│   ├── EntryEdit.tsx
 │   ├── MediaLibrary.tsx
 │   └── Settings.tsx
 ├── hooks/
@@ -1657,110 +1740,121 @@ admin/
 Modern CSS with BEM-like naming for easy theming:
 
 **Design Tokens (CSS Custom Properties):**
+
 ```css
 /* styles/tokens.css */
 :root {
-  /* Colors */
-  --am-color-primary: #3b82f6;
-  --am-color-primary-hover: #2563eb;
-  --am-color-background: #ffffff;
-  --am-color-surface: #f8fafc;
-  --am-color-border: #e2e8f0;
-  --am-color-text: #1e293b;
-  --am-color-text-muted: #64748b;
-  --am-color-danger: #ef4444;
-  --am-color-success: #22c55e;
+    /* Colors */
+    --am-color-primary: #3b82f6;
+    --am-color-primary-hover: #2563eb;
+    --am-color-background: #ffffff;
+    --am-color-surface: #f8fafc;
+    --am-color-border: #e2e8f0;
+    --am-color-text: #1e293b;
+    --am-color-text-muted: #64748b;
+    --am-color-danger: #ef4444;
+    --am-color-success: #22c55e;
 
-  /* Spacing */
-  --am-space-xs: 0.25rem;
-  --am-space-sm: 0.5rem;
-  --am-space-md: 1rem;
-  --am-space-lg: 1.5rem;
-  --am-space-xl: 2rem;
+    /* Spacing */
+    --am-space-xs: 0.25rem;
+    --am-space-sm: 0.5rem;
+    --am-space-md: 1rem;
+    --am-space-lg: 1.5rem;
+    --am-space-xl: 2rem;
 
-  /* Typography */
-  --am-font-family: system-ui, -apple-system, sans-serif;
-  --am-font-size-sm: 0.875rem;
-  --am-font-size-base: 1rem;
-  --am-font-size-lg: 1.125rem;
-  --am-font-size-xl: 1.25rem;
+    /* Typography */
+    --am-font-family: system-ui, -apple-system, sans-serif;
+    --am-font-size-sm: 0.875rem;
+    --am-font-size-base: 1rem;
+    --am-font-size-lg: 1.125rem;
+    --am-font-size-xl: 1.25rem;
 
-  /* Borders */
-  --am-radius-sm: 0.25rem;
-  --am-radius-md: 0.375rem;
-  --am-radius-lg: 0.5rem;
+    /* Borders */
+    --am-radius-sm: 0.25rem;
+    --am-radius-md: 0.375rem;
+    --am-radius-lg: 0.5rem;
 
-  /* Shadows */
-  --am-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --am-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    /* Shadows */
+    --am-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --am-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 /* Dark theme override */
-[data-theme="dark"] {
-  --am-color-background: #0f172a;
-  --am-color-surface: #1e293b;
-  --am-color-border: #334155;
-  --am-color-text: #f1f5f9;
-  --am-color-text-muted: #94a3b8;
+[data-theme='dark'] {
+    --am-color-background: #0f172a;
+    --am-color-surface: #1e293b;
+    --am-color-border: #334155;
+    --am-color-text: #f1f5f9;
+    --am-color-text-muted: #94a3b8;
 }
 ```
 
 **BEM-like Class Naming:**
+
 ```css
 /* Block */
-.am-button { }
+.am-button {
+}
 
 /* Element */
-.am-button__icon { }
-.am-button__label { }
+.am-button__icon {
+}
+.am-button__label {
+}
 
 /* Modifier */
-.am-button--primary { }
-.am-button--danger { }
-.am-button--small { }
+.am-button--primary {
+}
+.am-button--danger {
+}
+.am-button--small {
+}
 ```
 
 **Component Example:**
+
 ```css
 /* styles/components/button.css */
 .am-button {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--am-space-sm);
-  padding: var(--am-space-sm) var(--am-space-md);
-  font-size: var(--am-font-size-base);
-  font-family: var(--am-font-family);
-  border-radius: var(--am-radius-md);
-  border: 1px solid var(--am-color-border);
-  background: var(--am-color-surface);
-  color: var(--am-color-text);
-  cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--am-space-sm);
+    padding: var(--am-space-sm) var(--am-space-md);
+    font-size: var(--am-font-size-base);
+    font-family: var(--am-font-family);
+    border-radius: var(--am-radius-md);
+    border: 1px solid var(--am-color-border);
+    background: var(--am-color-surface);
+    color: var(--am-color-text);
+    cursor: pointer;
+    transition:
+        background-color 0.15s,
+        border-color 0.15s;
 }
 
 .am-button:hover {
-  background: var(--am-color-border);
+    background: var(--am-color-border);
 }
 
 .am-button--primary {
-  background: var(--am-color-primary);
-  border-color: var(--am-color-primary);
-  color: white;
+    background: var(--am-color-primary);
+    border-color: var(--am-color-primary);
+    color: white;
 }
 
 .am-button--primary:hover {
-  background: var(--am-color-primary-hover);
+    background: var(--am-color-primary-hover);
 }
 
 .am-button--danger {
-  background: var(--am-color-danger);
-  border-color: var(--am-color-danger);
-  color: white;
+    background: var(--am-color-danger);
+    border-color: var(--am-color-danger);
+    color: white;
 }
 
 .am-button__icon {
-  width: 1em;
-  height: 1em;
+    width: 1em;
+    height: 1em;
 }
 ```
 
@@ -1771,8 +1865,8 @@ Users can override design tokens to customize the admin UI:
 ```css
 /* Custom theme */
 :root {
-  --am-color-primary: #8b5cf6;  /* Purple instead of blue */
-  --am-radius-md: 0;            /* Sharp corners */
+    --am-color-primary: #8b5cf6; /* Purple instead of blue */
+    --am-radius-md: 0; /* Sharp corners */
 }
 ```
 
@@ -1783,91 +1877,114 @@ Users can override design tokens to customize the admin UI:
 ```typescript
 // Roles table
 export const roles = sqliteTable('roles', {
-  slug: text('slug').primaryKey(),        // e.g., 'admin', 'editor', 'blog_editor'
-  name: text('name').notNull(),            // Display name
-  permissions: text('permissions', { mode: 'json' }).$type<string[]>().notNull(),
-  isBuiltIn: integer('is_built_in', { mode: 'boolean' }).default(false),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    slug: text('slug').primaryKey(), // e.g., 'admin', 'editor', 'blog_editor'
+    name: text('name').notNull(), // Display name
+    permissions: text('permissions', { mode: 'json' }).$type<string[]>().notNull(),
+    isBuiltIn: integer('is_built_in', { mode: 'boolean' }).default(false),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
 // Users table
 export const users = sqliteTable('users', {
-  id: text('id').primaryKey(),
-  email: text('email').notNull().unique(),
-  name: text('name'),
-  roleSlug: text('role_slug').notNull().references(() => roles.slug).default('editor'),
-  fields: text('fields', { mode: 'json' }),  // Custom profile fields
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    id: text('id').primaryKey(),
+    email: text('email').notNull().unique(),
+    name: text('name'),
+    roleSlug: text('role_slug')
+        .notNull()
+        .references(() => roles.slug)
+        .default('editor'),
+    fields: text('fields', { mode: 'json' }), // Custom profile fields
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
-export const entities = sqliteTable('entities', {
-  id: text('id').primaryKey(),                                                  // UUID
-  collectionId: text('collection_id').notNull(),
+export const entries = sqliteTable(
+    'entries',
+    {
+        id: text('id').primaryKey(), // UUID
+        collectionId: text('collection_id').notNull(),
 
-  // Translation support (nullable for non-i18n collections)
-  // Translations are linked via relationships table with name: '_translations'
-  locale: text('locale'),                                                       // e.g., 'en-GB', 'es'
+        // Translation support (nullable for non-i18n collections)
+        // Translations are linked via relationships table with name: '_translations'
+        locale: text('locale'), // e.g., 'en-GB', 'es'
 
-  slug: text('slug').unique(),
-  title: text('title').notNull(),
-  fields: text('fields', { mode: 'json' }),
-  status: text('status', { enum: ['draft', 'published', 'scheduled'] }).default('draft'),
-  publishAt: integer('publish_at', { mode: 'timestamp' }),  // Scheduled publish date
-  deletedAt: integer('deleted_at', { mode: 'timestamp' }),  // Soft delete timestamp
+        slug: text('slug').unique(),
+        title: text('title').notNull(),
+        fields: text('fields', { mode: 'json' }),
+        status: text('status', { enum: ['draft', 'published', 'scheduled'] }).default(
+            'draft'
+        ),
+        publishAt: integer('publish_at', { mode: 'timestamp' }), // Scheduled publish date
+        deletedAt: integer('deleted_at', { mode: 'timestamp' }), // Soft delete timestamp
 
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-  createdBy: text('created_by').references(() => users.id),
-  updatedBy: text('updated_by').references(() => users.id),
-}, (table) => ({
-  localeIdx: index('idx_locale_lookup').on(table.collectionId, table.locale, table.status),
-}));
+        createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+        updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+        createdBy: text('created_by').references(() => users.id),
+        updatedBy: text('updated_by').references(() => users.id),
+    },
+    (table) => ({
+        localeIdx: index('idx_locale_lookup').on(
+            table.collectionId,
+            table.locale,
+            table.status
+        ),
+    })
+);
 
-export const entityVersions = sqliteTable('entity_versions', {
-  id: text('id').primaryKey(),
-  entityId: text('entity_id').notNull().references(() => entities.id, { onDelete: 'cascade' }),
-  versionNumber: integer('version_number').notNull(),
-  title: text('title').notNull(),
-  fields: text('fields', { mode: 'json' }),
-  status: text('status', { enum: ['draft', 'published', 'scheduled'] }),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  createdBy: text('created_by').references(() => users.id),
+export const entryVersions = sqliteTable('entry_versions', {
+    id: text('id').primaryKey(),
+    entryId: text('entry_id')
+        .notNull()
+        .references(() => entries.id, { onDelete: 'cascade' }),
+    versionNumber: integer('version_number').notNull(),
+    title: text('title').notNull(),
+    fields: text('fields', { mode: 'json' }),
+    status: text('status', { enum: ['draft', 'published', 'scheduled'] }),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    createdBy: text('created_by').references(() => users.id),
 });
 
-// Polymorphic relationships table (entity↔entity, entity↔user, etc.)
-// All IDs are UUIDs. Collection info is not stored here since entities already have collection_id.
-export const relationships = sqliteTable('relationships', {
-  id: text('id').primaryKey(),                                                  // UUID
-  sourceId: text('source_id').notNull(),                                        // UUID
-  sourceType: text('source_type', { enum: ['entity', 'user', 'media'] }).notNull(),
-  name: text('name').notNull(),                                                 // e.g., 'author', 'category', '_translations'
-  targetId: text('target_id').notNull(),                                        // UUID
-  targetType: text('target_type', { enum: ['entity', 'user', 'media'] }).notNull(),
-  position: integer('position').default(0),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-}, (table) => ({
-  sourceIdx: index('idx_rel_source').on(table.sourceId, table.sourceType, table.name),
-  targetIdx: index('idx_rel_target').on(table.targetId, table.targetType),
-}));
+// Polymorphic relationships table (entry↔entry, entry↔user, etc.)
+// All IDs are UUIDs. Collection info is not stored here since entries already have collection_id.
+export const relationships = sqliteTable(
+    'relationships',
+    {
+        id: text('id').primaryKey(), // UUID
+        sourceId: text('source_id').notNull(), // UUID
+        sourceType: text('source_type', { enum: ['entry', 'user', 'media'] }).notNull(),
+        name: text('name').notNull(), // e.g., 'author', 'category', '_translations'
+        targetId: text('target_id').notNull(), // UUID
+        targetType: text('target_type', { enum: ['entry', 'user', 'media'] }).notNull(),
+        position: integer('position').default(0),
+        createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    },
+    (table) => ({
+        sourceIdx: index('idx_rel_source').on(
+            table.sourceId,
+            table.sourceType,
+            table.name
+        ),
+        targetIdx: index('idx_rel_target').on(table.targetId, table.targetType),
+    })
+);
 
 export const media = sqliteTable('media', {
-  id: text('id').primaryKey(),
-  filename: text('filename').notNull(),
-  mimeType: text('mime_type').notNull(),
-  size: integer('size').notNull(),
-  url: text('url').notNull(),
-  alt: text('alt'),
-  fields: text('fields', { mode: 'json' }),  // Custom metadata fields
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  createdBy: text('created_by').references(() => users.id),
+    id: text('id').primaryKey(),
+    filename: text('filename').notNull(),
+    mimeType: text('mime_type').notNull(),
+    size: integer('size').notNull(),
+    url: text('url').notNull(),
+    alt: text('alt'),
+    fields: text('fields', { mode: 'json' }), // Custom metadata fields
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    createdBy: text('created_by').references(() => users.id),
 });
 
 export const settings = sqliteTable('settings', {
-  key: text('key').primaryKey(),
-  value: text('value', { mode: 'json' }),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    key: text('key').primaryKey(),
+    value: text('value', { mode: 'json' }),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 ```
 
@@ -1879,21 +1996,22 @@ export const settings = sqliteTable('settings', {
 
 ```json
 {
-  "compilerOptions": {
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "exactOptionalPropertyTypes": true,
-    "moduleResolution": "bundler",
-    "target": "ES2022",
-    "lib": ["ES2022"]
-  }
+    "compilerOptions": {
+        "strict": true,
+        "noUncheckedIndexedAccess": true,
+        "noImplicitOverride": true,
+        "exactOptionalPropertyTypes": true,
+        "moduleResolution": "bundler",
+        "target": "ES2022",
+        "lib": ["ES2022"]
+    }
 }
 ```
 
 ### Code Style
 
 **General:**
+
 - Use `type` over `interface` unless extending/declaration merging is needed
 - Use `import type { }` for type-only imports
 - Prefer `unknown` over `any`; never use `any` in committed code
@@ -1901,17 +2019,20 @@ export const settings = sqliteTable('settings', {
 - Self-documenting code over comments; reserve comments for non-obvious "why"
 
 **Naming:**
+
 - Files: `kebab-case.ts`
 - Types/Interfaces: `PascalCase`
 - Functions/variables: `camelCase`
 - Constants: `SCREAMING_SNAKE_CASE` for true constants, `camelCase` for derived values
 
 **Functions:**
+
 - Explicit return types on exported functions
 - Prefer named exports over default exports
 - Async functions should handle errors or explicitly propagate them
 
 **Imports:**
+
 - Group: external deps → internal absolute → relative
 - Sort alphabetically within groups
 
@@ -1920,13 +2041,14 @@ export const settings = sqliteTable('settings', {
 **ESLint:** `@typescript-eslint/recommended-type-checked` + `@typescript-eslint/stylistic-type-checked`
 
 **Prettier:**
+
 ```json
 {
-  "semi": true,
-  "singleQuote": true,
-  "trailingComma": "es5",
-  "printWidth": 100,
-  "tabWidth": 2
+    "semi": true,
+    "singleQuote": true,
+    "trailingComma": "es5",
+    "printWidth": 100,
+    "tabWidth": 2
 }
 ```
 

@@ -11,7 +11,7 @@ export function formatDate(date: Date | string | null | undefined): string {
     if (!date) return '—';
     const d = typeof date === 'string' ? parseISO(date) : date;
     if (!isValid(d)) return '—';
-    return format(d, 'MMM d, yyyy');
+    return format(d, 'd MMM yyyy');
 }
 
 /**

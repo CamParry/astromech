@@ -2,7 +2,7 @@
  * SDK types — AstromechClient, typed collection proxy
  */
 
-import type { Entity, EntityStatus, EntityVersion, JsonObject } from './domain.js';
+import type { Entry, EntryStatus, EntryVersion } from './domain.js';
 import type {
     CollectionApi,
     MediaApi,
@@ -16,7 +16,7 @@ import type {
 import type { ResolvedConfig } from './config.js';
 
 // ============================================================================
-// Typed Entity
+// Typed Entry
 // ============================================================================
 
 // Open interface — augmented by generated types (.astro/astromech.d.ts)
@@ -24,8 +24,8 @@ import type { ResolvedConfig } from './config.js';
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface AstromechCollections {}
 
-// Typed entity — the Entity type but with typed fields
-export type TypedEntity<TFields> = Omit<Entity, 'fields'> & {
+// Typed entry — the Entry type but with typed fields
+export type TypedEntry<TFields> = Omit<Entry, 'fields'> & {
     fields: TFields;
 };
 
@@ -35,37 +35,37 @@ export type TypedEntity<TFields> = Omit<Entity, 'fields'> & {
 
 // TypedCollectionApi — returned by the typed collections proxy when AstromechCollections is augmented
 export type TypedCollectionApi<TFields, TRelations> = {
-    all(options?: QueryOptions): Promise<TypedEntity<TFields>[]>;
+    all(options?: QueryOptions): Promise<TypedEntry<TFields>[]>;
     all<K extends keyof TRelations & string>(
         options: Omit<QueryOptions, 'populate'> & { populate: K[] }
-    ): Promise<TypedEntity<Omit<TFields, K> & Pick<TRelations, K>>[]>;
+    ): Promise<TypedEntry<Omit<TFields, K> & Pick<TRelations, K>>[]>;
 
     paginate(
         perPage: number,
         page: number,
         options?: QueryOptions
-    ): Promise<PaginationResult<TypedEntity<TFields>>>;
+    ): Promise<PaginationResult<TypedEntry<TFields>>>;
     paginate<K extends keyof TRelations & string>(
         perPage: number,
         page: number,
         options: Omit<QueryOptions, 'populate'> & { populate: K[] }
-    ): Promise<PaginationResult<TypedEntity<Omit<TFields, K> & Pick<TRelations, K>>>>;
+    ): Promise<PaginationResult<TypedEntry<Omit<TFields, K> & Pick<TRelations, K>>>>;
 
-    get(id: string, options?: Omit<QueryOptions, 'populate'>): Promise<TypedEntity<TFields> | null>;
+    get(id: string, options?: Omit<QueryOptions, 'populate'>): Promise<TypedEntry<TFields> | null>;
     get<K extends keyof TRelations & string>(
         id: string,
         options: Omit<QueryOptions, 'populate'> & { populate: K[] }
-    ): Promise<TypedEntity<Omit<TFields, K> & Pick<TRelations, K>> | null>;
+    ): Promise<TypedEntry<Omit<TFields, K> & Pick<TRelations, K>> | null>;
 
-    where(filters: WhereFilters, options?: QueryOptions): Promise<TypedEntity<TFields>[]>;
+    where(filters: WhereFilters, options?: QueryOptions): Promise<TypedEntry<TFields>[]>;
 
     create(data: {
         title: string;
         slug?: string;
         fields?: Partial<TFields>;
-        status?: EntityStatus;
+        status?: EntryStatus;
         publishAt?: Date | null;
-    }): Promise<TypedEntity<TFields>>;
+    }): Promise<TypedEntry<TFields>>;
 
     update(
         id: string,
@@ -73,25 +73,28 @@ export type TypedCollectionApi<TFields, TRelations> = {
             title: string;
             slug: string;
             fields: Partial<TFields>;
-            status: EntityStatus;
+            status: EntryStatus;
             publishAt: Date | null;
         }>
-    ): Promise<TypedEntity<TFields>>;
+    ): Promise<TypedEntry<TFields>>;
 
     trash(id: string): Promise<void>;
-    duplicate(id: string): Promise<TypedEntity<TFields>>;
-    trashed(options?: QueryOptions): Promise<TypedEntity<TFields>[]>;
-    restore(id: string): Promise<TypedEntity<TFields>>;
+    duplicate(id: string): Promise<TypedEntry<TFields>>;
+    trashed(options?: QueryOptions): Promise<TypedEntry<TFields>[]>;
+    restore(id: string): Promise<TypedEntry<TFields>>;
     delete(id: string): Promise<void>;
     emptyTrash(): Promise<void>;
-    versions(id: string): Promise<EntityVersion[]>;
-    restoreVersion(id: string, versionId: string): Promise<TypedEntity<TFields>>;
+    versions(id: string): Promise<EntryVersion[]>;
+    restoreVersion(id: string, versionId: string): Promise<TypedEntry<TFields>>;
     translations(id: string): Promise<TranslationInfo[]>;
     translate(
         id: string,
         locale: string,
         data?: { title?: string; fields?: Partial<TFields> }
-    ): Promise<TypedEntity<TFields>>;
+    ): Promise<TypedEntry<TFields>>;
+    publish(id: string): Promise<TypedEntry<TFields>>;
+    unpublish(id: string): Promise<TypedEntry<TFields>>;
+    schedule(id: string, publishAt: Date): Promise<TypedEntry<TFields>>;
 };
 
 // ============================================================================

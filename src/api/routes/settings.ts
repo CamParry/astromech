@@ -12,8 +12,9 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { Astromech } from '@/sdk/server/index.js';
-import { fromZodError, internalError, notFound } from '@/api/middleware/errors.js';
+import { forbidden, fromZodError, internalError, notFound } from '@/api/middleware/errors.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
+import { can } from '@/core/permissions.js';
 
 type Env = { Variables: AuthVariables };
 
@@ -37,6 +38,9 @@ const putSchema = z.object({ value: jsonValue });
 // ============================================================================
 
 router.get('/', async (c) => {
+    const role = c.var.role;
+    if (!can(role, 'settings:read')) return forbidden(c);
+
     try {
         const settings = await Astromech.settings.all();
         return c.json({ data: settings });
@@ -51,6 +55,8 @@ router.get('/', async (c) => {
 
 router.get('/:key', async (c) => {
     const { key } = c.req.param();
+    const role = c.var.role;
+    if (!can(role, 'settings:read')) return forbidden(c);
 
     try {
         const value = await Astromech.settings.get(key);
@@ -67,6 +73,8 @@ router.get('/:key', async (c) => {
 
 router.put('/:key', async (c) => {
     const { key } = c.req.param();
+    const role = c.var.role;
+    if (!can(role, 'settings:update')) return forbidden(c);
 
     try {
         const raw = await c.req.json();

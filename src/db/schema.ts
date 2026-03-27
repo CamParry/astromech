@@ -32,6 +32,7 @@ export const usersTable = sqliteTable('users', {
     emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
     image: text('image'),
     fields: text('fields', { mode: 'json' }),
+    roleSlug: text('role_slug').notNull().default('admin'),
     createdAt: integer('created_at', { mode: 'timestamp' })
         .notNull()
         .$defaultFn(() => new Date()),
@@ -93,11 +94,11 @@ export const verificationsTable = sqliteTable('verifications', {
 });
 
 // ============================================================================
-// Entities
+// Entries
 // ============================================================================
 
-export const entitiesTable = sqliteTable(
-    'entities',
+export const entriesTable = sqliteTable(
+    'entries',
     {
         id: text('id')
             .primaryKey()
@@ -124,32 +125,38 @@ export const entitiesTable = sqliteTable(
             .$defaultFn(() => new Date()),
         createdBy: text('created_by').references(() => usersTable.id),
         updatedBy: text('updated_by').references(() => usersTable.id),
+
+        // Translations support: points to the source/default locale entry
+        translationOf: text('translation_of').references(() => entriesTable.id, { onDelete: 'cascade' }),
     },
     (table) => [
-        index('idx_entities_collection').on(table.collection),
-        index('idx_entities_slug').on(table.collection, table.slug),
-        index('idx_entities_status').on(table.collection, table.status),
-        index('idx_entities_locale').on(table.collection, table.locale, table.status),
-        index('idx_entities_deleted').on(table.deletedAt),
+        index('idx_entries_collection').on(table.collection),
+        index('idx_entries_slug').on(table.collection, table.slug),
+        index('idx_entries_status').on(table.collection, table.status),
+        index('idx_entries_locale').on(table.collection, table.locale, table.status),
+        index('idx_entries_deleted').on(table.deletedAt),
+        index('idx_entries_translation_of').on(table.translationOf),
     ]
 );
 
 // ============================================================================
-// Entity Versions
+// Entry Versions
 // ============================================================================
 
-export const entityVersionsTable = sqliteTable(
-    'entity_versions',
+export const entryVersionsTable = sqliteTable(
+    'entry_versions',
     {
         id: text('id')
             .primaryKey()
             .$defaultFn(() => crypto.randomUUID()),
-        entityId: text('entity_id')
+        entryId: text('entry_id')
             .notNull()
-            .references(() => entitiesTable.id, { onDelete: 'cascade' }),
+            .references(() => entriesTable.id, { onDelete: 'cascade' }),
         versionNumber: integer('version_number').notNull(),
         title: text('title').notNull(),
+        slug: text('slug'),
         fields: text('fields', { mode: 'json' }),
+        relations: text('relations', { mode: 'json' }).$type<Record<string, string | string[]>>(),
         status: text('status', { enum: ['draft', 'published', 'scheduled'] }),
         createdAt: integer('created_at', { mode: 'timestamp' })
             .notNull()
@@ -157,7 +164,7 @@ export const entityVersionsTable = sqliteTable(
         createdBy: text('created_by').references(() => usersTable.id),
     },
     (table) => [
-        index('idx_versions_entity').on(table.entityId, table.versionNumber),
+        index('idx_versions_entry').on(table.entryId, table.versionNumber),
     ]
 );
 
@@ -173,12 +180,12 @@ export const relationshipsTable = sqliteTable(
 			.$defaultFn(() => crypto.randomUUID()),
 		sourceId: text('source_id').notNull(),
 		sourceType: text('source_type', {
-			enum: ['entity', 'user', 'media'],
+			enum: ['entry', 'user', 'media'],
 		}).notNull(),
 		name: text('name').notNull(),
 		targetId: text('target_id').notNull(),
 		targetType: text('target_type', {
-			enum: ['entity', 'user', 'media'],
+			enum: ['entry', 'user', 'media'],
 		}).notNull(),
 		position: integer('position').notNull().default(0),
 		createdAt: integer('created_at', { mode: 'timestamp' })
@@ -255,11 +262,11 @@ export type NewAccountRow = typeof accountsTable.$inferInsert;
 export type VerificationRow = typeof verificationsTable.$inferSelect;
 export type NewVerificationRow = typeof verificationsTable.$inferInsert;
 
-export type EntityRow = typeof entitiesTable.$inferSelect;
-export type NewEntityRow = typeof entitiesTable.$inferInsert;
+export type EntryRow = typeof entriesTable.$inferSelect;
+export type NewEntryRow = typeof entriesTable.$inferInsert;
 
-export type EntityVersionRow = typeof entityVersionsTable.$inferSelect;
-export type NewEntityVersionRow = typeof entityVersionsTable.$inferInsert;
+export type EntryVersionRow = typeof entryVersionsTable.$inferSelect;
+export type NewEntryVersionRow = typeof entryVersionsTable.$inferInsert;
 
 export type RelationshipRow = typeof relationshipsTable.$inferSelect;
 export type NewRelationshipRow = typeof relationshipsTable.$inferInsert;

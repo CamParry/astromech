@@ -3,6 +3,7 @@ import { defineConfig } from 'tsup';
 export default defineConfig({
     entry: {
         index: 'src/index.ts',
+        'adapters/astro': 'src/adapters/astro.ts',
         'sdk/server/index': 'src/sdk/server/index.ts',
         'sdk/client/index': 'src/sdk/client/index.ts',
         middleware: 'src/middleware.ts',
@@ -13,6 +14,6 @@ export default defineConfig({
     dts: true,
     sourcemap: true,
     clean: true,
-    external: ['astro', 'drizzle-orm', 'better-auth', 'virtual:astromech/config'],
+    external: ['astro', 'drizzle-orm', 'better-auth', 'virtual:astromech/config', 'virtual:astromech/admin-config'],
     treeshake: true,
 });

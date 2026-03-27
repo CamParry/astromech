@@ -5,7 +5,7 @@ import type { BaseFieldProps } from '@/types/index.js';
 import { formatValueForInput } from '@/utils/field-formatters';
 import './richtext-field.css';
 
-export function RichtextField({ name, value, field, required, onChange }: BaseFieldProps) {
+export function RichtextField({ name, value, field, required, onChange, disabled }: BaseFieldProps) {
   const stringValue = formatValueForInput(value, 'richtext');
   const [content, setContent] = useState(stringValue);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -13,6 +13,7 @@ export function RichtextField({ name, value, field, required, onChange }: BaseFi
   const editor = useEditor({
     extensions: [StarterKit],
     content: stringValue,
+    editable: !disabled,
     editorProps: {
       attributes: {
         class: 'am-richtext__content',
@@ -44,7 +45,7 @@ export function RichtextField({ name, value, field, required, onChange }: BaseFi
 
   return (
     <div className="am-richtext">
-      <div className="am-richtext__toolbar">
+      {!disabled && <div className="am-richtext__toolbar">
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -93,7 +94,7 @@ export function RichtextField({ name, value, field, required, onChange }: BaseFi
         >
           OL
         </button>
-      </div>
+      </div>}
       <EditorContent editor={editor} />
       <input
         ref={inputRef}

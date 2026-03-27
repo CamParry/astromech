@@ -5,15 +5,22 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1774220211591,
-      "tag": "0000_long_shatterstar",
+      "when": 1774393111099,
+      "tag": "0000_keen_doorman",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "6",
-      "when": 1774222238094,
-      "tag": "0001_curly_stepford_cuckoos",
+      "when": 1774393200000,
+      "tag": "0001_add_role_slug",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1742860800000,
+      "tag": "0002_entry_locale_backfill",
       "breakpoints": true
     }
   ]

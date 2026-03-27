@@ -7,6 +7,7 @@ function toUser(row: typeof usersTable.$inferSelect): User {
     return {
         ...row,
         fields: (row.fields as JsonObject | null) ?? null,
+        roleSlug: row.roleSlug,
     };
 }
 
@@ -27,13 +28,14 @@ export const usersApi = {
         return user.length > 0 ? toUser(user[0]!) : null;
     },
 
-    async create(data: { email: string; name: string }): Promise<User> {
+    async create(data: { email: string; name: string; roleSlug?: string }): Promise<User> {
         const db = getDb();
         const user = await db
             .insert(usersTable)
             .values({
                 email: data.email,
                 name: data.name,
+                ...(data.roleSlug !== undefined && { roleSlug: data.roleSlug }),
             })
             .returning();
 
@@ -46,7 +48,7 @@ export const usersApi = {
 
     async update(
         id: string,
-        data: Partial<{ name: string; email: string }>
+        data: Partial<{ name: string; email: string; fields: JsonObject; roleSlug: string }>
     ): Promise<User> {
         const db = getDb();
         const user = await db
@@ -54,6 +56,8 @@ export const usersApi = {
             .set({
                 ...(data.name !== undefined && { name: data.name }),
                 ...(data.email !== undefined && { email: data.email }),
+                ...(data.fields !== undefined && { fields: data.fields }),
+                ...(data.roleSlug !== undefined && { roleSlug: data.roleSlug }),
                 updatedAt: new Date(),
             })
             .where(eq(usersTable.id, id))

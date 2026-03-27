@@ -7,15 +7,19 @@
 
 import { Hono } from 'hono';
 import { requireAuth } from './middleware/auth.js';
+import type { AuthVariables } from './middleware/auth.js';
 import { onError, onNotFound } from './middleware/errors.js';
-import { entitiesRouter } from './routes/entities.js';
+import { entriesRouter } from './routes/entries.js';
 import { usersRouter } from './routes/users.js';
 import { mediaRouter } from './routes/media.js';
 import { settingsRouter } from './routes/settings.js';
 import { collectionsMetaRouter } from './routes/collections.js';
+import { cronRouter } from './routes/cron.js';
 import { Astromech } from '@/sdk/server/index.js';
 
-export const app = new Hono();
+type AppEnv = { Variables: AuthVariables };
+
+export const app = new Hono<AppEnv>();
 
 // ============================================================================
 // Error handling
@@ -39,12 +43,18 @@ app.get('/setup/check', async (c) => {
 
 app.use('*', requireAuth);
 
+// GET /me — current user + role (used by admin SPA)
+app.get('/me', (c) => {
+    return c.json({ data: { user: c.var.user, role: c.var.role } });
+});
+
 // ============================================================================
 // Route mounting
 // ============================================================================
 
-app.route('/collections', entitiesRouter);
+app.route('/collections', entriesRouter);
 app.route('/users', usersRouter);
 app.route('/media', mediaRouter);
 app.route('/settings', settingsRouter);
 app.route('/collections-meta', collectionsMetaRouter);
+app.route('/cron', cronRouter);

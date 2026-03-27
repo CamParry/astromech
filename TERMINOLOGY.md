@@ -9,9 +9,10 @@ Terms that are ambiguous, easily confused, or have meaningful design decisions b
 The standard term for any pluggable backend implementation in Astromech. A driver knows how to communicate with a specific external system and exposes a consistent interface.
 
 Current drivers:
-- **DatabaseDriver** — wraps a database connection (libsql, D1)
-- **StorageDriver** — wraps a file storage backend (filesystem, S3, R2)
-- **EmailDriver** — (Phase 11) wraps an email sending service (SMTP, Resend, etc.)
+
+- **DatabaseDriver** — wraps a database connection (`libsqlDriver`, `d1Driver`)
+- **StorageDriver** — wraps a file storage backend (`FilesystemStorage`, and future S3/R2 drivers)
+- **EmailDriver** — wraps an email sending service (`SmtpDriver`, `ResendDriver`, `ConsoleDriver`)
 
 > **Why "driver" and not "adapter"?** Both terms are used in the ecosystem (Payload uses "adapter", AdonisJS uses "driver"). We chose "driver" for consistency with `DatabaseDriver`, which was already established, and because it better conveys the idea of a low-level connector to a specific technology — not just a compatibility shim.
 
@@ -27,9 +28,9 @@ Prefer "collection config" when referring to the config object in conversation, 
 
 ---
 
-## Entity vs Record
+## Entry vs Record
 
-**Entity** is the Astromech term for a single content item stored in a collection. Avoid saying "record" — it conflates CMS content with raw database rows.
+**Entry** is the Astromech term for a single content item stored in a collection. Avoid saying "record" — it conflates CMS content with raw database rows.
 
 ---
 
@@ -37,9 +38,9 @@ Prefer "collection config" when referring to the config object in conversation, 
 
 These are distinct operations:
 
-- **Trash** (soft delete) — sets `deletedAt` on the entity; the row is preserved. The API method is `delete()`.
+- **Trash** (soft delete) — sets `deletedAt` on the entry; the row is preserved. The API method is `delete()`.
 - **Force delete** — permanently removes the row. The API method is `forceDelete()`.
-- **Restore** — clears `deletedAt`, returning a trashed entity to active status.
+- **Restore** — clears `deletedAt`, returning a trashed entry to active status.
 
 > **Known ambiguity:** The API method `delete()` performs a soft delete (trash), which is non-obvious. A future API revision may rename this to `trash()` and make `delete()` a force delete. This has not been decided yet.
 
@@ -47,7 +48,7 @@ These are distinct operations:
 
 ## Populate
 
-The mechanism for resolving relation fields when fetching entities. Pass `populate: ['fieldName']` in query options to include related entities or media inline on the response rather than returning bare IDs.
+The mechanism for resolving relation fields when fetching entries. Pass `populate: ['fieldName']` in query options to include related entries or media inline on the response rather than returning bare IDs.
 
 Not to be confused with database-level joins — populate is resolved at the application layer via the relationships table.
 
@@ -55,7 +56,7 @@ Not to be confused with database-level joins — populate is resolved at the app
 
 ## Publish / Schedule / Draft
 
-The three values of `EntityStatus`:
+The three values of `EntryStatus`:
 
 - `draft` — not publicly visible
 - `published` — live
@@ -67,7 +68,7 @@ The three values of `EntityStatus`:
 
 ## Versioning
 
-Per-collection opt-in via `CollectionConfig.versioning: true`. When enabled, a snapshot of the entity's fields and status is saved to the `entity_versions` table on each update.
+Per-collection opt-in via `CollectionConfig.versioning: true`. When enabled, a snapshot of the entry's fields and status is saved to the `entry_versions` table on each update.
 
 The table always exists in the schema regardless of whether any collection enables versioning.
 
@@ -85,7 +86,7 @@ These are different concepts that share a name. When speaking about the SPA exte
 
 ## Relation vs Relationship
 
-**Relation** — a field type (`"relation"`) on a collection that links an entity to one or more entities in another collection. Defined in `CollectionConfig`.
+**Relation** — a field type (`"relation"`) on a collection that links an entry to one or more entries in another collection. Defined in `CollectionConfig`.
 
 **Relationship** — the database record in the `relationships` table that backs a relation field. Stores source, target, field name, and position.
 

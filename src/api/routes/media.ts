@@ -14,8 +14,9 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { Astromech } from '@/sdk/server/index.js';
-import { badRequest, fromZodError, internalError, notFound } from '@/api/middleware/errors.js';
+import { badRequest, forbidden, fromZodError, internalError, notFound } from '@/api/middleware/errors.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
+import { can } from '@/core/permissions.js';
 
 type Env = { Variables: AuthVariables };
 
@@ -32,6 +33,9 @@ const updateSchema = z.object({
 // ============================================================================
 
 router.get('/', async (c) => {
+    const role = c.var.role;
+    if (!can(role, 'media:read')) return forbidden(c);
+
     try {
         const items = await Astromech.media.all();
         return c.json({ data: items });
@@ -52,6 +56,9 @@ const listQuerySchema = z.object({
 });
 
 router.get('/list', async (c) => {
+    const role = c.var.role;
+    if (!can(role, 'media:read')) return forbidden(c);
+
     const raw = {
         search: c.req.query('search'),
         type: c.req.query('type'),
@@ -76,6 +83,8 @@ router.get('/list', async (c) => {
 
 router.get('/:id', async (c) => {
     const { id } = c.req.param();
+    const role = c.var.role;
+    if (!can(role, 'media:read')) return forbidden(c);
 
     try {
         const item = await Astromech.media.get(id);
@@ -91,6 +100,9 @@ router.get('/:id', async (c) => {
 // ============================================================================
 
 router.post('/upload', async (c) => {
+    const role = c.var.role;
+    if (!can(role, 'media:upload')) return forbidden(c);
+
     try {
         const formData = await c.req.formData();
         const file = formData.get('file');
@@ -112,6 +124,8 @@ router.post('/upload', async (c) => {
 
 router.put('/:id', async (c) => {
     const { id } = c.req.param();
+    const role = c.var.role;
+    if (!can(role, 'media:upload')) return forbidden(c);
 
     try {
         const raw = await c.req.json();
@@ -136,6 +150,8 @@ router.put('/:id', async (c) => {
 
 router.delete('/:id', async (c) => {
     const { id } = c.req.param();
+    const role = c.var.role;
+    if (!can(role, 'media:delete')) return forbidden(c);
 
     try {
         await Astromech.media.delete(id);

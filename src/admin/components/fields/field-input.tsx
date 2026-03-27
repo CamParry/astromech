@@ -26,15 +26,17 @@ import { LinkField } from './link-field';
 import { KeyValueField } from './key-value-field';
 import { AccordionField } from './accordion-field';
 import { TabField } from './tab-field';
+import { BlocksField } from './blocks-field';
 
 export type FieldInputProps = {
     field: FieldDefinition;
     value: unknown;
     name?: string;
     onChange: (name: string, value: unknown) => void;
+    disabled?: boolean;
 };
 
-export function FieldInput({ field, value, name, onChange }: FieldInputProps): React.ReactElement {
+export function FieldInput({ field, value, name, onChange, disabled }: FieldInputProps): React.ReactElement {
     const required = field.required ?? false;
 
     const commonProps = {
@@ -43,6 +45,7 @@ export function FieldInput({ field, value, name, onChange }: FieldInputProps): R
         field,
         required,
         onChange,
+        ...(disabled !== undefined ? { disabled } : {}),
     };
 
     switch (field.type) {
@@ -96,6 +99,8 @@ export function FieldInput({ field, value, name, onChange }: FieldInputProps): R
             return <AccordionField {...commonProps} />;
         case 'tab':
             return <TabField {...commonProps} />;
+        case 'blocks':
+            return <BlocksField {...commonProps} />;
         default:
             return (
                 <Input

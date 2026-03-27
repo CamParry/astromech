@@ -25,7 +25,8 @@ import {
     FormLayoutSidebar,
 } from '../../components/ui/index.js';
 import { Astromech } from '../../../sdk/client/index.js';
-import { queryKeys } from '../../hooks/useQueryKeys.js';
+import { queryKeys } from '../../hooks/use-query-keys.js';
+import { usePermissions } from '../../hooks/index.js';
 
 // ============================================================================
 // Helpers
@@ -62,6 +63,7 @@ type FormValues = {
 
 export function MediaEditPage(): React.ReactElement {
     const { id } = useParams({ strict: false }) as { id: string };
+    const { canUploadMedia, canDeleteMedia } = usePermissions();
     const { toast } = useToast();
     const confirm = useConfirm();
     const queryClient = useQueryClient();
@@ -85,13 +87,12 @@ export function MediaEditPage(): React.ReactElement {
         if (item != null) {
             form.reset({ alt: item.alt ?? '' });
         }
-    // form is stable; item is the only reactive dep
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // form is stable; item is the only reactive dep
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [item]);
 
     const updateMutation = useMutation({
-        mutationFn: (data: { alt: string }) =>
-            Astromech.media.update(id, data),
+        mutationFn: (data: { alt: string }) => Astromech.media.update(id, data),
         onSuccess: () => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.media.detail(id) });
             void queryClient.invalidateQueries({ queryKey: queryKeys.media.all() });
@@ -99,7 +100,10 @@ export function MediaEditPage(): React.ReactElement {
             toast({ message: 'Media updated.', variant: 'success' });
         },
         onError: (err) => {
-            toast({ message: err instanceof Error ? err.message : 'Save failed', variant: 'error' });
+            toast({
+                message: err instanceof Error ? err.message : 'Save failed',
+                variant: 'error',
+            });
         },
     });
 
@@ -111,7 +115,10 @@ export function MediaEditPage(): React.ReactElement {
             void navigate({ to: '/media' });
         },
         onError: (err) => {
-            toast({ message: err instanceof Error ? err.message : 'Delete failed', variant: 'error' });
+            toast({
+                message: err instanceof Error ? err.message : 'Delete failed',
+                variant: 'error',
+            });
         },
     });
 
@@ -125,61 +132,72 @@ export function MediaEditPage(): React.ReactElement {
 
     return (
         <Page>
-                <PageHeader>
-                    <Breadcrumb
-                        items={[
-                            { label: 'Media', to: '/media' },
-                            { label: `Edit: ${item?.filename ?? 'media'}` },
-                        ]}
-                    />
-                </PageHeader>
+            <PageHeader>
+                <Breadcrumb
+                    items={[
+                        { label: 'Media', to: '/media' },
+                        { label: `Edit: ${item?.filename ?? 'media'}` },
+                    ]}
+                />
+            </PageHeader>
 
-                <FormLayout>
-                    {/* Main column */}
-                    <FormLayoutMain>
-                        <Panel title="Preview">
-                            {item?.mimeType.startsWith('image/') ? (
-                                <img
-                                    src={item.url}
-                                    alt={item.alt ?? item.filename}
-                                    style={{ maxWidth: '100%', display: 'block', borderRadius: '0.25rem' }}
+            <FormLayout>
+                {/* Main column */}
+                <FormLayoutMain>
+                    <Panel title="Preview">
+                        {item?.mimeType.startsWith('image/') ? (
+                            <img
+                                src={item.url}
+                                alt={item.alt ?? item.filename}
+                                style={{
+                                    maxWidth: '100%',
+                                    display: 'block',
+                                    borderRadius: '0.25rem',
+                                }}
+                            />
+                        ) : (
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '3rem',
+                                    color: 'var(--am-color-neutral-400)',
+                                }}
+                            >
+                                <FileImage size={48} />
+                            </div>
+                        )}
+                    </Panel>
+
+                    <Panel title="Details">
+                        <form.Field name="alt">
+                            {(field) => (
+                                <Input
+                                    id="media-alt"
+                                    label="Alt text"
+                                    type="text"
+                                    value={field.state.value}
+                                    onChange={(e) => field.handleChange(e.target.value)}
+                                    onBlur={field.handleBlur}
+                                    hint="Describe the image for accessibility and SEO."
                                 />
-                            ) : (
-                                <div
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        padding: '3rem',
-                                        color: 'var(--am-color-neutral-400)',
-                                    }}
-                                >
-                                    <FileImage size={48} />
-                                </div>
                             )}
-                        </Panel>
+                        </form.Field>
+                    </Panel>
+                </FormLayoutMain>
 
-                        <Panel title="Details">
-                            <form.Field name="alt">
-                                {(field) => (
-                                    <Input
-                                        id="media-alt"
-                                        label="Alt text"
-                                        type="text"
-                                        value={field.state.value}
-                                        onChange={(e) => field.handleChange(e.target.value)}
-                                        onBlur={field.handleBlur}
-                                        hint="Describe the image for accessibility and SEO."
-                                    />
-                                )}
-                            </form.Field>
-                        </Panel>
-                    </FormLayoutMain>
-
-                    {/* Sidebar column */}
-                    <FormLayoutSidebar>
-                        <Panel title="Actions">
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {/* Sidebar column */}
+                <FormLayoutSidebar>
+                    <Panel title="Actions">
+                        <div
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.5rem',
+                            }}
+                        >
+                            {canUploadMedia() && (
                                 <Button
                                     onClick={handleSave}
                                     loading={updateMutation.isPending}
@@ -187,55 +205,73 @@ export function MediaEditPage(): React.ReactElement {
                                 >
                                     Save
                                 </Button>
+                            )}
+                            {canDeleteMedia() && (
                                 <Button
                                     variant="danger"
-                                    onClick={() => confirm({
-                                        title: 'Delete media?',
-                                        description: item != null
-                                            ? `Are you sure you want to delete "${item.filename}"? This cannot be undone.`
-                                            : 'This action cannot be undone.',
-                                        confirmLabel: 'Delete',
-                                        onConfirm: () => deleteMutation.mutate(),
-                                    })}
+                                    onClick={() =>
+                                        confirm({
+                                            title: 'Delete media?',
+                                            description:
+                                                item != null
+                                                    ? `Are you sure you want to delete "${item.filename}"? This cannot be undone.`
+                                                    : 'This action cannot be undone.',
+                                            confirmLabel: 'Delete',
+                                            onConfirm: () => deleteMutation.mutate(),
+                                        })
+                                    }
                                     disabled={deleteMutation.isPending}
                                 >
                                     Delete
                                 </Button>
-                            </div>
-                        </Panel>
+                            )}
+                        </div>
+                    </Panel>
 
-                        <Panel title="Metadata">
-                            <dl className="am-meta">
+                    <Panel title="Metadata">
+                        <dl className="am-meta">
+                            <div>
+                                <dt className="am-meta__label">Filename</dt>
+                                <dd className="am-meta__value am-text-mono">
+                                    {item?.filename ?? '—'}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="am-meta__label">Size</dt>
+                                <dd className="am-meta__value">
+                                    {item != null ? formatBytes(item.size) : '—'}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="am-meta__label">Type</dt>
+                                <dd className="am-meta__value am-text-mono">
+                                    {item?.mimeType ?? '—'}
+                                </dd>
+                            </div>
+                            {item?.width != null && item.height != null && (
                                 <div>
-                                    <dt className="am-meta__label">Filename</dt>
-                                    <dd className="am-meta__value am-text-mono">{item?.filename ?? '—'}</dd>
+                                    <dt className="am-meta__label">Dimensions</dt>
+                                    <dd className="am-meta__value">
+                                        {item.width} × {item.height}
+                                    </dd>
                                 </div>
-                                <div>
-                                    <dt className="am-meta__label">Size</dt>
-                                    <dd className="am-meta__value">{item != null ? formatBytes(item.size) : '—'}</dd>
-                                </div>
-                                <div>
-                                    <dt className="am-meta__label">Type</dt>
-                                    <dd className="am-meta__value am-text-mono">{item?.mimeType ?? '—'}</dd>
-                                </div>
-                                {item?.width != null && item.height != null && (
-                                    <div>
-                                        <dt className="am-meta__label">Dimensions</dt>
-                                        <dd className="am-meta__value">{item.width} × {item.height}</dd>
-                                    </div>
-                                )}
-                                <div>
-                                    <dt className="am-meta__label">Uploaded</dt>
-                                    <dd className="am-meta__value">{formatDate(item?.createdAt)}</dd>
-                                </div>
-                                <div>
-                                    <dt className="am-meta__label">Last updated</dt>
-                                    <dd className="am-meta__value">{formatDate(item?.updatedAt)}</dd>
-                                </div>
-                            </dl>
-                        </Panel>
-                    </FormLayoutSidebar>
-                </FormLayout>
-            </Page>
+                            )}
+                            <div>
+                                <dt className="am-meta__label">Uploaded</dt>
+                                <dd className="am-meta__value">
+                                    {formatDate(item?.createdAt)}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="am-meta__label">Last updated</dt>
+                                <dd className="am-meta__value">
+                                    {formatDate(item?.updatedAt)}
+                                </dd>
+                            </div>
+                        </dl>
+                    </Panel>
+                </FormLayoutSidebar>
+            </FormLayout>
+        </Page>
     );
 }

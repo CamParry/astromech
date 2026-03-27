@@ -5,15 +5,17 @@
 
 export const queryKeys = {
     // Collections
-    entities: {
-        all: (collection: string) => ['entities', collection] as const,
+    entries: {
+        all: (collection: string) => ['entries', collection] as const,
         list: (collection: string, filters?: Record<string, unknown>) =>
-            ['entities', collection, 'list', filters] as const,
+            ['entries', collection, 'list', filters] as const,
         detail: (collection: string, id: string) =>
-            ['entities', collection, 'detail', id] as const,
-        trashed: (collection: string) => ['entities', collection, 'trashed'] as const,
+            ['entries', collection, 'detail', id] as const,
+        trashed: (collection: string) => ['entries', collection, 'trashed'] as const,
         versions: (collection: string, id: string) =>
-            ['entities', collection, 'versions', id] as const,
+            ['entries', collection, 'versions', id] as const,
+        translations: (collection: string, id: string) =>
+            ['entries', collection, 'translations', id] as const,
     },
 
     // Media

@@ -23,6 +23,7 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
               emailVerified: sessionData.user.emailVerified,
               image: sessionData.user.image ?? null,
               fields: null,
+              roleSlug: 'admin',
               createdAt: sessionData.user.createdAt,
               updatedAt: sessionData.user.updatedAt,
           }
