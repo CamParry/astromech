@@ -39,15 +39,15 @@ export function resolveTargets(
 }
 
 /**
- * Merge plugin field groups into target collections and system resources
+ * Merge plugin field groups into target entry types and system resources
  *
  * @param config - Astromech configuration
- * @param collectionNames - Available collection names
+ * @param entryTypeNames - Available entry type names
  */
-export function mergePluginFieldGroups(config: AstromechConfig, collectionNames: string[]): void {
+export function mergePluginFieldGroups(config: AstromechConfig, entryTypeNames: string[]): void {
 	for (const plugin of config.plugins ?? []) {
 		for (const fieldGroupEntry of plugin.fieldGroups ?? []) {
-			const targetNames = resolveTargets(fieldGroupEntry.targets, collectionNames);
+			const targetNames = resolveTargets(fieldGroupEntry.targets, entryTypeNames);
 
 			for (const targetName of targetNames) {
 				// Handle media resource
@@ -66,10 +66,10 @@ export function mergePluginFieldGroups(config: AstromechConfig, collectionNames:
 					continue;
 				}
 
-				// Handle collections
-				const collection = config.collections[targetName];
-				if (collection) {
-					collection.fieldGroups.push(...fieldGroupEntry.groups);
+				// Handle entry types
+				const entryType = config.entries[targetName];
+				if (entryType) {
+					entryType.fieldGroups.push(...fieldGroupEntry.groups);
 				}
 			}
 		}
@@ -77,14 +77,14 @@ export function mergePluginFieldGroups(config: AstromechConfig, collectionNames:
 }
 
 /**
- * Merge plugin collections into config
+ * Merge plugin entry types into config
  *
  * @param config - Astromech configuration
  */
-export function mergePluginCollections(config: AstromechConfig): void {
+export function mergePluginEntries(config: AstromechConfig): void {
 	for (const plugin of config.plugins ?? []) {
-		if (plugin.collections) {
-			Object.assign(config.collections, plugin.collections);
+		if (plugin.entries) {
+			Object.assign(config.entries, plugin.entries);
 		}
 	}
 }

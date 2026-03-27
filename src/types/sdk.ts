@@ -1,10 +1,12 @@
 /**
- * SDK types — AstromechClient, typed collection proxy
+ * SDK types — AstromechClient, typed entry type proxy
  */
 
 import type { Entry, EntryStatus, EntryVersion } from './domain.js';
 import type {
-    CollectionApi,
+    EntryTypeApi,
+    EntriesApi,
+    EntriesQueryOptions,
     MediaApi,
     PaginationResult,
     QueryOptions,
@@ -20,9 +22,15 @@ import type { ResolvedConfig } from './config.js';
 // ============================================================================
 
 // Open interface — augmented by generated types (.astro/astromech.d.ts)
-// Each entry shape: { fields: CollectionFields, relations: CollectionRelations }
+// Each entry shape: { fields: EntryTypeFields, relations: EntryTypeRelations }
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface AstromechCollections {}
+export interface AstromechEntryTypes {}
+
+// Helper types — extract fields/relations from AstromechEntryTypes by key
+type FieldsFor<T extends keyof AstromechEntryTypes> =
+    AstromechEntryTypes[T] extends { fields: infer F } ? F : never;
+type RelationsFor<T extends keyof AstromechEntryTypes> =
+    AstromechEntryTypes[T] extends { relations: infer R } ? R : never;
 
 // Typed entry — the Entry type but with typed fields
 export type TypedEntry<TFields> = Omit<Entry, 'fields'> & {
@@ -30,11 +38,11 @@ export type TypedEntry<TFields> = Omit<Entry, 'fields'> & {
 };
 
 // ============================================================================
-// Typed Collection API
+// Typed Entry Type API
 // ============================================================================
 
-// TypedCollectionApi — returned by the typed collections proxy when AstromechCollections is augmented
-export type TypedCollectionApi<TFields, TRelations> = {
+// TypedEntryTypeApi — returned by the typed entries proxy when AstromechEntryTypes is augmented
+export type TypedEntryTypeApi<TFields, TRelations> = {
     all(options?: QueryOptions): Promise<TypedEntry<TFields>[]>;
     all<K extends keyof TRelations & string>(
         options: Omit<QueryOptions, 'populate'> & { populate: K[] }
@@ -98,27 +106,95 @@ export type TypedCollectionApi<TFields, TRelations> = {
 };
 
 // ============================================================================
-// Typed Collections Proxy
+// Typed Entries Proxy
 // ============================================================================
 
-// The typed collections proxy type — used by AstromechClient when AstromechCollections is augmented
-export type TypedCollectionsProxy = [keyof AstromechCollections] extends [never]
-    ? Record<string, CollectionApi>
+// The typed entries proxy type — used by AstromechClient when AstromechEntryTypes is augmented
+export type TypedEntriesProxy = [keyof AstromechEntryTypes] extends [never]
+    ? Record<string, EntryTypeApi>
     : {
-          [K in keyof AstromechCollections]: AstromechCollections[K] extends {
+          [K in keyof AstromechEntryTypes]: AstromechEntryTypes[K] extends {
               fields: infer F;
               relations: infer R;
           }
-              ? TypedCollectionApi<F, R>
-              : CollectionApi;
-      } & Record<string, CollectionApi>;
+              ? TypedEntryTypeApi<F, R>
+              : EntryTypeApi;
+      } & Record<string, EntryTypeApi>;
+
+// ============================================================================
+// Typed Entries API
+// ============================================================================
+
+export type TypedEntriesApi =
+    // ── all() ────────────────────────────────────────────────────────────────
+    {
+        all<T extends keyof AstromechEntryTypes, K extends keyof RelationsFor<T> & string>(
+            options: { type: T; populate: K[] } & Omit<QueryOptions, 'populate'>
+        ): Promise<TypedEntry<Omit<FieldsFor<T>, K> & Pick<RelationsFor<T>, K>>[]>;
+        all<T extends keyof AstromechEntryTypes>(
+            options: { type: T } & QueryOptions
+        ): Promise<TypedEntry<FieldsFor<T>>[]>;
+        all(options?: EntriesQueryOptions): Promise<Entry[]>;
+
+        // ── paginate() ───────────────────────────────────────────────────────
+        paginate<T extends keyof AstromechEntryTypes, K extends keyof RelationsFor<T> & string>(
+            perPage: number,
+            page: number,
+            options: { type: T; populate: K[] } & Omit<QueryOptions, 'populate'>
+        ): Promise<PaginationResult<TypedEntry<Omit<FieldsFor<T>, K> & Pick<RelationsFor<T>, K>>>>;
+        paginate<T extends keyof AstromechEntryTypes>(
+            perPage: number,
+            page: number,
+            options: { type: T } & QueryOptions
+        ): Promise<PaginationResult<TypedEntry<FieldsFor<T>>>>;
+        paginate(perPage: number, page: number, options?: EntriesQueryOptions): Promise<PaginationResult<Entry>>;
+
+        // ── get() ────────────────────────────────────────────────────────────
+        get<T extends keyof AstromechEntryTypes, K extends keyof RelationsFor<T> & string>(
+            id: string,
+            options: { type: T; populate: K[] } & Omit<QueryOptions, 'populate'>
+        ): Promise<TypedEntry<Omit<FieldsFor<T>, K> & Pick<RelationsFor<T>, K>> | null>;
+        get<T extends keyof AstromechEntryTypes>(
+            id: string,
+            options: { type: T } & QueryOptions
+        ): Promise<TypedEntry<FieldsFor<T>> | null>;
+        get(id: string, options?: EntriesQueryOptions): Promise<Entry | null>;
+
+        // ── where() ──────────────────────────────────────────────────────────
+        where<T extends keyof AstromechEntryTypes>(
+            filters: WhereFilters,
+            options: { type: T } & QueryOptions
+        ): Promise<TypedEntry<FieldsFor<T>>[]>;
+        where(filters: WhereFilters, options?: EntriesQueryOptions): Promise<Entry[]>;
+
+        // ── create() ─────────────────────────────────────────────────────────
+        create<T extends keyof AstromechEntryTypes>(data: {
+            type: T;
+            title: string;
+            slug?: string;
+            fields?: Partial<FieldsFor<T>>;
+            status?: EntryStatus;
+            publishAt?: Date | null;
+        }): Promise<TypedEntry<FieldsFor<T>>>;
+        create(data: {
+            type: string;
+            title: string;
+            slug?: string;
+            fields?: Record<string, unknown>;
+            status?: EntryStatus;
+            publishAt?: Date | null;
+        }): Promise<Entry>;
+
+        // update doesn't take a type param at runtime, so no typed overload —
+        // falls through to EntriesApi's update signature
+    } & Omit<EntriesApi, 'all' | 'paginate' | 'get' | 'where' | 'create'>;
 
 // ============================================================================
 // AstromechClient
 // ============================================================================
 
 export type AstromechClient = {
-    collections: TypedCollectionsProxy;
+    entries: TypedEntriesApi;
     media: MediaApi;
     settings: SettingsApi;
     users: UsersApi;

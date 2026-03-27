@@ -45,7 +45,7 @@ export type QueryOptions = {
 export type WhereFilters = Record<string, unknown>;
 
 // ============================================================================
-// Collection API
+// Entry Type API
 // ============================================================================
 
 export type TranslationInfo = {
@@ -55,7 +55,7 @@ export type TranslationInfo = {
     status: EntryStatus;
 };
 
-export type CollectionApi = {
+export type EntryTypeApi = {
     all(options?: QueryOptions): Promise<Entry[]>;
     paginate(
         perPage: number,
@@ -87,6 +87,59 @@ export type CollectionApi = {
     restore(id: string): Promise<Entry>;
     delete(id: string): Promise<void>;
     emptyTrash(): Promise<void>;
+    versions(id: string): Promise<EntryVersion[]>;
+    restoreVersion(id: string, versionId: string): Promise<Entry>;
+    translations(id: string): Promise<TranslationInfo[]>;
+    createTranslation(
+        sourceId: string,
+        locale: string,
+        options?: { copyFields?: boolean }
+    ): Promise<Entry>;
+    getTranslation(sourceId: string, locale: string): Promise<Entry | null>;
+    publish(id: string): Promise<Entry>;
+    unpublish(id: string): Promise<Entry>;
+    schedule(id: string, publishAt: Date): Promise<Entry>;
+};
+
+// ============================================================================
+// Entries API (unified, type-discriminated)
+// ============================================================================
+
+export type EntriesQueryOptions = QueryOptions & { type?: string };
+
+export type EntriesApi = {
+    all(options?: EntriesQueryOptions): Promise<Entry[]>;
+    paginate(
+        perPage: number,
+        page: number,
+        options?: EntriesQueryOptions
+    ): Promise<PaginationResult<Entry>>;
+    get(id: string, options?: EntriesQueryOptions): Promise<Entry | null>;
+    where(filters: WhereFilters, options?: EntriesQueryOptions): Promise<Entry[]>;
+    create(data: {
+        type: string;
+        title: string;
+        slug?: string;
+        fields?: JsonObject;
+        status?: EntryStatus;
+        publishAt?: Date | null;
+    }): Promise<Entry>;
+    update(
+        id: string,
+        data: Partial<{
+            title: string;
+            slug: string;
+            fields: JsonObject;
+            status: EntryStatus;
+            publishAt: Date | null;
+        }>
+    ): Promise<Entry>;
+    trash(id: string): Promise<void>;
+    duplicate(id: string): Promise<Entry>;
+    trashed(options?: EntriesQueryOptions): Promise<Entry[]>;
+    restore(id: string): Promise<Entry>;
+    delete(id: string): Promise<void>;
+    emptyTrash(options?: { type?: string }): Promise<void>;
     versions(id: string): Promise<EntryVersion[]>;
     restoreVersion(id: string, versionId: string): Promise<Entry>;
     translations(id: string): Promise<TranslationInfo[]>;

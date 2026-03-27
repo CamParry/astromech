@@ -1,5 +1,5 @@
 /**
- * Collection entry create page.
+ * Entry create page.
  *
  * Two-column layout with field groups in main/sidebar positions.
  * Includes title, optional slug, and a status panel.
@@ -24,50 +24,50 @@ import {
 } from '../../components/ui/index';
 import { FieldInput } from '../../components/fields/field-input';
 import { PublishPanel } from '../../components/entries/PublishPanel';
-import { Astromech } from '../../../sdk/client/index.js';
+import { Astromech } from '../../../sdk/fetch/index.js';
 import { useEntryForm, usePermissions } from '../../hooks/index.js';
 
 // ============================================================================
 // Page
 // ============================================================================
 
-export function CollectionCreatePage(): React.ReactElement {
-    const { collection } = useParams({ strict: false }) as { collection: string };
+export function EntryCreatePage(): React.ReactElement {
+    const { type } = useParams({ strict: false }) as { type: string };
     const navigate = useNavigate();
     const { toast } = useToast();
     const { t } = useTranslation();
     const { canCreate } = usePermissions();
 
-    const collectionConfig = adminConfig.collections[collection];
+    const entryTypeConfig = adminConfig.entries[type];
 
-    if (!canCreate(collection)) {
+    if (!canCreate(type)) {
         toast({
             message: t('permissions.forbidden'),
             variant: 'error',
         });
-        void navigate({ to: '/collections/$collection', params: { collection } });
+        void navigate({ to: '/entries/$type', params: { type } });
         return <></>;
     }
-    const single = collectionConfig?.single ?? collection;
-    const plural = collectionConfig?.plural ?? collection;
-    const hasSlug = collectionConfig?.slug != null;
-    const fieldGroups = collectionConfig?.fieldGroups ?? [];
+    const single = entryTypeConfig?.single ?? type;
+    const plural = entryTypeConfig?.plural ?? type;
+    const hasSlug = entryTypeConfig?.slug != null;
+    const fieldGroups = entryTypeConfig?.fieldGroups ?? [];
 
     const mainGroups = fieldGroups.filter((g) => g.location === 'main');
     const sidebarGroups = fieldGroups.filter((g) => g.location === 'sidebar');
 
     const { form, saveMutation, handleSave, handlePublish } = useEntryForm({
         hasSlug,
-        saveFn: (payload) => Astromech.collections[collection]!.create(payload),
-        publishFn: (payload) => Astromech.collections[collection]!.create(payload),
+        saveFn: (payload) => Astromech.entries.create({ type, ...payload }),
+        publishFn: (payload) => Astromech.entries.create({ type, ...payload }),
         onSuccess: (entry) => {
             toast({
-                message: t('collections.created', { name: single }),
+                message: t('entries.created', { name: single }),
                 variant: 'success',
             });
             void navigate({
-                to: '/collections/$collection/$id',
-                params: { collection, id: entry.id },
+                to: '/entries/$type/$id',
+                params: { type, id: entry.id },
             });
         },
     });
@@ -77,8 +77,8 @@ export function CollectionCreatePage(): React.ReactElement {
             <PageHeader>
                 <Breadcrumb
                     items={[
-                        { label: plural, to: `/collections/${collection}` },
-                        { label: t('collections.create') },
+                        { label: plural, to: `/entries/${type}` },
+                        { label: t('entries.create') },
                     ]}
                 />
                 <ButtonGroup>
@@ -88,7 +88,7 @@ export function CollectionCreatePage(): React.ReactElement {
                         onClick={handleSave}
                         disabled={saveMutation.isPending}
                     >
-                        {t('collections.saveAsDraft')}
+                        {t('entries.saveAsDraft')}
                     </Button>
                     <Button
                         variant="primary"
@@ -111,7 +111,7 @@ export function CollectionCreatePage(): React.ReactElement {
                             validators={{
                                 onChange: ({ value }) =>
                                     value.trim() === ''
-                                        ? t('collections.titleRequired')
+                                        ? t('entries.titleRequired')
                                         : undefined,
                             }}
                         >
@@ -121,7 +121,7 @@ export function CollectionCreatePage(): React.ReactElement {
                                         className="am-field__label"
                                         htmlFor="entry-title"
                                     >
-                                        {t('collections.titleField')}{' '}
+                                        {t('entries.titleField')}{' '}
                                         <span className="am-field__required">*</span>
                                     </label>
                                     <Input
@@ -155,7 +155,7 @@ export function CollectionCreatePage(): React.ReactElement {
                                             className="am-field__label"
                                             htmlFor="entry-slug"
                                         >
-                                            {t('collections.slugField')}
+                                            {t('entries.slugField')}
                                         </label>
                                         <Input
                                             id="entry-slug"

@@ -22,7 +22,7 @@ export function Topbar() {
     const { setOpen: openCommandPalette } = useCommandPalette();
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const collections = Object.entries(adminConfig.collections);
+    const entryTypes = Object.entries(adminConfig.entries);
 
     async function handleLogout() {
         await logout();
@@ -110,7 +110,7 @@ export function Topbar() {
                 </button>
 
                 {/* Quick create */}
-                {collections.length > 0 && (
+                {entryTypes.length > 0 && (
                     <Menu.Root>
                         <Menu.Trigger
                             className="am-topbar__action-btn am-topbar__action-btn--create"
@@ -128,18 +128,18 @@ export function Topbar() {
                                     <div className="am-topbar__menu-section-heading">
                                         {t('topbar.createNewHeading')}
                                     </div>
-                                    {collections.map(([key, collection]) => (
+                                    {entryTypes.map(([key, entryType]) => (
                                         <Menu.Item
                                             key={key}
                                             className="am-topbar__menu-item"
                                             onClick={() =>
                                                 void navigate({
-                                                    to: `/collections/${key}/new`,
+                                                    to: `/entries/${key}/new`,
                                                 })
                                             }
                                         >
                                             <span className="am-topbar__menu-item-icon"><FilePlus size={14} /></span>
-                                            {collection.single}
+                                            {entryType.single}
                                         </Menu.Item>
                                     ))}
                                 </Menu.Popup>

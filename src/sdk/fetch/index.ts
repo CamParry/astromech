@@ -2,12 +2,13 @@
  * Astromech Client
  *
  * Fetch-based client for use in client-side JavaScript (React admin, etc.)
- * Import from 'astromech/client'
+ * Import from 'astromech/fetch'
  */
 
 import type {
     AstromechClient,
-    CollectionApi,
+    EntriesApi,
+    EntriesQueryOptions,
     Entry,
     EntryStatus,
     EntryVersion,
@@ -18,12 +19,11 @@ import type {
     MediaListParams,
     MediaListResult,
     PaginationResult,
-    QueryOptions,
     ResolvedConfig,
     Setting,
     SettingsApi,
     TranslationInfo,
-    TypedCollectionsProxy,
+    TypedEntriesApi,
     User,
     UsersApi,
     WhereFilters,
@@ -151,195 +151,205 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
 }
 
 // ============================================================================
-// Collection API Implementation
+// Entries API Implementation
 // ============================================================================
 
-function createCollectionApi(collectionId: string): CollectionApi {
-    const basePath = `/collections/${collectionId}`;
+const entriesApi: EntriesApi = {
+    async all(options?: EntriesQueryOptions): Promise<Entry[]> {
+        const type = options?.type;
+        const basePath = type ? `/entries/${type}` : '/entries';
+        const sort = Array.isArray(options?.sort) ? options.sort[0] : options?.sort;
+        return apiFetch<Entry[]>(basePath, {
+            params: {
+                populate: options?.populate?.join(','),
+                locale: options?.locale,
+                withTrashed: options?.withTrashed,
+                sort: sort?.field,
+                dir: sort?.direction,
+            },
+        });
+    },
 
-    return {
-        async all(options?: QueryOptions): Promise<Entry[]> {
-            const sort = Array.isArray(options?.sort) ? options.sort[0] : options?.sort;
-            return apiFetch<Entry[]>(basePath, {
-                params: {
-                    populate: options?.populate?.join(','),
-                    locale: options?.locale,
-                    withTrashed: options?.withTrashed,
-                    sort: sort?.field,
-                    dir: sort?.direction,
-                },
-            });
-        },
+    async paginate(
+        perPage: number,
+        page: number,
+        options?: EntriesQueryOptions
+    ): Promise<PaginationResult<Entry>> {
+        const type = options?.type;
+        const basePath = type ? `/entries/${type}` : '/entries';
+        const sort = Array.isArray(options?.sort) ? options.sort[0] : options?.sort;
+        return apiFetch<PaginationResult<Entry>>(basePath, {
+            params: {
+                perPage,
+                page,
+                populate: options?.populate?.join(','),
+                locale: options?.locale,
+                withTrashed: options?.withTrashed,
+                sort: sort?.field,
+                dir: sort?.direction,
+            },
+        });
+    },
 
-        async paginate(
-            perPage: number,
-            page: number,
-            options?: QueryOptions
-        ): Promise<PaginationResult<Entry>> {
-            const sort = Array.isArray(options?.sort) ? options.sort[0] : options?.sort;
-            return apiFetch<PaginationResult<Entry>>(basePath, {
-                params: {
-                    perPage,
-                    page,
-                    populate: options?.populate?.join(','),
-                    locale: options?.locale,
-                    withTrashed: options?.withTrashed,
-                    sort: sort?.field,
-                    dir: sort?.direction,
-                },
-            });
-        },
+    async get(id: string, options?: EntriesQueryOptions): Promise<Entry | null> {
+        const type = options?.type;
+        const basePath = type ? `/entries/${type}` : '/entries';
+        const res = await apiFetch<{ data: Entry } | null>(`${basePath}/${id}`, {
+            params: {
+                populate: options?.populate?.join(','),
+                locale: options?.locale,
+            },
+        });
+        return res?.data ?? null;
+    },
 
-        async get(id: string, options?: QueryOptions): Promise<Entry | null> {
-            const res = await apiFetch<{ data: Entry } | null>(`${basePath}/${id}`, {
-                params: {
-                    populate: options?.populate?.join(','),
-                    locale: options?.locale,
-                },
-            });
-            return res?.data ?? null;
-        },
+    async where(filters: WhereFilters, options?: EntriesQueryOptions): Promise<Entry[]> {
+        const type = options?.type;
+        const basePath = type ? `/entries/${type}` : '/entries';
+        return apiFetch<Entry[]>(`${basePath}/query`, {
+            method: 'POST',
+            body: { filters, options },
+        });
+    },
 
-        async where(filters: WhereFilters, options?: QueryOptions): Promise<Entry[]> {
-            return apiFetch<Entry[]>(`${basePath}/query`, {
-                method: 'POST',
-                body: { filters, options },
-            });
-        },
+    async create(data: {
+        type: string;
+        title: string;
+        slug?: string;
+        fields?: JsonObject;
+        status?: EntryStatus;
+        publishAt?: Date | null;
+    }): Promise<Entry> {
+        const { type, ...rest } = data;
+        const res = await apiFetch<{ data: Entry }>(`/entries/${type}`, {
+            method: 'POST',
+            body: rest,
+        });
+        return res.data;
+    },
 
-        async create(data: {
+    async update(
+        id: string,
+        data: Partial<{
             title: string;
-            slug?: string;
-            fields?: JsonObject;
-            status?: EntryStatus;
-            publishAt?: Date | null;
-        }): Promise<Entry> {
-            const res = await apiFetch<{ data: Entry }>(basePath, {
-                method: 'POST',
-                body: data,
-            });
+            slug: string;
+            fields: JsonObject;
+            status: EntryStatus;
+            publishAt: Date | null;
+        }>
+    ): Promise<Entry> {
+        const res = await apiFetch<{ data: Entry }>(`/entries/${id}`, {
+            method: 'PUT',
+            body: data,
+        });
+        return res.data;
+    },
+
+    async trash(id: string): Promise<void> {
+        await apiFetch<void>(`/entries/${id}`, {
+            method: 'DELETE',
+        });
+    },
+
+    async duplicate(id: string): Promise<Entry> {
+        const res = await apiFetch<{ data: Entry }>(`/entries/${id}/duplicate`, {
+            method: 'POST',
+        });
+        return res.data;
+    },
+
+    async trashed(options?: EntriesQueryOptions): Promise<Entry[]> {
+        const type = options?.type;
+        const basePath = type ? `/entries/${type}` : '/entries';
+        return apiFetch<Entry[]>(`${basePath}/trashed`, {
+            params: {
+                locale: options?.locale,
+            },
+        });
+    },
+
+    async restore(id: string): Promise<Entry> {
+        const res = await apiFetch<{ data: Entry }>(`/entries/${id}/restore`, {
+            method: 'POST',
+        });
+        return res.data;
+    },
+
+    async delete(id: string): Promise<void> {
+        await apiFetch<void>(`/entries/${id}/force`, {
+            method: 'DELETE',
+        });
+    },
+
+    async emptyTrash(options?: { type?: string }): Promise<void> {
+        const type = options?.type;
+        const basePath = type ? `/entries/${type}` : '/entries';
+        await apiFetch<void>(`${basePath}/trash`, {
+            method: 'DELETE',
+        });
+    },
+
+    async versions(id: string): Promise<EntryVersion[]> {
+        const res = await apiFetch<{ data: EntryVersion[] }>(`/entries/${id}/versions`);
+        return res.data;
+    },
+
+    async restoreVersion(id: string, versionId: string): Promise<Entry> {
+        const res = await apiFetch<{ data: Entry }>(`/entries/${id}/versions/${versionId}/restore`, {
+            method: 'POST',
+        });
+        return res.data;
+    },
+
+    async translations(id: string): Promise<TranslationInfo[]> {
+        const res = await apiFetch<{ data: TranslationInfo[] }>(`/entries/${id}/translations`);
+        return res.data;
+    },
+
+    async createTranslation(
+        sourceId: string,
+        locale: string,
+        options?: { copyFields?: boolean }
+    ): Promise<Entry> {
+        const res = await apiFetch<{ data: Entry }>(`/entries/${sourceId}/translations`, {
+            method: 'POST',
+            body: { locale, ...options },
+        });
+        return res.data;
+    },
+
+    async getTranslation(sourceId: string, locale: string): Promise<Entry | null> {
+        try {
+            const res = await apiFetch<{ data: Entry }>(`/entries/${sourceId}/translations/${locale}`);
             return res.data;
-        },
+        } catch (err) {
+            if (err instanceof AstromechApiError && err.status === 404) return null;
+            throw err;
+        }
+    },
 
-        async update(
-            id: string,
-            data: Partial<{
-                title: string;
-                slug: string;
-                fields: JsonObject;
-                status: EntryStatus;
-                publishAt: Date | null;
-            }>
-        ): Promise<Entry> {
-            const res = await apiFetch<{ data: Entry }>(`${basePath}/${id}`, {
-                method: 'PUT',
-                body: data,
-            });
-            return res.data;
-        },
+    async publish(id: string): Promise<Entry> {
+        const res = await apiFetch<{ data: Entry }>(`/entries/${id}/publish`, {
+            method: 'POST',
+        });
+        return res.data;
+    },
 
-        async trash(id: string): Promise<void> {
-            await apiFetch<void>(`${basePath}/${id}`, {
-                method: 'DELETE',
-            });
-        },
+    async unpublish(id: string): Promise<Entry> {
+        const res = await apiFetch<{ data: Entry }>(`/entries/${id}/unpublish`, {
+            method: 'POST',
+        });
+        return res.data;
+    },
 
-        async duplicate(id: string): Promise<Entry> {
-            const res = await apiFetch<{ data: Entry }>(`${basePath}/${id}/duplicate`, {
-                method: 'POST',
-            });
-            return res.data;
-        },
-
-        async trashed(options?: QueryOptions): Promise<Entry[]> {
-            return apiFetch<Entry[]>(`${basePath}/trashed`, {
-                params: {
-                    locale: options?.locale,
-                },
-            });
-        },
-
-        async restore(id: string): Promise<Entry> {
-            const res = await apiFetch<{ data: Entry }>(`${basePath}/${id}/restore`, {
-                method: 'POST',
-            });
-            return res.data;
-        },
-
-        async delete(id: string): Promise<void> {
-            await apiFetch<void>(`${basePath}/${id}/force`, {
-                method: 'DELETE',
-            });
-        },
-
-        async emptyTrash(): Promise<void> {
-            await apiFetch<void>(`${basePath}/trash`, {
-                method: 'DELETE',
-            });
-        },
-
-        async versions(id: string): Promise<EntryVersion[]> {
-            const res = await apiFetch<{ data: EntryVersion[] }>(`${basePath}/${id}/versions`);
-            return res.data;
-        },
-
-        async restoreVersion(id: string, versionId: string): Promise<Entry> {
-            const res = await apiFetch<{ data: Entry }>(`${basePath}/${id}/versions/${versionId}/restore`, {
-                method: 'POST',
-            });
-            return res.data;
-        },
-
-        async translations(id: string): Promise<TranslationInfo[]> {
-            const res = await apiFetch<{ data: TranslationInfo[] }>(`${basePath}/${id}/translations`);
-            return res.data;
-        },
-
-        async createTranslation(
-            sourceId: string,
-            locale: string,
-            options?: { copyFields?: boolean }
-        ): Promise<Entry> {
-            const res = await apiFetch<{ data: Entry }>(`${basePath}/${sourceId}/translations`, {
-                method: 'POST',
-                body: { locale, ...options },
-            });
-            return res.data;
-        },
-
-        async getTranslation(sourceId: string, locale: string): Promise<Entry | null> {
-            try {
-                const res = await apiFetch<{ data: Entry }>(`${basePath}/${sourceId}/translations/${locale}`);
-                return res.data;
-            } catch (err) {
-                if (err instanceof AstromechApiError && err.status === 404) return null;
-                throw err;
-            }
-        },
-
-        async publish(id: string): Promise<Entry> {
-            const res = await apiFetch<{ data: Entry }>(`${basePath}/${id}/publish`, {
-                method: 'POST',
-            });
-            return res.data;
-        },
-
-        async unpublish(id: string): Promise<Entry> {
-            const res = await apiFetch<{ data: Entry }>(`${basePath}/${id}/unpublish`, {
-                method: 'POST',
-            });
-            return res.data;
-        },
-
-        async schedule(id: string, publishAt: Date): Promise<Entry> {
-            const res = await apiFetch<{ data: Entry }>(`${basePath}/${id}/schedule`, {
-                method: 'POST',
-                body: { publishAt: publishAt.toISOString() },
-            });
-            return res.data;
-        },
-    };
-}
+    async schedule(id: string, publishAt: Date): Promise<Entry> {
+        const res = await apiFetch<{ data: Entry }>(`/entries/${id}/schedule`, {
+            method: 'POST',
+            body: { publishAt: publishAt.toISOString() },
+        });
+        return res.data;
+    },
+};
 
 // ============================================================================
 // Media API Implementation
@@ -495,24 +505,11 @@ const usersApi: UsersApi = {
 };
 
 // ============================================================================
-// Collections Proxy
-// ============================================================================
-
-const collectionsProxy = new Proxy(
-    {},
-    {
-        get(_target, prop: string) {
-            return createCollectionApi(prop);
-        },
-    }
-) as TypedCollectionsProxy;
-
-// ============================================================================
 // Export Client
 // ============================================================================
 
 export const Astromech: AstromechClient = {
-    collections: collectionsProxy,
+    entries: entriesApi as unknown as TypedEntriesApi,
     media: mediaApi,
     settings: settingsApi,
     users: usersApi,

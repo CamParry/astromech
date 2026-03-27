@@ -5,8 +5,8 @@ export default defineConfig({
     storage: new FilesystemStorage({ dir: './public/uploads' }),
     locales: ['en', 'fr'],
     defaultLocale: 'en',
-    collections: {
-        pages: {
+    entries: {
+        page: {
             single: 'Page',
             plural: 'Pages',
             translatable: true,
@@ -62,13 +62,13 @@ export default defineConfig({
                         {
                             name: 'parent_pages',
                             type: 'relation',
-                            target: 'pages',
+                            target: 'page',
                             label: 'Parent Page',
                         },
                         {
                             name: 'category',
                             type: 'relation',
-                            target: 'categories',
+                            target: 'category',
                             multiple: true,
                             label: 'Category',
                         },
@@ -132,7 +132,7 @@ export default defineConfig({
                 },
             ],
         },
-        posts: {
+        post: {
             single: 'Post',
             plural: 'Posts',
             versioning: true,
@@ -166,27 +166,27 @@ export default defineConfig({
                         {
                             name: 'category',
                             type: 'relation',
-                            target: 'categories',
-                            inverse: 'posts',
+                            target: 'category',
+                            inverse: 'post',
                         },
                         {
                             name: 'tags',
                             type: 'relation',
-                            target: 'tags',
+                            target: 'tag',
                             multiple: true,
-                            inverse: 'posts',
+                            inverse: 'post',
                         },
                         {
                             name: 'author',
                             type: 'relation',
                             target: 'users',
-                            inverse: 'posts',
+                            inverse: 'post',
                         },
                     ],
                 },
             ],
         },
-        categories: {
+        category: {
             single: 'Category',
             plural: 'Categories',
             fieldGroups: [
@@ -199,7 +199,7 @@ export default defineConfig({
                 },
             ],
         },
-        tags: {
+        tag: {
             single: 'Tag',
             plural: 'Tags',
             fieldGroups: [
@@ -402,7 +402,7 @@ export default defineConfig({
                         {
                             name: 'related_posts',
                             type: 'relation',
-                            target: 'posts',
+                            target: 'post',
                             multiple: true,
                             label: 'Related Posts',
                         },

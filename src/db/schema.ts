@@ -103,9 +103,9 @@ export const entriesTable = sqliteTable(
         id: text('id')
             .primaryKey()
             .$defaultFn(() => crypto.randomUUID()),
-        collection: text('collection').notNull(),
+        type: text('type').notNull(),
 
-        // Translation support (nullable for non-i18n collections)
+        // Translation support (nullable for non-i18n entry types)
         locale: text('locale'),
 
         slug: text('slug'),
@@ -130,10 +130,10 @@ export const entriesTable = sqliteTable(
         translationOf: text('translation_of').references(() => entriesTable.id, { onDelete: 'cascade' }),
     },
     (table) => [
-        index('idx_entries_collection').on(table.collection),
-        index('idx_entries_slug').on(table.collection, table.slug),
-        index('idx_entries_status').on(table.collection, table.status),
-        index('idx_entries_locale').on(table.collection, table.locale, table.status),
+        index('idx_entries_type').on(table.type),
+        index('idx_entries_slug').on(table.type, table.slug),
+        index('idx_entries_status').on(table.type, table.status),
+        index('idx_entries_locale').on(table.type, table.locale, table.status),
         index('idx_entries_deleted').on(table.deletedAt),
         index('idx_entries_translation_of').on(table.translationOf),
     ]

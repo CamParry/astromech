@@ -1,5 +1,5 @@
 /**
- * Collection entry edit page.
+ * Entry edit page.
  *
  * Two-column layout: sticky action bar, main content fields left, metadata sidebar right.
  */
@@ -31,7 +31,7 @@ import {
 import { FieldInput } from '../../components/fields/field-input';
 import { LocaleSwitcher } from '../../components/translations/LocaleSwitcher';
 import { PublishPanel } from '../../components/entries/PublishPanel';
-import { Astromech } from '../../../sdk/client/index.js';
+import { Astromech } from '../../../sdk/fetch/index.js';
 import { useEntryForm, usePermissions } from '../../hooks/index.js';
 import { queryKeys } from '../../hooks/index.js';
 import type { EntryStatus } from '../../../types/index.js';
@@ -52,10 +52,10 @@ function StatusBadge({ status }: StatusBadgeProps): React.ReactElement {
               : 'neutral';
     const label =
         status === 'published'
-            ? t('collections.published')
+            ? t('entries.published')
             : status === 'scheduled'
-              ? t('collections.scheduled')
-              : t('collections.draft');
+              ? t('entries.scheduled')
+              : t('entries.draft');
     return <Badge variant={variant}>{label}</Badge>;
 }
 
@@ -63,9 +63,9 @@ function StatusBadge({ status }: StatusBadgeProps): React.ReactElement {
 // Page
 // ============================================================================
 
-export function CollectionEditPage(): React.ReactElement {
-    const { collection, id } = useParams({ strict: false }) as {
-        collection: string;
+export function EntryEditPage(): React.ReactElement {
+    const { type, id } = useParams({ strict: false }) as {
+        type: string;
         id: string;
     };
     const { toast } = useToast();
@@ -75,36 +75,36 @@ export function CollectionEditPage(): React.ReactElement {
     const navigate = useNavigate();
 
     const { canUpdate } = usePermissions();
-    const collectionConfig = adminConfig.collections[collection];
-    const single = collectionConfig?.single ?? collection;
-    const plural = collectionConfig?.plural ?? collection;
-    const hasSlug = collectionConfig?.slug != null;
-    const fieldGroups = collectionConfig?.fieldGroups ?? [];
+    const entryTypeConfig = adminConfig.entries[type];
+    const single = entryTypeConfig?.single ?? type;
+    const plural = entryTypeConfig?.plural ?? type;
+    const hasSlug = entryTypeConfig?.slug != null;
+    const fieldGroups = entryTypeConfig?.fieldGroups ?? [];
     const mainGroups = fieldGroups.filter((g) => g.location !== 'sidebar');
     const sidebarGroups = fieldGroups.filter((g) => g.location === 'sidebar');
 
-    const isReadOnly = !canUpdate(collection);
+    const isReadOnly = !canUpdate(type);
 
     const { data: entry, isLoading } = useQuery({
-        queryKey: queryKeys.entries.detail(collection, id),
-        queryFn: () => Astromech.collections[collection]!.get(id),
+        queryKey: queryKeys.entries.detail(type, id),
+        queryFn: () => Astromech.entries.get(id),
     });
 
     // Versioning
-    const hasVersioning = collectionConfig?.versioning === true;
+    const hasVersioning = entryTypeConfig?.versioning === true;
     const { data: versions } = useQuery({
-        queryKey: queryKeys.entries.versions(collection, id),
-        queryFn: () => Astromech.collections[collection]!.versions(id),
+        queryKey: queryKeys.entries.versions(type, id),
+        queryFn: () => Astromech.entries.versions(id),
         enabled: hasVersioning,
     });
     const versionCount = versions?.length ?? 0;
 
     // Translations
-    const hasI18n = collectionConfig?.translatable === true;
+    const hasI18n = entryTypeConfig?.translatable === true;
     const sourceId = entry?.translationOf ?? id;
     const { data: translations } = useQuery({
-        queryKey: queryKeys.entries.translations(collection, sourceId),
-        queryFn: () => Astromech.collections[collection]!.translations(sourceId),
+        queryKey: queryKeys.entries.translations(type, sourceId),
+        queryFn: () => Astromech.entries.translations(sourceId),
         enabled: hasI18n && entry != null,
     });
 
@@ -121,35 +121,35 @@ export function CollectionEditPage(): React.ReactElement {
         },
         hasSlug,
         readOnly: isReadOnly,
-        saveFn: (data) => Astromech.collections[collection]!.update(id, data),
-        publishFn: (data) => Astromech.collections[collection]!.update(id, data),
+        saveFn: (data) => Astromech.entries.update(id, data),
+        publishFn: (data) => Astromech.entries.update(id, data),
         onSuccess: () => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.detail(collection, id),
+                queryKey: queryKeys.entries.detail(type, id),
             });
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(collection),
+                queryKey: queryKeys.entries.all(type),
             });
             toast({
-                message: t('collections.updated', { name: single }),
+                message: t('entries.updated', { name: single }),
                 variant: 'success',
             });
         },
     });
 
     const deleteMutation = useMutation({
-        mutationFn: () => Astromech.collections[collection]!.trash(id),
+        mutationFn: () => Astromech.entries.trash(id),
         onSuccess: () => {
-            void navigate({ to: `/collections/${collection}` });
+            void navigate({ to: `/entries/${type}` });
             toast({
-                message: t('collections.movedToTrash', { name: single }),
+                message: t('entries.movedToTrash', { name: single }),
                 variant: 'success',
             });
         },
         onError: (err) => {
             toast({
                 message:
-                    err instanceof Error ? err.message : t('collections.deleteFailed'),
+                    err instanceof Error ? err.message : t('entries.deleteFailed'),
                 variant: 'error',
             });
         },
@@ -158,7 +158,8 @@ export function CollectionEditPage(): React.ReactElement {
     const duplicateMutation = useMutation({
         mutationFn: () => {
             const values = form.state.values;
-            return Astromech.collections[collection]!.create({
+            return Astromech.entries.create({
+                type,
                 title: `${values.title || single} (copy)`,
                 fields: (values.fields ??
                     {}) as import('../../../types/index.js').JsonObject,
@@ -166,16 +167,16 @@ export function CollectionEditPage(): React.ReactElement {
             });
         },
         onSuccess: (newEntry) => {
-            void navigate({ to: `/collections/${collection}/${newEntry.id}` });
+            void navigate({ to: `/entries/${type}/${newEntry.id}` });
             toast({
-                message: t('collections.duplicated', { name: single }),
+                message: t('entries.duplicated', { name: single }),
                 variant: 'success',
             });
         },
         onError: (err) => {
             toast({
                 message:
-                    err instanceof Error ? err.message : t('collections.duplicateFailed'),
+                    err instanceof Error ? err.message : t('entries.duplicateFailed'),
                 variant: 'error',
             });
         },
@@ -200,9 +201,9 @@ export function CollectionEditPage(): React.ReactElement {
             <PageHeader>
                 <Breadcrumb
                     items={[
-                        { label: plural, to: `/collections/${collection}` },
+                        { label: plural, to: `/entries/${type}` },
                         {
-                            label: t('collections.editTitle', {
+                            label: t('entries.editTitle', {
                                 title: entry?.title ?? single,
                             }),
                         },
@@ -215,9 +216,9 @@ export function CollectionEditPage(): React.ReactElement {
                         </span>
                     )}
                     {entry != null && <StatusBadge status={entry.status} />}
-                    {collectionConfig?.previewUrl && entry?.status === 'published' && (
+                    {entryTypeConfig?.previewUrl && entry?.status === 'published' && (
                         <a
-                            href={resolvePreviewUrl(collectionConfig.previewUrl, entry)}
+                            href={resolvePreviewUrl(entryTypeConfig.previewUrl, entry)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="am-btn am-btn--ghost am-btn--sm"
@@ -239,7 +240,7 @@ export function CollectionEditPage(): React.ReactElement {
                         <LocaleSwitcher
                             sourceId={sourceId}
                             currentEntryId={id}
-                            collection={collection}
+                            type={type}
                             translations={translations ?? []}
                             allLocales={adminConfig.locales}
                             defaultLocale={adminConfig.defaultLocale}
@@ -250,7 +251,7 @@ export function CollectionEditPage(): React.ReactElement {
                         <Menu.Root>
                             <Menu.Trigger
                                 className="am-btn am-btn--secondary am-btn--md am-btn--icon"
-                                aria-label={t('collections.moreActions')}
+                                aria-label={t('entries.moreActions')}
                             >
                                 <MoreHorizontal size={14} />
                             </Menu.Trigger>
@@ -277,14 +278,14 @@ export function CollectionEditPage(): React.ReactElement {
                                             onClick={() =>
                                                 confirm({
                                                     title: t(
-                                                        'collections.confirmDeleteTitle'
+                                                        'entries.confirmDeleteTitle'
                                                     ),
                                                     description: t(
-                                                        'collections.confirmDeleteMessage',
+                                                        'entries.confirmDeleteMessage',
                                                         { name: single.toLowerCase() }
                                                     ),
                                                     confirmLabel: t(
-                                                        'collections.confirmDeleteLabel'
+                                                        'entries.confirmDeleteLabel'
                                                     ),
                                                     onConfirm: () =>
                                                         deleteMutation.mutate(),
@@ -319,7 +320,7 @@ export function CollectionEditPage(): React.ReactElement {
                                     validators={{
                                         onChange: ({ value }) =>
                                             value.trim() === ''
-                                                ? t('collections.titleRequired')
+                                                ? t('entries.titleRequired')
                                                 : undefined,
                                     }}
                                 >
@@ -329,7 +330,7 @@ export function CollectionEditPage(): React.ReactElement {
                                                 className="am-field__label"
                                                 htmlFor="entry-title"
                                             >
-                                                {t('collections.titleField')}{' '}
+                                                {t('entries.titleField')}{' '}
                                                 <span className="am-field__required">
                                                     *
                                                 </span>
@@ -428,7 +429,7 @@ export function CollectionEditPage(): React.ReactElement {
                             {hasSlug && (
                                 <form.Field name="slug">
                                     {(field) => (
-                                        <Panel title={t('collections.slugPanel')}>
+                                        <Panel title={t('entries.slugPanel')}>
                                             <div className="am-field">
                                                 <Input
                                                     id="entry-slug"
@@ -497,8 +498,8 @@ export function CollectionEditPage(): React.ReactElement {
                                 <Panel>
                                     {versionCount > 0 ? (
                                         <Link
-                                            to="/collections/$collection/$id/versions"
-                                            params={{ collection, id }}
+                                            to="/entries/$type/$id/versions"
+                                            params={{ type, id }}
                                             className="am-link am-text-sm"
                                         >
                                             {t('versions.revisionsLink', {

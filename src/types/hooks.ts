@@ -9,7 +9,7 @@ import type { Entry, EntryStatus, JsonObject, Media, User } from './domain.js';
 // ============================================================================
 
 export type EntryCreateContext = {
-    collection: string;
+    type: string;
     data: {
         title: string;
         slug?: string;
@@ -27,7 +27,7 @@ export type EntryAfterCreateContext = EntryCreateContext & {
 };
 
 export type EntryUpdateContext = {
-    collection: string;
+    type: string;
     entry: Entry;
     data: Partial<{
         title: string;
@@ -41,7 +41,7 @@ export type EntryUpdateContext = {
 };
 
 export type EntryDeleteContext = {
-    collection: string;
+    type: string;
     entry: Entry;
     user: User | null;
     force: boolean;

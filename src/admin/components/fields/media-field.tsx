@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import type { BaseFieldProps } from '@/types/index.js';
 import { formatValueForInput } from '@/utils/field-formatters';
-import { Astromech } from '../../../sdk/client/index.js';
+import { Astromech } from '../../../sdk/fetch/index.js';
 import { queryKeys } from '../../hooks/use-query-keys.js';
 import { Modal } from '@/admin/components/ui/modal';
 import { Spinner } from '@/admin/components/ui/spinner';

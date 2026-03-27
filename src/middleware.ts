@@ -7,7 +7,7 @@
 
 import type { MiddlewareHandler } from 'astro';
 import { auth } from '@/auth/index.js';
-import { setCurrentUser } from '@/sdk/server/index.js';
+import { setCurrentUser } from '@/sdk/local/index.js';
 
 export const onRequest: MiddlewareHandler = async (context, next) => {
     const { request } = context;

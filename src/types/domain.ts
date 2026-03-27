@@ -18,7 +18,7 @@ export type EntryStatus = 'draft' | 'published' | 'scheduled';
 
 export type Entry = {
     id: string;
-    collection: string;
+    type: string;
     locale: string;
     translationOf: string | null;
     slug: string | null;

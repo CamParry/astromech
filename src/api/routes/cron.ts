@@ -5,7 +5,7 @@
  * Admin-only. Useful for non-Cloudflare runtimes or manual testing.
  */
 
-import { Hono } from 'hono';
+import { OpenAPIHono } from '@hono/zod-openapi';
 import { forbidden, internalError } from '@/api/middleware/errors.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
 import { getCronJobs } from '@/cron/registry.js';
@@ -13,7 +13,7 @@ import { runScheduledJobs } from '@/cron/runner.js';
 
 type Env = { Variables: AuthVariables };
 
-const router = new Hono<Env>();
+const router = new OpenAPIHono<Env>();
 
 router.post('/run', async (c) => {
     const role = c.var.role;

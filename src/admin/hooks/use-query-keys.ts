@@ -37,9 +37,9 @@ export const queryKeys = {
         detail: (key: string) => ['settings', 'detail', key] as const,
     },
 
-    // Collections metadata (schema/config)
-    collections: {
-        all: () => ['collections-meta'] as const,
-        detail: (name: string) => ['collections-meta', 'detail', name] as const,
+    // Entry type metadata (schema/config)
+    entryTypes: {
+        all: () => ['entry-types-meta'] as const,
+        detail: (name: string) => ['entry-types-meta', 'detail', name] as const,
     },
 } as const;

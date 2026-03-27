@@ -23,7 +23,7 @@ import {
     PageHeader,
     PageTitle,
 } from '../../components/ui/index.js';
-import { Astromech } from '../../../sdk/client/index.js';
+import { Astromech } from '../../../sdk/fetch/index.js';
 import { queryKeys } from '../../hooks/use-query-keys.js';
 import { usePermissions } from '../../hooks/index.js';
 import { formatDate } from '@/support/dates.js';

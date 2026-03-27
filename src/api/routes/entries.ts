@@ -4,52 +4,30 @@
  * Full CRUD operations for collection entries.
  *
  * Routes:
- *   GET    /collections/:collection                   → all() or paginate()
- *   POST   /collections/:collection                   → create()
- *   POST   /collections/:collection/query             → where()
- *   GET    /collections/:collection/trashed           → trashed()
- *   DELETE /collections/:collection/trash             → emptyTrash()
- *   GET    /collections/:collection/:id               → get()
- *   PUT    /collections/:collection/:id               → update()
- *   DELETE /collections/:collection/:id               → trash()
- *   POST   /collections/:collection/:id/restore       → restore()
- *   DELETE /collections/:collection/:id/force         → delete()
- *   POST   /collections/:collection/:id/duplicate     → duplicate()
+ *   GET    /entries/:type                   → all() or paginate()
+ *   POST   /entries/:type                   → create()
+ *   POST   /entries/:type/query             → where()
+ *   GET    /entries/:type/trashed           → trashed()
+ *   DELETE /entries/:type/trash             → emptyTrash()
+ *   GET    /entries/:id                     → get()
+ *   PUT    /entries/:id                     → update()
+ *   DELETE /entries/:id                     → trash()
+ *   POST   /entries/:id/restore             → restore()
+ *   DELETE /entries/:id/force               → delete()
+ *   POST   /entries/:id/duplicate           → duplicate()
  */
 
-import { Hono } from 'hono';
-import { z } from 'zod';
-import { Astromech } from '@/sdk/server/index.js';
+import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
+import { Astromech } from '@/sdk/local/index.js';
 import { forbidden, fromZodError, internalError, notFound } from '@/api/middleware/errors.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
 import { can } from '@/core/permissions.js';
 import type { JsonObject, Permission, QueryOptions, SortOption } from '@/types/index.js';
+import { createEntrySchema, updateEntrySchema, scheduleEntrySchema, createTranslationSchema } from '@/schemas/entries.js';
 
 type Env = { Variables: AuthVariables };
 
-const router = new Hono<Env>();
-
-// ============================================================================
-// Schemas
-// ============================================================================
-
-const entryStatusEnum = z.enum(['draft', 'published', 'scheduled']);
-
-const createSchema = z.object({
-    title: z.string().min(1, 'Title is required'),
-    slug: z.string().regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens').optional(),
-    fields: z.record(z.string(), z.unknown()).optional(),
-    status: entryStatusEnum.optional(),
-    publishAt: z.iso.datetime({ offset: true }).nullable().optional(),
-});
-
-const updateSchema = z.object({
-    title: z.string().min(1, 'Title cannot be empty').optional(),
-    slug: z.string().regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens').optional(),
-    fields: z.record(z.string(), z.unknown()).optional(),
-    status: entryStatusEnum.optional(),
-    publishAt: z.iso.datetime({ offset: true }).nullable().optional(),
-});
+const router = new OpenAPIHono<Env>();
 
 // ============================================================================
 // Helpers
@@ -75,75 +53,113 @@ function parseQueryOptions(query: Record<string, string>): QueryOptions {
     return options;
 }
 
-function requireCollection(collection: string) {
-    if (!Astromech.config.collections[collection]) return null;
-    return Astromech.collections[collection]!;
+function requireEntryType(type: string) {
+    if (!Astromech.config.entries[type]) return null;
+    return type;
 }
 
 // ============================================================================
-// GET /collections/:collection
+// GET /entries/:type
 // ============================================================================
 
-router.get('/:collection', async (c) => {
-    const { collection } = c.req.param();
-    const role = c.var.role;
-    if (!can(role, `entry:read:${collection}` as Permission)) return forbidden(c);
+const listEntriesRoute = createRoute({
+    method: 'get',
+    path: '/{type}',
+    request: {
+        params: z.object({ type: z.string().openapi({ example: 'post' }) }),
+        query: z.object({
+            page: z.string().optional().openapi({ example: '1' }),
+            perPage: z.string().optional().openapi({ example: '20' }),
+            status: z.string().optional().openapi({ example: 'published' }),
+            search: z.string().optional(),
+            locale: z.string().optional().openapi({ example: 'en' }),
+            populate: z.string().optional(),
+            sort: z.string().optional(),
+            dir: z.enum(['asc', 'desc']).optional(),
+            withTrashed: z.string().optional(),
+        }),
+    },
+    responses: {
+        200: { description: 'Entry list' },
+    },
+});
 
-    const api = requireCollection(collection);
-    if (!api) return notFound(c, `Collection '${collection}' not found`);
+router.openapi(listEntriesRoute, async (c) => {
+    const { type } = c.req.param();
+    const role = c.var.role;
+    if (!can(role, `entry:read:${type}` as Permission)) return forbidden(c);
+
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
         const query = c.req.query();
         const page = query['page'];
         const perPage = query['perPage'];
-        const options = parseQueryOptions(query);
+        const options = { ...parseQueryOptions(query), type };
 
         if (page && perPage) {
-            const result = await api.paginate(Number(perPage), Number(page), options);
+            const result = await Astromech.entries.paginate(Number(perPage), Number(page), options);
             return c.json(result);
         }
 
-        return c.json(await api.all(options));
+        return c.json(await Astromech.entries.all(options));
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
     }
 });
 
 // ============================================================================
-// GET /collections/:collection/trashed
+// GET /entries/:type/trashed
 // ============================================================================
 
-router.get('/:collection/trashed', async (c) => {
-    const { collection } = c.req.param();
+router.get('/:type/trashed', async (c) => {
+    const { type } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:read:${collection}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:read:${type}` as Permission)) return forbidden(c);
 
-    const api = requireCollection(collection);
-    if (!api) return notFound(c, `Collection '${collection}' not found`);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const options = parseQueryOptions(c.req.query());
-        return c.json(await api.trashed(options));
+        const options = { ...parseQueryOptions(c.req.query()), type };
+        return c.json(await Astromech.entries.trashed(options));
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
     }
 });
 
 // ============================================================================
-// GET /collections/:collection/:id
+// GET /entries/:type/:id
 // ============================================================================
 
-router.get('/:collection/:id', async (c) => {
-    const { collection, id } = c.req.param();
-    const role = c.var.role;
-    if (!can(role, `entry:read:${collection}` as Permission)) return forbidden(c);
+const getEntryRoute = createRoute({
+    method: 'get',
+    path: '/{type}/{id}',
+    request: {
+        params: z.object({
+            type: z.string().openapi({ example: 'post' }),
+            id: z.string().openapi({ example: 'clx1234abc' }),
+        }),
+        query: z.object({
+            populate: z.string().optional(),
+            locale: z.string().optional(),
+        }),
+    },
+    responses: {
+        200: { description: 'Entry detail' },
+        404: { description: 'Entry not found' },
+    },
+});
 
-    const api = requireCollection(collection);
-    if (!api) return notFound(c, `Collection '${collection}' not found`);
+router.openapi(getEntryRoute, async (c) => {
+    const { type, id } = c.req.param();
+    const role = c.var.role;
+    if (!can(role, `entry:read:${type}` as Permission)) return forbidden(c);
+
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const options = parseQueryOptions(c.req.query());
-        const entry = await api.get(id, options);
+        const options = { ...parseQueryOptions(c.req.query()), type };
+        const entry = await Astromech.entries.get(id, options);
         if (!entry) return notFound(c, `Entry '${id}' not found`);
         return c.json({ data: entry });
     } catch (err) {
@@ -152,30 +168,46 @@ router.get('/:collection/:id', async (c) => {
 });
 
 // ============================================================================
-// POST /collections/:collection
+// POST /entries/:type
 // ============================================================================
 
-router.post('/:collection', async (c) => {
-    const { collection } = c.req.param();
-    const role = c.var.role;
-    if (!can(role, `entry:create:${collection}` as Permission)) return forbidden(c);
+const createEntryRoute = createRoute({
+    method: 'post',
+    path: '/{type}',
+    request: {
+        params: z.object({ type: z.string().openapi({ example: 'post' }) }),
+        body: {
+            content: { 'application/json': { schema: createEntrySchema } },
+            required: true,
+        },
+    },
+    responses: {
+        201: { description: 'Entry created' },
+        422: { description: 'Validation error' },
+    },
+});
 
-    const api = requireCollection(collection);
-    if (!api) return notFound(c, `Collection '${collection}' not found`);
+router.openapi(createEntryRoute, async (c) => {
+    const { type } = c.req.param();
+    const role = c.var.role;
+    if (!can(role, `entry:create:${type}` as Permission)) return forbidden(c);
+
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
         const raw = await c.req.json();
-        const parsed = createSchema.safeParse(raw);
+        const parsed = createEntrySchema.safeParse(raw);
         if (!parsed.success) return fromZodError(c, parsed.error);
 
         const { title, slug, fields, status, publishAt } = parsed.data;
 
-        const entry = await api.create({
+        const entry = await Astromech.entries.create({
+            type,
             title,
             ...(slug !== undefined && { slug }),
             ...(fields !== undefined && { fields: fields as JsonObject }),
             ...(status !== undefined && { status }),
-            ...(publishAt !== undefined && { publishAt: publishAt ? new Date(publishAt) : null }),
+            ...(publishAt !== undefined && { publishAt }),
         });
 
         return c.json({ data: entry }, 201);
@@ -185,16 +217,15 @@ router.post('/:collection', async (c) => {
 });
 
 // ============================================================================
-// POST /collections/:collection/query
+// POST /entries/:type/query
 // ============================================================================
 
-router.post('/:collection/query', async (c) => {
-    const { collection } = c.req.param();
+router.post('/:type/query', async (c) => {
+    const { type } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:read:${collection}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:read:${type}` as Permission)) return forbidden(c);
 
-    const api = requireCollection(collection);
-    if (!api) return notFound(c, `Collection '${collection}' not found`);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
         const body = await c.req.json<{
@@ -202,26 +233,25 @@ router.post('/:collection/query', async (c) => {
             options?: QueryOptions;
         }>();
 
-        return c.json(await api.where(body.filters ?? {}, body.options));
+        return c.json(await Astromech.entries.where(body.filters ?? {}, { ...body.options, type }));
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
     }
 });
 
 // ============================================================================
-// POST /collections/:collection/:id/restore
+// POST /entries/:type/:id/restore
 // ============================================================================
 
-router.post('/:collection/:id/restore', async (c) => {
-    const { collection, id } = c.req.param();
+router.post('/:type/:id/restore', async (c) => {
+    const { type, id } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:update:${collection}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:update:${type}` as Permission)) return forbidden(c);
 
-    const api = requireCollection(collection);
-    if (!api) return notFound(c, `Collection '${collection}' not found`);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const entry = await api.restore(id);
+        const entry = await Astromech.entries.restore(id);
         return c.json({ data: entry });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -229,19 +259,18 @@ router.post('/:collection/:id/restore', async (c) => {
 });
 
 // ============================================================================
-// POST /collections/:collection/:id/duplicate
+// POST /entries/:type/:id/duplicate
 // ============================================================================
 
-router.post('/:collection/:id/duplicate', async (c) => {
-    const { collection, id } = c.req.param();
+router.post('/:type/:id/duplicate', async (c) => {
+    const { type, id } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:create:${collection}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:create:${type}` as Permission)) return forbidden(c);
 
-    const api = requireCollection(collection);
-    if (!api) return notFound(c, `Collection '${collection}' not found`);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const entry = await api.duplicate(id);
+        const entry = await Astromech.entries.duplicate(id);
         return c.json({ data: entry }, 201);
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -249,35 +278,53 @@ router.post('/:collection/:id/duplicate', async (c) => {
 });
 
 // ============================================================================
-// PUT /collections/:collection/:id
+// PUT /entries/:type/:id
 // ============================================================================
 
-router.put('/:collection/:id', async (c) => {
-    const { collection, id } = c.req.param();
-    const role = c.var.role;
-    if (!can(role, `entry:update:${collection}` as Permission)) return forbidden(c);
+const updateEntryRoute = createRoute({
+    method: 'put',
+    path: '/{type}/{id}',
+    request: {
+        params: z.object({
+            type: z.string().openapi({ example: 'post' }),
+            id: z.string().openapi({ example: 'clx1234abc' }),
+        }),
+        body: {
+            content: { 'application/json': { schema: updateEntrySchema } },
+            required: true,
+        },
+    },
+    responses: {
+        200: { description: 'Entry updated' },
+        422: { description: 'Validation error' },
+    },
+});
 
-    const api = requireCollection(collection);
-    if (!api) return notFound(c, `Collection '${collection}' not found`);
+router.openapi(updateEntryRoute, async (c) => {
+    const { type, id } = c.req.param();
+    const role = c.var.role;
+    if (!can(role, `entry:update:${type}` as Permission)) return forbidden(c);
+
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
         const raw = await c.req.json();
-        const parsed = updateSchema.safeParse(raw);
+        const parsed = updateEntrySchema.safeParse(raw);
         if (!parsed.success) return fromZodError(c, parsed.error);
 
         const { title, slug, fields, status, publishAt } = parsed.data;
 
         // Check publish permission when setting status to published
         if (parsed.data.status === 'published') {
-            if (!can(role, `entry:publish:${collection}` as Permission)) return forbidden(c);
+            if (!can(role, `entry:publish:${type}` as Permission)) return forbidden(c);
         }
 
-        const entry = await api.update(id, {
+        const entry = await Astromech.entries.update(id, {
             ...(title !== undefined && { title }),
             ...(slug !== undefined && { slug }),
             ...(fields !== undefined && { fields: fields as JsonObject }),
             ...(status !== undefined && { status }),
-            ...(publishAt !== undefined && { publishAt: publishAt ? new Date(publishAt) : null }),
+            ...(publishAt !== undefined && { publishAt }),
         });
 
         return c.json({ data: entry });
@@ -287,19 +334,18 @@ router.put('/:collection/:id', async (c) => {
 });
 
 // ============================================================================
-// DELETE /collections/:collection/trash  (empty trash)
+// DELETE /entries/:type/trash  (empty trash)
 // ============================================================================
 
-router.delete('/:collection/trash', async (c) => {
-    const { collection } = c.req.param();
+router.delete('/:type/trash', async (c) => {
+    const { type } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:delete:${collection}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:delete:${type}` as Permission)) return forbidden(c);
 
-    const api = requireCollection(collection);
-    if (!api) return notFound(c, `Collection '${collection}' not found`);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        await api.emptyTrash();
+        await Astromech.entries.emptyTrash({ type });
         return c.json({ success: true });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -307,19 +353,18 @@ router.delete('/:collection/trash', async (c) => {
 });
 
 // ============================================================================
-// DELETE /collections/:collection/:id/force  (force delete)
+// DELETE /entries/:type/:id/force  (force delete)
 // ============================================================================
 
-router.delete('/:collection/:id/force', async (c) => {
-    const { collection, id } = c.req.param();
+router.delete('/:type/:id/force', async (c) => {
+    const { type, id } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:delete:${collection}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:delete:${type}` as Permission)) return forbidden(c);
 
-    const api = requireCollection(collection);
-    if (!api) return notFound(c, `Collection '${collection}' not found`);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        await api.delete(id);
+        await Astromech.entries.delete(id);
         return c.json({ success: true });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -327,19 +372,33 @@ router.delete('/:collection/:id/force', async (c) => {
 });
 
 // ============================================================================
-// DELETE /collections/:collection/:id  (soft delete)
+// DELETE /entries/:type/:id  (soft delete)
 // ============================================================================
 
-router.delete('/:collection/:id', async (c) => {
-    const { collection, id } = c.req.param();
-    const role = c.var.role;
-    if (!can(role, `entry:delete:${collection}` as Permission)) return forbidden(c);
+const trashEntryRoute = createRoute({
+    method: 'delete',
+    path: '/{type}/{id}',
+    request: {
+        params: z.object({
+            type: z.string().openapi({ example: 'post' }),
+            id: z.string().openapi({ example: 'clx1234abc' }),
+        }),
+    },
+    responses: {
+        200: { description: 'Entry trashed' },
+        404: { description: 'Entry not found' },
+    },
+});
 
-    const api = requireCollection(collection);
-    if (!api) return notFound(c, `Collection '${collection}' not found`);
+router.openapi(trashEntryRoute, async (c) => {
+    const { type, id } = c.req.param();
+    const role = c.var.role;
+    if (!can(role, `entry:delete:${type}` as Permission)) return forbidden(c);
+
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        await api.trash(id);
+        await Astromech.entries.trash(id);
         return c.json({ success: true });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -347,19 +406,18 @@ router.delete('/:collection/:id', async (c) => {
 });
 
 // ============================================================================
-// POST /collections/:collection/:id/publish
+// POST /entries/:type/:id/publish
 // ============================================================================
 
-router.post('/:collection/:id/publish', async (c) => {
-    const { collection, id } = c.req.param();
+router.post('/:type/:id/publish', async (c) => {
+    const { type, id } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:publish:${collection}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:publish:${type}` as Permission)) return forbidden(c);
 
-    const api = requireCollection(collection);
-    if (!api) return notFound(c, `Collection '${collection}' not found`);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const entry = await api.publish(id);
+        const entry = await Astromech.entries.publish(id);
         return c.json({ data: entry });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -367,19 +425,18 @@ router.post('/:collection/:id/publish', async (c) => {
 });
 
 // ============================================================================
-// POST /collections/:collection/:id/unpublish
+// POST /entries/:type/:id/unpublish
 // ============================================================================
 
-router.post('/:collection/:id/unpublish', async (c) => {
-    const { collection, id } = c.req.param();
+router.post('/:type/:id/unpublish', async (c) => {
+    const { type, id } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:publish:${collection}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:publish:${type}` as Permission)) return forbidden(c);
 
-    const api = requireCollection(collection);
-    if (!api) return notFound(c, `Collection '${collection}' not found`);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const entry = await api.unpublish(id);
+        const entry = await Astromech.entries.unpublish(id);
         return c.json({ data: entry });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -387,26 +444,21 @@ router.post('/:collection/:id/unpublish', async (c) => {
 });
 
 // ============================================================================
-// POST /collections/:collection/:id/schedule
+// POST /entries/:type/:id/schedule
 // ============================================================================
 
-const scheduleSchema = z.object({
-    publishAt: z.iso.datetime({ offset: true }),
-});
-
-router.post('/:collection/:id/schedule', async (c) => {
-    const { collection, id } = c.req.param();
+router.post('/:type/:id/schedule', async (c) => {
+    const { type, id } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:publish:${collection}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:publish:${type}` as Permission)) return forbidden(c);
 
-    const api = requireCollection(collection);
-    if (!api) return notFound(c, `Collection '${collection}' not found`);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
         const raw = await c.req.json();
-        const parsed = scheduleSchema.safeParse(raw);
+        const parsed = scheduleEntrySchema.safeParse(raw);
         if (!parsed.success) return fromZodError(c, parsed.error);
-        const entry = await api.schedule(id, new Date(parsed.data.publishAt));
+        const entry = await Astromech.entries.schedule(id, parsed.data.publishAt);
         return c.json({ data: entry });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -414,19 +466,18 @@ router.post('/:collection/:id/schedule', async (c) => {
 });
 
 // ============================================================================
-// GET /collections/:collection/:id/versions
+// GET /entries/:type/:id/versions
 // ============================================================================
 
-router.get('/:collection/:id/versions', async (c) => {
-    const { collection, id } = c.req.param();
+router.get('/:type/:id/versions', async (c) => {
+    const { type, id } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:read:${collection}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:read:${type}` as Permission)) return forbidden(c);
 
-    const api = requireCollection(collection);
-    if (!api) return notFound(c, `Collection '${collection}' not found`);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const versions = await api.versions(id);
+        const versions = await Astromech.entries.versions(id);
         return c.json({ data: versions });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -434,19 +485,18 @@ router.get('/:collection/:id/versions', async (c) => {
 });
 
 // ============================================================================
-// POST /collections/:collection/:id/versions/:versionId/restore
+// POST /entries/:type/:id/versions/:versionId/restore
 // ============================================================================
 
-router.post('/:collection/:id/versions/:versionId/restore', async (c) => {
-    const { collection, id, versionId } = c.req.param();
+router.post('/:type/:id/versions/:versionId/restore', async (c) => {
+    const { type, id, versionId } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:update:${collection}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:update:${type}` as Permission)) return forbidden(c);
 
-    const api = requireCollection(collection);
-    if (!api) return notFound(c, `Collection '${collection}' not found`);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const entry = await api.restoreVersion(id, versionId);
+        const entry = await Astromech.entries.restoreVersion(id, versionId);
         return c.json({ data: entry });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -454,19 +504,18 @@ router.post('/:collection/:id/versions/:versionId/restore', async (c) => {
 });
 
 // ============================================================================
-// GET /collections/:collection/:id/translations
+// GET /entries/:type/:id/translations
 // ============================================================================
 
-router.get('/:collection/:id/translations', async (c) => {
-    const { collection, id } = c.req.param();
+router.get('/:type/:id/translations', async (c) => {
+    const { type, id } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:read:${collection}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:read:${type}` as Permission)) return forbidden(c);
 
-    const api = requireCollection(collection);
-    if (!api) return notFound(c, `Collection '${collection}' not found`);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const translations = await api.translations(id);
+        const translations = await Astromech.entries.translations(id);
         return c.json({ data: translations });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -474,21 +523,15 @@ router.get('/:collection/:id/translations', async (c) => {
 });
 
 // ============================================================================
-// POST /collections/:collection/:id/translations  (create translation)
+// POST /entries/:type/:id/translations  (create translation)
 // ============================================================================
 
-const createTranslationSchema = z.object({
-    locale: z.string().min(1, 'Locale is required'),
-    copyFields: z.boolean().optional(),
-});
-
-router.post('/:collection/:id/translations', async (c) => {
-    const { collection, id } = c.req.param();
+router.post('/:type/:id/translations', async (c) => {
+    const { type, id } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:create:${collection}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:create:${type}` as Permission)) return forbidden(c);
 
-    const api = requireCollection(collection);
-    if (!api) return notFound(c, `Collection '${collection}' not found`);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
         const raw = await c.req.json();
@@ -497,7 +540,7 @@ router.post('/:collection/:id/translations', async (c) => {
 
         const options: { copyFields?: boolean } = {};
         if (parsed.data.copyFields !== undefined) options.copyFields = parsed.data.copyFields;
-        const entry = await api.createTranslation(id, parsed.data.locale, options);
+        const entry = await Astromech.entries.createTranslation(id, parsed.data.locale, options);
         return c.json({ data: entry }, 201);
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -505,19 +548,18 @@ router.post('/:collection/:id/translations', async (c) => {
 });
 
 // ============================================================================
-// GET /collections/:collection/:id/translations/:locale
+// GET /entries/:type/:id/translations/:locale
 // ============================================================================
 
-router.get('/:collection/:id/translations/:locale', async (c) => {
-    const { collection, id, locale } = c.req.param();
+router.get('/:type/:id/translations/:locale', async (c) => {
+    const { type, id, locale } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:read:${collection}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:read:${type}` as Permission)) return forbidden(c);
 
-    const api = requireCollection(collection);
-    if (!api) return notFound(c, `Collection '${collection}' not found`);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const entry = await api.getTranslation(id, locale);
+        const entry = await Astromech.entries.getTranslation(id, locale);
         if (!entry) return notFound(c, `Translation for locale '${locale}' not found`);
         return c.json({ data: entry });
     } catch (err) {

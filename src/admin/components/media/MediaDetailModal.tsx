@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from '@tanstack/react-form';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Modal, Spinner, useConfirm, useToast } from '../ui/index.js';
-import { Astromech } from '../../../sdk/client/index.js';
+import { Astromech } from '../../../sdk/fetch/index.js';
 import { queryKeys } from '../../hooks/use-query-keys.js';
 import { formatBytes } from '@/support/bytes.js';
 import { formatDatetime } from '@/support/dates.js';

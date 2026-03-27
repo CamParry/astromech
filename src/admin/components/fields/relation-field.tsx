@@ -2,7 +2,7 @@ import { Combobox } from '@base-ui/react/combobox';
 import React, { useState, useEffect, useRef, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { BaseFieldProps } from '@/types/index.js';
-import { Astromech } from '@/sdk/client/index.js';
+import { Astromech } from '@/sdk/fetch/index.js';
 import './combobox.css';
 import { CheckIcon, XIcon } from 'lucide-react';
 
@@ -28,7 +28,7 @@ export function RelationField({
 
     useEffect(() => {
         if (!target) return;
-        Astromech.collections[target]!.all()
+        Astromech.entries.all({ type: target })
             .then((entries) => {
                 setOptions(
                     entries.map((e) => ({ id: e.id, title: e.title, slug: e.slug }))

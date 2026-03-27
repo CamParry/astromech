@@ -8,6 +8,7 @@ import type { Context, ErrorHandler, NotFoundHandler } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { ZodError } from 'zod';
+import { ValidationError } from '@/errors/validation.js';
 
 // ============================================================================
 // Error Types
@@ -110,6 +111,15 @@ export function fromZodError(c: Context, err: ZodError): Response {
 export const onError: ErrorHandler = (err, c) => {
     if (err instanceof HTTPException) {
         return apiError(c, err.status, 'INTERNAL_ERROR', err.message);
+    }
+
+    if (err instanceof ValidationError) {
+        const fields: Record<string, string[]> = {};
+        for (const issue of err.issues) {
+            const key = issue.path.join('.') || '_';
+            (fields[key] ??= []).push(issue.message);
+        }
+        return validationFailed(c, fields);
     }
 
     const isDev = process.env.NODE_ENV !== 'production';

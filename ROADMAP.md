@@ -214,6 +214,30 @@ Ensure both SDKs are complete, typed, and consistent.
 
 ---
 
+## Phase 10.1 — SDK Rename + Security Hardening (Future)
+
+### SDK Rename: `local` + `fetch`
+
+Rename the two SDK exports to remove ambiguity. `server` implies "use this on any server" (wrong — it requires direct DB access); `client` implies browser-only. The new names make the distinction self-evident.
+
+- `astromech/server` → `astromech/local` — direct DB access, same codebase only
+- `astromech/client` → `astromech/fetch` — HTTP-based, works in browser, external servers, or any environment
+- [ ] Update `package.json` exports map
+- [ ] Update `tsup.config.ts` entry points
+- [ ] Rename `src/sdk/server/` → `src/sdk/local/` and `src/sdk/client/` → `src/sdk/fetch/`
+- [ ] Update all internal imports across the codebase
+- [ ] Update demo project imports
+
+### CORS & Security Headers
+
+- [ ] Add `hono/cors` middleware to the root Hono app — default: same-origin only (no `Access-Control-Allow-Origin` header unless configured)
+- [ ] `AstromechConfig.cors?: { origins: string[] }` — explicit opt-in to allow additional origins (e.g. a separate frontend on a different domain); supports exact domains only, no wildcards in production
+- [ ] Add `hono/secure-headers` middleware with sensible defaults: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-XSS-Protection: 0` (modern browsers), `Permissions-Policy` baseline
+- [ ] `AstromechConfig.security?: { headers?: Partial<SecureHeadersOptions> }` — escape hatch to override defaults where needed
+- [ ] Apply security headers to all routes including admin shell HTML
+
+---
+
 ## Phase 10.5 — Architecture Improvements ✅
 
 - [x] Fix `any` types across codebase
@@ -252,6 +276,23 @@ Ensure both SDKs are complete, typed, and consistent.
 - [x] Wire into Better Auth `sendResetPassword` callback (`src/auth/index.ts`)
 - [x] Add `email?` config to `AstromechConfig`
 - [x] Email driver registry (`src/email/registry.ts`) — same globalThis pattern as storage/db
+
+---
+
+## Phase 11.5 — React Email Migration (Future)
+
+Replace string-based email templates with React Email components. Plugins get a first-class way to define and send emails using the same system.
+
+- [ ] Install `@react-email/components` and `@react-email/render`
+- [ ] Create `src/email/components/` — React Email components live here
+- [ ] Rewrite `src/email/templates/base.ts` as a React Email base layout component
+- [ ] Rewrite `src/email/templates/password-reset.ts` as a React Email component
+- [ ] Create `src/email/render.ts` — `renderEmail(element): Promise<{ html: string; text: string }>` helper (wraps `@react-email/render`)
+- [ ] Update all internal `send()` call sites to use `renderEmail()` before passing to driver
+- [ ] Add `sendEmail(to, subject, element)` utility to `AstromechContext` so plugins can send emails from `setup()`
+- [ ] Add `emails?: EmailTemplateOverride[]` to `AstromechPlugin` — lets plugins replace built-in templates (e.g. swap the password reset design for their own branded version)
+- [ ] Update plugin resolver to collect and apply email template overrides
+- [ ] Export `renderEmail` and base email components from a public `astromech/email` entry point so plugins can build on the same primitives
 
 ---
 
@@ -318,11 +359,44 @@ Architecture: each locale is a separate entry row; `translationOf` FK points to 
 - [x] `src/admin/components/translations/LocaleSwitcher.tsx` — locale switcher with create-translation flow
 - [x] Entry edit page: locale switcher in sidebar, locale badge in header, "View source" link
 - [x] Entry list: translation count badge per row when `i18n` enabled
+- [ ] Rename `CollectionConfig.i18n` → `translatable` — clearer intent, avoids confusion with admin UI language (`i18n` is overloaded); breaking config change, update demo + type generator + all internal references
 - [x] Translation cascade on trash/restore/delete:
     - [x] `trash(id)` — also trash all entries where `translationOf = id`
     - [x] `restore(id)` — also restore all entries where `translationOf = id`
     - [x] `delete(id)` — also delete all entries where `translationOf = id`
     - [x] Add `ON DELETE CASCADE` to `translationOf` column as DB-level safety net
+
+---
+
+## Phase 15.5 — Translation Deletion & Primary Promotion (Future)
+
+> Two distinct concepts: **primary** (`translationOf IS NULL`) is an internal grouping concept only — it has no effect on SDK data fetching. **`defaultLocale`** is the SDK fallback when no locale is specified. Multi-lang sites should always pass `locale` explicitly to the SDK to avoid ambiguity.
+
+### Deleting a non-primary translation
+
+- [ ] Delete single locale: removes only that entry row; primary and other siblings unaffected
+- [ ] If the entry has incoming relations from other entries: show a warning in the confirmation modal ("X entries link to this entry") — user proceeds at their own risk, no automatic repointing
+- [ ] Confirmation modal offers a secondary option to delete all locale variants at once
+- [ ] API: `DELETE /entries/:type/:id` gains a `?cascade=true` query param to delete all siblings
+- [ ] SDK: `delete(id, { cascade?: boolean })`
+
+### Deleting a primary translation (translationOf = null)
+
+- [ ] If the entry has no sibling translations: delete proceeds normally
+- [ ] If sibling translations exist: automatically promote the first sibling that exists in config `locales` order (e.g. config `['en', 'fr', 'es']`, EN deleted, FR exists → FR promoted)
+  - Promoted entry: `translationOf` set to `null`
+  - Remaining siblings: `translationOf` repointed from old primary ID to new primary ID
+  - Old primary then deleted
+- [ ] If the entry has incoming relations from other entries: show warning in the confirmation modal before proceeding
+- [ ] Confirmation modal also offers "delete all translations" as an alternative to auto-promotion
+- [ ] API: `POST /entries/:type/:id/promote` — internal helper used by the delete flow; promotes an entry to primary and repoints siblings
+- [ ] SDK: `delete(id, { cascade?: boolean })` handles promotion transparently; no separate `promote()` exposed to users
+
+### Entry index page
+
+- [ ] List view filters by `translationOf IS NULL` — always shows the primary entry regardless of its locale
+- [ ] Locale badge on each row reflects the actual locale of the primary entry
+- [ ] `defaultLocale` is not used as a data filter in the index; it remains an SDK-level fetch default only
 
 ---
 
@@ -338,19 +412,37 @@ Architecture: each locale is a separate entry row; `translationOf` FK points to 
 
 ---
 
-## Phase 16.5 — Config Separation & Framework Adapters
+## Phase 16.5 — Config Separation & Framework Adapters ✅
 
 Decouple Astromech config from the Astro integration. Config lives in a standalone
 `astromech.config.ts`; framework adapters import it and bridge it. Core is mountable
 on any framework that can pass request/response.
 
 - [x] Extract Astro integration from `src/index.ts` into `src/adapters/astro.ts`
-- [x] `src/index.ts` becomes framework-agnostic: exports `defineConfig`, `defineCollection`, `definePlugin`, types only
+- [x] `src/index.ts` becomes framework-agnostic: exports `defineConfig`, `defineEntryType`, `definePlugin`, types only
 - [x] Add `astromech/astro` export pointing to `src/adapters/astro.ts`
 - [x] Update `package.json` exports map
 - [x] Update `tsup.config.ts` — add `src/adapters/astro.ts` as entry point
 - [x] Create `demo/astromech.config.ts` — demo config extracted from `demo/astro.config.mjs`
 - [x] Update `demo/astro.config.mjs` — import config from `astromech.config.ts`, use `astromech/astro`
+
+---
+
+## Phase 16.6 — Entries Rename & SDK Redesign ✅
+
+Rename "collections" to "entries" throughout. Cleaner semantic model: entry types are
+defined in config; entries are individual records; `type` is the discriminator field.
+SDK moves from a per-collection proxy to a unified `Astromech.entries` API.
+
+- [x] `CollectionConfig` → `EntryTypeConfig`, `defineCollection` → `defineEntryType`
+- [x] `AstromechConfig.collections` → `.entries`; config slugs go singular (`post`, `page`)
+- [x] `Entry.collection` → `Entry.type`; DB column `collection` → `type` (migration `0003`)
+- [x] SDK: `Astromech.collections['posts'].all()` → `Astromech.entries.all({ type: 'post' })`
+- [x] API routes: `/collections/:collection/...` → `/entries/:type/...`
+- [x] Collection metadata route: `/collections-meta` → `/entry-types`
+- [x] Admin URLs: `/admin/collections/:collection` → `/admin/entries/:type`
+- [x] Sidebar: "Collections" group heading removed; entry types are direct top-level nav items
+- [x] Permissions: `entry:read:posts` → `entry:read:post` (singular slugs)
 
 ---
 
@@ -378,9 +470,9 @@ Built with Citty.
 - [ ] `astromech users:delete <id>` — delete a user; `--force` skips confirmation
 
 ### Entry commands
-- [ ] `astromech entries:list <collection>` — list entries; `--status`, `--limit` flags
-- [ ] `astromech entries:get <collection> <id>` — get a single entry (JSON output)
-- [ ] `astromech entries:delete <collection> <id>` — delete entry; `--force` skips confirmation
+- [ ] `astromech entries:list <type>` — list entries; `--status`, `--limit` flags
+- [ ] `astromech entries:get <type> <id>` — get a single entry (JSON output)
+- [ ] `astromech entries:delete <type> <id>` — delete entry; `--force` skips confirmation
 
 ### Generate / Seed
 - [ ] `astromech generate:types` — regenerate SDK types from config
@@ -388,13 +480,58 @@ Built with Citty.
 
 ---
 
-## Phase 18 — Plugin UI System (Future)
+## Phase 17.4 — Admin React Query Hooks (Future)
 
-- [ ] Define `AdminRoute` type in plugin config
-- [ ] Add `adminRoutes?: AdminRoute[]` to `AstromechPlugin` type
+Extract all `useQuery` / `useMutation` calls from page components into a structured hook layer that mirrors the fetch SDK's API shape. Keeps data-fetching logic out of components and gives a single consistent pattern across the admin.
+
+> Pattern: `Astromech.entries.useAll({ type })`, `Astromech.entries.useGet(id)`, `Astromech.entries.useCreate()`, `Astromech.entries.useUpdate()`, etc. Each hook wraps the corresponding `astromech/fetch` method with TanStack Query. Mutation hooks handle cache invalidation internally via shared query key factories.
+
+- [ ] Define query key factories per resource (`entriesKeys`, `mediaKeys`, `usersKeys`) in `src/admin/hooks/query-keys.ts`
+- [ ] `src/admin/hooks/entries.ts` — `useEntries()`, `useEntry()`, `useCreateEntry()`, `useUpdateEntry()`, `useDeleteEntry()`, `usePublishEntry()`, etc.
+- [ ] `src/admin/hooks/media.ts` — `useMedia()`, `useUploadMedia()`, `useDeleteMedia()`, etc.
+- [ ] `src/admin/hooks/users.ts` — `useUsers()`, `useUser()`, `useUpdateUser()`, etc.
+- [ ] Replace all inline `useQuery` / `useMutation` calls in admin pages with the new hooks
+- [ ] Future: `astromech/react` public export once cache invalidation across hook boundaries is figured out
+
+---
+
+## Phase 17.5 — TanStack Router File-Based Routing (Future)
+
+Migrate the admin SPA from manually-defined routes in `src/admin/router.tsx` to TanStack Router's file-based routing. Route files in `src/admin/pages/` are scanned at build time; the route tree is generated automatically.
+
+- [ ] Install `@tanstack/router-plugin` and wire into Astro's Vite config (`vite.plugins`)
+- [ ] Configure `routesDirectory: 'src/admin/pages'` and `generatedRouteTree: 'src/admin/routeTree.gen.ts'`
+- [ ] Add `src/admin/routeTree.gen.ts` to `.gitignore` (build artifact)
+- [ ] Rename page files to TanStack Router file conventions (`_layout.tsx`, `$param.tsx`, `index.tsx`, etc.)
+- [ ] Delete manual route definitions from `src/admin/router.tsx`; import generated route tree instead
+- [ ] Migrate per-route search params, loaders, and `beforeLoad` guards to co-located route files
+- [ ] Verify plugin route merging still works (plugin routes use code-based API alongside the generated tree — TanStack supports mixing both)
+
+---
+
+## Phase 18 — Plugin Architecture & UI System (Future)
+
+### Plugin Architecture
+
+Revisit the plugin contract before first-party plugins are built. Key open questions:
+
+- Introduce `defineAstromechPlugin(config)` wrapper (mirroring `defineConfig`, `defineEntryType`) to enforce a consistent plugin shape and enable future validation/DX improvements
+- Replace flat `routes?: Route[]` with a mounted Hono sub-app — each plugin provides a `Hono` instance that the core mounts at `/api/cms/plugins/<name>/`. Keeps plugin routing isolated and gives plugins full Hono feature access (grouped routes, scoped middleware, RPC types). May keep flat `routes` as a convenience shorthand for simple cases.
+- Decide: should `middleware` remain flat or also move to the sub-app?
+
+- [ ] Finalise `defineAstromechPlugin` API and update `AstromechPlugin` type (`src/types/plugins.ts`)
+- [ ] Switch plugin API routes to mounted Hono sub-apps; update plugin resolver and root Hono app
+- [ ] Update first-party plugin stubs (Phase 19) to use the new pattern
+
+### Plugin UI System
+
+Plugin pages follow the same TanStack Router patterns as core pages (see Phase 17.5), but plugins are npm packages so they can't participate in file-based routing directly. Instead, plugins export code-based route definitions that are merged into the router at build time via the Vite plugin.
+
+- [ ] Define `PluginAdminRoute` type — wraps a TanStack Router route definition with metadata (path, nav label, icon, permission required)
+- [ ] Add `adminRoutes?: PluginAdminRoute[]` to `AstromechPlugin` type
 - [ ] Update `src/core/plugin-resolver.ts` to collect plugin `adminRoutes`
-- [ ] Update virtual module to include resolved admin routes
-- [ ] Update `src/admin/router.tsx` to register plugin routes dynamically
+- [ ] Update virtual module to include resolved plugin routes
+- [ ] Update router setup to merge plugin code-based routes into the file-based route tree
 - [ ] Update `Sidebar.tsx` to render plugin-contributed nav items
 - [ ] Define page extension points (entry edit tabs, sidebar panels)
 
@@ -436,24 +573,141 @@ Server-side image processing on upload.
 
 ---
 
-## Extra Thoughts
+## Phase 21.5 — Multi-Runtime & Framework Adapter Architecture (Future)
 
-- Use React Email for email templating
-- Plugins need to be able to define and send emails
-- Maybe plugins should function as nested Hono apps
-- Do we need to support other databases, or can we just support sqlite? Is there any benefit to supporting more databases?
-- Do we need to support R2 explicitly or do we just use the R2 S3 SKD?
-- If we only support sqlite and S3 complient storage do we even need drivers?
-- What are the consideration for hosting on multiple runtimes? I think the main runtimes will be Cloudflare, Vercel, Node, and maybe Bun and Deno
-- With the SDK we currently have server and client, but maybe we need to clarify things further: I can think of three different usages, first is purely client side, second is server side in the same codebase (intended usage), and third is server side but from an external app
-- We will probably have to have some cors and origin config for the client SDK usage
-- We probably want to move to TanStack router filesystem based routing instead of manually defining them all
-- We might want to move to using TanStack routers page level data fetching, maybe not though
-- We probably want to wrap up all of the current tanstack query usages in custom hooks, I like to call these "actions" but open to suggestions, I don't think we need to expose this, this can be admin specific so all the caching and optimistic updated makes sense
-- We need to think if we want to give the admin users access in the setting to configure the mailer driver, or if this is only defined in the code
-- We probably can move some of the /utils into /support
-- Change i18n: true to translatable: true
-- Global search needs to search collection entries as well
-- We need a notifications system that add a list of notifictions to the bell button in the topbar
-- We need to decide if media should really be a relationship, if it is how do we handle media in complex fields like repeaters and builders
-- Ability to delete a translation (including the default one?)
+> Current focus: Astro + Cloudflare Workers. The architecture must be built to support other runtimes and frameworks without refactoring core. All runtime-specific behaviour is pushed to adapter layers; core remains fully portable.
+
+### Adapter layers
+
+| Layer | Current | Planned |
+|---|---|---|
+| **Runtime** | Cloudflare Workers (implicit) | Node, Bun, Deno — auto-detect or explicit config |
+| **Framework** | `astromech/astro` | SvelteKit, Next.js, Nuxt, standalone Node/Bun HTTP |
+| **Database** | libsql, D1 binding | Postgres, MySQL (Phase 23) |
+| **Storage** | filesystem | S3-compatible, R2 binding (Phase 22) |
+| **Email** | SMTP, Resend, Console | driver interface already extensible |
+
+### Runtime adapter responsibilities
+A runtime adapter is responsible for:
+- Detecting or receiving the runtime environment (e.g. Cloudflare `env`, Node `process.env`)
+- Initialising the correct DB, storage, and email drivers for that runtime
+- Wiring up CRON (Workers scheduled event vs HTTP trigger vs OS cron)
+- Exporting a `handleRequest(request, env?)` entry point the framework adapter calls
+
+### Framework adapter responsibilities
+A framework adapter wraps the runtime adapter and bridges it to a specific framework's request/response model. `astromech/astro` is the reference implementation.
+
+### Tasks
+- [ ] Document the adapter contract (`RuntimeAdapter`, `FrameworkAdapter` types) in `src/types/`
+- [ ] Runtime auto-detection utility (`src/core/runtime.ts`) — detects Cloudflare Workers, Node, Bun, Deno from globals
+- [ ] `astromech/node` — standalone Node/Bun HTTP adapter (uses libsql + filesystem/S3 by default)
+- [ ] `astromech/sveltekit` — SvelteKit framework adapter
+- [ ] `astromech/nextjs` — Next.js framework adapter
+- [ ] Each new framework adapter follows the same pattern as `astromech/astro`
+
+---
+
+## Phase 22 — Storage Drivers (Future)
+
+> Current support: local filesystem only (`src/storage/filesystem.ts`). The registry pattern matches DB drivers — set once at startup, resolved at request time.
+
+- [ ] `src/storage/drivers/s3.ts` — S3-compatible driver (`@aws-sdk/client-s3`); configurable endpoint covers AWS S3, Cloudflare R2 (via HTTP), Backblaze B2, MinIO
+- [ ] `src/storage/drivers/r2-binding.ts` — Cloudflare Workers native R2 binding driver (`env.BUCKET.put/get/delete`); skips HTTP for lower latency inside Workers. Mirrors the D1 binding pattern.
+- [ ] Update `StorageDriver` type and `AstromechConfig` storage config to accept new driver options
+- [ ] Update `astromech/cloudflare` (or adapter) to wire up R2 binding from the Workers `env` object — same approach as D1
+
+---
+
+## Phase 23 — Additional Database Drivers (Future)
+
+> Current support: SQLite via libsql (Node/Bun) and D1 (Cloudflare Workers). The driver abstraction in `src/db/drivers/` is designed to accommodate additional dialects without breaking changes.
+
+- [ ] `src/db/drivers/postgres.ts` — Postgres driver (via `drizzle-orm/postgres-js` or `drizzle-orm/node-postgres`)
+- [ ] `src/db/drivers/mysql.ts` — MySQL driver (via `drizzle-orm/mysql2`)
+- [ ] Drizzle schema variants for Postgres/MySQL column types (separate schema files or conditional column helpers)
+- [ ] Migration pipeline per dialect — Drizzle Kit config needs to be dialect-aware
+- [ ] Update `AstromechConfig` DB config type to accept driver options for each dialect
+- [ ] Test coverage for each new driver
+
+---
+
+## Phase 24 — Notifications System (Future)
+
+> Rule of thumb: **sync operations use toasts, async operations use notifications**. A publish action completing immediately → toast. A scheduled entry going live at 3am → notification.
+
+### DB & Core
+
+- [ ] `notificationsTable` in `src/db/schema.ts` — columns: `id`, `type` (`info | success | warning | error`), `title`, `message`, `userId` (nullable — `null` = global, visible to all admins), `readBy` (JSON array of user IDs), `createdAt`, `expiresAt` (nullable)
+- [ ] `src/db/repositories/notifications.ts` — `NotificationsRepository`: `create()`, `list({ userId, unreadOnly })`, `markRead(id, userId)`, `markAllRead(userId)`, `deleteExpired()`
+- [ ] Built-in CRON job to purge expired notifications (`src/cron/jobs/notifications-purge.ts`)
+
+### Internal Notification Service
+
+- [ ] `src/notifications/index.ts` — `notify(notification)` helper; thin wrapper over repository; available server-side for core and plugins
+- [ ] Anti-spam rules enforced at `notify()` call site: rate-limit per `source` (plugin name) — max N notifications per hour; duplicate suppression (same `title` + `source` within a window deduplicates); plugins must declare a `source` field
+- [ ] Built-in notifications wired up: scheduled entry published, version restored, trash auto-purged, CRON job errors
+
+### API & SDK
+
+- [ ] `GET /api/cms/notifications` — list notifications for current user (global + user-scoped); supports `?unread=true`
+- [ ] `POST /api/cms/notifications/:id/read` — mark single notification read
+- [ ] `POST /api/cms/notifications/read-all` — mark all read
+- [ ] Add `notifications` namespace to server SDK (`astromech/local`) and fetch SDK (`astromech/fetch`): `list()`, `markRead()`, `markAllRead()`
+- [ ] Plugin context (`AstromechContext`) exposes `notify()` so plugins can push notifications from `setup()` hooks
+
+### Admin UI
+
+- [ ] Poll `GET /api/cms/notifications?unread=true` every 30s from topbar
+- [ ] Bell icon badge shows unread count
+- [ ] Dropdown panel: notification list (icon, title, message, timestamp), mark-all-read button
+- [ ] Clicking a notification marks it read; link to relevant resource if applicable
+
+---
+
+## Phase 25 — Global Search (Future)
+
+### Phase 25a — Title Search
+
+Search entry records from the command palette. All entry types are searchable by default; opt out per type with `searchable: false` in `EntryTypeConfig`.
+
+- [ ] Add `searchable?: false` to `EntryTypeConfig` (`src/types/config.ts`)
+- [ ] `GET /api/cms/search?q=...` — queries `title` across all searchable entry types + users + media; returns results grouped by resource type, ordered by relevance (case-insensitive match position)
+- [ ] Add `search(query)` to server SDK (`astromech/local`) and fetch SDK (`astromech/fetch`)
+- [ ] Update command palette (`src/admin/components/ui/command-palette.tsx`) to call the search endpoint and render grouped results (entry type label + title + edit link)
+
+### Phase 25b — Full-Text Search Indexing (Future)
+
+Long-term search solution that indexes all text content from entry fields into a dedicated searchable column.
+
+- [ ] Add `search_index` text column to `entriesTable` — auto-populated on create/update by concatenating all text values from the fields JSON
+- [ ] Add `searchable?: false` per field in `FieldConfig` to exclude sensitive or irrelevant fields from the index
+- [ ] Rebuild index on entry save (sync) and provide a CLI command `astromech entries:reindex` for backfilling
+- [ ] Switch `GET /api/cms/search` to query `search_index` column (SQLite FTS5 or simple LIKE depending on runtime support)
+- [ ] Expose `searchIndex` in SDK types
+
+---
+
+## Phase 26 — Populate & Complex Field Data Model (Future)
+
+> Design decisions to resolve before implementing. Two related but separable problems.
+
+### Media populate (IDs in JSON → hydrated objects)
+
+Media fields store IDs directly in the fields JSON blob, not in the `relationships` table. `populate` needs to reach inside the JSON to hydrate them efficiently.
+
+- [ ] Design a `populate` pass for media IDs embedded in fields JSON: extract all media IDs in a single traversal, fetch in one `WHERE id IN (...)` query, reinsert hydrated objects back into the JSON tree — O(1) queries regardless of field depth or entry count
+- [ ] Handle media IDs inside repeater rows, block items, and group fields in the same pass
+- [ ] Extend `populate` option on SDK `all()` / `get()` to include `'media'` alongside relation population
+
+### Relationship keys inside repeaters and blocks (open question)
+
+Relationship fields nested inside repeaters or blocks are currently stored in the `relationships` table with a key derived from the field path. When rows are reordered the keys may go stale.
+
+**Proposed approach:** store repeater/block items as objects keyed by stable UUIDs rather than arrays, with an explicit `_order` field in each item. The UUID key is assigned on creation and never changes — reordering updates `_order` values only, so relationship keys remain stable.
+
+- [ ] Decide: UUID-keyed objects vs arrays — evaluate impact on field components, form state, and type generation before committing
+- [ ] If adopting UUID keys: migration strategy for existing repeater data (arrays → keyed objects)
+- [ ] Update `relationships` key naming convention for nested fields to use stable UUID-based paths
+- [ ] Ensure drag-to-reorder in repeaters and blocks updates `_order` fields correctly without regenerating keys
+
+

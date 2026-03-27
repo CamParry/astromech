@@ -1,5 +1,5 @@
 /**
- * Collection entry version history page.
+ * Entry version history page.
  *
  * Two-column layout: version list sidebar left, diff view right.
  */
@@ -12,7 +12,6 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import adminConfig from 'virtual:astromech/admin-config';
 import {
     Button,
-    Badge,
     Panel,
     Breadcrumb,
     PageLoading,
@@ -22,7 +21,7 @@ import {
     PageHeader,
     PageContent,
 } from '../../components/ui/index';
-import { Astromech } from '../../../sdk/client/index.js';
+import { Astromech } from '../../../sdk/fetch/index.js';
 import { queryKeys } from '../../hooks/index.js';
 import type { EntryVersion } from '../../../types/index.js';
 
@@ -210,9 +209,9 @@ function DiffView({
 // Page
 // ============================================================================
 
-export function CollectionVersionsPage(): React.ReactElement {
-    const { collection, id } = useParams({ strict: false }) as {
-        collection: string;
+export function EntryVersionsPage(): React.ReactElement {
+    const { type, id } = useParams({ strict: false }) as {
+        type: string;
         id: string;
     };
     const { toast } = useToast();
@@ -221,19 +220,19 @@ export function CollectionVersionsPage(): React.ReactElement {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
 
-    const collectionConfig = adminConfig.collections[collection];
-    const plural = collectionConfig?.plural ?? collection;
+    const entryTypeConfig = adminConfig.entries[type];
+    const plural = entryTypeConfig?.plural ?? type;
 
     const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
 
     const { data: entry } = useQuery({
-        queryKey: queryKeys.entries.detail(collection, id),
-        queryFn: () => Astromech.collections[collection]!.get(id),
+        queryKey: queryKeys.entries.detail(type, id),
+        queryFn: () => Astromech.entries.get(id),
     });
 
     const { data: versions, isLoading } = useQuery({
-        queryKey: queryKeys.entries.versions(collection, id),
-        queryFn: () => Astromech.collections[collection]!.versions(id),
+        queryKey: queryKeys.entries.versions(type, id),
+        queryFn: () => Astromech.entries.versions(id),
         select: (data) => [...data].sort((a, b) => b.versionNumber - a.versionNumber),
     });
 
@@ -252,16 +251,16 @@ export function CollectionVersionsPage(): React.ReactElement {
 
     const restoreMutation = useMutation({
         mutationFn: (versionId: string) =>
-            Astromech.collections[collection]!.restoreVersion(id, versionId),
+            Astromech.entries.restoreVersion(id, versionId),
         onSuccess: () => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.detail(collection, id),
+                queryKey: queryKeys.entries.detail(type, id),
             });
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.versions(collection, id),
+                queryKey: queryKeys.entries.versions(type, id),
             });
             toast({ message: t('versions.restored'), variant: 'success' });
-            void navigate({ to: `/collections/${collection}/${id}` });
+            void navigate({ to: `/entries/${type}/${id}` });
         },
         onError: (err) => {
             toast({
@@ -292,10 +291,10 @@ export function CollectionVersionsPage(): React.ReactElement {
             <PageHeader>
                 <Breadcrumb
                     items={[
-                        { label: plural, to: `/collections/${collection}` },
+                        { label: plural, to: `/entries/${type}` },
                         {
                             label: entry?.title ?? id,
-                            to: `/collections/${collection}/${id}`,
+                            to: `/entries/${type}/${id}`,
                         },
                         { label: t('versions.pageTitle') },
                     ]}
@@ -311,8 +310,8 @@ export function CollectionVersionsPage(): React.ReactElement {
                                 {t('versions.pageTitle')}
                             </h2>
                             <Link
-                                to="/collections/$collection/$id"
-                                params={{ collection, id }}
+                                to="/entries/$type/$id"
+                                params={{ type, id }}
                                 className="am-link am-text-sm"
                             >
                                 <ArrowLeft

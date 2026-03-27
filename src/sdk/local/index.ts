@@ -1,8 +1,8 @@
 /**
- * Astromech Server Client
+ * Astromech Local Client
  *
  * Direct database access for use in Astro server-side code.
- * Import from 'astromech/server'
+ * Import from 'astromech/local'
  */
 
 import config from 'virtual:astromech/config';
@@ -14,12 +14,12 @@ import type {
     JsonValue,
     Setting,
     SettingsApi,
-    TypedCollectionsProxy,
+    TypedEntriesApi,
 } from '@/types/index.js';
-import { usersApi } from '@/sdk/server/users.js';
-import { collectionsProxy, initServerContext } from '@/sdk/server/collections.js';
-import { mediaApi } from '@/sdk/server/media.js';
-import { setCurrentUser } from '@/sdk/server/context.js';
+import { usersApi } from '@/sdk/local/users.js';
+import { entries, initServerContext } from '@/sdk/local/entries.js';
+import { mediaApi } from '@/sdk/local/media.js';
+import { setCurrentUser } from '@/sdk/local/context.js';
 
 export { initServerContext, setCurrentUser };
 
@@ -78,15 +78,11 @@ const settingsApi: SettingsApi = {
 };
 
 // ============================================================================
-// Collections Proxy
-// ============================================================================
-
-// ============================================================================
 // Export Client
 // ============================================================================
 
 export const Astromech: AstromechClient = {
-    collections: collectionsProxy as TypedCollectionsProxy,
+    entries: entries as unknown as TypedEntriesApi,
     media: mediaApi,
     settings: settingsApi,
     users: usersApi,

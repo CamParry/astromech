@@ -11,9 +11,9 @@
  *   /forgot-password → Forgot password
  *   /reset-password  → Reset password
  *   /setup       → First-run setup wizard
- *   /collections/:collection         → Collection list
- *   /collections/:collection/new     → New entry
- *   /collections/:collection/:id     → Edit entry
+ *   /entries/:type         → Entry type list
+ *   /entries/:type/new     → New entry
+ *   /entries/:type/:id     → Edit entry
  *   /media       → Media library
  *   /users       → Users list
  *   /settings    → Settings
@@ -40,10 +40,10 @@ import { ForgotPasswordPage } from './pages/auth/forgot-password.js';
 import { ResetPasswordPage } from './pages/auth/reset-password.js';
 import { SetupPage } from './pages/auth/setup.js';
 import { DashboardPage } from './pages/dashboard.js';
-import { CollectionIndexPage } from './pages/collections/index.js';
-import { CollectionCreatePage } from './pages/collections/create.js';
-import { CollectionEditPage } from './pages/collections/edit.js';
-import { CollectionVersionsPage } from './pages/collections/versions.js';
+import { EntryIndexPage } from './pages/entries/index.js';
+import { EntryCreatePage } from './pages/entries/create.js';
+import { EntryEditPage } from './pages/entries/edit.js';
+import { EntryVersionsPage } from './pages/entries/versions.js';
 import { UsersIndexPage } from './pages/users/index.js';
 import { UserCreatePage } from './pages/users/create.js';
 import { UserEditPage } from './pages/users/edit.js';
@@ -174,28 +174,28 @@ const dashboardRoute = createRoute({
     component: DashboardPage,
 });
 
-const collectionIndexRoute = createRoute({
+const entryIndexRoute = createRoute({
     getParentRoute: () => protectedLayoutRoute,
-    path: '/collections/$collection',
-    component: CollectionIndexPage,
+    path: '/entries/$type',
+    component: EntryIndexPage,
 });
 
-const collectionCreateRoute = createRoute({
+const entryCreateRoute = createRoute({
     getParentRoute: () => protectedLayoutRoute,
-    path: '/collections/$collection/new',
-    component: CollectionCreatePage,
+    path: '/entries/$type/new',
+    component: EntryCreatePage,
 });
 
-const collectionEditRoute = createRoute({
+const entryEditRoute = createRoute({
     getParentRoute: () => protectedLayoutRoute,
-    path: '/collections/$collection/$id',
-    component: CollectionEditPage,
+    path: '/entries/$type/$id',
+    component: EntryEditPage,
 });
 
-const collectionVersionsRoute = createRoute({
+const entryVersionsRoute = createRoute({
     getParentRoute: () => protectedLayoutRoute,
-    path: '/collections/$collection/$id/versions',
-    component: CollectionVersionsPage,
+    path: '/entries/$type/$id/versions',
+    component: EntryVersionsPage,
 });
 
 const usersIndexRoute = createRoute({
@@ -261,10 +261,10 @@ const routeTree = rootRoute.addChildren([
     ]),
     protectedLayoutRoute.addChildren([
         dashboardRoute,
-        collectionIndexRoute,
-        collectionCreateRoute,
-        collectionVersionsRoute,
-        collectionEditRoute,
+        entryIndexRoute,
+        entryCreateRoute,
+        entryVersionsRoute,
+        entryEditRoute,
         usersIndexRoute,
         userCreateRoute,
         userEditRoute,

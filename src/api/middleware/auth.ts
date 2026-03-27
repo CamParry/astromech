@@ -10,7 +10,7 @@ import { eq } from 'drizzle-orm';
 import { auth } from '@/auth/index.js';
 import { getDb } from '@/db/registry.js';
 import { usersTable } from '@/db/schema.js';
-import { Astromech } from '@/sdk/server/index.js';
+import { Astromech } from '@/sdk/local/index.js';
 import { resolveRole } from '@/core/permissions.js';
 import { unauthorized } from './errors.js';
 import type { User, Role } from '@/types/index.js';

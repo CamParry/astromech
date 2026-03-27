@@ -22,6 +22,13 @@
       "when": 1742860800000,
       "tag": "0002_entry_locale_backfill",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1743034800000,
+      "tag": "0003_rename_collection_to_type",
+      "breakpoints": true
     }
   ]
 }

@@ -11,33 +11,19 @@
  *   DELETE /users/:id     → delete()
  */
 
-import { Hono } from 'hono';
-import { z } from 'zod';
+import { OpenAPIHono } from '@hono/zod-openapi';
 import { eq, count } from 'drizzle-orm';
-import { Astromech } from '@/sdk/server/index.js';
+import { Astromech } from '@/sdk/local/index.js';
 import { badRequest, forbidden, fromZodError, internalError, notFound } from '@/api/middleware/errors.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
 import { can } from '@/core/permissions.js';
 import { getDb } from '@/db/registry.js';
 import { usersTable } from '@/db/schema.js';
+import { createUserSchema, updateUserSchema } from '@/schemas/users.js';
 
 type Env = { Variables: AuthVariables };
 
-const router = new Hono<Env>();
-
-const createSchema = z.object({
-    email: z.string().email('Must be a valid email address'),
-    name: z.string().min(1, 'Name is required'),
-    fields: z.record(z.string(), z.unknown()).optional(),
-    roleSlug: z.string().optional(),
-});
-
-const updateSchema = z.object({
-    email: z.string().email('Must be a valid email address').optional(),
-    name: z.string().min(1, 'Name cannot be empty').optional(),
-    fields: z.record(z.string(), z.unknown()).optional(),
-    roleSlug: z.string().optional(),
-});
+const router = new OpenAPIHono<Env>();
 
 // ============================================================================
 // GET /users
@@ -84,7 +70,7 @@ router.post('/', async (c) => {
 
     try {
         const raw = await c.req.json();
-        const parsed = createSchema.safeParse(raw);
+        const parsed = createUserSchema.safeParse(raw);
         if (!parsed.success) return fromZodError(c, parsed.error);
 
         const { email, name, fields, roleSlug } = parsed.data;
@@ -115,7 +101,7 @@ router.put('/:id', async (c) => {
 
     try {
         const raw = await c.req.json();
-        const parsed = updateSchema.safeParse(raw);
+        const parsed = updateUserSchema.safeParse(raw);
         if (!parsed.success) return fromZodError(c, parsed.error);
 
         const { email, name, fields, roleSlug } = parsed.data;

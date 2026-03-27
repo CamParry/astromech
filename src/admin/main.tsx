@@ -6,7 +6,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
-import { Astromech } from '../sdk/client/index.js';
+import { Astromech } from '../sdk/fetch/index.js';
 import { router } from './router.js';
 import './i18n.js';
 import './styles/main.css';

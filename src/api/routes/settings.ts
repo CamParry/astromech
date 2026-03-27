@@ -9,29 +9,16 @@
  *   PUT  /settings/:key    → set()
  */
 
-import { Hono } from 'hono';
-import { z } from 'zod';
-import { Astromech } from '@/sdk/server/index.js';
+import { OpenAPIHono } from '@hono/zod-openapi';
+import { Astromech } from '@/sdk/local/index.js';
 import { forbidden, fromZodError, internalError, notFound } from '@/api/middleware/errors.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
 import { can } from '@/core/permissions.js';
+import { setSettingSchema } from '@/schemas/settings.js';
 
 type Env = { Variables: AuthVariables };
 
-const router = new Hono<Env>();
-
-const jsonValue: z.ZodType<unknown> = z.lazy(() =>
-    z.union([
-        z.string(),
-        z.number(),
-        z.boolean(),
-        z.null(),
-        z.array(jsonValue),
-        z.record(z.string(), jsonValue),
-    ])
-);
-
-const putSchema = z.object({ value: jsonValue });
+const router = new OpenAPIHono<Env>();
 
 // ============================================================================
 // GET /settings
@@ -78,7 +65,7 @@ router.put('/:key', async (c) => {
 
     try {
         const raw = await c.req.json();
-        const parsed = putSchema.safeParse(raw);
+        const parsed = setSettingSchema.safeParse(raw);
         if (!parsed.success) return fromZodError(c, parsed.error);
 
         const setting = await Astromech.settings.set(key, parsed.data.value as import('@/types/index.js').JsonValue);

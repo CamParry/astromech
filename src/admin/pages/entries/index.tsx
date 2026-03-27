@@ -1,9 +1,9 @@
 /**
- * Collection entry list page.
+ * Entry type list page.
  *
  * Shows a searchable, filterable, paginated table or grid of entries for a
- * collection. Supports bulk selection and row-level actions (edit, duplicate,
- * trash/restore). Per-collection view preference is persisted to localStorage.
+ * given entry type. Supports bulk selection and row-level actions (edit,
+ * duplicate, trash/restore). Per-type view preference is persisted to localStorage.
  */
 
 import { formatDate } from '@/support/dates.js';
@@ -26,7 +26,7 @@ import {
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import { Astromech } from '../../../sdk/client/index.js';
+import { Astromech } from '../../../sdk/fetch/index.js';
 import type { Entry } from '../../../types/index.js';
 import type { DropdownItem } from '../../components/ui/dropdown.js';
 import {
@@ -78,16 +78,16 @@ function statusVariant(status: string): 'draft' | 'published' | 'scheduled' | 'd
 
 const ALL_COLUMNS = ['title', 'status', 'slug', 'locale', 'updatedAt'] as const;
 
-function colStorageKey(collection: string): string {
-    return `am-cols-${collection}`;
+function colStorageKey(type: string): string {
+    return `am-cols-${type}`;
 }
 
 function readStoredColumns(
-    collection: string,
+    type: string,
     adminCols: { field: string }[]
 ): Set<string> {
     try {
-        const stored = localStorage.getItem(colStorageKey(collection));
+        const stored = localStorage.getItem(colStorageKey(type));
         if (stored) {
             const parsed = JSON.parse(stored) as string[];
             if (Array.isArray(parsed)) return new Set(parsed);
@@ -98,9 +98,9 @@ function readStoredColumns(
     return new Set([...ALL_COLUMNS, ...adminCols.map((c) => c.field)]);
 }
 
-function writeStoredColumns(collection: string, cols: Set<string>): void {
+function writeStoredColumns(type: string, cols: Set<string>): void {
     try {
-        localStorage.setItem(colStorageKey(collection), JSON.stringify(Array.from(cols)));
+        localStorage.setItem(colStorageKey(type), JSON.stringify(Array.from(cols)));
     } catch {
         // ignore
     }
@@ -115,7 +115,7 @@ const PER_PAGE = 20;
 type RowActionsProps = {
     entry: Entry;
     isTrash: boolean;
-    collection: string;
+    type: string;
     canDelete: boolean;
     onRestore: (id: string) => void;
     onConfirmDelete: (id: string, force: boolean) => void;
@@ -133,7 +133,7 @@ function buildRowItems(props: RowActionsProps): DropdownItem[] {
     const {
         entry,
         isTrash,
-        collection,
+        type,
         canDelete,
         onRestore,
         onConfirmDelete,
@@ -161,7 +161,7 @@ function buildRowItems(props: RowActionsProps): DropdownItem[] {
     const items: DropdownItem[] = [
         {
             label: rowLabels.edit,
-            href: `/collections/${collection}/${entry.id}`,
+            href: `/entries/${type}/${entry.id}`,
             icon: <Pencil size={14} />,
         },
         {
@@ -189,7 +189,7 @@ type EntryTableRowProps = RowActionsProps & {
     selected: boolean;
     onToggleSelect: (id: string) => void;
     adminColumns: { field: string; label?: string; sortable?: boolean }[];
-    navigate: (opts: { to: string; params: { collection: string; id: string } }) => void;
+    navigate: (opts: { to: string; params: { type: string; id: string } }) => void;
     visibleColumns: Set<string>;
     translationCount?: number | undefined;
 };
@@ -197,7 +197,7 @@ type EntryTableRowProps = RowActionsProps & {
 function EntryTableRow({
     entry,
     isTrash,
-    collection,
+    type,
     canDelete,
     onRestore,
     onConfirmDelete,
@@ -214,7 +214,7 @@ function EntryTableRow({
     const items = buildRowItems({
         entry,
         isTrash,
-        collection,
+        type,
         canDelete,
         onRestore,
         onConfirmDelete,
@@ -232,8 +232,8 @@ function EntryTableRow({
                     !isTrash
                         ? () =>
                               void navigate({
-                                  to: '/collections/$collection/$id',
-                                  params: { collection, id: entry.id },
+                                  to: '/entries/$type/$id',
+                                  params: { type, id: entry.id },
                               })
                         : undefined
                 }
@@ -258,8 +258,8 @@ function EntryTableRow({
                                 <span className="am-text-muted">{entry.title}</span>
                             ) : (
                                 <Link
-                                    to="/collections/$collection/$id"
-                                    params={{ collection, id: entry.id }}
+                                    to="/entries/$type/$id"
+                                    params={{ type, id: entry.id }}
                                     className="am-link"
                                 >
                                     {entry.title}
@@ -319,13 +319,13 @@ function EntryTableRow({
 
 type EntryCardProps = RowActionsProps & {
     gridFields: { field: string; label?: string }[];
-    navigate: (opts: { to: string; params: { collection: string; id: string } }) => void;
+    navigate: (opts: { to: string; params: { type: string; id: string } }) => void;
 };
 
 function EntryCard({
     entry,
     isTrash,
-    collection,
+    type,
     canDelete,
     onRestore,
     onConfirmDelete,
@@ -338,7 +338,7 @@ function EntryCard({
     const items = buildRowItems({
         entry,
         isTrash,
-        collection,
+        type,
         canDelete,
         onRestore,
         onConfirmDelete,
@@ -350,8 +350,8 @@ function EntryCard({
     function handleCardClick() {
         if (isTrash) return;
         void navigate({
-            to: '/collections/$collection/$id',
-            params: { collection, id: entry.id },
+            to: '/entries/$type/$id',
+            params: { type, id: entry.id },
         });
     }
 
@@ -379,8 +379,8 @@ function EntryCard({
                     </span>
                 ) : (
                     <Link
-                        to="/collections/$collection/$id"
-                        params={{ collection, id: entry.id }}
+                        to="/entries/$type/$id"
+                        params={{ type, id: entry.id }}
                         className="am-collection-card__title"
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -414,71 +414,64 @@ function EntryCard({
 // Page
 // ============================================================================
 
-export function CollectionIndexPage(): React.ReactElement {
-    const { collection } = useParams({ strict: false }) as { collection: string };
+export function EntryIndexPage(): React.ReactElement {
+    const { type } = useParams({ strict: false }) as { type: string };
     const navigate = useNavigate();
     const { toast } = useToast();
     const { t } = useTranslation();
     const queryClient = useQueryClient();
     const { canCreate, canDelete } = usePermissions();
 
-    // collection is a valid router param — always present in configured collections
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const api = Astromech.collections[collection]!;
+    const entryTypeConfig = adminConfig.entries[type];
+    const single = entryTypeConfig?.single ?? type;
+    const plural = entryTypeConfig?.plural ?? type;
+    const adminColumns = entryTypeConfig?.adminColumns ?? [];
+    const gridFields = entryTypeConfig?.gridFields ?? [];
 
-    const collectionConfig = adminConfig.collections[collection];
-    const single = collectionConfig?.single ?? collection;
-    const plural = collectionConfig?.plural ?? collection;
-    const adminColumns = collectionConfig?.adminColumns ?? [];
-    const gridFields = collectionConfig?.gridFields ?? [];
-
-    const availableViews = collectionConfig?.views ?? ['list'];
+    const availableViews = entryTypeConfig?.views ?? ['list'];
     const defaultView: ViewMode =
-        (collectionConfig?.defaultView as ViewMode | undefined) ?? 'list';
+        (entryTypeConfig?.defaultView as ViewMode | undefined) ?? 'list';
     const showViewToggle =
         availableViews.includes('list') && availableViews.includes('grid');
 
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [page, setPage] = useState(1);
-    // const [view, setView] = useState<ViewMode>(() =>
-    //     readStoredView(collection, defaultView)
-    // );
 
-    const [viewMode, setViewMode] = useViewMode(`collection:${collection}`, defaultView);
+    const [viewMode, setViewMode] = useViewMode(`entry:${type}`, defaultView);
 
     const [sort, setSort] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(
         null
     );
     const [visibleColumns, setVisibleColumns] = useState<Set<string>>(() =>
-        readStoredColumns(collection, adminColumns)
+        readStoredColumns(type, adminColumns)
     );
 
     const STATUS_LABELS: Record<StatusFilter, string> = {
-        all: t('collections.all'),
-        draft: t('collections.draft'),
-        published: t('collections.published'),
-        scheduled: t('collections.scheduled'),
-        trashed: t('collections.trashed'),
+        all: t('entries.all'),
+        draft: t('entries.draft'),
+        published: t('entries.published'),
+        scheduled: t('entries.scheduled'),
+        trashed: t('entries.trashed'),
     };
 
     const rowLabels = {
-        edit: t('collections.rowEdit'),
-        duplicate: t('collections.rowDuplicate'),
-        moveToTrash: t('collections.rowMoveToTrash'),
+        edit: t('entries.rowEdit'),
+        duplicate: t('entries.rowDuplicate'),
+        moveToTrash: t('entries.rowMoveToTrash'),
         restore: t('common.restore'),
-        deletePermanently: t('collections.rowDeletePermanently'),
+        deletePermanently: t('entries.rowDeletePermanently'),
     };
 
     useEffect(() => {
-        setVisibleColumns(readStoredColumns(collection, adminColumns));
-    }, [collection]);
+        setVisibleColumns(readStoredColumns(type, adminColumns));
+    }, [type]);
 
     const isTrash = statusFilter === 'trashed';
 
     // Fetch entries (normal or trashed)
     const { data: listData, isLoading } = useQuery({
-        queryKey: queryKeys.entries.list(collection, {
+        queryKey: queryKeys.entries.list(type, {
             statusFilter,
             page,
             search,
@@ -486,7 +479,7 @@ export function CollectionIndexPage(): React.ReactElement {
         }),
         queryFn: async () => {
             if (isTrash) {
-                const items = await api.trashed();
+                const items = await Astromech.entries.trashed({ type });
                 return {
                     data: items,
                     pagination: {
@@ -497,7 +490,7 @@ export function CollectionIndexPage(): React.ReactElement {
                     },
                 };
             }
-            return api.paginate(PER_PAGE, page);
+            return Astromech.entries.paginate(PER_PAGE, page, { type });
         },
     });
 
@@ -533,12 +526,12 @@ export function CollectionIndexPage(): React.ReactElement {
         useSelection(sortedEntries);
     const confirm = useConfirm();
 
-    // Translation counts — only when collection has translatable enabled
-    const hasI18n = collectionConfig?.translatable === true;
+    // Translation counts — only when entry type has translatable enabled
+    const hasI18n = entryTypeConfig?.translatable === true;
     const translationQueries = useQueries({
         queries: sortedEntries.map((entry) => ({
-            queryKey: ['entry-translations', collection, entry.id],
-            queryFn: () => Astromech.collections[collection]!.translations(entry.id),
+            queryKey: ['entry-translations', type, entry.id],
+            queryFn: () => Astromech.entries.translations(entry.id),
             enabled: hasI18n,
         })),
     });
@@ -558,84 +551,84 @@ export function CollectionIndexPage(): React.ReactElement {
 
     // Mutations
     const trashMutation = useMutation({
-        mutationFn: ({ id }: { id: string }) => api.trash(id),
+        mutationFn: ({ id }: { id: string }) => Astromech.entries.trash(id),
         onSuccess: () => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(collection),
+                queryKey: queryKeys.entries.all(type),
             });
             toast({
-                message: t('collections.movedToTrash', { name: single }),
+                message: t('entries.movedToTrash', { name: single }),
                 variant: 'success',
             });
         },
         onError: (err) => {
             toast({
                 message:
-                    err instanceof Error ? err.message : t('collections.deleteFailed'),
+                    err instanceof Error ? err.message : t('entries.deleteFailed'),
                 variant: 'error',
             });
         },
     });
 
     const deleteMutation = useMutation({
-        mutationFn: ({ id }: { id: string }) => api.delete(id),
+        mutationFn: ({ id }: { id: string }) => Astromech.entries.delete(id),
         onSuccess: () => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(collection),
+                queryKey: queryKeys.entries.all(type),
             });
             toast({
-                message: t('collections.permanentlyDeleted', { name: single }),
+                message: t('entries.permanentlyDeleted', { name: single }),
                 variant: 'success',
             });
         },
         onError: (err) => {
             toast({
                 message:
-                    err instanceof Error ? err.message : t('collections.deleteFailed'),
+                    err instanceof Error ? err.message : t('entries.deleteFailed'),
                 variant: 'error',
             });
         },
     });
 
     const duplicateMutation = useMutation({
-        mutationFn: ({ id }: { id: string }) => api.duplicate(id),
+        mutationFn: ({ id }: { id: string }) => Astromech.entries.duplicate(id),
         onSuccess: (entry) => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(collection),
+                queryKey: queryKeys.entries.all(type),
             });
             toast({
-                message: t('collections.duplicated', { name: single }),
+                message: t('entries.duplicated', { name: single }),
                 variant: 'success',
             });
             void navigate({
-                to: '/collections/$collection/$id',
-                params: { collection, id: entry.id },
+                to: '/entries/$type/$id',
+                params: { type, id: entry.id },
             });
         },
         onError: (err) => {
             toast({
                 message:
-                    err instanceof Error ? err.message : t('collections.duplicateFailed'),
+                    err instanceof Error ? err.message : t('entries.duplicateFailed'),
                 variant: 'error',
             });
         },
     });
 
     const restoreMutation = useMutation({
-        mutationFn: ({ id }: { id: string }) => api.restore(id),
+        mutationFn: ({ id }: { id: string }) => Astromech.entries.restore(id),
         onSuccess: () => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(collection),
+                queryKey: queryKeys.entries.all(type),
             });
             toast({
-                message: t('collections.restored', { name: single }),
+                message: t('entries.restored', { name: single }),
                 variant: 'success',
             });
         },
         onError: (err) => {
             toast({
                 message:
-                    err instanceof Error ? err.message : t('collections.restoreFailed'),
+                    err instanceof Error ? err.message : t('entries.restoreFailed'),
                 variant: 'error',
             });
         },
@@ -644,53 +637,53 @@ export function CollectionIndexPage(): React.ReactElement {
     // Bulk mutations
     const bulkPublishMutation = useMutation({
         mutationFn: async (ids: string[]) => {
-            await Promise.all(ids.map((id) => api.update(id, { status: 'published' })));
+            await Promise.all(ids.map((id) => Astromech.entries.update(id, { status: 'published' })));
         },
         onSuccess: () => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(collection),
+                queryKey: queryKeys.entries.all(type),
             });
             reset();
-            toast({ message: t('collections.bulkPublished'), variant: 'success' });
+            toast({ message: t('entries.bulkPublished'), variant: 'success' });
         },
     });
 
     const bulkUnpublishMutation = useMutation({
         mutationFn: async (ids: string[]) => {
-            await Promise.all(ids.map((id) => api.update(id, { status: 'draft' })));
+            await Promise.all(ids.map((id) => Astromech.entries.update(id, { status: 'draft' })));
         },
         onSuccess: () => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(collection),
+                queryKey: queryKeys.entries.all(type),
             });
             reset();
-            toast({ message: t('collections.bulkUnpublished'), variant: 'success' });
+            toast({ message: t('entries.bulkUnpublished'), variant: 'success' });
         },
     });
 
     const bulkTrashMutation = useMutation({
         mutationFn: async (ids: string[]) => {
-            await Promise.all(ids.map((id) => api.trash(id)));
+            await Promise.all(ids.map((id) => Astromech.entries.trash(id)));
         },
         onSuccess: () => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(collection),
+                queryKey: queryKeys.entries.all(type),
             });
             reset();
-            toast({ message: t('collections.bulkTrashed'), variant: 'success' });
+            toast({ message: t('entries.bulkTrashed'), variant: 'success' });
         },
     });
 
     const bulkForceDeleteMutation = useMutation({
         mutationFn: async (ids: string[]) => {
-            await Promise.all(ids.map((id) => api.delete(id)));
+            await Promise.all(ids.map((id) => Astromech.entries.delete(id)));
         },
         onSuccess: () => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(collection),
+                queryKey: queryKeys.entries.all(type),
             });
             reset();
-            toast({ message: t('collections.bulkDeleted'), variant: 'success' });
+            toast({ message: t('entries.bulkDeleted'), variant: 'success' });
         },
     });
 
@@ -705,10 +698,10 @@ export function CollectionIndexPage(): React.ReactElement {
             void Promise.all(ids.map((id) => restoreMutation.mutateAsync({ id }))).then(
                 () => {
                     void queryClient.invalidateQueries({
-                        queryKey: queryKeys.entries.all(collection),
+                        queryKey: queryKeys.entries.all(type),
                     });
                     reset();
-                    toast({ message: t('collections.bulkRestored'), variant: 'success' });
+                    toast({ message: t('entries.bulkRestored'), variant: 'success' });
                 }
             );
         }
@@ -730,7 +723,7 @@ export function CollectionIndexPage(): React.ReactElement {
             } else {
                 next.add(key);
             }
-            writeStoredColumns(collection, next);
+            writeStoredColumns(type, next);
             return next;
         });
     }
@@ -751,15 +744,15 @@ export function CollectionIndexPage(): React.ReactElement {
     function handleConfirmDelete(id: string, force: boolean) {
         confirm({
             title: force
-                ? t('collections.confirmForceDeleteTitle')
-                : t('collections.confirmDeleteTitle'),
+                ? t('entries.confirmForceDeleteTitle')
+                : t('entries.confirmDeleteTitle'),
             description: force
-                ? t('collections.confirmForceDeleteMessage')
-                : t('collections.confirmDeleteMessage', { name: single.toLowerCase() }),
+                ? t('entries.confirmForceDeleteMessage')
+                : t('entries.confirmDeleteMessage', { name: single.toLowerCase() }),
             variant: 'danger',
             confirmLabel: force
-                ? t('collections.confirmForceDeleteLabel')
-                : t('collections.confirmDeleteLabel'),
+                ? t('entries.confirmForceDeleteLabel')
+                : t('entries.confirmDeleteLabel'),
             onConfirm: () => {
                 if (force) {
                     deleteMutation.mutate({ id });
@@ -775,10 +768,10 @@ export function CollectionIndexPage(): React.ReactElement {
     }
 
     const navigateCompat = useCallback(
-        (opts: { to: string; params: { collection: string; id: string } }) => {
+        (opts: { to: string; params: { type: string; id: string } }) => {
             void navigate({
-                to: '/collections/$collection/$id',
-                params: { collection: opts.params.collection, id: opts.params.id },
+                to: '/entries/$type/$id',
+                params: { type: opts.params.type, id: opts.params.id },
             });
         },
         [navigate]
@@ -789,10 +782,10 @@ export function CollectionIndexPage(): React.ReactElement {
             <Page>
                 <PageHeader>
                     <PageTitle>{plural}</PageTitle>
-                    {canCreate(collection) && (
-                        <Link to="/collections/$collection/new" params={{ collection }}>
+                    {canCreate(type) && (
+                        <Link to="/entries/$type/new" params={{ type }}>
                             <Button icon={<PlusIcon size={16} />}>
-                                {t('collections.new', { name: single })}
+                                {t('entries.new', { name: single })}
                             </Button>
                         </Link>
                     )}
@@ -801,7 +794,7 @@ export function CollectionIndexPage(): React.ReactElement {
                 <PageContent>
                     <Toolbar>
                         <ToolbarLeft>
-                            {someChecked && canDelete(collection) && (
+                            {someChecked && canDelete(type) && (
                                 <Dropdown
                                     label={`${t('media.bulkActions')} (${checkedIds.size})`}
                                     variant="secondary"
@@ -829,68 +822,10 @@ export function CollectionIndexPage(): React.ReactElement {
                                     ]}
                                 />
                             )}
-                            {/* Bulk actions — only when rows are selected */}
-                            {/* {someChecked && (
-                                <Dropdown
-                                    label={`${t('collections.bulkActions')} (${checkedIds.size})`}
-                                    variant="secondary"
-                                    size="sm"
-                                    align="start"
-                                    items={
-                                        isTrash
-                                            ? [
-                                                  {
-                                                      label: t(
-                                                          'collections.bulkRestoreSelected'
-                                                      ),
-                                                      icon: <RotateCcw size={14} />,
-                                                      onClick: () =>
-                                                          handleBulkAction('restore'),
-                                                  },
-                                                  {
-                                                      label: t(
-                                                          'collections.bulkDeletePermanently'
-                                                      ),
-                                                      icon: <Trash2 size={14} />,
-                                                      variant: 'danger',
-                                                      onClick: () =>
-                                                          handleBulkAction('delete'),
-                                                  },
-                                              ]
-                                            : [
-                                                  {
-                                                      label: t(
-                                                          'collections.bulkPublishSelected'
-                                                      ),
-                                                      icon: <Globe size={14} />,
-                                                      onClick: () =>
-                                                          handleBulkAction('publish'),
-                                                  },
-                                                  {
-                                                      label: t(
-                                                          'collections.bulkUnpublishSelected'
-                                                      ),
-                                                      icon: <EyeOff size={14} />,
-                                                      onClick: () =>
-                                                          handleBulkAction('unpublish'),
-                                                  },
-                                                  {
-                                                      label: t(
-                                                          'collections.bulkMoveToTrash'
-                                                      ),
-                                                      icon: <Trash2 size={14} />,
-                                                      variant: 'danger',
-                                                      onClick: () =>
-                                                          handleBulkAction('trash'),
-                                                  },
-                                              ]
-                                    }
-                                />
-                            )} */}
 
                             {/* Search */}
                             <SearchInput
-                                placeholder={t('collections.searchPlaceholder', {
+                                placeholder={t('entries.searchPlaceholder', {
                                     name: plural.toLowerCase(),
                                 })}
                                 value={search}
@@ -903,7 +838,7 @@ export function CollectionIndexPage(): React.ReactElement {
                             {/* Status filter */}
                             <Menu.Root>
                                 <Menu.Trigger className="am-toolbar__filter-btn">
-                                    {t('collections.statusFilter', {
+                                    {t('entries.statusFilter', {
                                         status: STATUS_LABELS[statusFilter],
                                     })}
                                     <ChevronDown size={12} />
@@ -970,7 +905,7 @@ export function CollectionIndexPage(): React.ReactElement {
                             <Menu.Root>
                                 <Menu.Trigger
                                     className="am-btn am-btn--secondary am-btn--md am-btn--icon"
-                                    aria-label={t('collections.toggleColumns')}
+                                    aria-label={t('entries.toggleColumns')}
                                 >
                                     <SlidersHorizontal size={14} />
                                 </Menu.Trigger>
@@ -984,15 +919,15 @@ export function CollectionIndexPage(): React.ReactElement {
                                             {[
                                                 {
                                                     key: 'title',
-                                                    label: t('collections.columnTitle'),
+                                                    label: t('entries.columnTitle'),
                                                 },
                                                 {
                                                     key: 'status',
-                                                    label: t('collections.columnStatus'),
+                                                    label: t('entries.columnStatus'),
                                                 },
                                                 {
                                                     key: 'slug',
-                                                    label: t('collections.columnSlug'),
+                                                    label: t('entries.columnSlug'),
                                                 },
                                                 ...adminColumns.map((c) => ({
                                                     key: c.field,
@@ -1000,7 +935,7 @@ export function CollectionIndexPage(): React.ReactElement {
                                                 })),
                                                 {
                                                     key: 'updatedAt',
-                                                    label: t('collections.columnUpdated'),
+                                                    label: t('entries.columnUpdated'),
                                                 },
                                             ].map((col) => (
                                                 <Menu.Item
@@ -1058,26 +993,26 @@ export function CollectionIndexPage(): React.ReactElement {
                                 </div>
                             ) : entries.length === 0 ? (
                                 <EmptyState
-                                    title={t('collections.empty', {
+                                    title={t('entries.empty', {
                                         name: plural.toLowerCase(),
                                     })}
                                     description={
                                         search
-                                            ? t('collections.emptySearch')
+                                            ? t('entries.emptySearch')
                                             : isTrash
-                                              ? t('collections.emptyTrash')
-                                              : t('collections.emptyCreate', {
+                                              ? t('entries.emptyTrash')
+                                              : t('entries.emptyCreate', {
                                                     name: single.toLowerCase(),
                                                 })
                                     }
                                     action={
                                         !isTrash && !search ? (
                                             <Link
-                                                to="/collections/$collection/new"
-                                                params={{ collection }}
+                                                to="/entries/$type/new"
+                                                params={{ type }}
                                             >
                                                 <Button size="sm">
-                                                    {t('collections.new', {
+                                                    {t('entries.new', {
                                                         name: single,
                                                     })}
                                                 </Button>
@@ -1092,8 +1027,8 @@ export function CollectionIndexPage(): React.ReactElement {
                                             key={entry.id}
                                             entry={entry}
                                             isTrash={isTrash}
-                                            collection={collection}
-                                            canDelete={canDelete(collection)}
+                                            type={type}
+                                            canDelete={canDelete(type)}
                                             onRestore={handleRestore}
                                             onConfirmDelete={handleConfirmDelete}
                                             onDuplicate={handleDuplicate}
@@ -1124,16 +1059,16 @@ export function CollectionIndexPage(): React.ReactElement {
                                             currentSort={sort}
                                             onSort={handleSort}
                                         >
-                                            {t('collections.columnTitle')}
+                                            {t('entries.columnTitle')}
                                         </Table.SortTh>
                                     )}
                                     {visibleColumns.has('status') && (
                                         <Table.Th>
-                                            {t('collections.columnStatus')}
+                                            {t('entries.columnStatus')}
                                         </Table.Th>
                                     )}
                                     {visibleColumns.has('slug') && (
-                                        <Table.Th>{t('collections.columnSlug')}</Table.Th>
+                                        <Table.Th>{t('entries.columnSlug')}</Table.Th>
                                     )}
                                     {adminColumns
                                         .filter((c) => visibleColumns.has(c.field))
@@ -1159,7 +1094,7 @@ export function CollectionIndexPage(): React.ReactElement {
                                             currentSort={sort}
                                             onSort={handleSort}
                                         >
-                                            {t('collections.columnUpdated')}
+                                            {t('entries.columnUpdated')}
                                         </Table.SortTh>
                                     )}
                                     <Table.Th style={{ width: '3rem' }} />
@@ -1173,26 +1108,26 @@ export function CollectionIndexPage(): React.ReactElement {
                                 ) : entries.length === 0 ? (
                                     <Table.Empty colSpan={colSpan}>
                                         <EmptyState
-                                            title={t('collections.empty', {
+                                            title={t('entries.empty', {
                                                 name: plural.toLowerCase(),
                                             })}
                                             description={
                                                 search
-                                                    ? t('collections.emptySearch')
+                                                    ? t('entries.emptySearch')
                                                     : isTrash
-                                                      ? t('collections.emptyTrash')
-                                                      : t('collections.emptyCreate', {
+                                                      ? t('entries.emptyTrash')
+                                                      : t('entries.emptyCreate', {
                                                             name: single.toLowerCase(),
                                                         })
                                             }
                                             action={
                                                 !isTrash && !search ? (
                                                     <Link
-                                                        to="/collections/$collection/new"
-                                                        params={{ collection }}
+                                                        to="/entries/$type/new"
+                                                        params={{ type }}
                                                     >
                                                         <Button size="sm">
-                                                            {t('collections.new', {
+                                                            {t('entries.new', {
                                                                 name: single,
                                                             })}
                                                         </Button>
@@ -1207,8 +1142,8 @@ export function CollectionIndexPage(): React.ReactElement {
                                             key={entry.id}
                                             entry={entry}
                                             isTrash={isTrash}
-                                            collection={collection}
-                                            canDelete={canDelete(collection)}
+                                            type={type}
+                                            canDelete={canDelete(type)}
                                             onRestore={handleRestore}
                                             onConfirmDelete={handleConfirmDelete}
                                             onDuplicate={handleDuplicate}

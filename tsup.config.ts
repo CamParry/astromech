@@ -4,8 +4,8 @@ export default defineConfig({
     entry: {
         index: 'src/index.ts',
         'adapters/astro': 'src/adapters/astro.ts',
-        'sdk/server/index': 'src/sdk/server/index.ts',
-        'sdk/client/index': 'src/sdk/client/index.ts',
+        'sdk/local/index': 'src/sdk/local/index.ts',
+        'sdk/fetch/index': 'src/sdk/fetch/index.ts',
         middleware: 'src/middleware.ts',
         'db/schema': 'src/db/schema.ts',
         'admin/components/ui/index': 'src/admin/components/ui/index.ts',

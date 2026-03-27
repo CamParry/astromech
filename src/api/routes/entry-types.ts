@@ -1,33 +1,33 @@
 /**
- * Collections Metadata Routes
+ * Entry Types Metadata Routes
  *
- * Returns collection configuration for the SPA to discover available
- * collections, their fields, and display settings.
+ * Returns entry type configuration for the SPA to discover available
+ * entry types, their fields, and display settings.
  *
  * Routes:
- *   GET /collections-meta            → all collection metadata
- *   GET /collections-meta/:name      → single collection metadata
+ *   GET /entry-types            → all entry type metadata
+ *   GET /entry-types/:type      → single entry type metadata
  */
 
-import { Hono } from 'hono';
-import { Astromech } from '@/sdk/server/index.js';
+import { OpenAPIHono } from '@hono/zod-openapi';
+import { Astromech } from '@/sdk/local/index.js';
 import { internalError, notFound } from '@/api/middleware/errors.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
 
 type Env = { Variables: AuthVariables };
 
-const router = new Hono<Env>();
+const router = new OpenAPIHono<Env>();
 
 // ============================================================================
-// GET /collections-meta
+// GET /entry-types
 // ============================================================================
 
 router.get('/', (c) => {
     try {
-        const { collections } = Astromech.config;
+        const { entries } = Astromech.config;
 
-        const meta = Object.entries(collections).map(([name, config]) => ({
-            name,
+        const meta = Object.entries(entries).map(([type, config]) => ({
+            type,
             single: config.single,
             plural: config.plural,
             versioning: config.versioning ?? false,
@@ -43,18 +43,18 @@ router.get('/', (c) => {
 });
 
 // ============================================================================
-// GET /collections-meta/:name
+// GET /entry-types/:type
 // ============================================================================
 
-router.get('/:name', (c) => {
+router.get('/:type', (c) => {
     try {
-        const { name } = c.req.param();
-        const config = Astromech.config.collections[name];
+        const { type } = c.req.param();
+        const config = Astromech.config.entries[type];
 
-        if (!config) return notFound(c, `Collection '${name}' not found`);
+        if (!config) return notFound(c, `Entry type '${type}' not found`);
 
         return c.json({
-            name,
+            type,
             single: config.single,
             plural: config.plural,
             versioning: config.versioning ?? false,
@@ -67,4 +67,4 @@ router.get('/:name', (c) => {
     }
 });
 
-export { router as collectionsMetaRouter };
+export { router as entryTypesRouter };

@@ -121,22 +121,22 @@ export function astromech(config: AstromechConfig): AstroIntegration {
 											locales: resolvedConfig.locales ?? [],
 											defaultLocale: resolvedConfig.defaultLocale ?? 'en',
 											roles: Object.entries(resolvedRoles).map(([slug, r]) => ({ slug, name: r.name })),
-											collections: Object.fromEntries(
-												Object.entries(resolvedConfig.collections).map(
-													([name, col]) => [
+											entries: Object.fromEntries(
+												Object.entries(resolvedConfig.entries).map(
+													([name, entryType]) => [
 														name,
 														{
-															single: col.single,
-															plural: col.plural,
-															versioning: !!col.versioning,
-															translatable: col.translatable ?? false,
-															slug: col.slug ?? null,
-															adminColumns: col.adminColumns ?? [],
-															fieldGroups: col.fieldGroups,
-															views: col.views,
-															defaultView: col.defaultView,
-															gridFields: col.gridFields,
-															previewUrl: col.previewUrl ?? null,
+															single: entryType.single,
+															plural: entryType.plural,
+															versioning: !!entryType.versioning,
+															translatable: entryType.translatable ?? false,
+															slug: entryType.slug ?? null,
+															adminColumns: entryType.adminColumns ?? [],
+															fieldGroups: entryType.fieldGroups,
+															views: entryType.views,
+															defaultView: entryType.defaultView,
+															gridFields: entryType.gridFields,
+															previewUrl: entryType.previewUrl ?? null,
 														},
 													]
 												)
@@ -159,7 +159,7 @@ export function astromech(config: AstromechConfig): AstroIntegration {
 				});
 
 				logger.info(`Admin UI: ${resolvedConfig.adminRoute}, API: ${resolvedConfig.apiRoute}`);
-				logger.info(`Collections: ${Object.keys(resolvedConfig.collections).join(', ')}`);
+				logger.info(`Entry types: ${Object.keys(resolvedConfig.entries).join(', ')}`);
 			},
 
 			'astro:config:done': async ({ injectTypes, logger }) => {

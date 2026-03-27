@@ -36,7 +36,6 @@
     },
     "nav": {
         "dashboard": "Dashboard",
-        "collections": "Collections",
         "media": "Media",
         "users": "Users",
         "settings": "Settings",
@@ -79,14 +78,14 @@
     },
     "dashboard": {
         "title": "Dashboard",
-        "collections": "Collections",
+        "collections": "Content",
         "recentActivity": "Recent Activity",
         "noContentYet": "No content yet",
         "noContentDescription": "Create your first entry to see recent activity here.",
         "updated": "Updated {{date}}"
     },
-    "collections": {
-        "title": "Collections",
+    "entries": {
+        "title": "Entries",
         "new": "New {{name}}",
         "create": "Create",
         "empty": "No {{name}} found",
@@ -177,7 +176,7 @@
         "createUser": "New User"
     },
     "permissions": {
-        "readOnly": "You have read-only access to this collection.",
+        "readOnly": "You have read-only access to this entry type.",
         "forbidden": "You don't have permission to access this page."
     },
     "settings": {
@@ -214,7 +213,7 @@
         "searchPlaceholder": "Search…",
         "noResults": "No results",
         "groupNavigation": "Navigation",
-        "groupCollections": "Collections",
+        "groupEntries": "Content",
         "ariaLabel": "Command palette",
         "resultsLabel": "Results"
     },

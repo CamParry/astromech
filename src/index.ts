@@ -3,7 +3,7 @@
  * For Astro projects, import the integration from 'astromech/astro'.
  */
 
-import type { AstromechConfig, AstromechPlugin, CollectionConfig } from '@/types/index.js';
+import type { AstromechConfig, AstromechPlugin, EntryTypeConfig } from '@/types/index.js';
 
 // ============================================================================
 // Type Exports
@@ -28,7 +28,7 @@ export function defineConfig(config: AstromechConfig): AstromechConfig {
 	return config;
 }
 
-export function defineCollection(config: CollectionConfig): CollectionConfig {
+export function defineEntryType(config: EntryTypeConfig): EntryTypeConfig {
 	return config;
 }
 

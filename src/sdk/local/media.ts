@@ -1,9 +1,21 @@
 import { eq, desc, like, and, not, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
+import { z } from 'zod';
 import { mediaTable } from '@/db/schema.js';
 import { getDb } from '@/db/registry.js';
 import { getStorageDriver } from '@/storage/registry.js';
 import type { Media, JsonObject, MediaListParams, MediaListResult } from '@/types/index.js';
+import { ValidationError } from '@/errors/validation.js';
+import { updateMediaSchema } from '@/schemas/media.js';
+
+function validate<T>(schema: z.ZodType<T>, data: unknown): T {
+    try {
+        return schema.parse(data);
+    } catch (err) {
+        if (err instanceof z.ZodError) throw new ValidationError(err.issues);
+        throw err;
+    }
+}
 
 export const mediaApi = {
     async all(): Promise<Media[]> {
@@ -98,13 +110,14 @@ export const mediaApi = {
         throw new Error('Failed to upload media');
     },
 
-    async update(id: string, data: Partial<{ alt: string; fields: JsonObject }>): Promise<Media> {
+    async update(id: string, data: Partial<{ alt: string; title: string; fields: JsonObject }>): Promise<Media> {
+        const validatedData = validate(updateMediaSchema, data);
         const db = getDb();
         const rows = await db
             .update(mediaTable)
             .set({
-                ...(data.alt !== undefined && { alt: data.alt }),
-                ...(data.fields !== undefined && { fields: data.fields }),
+                ...(validatedData.alt !== undefined && { alt: validatedData.alt }),
+                ...(validatedData.fields !== undefined && { fields: validatedData.fields as JsonObject }),
                 updatedAt: new Date(),
             })
             .where(eq(mediaTable.id, id))

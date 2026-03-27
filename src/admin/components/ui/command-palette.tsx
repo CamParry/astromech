@@ -21,7 +21,7 @@ type CommandItem = {
     id: string;
     label: string;
     to: string;
-    group: 'Navigation' | 'Collections';
+    group: 'Navigation' | 'Entries';
     icon: LucideIcon;
 };
 
@@ -96,18 +96,18 @@ export function CommandPalette(): React.ReactElement {
         { id: 'nav-settings', label: t('nav.settings'), to: '/settings', group: 'Navigation', icon: Settings },
     ];
 
-    // Build collection items from adminConfig at render time
-    const collectionItems: CommandItem[] = Object.entries(adminConfig.collections).map(
-        ([key, col]) => ({
-            id: `col-${key}`,
-            label: col.plural,
-            to: `/collections/${key}`,
-            group: 'Collections' as const,
+    // Build entry type items from adminConfig at render time
+    const entryItems: CommandItem[] = Object.entries(adminConfig.entries).map(
+        ([key, entryType]) => ({
+            id: `entry-${key}`,
+            label: entryType.plural,
+            to: `/entries/${key}`,
+            group: 'Entries' as const,
             icon: FolderOpen,
         }),
     );
 
-    const allItems: CommandItem[] = [...navItems, ...collectionItems];
+    const allItems: CommandItem[] = [...navItems, ...entryItems];
 
     const filtered = query.trim() === ''
         ? allItems
@@ -158,10 +158,10 @@ export function CommandPalette(): React.ReactElement {
 
     // Group filtered items for rendering
     const groups: Array<{ label: string; items: CommandItem[] }> = [];
-    const groupOrder: Array<CommandItem['group']> = ['Navigation', 'Collections'];
+    const groupOrder: Array<CommandItem['group']> = ['Navigation', 'Entries'];
     const groupLabels: Record<CommandItem['group'], string> = {
         Navigation: t('cmdpal.groupNavigation'),
-        Collections: t('cmdpal.groupCollections'),
+        Entries: t('cmdpal.groupEntries'),
     };
     for (const groupName of groupOrder) {
         const items = filtered.filter((item) => item.group === groupName);

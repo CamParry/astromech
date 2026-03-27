@@ -2,8 +2,8 @@
  * Plugin system types — AstromechPlugin, PluginTargets, Route, Middleware
  */
 
-import type { CollectionApi } from './api.js';
-import type { CollectionConfig, ResolvedConfig } from './config.js';
+import type { EntryTypeApi } from './api.js';
+import type { EntryTypeConfig, ResolvedConfig } from './config.js';
 import type { FieldGroup } from './fields.js';
 import type { HookRegistry } from './hooks.js';
 
@@ -32,7 +32,7 @@ export type Middleware = {
 export type AstromechContext = {
     config: ResolvedConfig;
     db: unknown;
-    collections: Record<string, CollectionApi>;
+    entryTypes: Record<string, EntryTypeApi>;
 };
 
 export type AstromechPlugin = {
@@ -41,7 +41,7 @@ export type AstromechPlugin = {
         targets: PluginTargets;
         groups: FieldGroup[];
     }[];
-    collections?: Record<string, CollectionConfig>;
+    entries?: Record<string, EntryTypeConfig>;
     setup?: (hooks: HookRegistry, ctx: AstromechContext) => void;
     routes?: Route[];
     middleware?: Middleware[];

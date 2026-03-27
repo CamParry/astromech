@@ -9,7 +9,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Select } from '../ui/index';
 import { useToast } from '../ui/index';
-import { Astromech } from '../../../sdk/client/index.js';
+import { Astromech } from '../../../sdk/fetch/index.js';
 import type { TranslationInfo } from '../../../types/index.js';
 
 // ============================================================================
@@ -19,7 +19,7 @@ import type { TranslationInfo } from '../../../types/index.js';
 type LocaleSwitcherProps = {
     sourceId: string;
     currentEntryId: string;
-    collection: string;
+    type: string;
     translations: TranslationInfo[];
     allLocales: string[];
     defaultLocale: string;
@@ -33,7 +33,7 @@ type LocaleSwitcherProps = {
 export function LocaleSwitcher({
     sourceId,
     currentEntryId,
-    collection,
+    type,
     translations,
     allLocales,
     defaultLocale,
@@ -52,10 +52,10 @@ export function LocaleSwitcher({
 
     const createMutation = useMutation({
         mutationFn: (locale: string) =>
-            Astromech.collections[collection]!.createTranslation(sourceId, locale),
+            Astromech.entries.createTranslation(sourceId, locale),
         onSuccess: (newEntry) => {
             setIsCreating(false);
-            void navigate({ to: `/collections/${collection}/${newEntry.id}` });
+            void navigate({ to: `/entries/${type}/${newEntry.id}` });
         },
         onError: (err) => {
             setIsCreating(false);
@@ -72,14 +72,14 @@ export function LocaleSwitcher({
 
         if (value === 'default') {
             // Navigate to source
-            void navigate({ to: `/collections/${collection}/${sourceId}` });
+            void navigate({ to: `/entries/${type}/${sourceId}` });
             return;
         }
 
         const existingTranslation = translations.find((tr) => tr.locale === value);
         if (existingTranslation != null) {
             void navigate({
-                to: `/collections/${collection}/${existingTranslation.entryId}`,
+                to: `/entries/${type}/${existingTranslation.entryId}`,
             });
             return;
         }

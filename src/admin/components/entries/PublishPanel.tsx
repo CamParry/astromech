@@ -38,9 +38,9 @@ export function PublishPanel({
     const { t } = useTranslation();
 
     const statusOptions = [
-        { value: 'draft' as EntryStatus, label: t('collections.draft') },
-        { value: 'published' as EntryStatus, label: t('collections.published') },
-        { value: 'scheduled' as EntryStatus, label: t('collections.scheduled') },
+        { value: 'draft' as EntryStatus, label: t('entries.draft') },
+        { value: 'published' as EntryStatus, label: t('entries.published') },
+        { value: 'scheduled' as EntryStatus, label: t('entries.scheduled') },
     ];
 
     const formattedPublishedAt =
@@ -49,10 +49,10 @@ export function PublishPanel({
             : null;
 
     return (
-        <Panel title={t('collections.statusPanel')}>
+        <Panel title={t('entries.statusPanel')}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div className="am-field">
-                    <label className="am-field__label">{t('collections.statusField')}</label>
+                    <label className="am-field__label">{t('entries.statusField')}</label>
                     <Select
                         value={status}
                         onValueChange={(v) => onStatusChange((v ?? 'draft') as EntryStatus)}
@@ -64,7 +64,7 @@ export function PublishPanel({
                 {status === 'scheduled' && (
                     <div className="am-field">
                         <label className="am-field__label" htmlFor="entry-publish-at">
-                            {t('collections.publishAtField')}
+                            {t('entries.publishAtField')}
                         </label>
                         <Input
                             id="entry-publish-at"

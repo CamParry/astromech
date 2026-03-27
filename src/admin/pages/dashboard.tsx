@@ -17,7 +17,7 @@ import {
     SectionTitle,
     PageLoading,
 } from '../components/ui/index.js';
-import { Astromech } from '../../sdk/client/index.js';
+import { Astromech } from '../../sdk/fetch/index.js';
 import type { Entry } from '../../types/index.js';
 import { formatDate } from '@/support/dates.js';
 
@@ -45,7 +45,7 @@ function StatCard({
 }): React.ReactElement {
     const { data, isLoading } = useQuery({
         queryKey: ['collection-count', collectionKey],
-        queryFn: () => Astromech.collections[collectionKey]!.paginate(1, 1),
+        queryFn: () => Astromech.entries.paginate(1, 1, { type: collectionKey }),
     });
 
     const total = data?.pagination.total ?? 0;
@@ -76,7 +76,7 @@ type RecentActivityResult = {
 };
 
 function useRecentEntries(): RecentActivityResult {
-    const collectionKeys = Object.keys(adminConfig.collections);
+    const collectionKeys = Object.keys(adminConfig.entries);
     const collectionKeysStr = collectionKeys.join(',');
 
     const { data, isLoading } = useQuery({
@@ -84,10 +84,11 @@ function useRecentEntries(): RecentActivityResult {
         queryFn: async () => {
             const results = await Promise.all(
                 collectionKeys.map(async (key) => {
-                    const result = await Astromech.collections[key]!.paginate(5, 1, {
+                    const result = await Astromech.entries.paginate(5, 1, {
+                        type: key,
                         sort: { field: 'updatedAt', direction: 'desc' },
                     });
-                    const collectionLabel = adminConfig.collections[key]?.plural ?? key;
+                    const collectionLabel = adminConfig.entries[key]?.plural ?? key;
                     return result.data.map(
                         (entry): RecentEntry => ({
                             ...entry,
@@ -117,7 +118,7 @@ function useRecentEntries(): RecentActivityResult {
 
 export function DashboardPage(): React.ReactElement {
     const { t } = useTranslation();
-    const collections = adminConfig.collections;
+    const collections = adminConfig.entries;
     const collectionEntries = Object.entries(collections);
     const { data: recentEntries, isLoading: recentLoading } = useRecentEntries();
 
@@ -133,8 +134,8 @@ export function DashboardPage(): React.ReactElement {
                         {collectionEntries.map(([key, col]) => (
                             <Link
                                 key={key}
-                                to="/collections/$collection"
-                                params={{ collection: key }}
+                                to="/entries/$type"
+                                params={{ type: key }}
                                 className="am-link--inherit"
                             >
                                 <StatCard collectionKey={key} label={col.plural} />
@@ -164,9 +165,9 @@ export function DashboardPage(): React.ReactElement {
                                 >
                                     <div className="am-activity-list__body">
                                         <Link
-                                            to="/collections/$collection/$id"
+                                            to="/entries/$type/$id"
                                             params={{
-                                                collection: entry.collectionKey,
+                                                type: entry.collectionKey,
                                                 id: entry.id,
                                             }}
                                             className="am-link"

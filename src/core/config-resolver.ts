@@ -4,7 +4,7 @@
  */
 
 import type { AstromechConfig, FieldGroup, ResolvedConfig } from '@/types/index.js';
-import { mergePluginCollections, mergePluginFieldGroups } from '@/core/plugin-resolver.js';
+import { mergePluginEntries, mergePluginFieldGroups } from '@/core/plugin-resolver.js';
 
 /**
  * Sort field groups by priority within each collection and resource
@@ -18,9 +18,9 @@ export function sortFieldGroups(config: AstromechConfig): void {
 		groups.sort((a, b) => (a.priority ?? 10) - (b.priority ?? 10));
 	};
 
-	// Sort collection field groups
-	for (const collection of Object.values(config.collections)) {
-		sortGroups(collection.fieldGroups);
+	// Sort entry type field groups
+	for (const entryType of Object.values(config.entries)) {
+		sortGroups(entryType.fieldGroups);
 	}
 
 	// Sort media field groups
@@ -41,14 +41,14 @@ export function sortFieldGroups(config: AstromechConfig): void {
  * @returns Fully resolved configuration with defaults
  */
 export function resolveConfig(config: AstromechConfig): ResolvedConfig {
-	// Step 1: Merge plugin collections (they might be targets for field groups)
-	mergePluginCollections(config);
+	// Step 1: Merge plugin entry types (they might be targets for field groups)
+	mergePluginEntries(config);
 
-	// Step 2: Get updated collection names after plugin collections are added
-	const allCollectionNames = Object.keys(config.collections);
+	// Step 2: Get updated entry type names after plugin entries are added
+	const allEntryTypeNames = Object.keys(config.entries);
 
-	// Step 3: Merge plugin field groups into collections
-	mergePluginFieldGroups(config, allCollectionNames);
+	// Step 3: Merge plugin field groups into entry types
+	mergePluginFieldGroups(config, allEntryTypeNames);
 
 	// Step 4: Sort field groups by priority
 	sortFieldGroups(config);

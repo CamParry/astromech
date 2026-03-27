@@ -94,7 +94,7 @@ export function Sidebar() {
     const { t } = useTranslation();
     const { sidebarOpen, toggleSidebar, setSidebarOpen } = useUI();
     const { canReadMedia, canReadUsers, canReadSettings } = usePermissions();
-    const collections = Object.entries(adminConfig.collections);
+    const entryTypes = Object.entries(adminConfig.entries);
 
     return (
         <aside
@@ -151,21 +151,18 @@ export function Sidebar() {
 
                 <div className="am-sidebar__nav--divider"></div>
 
-                {/* Collections nav */}
-                {collections.length > 0 && (
-                    <nav className="am-sidebar__nav" aria-label={t('nav.collections')}>
-                        <span className="am-sidebar__nav-heading">
-                            {t('nav.collections')}
-                        </span>
+                {/* Entry types nav */}
+                {entryTypes.length > 0 && (
+                    <nav className="am-sidebar__nav" aria-label="Entry types">
                         <ul className="am-sidebar__nav-list" role="list">
-                            {collections.map(([key, collection]) => (
+                            {entryTypes.map(([key, entryType]) => (
                                 <li key={key}>
-                                    <NavLink to={`/collections/${key}`}>
+                                    <NavLink to={`/entries/${key}`}>
                                         <span className="am-sidebar__nav-icon">
                                             <Database size={16} />
                                         </span>
                                         <span className="am-sidebar__nav-label">
-                                            {collection.plural}
+                                            {entryType.plural}
                                         </span>
                                     </NavLink>
                                 </li>

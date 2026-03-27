@@ -8,7 +8,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { AstromechApiError } from '../../../sdk/client/index.js';
+import type { AstromechApiError } from '../../../sdk/fetch/index.js';
 import { Badge } from './badge.js';
 import { Button } from './button.js';
 import { Modal } from './modal.js';

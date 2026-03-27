@@ -11,22 +11,17 @@
  *   DELETE /media/:id     → delete()
  */
 
-import { Hono } from 'hono';
-import { z } from 'zod';
-import { Astromech } from '@/sdk/server/index.js';
+import { OpenAPIHono } from '@hono/zod-openapi';
+import { z } from '@hono/zod-openapi';
+import { Astromech } from '@/sdk/local/index.js';
 import { badRequest, forbidden, fromZodError, internalError, notFound } from '@/api/middleware/errors.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
 import { can } from '@/core/permissions.js';
+import { updateMediaSchema } from '@/schemas/media.js';
 
 type Env = { Variables: AuthVariables };
 
-const router = new Hono<Env>();
-
-const updateSchema = z.object({
-    alt: z.string().optional(),
-    title: z.string().optional(),
-    fields: z.record(z.string(), z.unknown()).optional(),
-});
+const router = new OpenAPIHono<Env>();
 
 // ============================================================================
 // GET /media
@@ -129,7 +124,7 @@ router.put('/:id', async (c) => {
 
     try {
         const raw = await c.req.json();
-        const parsed = updateSchema.safeParse(raw);
+        const parsed = updateMediaSchema.safeParse(raw);
         if (!parsed.success) return fromZodError(c, parsed.error);
 
         const { alt, title, fields } = parsed.data;

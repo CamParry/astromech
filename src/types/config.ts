@@ -37,7 +37,7 @@ export type EmailDriver = {
 };
 
 // ============================================================================
-// Collections
+// Entry Types
 // ============================================================================
 
 export type SlugConfig = {
@@ -56,7 +56,7 @@ export type VersioningConfig = {
     maxVersions?: number;
 };
 
-export type CollectionConfig = {
+export type EntryTypeConfig = {
     fieldGroups: FieldGroup[];
     versioning?: boolean | VersioningConfig;
     translatable?: boolean;
@@ -97,7 +97,7 @@ export type AstromechConfig = {
     storage: StorageDriver;
     adminRoute?: string;
     apiRoute?: string;
-    collections: Record<string, CollectionConfig>;
+    entries: Record<string, EntryTypeConfig>;
     media?: MediaConfig;
     users?: UsersConfig;
     roles?: Record<string, RoleConfig>;
@@ -115,7 +115,7 @@ export type AstromechConfig = {
 export type ResolvedConfig = Omit<AstromechConfig, 'plugins' | 'db'> & {
     adminRoute: string;
     apiRoute: string;
-    collections: Record<string, CollectionConfig>;
+    entries: Record<string, EntryTypeConfig>;
     trash: Required<TrashConfig>;
 };
 
@@ -129,7 +129,7 @@ export type AdminConfig = {
     locales: string[];
     defaultLocale: string;
     roles: Array<{ slug: string; name: string }>;
-    collections: Record<string, {
+    entries: Record<string, {
         single: string;
         plural: string;
         versioning: boolean;
