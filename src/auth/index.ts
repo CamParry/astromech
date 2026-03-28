@@ -4,7 +4,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { getDb } from '@/db/registry.js';
 import * as schema from '@/db/schema.js';
 
-const apiRoute = process.env.ASTROMECH_API_ROUTE ?? '/api/cms';
+const apiRoute = process.env.ASTROMECH_API_ROUTE ?? '/api';
 
 let _auth: Auth<BetterAuthOptions> | null = null;
 
@@ -34,8 +34,9 @@ function getAuth(): Auth<BetterAuthOptions> {
                     token: string;
                 }) => {
                     const { getEmailConfig } = await import('@/email/registry.js');
-                    const { passwordResetTemplate } =
-                        await import('@/email/templates/password-reset.js');
+                    const { renderEmail } = await import('@/email/render.js');
+                    const { PasswordResetEmail } = await import('@/email/components/password-reset.js');
+                    const { getEmailOverride } = await import('@/email/email-overrides.js');
                     const emailConfig = getEmailConfig();
                     if (!emailConfig) {
                         console.log(
@@ -43,7 +44,13 @@ function getAuth(): Auth<BetterAuthOptions> {
                         );
                         return;
                     }
-                    const { subject, html, text } = passwordResetTemplate(url);
+                    const subject = 'Reset your password';
+                    const Override = getEmailOverride('password-reset');
+                    const { createElement } = await import('react');
+                    const element = Override
+                        ? createElement(Override, { url })
+                        : createElement(PasswordResetEmail, { url });
+                    const { html, text } = await renderEmail(element);
                     await emailConfig.driver.send({
                         to: user.email,
                         from: emailConfig.from,

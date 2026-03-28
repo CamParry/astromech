@@ -9,10 +9,10 @@ export function Breadcrumb({ items }: BreadcrumbProps): React.ReactElement {
         <nav className="am-breadcrumb" aria-label="Breadcrumb">
             <ol>
                 {items.map((item, i) => (
-                    <li key={i} className="am-breadcrumb__item">
-                        {i > 0 && <span className="am-breadcrumb__sep" aria-hidden="true">/</span>}
+                    <li key={i} className="am-breadcrumb-item">
+                        {i > 0 && <span className="am-breadcrumb-sep" aria-hidden="true">/</span>}
                         {item.to !== undefined ? (
-                            <Link to={item.to} className="am-breadcrumb__link">
+                            <Link to={item.to} className="am-breadcrumb-link">
                                 {item.label}
                             </Link>
                         ) : (

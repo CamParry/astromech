@@ -115,46 +115,46 @@ export function MediaDetailModal({
             headerActions={headerActions}
         >
             {isLoading || item == null ? (
-                <div className="am-media-modal__loading">
+                <div className="am-media-modal-loading">
                     <Spinner />
                 </div>
             ) : (
-                <div className="am-media-modal__layout">
+                <div className="am-media-modal-layout">
                     {/* Left panel — preview + metadata */}
-                    <div className="am-media-modal__preview-panel">
-                        <div className="am-media-modal__preview">
+                    <div className="am-media-modal-preview-panel">
+                        <div className="am-media-modal-preview">
                             {item.mimeType.startsWith('image/') ? (
                                 <img
                                     src={item.url}
                                     alt={item.alt ?? item.filename}
-                                    className="am-media-modal__preview-image"
+                                    className="am-media-modal-preview-image"
                                 />
                             ) : (
-                                <div className="am-media-modal__preview-icon">
+                                <div className="am-media-modal-preview-icon">
                                     <FileTypeIcon mimeType={item.mimeType} size={48} />
                                 </div>
                             )}
                         </div>
 
-                        <div className="am-media-modal__meta">
-                            <p className="am-media-modal__filename">{item.filename}</p>
-                            <dl className="am-media-modal__meta-list">
-                                <div className="am-media-modal__meta-row">
+                        <div className="am-media-modal-meta">
+                            <p className="am-media-modal-filename">{item.filename}</p>
+                            <dl className="am-media-modal-meta-list">
+                                <div className="am-media-modal-meta-row">
                                     <dt>{t('media.metaSize')}</dt>
                                     <dd>{formatBytes(item.size)}</dd>
                                 </div>
-                                <div className="am-media-modal__meta-row">
+                                <div className="am-media-modal-meta-row">
                                     <dt>{t('media.metaUploaded')}</dt>
                                     <dd>{formatDatetime(item.createdAt)}</dd>
                                 </div>
-                                <div className="am-media-modal__meta-row">
+                                <div className="am-media-modal-meta-row">
                                     <dt>{t('media.metaType')}</dt>
-                                    <dd className="am-text-mono am-media-modal__mime">
+                                    <dd className="am-text-mono am-media-modal-mime">
                                         {item.mimeType}
                                     </dd>
                                 </div>
                                 {item.width != null && item.height != null && (
-                                    <div className="am-media-modal__meta-row">
+                                    <div className="am-media-modal-meta-row">
                                         <dt>{t('media.metaDimensions')}</dt>
                                         <dd>
                                             {item.width} &times; {item.height}
@@ -166,7 +166,7 @@ export function MediaDetailModal({
                     </div>
 
                     {/* Right panel — edit form */}
-                    <div className="am-media-modal__form-panel">
+                    <div className="am-media-modal-form-panel">
                         <form.Field name="alt">
                             {(field) => (
                                 <Input

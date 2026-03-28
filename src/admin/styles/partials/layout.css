@@ -10,7 +10,7 @@
     height: 100vh;
 }
 
-.am-shell__main {
+.am-shell-main {
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -18,7 +18,7 @@
     overflow: hidden;
 }
 
-.am-shell__content {
+.am-shell-content {
     flex: 1;
     overflow-y: auto;
     background-color: var(--am-color-bg-muted);
@@ -29,7 +29,7 @@
 /* Mobile backdrop                                                      */
 /* ------------------------------------------------------------------ */
 
-.am-shell__backdrop {
+.am-shell-backdrop {
     display: none;
     position: fixed;
     inset: 0;
@@ -39,11 +39,11 @@
 }
 
 @media (max-width: 767px) {
-    .am-shell[data-sidebar-open='true'] .am-shell__backdrop {
+    .am-shell[data-sidebar-open='true'] .am-shell-backdrop {
         display: block;
     }
 
-    .am-shell__content {
+    .am-shell-content {
         padding: 1.25rem;
     }
 }

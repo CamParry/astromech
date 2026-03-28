@@ -55,6 +55,10 @@
         "./db/schema": {
             "types": "./dist/db/schema.d.ts",
             "default": "./dist/db/schema.js"
+        },
+        "./email": {
+            "types": "./dist/email/index.d.ts",
+            "default": "./dist/email/index.js"
         }
     },
     "main": "./dist/index.js",
@@ -92,6 +96,8 @@
         "@hono/swagger-ui": "^0.6.1",
         "@hono/zod-openapi": "^1.2.3",
         "@libsql/client": "^0.17.2",
+        "@react-email/components": "^1.0.10",
+        "@react-email/render": "^2.0.4",
         "@tanstack/react-form": "^1.28.5",
         "@tanstack/react-query": "^5.94.5",
         "@tanstack/react-router": "^1.168.1",

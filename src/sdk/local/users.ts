@@ -1,8 +1,9 @@
-import { eq } from 'drizzle-orm';
+import { eq, and, asc, desc, like, or, count } from 'drizzle-orm';
+import type { AnyColumn } from 'drizzle-orm';
 import { z } from 'zod';
 import { usersTable } from '@/db';
 import { getDb } from '@/db/registry.js';
-import type { JsonObject, User } from '@/types/index.js';
+import type { JsonObject, User, QueryResult, UserQueryParams, SortOption } from '@/types/index.js';
 import { ValidationError } from '@/errors/validation.js';
 import { createUserSchema, updateUserSchema } from '@/schemas/users.js';
 
@@ -23,11 +24,63 @@ function toUser(row: typeof usersTable.$inferSelect): User {
     };
 }
 
+const SORTABLE_FIELDS: Record<string, AnyColumn> = {
+    name: usersTable.name,
+    email: usersTable.email,
+    createdAt: usersTable.createdAt,
+    updatedAt: usersTable.updatedAt,
+    roleSlug: usersTable.roleSlug,
+};
+
+function buildOrderBy(sort?: SortOption | SortOption[]) {
+    if (!sort) return [asc(usersTable.name)];
+    const sorts = Array.isArray(sort) ? sort : [sort];
+    const clauses = sorts.flatMap((s) =>
+        Object.entries(s)
+            .filter(([field]) => field in SORTABLE_FIELDS)
+            .map(([field, dir]) => {
+                const col = SORTABLE_FIELDS[field]!;
+                return dir === 'asc' ? asc(col) : desc(col);
+            })
+    );
+    return clauses.length > 0 ? clauses : [asc(usersTable.name)];
+}
+
 export const usersApi = {
-    async all(): Promise<User[]> {
+    async query(params?: UserQueryParams): Promise<QueryResult<User>> {
         const db = getDb();
-        const users = await db.select().from(usersTable);
-        return users.map(toUser);
+        const page = params?.page ?? 1;
+        const limit = params?.limit;
+
+        const conditions = [];
+        if (params?.search) {
+            conditions.push(or(
+                like(usersTable.name, `%${params.search}%`),
+                like(usersTable.email, `%${params.search}%`)
+            ));
+        }
+
+        const where = conditions.length > 0 ? and(...conditions) : undefined;
+        const orderClauses = buildOrderBy(params?.sort);
+
+        if (limit === 'all') {
+            const rows = await db.select().from(usersTable).where(where).orderBy(...orderClauses);
+            return { data: rows.map(toUser), pagination: null };
+        }
+
+        const perPage = typeof limit === 'number' ? limit : 20;
+        const offset = (page - 1) * perPage;
+
+        const [rows, countRows] = await Promise.all([
+            db.select().from(usersTable).where(where).orderBy(...orderClauses).limit(perPage).offset(offset),
+            db.select({ count: count() }).from(usersTable).where(where),
+        ]);
+
+        const total = countRows[0]?.count ?? 0;
+        return {
+            data: rows.map(toUser),
+            pagination: { page, limit: perPage, total, pages: Math.ceil(total / perPage) },
+        };
     },
 
     async get(id: string): Promise<User | null> {

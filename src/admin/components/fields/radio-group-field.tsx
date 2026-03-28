@@ -24,9 +24,9 @@ export function RadioGroupField({ name, value, field, onChange }: BaseFieldProps
                             value={opt.value}
                             checked={selected === opt.value}
                             onChange={() => onChange(name, opt.value)}
-                            className="am-radio__input"
+                            className="am-radio-input"
                         />
-                        <span className="am-radio__label">{opt.label}</span>
+                        <span className="am-radio-label">{opt.label}</span>
                     </label>
                 );
             })}

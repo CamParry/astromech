@@ -20,20 +20,20 @@ export function AccordionField({ name, value, field, onChange }: BaseFieldProps)
             label={field.label ?? name}
             defaultOpen={field.collapsed !== true}
         >
-            <div className="am-accordion-field__content">
+            <div className="am-accordion-field-content">
                 {fields.map((subField) => (
-                    <div key={subField.name} className="am-accordion-field__item">
+                    <div key={subField.name} className="am-accordion-field-item">
                         <label
-                            className="am-accordion-field__label"
+                            className="am-accordion-field-label"
                             htmlFor={`${name}.${subField.name}`}
                         >
                             {subField.label ?? subField.name}
                             {subField.required === true && (
-                                <span className="am-accordion-field__required">*</span>
+                                <span className="am-accordion-field-required">*</span>
                             )}
                         </label>
                         {subField.description !== undefined && (
-                            <p className="am-accordion-field__description">
+                            <p className="am-accordion-field-description">
                                 {subField.description}
                             </p>
                         )}

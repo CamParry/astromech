@@ -26,25 +26,25 @@ export function Dropdown({ label, icon, ariaLabel, variant = 'ghost', size, item
     const effectiveSize = size ?? (iconOnly ? 'sm' : 'md');
     const triggerClass = [
         'am-btn',
-        `am-btn--${variant}`,
-        `am-btn--${effectiveSize}`,
-        iconOnly ? 'am-btn--icon' : '',
+        `am-btn-${variant}`,
+        `am-btn-${effectiveSize}`,
+        iconOnly ? 'am-btn-icon' : '',
     ].filter(Boolean).join(' ');
 
     return (
         <Menu.Root>
             <Menu.Trigger render={<button type="button" />} className={triggerClass} aria-label={ariaLabel}>
-                {icon !== undefined && <span className="am-btn__icon">{icon}</span>}
+                {icon !== undefined && <span className="am-btn-icon">{icon}</span>}
                 {label}
                 {!iconOnly && <ChevronDown size={12} />}
             </Menu.Trigger>
             <Menu.Portal>
-                <Menu.Positioner className="am-dropdown__positioner" align={align} sideOffset={4}>
-                    <Menu.Popup className="am-dropdown__popup">
+                <Menu.Positioner className="am-dropdown-positioner" align={align} sideOffset={4}>
+                    <Menu.Popup className="am-dropdown-popup">
                         {items.map((item, i) => {
                             const itemClass = [
-                                'am-dropdown__item',
-                                item.variant === 'danger' ? 'am-dropdown__item--danger' : '',
+                                'am-dropdown-item',
+                                item.variant === 'danger' ? 'am-dropdown-item-danger' : '',
                             ]
                                 .filter(Boolean)
                                 .join(' ');
@@ -58,7 +58,7 @@ export function Dropdown({ label, icon, ariaLabel, variant = 'ghost', size, item
                                         render={<a href={item.href} />}
                                     >
                                         {item.icon !== undefined && (
-                                            <span className="am-dropdown__item-icon">{item.icon}</span>
+                                            <span className="am-dropdown-item-icon">{item.icon}</span>
                                         )}
                                         {item.label}
                                     </Menu.Item>
@@ -73,7 +73,7 @@ export function Dropdown({ label, icon, ariaLabel, variant = 'ghost', size, item
                                     onClick={item.onClick}
                                 >
                                     {item.icon !== undefined && (
-                                        <span className="am-dropdown__item-icon">{item.icon}</span>
+                                        <span className="am-dropdown-item-icon">{item.icon}</span>
                                     )}
                                     {item.label}
                                 </Menu.Item>

@@ -13,7 +13,7 @@
    Sidebar — version list
    ============================================================================ */
 
-.am-versions__sidebar {
+.am-versions-sidebar {
     background-color: var(--am-color-bg-base);
     border: 1px solid var(--am-color-border);
     border-radius: var(--am-radius-lg);
@@ -22,7 +22,7 @@
     top: 0;
 }
 
-.am-versions__sidebar-header {
+.am-versions-sidebar-header {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -30,7 +30,7 @@
     border-bottom: 1px solid var(--am-color-border);
 }
 
-.am-versions__sidebar-title {
+.am-versions-sidebar-title {
     margin: 0;
     font-size: 0.8125rem;
     font-weight: 600;
@@ -39,7 +39,7 @@
     color: var(--am-color-text-muted);
 }
 
-.am-versions__list {
+.am-versions-list {
     display: flex;
     flex-direction: column;
 }
@@ -48,7 +48,7 @@
    Version item button
    ============================================================================ */
 
-.am-versions__item {
+.am-versions-item {
     display: flex;
     flex-direction: column;
     gap: 0.125rem;
@@ -66,7 +66,7 @@
         border-bottom: none;
     }
 
-    &:hover:not(.am-versions__item--selected) {
+    &:hover:not(.am-versions-item-selected) {
         background-color: var(--am-color-bg-muted);
     }
 
@@ -76,34 +76,34 @@
     }
 }
 
-.am-versions__item--selected {
+.am-versions-item-selected {
     background-color: var(--am-color-primary-subtle);
 }
 
-.am-versions__item-header {
+.am-versions-item-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
 }
 
-.am-versions__item-number {
+.am-versions-item-number {
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--am-versions__item--selected &) var(--am-color-primary-emphasis);
+    color: var(--am-versions-item-selected &) var(--am-color-primary-emphasis);
     color: var(--am-color-text-default);
 
-    .am-versions__item--selected & {
+    .am-versions-item-selected & {
         color: var(--am-color-primary-emphasis);
     }
 }
 
-.am-versions__item-date {
+.am-versions-item-date {
     font-size: 0.75rem;
     color: var(--am-color-text-muted);
 }
 
-.am-versions__item-author {
+.am-versions-item-author {
     font-size: 0.75rem;
     color: var(--am-color-text-muted);
 }
@@ -112,11 +112,11 @@
    Main diff area
    ============================================================================ */
 
-.am-versions__main {
+.am-versions-main {
     min-width: 0;
 }
 
-.am-versions__diff {
+.am-versions-diff {
     background-color: var(--am-color-bg-base);
     border: 1px solid var(--am-color-border);
     border-radius: var(--am-radius-lg);
@@ -127,7 +127,7 @@
    Diff toolbar
    ============================================================================ */
 
-.am-versions__diff-toolbar {
+.am-versions-diff-toolbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -137,21 +137,21 @@
     background-color: var(--am-color-bg-muted);
 }
 
-.am-versions__diff-title {
+.am-versions-diff-title {
     display: block;
     font-size: 0.9375rem;
     font-weight: 600;
     color: var(--am-color-text-default);
 }
 
-.am-versions__diff-subtitle {
+.am-versions-diff-subtitle {
     display: block;
     font-size: 0.8125rem;
     color: var(--am-color-text-muted);
     margin-top: 0.125rem;
 }
 
-.am-versions__diff-current-note {
+.am-versions-diff-current-note {
     margin: 0;
     padding: 0.625rem 1.25rem;
     font-size: 0.8125rem;
@@ -164,13 +164,13 @@
    Field diff list
    ============================================================================ */
 
-.am-versions__diff-fields {
+.am-versions-diff-fields {
     display: flex;
     flex-direction: column;
     gap: 0;
 }
 
-.am-versions__diff-field {
+.am-versions-diff-field {
     padding: 1rem 1.25rem;
     border-bottom: 1px solid var(--am-color-border);
 
@@ -179,7 +179,7 @@
     }
 }
 
-.am-versions__diff-field-name {
+.am-versions-diff-field-name {
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -188,19 +188,19 @@
     margin-bottom: 0.625rem;
 }
 
-.am-versions__diff-columns {
+.am-versions-diff-columns {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     gap: 0.5rem;
     align-items: center;
 }
 
-.am-versions__diff-arrow {
+.am-versions-diff-arrow {
     color: var(--am-color-text-muted);
     flex-shrink: 0;
 }
 
-.am-versions__diff-old {
+.am-versions-diff-old {
     font-size: 0.875rem;
     color: var(--am-color-danger);
     background-color: var(--am-color-danger-bg);
@@ -210,7 +210,7 @@
     word-break: break-word;
 }
 
-.am-versions__diff-new {
+.am-versions-diff-new {
     font-size: 0.875rem;
     color: var(--am-color-success);
     background-color: var(--am-color-success-bg);
@@ -220,7 +220,7 @@
     word-break: break-word;
 }
 
-.am-versions__diff-pre {
+.am-versions-diff-pre {
     margin: 0;
     font-family: ui-monospace, monospace;
     font-size: 0.8125rem;
@@ -237,7 +237,7 @@
         grid-template-columns: 1fr;
     }
 
-    .am-versions__sidebar {
+    .am-versions-sidebar {
         position: static;
     }
 }

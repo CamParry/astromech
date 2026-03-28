@@ -8,13 +8,13 @@ type InputProps = React.ComponentProps<'input'> & {
 };
 
 export function Input({ error, label, hint, className, id, ...props }: InputProps): React.ReactElement {
-    const inputClass = ['am-input', error ? 'am-input--error' : '', className].filter(Boolean).join(' ');
+    const inputClass = ['am-input', error ? 'am-input-error' : '', className].filter(Boolean).join(' ');
 
     if (label !== undefined || error !== undefined || hint !== undefined) {
         return (
             <Field.Root invalid={error !== undefined} className="am-field">
                 {label !== undefined && (
-                    <Field.Label className="am-field__label" htmlFor={id}>
+                    <Field.Label className="am-field-label" htmlFor={id}>
                         {label}
                     </Field.Label>
                 )}
@@ -25,12 +25,12 @@ export function Input({ error, label, hint, className, id, ...props }: InputProp
                     {...props}
                 />
                 {error !== undefined && (
-                    <Field.Error className="am-field__error">
+                    <Field.Error className="am-field-error">
                         {error}
                     </Field.Error>
                 )}
                 {hint !== undefined && error === undefined && (
-                    <Field.Description className="am-field__hint">
+                    <Field.Description className="am-field-hint">
                         {hint}
                     </Field.Description>
                 )}

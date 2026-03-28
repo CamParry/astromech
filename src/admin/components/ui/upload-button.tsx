@@ -59,7 +59,7 @@ export function UploadButton({
             >
                 {children ?? (
                     <>
-                        <Upload size={14} className="am-upload-btn__icon" />
+                        <Upload size={14} className="am-upload-btn-icon" />
                         Upload
                     </>
                 )}

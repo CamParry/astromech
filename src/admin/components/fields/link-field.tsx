@@ -30,8 +30,8 @@ export function LinkField({ name, value, onChange }: BaseFieldProps) {
 
     return (
         <div className="am-link-field">
-            <div className="am-link-field__row">
-                <label className="am-link-field__label" htmlFor={`${name}--href`}>
+            <div className="am-link-field-row">
+                <label className="am-link-field-label" htmlFor={`${name}--href`}>
                     URL
                 </label>
                 <Input
@@ -43,8 +43,8 @@ export function LinkField({ name, value, onChange }: BaseFieldProps) {
                     onChange={(e) => handleChange('href', e.target.value)}
                 />
             </div>
-            <div className="am-link-field__row">
-                <label className="am-link-field__label" htmlFor={`${name}--label`}>
+            <div className="am-link-field-row">
+                <label className="am-link-field-label" htmlFor={`${name}--label`}>
                     Label
                 </label>
                 <Input
@@ -56,8 +56,8 @@ export function LinkField({ name, value, onChange }: BaseFieldProps) {
                     onChange={(e) => handleChange('label', e.target.value)}
                 />
             </div>
-            <div className="am-link-field__row">
-                <label className="am-link-field__label" htmlFor={`${name}--target`}>
+            <div className="am-link-field-row">
+                <label className="am-link-field-label" htmlFor={`${name}--target`}>
                     Target
                 </label>
                 <select
@@ -65,7 +65,7 @@ export function LinkField({ name, value, onChange }: BaseFieldProps) {
                     name={`${name}[target]`}
                     value={link.target}
                     onChange={(e) => handleChange('target', e.target.value)}
-                    className="am-input am-link-field__select"
+                    className="am-input am-link-field-select"
                 >
                     <option value="_self">Same tab</option>
                     <option value="_blank">New tab</option>

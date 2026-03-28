@@ -17,28 +17,28 @@ export function MediaRow({ item, checked, onToggleCheck, onClick }: MediaRowProp
         <Table.Row
             selected={checked}
             onClick={() => onClick(item.id)}
-            className="am-table-row--clickable"
+            className="am-table-row-clickable"
         >
-            <Table.Td onClick={(e) => e.stopPropagation()} className="am-table__checkbox-cell">
+            <Table.Td onClick={(e) => e.stopPropagation()} className="am-table-checkbox-cell">
                 <Checkbox
                     checked={checked}
                     onChange={() => onToggleCheck(item.id)}
                 />
             </Table.Td>
             <Table.Td>
-                <div className="am-media-list-row__name">
+                <div className="am-media-list-row-name">
                     {item.mimeType.startsWith('image/') ? (
                         <img
                             src={item.url}
                             alt={item.alt ?? item.filename}
-                            className="am-media-list-row__thumb"
+                            className="am-media-list-row-thumb"
                         />
                     ) : (
-                        <span className="am-media-list-row__icon">
+                        <span className="am-media-list-row-icon">
                             <FileTypeIcon mimeType={item.mimeType} size={20} />
                         </span>
                     )}
-                    <span className="am-media-list-row__filename">{item.filename}</span>
+                    <span className="am-media-list-row-filename">{item.filename}</span>
                 </div>
             </Table.Td>
             <Table.Td className="am-text-mono am-text-xs am-text-muted">{item.mimeType}</Table.Td>

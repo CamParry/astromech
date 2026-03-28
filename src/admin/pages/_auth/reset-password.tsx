@@ -57,8 +57,8 @@ function ResetPasswordPage() {
     if (!token) {
         return (
             <AuthCard title="Invalid link">
-                <p className="am-auth__message">{t('auth.invalidLinkMessage')}</p>
-                <p className="am-auth__footer-link">
+                <p className="am-auth-message">{t('auth.invalidLinkMessage')}</p>
+                <p className="am-auth-footer-link">
                     <Link to="/login">{t('auth.backToLogin')}</Link>
                 </p>
             </AuthCard>
@@ -68,7 +68,7 @@ function ResetPasswordPage() {
     return (
         <AuthCard title="Reset password">
             <form onSubmit={handleSubmit}>
-                <div className="am-auth__fields">
+                <div className="am-auth-fields">
                     <Input
                         label="New password"
                         type="password"
@@ -87,10 +87,10 @@ function ResetPasswordPage() {
                     />
                 </div>
                 {error !== null && (
-                    <p className="am-auth__error">{error}</p>
+                    <p className="am-auth-error">{error}</p>
                 )}
-                <div className="am-auth__actions">
-                    <Button type="submit" variant="primary" className="am-btn--full" disabled={isSubmitting}>
+                <div className="am-auth-actions">
+                    <Button type="submit" variant="primary" className="am-btn-full" disabled={isSubmitting}>
                         {isSubmitting ? t('auth.resettingPassword') : t('auth.resetPassword')}
                     </Button>
                 </div>

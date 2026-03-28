@@ -11,11 +11,11 @@ function AuthLayout() {
 	if (isLoading) {
 		return (
 			<div className="am-auth">
-				<div className="am-auth__card">
-					<div className="am-auth__brand">
-						<span className="am-auth__logo">Astromech</span>
+				<div className="am-auth-card">
+					<div className="am-auth-brand">
+						<span className="am-auth-logo">Astromech</span>
 					</div>
-					<p className="am-auth__message">Loading…</p>
+					<p className="am-auth-message">Loading…</p>
 				</div>
 			</div>
 		);

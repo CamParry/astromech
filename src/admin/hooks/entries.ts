@@ -12,35 +12,16 @@ import { useTranslation } from 'react-i18next';
 import { Astromech } from '@/sdk/fetch/index.js';
 import { queryKeys } from './use-query-keys.js';
 import { useToast } from '../components/ui/index.js';
-import type { Entry, EntryStatus, JsonObject } from '@/types/index.js';
+import type { Entry, EntryStatus, JsonObject, EntryQueryParams } from '@/types/index.js';
 
 // ============================================================================
 // Query hooks
 // ============================================================================
 
-type EntriesListFilters = Record<string, unknown>;
-
-export function useEntriesList(type: string, filters?: EntriesListFilters) {
+export function useEntriesQuery(params?: EntryQueryParams) {
     return useQuery({
-        queryKey: queryKeys.entries.list(type, filters),
-        queryFn: async () => {
-            const isTrash = filters?.statusFilter === 'trashed';
-            if (isTrash) {
-                const items = await Astromech.entries.trashed({ type });
-                return {
-                    data: items,
-                    pagination: {
-                        total: items.length,
-                        page: 1,
-                        perPage: items.length,
-                        totalPages: 1,
-                    },
-                };
-            }
-            const page = typeof filters?.page === 'number' ? filters.page : 1;
-            const perPage = typeof filters?.perPage === 'number' ? filters.perPage : 20;
-            return Astromech.entries.paginate(perPage, page, { type });
-        },
+        queryKey: queryKeys.entries.list(params?.type ?? '', params as Record<string, unknown>),
+        queryFn: () => Astromech.entries.query(params),
     });
 }
 

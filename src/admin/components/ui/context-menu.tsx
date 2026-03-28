@@ -55,17 +55,17 @@ export function useContextMenu(items: DropdownItem[]): UseContextMenuReturn {
         <Menu.Root open={open} onOpenChange={setOpen}>
             <Menu.Portal>
                 <Menu.Positioner
-                    className="am-dropdown__positioner"
+                    className="am-dropdown-positioner"
                     anchor={anchorRef.current}
                     side="bottom"
                     align="start"
                     style={{ zIndex: 200 }}
                 >
-                    <Menu.Popup className="am-dropdown__popup">
+                    <Menu.Popup className="am-dropdown-popup">
                         {items.map((item, i) => {
                             const itemClass = [
-                                'am-dropdown__item',
-                                item.variant === 'danger' ? 'am-dropdown__item--danger' : '',
+                                'am-dropdown-item',
+                                item.variant === 'danger' ? 'am-dropdown-item-danger' : '',
                             ]
                                 .filter(Boolean)
                                 .join(' ');
@@ -79,7 +79,7 @@ export function useContextMenu(items: DropdownItem[]): UseContextMenuReturn {
                                         render={<a href={item.href} />}
                                     >
                                         {item.icon !== undefined && (
-                                            <span className="am-dropdown__item-icon">{item.icon}</span>
+                                            <span className="am-dropdown-item-icon">{item.icon}</span>
                                         )}
                                         {item.label}
                                     </Menu.Item>
@@ -94,7 +94,7 @@ export function useContextMenu(items: DropdownItem[]): UseContextMenuReturn {
                                     onClick={item.onClick}
                                 >
                                     {item.icon !== undefined && (
-                                        <span className="am-dropdown__item-icon">{item.icon}</span>
+                                        <span className="am-dropdown-item-icon">{item.icon}</span>
                                     )}
                                     {item.label}
                                 </Menu.Item>

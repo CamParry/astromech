@@ -17,32 +17,42 @@ import type {
 // Query Types
 // ============================================================================
 
-export type PaginationResult<T> = {
-    data: T[];
-    pagination: {
-        page: number;
-        perPage: number;
-        total: number;
-        totalPages: number;
-    };
-};
-
 export type SortDirection = 'asc' | 'desc';
 
-export type SortOption = {
-    field: string;
-    direction?: SortDirection;
-};
+// Drizzle-style: { createdAt: 'desc' } or [{ status: 'asc' }, { createdAt: 'desc' }]
+export type SortOption = Record<string, SortDirection>;
+
+export type WhereFilters = Record<string, unknown>;
 
 export type QueryOptions = {
     populate?: string[];
     locale?: string;
-    withTrashed?: boolean;
-    sort?: SortOption | SortOption[];
-    filters?: WhereFilters;
 };
 
-export type WhereFilters = Record<string, unknown>;
+export type EntryQueryParams = {
+    type?: string;
+    search?: string;
+    where?: WhereFilters;
+    trashed?: boolean;
+    page?: number;
+    limit?: number | 'all';
+    sort?: SortOption | SortOption[];
+    populate?: string[];
+    locale?: string;
+};
+
+export type QueryResult<T = Entry> = {
+    data: T[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        pages: number;
+    } | null; // null when limit is 'all'
+};
+
+/** @deprecated Use QueryResult instead */
+export type EntryQueryResult<T = Entry> = QueryResult<T>;
 
 // ============================================================================
 // Entry Type API
@@ -56,14 +66,8 @@ export type TranslationInfo = {
 };
 
 export type EntryTypeApi = {
-    all(options?: QueryOptions): Promise<Entry[]>;
-    paginate(
-        perPage: number,
-        page: number,
-        options?: QueryOptions
-    ): Promise<PaginationResult<Entry>>;
+    query(params?: Omit<EntryQueryParams, 'type'>): Promise<QueryResult<Entry>>;
     get(id: string, options?: QueryOptions): Promise<Entry | null>;
-    where(filters: WhereFilters, options?: QueryOptions): Promise<Entry[]>;
     create(data: {
         title: string;
         slug?: string;
@@ -83,7 +87,6 @@ export type EntryTypeApi = {
     ): Promise<Entry>;
     trash(id: string): Promise<void>;
     duplicate(id: string): Promise<Entry>;
-    trashed(options?: QueryOptions): Promise<Entry[]>;
     restore(id: string): Promise<Entry>;
     delete(id: string): Promise<void>;
     emptyTrash(): Promise<void>;
@@ -105,17 +108,9 @@ export type EntryTypeApi = {
 // Entries API (unified, type-discriminated)
 // ============================================================================
 
-export type EntriesQueryOptions = QueryOptions & { type?: string };
-
 export type EntriesApi = {
-    all(options?: EntriesQueryOptions): Promise<Entry[]>;
-    paginate(
-        perPage: number,
-        page: number,
-        options?: EntriesQueryOptions
-    ): Promise<PaginationResult<Entry>>;
-    get(id: string, options?: EntriesQueryOptions): Promise<Entry | null>;
-    where(filters: WhereFilters, options?: EntriesQueryOptions): Promise<Entry[]>;
+    query(params?: EntryQueryParams): Promise<QueryResult<Entry>>;
+    get(id: string, options?: QueryOptions & { type?: string }): Promise<Entry | null>;
     create(data: {
         type: string;
         title: string;
@@ -136,7 +131,6 @@ export type EntriesApi = {
     ): Promise<Entry>;
     trash(id: string): Promise<void>;
     duplicate(id: string): Promise<Entry>;
-    trashed(options?: EntriesQueryOptions): Promise<Entry[]>;
     restore(id: string): Promise<Entry>;
     delete(id: string): Promise<void>;
     emptyTrash(options?: { type?: string }): Promise<void>;
@@ -158,23 +152,27 @@ export type EntriesApi = {
 // Media, Settings, Users APIs
 // ============================================================================
 
-export type MediaListParams = {
+export type UserQueryParams = {
     search?: string;
-    type?: string;
     page?: number;
-    perPage?: number;
+    limit?: number | 'all';
+    sort?: SortOption | SortOption[];
 };
 
-export type MediaListResult = {
-    items: Media[];
-    total: number;
-    page: number;
-    perPage: number;
+export type MediaMimeTypeFilter = 'images' | 'videos' | 'documents' | 'other';
+
+export type MediaQueryParams = {
+    search?: string;
+    where?: {
+        mimeType?: MediaMimeTypeFilter;
+    };
+    page?: number;
+    limit?: number | 'all';
+    sort?: SortOption | SortOption[];
 };
 
 export type MediaApi = {
-    all(): Promise<Media[]>;
-    list(params?: MediaListParams): Promise<MediaListResult>;
+    query(params?: MediaQueryParams): Promise<QueryResult<Media>>;
     get(id: string): Promise<Media | null>;
     upload(file: File): Promise<Media>;
     update(
@@ -191,7 +189,7 @@ export type SettingsApi = {
 };
 
 export type UsersApi = {
-    all(): Promise<User[]>;
+    query(params?: UserQueryParams): Promise<QueryResult<User>>;
     get(id: string): Promise<User | null>;
     create(data: { email: string; name: string; fields?: JsonObject }): Promise<User>;
     update(

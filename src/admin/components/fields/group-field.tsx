@@ -17,13 +17,13 @@ export function GroupField({ name, value, field, onChange }: BaseFieldProps) {
     return (
         <div className="am-group-field">
             {fields.map((subField) => (
-                <div key={subField.name} className="am-group-field__item">
-                    <label className="am-group-field__label" htmlFor={`${name}.${subField.name}`}>
+                <div key={subField.name} className="am-group-field-item">
+                    <label className="am-group-field-label" htmlFor={`${name}.${subField.name}`}>
                         {subField.label ?? subField.name}
-                        {subField.required === true && <span className="am-group-field__required">*</span>}
+                        {subField.required === true && <span className="am-group-field-required">*</span>}
                     </label>
                     {subField.description !== undefined && (
-                        <p className="am-group-field__description">{subField.description}</p>
+                        <p className="am-group-field-description">{subField.description}</p>
                     )}
                     <FieldInput
                         field={subField}

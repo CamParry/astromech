@@ -44,16 +44,16 @@ function RepeaterItem({
     const [open, setOpen] = useState(true);
 
     return (
-        <Collapsible.Root open={open} onOpenChange={setOpen} className="am-repeater__item">
-            <div className="am-repeater__item-header">
-                <span className="am-repeater__item-title">{t('fields.repeaterItem', { number: index + 1 })}</span>
-                <div className="am-repeater__item-controls">
+        <Collapsible.Root open={open} onOpenChange={setOpen} className="am-repeater-item">
+            <div className="am-repeater-item-header">
+                <span className="am-repeater-item-title">{t('fields.repeaterItem', { number: index + 1 })}</span>
+                <div className="am-repeater-item-controls">
                     {!disabled && (
                         <button
                             type="button"
                             onClick={() => onMoveUp(index)}
                             disabled={index === 0}
-                            className="am-repeater__btn am-repeater__btn--icon"
+                            className="am-repeater-btn am-repeater-btn-icon"
                             aria-label={t('fields.repeaterMoveUp')}
                         >
                             <ChevronUp size={16} />
@@ -64,7 +64,7 @@ function RepeaterItem({
                             type="button"
                             onClick={() => onMoveDown(index)}
                             disabled={index === itemsLength - 1}
-                            className="am-repeater__btn am-repeater__btn--icon"
+                            className="am-repeater-btn am-repeater-btn-icon"
                             aria-label={t('fields.repeaterMoveDown')}
                         >
                             <ChevronDown size={16} />
@@ -75,22 +75,22 @@ function RepeaterItem({
                             type="button"
                             onClick={() => onRemove(index)}
                             disabled={itemsLength === 1 && required}
-                            className="am-repeater__btn am-repeater__btn--icon am-repeater__btn--remove"
+                            className="am-repeater-btn am-repeater-btn-icon am-repeater-btn-remove"
                             aria-label={t('fields.repeaterRemove')}
                         >
                             <Trash2 size={16} />
                         </button>
                     )}
                     <Collapsible.Trigger
-                        className="am-repeater__btn am-repeater__btn--icon"
+                        className="am-repeater-btn am-repeater-btn-icon"
                         aria-label={open ? t('fields.repeaterCollapse') : t('fields.repeaterExpand')}
                     >
                         {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </Collapsible.Trigger>
                 </div>
             </div>
-            <Collapsible.Panel className="am-repeater__item-panel">
-                <div className="am-repeater__item-content">
+            <Collapsible.Panel className="am-repeater-item-panel">
+                <div className="am-repeater-item-content">
                     {fields.map((subField) => (
                         <FieldInput
                             key={subField.name}
@@ -184,7 +184,7 @@ export function RepeaterField({ name, value, field, required, onChange, disabled
                 <button
                     type="button"
                     onClick={handleAdd}
-                    className="am-repeater__btn am-repeater__btn--add"
+                    className="am-repeater-btn am-repeater-btn-add"
                 >
                     {t('fields.repeaterAddItem')}
                 </button>

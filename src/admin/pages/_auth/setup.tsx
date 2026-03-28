@@ -79,7 +79,7 @@ function SetupPage() {
     if (isChecking) {
         return (
             <AuthCard title="Set up Astromech">
-                <p className="am-auth__message">Loading…</p>
+                <p className="am-auth-message">Loading…</p>
             </AuthCard>
         );
     }
@@ -87,7 +87,7 @@ function SetupPage() {
     return (
         <AuthCard title="Set up Astromech" subtitle="Create the first admin account to get started.">
             <form onSubmit={handleSubmit}>
-                <div className="am-auth__fields">
+                <div className="am-auth-fields">
                     <Input
                         label="Name"
                         type="text"
@@ -122,10 +122,10 @@ function SetupPage() {
                     />
                 </div>
                 {error !== null && (
-                    <p className="am-auth__error">{error}</p>
+                    <p className="am-auth-error">{error}</p>
                 )}
-                <div className="am-auth__actions">
-                    <Button type="submit" variant="primary" className="am-btn--full" disabled={isSubmitting}>
+                <div className="am-auth-actions">
+                    <Button type="submit" variant="primary" className="am-btn-full" disabled={isSubmitting}>
                         {isSubmitting ? t('auth.setupCreatingAccount') : t('auth.setupCreateAccount')}
                     </Button>
                 </div>

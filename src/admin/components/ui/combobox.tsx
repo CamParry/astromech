@@ -40,7 +40,7 @@ export function Combobox({
     return (
         <div className="am-field">
             {label !== undefined && (
-                <label className="am-field__label" htmlFor={id}>
+                <label className="am-field-label" htmlFor={id}>
                     {label}
                 </label>
             )}
@@ -56,25 +56,25 @@ export function Combobox({
                     disabled={disabled}
                     multiple={multiple}
                 >
-                    <BaseCombobox.InputGroup className="am-combobox__input-group">
+                    <BaseCombobox.InputGroup className="am-combobox-input-group">
                         <BaseCombobox.Input
                             id={id}
                             className={[
-                                'am-input am-combobox__input',
-                                error ? 'am-input--error' : '',
+                                'am-input am-combobox-input',
+                                error ? 'am-input-error' : '',
                             ]
                                 .filter(Boolean)
                                 .join(' ')}
                             placeholder={placeholder}
                         />
                         <BaseCombobox.Clear
-                            className="am-combobox__clear"
+                            className="am-combobox-clear"
                             aria-label="Clear"
                         >
                             <X size={14} />
                         </BaseCombobox.Clear>
                         <BaseCombobox.Trigger
-                            className="am-combobox__trigger"
+                            className="am-combobox-trigger"
                             aria-label="Open"
                         >
                             <ChevronDown size={14} />
@@ -82,19 +82,19 @@ export function Combobox({
                     </BaseCombobox.InputGroup>
                     <BaseCombobox.Portal>
                         <BaseCombobox.Positioner
-                            className="am-dropdown__positioner"
+                            className="am-dropdown-positioner"
                             sideOffset={4}
                         >
-                            <BaseCombobox.Popup className="am-dropdown__popup">
-                                <BaseCombobox.Empty className="am-combobox__empty">
+                            <BaseCombobox.Popup className="am-dropdown-popup">
+                                <BaseCombobox.Empty className="am-combobox-empty">
                                     No results found
                                 </BaseCombobox.Empty>
-                                <BaseCombobox.List className="am-combobox__list">
+                                <BaseCombobox.List className="am-combobox-list">
                                     {(item: ComboboxOption) => (
                                         <BaseCombobox.Item
                                             key={item.value}
                                             value={item}
-                                            className="am-dropdown__item"
+                                            className="am-dropdown-item"
                                         >
                                             {item.label}
                                         </BaseCombobox.Item>
@@ -105,9 +105,9 @@ export function Combobox({
                     </BaseCombobox.Portal>
                 </BaseCombobox.Root>
             </div>
-            {error !== undefined && <p className="am-field__error">{error}</p>}
+            {error !== undefined && <p className="am-field-error">{error}</p>}
             {hint !== undefined && error === undefined && (
-                <p className="am-field__hint">{hint}</p>
+                <p className="am-field-hint">{hint}</p>
             )}
         </div>
     );

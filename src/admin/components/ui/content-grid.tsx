@@ -22,7 +22,7 @@ function Root({ children, className, minItemWidth }: RootProps): React.ReactElem
 
 function Item({ children, className }: { children: React.ReactNode; className?: string }): React.ReactElement {
     return (
-        <div className={['am-content-grid__item', className].filter(Boolean).join(' ')}>
+        <div className={['am-content-grid-item', className].filter(Boolean).join(' ')}>
             {children}
         </div>
     );

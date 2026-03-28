@@ -17,7 +17,7 @@ export function Pagination({ currentPage, totalPages, onPage, totalItems }: Pagi
     return (
         <div className="am-pagination">
             {totalItems != null && (
-                <span className="am-pagination__total">{t('common.total', { count: totalItems })}</span>
+                <span className="am-pagination-total">{t('common.total', { count: totalItems })}</span>
             )}
             <Button
                 variant="secondary"
@@ -27,7 +27,7 @@ export function Pagination({ currentPage, totalPages, onPage, totalItems }: Pagi
             >
                 {t('common.previous')}
             </Button>
-            <span className="am-pagination__info">
+            <span className="am-pagination-info">
                 {t('common.page', { page: currentPage, total: totalPages })}
             </span>
             <Button

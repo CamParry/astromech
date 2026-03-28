@@ -61,24 +61,24 @@ type BlockPickerProps = {
 function BlockPicker({ blocks, onSelect, onClose }: BlockPickerProps): React.ReactElement {
     const { t } = useTranslation();
     return (
-        <div className="am-blocks__picker" role="menu" aria-label={t('fields.blocksPickerLabel')}>
+        <div className="am-blocks-picker" role="menu" aria-label={t('fields.blocksPickerLabel')}>
             {blocks.map((bd) => (
                 <button
                     key={bd.type}
                     type="button"
                     role="menuitem"
-                    className="am-blocks__picker-item"
+                    className="am-blocks-picker-item"
                     onClick={() => {
                         onSelect(bd.type);
                         onClose();
                     }}
                 >
                     {bd.icon !== undefined && (
-                        <span className="am-blocks__picker-icon" aria-hidden="true">
+                        <span className="am-blocks-picker-icon" aria-hidden="true">
                             {bd.icon}
                         </span>
                     )}
-                    <span className="am-blocks__picker-label">{bd.label}</span>
+                    <span className="am-blocks-picker-label">{bd.label}</span>
                 </button>
             ))}
         </div>
@@ -130,19 +130,19 @@ function SortableBlock({
         <div
             ref={setNodeRef}
             style={style}
-            className={['am-blocks__block', isDragging ? 'am-blocks__block--dragging' : ''].filter(Boolean).join(' ')}
+            className={['am-blocks-block', isDragging ? 'am-blocks-block-dragging' : ''].filter(Boolean).join(' ')}
         >
             <Collapsible.Root open={open} onOpenChange={setOpen}>
                 <div
                     className={[
-                        'am-blocks__block-header',
-                        block.disabled === true ? 'am-blocks__block-header--soft-disabled' : '',
+                        'am-blocks-block-header',
+                        block.disabled === true ? 'am-blocks-block-header-soft-disabled' : '',
                     ].filter(Boolean).join(' ')}
                 >
                     {!disabled && (
                         <button
                             type="button"
-                            className="am-blocks__btn am-blocks__btn--icon am-blocks__drag-handle"
+                            className="am-blocks-btn am-blocks-btn-icon am-blocks-drag-handle"
                             aria-label={t('fields.blocksDragHandle')}
                             {...attributes}
                             {...listeners}
@@ -151,29 +151,29 @@ function SortableBlock({
                         </button>
                     )}
 
-                    <div className="am-blocks__block-meta">
-                        <span className="am-blocks__block-label">
+                    <div className="am-blocks-block-meta">
+                        <span className="am-blocks-block-label">
                             {blockDef?.icon !== undefined && (
-                                <span className="am-blocks__block-icon" aria-hidden="true">
+                                <span className="am-blocks-block-icon" aria-hidden="true">
                                     {blockDef.icon}
                                 </span>
                             )}
                             {label}
                         </span>
-                        <span className="am-blocks__block-type-badge">{block.type}</span>
+                        <span className="am-blocks-block-type-badge">{block.type}</span>
                         {block.disabled === true && (
-                            <span className="am-blocks__block-disabled-badge">
+                            <span className="am-blocks-block-disabled-badge">
                                 {t('fields.blocksDisabledBadge')}
                             </span>
                         )}
                     </div>
 
-                    <div className="am-blocks__block-controls">
+                    <div className="am-blocks-block-controls">
                         {!disabled && (
                             <>
                                 <button
                                     type="button"
-                                    className="am-blocks__btn am-blocks__btn--icon"
+                                    className="am-blocks-btn am-blocks-btn-icon"
                                     onClick={() => onToggleDisabled(block._id)}
                                     aria-label={block.disabled === true ? t('fields.blocksEnable') : t('fields.blocksDisable')}
                                     title={block.disabled === true ? t('fields.blocksEnable') : t('fields.blocksDisable')}
@@ -182,7 +182,7 @@ function SortableBlock({
                                 </button>
                                 <button
                                     type="button"
-                                    className="am-blocks__btn am-blocks__btn--icon"
+                                    className="am-blocks-btn am-blocks-btn-icon"
                                     onClick={() => onDuplicate(block._id)}
                                     aria-label={t('fields.blocksDuplicate')}
                                     title={t('fields.blocksDuplicate')}
@@ -191,7 +191,7 @@ function SortableBlock({
                                 </button>
                                 <button
                                     type="button"
-                                    className="am-blocks__btn am-blocks__btn--icon am-blocks__btn--remove"
+                                    className="am-blocks-btn am-blocks-btn-icon am-blocks-btn-remove"
                                     onClick={() => onRemove(block._id)}
                                     aria-label={t('fields.blocksRemove')}
                                     title={t('fields.blocksRemove')}
@@ -201,7 +201,7 @@ function SortableBlock({
                             </>
                         )}
                         <Collapsible.Trigger
-                            className="am-blocks__btn am-blocks__btn--icon"
+                            className="am-blocks-btn am-blocks-btn-icon"
                             aria-label={open ? t('fields.blocksCollapse') : t('fields.blocksExpand')}
                         >
                             {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -210,8 +210,8 @@ function SortableBlock({
                 </div>
 
                 {block.disabled !== true && (
-                    <Collapsible.Panel className="am-blocks__block-panel">
-                        <div className="am-blocks__block-content">
+                    <Collapsible.Panel className="am-blocks-block-panel">
+                        <div className="am-blocks-block-content">
                             {(blockDef?.fields ?? []).map((subField: FieldDefinition) => (
                                 <FieldInput
                                     key={subField.name}
@@ -268,15 +268,15 @@ export function BlocksField({ name, value, field, onChange, disabled }: BaseFiel
     return (
         <div className="am-blocks">
             {blocks.length === 0 && (
-                <div className="am-blocks__empty">
-                    <p className="am-blocks__empty-text">{t('fields.blocksEmpty')}</p>
+                <div className="am-blocks-empty">
+                    <p className="am-blocks-empty-text">{t('fields.blocksEmpty')}</p>
                 </div>
             )}
 
             {blocks.length > 0 && (
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                     <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-                        <div className="am-blocks__list">
+                        <div className="am-blocks-list">
                             {blocks.map((block, index) => (
                                 <SortableBlock
                                     key={block._id}
@@ -297,11 +297,11 @@ export function BlocksField({ name, value, field, onChange, disabled }: BaseFiel
             )}
 
             {!disabled && (
-                <div className="am-blocks__footer">
-                    <div className="am-blocks__picker-anchor" ref={pickerAnchorRef}>
+                <div className="am-blocks-footer">
+                    <div className="am-blocks-picker-anchor" ref={pickerAnchorRef}>
                         <button
                             type="button"
-                            className="am-blocks__btn am-blocks__btn--add"
+                            className="am-blocks-btn am-blocks-btn-add"
                             onClick={() => setPickerOpen((o) => !o)}
                             aria-expanded={pickerOpen}
                             aria-haspopup="menu"

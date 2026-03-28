@@ -47,19 +47,19 @@ function StatCard({
 }): React.ReactElement {
     const { data, isLoading } = useQuery({
         queryKey: ['collection-count', collectionKey],
-        queryFn: () => Astromech.entries.paginate(1, 1, { type: collectionKey }),
+        queryFn: () => Astromech.entries.query({ type: collectionKey, limit: 1 }),
     });
 
-    const total = data?.pagination.total ?? 0;
+    const total = data?.pagination?.total ?? 0;
 
     return (
         <Panel>
             <div className="am-stat-card">
-                <span className="am-stat-card__label">{label}</span>
+                <span className="am-stat-card-label">{label}</span>
                 {isLoading ? (
                     <Skeleton style={{ width: '3rem', height: '2rem' }} />
                 ) : (
-                    <span className="am-stat-card__value">{total}</span>
+                    <span className="am-stat-card-value">{total}</span>
                 )}
             </div>
         </Panel>
@@ -86,9 +86,10 @@ function useRecentEntries(): RecentActivityResult {
         queryFn: async () => {
             const results = await Promise.all(
                 collectionKeys.map(async (key) => {
-                    const result = await Astromech.entries.paginate(5, 1, {
+                    const result = await Astromech.entries.query({
                         type: key,
-                        sort: { field: 'updatedAt', direction: 'desc' },
+                        limit: 5,
+                        sort: { updatedAt: 'desc' },
                     });
                     const collectionLabel = adminConfig.entries[key]?.plural ?? key;
                     return result.data.map(
@@ -141,7 +142,7 @@ function DashboardPage(): React.ReactElement {
                                     key={key}
                                     to="/entries/$type"
                                     params={{ type: key }}
-                                    className="am-link--inherit"
+                                    className="am-link-inherit"
                                 >
                                     <StatCard collectionKey={key} label={col.plural} />
                                 </Link>
@@ -166,9 +167,9 @@ function DashboardPage(): React.ReactElement {
                                 {recentEntries.map((entry) => (
                                     <li
                                         key={`${entry.collectionKey}-${entry.id}`}
-                                        className="am-activity-list__item"
+                                        className="am-activity-list-item"
                                     >
-                                        <div className="am-activity-list__body">
+                                        <div className="am-activity-list-body">
                                             <Link
                                                 to="/entries/$type/$id"
                                                 params={{
@@ -179,7 +180,7 @@ function DashboardPage(): React.ReactElement {
                                             >
                                                 {entry.title}
                                             </Link>
-                                            <div className="am-activity-list__meta">
+                                            <div className="am-activity-list-meta">
                                                 {entry.collectionLabel} ·{' '}
                                                 {t('dashboard.updated', {
                                                     date: formatDate(entry.updatedAt),

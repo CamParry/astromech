@@ -8,11 +8,11 @@ export function Page({ children }: ChildrenProps): React.ReactElement {
 }
 
 export function PageHeader({ children }: ChildrenProps): React.ReactElement {
-    return <div className="am-page__header">{children}</div>;
+    return <div className="am-page-header">{children}</div>;
 }
 
 export function PageTitle({ children }: ChildrenProps): React.ReactElement {
-    return <h1 className="am-page__title">{children}</h1>;
+    return <h1 className="am-page-title">{children}</h1>;
 }
 
 export function SectionTitle({ children }: ChildrenProps): React.ReactElement {
@@ -24,19 +24,19 @@ export function FormLayout({ children }: ChildrenProps): React.ReactElement {
 }
 
 export function FormLayoutActions({ children }: ChildrenProps): React.ReactElement {
-    return <div className="am-form-layout__actions">{children}</div>;
+    return <div className="am-form-layout-actions">{children}</div>;
 }
 
 export function FormLayoutContent({ children }: ChildrenProps): React.ReactElement {
-    return <div className="am-form-layout__content">{children}</div>;
+    return <div className="am-form-layout-content">{children}</div>;
 }
 
 export function FormLayoutMain({ children }: ChildrenProps): React.ReactElement {
-    return <div className="am-form-layout__main">{children}</div>;
+    return <div className="am-form-layout-main">{children}</div>;
 }
 
 export function FormLayoutSidebar({ children }: ChildrenProps): React.ReactElement {
-    return <div className="am-form-layout__sidebar">{children}</div>;
+    return <div className="am-form-layout-sidebar">{children}</div>;
 }
 
 export function ButtonGroup({ children }: ChildrenProps): React.ReactElement {

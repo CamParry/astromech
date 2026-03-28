@@ -20,6 +20,7 @@ import { can } from '@/core/permissions.js';
 import { getDb } from '@/db/registry.js';
 import { usersTable } from '@/db/schema.js';
 import { createUserSchema, updateUserSchema } from '@/schemas/users.js';
+import type { UserQueryParams } from '@/types/index.js';
 
 type Env = { Variables: AuthVariables };
 
@@ -29,13 +30,24 @@ const router = new OpenAPIHono<Env>();
 // GET /users
 // ============================================================================
 
+const SORTABLE_FIELDS = new Set(['name', 'email', 'createdAt', 'updatedAt', 'roleSlug']);
+
 router.get('/', async (c) => {
     const role = c.var.role;
     if (!can(role, 'users:read')) return forbidden(c);
 
     try {
-        const users = await Astromech.users.all();
-        return c.json({ data: users });
+        const q = c.req.query();
+        const params: UserQueryParams = {};
+        if (q['search']) params.search = q['search'];
+        if (q['page']) params.page = Number(q['page']);
+        if (q['limit'] === 'all') params.limit = 'all';
+        else if (q['limit']) params.limit = Number(q['limit']);
+        if (q['sort'] && SORTABLE_FIELDS.has(q['sort']!)) {
+            const dir = q['dir'] === 'asc' ? 'asc' : 'desc';
+            params.sort = { [q['sort']!]: dir };
+        }
+        return c.json(await Astromech.users.query(params));
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
     }

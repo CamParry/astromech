@@ -30,19 +30,19 @@ export function MultiselectField({ name, value, field, required, onChange }: Bas
 			required={!!required}
 		>
 			<div className="am-combobox">
-				<Combobox.Chips className="am-combobox__chips" ref={containerRef}>
+				<Combobox.Chips className="am-combobox-chips" ref={containerRef}>
 					<Combobox.Value>
 						{(val: SelectOption[]) => (
 							<React.Fragment>
 								{val.map((v) => (
 									<Combobox.Chip
 										key={v.value}
-										className="am-combobox__chip"
+										className="am-combobox-chip"
 										aria-label={v.label}
 									>
 										{v.label}
 										<Combobox.ChipRemove
-											className="am-combobox__chip-remove"
+											className="am-combobox-chip-remove"
 											aria-label="Remove"
 										>
 											<XIcon size={16} />
@@ -52,7 +52,7 @@ export function MultiselectField({ name, value, field, required, onChange }: Bas
 								<Combobox.Input
 									id={id}
 									placeholder={val.length > 0 ? '' : 'Select...'}
-									className="am-combobox__input"
+									className="am-combobox-input"
 								/>
 							</React.Fragment>
 						)}
@@ -61,23 +61,23 @@ export function MultiselectField({ name, value, field, required, onChange }: Bas
 			</div>
 			<Combobox.Portal>
 				<Combobox.Positioner
-					className="am-combobox__positioner"
+					className="am-combobox-positioner"
 					sideOffset={4}
 					anchor={containerRef}
 				>
-					<Combobox.Popup className="am-combobox__popup">
-						<Combobox.Empty className="am-combobox__empty">No results.</Combobox.Empty>
+					<Combobox.Popup className="am-combobox-popup">
+						<Combobox.Empty className="am-combobox-empty">No results.</Combobox.Empty>
 						<Combobox.List>
 							{(option: SelectOption) => (
 								<Combobox.Item
 									key={option.value}
-									className="am-combobox__item"
+									className="am-combobox-item"
 									value={option}
 								>
-									<Combobox.ItemIndicator className="am-combobox__item-indicator">
-										<CheckIcon className="am-combobox__item-indicator-icon" />
+									<Combobox.ItemIndicator className="am-combobox-item-indicator">
+										<CheckIcon className="am-combobox-item-indicator-icon" />
 									</Combobox.ItemIndicator>
-									<div className="am-combobox__item-text">{option.label}</div>
+									<div className="am-combobox-item-text">{option.label}</div>
 								</Combobox.Item>
 							)}
 						</Combobox.List>

@@ -39,19 +39,19 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }): Re
             {children}
             <AlertDialog.Root open={state !== null} onOpenChange={(open) => { if (!open) handleCancel(); }}>
                 <AlertDialog.Portal>
-                    <AlertDialog.Backdrop className="am-modal__backdrop" />
-                    <AlertDialog.Popup className="am-modal__panel am-modal__panel--sm">
-                        <div className="am-modal__header">
-                            <AlertDialog.Title className="am-modal__title">
+                    <AlertDialog.Backdrop className="am-modal-backdrop" />
+                    <AlertDialog.Popup className="am-modal-panel am-modal-panel-sm">
+                        <div className="am-modal-header">
+                            <AlertDialog.Title className="am-modal-title">
                                 {state?.title ?? ''}
                             </AlertDialog.Title>
                         </div>
                         {state?.description !== undefined && (
-                            <div className="am-modal__body">
+                            <div className="am-modal-body">
                                 <AlertDialog.Description>{state.description}</AlertDialog.Description>
                             </div>
                         )}
-                        <div className="am-modal__footer">
+                        <div className="am-modal-footer">
                             <AlertDialog.Close
                                 render={
                                     <Button variant="secondary" onClick={handleCancel}>

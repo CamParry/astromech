@@ -80,7 +80,7 @@ function renderFieldValue(value: unknown): React.ReactElement {
     }
     if (typeof value === 'object') {
         return (
-            <pre className="am-versions__diff-pre">{JSON.stringify(value, null, 2)}</pre>
+            <pre className="am-versions-diff-pre">{JSON.stringify(value, null, 2)}</pre>
         );
     }
     if (Array.isArray(value)) {
@@ -108,21 +108,21 @@ function VersionItem({
         <button
             type="button"
             className={[
-                'am-versions__item',
-                isSelected ? 'am-versions__item--selected' : '',
+                'am-versions-item',
+                isSelected ? 'am-versions-item-selected' : '',
             ]
                 .filter(Boolean)
                 .join(' ')}
             onClick={onClick}
         >
-            <div className="am-versions__item-header">
-                <span className="am-versions__item-number">#{version.versionNumber}</span>
+            <div className="am-versions-item-header">
+                <span className="am-versions-item-number">#{version.versionNumber}</span>
             </div>
-            <div className="am-versions__item-date">
+            <div className="am-versions-item-date">
                 {formatVersionDate(version.createdAt)}
             </div>
             {version.createdBy != null && (
-                <div className="am-versions__item-author">{version.createdBy}</div>
+                <div className="am-versions-item-author">{version.createdBy}</div>
             )}
         </button>
     );
@@ -145,13 +145,13 @@ function DiffView({
     const diff = computeDiff(previous, selected);
 
     return (
-        <div className="am-versions__diff">
-            <div className="am-versions__diff-toolbar">
+        <div className="am-versions-diff">
+            <div className="am-versions-diff-toolbar">
                 <div>
-                    <span className="am-versions__diff-title">
+                    <span className="am-versions-diff-title">
                         {t('versions.version', { number: selected.versionNumber })}
                     </span>
-                    <span className="am-versions__diff-subtitle">
+                    <span className="am-versions-diff-subtitle">
                         {formatVersionDate(selected.createdAt)}
                         {selected.createdBy != null && ` · ${selected.createdBy}`}
                     </span>
@@ -173,25 +173,25 @@ function DiffView({
                         : t('versions.noChanges')}
                 </p>
             ) : (
-                <div className="am-versions__diff-fields">
+                <div className="am-versions-diff-fields">
                     {diff.map((entry) => (
-                        <div key={entry.field} className="am-versions__diff-field">
-                            <div className="am-versions__diff-field-name">
+                        <div key={entry.field} className="am-versions-diff-field">
+                            <div className="am-versions-diff-field-name">
                                 {entry.field}
                             </div>
-                            <div className="am-versions__diff-columns">
+                            <div className="am-versions-diff-columns">
                                 {previous != null && (
                                     <>
-                                        <div className="am-versions__diff-old">
+                                        <div className="am-versions-diff-old">
                                             {renderFieldValue(entry.oldValue)}
                                         </div>
                                         <ArrowRight
                                             size={14}
-                                            className="am-versions__diff-arrow"
+                                            className="am-versions-diff-arrow"
                                         />
                                     </>
                                 )}
-                                <div className="am-versions__diff-new">
+                                <div className="am-versions-diff-new">
                                     {renderFieldValue(entry.newValue)}
                                 </div>
                             </div>
@@ -281,9 +281,9 @@ function EntryVersionsPage(): React.ReactElement {
             <PageContent>
                 <div className="am-versions">
                     {/* Sidebar */}
-                    <div className="am-versions__sidebar">
-                        <div className="am-versions__sidebar-header">
-                            <h2 className="am-versions__sidebar-title">
+                    <div className="am-versions-sidebar">
+                        <div className="am-versions-sidebar-header">
+                            <h2 className="am-versions-sidebar-title">
                                 {t('versions.pageTitle')}
                             </h2>
                             <Link
@@ -307,7 +307,7 @@ function EntryVersionsPage(): React.ReactElement {
                                 {t('versions.noVersions')}
                             </p>
                         ) : (
-                            <div className="am-versions__list">
+                            <div className="am-versions-list">
                                 {versions.map((version) => (
                                     <VersionItem
                                         key={version.id}
@@ -321,7 +321,7 @@ function EntryVersionsPage(): React.ReactElement {
                     </div>
 
                     {/* Main diff area */}
-                    <div className="am-versions__main">
+                    <div className="am-versions-main">
                         {selectedVersion == null ? (
                             <Panel>
                                 <p className="am-text-muted">

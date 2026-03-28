@@ -9,16 +9,16 @@ import { useTranslation } from 'react-i18next';
 import { Astromech } from '@/sdk/fetch/index.js';
 import { queryKeys } from './use-query-keys.js';
 import { useToast } from '../components/ui/index.js';
-import type { Media } from '@/types/index.js';
+import type { Media, MediaQueryParams } from '@/types/index.js';
 
 // ============================================================================
 // Query hooks
 // ============================================================================
 
-export function useMediaList(params: Record<string, unknown>) {
+export function useMediaQuery(params?: MediaQueryParams) {
     return useQuery({
-        queryKey: queryKeys.media.list(params),
-        queryFn: () => Astromech.media.list(params),
+        queryKey: queryKeys.media.list(params as Record<string, unknown>),
+        queryFn: () => Astromech.media.query(params),
     });
 }
 

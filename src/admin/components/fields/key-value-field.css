@@ -4,24 +4,24 @@
     gap: 0.75rem;
 }
 
-.am-kv-field__rows {
+.am-kv-field-rows {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
 }
 
-.am-kv-field__row {
+.am-kv-field-row {
     display: flex;
     gap: 0.5rem;
     align-items: center;
 }
 
-.am-kv-field__input {
+.am-kv-field-input {
     flex: 1;
     min-width: 0;
 }
 
-.am-kv-field__remove {
+.am-kv-field-remove {
     all: unset;
     display: flex;
     align-items: center;
@@ -36,6 +36,6 @@
     box-sizing: border-box;
 }
 
-.am-kv-field__remove:hover {
+.am-kv-field-remove:hover {
     background-color: var(--am-color-danger-50);
 }

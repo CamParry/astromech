@@ -155,7 +155,7 @@ function UserEditPage(): React.ReactElement {
                                 {(field) => (
                                     <div className="am-field">
                                         <label
-                                            className="am-field__label"
+                                            className="am-field-label"
                                             htmlFor="user-name"
                                         >
                                             {t('users.nameField')}
@@ -171,7 +171,7 @@ function UserEditPage(): React.ReactElement {
                                             required
                                         />
                                         {field.state.meta.errors.length > 0 && (
-                                            <p className="am-field__error">
+                                            <p className="am-field-error">
                                                 {field.state.meta.errors[0]}
                                             </p>
                                         )}
@@ -180,7 +180,7 @@ function UserEditPage(): React.ReactElement {
                             </form.Field>
 
                             <div className="am-field">
-                                <label className="am-field__label" htmlFor="user-email">
+                                <label className="am-field-label" htmlFor="user-email">
                                     {t('users.emailField')}
                                 </label>
                                 <Input
@@ -198,7 +198,7 @@ function UserEditPage(): React.ReactElement {
                                     {(field) => (
                                         <div className="am-field">
                                             <label
-                                                className="am-field__label"
+                                                className="am-field-label"
                                                 htmlFor="user-role"
                                             >
                                                 {t('users.roleField')}
@@ -289,18 +289,18 @@ function UserEditPage(): React.ReactElement {
 
                             <dl className="am-meta">
                                 <div>
-                                    <dt className="am-meta__label">
+                                    <dt className="am-meta-label">
                                         {t('users.joinedLabel')}
                                     </dt>
-                                    <dd className="am-meta__value">
+                                    <dd className="am-meta-value">
                                         {formatDate(user?.createdAt)}
                                     </dd>
                                 </div>
                                 <div>
-                                    <dt className="am-meta__label">
+                                    <dt className="am-meta-label">
                                         {t('users.lastUpdatedLabel')}
                                     </dt>
-                                    <dd className="am-meta__value">
+                                    <dd className="am-meta-value">
                                         {formatDate(user?.updatedAt)}
                                     </dd>
                                 </div>

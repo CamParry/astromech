@@ -4,10 +4,9 @@
  * Full CRUD operations for collection entries.
  *
  * Routes:
- *   GET    /entries/:type                   → all() or paginate()
+ *   GET    /entries/:type                   → query() with URL params
  *   POST   /entries/:type                   → create()
- *   POST   /entries/:type/query             → where()
- *   GET    /entries/:type/trashed           → trashed()
+ *   POST   /entries/:type/query             → query() with body
  *   DELETE /entries/:type/trash             → emptyTrash()
  *   GET    /entries/:id                     → get()
  *   PUT    /entries/:id                     → update()
@@ -27,7 +26,7 @@ import {
 } from '@/api/middleware/errors.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
 import { can } from '@/core/permissions.js';
-import type { JsonObject, Permission, QueryOptions, SortOption } from '@/types/index.js';
+import type { EntryQueryParams, JsonObject, Permission, SortOption } from '@/types/index.js';
 import {
     createEntrySchema,
     updateEntrySchema,
@@ -43,24 +42,56 @@ const router = new OpenAPIHono<Env>();
 // Helpers
 // ============================================================================
 
-function parseQueryOptions(query: Record<string, string>): QueryOptions {
-    const options: QueryOptions = {};
+const SORTABLE_FIELDS = new Set(['title', 'status', 'createdAt', 'updatedAt', 'publishedAt', 'slug']);
+
+function validateSort(sort: unknown): SortOption | SortOption[] | undefined {
+    if (!sort) return undefined;
+    const validate = (s: unknown): SortOption | null => {
+        if (typeof s !== 'object' || s === null || Array.isArray(s)) return null;
+        const result: SortOption = {};
+        for (const [key, val] of Object.entries(s as Record<string, unknown>)) {
+            if (!SORTABLE_FIELDS.has(key)) continue;
+            if (val !== 'asc' && val !== 'desc') continue;
+            result[key] = val;
+        }
+        return Object.keys(result).length > 0 ? result : null;
+    };
+    if (Array.isArray(sort)) {
+        const results = sort.map(validate).filter(Boolean) as SortOption[];
+        return results.length > 0 ? results : undefined;
+    }
+    return validate(sort) ?? undefined;
+}
+
+function parseQueryParams(query: Record<string, string>): Omit<EntryQueryParams, 'type'> {
+    const params: Omit<EntryQueryParams, 'type'> = {};
 
     const populate = query['populate'];
-    if (populate) options.populate = populate.split(',').filter(Boolean);
+    if (populate) params.populate = populate.split(',').filter(Boolean);
 
     const locale = query['locale'];
-    if (locale) options.locale = locale;
+    if (locale) params.locale = locale;
 
-    if (query['withTrashed'] === 'true') options.withTrashed = true;
+    if (query['trashed'] === 'true') params.trashed = true;
+
+    if (query['search']) params.search = query['search'];
+
+    const page = query['page'];
+    if (page) params.page = Number(page);
+
+    const limit = query['limit'];
+    if (limit === 'all') params.limit = 'all';
+    else if (limit) params.limit = Number(limit);
 
     const sortField = query['sort'];
     if (sortField) {
         const dir = query['dir'] === 'asc' ? 'asc' : 'desc';
-        options.sort = { field: sortField, direction: dir } as SortOption;
+        if (SORTABLE_FIELDS.has(sortField)) {
+            params.sort = { [sortField]: dir };
+        }
     }
 
-    return options;
+    return params;
 }
 
 function requireEntryType(type: string) {
@@ -78,15 +109,14 @@ const listEntriesRoute = createRoute({
     request: {
         params: z.object({ type: z.string().openapi({ example: 'post' }) }),
         query: z.object({
-            page: z.string().optional().openapi({ example: '1' }),
-            perPage: z.string().optional().openapi({ example: '20' }),
-            status: z.string().optional().openapi({ example: 'published' }),
+            page: z.string().optional(),
+            limit: z.string().optional(),
             search: z.string().optional(),
+            trashed: z.string().optional(),
             locale: z.string().optional().openapi({ example: 'en' }),
             populate: z.string().optional(),
             sort: z.string().optional(),
             dir: z.enum(['asc', 'desc']).optional(),
-            withTrashed: z.string().optional(),
         }),
     },
     responses: {
@@ -95,53 +125,14 @@ const listEntriesRoute = createRoute({
 });
 
 router.openapi(listEntriesRoute, async (c) => {
-    console.log('test');
-
     const { type } = c.req.param();
     const role = c.var.role;
     if (!can(role, `entry:read:${type}` as Permission)) return forbidden(c);
-
-    console.log('test1');
-    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-    console.log('test2');
-
-    try {
-        const query = c.req.query();
-        const page = query['page'];
-        const perPage = query['perPage'];
-        const options = { ...parseQueryOptions(query), type };
-        console.log({ options });
-
-        if (page && perPage) {
-            const result = await Astromech.entries.paginate(
-                Number(perPage),
-                Number(page),
-                options
-            );
-            console.log(result);
-            return c.json(result);
-        }
-
-        return c.json(await Astromech.entries.all(options));
-    } catch (err) {
-        return internalError(c, err instanceof Error ? err.message : undefined);
-    }
-});
-
-// ============================================================================
-// GET /entries/:type/trashed
-// ============================================================================
-
-router.get('/:type/trashed', async (c) => {
-    const { type } = c.req.param();
-    const role = c.var.role;
-    if (!can(role, `entry:read:${type}` as Permission)) return forbidden(c);
-
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const options = { ...parseQueryOptions(c.req.query()), type };
-        return c.json(await Astromech.entries.trashed(options));
+        const params = { ...parseQueryParams(c.req.query()), type };
+        return c.json(await Astromech.entries.query(params));
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
     }
@@ -178,7 +169,7 @@ router.openapi(getEntryRoute, async (c) => {
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const options = { ...parseQueryOptions(c.req.query()), type };
+        const options = { ...parseQueryParams(c.req.query()), type };
         const entry = await Astromech.entries.get(id, options);
         if (!entry) return notFound(c, `Entry '${id}' not found`);
         return c.json({ data: entry });
@@ -248,14 +239,14 @@ router.post('/:type/query', async (c) => {
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const body = await c.req.json<{
-            filters?: Record<string, unknown>;
-            options?: QueryOptions;
-        }>();
-
-        return c.json(
-            await Astromech.entries.where(body.filters ?? {}, { ...body.options, type })
-        );
+        const body = await c.req.json<Omit<EntryQueryParams, 'type'>>();
+        const validatedSort = validateSort(body.sort);
+        const params: EntryQueryParams = {
+            ...body,
+            type,
+            ...(validatedSort !== undefined ? { sort: validatedSort } : {}),
+        };
+        return c.json(await Astromech.entries.query(params));
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
     }

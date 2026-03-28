@@ -4,6 +4,7 @@
  */
 
 import type { AstromechConfig, PluginTargets } from '@/types/index.js';
+import { registerEmailOverride } from '@/email/email-overrides.js';
 
 /**
  * Resolve plugin targets to an array of collection names
@@ -85,6 +86,19 @@ export function mergePluginEntries(config: AstromechConfig): void {
 	for (const plugin of config.plugins ?? []) {
 		if (plugin.entries) {
 			Object.assign(config.entries, plugin.entries);
+		}
+	}
+}
+
+/**
+ * Register plugin email template overrides
+ *
+ * @param config - Astromech configuration
+ */
+export function collectEmailOverrides(config: AstromechConfig): void {
+	for (const plugin of config.plugins ?? []) {
+		for (const override of plugin.emails ?? []) {
+			registerEmailOverride(override);
 		}
 	}
 }

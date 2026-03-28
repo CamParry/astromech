@@ -37,9 +37,9 @@ import type {
     EntryStatus,
     EntryVersion,
     EntriesApi,
-    EntriesQueryOptions,
+    EntryQueryParams,
+    QueryResult,
     JsonObject,
-    PaginationResult,
     SortOption,
     TranslationInfo,
     User,
@@ -139,17 +139,17 @@ const SORTABLE_FIELDS: Record<string, DrizzleColumn> = {
  * Build Drizzle ORDER BY clauses from a sort option
  */
 function buildOrderBy(sort?: SortOption | SortOption[]) {
-    if (!sort) {
-        return [desc(entriesTable.createdAt)];
-    }
+    if (!sort) return [desc(entriesTable.createdAt)];
 
     const sorts = Array.isArray(sort) ? sort : [sort];
-    const clauses = sorts
-        .filter((s) => s.field in SORTABLE_FIELDS)
-        .map((s) => {
-            const column = SORTABLE_FIELDS[s.field]!;
-            return s.direction === 'asc' ? asc(column) : desc(column);
-        });
+    const clauses = sorts.flatMap((s) =>
+        Object.entries(s)
+            .filter(([field]) => field in SORTABLE_FIELDS)
+            .map(([field, dir]) => {
+                const column = SORTABLE_FIELDS[field]!;
+                return dir === 'asc' ? asc(column) : desc(column);
+            })
+    );
 
     return clauses.length > 0 ? clauses : [desc(entriesTable.createdAt)];
 }
@@ -316,67 +316,52 @@ function buildIncomingRelations(
 // ============================================================================
 
 export const entries: EntriesApi = {
-    async all(options?: EntriesQueryOptions): Promise<Entry[]> {
-        const type = options?.type;
-        const filterConditions = options?.filters
-            ? buildFilterConditions(options.filters)
+    async query(params?: EntryQueryParams): Promise<QueryResult<Entry>> {
+        const type = params?.type;
+        const trashed = params?.trashed ?? false;
+        const limit = params?.limit;
+        const page = params?.page ?? 1;
+
+        const filterConditions = params?.where
+            ? buildFilterConditions(params.where)
             : [];
-        const localeCondition = type
-            ? buildLocaleCondition(type, options?.locale)
+        const localeCondition = type ? buildLocaleCondition(type, params?.locale) : null;
+        const searchCondition = params?.search
+            ? like(entriesTable.title, `%${params.search}%`)
             : null;
+
         const conditions = [
             ...(type ? [eq(entriesTable.type, type)] : []),
-            ...(options?.withTrashed ? [] : [isNull(entriesTable.deletedAt)]),
+            trashed ? isNotNull(entriesTable.deletedAt) : isNull(entriesTable.deletedAt),
             ...(localeCondition ? [localeCondition] : []),
-            ...filterConditions,
-        ];
-
-        const orderClauses = buildOrderBy(options?.sort);
-
-        const rows = await getDb()
-            .select()
-            .from(entriesTable)
-            .where(and(...conditions))
-            .orderBy(...orderClauses);
-
-        const entriesArray = rows as Entry[];
-
-        if (type && options?.populate && options.populate.length > 0) {
-            const entryTypeConfig = config.entries[type];
-            if (entryTypeConfig) {
-                return await populateEntries(
-                    getDb(),
-                    entriesArray,
-                    entryTypeConfig.fieldGroups,
-                    options.populate
-                );
-            }
-        }
-
-        return entriesArray;
-    },
-
-    async paginate(
-        perPage: number,
-        page: number,
-        options?: EntriesQueryOptions
-    ): Promise<PaginationResult<Entry>> {
-        const type = options?.type;
-        const filterConditions = options?.filters
-            ? buildFilterConditions(options.filters)
-            : [];
-        const localeCondition = type
-            ? buildLocaleCondition(type, options?.locale)
-            : null;
-        const conditions = [
-            ...(type ? [eq(entriesTable.type, type)] : []),
-            ...(options?.withTrashed ? [] : [isNull(entriesTable.deletedAt)]),
-            ...(localeCondition ? [localeCondition] : []),
+            ...(searchCondition ? [searchCondition] : []),
             ...filterConditions,
         ];
 
         const whereClause = and(...conditions);
-        const orderClauses = buildOrderBy(options?.sort);
+        const orderClauses = buildOrderBy(params?.sort);
+
+        if (limit === 'all') {
+            const rows = await getDb()
+                .select()
+                .from(entriesTable)
+                .where(whereClause)
+                .orderBy(...orderClauses);
+
+            let data = rows as Entry[];
+
+            if (type && params?.populate && params.populate.length > 0) {
+                const entryTypeConfig = config.entries[type];
+                if (entryTypeConfig) {
+                    data = await populateEntries(getDb(), data, entryTypeConfig.fieldGroups, params.populate);
+                }
+            }
+
+            return { data, pagination: null };
+        }
+
+        const perPage = typeof limit === 'number' ? limit : 20;
+        const offset = (page - 1) * perPage;
 
         const [countResult] = await getDb()
             .select({ count: count() })
@@ -384,8 +369,7 @@ export const entries: EntriesApi = {
             .where(whereClause);
 
         const total = countResult?.count ?? 0;
-        const totalPages = Math.ceil(total / perPage);
-        const offset = (page - 1) * perPage;
+        const pages = Math.ceil(total / perPage);
 
         const rows = await getDb()
             .select()
@@ -397,30 +381,20 @@ export const entries: EntriesApi = {
 
         let data = rows as Entry[];
 
-        if (type && options?.populate && options.populate.length > 0) {
+        if (type && params?.populate && params.populate.length > 0) {
             const entryTypeConfig = config.entries[type];
             if (entryTypeConfig) {
-                data = await populateEntries(
-                    getDb(),
-                    data,
-                    entryTypeConfig.fieldGroups,
-                    options.populate
-                );
+                data = await populateEntries(getDb(), data, entryTypeConfig.fieldGroups, params.populate);
             }
         }
 
         return {
             data,
-            pagination: {
-                page,
-                perPage,
-                total,
-                totalPages,
-            },
+            pagination: { page, limit: perPage, total, pages },
         };
     },
 
-    async get(id: string, options?: EntriesQueryOptions): Promise<Entry | null> {
+    async get(id: string, options?: { populate?: string[]; locale?: string; type?: string }): Promise<Entry | null> {
         const type = options?.type;
         const conditions = [
             eq(entriesTable.id, id),
@@ -454,40 +428,6 @@ export const entries: EntriesApi = {
         }
 
         return result;
-    },
-
-    async where(filters: WhereFilters, options?: EntriesQueryOptions): Promise<Entry[]> {
-        const type = options?.type;
-        const filterConditions = buildFilterConditions(filters);
-        const orderClauses = buildOrderBy(options?.sort);
-
-        const conditions = [
-            ...(type ? [eq(entriesTable.type, type)] : []),
-            ...(options?.withTrashed ? [] : [isNull(entriesTable.deletedAt)]),
-            ...filterConditions,
-        ];
-
-        const rows = await getDb()
-            .select()
-            .from(entriesTable)
-            .where(and(...conditions))
-            .orderBy(...orderClauses);
-
-        let data = rows as Entry[];
-
-        if (type && options?.populate && options.populate.length > 0) {
-            const entryTypeConfig = config.entries[type];
-            if (entryTypeConfig) {
-                data = await populateEntries(
-                    getDb(),
-                    data,
-                    entryTypeConfig.fieldGroups,
-                    options.populate
-                );
-            }
-        }
-
-        return data;
     },
 
     async create(data: {
@@ -765,26 +705,6 @@ export const entries: EntriesApi = {
         }
 
         return created;
-    },
-
-    async trashed(options?: EntriesQueryOptions): Promise<Entry[]> {
-        const type = options?.type;
-        const conditions = [
-            ...(type ? [eq(entriesTable.type, type)] : []),
-            isNotNull(entriesTable.deletedAt),
-        ];
-
-        if (options?.locale) {
-            conditions.push(eq(entriesTable.locale, options.locale));
-        }
-
-        const rows = await getDb()
-            .select()
-            .from(entriesTable)
-            .where(and(...conditions))
-            .orderBy(desc(entriesTable.deletedAt));
-
-        return rows as Entry[];
     },
 
     async restore(id: string): Promise<Entry> {

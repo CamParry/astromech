@@ -22,7 +22,7 @@ import {
     PageTitle,
     PageContent,
 } from '@/admin/components/ui/index.js';
-import { usePermissions, useUsersList, useDeleteUser } from '@/admin/hooks/index.js';
+import { usePermissions, useUsersQuery, useDeleteUser } from '@/admin/hooks/index.js';
 import { formatDate } from '@/support/dates.js';
 
 // ============================================================================
@@ -41,7 +41,8 @@ function UsersIndexPage(): React.ReactElement {
         }
     }, []);
 
-    const { data: users, isLoading } = useUsersList();
+    const { data: usersResult, isLoading } = useUsersQuery();
+    const users = usersResult?.data;
     const deleteMutation = useDeleteUser();
 
     return (

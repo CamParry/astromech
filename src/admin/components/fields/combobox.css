@@ -5,7 +5,7 @@
     gap: 0.25rem;
 }
 
-.am-combobox__label {
+.am-combobox-label {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
@@ -15,7 +15,7 @@
     color: var(--am-color-text-default);
 }
 
-.am-combobox__chips {
+.am-combobox-chips {
     box-sizing: border-box;
     display: flex;
     flex-wrap: wrap;
@@ -34,7 +34,7 @@
     }
 }
 
-.am-combobox__chip {
+.am-combobox-chip {
     display: flex;
     align-items: center;
     background-color: var(--am-color-bg-subtle);
@@ -60,7 +60,7 @@
     }
 }
 
-.am-combobox__chip-button {
+.am-combobox-chip-button {
     display: flex;
     align-items: center;
     background: none;
@@ -73,7 +73,7 @@
     outline: 0;
 }
 
-.am-combobox__chip-remove {
+.am-combobox-chip-remove {
     border: none;
     background: none;
     display: flex;
@@ -91,7 +91,7 @@
     }
 }
 
-.am-combobox__input {
+.am-combobox-input {
     flex: 1;
     box-sizing: border-box;
     padding-left: 0.5rem;
@@ -110,7 +110,7 @@
     }
 }
 
-.am-combobox__trigger {
+.am-combobox-trigger {
     box-sizing: border-box;
     position: absolute;
     right: 0.75rem;
@@ -135,17 +135,17 @@
     }
 }
 
-.am-combobox__trigger-icon {
+.am-combobox-trigger-icon {
     width: 1rem;
     height: 1rem;
 }
 
-.am-combobox__positioner {
+.am-combobox-positioner {
     outline: 0;
     z-index: 50;
 }
 
-.am-combobox__popup {
+.am-combobox-popup {
     box-sizing: border-box;
     border-radius: 0.5rem;
     padding-block: 0.5rem;
@@ -181,7 +181,7 @@
     }
 }
 
-.am-combobox__item {
+.am-combobox-item {
     box-sizing: border-box;
     outline: 0;
     cursor: default;
@@ -223,26 +223,26 @@
     }
 }
 
-.am-combobox__item-text {
+.am-combobox-item-text {
     grid-column-start: 2;
 }
 
-.am-combobox__item-indicator {
+.am-combobox-item-indicator {
     grid-column-start: 1;
 }
 
-.am-combobox__item-indicator-icon {
+.am-combobox-item-indicator-icon {
     display: block;
     width: 1rem;
     height: 1rem;
 }
 
-.am-combobox__item-name {
+.am-combobox-item-name {
     font-weight: 500;
     color: inherit;
 }
 
-.am-combobox__empty:not(:empty) {
+.am-combobox-empty:not(:empty) {
     box-sizing: border-box;
     font-size: 0.925rem;
     line-height: 1rem;

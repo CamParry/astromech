@@ -44,30 +44,30 @@ export function Select({
             required={required}
             name={name}
         >
-            <BaseSelect.Trigger id={id} className={['am-select__trigger', className].filter(Boolean).join(' ')} style={style}>
-                {triggerPrefix && <span className="am-select__trigger-prefix">{triggerPrefix}</span>}
+            <BaseSelect.Trigger id={id} className={['am-select-trigger', className].filter(Boolean).join(' ')} style={style}>
+                {triggerPrefix && <span className="am-select-trigger-prefix">{triggerPrefix}</span>}
                 <BaseSelect.Value className="am-visually-hidden" placeholder={placeholder} />
-                <span className="am-select__label" aria-hidden>
-                    {currentLabel ?? <span className="am-select__placeholder-text">{placeholder}</span>}
+                <span className="am-select-label" aria-hidden>
+                    {currentLabel ?? <span className="am-select-placeholder-text">{placeholder}</span>}
                 </span>
-                <BaseSelect.Icon className="am-select__icon">
+                <BaseSelect.Icon className="am-select-icon">
                     <ChevronDown size={12} />
                 </BaseSelect.Icon>
             </BaseSelect.Trigger>
             <BaseSelect.Portal>
-                <BaseSelect.Positioner className="am-select__positioner" sideOffset={4} alignItemWithTrigger={false} align="start">
-                    <BaseSelect.Popup className="am-select__popup">
+                <BaseSelect.Positioner className="am-select-positioner" sideOffset={4} alignItemWithTrigger={false} align="start">
+                    <BaseSelect.Popup className="am-select-popup">
                         <BaseSelect.List>
                             {options.map((opt) => (
                                 <BaseSelect.Item
                                     key={opt.value}
                                     value={opt.value}
-                                    className="am-select__item"
+                                    className="am-select-item"
                                 >
-                                    <BaseSelect.ItemIndicator className="am-select__item-indicator">
+                                    <BaseSelect.ItemIndicator className="am-select-item-indicator">
                                         <Check size={10} />
                                     </BaseSelect.ItemIndicator>
-                                    <BaseSelect.ItemText className="am-select__item-text">
+                                    <BaseSelect.ItemText className="am-select-item-text">
                                         {opt.label}
                                     </BaseSelect.ItemText>
                                 </BaseSelect.Item>

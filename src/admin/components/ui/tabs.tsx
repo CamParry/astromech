@@ -17,19 +17,19 @@ export function Tabs({ tabs, value, onChange, children }: TabsProps): React.Reac
             value={value}
             onValueChange={onChange}
         >
-            <BaseTabs.List className="am-tabs__list">
+            <BaseTabs.List className="am-tabs-list">
                 {tabs.map((tab) => (
                     <BaseTabs.Tab
                         key={tab.value}
                         value={tab.value}
-                        className={['am-tabs__tab', value === tab.value ? 'am-tabs__tab--active' : ''].filter(Boolean).join(' ')}
+                        className={['am-tabs-tab', value === tab.value ? 'am-tabs-tab-active' : ''].filter(Boolean).join(' ')}
                     >
                         {tab.label}
                     </BaseTabs.Tab>
                 ))}
             </BaseTabs.List>
             {tabs.map((tab) => (
-                <BaseTabs.Panel key={tab.value} value={tab.value} className="am-tabs__panel">
+                <BaseTabs.Panel key={tab.value} value={tab.value} className="am-tabs-panel">
                     {value === tab.value ? children : null}
                 </BaseTabs.Panel>
             ))}

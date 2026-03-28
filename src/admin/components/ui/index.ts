@@ -36,7 +36,7 @@ export type { PanelProps } from './panel.js';
 
 export { Table } from './table.js';
 
-export { Toolbar, ToolbarLeft, ToolbarRight } from './toolbar.js';
+export { Toolbar, ToolbarStart, ToolbarEnd } from './toolbar.js';
 export { SearchInput } from './search-input.js';
 export { ContentGrid } from './content-grid.js';
 

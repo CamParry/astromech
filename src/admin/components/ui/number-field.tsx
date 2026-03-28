@@ -51,24 +51,24 @@ export function NumberField({
             className="am-field"
         >
             {label !== undefined && (
-                <label className="am-field__label" htmlFor={id}>
+                <label className="am-field-label" htmlFor={id}>
                     {label}
                 </label>
             )}
-            <BaseNumberField.Group className="am-number-field__group">
-                <BaseNumberField.Decrement className="am-number-field__btn am-number-field__btn--decrement">
+            <BaseNumberField.Group className="am-number-field-group">
+                <BaseNumberField.Decrement className="am-number-field-btn am-number-field-btn-decrement">
                     −
                 </BaseNumberField.Decrement>
                 <BaseNumberField.Input
-                    className={['am-input am-number-field__input', error ? 'am-input--error' : ''].filter(Boolean).join(' ')}
+                    className={['am-input am-number-field-input', error ? 'am-input-error' : ''].filter(Boolean).join(' ')}
                     placeholder={placeholder}
                 />
-                <BaseNumberField.Increment className="am-number-field__btn am-number-field__btn--increment">
+                <BaseNumberField.Increment className="am-number-field-btn am-number-field-btn-increment">
                     +
                 </BaseNumberField.Increment>
             </BaseNumberField.Group>
-            {error !== undefined && <p className="am-field__error">{error}</p>}
-            {hint !== undefined && error === undefined && <p className="am-field__hint">{hint}</p>}
+            {error !== undefined && <p className="am-field-error">{error}</p>}
+            {hint !== undefined && error === undefined && <p className="am-field-hint">{hint}</p>}
         </BaseNumberField.Root>
     );
 }

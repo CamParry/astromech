@@ -121,11 +121,11 @@
     --am-sidebar-width: 14rem;
     --am-sidebar-width-collapsed: (3.25rem + 1px);
     --am-topbar-height: 3.5rem;
-    --am-input-height: 2.25rem;
+    /* Control heights — keep these in sync */
     --am-button-height-sm: 2rem;
-    --am-toolbar-item-height: var(--am-button-height-md);
-    --am-button-height-md: 2.25rem;
+    --am-button-height: 2.25rem;
     --am-button-height-lg: 2.75rem;
+    --am-input-height: 2.25rem;
     --am-panel-padding: 1.5rem;
 
     /* Focus outline — applied globally via :focus-visible in base.css */

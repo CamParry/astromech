@@ -31,7 +31,7 @@ export function ToggleGroup<V extends string>({
                 <BaseToggle
                     key={item.value}
                     value={item.value}
-                    className="am-toggle-group__btn"
+                    className="am-toggle-group-btn"
                     aria-label={item.label}
                 >
                     {item.icon}

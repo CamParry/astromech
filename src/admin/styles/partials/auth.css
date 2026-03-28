@@ -11,7 +11,7 @@
     padding: calc(var(--am-space) * 6);
 }
 
-.am-auth__card {
+.am-auth-card {
     width: 100%;
     max-width: 24rem;
     background-color: var(--am-color-bg-base);
@@ -23,26 +23,26 @@
     gap: calc(var(--am-space) * 6);
 }
 
-.am-auth__brand {
+.am-auth-brand {
     display: flex;
     align-items: center;
     gap: calc(var(--am-space) * 2);
 }
 
-.am-auth__logo {
+.am-auth-logo {
     font-size: 1.125rem;
     font-weight: 700;
     color: var(--am-color-text-default);
     letter-spacing: -0.02em;
 }
 
-.am-auth__header {
+.am-auth-header {
     display: flex;
     flex-direction: column;
     gap: calc(var(--am-space) * 2);
 }
 
-.am-auth__title {
+.am-auth-title {
     margin: 0;
     font-size: 1.25rem;
     font-weight: 600;
@@ -50,53 +50,53 @@
     line-height: 1.3;
 }
 
-.am-auth__subtitle {
+.am-auth-subtitle {
     margin: 0;
     font-size: 0.875rem;
     color: var(--am-color-text-muted);
 }
 
-.am-auth__body {
+.am-auth-body {
     display: flex;
     flex-direction: column;
     gap: calc(var(--am-space) * 5);
 }
 
-.am-auth__body > form {
+.am-auth-body > form {
     display: flex;
     flex-direction: column;
     gap: calc(var(--am-space) * 5);
 }
 
-.am-auth__fields {
+.am-auth-fields {
     display: flex;
     flex-direction: column;
     gap: calc(var(--am-space) * 4);
 }
 
-.am-auth__actions {
+.am-auth-actions {
     display: flex;
     flex-direction: column;
     gap: calc(var(--am-space) * 3);
 }
 
-.am-auth__footer-link {
+.am-auth-footer-link {
     font-size: 0.875rem;
     color: var(--am-color-text-muted);
     text-align: center;
 }
 
-.am-auth__footer-link a {
+.am-auth-footer-link a {
     color: var(--am-color-primary);
     text-decoration: none;
     font-weight: 500;
 }
 
-.am-auth__footer-link a:hover {
+.am-auth-footer-link a:hover {
     text-decoration: underline;
 }
 
-.am-auth__error {
+.am-auth-error {
     font-size: 0.875rem;
     color: var(--am-color-danger);
     padding: calc(var(--am-space) * 3) calc(var(--am-space) * 4);
@@ -105,7 +105,7 @@
     border-radius: var(--am-radius-md);
 }
 
-.am-auth__message {
+.am-auth-message {
     font-size: 0.875rem;
     color: var(--am-color-text-default);
     line-height: 1.5;
@@ -117,7 +117,7 @@
         align-items: flex-start;
     }
 
-    .am-auth__card {
+    .am-auth-card {
         max-width: 100%;
         min-height: 100vh;
         border: none;

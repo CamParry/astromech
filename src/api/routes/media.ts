@@ -12,12 +12,12 @@
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { z } from '@hono/zod-openapi';
 import { Astromech } from '@/sdk/local/index.js';
 import { badRequest, forbidden, fromZodError, internalError, notFound } from '@/api/middleware/errors.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
 import { can } from '@/core/permissions.js';
 import { updateMediaSchema } from '@/schemas/media.js';
+import type { MediaQueryParams } from '@/types/index.js';
 
 type Env = { Variables: AuthVariables };
 
@@ -32,41 +32,17 @@ router.get('/', async (c) => {
     if (!can(role, 'media:read')) return forbidden(c);
 
     try {
-        const items = await Astromech.media.all();
-        return c.json({ data: items });
-    } catch (err) {
-        return internalError(c, err instanceof Error ? err.message : undefined);
-    }
-});
-
-// ============================================================================
-// GET /media/list
-// ============================================================================
-
-const listQuerySchema = z.object({
-    search: z.string().optional(),
-    type: z.enum(['all', 'images', 'videos', 'documents', 'other']).optional(),
-    page: z.coerce.number().int().positive().optional(),
-    perPage: z.coerce.number().int().positive().optional(),
-});
-
-router.get('/list', async (c) => {
-    const role = c.var.role;
-    if (!can(role, 'media:read')) return forbidden(c);
-
-    const raw = {
-        search: c.req.query('search'),
-        type: c.req.query('type'),
-        page: c.req.query('page'),
-        perPage: c.req.query('perPage'),
-    };
-
-    const parsed = listQuerySchema.safeParse(raw);
-    if (!parsed.success) return fromZodError(c, parsed.error);
-
-    try {
-        const result = await Astromech.media.list(parsed.data);
-        return c.json(result);
+        const q = c.req.query();
+        const params: MediaQueryParams = {};
+        if (q['search']) params.search = q['search'];
+        if (q['page']) params.page = Number(q['page']);
+        if (q['limit'] === 'all') params.limit = 'all';
+        else if (q['limit']) params.limit = Number(q['limit']);
+        const mimeType = q['mimeType'];
+        if (mimeType === 'images' || mimeType === 'videos' || mimeType === 'documents' || mimeType === 'other') {
+            params.where = { mimeType };
+        }
+        return c.json(await Astromech.media.query(params));
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
     }

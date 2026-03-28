@@ -113,7 +113,7 @@ export function LocaleSwitcher({
 
     return (
         <div className="am-field">
-            <label className="am-field__label">{t('translations.locale')}</label>
+            <label className="am-field-label">{t('translations.locale')}</label>
             <Select
                 value={currentValue}
                 onValueChange={handleValueChange}

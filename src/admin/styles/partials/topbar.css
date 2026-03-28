@@ -13,7 +13,7 @@
     flex-shrink: 0;
 }
 
-.am-topbar__left {
+.am-topbar-left {
     flex: 1;
     display: flex;
     align-items: center;
@@ -22,14 +22,14 @@
     min-width: 0;
 }
 
-.am-topbar__center {
+.am-topbar-center {
     flex: 0 1 28rem;
     display: flex;
     align-items: center;
     padding: 0 0.75rem;
 }
 
-.am-topbar__right {
+.am-topbar-right {
     flex: 1;
     display: flex;
     align-items: center;
@@ -41,7 +41,7 @@
 /* Mobile menu toggle — hidden on desktop                              */
 /* ------------------------------------------------------------------ */
 
-.am-topbar__menu-toggle {
+.am-topbar-menu-toggle {
     all: unset;
     display: none;
     align-items: center;
@@ -67,7 +67,7 @@
 /* Brand — mobile only (desktop brand lives in sidebar)               */
 /* ------------------------------------------------------------------ */
 
-.am-topbar__brand {
+.am-topbar-brand {
     display: none;
     font-size: 1rem;
     font-weight: 700;
@@ -80,11 +80,11 @@
 /* Search bar                                                           */
 /* ------------------------------------------------------------------ */
 
-.am-topbar__search {
+.am-topbar-search {
     width: 100%;
 }
 
-.am-topbar__search-btn {
+.am-topbar-search-btn {
     all: unset;
     display: flex;
     align-items: center;
@@ -113,16 +113,16 @@
     }
 }
 
-.am-topbar__search-icon {
+.am-topbar-search-icon {
     flex-shrink: 0;
 }
 
-.am-topbar__search-placeholder {
+.am-topbar-search-placeholder {
     flex: 1;
     text-align: left;
 }
 
-.am-topbar__search-kbd {
+.am-topbar-search-kbd {
     font-family: inherit;
     font-size: 0.75rem;
     padding: 0.125rem 0.375rem;
@@ -139,7 +139,7 @@
 /* ------------------------------------------------------------------ */
 
 
-.am-topbar__action-btn {
+.am-topbar-action-btn {
     all: unset;
     display: flex;
     align-items: center;
@@ -163,7 +163,7 @@
     }
 }
 
-.am-topbar__action-btn--create {
+.am-topbar-action-btn-create {
     /* Same appearance as other action buttons — no primary fill */
 }
 
@@ -171,7 +171,7 @@
 /* User menu button                                                     */
 /* ------------------------------------------------------------------ */
 
-.am-topbar__user-btn {
+.am-topbar-user-btn {
     all: unset;
     display: flex;
     align-items: center;
@@ -198,11 +198,11 @@
 /* Dropdown menus (shared between quick-create and user menu)          */
 /* ------------------------------------------------------------------ */
 
-.am-topbar__menu-positioner {
+.am-topbar-menu-positioner {
     z-index: 50;
 }
 
-.am-topbar__menu-popup {
+.am-topbar-menu-popup {
     background-color: var(--am-color-bg-base);
     border: 1px solid var(--am-color-border);
     border-radius: var(--am-radius-lg);
@@ -215,21 +215,21 @@
     outline: none;
 }
 
-.am-topbar__menu-section-heading {
+.am-topbar-menu-section-heading {
     padding: 0.375rem 0.75rem 0.25rem;
     font-size: 0.75rem;
     font-weight: 600;
     color: var(--am-color-text-muted);
 }
 
-.am-topbar__menu-header {
+.am-topbar-menu-header {
     display: flex;
     flex-direction: column;
     gap: 0.125rem;
     padding: 0.5rem 0.75rem;
 }
 
-.am-topbar__menu-name {
+.am-topbar-menu-name {
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--am-color-text-default);
@@ -238,7 +238,7 @@
     text-overflow: ellipsis;
 }
 
-.am-topbar__menu-email {
+.am-topbar-menu-email {
     font-size: 0.8125rem;
     color: var(--am-color-text-muted);
     white-space: nowrap;
@@ -246,13 +246,13 @@
     text-overflow: ellipsis;
 }
 
-.am-topbar__menu-separator {
+.am-topbar-menu-separator {
     height: 1px;
     background-color: var(--am-color-border);
     margin: 0.25rem 0;
 }
 
-.am-topbar__menu-item {
+.am-topbar-menu-item {
     all: unset;
     display: flex;
     align-items: center;
@@ -271,22 +271,22 @@
         color var(--am-duration-fast) var(--am-easing);
 }
 
-.am-topbar__menu-item[data-highlighted] {
+.am-topbar-menu-item[data-highlighted] {
     background-color: var(--am-color-bg-subtle);
     color: var(--am-color-text-default);
     outline: none;
 }
 
-.am-topbar__menu-item--danger {
+.am-topbar-menu-item-danger {
     color: var(--am-color-danger);
 }
 
-.am-topbar__menu-item--danger[data-highlighted] {
+.am-topbar-menu-item-danger[data-highlighted] {
     background-color: var(--am-color-danger-bg);
     color: var(--am-color-danger);
 }
 
-.am-topbar__menu-item-icon {
+.am-topbar-menu-item-icon {
     display: flex;
     align-items: center;
     flex-shrink: 0;
@@ -302,33 +302,33 @@
         padding: 0 0.75rem;
     }
 
-    .am-topbar__menu-toggle {
+    .am-topbar-menu-toggle {
         display: flex;
     }
 
-    .am-topbar__brand {
+    .am-topbar-brand {
         display: block;
     }
 
     /* Collapse search to icon-only on very small screens */
-    .am-topbar__search-placeholder,
-    .am-topbar__search-kbd {
+    .am-topbar-search-placeholder,
+    .am-topbar-search-kbd {
         display: none;
     }
 
-    .am-topbar__search-btn {
+    .am-topbar-search-btn {
         width: 2.25rem;
         padding: 0;
         justify-content: center;
         flex: 0 0 auto;
     }
 
-    .am-topbar__center {
+    .am-topbar-center {
         flex: 0 0 auto;
         padding: 0;
     }
 
-    .am-topbar__search {
+    .am-topbar-search {
         flex: 0;
         margin: 0;
     }

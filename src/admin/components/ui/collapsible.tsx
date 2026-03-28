@@ -28,12 +28,12 @@ export function Collapsible({
             onOpenChange={onOpenChange}
             className="am-collapsible"
         >
-            <BaseCollapsible.Trigger className="am-collapsible__trigger">
+            <BaseCollapsible.Trigger className="am-collapsible-trigger">
                 {label}
-                <ChevronDown size={14} className="am-collapsible__chevron" aria-hidden="true" />
+                <ChevronDown size={14} className="am-collapsible-chevron" aria-hidden="true" />
             </BaseCollapsible.Trigger>
-            <BaseCollapsible.Panel className="am-collapsible__panel">
-                <div className="am-collapsible__content">{children}</div>
+            <BaseCollapsible.Panel className="am-collapsible-panel">
+                <div className="am-collapsible-content">{children}</div>
             </BaseCollapsible.Panel>
         </BaseCollapsible.Root>
     );

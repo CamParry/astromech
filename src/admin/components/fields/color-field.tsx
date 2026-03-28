@@ -10,15 +10,15 @@ export function ColorField({ name, value, onChange }: BaseFieldProps) {
     return (
         <Popover.Root>
             <Popover.Trigger
-                className="am-color-field__trigger"
+                className="am-color-field-trigger"
                 aria-label={`Color: ${hex}`}
             >
-                <span className="am-color-field__swatch" style={{ backgroundColor: hex }} />
-                <span className="am-color-field__hex">{hex}</span>
+                <span className="am-color-field-swatch" style={{ backgroundColor: hex }} />
+                <span className="am-color-field-hex">{hex}</span>
             </Popover.Trigger>
             <Popover.Portal>
                 <Popover.Positioner sideOffset={6}>
-                    <Popover.Popup className="am-color-field__popover">
+                    <Popover.Popup className="am-color-field-popover">
                         <HexColorPicker color={hex} onChange={(c) => onChange(name, c)} />
                     </Popover.Popup>
                 </Popover.Positioner>

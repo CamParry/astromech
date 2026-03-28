@@ -8,25 +8,24 @@
 import type {
     AstromechClient,
     EntriesApi,
-    EntriesQueryOptions,
     Entry,
+    EntryQueryParams,
+    QueryResult,
     EntryStatus,
     EntryVersion,
     JsonObject,
     JsonValue,
     Media,
     MediaApi,
-    MediaListParams,
-    MediaListResult,
-    PaginationResult,
+    MediaQueryParams,
     ResolvedConfig,
     Setting,
     SettingsApi,
     TranslationInfo,
     TypedEntriesApi,
     User,
+    UserQueryParams,
     UsersApi,
-    WhereFilters,
 } from '@/types/index.js';
 
 // ============================================================================
@@ -64,7 +63,7 @@ export class AstromechApiError extends Error {
 declare const __ASTROMECH_API_ROUTE__: string;
 
 let apiBase =
-    typeof __ASTROMECH_API_ROUTE__ !== 'undefined' ? __ASTROMECH_API_ROUTE__ : '/api/cms';
+    typeof __ASTROMECH_API_ROUTE__ !== 'undefined' ? __ASTROMECH_API_ROUTE__ : '/api';
 
 // ============================================================================
 // Error event helper
@@ -155,43 +154,16 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
 // ============================================================================
 
 const entriesApi: EntriesApi = {
-    async all(options?: EntriesQueryOptions): Promise<Entry[]> {
-        const type = options?.type;
+    async query(params?: EntryQueryParams): Promise<QueryResult<Entry>> {
+        const type = params?.type;
         const basePath = type ? `/entries/${type}` : '/entries';
-        const sort = Array.isArray(options?.sort) ? options.sort[0] : options?.sort;
-        return apiFetch<Entry[]>(basePath, {
-            params: {
-                populate: options?.populate?.join(','),
-                locale: options?.locale,
-                withTrashed: options?.withTrashed,
-                sort: sort?.field,
-                dir: sort?.direction,
-            },
+        return apiFetch<QueryResult<Entry>>(`${basePath}/query`, {
+            method: 'POST',
+            body: params ?? {},
         });
     },
 
-    async paginate(
-        perPage: number,
-        page: number,
-        options?: EntriesQueryOptions
-    ): Promise<PaginationResult<Entry>> {
-        const type = options?.type;
-        const basePath = type ? `/entries/${type}` : '/entries';
-        const sort = Array.isArray(options?.sort) ? options.sort[0] : options?.sort;
-        return apiFetch<PaginationResult<Entry>>(basePath, {
-            params: {
-                perPage,
-                page,
-                populate: options?.populate?.join(','),
-                locale: options?.locale,
-                withTrashed: options?.withTrashed,
-                sort: sort?.field,
-                dir: sort?.direction,
-            },
-        });
-    },
-
-    async get(id: string, options?: EntriesQueryOptions): Promise<Entry | null> {
+    async get(id: string, options?: { populate?: string[]; locale?: string; type?: string }): Promise<Entry | null> {
         const type = options?.type;
         const basePath = type ? `/entries/${type}` : '/entries';
         const res = await apiFetch<{ data: Entry } | null>(`${basePath}/${id}`, {
@@ -201,15 +173,6 @@ const entriesApi: EntriesApi = {
             },
         });
         return res?.data ?? null;
-    },
-
-    async where(filters: WhereFilters, options?: EntriesQueryOptions): Promise<Entry[]> {
-        const type = options?.type;
-        const basePath = type ? `/entries/${type}` : '/entries';
-        return apiFetch<Entry[]>(`${basePath}/query`, {
-            method: 'POST',
-            body: { filters, options },
-        });
     },
 
     async create(data: {
@@ -256,16 +219,6 @@ const entriesApi: EntriesApi = {
             method: 'POST',
         });
         return res.data;
-    },
-
-    async trashed(options?: EntriesQueryOptions): Promise<Entry[]> {
-        const type = options?.type;
-        const basePath = type ? `/entries/${type}` : '/entries';
-        return apiFetch<Entry[]>(`${basePath}/trashed`, {
-            params: {
-                locale: options?.locale,
-            },
-        });
     },
 
     async restore(id: string): Promise<Entry> {
@@ -356,18 +309,13 @@ const entriesApi: EntriesApi = {
 // ============================================================================
 
 const mediaApi: MediaApi = {
-    async all(): Promise<Media[]> {
-        const res = await apiFetch<{ data: Media[] }>('/media');
-        return res.data;
-    },
-
-    async list(params?: MediaListParams): Promise<MediaListResult> {
-        return apiFetch<MediaListResult>('/media/list', {
+    async query(params?: MediaQueryParams): Promise<QueryResult<Media>> {
+        return apiFetch<QueryResult<Media>>('/media', {
             params: {
                 search: params?.search,
-                type: params?.type,
+                mimeType: params?.where?.mimeType,
                 page: params?.page,
-                perPage: params?.perPage,
+                limit: params?.limit,
             },
         });
     },
@@ -464,9 +412,16 @@ const settingsApi: SettingsApi = {
 // ============================================================================
 
 const usersApi: UsersApi = {
-    async all(): Promise<User[]> {
-        const res = await apiFetch<{ data: User[] }>('/users');
-        return res.data;
+    async query(params?: UserQueryParams): Promise<QueryResult<User>> {
+        return apiFetch<QueryResult<User>>('/users', {
+            params: {
+                search: params?.search,
+                page: params?.page,
+                limit: params?.limit,
+                sort: params?.sort && !Array.isArray(params.sort) ? Object.keys(params.sort)[0] : undefined,
+                dir: params?.sort && !Array.isArray(params.sort) ? Object.values(params.sort)[0] : undefined,
+            },
+        });
     },
 
     async get(id: string): Promise<User | null> {

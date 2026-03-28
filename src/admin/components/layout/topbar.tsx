@@ -31,11 +31,11 @@ export function Topbar() {
 
     return (
         <header className="am-topbar">
-            <div className="am-topbar__left">
+            <div className="am-topbar-left">
                 {/* Mobile menu toggle */}
                 <button
                     type="button"
-                    className="am-topbar__menu-toggle"
+                    className="am-topbar-menu-toggle"
                     onClick={() => setSidebarOpen(true)}
                     aria-label={t('nav.openNav')}
                 >
@@ -43,31 +43,31 @@ export function Topbar() {
                 </button>
 
                 {/* Brand (mobile only — desktop brand lives in sidebar) */}
-                <span className="am-topbar__brand">{t('topbar.brand')}</span>
+                <span className="am-topbar-brand">{t('topbar.brand')}</span>
             </div>
 
             {/* Global search */}
-            <div className="am-topbar__center">
-                <div className="am-topbar__search">
+            <div className="am-topbar-center">
+                <div className="am-topbar-search">
                     <button
                         type="button"
-                        className="am-topbar__search-btn"
+                        className="am-topbar-search-btn"
                         aria-label={t('topbar.searchLabel')}
                         onClick={() => openCommandPalette(true)}
                     >
-                        <Search size={15} className="am-topbar__search-icon" />
-                        <span className="am-topbar__search-placeholder">{t('topbar.searchPlaceholder')}</span>
-                        <kbd className="am-topbar__search-kbd">⌘K</kbd>
+                        <Search size={15} className="am-topbar-search-icon" />
+                        <span className="am-topbar-search-placeholder">{t('topbar.searchPlaceholder')}</span>
+                        <kbd className="am-topbar-search-kbd">⌘K</kbd>
                     </button>
                 </div>
             </div>
 
             {/* Right actions */}
-            <div className="am-topbar__right">
+            <div className="am-topbar-right">
                 {/* Help */}
                 <button
                     type="button"
-                    className="am-topbar__action-btn"
+                    className="am-topbar-action-btn"
                     aria-label={t('topbar.keyboardShortcutsLabel')}
                     onClick={() => setShortcutsOpen(true)}
                 >
@@ -77,7 +77,7 @@ export function Topbar() {
                 {/* Notification bell */}
                 <button
                     type="button"
-                    className="am-topbar__action-btn"
+                    className="am-topbar-action-btn"
                     aria-label={t('topbar.notificationsLabel')}
                 >
                     <Bell size={17} />
@@ -86,7 +86,7 @@ export function Topbar() {
                 {/* Theme toggle */}
                 <button
                     type="button"
-                    className="am-topbar__action-btn"
+                    className="am-topbar-action-btn"
                     aria-label={
                         theme === 'light'
                             ? t('topbar.themeLight')
@@ -113,32 +113,32 @@ export function Topbar() {
                 {entryTypes.length > 0 && (
                     <Menu.Root>
                         <Menu.Trigger
-                            className="am-topbar__action-btn am-topbar__action-btn--create"
+                            className="am-topbar-action-btn am-topbar-action-btn-create"
                             aria-label={t('topbar.createNewLabel')}
                         >
                             <Plus size={17} />
                         </Menu.Trigger>
                         <Menu.Portal>
                             <Menu.Positioner
-                                className="am-topbar__menu-positioner"
+                                className="am-topbar-menu-positioner"
                                 sideOffset={8}
                                 align="end"
                             >
-                                <Menu.Popup className="am-topbar__menu-popup">
-                                    <div className="am-topbar__menu-section-heading">
+                                <Menu.Popup className="am-topbar-menu-popup">
+                                    <div className="am-topbar-menu-section-heading">
                                         {t('topbar.createNewHeading')}
                                     </div>
                                     {entryTypes.map(([key, entryType]) => (
                                         <Menu.Item
                                             key={key}
-                                            className="am-topbar__menu-item"
+                                            className="am-topbar-menu-item"
                                             onClick={() =>
                                                 void navigate({
                                                     to: `/entries/${key}/new`,
                                                 })
                                             }
                                         >
-                                            <span className="am-topbar__menu-item-icon"><FilePlus size={14} /></span>
+                                            <span className="am-topbar-menu-item-icon"><FilePlus size={14} /></span>
                                             {entryType.single}
                                         </Menu.Item>
                                     ))}
@@ -151,26 +151,26 @@ export function Topbar() {
                 {/* User menu */}
                 {user && (
                     <Menu.Root>
-                        <Menu.Trigger className="am-topbar__user-btn" aria-label={t('topbar.userMenuLabel')}>
+                        <Menu.Trigger className="am-topbar-user-btn" aria-label={t('topbar.userMenuLabel')}>
                             <UserIcon size={16} />
                         </Menu.Trigger>
                         <Menu.Portal>
                             <Menu.Positioner
-                                className="am-topbar__menu-positioner"
+                                className="am-topbar-menu-positioner"
                                 sideOffset={8}
                                 align="end"
                             >
-                                <Menu.Popup className="am-topbar__menu-popup">
-                                    <div className="am-topbar__menu-header">
-                                        <span className="am-topbar__menu-name">{user.name}</span>
-                                        <span className="am-topbar__menu-email">{user.email}</span>
+                                <Menu.Popup className="am-topbar-menu-popup">
+                                    <div className="am-topbar-menu-header">
+                                        <span className="am-topbar-menu-name">{user.name}</span>
+                                        <span className="am-topbar-menu-email">{user.email}</span>
                                     </div>
-                                    <Menu.Separator className="am-topbar__menu-separator" />
+                                    <Menu.Separator className="am-topbar-menu-separator" />
                                     <Menu.Item
-                                        className="am-topbar__menu-item am-topbar__menu-item--danger"
+                                        className="am-topbar-menu-item am-topbar-menu-item-danger"
                                         onClick={handleLogout}
                                     >
-                                        <span className="am-topbar__menu-item-icon"><LogOut size={14} /></span>
+                                        <span className="am-topbar-menu-item-icon"><LogOut size={14} /></span>
                                         {t('topbar.logout')}
                                     </Menu.Item>
                                 </Menu.Popup>

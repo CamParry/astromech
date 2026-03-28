@@ -6,14 +6,13 @@ import type { Entry, EntryStatus, EntryVersion } from './domain.js';
 import type {
     EntryTypeApi,
     EntriesApi,
-    EntriesQueryOptions,
+    EntryQueryParams,
+    QueryResult,
     MediaApi,
-    PaginationResult,
     QueryOptions,
     SettingsApi,
     TranslationInfo,
     UsersApi,
-    WhereFilters,
 } from './api.js';
 import type { ResolvedConfig } from './config.js';
 
@@ -43,29 +42,16 @@ export type TypedEntry<TFields> = Omit<Entry, 'fields'> & {
 
 // TypedEntryTypeApi — returned by the typed entries proxy when AstromechEntryTypes is augmented
 export type TypedEntryTypeApi<TFields, TRelations> = {
-    all(options?: QueryOptions): Promise<TypedEntry<TFields>[]>;
-    all<K extends keyof TRelations & string>(
-        options: Omit<QueryOptions, 'populate'> & { populate: K[] }
-    ): Promise<TypedEntry<Omit<TFields, K> & Pick<TRelations, K>>[]>;
-
-    paginate(
-        perPage: number,
-        page: number,
-        options?: QueryOptions
-    ): Promise<PaginationResult<TypedEntry<TFields>>>;
-    paginate<K extends keyof TRelations & string>(
-        perPage: number,
-        page: number,
-        options: Omit<QueryOptions, 'populate'> & { populate: K[] }
-    ): Promise<PaginationResult<TypedEntry<Omit<TFields, K> & Pick<TRelations, K>>>>;
+    query<K extends keyof TRelations & string>(
+        params: Omit<EntryQueryParams, 'type' | 'populate'> & { populate: K[] }
+    ): Promise<QueryResult<TypedEntry<Omit<TFields, K> & Pick<TRelations, K>>>>;
+    query(params?: Omit<EntryQueryParams, 'type'>): Promise<QueryResult<TypedEntry<TFields>>>;
 
     get(id: string, options?: Omit<QueryOptions, 'populate'>): Promise<TypedEntry<TFields> | null>;
     get<K extends keyof TRelations & string>(
         id: string,
         options: Omit<QueryOptions, 'populate'> & { populate: K[] }
     ): Promise<TypedEntry<Omit<TFields, K> & Pick<TRelations, K>> | null>;
-
-    where(filters: WhereFilters, options?: QueryOptions): Promise<TypedEntry<TFields>[]>;
 
     create(data: {
         title: string;
@@ -88,7 +74,6 @@ export type TypedEntryTypeApi<TFields, TRelations> = {
 
     trash(id: string): Promise<void>;
     duplicate(id: string): Promise<TypedEntry<TFields>>;
-    trashed(options?: QueryOptions): Promise<TypedEntry<TFields>[]>;
     restore(id: string): Promise<TypedEntry<TFields>>;
     delete(id: string): Promise<void>;
     emptyTrash(): Promise<void>;
@@ -126,28 +111,15 @@ export type TypedEntriesProxy = [keyof AstromechEntryTypes] extends [never]
 // ============================================================================
 
 export type TypedEntriesApi =
-    // ── all() ────────────────────────────────────────────────────────────────
+    // ── query() ──────────────────────────────────────────────────────────────
     {
-        all<T extends keyof AstromechEntryTypes, K extends keyof RelationsFor<T> & string>(
-            options: { type: T; populate: K[] } & Omit<QueryOptions, 'populate'>
-        ): Promise<TypedEntry<Omit<FieldsFor<T>, K> & Pick<RelationsFor<T>, K>>[]>;
-        all<T extends keyof AstromechEntryTypes>(
-            options: { type: T } & QueryOptions
-        ): Promise<TypedEntry<FieldsFor<T>>[]>;
-        all(options?: EntriesQueryOptions): Promise<Entry[]>;
-
-        // ── paginate() ───────────────────────────────────────────────────────
-        paginate<T extends keyof AstromechEntryTypes, K extends keyof RelationsFor<T> & string>(
-            perPage: number,
-            page: number,
-            options: { type: T; populate: K[] } & Omit<QueryOptions, 'populate'>
-        ): Promise<PaginationResult<TypedEntry<Omit<FieldsFor<T>, K> & Pick<RelationsFor<T>, K>>>>;
-        paginate<T extends keyof AstromechEntryTypes>(
-            perPage: number,
-            page: number,
-            options: { type: T } & QueryOptions
-        ): Promise<PaginationResult<TypedEntry<FieldsFor<T>>>>;
-        paginate(perPage: number, page: number, options?: EntriesQueryOptions): Promise<PaginationResult<Entry>>;
+        query<T extends keyof AstromechEntryTypes, K extends keyof RelationsFor<T> & string>(
+            params: { type: T; populate: K[] } & Omit<EntryQueryParams, 'type' | 'populate'>
+        ): Promise<QueryResult<TypedEntry<Omit<FieldsFor<T>, K> & Pick<RelationsFor<T>, K>>>>;
+        query<T extends keyof AstromechEntryTypes>(
+            params: { type: T } & EntryQueryParams
+        ): Promise<QueryResult<TypedEntry<FieldsFor<T>>>>;
+        query(params?: EntryQueryParams): Promise<QueryResult<Entry>>;
 
         // ── get() ────────────────────────────────────────────────────────────
         get<T extends keyof AstromechEntryTypes, K extends keyof RelationsFor<T> & string>(
@@ -158,14 +130,7 @@ export type TypedEntriesApi =
             id: string,
             options: { type: T } & QueryOptions
         ): Promise<TypedEntry<FieldsFor<T>> | null>;
-        get(id: string, options?: EntriesQueryOptions): Promise<Entry | null>;
-
-        // ── where() ──────────────────────────────────────────────────────────
-        where<T extends keyof AstromechEntryTypes>(
-            filters: WhereFilters,
-            options: { type: T } & QueryOptions
-        ): Promise<TypedEntry<FieldsFor<T>>[]>;
-        where(filters: WhereFilters, options?: EntriesQueryOptions): Promise<Entry[]>;
+        get(id: string, options?: QueryOptions & { type?: string }): Promise<Entry | null>;
 
         // ── create() ─────────────────────────────────────────────────────────
         create<T extends keyof AstromechEntryTypes>(data: {
@@ -187,7 +152,7 @@ export type TypedEntriesApi =
 
         // update doesn't take a type param at runtime, so no typed overload —
         // falls through to EntriesApi's update signature
-    } & Omit<EntriesApi, 'all' | 'paginate' | 'get' | 'where' | 'create'>;
+    } & Omit<EntriesApi, 'query' | 'get' | 'create'>;
 
 // ============================================================================
 // AstromechClient

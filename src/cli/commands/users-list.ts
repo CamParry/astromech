@@ -9,7 +9,8 @@ export default defineCommand({
     },
     async run({ args }) {
         await loadConfig(args.config);
-        const users = await usersApi.all();
+        const result = await usersApi.query({ limit: 'all' });
+        const users = result.data;
         if (users.length === 0) {
             console.log('No users found.');
             return;

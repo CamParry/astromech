@@ -16,7 +16,7 @@ export function RichtextField({ name, value, field, required, onChange, disabled
     editable: !disabled,
     editorProps: {
       attributes: {
-        class: 'am-richtext__content',
+        class: 'am-richtext-content',
       },
     },
   });
@@ -45,11 +45,11 @@ export function RichtextField({ name, value, field, required, onChange, disabled
 
   return (
     <div className="am-richtext">
-      {!disabled && <div className="am-richtext__toolbar">
+      {!disabled && <div className="am-richtext-toolbar">
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBold().run()}
-          className={editor.isActive('bold') ? 'am-richtext__btn--active' : ''}
+          className={editor.isActive('bold') ? 'am-richtext-btn-active' : ''}
           aria-label="Bold"
         >
           B
@@ -57,7 +57,7 @@ export function RichtextField({ name, value, field, required, onChange, disabled
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={editor.isActive('italic') ? 'am-richtext__btn--active' : ''}
+          className={editor.isActive('italic') ? 'am-richtext-btn-active' : ''}
           aria-label="Italic"
         >
           I
@@ -65,7 +65,7 @@ export function RichtextField({ name, value, field, required, onChange, disabled
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          className={editor.isActive('heading', { level: 2 }) ? 'am-richtext__btn--active' : ''}
+          className={editor.isActive('heading', { level: 2 }) ? 'am-richtext-btn-active' : ''}
           aria-label="Heading 2"
         >
           H2
@@ -73,7 +73,7 @@ export function RichtextField({ name, value, field, required, onChange, disabled
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          className={editor.isActive('heading', { level: 3 }) ? 'am-richtext__btn--active' : ''}
+          className={editor.isActive('heading', { level: 3 }) ? 'am-richtext-btn-active' : ''}
           aria-label="Heading 3"
         >
           H3
@@ -81,7 +81,7 @@ export function RichtextField({ name, value, field, required, onChange, disabled
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={editor.isActive('bulletList') ? 'am-richtext__btn--active' : ''}
+          className={editor.isActive('bulletList') ? 'am-richtext-btn-active' : ''}
           aria-label="Bullet List"
         >
           UL
@@ -89,7 +89,7 @@ export function RichtextField({ name, value, field, required, onChange, disabled
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={editor.isActive('orderedList') ? 'am-richtext__btn--active' : ''}
+          className={editor.isActive('orderedList') ? 'am-richtext-btn-active' : ''}
           aria-label="Ordered List"
         >
           OL

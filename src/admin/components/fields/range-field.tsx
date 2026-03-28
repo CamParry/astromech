@@ -11,8 +11,8 @@ export function RangeField({ name, value, field, onChange }: BaseFieldProps) {
 
     return (
         <div className="am-range-field">
-            <div className="am-range-field__header">
-                <span className="am-range-field__value">{numValue}</span>
+            <div className="am-range-field-header">
+                <span className="am-range-field-value">{numValue}</span>
             </div>
             <Slider
                 value={numValue}

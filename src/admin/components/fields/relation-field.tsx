@@ -28,10 +28,10 @@ export function RelationField({
 
     useEffect(() => {
         if (!target) return;
-        Astromech.entries.all({ type: target })
-            .then((entries) => {
+        Astromech.entries.query({ type: target, limit: 'all' })
+            .then((result) => {
                 setOptions(
-                    entries.map((e) => ({ id: e.id, title: e.title, slug: e.slug }))
+                    result.data.map((e) => ({ id: e.id, title: e.title, slug: e.slug }))
                 );
             })
             .catch(() => {
@@ -61,7 +61,7 @@ export function RelationField({
             }}
         >
             <div className="am-combobox">
-                <Combobox.Chips className="am-combobox__chips" ref={containerRef}>
+                <Combobox.Chips className="am-combobox-chips" ref={containerRef}>
                     <Combobox.Value>
                         {(val: EntryOption | EntryOption[] | null) => {
                             const selected =
@@ -71,12 +71,12 @@ export function RelationField({
                                     {selected.map((v) => (
                                         <Combobox.Chip
                                             key={v.id}
-                                            className="am-combobox__chip"
+                                            className="am-combobox-chip"
                                             aria-label={v.title}
                                         >
                                             {v.title}
                                             <Combobox.ChipRemove
-                                                className="am-combobox__chip-remove"
+                                                className="am-combobox-chip-remove"
                                                 aria-label={t('fields.relationRemove')}
                                             >
                                                 <XIcon size={16} />
@@ -90,7 +90,7 @@ export function RelationField({
                                                 ? ''
                                                 : t('fields.relationSelect')
                                         }
-                                        className="am-combobox__input"
+                                        className="am-combobox-input"
                                     />
                                 </React.Fragment>
                             );
@@ -100,25 +100,25 @@ export function RelationField({
             </div>
             <Combobox.Portal>
                 <Combobox.Positioner
-                    className="am-combobox__positioner"
+                    className="am-combobox-positioner"
                     sideOffset={4}
                     anchor={containerRef}
                 >
-                    <Combobox.Popup className="am-combobox__popup">
-                        <Combobox.Empty className="am-combobox__empty">
+                    <Combobox.Popup className="am-combobox-popup">
+                        <Combobox.Empty className="am-combobox-empty">
                             {t('fields.relationNoResults')}
                         </Combobox.Empty>
                         <Combobox.List>
                             {(option: EntryOption) => (
                                 <Combobox.Item
                                     key={option.id}
-                                    className="am-combobox__item"
+                                    className="am-combobox-item"
                                     value={option}
                                 >
-                                    <Combobox.ItemIndicator className="am-combobox__item-indicator">
-                                        <CheckIcon className="am-combobox__item-indicator-icon" />
+                                    <Combobox.ItemIndicator className="am-combobox-item-indicator">
+                                        <CheckIcon className="am-combobox-item-indicator-icon" />
                                     </Combobox.ItemIndicator>
-                                    <div className="am-combobox__item-text">
+                                    <div className="am-combobox-item-text">
                                         {option.title}
                                     </div>
                                 </Combobox.Item>

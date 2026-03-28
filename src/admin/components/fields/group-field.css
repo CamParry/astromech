@@ -8,24 +8,24 @@
     background: var(--am-color-bg-subtle);
 }
 
-.am-group-field__item {
+.am-group-field-item {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
 }
 
-.am-group-field__label {
+.am-group-field-label {
     font-size: 0.8125rem;
     font-weight: 500;
     color: var(--am-color-text-default);
 }
 
-.am-group-field__required {
+.am-group-field-required {
     color: var(--am-color-danger-600);
     margin-left: 0.125rem;
 }
 
-.am-group-field__description {
+.am-group-field-description {
     font-size: 0.75rem;
     color: var(--am-color-text-muted);
     margin: 0;

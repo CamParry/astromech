@@ -21,7 +21,7 @@ export function MediaCard({ item, checked, onToggleCheck, onClick }: MediaCardPr
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick(item.id); }}
         >
             <div
-                className="am-media-card__checkbox"
+                className="am-media-card-checkbox"
                 onClick={(e) => e.stopPropagation()}
             >
                 <Checkbox
@@ -34,17 +34,17 @@ export function MediaCard({ item, checked, onToggleCheck, onClick }: MediaCardPr
                 <img
                     src={item.url}
                     alt={item.alt ?? item.filename}
-                    className="am-media-card__thumb"
+                    className="am-media-card-thumb"
                 />
             ) : (
-                <div className="am-media-card__thumb am-media-card__thumb--placeholder">
+                <div className="am-media-card-thumb am-media-card-thumb-placeholder">
                     <FileTypeIcon mimeType={item.mimeType} />
                 </div>
             )}
 
-            <div className="am-media-card__meta">
-                <p className="am-media-card__filename">{item.filename}</p>
-                <p className="am-media-card__size">{formatBytes(item.size)}</p>
+            <div className="am-media-card-meta">
+                <p className="am-media-card-filename">{item.filename}</p>
+                <p className="am-media-card-size">{formatBytes(item.size)}</p>
             </div>
         </div>
     );

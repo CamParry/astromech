@@ -45,8 +45,8 @@ import {
     Table,
     ToggleGroup,
     Toolbar,
-    ToolbarLeft,
-    ToolbarRight,
+    ToolbarStart,
+    ToolbarEnd,
     useConfirm,
     useContextMenu,
     useToast,
@@ -56,7 +56,7 @@ import {
     useSelection,
     useViewMode,
     usePermissions,
-    useEntriesList,
+    useEntriesQuery,
     useTrashEntry,
     useDeleteEntry,
     useDuplicateEntry,
@@ -375,7 +375,7 @@ function EntryCard({
                 onClick={handleCardClick}
             >
                 <div
-                    className="am-collection-card__actions"
+                    className="am-collection-card-actions"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <Dropdown
@@ -386,27 +386,27 @@ function EntryCard({
                 </div>
 
                 {isTrash ? (
-                    <span className="am-collection-card__title am-text-muted">
+                    <span className="am-collection-card-title am-text-muted">
                         {entry.title}
                     </span>
                 ) : (
                     <Link
                         to="/entries/$type/$id"
                         params={{ type, id: entry.id }}
-                        className="am-collection-card__title"
+                        className="am-collection-card-title"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {entry.title}
                     </Link>
                 )}
 
-                <div className="am-collection-card__meta">
+                <div className="am-collection-card-meta">
                     <Badge variant={statusVariant(entry.status)}>{entry.status}</Badge>
                 </div>
 
                 {gridFields.map((gf) => (
-                    <div key={gf.field} className="am-collection-card__field">
-                        <span className="am-collection-card__field-label">
+                    <div key={gf.field} className="am-collection-card-field">
+                        <span className="am-collection-card-field-label">
                             {gf.label ?? gf.field}
                         </span>
                         <span>
@@ -481,17 +481,18 @@ function EntryIndexPage(): React.ReactElement {
     const isTrash = statusFilter === 'trashed';
 
     // Fetch entries (normal or trashed)
-    const { data: listData, isLoading } = useEntriesList(type, {
-        statusFilter,
+    const { data: listData, isLoading } = useEntriesQuery({
+        type,
+        ...(statusFilter === 'trashed' ? { trashed: true } : statusFilter !== 'all' ? { where: { status: statusFilter } } : {}),
         page,
-        perPage: PER_PAGE,
+        limit: PER_PAGE,
         search,
-        sort,
+        ...(sort ? { sort: { [sort.key]: sort.direction } } : {}),
     });
 
     const entries = listData?.data ?? [];
     const pagination = listData?.pagination;
-    const totalPages = pagination?.totalPages ?? 1;
+    const totalPages = pagination?.pages ?? 1;
     const totalItems = pagination?.total ?? 0;
 
     const sortedEntries = React.useMemo(() => {
@@ -664,7 +665,7 @@ function EntryIndexPage(): React.ReactElement {
 
                 <PageContent>
                     <Toolbar>
-                        <ToolbarLeft>
+                        <ToolbarStart>
                             {someChecked && canDelete(type) && (
                                 <Dropdown
                                     label={`${t('media.bulkActions')} (${checkedIds.size})`}
@@ -708,7 +709,7 @@ function EntryIndexPage(): React.ReactElement {
 
                             {/* Status filter */}
                             <Menu.Root>
-                                <Menu.Trigger className="am-toolbar__filter-btn">
+                                <Menu.Trigger className="am-toolbar-filter-btn">
                                     {t('entries.statusFilter', {
                                         status: STATUS_LABELS[statusFilter],
                                     })}
@@ -716,10 +717,10 @@ function EntryIndexPage(): React.ReactElement {
                                 </Menu.Trigger>
                                 <Menu.Portal>
                                     <Menu.Positioner
-                                        className="am-dropdown__positioner"
+                                        className="am-dropdown-positioner"
                                         sideOffset={4}
                                     >
-                                        <Menu.Popup className="am-dropdown__popup">
+                                        <Menu.Popup className="am-dropdown-popup">
                                             {(
                                                 [
                                                     'all',
@@ -730,14 +731,14 @@ function EntryIndexPage(): React.ReactElement {
                                             ).map((s) => (
                                                 <Menu.Item
                                                     key={s}
-                                                    className="am-dropdown__item"
+                                                    className="am-dropdown-item"
                                                     onClick={() => {
                                                         setStatusFilter(s);
                                                         setPage(1);
                                                         reset();
                                                     }}
                                                 >
-                                                    <span className="am-dropdown__item-icon">
+                                                    <span className="am-dropdown-item-icon">
                                                         {statusFilter === s ? (
                                                             <Check size={14} />
                                                         ) : (
@@ -747,16 +748,16 @@ function EntryIndexPage(): React.ReactElement {
                                                     {STATUS_LABELS[s]}
                                                 </Menu.Item>
                                             ))}
-                                            <div className="am-dropdown__separator" />
+                                            <div className="am-dropdown-separator" />
                                             <Menu.Item
-                                                className="am-dropdown__item"
+                                                className="am-dropdown-item"
                                                 onClick={() => {
                                                     setStatusFilter('trashed');
                                                     setPage(1);
                                                     reset();
                                                 }}
                                             >
-                                                <span className="am-dropdown__item-icon">
+                                                <span className="am-dropdown-item-icon">
                                                     {statusFilter === 'trashed' ? (
                                                         <Check size={14} />
                                                     ) : (
@@ -769,24 +770,24 @@ function EntryIndexPage(): React.ReactElement {
                                     </Menu.Positioner>
                                 </Menu.Portal>
                             </Menu.Root>
-                        </ToolbarLeft>
+                        </ToolbarStart>
 
-                        <ToolbarRight>
+                        <ToolbarEnd>
                             {/* Columns visibility */}
                             <Menu.Root>
                                 <Menu.Trigger
-                                    className="am-btn am-btn--secondary am-btn--md am-btn--icon"
+                                    className="am-btn am-btn-secondary am-btn-md am-btn-icon"
                                     aria-label={t('entries.toggleColumns')}
                                 >
                                     <SlidersHorizontal size={14} />
                                 </Menu.Trigger>
                                 <Menu.Portal>
                                     <Menu.Positioner
-                                        className="am-dropdown__positioner"
+                                        className="am-dropdown-positioner"
                                         sideOffset={4}
                                         align="end"
                                     >
-                                        <Menu.Popup className="am-dropdown__popup">
+                                        <Menu.Popup className="am-dropdown-popup">
                                             {[
                                                 {
                                                     key: 'title',
@@ -811,10 +812,10 @@ function EntryIndexPage(): React.ReactElement {
                                             ].map((col) => (
                                                 <Menu.Item
                                                     key={col.key}
-                                                    className="am-dropdown__item"
+                                                    className="am-dropdown-item"
                                                     onClick={() => toggleColumn(col.key)}
                                                 >
-                                                    <span className="am-dropdown__item-icon">
+                                                    <span className="am-dropdown-item-icon">
                                                         {visibleColumns.has(col.key) ? (
                                                             <Check size={14} />
                                                         ) : (
@@ -846,7 +847,7 @@ function EntryIndexPage(): React.ReactElement {
                                     ]}
                                 />
                             )}
-                        </ToolbarRight>
+                        </ToolbarEnd>
                     </Toolbar>
 
                     {/* Grid view */}

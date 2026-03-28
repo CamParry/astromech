@@ -14,9 +14,9 @@ export function Tooltip({ content, children, side = 'top' }: TooltipProps): Reac
                 <BaseTooltip.Trigger render={children} />
                 <BaseTooltip.Portal>
                     <BaseTooltip.Positioner side={side}>
-                        <BaseTooltip.Popup className="am-tooltip__popup">
+                        <BaseTooltip.Popup className="am-tooltip-popup">
                             {content}
-                            <BaseTooltip.Arrow className="am-tooltip__arrow" />
+                            <BaseTooltip.Arrow className="am-tooltip-arrow" />
                         </BaseTooltip.Popup>
                     </BaseTooltip.Positioner>
                 </BaseTooltip.Portal>

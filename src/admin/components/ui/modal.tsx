@@ -29,16 +29,16 @@ export function Modal({ open, onClose, title, headerActions, children, footer, s
     return (
         <Dialog.Root open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
             <Dialog.Portal>
-                <Dialog.Backdrop className="am-modal__backdrop" />
-                <Dialog.Popup className={`am-modal__panel am-modal__panel--${size}`}>
+                <Dialog.Backdrop className="am-modal-backdrop" />
+                <Dialog.Popup className={`am-modal-panel am-modal-panel-${size}`}>
                     {title !== undefined && (
-                        <div className="am-modal__header">
-                            <Dialog.Title className="am-modal__title">{title}</Dialog.Title>
-                            {headerActions && <div className="am-modal__header-actions">{headerActions}</div>}
+                        <div className="am-modal-header">
+                            <Dialog.Title className="am-modal-title">{title}</Dialog.Title>
+                            {headerActions && <div className="am-modal-header-actions">{headerActions}</div>}
                         </div>
                     )}
-                    <div className="am-modal__body">{children}</div>
-                    {footer !== undefined && <div className="am-modal__footer">{footer}</div>}
+                    <div className="am-modal-body">{children}</div>
+                    {footer !== undefined && <div className="am-modal-footer">{footer}</div>}
                 </Dialog.Popup>
             </Dialog.Portal>
         </Dialog.Root>
@@ -58,17 +58,17 @@ export function ConfirmModal({
     return (
         <AlertDialog.Root open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
             <AlertDialog.Portal>
-                <AlertDialog.Backdrop className="am-modal__backdrop" />
-                <AlertDialog.Popup className="am-modal__panel am-modal__panel--sm">
-                    <div className="am-modal__header">
-                        <AlertDialog.Title className="am-modal__title">{title}</AlertDialog.Title>
+                <AlertDialog.Backdrop className="am-modal-backdrop" />
+                <AlertDialog.Popup className="am-modal-panel am-modal-panel-sm">
+                    <div className="am-modal-header">
+                        <AlertDialog.Title className="am-modal-title">{title}</AlertDialog.Title>
                     </div>
                     {message !== undefined && (
-                        <div className="am-modal__body">
+                        <div className="am-modal-body">
                             <AlertDialog.Description>{message}</AlertDialog.Description>
                         </div>
                     )}
-                    <div className="am-modal__footer">
+                    <div className="am-modal-footer">
                         <AlertDialog.Close
                             render={
                                 <Button variant="secondary" disabled={loading}>

@@ -57,14 +57,14 @@ export function KeyValueField({ name, value, onChange }: BaseFieldProps) {
     return (
         <div className="am-kv-field">
             {pairs.length > 0 && (
-                <div className="am-kv-field__rows">
+                <div className="am-kv-field-rows">
                     {pairs.map((pair) => (
-                        <div key={pair._id} className="am-kv-field__row">
+                        <div key={pair._id} className="am-kv-field-row">
                             <Input
                                 type="text"
                                 value={pair.key}
                                 placeholder={t('fields.kvKey')}
-                                className="am-kv-field__input"
+                                className="am-kv-field-input"
                                 onChange={(e) => handleChange(pair._id, 'key', e.target.value)}
                                 aria-label={t('fields.kvKey')}
                             />
@@ -72,13 +72,13 @@ export function KeyValueField({ name, value, onChange }: BaseFieldProps) {
                                 type="text"
                                 value={pair.value}
                                 placeholder={t('fields.kvValue')}
-                                className="am-kv-field__input"
+                                className="am-kv-field-input"
                                 onChange={(e) => handleChange(pair._id, 'value', e.target.value)}
                                 aria-label={t('fields.kvValue')}
                             />
                             <button
                                 type="button"
-                                className="am-kv-field__remove"
+                                className="am-kv-field-remove"
                                 onClick={() => handleRemove(pair._id)}
                                 aria-label={t('fields.kvRemovePair')}
                             >
@@ -91,7 +91,7 @@ export function KeyValueField({ name, value, onChange }: BaseFieldProps) {
             <button
                 type="button"
                 onClick={handleAdd}
-                className="am-repeater__btn am-repeater__btn--add"
+                className="am-repeater-btn am-repeater-btn-add"
             >
                 {t('fields.kvAddPair')}
             </button>

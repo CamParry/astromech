@@ -10,11 +10,11 @@ export function Toolbar({ children, className }: ToolbarProps): React.ReactEleme
     return <div className={classes}>{children}</div>;
 }
 
-export function ToolbarLeft({ children }: { children: React.ReactNode }): React.ReactElement {
-    return <div className="am-toolbar__left">{children}</div>;
+export function ToolbarStart({ children }: { children: React.ReactNode }): React.ReactElement {
+    return <div className="am-toolbar-group am-toolbar-start">{children}</div>;
 }
 
-export function ToolbarRight({ children }: { children: React.ReactNode }): React.ReactElement {
-    return <div className="am-toolbar__right">{children}</div>;
+export function ToolbarEnd({ children }: { children: React.ReactNode }): React.ReactElement {
+    return <div className="am-toolbar-group am-toolbar-end">{children}</div>;
 }
 

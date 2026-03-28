@@ -1,7 +1,3 @@
-/* ============================================================================
-   am-sidebar — BEM sidebar
-   ============================================================================ */
-
 .am-sidebar {
     display: flex;
     flex-direction: column;
@@ -18,11 +14,7 @@
     width: var(--am-sidebar-width-collapsed);
 }
 
-/* ------------------------------------------------------------------ */
-/* Brand / header                                                       */
-/* ------------------------------------------------------------------ */
-
-.am-sidebar__brand {
+.am-sidebar-start {
     display: flex;
     align-items: center;
     height: var(--am-topbar-height);
@@ -33,7 +25,18 @@
     gap: 0.625rem;
 }
 
-.am-sidebar__brand-text {
+.am-sidebar-main {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-bottom: 0.5rem;
+}
+
+.am-sidebar-end {
+    border-top: 1px solid var(--am-color-border);
+}
+
+.am-sidebar-brand-text {
     font-size: 1rem;
     font-weight: 700;
     color: var(--am-color-text-default);
@@ -42,91 +45,30 @@
     flex: 1;
 }
 
-.am-shell[data-sidebar-open='false'] .am-sidebar__brand-text {
+.am-shell[data-sidebar-open='false'] .am-sidebar-brand-text {
     display: none;
 }
 
-/* Mobile close button — hidden on desktop */
-.am-sidebar__close {
-    all: unset;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    border-radius: var(--am-radius-md);
-    cursor: pointer;
-    color: var(--am-color-text-muted);
-    flex-shrink: 0;
-
-    &:hover {
-        background-color: var(--am-color-bg-subtle);
-        color: var(--am-color-text-default);
-    }
-
-    &:focus-visible {
-        /* focus: global :focus-visible rule in base.css */
-    }
-}
-
-/* ------------------------------------------------------------------ */
-/* Scrollable nav area                                                  */
-/* ------------------------------------------------------------------ */
-
-.am-sidebar__scroll {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding-bottom: 0.5rem;
-}
-
-/* ------------------------------------------------------------------ */
-/* Nav sections                                                         */
-/* ------------------------------------------------------------------ */
-
-.am-sidebar__nav {
+.am-sidebar-nav {
     padding: 0.5rem;
 }
 
-.am-sidebar__nav--collections {
-    /* margin-top: 0.25rem; */
-}
-
-.am-sidebar__nav--bottom {
-    /* padding-bottom: 0; */
-}
-
-.am-sidebar__nav-heading {
-    display: block;
-    padding: 0.25rem 0.5rem 0.5rem;
-    font-size: 0.6875rem;
-    font-weight: 600;
-    color: var(--am-color-text-muted);
-    white-space: nowrap;
-    overflow: hidden;
-}
-
-.am-sidebar__nav--divider {
+.am-sidebar-nav-divider {
     border-top: 1px solid var(--am-color-border);
     width: 100%;
 }
 
-.am-shell[data-sidebar-open='false'] .am-sidebar__nav-heading {
-    display: none;
-}
-
-.am-sidebar__nav-list {
+.am-sidebar-nav-list {
     list-style: none;
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
 }
 
-/* ------------------------------------------------------------------ */
-/* Nav items                                                            */
-/* ------------------------------------------------------------------ */
+.am-sidebar-nav-item {
+}
 
-.am-sidebar__nav-item {
+.am-sidebar-nav-item-link {
     display: flex;
     align-items: center;
     gap: 0.625rem;
@@ -148,18 +90,14 @@
         color: var(--am-color-text-default);
         text-decoration: none;
     }
-
-    &:focus-visible {
-        /* focus: global :focus-visible rule in base.css */
-    }
 }
 
-.am-shell[data-sidebar-open='false'] .am-sidebar__nav-item {
+.am-shell[data-sidebar-open='false'] .am-sidebar-nav-item {
     justify-content: center;
 }
 
-.am-sidebar__nav-item--active,
-.am-sidebar__nav-item[aria-current='page'] {
+.am-sidebar-nav-item-active .am-sidebar-nav-item-link,
+.am-sidebar-nav-item[aria-current='page'] .am-sidebar-nav-item-link {
     background-color: var(--am-color-primary-subtle);
     color: var(--am-color-primary-emphasis);
 
@@ -169,7 +107,7 @@
     }
 }
 
-.am-sidebar__nav-icon {
+.am-sidebar-nav-item-icon {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -179,35 +117,40 @@
     color: inherit;
 }
 
-.am-sidebar__nav-label {
+.am-sidebar-nav-item-label {
     overflow: hidden;
     text-overflow: ellipsis;
     transition: opacity var(--am-duration-base) var(--am-easing);
 }
 
-.am-shell[data-sidebar-open='false'] .am-sidebar__nav-label {
+.am-shell[data-sidebar-open='false'] .am-sidebar-nav-item-label {
     display: none;
 }
 
-/* ------------------------------------------------------------------ */
-/* Bottom area — pinned                                                 */
-/* ------------------------------------------------------------------ */
-
-.am-sidebar__bottom {
+/* Mobile close button — hidden on desktop */
+.am-sidebar-close {
+    all: unset;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--am-radius-md);
+    cursor: pointer;
+    color: var(--am-color-text-muted);
     flex-shrink: 0;
-    padding-bottom: 0.5rem;
+
+    &:hover {
+        background-color: var(--am-color-bg-subtle);
+        color: var(--am-color-text-default);
+    }
 }
 
-/* ------------------------------------------------------------------ */
-/* Collapse toggle (desktop)                                            */
-/* ------------------------------------------------------------------ */
-
-.am-sidebar__toggle {
+.am-sidebar-toggle {
     all: unset;
     display: flex;
     align-items: center;
     justify-content: center;
-    /* margin: 0.5rem 0.5rem 0; */
     width: 2.25rem;
     height: 2.25rem;
     border-radius: var(--am-radius-md);
@@ -222,15 +165,7 @@
         background-color: var(--am-color-bg-subtle);
         color: var(--am-color-text-default);
     }
-
-    &:focus-visible {
-        /* focus: global :focus-visible rule in base.css */
-    }
 }
-
-/* ------------------------------------------------------------------ */
-/* Mobile overlay                                                       */
-/* ------------------------------------------------------------------ */
 
 @media (max-width: 767px) {
     .am-sidebar {
@@ -250,12 +185,12 @@
     }
 
     /* Show close button on mobile */
-    .am-sidebar__close {
+    .am-sidebar-close {
         display: flex;
     }
 
     /* Hide desktop collapse toggle on mobile */
-    .am-sidebar__toggle {
+    .am-sidebar-toggle {
         display: none;
     }
 }

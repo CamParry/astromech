@@ -49,10 +49,10 @@ function ForgotPasswordPage() {
     if (submitted) {
         return (
             <AuthCard title="Check your email">
-                <p className="am-auth__message">
+                <p className="am-auth-message">
                     We sent a reset link to <strong>{email}</strong>. Check your inbox.
                 </p>
-                <p className="am-auth__footer-link">
+                <p className="am-auth-footer-link">
                     <Link to="/login">{t('auth.backToLogin')}</Link>
                 </p>
             </AuthCard>
@@ -62,7 +62,7 @@ function ForgotPasswordPage() {
     return (
         <AuthCard title="Forgot password" subtitle="Enter your email and we'll send you a reset link.">
             <form onSubmit={handleSubmit}>
-                <div className="am-auth__fields">
+                <div className="am-auth-fields">
                     <Input
                         label="Email address"
                         type="email"
@@ -73,13 +73,13 @@ function ForgotPasswordPage() {
                     />
                 </div>
                 {error !== null && (
-                    <p className="am-auth__error">{error}</p>
+                    <p className="am-auth-error">{error}</p>
                 )}
-                <div className="am-auth__actions">
-                    <Button type="submit" variant="primary" className="am-btn--full" disabled={isSubmitting}>
+                <div className="am-auth-actions">
+                    <Button type="submit" variant="primary" className="am-btn-full" disabled={isSubmitting}>
                         {isSubmitting ? t('auth.sendingResetLink') : t('auth.sendResetLink')}
                     </Button>
-                    <p className="am-auth__footer-link">
+                    <p className="am-auth-footer-link">
                         <Link to="/login">{t('auth.backToLogin')}</Link>
                     </p>
                 </div>

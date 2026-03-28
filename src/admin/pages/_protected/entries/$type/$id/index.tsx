@@ -168,7 +168,7 @@ function EntryEditPage(): React.ReactElement {
                 />
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     {!isReadOnly && form.state.isDirty && (
-                        <span className="am-form-layout__dirty-indicator">
+                        <span className="am-form-layout-dirty-indicator">
                             {t('common.unsavedChanges')}
                         </span>
                     )}
@@ -178,7 +178,7 @@ function EntryEditPage(): React.ReactElement {
                             href={resolvePreviewUrl(entryTypeConfig.previewUrl, entry)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="am-btn am-btn--ghost am-btn--sm"
+                            className="am-btn am-btn-ghost am-btn-sm"
                         >
                             <ExternalLink size={14} style={{ marginRight: '0.25rem' }} />
                             {t('common.view')}
@@ -207,31 +207,31 @@ function EntryEditPage(): React.ReactElement {
                     {!isReadOnly && (
                         <Menu.Root>
                             <Menu.Trigger
-                                className="am-btn am-btn--secondary am-btn--md am-btn--icon"
+                                className="am-btn am-btn-secondary am-btn-md am-btn-icon"
                                 aria-label={t('entries.moreActions')}
                             >
                                 <MoreHorizontal size={14} />
                             </Menu.Trigger>
                             <Menu.Portal>
                                 <Menu.Positioner
-                                    className="am-topbar__menu-positioner"
+                                    className="am-topbar-menu-positioner"
                                     sideOffset={6}
                                     align="end"
                                 >
-                                    <Menu.Popup className="am-topbar__menu-popup">
+                                    <Menu.Popup className="am-topbar-menu-popup">
                                         <Menu.Item
-                                            className="am-topbar__menu-item"
+                                            className="am-topbar-menu-item"
                                             onClick={() => duplicateEntry.mutate(id)}
                                             disabled={duplicateEntry.isPending}
                                         >
-                                            <span className="am-topbar__menu-item-icon">
+                                            <span className="am-topbar-menu-item-icon">
                                                 <Copy size={14} />
                                             </span>
                                             {t('common.duplicate')}
                                         </Menu.Item>
-                                        <Menu.Separator className="am-topbar__menu-separator" />
+                                        <Menu.Separator className="am-topbar-menu-separator" />
                                         <Menu.Item
-                                            className="am-topbar__menu-item am-topbar__menu-item--danger"
+                                            className="am-topbar-menu-item am-topbar-menu-item-danger"
                                             onClick={() =>
                                                 confirm({
                                                     title: t(
@@ -249,7 +249,7 @@ function EntryEditPage(): React.ReactElement {
                                                 })
                                             }
                                         >
-                                            <span className="am-topbar__menu-item-icon">
+                                            <span className="am-topbar-menu-item-icon">
                                                 <Trash2 size={14} />
                                             </span>
                                             {t('common.delete')}
@@ -264,7 +264,7 @@ function EntryEditPage(): React.ReactElement {
 
             <PageContent>
                 {isReadOnly && (
-                    <div className="am-banner am-banner--info" style={{ marginBottom: '1rem' }}>
+                    <div className="am-banner am-banner-info" style={{ marginBottom: '1rem' }}>
                         {t('permissions.readOnly')}
                     </div>
                 )}
@@ -284,11 +284,11 @@ function EntryEditPage(): React.ReactElement {
                                     {(field) => (
                                         <div className="am-field">
                                             <label
-                                                className="am-field__label"
+                                                className="am-field-label"
                                                 htmlFor="entry-title"
                                             >
                                                 {t('entries.titleField')}{' '}
-                                                <span className="am-field__required">
+                                                <span className="am-field-required">
                                                     *
                                                 </span>
                                             </label>
@@ -303,7 +303,7 @@ function EntryEditPage(): React.ReactElement {
                                                 required
                                             />
                                             {field.state.meta.errors.length > 0 && (
-                                                <p className="am-field__error">
+                                                <p className="am-field-error">
                                                     {field.state.meta.errors[0]}
                                                 </p>
                                             )}
@@ -325,17 +325,17 @@ function EntryEditPage(): React.ReactElement {
                                             <form.Field key={field.name} name="fields">
                                                 {(f) => (
                                                     <div className="am-field">
-                                                        <label className="am-field__label">
+                                                        <label className="am-field-label">
                                                             {field.label ?? field.name}
                                                             {field.required === true && (
-                                                                <span className="am-field__required">
+                                                                <span className="am-field-required">
                                                                     *
                                                                 </span>
                                                             )}
                                                         </label>
                                                         {field.description !==
                                                             undefined && (
-                                                            <p className="am-field__hint">
+                                                            <p className="am-field-hint">
                                                                 {field.description}
                                                             </p>
                                                         )}
@@ -417,17 +417,17 @@ function EntryEditPage(): React.ReactElement {
                                             <form.Field key={field.name} name="fields">
                                                 {(f) => (
                                                     <div className="am-field">
-                                                        <label className="am-field__label">
+                                                        <label className="am-field-label">
                                                             {field.label ?? field.name}
                                                             {field.required === true && (
-                                                                <span className="am-field__required">
+                                                                <span className="am-field-required">
                                                                     *
                                                                 </span>
                                                             )}
                                                         </label>
                                                         {field.description !==
                                                             undefined && (
-                                                            <p className="am-field__hint">
+                                                            <p className="am-field-hint">
                                                                 {field.description}
                                                             </p>
                                                         )}

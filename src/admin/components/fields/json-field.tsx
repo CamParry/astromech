@@ -28,7 +28,7 @@ export function JsonField({ name, value, field, required, onChange }: BaseFieldP
     return (
         <div className="am-json-field">
             <textarea
-                className={`am-json-field__textarea${error !== null ? ' am-json-field__textarea--error' : ''}`}
+                className={`am-json-field-textarea${error !== null ? ' am-json-field-textarea-error' : ''}`}
                 name={name}
                 value={raw}
                 onChange={(e) => setRaw(e.target.value)}
@@ -38,7 +38,7 @@ export function JsonField({ name, value, field, required, onChange }: BaseFieldP
                 spellCheck={false}
                 autoComplete="off"
             />
-            {error !== null && <span className="am-json-field__error">{error}</span>}
+            {error !== null && <span className="am-json-field-error">{error}</span>}
         </div>
     );
 }

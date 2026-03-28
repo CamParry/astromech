@@ -22,11 +22,11 @@ function getInitials(name: string): string {
 
 export function Avatar({ name, src, size = 'md' }: AvatarProps): React.ReactElement {
     return (
-        <BaseAvatar.Root className={`am-avatar am-avatar--${size}`} aria-label={name}>
+        <BaseAvatar.Root className={`am-avatar am-avatar-${size}`} aria-label={name}>
             {src != null && (
-                <BaseAvatar.Image src={src} alt={name} className="am-avatar__image" />
+                <BaseAvatar.Image src={src} alt={name} className="am-avatar-image" />
             )}
-            <BaseAvatar.Fallback className="am-avatar__fallback">
+            <BaseAvatar.Fallback className="am-avatar-fallback">
                 {getInitials(name)}
             </BaseAvatar.Fallback>
         </BaseAvatar.Root>

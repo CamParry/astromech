@@ -31,14 +31,14 @@ export function TabField({ name, value, field, onChange }: BaseFieldProps) {
             value={activeTab}
             onValueChange={(v) => setActiveTab(v)}
         >
-            <Tabs.List className="am-tab-field__list">
+            <Tabs.List className="am-tab-field-list">
                 {tabLabels.map((label) => (
                     <Tabs.Tab
                         key={label}
                         value={label}
                         className={[
-                            'am-tab-field__tab',
-                            activeTab === label ? 'am-tab-field__tab--active' : '',
+                            'am-tab-field-tab',
+                            activeTab === label ? 'am-tab-field-tab-active' : '',
                         ]
                             .filter(Boolean)
                             .join(' ')}
@@ -48,21 +48,21 @@ export function TabField({ name, value, field, onChange }: BaseFieldProps) {
                 ))}
             </Tabs.List>
             {tabLabels.map((label) => (
-                <Tabs.Panel key={label} value={label} className="am-tab-field__panel">
-                    <div className="am-tab-field__content">
+                <Tabs.Panel key={label} value={label} className="am-tab-field-panel">
+                    <div className="am-tab-field-content">
                         {getTabFields(label).map((subField) => (
-                            <div key={subField.name} className="am-tab-field__item">
+                            <div key={subField.name} className="am-tab-field-item">
                                 <label
-                                    className="am-tab-field__label"
+                                    className="am-tab-field-label"
                                     htmlFor={`${name}.${subField.name}`}
                                 >
                                     {subField.label ?? subField.name}
                                     {subField.required === true && (
-                                        <span className="am-tab-field__required">*</span>
+                                        <span className="am-tab-field-required">*</span>
                                     )}
                                 </label>
                                 {subField.description !== undefined && (
-                                    <p className="am-tab-field__description">
+                                    <p className="am-tab-field-description">
                                         {subField.description}
                                     </p>
                                 )}

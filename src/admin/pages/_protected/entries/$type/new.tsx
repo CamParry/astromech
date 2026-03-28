@@ -122,11 +122,11 @@ function EntryCreatePage(): React.ReactElement {
                             {(field) => (
                                 <div className="am-field">
                                     <label
-                                        className="am-field__label"
+                                        className="am-field-label"
                                         htmlFor="entry-title"
                                     >
                                         {t('entries.titleField')}{' '}
-                                        <span className="am-field__required">*</span>
+                                        <span className="am-field-required">*</span>
                                     </label>
                                     <Input
                                         id="entry-title"
@@ -140,7 +140,7 @@ function EntryCreatePage(): React.ReactElement {
                                         required
                                     />
                                     {field.state.meta.errors.length > 0 && (
-                                        <p className="am-field__error">
+                                        <p className="am-field-error">
                                             {field.state.meta.errors[0]}
                                         </p>
                                     )}
@@ -156,7 +156,7 @@ function EntryCreatePage(): React.ReactElement {
                                         style={{ marginTop: '1rem' }}
                                     >
                                         <label
-                                            className="am-field__label"
+                                            className="am-field-label"
                                             htmlFor="entry-slug"
                                         >
                                             {t('entries.slugField')}
@@ -191,16 +191,16 @@ function EntryCreatePage(): React.ReactElement {
                                     <form.Field key={field.name} name="fields">
                                         {(f) => (
                                             <div className="am-field">
-                                                <label className="am-field__label">
+                                                <label className="am-field-label">
                                                     {field.label ?? field.name}
                                                     {field.required === true && (
-                                                        <span className="am-field__required">
+                                                        <span className="am-field-required">
                                                             *
                                                         </span>
                                                     )}
                                                 </label>
                                                 {field.description !== undefined && (
-                                                    <p className="am-field__hint">
+                                                    <p className="am-field-hint">
                                                         {field.description}
                                                     </p>
                                                 )}
@@ -257,16 +257,16 @@ function EntryCreatePage(): React.ReactElement {
                                     <form.Field key={field.name} name="fields">
                                         {(f) => (
                                             <div className="am-field">
-                                                <label className="am-field__label">
+                                                <label className="am-field-label">
                                                     {field.label ?? field.name}
                                                     {field.required === true && (
-                                                        <span className="am-field__required">
+                                                        <span className="am-field-required">
                                                             *
                                                         </span>
                                                     )}
                                                 </label>
                                                 {field.description !== undefined && (
-                                                    <p className="am-field__hint">
+                                                    <p className="am-field-hint">
                                                         {field.description}
                                                     </p>
                                                 )}

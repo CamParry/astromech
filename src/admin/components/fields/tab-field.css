@@ -3,13 +3,13 @@
     flex-direction: column;
 }
 
-.am-tab-field__list {
+.am-tab-field-list {
     display: flex;
     border-bottom: 1px solid var(--am-color-border);
     gap: 0;
 }
 
-.am-tab-field__tab {
+.am-tab-field-tab {
     all: unset;
     padding: 0.5rem 1rem;
     font-size: 0.875rem;
@@ -22,43 +22,43 @@
     box-sizing: border-box;
 }
 
-.am-tab-field__tab:hover {
+.am-tab-field-tab:hover {
     color: var(--am-color-text-default);
 }
 
-.am-tab-field__tab--active {
+.am-tab-field-tab-active {
     color: var(--am-color-primary);
     border-bottom-color: var(--am-color-primary);
 }
 
-.am-tab-field__panel {
+.am-tab-field-panel {
     padding-top: 1rem;
 }
 
-.am-tab-field__content {
+.am-tab-field-content {
     display: flex;
     flex-direction: column;
     gap: 1rem;
 }
 
-.am-tab-field__item {
+.am-tab-field-item {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
 }
 
-.am-tab-field__label {
+.am-tab-field-label {
     font-size: 0.8125rem;
     font-weight: 500;
     color: var(--am-color-text-default);
 }
 
-.am-tab-field__required {
+.am-tab-field-required {
     color: var(--am-color-danger-600);
     margin-left: 0.125rem;
 }
 
-.am-tab-field__description {
+.am-tab-field-description {
     font-size: 0.75rem;
     color: var(--am-color-text-muted);
     margin: 0;

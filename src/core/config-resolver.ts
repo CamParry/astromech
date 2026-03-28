@@ -60,7 +60,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
 	return {
 		...rest,
 		adminRoute: config.adminRoute ?? '/admin',
-		apiRoute: config.apiRoute ?? '/api/cms',
+		apiRoute: config.apiRoute ?? '/api',
 		trash: {
 			enabled: config.trash?.enabled ?? true,
 			retentionDays: config.trash?.retentionDays ?? 30,

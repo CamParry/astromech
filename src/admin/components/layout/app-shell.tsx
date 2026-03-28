@@ -26,16 +26,16 @@ export function AppShell() {
             <div className="am-shell" data-sidebar-open={sidebarOpen ? 'true' : 'false'}>
                 {/* Mobile backdrop — visible only on small screens when sidebar is open */}
                 <div
-                    className="am-shell__backdrop"
+                    className="am-shell-backdrop"
                     onClick={() => setSidebarOpen(false)}
                     aria-hidden="true"
                 />
 
                 <Sidebar />
 
-                <div className="am-shell__main">
+                <div className="am-shell-main">
                     <Topbar />
-                    <main className="am-shell__content">
+                    <main className="am-shell-content">
                         <Outlet />
                     </main>
                 </div>
@@ -44,49 +44,49 @@ export function AppShell() {
 
             <Dialog.Root open={shortcutsOpen} onOpenChange={setShortcutsOpen}>
                 <Dialog.Portal>
-                    <Dialog.Backdrop className="am-modal__backdrop" />
-                    <Dialog.Popup className="am-modal__panel am-modal__panel--sm">
-                        <div className="am-modal__header">
-                            <Dialog.Title className="am-modal__title">{t('shortcuts.title')}</Dialog.Title>
+                    <Dialog.Backdrop className="am-modal-backdrop" />
+                    <Dialog.Popup className="am-modal-panel am-modal-panel-sm">
+                        <div className="am-modal-header">
+                            <Dialog.Title className="am-modal-title">{t('shortcuts.title')}</Dialog.Title>
                         </div>
-                        <div className="am-modal__body">
+                        <div className="am-modal-body">
                             <table className="am-shortcuts-table">
                                 <tbody>
                                     <tr>
-                                        <td className="am-shortcuts-table__keys">
-                                            <div className="am-shortcuts-table__keys-inner">
+                                        <td className="am-shortcuts-table-keys">
+                                            <div className="am-shortcuts-table-keys-inner">
                                                 <kbd className="am-kbd">⌘K</kbd>
-                                                <span className="am-shortcuts-table__sep">/</span>
+                                                <span className="am-shortcuts-table-sep">/</span>
                                                 <kbd className="am-kbd">Ctrl+K</kbd>
                                             </div>
                                         </td>
-                                        <td className="am-shortcuts-table__desc">{t('shortcuts.search')}</td>
+                                        <td className="am-shortcuts-table-desc">{t('shortcuts.search')}</td>
                                     </tr>
                                     <tr>
-                                        <td className="am-shortcuts-table__keys">
-                                            <div className="am-shortcuts-table__keys-inner">
+                                        <td className="am-shortcuts-table-keys">
+                                            <div className="am-shortcuts-table-keys-inner">
                                                 <kbd className="am-kbd">⌘S</kbd>
-                                                <span className="am-shortcuts-table__sep">/</span>
+                                                <span className="am-shortcuts-table-sep">/</span>
                                                 <kbd className="am-kbd">Ctrl+S</kbd>
                                             </div>
                                         </td>
-                                        <td className="am-shortcuts-table__desc">{t('shortcuts.save')}</td>
+                                        <td className="am-shortcuts-table-desc">{t('shortcuts.save')}</td>
                                     </tr>
                                     <tr>
-                                        <td className="am-shortcuts-table__keys">
-                                            <div className="am-shortcuts-table__keys-inner">
+                                        <td className="am-shortcuts-table-keys">
+                                            <div className="am-shortcuts-table-keys-inner">
                                                 <kbd className="am-kbd">Escape</kbd>
                                             </div>
                                         </td>
-                                        <td className="am-shortcuts-table__desc">{t('shortcuts.closeCancel')}</td>
+                                        <td className="am-shortcuts-table-desc">{t('shortcuts.closeCancel')}</td>
                                     </tr>
                                     <tr>
-                                        <td className="am-shortcuts-table__keys">
-                                            <div className="am-shortcuts-table__keys-inner">
+                                        <td className="am-shortcuts-table-keys">
+                                            <div className="am-shortcuts-table-keys-inner">
                                                 <kbd className="am-kbd">?</kbd>
                                             </div>
                                         </td>
-                                        <td className="am-shortcuts-table__desc">{t('shortcuts.showShortcuts')}</td>
+                                        <td className="am-shortcuts-table-desc">{t('shortcuts.showShortcuts')}</td>
                                     </tr>
                                 </tbody>
                             </table>

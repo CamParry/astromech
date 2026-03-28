@@ -24,9 +24,9 @@ export function Button({
     const iconOnly = icon !== undefined && children === undefined;
     const classes = [
         'am-btn',
-        `am-btn--${variant}`,
-        `am-btn--${size}`,
-        iconOnly ? 'am-btn--icon' : '',
+        `am-btn-${variant}`,
+        `am-btn-${size}`,
+        iconOnly ? 'am-btn-icon' : '',
         className ?? '',
     ]
         .filter(Boolean)
@@ -37,7 +37,7 @@ export function Button({
             {loading ? (
                 <Spinner size="sm" />
             ) : icon !== undefined ? (
-                <span className="am-btn__icon">{icon}</span>
+                <span className="am-btn-icon">{icon}</span>
             ) : null}
             {children}
         </button>

@@ -74,8 +74,8 @@ app.use('*', (c, next) => {
 // ============================================================================
 
 app.get('/setup/check', async (c) => {
-    const users = await Astromech.users.all();
-    return c.json({ needsSetup: users.length === 0 });
+    const result = await Astromech.users.query({ limit: 'all' });
+    return c.json({ needsSetup: result.data.length === 0 });
 });
 
 // ============================================================================
@@ -114,5 +114,5 @@ app.doc('/openapi.json', {
 });
 
 if (process.env.NODE_ENV !== 'production') {
-    app.get('/docs', swaggerUI({ url: '/api/cms/openapi.json' }));
+    app.get('/docs', (c) => swaggerUI({ url: `${Astromech.config.apiRoute}/openapi.json` })(c));
 }

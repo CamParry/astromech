@@ -1,28 +1,28 @@
-.am-accordion-field__content {
+.am-accordion-field-content {
     display: flex;
     flex-direction: column;
     gap: 1rem;
     padding: 1rem 0;
 }
 
-.am-accordion-field__item {
+.am-accordion-field-item {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
 }
 
-.am-accordion-field__label {
+.am-accordion-field-label {
     font-size: 0.8125rem;
     font-weight: 500;
     color: var(--am-color-text-default);
 }
 
-.am-accordion-field__required {
+.am-accordion-field-required {
     color: var(--am-color-danger-600);
     margin-left: 0.125rem;
 }
 
-.am-accordion-field__description {
+.am-accordion-field-description {
     font-size: 0.75rem;
     color: var(--am-color-text-muted);
     margin: 0;

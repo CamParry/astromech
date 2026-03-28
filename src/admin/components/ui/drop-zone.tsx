@@ -51,8 +51,8 @@ export function DropZone({
             onDrop={handleDrop}
         >
             {isDragging && (
-                <div className="am-drop-zone__overlay">
-                    <div className="am-drop-zone__overlay-content">
+                <div className="am-drop-zone-overlay">
+                    <div className="am-drop-zone-overlay-content">
                         <UploadCloud size={32} />
                         <span>{overlayLabel}</span>
                     </div>

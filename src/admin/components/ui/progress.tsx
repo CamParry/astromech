@@ -23,13 +23,13 @@ export function Progress({
     return (
         <BaseProgress.Root value={value} min={min} max={max} className="am-progress">
             {label !== undefined && (
-                <BaseProgress.Label className="am-progress__label">{label}</BaseProgress.Label>
+                <BaseProgress.Label className="am-progress-label">{label}</BaseProgress.Label>
             )}
-            <BaseProgress.Track className="am-progress__track">
-                <BaseProgress.Indicator className="am-progress__indicator" />
+            <BaseProgress.Track className="am-progress-track">
+                <BaseProgress.Indicator className="am-progress-indicator" />
             </BaseProgress.Track>
             {showValue && (
-                <BaseProgress.Value className="am-progress__value" />
+                <BaseProgress.Value className="am-progress-value" />
             )}
         </BaseProgress.Root>
     );

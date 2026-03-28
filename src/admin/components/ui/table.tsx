@@ -40,8 +40,8 @@ const Row = ({ href, selected, className, ...props }: RowProps) => (
         data-selected={selected ? 'true' : undefined}
         className={[
             className,
-            href ? 'am-table-row--clickable' : '',
-            selected ? 'am-table-row--selected' : '',
+            href ? 'am-table-row-clickable' : '',
+            selected ? 'am-table-row-selected' : '',
         ]
             .filter(Boolean)
             .join(' ') || undefined}
@@ -69,7 +69,7 @@ const SortTh = ({ sortKey, currentSort, onSort, children, ...props }: SortThProp
         <th {...props}>
             <button
                 type="button"
-                className={`am-table-sort-btn${isActive ? ' am-table-sort-btn--active' : ''}`}
+                className={`am-table-sort-btn${isActive ? ' am-table-sort-btn-active' : ''}`}
                 onClick={handleClick}
                 aria-sort={
                     direction === 'asc'

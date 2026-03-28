@@ -4,14 +4,14 @@
     gap: 0.75rem;
 }
 
-.am-repeater__item {
+.am-repeater-item {
     border: 1px solid var(--am-color-border-strong);
     border-radius: 0.25rem;
     background: var(--am-color-bg-muted);
     overflow: hidden;
 }
 
-.am-repeater__item-header {
+.am-repeater-item-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -20,30 +20,30 @@
     border-bottom: 1px solid var(--am-color-border-strong);
 }
 
-.am-repeater__item-title {
+.am-repeater-item-title {
     font-weight: 600;
     font-size: 1rem;
 }
 
-.am-repeater__item-controls {
+.am-repeater-item-controls {
     display: flex;
     gap: 0.25rem;
 }
 
-.am-repeater__item-panel {
+.am-repeater-item-panel {
     height: var(--collapsible-panel-height);
     overflow: hidden;
     transition: height 0.2s ease;
 }
 
-.am-repeater__item-content {
+.am-repeater-item-content {
     padding: 1.5rem;
     display: flex;
     flex-direction: column;
     gap: 1rem;
 }
 
-.am-repeater__btn {
+.am-repeater-btn {
     padding: 0.5rem 1rem;
     border: 1px solid var(--am-color-border-strong);
     border-radius: 0.25rem;
@@ -54,16 +54,16 @@
     transition: all 0.2s;
 }
 
-.am-repeater__btn:hover:not(:disabled) {
+.am-repeater-btn:hover:not(:disabled) {
     background: var(--am-color-bg-subtle);
 }
 
-.am-repeater__btn:disabled {
+.am-repeater-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
-.am-repeater__btn--icon {
+.am-repeater-btn-icon {
     width: 2rem;
     height: 2rem;
     padding: 0;
@@ -72,18 +72,18 @@
     justify-content: center;
 }
 
-.am-repeater__btn--remove {
+.am-repeater-btn-remove {
     color: var(--am-color-danger-600);
 }
 
-.am-repeater__btn--add {
+.am-repeater-btn-add {
     background: var(--am-color-primary);
     color: var(--am-color-neutral-0);
     border-color: var(--am-color-primary);
     align-self: flex-start;
 }
 
-.am-repeater__btn--add:hover {
+.am-repeater-btn-add:hover {
     background: var(--am-color-primary-700);
     border-color: var(--am-color-primary-700);
 }

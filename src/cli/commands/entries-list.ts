@@ -12,16 +12,17 @@ export default defineCommand({
     },
     async run({ args }) {
         await loadConfig(args.config);
-        const results = await entries.all({
+        const limitNum = parseInt(args.limit, 10);
+        const { data } = await entries.query({
             type: args.type,
-            ...(args.status ? { filters: { status: args.status } } : {}),
+            limit: limitNum,
+            ...(args.status ? { where: { status: args.status } } : {}),
         });
-        const limited = results.slice(0, parseInt(args.limit, 10));
-        if (limited.length === 0) {
+        if (data.length === 0) {
             console.log('No entries found.');
             return;
         }
-        for (const e of limited) {
+        for (const e of data) {
             console.log(`${e.id}  ${e.status}  ${e.title}`);
         }
     },

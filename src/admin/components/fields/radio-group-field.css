@@ -12,7 +12,7 @@
     user-select: none;
 }
 
-.am-radio__input {
+.am-radio-input {
     width: 1rem;
     height: 1rem;
     accent-color: var(--am-color-primary);
@@ -20,7 +20,7 @@
     flex-shrink: 0;
 }
 
-.am-radio__label {
+.am-radio-label {
     font-size: 0.9375rem;
     color: var(--am-color-text-default);
 }

@@ -10,10 +10,10 @@ type EmptyStateProps = {
 export function EmptyState({ title, description, action, icon }: EmptyStateProps): React.ReactElement {
     return (
         <div className="am-empty-state">
-            {icon !== undefined && <div className="am-empty-state__icon">{icon}</div>}
-            <p className="am-empty-state__title">{title}</p>
-            {description !== undefined && <p className="am-empty-state__description">{description}</p>}
-            {action !== undefined && <div className="am-empty-state__action">{action}</div>}
+            {icon !== undefined && <div className="am-empty-state-icon">{icon}</div>}
+            <p className="am-empty-state-title">{title}</p>
+            {description !== undefined && <p className="am-empty-state-description">{description}</p>}
+            {action !== undefined && <div className="am-empty-state-action">{action}</div>}
         </div>
     );
 }

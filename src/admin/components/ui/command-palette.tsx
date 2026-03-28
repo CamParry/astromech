@@ -187,17 +187,17 @@ export function CommandPalette(): React.ReactElement {
             }}
         >
             <Dialog.Portal>
-                <Dialog.Backdrop className="am-modal__backdrop" />
+                <Dialog.Backdrop className="am-modal-backdrop" />
                 <Dialog.Popup
-                    className="am-modal__panel am-cmdpal"
+                    className="am-modal-panel am-cmdpal"
                     onKeyDown={handleKeyDown}
                     aria-label={t('cmdpal.ariaLabel')}
                 >
-                    <div className="am-cmdpal__input-wrap">
+                    <div className="am-cmdpal-input-wrap">
                         <input
                             ref={inputRef}
                             type="text"
-                            className="am-cmdpal__input"
+                            className="am-cmdpal-input"
                             placeholder={t('cmdpal.searchPlaceholder')}
                             value={query}
                             onChange={(e) => {
@@ -209,13 +209,13 @@ export function CommandPalette(): React.ReactElement {
                         />
                     </div>
 
-                    <div className="am-cmdpal__results" role="listbox" aria-label={t('cmdpal.resultsLabel')}>
+                    <div className="am-cmdpal-results" role="listbox" aria-label={t('cmdpal.resultsLabel')}>
                         {filtered.length === 0 && (
-                            <div className="am-cmdpal__empty">{t('cmdpal.noResults')}</div>
+                            <div className="am-cmdpal-empty">{t('cmdpal.noResults')}</div>
                         )}
                         {groups.map((group, groupIdx) => (
-                            <div key={group.label} className="am-cmdpal__group">
-                                <div className="am-cmdpal__group-heading">{group.label}</div>
+                            <div key={group.label} className="am-cmdpal-group">
+                                <div className="am-cmdpal-group-heading">{group.label}</div>
                                 {group.items.map((item, itemIdx) => {
                                     const idx = flatIndex(groupIdx, itemIdx);
                                     const isActive = idx === activeIndex;
@@ -228,16 +228,16 @@ export function CommandPalette(): React.ReactElement {
                                             aria-selected={isActive}
                                             className={
                                                 isActive
-                                                    ? 'am-cmdpal__item am-cmdpal__item--active'
-                                                    : 'am-cmdpal__item'
+                                                    ? 'am-cmdpal-item am-cmdpal-item-active'
+                                                    : 'am-cmdpal-item'
                                             }
                                             onMouseEnter={() => setActiveIndex(idx)}
                                             onClick={() => activate(item)}
                                         >
-                                            <span className="am-cmdpal__item-icon">
+                                            <span className="am-cmdpal-item-icon">
                                                 <Icon size={15} />
                                             </span>
-                                            <span className="am-cmdpal__item-label">{item.label}</span>
+                                            <span className="am-cmdpal-item-label">{item.label}</span>
                                         </button>
                                     );
                                 })}

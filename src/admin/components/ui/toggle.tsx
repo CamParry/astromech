@@ -13,15 +13,15 @@ export function Toggle({ checked, defaultChecked, onChange, label, disabled }: T
     return (
         <label className="am-toggle">
             <Switch.Root
-                className="am-toggle__root"
+                className="am-toggle-root"
                 checked={checked}
                 defaultChecked={defaultChecked}
                 onCheckedChange={onChange}
                 disabled={disabled}
             >
-                <Switch.Thumb className="am-toggle__thumb" />
+                <Switch.Thumb className="am-toggle-thumb" />
             </Switch.Root>
-            {label !== undefined && <span className="am-toggle__label">{label}</span>}
+            {label !== undefined && <span className="am-toggle-label">{label}</span>}
         </label>
     );
 }

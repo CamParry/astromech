@@ -83,11 +83,11 @@ export function ApiErrorPanel(): React.ReactElement {
         >
             {serverError !== null && (
                 <div className="am-api-error">
-                    <div className="am-api-error__badge-row">
+                    <div className="am-api-error-badge-row">
                         <Badge variant="danger">{serverError.code}</Badge>
                     </div>
-                    <p className="am-api-error__message">{serverError.message}</p>
-                    <p className="am-api-error__ref">{t('apiError.ref', { id: serverError.id })}</p>
+                    <p className="am-api-error-message">{serverError.message}</p>
+                    <p className="am-api-error-ref">{t('apiError.ref', { id: serverError.id })}</p>
                 </div>
             )}
         </Modal>

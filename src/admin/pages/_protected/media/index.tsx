@@ -18,8 +18,8 @@ import {
     Select,
     Table,
     Toolbar,
-    ToolbarLeft,
-    ToolbarRight,
+    ToolbarStart,
+    ToolbarEnd,
     ToggleGroup,
     UploadButton,
     UploadZone,
@@ -31,7 +31,7 @@ import { MediaDetailModal } from '@/admin/components/media/MediaDetailModal.js';
 import { useViewMode } from '@/admin/hooks/use-view-mode.js';
 import { useQueryState } from '@/admin/hooks/use-query-state.js';
 import { useSelection } from '@/admin/hooks/use-selection.js';
-import { useUploadMedia, usePermissions, useMediaList, useBulkDeleteMedia } from '@/admin/hooks/index.js';
+import { useUploadMedia, usePermissions, useMediaQuery, useBulkDeleteMedia } from '@/admin/hooks/index.js';
 import { TYPE_FILTER_OPTIONS, MEDIA_ACCEPT } from '@/admin/types/media.js';
 import type { TypeFilter } from '@/admin/types/media.js';
 
@@ -54,16 +54,15 @@ function MediaIndexPage(): React.ReactElement {
     const currentPage = Math.max(1, Number(page) || 1);
     const queryParams = {
         ...(q ? { search: q } : {}),
-        ...(typeFilter !== 'all' ? { type: typeFilter } : {}),
+        ...(typeFilter !== 'all' ? { where: { mimeType: typeFilter } } : {}),
         page: currentPage,
-        perPage: PER_PAGE,
+        limit: PER_PAGE,
     };
 
-    const { data, isLoading } = useMediaList(queryParams);
+    const { data, isLoading } = useMediaQuery(queryParams);
 
-    const items = data?.items ?? [];
-    const total = data?.total ?? 0;
-    const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+    const items = data?.data ?? [];
+    const totalPages = Math.max(1, data?.pagination?.pages ?? 1);
 
     const { checkedIds, toggle, toggleAll, allChecked, someChecked, reset } =
         useSelection(items);
@@ -89,7 +88,7 @@ function MediaIndexPage(): React.ReactElement {
 
                 <PageContent>
                     <Toolbar>
-                        <ToolbarLeft>
+                        <ToolbarStart>
                             {someChecked && canDeleteMedia() && (
                                 <Dropdown
                                     label={`${t('media.bulkActions')} (${checkedIds.size})`}
@@ -131,11 +130,11 @@ function MediaIndexPage(): React.ReactElement {
                                 }}
                                 options={TYPE_FILTER_OPTIONS}
                                 triggerPrefix={t('media.typeFilterPrefix')}
-                                className="am-select__trigger--auto"
+                                className="am-select-trigger-auto"
                             />
-                        </ToolbarLeft>
+                        </ToolbarStart>
 
-                        <ToolbarRight>
+                        <ToolbarEnd>
                             <ToggleGroup
                                 value={viewMode}
                                 onValueChange={setViewMode}
@@ -152,7 +151,7 @@ function MediaIndexPage(): React.ReactElement {
                                     },
                                 ]}
                             />
-                        </ToolbarRight>
+                        </ToolbarEnd>
                     </Toolbar>
 
                     {isLoading ? (
@@ -216,7 +215,7 @@ function MediaIndexPage(): React.ReactElement {
                                         <Table.Root>
                                             <Table.Head>
                                                 <Table.Row>
-                                                    <Table.Th className="am-table__checkbox-col">
+                                                    <Table.Th className="am-table-checkbox-col">
                                                         <Checkbox
                                                             checked={allChecked}
                                                             onChange={toggleAll}

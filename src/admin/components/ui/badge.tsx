@@ -18,7 +18,7 @@ type BadgeProps = {
 };
 
 export function Badge({ variant = 'default', children }: BadgeProps): React.ReactElement {
-    return <span className={`am-badge am-badge--${variant}`}>{children}</span>;
+    return <span className={`am-badge am-badge-${variant}`}>{children}</span>;
 }
 
 export type { BadgeProps, BadgeVariant };

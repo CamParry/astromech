@@ -14,17 +14,17 @@ type AuthCardProps = {
 export function AuthCard({ title, subtitle, children }: AuthCardProps): React.ReactElement {
     return (
         <div className="am-auth">
-            <div className="am-auth__card">
-                <div className="am-auth__brand">
-                    <span className="am-auth__logo">Astromech</span>
+            <div className="am-auth-card">
+                <div className="am-auth-brand">
+                    <span className="am-auth-logo">Astromech</span>
                 </div>
-                <div className="am-auth__header">
-                    <h1 className="am-auth__title">{title}</h1>
+                <div className="am-auth-header">
+                    <h1 className="am-auth-title">{title}</h1>
                     {subtitle !== undefined && (
-                        <p className="am-auth__subtitle">{subtitle}</p>
+                        <p className="am-auth-subtitle">{subtitle}</p>
                     )}
                 </div>
-                <div className="am-auth__body">
+                <div className="am-auth-body">
                     {children}
                 </div>
             </div>

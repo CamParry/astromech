@@ -14,7 +14,7 @@ export function BooleanField({ name, value, onChange }: BaseFieldProps) {
             value="true"
             onCheckedChange={(c) => onChange(name, c)}
         >
-            <Switch.Thumb className="am-switch__thumb" />
+            <Switch.Thumb className="am-switch-thumb" />
         </Switch.Root>
     );
 }

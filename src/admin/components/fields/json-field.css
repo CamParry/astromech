@@ -4,7 +4,7 @@
     gap: 0.25rem;
 }
 
-.am-json-field__textarea {
+.am-json-field-textarea {
     width: 100%;
     font-family: ui-monospace, monospace;
     font-size: 0.8125rem;
@@ -19,21 +19,21 @@
     box-sizing: border-box;
 }
 
-.am-json-field__textarea:focus {
+.am-json-field-textarea:focus {
     outline: none;
     border-color: var(--am-color-primary);
     box-shadow: 0 0 0 2px var(--am-color-primary-100);
 }
 
-.am-json-field__textarea--error {
+.am-json-field-textarea-error {
     border-color: var(--am-color-danger-600);
 }
 
-.am-json-field__textarea--error:focus {
+.am-json-field-textarea-error:focus {
     box-shadow: 0 0 0 2px var(--am-color-danger-100);
 }
 
-.am-json-field__error {
+.am-json-field-error {
     font-size: 0.75rem;
     color: var(--am-color-danger-600);
 }

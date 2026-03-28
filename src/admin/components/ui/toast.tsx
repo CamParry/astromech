@@ -42,17 +42,17 @@ function ToastViewport(): React.ReactElement {
                         toast={toast}
                         className={[
                             'am-toast',
-                            data?.variant ? `am-toast--${data.variant}` : '',
+                            data?.variant ? `am-toast-${data.variant}` : '',
                         ]
                             .filter(Boolean)
                             .join(' ')}
                     >
-                        <Toast.Content className="am-toast__content">
-                            <Toast.Title className="am-toast__message">
+                        <Toast.Content className="am-toast-content">
+                            <Toast.Title className="am-toast-message">
                                 {data?.message ?? ''}
                             </Toast.Title>
                         </Toast.Content>
-                        <Toast.Close className="am-toast__dismiss" aria-label="Dismiss">
+                        <Toast.Close className="am-toast-dismiss" aria-label="Dismiss">
                             ×
                         </Toast.Close>
                     </Toast.Root>

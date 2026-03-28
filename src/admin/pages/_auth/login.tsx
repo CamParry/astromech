@@ -38,7 +38,7 @@ function LoginPage() {
     return (
         <AuthCard title="Sign in">
             <form onSubmit={handleSubmit}>
-                <div className="am-auth__fields">
+                <div className="am-auth-fields">
                     <Input
                         label="Email address"
                         type="email"
@@ -57,13 +57,13 @@ function LoginPage() {
                     />
                 </div>
                 {error !== null && (
-                    <p className="am-auth__error">{error}</p>
+                    <p className="am-auth-error">{error}</p>
                 )}
-                <div className="am-auth__actions">
-                    <Button type="submit" variant="primary" className="am-btn--full" disabled={isSubmitting}>
+                <div className="am-auth-actions">
+                    <Button type="submit" variant="primary" className="am-btn-full" disabled={isSubmitting}>
                         {isSubmitting ? 'Signing in…' : 'Sign in'}
                     </Button>
-                    <p className="am-auth__footer-link">
+                    <p className="am-auth-footer-link">
                         <Link to="/forgot-password">{t('auth.forgotPassword')}</Link>
                     </p>
                 </div>

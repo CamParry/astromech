@@ -52,7 +52,7 @@ export function PublishPanel({
         <Panel title={t('entries.statusPanel')}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div className="am-field">
-                    <label className="am-field__label">{t('entries.statusField')}</label>
+                    <label className="am-field-label">{t('entries.statusField')}</label>
                     <Select
                         value={status}
                         onValueChange={(v) => onStatusChange((v ?? 'draft') as EntryStatus)}
@@ -63,7 +63,7 @@ export function PublishPanel({
 
                 {status === 'scheduled' && (
                     <div className="am-field">
-                        <label className="am-field__label" htmlFor="entry-publish-at">
+                        <label className="am-field-label" htmlFor="entry-publish-at">
                             {t('entries.publishAtField')}
                         </label>
                         <Input
@@ -78,7 +78,7 @@ export function PublishPanel({
 
                 {status === 'published' && formattedPublishedAt != null && (
                     <div className="am-field">
-                        <label className="am-field__label">
+                        <label className="am-field-label">
                             {t('entry.fields.publishedAt')}
                         </label>
                         <p className="am-text-sm am-text-muted">{formattedPublishedAt}</p>

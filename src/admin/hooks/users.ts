@@ -7,16 +7,16 @@ import { useTranslation } from 'react-i18next';
 import { Astromech } from '@/sdk/fetch/index.js';
 import { queryKeys } from './use-query-keys.js';
 import { useToast } from '../components/ui/index.js';
-import type { User } from '@/types/index.js';
+import type { User, UserQueryParams } from '@/types/index.js';
 
 // ============================================================================
 // Query hooks
 // ============================================================================
 
-export function useUsersList() {
+export function useUsersQuery(params?: UserQueryParams) {
     return useQuery({
-        queryKey: queryKeys.users.all(),
-        queryFn: () => Astromech.users.all(),
+        queryKey: queryKeys.users.list(params as Record<string, unknown>),
+        queryFn: () => Astromech.users.query(params),
     });
 }
 

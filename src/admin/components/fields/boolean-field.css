@@ -28,7 +28,7 @@
     }
 }
 
-.am-switch__thumb {
+.am-switch-thumb {
     display: block;
     width: 1.25rem;
     height: 1.25rem;
@@ -43,7 +43,7 @@
     }
 }
 
-.am-switch__label {
+.am-switch-label {
     font-size: 1rem;
     color: var(--am-color-text-default);
     cursor: pointer;

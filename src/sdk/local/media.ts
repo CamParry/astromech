@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { mediaTable } from '@/db/schema.js';
 import { getDb } from '@/db/registry.js';
 import { getStorageDriver } from '@/storage/registry.js';
-import type { Media, JsonObject, MediaListParams, MediaListResult } from '@/types/index.js';
+import type { Media, JsonObject, QueryResult, MediaQueryParams } from '@/types/index.js';
 import { ValidationError } from '@/errors/validation.js';
 import { updateMediaSchema } from '@/schemas/media.js';
 
@@ -18,17 +18,10 @@ function validate<T>(schema: z.ZodType<T>, data: unknown): T {
 }
 
 export const mediaApi = {
-    async all(): Promise<Media[]> {
-        const db = getDb();
-        const rows = await db.select().from(mediaTable).orderBy(desc(mediaTable.createdAt));
-        return rows as Media[];
-    },
-
-    async list(params?: MediaListParams): Promise<MediaListResult> {
+    async query(params?: MediaQueryParams): Promise<QueryResult<Media>> {
         const db = getDb();
         const page = params?.page ?? 1;
-        const perPage = params?.perPage ?? 20;
-        const offset = (page - 1) * perPage;
+        const limit = params?.limit;
 
         const conditions: SQL[] = [];
 
@@ -36,43 +29,39 @@ export const mediaApi = {
             conditions.push(like(mediaTable.filename, `%${params.search}%`));
         }
 
-        if (params?.type && params.type !== 'all') {
-            if (params.type === 'images') {
+        const mimeType = params?.where?.mimeType;
+        if (mimeType) {
+            if (mimeType === 'images') {
                 conditions.push(like(mediaTable.mimeType, 'image/%'));
-            } else if (params.type === 'videos') {
+            } else if (mimeType === 'videos') {
                 conditions.push(like(mediaTable.mimeType, 'video/%'));
-            } else if (params.type === 'documents') {
-                conditions.push(
-                    sql`(${mediaTable.mimeType} LIKE 'application/%' OR ${mediaTable.mimeType} LIKE 'text/%')`
-                );
-            } else if (params.type === 'other') {
-                conditions.push(
-                    not(
-                        sql`(${mediaTable.mimeType} LIKE 'image/%' OR ${mediaTable.mimeType} LIKE 'video/%' OR ${mediaTable.mimeType} LIKE 'application/%' OR ${mediaTable.mimeType} LIKE 'text/%')`
-                    )
-                );
+            } else if (mimeType === 'documents') {
+                conditions.push(sql`(${mediaTable.mimeType} LIKE 'application/%' OR ${mediaTable.mimeType} LIKE 'text/%')`);
+            } else if (mimeType === 'other') {
+                conditions.push(not(sql`(${mediaTable.mimeType} LIKE 'image/%' OR ${mediaTable.mimeType} LIKE 'video/%' OR ${mediaTable.mimeType} LIKE 'application/%' OR ${mediaTable.mimeType} LIKE 'text/%')`));
             }
         }
 
         const where = conditions.length > 0 ? and(...conditions) : undefined;
 
+        if (limit === 'all') {
+            const rows = await db.select().from(mediaTable).where(where).orderBy(desc(mediaTable.createdAt));
+            return { data: rows as Media[], pagination: null };
+        }
+
+        const perPage = typeof limit === 'number' ? limit : 20;
+        const offset = (page - 1) * perPage;
+
         const [rows, countRows] = await Promise.all([
-            db
-                .select()
-                .from(mediaTable)
-                .where(where)
-                .orderBy(desc(mediaTable.createdAt))
-                .limit(perPage)
-                .offset(offset),
-            db
-                .select({ count: sql<number>`count(*)` })
-                .from(mediaTable)
-                .where(where),
+            db.select().from(mediaTable).where(where).orderBy(desc(mediaTable.createdAt)).limit(perPage).offset(offset),
+            db.select({ count: sql<number>`count(*)` }).from(mediaTable).where(where),
         ]);
 
         const total = countRows[0]?.count ?? 0;
-
-        return { items: rows as Media[], total, page, perPage };
+        return {
+            data: rows as Media[],
+            pagination: { page, limit: perPage, total, pages: Math.ceil(total / perPage) },
+        };
     },
 
     async get(id: string): Promise<Media | null> {

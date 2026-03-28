@@ -1,47 +1,6 @@
-/**
- * Sidebar navigation component for the Astromech admin SPA.
- */
-
 import React from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-
-// ============================================================================
-// Logo
-// ============================================================================
-
-function AstromechLogo({ size = 28 }: { size?: number }) {
-    return (
-        <svg
-            width={size}
-            height={size}
-            viewBox="0 0 26 26"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden="true"
-            style={{ flexShrink: 0 }}
-        >
-            <rect width="26" height="26" rx="6" fill="var(--am-color-primary-500)" />
-            {/* Stylised A mark */}
-            <path
-                d="M13 5L20 20H6L13 5Z"
-                fill="none"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinejoin="round"
-            />
-            <line
-                x1="9.5"
-                y1="15"
-                x2="16.5"
-                y2="15"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-            />
-        </svg>
-    );
-}
 import {
     LayoutDashboard,
     Image,
@@ -54,41 +13,7 @@ import {
 import adminConfig from 'virtual:astromech/admin-config';
 import { useUI } from '../../context/ui.js';
 import { usePermissions } from '../../hooks/index.js';
-
-// ============================================================================
-// NavLink
-// ============================================================================
-
-type NavLinkProps = {
-    to: string;
-    children: React.ReactNode;
-    exact?: boolean;
-};
-
-function NavLink({ to, children, exact = false }: NavLinkProps) {
-    const routerState = useRouterState();
-    const pathname = routerState.location.pathname;
-
-    const isActive = exact
-        ? pathname === to
-        : pathname === to || pathname.startsWith(to + '/');
-
-    return (
-        <Link
-            to={to}
-            className={
-                'am-sidebar__nav-item' + (isActive ? ' am-sidebar__nav-item--active' : '')
-            }
-            aria-current={isActive ? 'page' : undefined}
-        >
-            {children}
-        </Link>
-    );
-}
-
-// ============================================================================
-// Sidebar
-// ============================================================================
+import { Logo } from '../brand/Brand.js';
 
 export function Sidebar() {
     const { t } = useTranslation();
@@ -102,124 +27,125 @@ export function Sidebar() {
             data-open={sidebarOpen ? 'true' : 'false'}
             aria-label={t('nav.primary')}
         >
-            {/* Brand */}
-            <div className="am-sidebar__brand">
-                <AstromechLogo />
-                <span className="am-sidebar__brand-text">
+            <div className="am-sidebar-start">
+                <Logo />
+                <span className="am-sidebar-brand-text">
                     {(adminConfig as { siteName?: string }).siteName ?? 'Astromech'}
                 </span>
-                {/* Mobile close button */}
                 <button
                     type="button"
-                    className="am-sidebar__close"
+                    className="am-sidebar-close"
                     onClick={() => setSidebarOpen(false)}
                     aria-label={t('nav.closeNav')}
                 >
                     <ChevronLeft size={16} />
                 </button>
             </div>
-
-            {/* Scrollable nav area */}
-            <div className="am-sidebar__scroll">
-                {/* Primary nav */}
-                <nav className="am-sidebar__nav" aria-label={t('nav.primary')}>
-                    <ul className="am-sidebar__nav-list" role="list">
-                        <li key="/">
-                            <NavLink to="/" exact>
-                                <span className="am-sidebar__nav-icon">
-                                    <LayoutDashboard size={16} />
-                                </span>
-                                <span className="am-sidebar__nav-label">
-                                    {t('nav.dashboard')}
-                                </span>
-                            </NavLink>
-                        </li>
+            <div className="am-sidebar-main">
+                <nav className="am-sidebar-nav" aria-label={t('nav.primary')}>
+                    <ul className="am-sidebar-nav-list" role="list">
+                        <SidebarNavItem
+                            to="/"
+                            exact
+                            label={t('nav.dashboard')}
+                            icon={<LayoutDashboard size={16} />}
+                        />
                         {canReadMedia() && (
-                            <li key="/media">
-                                <NavLink to="/media">
-                                    <span className="am-sidebar__nav-icon">
-                                        <Image size={16} />
-                                    </span>
-                                    <span className="am-sidebar__nav-label">
-                                        {t('nav.media')}
-                                    </span>
-                                </NavLink>
-                            </li>
+                            <SidebarNavItem
+                                to="/media"
+                                label={t('nav.media')}
+                                icon={<Image size={16} />}
+                            />
                         )}
                     </ul>
                 </nav>
-
-                <div className="am-sidebar__nav--divider"></div>
-
-                {/* Entry types nav */}
+                <div className="am-sidebar-nav-divider"></div>
                 {entryTypes.length > 0 && (
-                    <nav className="am-sidebar__nav" aria-label="Entry types">
-                        <ul className="am-sidebar__nav-list" role="list">
+                    <nav className="am-sidebar-nav" aria-label="Entry types">
+                        <ul className="am-sidebar-nav-list" role="list">
                             {entryTypes.map(([key, entryType]) => (
-                                <li key={key}>
-                                    <NavLink to={`/entries/${key}`}>
-                                        <span className="am-sidebar__nav-icon">
-                                            <Database size={16} />
-                                        </span>
-                                        <span className="am-sidebar__nav-label">
-                                            {entryType.plural}
-                                        </span>
-                                    </NavLink>
-                                </li>
+                                <SidebarNavItem
+                                    key={key}
+                                    to={`/entries/${key}`}
+                                    label={entryType.plural}
+                                    icon={<Database size={16} />}
+                                />
                             ))}
                         </ul>
                     </nav>
                 )}
             </div>
-
-            <div className="am-sidebar__nav--divider"></div>
-
-            <nav
-                className="am-sidebar__nav am-sidebar__nav--bottom"
-                aria-label={t('nav.system')}
-            >
-                <ul className="am-sidebar__nav-list" role="list">
-                    {canReadUsers() && (
-                        <li key="/users">
-                            <NavLink to="/users">
-                                <span className="am-sidebar__nav-icon">
-                                    <Users size={16} />
-                                </span>
-                                <span className="am-sidebar__nav-label">
-                                    {t('nav.users')}
-                                </span>
-                            </NavLink>
-                        </li>
-                    )}
-                    {canReadSettings() && (
-                        <li key="/settings">
-                            <NavLink to="/settings">
-                                <span className="am-sidebar__nav-icon">
-                                    <Settings size={16} />
-                                </span>
-                                <span className="am-sidebar__nav-label">
-                                    {t('nav.settings')}
-                                </span>
-                            </NavLink>
-                        </li>
-                    )}
-                </ul>
-                <button
-                    type="button"
-                    className="am-sidebar__toggle"
-                    onClick={toggleSidebar}
-                    aria-label={
-                        sidebarOpen ? t('nav.collapseSidebar') : t('nav.expandSidebar')
-                    }
-                >
-                    {sidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-                </button>
-            </nav>
-
-            {/* Bottom nav — pinned */}
-            {/* <div className="am-sidebar__bottom"> */}
-            {/* Collapse toggle (desktop only) */}
-            {/* </div> */}
+            <div className="am-sidebar-end">
+                <nav className="am-sidebar-nav" aria-label={t('nav.system')}>
+                    <ul className="am-sidebar-nav-list" role="list">
+                        {canReadUsers() && (
+                            <SidebarNavItem
+                                to="/users"
+                                label={t('nav.users')}
+                                icon={<Users size={16} />}
+                            />
+                        )}
+                        {canReadSettings() && (
+                            <SidebarNavItem
+                                to="/settings"
+                                label={t('nav.settings')}
+                                icon={<Settings size={16} />}
+                            />
+                        )}
+                    </ul>
+                    <button
+                        type="button"
+                        className="am-sidebar-toggle"
+                        onClick={toggleSidebar}
+                        aria-label={
+                            sidebarOpen
+                                ? t('nav.collapseSidebar')
+                                : t('nav.expandSidebar')
+                        }
+                    >
+                        {sidebarOpen ? (
+                            <ChevronLeft size={16} />
+                        ) : (
+                            <ChevronRight size={16} />
+                        )}
+                    </button>
+                </nav>
+            </div>
         </aside>
+    );
+}
+
+function SidebarNavItem({
+    to,
+    icon,
+    label,
+    exact = false,
+}: {
+    to: string;
+    icon: React.ReactNode;
+    label: string;
+    exact?: boolean;
+}) {
+    const routerState = useRouterState();
+    const pathname = routerState.location.pathname;
+
+    const isActive = exact
+        ? pathname === to
+        : pathname === to || pathname.startsWith(to + '/');
+    return (
+        <li
+            className={
+                'am-sidebar-nav-item' + (isActive ? ' am-sidebar-nav-item-active' : '')
+            }
+        >
+            <Link
+                to={to}
+                className="am-sidebar-nav-item-link"
+                aria-current={isActive ? 'page' : undefined}
+            >
+                <span className="am-sidebar-nav-item-icon">{icon}</span>
+                <span className="am-sidebar-nav-item-label">{label}</span>
+            </Link>
+        </li>
     );
 }

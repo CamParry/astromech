@@ -204,40 +204,40 @@ function MediaEditPage(): React.ReactElement {
                     <Panel title="Metadata">
                         <dl className="am-meta">
                             <div>
-                                <dt className="am-meta__label">Filename</dt>
-                                <dd className="am-meta__value am-text-mono">
+                                <dt className="am-meta-label">Filename</dt>
+                                <dd className="am-meta-value am-text-mono">
                                     {item?.filename ?? '—'}
                                 </dd>
                             </div>
                             <div>
-                                <dt className="am-meta__label">Size</dt>
-                                <dd className="am-meta__value">
+                                <dt className="am-meta-label">Size</dt>
+                                <dd className="am-meta-value">
                                     {item != null ? formatBytes(item.size) : '—'}
                                 </dd>
                             </div>
                             <div>
-                                <dt className="am-meta__label">Type</dt>
-                                <dd className="am-meta__value am-text-mono">
+                                <dt className="am-meta-label">Type</dt>
+                                <dd className="am-meta-value am-text-mono">
                                     {item?.mimeType ?? '—'}
                                 </dd>
                             </div>
                             {item?.width != null && item.height != null && (
                                 <div>
-                                    <dt className="am-meta__label">Dimensions</dt>
-                                    <dd className="am-meta__value">
+                                    <dt className="am-meta-label">Dimensions</dt>
+                                    <dd className="am-meta-value">
                                         {item.width} × {item.height}
                                     </dd>
                                 </div>
                             )}
                             <div>
-                                <dt className="am-meta__label">Uploaded</dt>
-                                <dd className="am-meta__value">
+                                <dt className="am-meta-label">Uploaded</dt>
+                                <dd className="am-meta-value">
                                     {formatDate(item?.createdAt)}
                                 </dd>
                             </div>
                             <div>
-                                <dt className="am-meta__label">Last updated</dt>
-                                <dd className="am-meta__value">
+                                <dt className="am-meta-label">Last updated</dt>
+                                <dd className="am-meta-value">
                                     {formatDate(item?.updatedAt)}
                                 </dd>
                             </div>

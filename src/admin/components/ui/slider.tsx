@@ -32,7 +32,7 @@ export function Slider({
 
     return (
         <div className="am-slider-wrap">
-            {label !== undefined && <span className="am-field__label">{label}</span>}
+            {label !== undefined && <span className="am-field-label">{label}</span>}
             <BaseSlider.Root
                 value={value}
                 defaultValue={defaultValue}
@@ -43,14 +43,14 @@ export function Slider({
                 onValueChange={onValueChange}
                 className="am-slider"
             >
-                <BaseSlider.Control className="am-slider__control">
-                    <BaseSlider.Track className="am-slider__track">
-                        <BaseSlider.Indicator className="am-slider__indicator" />
+                <BaseSlider.Control className="am-slider-control">
+                    <BaseSlider.Track className="am-slider-track">
+                        <BaseSlider.Indicator className="am-slider-indicator" />
                         {Array.from({ length: thumbCount }).map((_, i) => (
                             <BaseSlider.Thumb
                                 key={i}
                                 index={i}
-                                className="am-slider__thumb"
+                                className="am-slider-thumb"
                                 aria-label={ariaLabel ?? label ?? `Value ${i + 1}`}
                             />
                         ))}

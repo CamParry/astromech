@@ -14,7 +14,7 @@ export { useUploadMedia } from './use-upload-media.js';
 export type { UseUploadMediaResult } from './use-upload-media.js';
 export { usePermissions, hasPermission } from './use-permissions.js';
 export {
-    useEntriesList,
+    useEntriesQuery,
     useEntry,
     useEntryVersions,
     useEntryTranslations,
@@ -34,5 +34,5 @@ export {
     useRestoreEntryVersion,
     useCreateTranslation,
 } from './entries.js';
-export { useMediaList, useMediaItem, useUpdateMedia, useDeleteMedia, useBulkDeleteMedia } from './media.js';
-export { useUsersList, useUser, useCreateUser, useUpdateUser, useDeleteUser } from './users.js';
+export { useMediaQuery, useMediaItem, useUpdateMedia, useDeleteMedia, useBulkDeleteMedia } from './media.js';
+export { useUsersQuery, useUser, useCreateUser, useUpdateUser, useDeleteUser } from './users.js';

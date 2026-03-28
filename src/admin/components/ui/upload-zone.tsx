@@ -32,7 +32,7 @@ export function UploadZone({
 
     return (
         <div
-            className={['am-upload-zone', isDragging && 'am-upload-zone--dragging', disabled && 'am-upload-zone--disabled', className].filter(Boolean).join(' ')}
+            className={['am-upload-zone', isDragging && 'am-upload-zone-dragging', disabled && 'am-upload-zone-disabled', className].filter(Boolean).join(' ')}
             onDragEnter={(e) => { e.preventDefault(); if (!disabled) setIsDragging(true); }}
             onDragOver={(e) => { e.preventDefault(); }}
             onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
@@ -52,12 +52,12 @@ export function UploadZone({
                 type="file"
                 accept={accept}
                 multiple={multiple}
-                className="am-upload-zone__input"
+                className="am-upload-zone-input"
                 onChange={(e) => handleFiles(e.target.files)}
                 disabled={disabled}
             />
-            <UploadCloud size={24} className="am-upload-zone__icon" />
-            <span className="am-upload-zone__label">{label}</span>
+            <UploadCloud size={24} className="am-upload-zone-icon" />
+            <span className="am-upload-zone-label">{label}</span>
         </div>
     );
 }

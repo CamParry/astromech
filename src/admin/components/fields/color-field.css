@@ -3,7 +3,7 @@
     display: inline-flex;
 }
 
-.am-color-field__trigger {
+.am-color-field-trigger {
     all: unset;
     display: flex;
     align-items: center;
@@ -23,17 +23,17 @@
         background-color var(--am-duration-base) var(--am-easing);
 }
 
-.am-color-field__trigger:hover {
+.am-color-field-trigger:hover {
     border-color: var(--am-color-primary);
     background-color: var(--am-color-bg-subtle);
 }
 
-.am-color-field__trigger:focus-visible {
+.am-color-field-trigger:focus-visible {
     outline: 2px solid var(--am-color-primary);
     outline-offset: 2px;
 }
 
-.am-color-field__swatch {
+.am-color-field-swatch {
     width: 1rem;
     height: 1rem;
     border-radius: 50%;
@@ -41,12 +41,12 @@
     flex-shrink: 0;
 }
 
-.am-color-field__hex {
+.am-color-field-hex {
     font-size: 0.8125rem;
     letter-spacing: 0.03em;
 }
 
-.am-color-field__popover {
+.am-color-field-popover {
     position: absolute;
     top: calc(100% + 0.375rem);
     left: 0;
