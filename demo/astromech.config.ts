@@ -1,7 +1,8 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig, FilesystemStorage, libsqlDriver } from 'astromech';
 
 export default defineConfig({
-    db: libsqlDriver({ url: 'file:./database.db' }),
+    db: libsqlDriver({ url: 'file:' + fileURLToPath(new URL('./database.db', import.meta.url)) }),
     storage: new FilesystemStorage({ dir: './public/uploads' }),
     locales: ['en', 'fr'],
     defaultLocale: 'en',

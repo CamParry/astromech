@@ -31,3 +31,6 @@ coverage/
 
 # Cloudflare
 .wrangler/
+
+# TanStack Router generated file
+src/admin/routeTree.gen.ts

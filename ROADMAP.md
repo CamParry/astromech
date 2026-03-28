@@ -214,27 +214,25 @@ Ensure both SDKs are complete, typed, and consistent.
 
 ---
 
-## Phase 10.1 — SDK Rename + Security Hardening (Future)
+## Phase 10.1 — SDK Rename + Security Hardening ✅
 
 ### SDK Rename: `local` + `fetch`
 
-Rename the two SDK exports to remove ambiguity. `server` implies "use this on any server" (wrong — it requires direct DB access); `client` implies browser-only. The new names make the distinction self-evident.
-
-- `astromech/server` → `astromech/local` — direct DB access, same codebase only
-- `astromech/client` → `astromech/fetch` — HTTP-based, works in browser, external servers, or any environment
-- [ ] Update `package.json` exports map
-- [ ] Update `tsup.config.ts` entry points
-- [ ] Rename `src/sdk/server/` → `src/sdk/local/` and `src/sdk/client/` → `src/sdk/fetch/`
-- [ ] Update all internal imports across the codebase
-- [ ] Update demo project imports
+- [x] `astromech/server` → `astromech/local` — direct DB access, same codebase only
+- [x] `astromech/client` → `astromech/fetch` — HTTP-based, works in browser, external servers, or any environment
+- [x] Update `package.json` exports map
+- [x] Update `tsup.config.ts` entry points
+- [x] Rename `src/sdk/server/` → `src/sdk/local/` and `src/sdk/client/` → `src/sdk/fetch/`
+- [x] Update all internal imports across the codebase
+- [x] Typed `EntriesApi` overloads — `Astromech.entries.all({ type: 'post' })` returns `TypedEntry<PostFields>[]`
+- [x] Rename `CollectionApi` → `EntryTypeApi`, `AstromechCollections` → `AstromechEntryTypes` throughout
 
 ### CORS & Security Headers
 
-- [ ] Add `hono/cors` middleware to the root Hono app — default: same-origin only (no `Access-Control-Allow-Origin` header unless configured)
-- [ ] `AstromechConfig.cors?: { origins: string[] }` — explicit opt-in to allow additional origins (e.g. a separate frontend on a different domain); supports exact domains only, no wildcards in production
-- [ ] Add `hono/secure-headers` middleware with sensible defaults: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-XSS-Protection: 0` (modern browsers), `Permissions-Policy` baseline
-- [ ] `AstromechConfig.security?: { headers?: Partial<SecureHeadersOptions> }` — escape hatch to override defaults where needed
-- [ ] Apply security headers to all routes including admin shell HTML
+- [x] `AstromechConfig.cors?: { origins: string[] }` — opt-in additional origins; default same-origin only
+- [x] `AstromechConfig.security?: { headers?: {...} }` — escape hatch for header overrides
+- [x] `hono/cors` middleware — same-origin default, reflects configured origins
+- [x] `hono/secure-headers` middleware — `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`
 
 ---
 
@@ -446,64 +444,64 @@ SDK moves from a per-collection proxy to a unified `Astromech.entries` API.
 
 ---
 
-## Phase 17 — CLI (Future)
+## Phase 17 — CLI ✅
 
 Thin CLI — commands are wrappers around the server SDK. Config loaded at runtime via
 `jiti` (loads `astromech.config.ts` without pre-compilation). Binary: `astromech`.
 Built with Citty.
 
 ### Setup
-- [ ] Install `citty` and `jiti`
-- [ ] `src/cli/index.ts` — CLI entry point, registers all commands
-- [ ] `src/cli/config.ts` — loads `astromech.config.ts` using jiti, resolves config, initialises DB
-- [ ] Register `"astromech": "./dist/cli/index.js"` in `package.json#bin`
-- [ ] Add `src/cli/index.ts` as tsup entry
+- [x] Install `citty` and `jiti`
+- [x] `src/cli/index.ts` — CLI entry point, registers all commands
+- [x] `src/cli/config.ts` — loads `astromech.config.ts` using jiti, resolves config, initialises DB
+- [x] Register `"astromech": "./dist/cli/index.js"` in `package.json#bin`
+- [x] Add `src/cli/index.ts` as tsup entry
 
 ### DB commands
-- [ ] `astromech db:init` — run Drizzle migrations; checks DB is empty first; `--force` skips check
-- [ ] `astromech db:status` — show which migrations have been applied
+- [x] `astromech db:init` — run Drizzle migrations; checks DB is empty first; `--force` skips check
+- [x] `astromech db:status` — show which migrations have been applied
 
 ### User commands
-- [ ] `astromech users:create` — interactive prompts (name, email, password, role); primary path for initial admin setup
-- [ ] `astromech users:list` — list all users (table output)
-- [ ] `astromech users:get <id>` — get a single user by ID
-- [ ] `astromech users:delete <id>` — delete a user; `--force` skips confirmation
+- [x] `astromech users:create` — interactive prompts (name, email, password, role); primary path for initial admin setup
+- [x] `astromech users:list` — list all users (table output)
+- [x] `astromech users:get <id>` — get a single user by ID
+- [x] `astromech users:delete <id>` — delete a user; `--force` skips confirmation
 
 ### Entry commands
-- [ ] `astromech entries:list <type>` — list entries; `--status`, `--limit` flags
-- [ ] `astromech entries:get <type> <id>` — get a single entry (JSON output)
-- [ ] `astromech entries:delete <type> <id>` — delete entry; `--force` skips confirmation
+- [x] `astromech entries:list <type>` — list entries; `--status`, `--limit` flags
+- [x] `astromech entries:get <type> <id>` — get a single entry (JSON output)
+- [x] `astromech entries:delete <type> <id>` — delete entry; `--force` skips confirmation
 
 ### Generate / Seed
-- [ ] `astromech generate:types` — regenerate SDK types from config
-- [ ] `astromech seed` — run `seed.ts` at project root if present
+- [x] `astromech generate:types` — regenerate SDK types from config
+- [x] `astromech seed` — run `seed.ts` at project root if present
 
 ---
 
-## Phase 17.4 — Admin React Query Hooks (Future)
+## Phase 17.4 — Admin React Query Hooks ✅
 
 Extract all `useQuery` / `useMutation` calls from page components into a structured hook layer that mirrors the fetch SDK's API shape. Keeps data-fetching logic out of components and gives a single consistent pattern across the admin.
 
 > Pattern: `Astromech.entries.useAll({ type })`, `Astromech.entries.useGet(id)`, `Astromech.entries.useCreate()`, `Astromech.entries.useUpdate()`, etc. Each hook wraps the corresponding `astromech/fetch` method with TanStack Query. Mutation hooks handle cache invalidation internally via shared query key factories.
 
-- [ ] Define query key factories per resource (`entriesKeys`, `mediaKeys`, `usersKeys`) in `src/admin/hooks/query-keys.ts`
-- [ ] `src/admin/hooks/entries.ts` — `useEntries()`, `useEntry()`, `useCreateEntry()`, `useUpdateEntry()`, `useDeleteEntry()`, `usePublishEntry()`, etc.
-- [ ] `src/admin/hooks/media.ts` — `useMedia()`, `useUploadMedia()`, `useDeleteMedia()`, etc.
-- [ ] `src/admin/hooks/users.ts` — `useUsers()`, `useUser()`, `useUpdateUser()`, etc.
-- [ ] Replace all inline `useQuery` / `useMutation` calls in admin pages with the new hooks
+- [x] Define query key factories per resource (`entriesKeys`, `mediaKeys`, `usersKeys`) in `src/admin/hooks/query-keys.ts`
+- [x] `src/admin/hooks/entries.ts` — `useEntries()`, `useEntry()`, `useCreateEntry()`, `useUpdateEntry()`, `useDeleteEntry()`, `usePublishEntry()`, etc.
+- [x] `src/admin/hooks/media.ts` — `useMedia()`, `useUploadMedia()`, `useDeleteMedia()`, etc.
+- [x] `src/admin/hooks/users.ts` — `useUsers()`, `useUser()`, `useUpdateUser()`, etc.
+- [x] Replace all inline `useQuery` / `useMutation` calls in admin pages with the new hooks
 - [ ] Future: `astromech/react` public export once cache invalidation across hook boundaries is figured out
 
 ---
 
-## Phase 17.5 — TanStack Router File-Based Routing (Future)
+## Phase 17.5 — TanStack Router File-Based Routing ✅
 
 Migrate the admin SPA from manually-defined routes in `src/admin/router.tsx` to TanStack Router's file-based routing. Route files in `src/admin/pages/` are scanned at build time; the route tree is generated automatically.
 
-- [ ] Install `@tanstack/router-plugin` and wire into Astro's Vite config (`vite.plugins`)
-- [ ] Configure `routesDirectory: 'src/admin/pages'` and `generatedRouteTree: 'src/admin/routeTree.gen.ts'`
-- [ ] Add `src/admin/routeTree.gen.ts` to `.gitignore` (build artifact)
-- [ ] Rename page files to TanStack Router file conventions (`_layout.tsx`, `$param.tsx`, `index.tsx`, etc.)
-- [ ] Delete manual route definitions from `src/admin/router.tsx`; import generated route tree instead
+- [x] Install `@tanstack/router-plugin` and wire into Astro's Vite config (`vite.plugins`)
+- [x] Configure `routesDirectory: 'src/admin/pages'` and `generatedRouteTree: 'src/admin/routeTree.gen.ts'`
+- [x] Add `src/admin/routeTree.gen.ts` to `.gitignore` (build artifact)
+- [x] Rename page files to TanStack Router file conventions (`_layout.tsx`, `$param.tsx`, `index.tsx`, etc.)
+- [x] Delete manual route definitions from `src/admin/router.tsx`; import generated route tree instead
 - [ ] Migrate per-route search params, loaders, and `beforeLoad` guards to co-located route files
 - [ ] Verify plugin route merging still works (plugin routes use code-based API alongside the generated tree — TanStack supports mixing both)
 

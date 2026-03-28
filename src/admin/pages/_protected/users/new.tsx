@@ -6,8 +6,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { useTranslation } from 'react-i18next';
 import {
@@ -16,15 +15,15 @@ import {
     Breadcrumb,
     Input,
     Select,
-    useToast,
     Page,
+    PageHeader,
+    PageTitle,
+    PageContent,
     FormLayout,
     FormLayoutMain,
     FormLayoutSidebar,
-} from '../../components/ui/index.js';
-import { Astromech } from '../../../sdk/fetch/index.js';
-import { queryKeys } from '../../hooks/use-query-keys.js';
-import { usePermissions } from '../../hooks/index.js';
+} from '@/admin/components/ui/index.js';
+import { usePermissions, useCreateUser } from '@/admin/hooks/index.js';
 import adminConfig from 'virtual:astromech/admin-config';
 
 // ============================================================================
@@ -41,11 +40,9 @@ type FormValues = {
 // Page
 // ============================================================================
 
-export function UserCreatePage(): React.ReactElement {
+function UserCreatePage(): React.ReactElement {
     const { t } = useTranslation();
-    const { toast } = useToast();
     const navigate = useNavigate();
-    const queryClient = useQueryClient();
     const { canCreateUsers } = usePermissions();
 
     useEffect(() => {
@@ -55,6 +52,10 @@ export function UserCreatePage(): React.ReactElement {
     }, []);
 
     const defaultRole = adminConfig.roles[0]?.slug ?? '';
+
+    const createMutation = useCreateUser({
+        onSuccess: () => void navigate({ to: '/users' }),
+    });
 
     const form = useForm({
         defaultValues: {
@@ -71,35 +72,23 @@ export function UserCreatePage(): React.ReactElement {
         },
     });
 
-    const createMutation = useMutation({
-        mutationFn: (data: { name: string; email: string; roleSlug: string }) =>
-            Astromech.users.create(data),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({ queryKey: queryKeys.users.all() });
-            toast({ message: t('users.updated'), variant: 'success' });
-            void navigate({ to: '/users' });
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('users.saveFailed'),
-                variant: 'error',
-            });
-        },
-    });
-
     function handleSave() {
         void form.handleSubmit();
     }
 
     return (
         <Page>
-            <Breadcrumb
-                items={[
-                    { label: t('users.title'), to: '/users' },
-                    { label: t('users.createTitle') },
-                ]}
-            />
+            <PageHeader>
+                <PageTitle>{t('users.createTitle')}</PageTitle>
+                <Breadcrumb
+                    items={[
+                        { label: t('users.title'), to: '/users' },
+                        { label: t('users.createTitle') },
+                    ]}
+                />
+            </PageHeader>
 
+            <PageContent>
             <FormLayout>
                 {/* Main column */}
                 <FormLayoutMain>
@@ -223,6 +212,11 @@ export function UserCreatePage(): React.ReactElement {
                     </Panel>
                 </FormLayoutSidebar>
             </FormLayout>
+            </PageContent>
         </Page>
     );
 }
+
+export const Route = createFileRoute('/_protected/users/new')({
+	component: UserCreatePage,
+});

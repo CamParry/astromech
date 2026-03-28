@@ -8,8 +8,8 @@
 
 import { formatDate } from '@/support/dates.js';
 import { Menu } from '@base-ui/react/menu';
-import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate, useParams } from '@tanstack/react-router';
+import { useQueries } from '@tanstack/react-query';
+import { createFileRoute, Link, useNavigate, useParams } from '@tanstack/react-router';
 import {
     Check,
     ChevronDown,
@@ -26,9 +26,9 @@ import {
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import { Astromech } from '../../../sdk/fetch/index.js';
-import type { Entry } from '../../../types/index.js';
-import type { DropdownItem } from '../../components/ui/dropdown.js';
+import { Astromech } from '@/sdk/fetch/index.js';
+import type { Entry } from '@/types/index.js';
+import type { DropdownItem } from '@/admin/components/ui/dropdown.js';
 import {
     Badge,
     Button,
@@ -50,10 +50,22 @@ import {
     useConfirm,
     useContextMenu,
     useToast,
-} from '../../components/ui/index.js';
-import type { SortDirection } from '../../components/ui/table.js';
-import { useSelection, useViewMode, usePermissions } from '../../hooks/index.js';
-import { queryKeys } from '../../hooks/use-query-keys.js';
+} from '@/admin/components/ui/index.js';
+import type { SortDirection } from '@/admin/components/ui/table.js';
+import {
+    useSelection,
+    useViewMode,
+    usePermissions,
+    useEntriesList,
+    useTrashEntry,
+    useDeleteEntry,
+    useDuplicateEntry,
+    useRestoreEntry,
+    useBulkTrashEntries,
+    useBulkDeleteEntries,
+    useBulkPublishEntries,
+    useBulkUnpublishEntries,
+} from '@/admin/hooks/index.js';
 
 // ============================================================================
 // Types
@@ -414,12 +426,11 @@ function EntryCard({
 // Page
 // ============================================================================
 
-export function EntryIndexPage(): React.ReactElement {
+function EntryIndexPage(): React.ReactElement {
     const { type } = useParams({ strict: false }) as { type: string };
     const navigate = useNavigate();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const queryClient = useQueryClient();
     const { canCreate, canDelete } = usePermissions();
 
     const entryTypeConfig = adminConfig.entries[type];
@@ -470,28 +481,12 @@ export function EntryIndexPage(): React.ReactElement {
     const isTrash = statusFilter === 'trashed';
 
     // Fetch entries (normal or trashed)
-    const { data: listData, isLoading } = useQuery({
-        queryKey: queryKeys.entries.list(type, {
-            statusFilter,
-            page,
-            search,
-            sort,
-        }),
-        queryFn: async () => {
-            if (isTrash) {
-                const items = await Astromech.entries.trashed({ type });
-                return {
-                    data: items,
-                    pagination: {
-                        total: items.length,
-                        page: 1,
-                        perPage: items.length,
-                        totalPages: 1,
-                    },
-                };
-            }
-            return Astromech.entries.paginate(PER_PAGE, page, { type });
-        },
+    const { data: listData, isLoading } = useEntriesList(type, {
+        statusFilter,
+        page,
+        perPage: PER_PAGE,
+        search,
+        sort,
     });
 
     const entries = listData?.data ?? [];
@@ -550,142 +545,21 @@ export function EntryIndexPage(): React.ReactElement {
     }, [hasI18n, sortedEntries, translationQueries]);
 
     // Mutations
-    const trashMutation = useMutation({
-        mutationFn: ({ id }: { id: string }) => Astromech.entries.trash(id),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(type),
-            });
-            toast({
-                message: t('entries.movedToTrash', { name: single }),
-                variant: 'success',
-            });
-        },
-        onError: (err) => {
-            toast({
-                message:
-                    err instanceof Error ? err.message : t('entries.deleteFailed'),
-                variant: 'error',
-            });
-        },
-    });
-
-    const deleteMutation = useMutation({
-        mutationFn: ({ id }: { id: string }) => Astromech.entries.delete(id),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(type),
-            });
-            toast({
-                message: t('entries.permanentlyDeleted', { name: single }),
-                variant: 'success',
-            });
-        },
-        onError: (err) => {
-            toast({
-                message:
-                    err instanceof Error ? err.message : t('entries.deleteFailed'),
-                variant: 'error',
-            });
-        },
-    });
-
-    const duplicateMutation = useMutation({
-        mutationFn: ({ id }: { id: string }) => Astromech.entries.duplicate(id),
+    const trashMutation = useTrashEntry(type);
+    const deleteMutation = useDeleteEntry(type);
+    const duplicateMutation = useDuplicateEntry(type, {
         onSuccess: (entry) => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(type),
-            });
-            toast({
-                message: t('entries.duplicated', { name: single }),
-                variant: 'success',
-            });
             void navigate({
                 to: '/entries/$type/$id',
                 params: { type, id: entry.id },
             });
         },
-        onError: (err) => {
-            toast({
-                message:
-                    err instanceof Error ? err.message : t('entries.duplicateFailed'),
-                variant: 'error',
-            });
-        },
     });
-
-    const restoreMutation = useMutation({
-        mutationFn: ({ id }: { id: string }) => Astromech.entries.restore(id),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(type),
-            });
-            toast({
-                message: t('entries.restored', { name: single }),
-                variant: 'success',
-            });
-        },
-        onError: (err) => {
-            toast({
-                message:
-                    err instanceof Error ? err.message : t('entries.restoreFailed'),
-                variant: 'error',
-            });
-        },
-    });
-
-    // Bulk mutations
-    const bulkPublishMutation = useMutation({
-        mutationFn: async (ids: string[]) => {
-            await Promise.all(ids.map((id) => Astromech.entries.update(id, { status: 'published' })));
-        },
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(type),
-            });
-            reset();
-            toast({ message: t('entries.bulkPublished'), variant: 'success' });
-        },
-    });
-
-    const bulkUnpublishMutation = useMutation({
-        mutationFn: async (ids: string[]) => {
-            await Promise.all(ids.map((id) => Astromech.entries.update(id, { status: 'draft' })));
-        },
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(type),
-            });
-            reset();
-            toast({ message: t('entries.bulkUnpublished'), variant: 'success' });
-        },
-    });
-
-    const bulkTrashMutation = useMutation({
-        mutationFn: async (ids: string[]) => {
-            await Promise.all(ids.map((id) => Astromech.entries.trash(id)));
-        },
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(type),
-            });
-            reset();
-            toast({ message: t('entries.bulkTrashed'), variant: 'success' });
-        },
-    });
-
-    const bulkForceDeleteMutation = useMutation({
-        mutationFn: async (ids: string[]) => {
-            await Promise.all(ids.map((id) => Astromech.entries.delete(id)));
-        },
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(type),
-            });
-            reset();
-            toast({ message: t('entries.bulkDeleted'), variant: 'success' });
-        },
-    });
+    const restoreMutation = useRestoreEntry(type);
+    const bulkPublishMutation = useBulkPublishEntries(type, { onSuccess: reset });
+    const bulkUnpublishMutation = useBulkUnpublishEntries(type, { onSuccess: reset });
+    const bulkTrashMutation = useBulkTrashEntries(type, { onSuccess: reset });
+    const bulkForceDeleteMutation = useBulkDeleteEntries(type, { onSuccess: reset });
 
     function handleBulkAction(action: BulkAction) {
         const ids = Array.from(checkedIds);
@@ -695,11 +569,8 @@ export function EntryIndexPage(): React.ReactElement {
         if (action === 'trash') bulkTrashMutation.mutate(ids);
         if (action === 'delete') bulkForceDeleteMutation.mutate(ids);
         if (action === 'restore') {
-            void Promise.all(ids.map((id) => restoreMutation.mutateAsync({ id }))).then(
+            void Promise.all(ids.map((id) => restoreMutation.mutateAsync(id))).then(
                 () => {
-                    void queryClient.invalidateQueries({
-                        queryKey: queryKeys.entries.all(type),
-                    });
                     reset();
                     toast({ message: t('entries.bulkRestored'), variant: 'success' });
                 }
@@ -738,7 +609,7 @@ export function EntryIndexPage(): React.ReactElement {
 
     // Shared row action handlers (stable references via mutation objects)
     function handleRestore(id: string) {
-        restoreMutation.mutate({ id });
+        restoreMutation.mutate(id);
     }
 
     function handleConfirmDelete(id: string, force: boolean) {
@@ -755,16 +626,16 @@ export function EntryIndexPage(): React.ReactElement {
                 : t('entries.confirmDeleteLabel'),
             onConfirm: () => {
                 if (force) {
-                    deleteMutation.mutate({ id });
+                    deleteMutation.mutate(id);
                 } else {
-                    trashMutation.mutate({ id });
+                    trashMutation.mutate(id);
                 }
             },
         });
     }
 
     function handleDuplicate(id: string) {
-        duplicateMutation.mutate({ id });
+        duplicateMutation.mutate(id);
     }
 
     const navigateCompat = useCallback(
@@ -1174,3 +1045,7 @@ export function EntryIndexPage(): React.ReactElement {
         </>
     );
 }
+
+export const Route = createFileRoute('/_protected/entries/$type/')({
+	component: EntryIndexPage,
+});

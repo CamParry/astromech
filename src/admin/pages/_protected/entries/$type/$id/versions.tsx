@@ -5,8 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import { useParams, useNavigate, Link } from '@tanstack/react-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { createFileRoute, useParams, useNavigate, Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -15,15 +14,14 @@ import {
     Panel,
     Breadcrumb,
     PageLoading,
-    useToast,
     useConfirm,
     Page,
     PageHeader,
+    PageTitle,
     PageContent,
-} from '../../components/ui/index';
-import { Astromech } from '../../../sdk/fetch/index.js';
-import { queryKeys } from '../../hooks/index.js';
-import type { EntryVersion } from '../../../types/index.js';
+} from '@/admin/components/ui/index.js';
+import { useEntry, useEntryVersions, useRestoreEntryVersion } from '@/admin/hooks/index.js';
+import type { EntryVersion } from '@/types/index.js';
 
 // ============================================================================
 // Helpers
@@ -209,32 +207,27 @@ function DiffView({
 // Page
 // ============================================================================
 
-export function EntryVersionsPage(): React.ReactElement {
+function EntryVersionsPage(): React.ReactElement {
     const { type, id } = useParams({ strict: false }) as {
         type: string;
         id: string;
     };
-    const { toast } = useToast();
     const confirm = useConfirm();
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const queryClient = useQueryClient();
 
     const entryTypeConfig = adminConfig.entries[type];
     const plural = entryTypeConfig?.plural ?? type;
 
     const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
 
-    const { data: entry } = useQuery({
-        queryKey: queryKeys.entries.detail(type, id),
-        queryFn: () => Astromech.entries.get(id),
-    });
+    const { data: entry } = useEntry(type, id);
 
-    const { data: versions, isLoading } = useQuery({
-        queryKey: queryKeys.entries.versions(type, id),
-        queryFn: () => Astromech.entries.versions(id),
-        select: (data) => [...data].sort((a, b) => b.versionNumber - a.versionNumber),
-    });
+    const { data: rawVersions, isLoading } = useEntryVersions(type, id);
+    const versions =
+        rawVersions !== undefined
+            ? [...rawVersions].sort((a, b) => b.versionNumber - a.versionNumber)
+            : undefined;
 
     // Auto-select the first (latest) version on load
     const resolvedSelectedId =
@@ -249,25 +242,8 @@ export function EntryVersionsPage(): React.ReactElement {
             ? (versions[selectedIndex + 1] ?? null)
             : null;
 
-    const restoreMutation = useMutation({
-        mutationFn: (versionId: string) =>
-            Astromech.entries.restoreVersion(id, versionId),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.detail(type, id),
-            });
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.versions(type, id),
-            });
-            toast({ message: t('versions.restored'), variant: 'success' });
-            void navigate({ to: `/entries/${type}/${id}` });
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('versions.restoreFailed'),
-                variant: 'error',
-            });
-        },
+    const restoreMutation = useRestoreEntryVersion(type, id, {
+        onSuccess: () => void navigate({ to: `/entries/${type}/${id}` }),
     });
 
     function handleRestore(): void {
@@ -289,6 +265,7 @@ export function EntryVersionsPage(): React.ReactElement {
     return (
         <Page>
             <PageHeader>
+                <PageTitle>{t('versions.pageTitle')}</PageTitle>
                 <Breadcrumb
                     items={[
                         { label: plural, to: `/entries/${type}` },
@@ -365,3 +342,7 @@ export function EntryVersionsPage(): React.ReactElement {
         </Page>
     );
 }
+
+export const Route = createFileRoute('/_protected/entries/$type/$id/versions')({
+	component: EntryVersionsPage,
+});

@@ -110,6 +110,19 @@ export type AstromechConfig = {
     };
     locales?: string[];
     defaultLocale?: string;
+    cors?: {
+        /** Additional allowed origins beyond same-origin. Exact domain matches only. */
+        origins: string[];
+    };
+    security?: {
+        /** Override individual secure header values. */
+        headers?: {
+            xContentTypeOptions?: string;
+            xFrameOptions?: string;
+            referrerPolicy?: string;
+            permissionsPolicy?: string;
+        };
+    };
 };
 
 export type ResolvedConfig = Omit<AstromechConfig, 'plugins' | 'db'> & {

@@ -6,8 +6,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { Link, useNavigate } from '@tanstack/react-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import {
@@ -17,30 +16,22 @@ import {
     Table,
     Dropdown,
     Avatar,
-    useToast,
     useConfirm,
     Page,
     PageHeader,
     PageTitle,
-} from '../../components/ui/index.js';
-import { Astromech } from '../../../sdk/fetch/index.js';
-import { queryKeys } from '../../hooks/use-query-keys.js';
-import { usePermissions } from '../../hooks/index.js';
+    PageContent,
+} from '@/admin/components/ui/index.js';
+import { usePermissions, useUsersList, useDeleteUser } from '@/admin/hooks/index.js';
 import { formatDate } from '@/support/dates.js';
-
-// ============================================================================
-// Helpers
-// ============================================================================
 
 // ============================================================================
 // Page
 // ============================================================================
 
-export function UsersIndexPage(): React.ReactElement {
+function UsersIndexPage(): React.ReactElement {
     const { t } = useTranslation();
-    const { toast } = useToast();
     const confirm = useConfirm();
-    const queryClient = useQueryClient();
     const navigate = useNavigate();
     const { canReadUsers, canCreateUsers, canDeleteUsers } = usePermissions();
 
@@ -50,24 +41,8 @@ export function UsersIndexPage(): React.ReactElement {
         }
     }, []);
 
-    const { data: users, isLoading } = useQuery({
-        queryKey: queryKeys.users.all(),
-        queryFn: () => Astromech.users.all(),
-    });
-
-    const deleteMutation = useMutation({
-        mutationFn: (id: string) => Astromech.users.delete(id),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({ queryKey: queryKeys.users.all() });
-            toast({ message: t('users.deleted'), variant: 'success' });
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('users.deleteFailed'),
-                variant: 'error',
-            });
-        },
-    });
+    const { data: users, isLoading } = useUsersList();
+    const deleteMutation = useDeleteUser();
 
     return (
         <Page>
@@ -85,6 +60,7 @@ export function UsersIndexPage(): React.ReactElement {
                 )}
             </PageHeader>
 
+            <PageContent>
             <Table.Root>
                 <Table.Head>
                     <Table.Row>
@@ -181,6 +157,11 @@ export function UsersIndexPage(): React.ReactElement {
                     )}
                 </Table.Body>
             </Table.Root>
+            </PageContent>
         </Page>
     );
 }
+
+export const Route = createFileRoute('/_protected/users/')({
+	component: UsersIndexPage,
+});

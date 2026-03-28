@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { useParams, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, useParams, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import {
@@ -17,21 +17,23 @@ import {
     useToast,
     Page,
     PageHeader,
+    PageTitle,
+    PageContent,
     ButtonGroup,
     FormLayout,
     FormLayoutMain,
     FormLayoutSidebar,
-} from '../../components/ui/index';
-import { FieldInput } from '../../components/fields/field-input';
-import { PublishPanel } from '../../components/entries/PublishPanel';
-import { Astromech } from '../../../sdk/fetch/index.js';
-import { useEntryForm, usePermissions } from '../../hooks/index.js';
+} from '@/admin/components/ui/index.js';
+import { FieldInput } from '@/admin/components/fields/field-input.js';
+import { PublishPanel } from '@/admin/components/entries/PublishPanel.js';
+import { Astromech } from '@/sdk/fetch/index.js';
+import { useEntryForm, usePermissions } from '@/admin/hooks/index.js';
 
 // ============================================================================
 // Page
 // ============================================================================
 
-export function EntryCreatePage(): React.ReactElement {
+function EntryCreatePage(): React.ReactElement {
     const { type } = useParams({ strict: false }) as { type: string };
     const navigate = useNavigate();
     const { toast } = useToast();
@@ -75,6 +77,7 @@ export function EntryCreatePage(): React.ReactElement {
     return (
         <Page>
             <PageHeader>
+                <PageTitle>{t('entries.create')}</PageTitle>
                 <Breadcrumb
                     items={[
                         { label: plural, to: `/entries/${type}` },
@@ -101,6 +104,7 @@ export function EntryCreatePage(): React.ReactElement {
                 </ButtonGroup>
             </PageHeader>
 
+            <PageContent>
             <FormLayout>
                 {/* Main column */}
                 <FormLayoutMain>
@@ -285,6 +289,11 @@ export function EntryCreatePage(): React.ReactElement {
                     ))}
                 </FormLayoutSidebar>
             </FormLayout>
+            </PageContent>
         </Page>
     );
 }
+
+export const Route = createFileRoute('/_protected/entries/$type/new')({
+	component: EntryCreatePage,
+});

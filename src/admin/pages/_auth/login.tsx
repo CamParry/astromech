@@ -3,14 +3,14 @@
  */
 
 import React, { useState } from 'react';
-import { Link, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/admin/context/auth.js';
 import { AuthCard } from '@/admin/components/auth/AuthCard.js';
 import { Input } from '@/admin/components/ui/input.js';
 import { Button } from '@/admin/components/ui/button.js';
 
-export function LoginPage() {
+function LoginPage() {
     const { login } = useAuth();
     const navigate = useNavigate();
     const { t } = useTranslation();
@@ -71,3 +71,7 @@ export function LoginPage() {
         </AuthCard>
     );
 }
+
+export const Route = createFileRoute('/_auth/login')({
+	component: LoginPage,
+});

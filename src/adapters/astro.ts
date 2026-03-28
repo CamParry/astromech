@@ -16,6 +16,7 @@
 
 import { fileURLToPath } from 'node:url';
 import type { AstroIntegration } from 'astro';
+import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 import type { AstromechConfig } from '@/types/index.js';
 import { resolveConfig } from '@/core/config-resolver.js';
 import { resolveRoles } from '@/core/permissions.js';
@@ -89,6 +90,7 @@ export function astromech(config: AstromechConfig): AstroIntegration {
 							__ASTROMECH_API_ROUTE__: JSON.stringify(resolvedConfig.apiRoute),
 						},
 						plugins: [
+						TanStackRouterVite({ routesDirectory: pkgSrc + '/admin/pages', generatedRouteTree: pkgSrc + '/admin/routeTree.gen.ts', routeToken: 'route' }),
 							{
 								name: 'virtual:astromech/config',
 								resolveId(id) {

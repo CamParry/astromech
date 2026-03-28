@@ -2,8 +2,8 @@
  * Forgot password page for the Astromech admin SPA.
  */
 
-import React, { useState } from 'react';
-import { Link } from '@tanstack/react-router';
+import { useState, type FormEvent } from 'react';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { AuthCard } from '@/admin/components/auth/AuthCard.js';
 import { Input } from '@/admin/components/ui/input.js';
@@ -12,14 +12,14 @@ import { Button } from '@/admin/components/ui/button.js';
 declare const __ASTROMECH_API_ROUTE__: string;
 declare const __ASTROMECH_ADMIN_ROUTE__: string;
 
-export function ForgotPasswordPage() {
+function ForgotPasswordPage() {
     const { t } = useTranslation();
     const [email, setEmail] = useState('');
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    async function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setError(null);
         setIsSubmitting(true);
@@ -87,3 +87,7 @@ export function ForgotPasswordPage() {
         </AuthCard>
     );
 }
+
+export const Route = createFileRoute('/_auth/forgot-password')({
+	component: ForgotPasswordPage,
+});

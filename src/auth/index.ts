@@ -11,6 +11,7 @@ let _auth: Auth<BetterAuthOptions> | null = null;
 function getAuth(): Auth<BetterAuthOptions> {
     if (!_auth) {
         _auth = betterAuth({
+            baseURL: import.meta.env.BETTER_AUTH_URL,
             basePath: `${apiRoute}/auth`,
             database: drizzleAdapter(getDb(), {
                 provider: 'sqlite',
@@ -23,16 +24,33 @@ function getAuth(): Auth<BetterAuthOptions> {
             }),
             emailAndPassword: {
                 enabled: true,
-                sendResetPassword: async ({ user, url }: { user: { email: string }; url: string; token: string }) => {
+                sendResetPassword: async ({
+                    user,
+                    url,
+                }: {
+                    user: { email: string };
+
+                    url: string;
+                    token: string;
+                }) => {
                     const { getEmailConfig } = await import('@/email/registry.js');
-                    const { passwordResetTemplate } = await import('@/email/templates/password-reset.js');
+                    const { passwordResetTemplate } =
+                        await import('@/email/templates/password-reset.js');
                     const emailConfig = getEmailConfig();
                     if (!emailConfig) {
-                        console.log(`[Astromech] Password reset URL for ${user.email}: ${url}`);
+                        console.log(
+                            `[Astromech] Password reset URL for ${user.email}: ${url}`
+                        );
                         return;
                     }
                     const { subject, html, text } = passwordResetTemplate(url);
-                    await emailConfig.driver.send({ to: user.email, from: emailConfig.from, subject, html, text });
+                    await emailConfig.driver.send({
+                        to: user.email,
+                        from: emailConfig.from,
+                        subject,
+                        html,
+                        text,
+                    });
                 },
             },
         }) as unknown as Auth<BetterAuthOptions>;

@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/admin/context/auth.js';
 import { AuthCard } from '@/admin/components/auth/AuthCard.js';
@@ -14,7 +14,7 @@ import { Button } from '@/admin/components/ui/button.js';
 
 declare const __ASTROMECH_API_ROUTE__: string;
 
-export function SetupPage() {
+function SetupPage() {
     const { login } = useAuth();
     const navigate = useNavigate();
     const { t } = useTranslation();
@@ -133,3 +133,7 @@ export function SetupPage() {
         </AuthCard>
     );
 }
+
+export const Route = createFileRoute('/_auth/setup')({
+	component: SetupPage,
+});

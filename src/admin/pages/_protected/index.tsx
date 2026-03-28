@@ -3,8 +3,8 @@
  */
 
 import React from 'react';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import {
@@ -16,9 +16,11 @@ import {
     PageTitle,
     SectionTitle,
     PageLoading,
-} from '../components/ui/index.js';
-import { Astromech } from '../../sdk/fetch/index.js';
-import type { Entry } from '../../types/index.js';
+    PageHeader,
+    PageContent,
+} from '@/admin/components/ui/index.js';
+import { Astromech } from '@/sdk/fetch/index.js';
+import type { Entry } from '@/types/index.js';
 import { formatDate } from '@/support/dates.js';
 
 // ============================================================================
@@ -116,7 +118,7 @@ function useRecentEntries(): RecentActivityResult {
 // Page
 // ============================================================================
 
-export function DashboardPage(): React.ReactElement {
+function DashboardPage(): React.ReactElement {
     const { t } = useTranslation();
     const collections = adminConfig.entries;
     const collectionEntries = Object.entries(collections);
@@ -124,72 +126,80 @@ export function DashboardPage(): React.ReactElement {
 
     return (
         <Page>
-            <PageTitle>{t('dashboard.title')}</PageTitle>
+            <PageHeader>
+                <PageTitle>{t('dashboard.title')}</PageTitle>
+            </PageHeader>
 
-            {/* Stat cards */}
-            {collectionEntries.length > 0 && (
-                <section>
-                    <SectionTitle>{t('dashboard.collections')}</SectionTitle>
-                    <div className="am-stat-grid">
-                        {collectionEntries.map(([key, col]) => (
-                            <Link
-                                key={key}
-                                to="/entries/$type"
-                                params={{ type: key }}
-                                className="am-link--inherit"
-                            >
-                                <StatCard collectionKey={key} label={col.plural} />
-                            </Link>
-                        ))}
-                    </div>
-                </section>
-            )}
-
-            {/* Recent activity */}
-            <section>
-                <SectionTitle>{t('dashboard.recentActivity')}</SectionTitle>
-                <Panel>
-                    {recentLoading ? (
-                        <PageLoading />
-                    ) : recentEntries.length === 0 ? (
-                        <EmptyState
-                            title={t('dashboard.noContentYet')}
-                            description={t('dashboard.noContentDescription')}
-                        />
-                    ) : (
-                        <ul className="am-activity-list">
-                            {recentEntries.map((entry) => (
-                                <li
-                                    key={`${entry.collectionKey}-${entry.id}`}
-                                    className="am-activity-list__item"
+            <PageContent>
+                {/* Stat cards */}
+                {collectionEntries.length > 0 && (
+                    <section>
+                        <SectionTitle>{t('dashboard.collections')}</SectionTitle>
+                        <div className="am-stat-grid">
+                            {collectionEntries.map(([key, col]) => (
+                                <Link
+                                    key={key}
+                                    to="/entries/$type"
+                                    params={{ type: key }}
+                                    className="am-link--inherit"
                                 >
-                                    <div className="am-activity-list__body">
-                                        <Link
-                                            to="/entries/$type/$id"
-                                            params={{
-                                                type: entry.collectionKey,
-                                                id: entry.id,
-                                            }}
-                                            className="am-link"
-                                        >
-                                            {entry.title}
-                                        </Link>
-                                        <div className="am-activity-list__meta">
-                                            {entry.collectionLabel} ·{' '}
-                                            {t('dashboard.updated', {
-                                                date: formatDate(entry.updatedAt),
-                                            })}
-                                        </div>
-                                    </div>
-                                    <Badge variant={statusVariant(entry.status)}>
-                                        {entry.status}
-                                    </Badge>
-                                </li>
+                                    <StatCard collectionKey={key} label={col.plural} />
+                                </Link>
                             ))}
-                        </ul>
-                    )}
-                </Panel>
-            </section>
+                        </div>
+                    </section>
+                )}
+
+                {/* Recent activity */}
+                <section>
+                    <SectionTitle>{t('dashboard.recentActivity')}</SectionTitle>
+                    <Panel>
+                        {recentLoading ? (
+                            <PageLoading />
+                        ) : recentEntries.length === 0 ? (
+                            <EmptyState
+                                title={t('dashboard.noContentYet')}
+                                description={t('dashboard.noContentDescription')}
+                            />
+                        ) : (
+                            <ul className="am-activity-list">
+                                {recentEntries.map((entry) => (
+                                    <li
+                                        key={`${entry.collectionKey}-${entry.id}`}
+                                        className="am-activity-list__item"
+                                    >
+                                        <div className="am-activity-list__body">
+                                            <Link
+                                                to="/entries/$type/$id"
+                                                params={{
+                                                    type: entry.collectionKey,
+                                                    id: entry.id,
+                                                }}
+                                                className="am-link"
+                                            >
+                                                {entry.title}
+                                            </Link>
+                                            <div className="am-activity-list__meta">
+                                                {entry.collectionLabel} ·{' '}
+                                                {t('dashboard.updated', {
+                                                    date: formatDate(entry.updatedAt),
+                                                })}
+                                            </div>
+                                        </div>
+                                        <Badge variant={statusVariant(entry.status)}>
+                                            {entry.status}
+                                        </Badge>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </Panel>
+                </section>
+            </PageContent>
         </Page>
     );
 }
+
+export const Route = createFileRoute('/_protected/')({
+    component: DashboardPage,
+});

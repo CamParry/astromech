@@ -6,12 +6,10 @@
  */
 
 import React, { useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from '@tanstack/react-form';
 import { useTranslation } from 'react-i18next';
-import { Button, Input, Modal, Spinner, useConfirm, useToast } from '../ui/index.js';
-import { Astromech } from '../../../sdk/fetch/index.js';
-import { queryKeys } from '../../hooks/use-query-keys.js';
+import { Button, Input, Modal, Spinner, useConfirm } from '../ui/index.js';
+import { useMediaItem, useUpdateMedia, useDeleteMedia } from '../../hooks/media.js';
 import { formatBytes } from '@/support/bytes.js';
 import { formatDatetime } from '@/support/dates.js';
 import { FileTypeIcon } from '@/admin/utils/media.js';
@@ -37,15 +35,9 @@ export function MediaDetailModal({
     canUpload = true,
 }: MediaDetailModalProps): React.ReactElement {
     const { t } = useTranslation();
-    const { toast } = useToast();
     const confirm = useConfirm();
-    const queryClient = useQueryClient();
 
-    const { data: item, isLoading } = useQuery({
-        queryKey: queryKeys.media.detail(mediaId ?? ''),
-        queryFn: () => Astromech.media.get(mediaId!),
-        enabled: mediaId !== null,
-    });
+    const { data: item, isLoading } = useMediaItem(mediaId ?? '', mediaId !== null);
 
     const form = useForm({
         defaultValues: {
@@ -67,37 +59,12 @@ export function MediaDetailModal({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [item?.id]);
 
-    const updateMutation = useMutation({
-        mutationFn: (data: { alt: string }) => Astromech.media.update(mediaId!, data),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.media.detail(mediaId!),
-            });
-            void queryClient.invalidateQueries({ queryKey: queryKeys.media.all() });
-            form.reset(form.state.values);
-            toast({ message: t('media.saved'), variant: 'success' });
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('media.saveFailed'),
-                variant: 'error',
-            });
-        },
+    const updateMutation = useUpdateMedia(mediaId ?? '', {
+        onSuccess: () => form.reset(form.state.values),
     });
 
-    const deleteMutation = useMutation({
-        mutationFn: () => Astromech.media.delete(mediaId!),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({ queryKey: queryKeys.media.all() });
-            toast({ message: t('media.deleted'), variant: 'success' });
-            onDeleted();
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('media.deleteFailed'),
-                variant: 'error',
-            });
-        },
+    const deleteMutation = useDeleteMedia({
+        onSuccess: onDeleted,
     });
 
     const open = mediaId !== null;
@@ -114,7 +81,7 @@ export function MediaDetailModal({
                                 title: t('media.deleteConfirmLabel'),
                                 description: t('media.bulkDeleteDescription'),
                                 confirmLabel: t('common.delete'),
-                                onConfirm: () => deleteMutation.mutate(),
+                                onConfirm: () => deleteMutation.mutate(mediaId!),
                             })
                         }
                         disabled={deleteMutation.isPending}

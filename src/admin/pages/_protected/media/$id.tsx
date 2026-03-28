@@ -6,8 +6,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { useParams, useNavigate } from '@tanstack/react-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { createFileRoute, useParams, useNavigate } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { FileImage } from 'lucide-react';
 import {
@@ -16,17 +15,16 @@ import {
     Breadcrumb,
     Input,
     PageLoading,
-    useToast,
     useConfirm,
     Page,
     PageHeader,
+    PageTitle,
+    PageContent,
     FormLayout,
     FormLayoutMain,
     FormLayoutSidebar,
-} from '../../components/ui/index.js';
-import { Astromech } from '../../../sdk/fetch/index.js';
-import { queryKeys } from '../../hooks/use-query-keys.js';
-import { usePermissions } from '../../hooks/index.js';
+} from '@/admin/components/ui/index.js';
+import { usePermissions, useMediaItem, useUpdateMedia, useDeleteMedia } from '@/admin/hooks/index.js';
 
 // ============================================================================
 // Helpers
@@ -61,12 +59,10 @@ type FormValues = {
 // Page
 // ============================================================================
 
-export function MediaEditPage(): React.ReactElement {
+function MediaEditPage(): React.ReactElement {
     const { id } = useParams({ strict: false }) as { id: string };
     const { canUploadMedia, canDeleteMedia } = usePermissions();
-    const { toast } = useToast();
     const confirm = useConfirm();
-    const queryClient = useQueryClient();
     const navigate = useNavigate();
 
     const form = useForm({
@@ -78,10 +74,7 @@ export function MediaEditPage(): React.ReactElement {
         },
     });
 
-    const { data: item, isLoading } = useQuery({
-        queryKey: queryKeys.media.detail(id),
-        queryFn: () => Astromech.media.get(id),
-    });
+    const { data: item, isLoading } = useMediaItem(id);
 
     useEffect(() => {
         if (item != null) {
@@ -91,35 +84,13 @@ export function MediaEditPage(): React.ReactElement {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [item]);
 
-    const updateMutation = useMutation({
-        mutationFn: (data: { alt: string }) => Astromech.media.update(id, data),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({ queryKey: queryKeys.media.detail(id) });
-            void queryClient.invalidateQueries({ queryKey: queryKeys.media.all() });
-            form.reset(form.state.values);
-            toast({ message: 'Media updated.', variant: 'success' });
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : 'Save failed',
-                variant: 'error',
-            });
-        },
+    const updateMutation = useUpdateMedia(id, {
+        onSuccess: () => form.reset(form.state.values),
     });
 
-    const deleteMutation = useMutation({
-        mutationFn: () => Astromech.media.delete(id),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({ queryKey: queryKeys.media.all() });
-            toast({ message: 'Media deleted.', variant: 'success' });
-            void navigate({ to: '/media' });
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : 'Delete failed',
-                variant: 'error',
-            });
-        },
+    const deleteMutation = useDeleteMedia({
+        id,
+        onSuccess: () => void navigate({ to: '/media' }),
     });
 
     function handleSave() {
@@ -133,6 +104,7 @@ export function MediaEditPage(): React.ReactElement {
     return (
         <Page>
             <PageHeader>
+                <PageTitle>{item?.filename ?? 'Edit media'}</PageTitle>
                 <Breadcrumb
                     items={[
                         { label: 'Media', to: '/media' },
@@ -141,6 +113,7 @@ export function MediaEditPage(): React.ReactElement {
                 />
             </PageHeader>
 
+            <PageContent>
             <FormLayout>
                 {/* Main column */}
                 <FormLayoutMain>
@@ -217,7 +190,7 @@ export function MediaEditPage(): React.ReactElement {
                                                     ? `Are you sure you want to delete "${item.filename}"? This cannot be undone.`
                                                     : 'This action cannot be undone.',
                                             confirmLabel: 'Delete',
-                                            onConfirm: () => deleteMutation.mutate(),
+                                            onConfirm: () => deleteMutation.mutate(undefined),
                                         })
                                     }
                                     disabled={deleteMutation.isPending}
@@ -272,6 +245,11 @@ export function MediaEditPage(): React.ReactElement {
                     </Panel>
                 </FormLayoutSidebar>
             </FormLayout>
+            </PageContent>
         </Page>
     );
 }
+
+export const Route = createFileRoute('/_protected/media/$id')({
+	component: MediaEditPage,
+});

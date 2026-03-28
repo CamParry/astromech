@@ -14,7 +14,7 @@ export function useQueryState<T extends string>(
 
     function setValue(v: string) {
         void navigate({
-            search: (prev: Record<string, unknown>) => ({ ...prev, [key]: v }),
+            search: ((prev: Record<string, unknown>) => ({ ...prev, [key]: v })) as never,
         });
     }
 
@@ -34,7 +34,7 @@ export function useQueryStates<T extends Record<string, string>>(
 
     function setValues(updates: Partial<T>) {
         void navigate({
-            search: (prev: Record<string, unknown>) => ({ ...prev, ...updates }),
+            search: ((prev: Record<string, unknown>) => ({ ...prev, ...updates })) as never,
         });
     }
 

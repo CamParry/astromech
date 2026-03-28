@@ -5,8 +5,7 @@
  */
 
 import React from 'react';
-import { useParams, useNavigate, Link } from '@tanstack/react-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { createFileRoute, useParams, useNavigate, Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui/react/menu';
 import { Copy, ExternalLink, MoreHorizontal, Trash2 } from 'lucide-react';
@@ -22,19 +21,27 @@ import {
     useConfirm,
     Page,
     PageHeader,
+    PageTitle,
     FormLayout,
     FormLayoutContent,
     FormLayoutMain,
     FormLayoutSidebar,
     PageContent,
-} from '../../components/ui/index';
-import { FieldInput } from '../../components/fields/field-input';
-import { LocaleSwitcher } from '../../components/translations/LocaleSwitcher';
-import { PublishPanel } from '../../components/entries/PublishPanel';
-import { Astromech } from '../../../sdk/fetch/index.js';
-import { useEntryForm, usePermissions } from '../../hooks/index.js';
-import { queryKeys } from '../../hooks/index.js';
-import type { EntryStatus } from '../../../types/index.js';
+} from '@/admin/components/ui/index.js';
+import { FieldInput } from '@/admin/components/fields/field-input.js';
+import { LocaleSwitcher } from '@/admin/components/translations/LocaleSwitcher.js';
+import { PublishPanel } from '@/admin/components/entries/PublishPanel.js';
+import { Astromech } from '@/sdk/fetch/index.js';
+import {
+    useEntryForm,
+    usePermissions,
+    useEntry,
+    useEntryVersions,
+    useEntryTranslations,
+    useTrashEntry,
+    useDuplicateEntry,
+} from '@/admin/hooks/index.js';
+import type { EntryStatus } from '@/types/index.js';
 
 // ============================================================================
 // Status badge
@@ -63,7 +70,7 @@ function StatusBadge({ status }: StatusBadgeProps): React.ReactElement {
 // Page
 // ============================================================================
 
-export function EntryEditPage(): React.ReactElement {
+function EntryEditPage(): React.ReactElement {
     const { type, id } = useParams({ strict: false }) as {
         type: string;
         id: string;
@@ -71,7 +78,6 @@ export function EntryEditPage(): React.ReactElement {
     const { toast } = useToast();
     const confirm = useConfirm();
     const { t } = useTranslation();
-    const queryClient = useQueryClient();
     const navigate = useNavigate();
 
     const { canUpdate } = usePermissions();
@@ -85,27 +91,28 @@ export function EntryEditPage(): React.ReactElement {
 
     const isReadOnly = !canUpdate(type);
 
-    const { data: entry, isLoading } = useQuery({
-        queryKey: queryKeys.entries.detail(type, id),
-        queryFn: () => Astromech.entries.get(id),
-    });
+    const { data: entry, isLoading } = useEntry(type, id);
 
     // Versioning
     const hasVersioning = entryTypeConfig?.versioning === true;
-    const { data: versions } = useQuery({
-        queryKey: queryKeys.entries.versions(type, id),
-        queryFn: () => Astromech.entries.versions(id),
-        enabled: hasVersioning,
-    });
+    const { data: versions } = useEntryVersions(type, id, hasVersioning);
     const versionCount = versions?.length ?? 0;
 
     // Translations
     const hasI18n = entryTypeConfig?.translatable === true;
     const sourceId = entry?.translationOf ?? id;
-    const { data: translations } = useQuery({
-        queryKey: queryKeys.entries.translations(type, sourceId),
-        queryFn: () => Astromech.entries.translations(sourceId),
-        enabled: hasI18n && entry != null,
+    const { data: translations } = useEntryTranslations(
+        type,
+        sourceId,
+        hasI18n && entry !== undefined
+    );
+
+    const trashEntry = useTrashEntry(type, {
+        onSuccess: () => void navigate({ to: `/entries/${type}` }),
+    });
+
+    const duplicateEntry = useDuplicateEntry(type, {
+        onSuccess: (newEntry) => void navigate({ to: `/entries/${type}/${newEntry.id}` }),
     });
 
     const { form, saveMutation, handleSave } = useEntryForm({
@@ -124,60 +131,9 @@ export function EntryEditPage(): React.ReactElement {
         saveFn: (data) => Astromech.entries.update(id, data),
         publishFn: (data) => Astromech.entries.update(id, data),
         onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.detail(type, id),
-            });
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(type),
-            });
             toast({
                 message: t('entries.updated', { name: single }),
                 variant: 'success',
-            });
-        },
-    });
-
-    const deleteMutation = useMutation({
-        mutationFn: () => Astromech.entries.trash(id),
-        onSuccess: () => {
-            void navigate({ to: `/entries/${type}` });
-            toast({
-                message: t('entries.movedToTrash', { name: single }),
-                variant: 'success',
-            });
-        },
-        onError: (err) => {
-            toast({
-                message:
-                    err instanceof Error ? err.message : t('entries.deleteFailed'),
-                variant: 'error',
-            });
-        },
-    });
-
-    const duplicateMutation = useMutation({
-        mutationFn: () => {
-            const values = form.state.values;
-            return Astromech.entries.create({
-                type,
-                title: `${values.title || single} (copy)`,
-                fields: (values.fields ??
-                    {}) as import('../../../types/index.js').JsonObject,
-                status: 'draft',
-            });
-        },
-        onSuccess: (newEntry) => {
-            void navigate({ to: `/entries/${type}/${newEntry.id}` });
-            toast({
-                message: t('entries.duplicated', { name: single }),
-                variant: 'success',
-            });
-        },
-        onError: (err) => {
-            toast({
-                message:
-                    err instanceof Error ? err.message : t('entries.duplicateFailed'),
-                variant: 'error',
             });
         },
     });
@@ -199,6 +155,7 @@ export function EntryEditPage(): React.ReactElement {
     return (
         <Page>
             <PageHeader>
+                <PageTitle>{entry?.title ?? single}</PageTitle>
                 <Breadcrumb
                     items={[
                         { label: plural, to: `/entries/${type}` },
@@ -264,8 +221,8 @@ export function EntryEditPage(): React.ReactElement {
                                     <Menu.Popup className="am-topbar__menu-popup">
                                         <Menu.Item
                                             className="am-topbar__menu-item"
-                                            onClick={() => duplicateMutation.mutate()}
-                                            disabled={duplicateMutation.isPending}
+                                            onClick={() => duplicateEntry.mutate(id)}
+                                            disabled={duplicateEntry.isPending}
                                         >
                                             <span className="am-topbar__menu-item-icon">
                                                 <Copy size={14} />
@@ -288,7 +245,7 @@ export function EntryEditPage(): React.ReactElement {
                                                         'entries.confirmDeleteLabel'
                                                     ),
                                                     onConfirm: () =>
-                                                        deleteMutation.mutate(),
+                                                        trashEntry.mutate(id),
                                                 })
                                             }
                                         >
@@ -520,3 +477,7 @@ export function EntryEditPage(): React.ReactElement {
         </Page>
     );
 }
+
+export const Route = createFileRoute('/_protected/entries/$type/$id/')({
+	component: EntryEditPage,
+});

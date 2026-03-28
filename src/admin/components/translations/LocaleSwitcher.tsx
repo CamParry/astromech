@@ -5,11 +5,9 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Select } from '../ui/index';
-import { useToast } from '../ui/index';
-import { Astromech } from '../../../sdk/fetch/index.js';
+import { useCreateTranslation } from '../../hooks/entries.js';
 import type { TranslationInfo } from '../../../types/index.js';
 
 // ============================================================================
@@ -39,9 +37,8 @@ export function LocaleSwitcher({
     defaultLocale,
     compact = false,
 }: LocaleSwitcherProps): React.ReactElement {
-    const { t } = useTranslation();
     const navigate = useNavigate();
-    const { toast } = useToast();
+    const { t } = useTranslation();
 
     // Current value: either the locale of a translation or "default" for the source
     const currentTranslation = translations.find((tr) => tr.entryId === currentEntryId);
@@ -50,21 +47,12 @@ export function LocaleSwitcher({
 
     const [isCreating, setIsCreating] = useState(false);
 
-    const createMutation = useMutation({
-        mutationFn: (locale: string) =>
-            Astromech.entries.createTranslation(sourceId, locale),
+    const createMutation = useCreateTranslation(type, {
         onSuccess: (newEntry) => {
             setIsCreating(false);
             void navigate({ to: `/entries/${type}/${newEntry.id}` });
         },
-        onError: (err) => {
-            setIsCreating(false);
-            toast({
-                message:
-                    err instanceof Error ? err.message : t('translations.createFailed'),
-                variant: 'error',
-            });
-        },
+        onError: () => setIsCreating(false),
     });
 
     function handleValueChange(value: string | null): void {
@@ -86,7 +74,7 @@ export function LocaleSwitcher({
 
         // Create new translation
         setIsCreating(true);
-        createMutation.mutate(value);
+        createMutation.mutate({ sourceId, locale: value });
     }
 
     // Build options: default locale first, then all other locales

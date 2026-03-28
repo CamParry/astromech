@@ -7,6 +7,8 @@
 
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { swaggerUI } from '@hono/swagger-ui';
+import { cors } from 'hono/cors';
+import { secureHeaders } from 'hono/secure-headers';
 import { requireAuth } from './middleware/auth.js';
 import type { AuthVariables } from './middleware/auth.js';
 import { onError, onNotFound } from './middleware/errors.js';
@@ -28,6 +30,44 @@ export const app = new OpenAPIHono<AppEnv>();
 
 app.onError(onError);
 app.notFound(onNotFound);
+
+// ============================================================================
+// Security headers — applied to all responses
+// ============================================================================
+
+app.use('*', (c, next) => {
+    const cfg = Astromech.config;
+    return secureHeaders({
+        xContentTypeOptions: cfg.security?.headers?.xContentTypeOptions ?? 'nosniff',
+        xFrameOptions: cfg.security?.headers?.xFrameOptions ?? 'DENY',
+        referrerPolicy: cfg.security?.headers?.referrerPolicy ?? 'strict-origin-when-cross-origin',
+    })(c, next);
+});
+
+app.use('*', async (c, next) => {
+    await next();
+    const permissionsPolicy = Astromech.config.security?.headers?.permissionsPolicy;
+    if (permissionsPolicy) {
+        c.res.headers.set('Permissions-Policy', permissionsPolicy);
+    }
+});
+
+// ============================================================================
+// CORS — same-origin only by default; opt-in additional origins via config
+// ============================================================================
+
+app.use('*', (c, next) => {
+    const allowed = Astromech.config.cors?.origins ?? [];
+    return cors({
+        origin: (origin) => {
+            if (!origin) return null;
+            return allowed.includes(origin) ? origin : null;
+        },
+        allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowHeaders: ['Content-Type', 'Authorization'],
+        credentials: true,
+    })(c, next);
+});
 
 // ============================================================================
 // Public routes (no auth required)

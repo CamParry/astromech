@@ -6,8 +6,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { useParams, useNavigate } from '@tanstack/react-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { createFileRoute, useParams, useNavigate } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { useTranslation } from 'react-i18next';
 import {
@@ -18,17 +17,17 @@ import {
     Select,
     Avatar,
     PageLoading,
-    useToast,
     useConfirm,
     Page,
+    PageHeader,
+    PageTitle,
+    PageContent,
     FormLayout,
     FormLayoutMain,
     FormLayoutSidebar,
-} from '../../components/ui/index.js';
-import { Astromech } from '../../../sdk/fetch/index.js';
-import { queryKeys } from '../../hooks/use-query-keys.js';
-import { usePermissions } from '../../hooks/index.js';
-import { useAuth } from '../../context/auth.js';
+} from '@/admin/components/ui/index.js';
+import { usePermissions, useUser, useUpdateUser, useDeleteUser } from '@/admin/hooks/index.js';
+import { useAuth } from '@/admin/context/auth.js';
 import adminConfig from 'virtual:astromech/admin-config';
 
 // ============================================================================
@@ -59,12 +58,10 @@ type FormValues = {
 // Page
 // ============================================================================
 
-export function UserEditPage(): React.ReactElement {
+function UserEditPage(): React.ReactElement {
     const { id } = useParams({ strict: false }) as { id: string };
-    const { toast } = useToast();
     const confirm = useConfirm();
     const { t } = useTranslation();
-    const queryClient = useQueryClient();
     const navigate = useNavigate();
     const { user: currentUser } = useAuth();
     const { canReadUsers, canUpdateUsers, canDeleteUsers } = usePermissions();
@@ -87,10 +84,7 @@ export function UserEditPage(): React.ReactElement {
         },
     });
 
-    const { data: user, isLoading } = useQuery({
-        queryKey: queryKeys.users.detail(id),
-        queryFn: () => Astromech.users.get(id),
-    });
+    const { data: user, isLoading } = useUser(id);
 
     useEffect(() => {
         if (!canReadUsers() && !isSelf) {
@@ -106,36 +100,13 @@ export function UserEditPage(): React.ReactElement {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
-    const updateMutation = useMutation({
-        mutationFn: (data: Partial<{ name: string; roleSlug: string }>) =>
-            Astromech.users.update(id, data),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(id) });
-            void queryClient.invalidateQueries({ queryKey: queryKeys.users.all() });
-            form.reset(form.state.values);
-            toast({ message: t('users.updated'), variant: 'success' });
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('users.saveFailed'),
-                variant: 'error',
-            });
-        },
+    const updateMutation = useUpdateUser(id, {
+        onFormReset: () => form.reset(form.state.values),
     });
 
-    const deleteMutation = useMutation({
-        mutationFn: () => Astromech.users.delete(id),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({ queryKey: queryKeys.users.all() });
-            toast({ message: t('users.deleted'), variant: 'success' });
-            void navigate({ to: '/users' });
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('users.deleteFailed'),
-                variant: 'error',
-            });
-        },
+    const deleteMutation = useDeleteUser({
+        id,
+        onSuccess: () => void navigate({ to: '/users' }),
     });
 
     const canSave = canUpdateUsers() || isSelf;
@@ -150,13 +121,17 @@ export function UserEditPage(): React.ReactElement {
 
     return (
         <Page>
-            <Breadcrumb
-                items={[
-                    { label: t('users.title'), to: '/users' },
-                    { label: user?.name ?? t('users.editUser') },
-                ]}
-            />
+            <PageHeader>
+                <PageTitle>{user?.name ?? t('users.editUser')}</PageTitle>
+                <Breadcrumb
+                    items={[
+                        { label: t('users.title'), to: '/users' },
+                        { label: user?.name ?? t('users.editUser') },
+                    ]}
+                />
+            </PageHeader>
 
+            <PageContent>
             <FormLayout>
                 {/* Main column */}
                 <FormLayoutMain>
@@ -269,7 +244,7 @@ export function UserEditPage(): React.ReactElement {
                                             name: user?.name ?? '',
                                         }),
                                         confirmLabel: t('common.delete'),
-                                        onConfirm: () => deleteMutation.mutate(),
+                                        onConfirm: () => deleteMutation.mutate(undefined),
                                     })
                                 }
                                 loading={deleteMutation.isPending}
@@ -334,6 +309,11 @@ export function UserEditPage(): React.ReactElement {
                     </Panel>
                 </FormLayoutSidebar>
             </FormLayout>
+            </PageContent>
         </Page>
     );
 }
+
+export const Route = createFileRoute('/_protected/users/$id')({
+	component: UserEditPage,
+});

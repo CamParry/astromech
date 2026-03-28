@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { LayoutGrid, LayoutList, Trash2 } from 'lucide-react';
 import {
@@ -24,28 +24,22 @@ import {
     UploadButton,
     UploadZone,
     useConfirm,
-    useToast,
 } from '@/admin/components/ui/index.js';
 import { MediaCard } from '@/admin/components/media/MediaCard.js';
 import { MediaRow } from '@/admin/components/media/MediaRow.js';
 import { MediaDetailModal } from '@/admin/components/media/MediaDetailModal.js';
-import { Astromech } from '@/sdk/fetch/index.js';
-import { queryKeys } from '@/admin/hooks/use-query-keys.js';
 import { useViewMode } from '@/admin/hooks/use-view-mode.js';
 import { useQueryState } from '@/admin/hooks/use-query-state.js';
 import { useSelection } from '@/admin/hooks/use-selection.js';
-import { useUploadMedia } from '@/admin/hooks/use-upload-media.js';
-import { usePermissions } from '../../hooks/index.js';
+import { useUploadMedia, usePermissions, useMediaList, useBulkDeleteMedia } from '@/admin/hooks/index.js';
 import { TYPE_FILTER_OPTIONS, MEDIA_ACCEPT } from '@/admin/types/media.js';
 import type { TypeFilter } from '@/admin/types/media.js';
 
 const PER_PAGE = 20;
 
-export function MediaIndexPage(): React.ReactElement {
+function MediaIndexPage(): React.ReactElement {
     const { t } = useTranslation();
-    const { toast } = useToast();
     const confirm = useConfirm();
-    const queryClient = useQueryClient();
 
     const [q, setQ] = useQueryState('q', '');
     const [typeFilter, setTypeFilter] = useQueryState<TypeFilter>('type', 'all');
@@ -65,10 +59,7 @@ export function MediaIndexPage(): React.ReactElement {
         perPage: PER_PAGE,
     };
 
-    const { data, isLoading } = useQuery({
-        queryKey: queryKeys.media.list(queryParams),
-        queryFn: () => Astromech.media.list(queryParams),
-    });
+    const { data, isLoading } = useMediaList(queryParams);
 
     const items = data?.items ?? [];
     const total = data?.total ?? 0;
@@ -77,29 +68,7 @@ export function MediaIndexPage(): React.ReactElement {
     const { checkedIds, toggle, toggleAll, allChecked, someChecked, reset } =
         useSelection(items);
 
-    const bulkDeleteMutation = useMutation({
-        mutationFn: async (ids: string[]) => {
-            for (const id of ids) {
-                await Astromech.media.delete(id);
-            }
-        },
-        onSuccess: (_data, ids) => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.media.list(queryParams),
-            });
-            reset();
-            toast({
-                message: t('media.deletedToast', { count: ids.length }),
-                variant: 'success',
-            });
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('media.deleteFailed'),
-                variant: 'error',
-            });
-        },
-    });
+    const bulkDeleteMutation = useBulkDeleteMedia({ onSuccess: reset });
 
     const isEmpty = items.length === 0;
 
@@ -290,9 +259,6 @@ export function MediaIndexPage(): React.ReactElement {
                 onClose={() => setSelectedMediaId(null)}
                 onDeleted={() => {
                     setSelectedMediaId(null);
-                    void queryClient.invalidateQueries({
-                        queryKey: queryKeys.media.list(queryParams),
-                    });
                 }}
                 canDelete={canDeleteMedia()}
                 canUpload={canUploadMedia()}
@@ -300,3 +266,7 @@ export function MediaIndexPage(): React.ReactElement {
         </>
     );
 }
+
+export const Route = createFileRoute('/_protected/media/')({
+	component: MediaIndexPage,
+});

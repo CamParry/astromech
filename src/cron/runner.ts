@@ -7,11 +7,11 @@
 
 import { getDb } from '@/db/registry.js';
 import { getCronJobs } from '@/cron/registry.js';
-import config from 'virtual:astromech/config';
 
 export async function runScheduledJobs(): Promise<void> {
     const db = getDb();
     const jobs = getCronJobs();
+    const { default: config } = await import('virtual:astromech/config');
 
     for (const job of jobs) {
         try {

@@ -19,11 +19,21 @@
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { Astromech } from '@/sdk/local/index.js';
-import { forbidden, fromZodError, internalError, notFound } from '@/api/middleware/errors.js';
+import {
+    forbidden,
+    fromZodError,
+    internalError,
+    notFound,
+} from '@/api/middleware/errors.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
 import { can } from '@/core/permissions.js';
 import type { JsonObject, Permission, QueryOptions, SortOption } from '@/types/index.js';
-import { createEntrySchema, updateEntrySchema, scheduleEntrySchema, createTranslationSchema } from '@/schemas/entries.js';
+import {
+    createEntrySchema,
+    updateEntrySchema,
+    scheduleEntrySchema,
+    createTranslationSchema,
+} from '@/schemas/entries.js';
 
 type Env = { Variables: AuthVariables };
 
@@ -85,20 +95,30 @@ const listEntriesRoute = createRoute({
 });
 
 router.openapi(listEntriesRoute, async (c) => {
+    console.log('test');
+
     const { type } = c.req.param();
     const role = c.var.role;
     if (!can(role, `entry:read:${type}` as Permission)) return forbidden(c);
 
+    console.log('test1');
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
+    console.log('test2');
 
     try {
         const query = c.req.query();
         const page = query['page'];
         const perPage = query['perPage'];
         const options = { ...parseQueryOptions(query), type };
+        console.log({ options });
 
         if (page && perPage) {
-            const result = await Astromech.entries.paginate(Number(perPage), Number(page), options);
+            const result = await Astromech.entries.paginate(
+                Number(perPage),
+                Number(page),
+                options
+            );
+            console.log(result);
             return c.json(result);
         }
 
@@ -233,7 +253,9 @@ router.post('/:type/query', async (c) => {
             options?: QueryOptions;
         }>();
 
-        return c.json(await Astromech.entries.where(body.filters ?? {}, { ...body.options, type }));
+        return c.json(
+            await Astromech.entries.where(body.filters ?? {}, { ...body.options, type })
+        );
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
     }
@@ -539,8 +561,13 @@ router.post('/:type/:id/translations', async (c) => {
         if (!parsed.success) return fromZodError(c, parsed.error);
 
         const options: { copyFields?: boolean } = {};
-        if (parsed.data.copyFields !== undefined) options.copyFields = parsed.data.copyFields;
-        const entry = await Astromech.entries.createTranslation(id, parsed.data.locale, options);
+        if (parsed.data.copyFields !== undefined)
+            options.copyFields = parsed.data.copyFields;
+        const entry = await Astromech.entries.createTranslation(
+            id,
+            parsed.data.locale,
+            options
+        );
         return c.json({ data: entry }, 201);
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
