@@ -126,7 +126,16 @@
     --am-button-height: 2.25rem;
     --am-button-height-lg: 2.75rem;
     --am-input-height: 2.25rem;
+    --am-input-border-color: var(--am-color-border-strong);
+    --am-input-border-radius: var(--am-radius-md);
+    --am-input-background: var(--am-color-bg-base);
+    --am-input-color: var(--am-color-text-default);
+    --am-input-font-size: 0.875rem;
     --am-panel-padding: 1.5rem;
+    /* Popup / overlay */
+    --am-z-index-popup: 50;
+    --am-popup-max-width: 24rem;
+    --am-popup-max-height: 20rem;
 
     /* Focus outline — applied globally via :focus-visible in base.css */
     --am-focus-color: var(--am-color-primary-500);
