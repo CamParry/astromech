@@ -29,7 +29,7 @@ import {
     Plus,
 } from 'lucide-react';
 import type { BaseFieldProps, BlockDefinition, FieldDefinition } from '@/types/index.js';
-import { FieldInput } from '@/admin/components/fields/field-input';
+import { FormField } from '@/admin/components/fields/form-field';
 import { useBlocksField } from '@/admin/hooks/use-blocks-field';
 import type { BlockWithId } from '@/admin/hooks/use-blocks-field';
 import './blocks-field.css';
@@ -242,7 +242,7 @@ function SortableBlock({
                     <Collapsible.Panel className="am-blocks-block-panel">
                         <div className="am-blocks-block-content">
                             {(blockDef?.fields ?? []).map((subField: FieldDefinition) => (
-                                <FieldInput
+                                <FormField
                                     key={subField.name}
                                     field={subField}
                                     value={block[subField.name]}

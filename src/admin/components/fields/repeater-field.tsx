@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Collapsible } from '@base-ui/react';
 import { Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import type { BaseFieldProps, FieldDefinition } from '@/types/index.js';
-import { FieldInput } from '@/admin/components/fields/field-input';
+import { FormField } from '@/admin/components/fields/form-field';
 import './repeater-field.css';
 
 type ItemWithId = Record<string, unknown> & { _id: string };
@@ -46,7 +46,9 @@ function RepeaterItem({
     return (
         <Collapsible.Root open={open} onOpenChange={setOpen} className="am-repeater-item">
             <div className="am-repeater-item-header">
-                <span className="am-repeater-item-title">{t('fields.repeaterItem', { number: index + 1 })}</span>
+                <span className="am-repeater-item-title">
+                    {t('fields.repeaterItem', { number: index + 1 })}
+                </span>
                 <div className="am-repeater-item-controls">
                     {!disabled && (
                         <button
@@ -83,7 +85,11 @@ function RepeaterItem({
                     )}
                     <Collapsible.Trigger
                         className="am-repeater-btn am-repeater-btn-icon"
-                        aria-label={open ? t('fields.repeaterCollapse') : t('fields.repeaterExpand')}
+                        aria-label={
+                            open
+                                ? t('fields.repeaterCollapse')
+                                : t('fields.repeaterExpand')
+                        }
                     >
                         {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </Collapsible.Trigger>
@@ -92,7 +98,7 @@ function RepeaterItem({
             <Collapsible.Panel className="am-repeater-item-panel">
                 <div className="am-repeater-item-content">
                     {fields.map((subField) => (
-                        <FieldInput
+                        <FormField
                             key={subField.name}
                             field={subField}
                             value={item[subField.name]}
@@ -107,7 +113,14 @@ function RepeaterItem({
     );
 }
 
-export function RepeaterField({ name, value, field, required, onChange, disabled }: BaseFieldProps) {
+export function RepeaterField({
+    name,
+    value,
+    field,
+    required,
+    onChange,
+    disabled,
+}: BaseFieldProps) {
     const { t } = useTranslation();
     const fields = field.fields || [];
     const arrayValue = Array.isArray(value) ? value : [];
@@ -115,12 +128,19 @@ export function RepeaterField({ name, value, field, required, onChange, disabled
         (arrayValue.length > 0 ? arrayValue : [{}]).map(withId)
     );
 
-    function handleItemFieldChange(itemIndex: number, fieldName: string, fieldValue: unknown) {
+    function handleItemFieldChange(
+        itemIndex: number,
+        fieldName: string,
+        fieldValue: unknown
+    ) {
         setItems((prev) => {
             const next = prev.map((item, i) =>
                 i === itemIndex ? { ...item, [fieldName]: fieldValue } : item
             );
-            onChange(name, next.map(({ _id, ...rest }) => rest));
+            onChange(
+                name,
+                next.map(({ _id, ...rest }) => rest)
+            );
             return next;
         });
     }
@@ -128,25 +148,35 @@ export function RepeaterField({ name, value, field, required, onChange, disabled
     const handleAdd = () => {
         const next = [...items, withId({})];
         setItems(next);
-        onChange(name, next.map(({ _id, ...rest }) => rest));
+        onChange(
+            name,
+            next.map(({ _id, ...rest }) => rest)
+        );
     };
 
     const handleRemove = (index: number) => {
         if (items.length === 1 && required) return;
         const next = items.filter((_, i) => i !== index);
         setItems(next);
-        onChange(name, next.map(({ _id, ...rest }) => rest));
+        onChange(
+            name,
+            next.map(({ _id, ...rest }) => rest)
+        );
     };
 
     const handleMoveUp = (index: number) => {
         if (index === 0) return;
         const newItems = [...items];
         const temp = newItems[index - 1];
-        if (temp !== undefined && newItems[index] !== undefined) {
-            newItems[index - 1] = newItems[index]!;
+        const current = newItems[index];
+        if (temp !== undefined && current !== undefined) {
+            newItems[index - 1] = current;
             newItems[index] = temp;
             setItems(newItems);
-            onChange(name, newItems.map(({ _id, ...rest }) => rest));
+            onChange(
+                name,
+                newItems.map(({ _id, ...rest }) => rest)
+            );
         }
     };
 
@@ -154,11 +184,15 @@ export function RepeaterField({ name, value, field, required, onChange, disabled
         if (index === items.length - 1) return;
         const newItems = [...items];
         const temp = newItems[index];
-        if (temp !== undefined && newItems[index + 1] !== undefined) {
-            newItems[index] = newItems[index + 1]!;
+        const next = newItems[index + 1];
+        if (temp !== undefined && next !== undefined) {
+            newItems[index] = next;
             newItems[index + 1] = temp;
             setItems(newItems);
-            onChange(name, newItems.map(({ _id, ...rest }) => rest));
+            onChange(
+                name,
+                newItems.map(({ _id, ...rest }) => rest)
+            );
         }
     };
 
@@ -177,7 +211,9 @@ export function RepeaterField({ name, value, field, required, onChange, disabled
                     onMoveUp={handleMoveUp}
                     onMoveDown={handleMoveDown}
                     onRemove={handleRemove}
-                    onFieldChange={(fieldName, fieldValue) => handleItemFieldChange(index, fieldName, fieldValue)}
+                    onFieldChange={(fieldName, fieldValue) =>
+                        handleItemFieldChange(index, fieldName, fieldValue)
+                    }
                 />
             ))}
             {!disabled && (

@@ -121,10 +121,11 @@
     --am-sidebar-width: 14rem;
     --am-sidebar-width-collapsed: (3.25rem + 1px);
     --am-topbar-height: 3.5rem;
-    /* Control heights — keep these in sync */
+
     --am-button-height-sm: 2rem;
     --am-button-height: 2.25rem;
     --am-button-height-lg: 2.75rem;
+
     --am-input-height: 2.25rem;
     --am-input-border-color: var(--am-color-border-strong);
     --am-input-border-radius: var(--am-radius-md);
@@ -138,7 +139,7 @@
         border-color var(--am-duration-base) var(--am-easing),
         box-shadow var(--am-duration-base) var(--am-easing);
     --am-panel-padding: 1.5rem;
-    /* Popup / overlay */
+
     --am-popup-z-index: 50;
     --am-popup-max-width: 24rem;
     --am-popup-max-height: 20rem;

@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Tabs } from '@base-ui/react/tabs';
 import type { BaseFieldProps, FieldDefinition } from '@/types/index.js';
-import { FieldInput } from '@/admin/components/fields/field-input';
+import { FormField } from '@/admin/components/fields/form-field';
 import './tab-field.css';
 
 export function TabField({ name, value, field, onChange }: BaseFieldProps) {
     const fields = field.fields ?? [];
-    const tabLabels: string[] =
-        (field.options ?? []).map((opt) => (typeof opt === 'string' ? opt : opt.label));
+    const tabLabels: string[] = (field.options ?? []).map((opt) =>
+        typeof opt === 'string' ? opt : opt.label
+    );
 
     const groupValue =
         typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -66,7 +67,7 @@ export function TabField({ name, value, field, onChange }: BaseFieldProps) {
                                         {subField.description}
                                     </p>
                                 )}
-                                <FieldInput
+                                <FormField
                                     field={subField}
                                     value={groupValue[subField.name]}
                                     name={`${name}.${subField.name}`}

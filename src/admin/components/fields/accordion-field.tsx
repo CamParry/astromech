@@ -1,7 +1,7 @@
 import React from 'react';
 import type { BaseFieldProps } from '@/types/index.js';
 import { Collapsible } from '@/admin/components/ui/collapsible';
-import { FieldInput } from '@/admin/components/fields/field-input';
+import { FormField } from '@/admin/components/fields/form-field';
 import './accordion-field.css';
 
 export function AccordionField({ name, value, field, onChange }: BaseFieldProps) {
@@ -16,10 +16,7 @@ export function AccordionField({ name, value, field, onChange }: BaseFieldProps)
     }
 
     return (
-        <Collapsible
-            label={field.label ?? name}
-            defaultOpen={field.collapsed !== true}
-        >
+        <Collapsible label={field.label ?? name} defaultOpen={field.collapsed !== true}>
             <div className="am-accordion-field-content">
                 {fields.map((subField) => (
                     <div key={subField.name} className="am-accordion-field-item">
@@ -37,7 +34,7 @@ export function AccordionField({ name, value, field, onChange }: BaseFieldProps)
                                 {subField.description}
                             </p>
                         )}
-                        <FieldInput
+                        <FormField
                             field={subField}
                             value={groupValue[subField.name]}
                             name={`${name}.${subField.name}`}

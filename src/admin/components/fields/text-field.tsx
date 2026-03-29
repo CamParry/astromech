@@ -1,7 +1,6 @@
 import type { BaseFieldProps } from '@/types/index.js';
 import { formatValueForInput } from '@/utils/field-formatters';
 import { Input } from '@/admin/components/ui/input';
-import './text-field.css';
 
 export function TextField({ name, value, required, onChange }: BaseFieldProps) {
     const stringValue = formatValueForInput(value, 'text');

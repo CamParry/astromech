@@ -24,7 +24,7 @@ import {
     FormLayoutMain,
     FormLayoutSidebar,
 } from '@/admin/components/ui/index.js';
-import { FieldInput } from '@/admin/components/fields/field-input.js';
+import { FormField } from '@/admin/components/fields/form-field.js';
 import { PublishPanel } from '@/admin/components/entries/PublishPanel.js';
 import { Astromech } from '@/sdk/fetch/index.js';
 import { useEntryForm, usePermissions } from '@/admin/hooks/index.js';
@@ -105,106 +105,92 @@ function EntryCreatePage(): React.ReactElement {
             </PageHeader>
 
             <PageContent>
-            <FormLayout>
-                {/* Main column */}
-                <FormLayoutMain>
-                    {/* Title + optional slug */}
-                    <Panel>
-                        <form.Field
-                            name="title"
-                            validators={{
-                                onChange: ({ value }) =>
-                                    value.trim() === ''
-                                        ? t('entries.titleRequired')
-                                        : undefined,
-                            }}
-                        >
-                            {(field) => (
-                                <div className="am-field">
-                                    <label
-                                        className="am-field-label"
-                                        htmlFor="entry-title"
-                                    >
-                                        {t('entries.titleField')}{' '}
-                                        <span className="am-field-required">*</span>
-                                    </label>
-                                    <Input
-                                        id="entry-title"
-                                        type="text"
-                                        value={field.state.value}
-                                        onChange={(e) =>
-                                            field.handleChange(e.target.value)
-                                        }
-                                        onBlur={field.handleBlur}
-                                        placeholder={`${single} title`}
-                                        required
-                                    />
-                                    {field.state.meta.errors.length > 0 && (
-                                        <p className="am-field-error">
-                                            {field.state.meta.errors[0]}
-                                        </p>
-                                    )}
-                                </div>
-                            )}
-                        </form.Field>
-
-                        {hasSlug && (
-                            <form.Field name="slug">
+                <FormLayout>
+                    {/* Main column */}
+                    <FormLayoutMain>
+                        {/* Title + optional slug */}
+                        <Panel>
+                            <form.Field
+                                name="title"
+                                validators={{
+                                    onChange: ({ value }) =>
+                                        value.trim() === ''
+                                            ? t('entries.titleRequired')
+                                            : undefined,
+                                }}
+                            >
                                 {(field) => (
-                                    <div
-                                        className="am-field"
-                                        style={{ marginTop: '1rem' }}
-                                    >
+                                    <div className="am-field">
                                         <label
                                             className="am-field-label"
-                                            htmlFor="entry-slug"
+                                            htmlFor="entry-title"
                                         >
-                                            {t('entries.slugField')}
+                                            {t('entries.titleField')}{' '}
+                                            <span className="am-field-required">*</span>
                                         </label>
                                         <Input
-                                            id="entry-slug"
+                                            id="entry-title"
                                             type="text"
                                             value={field.state.value}
                                             onChange={(e) =>
                                                 field.handleChange(e.target.value)
                                             }
                                             onBlur={field.handleBlur}
-                                            placeholder="auto-generated-from-title"
-                                            pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                                            placeholder={`${single} title`}
+                                            required
                                         />
+                                        {field.state.meta.errors.length > 0 && (
+                                            <p className="am-field-error">
+                                                {field.state.meta.errors[0]}
+                                            </p>
+                                        )}
                                     </div>
                                 )}
                             </form.Field>
-                        )}
-                    </Panel>
 
-                    {mainGroups.map((group) => (
-                        <Panel
-                            key={group.name}
-                            title={group.label}
-                            {...(group.description !== undefined && {
-                                description: group.description,
-                            })}
-                        >
-                            <div className="am-field-list">
-                                {group.fields.map((field) => (
-                                    <form.Field key={field.name} name="fields">
-                                        {(f) => (
-                                            <div className="am-field">
-                                                <label className="am-field-label">
-                                                    {field.label ?? field.name}
-                                                    {field.required === true && (
-                                                        <span className="am-field-required">
-                                                            *
-                                                        </span>
-                                                    )}
-                                                </label>
-                                                {field.description !== undefined && (
-                                                    <p className="am-field-hint">
-                                                        {field.description}
-                                                    </p>
-                                                )}
-                                                <FieldInput
+                            {hasSlug && (
+                                <form.Field name="slug">
+                                    {(field) => (
+                                        <div
+                                            className="am-field"
+                                            style={{ marginTop: '1rem' }}
+                                        >
+                                            <label
+                                                className="am-field-label"
+                                                htmlFor="entry-slug"
+                                            >
+                                                {t('entries.slugField')}
+                                            </label>
+                                            <Input
+                                                id="entry-slug"
+                                                type="text"
+                                                value={field.state.value}
+                                                onChange={(e) =>
+                                                    field.handleChange(e.target.value)
+                                                }
+                                                onBlur={field.handleBlur}
+                                                placeholder="auto-generated-from-title"
+                                                pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                                            />
+                                        </div>
+                                    )}
+                                </form.Field>
+                            )}
+                        </Panel>
+
+                        {mainGroups.map((group) => (
+                            <Panel
+                                key={group.name}
+                                title={group.label}
+                                {...(group.description !== undefined && {
+                                    description: group.description,
+                                })}
+                            >
+                                <div className="am-field-list">
+                                    {group.fields.map((field) => (
+                                        <form.Field key={field.name} name="fields">
+                                            {(f) => (
+                                                <FormField
                                                     field={field}
                                                     value={f.state.value[field.name]}
                                                     onChange={(_name, value) =>
@@ -214,63 +200,48 @@ function EntryCreatePage(): React.ReactElement {
                                                         })
                                                     }
                                                 />
-                                            </div>
-                                        )}
-                                    </form.Field>
-                                ))}
-                            </div>
-                        </Panel>
-                    ))}
-                </FormLayoutMain>
+                                            )}
+                                        </form.Field>
+                                    ))}
+                                </div>
+                            </Panel>
+                        ))}
+                    </FormLayoutMain>
 
-                {/* Sidebar column */}
-                <FormLayoutSidebar>
-                    <form.Field name="status">
-                        {(statusField) => (
-                            <form.Field name="publishAt">
-                                {(publishAtField) => (
-                                    <PublishPanel
-                                        status={statusField.state.value}
-                                        publishAt={publishAtField.state.value}
-                                        onStatusChange={(s) =>
-                                            statusField.handleChange(s)
-                                        }
-                                        onPublishAtChange={(v) =>
-                                            publishAtField.handleChange(v)
-                                        }
-                                    />
-                                )}
-                            </form.Field>
-                        )}
-                    </form.Field>
+                    {/* Sidebar column */}
+                    <FormLayoutSidebar>
+                        <form.Field name="status">
+                            {(statusField) => (
+                                <form.Field name="publishAt">
+                                    {(publishAtField) => (
+                                        <PublishPanel
+                                            status={statusField.state.value}
+                                            publishAt={publishAtField.state.value}
+                                            onStatusChange={(s) =>
+                                                statusField.handleChange(s)
+                                            }
+                                            onPublishAtChange={(v) =>
+                                                publishAtField.handleChange(v)
+                                            }
+                                        />
+                                    )}
+                                </form.Field>
+                            )}
+                        </form.Field>
 
-                    {sidebarGroups.map((group) => (
-                        <Panel
-                            key={group.name}
-                            title={group.label}
-                            {...(group.description !== undefined && {
-                                description: group.description,
-                            })}
-                        >
-                            <div className="am-field-list">
-                                {group.fields.map((field) => (
-                                    <form.Field key={field.name} name="fields">
-                                        {(f) => (
-                                            <div className="am-field">
-                                                <label className="am-field-label">
-                                                    {field.label ?? field.name}
-                                                    {field.required === true && (
-                                                        <span className="am-field-required">
-                                                            *
-                                                        </span>
-                                                    )}
-                                                </label>
-                                                {field.description !== undefined && (
-                                                    <p className="am-field-hint">
-                                                        {field.description}
-                                                    </p>
-                                                )}
-                                                <FieldInput
+                        {sidebarGroups.map((group) => (
+                            <Panel
+                                key={group.name}
+                                title={group.label}
+                                {...(group.description !== undefined && {
+                                    description: group.description,
+                                })}
+                            >
+                                <div className="am-field-list">
+                                    {group.fields.map((field) => (
+                                        <form.Field key={field.name} name="fields">
+                                            {(f) => (
+                                                <FormField
                                                     field={field}
                                                     value={f.state.value[field.name]}
                                                     onChange={(_name, value) =>
@@ -280,20 +251,19 @@ function EntryCreatePage(): React.ReactElement {
                                                         })
                                                     }
                                                 />
-                                            </div>
-                                        )}
-                                    </form.Field>
-                                ))}
-                            </div>
-                        </Panel>
-                    ))}
-                </FormLayoutSidebar>
-            </FormLayout>
+                                            )}
+                                        </form.Field>
+                                    ))}
+                                </div>
+                            </Panel>
+                        ))}
+                    </FormLayoutSidebar>
+                </FormLayout>
             </PageContent>
         </Page>
     );
 }
 
 export const Route = createFileRoute('/_protected/entries/$type/new')({
-	component: EntryCreatePage,
+    component: EntryCreatePage,
 });

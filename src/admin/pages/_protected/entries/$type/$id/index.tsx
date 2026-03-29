@@ -28,7 +28,7 @@ import {
     FormLayoutSidebar,
     PageContent,
 } from '@/admin/components/ui/index.js';
-import { FieldInput } from '@/admin/components/fields/field-input.js';
+import { FormField } from '@/admin/components/fields/form-field.js';
 import { LocaleSwitcher } from '@/admin/components/translations/LocaleSwitcher.js';
 import { PublishPanel } from '@/admin/components/entries/PublishPanel.js';
 import { Astromech } from '@/sdk/fetch/index.js';
@@ -264,7 +264,10 @@ function EntryEditPage(): React.ReactElement {
 
             <PageContent>
                 {isReadOnly && (
-                    <div className="am-banner am-banner-info" style={{ marginBottom: '1rem' }}>
+                    <div
+                        className="am-banner am-banner-info"
+                        style={{ marginBottom: '1rem' }}
+                    >
                         {t('permissions.readOnly')}
                     </div>
                 )}
@@ -324,35 +327,17 @@ function EntryEditPage(): React.ReactElement {
                                         {group.fields.map((field) => (
                                             <form.Field key={field.name} name="fields">
                                                 {(f) => (
-                                                    <div className="am-field">
-                                                        <label className="am-field-label">
-                                                            {field.label ?? field.name}
-                                                            {field.required === true && (
-                                                                <span className="am-field-required">
-                                                                    *
-                                                                </span>
-                                                            )}
-                                                        </label>
-                                                        {field.description !==
-                                                            undefined && (
-                                                            <p className="am-field-hint">
-                                                                {field.description}
-                                                            </p>
-                                                        )}
-                                                        <FieldInput
-                                                            field={field}
-                                                            value={
-                                                                f.state.value[field.name]
-                                                            }
-                                                            onChange={(_name, value) =>
-                                                                f.handleChange({
-                                                                    ...f.state.value,
-                                                                    [field.name]: value,
-                                                                })
-                                                            }
-                                                            disabled={isReadOnly}
-                                                        />
-                                                    </div>
+                                                    <FormField
+                                                        field={field}
+                                                        value={f.state.value[field.name]}
+                                                        onChange={(_name, value) =>
+                                                            f.handleChange({
+                                                                ...f.state.value,
+                                                                [field.name]: value,
+                                                            })
+                                                        }
+                                                        disabled={isReadOnly}
+                                                    />
                                                 )}
                                             </form.Field>
                                         ))}
@@ -416,35 +401,17 @@ function EntryEditPage(): React.ReactElement {
                                         {group.fields.map((field) => (
                                             <form.Field key={field.name} name="fields">
                                                 {(f) => (
-                                                    <div className="am-field">
-                                                        <label className="am-field-label">
-                                                            {field.label ?? field.name}
-                                                            {field.required === true && (
-                                                                <span className="am-field-required">
-                                                                    *
-                                                                </span>
-                                                            )}
-                                                        </label>
-                                                        {field.description !==
-                                                            undefined && (
-                                                            <p className="am-field-hint">
-                                                                {field.description}
-                                                            </p>
-                                                        )}
-                                                        <FieldInput
-                                                            field={field}
-                                                            value={
-                                                                f.state.value[field.name]
-                                                            }
-                                                            onChange={(_name, value) =>
-                                                                f.handleChange({
-                                                                    ...f.state.value,
-                                                                    [field.name]: value,
-                                                                })
-                                                            }
-                                                            disabled={isReadOnly}
-                                                        />
-                                                    </div>
+                                                    <FormField
+                                                        field={field}
+                                                        value={f.state.value[field.name]}
+                                                        onChange={(_name, value) =>
+                                                            f.handleChange({
+                                                                ...f.state.value,
+                                                                [field.name]: value,
+                                                            })
+                                                        }
+                                                        disabled={isReadOnly}
+                                                    />
                                                 )}
                                             </form.Field>
                                         ))}
@@ -479,5 +446,5 @@ function EntryEditPage(): React.ReactElement {
 }
 
 export const Route = createFileRoute('/_protected/entries/$type/$id/')({
-	component: EntryEditPage,
+    component: EntryEditPage,
 });
