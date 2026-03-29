@@ -6,6 +6,8 @@ Astromech is a lightweight TypeScript CMS. Built to work well across runtimes bu
 
 Use sub-agents wherever the task is clear enough to delegate. Always include a full implementation plan in the prompt — file paths, exact code changes, and expected outcomes — so the agent can execute without re-researching the codebase.
 
+**Before launching a worktree agent:** ensure all in-progress changes in the main working tree are committed or stashed. Worktrees are forked from the last commit — copying their output back will silently overwrite any uncommitted work.
+
 ## Workflow
 
 - **Clarify before acting:** If a task is ambiguous or the right approach depends on an unclear requirement, ask first — don't assume and proceed.
