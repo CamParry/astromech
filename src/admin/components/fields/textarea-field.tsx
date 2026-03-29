@@ -1,14 +1,13 @@
 import type { BaseFieldProps } from '@/types/index.js';
-import './textarea-field.css';
+import { Textarea } from '@/admin/components/ui/textarea.js';
 
-export function TextareaField({ name, value, field, required, onChange }: BaseFieldProps) {
+export function TextareaField({ name, value, required, onChange }: BaseFieldProps) {
     return (
-        <textarea
+        <Textarea
             name={name}
             value={typeof value === 'string' ? value : ''}
             required={required}
             rows={5}
-            className="am-textarea-field"
             onChange={(e) => onChange(name, e.target.value)}
         />
     );
