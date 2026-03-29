@@ -134,6 +134,7 @@
         "bulkRestored": "Entries restored.",
         "searchPlaceholder": "Search {{name}}…",
         "statusFilter": "Status: {{status}}",
+        "statusFilterPrefix": "Status:",
         "columnTitle": "Title",
         "columnStatus": "Status",
         "columnSlug": "Slug",
