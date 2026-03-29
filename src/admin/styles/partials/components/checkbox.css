@@ -51,3 +51,9 @@
     font-weight: 500;
     color: var(--am-color-text-default);
 }
+
+.am-checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}

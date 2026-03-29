@@ -45,5 +45,6 @@
 @import './partials/components/radio-group.css';
 @import './partials/components/color-picker.css';
 @import './partials/components/key-value-editor.css';
+@import './partials/components/rich-text-editor.css';
 @import './partials/components/upload.css';
 @import './partials/versions.css';

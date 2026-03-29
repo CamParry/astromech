@@ -95,6 +95,15 @@ export type { ColorPickerProps } from './color-picker.js';
 export { KeyValueEditor } from './key-value-editor.js';
 export type { KeyValueEditorProps } from './key-value-editor.js';
 
+export { RichTextEditor } from './rich-text-editor.js';
+export type { RichTextEditorProps } from './rich-text-editor.js';
+
+export { RangeInput } from './range-input.js';
+export type { RangeInputProps } from './range-input.js';
+
+export { CheckboxGroup } from './checkbox-group.js';
+export type { CheckboxGroupProps, CheckboxGroupOption } from './checkbox-group.js';
+
 export { ApiErrorPanel, dispatchApiErrorEvent } from './api-error-panel.js';
 export type { ApiErrorEventDetail } from './api-error-panel.js';
 

@@ -1,29 +1,20 @@
 import type { BaseFieldProps } from '@/types/index.js';
-import { Slider } from '@/admin/components/ui/slider.js';
+import { RangeInput } from '@/admin/components/ui/range-input.js';
 
 export function RangeField({ name, value, field, onChange }: BaseFieldProps) {
     const numValue = typeof value === 'number' ? value : (field.min ?? 0);
-    const min = field.min ?? 0;
-    const max = field.max ?? 100;
-    const step = field.step ?? 1;
 
     return (
-        <div className="am-slider-range">
-            <div className="am-slider-range-header">
-                <span className="am-slider-range-value">{numValue}</span>
-            </div>
-            <Slider
+        <>
+            <RangeInput
                 value={numValue}
-                min={min}
-                max={max}
-                step={step}
+                min={field.min ?? 0}
+                max={field.max ?? 100}
+                step={field.step ?? 1}
                 aria-label={field.label ?? name}
-                onValueChange={(v) => {
-                    const next = Array.isArray(v) ? v[0] : v;
-                    if (next !== undefined) onChange(name, next);
-                }}
+                onChange={(v) => onChange(name, v)}
             />
-            <input type="hidden" name={name} value={numValue} />
-        </div>
+            <input type="hidden" name={name} value={numValue} onChange={() => {}} />
+        </>
     );
 }
