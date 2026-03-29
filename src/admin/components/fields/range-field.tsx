@@ -1,7 +1,5 @@
-import React from 'react';
 import type { BaseFieldProps } from '@/types/index.js';
-import { Slider } from '@/admin/components/ui/slider';
-import './range-field.css';
+import { Slider } from '@/admin/components/ui/slider.js';
 
 export function RangeField({ name, value, field, onChange }: BaseFieldProps) {
     const numValue = typeof value === 'number' ? value : (field.min ?? 0);
@@ -10,9 +8,9 @@ export function RangeField({ name, value, field, onChange }: BaseFieldProps) {
     const step = field.step ?? 1;
 
     return (
-        <div className="am-range-field">
-            <div className="am-range-field-header">
-                <span className="am-range-field-value">{numValue}</span>
+        <div className="am-slider-range">
+            <div className="am-slider-range-header">
+                <span className="am-slider-range-value">{numValue}</span>
             </div>
             <Slider
                 value={numValue}

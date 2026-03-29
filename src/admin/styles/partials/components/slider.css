@@ -56,3 +56,22 @@
         cursor: grabbing;
     }
 }
+
+.am-slider-range {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.am-slider-range-header {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.am-slider-range-value {
+    min-width: 2.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--am-color-text-default);
+    text-align: right;
+}

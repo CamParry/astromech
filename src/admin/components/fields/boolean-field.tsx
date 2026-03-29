@@ -1,20 +1,14 @@
-import { Switch } from '@base-ui/react/switch';
 import type { BaseFieldProps } from '@/types/index.js';
-import './boolean-field.css';
+import { Toggle } from '@/admin/components/ui/toggle.js';
 
 export function BooleanField({ name, value, onChange }: BaseFieldProps) {
     const checked = value === true || value === 'true';
-
     return (
-        <Switch.Root
-            className="am-switch"
+        <Toggle
             id={name}
             name={name}
             checked={checked}
-            value="true"
-            onCheckedChange={(c) => onChange(name, c)}
-        >
-            <Switch.Thumb className="am-switch-thumb" />
-        </Switch.Root>
+            onChange={(c) => onChange(name, c)}
+        />
     );
 }

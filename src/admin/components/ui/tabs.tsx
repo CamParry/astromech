@@ -9,9 +9,10 @@ type TabsProps = {
     value: string;
     onChange: (value: string) => void;
     children?: React.ReactNode;
+    renderPanel?: (value: string) => React.ReactNode;
 };
 
-export function Tabs({ tabs, value, onChange, children }: TabsProps): React.ReactElement {
+export function Tabs({ tabs, value, onChange, children, renderPanel }: TabsProps): React.ReactElement {
     return (
         <BaseTabs.Root className="am-tabs" value={value} onValueChange={onChange}>
             <BaseTabs.List className="am-tabs-list">
@@ -34,7 +35,7 @@ export function Tabs({ tabs, value, onChange, children }: TabsProps): React.Reac
                     value={tab.value}
                     className="am-tabs-panel"
                 >
-                    {value === tab.value ? children : null}
+                    {renderPanel ? renderPanel(tab.value) : (value === tab.value ? children : null)}
                 </BaseTabs.Panel>
             ))}
         </BaseTabs.Root>

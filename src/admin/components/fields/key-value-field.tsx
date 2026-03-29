@@ -1,100 +1,20 @@
-import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Trash2 } from 'lucide-react';
 import type { BaseFieldProps } from '@/types/index.js';
-import { Input } from '@/admin/components/ui/input';
-import './key-value-field.css';
-
-type PairWithId = {
-    _id: string;
-    key: string;
-    value: string;
-};
-
-function recordToPairs(v: unknown): PairWithId[] {
-    if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
-        return Object.entries(v as Record<string, unknown>).map(([k, val]) => ({
-            _id: crypto.randomUUID(),
-            key: k,
-            value: typeof val === 'string' ? val : String(val),
-        }));
-    }
-    return [];
-}
-
-function pairsToRecord(pairs: PairWithId[]): Record<string, string> {
-    const result: Record<string, string> = {};
-    for (const pair of pairs) {
-        if (pair.key !== '') {
-            result[pair.key] = pair.value;
-        }
-    }
-    return result;
-}
+import { KeyValueEditor } from '@/admin/components/ui/key-value-editor.js';
 
 export function KeyValueField({ name, value, onChange }: BaseFieldProps) {
     const { t } = useTranslation();
-    const [pairs, setPairs] = useState<PairWithId[]>(() => recordToPairs(value));
-
-    function handleChange(id: string, field: 'key' | 'value', val: string) {
-        const next = pairs.map((p) => (p._id === id ? { ...p, [field]: val } : p));
-        setPairs(next);
-        onChange(name, pairsToRecord(next));
-    }
-
-    function handleAdd() {
-        const next = [...pairs, { _id: crypto.randomUUID(), key: '', value: '' }];
-        setPairs(next);
-        onChange(name, pairsToRecord(next));
-    }
-
-    function handleRemove(id: string) {
-        const next = pairs.filter((p) => p._id !== id);
-        setPairs(next);
-        onChange(name, pairsToRecord(next));
-    }
+    const record = typeof value === 'object' && value !== null && !Array.isArray(value)
+        ? (value as Record<string, string>)
+        : {};
 
     return (
-        <div className="am-kv-field">
-            {pairs.length > 0 && (
-                <div className="am-kv-field-rows">
-                    {pairs.map((pair) => (
-                        <div key={pair._id} className="am-kv-field-row">
-                            <Input
-                                type="text"
-                                value={pair.key}
-                                placeholder={t('fields.kvKey')}
-                                className="am-kv-field-input"
-                                onChange={(e) => handleChange(pair._id, 'key', e.target.value)}
-                                aria-label={t('fields.kvKey')}
-                            />
-                            <Input
-                                type="text"
-                                value={pair.value}
-                                placeholder={t('fields.kvValue')}
-                                className="am-kv-field-input"
-                                onChange={(e) => handleChange(pair._id, 'value', e.target.value)}
-                                aria-label={t('fields.kvValue')}
-                            />
-                            <button
-                                type="button"
-                                className="am-kv-field-remove"
-                                onClick={() => handleRemove(pair._id)}
-                                aria-label={t('fields.kvRemovePair')}
-                            >
-                                <Trash2 size={15} />
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            )}
-            <button
-                type="button"
-                onClick={handleAdd}
-                className="am-repeater-btn am-repeater-btn-add"
-            >
-                {t('fields.kvAddPair')}
-            </button>
-        </div>
+        <KeyValueEditor
+            value={record}
+            onChange={(v) => onChange(name, v)}
+            addLabel={t('fields.kvAddPair')}
+            keyPlaceholder={t('fields.kvKey')}
+            valuePlaceholder={t('fields.kvValue')}
+        />
     );
 }

@@ -83,6 +83,18 @@ export type { CollapsibleProps } from './collapsible.js';
 export { Combobox } from './combobox.js';
 export type { ComboboxProps, ComboboxOption } from './combobox.js';
 
+export { MultiSelect } from './multi-select.js';
+export type { MultiSelectProps, MultiSelectOption } from './multi-select.js';
+
+export { RadioGroup } from './radio-group.js';
+export type { RadioGroupProps, RadioGroupOption } from './radio-group.js';
+
+export { ColorPicker } from './color-picker.js';
+export type { ColorPickerProps } from './color-picker.js';
+
+export { KeyValueEditor } from './key-value-editor.js';
+export type { KeyValueEditorProps } from './key-value-editor.js';
+
 export { ApiErrorPanel, dispatchApiErrorEvent } from './api-error-panel.js';
 export type { ApiErrorEventDetail } from './api-error-panel.js';
 

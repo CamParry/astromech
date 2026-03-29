@@ -4,23 +4,23 @@
     gap: 0.5rem;
 }
 
-.am-radio {
+.am-radio-group-item {
     display: inline-flex;
-    align-items: center;
     gap: 0.5rem;
+    align-items: center;
     cursor: pointer;
     user-select: none;
 }
 
-.am-radio-input {
+.am-radio-group-input {
+    flex-shrink: 0;
     width: 1rem;
     height: 1rem;
     accent-color: var(--am-color-primary);
     cursor: pointer;
-    flex-shrink: 0;
 }
 
-.am-radio-label {
+.am-radio-group-label {
     font-size: 0.9375rem;
     color: var(--am-color-text-default);
 }

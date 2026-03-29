@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
-import { Tabs } from '@base-ui/react/tabs';
+import { useState } from 'react';
 import type { BaseFieldProps, FieldDefinition } from '@/types/index.js';
-import { FormField } from '@/admin/components/fields/form-field';
-import './tab-field.css';
+import { FormField } from '@/admin/components/fields/form-field.js';
+import { Tabs } from '@/admin/components/ui/tabs.js';
 
 export function TabField({ name, value, field, onChange }: BaseFieldProps) {
     const fields = field.fields ?? [];
@@ -26,58 +25,26 @@ export function TabField({ name, value, field, onChange }: BaseFieldProps) {
         return fields.filter((f) => f.tab === tabLabel);
     }
 
+    const tabs = tabLabels.map((label) => ({ label, value: label }));
+
     return (
-        <Tabs.Root
-            className="am-tab-field"
+        <Tabs
+            tabs={tabs}
             value={activeTab}
-            onValueChange={(v) => setActiveTab(v)}
-        >
-            <Tabs.List className="am-tab-field-list">
-                {tabLabels.map((label) => (
-                    <Tabs.Tab
-                        key={label}
-                        value={label}
-                        className={[
-                            'am-tab-field-tab',
-                            activeTab === label ? 'am-tab-field-tab-active' : '',
-                        ]
-                            .filter(Boolean)
-                            .join(' ')}
-                    >
-                        {label}
-                    </Tabs.Tab>
-                ))}
-            </Tabs.List>
-            {tabLabels.map((label) => (
-                <Tabs.Panel key={label} value={label} className="am-tab-field-panel">
-                    <div className="am-tab-field-content">
-                        {getTabFields(label).map((subField) => (
-                            <div key={subField.name} className="am-tab-field-item">
-                                <label
-                                    className="am-tab-field-label"
-                                    htmlFor={`${name}.${subField.name}`}
-                                >
-                                    {subField.label ?? subField.name}
-                                    {subField.required === true && (
-                                        <span className="am-tab-field-required">*</span>
-                                    )}
-                                </label>
-                                {subField.description !== undefined && (
-                                    <p className="am-tab-field-description">
-                                        {subField.description}
-                                    </p>
-                                )}
-                                <FormField
-                                    field={subField}
-                                    value={groupValue[subField.name]}
-                                    name={`${name}.${subField.name}`}
-                                    onChange={handleSubFieldChange}
-                                />
-                            </div>
-                        ))}
-                    </div>
-                </Tabs.Panel>
-            ))}
-        </Tabs.Root>
+            onChange={setActiveTab}
+            renderPanel={(tabValue) => (
+                <div className="am-group-field">
+                    {getTabFields(tabValue).map((subField) => (
+                        <FormField
+                            key={subField.name}
+                            field={subField}
+                            value={groupValue[subField.name]}
+                            name={`${name}.${subField.name}`}
+                            onChange={handleSubFieldChange}
+                        />
+                    ))}
+                </div>
+            )}
+        />
     );
 }

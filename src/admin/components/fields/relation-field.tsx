@@ -1,10 +1,8 @@
-import { Combobox } from '@base-ui/react/combobox';
-import React, { useState, useEffect, useRef, useId } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { BaseFieldProps } from '@/types/index.js';
 import { Astromech } from '@/sdk/fetch/index.js';
-import './combobox.css';
-import { CheckIcon, XIcon } from 'lucide-react';
+import { MultiSelect } from '@/admin/components/ui/multi-select.js';
 
 type EntryOption = {
     id: string;
@@ -12,121 +10,46 @@ type EntryOption = {
     slug: string | null;
 };
 
-export function RelationField({
-    name,
-    value,
-    field,
-    required,
-    onChange,
-}: BaseFieldProps) {
+export function RelationField({ name, value, field, required, onChange }: BaseFieldProps) {
     const { t } = useTranslation();
     const target = field.target || '';
     const multiple = field.multiple || false;
-    const containerRef = useRef<HTMLDivElement | null>(null);
-    const id = useId();
     const [options, setOptions] = useState<EntryOption[]>([]);
 
     useEffect(() => {
         if (!target) return;
         Astromech.entries.query({ type: target, limit: 'all' })
             .then((result) => {
-                setOptions(
-                    result.data.map((e) => ({ id: e.id, title: e.title, slug: e.slug }))
-                );
+                setOptions(result.data.map((e) => ({ id: e.id, title: e.title, slug: e.slug })));
             })
-            .catch(() => {
-                // silently ignore fetch errors — options remain empty
-            });
+            .catch(() => {});
     }, [target]);
 
+    // Normalise stored value to array of EntryOption
+    const selectedIds = Array.isArray(value)
+        ? value.map(String)
+        : value != null
+        ? [String(value)]
+        : [];
+    const currentValue = options.filter((o) => selectedIds.includes(o.id));
+
     return (
-        <Combobox.Root
-            items={options}
+        <MultiSelect<EntryOption>
+            options={options}
+            value={currentValue}
+            itemToStringValue={(e) => e.id}
+            itemToStringLabel={(e) => e.title}
             multiple={multiple}
             name={name}
             required={!!required}
-            itemToStringValue={(item: EntryOption) => item.id}
-            itemToStringLabel={(item: EntryOption) => item.title}
-            onValueChange={(val: EntryOption | EntryOption[] | null) => {
-                if (val === null) {
-                    onChange(name, null);
-                } else if (Array.isArray(val)) {
-                    onChange(
-                        name,
-                        val.map((v) => v.id)
-                    );
+            placeholder={t('fields.relationSelect')}
+            onValueChange={(val) => {
+                if (!multiple) {
+                    onChange(name, val[0]?.id ?? null);
                 } else {
-                    onChange(name, val.id);
+                    onChange(name, val.map((v) => v.id));
                 }
             }}
-        >
-            <div className="am-combobox">
-                <Combobox.Chips className="am-combobox-chips" ref={containerRef}>
-                    <Combobox.Value>
-                        {(val: EntryOption | EntryOption[] | null) => {
-                            const selected =
-                                val == null ? [] : Array.isArray(val) ? val : [val];
-                            return (
-                                <React.Fragment>
-                                    {selected.map((v) => (
-                                        <Combobox.Chip
-                                            key={v.id}
-                                            className="am-combobox-chip"
-                                            aria-label={v.title}
-                                        >
-                                            {v.title}
-                                            <Combobox.ChipRemove
-                                                className="am-combobox-chip-remove"
-                                                aria-label={t('fields.relationRemove')}
-                                            >
-                                                <XIcon size={16} />
-                                            </Combobox.ChipRemove>
-                                        </Combobox.Chip>
-                                    ))}
-                                    <Combobox.Input
-                                        id={id}
-                                        placeholder={
-                                            selected.length > 0
-                                                ? ''
-                                                : t('fields.relationSelect')
-                                        }
-                                        className="am-combobox-input"
-                                    />
-                                </React.Fragment>
-                            );
-                        }}
-                    </Combobox.Value>
-                </Combobox.Chips>
-            </div>
-            <Combobox.Portal>
-                <Combobox.Positioner
-                    className="am-combobox-positioner"
-                    sideOffset={4}
-                    anchor={containerRef}
-                >
-                    <Combobox.Popup className="am-combobox-popup">
-                        <Combobox.Empty className="am-combobox-empty">
-                            {t('fields.relationNoResults')}
-                        </Combobox.Empty>
-                        <Combobox.List>
-                            {(option: EntryOption) => (
-                                <Combobox.Item
-                                    key={option.id}
-                                    className="am-combobox-item"
-                                    value={option}
-                                >
-                                    <Combobox.ItemIndicator className="am-combobox-item-indicator">
-                                        <CheckIcon className="am-combobox-item-indicator-icon" />
-                                    </Combobox.ItemIndicator>
-                                    <div className="am-combobox-item-text">
-                                        {option.title}
-                                    </div>
-                                </Combobox.Item>
-                            )}
-                        </Combobox.List>
-                    </Combobox.Popup>
-                </Combobox.Positioner>
-            </Combobox.Portal>
-        </Combobox.Root>
+        />
     );
 }

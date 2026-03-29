@@ -7,9 +7,11 @@ type ToggleProps = {
     onChange?: (checked: boolean) => void;
     label?: string;
     disabled?: boolean;
+    name?: string;
+    id?: string;
 };
 
-export function Toggle({ checked, defaultChecked, onChange, label, disabled }: ToggleProps): React.ReactElement {
+export function Toggle({ checked, defaultChecked, onChange, label, disabled, name, id }: ToggleProps): React.ReactElement {
     return (
         <label className="am-toggle">
             <Switch.Root
@@ -18,6 +20,8 @@ export function Toggle({ checked, defaultChecked, onChange, label, disabled }: T
                 defaultChecked={defaultChecked}
                 onCheckedChange={onChange}
                 disabled={disabled}
+                name={name}
+                id={id}
             >
                 <Switch.Thumb className="am-toggle-thumb" />
             </Switch.Root>

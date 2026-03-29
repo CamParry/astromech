@@ -41,5 +41,9 @@
 @import './partials/components/accordion.css';
 @import './partials/components/collapsible.css';
 @import './partials/components/combobox.css';
+@import './partials/components/multi-select.css';
+@import './partials/components/radio-group.css';
+@import './partials/components/color-picker.css';
+@import './partials/components/key-value-editor.css';
 @import './partials/components/upload.css';
 @import './partials/versions.css';
