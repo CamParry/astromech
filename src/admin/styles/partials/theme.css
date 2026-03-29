@@ -128,17 +128,29 @@
     --am-input-height: 2.25rem;
     --am-input-border-color: var(--am-color-border-strong);
     --am-input-border-radius: var(--am-radius-md);
-    --am-input-background: var(--am-color-bg-base);
+    --am-input-background-color: var(--am-color-bg-base);
     --am-input-color: var(--am-color-text-default);
     --am-input-font-size: 0.875rem;
+    --am-input-icon-color: var(--am-color-text-muted);
+    --am-input-placeholder-color: var(--am-color-text-placeholder);
+    --am-input-padding-x: calc(var(--am-space) * 3);
+    --am-input-transition:
+        border-color var(--am-duration-base) var(--am-easing),
+        box-shadow var(--am-duration-base) var(--am-easing);
     --am-panel-padding: 1.5rem;
     /* Popup / overlay */
-    --am-z-index-popup: 50;
+    --am-popup-z-index: 50;
     --am-popup-max-width: 24rem;
     --am-popup-max-height: 20rem;
-    --am-shadow-popup:
+    --am-popup-border-color: var(--am-color-border);
+    --am-popup-border-radius: var(--am-radius-md);
+    --am-popup-padding: calc(var(--am-space) * 1);
+    --am-popup-background-color: var(--am-color-bg-base);
+    --am-popup-min-width: 11rem;
+    --am-menu-item-highlighted-background-color: var(--am-color-bg-subtle);
+    --am-popup-shadow:
         0 10px 15px -3px var(--am-color-border), 0 4px 6px -4px var(--am-color-border);
-    --am-shadow-modal:
+    --am-modal-shadow:
         0 20px 25px -5px var(--am-color-border), 0 8px 10px -6px var(--am-color-border);
 
     /* Focus outline — applied globally via :focus-visible in base.css */

@@ -10,18 +10,18 @@
     color: var(--am-input-color);
     text-align: left;
     cursor: pointer;
-    background-color: var(--am-input-background);
+    background-color: var(--am-input-background-color);
     border: 1px solid var(--am-input-border-color);
     border-radius: var(--am-input-border-radius);
 
     &[data-placeholder] {
-        color: var(--am-color-text-placeholder);
+        color: var(--am-input-placeholder-color);
     }
 }
 
 .am-select-trigger-prefix {
     flex-shrink: 0;
-    color: var(--am-color-text-muted);
+    color: var(--am-input-icon-color);
 }
 
 .am-select-trigger-auto {
@@ -41,11 +41,11 @@
     display: flex;
     flex-shrink: 0;
     align-items: center;
-    color: var(--am-color-text-muted);
+    color: var(--am-input-icon-color);
 }
 
 .am-select-positioner {
-    z-index: var(--am-z-index-popup);
+    z-index: var(--am-popup-z-index);
     outline: 0;
 }
 
@@ -54,13 +54,13 @@
     min-width: var(--anchor-width);
     max-width: min(var(--available-width), var(--am-popup-max-width));
     max-height: min(var(--available-height), var(--am-popup-max-height));
-    padding: calc(var(--am-space) * 1);
+    padding: var(--am-popup-padding);
     overflow-y: auto;
     overscroll-behavior: contain;
-    background-color: var(--am-color-bg-base);
-    border: 1px solid var(--am-color-border);
-    border-radius: var(--am-radius-md);
-    box-shadow: var(--am-shadow-popup);
+    background-color: var(--am-popup-background-color);
+    border: 1px solid var(--am-popup-border-color);
+    border-radius: var(--am-popup-border-radius);
+    box-shadow: var(--am-popup-shadow);
     transform-origin: var(--transform-origin);
     transition:
         opacity var(--am-duration-fast) var(--am-easing),
@@ -73,7 +73,6 @@
     }
 
     [data-theme='dark'] & {
-        border-color: var(--am-color-border-strong);
         box-shadow: none;
     }
 }
@@ -89,10 +88,10 @@
     cursor: default;
     user-select: none;
     outline: 0;
-    border-radius: var(--am-radius-sm);
+    border-radius: calc(var(--am-popup-border-radius) - var(--am-popup-padding));
 
     &[data-highlighted] {
-        background-color: var(--am-color-bg-subtle);
+        background-color: var(--am-menu-item-highlighted-background-color);
     }
 }
 

@@ -12,18 +12,16 @@
 .am-cmdpal-input {
     width: 100%;
     height: var(--am-input-height);
-    padding: 0 calc(var(--am-space) * 3);
+    padding: 0 var(--am-input-padding-x);
     font-size: 0.875rem;
     color: var(--am-color-text-default);
     background-color: var(--am-color-bg-base);
     border: 1px solid var(--am-color-border-strong);
     border-radius: var(--am-radius-md);
-    transition:
-        border-color 0.15s,
-        box-shadow 0.15s;
+    transition: var(--am-input-transition);
 
     &::placeholder {
-        color: var(--am-color-text-placeholder);
+        color: var(--am-input-placeholder-color);
     }
 }
 
@@ -66,7 +64,7 @@
     color: var(--am-color-text-default);
     cursor: pointer;
     user-select: none;
-    transition: background-color 0.1s;
+    transition: background-color var(--am-duration-fast) var(--am-easing);
 
     &:hover {
         background-color: var(--am-color-bg-subtle);

@@ -23,7 +23,7 @@
     justify-content: center;
     width: 1.75rem;
     height: 100%;
-    color: var(--am-color-text-muted);
+    color: var(--am-input-icon-color);
     cursor: pointer;
     transition: color var(--am-duration-base) var(--am-easing);
 

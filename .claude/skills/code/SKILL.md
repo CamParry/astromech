@@ -1,6 +1,6 @@
 ---
 name: code
-description: TypeScript coding standards and style rules for Astromech. Use when writing, editing, or reviewing any code — TypeScript, React, CSS, or otherwise.
+description: TypeScript coding standards and style rules for Astromech. Use when writing, editing, or reviewing any TypeScript or React code. For CSS, use the css skill instead.
 user-invocable: false
 ---
 

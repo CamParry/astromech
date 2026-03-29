@@ -1,6 +1,6 @@
 ---
 name: ui
-description: Admin UI guidelines for Astromech. Use when building or editing React components, pages, hooks, or styles in the admin panel.
+description: Admin UI guidelines for Astromech. Use when building or editing React components, pages, or hooks. For CSS authoring rules, also load the css skill.
 user-invocable: false
 ---
 
@@ -20,10 +20,6 @@ user-invocable: false
 
 - Icon-only buttons need `aria-label`. Use semantic HTML (`button`, `nav`, `main`) not `div` soup.
 - Add `aria-busy="true"` on containers during async operations.
-
-## CSS
-
-- Always wrap `:hover` styles in `@media (hover: hover)` to prevent stuck hover states on touch devices.
 
 ## Localization
 

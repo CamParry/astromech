@@ -42,6 +42,7 @@ export function Select({
             disabled={disabled}
             required={required}
             name={name}
+            items={options}
         >
             <BaseSelect.Trigger
                 id={id}

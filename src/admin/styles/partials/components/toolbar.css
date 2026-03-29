@@ -28,7 +28,7 @@
     display: flex;
     flex-shrink: 0;
     align-items: center;
-    color: var(--am-color-text-muted);
+    color: var(--am-input-icon-color);
     pointer-events: none;
 }
 
@@ -43,7 +43,7 @@
     border-radius: var(--am-radius-md);
 
     &::placeholder {
-        color: var(--am-color-text-placeholder);
+        color: var(--am-input-placeholder-color);
     }
 }
 

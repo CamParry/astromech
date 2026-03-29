@@ -18,7 +18,7 @@
     background-color: var(--am-color-bg-base);
     border: 1px solid var(--am-color-border);
     border-radius: var(--am-radius-lg);
-    box-shadow: var(--am-shadow-modal);
+    box-shadow: var(--am-modal-shadow);
     translate: -50% -50%;
 }
 

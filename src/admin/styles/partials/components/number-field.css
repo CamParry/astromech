@@ -18,7 +18,7 @@
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    width: 2.25rem;
+    width: var(--am-input-height);
     height: var(--am-input-height);
     font-size: 1rem;
     color: var(--am-color-text-default);
@@ -38,9 +38,9 @@
 }
 
 .am-number-field-btn-decrement {
-    border-radius: var(--am-radius-md) 0 0 var(--am-radius-md);
+    border-radius: var(--am-input-border-radius) 0 0 var(--am-input-border-radius);
 }
 
 .am-number-field-btn-increment {
-    border-radius: 0 var(--am-radius-md) var(--am-radius-md) 0;
+    border-radius: 0 var(--am-input-border-radius) var(--am-input-border-radius) 0;
 }
