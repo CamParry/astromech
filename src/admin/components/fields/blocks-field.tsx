@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { clsx } from 'clsx';
 import {
     DndContext,
     PointerSensor,
@@ -37,7 +38,10 @@ import './blocks-field.css';
 // useClickOutside
 // ============================================================================
 
-function useClickOutside(ref: React.RefObject<HTMLElement | null>, handler: () => void): void {
+function useClickOutside(
+    ref: React.RefObject<HTMLElement | null>,
+    handler: () => void
+): void {
     useEffect(() => {
         function listener(e: MouseEvent): void {
             if (ref.current === null || ref.current.contains(e.target as Node)) return;
@@ -58,10 +62,18 @@ type BlockPickerProps = {
     onClose: () => void;
 };
 
-function BlockPicker({ blocks, onSelect, onClose }: BlockPickerProps): React.ReactElement {
+function BlockPicker({
+    blocks,
+    onSelect,
+    onClose,
+}: BlockPickerProps): React.ReactElement {
     const { t } = useTranslation();
     return (
-        <div className="am-blocks-picker" role="menu" aria-label={t('fields.blocksPickerLabel')}>
+        <div
+            className="am-blocks-picker"
+            role="menu"
+            aria-label={t('fields.blocksPickerLabel')}
+        >
             {blocks.map((bd) => (
                 <button
                     key={bd.type}
@@ -115,9 +127,10 @@ function SortableBlock({
     const { t } = useTranslation();
     const [open, setOpen] = useState(true);
 
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-        id: block._id,
-    });
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+        useSortable({
+            id: block._id,
+        });
 
     const style: React.CSSProperties = {
         transform: CSS.Transform.toString(transform),
@@ -130,14 +143,14 @@ function SortableBlock({
         <div
             ref={setNodeRef}
             style={style}
-            className={['am-blocks-block', isDragging ? 'am-blocks-block-dragging' : ''].filter(Boolean).join(' ')}
+            className={clsx('am-blocks-block', isDragging && 'am-blocks-block-dragging')}
         >
             <Collapsible.Root open={open} onOpenChange={setOpen}>
                 <div
-                    className={[
+                    className={clsx(
                         'am-blocks-block-header',
-                        block.disabled === true ? 'am-blocks-block-header-soft-disabled' : '',
-                    ].filter(Boolean).join(' ')}
+                        block.disabled === true && 'am-blocks-block-header-soft-disabled'
+                    )}
                 >
                     {!disabled && (
                         <button
@@ -175,10 +188,22 @@ function SortableBlock({
                                     type="button"
                                     className="am-blocks-btn am-blocks-btn-icon"
                                     onClick={() => onToggleDisabled(block._id)}
-                                    aria-label={block.disabled === true ? t('fields.blocksEnable') : t('fields.blocksDisable')}
-                                    title={block.disabled === true ? t('fields.blocksEnable') : t('fields.blocksDisable')}
+                                    aria-label={
+                                        block.disabled === true
+                                            ? t('fields.blocksEnable')
+                                            : t('fields.blocksDisable')
+                                    }
+                                    title={
+                                        block.disabled === true
+                                            ? t('fields.blocksEnable')
+                                            : t('fields.blocksDisable')
+                                    }
                                 >
-                                    {block.disabled === true ? <Eye size={16} /> : <EyeOff size={16} />}
+                                    {block.disabled === true ? (
+                                        <Eye size={16} />
+                                    ) : (
+                                        <EyeOff size={16} />
+                                    )}
                                 </button>
                                 <button
                                     type="button"
@@ -202,7 +227,11 @@ function SortableBlock({
                         )}
                         <Collapsible.Trigger
                             className="am-blocks-btn am-blocks-btn-icon"
-                            aria-label={open ? t('fields.blocksCollapse') : t('fields.blocksExpand')}
+                            aria-label={
+                                open
+                                    ? t('fields.blocksCollapse')
+                                    : t('fields.blocksExpand')
+                            }
                         >
                             {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         </Collapsible.Trigger>
@@ -219,7 +248,11 @@ function SortableBlock({
                                     value={block[subField.name]}
                                     name={`${name}[${index}].${subField.name}`}
                                     onChange={(_fieldName, fieldValue) =>
-                                        onFieldChange(block._id, subField.name, fieldValue)
+                                        onFieldChange(
+                                            block._id,
+                                            subField.name,
+                                            fieldValue
+                                        )
                                     }
                                     {...(disabled !== undefined ? { disabled } : {})}
                                 />
@@ -236,7 +269,13 @@ function SortableBlock({
 // BlocksField
 // ============================================================================
 
-export function BlocksField({ name, value, field, onChange, disabled }: BaseFieldProps): React.ReactElement {
+export function BlocksField({
+    name,
+    value,
+    field,
+    onChange,
+    disabled,
+}: BaseFieldProps): React.ReactElement {
     const { t } = useTranslation();
     const blockDefs = field.blocks ?? [];
     const [pickerOpen, setPickerOpen] = useState(false);
@@ -244,8 +283,15 @@ export function BlocksField({ name, value, field, onChange, disabled }: BaseFiel
 
     useClickOutside(pickerAnchorRef, () => setPickerOpen(false));
 
-    const { blocks, addBlock, removeBlock, duplicateBlock, toggleDisabled, updateBlock, reorder } =
-        useBlocksField({ name, value, onChange });
+    const {
+        blocks,
+        addBlock,
+        removeBlock,
+        duplicateBlock,
+        toggleDisabled,
+        updateBlock,
+        reorder,
+    } = useBlocksField({ name, value, onChange });
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -262,7 +308,9 @@ export function BlocksField({ name, value, field, onChange, disabled }: BaseFiel
         }
     }
 
-    const blockDefMap = new Map<string, BlockDefinition>(blockDefs.map((bd) => [bd.type, bd]));
+    const blockDefMap = new Map<string, BlockDefinition>(
+        blockDefs.map((bd) => [bd.type, bd])
+    );
     const sortableIds = blocks.map((b) => b._id);
 
     return (
@@ -274,8 +322,15 @@ export function BlocksField({ name, value, field, onChange, disabled }: BaseFiel
             )}
 
             {blocks.length > 0 && (
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                    <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                >
+                    <SortableContext
+                        items={sortableIds}
+                        strategy={verticalListSortingStrategy}
+                    >
                         <div className="am-blocks-list">
                             {blocks.map((block, index) => (
                                 <SortableBlock

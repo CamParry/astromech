@@ -13,7 +13,6 @@
     font-weight: 500;
     color: var(--am-color-text-default);
     cursor: pointer;
-    box-sizing: border-box;
     transition: color var(--am-duration-base) var(--am-easing);
 
     &:hover {

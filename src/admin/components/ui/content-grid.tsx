@@ -1,4 +1,5 @@
 import React from 'react';
+import { clsx } from 'clsx';
 
 type RootProps = {
     children: React.ReactNode;
@@ -11,21 +12,20 @@ function Root({ children, className, minItemWidth }: RootProps): React.ReactElem
         ? ({ '--am-content-grid-min': minItemWidth } as React.CSSProperties)
         : undefined;
     return (
-        <div
-            className={['am-content-grid', className].filter(Boolean).join(' ')}
-            style={style}
-        >
+        <div className={clsx('am-content-grid', className)} style={style}>
             {children}
         </div>
     );
 }
 
-function Item({ children, className }: { children: React.ReactNode; className?: string }): React.ReactElement {
-    return (
-        <div className={['am-content-grid-item', className].filter(Boolean).join(' ')}>
-            {children}
-        </div>
-    );
+function Item({
+    children,
+    className,
+}: {
+    children: React.ReactNode;
+    className?: string;
+}): React.ReactElement {
+    return <div className={clsx('am-content-grid-item', className)}>{children}</div>;
 }
 
 export const ContentGrid = { Root, Item };

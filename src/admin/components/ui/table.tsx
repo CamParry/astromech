@@ -1,5 +1,6 @@
 import type { ComponentProps } from 'react';
 import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { clsx } from 'clsx';
 
 // ============================================================================
 // Types
@@ -19,7 +20,7 @@ type SortThProps = ComponentProps<'th'> & {
 
 const Root = ({ className, children, ...props }: ComponentProps<'table'>) => (
     <div className="am-table-wrapper">
-        <table className={['am-table', className].filter(Boolean).join(' ')} {...props}>
+        <table className={clsx('am-table', className)} {...props}>
             {children}
         </table>
     </div>
@@ -38,13 +39,15 @@ const Row = ({ href, selected, className, ...props }: RowProps) => (
     <tr
         data-href={href}
         data-selected={selected ? 'true' : undefined}
-        className={[
-            className,
-            href ? 'am-table-row-clickable' : '',
-            selected ? 'am-table-row-selected' : '',
-        ]
-            .filter(Boolean)
-            .join(' ') || undefined}
+        className={
+            [
+                className,
+                href ? 'am-table-row-clickable' : '',
+                selected ? 'am-table-row-selected' : '',
+            ]
+                .filter(Boolean)
+                .join(' ') || undefined
+        }
         {...props}
     />
 );

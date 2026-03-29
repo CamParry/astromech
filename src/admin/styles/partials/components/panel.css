@@ -10,9 +10,9 @@
 
 .am-panel-header {
     padding: var(--am-panel-padding) var(--am-panel-padding) 0;
-    border-bottom: 1px solid var(--am-color-border);
     padding-bottom: calc(var(--am-space) * 4);
     margin-bottom: 0;
+    border-bottom: 1px solid var(--am-color-border);
 }
 
 .am-panel-title {
@@ -22,9 +22,9 @@
 }
 
 .am-panel-description {
+    margin-top: calc(var(--am-space) * 1);
     font-size: 0.875rem;
     color: var(--am-color-text-muted);
-    margin-top: calc(var(--am-space) * 1);
 }
 
 .am-panel-body {
@@ -32,9 +32,9 @@
 }
 
 .am-panel-footer {
+    display: flex;
+    gap: calc(var(--am-space) * 2);
+    align-items: center;
     padding: calc(var(--am-space) * 4) var(--am-panel-padding);
     border-top: 1px solid var(--am-color-border);
-    display: flex;
-    align-items: center;
-    gap: calc(var(--am-space) * 2);
 }

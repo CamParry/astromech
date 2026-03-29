@@ -27,7 +27,6 @@
     font-weight: 500;
     color: var(--am-color-text-default);
     cursor: pointer;
-    box-sizing: border-box;
     transition: color var(--am-duration-base) var(--am-easing);
 
     &:hover {
@@ -57,6 +56,6 @@
 .am-accordion-content {
     padding-bottom: 0.875rem;
     font-size: 0.875rem;
-    color: var(--am-color-text-muted);
     line-height: 1.6;
+    color: var(--am-color-text-muted);
 }

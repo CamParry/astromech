@@ -1,4 +1,5 @@
 import React from 'react';
+import { clsx } from 'clsx';
 
 type TextareaProps = React.ComponentProps<'textarea'> & {
     error?: string;
@@ -6,8 +7,15 @@ type TextareaProps = React.ComponentProps<'textarea'> & {
     hint?: string;
 };
 
-export function Textarea({ error, label, hint, className, id, ...props }: TextareaProps): React.ReactElement {
-    const textareaClass = ['am-textarea', error ? 'am-textarea-error' : '', className].filter(Boolean).join(' ');
+export function Textarea({
+    error,
+    label,
+    hint,
+    className,
+    id,
+    ...props
+}: TextareaProps): React.ReactElement {
+    const textareaClass = clsx('am-textarea', error && 'am-textarea-error', className);
     const textareaEl = <textarea id={id} className={textareaClass} {...props} />;
 
     if (label !== undefined || error !== undefined || hint !== undefined) {
@@ -20,7 +28,9 @@ export function Textarea({ error, label, hint, className, id, ...props }: Textar
                 )}
                 {textareaEl}
                 {error !== undefined && <p className="am-field-error">{error}</p>}
-                {hint !== undefined && error === undefined && <p className="am-field-hint">{hint}</p>}
+                {hint !== undefined && error === undefined && (
+                    <p className="am-field-hint">{hint}</p>
+                )}
             </div>
         );
     }

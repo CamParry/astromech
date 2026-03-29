@@ -1,21 +1,21 @@
 /* Field helpers */
 .field-required {
-    color: var(--am-color-danger);
     margin-left: 0.25rem;
+    color: var(--am-color-danger);
 }
 
 .field-help {
+    margin-top: 0.25rem;
     font-size: 0.875rem;
     color: var(--am-color-text-secondary);
-    margin-top: 0.25rem;
 }
 
 .field-placeholder {
     padding: 1rem;
+    color: var(--am-color-warning);
     background-color: var(--am-color-warning-bg);
     border: 1px solid var(--am-color-warning-border);
     border-radius: 0.25rem;
-    color: var(--am-color-warning);
 }
 
 .field-placeholder p {

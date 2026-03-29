@@ -1,16 +1,16 @@
 .am-tooltip-popup {
-    background-color: var(--am-color-neutral-900);
-    color: var(--am-color-neutral-50);
-    padding: calc(var(--am-space) * 1.5) calc(var(--am-space) * 2.5);
-    border-radius: var(--am-radius-md);
-    font-size: 0.8125rem;
     z-index: 150;
     max-width: 16rem;
+    padding: calc(var(--am-space) * 1.5) calc(var(--am-space) * 2.5);
+    font-size: 0.8125rem;
+    color: var(--am-color-neutral-50);
     pointer-events: none;
+    background-color: var(--am-color-neutral-900);
+    border-radius: var(--am-radius-md);
 }
 
 .am-tooltip-arrow {
-    fill: var(--am-color-neutral-900);
     width: 0.5rem;
     height: 0.25rem;
+    fill: var(--am-color-neutral-900);
 }

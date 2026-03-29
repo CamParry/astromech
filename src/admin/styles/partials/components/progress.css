@@ -13,9 +13,9 @@
 .am-progress-track {
     width: 100%;
     height: 0.5rem;
+    overflow: hidden;
     background-color: var(--am-color-border);
     border-radius: 9999px;
-    overflow: hidden;
 }
 
 .am-progress-indicator {

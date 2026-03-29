@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { NumberField as BaseNumberField } from '@base-ui/react/number-field';
+import { clsx } from 'clsx';
 
 type NumberFieldProps = {
     id?: string;
@@ -60,7 +61,10 @@ export function NumberField({
                     −
                 </BaseNumberField.Decrement>
                 <BaseNumberField.Input
-                    className={['am-input am-number-field-input', error ? 'am-input-error' : ''].filter(Boolean).join(' ')}
+                    className={clsx(
+                        'am-input am-number-field-input',
+                        error && 'am-input-error'
+                    )}
                     placeholder={placeholder}
                 />
                 <BaseNumberField.Increment className="am-number-field-btn am-number-field-btn-increment">
@@ -68,7 +72,9 @@ export function NumberField({
                 </BaseNumberField.Increment>
             </BaseNumberField.Group>
             {error !== undefined && <p className="am-field-error">{error}</p>}
-            {hint !== undefined && error === undefined && <p className="am-field-hint">{hint}</p>}
+            {hint !== undefined && error === undefined && (
+                <p className="am-field-hint">{hint}</p>
+            )}
         </BaseNumberField.Root>
     );
 }

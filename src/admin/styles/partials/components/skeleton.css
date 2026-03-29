@@ -9,7 +9,6 @@
 
 .am-skeleton {
     display: block;
-    border-radius: var(--am-radius-md);
     background: linear-gradient(
         90deg,
         var(--am-color-bg-subtle) 25%,
@@ -17,5 +16,6 @@
         var(--am-color-bg-subtle) 75%
     );
     background-size: 200% 100%;
+    border-radius: var(--am-radius-md);
     animation: am-shimmer 1.5s ease-in-out infinite;
 }

@@ -1,37 +1,37 @@
 .am-upload-zone {
     display: flex;
     flex-direction: column;
+    gap: 0.5rem;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
     padding: 1.5rem;
+    color: var(--am-color-text-muted);
+    cursor: pointer;
+    user-select: none;
+    background-color: var(--am-color-bg-subtle);
     border: 2px dashed var(--am-color-border-strong);
     border-radius: var(--am-radius-md);
-    cursor: pointer;
-    color: var(--am-color-text-muted);
-    background-color: var(--am-color-bg-subtle);
     transition:
         border-color var(--am-duration-base) var(--am-easing),
         background-color var(--am-duration-base) var(--am-easing),
         color var(--am-duration-base) var(--am-easing);
-    user-select: none;
 }
 
 .am-upload-zone:hover:not(.am-upload-zone-disabled) {
-    border-color: var(--am-color-primary);
-    background-color: var(--am-color-primary-subtle);
     color: var(--am-color-primary-emphasis);
+    background-color: var(--am-color-primary-subtle);
+    border-color: var(--am-color-primary);
 }
 
 .am-upload-zone-dragging {
-    border-color: var(--am-color-primary);
-    background-color: var(--am-color-primary-subtle);
     color: var(--am-color-primary-emphasis);
+    background-color: var(--am-color-primary-subtle);
+    border-color: var(--am-color-primary);
 }
 
 .am-upload-zone-disabled {
-    opacity: 0.5;
     cursor: not-allowed;
+    opacity: 0.5;
 }
 
 .am-upload-zone-input {
@@ -60,21 +60,21 @@
     position: absolute;
     inset: 0;
     z-index: 50;
-    background-color: color-mix(in srgb, var(--am-color-bg-base) 90%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: var(--am-radius-md);
     padding: 2rem;
+    background-color: color-mix(in srgb, var(--am-color-bg-base) 90%, transparent);
+    border-radius: var(--am-radius-md);
 }
 
 .am-drop-zone-overlay-content {
     display: flex;
     flex-direction: column;
-    align-items: center;
     gap: 0.75rem;
-    color: var(--am-color-primary-emphasis);
+    align-items: center;
     font-size: 0.875rem;
     font-weight: 500;
+    color: var(--am-color-primary-emphasis);
     pointer-events: none;
 }

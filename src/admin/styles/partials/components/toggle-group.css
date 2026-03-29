@@ -1,11 +1,10 @@
 .am-toggle-group {
     display: flex;
     align-items: center;
+    height: var(--am-button-height);
+    overflow: hidden;
     border: 1px solid var(--am-color-border-strong);
     border-radius: var(--am-radius-md);
-    overflow: hidden;
-    height: var(--am-button-height);
-    box-sizing: border-box;
 }
 
 .am-toggle-group-btn {
@@ -27,13 +26,13 @@
     }
 
     &:hover {
-        background-color: var(--am-color-bg-subtle);
         color: var(--am-color-text-default);
+        background-color: var(--am-color-bg-subtle);
     }
 
     &[data-pressed] {
-        background-color: var(--am-color-bg-subtle);
         color: var(--am-color-text-default);
+        background-color: var(--am-color-bg-subtle);
     }
 
     &:focus-visible {

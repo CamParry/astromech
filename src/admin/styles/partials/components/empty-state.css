@@ -1,16 +1,16 @@
 .am-empty-state {
     display: flex;
     flex-direction: column;
+    gap: calc(var(--am-space) * 3);
     align-items: center;
     justify-content: center;
-    text-align: center;
     padding: calc(var(--am-space) * 16) calc(var(--am-space) * 8);
-    gap: calc(var(--am-space) * 3);
+    text-align: center;
 }
 
 .am-empty-state-icon {
-    color: var(--am-color-text-muted);
     margin-bottom: calc(var(--am-space) * 2);
+    color: var(--am-color-text-muted);
 }
 
 .am-empty-state-title {
@@ -20,9 +20,9 @@
 }
 
 .am-empty-state-description {
+    max-width: 28rem;
     font-size: 0.875rem;
     color: var(--am-color-text-muted);
-    max-width: 28rem;
 }
 
 .am-empty-state-action {

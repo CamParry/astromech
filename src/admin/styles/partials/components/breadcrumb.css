@@ -1,17 +1,17 @@
 .am-breadcrumb ol {
     display: flex;
-    align-items: center;
     flex-wrap: wrap;
     gap: calc(var(--am-space) * 2);
-    list-style: none;
+    align-items: center;
     font-size: 0.875rem;
     color: var(--am-color-text-muted);
+    list-style: none;
 }
 
 .am-breadcrumb-item {
     display: flex;
-    align-items: center;
     gap: calc(var(--am-space) * 2);
+    align-items: center;
 }
 
 .am-breadcrumb-sep {

@@ -6,11 +6,11 @@
 
 .am-spinner {
     display: inline-block;
-    border-radius: var(--am-radius-full);
+    flex-shrink: 0;
     border: 2px solid currentColor;
     border-top-color: transparent;
+    border-radius: var(--am-radius-full);
     animation: am-spin 0.7s linear infinite;
-    flex-shrink: 0;
 }
 
 .am-spinner-sm {

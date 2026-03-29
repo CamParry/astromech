@@ -1,15 +1,15 @@
 .am-avatar {
     display: inline-flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    border-radius: var(--am-radius-full);
-    background-color: var(--am-color-primary-subtle-hover);
-    color: var(--am-color-primary-emphasis);
-    font-weight: 600;
-    font-size: 0.75rem;
     overflow: hidden;
-    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--am-color-primary-emphasis);
     object-fit: cover;
+    background-color: var(--am-color-primary-subtle-hover);
+    border-radius: var(--am-radius-full);
 }
 
 .am-avatar-sm {

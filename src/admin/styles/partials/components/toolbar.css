@@ -1,18 +1,20 @@
 .am-toolbar {
     display: flex;
+    gap: calc(var(--am-space) * 4);
     align-items: center;
     justify-content: space-between;
-    gap: calc(var(--am-space) * 4);
 }
 
 .am-toolbar-group {
     display: flex;
-    align-items: center;
     gap: calc(var(--am-space) * 3);
+    align-items: center;
 }
 
-.am-toolbar-start { }
-.am-toolbar-end { }
+.am-toolbar-start {
+}
+.am-toolbar-end {
+}
 
 .am-search-wrap {
     position: relative;
@@ -23,49 +25,43 @@
 .am-search-icon {
     position: absolute;
     left: 0.625rem;
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
     color: var(--am-color-text-muted);
     pointer-events: none;
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
 }
 
 .am-search {
+    width: 14rem;
     height: var(--am-input-height);
     padding: 0 calc(var(--am-space) * 2.5) 0 2rem;
+    font-size: 0.875rem;
+    color: var(--am-color-text-default);
+    background: var(--am-color-bg-base);
     border: 1px solid var(--am-color-border-strong);
     border-radius: var(--am-radius-md);
-    font-size: 0.875rem;
-    font-family: inherit;
-    background: var(--am-color-bg-base);
-    color: var(--am-color-text-default);
-    width: 14rem;
 
     &::placeholder {
         color: var(--am-color-text-placeholder);
-    }
-
-    &:focus-visible {
-        outline-offset: -1px;
     }
 }
 
 .am-toolbar-filter-btn {
     display: inline-flex;
-    align-items: center;
+    flex-shrink: 0;
     gap: 0.375rem;
+    align-items: center;
     height: var(--am-button-height);
     padding: 0 calc(var(--am-space) * 3);
-    border: 1px solid var(--am-color-border-strong);
-    border-radius: var(--am-radius-md);
-    background-color: var(--am-color-bg-base);
-    color: var(--am-color-text-default);
     font-size: 0.875rem;
     font-weight: 500;
-    font-family: inherit;
-    cursor: pointer;
+    color: var(--am-color-text-default);
     white-space: nowrap;
-    flex-shrink: 0;
+    cursor: pointer;
+    background-color: var(--am-color-bg-base);
+    border: 1px solid var(--am-color-border-strong);
+    border-radius: var(--am-radius-md);
     transition: background-color var(--am-duration-base) var(--am-easing);
 
     &:hover {
@@ -80,15 +76,10 @@
 .am-toolbar-select {
     height: var(--am-input-height);
     padding: 0 calc(var(--am-space) * 2.5);
-    border: 1px solid var(--am-color-border-strong);
-    border-radius: var(--am-radius-md);
     font-size: 0.875rem;
-    font-family: inherit;
-    background: var(--am-color-bg-base);
     color: var(--am-color-text-default);
     cursor: pointer;
-
-    &:focus-visible {
-        outline-offset: -1px;
-    }
+    background: var(--am-color-bg-base);
+    border: 1px solid var(--am-color-border-strong);
+    border-radius: var(--am-radius-md);
 }

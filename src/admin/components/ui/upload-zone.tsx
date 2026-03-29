@@ -1,6 +1,7 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { UploadCloud } from 'lucide-react';
 import { MEDIA_ACCEPT } from '@/admin/types/media.js';
+import { clsx } from 'clsx';
 
 type UploadZoneProps = {
     onUpload: (files: File[]) => void;
@@ -32,19 +33,37 @@ export function UploadZone({
 
     return (
         <div
-            className={['am-upload-zone', isDragging && 'am-upload-zone-dragging', disabled && 'am-upload-zone-disabled', className].filter(Boolean).join(' ')}
-            onDragEnter={(e) => { e.preventDefault(); if (!disabled) setIsDragging(true); }}
-            onDragOver={(e) => { e.preventDefault(); }}
-            onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
+            className={clsx(
+                'am-upload-zone',
+                isDragging && 'am-upload-zone-dragging',
+                disabled && 'am-upload-zone-disabled',
+                className
+            )}
+            onDragEnter={(e) => {
+                e.preventDefault();
+                if (!disabled) setIsDragging(true);
+            }}
+            onDragOver={(e) => {
+                e.preventDefault();
+            }}
+            onDragLeave={(e) => {
+                e.preventDefault();
+                setIsDragging(false);
+            }}
             onDrop={(e) => {
                 e.preventDefault();
                 setIsDragging(false);
                 if (!disabled) handleFiles(e.dataTransfer.files);
             }}
-            onClick={() => { if (!disabled) inputRef.current?.click(); }}
+            onClick={() => {
+                if (!disabled) inputRef.current?.click();
+            }}
             role="button"
             tabIndex={disabled ? -1 : 0}
-            onKeyDown={(e) => { if (!disabled && (e.key === 'Enter' || e.key === ' ')) inputRef.current?.click(); }}
+            onKeyDown={(e) => {
+                if (!disabled && (e.key === 'Enter' || e.key === ' '))
+                    inputRef.current?.click();
+            }}
             aria-label={label}
         >
             <input

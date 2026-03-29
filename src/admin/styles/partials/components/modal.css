@@ -1,27 +1,25 @@
 .am-modal-backdrop {
     position: fixed;
     inset: 0;
-    background-color: rgba(0, 0, 0, 0.4);
     z-index: 100;
+    background-color: rgba(0, 0, 0, 0.4);
 }
 
 .am-modal-panel {
     position: fixed;
     top: 50%;
     left: 50%;
-    translate: -50% -50%;
-    background-color: var(--am-color-bg-base);
-    border: 1px solid var(--am-color-border);
-    border-radius: var(--am-radius-lg);
-    box-shadow:
-        0 20px 25px -5px rgba(0, 0, 0, 0.1),
-        0 8px 10px -6px rgba(0, 0, 0, 0.1);
     z-index: 101;
     display: flex;
     flex-direction: column;
-    max-height: calc(100vh - 4rem);
     width: calc(100vw - 2rem);
+    max-height: calc(100vh - 4rem);
     outline: none;
+    background-color: var(--am-color-bg-base);
+    border: 1px solid var(--am-color-border);
+    border-radius: var(--am-radius-lg);
+    box-shadow: var(--am-shadow-modal);
+    translate: -50% -50%;
 }
 
 .am-modal-panel-sm {
@@ -38,10 +36,10 @@
 
 .am-modal-header {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: space-between;
     padding: var(--am-panel-padding) var(--am-panel-padding) 0;
-    flex-shrink: 0;
 }
 
 .am-modal-title {
@@ -52,10 +50,10 @@
 
 .am-modal-header-actions {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-left: auto;
     flex-shrink: 0;
+    gap: 0.5rem;
+    align-items: center;
+    margin-left: auto;
 }
 
 .am-visually-hidden {
@@ -63,8 +61,8 @@
     width: 1px;
     height: 1px;
     overflow: hidden;
-    clip: rect(0, 0, 0, 0);
     white-space: nowrap;
+    clip: rect(0, 0, 0, 0);
 }
 
 .am-upload-btn-icon {
@@ -72,21 +70,21 @@
 }
 
 .am-modal-body {
+    flex: 1;
     padding: var(--am-panel-padding);
     overflow-y: auto;
-    flex: 1;
     font-size: 0.9375rem;
     color: var(--am-color-text-default);
 }
 
 .am-modal-footer {
     display: flex;
+    flex-shrink: 0;
+    gap: calc(var(--am-space) * 2);
     align-items: center;
     justify-content: flex-end;
-    gap: calc(var(--am-space) * 2);
     padding: calc(var(--am-space) * 4) var(--am-panel-padding);
     border-top: 1px solid var(--am-color-border);
-    flex-shrink: 0;
 }
 
 /* ============================================================================
@@ -105,16 +103,16 @@
 }
 
 .am-api-error-message {
-    font-size: 0.875rem;
-    color: var(--am-color-text-default);
-    line-height: 1.6;
-    white-space: pre-wrap;
-    word-break: break-word;
     margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--am-color-text-default);
+    word-break: break-word;
+    white-space: pre-wrap;
 }
 
 .am-api-error-ref {
+    margin: 0;
     font-size: 0.75rem;
     color: var(--am-color-text-muted);
-    margin: 0;
 }

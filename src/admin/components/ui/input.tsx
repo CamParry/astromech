@@ -1,5 +1,6 @@
 import React from 'react';
 import { Field } from '@base-ui/react/field';
+import { clsx } from 'clsx';
 
 type InputProps = React.ComponentProps<'input'> & {
     error?: string;
@@ -7,8 +8,15 @@ type InputProps = React.ComponentProps<'input'> & {
     hint?: string;
 };
 
-export function Input({ error, label, hint, className, id, ...props }: InputProps): React.ReactElement {
-    const inputClass = ['am-input', error ? 'am-input-error' : '', className].filter(Boolean).join(' ');
+export function Input({
+    error,
+    label,
+    hint,
+    className,
+    id,
+    ...props
+}: InputProps): React.ReactElement {
+    const inputClass = clsx('am-input', error && 'am-input-error', className);
 
     if (label !== undefined || error !== undefined || hint !== undefined) {
         return (
@@ -25,9 +33,7 @@ export function Input({ error, label, hint, className, id, ...props }: InputProp
                     {...props}
                 />
                 {error !== undefined && (
-                    <Field.Error className="am-field-error">
-                        {error}
-                    </Field.Error>
+                    <Field.Error className="am-field-error">{error}</Field.Error>
                 )}
                 {hint !== undefined && error === undefined && (
                     <Field.Description className="am-field-hint">

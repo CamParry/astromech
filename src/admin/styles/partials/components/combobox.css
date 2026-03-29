@@ -23,8 +23,8 @@
     justify-content: center;
     width: 1.75rem;
     height: 100%;
-    cursor: pointer;
     color: var(--am-color-text-muted);
+    cursor: pointer;
     transition: color var(--am-duration-base) var(--am-easing);
 
     &:hover {

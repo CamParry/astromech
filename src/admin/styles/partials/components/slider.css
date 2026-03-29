@@ -16,8 +16,8 @@
     cursor: pointer;
 
     &:disabled {
-        opacity: 0.5;
         cursor: not-allowed;
+        opacity: 0.5;
     }
 }
 
@@ -32,20 +32,20 @@
 }
 
 .am-slider-indicator {
+    height: 100%;
     background-color: var(--am-color-primary);
     border-radius: 9999px;
-    height: 100%;
 }
 
 .am-slider-thumb {
     width: 1.125rem;
     height: 1.125rem;
-    border-radius: 50%;
-    background-color: var(--am-color-primary);
-    border: 2px solid white;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
     cursor: grab;
     outline: none;
+    background-color: var(--am-color-primary);
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
     transition: box-shadow var(--am-duration-base) var(--am-easing);
 
     &:focus-visible {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Select as BaseSelect } from '@base-ui/react/select';
 import { Check, ChevronDown } from 'lucide-react';
+import { clsx } from 'clsx';
 
 export type SelectOption = {
     value: string;
@@ -34,8 +35,6 @@ export function Select({
     style,
     triggerPrefix,
 }: SelectProps): React.ReactElement {
-    const currentLabel = options.find((o) => o.value === value)?.label;
-
     return (
         <BaseSelect.Root
             value={value}
@@ -44,18 +43,29 @@ export function Select({
             required={required}
             name={name}
         >
-            <BaseSelect.Trigger id={id} className={['am-select-trigger', className].filter(Boolean).join(' ')} style={style}>
-                {triggerPrefix && <span className="am-select-trigger-prefix">{triggerPrefix}</span>}
-                <BaseSelect.Value className="am-visually-hidden" placeholder={placeholder} />
-                <span className="am-select-label" aria-hidden>
-                    {currentLabel ?? <span className="am-select-placeholder-text">{placeholder}</span>}
-                </span>
+            <BaseSelect.Trigger
+                id={id}
+                className={clsx('am-select-trigger', className)}
+                style={style}
+            >
+                {triggerPrefix && (
+                    <span className="am-select-trigger-prefix">{triggerPrefix}</span>
+                )}
+                <BaseSelect.Value
+                    className="am-select-trigger-value"
+                    placeholder={placeholder}
+                />
                 <BaseSelect.Icon className="am-select-icon">
                     <ChevronDown size={12} />
                 </BaseSelect.Icon>
             </BaseSelect.Trigger>
             <BaseSelect.Portal>
-                <BaseSelect.Positioner className="am-select-positioner" sideOffset={4} alignItemWithTrigger={false} align="start">
+                <BaseSelect.Positioner
+                    className="am-select-positioner"
+                    sideOffset={4}
+                    alignItemWithTrigger={false}
+                    align="start"
+                >
                     <BaseSelect.Popup className="am-select-popup">
                         <BaseSelect.List>
                             {options.map((opt) => (

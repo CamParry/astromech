@@ -5,18 +5,18 @@
 }
 
 .am-collection-card {
-    background: var(--am-color-bg-base);
-    border: 1px solid var(--am-color-border);
-    border-radius: var(--am-radius-lg);
-    padding: 1.25rem;
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    padding: 1.25rem;
     cursor: pointer;
+    background: var(--am-color-bg-base);
+    border: 1px solid var(--am-color-border);
+    border-radius: var(--am-radius-lg);
     transition:
         border-color var(--am-duration-base),
         box-shadow var(--am-duration-base);
-    position: relative;
 }
 
 .am-collection-card:hover {
@@ -25,17 +25,17 @@
 }
 
 .am-collection-card-title {
-    font-weight: 600;
     font-size: 0.9375rem;
+    font-weight: 600;
     color: var(--am-color-text-default);
     text-decoration: none;
 }
 
 .am-collection-card-meta {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
     flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
 }
 
 .am-collection-card-field {
@@ -46,9 +46,9 @@
 }
 
 .am-collection-card-field-label {
-    color: var(--am-color-text-muted);
     font-size: 0.75rem;
     font-weight: 500;
+    color: var(--am-color-text-muted);
 }
 
 .am-collection-card-actions {

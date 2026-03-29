@@ -14,12 +14,12 @@
    ============================================================================ */
 
 .am-versions-sidebar {
+    position: sticky;
+    top: 0;
+    overflow: hidden;
     background-color: var(--am-color-bg-base);
     border: 1px solid var(--am-color-border);
     border-radius: var(--am-radius-lg);
-    overflow: hidden;
-    position: sticky;
-    top: 0;
 }
 
 .am-versions-sidebar-header {
@@ -34,9 +34,9 @@
     margin: 0;
     font-size: 0.8125rem;
     font-weight: 600;
+    color: var(--am-color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--am-color-text-muted);
 }
 
 .am-versions-list {
@@ -54,12 +54,12 @@
     gap: 0.125rem;
     width: 100%;
     padding: 0.75rem 1rem;
-    border: none;
-    border-bottom: 1px solid var(--am-color-border);
-    background: none;
+    font-family: inherit;
     text-align: left;
     cursor: pointer;
-    font-family: inherit;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--am-color-border);
     transition: background-color var(--am-duration-fast) var(--am-easing);
 
     &:last-child {
@@ -82,9 +82,9 @@
 
 .am-versions-item-header {
     display: flex;
+    gap: 0.5rem;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
 }
 
 .am-versions-item-number {
@@ -117,10 +117,10 @@
 }
 
 .am-versions-diff {
+    overflow: hidden;
     background-color: var(--am-color-bg-base);
     border: 1px solid var(--am-color-border);
     border-radius: var(--am-radius-lg);
-    overflow: hidden;
 }
 
 /* ============================================================================
@@ -129,12 +129,12 @@
 
 .am-versions-diff-toolbar {
     display: flex;
+    gap: 1rem;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
     padding: 0.875rem 1.25rem;
-    border-bottom: 1px solid var(--am-color-border);
     background-color: var(--am-color-bg-muted);
+    border-bottom: 1px solid var(--am-color-border);
 }
 
 .am-versions-diff-title {
@@ -146,14 +146,14 @@
 
 .am-versions-diff-subtitle {
     display: block;
+    margin-top: 0.125rem;
     font-size: 0.8125rem;
     color: var(--am-color-text-muted);
-    margin-top: 0.125rem;
 }
 
 .am-versions-diff-current-note {
-    margin: 0;
     padding: 0.625rem 1.25rem;
+    margin: 0;
     font-size: 0.8125rem;
     color: var(--am-color-warning);
     background-color: var(--am-color-warning-bg);
@@ -180,12 +180,12 @@
 }
 
 .am-versions-diff-field-name {
+    margin-bottom: 0.625rem;
     font-size: 0.75rem;
     font-weight: 600;
+    color: var(--am-color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--am-color-text-muted);
-    margin-bottom: 0.625rem;
 }
 
 .am-versions-diff-columns {
@@ -196,36 +196,36 @@
 }
 
 .am-versions-diff-arrow {
-    color: var(--am-color-text-muted);
     flex-shrink: 0;
+    color: var(--am-color-text-muted);
 }
 
 .am-versions-diff-old {
+    padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
     color: var(--am-color-danger);
+    word-break: break-word;
     background-color: var(--am-color-danger-bg);
     border: 1px solid var(--am-color-danger-border);
     border-radius: var(--am-radius-md);
-    padding: 0.5rem 0.75rem;
-    word-break: break-word;
 }
 
 .am-versions-diff-new {
+    padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
     color: var(--am-color-success);
+    word-break: break-word;
     background-color: var(--am-color-success-bg);
     border: 1px solid color-mix(in oklch, var(--am-color-success) 30%, transparent);
     border-radius: var(--am-radius-md);
-    padding: 0.5rem 0.75rem;
-    word-break: break-word;
 }
 
 .am-versions-diff-pre {
     margin: 0;
+    overflow-x: auto;
     font-family: ui-monospace, monospace;
     font-size: 0.8125rem;
     white-space: pre-wrap;
-    overflow-x: auto;
 }
 
 /* ============================================================================

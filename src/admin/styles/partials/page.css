@@ -9,15 +9,15 @@
 
 .am-page-header {
     position: sticky;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
     position: sticky;
     top: 0;
     z-index: 20;
-    background-color: var(--am-color-bg-muted);
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
     padding: 2rem 2rem 0;
+    background-color: var(--am-color-bg-muted);
 }
 
 .am-page-title {
@@ -77,9 +77,9 @@
    ============================================================================ */
 
 .am-link {
+    font-weight: 500;
     color: var(--am-color-text-default);
     text-decoration: none;
-    font-weight: 500;
 
     &:hover {
         text-decoration: underline;
@@ -96,14 +96,14 @@
    ============================================================================ */
 
 .am-field-required {
-    color: var(--am-color-danger);
     margin-left: 0.25rem;
+    color: var(--am-color-danger);
 }
 
 .am-field-hint {
+    margin: 0;
     font-size: 0.875rem;
     color: var(--am-color-text-muted);
-    margin: 0;
 }
 
 /* ============================================================================
@@ -112,8 +112,8 @@
 
 .am-autosave {
     display: flex;
-    align-items: center;
     gap: 0.375rem;
+    align-items: center;
     font-size: 0.8125rem;
     color: var(--am-color-text-muted);
 }
@@ -147,12 +147,12 @@
     top: 0;
     z-index: 10;
     display: flex;
-    align-items: center;
     gap: 1rem;
+    align-items: center;
     padding: 0.75rem 0;
+    margin-bottom: 2rem;
     background-color: var(--am-color-bg-muted);
     border-bottom: 1px solid var(--am-color-border);
-    margin-bottom: 2rem;
 }
 
 .am-form-layout-dirty-indicator {
@@ -227,18 +227,18 @@
    ============================================================================ */
 
 .am-activity-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
 }
 
 .am-activity-list-item {
     display: flex;
-    align-items: center;
     gap: 0.75rem;
+    align-items: center;
     padding: 0.5rem 0;
     border-bottom: 1px solid var(--am-color-border);
 }
@@ -249,9 +249,9 @@
 }
 
 .am-activity-list-meta {
+    margin-top: 0.125rem;
     font-size: 0.75rem;
     color: var(--am-color-text-muted);
-    margin-top: 0.125rem;
 }
 
 /* ============================================================================
@@ -259,16 +259,16 @@
    ============================================================================ */
 
 .am-meta {
-    margin: 0;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    margin: 0;
 }
 
 .am-meta-label {
+    margin-bottom: 0.125rem;
     font-size: 0.75rem;
     color: var(--am-color-text-muted);
-    margin-bottom: 0.125rem;
 }
 
 .am-meta-value {
@@ -284,12 +284,12 @@
 }
 
 .am-media-card {
-    border: 1px solid var(--am-color-border);
-    border-radius: 0.375rem;
     overflow: hidden;
     cursor: pointer;
-    transition: border-color 0.15s;
     background-color: var(--am-color-bg-subtle);
+    border: 1px solid var(--am-color-border);
+    border-radius: 0.375rem;
+    transition: border-color 0.15s;
 }
 
 .am-media-card:hover {
@@ -297,10 +297,10 @@
 }
 
 .am-media-card-thumb {
+    display: block;
     width: 100%;
     aspect-ratio: 1;
     object-fit: cover;
-    display: block;
     background-color: var(--am-color-bg-subtle);
 }
 
@@ -316,31 +316,31 @@
 }
 
 .am-media-card-filename {
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-size: 0.75rem;
     color: var(--am-color-text-default);
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .am-media-card-size {
+    margin-top: 0.125rem;
     font-size: 0.6875rem;
     color: var(--am-color-text-muted);
-    margin-top: 0.125rem;
 }
 
 .am-media-select-bar {
     display: flex;
-    align-items: center;
     gap: 0.5rem;
+    align-items: center;
     padding: 0.25rem 0;
     margin-bottom: 0.5rem;
 }
 
 .am-media-bulk-bar-select-all {
     display: flex;
-    align-items: center;
     gap: 0.5rem;
+    align-items: center;
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--am-color-text-default);
@@ -365,37 +365,37 @@
 /* Media list row */
 .am-media-list-row-name {
     display: flex;
-    align-items: center;
     gap: 0.625rem;
+    align-items: center;
 }
 
 .am-media-list-row-thumb {
+    flex-shrink: 0;
     width: 2rem;
     height: 2rem;
     object-fit: cover;
-    border-radius: var(--am-radius-sm);
-    flex-shrink: 0;
     background-color: var(--am-color-bg-subtle);
+    border-radius: var(--am-radius-sm);
 }
 
 .am-media-list-row-icon {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: center;
     width: 2rem;
     height: 2rem;
-    border-radius: var(--am-radius-sm);
-    background-color: var(--am-color-bg-subtle);
     color: var(--am-color-text-muted);
-    flex-shrink: 0;
+    background-color: var(--am-color-bg-subtle);
+    border-radius: var(--am-radius-sm);
 }
 
 .am-media-list-row-filename {
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-size: 0.875rem;
     color: var(--am-color-text-default);
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 /* ============================================================================
@@ -421,17 +421,17 @@
 }
 
 .am-media-modal-preview {
-    border-radius: var(--am-radius-md);
     overflow: hidden;
     background-color: var(--am-color-bg-subtle);
     border: 1px solid var(--am-color-border);
+    border-radius: var(--am-radius-md);
 }
 
 .am-media-modal-preview-image {
-    width: 100%;
     display: block;
-    object-fit: contain;
+    width: 100%;
     max-height: 12rem;
+    object-fit: contain;
 }
 
 .am-media-modal-preview-icon {
@@ -449,30 +449,30 @@
 }
 
 .am-media-modal-filename {
+    margin: 0 0 0.5rem;
     font-size: 0.8125rem;
     font-weight: 500;
     color: var(--am-color-text-default);
     word-break: break-all;
-    margin: 0 0 0.5rem;
 }
 
 .am-media-modal-meta-list {
-    margin: 0;
     display: flex;
     flex-direction: column;
     gap: 0.375rem;
+    margin: 0;
 }
 
 .am-media-modal-meta-row {
     display: flex;
-    justify-content: space-between;
     gap: 0.5rem;
+    justify-content: space-between;
     font-size: 0.8125rem;
 }
 
 .am-media-modal-meta-row dt {
-    color: var(--am-color-text-muted);
     flex-shrink: 0;
+    color: var(--am-color-text-muted);
 }
 
 .am-media-modal-meta-row dd {
@@ -511,9 +511,9 @@
 
 .am-pagination {
     display: flex;
+    gap: 0.75rem;
     align-items: center;
     justify-content: center;
-    gap: 0.75rem;
     padding-top: 1.5rem;
 }
 
@@ -523,7 +523,7 @@
 }
 
 .am-pagination-total {
+    margin-right: auto;
     font-size: 0.875rem;
     color: var(--am-color-text-muted);
-    margin-right: auto;
 }

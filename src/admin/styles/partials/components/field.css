@@ -25,26 +25,20 @@
    ============================================================================ */
 
 .am-input {
+    width: 100%;
     height: var(--am-input-height);
     padding: 0 calc(var(--am-space) * 3);
-    border: 1px solid var(--am-color-border-strong);
-    border-radius: var(--am-radius-md);
-    background-color: var(--am-color-bg-base);
-    color: var(--am-color-text-default);
-    font-size: 0.875rem;
-    font-family: inherit;
-    width: 100%;
-    box-sizing: border-box;
+    font-size: var(--am-input-font-size);
+    color: var(--am-input-color);
+    background-color: var(--am-input-background);
+    border: 1px solid var(--am-input-border-color);
+    border-radius: var(--am-input-border-radius);
     transition:
         border-color 0.15s,
         box-shadow 0.15s;
 
     &::placeholder {
         color: var(--am-color-text-placeholder);
-    }
-
-    &:focus-visible {
-        outline-offset: -1px;
     }
 }
 
@@ -62,29 +56,23 @@
    ============================================================================ */
 
 .am-textarea {
-    padding: calc(var(--am-space) * 2.5) calc(var(--am-space) * 3);
-    border: 1px solid var(--am-color-border-strong);
-    border-radius: var(--am-radius-md);
-    background-color: var(--am-color-bg-base);
-    color: var(--am-color-text-default);
-    font-size: 0.875rem;
-    font-family: inherit;
     width: 100%;
     min-height: 6rem;
-    resize: vertical;
-    box-sizing: border-box;
-    appearance: none;
+    padding: calc(var(--am-space) * 2.5) calc(var(--am-space) * 3);
+    font-size: var(--am-input-font-size);
+    color: var(--am-input-color);
     -webkit-appearance: none;
+    appearance: none;
+    resize: vertical;
+    background-color: var(--am-input-background);
+    border: 1px solid var(--am-input-border-color);
+    border-radius: var(--am-input-border-radius);
     transition:
         border-color 0.15s,
         box-shadow 0.15s;
 
     &::placeholder {
         color: var(--am-color-text-placeholder);
-    }
-
-    &:focus-visible {
-        outline-offset: -1px;
     }
 }
 
