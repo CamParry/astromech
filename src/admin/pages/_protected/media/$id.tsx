@@ -5,7 +5,7 @@
  * Save calls PUT /media/:id, delete calls DELETE /media/:id.
  */
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { createFileRoute, useParams, useNavigate } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { FileImage } from 'lucide-react';
@@ -24,7 +24,12 @@ import {
     FormLayoutMain,
     FormLayoutSidebar,
 } from '@/admin/components/ui/index.js';
-import { usePermissions, useMediaItem, useUpdateMedia, useDeleteMedia } from '@/admin/hooks/index.js';
+import {
+    usePermissions,
+    useMediaItem,
+    useUpdateMedia,
+    useDeleteMedia,
+} from '@/admin/hooks/index.js';
 
 // ============================================================================
 // Helpers
@@ -65,24 +70,16 @@ function MediaEditPage(): React.ReactElement {
     const confirm = useConfirm();
     const navigate = useNavigate();
 
+    const { data: item, isLoading } = useMediaItem(id);
+
     const form = useForm({
         defaultValues: {
-            alt: '',
+            alt: item?.alt ?? '',
         } satisfies FormValues,
         onSubmit: ({ value }) => {
             updateMutation.mutate({ alt: value.alt });
         },
     });
-
-    const { data: item, isLoading } = useMediaItem(id);
-
-    useEffect(() => {
-        if (item != null) {
-            form.reset({ alt: item.alt ?? '' });
-        }
-        // form is stable; item is the only reactive dep
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [item]);
 
     const updateMutation = useUpdateMedia(id, {
         onSuccess: () => form.reset(form.state.values),
@@ -114,142 +111,145 @@ function MediaEditPage(): React.ReactElement {
             </PageHeader>
 
             <PageContent>
-            <FormLayout>
-                {/* Main column */}
-                <FormLayoutMain>
-                    <Panel title="Preview">
-                        {item?.mimeType.startsWith('image/') ? (
-                            <img
-                                src={item.url}
-                                alt={item.alt ?? item.filename}
-                                style={{
-                                    maxWidth: '100%',
-                                    display: 'block',
-                                    borderRadius: '0.25rem',
-                                }}
-                            />
-                        ) : (
+                <FormLayout>
+                    {/* Main column */}
+                    <FormLayoutMain>
+                        <Panel title="Preview">
+                            {item?.mimeType.startsWith('image/') ? (
+                                <img
+                                    src={item.url}
+                                    alt={item.alt ?? item.filename}
+                                    style={{
+                                        maxWidth: '100%',
+                                        display: 'block',
+                                        borderRadius: '0.25rem',
+                                    }}
+                                />
+                            ) : (
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        padding: '3rem',
+                                        color: 'var(--am-color-neutral-400)',
+                                    }}
+                                >
+                                    <FileImage size={48} />
+                                </div>
+                            )}
+                        </Panel>
+
+                        <Panel title="Details">
+                            <form.Field name="alt">
+                                {(field) => (
+                                    <Input
+                                        id="media-alt"
+                                        label="Alt text"
+                                        type="text"
+                                        value={field.state.value}
+                                        onChange={(e) =>
+                                            field.handleChange(e.target.value)
+                                        }
+                                        onBlur={field.handleBlur}
+                                        hint="Describe the image for accessibility and SEO."
+                                    />
+                                )}
+                            </form.Field>
+                        </Panel>
+                    </FormLayoutMain>
+
+                    {/* Sidebar column */}
+                    <FormLayoutSidebar>
+                        <Panel title="Actions">
                             <div
                                 style={{
                                     display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    padding: '3rem',
-                                    color: 'var(--am-color-neutral-400)',
+                                    flexDirection: 'column',
+                                    gap: '0.5rem',
                                 }}
                             >
-                                <FileImage size={48} />
+                                {canUploadMedia() && (
+                                    <Button
+                                        onClick={handleSave}
+                                        loading={updateMutation.isPending}
+                                        disabled={!form.state.isDirty}
+                                    >
+                                        Save
+                                    </Button>
+                                )}
+                                {canDeleteMedia() && (
+                                    <Button
+                                        variant="danger"
+                                        onClick={() =>
+                                            confirm({
+                                                title: 'Delete media?',
+                                                description:
+                                                    item != null
+                                                        ? `Are you sure you want to delete "${item.filename}"? This cannot be undone.`
+                                                        : 'This action cannot be undone.',
+                                                confirmLabel: 'Delete',
+                                                onConfirm: () =>
+                                                    deleteMutation.mutate(undefined),
+                                            })
+                                        }
+                                        disabled={deleteMutation.isPending}
+                                    >
+                                        Delete
+                                    </Button>
+                                )}
                             </div>
-                        )}
-                    </Panel>
+                        </Panel>
 
-                    <Panel title="Details">
-                        <form.Field name="alt">
-                            {(field) => (
-                                <Input
-                                    id="media-alt"
-                                    label="Alt text"
-                                    type="text"
-                                    value={field.state.value}
-                                    onChange={(e) => field.handleChange(e.target.value)}
-                                    onBlur={field.handleBlur}
-                                    hint="Describe the image for accessibility and SEO."
-                                />
-                            )}
-                        </form.Field>
-                    </Panel>
-                </FormLayoutMain>
-
-                {/* Sidebar column */}
-                <FormLayoutSidebar>
-                    <Panel title="Actions">
-                        <div
-                            style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '0.5rem',
-                            }}
-                        >
-                            {canUploadMedia() && (
-                                <Button
-                                    onClick={handleSave}
-                                    loading={updateMutation.isPending}
-                                    disabled={!form.state.isDirty}
-                                >
-                                    Save
-                                </Button>
-                            )}
-                            {canDeleteMedia() && (
-                                <Button
-                                    variant="danger"
-                                    onClick={() =>
-                                        confirm({
-                                            title: 'Delete media?',
-                                            description:
-                                                item != null
-                                                    ? `Are you sure you want to delete "${item.filename}"? This cannot be undone.`
-                                                    : 'This action cannot be undone.',
-                                            confirmLabel: 'Delete',
-                                            onConfirm: () => deleteMutation.mutate(undefined),
-                                        })
-                                    }
-                                    disabled={deleteMutation.isPending}
-                                >
-                                    Delete
-                                </Button>
-                            )}
-                        </div>
-                    </Panel>
-
-                    <Panel title="Metadata">
-                        <dl className="am-meta">
-                            <div>
-                                <dt className="am-meta-label">Filename</dt>
-                                <dd className="am-meta-value am-text-mono">
-                                    {item?.filename ?? '—'}
-                                </dd>
-                            </div>
-                            <div>
-                                <dt className="am-meta-label">Size</dt>
-                                <dd className="am-meta-value">
-                                    {item != null ? formatBytes(item.size) : '—'}
-                                </dd>
-                            </div>
-                            <div>
-                                <dt className="am-meta-label">Type</dt>
-                                <dd className="am-meta-value am-text-mono">
-                                    {item?.mimeType ?? '—'}
-                                </dd>
-                            </div>
-                            {item?.width != null && item.height != null && (
+                        <Panel title="Metadata">
+                            <dl className="am-meta">
                                 <div>
-                                    <dt className="am-meta-label">Dimensions</dt>
-                                    <dd className="am-meta-value">
-                                        {item.width} × {item.height}
+                                    <dt className="am-meta-label">Filename</dt>
+                                    <dd className="am-meta-value am-text-mono">
+                                        {item?.filename ?? '—'}
                                     </dd>
                                 </div>
-                            )}
-                            <div>
-                                <dt className="am-meta-label">Uploaded</dt>
-                                <dd className="am-meta-value">
-                                    {formatDate(item?.createdAt)}
-                                </dd>
-                            </div>
-                            <div>
-                                <dt className="am-meta-label">Last updated</dt>
-                                <dd className="am-meta-value">
-                                    {formatDate(item?.updatedAt)}
-                                </dd>
-                            </div>
-                        </dl>
-                    </Panel>
-                </FormLayoutSidebar>
-            </FormLayout>
+                                <div>
+                                    <dt className="am-meta-label">Size</dt>
+                                    <dd className="am-meta-value">
+                                        {item != null ? formatBytes(item.size) : '—'}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt className="am-meta-label">Type</dt>
+                                    <dd className="am-meta-value am-text-mono">
+                                        {item?.mimeType ?? '—'}
+                                    </dd>
+                                </div>
+                                {item?.width != null && item.height != null && (
+                                    <div>
+                                        <dt className="am-meta-label">Dimensions</dt>
+                                        <dd className="am-meta-value">
+                                            {item.width} × {item.height}
+                                        </dd>
+                                    </div>
+                                )}
+                                <div>
+                                    <dt className="am-meta-label">Uploaded</dt>
+                                    <dd className="am-meta-value">
+                                        {formatDate(item?.createdAt)}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt className="am-meta-label">Last updated</dt>
+                                    <dd className="am-meta-value">
+                                        {formatDate(item?.updatedAt)}
+                                    </dd>
+                                </div>
+                            </dl>
+                        </Panel>
+                    </FormLayoutSidebar>
+                </FormLayout>
             </PageContent>
         </Page>
     );
 }
 
 export const Route = createFileRoute('/_protected/media/$id')({
-	component: MediaEditPage,
+    component: MediaEditPage,
 });

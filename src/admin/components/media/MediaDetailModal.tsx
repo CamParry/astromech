@@ -5,7 +5,7 @@
  * left and an editable form (alt text, title) on the right.
  */
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Modal, Spinner, useConfirm } from '../ui/index.js';
@@ -41,23 +41,13 @@ export function MediaDetailModal({
 
     const form = useForm({
         defaultValues: {
-            alt: '',
+            alt: item?.alt ?? '',
             title: '',
         } satisfies FormValues,
         onSubmit: ({ value }) => {
             updateMutation.mutate({ alt: value.alt });
         },
     });
-
-    useEffect(() => {
-        if (item != null) {
-            form.reset({
-                alt: item.alt ?? '',
-                title: '',
-            });
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [item?.id]);
 
     const updateMutation = useUpdateMedia(mediaId ?? '', {
         onSuccess: () => form.reset(form.state.values),
@@ -76,14 +66,16 @@ export function MediaDetailModal({
                     <Button
                         variant="danger"
                         size="sm"
-                        onClick={() =>
-                            confirm({
-                                title: t('media.deleteConfirmLabel'),
-                                description: t('media.bulkDeleteDescription'),
-                                confirmLabel: t('common.delete'),
-                                onConfirm: () => deleteMutation.mutate(mediaId!),
-                            })
-                        }
+                        onClick={() => {
+                            if (mediaId) {
+                                confirm({
+                                    title: t('media.deleteConfirmLabel'),
+                                    description: t('media.bulkDeleteDescription'),
+                                    confirmLabel: t('common.delete'),
+                                    onConfirm: () => deleteMutation.mutate(mediaId),
+                                });
+                            }
+                        }}
                         disabled={deleteMutation.isPending}
                     >
                         {t('common.delete')}
