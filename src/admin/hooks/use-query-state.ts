@@ -1,4 +1,4 @@
-import { useRouter, useNavigate } from '@tanstack/react-router';
+import { useRouterState, useNavigate } from '@tanstack/react-router';
 
 function readParam(search: string, key: string): string | null {
     return new URLSearchParams(search).get(key);
@@ -8,9 +8,9 @@ export function useQueryState<T extends string>(
     key: string,
     defaultValue: T
 ): [T, (value: string) => void] {
-    const router = useRouter();
+    const searchStr = useRouterState({ select: (s) => s.location.searchStr });
     const navigate = useNavigate();
-    const value = (readParam(router.state.location.searchStr, key) as T | null) ?? defaultValue;
+    const value = (readParam(searchStr, key) as T | null) ?? defaultValue;
 
     function setValue(v: string) {
         void navigate({
@@ -24,9 +24,9 @@ export function useQueryState<T extends string>(
 export function useQueryStates<T extends Record<string, string>>(
     defaults: T
 ): [T, (updates: Partial<T>) => void] {
-    const router = useRouter();
+    const searchStr = useRouterState({ select: (s) => s.location.searchStr });
     const navigate = useNavigate();
-    const params = new URLSearchParams(router.state.location.searchStr);
+    const params = new URLSearchParams(searchStr);
 
     const values = Object.fromEntries(
         Object.entries(defaults).map(([k, def]) => [k, params.get(k) ?? def])

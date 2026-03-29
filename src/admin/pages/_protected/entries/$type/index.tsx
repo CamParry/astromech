@@ -12,7 +12,6 @@ import { useQueries } from '@tanstack/react-query';
 import { createFileRoute, Link, useNavigate, useParams } from '@tanstack/react-router';
 import {
     Check,
-    ChevronDown,
     Copy,
     LayoutGrid,
     LayoutList,
@@ -41,6 +40,7 @@ import {
     PageTitle,
     Pagination,
     SearchInput,
+    Select,
     Spinner,
     Table,
     ToggleGroup,
@@ -466,6 +466,11 @@ function EntryIndexPage(): React.ReactElement {
         trashed: t('entries.trashed'),
     };
 
+    const STATUS_FILTER_OPTIONS = (Object.keys(STATUS_LABELS) as StatusFilter[]).map((s) => ({
+        value: s,
+        label: STATUS_LABELS[s],
+    }));
+
     const rowLabels = {
         edit: t('entries.rowEdit'),
         duplicate: t('entries.rowDuplicate'),
@@ -708,68 +713,16 @@ function EntryIndexPage(): React.ReactElement {
                             />
 
                             {/* Status filter */}
-                            <Menu.Root>
-                                <Menu.Trigger className="am-toolbar-filter-btn">
-                                    {t('entries.statusFilter', {
-                                        status: STATUS_LABELS[statusFilter],
-                                    })}
-                                    <ChevronDown size={12} />
-                                </Menu.Trigger>
-                                <Menu.Portal>
-                                    <Menu.Positioner
-                                        className="am-dropdown-positioner"
-                                        sideOffset={4}
-                                    >
-                                        <Menu.Popup className="am-dropdown-popup">
-                                            {(
-                                                [
-                                                    'all',
-                                                    'draft',
-                                                    'published',
-                                                    'scheduled',
-                                                ] as StatusFilter[]
-                                            ).map((s) => (
-                                                <Menu.Item
-                                                    key={s}
-                                                    className="am-dropdown-item"
-                                                    onClick={() => {
-                                                        setStatusFilter(s);
-                                                        setPage(1);
-                                                        reset();
-                                                    }}
-                                                >
-                                                    <span className="am-dropdown-item-icon">
-                                                        {statusFilter === s ? (
-                                                            <Check size={14} />
-                                                        ) : (
-                                                            <span style={{ width: 14 }} />
-                                                        )}
-                                                    </span>
-                                                    {STATUS_LABELS[s]}
-                                                </Menu.Item>
-                                            ))}
-                                            <div className="am-dropdown-separator" />
-                                            <Menu.Item
-                                                className="am-dropdown-item"
-                                                onClick={() => {
-                                                    setStatusFilter('trashed');
-                                                    setPage(1);
-                                                    reset();
-                                                }}
-                                            >
-                                                <span className="am-dropdown-item-icon">
-                                                    {statusFilter === 'trashed' ? (
-                                                        <Check size={14} />
-                                                    ) : (
-                                                        <span style={{ width: 14 }} />
-                                                    )}
-                                                </span>
-                                                {STATUS_LABELS['trashed']}
-                                            </Menu.Item>
-                                        </Menu.Popup>
-                                    </Menu.Positioner>
-                                </Menu.Portal>
-                            </Menu.Root>
+                            <Select
+                                value={statusFilter}
+                                onValueChange={(v) => {
+                                    setStatusFilter((v ?? 'all') as StatusFilter);
+                                    setPage(1);
+                                    reset();
+                                }}
+                                options={STATUS_FILTER_OPTIONS}
+                                triggerPrefix={t('entries.statusFilterPrefix')}
+                            />
                         </ToolbarStart>
 
                         <ToolbarEnd>
