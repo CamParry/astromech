@@ -1,0 +1,80 @@
+.am-upload-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    border: 2px dashed var(--am-color-border-strong);
+    border-radius: var(--am-radius-md);
+    cursor: pointer;
+    color: var(--am-color-text-muted);
+    background-color: var(--am-color-bg-subtle);
+    transition:
+        border-color var(--am-duration-base) var(--am-easing),
+        background-color var(--am-duration-base) var(--am-easing),
+        color var(--am-duration-base) var(--am-easing);
+    user-select: none;
+}
+
+.am-upload-zone:hover:not(.am-upload-zone-disabled) {
+    border-color: var(--am-color-primary);
+    background-color: var(--am-color-primary-subtle);
+    color: var(--am-color-primary-emphasis);
+}
+
+.am-upload-zone-dragging {
+    border-color: var(--am-color-primary);
+    background-color: var(--am-color-primary-subtle);
+    color: var(--am-color-primary-emphasis);
+}
+
+.am-upload-zone-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.am-upload-zone-input {
+    display: none;
+}
+
+.am-upload-zone-icon {
+    flex-shrink: 0;
+}
+
+.am-upload-zone-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-align: center;
+}
+
+/* ============================================================================
+   am-drop-zone — Drag-and-drop file upload wrapper
+   ============================================================================ */
+
+.am-drop-zone {
+    position: relative;
+}
+
+.am-drop-zone-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 50;
+    background-color: color-mix(in srgb, var(--am-color-bg-base) 90%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--am-radius-md);
+    padding: 2rem;
+}
+
+.am-drop-zone-overlay-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--am-color-primary-emphasis);
+    font-size: 0.875rem;
+    font-weight: 500;
+    pointer-events: none;
+}

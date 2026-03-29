@@ -1,0 +1,30 @@
+.am-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: calc(var(--am-space) * 16) calc(var(--am-space) * 8);
+    gap: calc(var(--am-space) * 3);
+}
+
+.am-empty-state-icon {
+    color: var(--am-color-text-muted);
+    margin-bottom: calc(var(--am-space) * 2);
+}
+
+.am-empty-state-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--am-color-text-default);
+}
+
+.am-empty-state-description {
+    font-size: 0.875rem;
+    color: var(--am-color-text-muted);
+    max-width: 28rem;
+}
+
+.am-empty-state-action {
+    margin-top: calc(var(--am-space) * 2);
+}

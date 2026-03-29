@@ -1,0 +1,42 @@
+.am-toggle-group {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--am-color-border-strong);
+    border-radius: var(--am-radius-md);
+    overflow: hidden;
+    height: var(--am-button-height);
+    box-sizing: border-box;
+}
+
+.am-toggle-group-btn {
+    all: unset;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--am-button-height);
+    height: 100%;
+    color: var(--am-color-text-muted);
+    cursor: pointer;
+    background-color: var(--am-color-bg-base);
+    transition:
+        background-color var(--am-duration-base) var(--am-easing),
+        color var(--am-duration-base) var(--am-easing);
+
+    & + & {
+        border-left: 1px solid var(--am-color-border-strong);
+    }
+
+    &:hover {
+        background-color: var(--am-color-bg-subtle);
+        color: var(--am-color-text-default);
+    }
+
+    &[data-pressed] {
+        background-color: var(--am-color-bg-subtle);
+        color: var(--am-color-text-default);
+    }
+
+    &:focus-visible {
+        /* focus: global :focus-visible rule in base.css */
+    }
+}

@@ -1,0 +1,44 @@
+.am-collapsible {
+    width: 100%;
+}
+
+.am-collapsible-trigger {
+    all: unset;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.5rem 0;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--am-color-text-default);
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: color var(--am-duration-base) var(--am-easing);
+
+    &:hover {
+        color: var(--am-color-primary);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--am-color-primary);
+        outline-offset: 2px;
+    }
+}
+
+.am-collapsible-chevron {
+    flex-shrink: 0;
+    transition: transform var(--am-duration-base) var(--am-easing);
+}
+
+.am-collapsible[data-open] .am-collapsible-chevron {
+    transform: rotate(180deg);
+}
+
+.am-collapsible-panel {
+    overflow: hidden;
+}
+
+.am-collapsible-content {
+    padding: 0.5rem 0 0.75rem;
+}

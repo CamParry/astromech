@@ -1,0 +1,31 @@
+@keyframes am-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.am-spinner {
+    display: inline-block;
+    border-radius: var(--am-radius-full);
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    animation: am-spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+.am-spinner-sm {
+    width: 0.875rem;
+    height: 0.875rem;
+}
+
+.am-spinner-md {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-width: 2.5px;
+}
+
+.am-spinner-lg {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-width: 3px;
+}

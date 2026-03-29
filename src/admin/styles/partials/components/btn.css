@@ -1,0 +1,117 @@
+.am-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--am-space) * 1.5);
+    border: 1px solid transparent;
+    border-radius: var(--am-radius-md);
+    font-size: 0.875rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    transition:
+        background-color 0.15s,
+        color 0.15s,
+        border-color 0.15s,
+        opacity 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+
+    &:focus-visible {
+        /* focus: global :focus-visible rule in base.css */
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+}
+
+/* Sizes */
+
+.am-btn-sm {
+    height: var(--am-button-height-sm);
+    padding: 0 calc(var(--am-space) * 3);
+    font-size: 0.8125rem;
+}
+
+.am-btn-md {
+    height: var(--am-button-height);
+    padding: 0 calc(var(--am-space) * 4);
+}
+
+.am-btn-lg {
+    height: var(--am-button-height-lg);
+    padding: 0 calc(var(--am-space) * 5);
+    font-size: 1rem;
+}
+
+/* Icon-only: square */
+
+.am-btn-icon.am-btn-sm {
+    width: var(--am-button-height-sm);
+    padding: 0;
+}
+
+.am-btn-icon.am-btn-md {
+    width: var(--am-button-height);
+    padding: 0;
+}
+
+.am-btn-icon.am-btn-lg {
+    width: var(--am-button-height-lg);
+    padding: 0;
+}
+
+/* Variants */
+
+.am-btn-primary {
+    background-color: var(--am-color-primary);
+    color: var(--am-color-neutral-0);
+
+    &:hover:not(:disabled) {
+        background-color: var(--am-color-primary-emphasis);
+    }
+}
+
+.am-btn-secondary {
+    background-color: var(--am-color-bg-base);
+    color: var(--am-color-text-default);
+    border-color: var(--am-color-border-strong);
+
+    &:hover:not(:disabled) {
+        background-color: var(--am-color-bg-subtle);
+    }
+}
+
+.am-btn-ghost {
+    background-color: transparent;
+    color: var(--am-color-text-default);
+
+    &:hover:not(:disabled) {
+        background-color: var(--am-color-bg-subtle);
+    }
+}
+
+.am-btn-danger {
+    background-color: var(--am-color-danger);
+    color: var(--am-color-neutral-0);
+
+    &:hover:not(:disabled) {
+        background-color: var(--am-color-danger-emphasis);
+    }
+}
+
+.am-btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.am-btn-full {
+    width: 100%;
+    justify-content: center;
+}

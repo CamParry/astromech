@@ -1,0 +1,46 @@
+.am-number-field-group {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+}
+
+.am-number-field-input {
+    flex: 1;
+    text-align: center;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+}
+
+.am-number-field-btn {
+    all: unset;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: var(--am-input-height);
+    background-color: var(--am-color-bg-subtle);
+    border: 1px solid var(--am-color-border-strong);
+    color: var(--am-color-text-default);
+    cursor: pointer;
+    font-size: 1rem;
+    flex-shrink: 0;
+    transition: background-color var(--am-duration-base) var(--am-easing);
+
+    &:hover:not(:disabled) {
+        background-color: var(--am-color-bg-muted);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+.am-number-field-btn-decrement {
+    border-radius: var(--am-radius-md) 0 0 var(--am-radius-md);
+}
+
+.am-number-field-btn-increment {
+    border-radius: 0 var(--am-radius-md) var(--am-radius-md) 0;
+}

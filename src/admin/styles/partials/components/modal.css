@@ -1,0 +1,120 @@
+.am-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 100;
+}
+
+.am-modal-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    background-color: var(--am-color-bg-base);
+    border: 1px solid var(--am-color-border);
+    border-radius: var(--am-radius-lg);
+    box-shadow:
+        0 20px 25px -5px rgba(0, 0, 0, 0.1),
+        0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    z-index: 101;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 4rem);
+    width: calc(100vw - 2rem);
+    outline: none;
+}
+
+.am-modal-panel-sm {
+    max-width: 24rem;
+}
+
+.am-modal-panel-md {
+    max-width: 40rem;
+}
+
+.am-modal-panel-lg {
+    max-width: 56rem;
+}
+
+.am-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--am-panel-padding) var(--am-panel-padding) 0;
+    flex-shrink: 0;
+}
+
+.am-modal-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--am-color-text-default);
+}
+
+.am-modal-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.am-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+}
+
+.am-upload-btn-icon {
+    margin-right: 0.375rem;
+}
+
+.am-modal-body {
+    padding: var(--am-panel-padding);
+    overflow-y: auto;
+    flex: 1;
+    font-size: 0.9375rem;
+    color: var(--am-color-text-default);
+}
+
+.am-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: calc(var(--am-space) * 2);
+    padding: calc(var(--am-space) * 4) var(--am-panel-padding);
+    border-top: 1px solid var(--am-color-border);
+    flex-shrink: 0;
+}
+
+/* ============================================================================
+   am-api-error — API error panel content (inside Modal)
+   ============================================================================ */
+
+.am-api-error {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--am-space) * 3);
+}
+
+.am-api-error-badge-row {
+    display: flex;
+    align-items: center;
+}
+
+.am-api-error-message {
+    font-size: 0.875rem;
+    color: var(--am-color-text-default);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0;
+}
+
+.am-api-error-ref {
+    font-size: 0.75rem;
+    color: var(--am-color-text-muted);
+    margin: 0;
+}

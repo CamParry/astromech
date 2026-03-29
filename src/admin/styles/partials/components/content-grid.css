@@ -1,0 +1,8 @@
+.am-content-grid {
+    display: grid;
+    grid-template-columns: repeat(
+        auto-fill,
+        minmax(var(--am-content-grid-min, 10rem), 1fr)
+    );
+    gap: 1rem;
+}

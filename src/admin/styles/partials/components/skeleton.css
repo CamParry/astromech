@@ -1,0 +1,21 @@
+@keyframes am-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.am-skeleton {
+    display: block;
+    border-radius: var(--am-radius-md);
+    background: linear-gradient(
+        90deg,
+        var(--am-color-bg-subtle) 25%,
+        var(--am-color-bg-muted) 50%,
+        var(--am-color-bg-subtle) 75%
+    );
+    background-size: 200% 100%;
+    animation: am-shimmer 1.5s ease-in-out infinite;
+}

@@ -1,0 +1,58 @@
+.am-collection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 1rem;
+}
+
+.am-collection-card {
+    background: var(--am-color-bg-base);
+    border: 1px solid var(--am-color-border);
+    border-radius: var(--am-radius-lg);
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    cursor: pointer;
+    transition:
+        border-color var(--am-duration-base),
+        box-shadow var(--am-duration-base);
+    position: relative;
+}
+
+.am-collection-card:hover {
+    border-color: var(--am-color-border-strong);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.am-collection-card-title {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--am-color-text-default);
+    text-decoration: none;
+}
+
+.am-collection-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.am-collection-card-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    font-size: 0.8125rem;
+}
+
+.am-collection-card-field-label {
+    color: var(--am-color-text-muted);
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.am-collection-card-actions {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+}

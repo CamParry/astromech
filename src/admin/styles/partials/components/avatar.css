@@ -1,0 +1,31 @@
+.am-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--am-radius-full);
+    background-color: var(--am-color-primary-subtle-hover);
+    color: var(--am-color-primary-emphasis);
+    font-weight: 600;
+    font-size: 0.75rem;
+    overflow: hidden;
+    flex-shrink: 0;
+    object-fit: cover;
+}
+
+.am-avatar-sm {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 0.625rem;
+}
+
+.am-avatar-md {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.75rem;
+}
+
+.am-avatar-lg {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 0.875rem;
+}

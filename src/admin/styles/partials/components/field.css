@@ -1,0 +1,98 @@
+.am-field {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--am-space) * 1.5);
+}
+
+.am-field-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--am-color-text-default);
+}
+
+.am-field-error {
+    font-size: 0.8125rem;
+    color: var(--am-color-danger);
+}
+
+.am-field-hint {
+    font-size: 0.8125rem;
+    color: var(--am-color-text-muted);
+}
+
+/* ============================================================================
+   am-input — Text input
+   ============================================================================ */
+
+.am-input {
+    height: var(--am-input-height);
+    padding: 0 calc(var(--am-space) * 3);
+    border: 1px solid var(--am-color-border-strong);
+    border-radius: var(--am-radius-md);
+    background-color: var(--am-color-bg-base);
+    color: var(--am-color-text-default);
+    font-size: 0.875rem;
+    font-family: inherit;
+    width: 100%;
+    box-sizing: border-box;
+    transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
+
+    &::placeholder {
+        color: var(--am-color-text-placeholder);
+    }
+
+    &:focus-visible {
+        outline-offset: -1px;
+    }
+}
+
+.am-input-error {
+    border-color: var(--am-color-danger);
+
+    &:focus {
+        border-color: var(--am-color-danger);
+        box-shadow: 0 0 0 2px var(--am-color-danger-border);
+    }
+}
+
+/* ============================================================================
+   am-textarea — Textarea
+   ============================================================================ */
+
+.am-textarea {
+    padding: calc(var(--am-space) * 2.5) calc(var(--am-space) * 3);
+    border: 1px solid var(--am-color-border-strong);
+    border-radius: var(--am-radius-md);
+    background-color: var(--am-color-bg-base);
+    color: var(--am-color-text-default);
+    font-size: 0.875rem;
+    font-family: inherit;
+    width: 100%;
+    min-height: 6rem;
+    resize: vertical;
+    box-sizing: border-box;
+    appearance: none;
+    -webkit-appearance: none;
+    transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
+
+    &::placeholder {
+        color: var(--am-color-text-placeholder);
+    }
+
+    &:focus-visible {
+        outline-offset: -1px;
+    }
+}
+
+.am-textarea-error {
+    border-color: var(--am-color-danger);
+
+    &:focus {
+        border-color: var(--am-color-danger);
+        box-shadow: 0 0 0 2px var(--am-color-danger-border);
+    }
+}

@@ -1,0 +1,159 @@
+.am-cmdpal {
+    max-width: 36rem;
+    padding: 0;
+    overflow: hidden;
+}
+
+.am-cmdpal-input-wrap {
+    padding: calc(var(--am-space) * 3) calc(var(--am-space) * 4);
+    border-bottom: 1px solid var(--am-color-border);
+}
+
+.am-cmdpal-input {
+    height: var(--am-input-height);
+    padding: 0 calc(var(--am-space) * 3);
+    border: 1px solid var(--am-color-border-strong);
+    border-radius: var(--am-radius-md);
+    background-color: var(--am-color-bg-base);
+    color: var(--am-color-text-default);
+    font-size: 0.875rem;
+    font-family: inherit;
+    width: 100%;
+    transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
+
+    &::placeholder {
+        color: var(--am-color-text-placeholder);
+    }
+
+    &:focus-visible {
+        outline-offset: -1px;
+    }
+}
+
+.am-cmdpal-results {
+    overflow-y: auto;
+    max-height: 20rem;
+    padding: calc(var(--am-space) * 2) 0;
+}
+
+.am-cmdpal-empty {
+    padding: calc(var(--am-space) * 6) calc(var(--am-space) * 4);
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--am-color-text-muted);
+}
+
+.am-cmdpal-group {
+    padding-bottom: calc(var(--am-space) * 2);
+
+    &:last-child {
+        padding-bottom: 0;
+    }
+}
+
+.am-cmdpal-group-heading {
+    padding: calc(var(--am-space) * 1.5) calc(var(--am-space) * 4);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--am-color-text-muted);
+}
+
+.am-cmdpal-item {
+    all: unset;
+    display: flex;
+    align-items: center;
+    gap: calc(var(--am-space) * 2.5);
+    width: 100%;
+    box-sizing: border-box;
+    padding: calc(var(--am-space) * 2) calc(var(--am-space) * 4);
+    font-size: 0.875rem;
+    color: var(--am-color-text-default);
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.1s;
+
+    &:hover {
+        background-color: var(--am-color-bg-subtle);
+    }
+}
+
+.am-cmdpal-item-active {
+    background-color: var(--am-color-bg-subtle);
+    color: var(--am-color-primary);
+}
+
+.am-cmdpal-item-icon {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    color: var(--am-color-text-muted);
+
+    .am-cmdpal-item-active & {
+        color: var(--am-color-primary);
+    }
+}
+
+.am-cmdpal-item-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ============================================================================
+   am-kbd — Keyboard key badge
+   ============================================================================ */
+
+.am-kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: calc(var(--am-space) * 0.5) calc(var(--am-space) * 1.5);
+    background-color: var(--am-color-bg-subtle);
+    border: 1px solid var(--am-color-border-strong);
+    border-bottom-width: 2px;
+    border-radius: var(--am-radius-sm);
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--am-color-text-muted);
+    white-space: nowrap;
+    line-height: 1.4;
+}
+
+/* ============================================================================
+   am-shortcuts-table — Shortcuts list inside the shortcuts modal
+   ============================================================================ */
+
+.am-shortcuts-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.am-shortcuts-table tr + tr td {
+    padding-top: calc(var(--am-space) * 3);
+}
+
+.am-shortcuts-table-keys {
+    white-space: nowrap;
+    padding-right: calc(var(--am-space) * 6);
+}
+
+.am-shortcuts-table-keys-inner {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--am-space) * 1.5);
+}
+
+.am-shortcuts-table-sep {
+    font-size: 0.75rem;
+    color: var(--am-color-text-muted);
+}
+
+.am-shortcuts-table-desc {
+    font-size: 0.875rem;
+    color: var(--am-color-text-default);
+}
