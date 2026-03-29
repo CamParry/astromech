@@ -20,14 +20,17 @@ import type { Entry, EntryStatus, JsonObject, EntryQueryParams } from '@/types/i
 
 export function useEntriesQuery(params?: EntryQueryParams) {
     return useQuery({
-        queryKey: queryKeys.entries.list(params?.type ?? '', params as Record<string, unknown>),
+        queryKey: queryKeys.entries.list(
+            params?.type ?? '',
+            params as Record<string, unknown>
+        ),
         queryFn: () => Astromech.entries.query(params),
     });
 }
 
 export function useEntry(type: string, id: string) {
     return useQuery({
-        queryKey: queryKeys.entries.detail(type, id),
+        queryKey: queryKeys.entries.get(type, id),
         queryFn: () => Astromech.entries.get(id),
     });
 }
@@ -94,7 +97,7 @@ export function useUpdateEntry(
             Astromech.entries.update(id, payload),
         onSuccess: (entry) => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.detail(type, id),
+                queryKey: queryKeys.entries.get(type, id),
             });
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.all(type),
@@ -107,10 +110,7 @@ export function useUpdateEntry(
     });
 }
 
-export function useTrashEntry(
-    type: string,
-    options?: { onSuccess?: () => void }
-) {
+export function useTrashEntry(type: string, options?: { onSuccess?: () => void }) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
@@ -121,7 +121,10 @@ export function useTrashEntry(
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.all(type),
             });
-            toast({ message: t('entries.movedToTrash', { name: type }), variant: 'success' });
+            toast({
+                message: t('entries.movedToTrash', { name: type }),
+                variant: 'success',
+            });
             options?.onSuccess?.();
         },
         onError: (err) => {
@@ -133,10 +136,7 @@ export function useTrashEntry(
     });
 }
 
-export function useDeleteEntry(
-    type: string,
-    options?: { onSuccess?: () => void }
-) {
+export function useDeleteEntry(type: string, options?: { onSuccess?: () => void }) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
@@ -176,22 +176,23 @@ export function useDuplicateEntry(
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.all(type),
             });
-            toast({ message: t('entries.duplicated', { name: type }), variant: 'success' });
+            toast({
+                message: t('entries.duplicated', { name: type }),
+                variant: 'success',
+            });
             options?.onSuccess?.(entry);
         },
         onError: (err) => {
             toast({
-                message: err instanceof Error ? err.message : t('entries.duplicateFailed'),
+                message:
+                    err instanceof Error ? err.message : t('entries.duplicateFailed'),
                 variant: 'error',
             });
         },
     });
 }
 
-export function useRestoreEntry(
-    type: string,
-    options?: { onSuccess?: () => void }
-) {
+export function useRestoreEntry(type: string, options?: { onSuccess?: () => void }) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
@@ -227,7 +228,7 @@ export function usePublishEntry(
         mutationFn: () => Astromech.entries.publish(id),
         onSuccess: (entry) => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.detail(type, id),
+                queryKey: queryKeys.entries.get(type, id),
             });
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.all(type),
@@ -257,7 +258,7 @@ export function useUnpublishEntry(
         mutationFn: () => Astromech.entries.unpublish(id),
         onSuccess: (entry) => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.detail(type, id),
+                queryKey: queryKeys.entries.get(type, id),
             });
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.all(type),
@@ -267,7 +268,8 @@ export function useUnpublishEntry(
         },
         onError: (err) => {
             toast({
-                message: err instanceof Error ? err.message : t('entries.unpublishFailed'),
+                message:
+                    err instanceof Error ? err.message : t('entries.unpublishFailed'),
                 variant: 'error',
             });
         },
@@ -287,7 +289,7 @@ export function useScheduleEntry(
         mutationFn: (publishAt: Date) => Astromech.entries.schedule(id, publishAt),
         onSuccess: (entry) => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.detail(type, id),
+                queryKey: queryKeys.entries.get(type, id),
             });
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.all(type),
@@ -304,10 +306,7 @@ export function useScheduleEntry(
     });
 }
 
-export function useBulkTrashEntries(
-    type: string,
-    options?: { onSuccess?: () => void }
-) {
+export function useBulkTrashEntries(type: string, options?: { onSuccess?: () => void }) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
@@ -331,10 +330,7 @@ export function useBulkTrashEntries(
     });
 }
 
-export function useBulkDeleteEntries(
-    type: string,
-    options?: { onSuccess?: () => void }
-) {
+export function useBulkDeleteEntries(type: string, options?: { onSuccess?: () => void }) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
@@ -430,7 +426,7 @@ export function useRestoreEntryVersion(
             Astromech.entries.restoreVersion(id, versionId),
         onSuccess: () => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.detail(type, id),
+                queryKey: queryKeys.entries.get(type, id),
             });
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.versions(type, id),

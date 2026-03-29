@@ -9,7 +9,7 @@ export const queryKeys = {
         all: (collection: string) => ['entries', collection] as const,
         list: (collection: string, filters?: Record<string, unknown>) =>
             ['entries', collection, 'list', filters] as const,
-        detail: (collection: string, id: string) =>
+        get: (collection: string, id: string) =>
             ['entries', collection, 'detail', id] as const,
         trashed: (collection: string) => ['entries', collection, 'trashed'] as const,
         versions: (collection: string, id: string) =>
