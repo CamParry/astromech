@@ -4,7 +4,6 @@
  * Layout: [Menu toggle (mobile)] [Brand] [Search] [Bell] [Quick-create] [User menu]
  */
 
-import React from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui/react/menu';

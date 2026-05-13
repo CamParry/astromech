@@ -155,17 +155,18 @@ function EntryEditPage(): React.ReactElement {
     return (
         <Page>
             <PageHeader>
-                <PageTitle>{entry?.title ?? single}</PageTitle>
-                <Breadcrumb
-                    items={[
-                        { label: plural, to: `/entries/${type}` },
-                        {
-                            label: t('entries.editTitle', {
-                                title: entry?.title ?? single,
-                            }),
-                        },
-                    ]}
-                />
+                <PageTitle>
+                    <Breadcrumb
+                        items={[
+                            { label: plural, to: `/entries/${type}` },
+                            {
+                                label: t('entries.editTitle', {
+                                    title: entry?.title ?? single,
+                                }),
+                            },
+                        ]}
+                    />
+                </PageTitle>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     {!isReadOnly && form.state.isDirty && (
                         <span className="am-form-layout-dirty-indicator">

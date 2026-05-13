@@ -4,7 +4,7 @@
  * Compatible with Cloudflare D1 (SQLite)
  */
 
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 
 // ============================================================================
 // Roles
@@ -127,7 +127,7 @@ export const entriesTable = sqliteTable(
         updatedBy: text('updated_by').references(() => usersTable.id),
 
         // Translations support: points to the source/default locale entry
-        translationOf: text('translation_of').references(() => entriesTable.id, { onDelete: 'cascade' }),
+        translationOf: text('translation_of').references((): AnySQLiteColumn => entriesTable.id, { onDelete: 'cascade' }),
     },
     (table) => [
         index('idx_entries_type').on(table.type),

@@ -163,10 +163,8 @@ const entriesApi: EntriesApi = {
         });
     },
 
-    async get(id: string, options?: { populate?: string[]; locale?: string; type?: string }): Promise<Entry | null> {
-        const type = options?.type;
-        const basePath = type ? `/entries/${type}` : '/entries';
-        const res = await apiFetch<{ data: Entry } | null>(`${basePath}/${id}`, {
+    async get(type: string, id: string, options?: { populate?: string[]; locale?: string }): Promise<Entry | null> {
+        const res = await apiFetch<{ data: Entry } | null>(`/entries/${type}/${id}`, {
             params: {
                 populate: options?.populate?.join(','),
                 locale: options?.locale,

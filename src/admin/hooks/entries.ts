@@ -31,7 +31,7 @@ export function useEntriesQuery(params?: EntryQueryParams) {
 export function useEntry(type: string, id: string) {
     return useQuery({
         queryKey: queryKeys.entries.get(type, id),
-        queryFn: () => Astromech.entries.get(id),
+        queryFn: () => Astromech.entries.get(type, id),
     });
 }
 

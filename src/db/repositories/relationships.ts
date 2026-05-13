@@ -3,7 +3,7 @@
  * Handles CRUD operations for entry/user/media relationships
  */
 
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import {
     relationshipsTable,

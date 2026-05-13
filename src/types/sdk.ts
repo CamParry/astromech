@@ -123,14 +123,16 @@ export type TypedEntriesApi =
 
         // ── get() ────────────────────────────────────────────────────────────
         get<T extends keyof AstromechEntryTypes, K extends keyof RelationsFor<T> & string>(
+            type: T,
             id: string,
-            options: { type: T; populate: K[] } & Omit<QueryOptions, 'populate'>
+            options: { populate: K[] } & Omit<QueryOptions, 'populate'>
         ): Promise<TypedEntry<Omit<FieldsFor<T>, K> & Pick<RelationsFor<T>, K>> | null>;
         get<T extends keyof AstromechEntryTypes>(
+            type: T,
             id: string,
-            options: { type: T } & QueryOptions
+            options?: QueryOptions
         ): Promise<TypedEntry<FieldsFor<T>> | null>;
-        get(id: string, options?: QueryOptions & { type?: string }): Promise<Entry | null>;
+        get(type: string, id: string, options?: QueryOptions): Promise<Entry | null>;
 
         // ── create() ─────────────────────────────────────────────────────────
         create<T extends keyof AstromechEntryTypes>(data: {

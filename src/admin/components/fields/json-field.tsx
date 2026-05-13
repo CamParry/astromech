@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { BaseFieldProps } from '@/types/index.js';
 import './json-field.css';
 
-export function JsonField({ name, value, field, required, onChange }: BaseFieldProps) {
+export function JsonField({ name, value, required, onChange }: BaseFieldProps) {
     const initialJson = value !== undefined && value !== null
         ? JSON.stringify(value, null, 2)
         : '';

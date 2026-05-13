@@ -169,8 +169,8 @@ router.openapi(getEntryRoute, async (c) => {
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const options = { ...parseQueryParams(c.req.query()), type };
-        const entry = await Astromech.entries.get(id, options);
+        const options = parseQueryParams(c.req.query());
+        const entry = await Astromech.entries.get(type, id, options);
         if (!entry) return notFound(c, `Entry '${id}' not found`);
         return c.json({ data: entry });
     } catch (err) {

@@ -394,12 +394,11 @@ export const entries: EntriesApi = {
         };
     },
 
-    async get(id: string, options?: { populate?: string[]; locale?: string; type?: string }): Promise<Entry | null> {
-        const type = options?.type;
+    async get(type: string, id: string, options?: { populate?: string[]; locale?: string }): Promise<Entry | null> {
         const conditions = [
             eq(entriesTable.id, id),
             isNull(entriesTable.deletedAt),
-            ...(type ? [eq(entriesTable.type, type)] : []),
+            eq(entriesTable.type, type),
         ];
 
         const row = await getDb()
@@ -414,7 +413,7 @@ export const entries: EntriesApi = {
 
         let result = row[0] as Entry;
 
-        if (type && options?.populate && options.populate.length > 0) {
+        if (options?.populate && options.populate.length > 0) {
             const entryTypeConfig = config.entries[type];
             if (entryTypeConfig) {
                 const populated = await populateEntries(

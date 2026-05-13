@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -12,7 +12,6 @@ import {
     X,
 } from 'lucide-react';
 import type { BaseFieldProps } from '@/types/index.js';
-import { formatValueForInput } from '@/utils/field-formatters';
 import { Astromech } from '../../../sdk/fetch/index.js';
 import { queryKeys } from '../../hooks/use-query-keys.js';
 import { Modal } from '@/admin/components/ui/modal';
@@ -183,7 +182,7 @@ export function MediaField({ name, value, required, field, onChange, disabled }:
         setError(null);
         for (const file of files) {
             try {
-                const media = await Astromech.media.upload(file);
+                await Astromech.media.upload(file);
                 queryClient.invalidateQueries({ queryKey: queryKeys.media.list({}) });
                 toast({ message: `${file.name} uploaded.`, variant: 'success' });
             } catch (err) {

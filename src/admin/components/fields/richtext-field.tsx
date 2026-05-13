@@ -16,7 +16,7 @@ export function RichtextField({ name, value, required, onChange, disabled }: Bas
 
     return (
         <>
-            <RichTextEditor value={stringValue} onChange={handleChange} disabled={disabled} />
+            <RichTextEditor value={stringValue} onChange={handleChange} disabled={disabled ?? false} />
             <input
                 ref={inputRef}
                 type="hidden"

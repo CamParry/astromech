@@ -27,7 +27,7 @@ export function RangeInput({
                 min={min}
                 max={max}
                 step={step}
-                aria-label={ariaLabel}
+                {...(ariaLabel !== undefined && { 'aria-label': ariaLabel })}
                 onValueChange={(v) => {
                     const next = Array.isArray(v) ? v[0] : v;
                     if (next !== undefined) onChange?.(next);

@@ -114,5 +114,5 @@ app.doc('/openapi.json', {
 });
 
 if (process.env.NODE_ENV !== 'production') {
-    app.get('/docs', (c) => swaggerUI({ url: `${Astromech.config.apiRoute}/openapi.json` })(c));
+    app.get('/docs', swaggerUI({ url: `${Astromech.config.apiRoute}/openapi.json` }));
 }

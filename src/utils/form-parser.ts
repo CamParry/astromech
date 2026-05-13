@@ -1,6 +1,5 @@
 import type {
     FieldGroup,
-    FieldDefinition,
     JsonObject,
     JsonValue,
 } from '@/types/index.js';

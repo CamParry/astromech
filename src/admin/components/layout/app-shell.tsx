@@ -5,7 +5,6 @@
  * On mobile the sidebar becomes a fixed overlay with a backdrop.
  */
 
-import React from 'react';
 import { Outlet } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui/react/dialog';

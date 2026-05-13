@@ -1,4 +1,3 @@
-import React from 'react';
 import type { BaseFieldProps } from '@/types/index.js';
 import { Input } from '@/admin/components/ui/input';
 import './link-field.css';

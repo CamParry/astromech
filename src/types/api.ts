@@ -110,7 +110,7 @@ export type EntryTypeApi = {
 
 export type EntriesApi = {
     query(params?: EntryQueryParams): Promise<QueryResult<Entry>>;
-    get(id: string, options?: QueryOptions & { type?: string }): Promise<Entry | null>;
+    get(type: string, id: string, options?: QueryOptions): Promise<Entry | null>;
     create(data: {
         type: string;
         title: string;

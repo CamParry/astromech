@@ -6,7 +6,7 @@
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Entry, FieldDefinition, FieldGroup } from '@/types/index.js';
 import { RelationshipsRepository } from '@/db/repositories/relationships';
-import { eq, inArray } from 'drizzle-orm';
+import { inArray } from 'drizzle-orm';
 import { entriesTable, usersTable } from '@/db/schema';
 
 type PopulatedEntry = Entry & {

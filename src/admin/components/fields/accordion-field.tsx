@@ -1,4 +1,3 @@
-import React from 'react';
 import type { BaseFieldProps } from '@/types/index.js';
 import { Collapsible } from '@/admin/components/ui/collapsible';
 import { FormField } from '@/admin/components/fields/form-field';

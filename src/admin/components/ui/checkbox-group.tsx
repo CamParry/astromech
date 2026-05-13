@@ -23,10 +23,10 @@ export function CheckboxGroup({ options, value = [], onChange, name, disabled }:
             {options.map((opt) => (
                 <Checkbox
                     key={opt.value}
-                    id={name ? `${name}--${opt.value}` : undefined}
+                    {...(name !== undefined && { id: `${name}--${opt.value}` })}
                     label={opt.label}
                     checked={value.includes(opt.value)}
-                    disabled={disabled}
+                    disabled={disabled ?? false}
                     onChange={(checked) => handleChange(opt.value, checked)}
                 />
             ))}

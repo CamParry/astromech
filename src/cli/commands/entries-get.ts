@@ -11,7 +11,7 @@ export default defineCommand({
     },
     async run({ args }) {
         await loadConfig(args.config);
-        const entry = await entries.get(args.id, { type: args.type });
+        const entry = await entries.get(args.type, args.id);
         if (!entry) {
             console.error('Entry not found');
             process.exit(1);
