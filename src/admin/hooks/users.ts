@@ -2,7 +2,7 @@
  * Query and mutation hooks for users.
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, queryOptions } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Astromech } from '@/sdk/fetch/index.js';
 import { queryKeys } from './use-query-keys.js';
@@ -20,11 +20,15 @@ export function useUsersQuery(params?: UserQueryParams) {
     });
 }
 
-export function useUser(id: string) {
-    return useQuery({
+export function userQueryOptions(id: string) {
+    return queryOptions({
         queryKey: queryKeys.users.detail(id),
         queryFn: () => Astromech.users.get(id),
     });
+}
+
+export function useUser(id: string) {
+    return useQuery(userQueryOptions(id));
 }
 
 // ============================================================================

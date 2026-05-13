@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { createFileRoute, useParams, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { FileImage } from 'lucide-react';
 import {
@@ -30,6 +30,7 @@ import {
     useUpdateMedia,
     useDeleteMedia,
 } from '@/admin/hooks/index.js';
+import { mediaItemQueryOptions } from '@/admin/hooks/media.js';
 
 // ============================================================================
 // Helpers
@@ -65,7 +66,7 @@ type FormValues = {
 // ============================================================================
 
 function MediaEditPage(): React.ReactElement {
-    const { id } = useParams({ strict: false }) as { id: string };
+    const { id } = Route.useParams();
     const { canUploadMedia, canDeleteMedia } = usePermissions();
     const confirm = useConfirm();
     const navigate = useNavigate();
@@ -251,5 +252,7 @@ function MediaEditPage(): React.ReactElement {
 }
 
 export const Route = createFileRoute('/_protected/media/$id')({
+    loader: ({ context, params }) =>
+        context.queryClient.ensureQueryData(mediaItemQueryOptions(params.id)),
     component: MediaEditPage,
 });

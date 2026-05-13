@@ -1,11 +1,13 @@
 /**
  * Auth context for the Astromech admin SPA.
  *
- * Provides the current session user, loading state, and login/logout actions.
+ * Session state is owned by React Query (`sessionQueryOptions`) so that route
+ * `beforeLoad` guards can ensureQueryData the same key the React tree reads.
  * Uses Better Auth endpoints via fetch with `credentials: 'include'`.
  */
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext } from 'react';
+import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 
 declare const __ASTROMECH_API_ROUTE__: string;
 
@@ -29,20 +31,6 @@ type AuthContextValue = {
     logout: () => Promise<void>;
 };
 
-// ============================================================================
-// Context
-// ============================================================================
-
-const AuthContext = createContext<AuthContextValue | null>(null);
-
-// ============================================================================
-// Provider
-// ============================================================================
-
-type AuthProviderProps = {
-    children: React.ReactNode;
-};
-
 type MeResponse = {
     data: {
         user: {
@@ -61,36 +49,39 @@ type MeResponse = {
     };
 };
 
+// ============================================================================
+// Session query
+// ============================================================================
+
+async function fetchSession(): Promise<AuthUser | null> {
+    const res = await fetch(`${__ASTROMECH_API_ROUTE__}/me`, {
+        credentials: 'include',
+    });
+    if (!res.ok) return null;
+    const { data } = (await res.json()) as MeResponse;
+    return { ...data.user, permissions: data.role.permissions };
+}
+
+export const sessionQueryOptions = queryOptions({
+    queryKey: ['session'] as const,
+    queryFn: fetchSession,
+    staleTime: 30_000,
+    retry: false,
+});
+
+// ============================================================================
+// Context
+// ============================================================================
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+type AuthProviderProps = {
+    children: React.ReactNode;
+};
+
 export function AuthProvider({ children }: AuthProviderProps) {
-    const [user, setUser] = useState<AuthUser | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-
-    async function fetchMe(): Promise<void> {
-        const res = await fetch(`${__ASTROMECH_API_ROUTE__}/me`, {
-            credentials: 'include',
-        });
-
-        if (!res.ok) {
-            setUser(null);
-            return;
-        }
-
-        const { data } = (await res.json()) as MeResponse;
-        setUser({
-            ...data.user,
-            permissions: data.role.permissions,
-        });
-    }
-
-    useEffect(() => {
-        fetchMe()
-            .catch(() => {
-                setUser(null);
-            })
-            .finally(() => {
-                setIsLoading(false);
-            });
-    }, []);
+    const queryClient = useQueryClient();
+    const { data, isPending } = useQuery(sessionQueryOptions);
 
     async function login(email: string, password: string): Promise<void> {
         const res = await fetch(`${__ASTROMECH_API_ROUTE__}/auth/sign-in/email`, {
@@ -99,13 +90,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password }),
         });
-
         if (!res.ok) {
-            const data = (await res.json().catch(() => ({}))) as { message?: string };
-            throw new Error(data.message ?? 'Login failed');
+            const body = (await res.json().catch(() => ({}))) as { message?: string };
+            throw new Error(body.message ?? 'Login failed');
         }
-
-        await fetchMe();
+        await queryClient.refetchQueries({ queryKey: sessionQueryOptions.queryKey });
     }
 
     async function logout(): Promise<void> {
@@ -113,10 +102,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
             method: 'POST',
             credentials: 'include',
         });
-        setUser(null);
+        queryClient.setQueryData(sessionQueryOptions.queryKey, null);
     }
 
-    return <AuthContext.Provider value={{ user, isLoading, login, logout }}>{children}</AuthContext.Provider>;
+    return (
+        <AuthContext.Provider
+            value={{ user: data ?? null, isLoading: isPending, login, logout }}
+        >
+            {children}
+        </AuthContext.Provider>
+    );
 }
 
 // ============================================================================

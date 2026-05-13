@@ -5,7 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import { createFileRoute, useParams, useNavigate, Link } from '@tanstack/react-router';
+import { createFileRoute, useNavigate, Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -21,6 +21,10 @@ import {
     PageContent,
 } from '@/admin/components/ui/index.js';
 import { useEntry, useEntryVersions, useRestoreEntryVersion } from '@/admin/hooks/index.js';
+import {
+    entryQueryOptions,
+    entryVersionsQueryOptions,
+} from '@/admin/hooks/entries.js';
 import type { EntryVersion } from '@/types/index.js';
 
 // ============================================================================
@@ -208,10 +212,7 @@ function DiffView({
 // ============================================================================
 
 function EntryVersionsPage(): React.ReactElement {
-    const { type, id } = useParams({ strict: false }) as {
-        type: string;
-        id: string;
-    };
+    const { type, id } = Route.useParams();
     const confirm = useConfirm();
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -344,5 +345,12 @@ function EntryVersionsPage(): React.ReactElement {
 }
 
 export const Route = createFileRoute('/_protected/entries/$type/$id/versions')({
+	loader: ({ context, params }) =>
+		Promise.all([
+			context.queryClient.ensureQueryData(entryQueryOptions(params.type, params.id)),
+			context.queryClient.ensureQueryData(
+				entryVersionsQueryOptions(params.type, params.id),
+			),
+		]),
 	component: EntryVersionsPage,
 });

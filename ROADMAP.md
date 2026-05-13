@@ -452,7 +452,8 @@ Implementation of [`specs/typed-entries-api.md`](specs/typed-entries-api.md). Co
 - [x] `src/admin/hooks/media.ts` — `useMedia()`, `useUploadMedia()`, `useDeleteMedia()`, etc.
 - [x] `src/admin/hooks/users.ts` — `useUsers()`, `useUser()`, `useUpdateUser()`, etc.
 - [x] Replace all inline `useQuery` / `useMutation` calls in admin pages with the new hooks
-- [ ] `astromech/react` public export once cache invalidation across hook boundaries is figured out
+
+Hooks stay internal to the admin SPA — no `astromech/react` public export. Consuming apps that want React Query integration can re-implement the thin SDK wrappers in user land with their own query keys, toast system, and invalidation policy.
 
 ---
 
@@ -463,8 +464,13 @@ Implementation of [`specs/typed-entries-api.md`](specs/typed-entries-api.md). Co
 - [x] Add `src/admin/routeTree.gen.ts` to `.gitignore`
 - [x] Rename page files to TanStack Router file conventions (`_layout.tsx`, `$param.tsx`, `index.tsx`, etc.)
 - [x] Delete manual route definitions from `src/admin/router.tsx`; import generated route tree instead
-- [ ] Migrate per-route search params, loaders, and `beforeLoad` guards to co-located route files
-- [ ] Verify plugin route merging still works
+- [x] Migrate per-route search params, loaders, and `beforeLoad` guards to co-located route files
+    - Router context wires `queryClient` so `beforeLoad`/`loader` can call `ensureQueryData`
+    - Auth: `AuthProvider` session backed by React Query (`sessionQueryOptions`); `_protected` and `_auth` `beforeLoad` guards replace render-time `<Navigate />` checks; both routes have `pendingComponent` for the auth-check loading state
+    - `validateSearch` added to `_auth/reset-password.tsx` and `_protected/media/index.tsx` (replaces the custom `useQueryState` hook, now deleted)
+    - Loaders pre-fetch on `entries/$type/$id` (entry), `entries/$type/$id/versions` (entry + versions), `media/$id`, `users/$id` — shared `queryOptions` factories exported from each hooks module
+    - All `useParams({ strict: false })` / `useSearch({ strict: false })` casts replaced with `Route.useParams()` / `Route.useSearch()`
+- [ ] Verify plugin route merging still works (deferred to Phase 18)
 
 ---
 

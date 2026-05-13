@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { createFileRoute, useParams, useNavigate, Link } from '@tanstack/react-router';
+import { createFileRoute, useNavigate, Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui/react/menu';
 import { Copy, ExternalLink, MoreHorizontal, Trash2 } from 'lucide-react';
@@ -40,6 +40,7 @@ import {
     useTrashEntry,
     useDuplicateEntry,
 } from '@/admin/hooks/index.js';
+import { entryQueryOptions } from '@/admin/hooks/entries.js';
 import type { EntryStatus } from '@/types/index.js';
 
 // ============================================================================
@@ -70,10 +71,7 @@ function StatusBadge({ status }: StatusBadgeProps): React.ReactElement {
 // ============================================================================
 
 function EntryEditPage(): React.ReactElement {
-    const { type, id } = useParams({ strict: false }) as {
-        type: string;
-        id: string;
-    };
+    const { type, id } = Route.useParams();
     const { toast } = useToast();
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -436,5 +434,7 @@ function EntryEditPage(): React.ReactElement {
 }
 
 export const Route = createFileRoute('/_protected/entries/$type/$id/')({
+    loader: ({ context, params }) =>
+        context.queryClient.ensureQueryData(entryQueryOptions(params.type, params.id)),
     component: EntryEditPage,
 });

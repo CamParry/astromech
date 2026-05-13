@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from 'react';
-import { createFileRoute, useSearch, useNavigate, Link } from '@tanstack/react-router';
+import { createFileRoute, useNavigate, Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { AuthCard } from '@/admin/components/auth/AuthCard.js';
 import { Input } from '@/admin/components/ui/input.js';
@@ -13,8 +13,7 @@ declare const __ASTROMECH_API_ROUTE__: string;
 
 function ResetPasswordPage() {
     const { t } = useTranslation();
-    const search = useSearch({ from: '/_auth/reset-password' });
-    const token = (search as Record<string, string | undefined>).token ?? '';
+    const { token } = Route.useSearch();
     const navigate = useNavigate();
 
     const [newPassword, setNewPassword] = useState('');
@@ -100,5 +99,9 @@ function ResetPasswordPage() {
 }
 
 export const Route = createFileRoute('/_auth/reset-password')({
+	validateSearch: (search: Record<string, unknown>): { token: string } => {
+		const token = typeof search['token'] === 'string' ? search['token'] : '';
+		return { token };
+	},
 	component: ResetPasswordPage,
 });

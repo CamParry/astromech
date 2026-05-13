@@ -29,29 +29,66 @@ import { MediaCard } from '@/admin/components/media/MediaCard.js';
 import { MediaRow } from '@/admin/components/media/MediaRow.js';
 import { MediaDetailModal } from '@/admin/components/media/MediaDetailModal.js';
 import { useViewMode } from '@/admin/hooks/use-view-mode.js';
-import { useQueryState } from '@/admin/hooks/use-query-state.js';
 import { useSelection } from '@/admin/hooks/use-selection.js';
 import { useUploadMedia, usePermissions, useMediaQuery, useBulkDeleteMedia } from '@/admin/hooks/index.js';
 import { TYPE_FILTER_OPTIONS, MEDIA_ACCEPT } from '@/admin/types/media.js';
 import type { TypeFilter } from '@/admin/types/media.js';
 
 const PER_PAGE = 20;
+const TYPE_FILTER_VALUES: readonly TypeFilter[] = TYPE_FILTER_OPTIONS.map((o) => o.value);
+
+type MediaSearch = {
+    q?: string;
+    type?: TypeFilter;
+    page?: number;
+};
 
 function MediaIndexPage(): React.ReactElement {
     const { t } = useTranslation();
     const confirm = useConfirm();
+    const navigate = Route.useNavigate();
 
-    const [q, setQ] = useQueryState('q', '');
-    const [typeFilter, setTypeFilter] = useQueryState<TypeFilter>('type', 'all');
-    const [page, setPage] = useQueryState('page', '1');
+    const { q = '', type: typeFilter = 'all', page: pageParam = 1 } = Route.useSearch();
     const [viewMode, setViewMode] = useViewMode('media');
     const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
+
+    function setQ(value: string): void {
+        void navigate({
+            search: (prev) => {
+                const next: MediaSearch = { ...prev };
+                if (value) next.q = value;
+                else delete next.q;
+                return next;
+            },
+        });
+    }
+    function setTypeFilter(value: TypeFilter): void {
+        void navigate({
+            search: (prev) => {
+                const next: MediaSearch = { ...prev };
+                if (value === 'all') delete next.type;
+                else next.type = value;
+                delete next.page;
+                return next;
+            },
+        });
+    }
+    function setPage(value: number): void {
+        void navigate({
+            search: (prev) => {
+                const next: MediaSearch = { ...prev };
+                if (value === 1) delete next.page;
+                else next.page = value;
+                return next;
+            },
+        });
+    }
 
     const { canUploadMedia, canDeleteMedia } = usePermissions();
 
     const { upload, isUploading } = useUploadMedia();
 
-    const currentPage = Math.max(1, Number(page) || 1);
+    const currentPage = Math.max(1, pageParam);
     const queryParams = {
         ...(q ? { search: q } : {}),
         ...(typeFilter !== 'all' ? { where: { mimeType: typeFilter } } : {}),
@@ -126,7 +163,6 @@ function MediaIndexPage(): React.ReactElement {
                                 value={typeFilter}
                                 onValueChange={(v) => {
                                     setTypeFilter((v ?? 'all') as TypeFilter);
-                                    setPage('1');
                                 }}
                                 options={TYPE_FILTER_OPTIONS}
                                 triggerPrefix={t('media.typeFilterPrefix')}
@@ -244,7 +280,7 @@ function MediaIndexPage(): React.ReactElement {
                                     <Pagination
                                         currentPage={currentPage}
                                         totalPages={totalPages}
-                                        onPage={(p) => setPage(String(p))}
+                                        onPage={setPage}
                                     />
                                 </>
                             )}
@@ -267,5 +303,24 @@ function MediaIndexPage(): React.ReactElement {
 }
 
 export const Route = createFileRoute('/_protected/media/')({
+	validateSearch: (search: Record<string, unknown>): MediaSearch => {
+		const out: MediaSearch = {};
+		if (typeof search['q'] === 'string' && search['q']) out.q = search['q'];
+		if (
+			typeof search['type'] === 'string' &&
+			TYPE_FILTER_VALUES.includes(search['type'] as TypeFilter)
+		) {
+			out.type = search['type'] as TypeFilter;
+		}
+		const pageRaw = search['page'];
+		const pageNum =
+			typeof pageRaw === 'number'
+				? pageRaw
+				: typeof pageRaw === 'string'
+					? Number(pageRaw)
+					: NaN;
+		if (Number.isFinite(pageNum) && pageNum > 1) out.page = pageNum;
+		return out;
+	},
 	component: MediaIndexPage,
 });

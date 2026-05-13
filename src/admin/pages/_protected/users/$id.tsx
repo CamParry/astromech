@@ -6,7 +6,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { createFileRoute, useParams, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { useTranslation } from 'react-i18next';
 import {
@@ -32,6 +32,7 @@ import {
     useUpdateUser,
     useDeleteUser,
 } from '@/admin/hooks/index.js';
+import { userQueryOptions } from '@/admin/hooks/users.js';
 import { useAuth } from '@/admin/context/auth.js';
 import adminConfig from 'virtual:astromech/admin-config';
 
@@ -64,7 +65,7 @@ type FormValues = {
 // ============================================================================
 
 function UserEditPage(): React.ReactElement {
-    const { id } = useParams({ strict: false }) as { id: string };
+    const { id } = Route.useParams();
     const confirm = useConfirm();
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -326,5 +327,7 @@ function UserEditPage(): React.ReactElement {
 }
 
 export const Route = createFileRoute('/_protected/users/$id')({
+    loader: ({ context, params }) =>
+        context.queryClient.ensureQueryData(userQueryOptions(params.id)),
     component: UserEditPage,
 });

@@ -9,7 +9,7 @@
  * SDK surface: see specs/typed-entries-api.md (options-object, type required).
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, queryOptions } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Astromech } from '@/sdk/fetch/index.js';
 import { queryKeys } from './use-query-keys.js';
@@ -38,19 +38,26 @@ export function useEntriesQuery(
     });
 }
 
-export function useEntry(type: string, id: string) {
-    return useQuery({
+export function entryQueryOptions(type: string, id: string) {
+    return queryOptions({
         queryKey: queryKeys.entries.get(type, id),
         queryFn: () => Astromech.entries.get({ type, id }),
     });
 }
 
-export function useEntryVersions(type: string, id: string, enabled = true) {
-    return useQuery({
+export function entryVersionsQueryOptions(type: string, id: string) {
+    return queryOptions({
         queryKey: queryKeys.entries.versions(type, id),
         queryFn: () => Astromech.entries.versions({ type, id }),
-        enabled,
     });
+}
+
+export function useEntry(type: string, id: string) {
+    return useQuery(entryQueryOptions(type, id));
+}
+
+export function useEntryVersions(type: string, id: string, enabled = true) {
+    return useQuery({ ...entryVersionsQueryOptions(type, id), enabled });
 }
 
 /**

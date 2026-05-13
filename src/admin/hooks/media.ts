@@ -4,7 +4,7 @@
  * Upload is handled separately by useUploadMedia.
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, queryOptions } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Astromech } from '@/sdk/fetch/index.js';
 import { queryKeys } from './use-query-keys.js';
@@ -22,12 +22,15 @@ export function useMediaQuery(params?: MediaQueryParams) {
     });
 }
 
-export function useMediaItem(id: string, enabled = true) {
-    return useQuery({
+export function mediaItemQueryOptions(id: string) {
+    return queryOptions({
         queryKey: queryKeys.media.detail(id),
         queryFn: () => Astromech.media.get(id),
-        enabled,
     });
+}
+
+export function useMediaItem(id: string, enabled = true) {
+    return useQuery({ ...mediaItemQueryOptions(id), enabled });
 }
 
 // ============================================================================

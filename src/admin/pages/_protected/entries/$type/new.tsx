@@ -10,7 +10,7 @@
  */
 
 import React, { useState } from 'react';
-import { createFileRoute, useParams, useNavigate, useSearch } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import {
@@ -192,8 +192,8 @@ function RadioOption({
 // ============================================================================
 
 function EntryCreatePage(): React.ReactElement {
-    const { type } = useParams({ strict: false }) as { type: string };
-    const search = useSearch({ strict: false }) as SearchParams;
+    const { type } = Route.useParams();
+    const search = Route.useSearch();
     const navigate = useNavigate();
     const { toast } = useToast();
     const { t } = useTranslation();

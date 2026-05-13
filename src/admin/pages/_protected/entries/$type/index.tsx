@@ -8,7 +8,7 @@
 
 import { formatDate } from '@/support/dates.js';
 import { Menu } from '@base-ui/react/menu';
-import { createFileRoute, Link, useNavigate, useParams } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import {
     Check,
     Copy,
@@ -493,7 +493,7 @@ function EntryCard({
 // ============================================================================
 
 function EntryIndexPage(): React.ReactElement {
-    const { type } = useParams({ strict: false }) as { type: string };
+    const { type } = Route.useParams();
     const navigate = useNavigate();
     const { toast } = useToast();
     const { t } = useTranslation();

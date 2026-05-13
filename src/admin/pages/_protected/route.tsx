@@ -1,29 +1,22 @@
-import { createFileRoute, Navigate } from '@tanstack/react-router';
-import { useAuth } from '../../context/auth.js';
-import { usePermissions } from '../../hooks/index.js';
+import { createFileRoute, redirect } from '@tanstack/react-router';
+import { sessionQueryOptions } from '../../context/auth.js';
+import { hasPermission } from '../../hooks/use-permissions.js';
 import { UIProvider } from '../../context/ui.js';
 import { AppShell } from '../../components/layout/app-shell.js';
 
 export const Route = createFileRoute('/_protected')({
+	beforeLoad: async ({ context }) => {
+		const session = await context.queryClient.ensureQueryData(sessionQueryOptions);
+		if (session === null || !hasPermission(session.permissions, 'admin:access')) {
+			throw redirect({ to: '/login' });
+		}
+	},
+	pendingComponent: () => <div className="am-loading" />,
+	pendingMs: 0,
 	component: ProtectedLayout,
 });
 
 function ProtectedLayout() {
-	const { user, isLoading } = useAuth();
-	const { hasAdminAccess } = usePermissions();
-
-	if (isLoading) {
-		return <div className="am-loading" />;
-	}
-
-	if (user === null) {
-		return <Navigate to="/login" />;
-	}
-
-	if (!hasAdminAccess()) {
-		return <Navigate to="/login" />;
-	}
-
 	return (
 		<UIProvider>
 			<AppShell />

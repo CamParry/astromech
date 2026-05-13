@@ -7,7 +7,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import { Astromech } from '../sdk/fetch/index.js';
-import { router } from './router.js';
+import { createAppRouter } from './router.js';
 import './i18n.js';
 import './styles/main.css';
 
@@ -26,6 +26,8 @@ const queryClient = new QueryClient({
         },
     },
 });
+
+const router = createAppRouter(queryClient);
 
 export default function AdminApp() {
     return (
