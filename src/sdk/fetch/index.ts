@@ -9,10 +9,13 @@ import type {
     AstromechClient,
     EntriesApi,
     Entry,
+    EntryDuplicateOverrides,
     EntryQueryParams,
+    EntryUpdateData,
     QueryResult,
     EntryStatus,
     EntryVersion,
+    IncomingRelation,
     JsonObject,
     JsonValue,
     Media,
@@ -21,7 +24,6 @@ import type {
     ResolvedConfig,
     Setting,
     SettingsApi,
-    TranslationInfo,
     TypedEntriesApi,
     User,
     UserQueryParams,
@@ -154,34 +156,47 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
 // ============================================================================
 
 const entriesApi: EntriesApi = {
-    async query(params?: EntryQueryParams): Promise<QueryResult<Entry>> {
-        const type = params?.type;
-        const basePath = type ? `/entries/${type}` : '/entries';
-        return apiFetch<QueryResult<Entry>>(`${basePath}/query`, {
+    async query(params: EntryQueryParams & { type: string | readonly string[] }): Promise<QueryResult<Entry>> {
+        const typeParam = params.type;
+        const isArray = Array.isArray(typeParam);
+        // Cross-type: /entries/query (no :type). Single-type: /entries/:type/query.
+        const path = isArray ? '/entries/query' : `/entries/${typeParam as string}/query`;
+        const body = isArray ? params : { ...params, type: undefined };
+        return apiFetch<QueryResult<Entry>>(path, {
             method: 'POST',
-            body: params ?? {},
+            body,
         });
     },
 
-    async get(type: string, id: string, options?: { populate?: string[]; locale?: string }): Promise<Entry | null> {
-        const res = await apiFetch<{ data: Entry } | null>(`/entries/${type}/${id}`, {
-            params: {
-                populate: options?.populate?.join(','),
-                locale: options?.locale,
-            },
-        });
+    async get(params: {
+        type: string;
+        id: string;
+        locale?: string;
+        populate?: string[];
+    }): Promise<Entry | null> {
+        const res = await apiFetch<{ data: Entry } | null>(
+            `/entries/${params.type}/${params.id}`,
+            {
+                params: {
+                    populate: params.populate?.join(','),
+                    locale: params.locale,
+                },
+            }
+        );
         return res?.data ?? null;
     },
 
-    async create(data: {
+    async create(params: {
         type: string;
         title: string;
         slug?: string;
+        locale?: string;
+        localeGroup?: string;
         fields?: JsonObject;
         status?: EntryStatus;
         publishAt?: Date | null;
     }): Promise<Entry> {
-        const { type, ...rest } = data;
+        const { type, ...rest } = params;
         const res = await apiFetch<{ data: Entry }>(`/entries/${type}`, {
             method: 'POST',
             body: rest,
@@ -189,117 +204,179 @@ const entriesApi: EntriesApi = {
         return res.data;
     },
 
-    async update(
-        id: string,
-        data: Partial<{
-            title: string;
-            slug: string;
-            fields: JsonObject;
-            status: EntryStatus;
-            publishAt: Date | null;
-        }>
-    ): Promise<Entry> {
-        const res = await apiFetch<{ data: Entry }>(`/entries/${id}`, {
-            method: 'PUT',
-            body: data,
-        });
-        return res.data;
-    },
-
-    async trash(id: string): Promise<void> {
-        await apiFetch<void>(`/entries/${id}`, {
-            method: 'DELETE',
-        });
-    },
-
-    async duplicate(id: string): Promise<Entry> {
-        const res = await apiFetch<{ data: Entry }>(`/entries/${id}/duplicate`, {
-            method: 'POST',
-        });
-        return res.data;
-    },
-
-    async restore(id: string): Promise<Entry> {
-        const res = await apiFetch<{ data: Entry }>(`/entries/${id}/restore`, {
-            method: 'POST',
-        });
-        return res.data;
-    },
-
-    async delete(id: string): Promise<void> {
-        await apiFetch<void>(`/entries/${id}/force`, {
-            method: 'DELETE',
-        });
-    },
-
-    async emptyTrash(options?: { type?: string }): Promise<void> {
-        const type = options?.type;
-        const basePath = type ? `/entries/${type}` : '/entries';
-        await apiFetch<void>(`${basePath}/trash`, {
-            method: 'DELETE',
-        });
-    },
-
-    async versions(id: string): Promise<EntryVersion[]> {
-        const res = await apiFetch<{ data: EntryVersion[] }>(`/entries/${id}/versions`);
-        return res.data;
-    },
-
-    async restoreVersion(id: string, versionId: string): Promise<Entry> {
-        const res = await apiFetch<{ data: Entry }>(`/entries/${id}/versions/${versionId}/restore`, {
-            method: 'POST',
-        });
-        return res.data;
-    },
-
-    async translations(id: string): Promise<TranslationInfo[]> {
-        const res = await apiFetch<{ data: TranslationInfo[] }>(`/entries/${id}/translations`);
-        return res.data;
-    },
-
-    async createTranslation(
-        sourceId: string,
-        locale: string,
-        options?: { copyFields?: boolean }
-    ): Promise<Entry> {
-        const res = await apiFetch<{ data: Entry }>(`/entries/${sourceId}/translations`, {
-            method: 'POST',
-            body: { locale, ...options },
-        });
-        return res.data;
-    },
-
-    async getTranslation(sourceId: string, locale: string): Promise<Entry | null> {
-        try {
-            const res = await apiFetch<{ data: Entry }>(`/entries/${sourceId}/translations/${locale}`);
+    update: (async (params: {
+        type: string;
+        id: string | readonly string[];
+        data: EntryUpdateData;
+    }): Promise<Entry | Entry[]> => {
+        if (Array.isArray(params.id)) {
+            const res = await apiFetch<{ data: Entry[] }>(
+                `/entries/${params.type}/bulk-update`,
+                { method: 'POST', body: { ids: params.id, data: params.data } }
+            );
             return res.data;
-        } catch (err) {
-            if (err instanceof AstromechApiError && err.status === 404) return null;
-            throw err;
         }
+        const res = await apiFetch<{ data: Entry }>(
+            `/entries/${params.type}/${params.id as string}`,
+            { method: 'PUT', body: params.data }
+        );
+        return res.data;
+    }) as EntriesApi['update'],
+
+    async trash(params: {
+        type: string;
+        id: string | readonly string[];
+        cascadeLocales?: boolean;
+    }): Promise<void> {
+        if (Array.isArray(params.id)) {
+            await apiFetch<void>(`/entries/${params.type}/bulk-trash`, {
+                method: 'POST',
+                body: { ids: params.id, cascadeLocales: !!params.cascadeLocales },
+            });
+            return;
+        }
+        await apiFetch<void>(`/entries/${params.type}/${params.id as string}`, {
+            method: 'DELETE',
+            ...(params.cascadeLocales ? { params: { cascadeLocales: true } } : {}),
+        });
     },
 
-    async publish(id: string): Promise<Entry> {
-        const res = await apiFetch<{ data: Entry }>(`/entries/${id}/publish`, {
-            method: 'POST',
-        });
+    async duplicate(params: {
+        type: string;
+        id: string;
+        overrides?: EntryDuplicateOverrides;
+    }): Promise<Entry> {
+        const res = await apiFetch<{ data: Entry }>(
+            `/entries/${params.type}/${params.id}/duplicate`,
+            { method: 'POST', body: params.overrides ?? {} }
+        );
         return res.data;
     },
 
-    async unpublish(id: string): Promise<Entry> {
-        const res = await apiFetch<{ data: Entry }>(`/entries/${id}/unpublish`, {
-            method: 'POST',
+    restore: (async (params: {
+        type: string;
+        id: string | readonly string[];
+    }): Promise<Entry | Entry[]> => {
+        if (Array.isArray(params.id)) {
+            const res = await apiFetch<{ data: Entry[] }>(
+                `/entries/${params.type}/bulk-restore`,
+                { method: 'POST', body: { ids: params.id } }
+            );
+            return res.data;
+        }
+        const res = await apiFetch<{ data: Entry }>(
+            `/entries/${params.type}/${params.id as string}/restore`,
+            { method: 'POST' }
+        );
+        return res.data;
+    }) as EntriesApi['restore'],
+
+    async delete(params: {
+        type: string;
+        id: string | readonly string[];
+        cascadeLocales?: boolean;
+    }): Promise<void> {
+        if (Array.isArray(params.id)) {
+            await apiFetch<void>(`/entries/${params.type}/bulk-delete`, {
+                method: 'POST',
+                body: { ids: params.id, cascadeLocales: !!params.cascadeLocales },
+            });
+            return;
+        }
+        await apiFetch<void>(`/entries/${params.type}/${params.id as string}/force`, {
+            method: 'DELETE',
+            ...(params.cascadeLocales ? { params: { cascadeLocales: true } } : {}),
         });
+    },
+
+    async emptyTrash(params: { type: string }): Promise<void> {
+        await apiFetch<void>(`/entries/${params.type}/trash`, { method: 'DELETE' });
+    },
+
+    async versions(params: { type: string; id: string }): Promise<EntryVersion[]> {
+        const res = await apiFetch<{ data: EntryVersion[] }>(
+            `/entries/${params.type}/${params.id}/versions`
+        );
         return res.data;
     },
 
-    async schedule(id: string, publishAt: Date): Promise<Entry> {
-        const res = await apiFetch<{ data: Entry }>(`/entries/${id}/schedule`, {
-            method: 'POST',
-            body: { publishAt: publishAt.toISOString() },
-        });
+    async restoreVersion(params: {
+        type: string;
+        id: string;
+        versionId: string;
+    }): Promise<Entry> {
+        const res = await apiFetch<{ data: Entry }>(
+            `/entries/${params.type}/${params.id}/versions/${params.versionId}/restore`,
+            { method: 'POST' }
+        );
         return res.data;
     },
+
+    async incomingRelations(params: {
+        type: string;
+        id: string;
+    }): Promise<IncomingRelation[]> {
+        const res = await apiFetch<{ data: IncomingRelation[] }>(
+            `/entries/${params.type}/${params.id}/incoming-relations`
+        );
+        return res.data;
+    },
+
+    publish: (async (params: {
+        type: string;
+        id: string | readonly string[];
+    }): Promise<Entry | Entry[]> => {
+        if (Array.isArray(params.id)) {
+            const res = await apiFetch<{ data: Entry[] }>(
+                `/entries/${params.type}/bulk-publish`,
+                { method: 'POST', body: { ids: params.id } }
+            );
+            return res.data;
+        }
+        const res = await apiFetch<{ data: Entry }>(
+            `/entries/${params.type}/${params.id as string}/publish`,
+            { method: 'POST' }
+        );
+        return res.data;
+    }) as EntriesApi['publish'],
+
+    unpublish: (async (params: {
+        type: string;
+        id: string | readonly string[];
+    }): Promise<Entry | Entry[]> => {
+        if (Array.isArray(params.id)) {
+            const res = await apiFetch<{ data: Entry[] }>(
+                `/entries/${params.type}/bulk-unpublish`,
+                { method: 'POST', body: { ids: params.id } }
+            );
+            return res.data;
+        }
+        const res = await apiFetch<{ data: Entry }>(
+            `/entries/${params.type}/${params.id as string}/unpublish`,
+            { method: 'POST' }
+        );
+        return res.data;
+    }) as EntriesApi['unpublish'],
+
+    schedule: (async (params: {
+        type: string;
+        id: string | readonly string[];
+        publishAt: Date;
+    }): Promise<Entry | Entry[]> => {
+        const publishAtIso = params.publishAt.toISOString();
+        if (Array.isArray(params.id)) {
+            const res = await apiFetch<{ data: Entry[] }>(
+                `/entries/${params.type}/bulk-schedule`,
+                { method: 'POST', body: { ids: params.id, publishAt: publishAtIso } }
+            );
+            return res.data;
+        }
+        const res = await apiFetch<{ data: Entry }>(
+            `/entries/${params.type}/${params.id as string}/schedule`,
+            { method: 'POST', body: { publishAt: publishAtIso } }
+        );
+        return res.data;
+    }) as EntriesApi['schedule'],
 };
 
 // ============================================================================

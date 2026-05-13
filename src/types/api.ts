@@ -1,5 +1,11 @@
 /**
- * API client contract types — collection API, media, settings, users
+ * API client contract types — entries API, media, settings, users.
+ *
+ * Entry surface design: see specs/typed-entries-api.md.
+ *  - Every entry method takes a single options object.
+ *  - `type` is required on every method.
+ *  - Bulk-capable methods accept `id: string | string[]`; single id → single
+ *    return, array id → array return. Bulk is all-or-nothing transactional.
  */
 
 import type {
@@ -12,6 +18,13 @@ import type {
     Setting,
     User,
 } from './domain.js';
+
+// ============================================================================
+// Locale Sentinels
+// ============================================================================
+
+/** Sentinel for query({ locale }) meaning "rows across all locales". */
+export type AllLocales = 'all';
 
 // ============================================================================
 // Query Types
@@ -30,7 +43,8 @@ export type QueryOptions = {
 };
 
 export type EntryQueryParams = {
-    type?: string;
+    /** Single type or array of types. Required at the runtime surface. */
+    type?: string | readonly string[];
     search?: string;
     where?: WhereFilters;
     trashed?: boolean;
@@ -38,7 +52,8 @@ export type EntryQueryParams = {
     limit?: number | 'all';
     sort?: SortOption | SortOption[];
     populate?: string[];
-    locale?: string;
+    /** Locale code, or `'all'` for rows across every locale. Defaults to configured `defaultLocale`. */
+    locale?: string | AllLocales;
 };
 
 export type QueryResult<T = Entry> = {
@@ -55,97 +70,127 @@ export type QueryResult<T = Entry> = {
 export type EntryQueryResult<T = Entry> = QueryResult<T>;
 
 // ============================================================================
-// Entry Type API
+// Entry options
 // ============================================================================
 
-export type TranslationInfo = {
-    locale: string;
-    entryId: string;
-    slug: string | null;
+/**
+ * Lightweight summary of an inbound relationship row — used by the delete
+ * confirmation modal to surface entries that reference the one being deleted.
+ */
+export type IncomingRelation = {
+    /** Source entry id (the entry that contains the relationship). */
+    sourceId: string;
+    /** Title of the source entry. */
+    sourceTitle: string;
+    /** Type of the source entry (only `'entry'`-source rows are returned). */
+    sourceType: string;
+    /** Relationship field name on the source entry. */
+    name: string;
+};
+
+/** Update payload fragment — fields that can be modified after creation. */
+export type EntryUpdateData = Partial<{
+    title: string;
+    slug: string;
+    fields: JsonObject;
     status: EntryStatus;
-};
+    publishAt: Date | null;
+}>;
 
-export type EntryTypeApi = {
-    query(params?: Omit<EntryQueryParams, 'type'>): Promise<QueryResult<Entry>>;
-    get(id: string, options?: QueryOptions): Promise<Entry | null>;
-    create(data: {
-        title: string;
-        slug?: string;
-        fields?: JsonObject;
-        status?: EntryStatus;
-        publishAt?: Date | null;
-    }): Promise<Entry>;
-    update(
-        id: string,
-        data: Partial<{
-            title: string;
-            slug: string;
-            fields: JsonObject;
-            status: EntryStatus;
-            publishAt: Date | null;
-        }>
-    ): Promise<Entry>;
-    trash(id: string): Promise<void>;
-    duplicate(id: string): Promise<Entry>;
-    restore(id: string): Promise<Entry>;
-    delete(id: string): Promise<void>;
-    emptyTrash(): Promise<void>;
-    versions(id: string): Promise<EntryVersion[]>;
-    restoreVersion(id: string, versionId: string): Promise<Entry>;
-    translations(id: string): Promise<TranslationInfo[]>;
-    createTranslation(
-        sourceId: string,
-        locale: string,
-        options?: { copyFields?: boolean }
-    ): Promise<Entry>;
-    getTranslation(sourceId: string, locale: string): Promise<Entry | null>;
-    publish(id: string): Promise<Entry>;
-    unpublish(id: string): Promise<Entry>;
-    schedule(id: string, publishAt: Date): Promise<Entry>;
-};
+/** Overrides accepted by `duplicate` — superset of update plus locale fields. */
+export type EntryDuplicateOverrides = Partial<{
+    title: string;
+    slug: string;
+    locale: string;
+    localeGroup: string;
+    fields: JsonObject;
+    status: EntryStatus;
+}>;
 
 // ============================================================================
-// Entries API (unified, type-discriminated)
+// Entries API (unified, type-scoped, options-object)
 // ============================================================================
 
 export type EntriesApi = {
-    query(params?: EntryQueryParams): Promise<QueryResult<Entry>>;
-    get(type: string, id: string, options?: QueryOptions): Promise<Entry | null>;
-    create(data: {
+    query(params: EntryQueryParams & { type: string | readonly string[] }): Promise<QueryResult<Entry>>;
+
+    get(params: {
+        type: string;
+        id: string;
+        locale?: string;
+        populate?: string[];
+    }): Promise<Entry | null>;
+
+    create(params: {
         type: string;
         title: string;
         slug?: string;
+        locale?: string;
+        /** Existing localeGroup to join. Omit for a fresh group (UUID generated). */
+        localeGroup?: string;
         fields?: JsonObject;
         status?: EntryStatus;
         publishAt?: Date | null;
     }): Promise<Entry>;
-    update(
-        id: string,
-        data: Partial<{
-            title: string;
-            slug: string;
-            fields: JsonObject;
-            status: EntryStatus;
-            publishAt: Date | null;
-        }>
-    ): Promise<Entry>;
-    trash(id: string): Promise<void>;
-    duplicate(id: string): Promise<Entry>;
-    restore(id: string): Promise<Entry>;
-    delete(id: string): Promise<void>;
-    emptyTrash(options?: { type?: string }): Promise<void>;
-    versions(id: string): Promise<EntryVersion[]>;
-    restoreVersion(id: string, versionId: string): Promise<Entry>;
-    translations(id: string): Promise<TranslationInfo[]>;
-    createTranslation(
-        sourceId: string,
-        locale: string,
-        options?: { copyFields?: boolean }
-    ): Promise<Entry>;
-    getTranslation(sourceId: string, locale: string): Promise<Entry | null>;
-    publish(id: string): Promise<Entry>;
-    unpublish(id: string): Promise<Entry>;
-    schedule(id: string, publishAt: Date): Promise<Entry>;
+
+    update(params: {
+        type: string;
+        id: string;
+        data: EntryUpdateData;
+    }): Promise<Entry>;
+    update(params: {
+        type: string;
+        id: readonly string[];
+        data: EntryUpdateData;
+    }): Promise<Entry[]>;
+
+    duplicate(params: {
+        type: string;
+        id: string;
+        overrides?: EntryDuplicateOverrides;
+    }): Promise<Entry>;
+
+    trash(params: {
+        type: string;
+        id: string | readonly string[];
+        cascadeLocales?: boolean;
+    }): Promise<void>;
+
+    restore(params: { type: string; id: string }): Promise<Entry>;
+    restore(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
+
+    delete(params: {
+        type: string;
+        id: string | readonly string[];
+        cascadeLocales?: boolean;
+    }): Promise<void>;
+
+    emptyTrash(params: { type: string }): Promise<void>;
+
+    versions(params: { type: string; id: string }): Promise<EntryVersion[]>;
+    restoreVersion(params: {
+        type: string;
+        id: string;
+        versionId: string;
+    }): Promise<Entry>;
+
+    publish(params: { type: string; id: string }): Promise<Entry>;
+    publish(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
+
+    unpublish(params: { type: string; id: string }): Promise<Entry>;
+    unpublish(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
+
+    schedule(params: { type: string; id: string; publishAt: Date }): Promise<Entry>;
+    schedule(params: {
+        type: string;
+        id: readonly string[];
+        publishAt: Date;
+    }): Promise<Entry[]>;
+
+    incomingRelations(params: {
+        type: string;
+        id: string;
+    }): Promise<IncomingRelation[]>;
 };
 
 // ============================================================================

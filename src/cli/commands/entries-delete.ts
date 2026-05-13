@@ -22,7 +22,7 @@ export default defineCommand({
                 return;
             }
         }
-        await entries.delete(args.id);
+        await entries.delete({ type: args.type, id: args.id });
         console.log(`Entry ${args.id} deleted`);
     },
 });

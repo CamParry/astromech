@@ -18,7 +18,6 @@ import {
     Input,
     PageLoading,
     useToast,
-    useConfirm,
     Page,
     PageHeader,
     PageTitle,
@@ -28,6 +27,7 @@ import {
     FormLayoutSidebar,
     PageContent,
 } from '@/admin/components/ui/index.js';
+import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal.js';
 import { FormField } from '@/admin/components/fields/form-field.js';
 import { LocaleSwitcher } from '@/admin/components/translations/LocaleSwitcher.js';
 import { PublishPanel } from '@/admin/components/entries/PublishPanel.js';
@@ -37,7 +37,6 @@ import {
     usePermissions,
     useEntry,
     useEntryVersions,
-    useEntryTranslations,
     useTrashEntry,
     useDuplicateEntry,
 } from '@/admin/hooks/index.js';
@@ -76,9 +75,9 @@ function EntryEditPage(): React.ReactElement {
         id: string;
     };
     const { toast } = useToast();
-    const confirm = useConfirm();
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const [deleteOpen, setDeleteOpen] = React.useState(false);
 
     const { canUpdate } = usePermissions();
     const entryTypeConfig = adminConfig.entries[type];
@@ -98,14 +97,7 @@ function EntryEditPage(): React.ReactElement {
     const { data: versions } = useEntryVersions(type, id, hasVersioning);
     const versionCount = versions?.length ?? 0;
 
-    // Translations
     const hasI18n = entryTypeConfig?.translatable === true;
-    const sourceId = entry?.translationOf ?? id;
-    const { data: translations } = useEntryTranslations(
-        type,
-        sourceId,
-        hasI18n && entry !== undefined
-    );
 
     const trashEntry = useTrashEntry(type, {
         onSuccess: () => void navigate({ to: `/entries/${type}` }),
@@ -128,8 +120,8 @@ function EntryEditPage(): React.ReactElement {
         },
         hasSlug,
         readOnly: isReadOnly,
-        saveFn: (data) => Astromech.entries.update(id, data),
-        publishFn: (data) => Astromech.entries.update(id, data),
+        saveFn: (data) => Astromech.entries.update({ type, id, data }),
+        publishFn: (data) => Astromech.entries.update({ type, id, data }),
         onSuccess: () => {
             toast({
                 message: t('entries.updated', { name: single }),
@@ -154,6 +146,19 @@ function EntryEditPage(): React.ReactElement {
 
     return (
         <Page>
+            <DeleteEntryModal
+                open={deleteOpen}
+                entry={entry ?? null}
+                typeLabel={single}
+                force={false}
+                onCancel={() => setDeleteOpen(false)}
+                onConfirm={(opts) =>
+                    trashEntry.mutate(
+                        opts.cascadeLocales ? { id, cascadeLocales: true } : id
+                    )
+                }
+                loading={trashEntry.isPending}
+            />
             <PageHeader>
                 <PageTitle>
                     <Breadcrumb
@@ -196,10 +201,9 @@ function EntryEditPage(): React.ReactElement {
                     )}
                     {hasI18n && entry != null && (
                         <LocaleSwitcher
-                            sourceId={sourceId}
                             currentEntryId={id}
                             type={type}
-                            translations={translations ?? []}
+                            locales={entry.locales}
                             allLocales={adminConfig.locales}
                             defaultLocale={adminConfig.defaultLocale}
                             compact
@@ -233,22 +237,7 @@ function EntryEditPage(): React.ReactElement {
                                         <Menu.Separator className="am-topbar-menu-separator" />
                                         <Menu.Item
                                             className="am-topbar-menu-item am-topbar-menu-item-danger"
-                                            onClick={() =>
-                                                confirm({
-                                                    title: t(
-                                                        'entries.confirmDeleteTitle'
-                                                    ),
-                                                    description: t(
-                                                        'entries.confirmDeleteMessage',
-                                                        { name: single.toLowerCase() }
-                                                    ),
-                                                    confirmLabel: t(
-                                                        'entries.confirmDeleteLabel'
-                                                    ),
-                                                    onConfirm: () =>
-                                                        trashEntry.mutate(id),
-                                                })
-                                            }
+                                            onClick={() => setDeleteOpen(true)}
                                         >
                                             <span className="am-topbar-menu-item-icon">
                                                 <Trash2 size={14} />

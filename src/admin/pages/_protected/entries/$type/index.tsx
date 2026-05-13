@@ -8,7 +8,6 @@
 
 import { formatDate } from '@/support/dates.js';
 import { Menu } from '@base-ui/react/menu';
-import { useQueries } from '@tanstack/react-query';
 import { createFileRoute, Link, useNavigate, useParams } from '@tanstack/react-router';
 import {
     Check,
@@ -25,7 +24,6 @@ import {
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import { Astromech } from '@/sdk/fetch/index.js';
 import type { Entry } from '@/types/index.js';
 import type { DropdownItem } from '@/admin/components/ui/dropdown.js';
 import {
@@ -66,6 +64,7 @@ import {
     useBulkPublishEntries,
     useBulkUnpublishEntries,
 } from '@/admin/hooks/index.js';
+import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal.js';
 
 // ============================================================================
 // Types
@@ -88,7 +87,8 @@ function statusVariant(status: string): 'draft' | 'published' | 'scheduled' | 'd
     return 'default';
 }
 
-const ALL_COLUMNS = ['title', 'status', 'slug', 'locale', 'updatedAt'] as const;
+const ALL_COLUMNS = ['title', 'status', 'slug', 'locale', 'translations', 'updatedAt'] as const;
+const LOCALE_FILTER_ALL = '__all__';
 
 function colStorageKey(type: string): string {
     return `am-cols-${type}`;
@@ -123,6 +123,63 @@ const PER_PAGE = 20;
 // ============================================================================
 // Sub-components
 // ============================================================================
+
+type TranslationsCellProps = {
+    entry: Entry;
+    type: string;
+    configuredLocales: string[];
+};
+
+function TranslationsCell({
+    entry,
+    type,
+    configuredLocales,
+}: TranslationsCellProps): React.ReactElement {
+    return (
+        <span style={{ display: 'inline-flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+            {configuredLocales.map((loc) => {
+                const siblingId = entry.locales[loc];
+                const isCurrent = siblingId === entry.id;
+                const present = siblingId != null;
+                if (!present) {
+                    return (
+                        <span
+                            key={loc}
+                            className="am-text-mono am-text-muted"
+                            style={{ opacity: 0.4, fontSize: '0.75rem' }}
+                            title={`${loc.toUpperCase()} translation does not exist`}
+                        >
+                            {loc.toUpperCase()}
+                        </span>
+                    );
+                }
+                if (isCurrent) {
+                    return (
+                        <span
+                            key={loc}
+                            className="am-text-mono"
+                            style={{ fontWeight: 600, fontSize: '0.75rem' }}
+                        >
+                            {loc.toUpperCase()}
+                        </span>
+                    );
+                }
+                return (
+                    <Link
+                        key={loc}
+                        to="/entries/$type/$id"
+                        params={{ type, id: siblingId }}
+                        className="am-link am-text-mono"
+                        style={{ fontSize: '0.75rem' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {loc.toUpperCase()}
+                    </Link>
+                );
+            })}
+        </span>
+    );
+}
 
 type RowActionsProps = {
     entry: Entry;
@@ -203,7 +260,9 @@ type EntryTableRowProps = RowActionsProps & {
     adminColumns: { field: string; label?: string; sortable?: boolean }[];
     navigate: (opts: { to: string; params: { type: string; id: string } }) => void;
     visibleColumns: Set<string>;
-    translationCount?: number | undefined;
+    showTranslations: boolean;
+    showLocale: boolean;
+    configuredLocales: string[];
 };
 
 function EntryTableRow({
@@ -220,7 +279,9 @@ function EntryTableRow({
     navigate,
     visibleColumns,
     rowLabels,
-    translationCount,
+    showTranslations,
+    showLocale,
+    configuredLocales,
 }: EntryTableRowProps): React.ReactElement {
     const { t } = useTranslation();
     const items = buildRowItems({
@@ -259,28 +320,17 @@ function EntryTableRow({
                 </Table.Td>
                 {visibleColumns.has('title') && (
                     <Table.Td>
-                        <span
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.375rem',
-                            }}
-                        >
-                            {isTrash ? (
-                                <span className="am-text-muted">{entry.title}</span>
-                            ) : (
-                                <Link
-                                    to="/entries/$type/$id"
-                                    params={{ type, id: entry.id }}
-                                    className="am-link"
-                                >
-                                    {entry.title}
-                                </Link>
-                            )}
-                            {translationCount != null && translationCount > 0 && (
-                                <Badge variant="neutral">+{translationCount}</Badge>
-                            )}
-                        </span>
+                        {isTrash ? (
+                            <span className="am-text-muted">{entry.title}</span>
+                        ) : (
+                            <Link
+                                to="/entries/$type/$id"
+                                params={{ type, id: entry.id }}
+                                className="am-link"
+                            >
+                                {entry.title}
+                            </Link>
+                        )}
                     </Table.Td>
                 )}
                 {visibleColumns.has('status') && (
@@ -295,6 +345,22 @@ function EntryTableRow({
                         <span className="am-text-mono am-text-muted">
                             {entry.slug ?? '—'}
                         </span>
+                    </Table.Td>
+                )}
+                {showLocale && visibleColumns.has('locale') && (
+                    <Table.Td>
+                        <span className="am-text-mono am-text-muted">
+                            {entry.locale.toUpperCase()}
+                        </span>
+                    </Table.Td>
+                )}
+                {showTranslations && visibleColumns.has('translations') && (
+                    <Table.Td>
+                        <TranslationsCell
+                            entry={entry}
+                            type={type}
+                            configuredLocales={configuredLocales}
+                        />
                     </Table.Td>
                 )}
                 {adminColumns
@@ -448,6 +514,11 @@ function EntryIndexPage(): React.ReactElement {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [page, setPage] = useState(1);
+    const hasI18n = entryTypeConfig?.translatable === true;
+    const configuredLocales = adminConfig.locales;
+    const [localeFilter, setLocaleFilter] = useState<string>(
+        adminConfig.defaultLocale
+    );
 
     const [viewMode, setViewMode] = useViewMode(`entry:${type}`, defaultView);
 
@@ -486,14 +557,21 @@ function EntryIndexPage(): React.ReactElement {
     const isTrash = statusFilter === 'trashed';
 
     // Fetch entries (normal or trashed)
+    const effectiveLocale = hasI18n
+        ? localeFilter === LOCALE_FILTER_ALL
+            ? 'all'
+            : localeFilter
+        : 'all';
     const { data: listData, isLoading } = useEntriesQuery({
         type,
+        locale: effectiveLocale,
         ...(statusFilter === 'trashed' ? { trashed: true } : statusFilter !== 'all' ? { where: { status: statusFilter } } : {}),
         page,
         limit: PER_PAGE,
         search,
         ...(sort ? { sort: { [sort.key]: sort.direction } } : {}),
     });
+    const showLocaleColumn = hasI18n && localeFilter === LOCALE_FILTER_ALL;
 
     const entries = listData?.data ?? [];
     const pagination = listData?.pagination;
@@ -526,29 +604,6 @@ function EntryIndexPage(): React.ReactElement {
     const { checkedIds, toggle, toggleAll, allChecked, someChecked, reset } =
         useSelection(sortedEntries);
     const confirm = useConfirm();
-
-    // Translation counts — only when entry type has translatable enabled
-    const hasI18n = entryTypeConfig?.translatable === true;
-    const translationQueries = useQueries({
-        queries: sortedEntries.map((entry) => ({
-            queryKey: ['entry-translations', type, entry.id],
-            queryFn: () => Astromech.entries.translations(entry.id),
-            enabled: hasI18n,
-        })),
-    });
-    // Map entryId -> translation count
-    const translationCountMap = React.useMemo(() => {
-        const map = new Map<string, number>();
-        if (!hasI18n) return map;
-        sortedEntries.forEach((entry, i) => {
-            const result = translationQueries[i];
-            if (result?.data != null) {
-                map.set(entry.id, result.data.length);
-            }
-        });
-        return map;
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasI18n, sortedEntries, translationQueries]);
 
     // Mutations
     const trashMutation = useTrashEntry(type);
@@ -609,35 +664,26 @@ function EntryIndexPage(): React.ReactElement {
         2 +
         (visibleColumns.has('status') ? 1 : 0) +
         (visibleColumns.has('slug') ? 1 : 0) +
+        (showLocaleColumn && visibleColumns.has('locale') ? 1 : 0) +
+        (hasI18n && visibleColumns.has('translations') ? 1 : 0) +
         adminColumns.filter((c) => visibleColumns.has(c.field)).length +
         (visibleColumns.has('updatedAt') ? 1 : 0) +
         1;
 
-    // Shared row action handlers (stable references via mutation objects)
+    // Delete modal state — drives DeleteEntryModal for both trash and force-delete.
+    const [deleteTarget, setDeleteTarget] = useState<{
+        entry: Entry;
+        force: boolean;
+    } | null>(null);
+
     function handleRestore(id: string) {
         restoreMutation.mutate(id);
     }
 
     function handleConfirmDelete(id: string, force: boolean) {
-        confirm({
-            title: force
-                ? t('entries.confirmForceDeleteTitle')
-                : t('entries.confirmDeleteTitle'),
-            description: force
-                ? t('entries.confirmForceDeleteMessage')
-                : t('entries.confirmDeleteMessage', { name: single.toLowerCase() }),
-            variant: 'danger',
-            confirmLabel: force
-                ? t('entries.confirmForceDeleteLabel')
-                : t('entries.confirmDeleteLabel'),
-            onConfirm: () => {
-                if (force) {
-                    deleteMutation.mutate(id);
-                } else {
-                    trashMutation.mutate(id);
-                }
-            },
-        });
+        const entry = sortedEntries.find((e) => e.id === id);
+        if (!entry) return;
+        setDeleteTarget({ entry, force });
     }
 
     function handleDuplicate(id: string) {
@@ -654,13 +700,43 @@ function EntryIndexPage(): React.ReactElement {
         [navigate]
     );
 
+    function handleDeleteConfirm(options: { cascadeLocales: boolean }) {
+        if (!deleteTarget) return;
+        const { entry, force } = deleteTarget;
+        const input = options.cascadeLocales
+            ? { id: entry.id, cascadeLocales: true }
+            : entry.id;
+        if (force) {
+            deleteMutation.mutate(input, { onSuccess: () => setDeleteTarget(null) });
+        } else {
+            trashMutation.mutate(input, { onSuccess: () => setDeleteTarget(null) });
+        }
+    }
+
     return (
         <>
+            <DeleteEntryModal
+                open={deleteTarget != null}
+                entry={deleteTarget?.entry ?? null}
+                typeLabel={single}
+                force={deleteTarget?.force ?? false}
+                onCancel={() => setDeleteTarget(null)}
+                onConfirm={handleDeleteConfirm}
+                loading={trashMutation.isPending || deleteMutation.isPending}
+            />
             <Page>
                 <PageHeader>
                     <PageTitle>{plural}</PageTitle>
                     {canCreate(type) && (
-                        <Link to="/entries/$type/new" params={{ type }}>
+                        <Link
+                            to="/entries/$type/new"
+                            params={{ type }}
+                            search={
+                                hasI18n && localeFilter !== LOCALE_FILTER_ALL
+                                    ? { locale: localeFilter }
+                                    : {}
+                            }
+                        >
                             <Button icon={<PlusIcon size={16} />}>
                                 {t('entries.new', { name: single })}
                             </Button>
@@ -723,6 +799,29 @@ function EntryIndexPage(): React.ReactElement {
                                 options={STATUS_FILTER_OPTIONS}
                                 triggerPrefix={t('entries.statusFilterPrefix')}
                             />
+
+                            {/* Locale filter (only when translatable) */}
+                            {hasI18n && (
+                                <Select
+                                    value={localeFilter}
+                                    onValueChange={(v) => {
+                                        setLocaleFilter(v ?? adminConfig.defaultLocale);
+                                        setPage(1);
+                                        reset();
+                                    }}
+                                    options={[
+                                        ...configuredLocales.map((loc) => ({
+                                            value: loc,
+                                            label: loc.toUpperCase(),
+                                        })),
+                                        {
+                                            value: LOCALE_FILTER_ALL,
+                                            label: t('entries.allLocales'),
+                                        },
+                                    ]}
+                                    triggerPrefix={t('entries.localeFilterPrefix')}
+                                />
+                            )}
                         </ToolbarStart>
 
                         <ToolbarEnd>
@@ -754,6 +853,26 @@ function EntryIndexPage(): React.ReactElement {
                                                     key: 'slug',
                                                     label: t('entries.columnSlug'),
                                                 },
+                                                ...(showLocaleColumn
+                                                    ? [
+                                                          {
+                                                              key: 'locale',
+                                                              label: t(
+                                                                  'entries.columnLocale'
+                                                              ),
+                                                          },
+                                                      ]
+                                                    : []),
+                                                ...(hasI18n
+                                                    ? [
+                                                          {
+                                                              key: 'translations',
+                                                              label: t(
+                                                                  'entries.columnTranslations'
+                                                              ),
+                                                          },
+                                                      ]
+                                                    : []),
                                                 ...adminColumns.map((c) => ({
                                                     key: c.field,
                                                     label: c.label ?? c.field,
@@ -895,6 +1014,12 @@ function EntryIndexPage(): React.ReactElement {
                                     {visibleColumns.has('slug') && (
                                         <Table.Th>{t('entries.columnSlug')}</Table.Th>
                                     )}
+                                    {showLocaleColumn && visibleColumns.has('locale') && (
+                                        <Table.Th>{t('entries.columnLocale')}</Table.Th>
+                                    )}
+                                    {hasI18n && visibleColumns.has('translations') && (
+                                        <Table.Th>{t('entries.columnTranslations')}</Table.Th>
+                                    )}
                                     {adminColumns
                                         .filter((c) => visibleColumns.has(c.field))
                                         .map((col) =>
@@ -978,9 +1103,9 @@ function EntryIndexPage(): React.ReactElement {
                                             navigate={navigateCompat}
                                             visibleColumns={visibleColumns}
                                             rowLabels={rowLabels}
-                                            translationCount={translationCountMap.get(
-                                                entry.id
-                                            )}
+                                            showTranslations={hasI18n}
+                                            showLocale={showLocaleColumn}
+                                            configuredLocales={configuredLocales}
                                         />
                                     ))
                                 )}

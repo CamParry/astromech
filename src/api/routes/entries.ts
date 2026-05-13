@@ -1,19 +1,8 @@
 /**
  * Entry Routes
  *
- * Full CRUD operations for collection entries.
- *
- * Routes:
- *   GET    /entries/:type                   → query() with URL params
- *   POST   /entries/:type                   → create()
- *   POST   /entries/:type/query             → query() with body
- *   DELETE /entries/:type/trash             → emptyTrash()
- *   GET    /entries/:id                     → get()
- *   PUT    /entries/:id                     → update()
- *   DELETE /entries/:id                     → trash()
- *   POST   /entries/:id/restore             → restore()
- *   DELETE /entries/:id/force               → delete()
- *   POST   /entries/:id/duplicate           → duplicate()
+ * Full CRUD operations for collection entries. See specs/typed-entries-api.md
+ * for the surface contract (type-scoped routes, bulk-* sub-routes).
  */
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
@@ -26,12 +15,18 @@ import {
 } from '@/api/middleware/errors.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
 import { can } from '@/core/permissions.js';
-import type { EntryQueryParams, JsonObject, Permission, SortOption } from '@/types/index.js';
+import type {
+    EntryDuplicateOverrides,
+    EntryQueryParams,
+    EntryUpdateData,
+    JsonObject,
+    Permission,
+    SortOption,
+} from '@/types/index.js';
 import {
     createEntrySchema,
     updateEntrySchema,
     scheduleEntrySchema,
-    createTranslationSchema,
 } from '@/schemas/entries.js';
 
 type Env = { Variables: AuthVariables };
@@ -94,10 +89,76 @@ function parseQueryParams(query: Record<string, string>): Omit<EntryQueryParams,
     return params;
 }
 
+function cascadeLocalesFromQuery(query: Record<string, string>): boolean {
+    return query['cascadeLocales'] === 'true' || query['cascadeLocales'] === '1';
+}
+
 function requireEntryType(type: string) {
     if (!Astromech.config.entries[type]) return null;
     return type;
 }
+
+const bulkIdsSchema = z.object({
+    ids: z.array(z.string().min(1)).min(1),
+});
+
+const bulkUpdateSchema = z.object({
+    ids: z.array(z.string().min(1)).min(1),
+    data: updateEntrySchema,
+});
+
+const bulkScheduleSchema = z.object({
+    ids: z.array(z.string().min(1)).min(1),
+    publishAt: z.union([
+        z.date(),
+        z.string().datetime({ offset: true }).transform((v) => new Date(v)),
+    ]),
+});
+
+const bulkTrashOrDeleteSchema = z.object({
+    ids: z.array(z.string().min(1)).min(1),
+    cascadeLocales: z.boolean().optional(),
+});
+
+// ============================================================================
+// POST /entries/query  (cross-type)
+// Registered BEFORE any /:type/... route so it isn't shadowed.
+// ============================================================================
+
+router.post('/query', async (c) => {
+    const role = c.var.role;
+    try {
+        const body = await c.req.json<EntryQueryParams>();
+        const typeParam = body.type;
+        const types = Array.isArray(typeParam)
+            ? Array.from(typeParam)
+            : typeParam
+              ? [typeParam as string]
+              : [];
+
+        if (types.length === 0) {
+            return c.json(
+                { error: { code: 'invalid_input', message: '`type` is required (string or string[])', status: 400 } },
+                400
+            );
+        }
+
+        for (const t of types) {
+            if (!requireEntryType(t)) return notFound(c, `Entry type '${t}' not found`);
+            if (!can(role, `entry:read:${t}` as Permission)) return forbidden(c);
+        }
+
+        const validatedSort = validateSort(body.sort);
+        const params: EntryQueryParams & { type: string | readonly string[] } = {
+            ...body,
+            type: types,
+            ...(validatedSort !== undefined ? { sort: validatedSort } : {}),
+        };
+        return c.json(await Astromech.entries.query(params));
+    } catch (err) {
+        return internalError(c, err instanceof Error ? err.message : undefined);
+    }
+});
 
 // ============================================================================
 // GET /entries/:type
@@ -170,7 +231,12 @@ router.openapi(getEntryRoute, async (c) => {
 
     try {
         const options = parseQueryParams(c.req.query());
-        const entry = await Astromech.entries.get(type, id, options);
+        const entry = await Astromech.entries.get({
+            type,
+            id,
+            ...(options.populate ? { populate: options.populate } : {}),
+            ...(options.locale ? { locale: options.locale } : {}),
+        });
         if (!entry) return notFound(c, `Entry '${id}' not found`);
         return c.json({ data: entry });
     } catch (err) {
@@ -210,12 +276,14 @@ router.openapi(createEntryRoute, async (c) => {
         const parsed = createEntrySchema.safeParse(raw);
         if (!parsed.success) return fromZodError(c, parsed.error);
 
-        const { title, slug, fields, status, publishAt } = parsed.data;
+        const { title, slug, fields, status, publishAt, locale, localeGroup } = parsed.data;
 
         const entry = await Astromech.entries.create({
             type,
             title,
             ...(slug !== undefined && { slug }),
+            ...(locale !== undefined && { locale }),
+            ...(localeGroup !== undefined && { localeGroup }),
             ...(fields !== undefined && { fields: fields as JsonObject }),
             ...(status !== undefined && { status }),
             ...(publishAt !== undefined && { publishAt }),
@@ -228,7 +296,7 @@ router.openapi(createEntryRoute, async (c) => {
 });
 
 // ============================================================================
-// POST /entries/:type/query
+// POST /entries/:type/query  (single-type)
 // ============================================================================
 
 router.post('/:type/query', async (c) => {
@@ -241,12 +309,188 @@ router.post('/:type/query', async (c) => {
     try {
         const body = await c.req.json<Omit<EntryQueryParams, 'type'>>();
         const validatedSort = validateSort(body.sort);
-        const params: EntryQueryParams = {
+        const params: EntryQueryParams & { type: string } = {
             ...body,
             type,
             ...(validatedSort !== undefined ? { sort: validatedSort } : {}),
         };
         return c.json(await Astromech.entries.query(params));
+    } catch (err) {
+        return internalError(c, err instanceof Error ? err.message : undefined);
+    }
+});
+
+// ============================================================================
+// POST /entries/:type/bulk-update
+// ============================================================================
+
+router.post('/:type/bulk-update', async (c) => {
+    const { type } = c.req.param();
+    const role = c.var.role;
+    if (!can(role, `entry:update:${type}` as Permission)) return forbidden(c);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
+
+    try {
+        const raw = await c.req.json();
+        const parsed = bulkUpdateSchema.safeParse(raw);
+        if (!parsed.success) return fromZodError(c, parsed.error);
+
+        const { ids, data } = parsed.data;
+
+        if (data.status === 'published') {
+            if (!can(role, `entry:publish:${type}` as Permission)) return forbidden(c);
+        }
+
+        const entries = await Astromech.entries.update({
+            type,
+            id: ids,
+            data: data as EntryUpdateData,
+        });
+        return c.json({ data: entries });
+    } catch (err) {
+        return internalError(c, err instanceof Error ? err.message : undefined);
+    }
+});
+
+// ============================================================================
+// POST /entries/:type/bulk-trash
+// ============================================================================
+
+router.post('/:type/bulk-trash', async (c) => {
+    const { type } = c.req.param();
+    const role = c.var.role;
+    if (!can(role, `entry:delete:${type}` as Permission)) return forbidden(c);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
+
+    try {
+        const raw = await c.req.json();
+        const parsed = bulkTrashOrDeleteSchema.safeParse(raw);
+        if (!parsed.success) return fromZodError(c, parsed.error);
+
+        await Astromech.entries.trash({
+            type,
+            id: parsed.data.ids,
+            ...(parsed.data.cascadeLocales ? { cascadeLocales: true } : {}),
+        });
+        return c.json({ success: true });
+    } catch (err) {
+        return internalError(c, err instanceof Error ? err.message : undefined);
+    }
+});
+
+// ============================================================================
+// POST /entries/:type/bulk-delete
+// ============================================================================
+
+router.post('/:type/bulk-delete', async (c) => {
+    const { type } = c.req.param();
+    const role = c.var.role;
+    if (!can(role, `entry:delete:${type}` as Permission)) return forbidden(c);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
+
+    try {
+        const raw = await c.req.json();
+        const parsed = bulkTrashOrDeleteSchema.safeParse(raw);
+        if (!parsed.success) return fromZodError(c, parsed.error);
+
+        await Astromech.entries.delete({
+            type,
+            id: parsed.data.ids,
+            ...(parsed.data.cascadeLocales ? { cascadeLocales: true } : {}),
+        });
+        return c.json({ success: true });
+    } catch (err) {
+        return internalError(c, err instanceof Error ? err.message : undefined);
+    }
+});
+
+// ============================================================================
+// POST /entries/:type/bulk-restore
+// ============================================================================
+
+router.post('/:type/bulk-restore', async (c) => {
+    const { type } = c.req.param();
+    const role = c.var.role;
+    if (!can(role, `entry:update:${type}` as Permission)) return forbidden(c);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
+
+    try {
+        const raw = await c.req.json();
+        const parsed = bulkIdsSchema.safeParse(raw);
+        if (!parsed.success) return fromZodError(c, parsed.error);
+
+        const entries = await Astromech.entries.restore({ type, id: parsed.data.ids });
+        return c.json({ data: entries });
+    } catch (err) {
+        return internalError(c, err instanceof Error ? err.message : undefined);
+    }
+});
+
+// ============================================================================
+// POST /entries/:type/bulk-publish
+// ============================================================================
+
+router.post('/:type/bulk-publish', async (c) => {
+    const { type } = c.req.param();
+    const role = c.var.role;
+    if (!can(role, `entry:publish:${type}` as Permission)) return forbidden(c);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
+
+    try {
+        const raw = await c.req.json();
+        const parsed = bulkIdsSchema.safeParse(raw);
+        if (!parsed.success) return fromZodError(c, parsed.error);
+
+        const entries = await Astromech.entries.publish({ type, id: parsed.data.ids });
+        return c.json({ data: entries });
+    } catch (err) {
+        return internalError(c, err instanceof Error ? err.message : undefined);
+    }
+});
+
+// ============================================================================
+// POST /entries/:type/bulk-unpublish
+// ============================================================================
+
+router.post('/:type/bulk-unpublish', async (c) => {
+    const { type } = c.req.param();
+    const role = c.var.role;
+    if (!can(role, `entry:publish:${type}` as Permission)) return forbidden(c);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
+
+    try {
+        const raw = await c.req.json();
+        const parsed = bulkIdsSchema.safeParse(raw);
+        if (!parsed.success) return fromZodError(c, parsed.error);
+
+        const entries = await Astromech.entries.unpublish({ type, id: parsed.data.ids });
+        return c.json({ data: entries });
+    } catch (err) {
+        return internalError(c, err instanceof Error ? err.message : undefined);
+    }
+});
+
+// ============================================================================
+// POST /entries/:type/bulk-schedule
+// ============================================================================
+
+router.post('/:type/bulk-schedule', async (c) => {
+    const { type } = c.req.param();
+    const role = c.var.role;
+    if (!can(role, `entry:publish:${type}` as Permission)) return forbidden(c);
+    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
+
+    try {
+        const raw = await c.req.json();
+        const parsed = bulkScheduleSchema.safeParse(raw);
+        if (!parsed.success) return fromZodError(c, parsed.error);
+
+        const entries = await Astromech.entries.schedule({
+            type,
+            id: parsed.data.ids,
+            publishAt: parsed.data.publishAt,
+        });
+        return c.json({ data: entries });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
     }
@@ -264,7 +508,7 @@ router.post('/:type/:id/restore', async (c) => {
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const entry = await Astromech.entries.restore(id);
+        const entry = await Astromech.entries.restore({ type, id });
         return c.json({ data: entry });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -275,6 +519,20 @@ router.post('/:type/:id/restore', async (c) => {
 // POST /entries/:type/:id/duplicate
 // ============================================================================
 
+const duplicateOverridesSchema = z
+    .object({
+        title: z.string().min(1).optional(),
+        slug: z
+            .string()
+            .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+            .optional(),
+        locale: z.string().min(1).optional(),
+        localeGroup: z.string().min(1).optional(),
+        fields: z.record(z.string(), z.unknown()).optional(),
+        status: z.enum(['draft', 'published', 'scheduled']).optional(),
+    })
+    .partial();
+
 router.post('/:type/:id/duplicate', async (c) => {
     const { type, id } = c.req.param();
     const role = c.var.role;
@@ -283,7 +541,20 @@ router.post('/:type/:id/duplicate', async (c) => {
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const entry = await Astromech.entries.duplicate(id);
+        let overrides: Record<string, unknown> = {};
+        try {
+            const raw = await c.req.json();
+            const parsed = duplicateOverridesSchema.safeParse(raw);
+            if (!parsed.success) return fromZodError(c, parsed.error);
+            overrides = parsed.data as Record<string, unknown>;
+        } catch {
+            // No body / empty body — proceed with no overrides.
+        }
+        const entry = await Astromech.entries.duplicate({
+            type,
+            id,
+            overrides: overrides as EntryDuplicateOverrides,
+        });
         return c.json({ data: entry }, 201);
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -327,17 +598,20 @@ router.openapi(updateEntryRoute, async (c) => {
 
         const { title, slug, fields, status, publishAt } = parsed.data;
 
-        // Check publish permission when setting status to published
         if (parsed.data.status === 'published') {
             if (!can(role, `entry:publish:${type}` as Permission)) return forbidden(c);
         }
 
-        const entry = await Astromech.entries.update(id, {
-            ...(title !== undefined && { title }),
-            ...(slug !== undefined && { slug }),
-            ...(fields !== undefined && { fields: fields as JsonObject }),
-            ...(status !== undefined && { status }),
-            ...(publishAt !== undefined && { publishAt }),
+        const entry = await Astromech.entries.update({
+            type,
+            id,
+            data: {
+                ...(title !== undefined && { title }),
+                ...(slug !== undefined && { slug }),
+                ...(fields !== undefined && { fields: fields as JsonObject }),
+                ...(status !== undefined && { status }),
+                ...(publishAt !== undefined && { publishAt }),
+            },
         });
 
         return c.json({ data: entry });
@@ -377,7 +651,11 @@ router.delete('/:type/:id/force', async (c) => {
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        await Astromech.entries.delete(id);
+        await Astromech.entries.delete({
+            type,
+            id,
+            cascadeLocales: cascadeLocalesFromQuery(c.req.query()),
+        });
         return c.json({ success: true });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -411,7 +689,11 @@ router.openapi(trashEntryRoute, async (c) => {
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        await Astromech.entries.trash(id);
+        await Astromech.entries.trash({
+            type,
+            id,
+            cascadeLocales: cascadeLocalesFromQuery(c.req.query()),
+        });
         return c.json({ success: true });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -430,7 +712,7 @@ router.post('/:type/:id/publish', async (c) => {
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const entry = await Astromech.entries.publish(id);
+        const entry = await Astromech.entries.publish({ type, id });
         return c.json({ data: entry });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -449,7 +731,7 @@ router.post('/:type/:id/unpublish', async (c) => {
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const entry = await Astromech.entries.unpublish(id);
+        const entry = await Astromech.entries.unpublish({ type, id });
         return c.json({ data: entry });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -471,7 +753,11 @@ router.post('/:type/:id/schedule', async (c) => {
         const raw = await c.req.json();
         const parsed = scheduleEntrySchema.safeParse(raw);
         if (!parsed.success) return fromZodError(c, parsed.error);
-        const entry = await Astromech.entries.schedule(id, parsed.data.publishAt);
+        const entry = await Astromech.entries.schedule({
+            type,
+            id,
+            publishAt: parsed.data.publishAt,
+        });
         return c.json({ data: entry });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -490,7 +776,7 @@ router.get('/:type/:id/versions', async (c) => {
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const versions = await Astromech.entries.versions(id);
+        const versions = await Astromech.entries.versions({ type, id });
         return c.json({ data: versions });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -509,7 +795,7 @@ router.post('/:type/:id/versions/:versionId/restore', async (c) => {
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const entry = await Astromech.entries.restoreVersion(id, versionId);
+        const entry = await Astromech.entries.restoreVersion({ type, id, versionId });
         return c.json({ data: entry });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -517,10 +803,10 @@ router.post('/:type/:id/versions/:versionId/restore', async (c) => {
 });
 
 // ============================================================================
-// GET /entries/:type/:id/translations
+// GET /entries/:type/:id/incoming-relations
 // ============================================================================
 
-router.get('/:type/:id/translations', async (c) => {
+router.get('/:type/:id/incoming-relations', async (c) => {
     const { type, id } = c.req.param();
     const role = c.var.role;
     if (!can(role, `entry:read:${type}` as Permission)) return forbidden(c);
@@ -528,58 +814,8 @@ router.get('/:type/:id/translations', async (c) => {
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
-        const translations = await Astromech.entries.translations(id);
-        return c.json({ data: translations });
-    } catch (err) {
-        return internalError(c, err instanceof Error ? err.message : undefined);
-    }
-});
-
-// ============================================================================
-// POST /entries/:type/:id/translations  (create translation)
-// ============================================================================
-
-router.post('/:type/:id/translations', async (c) => {
-    const { type, id } = c.req.param();
-    const role = c.var.role;
-    if (!can(role, `entry:create:${type}` as Permission)) return forbidden(c);
-
-    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-    try {
-        const raw = await c.req.json();
-        const parsed = createTranslationSchema.safeParse(raw);
-        if (!parsed.success) return fromZodError(c, parsed.error);
-
-        const options: { copyFields?: boolean } = {};
-        if (parsed.data.copyFields !== undefined)
-            options.copyFields = parsed.data.copyFields;
-        const entry = await Astromech.entries.createTranslation(
-            id,
-            parsed.data.locale,
-            options
-        );
-        return c.json({ data: entry }, 201);
-    } catch (err) {
-        return internalError(c, err instanceof Error ? err.message : undefined);
-    }
-});
-
-// ============================================================================
-// GET /entries/:type/:id/translations/:locale
-// ============================================================================
-
-router.get('/:type/:id/translations/:locale', async (c) => {
-    const { type, id, locale } = c.req.param();
-    const role = c.var.role;
-    if (!can(role, `entry:read:${type}` as Permission)) return forbidden(c);
-
-    if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-    try {
-        const entry = await Astromech.entries.getTranslation(id, locale);
-        if (!entry) return notFound(c, `Translation for locale '${locale}' not found`);
-        return c.json({ data: entry });
+        const relations = await Astromech.entries.incomingRelations({ type, id });
+        return c.json({ data: relations });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
     }

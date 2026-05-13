@@ -3,7 +3,6 @@
  */
 
 import type { ComponentType, ReactElement } from 'react';
-import type { EntryTypeApi } from './api.js';
 import type { EntryTypeConfig, ResolvedConfig } from './config.js';
 import type { FieldGroup } from './fields.js';
 import type { HookRegistry } from './hooks.js';
@@ -38,7 +37,7 @@ export type Middleware = {
 export type AstromechContext = {
     config: ResolvedConfig;
     db: unknown;
-    entryTypes: Record<string, EntryTypeApi>;
+    entryTypes: Record<string, unknown>;
     sendEmail: (to: string, subject: string, element: ReactElement) => Promise<void>;
 };
 

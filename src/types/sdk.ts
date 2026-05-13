@@ -1,17 +1,20 @@
 /**
- * SDK types — AstromechClient, typed entry type proxy
+ * SDK types — AstromechClient and the typed-entry narrowing surface.
+ *
+ * Runtime is `EntriesApi` (api.ts). This file layers literal-type overloads on
+ * top so that callers passing string-literal types get a narrowed `TypedEntry`
+ * result instead of the wide `Entry`. See specs/typed-entries-api.md §3.2.
  */
 
 import type { Entry, EntryStatus, EntryVersion } from './domain.js';
 import type {
-    EntryTypeApi,
     EntriesApi,
+    EntryDuplicateOverrides,
     EntryQueryParams,
-    QueryResult,
+    EntryUpdateData,
     MediaApi,
-    QueryOptions,
+    QueryResult,
     SettingsApi,
-    TranslationInfo,
     UsersApi,
 } from './api.js';
 import type { ResolvedConfig } from './config.js';
@@ -37,124 +40,193 @@ export type TypedEntry<TFields> = Omit<Entry, 'fields'> & {
 };
 
 // ============================================================================
-// Typed Entry Type API
-// ============================================================================
-
-// TypedEntryTypeApi — returned by the typed entries proxy when AstromechEntryTypes is augmented
-export type TypedEntryTypeApi<TFields, TRelations> = {
-    query<K extends keyof TRelations & string>(
-        params: Omit<EntryQueryParams, 'type' | 'populate'> & { populate: K[] }
-    ): Promise<QueryResult<TypedEntry<Omit<TFields, K> & Pick<TRelations, K>>>>;
-    query(params?: Omit<EntryQueryParams, 'type'>): Promise<QueryResult<TypedEntry<TFields>>>;
-
-    get(id: string, options?: Omit<QueryOptions, 'populate'>): Promise<TypedEntry<TFields> | null>;
-    get<K extends keyof TRelations & string>(
-        id: string,
-        options: Omit<QueryOptions, 'populate'> & { populate: K[] }
-    ): Promise<TypedEntry<Omit<TFields, K> & Pick<TRelations, K>> | null>;
-
-    create(data: {
-        title: string;
-        slug?: string;
-        fields?: Partial<TFields>;
-        status?: EntryStatus;
-        publishAt?: Date | null;
-    }): Promise<TypedEntry<TFields>>;
-
-    update(
-        id: string,
-        data: Partial<{
-            title: string;
-            slug: string;
-            fields: Partial<TFields>;
-            status: EntryStatus;
-            publishAt: Date | null;
-        }>
-    ): Promise<TypedEntry<TFields>>;
-
-    trash(id: string): Promise<void>;
-    duplicate(id: string): Promise<TypedEntry<TFields>>;
-    restore(id: string): Promise<TypedEntry<TFields>>;
-    delete(id: string): Promise<void>;
-    emptyTrash(): Promise<void>;
-    versions(id: string): Promise<EntryVersion[]>;
-    restoreVersion(id: string, versionId: string): Promise<TypedEntry<TFields>>;
-    translations(id: string): Promise<TranslationInfo[]>;
-    translate(
-        id: string,
-        locale: string,
-        data?: { title?: string; fields?: Partial<TFields> }
-    ): Promise<TypedEntry<TFields>>;
-    publish(id: string): Promise<TypedEntry<TFields>>;
-    unpublish(id: string): Promise<TypedEntry<TFields>>;
-    schedule(id: string, publishAt: Date): Promise<TypedEntry<TFields>>;
-};
-
-// ============================================================================
-// Typed Entries Proxy
-// ============================================================================
-
-// The typed entries proxy type — used by AstromechClient when AstromechEntryTypes is augmented
-export type TypedEntriesProxy = [keyof AstromechEntryTypes] extends [never]
-    ? Record<string, EntryTypeApi>
-    : {
-          [K in keyof AstromechEntryTypes]: AstromechEntryTypes[K] extends {
-              fields: infer F;
-              relations: infer R;
-          }
-              ? TypedEntryTypeApi<F, R>
-              : EntryTypeApi;
-      } & Record<string, EntryTypeApi>;
-
-// ============================================================================
 // Typed Entries API
 // ============================================================================
 
-export type TypedEntriesApi =
-    // ── query() ──────────────────────────────────────────────────────────────
-    {
-        query<T extends keyof AstromechEntryTypes, K extends keyof RelationsFor<T> & string>(
-            params: { type: T; populate: K[] } & Omit<EntryQueryParams, 'type' | 'populate'>
-        ): Promise<QueryResult<TypedEntry<Omit<FieldsFor<T>, K> & Pick<RelationsFor<T>, K>>>>;
-        query<T extends keyof AstromechEntryTypes>(
-            params: { type: T } & EntryQueryParams
-        ): Promise<QueryResult<TypedEntry<FieldsFor<T>>>>;
-        query(params?: EntryQueryParams): Promise<QueryResult<Entry>>;
+/**
+ * Layered overloads above the wide `EntriesApi`. Literal-type `type` args
+ * return `TypedEntry<FieldsFor<T>>`; the wide overload fallback returns `Entry`.
+ */
+export type TypedEntriesApi = {
+    // ── query ────────────────────────────────────────────────────────────────
+    query<T extends keyof AstromechEntryTypes, K extends keyof RelationsFor<T> & string>(
+        params: { type: T; populate: K[] } & Omit<EntryQueryParams, 'type' | 'populate'>
+    ): Promise<QueryResult<TypedEntry<Omit<FieldsFor<T>, K> & Pick<RelationsFor<T>, K>>>>;
+    query<T extends keyof AstromechEntryTypes>(
+        params: { type: T } & Omit<EntryQueryParams, 'type'>
+    ): Promise<QueryResult<TypedEntry<FieldsFor<T>>>>;
+    query<T extends keyof AstromechEntryTypes>(
+        params: { type: readonly T[] } & Omit<EntryQueryParams, 'type'>
+    ): Promise<QueryResult<TypedEntry<FieldsFor<T>>>>;
+    query(
+        params: { type: string | readonly string[] } & Omit<EntryQueryParams, 'type'>
+    ): Promise<QueryResult<Entry>>;
 
-        // ── get() ────────────────────────────────────────────────────────────
-        get<T extends keyof AstromechEntryTypes, K extends keyof RelationsFor<T> & string>(
-            type: T,
-            id: string,
-            options: { populate: K[] } & Omit<QueryOptions, 'populate'>
-        ): Promise<TypedEntry<Omit<FieldsFor<T>, K> & Pick<RelationsFor<T>, K>> | null>;
-        get<T extends keyof AstromechEntryTypes>(
-            type: T,
-            id: string,
-            options?: QueryOptions
-        ): Promise<TypedEntry<FieldsFor<T>> | null>;
-        get(type: string, id: string, options?: QueryOptions): Promise<Entry | null>;
+    // ── get ──────────────────────────────────────────────────────────────────
+    get<T extends keyof AstromechEntryTypes, K extends keyof RelationsFor<T> & string>(
+        params: { type: T; id: string; populate: K[]; locale?: string }
+    ): Promise<TypedEntry<Omit<FieldsFor<T>, K> & Pick<RelationsFor<T>, K>> | null>;
+    get<T extends keyof AstromechEntryTypes>(
+        params: { type: T; id: string; populate?: string[]; locale?: string }
+    ): Promise<TypedEntry<FieldsFor<T>> | null>;
+    get(params: {
+        type: string;
+        id: string;
+        populate?: string[];
+        locale?: string;
+    }): Promise<Entry | null>;
 
-        // ── create() ─────────────────────────────────────────────────────────
-        create<T extends keyof AstromechEntryTypes>(data: {
-            type: T;
+    // ── create ───────────────────────────────────────────────────────────────
+    create<T extends keyof AstromechEntryTypes>(params: {
+        type: T;
+        title: string;
+        slug?: string;
+        locale?: string;
+        localeGroup?: string;
+        fields?: Partial<FieldsFor<T>>;
+        status?: EntryStatus;
+        publishAt?: Date | null;
+    }): Promise<TypedEntry<FieldsFor<T>>>;
+    create(params: {
+        type: string;
+        title: string;
+        slug?: string;
+        locale?: string;
+        localeGroup?: string;
+        fields?: Record<string, unknown>;
+        status?: EntryStatus;
+        publishAt?: Date | null;
+    }): Promise<Entry>;
+
+    // ── update ───────────────────────────────────────────────────────────────
+    update<T extends keyof AstromechEntryTypes>(params: {
+        type: T;
+        id: string;
+        data: Partial<{
             title: string;
-            slug?: string;
-            fields?: Partial<FieldsFor<T>>;
-            status?: EntryStatus;
-            publishAt?: Date | null;
-        }): Promise<TypedEntry<FieldsFor<T>>>;
-        create(data: {
-            type: string;
+            slug: string;
+            fields: Partial<FieldsFor<T>>;
+            status: EntryStatus;
+            publishAt: Date | null;
+        }>;
+    }): Promise<TypedEntry<FieldsFor<T>>>;
+    update<T extends keyof AstromechEntryTypes>(params: {
+        type: T;
+        id: readonly string[];
+        data: Partial<{
             title: string;
-            slug?: string;
-            fields?: Record<string, unknown>;
-            status?: EntryStatus;
-            publishAt?: Date | null;
-        }): Promise<Entry>;
+            slug: string;
+            fields: Partial<FieldsFor<T>>;
+            status: EntryStatus;
+            publishAt: Date | null;
+        }>;
+    }): Promise<TypedEntry<FieldsFor<T>>[]>;
+    update(params: { type: string; id: string; data: EntryUpdateData }): Promise<Entry>;
+    update(params: {
+        type: string;
+        id: readonly string[];
+        data: EntryUpdateData;
+    }): Promise<Entry[]>;
 
-        // update doesn't take a type param at runtime, so no typed overload —
-        // falls through to EntriesApi's update signature
-    } & Omit<EntriesApi, 'query' | 'get' | 'create'>;
+    // ── duplicate ────────────────────────────────────────────────────────────
+    duplicate<T extends keyof AstromechEntryTypes>(params: {
+        type: T;
+        id: string;
+        overrides?: Partial<{
+            title: string;
+            slug: string;
+            locale: string;
+            localeGroup: string;
+            fields: Partial<FieldsFor<T>>;
+            status: EntryStatus;
+        }>;
+    }): Promise<TypedEntry<FieldsFor<T>>>;
+    duplicate(params: {
+        type: string;
+        id: string;
+        overrides?: EntryDuplicateOverrides;
+    }): Promise<Entry>;
+
+    // ── publish ──────────────────────────────────────────────────────────────
+    publish<T extends keyof AstromechEntryTypes>(params: {
+        type: T;
+        id: string;
+    }): Promise<TypedEntry<FieldsFor<T>>>;
+    publish<T extends keyof AstromechEntryTypes>(params: {
+        type: T;
+        id: readonly string[];
+    }): Promise<TypedEntry<FieldsFor<T>>[]>;
+    publish(params: { type: string; id: string }): Promise<Entry>;
+    publish(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
+
+    // ── unpublish ────────────────────────────────────────────────────────────
+    unpublish<T extends keyof AstromechEntryTypes>(params: {
+        type: T;
+        id: string;
+    }): Promise<TypedEntry<FieldsFor<T>>>;
+    unpublish<T extends keyof AstromechEntryTypes>(params: {
+        type: T;
+        id: readonly string[];
+    }): Promise<TypedEntry<FieldsFor<T>>[]>;
+    unpublish(params: { type: string; id: string }): Promise<Entry>;
+    unpublish(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
+
+    // ── schedule ─────────────────────────────────────────────────────────────
+    schedule<T extends keyof AstromechEntryTypes>(params: {
+        type: T;
+        id: string;
+        publishAt: Date;
+    }): Promise<TypedEntry<FieldsFor<T>>>;
+    schedule<T extends keyof AstromechEntryTypes>(params: {
+        type: T;
+        id: readonly string[];
+        publishAt: Date;
+    }): Promise<TypedEntry<FieldsFor<T>>[]>;
+    schedule(params: { type: string; id: string; publishAt: Date }): Promise<Entry>;
+    schedule(params: {
+        type: string;
+        id: readonly string[];
+        publishAt: Date;
+    }): Promise<Entry[]>;
+
+    // ── restore ──────────────────────────────────────────────────────────────
+    restore<T extends keyof AstromechEntryTypes>(params: {
+        type: T;
+        id: string;
+    }): Promise<TypedEntry<FieldsFor<T>>>;
+    restore<T extends keyof AstromechEntryTypes>(params: {
+        type: T;
+        id: readonly string[];
+    }): Promise<TypedEntry<FieldsFor<T>>[]>;
+    restore(params: { type: string; id: string }): Promise<Entry>;
+    restore(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
+
+    // ── versions / restoreVersion ────────────────────────────────────────────
+    versions(params: { type: string; id: string }): Promise<EntryVersion[]>;
+    restoreVersion<T extends keyof AstromechEntryTypes>(params: {
+        type: T;
+        id: string;
+        versionId: string;
+    }): Promise<TypedEntry<FieldsFor<T>>>;
+    restoreVersion(params: {
+        type: string;
+        id: string;
+        versionId: string;
+    }): Promise<Entry>;
+} & Omit<
+    EntriesApi,
+    | 'query'
+    | 'get'
+    | 'create'
+    | 'update'
+    | 'duplicate'
+    | 'publish'
+    | 'unpublish'
+    | 'schedule'
+    | 'restore'
+    | 'versions'
+    | 'restoreVersion'
+>;
 
 // ============================================================================
 // AstromechClient

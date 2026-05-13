@@ -20,7 +20,12 @@ export type Entry = {
     id: string;
     type: string;
     locale: string;
-    translationOf: string | null;
+    localeGroup: string;
+    /**
+     * Map of locale code to entry id, including this entry itself.
+     * Always populated. For non-translatable collections this is a single-entry map.
+     */
+    locales: Record<string, string>;
     slug: string | null;
     title: string;
     fields: JsonObject;

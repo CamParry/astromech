@@ -5,6 +5,8 @@
  * Mutation hooks wrap useMutation, baking in cache invalidation and toasts
  * for consistent operations. Page-specific callbacks (e.g. navigation) are
  * accepted via optional onSuccess.
+ *
+ * SDK surface: see specs/typed-entries-api.md (options-object, type required).
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -12,18 +14,26 @@ import { useTranslation } from 'react-i18next';
 import { Astromech } from '@/sdk/fetch/index.js';
 import { queryKeys } from './use-query-keys.js';
 import { useToast } from '../components/ui/index.js';
-import type { Entry, EntryStatus, JsonObject, EntryQueryParams } from '@/types/index.js';
+import type {
+    Entry,
+    EntryStatus,
+    EntryUpdateData,
+    JsonObject,
+    EntryQueryParams,
+} from '@/types/index.js';
 
 // ============================================================================
 // Query hooks
 // ============================================================================
 
-export function useEntriesQuery(params?: EntryQueryParams) {
+export function useEntriesQuery(
+    params: EntryQueryParams & { type: string | readonly string[] }
+) {
+    const typeKey = Array.isArray(params.type)
+        ? params.type.join(',')
+        : (params.type as string);
     return useQuery({
-        queryKey: queryKeys.entries.list(
-            params?.type ?? '',
-            params as Record<string, unknown>
-        ),
+        queryKey: queryKeys.entries.list(typeKey, params as Record<string, unknown>),
         queryFn: () => Astromech.entries.query(params),
     });
 }
@@ -31,23 +41,45 @@ export function useEntriesQuery(params?: EntryQueryParams) {
 export function useEntry(type: string, id: string) {
     return useQuery({
         queryKey: queryKeys.entries.get(type, id),
-        queryFn: () => Astromech.entries.get(type, id),
+        queryFn: () => Astromech.entries.get({ type, id }),
     });
 }
 
 export function useEntryVersions(type: string, id: string, enabled = true) {
     return useQuery({
         queryKey: queryKeys.entries.versions(type, id),
-        queryFn: () => Astromech.entries.versions(id),
+        queryFn: () => Astromech.entries.versions({ type, id }),
         enabled,
     });
 }
 
-export function useEntryTranslations(type: string, sourceId: string, enabled = true) {
+/**
+ * Read-only: fetch entries that reference `id` via a relationship row.
+ * Used by the delete-confirmation modal to warn about dangling references.
+ */
+export function useIncomingRelations(type: string, id: string, enabled = true) {
     return useQuery({
-        queryKey: queryKeys.entries.translations(type, sourceId),
-        queryFn: () => Astromech.entries.translations(sourceId),
+        queryKey: ['entries', type, 'incoming-relations', id] as const,
+        queryFn: () => Astromech.entries.incomingRelations({ type, id }),
         enabled,
+    });
+}
+
+/**
+ * Batch-fetch entries by id, across all locales. Used to load sibling-title
+ * metadata for an entry's `locales` map.
+ */
+export function useEntriesByIds(type: string, ids: string[], enabled = true) {
+    return useQuery({
+        queryKey: queryKeys.entries.list(type, { _byIds: ids, locale: 'all' }),
+        queryFn: () =>
+            Astromech.entries.query({
+                type,
+                locale: 'all',
+                where: { id: { in: ids } },
+                limit: 'all',
+            }),
+        enabled: enabled && ids.length > 0,
     });
 }
 
@@ -94,7 +126,11 @@ export function useUpdateEntry(
 
     return useMutation({
         mutationFn: (payload: Record<string, unknown>) =>
-            Astromech.entries.update(id, payload),
+            Astromech.entries.update({
+                type,
+                id,
+                data: payload as EntryUpdateData,
+            }),
         onSuccess: (entry) => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.get(type, id),
@@ -116,7 +152,12 @@ export function useTrashEntry(type: string, options?: { onSuccess?: () => void }
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: (id: string) => Astromech.entries.trash(id),
+        mutationFn: (input: string | { id: string; cascadeLocales?: boolean }) => {
+            const id = typeof input === 'string' ? input : input.id;
+            const cascadeLocales =
+                typeof input === 'string' ? false : !!input.cascadeLocales;
+            return Astromech.entries.trash({ type, id, cascadeLocales });
+        },
         onSuccess: () => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.all(type),
@@ -142,7 +183,12 @@ export function useDeleteEntry(type: string, options?: { onSuccess?: () => void 
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: (id: string) => Astromech.entries.delete(id),
+        mutationFn: (input: string | { id: string; cascadeLocales?: boolean }) => {
+            const id = typeof input === 'string' ? input : input.id;
+            const cascadeLocales =
+                typeof input === 'string' ? false : !!input.cascadeLocales;
+            return Astromech.entries.delete({ type, id, cascadeLocales });
+        },
         onSuccess: () => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.all(type),
@@ -171,7 +217,7 @@ export function useDuplicateEntry(
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: (id: string) => Astromech.entries.duplicate(id),
+        mutationFn: (id: string) => Astromech.entries.duplicate({ type, id }),
         onSuccess: (entry) => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.all(type),
@@ -198,7 +244,7 @@ export function useRestoreEntry(type: string, options?: { onSuccess?: () => void
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: (id: string) => Astromech.entries.restore(id),
+        mutationFn: (id: string) => Astromech.entries.restore({ type, id }),
         onSuccess: () => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.all(type),
@@ -225,7 +271,7 @@ export function usePublishEntry(
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: () => Astromech.entries.publish(id),
+        mutationFn: () => Astromech.entries.publish({ type, id }),
         onSuccess: (entry) => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.get(type, id),
@@ -255,7 +301,7 @@ export function useUnpublishEntry(
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: () => Astromech.entries.unpublish(id),
+        mutationFn: () => Astromech.entries.unpublish({ type, id }),
         onSuccess: (entry) => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.get(type, id),
@@ -286,7 +332,8 @@ export function useScheduleEntry(
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: (publishAt: Date) => Astromech.entries.schedule(id, publishAt),
+        mutationFn: (publishAt: Date) =>
+            Astromech.entries.schedule({ type, id, publishAt }),
         onSuccess: (entry) => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.get(type, id),
@@ -306,14 +353,25 @@ export function useScheduleEntry(
     });
 }
 
+// ============================================================================
+// Bulk mutation hooks (atomic — single SDK call per action)
+// ============================================================================
+
+function bulkErrorMessage(err: unknown, fallback: string): string {
+    if (err instanceof Error) {
+        const failedId = (err as { failedId?: string }).failedId;
+        return failedId ? `${err.message}` : err.message;
+    }
+    return fallback;
+}
+
 export function useBulkTrashEntries(type: string, options?: { onSuccess?: () => void }) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: (ids: string[]) =>
-            Promise.all(ids.map((id) => Astromech.entries.trash(id))),
+        mutationFn: (ids: string[]) => Astromech.entries.trash({ type, id: ids }),
         onSuccess: () => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.all(type),
@@ -323,7 +381,7 @@ export function useBulkTrashEntries(type: string, options?: { onSuccess?: () => 
         },
         onError: (err) => {
             toast({
-                message: err instanceof Error ? err.message : t('entries.deleteFailed'),
+                message: bulkErrorMessage(err, t('entries.deleteFailed')),
                 variant: 'error',
             });
         },
@@ -336,8 +394,7 @@ export function useBulkDeleteEntries(type: string, options?: { onSuccess?: () =>
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: (ids: string[]) =>
-            Promise.all(ids.map((id) => Astromech.entries.delete(id))),
+        mutationFn: (ids: string[]) => Astromech.entries.delete({ type, id: ids }),
         onSuccess: () => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.all(type),
@@ -347,7 +404,7 @@ export function useBulkDeleteEntries(type: string, options?: { onSuccess?: () =>
         },
         onError: (err) => {
             toast({
-                message: err instanceof Error ? err.message : t('entries.deleteFailed'),
+                message: bulkErrorMessage(err, t('entries.deleteFailed')),
                 variant: 'error',
             });
         },
@@ -363,10 +420,7 @@ export function useBulkPublishEntries(
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: (ids: string[]) =>
-            Promise.all(
-                ids.map((id) => Astromech.entries.update(id, { status: 'published' }))
-            ),
+        mutationFn: (ids: string[]) => Astromech.entries.publish({ type, id: ids }),
         onSuccess: () => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.all(type),
@@ -376,7 +430,7 @@ export function useBulkPublishEntries(
         },
         onError: (err) => {
             toast({
-                message: err instanceof Error ? err.message : t('entries.updateFailed'),
+                message: bulkErrorMessage(err, t('entries.updateFailed')),
                 variant: 'error',
             });
         },
@@ -392,10 +446,7 @@ export function useBulkUnpublishEntries(
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: (ids: string[]) =>
-            Promise.all(
-                ids.map((id) => Astromech.entries.update(id, { status: 'draft' }))
-            ),
+        mutationFn: (ids: string[]) => Astromech.entries.unpublish({ type, id: ids }),
         onSuccess: () => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.all(type),
@@ -405,7 +456,7 @@ export function useBulkUnpublishEntries(
         },
         onError: (err) => {
             toast({
-                message: err instanceof Error ? err.message : t('entries.updateFailed'),
+                message: bulkErrorMessage(err, t('entries.updateFailed')),
                 variant: 'error',
             });
         },
@@ -423,7 +474,7 @@ export function useRestoreEntryVersion(
 
     return useMutation({
         mutationFn: (versionId: string) =>
-            Astromech.entries.restoreVersion(id, versionId),
+            Astromech.entries.restoreVersion({ type, id, versionId }),
         onSuccess: () => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.get(type, id),
@@ -443,16 +494,37 @@ export function useRestoreEntryVersion(
     });
 }
 
+/**
+ * Mutation: create a new entry that joins an existing locale group as a
+ * translation of `sourceId`. Used by the LocaleSwitcher "Create translation" CTA.
+ *
+ * Implementation: reads the source via Astromech.entries.get, then calls
+ * Astromech.entries.duplicate({ type, id: sourceId, overrides: { locale, localeGroup } })
+ * so the new row inherits the source's localeGroup. See specs/symmetric-locale-model.md §6.
+ */
 export function useCreateTranslation(
-    _type: string,
+    type: string,
     options?: { onSuccess?: (entry: Entry) => void; onError?: (err: Error) => void }
 ) {
     const { toast } = useToast();
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: ({ sourceId, locale }: { sourceId: string; locale: string }) =>
-            Astromech.entries.createTranslation(sourceId, locale),
+        mutationFn: async ({
+            sourceId,
+            locale,
+        }: {
+            sourceId: string;
+            locale: string;
+        }): Promise<Entry> => {
+            const source = await Astromech.entries.get({ type, id: sourceId });
+            if (!source) throw new Error(`Entry ${sourceId} not found`);
+            return Astromech.entries.duplicate({
+                type,
+                id: sourceId,
+                overrides: { locale, localeGroup: source.localeGroup },
+            }) as Promise<Entry>;
+        },
         onSuccess: (entry) => {
             options?.onSuccess?.(entry);
         },

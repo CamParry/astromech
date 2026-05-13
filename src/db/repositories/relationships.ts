@@ -167,6 +167,33 @@ export class RelationshipsRepository {
     }
 
     /**
+     * Remove every relationship row (incoming and outgoing) involving an entry.
+     * Used when an entry is permanently deleted.
+     */
+    async deleteByEntry(id: string): Promise<void> {
+        await this.deleteBySource(id, 'entry');
+        await this.deleteByTarget(id, 'entry');
+    }
+
+    /**
+     * Remove every relationship row (incoming and outgoing) involving a user.
+     * Used when a user is permanently deleted.
+     */
+    async deleteByUser(id: string): Promise<void> {
+        await this.deleteBySource(id, 'user');
+        await this.deleteByTarget(id, 'user');
+    }
+
+    /**
+     * Remove every relationship row (incoming and outgoing) involving a media item.
+     * Used when a media item is permanently deleted.
+     */
+    async deleteByMedia(id: string): Promise<void> {
+        await this.deleteBySource(id, 'media');
+        await this.deleteByTarget(id, 'media');
+    }
+
+    /**
      * Replace all relationships for a source/name combination
      * Useful for form submissions where all relations are set at once
      */

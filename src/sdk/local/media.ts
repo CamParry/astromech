@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { mediaTable } from '@/db/schema.js';
 import { getDb } from '@/db/registry.js';
 import { getStorageDriver } from '@/storage/registry.js';
+import { RelationshipsRepository } from '@/db/repositories/relationships.js';
 import type { Media, JsonObject, QueryResult, MediaQueryParams } from '@/types/index.js';
 import { ValidationError } from '@/errors/validation.js';
 import { updateMediaSchema } from '@/schemas/media.js';
@@ -132,6 +133,7 @@ export const mediaApi = {
             }
         }
 
+        await new RelationshipsRepository(db).deleteByMedia(id);
         await db.delete(mediaTable).where(eq(mediaTable.id, id));
     },
 };

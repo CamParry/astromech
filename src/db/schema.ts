@@ -4,7 +4,7 @@
  * Compatible with Cloudflare D1 (SQLite)
  */
 
-import { sqliteTable, text, integer, index, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 // ============================================================================
 // Roles
@@ -104,9 +104,12 @@ export const entriesTable = sqliteTable(
             .primaryKey()
             .$defaultFn(() => crypto.randomUUID()),
         type: text('type').notNull(),
-
-        // Translation support (nullable for non-i18n entry types)
-        locale: text('locale'),
+        locale: text('locale').notNull(),
+        // Synthetic group identifier shared by all rows that represent the same
+        // content across locales. Generated via crypto.randomUUID() on create.
+        localeGroup: text('locale_group')
+            .notNull()
+            .$defaultFn(() => crypto.randomUUID()),
 
         slug: text('slug'),
         title: text('title').notNull(),
@@ -125,17 +128,15 @@ export const entriesTable = sqliteTable(
             .$defaultFn(() => new Date()),
         createdBy: text('created_by').references(() => usersTable.id),
         updatedBy: text('updated_by').references(() => usersTable.id),
-
-        // Translations support: points to the source/default locale entry
-        translationOf: text('translation_of').references((): AnySQLiteColumn => entriesTable.id, { onDelete: 'cascade' }),
     },
     (table) => [
         index('idx_entries_type').on(table.type),
-        index('idx_entries_slug').on(table.type, table.slug),
         index('idx_entries_status').on(table.type, table.status),
         index('idx_entries_locale').on(table.type, table.locale, table.status),
         index('idx_entries_deleted').on(table.deletedAt),
-        index('idx_entries_translation_of').on(table.translationOf),
+        index('idx_entries_locale_group').on(table.localeGroup),
+        uniqueIndex('entries_locale_group_locale_unique').on(table.localeGroup, table.locale),
+        uniqueIndex('entries_type_locale_slug_unique').on(table.type, table.locale, table.slug),
     ]
 );
 

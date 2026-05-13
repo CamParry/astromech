@@ -2,7 +2,11 @@
  * Astromech Server Entries API
  *
  * Unified entries object for direct database access in Astro server-side code.
- * Import from 'astromech/local'
+ * Import from 'astromech/local'.
+ *
+ * Surface: see specs/typed-entries-api.md (options-object shape, type required
+ * on every call, bulk-capable methods accept `id: string | string[]`).
+ * Locale model: see specs/symmetric-locale-model.md.
  */
 
 import config from 'virtual:astromech/config';
@@ -18,16 +22,18 @@ import {
     like,
     ne,
 } from 'drizzle-orm';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { z } from 'zod';
 import { getDb } from '@/db/registry.js';
 import { entriesTable } from '@/db/schema.js';
 import type { EntryRow } from '@/db/schema.js';
 import { ValidationError } from '@/errors/validation.js';
+import { EntryTypeMismatchError } from '@/errors/entry-type-mismatch.js';
+import { BulkOperationError } from '@/errors/bulk-operation.js';
 import {
     createEntrySchema,
     updateEntrySchema,
     scheduleEntrySchema,
-    createTranslationSchema,
 } from '@/schemas/entries.js';
 import { RelationshipsRepository } from '@/db/repositories/relationships.js';
 import { VersionsRepository } from '@/db/repositories/versions.js';
@@ -38,15 +44,20 @@ import type {
     EntryVersion,
     EntriesApi,
     EntryQueryParams,
+    EntryUpdateData,
+    EntryDuplicateOverrides,
+    IncomingRelation,
     QueryResult,
     JsonObject,
     SortOption,
-    TranslationInfo,
     User,
     WhereFilters,
 } from '@/types/index.js';
 import { setCurrentUser } from '@/sdk/local/context.js';
 import { titleToSlug } from '@/support/strings.js';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Db = LibSQLDatabase<any>;
 
 // ============================================================================
 // Validation Helper
@@ -59,6 +70,10 @@ function validate<T>(schema: z.ZodType<T>, data: unknown): T {
         if (err instanceof z.ZodError) throw new ValidationError(err.issues);
         throw err;
     }
+}
+
+function getDefaultLocale(): string {
+    return (config as { defaultLocale?: string }).defaultLocale ?? 'en';
 }
 
 // ============================================================================
@@ -80,13 +95,12 @@ export function initServerContext(ctx: {
 // Slug Utilities
 // ============================================================================
 
-/**
- * Generate a unique slug for an entry type, appending -2, -3, etc. on collision
- */
-async function generateUniqueSlug(
+export async function generateUniqueSlug(
     type: string,
+    locale: string,
     baseSlug: string,
-    excludeId?: string
+    excludeId?: string,
+    db: Db = getDb()
 ): Promise<string> {
     let candidate = baseSlug;
     let counter = 1;
@@ -94,24 +108,61 @@ async function generateUniqueSlug(
     while (true) {
         const conditions = [
             eq(entriesTable.type, type),
+            eq(entriesTable.locale, locale),
             eq(entriesTable.slug, candidate),
             isNull(entriesTable.deletedAt),
             ...(excludeId ? [ne(entriesTable.id, excludeId)] : []),
         ];
 
-        const existing = await getDb()
+        const existing = await db
             .select({ id: entriesTable.id })
             .from(entriesTable)
             .where(and(...conditions))
             .limit(1);
 
-        if (!existing[0]) {
-            return candidate;
-        }
+        if (!existing[0]) return candidate;
 
         counter++;
         candidate = `${baseSlug}-${counter}`;
     }
+}
+
+// ============================================================================
+// locales map population
+// ============================================================================
+
+async function populateLocales<T extends EntryRow>(rows: T[], db: Db = getDb()): Promise<Entry[]> {
+    if (rows.length === 0) return [] as Entry[];
+
+    const groupIds = Array.from(new Set(rows.map((r) => r.localeGroup)));
+    const siblings = await db
+        .select({
+            id: entriesTable.id,
+            locale: entriesTable.locale,
+            localeGroup: entriesTable.localeGroup,
+        })
+        .from(entriesTable)
+        .where(and(inArray(entriesTable.localeGroup, groupIds), isNull(entriesTable.deletedAt)));
+
+    const byGroup = new Map<string, Record<string, string>>();
+    for (const sib of siblings) {
+        let map = byGroup.get(sib.localeGroup);
+        if (!map) {
+            map = {};
+            byGroup.set(sib.localeGroup, map);
+        }
+        map[sib.locale] = sib.id;
+    }
+
+    return rows.map((row) => ({
+        ...(row as unknown as Entry),
+        locales: byGroup.get(row.localeGroup) ?? { [row.locale]: row.id },
+    }));
+}
+
+async function populateLocaleSingle<T extends EntryRow>(row: T, db: Db = getDb()): Promise<Entry> {
+    const populated = await populateLocales([row], db);
+    return populated[0]!;
 }
 
 // ============================================================================
@@ -135,9 +186,6 @@ const SORTABLE_FIELDS: Record<string, DrizzleColumn> = {
     slug: entriesTable.slug,
 };
 
-/**
- * Build Drizzle ORDER BY clauses from a sort option
- */
 function buildOrderBy(sort?: SortOption | SortOption[]) {
     if (!sort) return [desc(entriesTable.createdAt)];
 
@@ -154,12 +202,6 @@ function buildOrderBy(sort?: SortOption | SortOption[]) {
     return clauses.length > 0 ? clauses : [desc(entriesTable.createdAt)];
 }
 
-/**
- * Build Drizzle WHERE conditions from a WhereFilters object
- *
- * Supports top-level entry fields: status, slug, title, locale
- * Array values result in IN queries.
- */
 function buildFilterConditions(filters: WhereFilters) {
     const conditions = [];
 
@@ -179,7 +221,14 @@ function buildFilterConditions(filters: WhereFilters) {
         } else if (key === 'title') {
             conditions.push(eq(entriesTable.title, value as string));
         } else if (key === 'locale') {
-            conditions.push(eq(entriesTable.locale, value as string));
+            // Handled by buildLocaleCondition at the top level — ignore here.
+        } else if (key === 'id') {
+            const inClause = (value as { in?: unknown }).in;
+            if (Array.isArray(inClause)) {
+                conditions.push(inArray(entriesTable.id, inClause as string[]));
+            } else {
+                conditions.push(eq(entriesTable.id, value as string));
+            }
         }
     }
 
@@ -187,18 +236,16 @@ function buildFilterConditions(filters: WhereFilters) {
 }
 
 // ============================================================================
-// Helper Functions
+// Relationship + version helpers
 // ============================================================================
 
-/**
- * Extract and save relationships from entry fields
- */
 async function saveRelationships(
+    db: Db,
     entryId: string,
     fields: JsonObject,
     typeName: string
 ): Promise<void> {
-    const relationshipsRepo = new RelationshipsRepository(getDb());
+    const relationshipsRepo = new RelationshipsRepository(db);
     const entryTypeConfig = config.entries[typeName];
 
     if (!entryTypeConfig) return;
@@ -234,11 +281,11 @@ function isVersioningEnabled(typeName: string): boolean {
 }
 
 async function buildRelationsSnapshot(
+    db: Db,
     entryId: string
 ): Promise<Record<string, string | string[]>> {
-    const relRepo = new RelationshipsRepository(getDb());
+    const relRepo = new RelationshipsRepository(db);
     const rels = await relRepo.getBySource(entryId, 'entry');
-    // rels are already ordered by position
     const byName = new Map<string, string[]>();
     for (const rel of rels) {
         if (!byName.has(rel.name)) byName.set(rel.name, []);
@@ -268,11 +315,9 @@ function deepEqual(a: unknown, b: unknown): boolean {
     );
 }
 
-function buildLocaleCondition(typeName: string, locale?: string) {
-    const entryTypeConfig = config.entries[typeName];
-    if (!entryTypeConfig?.translatable) return null;
-    const defaultLocale = (config as { defaultLocale?: string }).defaultLocale ?? 'en';
-    return eq(entriesTable.locale, locale ?? defaultLocale);
+function buildLocaleCondition(locale: string | 'all' | undefined) {
+    if (locale === 'all') return null;
+    return eq(entriesTable.locale, locale ?? getDefaultLocale());
 }
 
 function getNonTranslatableFieldNames(
@@ -312,26 +357,302 @@ function buildIncomingRelations(
 }
 
 // ============================================================================
+// Type-mismatch enforcement helper
+// ============================================================================
+
+async function loadAndAssertType(
+    db: Db,
+    type: string,
+    id: string
+): Promise<EntryRow> {
+    const rows = await db
+        .select()
+        .from(entriesTable)
+        .where(eq(entriesTable.id, id))
+        .limit(1);
+    const row = rows[0] as EntryRow | undefined;
+    if (!row) throw new Error(`Entry '${id}' not found`);
+    if (row.type !== type) {
+        throw new EntryTypeMismatchError({
+            entryId: id,
+            expectedType: type,
+            actualType: row.type,
+        });
+    }
+    return row;
+}
+
+// ============================================================================
+// Bulk dispatch helper
+// ============================================================================
+
+async function runBulk<T>(
+    ids: readonly string[],
+    perId: (db: Db, id: string) => Promise<T>
+): Promise<T[]> {
+    if (ids.length === 0) return [];
+    return getDb().transaction(async (tx) => {
+        const results: T[] = [];
+        const succeeded: string[] = [];
+        for (const id of ids) {
+            try {
+                results.push(await perId(tx as unknown as Db, id));
+                succeeded.push(id);
+            } catch (err) {
+                throw new BulkOperationError({
+                    failedId: id,
+                    reason: err instanceof Error ? err.message : String(err),
+                    succeededBefore: succeeded,
+                    cause: err,
+                });
+            }
+        }
+        return results;
+    });
+}
+
+async function runBulkVoid(
+    ids: readonly string[],
+    perId: (db: Db, id: string) => Promise<void>
+): Promise<void> {
+    if (ids.length === 0) return;
+    await getDb().transaction(async (tx) => {
+        const succeeded: string[] = [];
+        for (const id of ids) {
+            try {
+                await perId(tx as unknown as Db, id);
+                succeeded.push(id);
+            } catch (err) {
+                throw new BulkOperationError({
+                    failedId: id,
+                    reason: err instanceof Error ? err.message : String(err),
+                    succeededBefore: succeeded,
+                    cause: err,
+                });
+            }
+        }
+    });
+}
+
+// ============================================================================
+// Internal per-id operations
+// ============================================================================
+
+async function _updateOne(
+    db: Db,
+    type: string,
+    id: string,
+    data: EntryUpdateData
+): Promise<Entry> {
+    const validatedData = validate(updateEntrySchema, data);
+    const currentEntry = await loadAndAssertType(db, type, id);
+
+    if (isVersioningEnabled(type)) {
+        const currentRelations = await buildRelationsSnapshot(db, id);
+        const incomingRelations = validatedData.fields
+            ? buildIncomingRelations(type, validatedData.fields as JsonObject)
+            : currentRelations;
+
+        const titleChanged =
+            validatedData.title !== undefined && validatedData.title !== currentEntry.title;
+        const slugChanged =
+            validatedData.slug !== undefined && validatedData.slug !== currentEntry.slug;
+        const fieldsChanged =
+            validatedData.fields !== undefined &&
+            !deepEqual(currentEntry.fields, validatedData.fields);
+        const relationsChanged =
+            validatedData.fields !== undefined &&
+            !deepEqual(currentRelations, incomingRelations);
+
+        if (titleChanged || slugChanged || fieldsChanged || relationsChanged) {
+            const versionsRepo = new VersionsRepository(db);
+            const latestNumber = await versionsRepo.getLatestNumber(id);
+            await versionsRepo.create({
+                entryId: id,
+                versionNumber: latestNumber + 1,
+                title: currentEntry.title,
+                slug: currentEntry.slug,
+                fields: currentEntry.fields as JsonObject,
+                relations: currentRelations,
+                createdBy: null,
+            });
+        }
+    }
+
+    let publishedAt = validatedData.publishAt;
+    if (validatedData.status === 'published' && !currentEntry.publishedAt) {
+        publishedAt = new Date();
+    }
+
+    let slug = validatedData.slug;
+    if (slug && slug !== currentEntry.slug) {
+        slug = await generateUniqueSlug(type, currentEntry.locale, slug, id, db);
+    }
+
+    const row = await db
+        .update(entriesTable)
+        .set({
+            title: validatedData.title,
+            slug,
+            fields: validatedData.fields as JsonObject | undefined,
+            status: validatedData.status,
+            publishedAt,
+            updatedAt: new Date(),
+        })
+        .where(eq(entriesTable.id, id))
+        .returning();
+
+    if (!(row as EntryRow[])[0]) throw new Error('Failed to update entry');
+    const updated = (row as EntryRow[])[0]!;
+
+    if (validatedData.fields) {
+        await saveRelationships(db, updated.id, validatedData.fields as JsonObject, type);
+    }
+
+    if (validatedData.fields) {
+        const changedFieldNames = Object.keys(validatedData.fields);
+        const nonTranslatableNames = getNonTranslatableFieldNames(type, changedFieldNames);
+        if (nonTranslatableNames.length > 0) {
+            const nonTranslatableValues: JsonObject = {};
+            for (const name of nonTranslatableNames) {
+                nonTranslatableValues[name] = (validatedData.fields as JsonObject)[name]!;
+            }
+
+            const siblings = await db
+                .select({ id: entriesTable.id, fields: entriesTable.fields })
+                .from(entriesTable)
+                .where(
+                    and(
+                        eq(entriesTable.localeGroup, currentEntry.localeGroup),
+                        ne(entriesTable.id, id),
+                        isNull(entriesTable.deletedAt)
+                    )
+                );
+
+            for (const sibling of siblings) {
+                const mergedFields = {
+                    ...((sibling.fields as JsonObject) ?? {}),
+                    ...nonTranslatableValues,
+                };
+                await db
+                    .update(entriesTable)
+                    .set({ fields: mergedFields, updatedAt: new Date() })
+                    .where(eq(entriesTable.id, sibling.id));
+            }
+        }
+    }
+
+    return populateLocaleSingle(updated, db);
+}
+
+async function _trashOne(
+    db: Db,
+    type: string,
+    id: string,
+    cascadeLocales: boolean
+): Promise<void> {
+    const row = await loadAndAssertType(db, type, id);
+    const now = new Date();
+
+    // Idempotent: re-trashing an already-trashed entry is a no-op.
+    if (row.deletedAt == null) {
+        await db
+            .update(entriesTable)
+            .set({ deletedAt: now })
+            .where(eq(entriesTable.id, id));
+    }
+
+    if (cascadeLocales) {
+        await db
+            .update(entriesTable)
+            .set({ deletedAt: now })
+            .where(
+                and(
+                    eq(entriesTable.localeGroup, row.localeGroup),
+                    ne(entriesTable.id, id),
+                    isNull(entriesTable.deletedAt)
+                )
+            );
+    }
+}
+
+async function _deleteOne(
+    db: Db,
+    type: string,
+    id: string,
+    cascadeLocales: boolean
+): Promise<void> {
+    const existing = await loadAndAssertType(db, type, id);
+    const relationshipsRepo = new RelationshipsRepository(db);
+
+    if (cascadeLocales) {
+        const siblings = await db
+            .select({ id: entriesTable.id })
+            .from(entriesTable)
+            .where(
+                and(
+                    eq(entriesTable.localeGroup, existing.localeGroup),
+                    ne(entriesTable.id, id)
+                )
+            );
+
+        for (const sib of siblings) {
+            await relationshipsRepo.deleteByEntry(sib.id);
+        }
+        await relationshipsRepo.deleteByEntry(id);
+
+        // Versions cascade-delete via entry_versions.entry_id ON DELETE CASCADE.
+        await db
+            .delete(entriesTable)
+            .where(eq(entriesTable.localeGroup, existing.localeGroup));
+        return;
+    }
+
+    await relationshipsRepo.deleteByEntry(id);
+    await db.delete(entriesTable).where(eq(entriesTable.id, id));
+}
+
+async function _restoreOne(db: Db, type: string, id: string): Promise<Entry> {
+    await loadAndAssertType(db, type, id);
+    const row = await db
+        .update(entriesTable)
+        .set({ deletedAt: null, updatedAt: new Date() })
+        .where(and(eq(entriesTable.id, id), isNotNull(entriesTable.deletedAt)))
+        .returning();
+
+    if (!(row as EntryRow[])[0]) {
+        throw new Error('Entry not found in trash');
+    }
+    return populateLocaleSingle((row as EntryRow[])[0]!, db);
+}
+
+// ============================================================================
 // Entries API
 // ============================================================================
 
 export const entries: EntriesApi = {
-    async query(params?: EntryQueryParams): Promise<QueryResult<Entry>> {
-        const type = params?.type;
-        const trashed = params?.trashed ?? false;
-        const limit = params?.limit;
-        const page = params?.page ?? 1;
+    async query(params: EntryQueryParams & { type: string | readonly string[] }): Promise<QueryResult<Entry>> {
+        const typeParam = params.type;
+        const types = Array.isArray(typeParam) ? Array.from(typeParam) : [typeParam as string];
+        const trashed = params.trashed ?? false;
+        const limit = params.limit;
+        const page = params.page ?? 1;
 
-        const filterConditions = params?.where
+        const filterConditions = params.where
             ? buildFilterConditions(params.where)
             : [];
-        const localeCondition = type ? buildLocaleCondition(type, params?.locale) : null;
-        const searchCondition = params?.search
+        const localeCondition = buildLocaleCondition(params.locale);
+        const searchCondition = params.search
             ? like(entriesTable.title, `%${params.search}%`)
             : null;
 
+        const typeCondition =
+            types.length === 1
+                ? eq(entriesTable.type, types[0]!)
+                : inArray(entriesTable.type, types);
+
         const conditions = [
-            ...(type ? [eq(entriesTable.type, type)] : []),
+            typeCondition,
             trashed ? isNotNull(entriesTable.deletedAt) : isNull(entriesTable.deletedAt),
             ...(localeCondition ? [localeCondition] : []),
             ...(searchCondition ? [searchCondition] : []),
@@ -339,7 +660,10 @@ export const entries: EntriesApi = {
         ];
 
         const whereClause = and(...conditions);
-        const orderClauses = buildOrderBy(params?.sort);
+        const orderClauses = buildOrderBy(params.sort);
+
+        // Populate only applies when all rows share a single type config.
+        const singleType = types.length === 1 ? types[0]! : null;
 
         if (limit === 'all') {
             const rows = await getDb()
@@ -348,10 +672,10 @@ export const entries: EntriesApi = {
                 .where(whereClause)
                 .orderBy(...orderClauses);
 
-            let data = rows as Entry[];
+            let data = await populateLocales(rows as EntryRow[]);
 
-            if (type && params?.populate && params.populate.length > 0) {
-                const entryTypeConfig = config.entries[type];
+            if (singleType && params.populate && params.populate.length > 0) {
+                const entryTypeConfig = config.entries[singleType];
                 if (entryTypeConfig) {
                     data = await populateEntries(getDb(), data, entryTypeConfig.fieldGroups, params.populate);
                 }
@@ -379,10 +703,10 @@ export const entries: EntriesApi = {
             .limit(perPage)
             .offset(offset);
 
-        let data = rows as Entry[];
+        let data = await populateLocales(rows as EntryRow[]);
 
-        if (type && params?.populate && params.populate.length > 0) {
-            const entryTypeConfig = config.entries[type];
+        if (singleType && params.populate && params.populate.length > 0) {
+            const entryTypeConfig = config.entries[singleType];
             if (entryTypeConfig) {
                 data = await populateEntries(getDb(), data, entryTypeConfig.fieldGroups, params.populate);
             }
@@ -394,7 +718,13 @@ export const entries: EntriesApi = {
         };
     },
 
-    async get(type: string, id: string, options?: { populate?: string[]; locale?: string }): Promise<Entry | null> {
+    async get(params: {
+        type: string;
+        id: string;
+        locale?: string;
+        populate?: string[];
+    }): Promise<Entry | null> {
+        const { type, id } = params;
         const conditions = [
             eq(entriesTable.id, id),
             isNull(entriesTable.deletedAt),
@@ -407,20 +737,18 @@ export const entries: EntriesApi = {
             .where(and(...conditions))
             .limit(1);
 
-        if (!row[0]) {
-            return null;
-        }
+        if (!row[0]) return null;
 
-        let result = row[0] as Entry;
+        let result: Entry = await populateLocaleSingle(row[0] as EntryRow);
 
-        if (options?.populate && options.populate.length > 0) {
+        if (params.populate && params.populate.length > 0) {
             const entryTypeConfig = config.entries[type];
             if (entryTypeConfig) {
                 const populated = await populateEntries(
                     getDb(),
                     [result],
                     entryTypeConfig.fieldGroups,
-                    options.populate
+                    params.populate
                 );
                 result = populated[0] || result;
             }
@@ -429,29 +757,34 @@ export const entries: EntriesApi = {
         return result;
     },
 
-    async create(data: {
+    async create(params: {
         type: string;
         title: string;
         slug?: string;
+        locale?: string;
+        localeGroup?: string;
         fields?: JsonObject;
         status?: EntryStatus;
         publishAt?: Date | null;
     }): Promise<Entry> {
         const validated = validate(createEntrySchema, {
-            title: data.title,
-            slug: data.slug,
-            fields: data.fields,
-            status: data.status,
-            publishAt: data.publishAt,
+            title: params.title,
+            slug: params.slug,
+            fields: params.fields,
+            status: params.status,
+            publishAt: params.publishAt,
         });
 
-        const { type } = data;
+        const { type } = params;
         const status = validated.status || 'draft';
         const publishedAt =
             status === 'published' ? new Date() : (validated.publishAt ?? null);
 
+        const locale = params.locale ?? getDefaultLocale();
+        const localeGroup = params.localeGroup ?? crypto.randomUUID();
+
         const baseSlug = validated.slug ? validated.slug : titleToSlug(validated.title);
-        const slug = await generateUniqueSlug(type, baseSlug);
+        const slug = await generateUniqueSlug(type, locale, baseSlug);
 
         const row = await getDb()
             .insert(entriesTable)
@@ -459,236 +792,79 @@ export const entries: EntriesApi = {
                 type,
                 title: validated.title,
                 slug,
-                locale: (config as { defaultLocale?: string }).defaultLocale ?? 'en',
+                locale,
+                localeGroup,
                 fields: validated.fields || {},
                 status,
                 publishedAt,
             })
             .returning();
 
-        if (!(row as EntryRow[])[0]) {
-            throw new Error('Failed to create entry');
-        }
+        if (!(row as EntryRow[])[0]) throw new Error('Failed to create entry');
 
-        const created = (row as EntryRow[])[0] as Entry;
+        const created = (row as EntryRow[])[0]!;
 
         if (validated.fields) {
-            await saveRelationships(created.id, validated.fields as JsonObject, type);
+            await saveRelationships(getDb(), created.id, validated.fields as JsonObject, type);
         }
 
-        return created;
+        return populateLocaleSingle(created);
     },
 
-    async update(
-        id: string,
-        data: Partial<{
-            title: string;
-            slug: string;
-            fields: JsonObject;
-            status: EntryStatus;
-            publishAt: Date | null;
-        }>
-    ): Promise<Entry> {
-        const validatedData = validate(updateEntrySchema, data);
-
-        const current = await getDb()
-            .select()
-            .from(entriesTable)
-            .where(eq(entriesTable.id, id))
-            .limit(1);
-
-        const currentEntry = current[0];
-        if (!currentEntry) {
-            throw new Error('Entry not found');
-        }
-
-        const type = currentEntry.type;
-
-        // --- Versioning ---
-        if (isVersioningEnabled(type)) {
-            const currentRelations = await buildRelationsSnapshot(id);
-            const incomingRelations = validatedData.fields
-                ? buildIncomingRelations(type, validatedData.fields as JsonObject)
-                : currentRelations;
-
-            const titleChanged =
-                validatedData.title !== undefined && validatedData.title !== currentEntry.title;
-            const slugChanged =
-                validatedData.slug !== undefined && validatedData.slug !== currentEntry.slug;
-            const fieldsChanged =
-                validatedData.fields !== undefined &&
-                !deepEqual(currentEntry.fields, validatedData.fields);
-            const relationsChanged =
-                validatedData.fields !== undefined &&
-                !deepEqual(currentRelations, incomingRelations);
-
-            if (titleChanged || slugChanged || fieldsChanged || relationsChanged) {
-                const versionsRepo = new VersionsRepository(getDb());
-                const latestNumber = await versionsRepo.getLatestNumber(id);
-                await versionsRepo.create({
-                    entryId: id,
-                    versionNumber: latestNumber + 1,
-                    title: currentEntry.title,
-                    slug: currentEntry.slug,
-                    fields: currentEntry.fields as JsonObject,
-                    relations: currentRelations,
-                    createdBy: null,
-                });
-            }
-        }
-
-        let publishedAt = validatedData.publishAt;
-        if (validatedData.status === 'published' && !currentEntry.publishedAt) {
-            publishedAt = new Date();
-        }
-
-        // If slug is being updated, ensure uniqueness
-        let slug = validatedData.slug;
-        if (slug && slug !== currentEntry.slug) {
-            slug = await generateUniqueSlug(type, slug, id);
-        }
-
-        const row = await getDb()
-            .update(entriesTable)
-            .set({
-                title: validatedData.title,
-                slug,
-                fields: validatedData.fields as JsonObject | undefined,
-                status: validatedData.status,
-                publishedAt,
-                updatedAt: new Date(),
-            })
-            .where(eq(entriesTable.id, id))
-            .returning();
-
-        if (!(row as EntryRow[])[0]) {
-            throw new Error('Failed to update entry');
-        }
-
-        const updated = (row as EntryRow[])[0] as Entry;
-
-        if (validatedData.fields) {
-            await saveRelationships(updated.id, validatedData.fields as JsonObject, type);
-        }
-
-        // --- Non-translatable field propagation ---
-        if (validatedData.fields) {
-            const changedFieldNames = Object.keys(validatedData.fields);
-            const nonTranslatableNames = getNonTranslatableFieldNames(
-                type,
-                changedFieldNames
-            );
-            if (nonTranslatableNames.length > 0) {
-                const nonTranslatableValues: JsonObject = {};
-                for (const name of nonTranslatableNames) {
-                    nonTranslatableValues[name] = (validatedData.fields as JsonObject)[name]!;
-                }
-
-                // Find siblings: source + other translations
-                const sourceId = currentEntry.translationOf ?? id;
-                const siblingConditions = [
-                    eq(entriesTable.translationOf, sourceId),
-                    ne(entriesTable.id, id),
-                    isNull(entriesTable.deletedAt),
-                ];
-                const siblings = await getDb()
-                    .select({ id: entriesTable.id, fields: entriesTable.fields })
-                    .from(entriesTable)
-                    .where(and(...siblingConditions));
-
-                // Include source entry if current entry is a translation
-                if (currentEntry.translationOf) {
-                    const sourceEntry = await getDb()
-                        .select({ id: entriesTable.id, fields: entriesTable.fields })
-                        .from(entriesTable)
-                        .where(eq(entriesTable.id, sourceId))
-                        .limit(1);
-                    if (sourceEntry[0]) siblings.push(sourceEntry[0]);
-                }
-
-                for (const sibling of siblings) {
-                    const mergedFields = {
-                        ...((sibling.fields as JsonObject) ?? {}),
-                        ...nonTranslatableValues,
-                    };
-                    await getDb()
-                        .update(entriesTable)
-                        .set({ fields: mergedFields, updatedAt: new Date() })
-                        .where(eq(entriesTable.id, sibling.id));
-                }
-            }
-        }
-
-        return updated;
-    },
-
-    async trash(id: string): Promise<void> {
-        const now = new Date();
-        // Look up the entry to get its type for the cascade
-        const row = await getDb()
-            .select({ type: entriesTable.type })
-            .from(entriesTable)
-            .where(eq(entriesTable.id, id))
-            .limit(1);
-
-        await getDb()
-            .update(entriesTable)
-            .set({ deletedAt: now })
-            .where(eq(entriesTable.id, id));
-
-        if (row[0]) {
-            // Cascade trash to translations
-            await getDb()
-                .update(entriesTable)
-                .set({ deletedAt: now })
-                .where(
-                    and(
-                        eq(entriesTable.translationOf, id),
-                        eq(entriesTable.type, row[0].type),
-                        isNull(entriesTable.deletedAt)
-                    )
+    update: (async (params: {
+        type: string;
+        id: string | readonly string[];
+        data: EntryUpdateData;
+    }): Promise<Entry | Entry[]> => {
+        if (Array.isArray(params.id)) {
+            if (params.data.slug !== undefined) {
+                throw new Error(
+                    'Bulk update cannot set `slug`: a single value across multiple ids ' +
+                        'would violate (type, locale) slug uniqueness. Update slugs individually.'
                 );
+            }
+            return runBulk(params.id, (tx, id) => _updateOne(tx, params.type, id, params.data));
         }
-    },
+        return _updateOne(getDb(), params.type, params.id as string, params.data);
+    }) as EntriesApi['update'],
 
-    async duplicate(id: string): Promise<Entry> {
-        const original = await getDb()
-            .select()
-            .from(entriesTable)
-            .where(eq(entriesTable.id, id))
-            .limit(1);
+    async duplicate(params: {
+        type: string;
+        id: string;
+        overrides?: EntryDuplicateOverrides;
+    }): Promise<Entry> {
+        const { type, id, overrides } = params;
+        const source = await loadAndAssertType(getDb(), type, id);
 
-        if (!original[0]) {
-            throw new Error('Entry not found');
-        }
+        const locale = overrides?.locale ?? source.locale;
+        const localeGroup = overrides?.localeGroup ?? crypto.randomUUID();
+        const status = overrides?.status ?? 'draft';
+        const title = overrides?.title ?? source.title;
+        const mergedFields: JsonObject = {
+            ...((source.fields as JsonObject) ?? {}),
+            ...(overrides?.fields ?? {}),
+        };
 
-        const source = original[0] as Entry;
-        const type = source.type;
-        const baseSlug = source.slug
-            ? `${source.slug}-copy`
-            : titleToSlug(`${source.title} copy`);
-        const slug = await generateUniqueSlug(type, baseSlug);
+        const baseSlug = overrides?.slug ?? source.slug;
+        const slug = baseSlug ? await generateUniqueSlug(type, locale, baseSlug) : null;
 
         const row = await getDb()
             .insert(entriesTable)
             .values({
                 type,
-                title: `${source.title} (Copy)`,
+                title,
                 slug,
-                locale: (config as { defaultLocale?: string }).defaultLocale ?? 'en',
-                fields: (source.fields as JsonObject) || {},
-                status: 'draft',
-                publishedAt: null,
+                locale,
+                localeGroup,
+                fields: mergedFields,
+                status,
+                publishedAt: status === 'published' ? new Date() : null,
             })
             .returning();
 
-        if (!(row as EntryRow[])[0]) {
-            throw new Error('Failed to duplicate entry');
-        }
+        if (!(row as EntryRow[])[0]) throw new Error('Failed to duplicate entry');
+        const created = (row as EntryRow[])[0]!;
 
-        const created = (row as EntryRow[])[0] as Entry;
-
-        // Copy relationships from original
         const relationshipsRepo = new RelationshipsRepository(getDb());
         const originalRels = await relationshipsRepo.getBySource(id, 'entry');
 
@@ -703,102 +879,51 @@ export const entries: EntriesApi = {
             });
         }
 
-        return created;
+        return populateLocaleSingle(created);
     },
 
-    async restore(id: string): Promise<Entry> {
-        // Look up the entry to get its type for the cascade
-        const existing = await getDb()
-            .select({ type: entriesTable.type })
-            .from(entriesTable)
-            .where(eq(entriesTable.id, id))
-            .limit(1);
-
-        const row = await getDb()
-            .update(entriesTable)
-            .set({ deletedAt: null, updatedAt: new Date() })
-            .where(
-                and(
-                    eq(entriesTable.id, id),
-                    isNotNull(entriesTable.deletedAt)
-                )
-            )
-            .returning();
-
-        if (!(row as EntryRow[])[0]) {
-            throw new Error('Entry not found in trash');
+    async trash(params: {
+        type: string;
+        id: string | readonly string[];
+        cascadeLocales?: boolean;
+    }): Promise<void> {
+        const cascade = !!params.cascadeLocales;
+        if (Array.isArray(params.id)) {
+            return runBulkVoid(params.id, (tx, id) =>
+                _trashOne(tx, params.type, id, cascade)
+            );
         }
-
-        if (existing[0]) {
-            // Cascade restore to translations
-            await getDb()
-                .update(entriesTable)
-                .set({ deletedAt: null, updatedAt: new Date() })
-                .where(
-                    and(
-                        eq(entriesTable.translationOf, id),
-                        eq(entriesTable.type, existing[0].type),
-                        isNotNull(entriesTable.deletedAt)
-                    )
-                );
-        }
-
-        return (row as EntryRow[])[0] as Entry;
+        await _trashOne(getDb(), params.type, params.id as string, cascade);
     },
 
-    async delete(id: string): Promise<void> {
-        const relationshipsRepo = new RelationshipsRepository(getDb());
-
-        // Look up the entry to get its type for scoped cleanup
-        const existing = await getDb()
-            .select({ type: entriesTable.type })
-            .from(entriesTable)
-            .where(eq(entriesTable.id, id))
-            .limit(1);
-
-        if (existing[0]) {
-            const type = existing[0].type;
-
-            // Delete translations first
-            const translations = await getDb()
-                .select({ id: entriesTable.id })
-                .from(entriesTable)
-                .where(
-                    and(
-                        eq(entriesTable.translationOf, id),
-                        eq(entriesTable.type, type)
-                    )
-                );
-
-            for (const { id: translationId } of translations) {
-                await relationshipsRepo.deleteBySource(translationId, 'entry');
-            }
-
-            if (translations.length > 0) {
-                await getDb()
-                    .delete(entriesTable)
-                    .where(
-                        and(
-                            eq(entriesTable.translationOf, id),
-                            eq(entriesTable.type, type)
-                        )
-                    );
-            }
+    restore: (async (params: {
+        type: string;
+        id: string | readonly string[];
+    }): Promise<Entry | Entry[]> => {
+        if (Array.isArray(params.id)) {
+            return runBulk(params.id, (tx, id) => _restoreOne(tx, params.type, id));
         }
+        return _restoreOne(getDb(), params.type, params.id as string);
+    }) as EntriesApi['restore'],
 
-        await relationshipsRepo.deleteBySource(id, 'entry');
-
-        await getDb()
-            .delete(entriesTable)
-            .where(eq(entriesTable.id, id));
+    async delete(params: {
+        type: string;
+        id: string | readonly string[];
+        cascadeLocales?: boolean;
+    }): Promise<void> {
+        const cascade = !!params.cascadeLocales;
+        if (Array.isArray(params.id)) {
+            return runBulkVoid(params.id, (tx, id) =>
+                _deleteOne(tx, params.type, id, cascade)
+            );
+        }
+        await _deleteOne(getDb(), params.type, params.id as string, cascade);
     },
 
-    async emptyTrash(options?: { type?: string }): Promise<void> {
-        const type = options?.type;
-
-        // Find all trashed entries to clean up relationships
+    async emptyTrash(params: { type: string }): Promise<void> {
+        const { type } = params;
         const conditions = [
-            ...(type ? [eq(entriesTable.type, type)] : []),
+            eq(entriesTable.type, type),
             isNotNull(entriesTable.deletedAt),
         ];
 
@@ -809,40 +934,35 @@ export const entries: EntriesApi = {
 
         const relationshipsRepo = new RelationshipsRepository(getDb());
         for (const { id } of trashed) {
-            await relationshipsRepo.deleteBySource(id, 'entry');
+            await relationshipsRepo.deleteByEntry(id);
         }
 
-        await getDb()
-            .delete(entriesTable)
-            .where(and(...conditions));
+        await getDb().delete(entriesTable).where(and(...conditions));
     },
 
-    async versions(id: string): Promise<EntryVersion[]> {
+    async versions(params: { type: string; id: string }): Promise<EntryVersion[]> {
+        await loadAndAssertType(getDb(), params.type, params.id);
         const versionsRepo = new VersionsRepository(getDb());
-        const rows = await versionsRepo.list(id);
+        const rows = await versionsRepo.list(params.id);
         return rows as unknown as EntryVersion[];
     },
 
-    async restoreVersion(id: string, versionId: string): Promise<Entry> {
-        const versionsRepo = new VersionsRepository(getDb());
+    async restoreVersion(params: {
+        type: string;
+        id: string;
+        versionId: string;
+    }): Promise<Entry> {
+        const { type, id, versionId } = params;
+        const db = getDb();
+        const versionsRepo = new VersionsRepository(db);
         const version = await versionsRepo.get(versionId);
         if (!version || version.entryId !== id) {
             throw new Error('Version not found');
         }
 
-        const current = await getDb()
-            .select()
-            .from(entriesTable)
-            .where(eq(entriesTable.id, id))
-            .limit(1);
+        const currentEntry = await loadAndAssertType(db, type, id);
 
-        const currentEntry = current[0];
-        if (!currentEntry) throw new Error('Entry not found');
-
-        const type = currentEntry.type;
-
-        // Snapshot current state before restoring
-        const currentRelations = await buildRelationsSnapshot(id);
+        const currentRelations = await buildRelationsSnapshot(db, id);
         const latestNumber = await versionsRepo.getLatestNumber(id);
         await versionsRepo.create({
             entryId: id,
@@ -854,14 +974,12 @@ export const entries: EntriesApi = {
             createdBy: null,
         });
 
-        // Determine new slug
         let slug = version.slug;
         if (slug && slug !== currentEntry.slug) {
-            slug = await generateUniqueSlug(type, slug, id);
+            slug = await generateUniqueSlug(type, currentEntry.locale, slug, id);
         }
 
-        // Apply restored version to entry
-        const updated = await getDb()
+        const updated = await db
             .update(entriesTable)
             .set({
                 title: version.title,
@@ -874,16 +992,14 @@ export const entries: EntriesApi = {
 
         if (!(updated as EntryRow[])[0]) throw new Error('Failed to restore entry');
 
-        // Rebuild relationship rows from version snapshot
         if (version.relations) {
-            const relRepo = new RelationshipsRepository(getDb());
+            const relRepo = new RelationshipsRepository(db);
             for (const [fieldName, targetIds] of Object.entries(
                 version.relations as Record<string, unknown>
             )) {
                 const ids = Array.isArray(targetIds)
                     ? (targetIds as string[])
                     : [targetIds as string];
-                // Determine target type from entry type config
                 const entryTypeConfig = config.entries[type];
                 let targetType: 'entry' | 'user' | 'media' = 'entry';
                 if (entryTypeConfig) {
@@ -901,160 +1017,76 @@ export const entries: EntriesApi = {
             }
         }
 
-        return (updated as EntryRow[])[0] as unknown as Entry;
+        return populateLocaleSingle((updated as EntryRow[])[0]!);
     },
 
-    async translations(id: string): Promise<TranslationInfo[]> {
-        const rows = await getDb()
+    async incomingRelations(params: {
+        type: string;
+        id: string;
+    }): Promise<IncomingRelation[]> {
+        await loadAndAssertType(getDb(), params.type, params.id);
+        const relRepo = new RelationshipsRepository(getDb());
+        const rels = await relRepo.getByTarget(params.id, 'entry');
+        const entryRels = rels.filter((r) => r.sourceType === 'entry');
+        if (entryRels.length === 0) return [];
+
+        const sourceIds = Array.from(new Set(entryRels.map((r) => r.sourceId)));
+        const sources = await getDb()
             .select({
                 id: entriesTable.id,
-                locale: entriesTable.locale,
-                slug: entriesTable.slug,
-                status: entriesTable.status,
+                title: entriesTable.title,
+                type: entriesTable.type,
             })
             .from(entriesTable)
-            .where(
-                and(
-                    eq(entriesTable.translationOf, id),
-                    isNull(entriesTable.deletedAt)
-                )
-            );
+            .where(inArray(entriesTable.id, sourceIds));
 
-        return rows.map((row) => ({
-            entryId: row.id,
-            locale: row.locale ?? '',
-            slug: row.slug,
-            status: row.status,
-        }));
-    },
-
-    async createTranslation(
-        sourceId: string,
-        locale: string,
-        options?: { copyFields?: boolean }
-    ): Promise<Entry> {
-        const validated = validate(createTranslationSchema, { locale, ...options });
-        const copyFields = validated.copyFields ?? true;
-
-        const source = await getDb()
-            .select()
-            .from(entriesTable)
-            .where(
-                and(
-                    eq(entriesTable.id, sourceId),
-                    isNull(entriesTable.deletedAt)
-                )
-            )
-            .limit(1);
-
-        if (!source[0]) throw new Error('Source entry not found');
-        if (source[0].translationOf !== null)
-            throw new Error('Source entry is itself a translation');
-
-        const type = source[0].type;
-
-        // Check if translation already exists for this locale
-        const existing = await getDb()
-            .select({ id: entriesTable.id })
-            .from(entriesTable)
-            .where(
-                and(
-                    eq(entriesTable.translationOf, sourceId),
-                    eq(entriesTable.locale, locale),
-                    isNull(entriesTable.deletedAt)
-                )
-            )
-            .limit(1);
-
-        if (existing[0])
-            throw new Error(`Translation for locale '${locale}' already exists`);
-
-        const sourceEntry = source[0] as Entry;
-        const fields = copyFields ? ((sourceEntry.fields as JsonObject) ?? {}) : {};
-        const slug = sourceEntry.slug;
-
-        const inserted = await getDb()
-            .insert(entriesTable)
-            .values({
-                type,
-                locale,
-                translationOf: sourceId,
-                title: sourceEntry.title,
-                slug,
-                fields,
-                status: 'draft',
-                publishedAt: null,
-            })
-            .returning();
-
-        if (!(inserted as EntryRow[])[0]) throw new Error('Failed to create translation');
-
-        const created = (inserted as EntryRow[])[0] as Entry;
-
-        if (copyFields) {
-            // Copy relationships from source
-            const relRepo = new RelationshipsRepository(getDb());
-            const sourceRels = await relRepo.getBySource(sourceId, 'entry');
-            for (const rel of sourceRels) {
-                await relRepo.create({
-                    sourceId: created.id,
-                    sourceType: 'entry',
+        const byId = new Map(sources.map((s) => [s.id, s]));
+        return entryRels
+            .map((rel) => {
+                const src = byId.get(rel.sourceId);
+                if (!src) return null;
+                return {
+                    sourceId: src.id,
+                    sourceTitle: src.title,
+                    sourceType: src.type,
                     name: rel.name,
-                    targetId: rel.targetId,
-                    targetType: rel.targetType,
-                    position: rel.position,
-                });
-            }
-        }
-
-        return created;
+                } satisfies IncomingRelation;
+            })
+            .filter((x): x is IncomingRelation => x !== null);
     },
 
-    async publish(id: string): Promise<Entry> {
-        return entries.update(id, { status: 'published', publishAt: null });
-    },
+    publish: (async (params: {
+        type: string;
+        id: string | readonly string[];
+    }): Promise<Entry | Entry[]> => {
+        return entries.update({
+            type: params.type,
+            id: params.id,
+            data: { status: 'published', publishAt: null },
+        } as Parameters<EntriesApi['update']>[0]);
+    }) as EntriesApi['publish'],
 
-    async unpublish(id: string): Promise<Entry> {
-        return entries.update(id, { status: 'draft', publishAt: null });
-    },
+    unpublish: (async (params: {
+        type: string;
+        id: string | readonly string[];
+    }): Promise<Entry | Entry[]> => {
+        return entries.update({
+            type: params.type,
+            id: params.id,
+            data: { status: 'draft', publishAt: null },
+        } as Parameters<EntriesApi['update']>[0]);
+    }) as EntriesApi['unpublish'],
 
-    async schedule(id: string, publishAt: Date): Promise<Entry> {
-        const validated = validate(scheduleEntrySchema, { publishAt });
-        return entries.update(id, { status: 'scheduled', publishAt: validated.publishAt });
-    },
-
-    async getTranslation(sourceId: string, locale: string): Promise<Entry | null> {
-        const defaultLocale =
-            (config as { defaultLocale?: string }).defaultLocale ?? 'en';
-
-        // Requesting default locale = return the source entry itself
-        if (locale === defaultLocale) {
-            const result = await getDb()
-                .select()
-                .from(entriesTable)
-                .where(
-                    and(
-                        eq(entriesTable.id, sourceId),
-                        isNull(entriesTable.deletedAt)
-                    )
-                )
-                .limit(1);
-            return (result[0] as Entry) ?? null;
-        }
-
-        const result = await getDb()
-            .select()
-            .from(entriesTable)
-            .where(
-                and(
-                    eq(entriesTable.translationOf, sourceId),
-                    eq(entriesTable.locale, locale),
-                    isNull(entriesTable.deletedAt)
-                )
-            )
-            .limit(1);
-
-        return (result[0] as Entry) ?? null;
-    },
+    schedule: (async (params: {
+        type: string;
+        id: string | readonly string[];
+        publishAt: Date;
+    }): Promise<Entry | Entry[]> => {
+        const validated = validate(scheduleEntrySchema, { publishAt: params.publishAt });
+        return entries.update({
+            type: params.type,
+            id: params.id,
+            data: { status: 'scheduled', publishAt: validated.publishAt },
+        } as Parameters<EntriesApi['update']>[0]);
+    }) as EntriesApi['schedule'],
 };
-

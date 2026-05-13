@@ -1,6 +1,12 @@
 /**
- * LocaleSwitcher — shows available locales for an entry and allows navigating
- * to existing translations or creating new ones.
+ * LocaleSwitcher — shows available locales for an entry's group and allows
+ * navigating to existing sibling rows or creating new translations.
+ *
+ * Reads {@link Entry.locales} directly (no separate query). For missing locales,
+ * fires the "create translation" mutation which dispatches Astromech.entries.duplicate
+ * with the source's localeGroup, joining the new row to the existing group.
+ *
+ * See specs/symmetric-locale-model.md §9 (edit page).
  */
 
 import React, { useState } from 'react';
@@ -8,19 +14,21 @@ import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Select } from '../ui/index';
 import { useCreateTranslation } from '../../hooks/entries.js';
-import type { TranslationInfo } from '../../../types/index.js';
 
 // ============================================================================
 // Types
 // ============================================================================
 
 type LocaleSwitcherProps = {
-    sourceId: string;
+    /** The entry currently being viewed/edited. */
     currentEntryId: string;
-    type: string;
-    translations: TranslationInfo[];
+    /** Map of locale code → entry id (i.e. Entry.locales). */
+    locales: Record<string, string>;
+    /** Locales configured on the entry type's `locales` (or global `locales`). */
     allLocales: string[];
+    /** Configured default locale (used for fallback / label sorting). */
     defaultLocale: string;
+    type: string;
     compact?: boolean;
 };
 
@@ -29,21 +37,21 @@ type LocaleSwitcherProps = {
 // ============================================================================
 
 export function LocaleSwitcher({
-    sourceId,
     currentEntryId,
-    type,
-    translations,
+    locales,
     allLocales,
     defaultLocale,
+    type,
     compact = false,
 }: LocaleSwitcherProps): React.ReactElement {
     const navigate = useNavigate();
     const { t } = useTranslation();
 
-    // Current value: either the locale of a translation or "default" for the source
-    const currentTranslation = translations.find((tr) => tr.entryId === currentEntryId);
-    const currentValue =
-        currentTranslation != null ? currentTranslation.locale : 'default';
+    // Determine which locale this entry is. The locales map always contains
+    // self, so reverse-lookup is reliable.
+    const currentLocale =
+        Object.entries(locales).find(([, id]) => id === currentEntryId)?.[0] ??
+        defaultLocale;
 
     const [isCreating, setIsCreating] = useState(false);
 
@@ -56,54 +64,37 @@ export function LocaleSwitcher({
     });
 
     function handleValueChange(value: string | null): void {
-        if (value == null) return;
+        if (value == null || value === currentLocale) return;
 
-        if (value === 'default') {
-            // Navigate to source
-            void navigate({ to: `/entries/${type}/${sourceId}` });
+        const existing = locales[value];
+        if (existing != null) {
+            void navigate({ to: `/entries/${type}/${existing}` });
             return;
         }
 
-        const existingTranslation = translations.find((tr) => tr.locale === value);
-        if (existingTranslation != null) {
-            void navigate({
-                to: `/entries/${type}/${existingTranslation.entryId}`,
-            });
-            return;
-        }
-
-        // Create new translation
+        // Missing translation — create one joining this group via duplicate.
         setIsCreating(true);
-        createMutation.mutate({ sourceId, locale: value });
+        createMutation.mutate({ sourceId: currentEntryId, locale: value });
     }
 
-    // Build options: default locale first, then all other locales
-    const options = [
-        {
-            value: 'default',
-            label: `${defaultLocale.toUpperCase()}`,
-        },
-        ...allLocales
-            .filter((locale) => locale !== defaultLocale)
-            .map((locale) => {
-                const existing = translations.find((tr) => tr.locale === locale);
-                if (existing != null) {
-                    return {
-                        value: locale,
-                        label: `${locale.toUpperCase()}`,
-                    };
-                }
-                return {
-                    value: locale,
-                    label: `Add ${locale.toUpperCase()}`,
-                };
-            }),
+    // Sort options: default locale first, others alphabetical; missing locales
+    // labeled "Add XX" so the affordance is obvious.
+    const sortedLocales = [
+        defaultLocale,
+        ...allLocales.filter((l) => l !== defaultLocale).sort(),
     ];
+    const options = sortedLocales.map((loc) => ({
+        value: loc,
+        label:
+            locales[loc] != null
+                ? loc.toUpperCase()
+                : `Add ${loc.toUpperCase()}`,
+    }));
 
     if (compact) {
         return (
             <Select
-                value={currentValue}
+                value={currentLocale}
                 onValueChange={handleValueChange}
                 options={options}
                 disabled={isCreating || createMutation.isPending}
@@ -115,7 +106,7 @@ export function LocaleSwitcher({
         <div className="am-field">
             <label className="am-field-label">{t('translations.locale')}</label>
             <Select
-                value={currentValue}
+                value={currentLocale}
                 onValueChange={handleValueChange}
                 options={options}
                 disabled={isCreating || createMutation.isPending}

@@ -333,29 +333,25 @@
 
 ---
 
-## Phase 15.5 — Translation Deletion & Primary Promotion (Future)
+## Phase 15.5 — Symmetric Locale Model ✅
 
-### Delete non-primary translation
+Implementation of [`specs/symmetric-locale-model.md`](specs/symmetric-locale-model.md). The "primary translation" concept was eliminated entirely — every locale row is a sibling, linked via a synthetic `locale_group` UUID.
 
-- [ ] Delete single locale: removes only that entry row; primary and other siblings unaffected
-- [ ] If entry has incoming relations: show warning in confirmation modal
-- [ ] Confirmation modal offers option to delete all locale variants at once
-- [ ] API: `DELETE /entries/:type/:id` gains `?cascade=true` query param
-- [ ] SDK: `delete(id, { cascade?: boolean })`
+- [x] Replace `translationOf` FK with `locale_group` UUID column — all locales are siblings, no primary (migration `0005_locale_group`)
+- [x] `UNIQUE(locale_group, locale)` and `UNIQUE(type, locale, slug)` constraints
+- [x] Per-locale `delete` / `trash` by default, opt-in `cascadeLocales: true`; `restore` per-locale only
+- [x] Cascade-delete relationships via new `RelationshipsRepository.deleteByEntry/User/Media` helpers
+- [x] `entry.locales: { [code]: id }` map populated on all entry responses via batched lookup
+- [x] Unified `create({ ..., localeGroup? })` and `duplicate(id, overrides?)` — `createTranslation` / `translations` / `getTranslation` SDK methods removed
+- [x] Admin list: locale filter dropdown (default `defaultLocale`), "All locales" option, translations indicator column
+- [x] Admin create flow: three-way modal at non-default locale (Translate / Start blank in group / New standalone)
+- [x] Admin edit: `LocaleSwitcher` reads `entry.locales` directly; "Create translation" CTA wires to `duplicate(sourceId, { locale, localeGroup })`
+- [x] Delete confirmation modal with `cascadeLocales` checkbox and incoming-relations preview (new `Astromech.entries.incomingRelations(id)` SDK method)
+- [x] No SDK-level locale fallback — missing locales return null/empty; redirects deferred to Phase 19
 
-### Delete primary translation
-
-- [ ] If no sibling translations: delete proceeds normally
-- [ ] If sibling translations exist: automatically promote first sibling in config `locales` order
-- [ ] If entry has incoming relations: show warning in confirmation modal
-- [ ] Confirmation modal also offers "delete all translations" as an alternative to auto-promotion
-- [ ] API: `POST /entries/:type/:id/promote` — promotes an entry to primary and repoints siblings
-- [ ] SDK: `delete(id, { cascade?: boolean })` handles promotion transparently
-
-### Entry index page
-
-- [ ] List view filters by `translationOf IS NULL` — always shows primary entry
-- [ ] Locale badge on each row reflects actual locale of the primary entry
+Deferred from spec:
+- "Link to existing translation group" rescue action on the edit page (out of scope for v1)
+- SDK integration test harness (vitest doesn't currently resolve the `virtual:astromech/config` module; manual verification via the seed covers the §15 checklist)
 
 ---
 
@@ -394,6 +390,23 @@
 - [x] Admin URLs: `/admin/collections/:collection` → `/admin/entries/:type`
 - [x] Sidebar: "Collections" group heading removed; entry types are direct top-level nav items
 - [x] Permissions: `entry:read:posts` → `entry:read:post` (singular slugs)
+
+---
+
+## Phase 16.7 — Typed Entries API ✅
+
+Implementation of [`specs/typed-entries-api.md`](specs/typed-entries-api.md). Consolidated the post-locale SDK surface: type is required on every method, bulk operations are atomic, and the `/by-id` workaround is gone.
+
+- [x] Every `Astromech.entries.*` method takes a single options object (`{ type, id, data, ... }`)
+- [x] `type` required on every call (TS error if omitted); `query` accepts `type: T | readonly T[]`
+- [x] Polymorphic bulk: `update`, `trash`, `delete`, `restore`, `publish`, `unpublish`, `schedule` accept `id: string | string[]` — single id → single return, array id → array return
+- [x] Bulk operations wrapped in a DB transaction (all-or-nothing); failure throws `BulkOperationError` with `failedId` + `succeededBefore`
+- [x] DB-enforced `WHERE id = ? AND type = ?` on every single-entry op; mismatched type→id throws `EntryTypeMismatchError`, `get` returns `null`
+- [x] Bulk-route HTTP surface: `POST /entries/:type/bulk-{trash,delete,restore,publish,unpublish,schedule,update}`
+- [x] Cross-type list: `POST /entries/query` registered before any `/:type/...` route
+- [x] Deleted `GET /entries/by-id/:id` and the fetch-SDK `resolveEntryType()` workaround (no more pre-flight type lookups)
+- [x] Dropped `TypedEntriesProxy` / `TypedEntryTypeApi` / `EntryTypeApi` dead types
+- [x] Trash is idempotent; re-trashing an already-trashed entry is a no-op
 
 ---
 

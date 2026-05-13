@@ -15,6 +15,8 @@ const publishAtField = z
 export const createEntrySchema = z.object({
     title: z.string().min(1, 'Title is required').openapi({ example: 'My Post' }),
     slug: slugField,
+    locale: z.string().min(1).optional().openapi({ example: 'en' }),
+    localeGroup: z.string().min(1).optional(),
     fields: z.record(z.string(), z.unknown()).optional().openapi({ example: { body: 'Hello world' } }),
     status: entryStatusEnum.optional(),
     publishAt: publishAtField,
@@ -33,9 +35,4 @@ export const scheduleEntrySchema = z.object({
         z.date(),
         z.string().datetime({ offset: true }).transform(v => new Date(v)),
     ]),
-});
-
-export const createTranslationSchema = z.object({
-    locale: z.string().min(1, 'Locale is required'),
-    copyFields: z.boolean().optional(),
 });
