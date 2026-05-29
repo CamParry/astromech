@@ -1,21 +1,23 @@
 /**
  * Route Registration
- * Handles registration of API and auth routes
+ * Handles registration of API and auth routes.
+ *
+ * Plugin routes are NOT injected here: plugin RPC and raw routes mount inside
+ * the existing Hono app under `/api/plugins/*`, which the `${apiRoute}/[...path]`
+ * catch-all already serves. Plugins cannot register routes outside `/api`.
  */
 
-import type { AstromechPlugin, ResolvedConfig } from '@/types/index.js';
+import type { ResolvedConfig } from '@/types/index.js';
 
 /**
  * Register all API and auth routes
  *
  * @param injectRoute - Astro's route injection function
  * @param resolvedConfig - Resolved Astromech configuration
- * @param plugins - Installed plugins
  */
 export function registerRoutes(
 	injectRoute: (route: { pattern: string; entrypoint: string; prerender: boolean }) => void,
-	resolvedConfig: ResolvedConfig,
-	plugins: AstromechPlugin[]
+	resolvedConfig: ResolvedConfig
 ): void {
 	const { apiRoute } = resolvedConfig;
 
@@ -39,15 +41,4 @@ export function registerRoutes(
 		entrypoint: 'astromech/routes/api.ts',
 		prerender: false,
 	});
-
-	// Plugin routes
-	for (const plugin of plugins) {
-		for (const route of plugin.routes ?? []) {
-			injectRoute({
-				pattern: route.path,
-				entrypoint: 'astromech/routes/plugin-handler.ts',
-				prerender: false,
-			});
-		}
-	}
 }

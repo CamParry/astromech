@@ -3,7 +3,12 @@
  * For Astro projects, import the integration from 'astromech/astro'.
  */
 
-import type { AstromechConfig, AstromechPlugin, EntryTypeConfig } from '@/types/index.js';
+import type {
+	AstromechConfig,
+	EntryTypeConfig,
+	PluginDefinition,
+	PluginFactory,
+} from '@/types/index.js';
 
 // ============================================================================
 // Type Exports
@@ -32,6 +37,20 @@ export function defineEntryType(config: EntryTypeConfig): EntryTypeConfig {
 	return config;
 }
 
-export function definePlugin(plugin: AstromechPlugin): AstromechPlugin {
-	return plugin;
+/**
+ * Define a plugin as a factory. First-party plugins export the returned
+ * function and are callable with zero args (`redirects()`); options are always
+ * optional, and the factory is responsible for validating them and applying
+ * defaults internally.
+ *
+ * @example
+ * export const redirects = definePlugin<RedirectsOptions>((options) => ({
+ *     package: '@astromech/redirects',
+ *     // ...declarative definition...
+ * }));
+ */
+export function definePlugin<Options = void>(
+	factory: (options?: Options) => PluginDefinition
+): PluginFactory<Options> {
+	return (options?: Options) => factory(options);
 }

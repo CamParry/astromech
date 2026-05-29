@@ -1,14 +1,21 @@
 /**
- * Plugin system types — AstromechPlugin, PluginTargets, Route, Middleware
+ * Plugin system types.
+ *
+ * A plugin is one npm package, framework-agnostic. Its definition is almost
+ * entirely declarative data; `setup(ctx)` is an optional imperative escape
+ * hatch. See `specs/plugin-architecture.md` for the full design.
  */
 
 import type { ComponentType, ReactElement } from 'react';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { EntryTypeConfig, ResolvedConfig } from './config.js';
-import type { FieldGroup } from './fields.js';
-import type { HookRegistry } from './hooks.js';
+import type { FieldDefinition } from './fields.js';
+import type { User } from './domain.js';
+import type { PluginHooks } from './hooks.js';
+import type { AstromechClient } from './sdk.js';
 
 // ============================================================================
-// Plugin Types
+// Email overrides (carried over from the prior plugin surface)
 // ============================================================================
 
 export type EmailTemplateOverride = {
@@ -16,40 +23,194 @@ export type EmailTemplateOverride = {
     component: ComponentType<Record<string, unknown>>;
 };
 
-export type PluginTargets = string[] | '*' | { include?: string[]; exclude?: string[] };
+// ============================================================================
+// Plugin Context — unified across hooks / sdk / cron / api
+// ============================================================================
 
-export type Route = {
-    path: string;
-    method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-    handler: (request: Request, context: unknown) => Promise<Response> | Response;
+/** Logger that attributes lines to the originating plugin. */
+export type PluginLogger = {
+    info: (message: string) => void;
+    warn: (message: string) => void;
+    error: (message: string, error?: unknown) => void;
 };
 
-export type Middleware = {
-    name?: string;
-    order?: 'pre' | 'post';
-    handler: (
-        request: Request,
-        context: unknown,
-        next: () => Promise<Response>
-    ) => Promise<Response>;
+/**
+ * The resolved config as seen by a plugin, plus footprint helpers. Plugin
+ * "footprint" (which entry types use a plugin) is *derived* from field
+ * presence, never declared.
+ */
+export type PluginConfigView = ResolvedConfig & {
+    /** Entry type names whose field groups contain a field of the given name. */
+    entryTypesWithField(fieldName: string): string[];
 };
 
-export type AstromechContext = {
-    config: ResolvedConfig;
-    db: unknown;
-    entryTypes: Record<string, unknown>;
+export type PluginContext = {
+    db: LibSQLDatabase;
+    config: PluginConfigView;
+    /** The acting user, or null for unauthenticated / system contexts. */
+    user: User | null;
+    sdk: AstromechClient;
     sendEmail: (to: string, subject: string, element: ReactElement) => Promise<void>;
+    logger: PluginLogger;
+    /** Env vars (resolved via import.meta.env in Vite/Astro SSR). Never the browser. */
+    env: Record<string, string | undefined>;
+    /** Fire a (typically plugin-declared) hook event. */
+    emit: (event: string, payload: unknown) => Promise<void>;
 };
 
-export type AstromechPlugin = {
+// ============================================================================
+// SDK methods + raw escape hatch
+// ============================================================================
+
+/**
+ * Access policy for a plugin SDK method or raw route. There is no default —
+ * omitting `access` is a build error (the field is required).
+ */
+export type PluginAccess = 'public' | 'authenticated' | { permission: string };
+
+export type PluginSdkMethod<Input = unknown, Output = unknown> = {
+    access: PluginAccess;
+    handler: (input: Input, ctx: PluginContext) => Promise<Output> | Output;
+};
+
+/**
+ * Raw request handler for payloads RPC-JSON can't carry (binary / multipart /
+ * streaming). Mounted inside `/api/plugins/{name}/*`.
+ */
+export type PluginRawRoute = {
+    method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+    /** Path relative to `/api/plugins/{name}`, e.g. `/upload`. */
+    path: string;
+    access: PluginAccess;
+    handler: (request: Request, ctx: PluginContext) => Promise<Response> | Response;
+};
+
+// ============================================================================
+// Permissions
+// ============================================================================
+
+export type PluginPermission = {
+    /** Action segment, e.g. `lookup` → `plugin:<namespace>:lookup`. */
+    key: string;
+    label: string;
+    description?: string;
+};
+
+/** Advisory only — surfaced as a one-click admin notice, never auto-applied. */
+export type PluginSuggestedGrant = {
+    role: string;
+    /** Permission action keys (as in `PluginPermission.key`). */
+    permissions: string[];
+};
+
+// ============================================================================
+// CRON
+// ============================================================================
+
+export type PluginCronJob = {
     name: string;
-    emails?: EmailTemplateOverride[];
-    fieldGroups?: {
-        targets: PluginTargets;
-        groups: FieldGroup[];
-    }[];
+    schedule: string;
+    handler: (ctx: PluginContext) => Promise<void> | void;
+};
+
+// ============================================================================
+// Admin surfaces (consumed in 18b; declared here for a stable shape)
+// ============================================================================
+
+export type PluginNavItem = {
+    label: string;
+    /** Where the item points — any admin path. */
+    to?: string;
+    icon?: string;
+    /** Auto-hides the item when the user lacks this permission. */
+    permission?: string;
+    children?: PluginNavItem[];
+};
+
+export type PluginPage = {
+    /** Path relative to `/admin/plugin/{name}`. */
+    path: string;
+    /**
+     * Import specifier (a STRING, not a thunk) for the page component, so the
+     * Node-side generator can statically emit `import(specifier)`.
+     */
+    component: string;
+    label?: string;
+    permission?: string;
+};
+
+export type PluginSettingsSchema = {
+    fields: FieldDefinition[];
+};
+
+export type PluginAdmin = {
+    nav?: PluginNavItem[];
+    pages?: PluginPage[];
+    settings?: PluginSettingsSchema;
+};
+
+/** Custom field type registration (renderer wired in 18b). */
+export type PluginFieldTypeRegistration = {
+    type: string;
+    /** Import specifier (STRING) for the renderer component. */
+    component: string;
+};
+
+// ============================================================================
+// Plugin Definition
+// ============================================================================
+
+/** A Drizzle schema module: a map of exported table objects. */
+export type PluginDrizzleSchema = Record<string, unknown>;
+
+export type PluginDefinition = {
+    // ── Identity ────────────────────────────────────────────────────────
+    /** Canonical package name, e.g. `@astromech/redirects`. */
+    package: string;
+    /** Own version (e.g. from package.json) — enables `dependsOn` semver checks. */
+    version?: string;
+    /** Access key on `Astromech.plugins.X`. Defaults to the last path segment. */
+    name?: string;
+    /** User override for access-key collisions. */
+    alias?: string;
+    /** Defaults to the sanitised package. Anchors permission strings. */
+    permissionNamespace?: string;
+
+    // ── Declarative surfaces ────────────────────────────────────────────
+    permissions?: PluginPermission[];
+    suggestedRoleGrants?: PluginSuggestedGrant[];
     entries?: Record<string, EntryTypeConfig>;
-    setup?: (hooks: HookRegistry, ctx: AstromechContext) => void;
-    routes?: Route[];
-    middleware?: Middleware[];
+    fields?: PluginFieldTypeRegistration[];
+    schema?: PluginDrizzleSchema;
+    sdk?: Record<string, PluginSdkMethod>;
+    rawRoutes?: PluginRawRoute[];
+    hooks?: PluginHooks;
+    /** Custom events this plugin fires via `ctx.emit`. Type-augmented in 18b. */
+    hookEvents?: string[];
+    cron?: PluginCronJob[];
+    admin?: PluginAdmin;
+    /** Lazy locale resource thunks, keyed by locale code. */
+    i18n?: Record<string, () => Promise<unknown>>;
+    requiredEnv?: string[];
+    /** Package name → semver range. Existence + basic range check only. */
+    dependsOn?: Record<string, string>;
+    emails?: EmailTemplateOverride[];
+
+    // ── Imperative escape hatch ─────────────────────────────────────────
+    /** Runs once per runtime boot. Optional. */
+    setup?: (ctx: PluginContext) => void | Promise<void>;
+};
+
+/** The result of a plugin factory — what users place in `config.plugins`. */
+export type PluginFactory<Options = void> = (options?: Options) => PluginDefinition;
+
+/**
+ * Fully-derived plugin identity, computed once during config resolution.
+ */
+export type ResolvedPluginIdentity = {
+    package: string;
+    name: string;
+    alias: string;
+    permissionNamespace: string;
+    version?: string;
 };

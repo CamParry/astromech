@@ -1,84 +1,20 @@
 /**
  * Plugin System Helpers
- * Handles plugin target resolution and merging into config
+ *
+ * Field injection is explicit attachment now (users compose plugin
+ * field-group factories into their own entry-type config), so the old
+ * `targets`-based dynamic injection is gone. What remains is merging
+ * plugin-contributed entry types into the config and collecting email
+ * overrides. Identity validation and dependency checks live in
+ * `plugin-identity.ts` and are orchestrated from `config-resolver.ts`.
  */
 
-import type { AstromechConfig, PluginTargets } from '@/types/index.js';
+import type { AstromechConfig } from '@/types/index.js';
 import { registerEmailOverride } from '@/email/email-overrides.js';
 
 /**
- * Resolve plugin targets to an array of collection names
- *
- * @param targets - Plugin target specification (string array, wildcard, or object)
- * @param collectionNames - Available collection names
- * @param systemResources - System resource names (media, users)
- * @returns Resolved array of target names
- */
-export function resolveTargets(
-	targets: PluginTargets,
-	collectionNames: string[],
-	systemResources: string[] = ['media', 'users']
-): string[] {
-	const allTargets = [...collectionNames, ...systemResources];
-
-	// Wildcard: target everything
-	if (targets === '*') {
-		return allTargets;
-	}
-
-	// Array: target specific collections
-	if (Array.isArray(targets)) {
-		return targets.filter((t) => allTargets.includes(t));
-	}
-
-	// Object: include/exclude pattern
-	let result = targets.include ?? allTargets;
-	if (targets.exclude) {
-		result = result.filter((t) => !targets.exclude?.includes(t));
-	}
-	return result;
-}
-
-/**
- * Merge plugin field groups into target entry types and system resources
- *
- * @param config - Astromech configuration
- * @param entryTypeNames - Available entry type names
- */
-export function mergePluginFieldGroups(config: AstromechConfig, entryTypeNames: string[]): void {
-	for (const plugin of config.plugins ?? []) {
-		for (const fieldGroupEntry of plugin.fieldGroups ?? []) {
-			const targetNames = resolveTargets(fieldGroupEntry.targets, entryTypeNames);
-
-			for (const targetName of targetNames) {
-				// Handle media resource
-				if (targetName === 'media') {
-					config.media = config.media ?? { fieldGroups: [] };
-					config.media.fieldGroups = config.media.fieldGroups ?? [];
-					config.media.fieldGroups.push(...fieldGroupEntry.groups);
-					continue;
-				}
-
-				// Handle users resource
-				if (targetName === 'users') {
-					config.users = config.users ?? { fieldGroups: [] };
-					config.users.fieldGroups = config.users.fieldGroups ?? [];
-					config.users.fieldGroups.push(...fieldGroupEntry.groups);
-					continue;
-				}
-
-				// Handle entry types
-				const entryType = config.entries[targetName];
-				if (entryType) {
-					entryType.fieldGroups.push(...fieldGroupEntry.groups);
-				}
-			}
-		}
-	}
-}
-
-/**
- * Merge plugin entry types into config
+ * Merge plugin-contributed entry types into the config. Plugin entry types are
+ * first-class — they live flat at `/admin/entries/{type}` like user types.
  *
  * @param config - Astromech configuration
  */
@@ -91,7 +27,7 @@ export function mergePluginEntries(config: AstromechConfig): void {
 }
 
 /**
- * Register plugin email template overrides
+ * Register plugin email template overrides.
  *
  * @param config - Astromech configuration
  */

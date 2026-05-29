@@ -232,11 +232,23 @@ export type TypedEntriesApi = {
 // AstromechClient
 // ============================================================================
 
+/**
+ * Plugin SDK namespace. Each plugin's access key maps to its set of RPC
+ * methods. Strongly-typed per-plugin augmentation is layered on in 18b via
+ * generated `declare module` types; the base shape stays loose.
+ */
+export type PluginSdkNamespace = Record<
+    string,
+    Record<string, (input?: unknown) => Promise<unknown>>
+>;
+
 export type AstromechClient = {
     entries: TypedEntriesApi;
     media: MediaApi;
     settings: SettingsApi;
     users: UsersApi;
     config: ResolvedConfig;
+    /** Plugin RPC methods — `Astromech.plugins.<name>.<method>(input)`. */
+    plugins?: PluginSdkNamespace;
     configure(options: { baseUrl: string }): void;
 };

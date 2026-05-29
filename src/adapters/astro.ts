@@ -153,7 +153,7 @@ export function astromech(config: AstromechConfig): AstroIntegration {
 					},
 				});
 
-				registerRoutes(injectRoute, resolvedConfig, config.plugins ?? []);
+				registerRoutes(injectRoute, resolvedConfig);
 
 				addMiddleware({
 					entrypoint: 'astromech/middleware',

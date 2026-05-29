@@ -4,7 +4,8 @@
  */
 
 import type { AstromechConfig, FieldGroup, ResolvedConfig } from '@/types/index.js';
-import { mergePluginEntries, mergePluginFieldGroups } from '@/core/plugin-resolver.js';
+import { mergePluginEntries } from '@/core/plugin-resolver.js';
+import { assertNoPluginCollisions, checkPluginDependencies } from '@/core/plugin-identity.js';
 
 /**
  * Sort field groups by priority within each collection and resource
@@ -41,19 +42,19 @@ export function sortFieldGroups(config: AstromechConfig): void {
  * @returns Fully resolved configuration with defaults
  */
 export function resolveConfig(config: AstromechConfig): ResolvedConfig {
-	// Step 1: Merge plugin entry types (they might be targets for field groups)
+	// Step 1: Validate plugin identities (access-key collisions) and
+	// dependencies (existence + basic semver range). Both crash loud.
+	const plugins = config.plugins ?? [];
+	assertNoPluginCollisions(plugins);
+	checkPluginDependencies(plugins);
+
+	// Step 2: Merge plugin-contributed entry types into the config.
 	mergePluginEntries(config);
 
-	// Step 2: Get updated entry type names after plugin entries are added
-	const allEntryTypeNames = Object.keys(config.entries);
-
-	// Step 3: Merge plugin field groups into entry types
-	mergePluginFieldGroups(config, allEntryTypeNames);
-
-	// Step 4: Sort field groups by priority
+	// Step 3: Sort field groups by priority
 	sortFieldGroups(config);
 
-	// Step 5: Return resolved config with defaults
+	// Step 4: Return resolved config with defaults
 	// Destructure out `db` so the driver instance is not included in the
 	// resolved config (it cannot be JSON.stringify'd into the virtual module).
 	const { db: _db, ...rest } = config;

@@ -5,7 +5,7 @@
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Permission } from './domain.js';
 import type { FieldGroup } from './fields.js';
-import type { AstromechPlugin } from './plugins.js';
+import type { PluginDefinition } from './plugins.js';
 
 // ============================================================================
 // Drivers
@@ -102,7 +102,7 @@ export type AstromechConfig = {
     users?: UsersConfig;
     roles?: Record<string, RoleConfig>;
     defaultRole?: string;
-    plugins?: AstromechPlugin[];
+    plugins?: PluginDefinition[];
     trash?: TrashConfig;
     email?: {
         driver: EmailDriver;
