@@ -53,7 +53,8 @@ import type {
     User,
     WhereFilters,
 } from '@/types/index.js';
-import { setCurrentUser } from '@/sdk/local/context.js';
+import { getCurrentUser, setCurrentUser } from '@/sdk/local/context.js';
+import { hasHookHandlers, runAfterHooks, runBeforeHooks } from '@/core/plugin-runtime.js';
 import { titleToSlug } from '@/support/strings.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -627,6 +628,48 @@ async function _restoreOne(db: Db, type: string, id: string): Promise<Entry> {
 }
 
 // ============================================================================
+// Plugin hook helpers
+//
+// Hooks fire at the public-method level: `before*` before the DB work (a throw
+// aborts), `after*` after it completes (post-commit, even for bulk). Snapshots
+// for the event context are only loaded when a plugin actually subscribes.
+// ============================================================================
+
+function entryHooksActive(...events: string[]): boolean {
+    return events.some((event) => hasHookHandlers(event));
+}
+
+async function entrySnapshot(type: string, id: string): Promise<Entry> {
+    return populateLocaleSingle(await loadAndAssertType(getDb(), type, id));
+}
+
+/**
+ * Run a trash/delete operation with `entry:beforeDelete`/`entry:afterDelete`
+ * hooks. `force` distinguishes permanent delete (true) from trash (false).
+ */
+async function runDeleteWithHooks(
+    type: string,
+    id: string | readonly string[],
+    force: boolean,
+    op: () => Promise<void>
+): Promise<void> {
+    if (!entryHooksActive('entry:beforeDelete', 'entry:afterDelete')) {
+        await op();
+        return;
+    }
+    const user = getCurrentUser();
+    const ids = Array.isArray(id) ? Array.from(id) : [id as string];
+    const before = await Promise.all(ids.map((entryId) => entrySnapshot(type, entryId)));
+    for (const entry of before) {
+        await runBeforeHooks('entry:beforeDelete', { type, entry, user, force }, user);
+    }
+    await op();
+    for (const entry of before) {
+        await runAfterHooks('entry:afterDelete', { type, entry, user, force }, user);
+    }
+}
+
+// ============================================================================
 // Entries API
 // ============================================================================
 
@@ -786,6 +829,17 @@ export const entries: EntriesApi = {
         const baseSlug = validated.slug ? validated.slug : titleToSlug(validated.title);
         const slug = await generateUniqueSlug(type, locale, baseSlug);
 
+        const user = getCurrentUser();
+        const createData = {
+            title: validated.title,
+            slug,
+            locale,
+            fields: (validated.fields ?? {}) as JsonObject,
+            status,
+            publishAt: publishedAt,
+        };
+        await runBeforeHooks('entry:beforeCreate', { type, data: createData, user }, user);
+
         const row = await getDb()
             .insert(entriesTable)
             .values({
@@ -808,7 +862,9 @@ export const entries: EntriesApi = {
             await saveRelationships(getDb(), created.id, validated.fields as JsonObject, type);
         }
 
-        return populateLocaleSingle(created);
+        const entry = await populateLocaleSingle(created);
+        await runAfterHooks('entry:afterCreate', { type, data: createData, user, entry }, user);
+        return entry;
     },
 
     update: (async (params: {
@@ -816,6 +872,9 @@ export const entries: EntriesApi = {
         id: string | readonly string[];
         data: EntryUpdateData;
     }): Promise<Entry | Entry[]> => {
+        const user = getCurrentUser();
+        const hooksActive = entryHooksActive('entry:beforeUpdate', 'entry:afterUpdate');
+
         if (Array.isArray(params.id)) {
             if (params.data.slug !== undefined) {
                 throw new Error(
@@ -823,9 +882,47 @@ export const entries: EntriesApi = {
                         'would violate (type, locale) slug uniqueness. Update slugs individually.'
                 );
             }
-            return runBulk(params.id, (tx, id) => _updateOne(tx, params.type, id, params.data));
+            const before = hooksActive
+                ? await Promise.all(params.id.map((id) => entrySnapshot(params.type, id)))
+                : [];
+            for (const entry of before) {
+                await runBeforeHooks(
+                    'entry:beforeUpdate',
+                    { type: params.type, entry, data: params.data, user },
+                    user
+                );
+            }
+            const results = await runBulk(params.id, (tx, id) =>
+                _updateOne(tx, params.type, id, params.data)
+            );
+            for (const entry of before) {
+                await runAfterHooks(
+                    'entry:afterUpdate',
+                    { type: params.type, entry, data: params.data, user },
+                    user
+                );
+            }
+            return results;
         }
-        return _updateOne(getDb(), params.type, params.id as string, params.data);
+
+        const id = params.id as string;
+        const before = hooksActive ? await entrySnapshot(params.type, id) : null;
+        if (before) {
+            await runBeforeHooks(
+                'entry:beforeUpdate',
+                { type: params.type, entry: before, data: params.data, user },
+                user
+            );
+        }
+        const updated = await _updateOne(getDb(), params.type, id, params.data);
+        if (before) {
+            await runAfterHooks(
+                'entry:afterUpdate',
+                { type: params.type, entry: before, data: params.data, user },
+                user
+            );
+        }
+        return updated;
     }) as EntriesApi['update'],
 
     async duplicate(params: {
@@ -888,12 +985,13 @@ export const entries: EntriesApi = {
         cascadeLocales?: boolean;
     }): Promise<void> {
         const cascade = !!params.cascadeLocales;
-        if (Array.isArray(params.id)) {
-            return runBulkVoid(params.id, (tx, id) =>
-                _trashOne(tx, params.type, id, cascade)
-            );
-        }
-        await _trashOne(getDb(), params.type, params.id as string, cascade);
+        await runDeleteWithHooks(params.type, params.id, false, async () => {
+            if (Array.isArray(params.id)) {
+                await runBulkVoid(params.id, (tx, id) => _trashOne(tx, params.type, id, cascade));
+                return;
+            }
+            await _trashOne(getDb(), params.type, params.id as string, cascade);
+        });
     },
 
     restore: (async (params: {
@@ -912,12 +1010,13 @@ export const entries: EntriesApi = {
         cascadeLocales?: boolean;
     }): Promise<void> {
         const cascade = !!params.cascadeLocales;
-        if (Array.isArray(params.id)) {
-            return runBulkVoid(params.id, (tx, id) =>
-                _deleteOne(tx, params.type, id, cascade)
-            );
-        }
-        await _deleteOne(getDb(), params.type, params.id as string, cascade);
+        await runDeleteWithHooks(params.type, params.id, true, async () => {
+            if (Array.isArray(params.id)) {
+                await runBulkVoid(params.id, (tx, id) => _deleteOne(tx, params.type, id, cascade));
+                return;
+            }
+            await _deleteOne(getDb(), params.type, params.id as string, cascade);
+        });
     },
 
     async emptyTrash(params: { type: string }): Promise<void> {

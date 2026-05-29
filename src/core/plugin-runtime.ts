@@ -103,6 +103,11 @@ export function getPluginIdentities(): ResolvedPluginIdentity[] {
     return state().identities;
 }
 
+/** Whether any plugin subscribes to an event — lets callers skip hook setup work. */
+export function hasHookHandlers(event: string): boolean {
+    return (state().hooks.get(event)?.length ?? 0) > 0;
+}
+
 export function getPluginSdkMethods(): Map<string, Record<string, PluginSdkMethod>> {
     return state().sdk;
 }
