@@ -8,6 +8,7 @@
  */
 
 import type { Entry, EntryStatus, JsonObject, Media, User } from './domain.js';
+import type { PluginContext } from './plugins.js';
 
 // ============================================================================
 // Hook Context Types (core events)
@@ -89,19 +90,19 @@ export type ApiResponseContext = {
  * swallow-and-logged (a throw never rolls back).
  */
 export type CoreHookHandlers = {
-    'entry:beforeCreate': (ctx: EntryCreateContext) => Promise<void> | void;
-    'entry:afterCreate': (ctx: EntryAfterCreateContext) => Promise<void> | void;
-    'entry:beforeUpdate': (ctx: EntryUpdateContext) => Promise<void> | void;
-    'entry:afterUpdate': (ctx: EntryUpdateContext) => Promise<void> | void;
-    'entry:beforeDelete': (ctx: EntryDeleteContext) => Promise<void> | void;
-    'entry:afterDelete': (ctx: EntryDeleteContext) => Promise<void> | void;
-    'media:beforeUpload': (ctx: MediaUploadContext) => Promise<void> | void;
-    'media:afterUpload': (ctx: MediaUploadContext) => Promise<void> | void;
-    'media:beforeDelete': (ctx: MediaDeleteContext) => Promise<void> | void;
-    'auth:afterLogin': (ctx: AuthContext) => Promise<void> | void;
-    'auth:afterLogout': (ctx: AuthContext) => Promise<void> | void;
-    'api:beforeRequest': (ctx: ApiRequestContext) => Promise<void> | void;
-    'api:afterRequest': (ctx: ApiResponseContext) => Promise<void> | void;
+    'entry:beforeCreate': (ctx: EntryCreateContext, plugin: PluginContext) => Promise<void> | void;
+    'entry:afterCreate': (ctx: EntryAfterCreateContext, plugin: PluginContext) => Promise<void> | void;
+    'entry:beforeUpdate': (ctx: EntryUpdateContext, plugin: PluginContext) => Promise<void> | void;
+    'entry:afterUpdate': (ctx: EntryUpdateContext, plugin: PluginContext) => Promise<void> | void;
+    'entry:beforeDelete': (ctx: EntryDeleteContext, plugin: PluginContext) => Promise<void> | void;
+    'entry:afterDelete': (ctx: EntryDeleteContext, plugin: PluginContext) => Promise<void> | void;
+    'media:beforeUpload': (ctx: MediaUploadContext, plugin: PluginContext) => Promise<void> | void;
+    'media:afterUpload': (ctx: MediaUploadContext, plugin: PluginContext) => Promise<void> | void;
+    'media:beforeDelete': (ctx: MediaDeleteContext, plugin: PluginContext) => Promise<void> | void;
+    'auth:afterLogin': (ctx: AuthContext, plugin: PluginContext) => Promise<void> | void;
+    'auth:afterLogout': (ctx: AuthContext, plugin: PluginContext) => Promise<void> | void;
+    'api:beforeRequest': (ctx: ApiRequestContext, plugin: PluginContext) => Promise<void> | void;
+    'api:afterRequest': (ctx: ApiResponseContext, plugin: PluginContext) => Promise<void> | void;
 };
 
 export type KnownCoreEvent = keyof CoreHookHandlers;
@@ -109,8 +110,14 @@ export type KnownCoreEvent = keyof CoreHookHandlers;
 /** Any event name — a known core event or a plugin-declared custom event. */
 export type HookEvent = KnownCoreEvent | (string & {});
 
-/** A handler for a custom (plugin-declared) event. Payload is opaque to core. */
-export type HookHandler<Payload = unknown> = (payload: Payload) => Promise<void> | void;
+/**
+ * A handler for a custom (plugin-declared) event. The payload is opaque to
+ * core; the second argument is the firing plugin's context.
+ */
+export type HookHandler<Payload = unknown> = (
+    payload: Payload,
+    plugin: PluginContext
+) => Promise<void> | void;
 
 /** Union of every core handler signature — the index-signature value type. */
 type AnyCoreHookHandler = CoreHookHandlers[KnownCoreEvent];

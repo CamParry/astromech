@@ -20,6 +20,7 @@ import { usersApi } from '@/sdk/local/users.js';
 import { entries, initServerContext } from '@/sdk/local/entries.js';
 import { mediaApi } from '@/sdk/local/media.js';
 import { setCurrentUser } from '@/sdk/local/context.js';
+import { setPluginSdkClient } from '@/core/plugin-runtime.js';
 
 export { initServerContext, setCurrentUser };
 
@@ -91,5 +92,9 @@ export const Astromech: AstromechClient = {
         // No-op for server SDK — direct DB access does not use a base URL
     },
 };
+
+// Register the client so plugin contexts can reach `ctx.sdk` without a static
+// import cycle (plugin-runtime → sdk/local → plugin-runtime).
+setPluginSdkClient(Astromech);
 
 export default Astromech;
