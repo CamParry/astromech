@@ -84,16 +84,24 @@ export function resolveRole(config: ConfigWithRoles, slug: string): Role {
  * - Exact match: 'entry:read:posts' in permissions
  * - Global wildcard: '*' in permissions → grants everything
  * - Scope wildcard: 'entry:read:*' in permissions → grants 'entry:read:posts'
+ *   (this also covers per-plugin 'plugin:<pkg>:*' → 'plugin:<pkg>:lookup')
+ * - Plugin-wide wildcard: 'plugin:*' grants any 'plugin:<pkg>:<action>'
  */
 export function hasPermission(permissions: Permission[], check: Permission): boolean {
     if (permissions.includes('*' as Permission)) return true;
     if (permissions.includes(check)) return true;
 
-    // Handle scope wildcard: entry:read:* covers entry:read:posts
     const parts = check.split(':');
+
+    // Handle scope wildcard: entry:read:* covers entry:read:posts
     if (parts.length === 3) {
         const wildcard = `${parts[0]}:${parts[1]}:*` as Permission;
         if (permissions.includes(wildcard)) return true;
+    }
+
+    // Plugin-wide wildcard: plugin:* covers any plugin:<pkg>:<action>
+    if (parts[0] === 'plugin' && permissions.includes('plugin:*' as Permission)) {
+        return true;
     }
 
     return false;
