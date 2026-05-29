@@ -6,6 +6,7 @@
 import type { AstromechConfig, FieldGroup, ResolvedConfig } from '@/types/index.js';
 import { mergePluginEntries } from '@/core/plugin-resolver.js';
 import { assertNoPluginCollisions, checkPluginDependencies } from '@/core/plugin-identity.js';
+import { assertPluginTablePrefixes } from '@/core/plugin-schema.js';
 
 /**
  * Sort field groups by priority within each collection and resource
@@ -47,6 +48,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
 	const plugins = config.plugins ?? [];
 	assertNoPluginCollisions(plugins);
 	checkPluginDependencies(plugins);
+	assertPluginTablePrefixes(plugins);
 
 	// Step 2: Merge plugin-contributed entry types into the config.
 	mergePluginEntries(config);
