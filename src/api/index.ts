@@ -18,6 +18,7 @@ import { mediaRouter } from './routes/media.js';
 import { settingsRouter } from './routes/settings.js';
 import { entryTypesRouter } from './routes/entry-types.js';
 import { cronRouter } from './routes/cron.js';
+import { pluginsRouter } from './routes/plugins.js';
 import { Astromech } from '@/sdk/local/index.js';
 
 type AppEnv = { Variables: AuthVariables };
@@ -77,6 +78,13 @@ app.get('/setup/check', async (c) => {
     const result = await Astromech.users.query({ limit: 'all' });
     return c.json({ needsSetup: result.data.length === 0 });
 });
+
+// ============================================================================
+// Plugin RPC + raw routes — enforce access per-method (incl. public), so they
+// mount before the app-wide requireAuth.
+// ============================================================================
+
+app.route('/plugins', pluginsRouter);
 
 // ============================================================================
 // All routes require authentication

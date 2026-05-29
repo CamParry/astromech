@@ -21,18 +21,14 @@ export type AuthVariables = {
 };
 
 /**
- * Require an authenticated session.
- * Attaches `user` and `role` to context variables.
- * Returns 401 if no valid session is found.
+ * Resolve the Better Auth session into a full user row + role, or null if there
+ * is no valid session. Shared by `requireAuth` and `optionalAuth`.
  */
-export const requireAuth = createMiddleware<{ Variables: AuthVariables }>(async (c, next) => {
-    const session = await auth.api.getSession({
-        headers: c.req.raw.headers,
-    });
-
-    if (!session?.user) {
-        return unauthorized(c);
-    }
+export async function resolveSessionUser(
+    headers: Headers
+): Promise<{ user: User; role: Role } | null> {
+    const session = await auth.api.getSession({ headers });
+    if (!session?.user) return null;
 
     // Load the full user row (Better Auth session may not include custom fields)
     const db = getDb();
@@ -42,9 +38,7 @@ export const requireAuth = createMiddleware<{ Variables: AuthVariables }>(async 
         .where(eq(usersTable.id, session.user.id))
         .get();
 
-    if (!userRow) {
-        return unauthorized(c);
-    }
+    if (!userRow) return null;
 
     const user: User = {
         id: userRow.id,
@@ -58,9 +52,36 @@ export const requireAuth = createMiddleware<{ Variables: AuthVariables }>(async 
         updatedAt: userRow.updatedAt,
     };
 
-    const role = resolveRole(Astromech.config, userRow.roleSlug);
+    return { user, role: resolveRole(Astromech.config, userRow.roleSlug) };
+}
 
-    c.set('user', user);
-    c.set('role', role);
+/**
+ * Require an authenticated session.
+ * Attaches `user` and `role` to context variables.
+ * Returns 401 if no valid session is found.
+ */
+export const requireAuth = createMiddleware<{ Variables: AuthVariables }>(async (c, next) => {
+    const resolved = await resolveSessionUser(c.req.raw.headers);
+    if (!resolved) {
+        return unauthorized(c);
+    }
+    c.set('user', resolved.user);
+    c.set('role', resolved.role);
     return next();
 });
+
+/**
+ * Resolve the session if present but never reject. Attaches `user`/`role` only
+ * when a valid session exists. Used by routes (e.g. plugin RPC) that enforce
+ * access per-method, including `public` methods.
+ */
+export const optionalAuth = createMiddleware<{ Variables: Partial<AuthVariables> }>(
+    async (c, next) => {
+        const resolved = await resolveSessionUser(c.req.raw.headers);
+        if (resolved) {
+            c.set('user', resolved.user);
+            c.set('role', resolved.role);
+        }
+        return next();
+    }
+);
