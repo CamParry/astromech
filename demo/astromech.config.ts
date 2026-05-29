@@ -1,11 +1,13 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig, FilesystemStorage, libsqlDriver } from 'astromech';
+import { redirects } from 'astromech/plugins/redirects';
 
 export default defineConfig({
     db: libsqlDriver({ url: 'file:' + fileURLToPath(new URL('./database.db', import.meta.url)) }),
     storage: new FilesystemStorage({ dir: './public/uploads' }),
     locales: ['en', 'fr'],
     defaultLocale: 'en',
+    plugins: [redirects()],
     entries: {
         page: {
             single: 'Page',

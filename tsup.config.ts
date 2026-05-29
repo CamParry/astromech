@@ -12,6 +12,7 @@ export default defineConfig([
             'db/schema': 'src/db/schema.ts',
             'admin/components/ui/index': 'src/admin/components/ui/index.ts',
             'email/index': 'src/email/index.ts',
+            'plugins/redirects/index': 'src/plugins/redirects/index.ts',
         },
         format: ['esm'],
         dts: true,

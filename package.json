@@ -59,6 +59,10 @@
         "./email": {
             "types": "./dist/email/index.d.ts",
             "default": "./dist/email/index.js"
+        },
+        "./plugins/redirects": {
+            "types": "./dist/plugins/redirects/index.d.ts",
+            "default": "./dist/plugins/redirects/index.js"
         }
     },
     "main": "./dist/index.js",
