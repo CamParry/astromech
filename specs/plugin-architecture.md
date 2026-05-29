@@ -271,19 +271,22 @@ React / TanStack Router / TanStack Query / i18next are **peer deps** — wrap CM
 
 The hard constraint (§1): functions don't survive `JSON.stringify`, so plugin-bearing modules are **code-generating** (emit real `import` statements) rather than data-serializing.
 
+**Implementation note (18a).** The SDK wiring does *not* use code-gen virtual modules. The locked constraint was "functions die in `JSON.stringify`" — but plugin handlers, hooks, and cron are registered live into a `globalThis` runtime registry at boot (`registerPlugins`, the same pattern cron already uses), so the functions are available in-process without serialization. Consequently:
+- **Local SDK** (`Astromech.plugins.X`) builds dynamically from the runtime registry and calls handlers directly (a `Proxy` resolves names/methods lazily). No virtual module.
+- **Fetch SDK** synthesises HTTP shims with a `Proxy` (`plugins.<name>.<method>(input)` → `POST /api/plugins/<name>/<method>`). No name list, no codegen.
+- **Hooks / cron / RPC routes** are read from the same registry server-side.
+
+Code-gen virtual modules remain the right tool for **browser-bound assets** that the bundler must statically import — plugin React components and lazy locale imports (18b). Those are declared as **string import specifiers** so the Node-side generator can emit `import(specifier)`.
+
 Virtual modules by audience:
 
 | Module | Audience | Method |
 |---|---|---|
 | `virtual:astromech/config` | Node/SSR | serialize (existing) |
 | `virtual:astromech/admin-config` | browser | serialize (existing — **extend** with plugin nav/permissions/static metadata) |
-| `virtual:astromech/plugins/components` | browser | **code-gen** lazy React imports, keyed `plugin:name` |
-| `virtual:astromech/plugins/local` | SSR | **code-gen** imports wiring SDK `local` handlers → `Astromech.plugins.X` |
-| `virtual:astromech/plugins/fetch` | browser/SSR | **code-gen** (mostly synthesised fetch shims) |
-| `virtual:astromech/plugins/server` | Node/SSR | **code-gen** hooks / cron / API / schema imports |
-| `virtual:astromech/plugins/i18n` | browser | **code-gen** lazy locale imports |
-
-- **Browser-bound references declared as string import specifiers** (not inline thunks) so the Node-side generator can statically emit `import(specifier)`.
+| `virtual:astromech/plugins/components` | browser | **code-gen** lazy React imports, keyed `plugin:name` (18b) |
+| `virtual:astromech/plugins/i18n` | browser | **code-gen** lazy locale imports (18b) |
+| ~~`virtual:astromech/plugins/{local,fetch,server}`~~ | — | **superseded** by the `globalThis` runtime registry + Proxy shims (see note above) |
 - Extend the existing `injectTypes('astromech.d.ts')` step (`astro:config:done` → `generateSdkTypes`, `src/core/type-generator.ts`) to emit `declare module` augmentation mapping **access keys → inferred plugin SDK types**, plus declared plugin hook-event types.
 
 ---

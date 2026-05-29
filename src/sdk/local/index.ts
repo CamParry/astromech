@@ -21,6 +21,7 @@ import { entries, initServerContext } from '@/sdk/local/entries.js';
 import { mediaApi } from '@/sdk/local/media.js';
 import { setCurrentUser } from '@/sdk/local/context.js';
 import { setPluginSdkClient } from '@/core/plugin-runtime.js';
+import { localPlugins } from '@/sdk/local/plugins.js';
 
 export { initServerContext, setCurrentUser };
 
@@ -88,6 +89,7 @@ export const Astromech: AstromechClient = {
     settings: settingsApi,
     users: usersApi,
     config,
+    plugins: localPlugins,
     configure(_options: { baseUrl: string }): void {
         // No-op for server SDK — direct DB access does not use a base URL
     },

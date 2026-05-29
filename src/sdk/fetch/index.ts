@@ -21,6 +21,7 @@ import type {
     Media,
     MediaApi,
     MediaQueryParams,
+    PluginSdkNamespace,
     ResolvedConfig,
     Setting,
     SettingsApi,
@@ -535,6 +536,33 @@ const usersApi: UsersApi = {
 };
 
 // ============================================================================
+// Plugins API — HTTP shims to /api/plugins/{name}/{method} (RPC: POST JSON)
+//
+// Synthesised lazily by a Proxy: no name list, no codegen. The server enforces
+// existence and `access`; an unknown name/method simply 404s on call.
+// ============================================================================
+
+type FetchMethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
+
+const pluginsApi: PluginSdkNamespace = new Proxy({} as PluginSdkNamespace, {
+    get(_target, nameProp): FetchMethodMap | undefined {
+        if (typeof nameProp !== 'string' || nameProp === 'then') return undefined;
+        const name = nameProp;
+        return new Proxy({} as FetchMethodMap, {
+            get(_t, methodProp) {
+                if (typeof methodProp !== 'string' || methodProp === 'then') return undefined;
+                const method = methodProp;
+                return (input?: unknown) =>
+                    apiFetch<unknown>(`/plugins/${name}/${method}`, {
+                        method: 'POST',
+                        body: input ?? {},
+                    });
+            },
+        });
+    },
+});
+
+// ============================================================================
 // Export Client
 // ============================================================================
 
@@ -544,6 +572,7 @@ export const Astromech: AstromechClient = {
     settings: settingsApi,
     users: usersApi,
     config: null as unknown as ResolvedConfig, // Placeholder, will be set in middleware
+    plugins: pluginsApi,
     configure({ baseUrl }: { baseUrl: string }): void {
         apiBase = baseUrl;
     },

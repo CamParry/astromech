@@ -108,6 +108,11 @@ export function hasHookHandlers(event: string): boolean {
     return (state().hooks.get(event)?.length ?? 0) > 0;
 }
 
+/** Resolved identity for a plugin by its access key. */
+export function getPluginIdentity(name: string): ResolvedPluginIdentity | undefined {
+    return state().identities.find((identity) => identity.name === name);
+}
+
 export function getPluginSdkMethods(): Map<string, Record<string, PluginSdkMethod>> {
     return state().sdk;
 }
