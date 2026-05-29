@@ -474,33 +474,58 @@ Hooks stay internal to the admin SPA — no `astromech/react` public export. Con
 
 ---
 
-## Phase 18 — Plugin Architecture & UI System (Future)
+## Phase 18 — Plugin Architecture (Future)
 
-### Plugin Architecture
+Architecture fully designed and locked — see [`specs/plugin-architecture.md`](specs/plugin-architecture.md) for the complete spec (terminology, locked decisions, build pipeline). Three dependency-ordered slices; each ships one real plugin that stress-tests exactly what it built (validation complexity ascends: redirects → SEO → forms).
 
-- [ ] Finalise `defineAstromechPlugin` API and update `AstromechPlugin` type (`src/types/plugins.ts`)
-- [ ] Switch plugin API routes to mounted Hono sub-apps; update plugin resolver and root Hono app
-- [ ] Update first-party plugin stubs (Phase 19) to use the new pattern
+### 18a — Plugin Runtime (headless)
 
-### Plugin UI System
+- [ ] `definePlugin` **factory** `(options) => PluginDefinition`; identity derivation (`package`/`name`/`alias`/`permissionNamespace`); collision → build error
+- [ ] Declarative `PluginDefinition` type; replace old `AstromechPlugin` (`src/types/plugins.ts`)
+- [ ] Rewrite `src/core/plugin-resolver.ts` — remove `targets` injection (`resolveTargets`/`mergePluginFieldGroups`); add SDK/hook/cron/schema/API collection; update `src/core/config-resolver.ts`
+- [ ] Unified `PluginContext` (`{ db, config, user, sdk, sendEmail, logger, env, emit }`)
+- [ ] Open hook registry (`src/types/hooks.ts` → `KnownCoreEvent | string`) + `hooks: {}` declaration + `ctx.emit`
+- [ ] SDK namespace `Astromech.plugins.X` (local + fetch) via code-gen virtual modules
+- [ ] Auto-mounted RPC API `/api/plugins/{name}/{method}` + `access` enforcement + raw escape hatch (`src/api/plugins/*`)
+- [ ] DB schema merge + `db:generate`/`db:migrate` wrappers + `plugin_{alias}_` prefix (SQLite-only)
+- [ ] Failure isolation (boot crash-loud; before-aborts/after-swallows; per-request & per-job containment)
+- [ ] `dependsOn` existence + semver checks; ordering by `plugins: []`
+- [ ] Non-UI code-gen virtual modules (`local`, `fetch`, `server`)
+- [ ] **Ship `@astromech/redirects`** — redirect entry type + slug-change `entry:afterUpdate` hook + `lookup` SDK; near-zero UI
 
-- [ ] Define `PluginAdminRoute` type — wraps a TanStack Router route definition with metadata (path, nav label, icon, permission required)
-- [ ] Add `adminRoutes?: PluginAdminRoute[]` to `AstromechPlugin` type
-- [ ] Update `src/core/plugin-resolver.ts` to collect plugin `adminRoutes`
-- [ ] Update virtual module to include resolved plugin routes
-- [ ] Update router setup to merge plugin code-based routes into the file-based route tree
-- [ ] Update `Sidebar.tsx` to render plugin-contributed nav items
-- [ ] Define page extension points (entry edit tabs, sidebar panels)
+### 18b — Plugin Admin UI
+
+- [ ] Field-group `placement: 'tab'` + edit-page tab strip
+- [ ] `registerFieldType` (renderer + validator + defaultValue + typeGen)
+- [ ] Plugin nav tree; permission-gated auto-hide
+- [ ] Pages under `/admin/plugin/{name}/*` + catch-all `_protected/plugin/$.tsx` (closes Phase 17.5 deferred item)
+- [ ] Per-plugin React error boundaries with localized fallback
+- [ ] Auto-rendered settings page from `admin.settings`
+- [ ] Public exports: `astromech/ui/fields`, `astromech/ui/layout`, `astromech/db`, `useAstromechPlugin()`
+- [ ] Component + i18n code-gen virtual modules; type augmentation in `astromech.d.ts`
+- [ ] **Ship `@astromech/seo`** — `seo-meta` field type + edit-page panel + dashboard + settings + sitemap/OG via SDK + length recommendations (non-AI)
+
+### 18c — Compositional Integrations
+
+- [ ] Form-builder custom field type
+- [ ] Public `submit` API + file-upload raw escape hatch
+- [ ] `forms:beforeSubmit`/`forms:afterSubmit` hook events
+- [ ] Built-in reCAPTCHA/Turnstile/Mailchimp via those hooks (dogfooding principle)
+- [ ] **Ship `@astromech/forms`** — `form` + `submission` entry types, form-builder field, public submission API, frontend form helper/component
 
 ---
 
 ## Phase 19 — Plugins (First-Party, Future)
 
-- [ ] `@astromech/seo` — SEO field group + sitemap route
-- [ ] `@astromech/redirects` — redirects collection + middleware
-- [ ] `@astromech/translations` — multi-language content
-- [ ] `@astromech/forms` — form builder collection + submission handling
-- [ ] `@astromech/analytics` — analytics dashboard page
+Built on the proven 18a–18c foundation. (`@astromech/redirects`, `seo`, `forms` ship inside Phase 18 as slice validators.)
+
+- [ ] `@astromech/analytics` — tracking-script management + dashboard page
+- [ ] `@astromech/activity-log` — audit log (Drizzle table escape valve)
+- [ ] `@astromech/backups`
+- [ ] `@astromech/comments`
+- [ ] `@astromech/import-export`
+
+> Note: `@astromech/translations` is **dropped** — multi-locale content is now a core feature (see `specs/symmetric-locale-model.md`), not a plugin.
 
 ---
 
