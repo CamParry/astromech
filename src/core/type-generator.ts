@@ -9,9 +9,11 @@
 import type {
     FieldDefinition,
     FieldGroup,
+    PluginDefinition,
     PluginFieldTypeRegistration,
     ResolvedConfig,
 } from '@/types/index.js';
+import { resolvePluginIdentity } from '@/core/plugin-identity.js';
 
 // ============================================================================
 // Naming Helpers
@@ -234,9 +236,49 @@ function generateCollectionTypes(
 /**
  * Generate the full content of the `.astro/astromech.d.ts` type declaration file.
  */
+/**
+ * `declare module` augmentation for installed plugins: SDK method names on
+ * `AstromechPluginSdks` (method-name autocomplete; IO stays `unknown` — only
+ * runtime values are available here) and declared `hookEvents` on
+ * `AstromechPluginHookEvents`.
+ */
+function generatePluginAugmentations(plugins: PluginDefinition[]): string[] {
+    const sdkLines = plugins.flatMap((def) => {
+        const methods = Object.keys(def.sdk ?? {});
+        if (methods.length === 0) return [];
+        const name = resolvePluginIdentity(def).name;
+        return [
+            `    '${name}': {`,
+            ...methods.map((m) => `      ${m}(input?: unknown): Promise<unknown>;`),
+            '    };',
+        ];
+    });
+
+    const eventLines = plugins.flatMap((def) =>
+        (def.hookEvents ?? []).map((event) => `    '${event}': unknown;`)
+    );
+
+    if (sdkLines.length === 0 && eventLines.length === 0) return [];
+
+    return [
+        '',
+        '// --- Installed plugins ---',
+        '',
+        "declare module 'astromech' {",
+        '  interface AstromechPluginSdks {',
+        ...sdkLines,
+        '  }',
+        '  interface AstromechPluginHookEvents {',
+        ...eventLines,
+        '  }',
+        '}',
+    ];
+}
+
 export function generateSdkTypes(
     config: ResolvedConfig,
-    pluginFieldTypes = new Map<string, PluginFieldTypeRegistration>()
+    pluginFieldTypes = new Map<string, PluginFieldTypeRegistration>(),
+    plugins: PluginDefinition[] = []
 ): string {
     const collectionKeys = Object.keys(config.entries);
     const knownCollections = new Set(collectionKeys);
@@ -280,6 +322,7 @@ export function generateSdkTypes(
         '}',
         '',
         collectionTypeBlocks,
+        ...generatePluginAugmentations(plugins),
         '',
         'export {};',
         '',

@@ -90,25 +90,65 @@ export type ApiResponseContext = {
  * swallow-and-logged (a throw never rolls back).
  */
 export type CoreHookHandlers = {
-    'entry:beforeCreate': (ctx: EntryCreateContext, plugin: PluginContext) => Promise<void> | void;
-    'entry:afterCreate': (ctx: EntryAfterCreateContext, plugin: PluginContext) => Promise<void> | void;
-    'entry:beforeUpdate': (ctx: EntryUpdateContext, plugin: PluginContext) => Promise<void> | void;
-    'entry:afterUpdate': (ctx: EntryUpdateContext, plugin: PluginContext) => Promise<void> | void;
-    'entry:beforeDelete': (ctx: EntryDeleteContext, plugin: PluginContext) => Promise<void> | void;
-    'entry:afterDelete': (ctx: EntryDeleteContext, plugin: PluginContext) => Promise<void> | void;
-    'media:beforeUpload': (ctx: MediaUploadContext, plugin: PluginContext) => Promise<void> | void;
-    'media:afterUpload': (ctx: MediaUploadContext, plugin: PluginContext) => Promise<void> | void;
-    'media:beforeDelete': (ctx: MediaDeleteContext, plugin: PluginContext) => Promise<void> | void;
+    'entry:beforeCreate': (
+        ctx: EntryCreateContext,
+        plugin: PluginContext
+    ) => Promise<void> | void;
+    'entry:afterCreate': (
+        ctx: EntryAfterCreateContext,
+        plugin: PluginContext
+    ) => Promise<void> | void;
+    'entry:beforeUpdate': (
+        ctx: EntryUpdateContext,
+        plugin: PluginContext
+    ) => Promise<void> | void;
+    'entry:afterUpdate': (
+        ctx: EntryUpdateContext,
+        plugin: PluginContext
+    ) => Promise<void> | void;
+    'entry:beforeDelete': (
+        ctx: EntryDeleteContext,
+        plugin: PluginContext
+    ) => Promise<void> | void;
+    'entry:afterDelete': (
+        ctx: EntryDeleteContext,
+        plugin: PluginContext
+    ) => Promise<void> | void;
+    'media:beforeUpload': (
+        ctx: MediaUploadContext,
+        plugin: PluginContext
+    ) => Promise<void> | void;
+    'media:afterUpload': (
+        ctx: MediaUploadContext,
+        plugin: PluginContext
+    ) => Promise<void> | void;
+    'media:beforeDelete': (
+        ctx: MediaDeleteContext,
+        plugin: PluginContext
+    ) => Promise<void> | void;
     'auth:afterLogin': (ctx: AuthContext, plugin: PluginContext) => Promise<void> | void;
     'auth:afterLogout': (ctx: AuthContext, plugin: PluginContext) => Promise<void> | void;
-    'api:beforeRequest': (ctx: ApiRequestContext, plugin: PluginContext) => Promise<void> | void;
-    'api:afterRequest': (ctx: ApiResponseContext, plugin: PluginContext) => Promise<void> | void;
+    'api:beforeRequest': (
+        ctx: ApiRequestContext,
+        plugin: PluginContext
+    ) => Promise<void> | void;
+    'api:afterRequest': (
+        ctx: ApiResponseContext,
+        plugin: PluginContext
+    ) => Promise<void> | void;
 };
 
 export type KnownCoreEvent = keyof CoreHookHandlers;
 
 /** Any event name — a known core event or a plugin-declared custom event. */
-export type HookEvent = KnownCoreEvent | (string & {});
+/**
+ * Augmented by the generated `astromech.d.ts` with events plugins declare via
+ * `hookEvents`. Empty by default.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
+export interface AstromechPluginHookEvents {}
+
+export type HookEvent = KnownCoreEvent | keyof AstromechPluginHookEvents | (string & {});
 
 /**
  * A handler for a custom (plugin-declared) event. The payload is opaque to

@@ -10,6 +10,9 @@ export const rating = definePlugin(() => ({
     package: 'demo-rating',
     version: '1.0.0',
     permissions: [{ key: 'view', label: 'View rating reports' }],
+    i18n: {
+        en: fileURLToPath(new URL('./locales/en.json', import.meta.url)),
+    },
     fields: [
         {
             type: 'rating',

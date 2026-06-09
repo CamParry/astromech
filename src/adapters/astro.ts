@@ -236,9 +236,31 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                                                 );
                                             }
                                         );
+                                        // Locale bundles keyed by i18n namespace
+                                        // (= permissionNamespace), then locale code.
+                                        const i18nLines = (config.plugins ?? []).flatMap(
+                                            (def) => {
+                                                const locales = Object.entries(
+                                                    def.i18n ?? {}
+                                                );
+                                                if (locales.length === 0) return [];
+                                                const identity =
+                                                    resolvePluginIdentity(def);
+                                                const inner = locales
+                                                    .map(
+                                                        ([locale, specifier]) =>
+                                                            `${JSON.stringify(locale)}: () => import(${JSON.stringify(specifier)})`
+                                                    )
+                                                    .join(', ');
+                                                return [
+                                                    `\t${JSON.stringify(identity.permissionNamespace)}: { ${inner} },`,
+                                                ];
+                                            }
+                                        );
                                         return [
                                             `export const fieldTypes = {\n${fieldTypeLines.join('\n')}\n};`,
                                             `export const pages = {\n${pageLines.join('\n')}\n};`,
+                                            `export const i18n = {\n${i18nLines.join('\n')}\n};`,
                                             '',
                                         ].join('\n');
                                     }
@@ -270,7 +292,8 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                     filename: 'astromech.d.ts',
                     content: generateSdkTypes(
                         resolvedConfig,
-                        collectPluginFieldTypes(config.plugins ?? [])
+                        collectPluginFieldTypes(config.plugins ?? []),
+                        config.plugins ?? []
                     ),
                 });
                 logger.info('Astromech configuration complete');

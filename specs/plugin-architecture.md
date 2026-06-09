@@ -24,16 +24,16 @@ The reference target is the way Payload / Strapi / Sanity treat plugins: **a plu
 
 The design introduced several near-synonyms that must stay distinct:
 
-| Term | Meaning |
-|---|---|
-| **canonical package** | The npm package name, e.g. `@astromech/redirects`. The stable identity that survives renames. |
-| **access key** (`name`) | The key a plugin is reached by on the SDK: `Astromech.plugins.redirects`. Defaults to the last path segment of the package; user-overridable via `alias`. |
-| **permissionNamespace** | Sanitised package (`@`→stripped, `/`→`-`, lowercased) used to anchor permission strings: `plugin:astromech-redirects:lookup`. Anchored to the package so it survives `alias` renames. Overridable. |
-| **plugin footprint** | The set of entry types that actually use a plugin. **Derived** from field presence (`ctx.config.entryTypesWithField('seo-meta')`), never declared. |
-| **field-group placement** | Where a field group renders on the edit page: `'main' \| 'sidebar' \| 'tab'`. Replaces the old panel/tab API. |
-| **hook event** | A named lifecycle point. Core events are known/typed; plugins declare their own via `hookEvents` and fire them with `ctx.emit(event, payload)`. |
-| **raw escape hatch** | A raw request handler mounted inside `/api/plugins/{name}/*` for binary/multipart/streaming, via a thin wrapper (not raw Hono). |
-| **declarative definition** | The plugin object is almost entirely data; `setup(ctx)` is the only imperative escape hatch. |
+| Term                       | Meaning                                                                                                                                                                                            |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **canonical package**      | The npm package name, e.g. `@astromech/redirects`. The stable identity that survives renames.                                                                                                      |
+| **access key** (`name`)    | The key a plugin is reached by on the SDK: `Astromech.plugins.redirects`. Defaults to the last path segment of the package; user-overridable via `alias`.                                          |
+| **permissionNamespace**    | Sanitised package (`@`→stripped, `/`→`-`, lowercased) used to anchor permission strings: `plugin:astromech-redirects:lookup`. Anchored to the package so it survives `alias` renames. Overridable. |
+| **plugin footprint**       | The set of entry types that actually use a plugin. **Derived** from field presence (`ctx.config.entryTypesWithField('seo-meta')`), never declared.                                                 |
+| **field-group placement**  | Where a field group renders on the edit page: `'main' \| 'sidebar' \| 'tab'`. Replaces the old panel/tab API.                                                                                      |
+| **hook event**             | A named lifecycle point. Core events are known/typed; plugins declare their own via `hookEvents` and fire them with `ctx.emit(event, payload)`.                                                    |
+| **raw escape hatch**       | A raw request handler mounted inside `/api/plugins/{name}/*` for binary/multipart/streaming, via a thin wrapper (not raw Hono).                                                                    |
+| **declarative definition** | The plugin object is almost entirely data; `setup(ctx)` is the only imperative escape hatch.                                                                                                       |
 
 ---
 
@@ -48,11 +48,11 @@ The design introduced several near-synonyms that must stay distinct:
 ### 3.2 Distribution & frontend
 
 4. A plugin is **one npm package, framework-agnostic**, with sub-path exports:
-   - `index` — `definePlugin` factory (server).
-   - `/client` — pure-JS helpers (no React).
-   - `/components` — pure React (works in any React framework).
+    - `index` — `definePlugin` factory (server).
+    - `/client` — pure-JS helpers (no React).
+    - `/components` — pure React (works in any React framework).
 5. **Framework adapters live outside the plugin** — README recipes or sibling packages. **No `astromech/redirects/astro` sub-paths.** No deep integration with `@astrojs/sitemap` / `astro-seo`.
-6. **Plugins cannot register routes outside `/api`.** Sitemap / robots / redirect-interception: the plugin exposes *data* via the SDK; the **user** creates the framework route (e.g. `/sitemap.xml`) themselves.
+6. **Plugins cannot register routes outside `/api`.** Sitemap / robots / redirect-interception: the plugin exposes _data_ via the SDK; the **user** creates the framework route (e.g. `/sitemap.xml`) themselves.
 
 ### 3.3 SDK + API parity
 
@@ -112,7 +112,8 @@ The design introduced several near-synonyms that must stay distinct:
 
 ### 3.11 i18n
 
-38. **Per-plugin i18next namespace** = sanitised package. Locale resources as **lazy import thunks** (`i18n: { en: () => import('./locales/en.json') }`), collected via a code-gen virtual module. `useAstromechPlugin().t` is **pre-scoped** to the namespace. Fallback follows core.
+38. **Per-plugin i18next namespace** = sanitised package. Locale resources collected via a code-gen virtual module. `useAstromechPlugin().t` is **pre-scoped** to the namespace. Fallback follows core.
+    **Implementation note (18b):** declared as **string import specifiers** (`i18n: { en: './locales/en.json' }`), not thunks — thunks can't serialize into the code-gen module; this matches the §11 rule for all browser-bound assets.
 39. **Server-side plugin i18n is out for v1** — admin-UI strings only; server strings are English-keyed.
 
 ### 3.12 Failure isolation
@@ -150,30 +151,30 @@ export function definePlugin<Options>(
 
 export type PluginDefinition = {
     // Identity
-    package: string;                  // canonical, e.g. '@astromech/redirects'
-    name?: string;                    // access key; defaults to last path segment
-    alias?: string;                   // user override for collisions
-    permissionNamespace?: string;     // defaults to sanitised(package)
+    package: string; // canonical, e.g. '@astromech/redirects'
+    name?: string; // access key; defaults to last path segment
+    alias?: string; // user override for collisions
+    permissionNamespace?: string; // defaults to sanitised(package)
 
     // Declarative surfaces
     permissions?: PluginPermission[]; // { key, label, description }
     suggestedRoleGrants?: SuggestedGrant[];
     entries?: Record<string, EntryTypeConfig>;
     fields?: FieldTypeRegistration[]; // registerFieldType payloads
-    schema?: DrizzleSchemaModule;     // plugin_{alias}_* tables
-    sdk?: Record<string, SdkMethod>;  // each MUST declare `access`
-    rawRoutes?: RawRoute[];           // escape hatch, mounted in /api/plugins/{name}/*
+    schema?: DrizzleSchemaModule; // plugin_{alias}_* tables
+    sdk?: Record<string, SdkMethod>; // each MUST declare `access`
+    rawRoutes?: RawRoute[]; // escape hatch, mounted in /api/plugins/{name}/*
     hooks?: Partial<Record<KnownCoreEvent | string, HookHandler>>;
-    hookEvents?: string[];            // events this plugin fires (type-augmented)
-    cron?: CronJob[];                 // { name, schedule, handler }
+    hookEvents?: string[]; // events this plugin fires (type-augmented)
+    cron?: CronJob[]; // { name, schedule, handler }
     admin?: {
-        nav?: NavTree;                // tree; items carry optional permission
-        pages?: PluginPage[];         // mounted under /admin/plugin/{name}/*
-        settings?: SettingsSchema;    // auto-rendered settings page
+        nav?: NavTree; // tree; items carry optional permission
+        pages?: PluginPage[]; // mounted under /admin/plugin/{name}/*
+        settings?: SettingsSchema; // auto-rendered settings page
     };
     i18n?: Record<string, () => Promise<unknown>>; // lazy locale thunks
     requiredEnv?: string[];
-    dependsOn?: Record<string, string>;  // package -> semver range
+    dependsOn?: Record<string, string>; // package -> semver range
 
     // Imperative escape hatch (optional, runs once per boot)
     setup?: (ctx: PluginContext) => void | Promise<void>;
@@ -190,8 +191,8 @@ export type PluginContext = {
     user: User | null;
     sdk: AstromechClient;
     sendEmail: (to: string, subject: string, element: ReactElement) => Promise<void>;
-    logger: Logger;                   // attributes log lines to the plugin
-    env: Record<string, string | undefined>;  // via import.meta.env in SSR
+    logger: Logger; // attributes log lines to the plugin
+    env: Record<string, string | undefined>; // via import.meta.env in SSR
     emit: (event: string, payload: unknown) => Promise<void>;
 };
 ```
@@ -209,6 +210,7 @@ The consistency story: **author writes the logic once** (the `local` handler in 
 3. **Fetch SDK** — `Astromech.plugins.X.method(input)` over HTTP; shim auto-generated to call the matching route. Wired by `virtual:astromech/plugins/fetch`.
 
 `access` enforcement is automatic and uniform:
+
 - `'public'` — no auth required.
 - `'authenticated'` — requires a session user.
 - `{ permission: 'lookup' }` — requires `plugin:<pkg>:lookup` (or a covering wildcard).
@@ -237,12 +239,12 @@ The **raw escape hatch** (`rawRoutes`) is for payloads RPC-JSON can't carry (fil
 
 ## 8. Public Exports
 
-| Export | Contents |
-|---|---|
-| `astromech/ui` | UI atoms (added Phase 6). |
-| `astromech/ui/fields` | Core field renderers (compose custom field types from these). |
-| `astromech/ui/layout` | `PageHeader`, `PageLayout`, `Breadcrumb`, `Toolbar`. |
-| `astromech/db` | Drizzle helpers for plugin schema authoring. |
+| Export                 | Contents                                                                                                          |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `astromech/ui`         | UI atoms (added Phase 6).                                                                                         |
+| `astromech/ui/fields`  | Core field renderers (compose custom field types from these).                                                     |
+| `astromech/ui/layout`  | `PageHeader`, `PageLayout`, `Breadcrumb`, `Toolbar`.                                                              |
+| `astromech/db`         | Drizzle helpers for plugin schema authoring.                                                                      |
 | `useAstromechPlugin()` | Runtime context hook: `{ sdk, toast, modal, currentUser, navigate, t }` (`t` pre-scoped to the plugin namespace). |
 
 React / TanStack Router / TanStack Query / i18next are **peer deps** — wrap CMS-specific things only, never re-export the underlying libs.
@@ -271,7 +273,8 @@ React / TanStack Router / TanStack Query / i18next are **peer deps** — wrap CM
 
 The hard constraint (§1): functions don't survive `JSON.stringify`, so plugin-bearing modules are **code-generating** (emit real `import` statements) rather than data-serializing.
 
-**Implementation note (18a).** The SDK wiring does *not* use code-gen virtual modules. The locked constraint was "functions die in `JSON.stringify`" — but plugin handlers, hooks, and cron are registered live into a `globalThis` runtime registry at boot (`registerPlugins`, the same pattern cron already uses), so the functions are available in-process without serialization. Consequently:
+**Implementation note (18a).** The SDK wiring does _not_ use code-gen virtual modules. The locked constraint was "functions die in `JSON.stringify`" — but plugin handlers, hooks, and cron are registered live into a `globalThis` runtime registry at boot (`registerPlugins`, the same pattern cron already uses), so the functions are available in-process without serialization. Consequently:
+
 - **Local SDK** (`Astromech.plugins.X`) builds dynamically from the runtime registry and calls handlers directly (a `Proxy` resolves names/methods lazily). No virtual module.
 - **Fetch SDK** synthesises HTTP shims with a `Proxy` (`plugins.<name>.<method>(input)` → `POST /api/plugins/<name>/<method>`). No name list, no codegen.
 - **Hooks / cron / RPC routes** are read from the same registry server-side.
@@ -280,13 +283,14 @@ Code-gen virtual modules remain the right tool for **browser-bound assets** that
 
 Virtual modules by audience:
 
-| Module | Audience | Method |
-|---|---|---|
-| `virtual:astromech/config` | Node/SSR | serialize (existing) |
-| `virtual:astromech/admin-config` | browser | serialize (existing — **extend** with plugin nav/permissions/static metadata) |
-| `virtual:astromech/plugins/components` | browser | **code-gen** lazy React imports, keyed `plugin:name` (18b) |
-| `virtual:astromech/plugins/i18n` | browser | **code-gen** lazy locale imports (18b) |
-| ~~`virtual:astromech/plugins/{local,fetch,server}`~~ | — | **superseded** by the `globalThis` runtime registry + Proxy shims (see note above) |
+| Module                                               | Audience | Method                                                                             |
+| ---------------------------------------------------- | -------- | ---------------------------------------------------------------------------------- |
+| `virtual:astromech/config`                           | Node/SSR | serialize (existing)                                                               |
+| `virtual:astromech/admin-config`                     | browser  | serialize (existing — **extend** with plugin nav/permissions/static metadata)      |
+| `virtual:astromech/plugins/components`               | browser  | **code-gen** lazy React imports, keyed `plugin:name` (18b)                         |
+| `virtual:astromech/plugins/i18n`                     | browser  | **code-gen** lazy locale imports (18b)                                             |
+| ~~`virtual:astromech/plugins/{local,fetch,server}`~~ | —        | **superseded** by the `globalThis` runtime registry + Proxy shims (see note above) |
+
 - Extend the existing `injectTypes('astromech.d.ts')` step (`astro:config:done` → `generateSdkTypes`, `src/core/type-generator.ts`) to emit `declare module` augmentation mapping **access keys → inferred plugin SDK types**, plus declared plugin hook-event types.
 
 ---
@@ -298,6 +302,7 @@ Dependency-ordered. Each slice ends by shipping one real plugin that stress-test
 ### 18a — Plugin Runtime (headless)
 
 Build the spine:
+
 - [ ] `definePlugin` factory; identity derivation (`package`/`name`/`alias`/`permissionNamespace`); collision → build error.
 - [ ] Declarative `PluginDefinition` type; replace the old `AstromechPlugin` (`src/types/plugins.ts`).
 - [ ] Rewrite `src/core/plugin-resolver.ts` — **remove** `resolveTargets` / `mergePluginFieldGroups` target injection; keep entry-type merge; add SDK / hook / cron / schema / API collection. Update `src/core/config-resolver.ts` callers.

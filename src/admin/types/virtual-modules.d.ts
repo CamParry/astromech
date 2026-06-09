@@ -40,4 +40,10 @@ declare module 'virtual:astromech/plugins/components' {
             label: string | null;
         }
     >;
+
+    /** Lazy locale bundles, keyed by i18n namespace then locale code. */
+    export const i18n: Record<
+        string,
+        Record<string, () => Promise<{ default: Record<string, unknown> }>>
+    >;
 }

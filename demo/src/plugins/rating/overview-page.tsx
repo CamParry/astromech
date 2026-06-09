@@ -7,12 +7,12 @@ export default function RatingsOverviewPage(): React.ReactElement {
         throw new Error('deliberate crash for error-boundary testing');
     }
 
-    const { plugin, currentUser, toast } = useAstromechPlugin();
+    const { plugin, currentUser, toast, t } = useAstromechPlugin();
 
     return (
         <div data-ratings-overview>
             <Panel>
-                <p>Average content quality across all pages, at a glance.</p>
+                <p data-localized-heading>{t('overview.heading')}</p>
                 <p data-plugin-context>
                     Plugin: {plugin} · Viewer: {currentUser?.name ?? 'unknown'}
                 </p>

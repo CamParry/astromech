@@ -200,8 +200,13 @@ export type PluginDefinition = {
     hookEvents?: string[];
     cron?: PluginCronJob[];
     admin?: PluginAdmin;
-    /** Lazy locale resource thunks, keyed by locale code. */
-    i18n?: Record<string, () => Promise<unknown>>;
+    /**
+     * Admin-UI locale resources, keyed by locale code. Values are import
+     * specifiers (STRINGS, e.g. `'./locales/en.json'` resolved by the
+     * plugin) so the code-gen virtual module can emit lazy `import()` calls
+     * (spec §11). Namespace = `permissionNamespace`.
+     */
+    i18n?: Record<string, string>;
     requiredEnv?: string[];
     /** Package name → semver range. Existence + basic range check only. */
     dependsOn?: Record<string, string>;

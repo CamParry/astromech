@@ -127,4 +127,22 @@ describe('generateSdkTypes with plugin field types', () => {
         const output = generateSdkTypes(config);
         expect(output).not.toContain('seo?:');
     });
+
+    it('emits plugin SDK and hook-event augmentations', () => {
+        const output = generateSdkTypes(config, new Map(), [
+            def({
+                package: '@astromech/redirects',
+                sdk: { lookup: { access: 'public', handler: async () => null } },
+                hookEvents: ['redirects:resolved'],
+            }),
+        ]);
+        expect(output).toContain("'redirects': {");
+        expect(output).toContain('lookup(input?: unknown): Promise<unknown>;');
+        expect(output).toContain("'redirects:resolved': unknown;");
+    });
+
+    it('omits the plugin augmentation block when no plugin contributes', () => {
+        const output = generateSdkTypes(config, new Map(), [def({ package: '@a/b' })]);
+        expect(output).not.toContain('AstromechPluginSdks');
+    });
 });

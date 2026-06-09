@@ -25,14 +25,20 @@ import type { ResolvedConfig } from './config.js';
 
 // Open interface — augmented by generated types (.astro/astromech.d.ts)
 // Each entry shape: { fields: EntryTypeFields, relations: EntryTypeRelations }
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
 export interface AstromechEntryTypes {}
 
 // Helper types — extract fields/relations from AstromechEntryTypes by key
-type FieldsFor<T extends keyof AstromechEntryTypes> =
-    AstromechEntryTypes[T] extends { fields: infer F } ? F : never;
-type RelationsFor<T extends keyof AstromechEntryTypes> =
-    AstromechEntryTypes[T] extends { relations: infer R } ? R : never;
+type FieldsFor<T extends keyof AstromechEntryTypes> = AstromechEntryTypes[T] extends {
+    fields: infer F;
+}
+    ? F
+    : never;
+type RelationsFor<T extends keyof AstromechEntryTypes> = AstromechEntryTypes[T] extends {
+    relations: infer R;
+}
+    ? R
+    : never;
 
 // Typed entry — the Entry type but with typed fields
 export type TypedEntry<TFields> = Omit<Entry, 'fields'> & {
@@ -55,20 +61,33 @@ export type TypedEntriesApi = {
     query<T extends keyof AstromechEntryTypes>(
         params: { type: T } & Omit<EntryQueryParams, 'type'>
     ): Promise<QueryResult<TypedEntry<FieldsFor<T>>>>;
+    // Deliberately separate from the single-type overload: a union parameter
+    // would degrade inference of T at call sites.
+    /* eslint-disable @typescript-eslint/unified-signatures */
     query<T extends keyof AstromechEntryTypes>(
         params: { type: readonly T[] } & Omit<EntryQueryParams, 'type'>
     ): Promise<QueryResult<TypedEntry<FieldsFor<T>>>>;
+    /* eslint-enable @typescript-eslint/unified-signatures */
     query(
         params: { type: string | readonly string[] } & Omit<EntryQueryParams, 'type'>
     ): Promise<QueryResult<Entry>>;
 
     // ── get ──────────────────────────────────────────────────────────────────
-    get<T extends keyof AstromechEntryTypes, K extends keyof RelationsFor<T> & string>(
-        params: { type: T; id: string; populate: K[]; locale?: string }
-    ): Promise<TypedEntry<Omit<FieldsFor<T>, K> & Pick<RelationsFor<T>, K>> | null>;
-    get<T extends keyof AstromechEntryTypes>(
-        params: { type: T; id: string; populate?: string[]; locale?: string }
-    ): Promise<TypedEntry<FieldsFor<T>> | null>;
+    get<
+        T extends keyof AstromechEntryTypes,
+        K extends keyof RelationsFor<T> & string,
+    >(params: {
+        type: T;
+        id: string;
+        populate: K[];
+        locale?: string;
+    }): Promise<TypedEntry<Omit<FieldsFor<T>, K> & Pick<RelationsFor<T>, K>> | null>;
+    get<T extends keyof AstromechEntryTypes>(params: {
+        type: T;
+        id: string;
+        populate?: string[];
+        locale?: string;
+    }): Promise<TypedEntry<FieldsFor<T>> | null>;
     get(params: {
         type: string;
         id: string;
@@ -237,10 +256,15 @@ export type TypedEntriesApi = {
  * methods. Strongly-typed per-plugin augmentation is layered on in 18b via
  * generated `declare module` types; the base shape stays loose.
  */
-export type PluginSdkNamespace = Record<
-    string,
-    Record<string, (input?: unknown) => Promise<unknown>>
->;
+/**
+ * Augmented by the generated `astromech.d.ts`: each installed plugin's access
+ * key maps to its SDK method signatures. Empty by default.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
+export interface AstromechPluginSdks {}
+
+export type PluginSdkNamespace = AstromechPluginSdks &
+    Record<string, Record<string, (input?: unknown) => Promise<unknown>>>;
 
 export type AstromechClient = {
     entries: TypedEntriesApi;
