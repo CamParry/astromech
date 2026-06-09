@@ -63,6 +63,18 @@
         "./plugins/redirects": {
             "types": "./dist/plugins/redirects/index.d.ts",
             "default": "./dist/plugins/redirects/index.js"
+        },
+        "./ui/fields": {
+            "types": "./dist/admin/components/fields/index.d.ts",
+            "default": "./dist/admin/components/fields/index.js"
+        },
+        "./ui/layout": {
+            "types": "./dist/admin/components/ui/layout.d.ts",
+            "default": "./dist/admin/components/ui/layout.js"
+        },
+        "./db": {
+            "types": "./dist/db/plugin-helpers.d.ts",
+            "default": "./dist/db/plugin-helpers.js"
         }
     },
     "main": "./dist/index.js",

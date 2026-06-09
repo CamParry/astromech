@@ -77,7 +77,18 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                 updateConfig({
                     vite: {
                         resolve: {
-                            alias: { '@/': pkgSrc + '/' },
+                            // Public browser-facing entries alias to package src so
+                            // plugin components share module identity (React context,
+                            // hooks) with the admin app. Specific keys first — the
+                            // bare `astromech/ui` would otherwise shadow them.
+                            alias: {
+                                'astromech/ui/fields':
+                                    pkgSrc + '/admin/components/fields/index.ts',
+                                'astromech/ui/layout':
+                                    pkgSrc + '/admin/components/ui/layout.ts',
+                                'astromech/ui': pkgSrc + '/admin/components/ui/index.ts',
+                                '@/': pkgSrc + '/',
+                            },
                         },
                         ssr: {
                             noExternal: ['@fontsource-variable/inter'],
@@ -206,12 +217,13 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                                     if (id === '\0virtual:astromech/plugins/components') {
                                         const fieldTypeLines = (
                                             config.plugins ?? []
-                                        ).flatMap((def) =>
-                                            (def.fields ?? []).map(
+                                        ).flatMap((def) => {
+                                            const identity = resolvePluginIdentity(def);
+                                            return (def.fields ?? []).map(
                                                 (reg) =>
-                                                    `\t${JSON.stringify(reg.type)}: { load: () => import(${JSON.stringify(reg.component)}), defaultValue: ${JSON.stringify(reg.defaultValue ?? null)} },`
-                                            )
-                                        );
+                                                    `\t${JSON.stringify(reg.type)}: { load: () => import(${JSON.stringify(reg.component)}), defaultValue: ${JSON.stringify(reg.defaultValue ?? null)}, plugin: ${JSON.stringify(identity.name)}, namespace: ${JSON.stringify(identity.permissionNamespace)} },`
+                                            );
+                                        });
                                         // Pages keyed `{name}{path}` (e.g. `seo/dashboard`),
                                         // matching the catch-all's `/plugin/$` splat.
                                         const pageLines = (config.plugins ?? []).flatMap(

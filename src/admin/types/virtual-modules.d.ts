@@ -16,7 +16,14 @@ declare module 'virtual:astromech/plugins/components' {
 
     export const fieldTypes: Record<
         string,
-        { load: () => Promise<PluginFieldModule>; defaultValue: unknown }
+        {
+            load: () => Promise<PluginFieldModule>;
+            defaultValue: unknown;
+            /** Owning plugin's access key. */
+            plugin: string;
+            /** Owning plugin's permissionNamespace (i18n namespace). */
+            namespace: string;
+        }
     >;
 
     type PluginPageModule = {

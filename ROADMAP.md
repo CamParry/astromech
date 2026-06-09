@@ -503,7 +503,7 @@ Architecture fully designed and locked — see [`specs/plugin-architecture.md`](
 - [x] Pages under `/admin/plugin/{name}/*` + catch-all `_protected/plugin/$.tsx` (closes Phase 17.5 deferred item) — splat keys into code-gen'd `pages` map; lazy-loaded, permission-gated
 - [x] Per-plugin React error boundaries with localized fallback (`PluginErrorBoundary` wraps plugin pages and field renderers; logs with plugin attribution)
 - [x] Auto-rendered settings page from `admin.settings` — served by the `/plugin/$` catch-all at `{name}/settings`; keys namespaced `plugin:<permissionNamespace>:<key>` in the core settings table; save gated on `settings:update`
-- [ ] Public exports: `astromech/ui/fields`, `astromech/ui/layout`, `astromech/db`, `useAstromechPlugin()`
+- [x] Public exports: `astromech/ui/fields`, `astromech/ui/layout`, `astromech/db`, `useAstromechPlugin()` — browser entries vite-alias to package src so plugin components share module identity (React context) with the admin app
 - [ ] Component + i18n code-gen virtual modules; type augmentation in `astromech.d.ts`
 - [ ] **Ship `@astromech/seo`** — `seo-meta` field type + edit-page panel + dashboard + settings + sitemap/OG via SDK + length recommendations (non-AI)
 

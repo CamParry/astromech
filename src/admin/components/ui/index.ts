@@ -58,12 +58,29 @@ export type { AvatarProps } from './avatar.js';
 export { Tooltip } from './tooltip.js';
 export type { TooltipProps } from './tooltip.js';
 
-export { Page, PageHeader, PageTitle, PageContent, SectionTitle, FormLayout, FormLayoutActions, FormLayoutContent, FormLayoutMain, FormLayoutSidebar, ButtonGroup, PageLoading } from './page.js';
+export {
+    Page,
+    PageHeader,
+    PageTitle,
+    PageContent,
+    SectionTitle,
+    FormLayout,
+    FormLayoutActions,
+    FormLayoutContent,
+    FormLayoutMain,
+    FormLayoutSidebar,
+    ButtonGroup,
+    PageLoading,
+} from './page.js';
 
 export { ContextMenu, useContextMenu } from './context-menu.js';
 export type { ContextMenuProps } from './context-menu.js';
 
-export { CommandPaletteProvider, CommandPalette, useCommandPalette } from './command-palette.js';
+export {
+    CommandPaletteProvider,
+    CommandPalette,
+    useCommandPalette,
+} from './command-palette.js';
 
 export { NumberField } from './number-field.js';
 export type { NumberFieldProps } from './number-field.js';
@@ -120,3 +137,6 @@ export { UploadZone } from './upload-zone.js';
 
 export { Pagination } from './pagination.js';
 export type { PaginationProps } from './pagination.js';
+
+// Plugin runtime context hook (spec §8) — only usable inside plugin surfaces.
+export { useAstromechPlugin } from '../../context/plugin.js';

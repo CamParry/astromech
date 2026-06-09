@@ -13,6 +13,7 @@ import { fieldTypes } from 'virtual:astromech/plugins/components';
 import type { BaseFieldProps } from '@/types/index.js';
 import { Spinner } from '@/admin/components/ui/index.js';
 import { PluginErrorBoundary } from '@/admin/components/plugins/PluginErrorBoundary.js';
+import { PluginUiProvider } from '@/admin/context/plugin.js';
 
 export function hasPluginFieldType(type: string): boolean {
     return type in fieldTypes;
@@ -62,11 +63,18 @@ function lazyFieldFor(type: string): LazyField {
 
 export function PluginField(props: BaseFieldProps): React.ReactElement {
     const Lazy = lazyFieldFor(props.field.type);
+    const entry = fieldTypes[props.field.type];
+    const identity = {
+        name: entry?.plugin ?? props.field.type,
+        permissionNamespace: entry?.namespace ?? props.field.type,
+    };
     return (
-        <PluginErrorBoundary plugin={props.field.type}>
-            <React.Suspense fallback={<Spinner size="sm" />}>
-                <Lazy {...props} />
-            </React.Suspense>
-        </PluginErrorBoundary>
+        <PluginUiProvider identity={identity}>
+            <PluginErrorBoundary plugin={identity.name}>
+                <React.Suspense fallback={<Spinner size="sm" />}>
+                    <Lazy {...props} />
+                </React.Suspense>
+            </PluginErrorBoundary>
+        </PluginUiProvider>
     );
 }

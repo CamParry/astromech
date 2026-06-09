@@ -16,6 +16,7 @@ import adminConfig from 'virtual:astromech/admin-config';
 import { usePermissions } from '@/admin/hooks/index.js';
 import { PluginErrorBoundary } from '@/admin/components/plugins/PluginErrorBoundary.js';
 import { PluginSettingsPage } from '@/admin/components/plugins/PluginSettingsPage.js';
+import { PluginUiProvider } from '@/admin/context/plugin.js';
 import {
     EmptyState,
     Page,
@@ -65,13 +66,22 @@ function PluginPage(): React.ReactElement {
                         </PageTitle>
                     </PageHeader>
                     <PageContent>
-                        <PluginErrorBoundary plugin={settingsPlugin.name}>
-                            <PluginSettingsPage
-                                plugin={settingsPlugin.name}
-                                permissionNamespace={settingsPlugin.permissionNamespace}
-                                schema={settingsPlugin.settings}
-                            />
-                        </PluginErrorBoundary>
+                        <PluginUiProvider
+                            identity={{
+                                name: settingsPlugin.name,
+                                permissionNamespace: settingsPlugin.permissionNamespace,
+                            }}
+                        >
+                            <PluginErrorBoundary plugin={settingsPlugin.name}>
+                                <PluginSettingsPage
+                                    plugin={settingsPlugin.name}
+                                    permissionNamespace={
+                                        settingsPlugin.permissionNamespace
+                                    }
+                                    schema={settingsPlugin.settings}
+                                />
+                            </PluginErrorBoundary>
+                        </PluginUiProvider>
                     </PageContent>
                 </Page>
             );
@@ -110,11 +120,21 @@ function PluginPage(): React.ReactElement {
                 </PageHeader>
             )}
             <PageContent>
-                <PluginErrorBoundary plugin={registration.plugin}>
-                    <React.Suspense fallback={<Spinner size="md" />}>
-                        <LazyComponent />
-                    </React.Suspense>
-                </PluginErrorBoundary>
+                <PluginUiProvider
+                    identity={{
+                        name: registration.plugin,
+                        permissionNamespace:
+                            adminConfig.plugins.find(
+                                (plugin) => plugin.name === registration.plugin
+                            )?.permissionNamespace ?? registration.plugin,
+                    }}
+                >
+                    <PluginErrorBoundary plugin={registration.plugin}>
+                        <React.Suspense fallback={<Spinner size="md" />}>
+                            <LazyComponent />
+                        </React.Suspense>
+                    </PluginErrorBoundary>
+                </PluginUiProvider>
             </PageContent>
         </Page>
     );
