@@ -22,6 +22,7 @@ import {
     getPluginSdkMethods,
 } from '@/core/plugin-runtime.js';
 import { can } from '@/core/permissions.js';
+import { resolvePluginPermission } from '@/core/plugin-identity.js';
 import type { Context } from 'hono';
 import type { Permission, PluginAccess } from '@/types/index.js';
 
@@ -45,7 +46,10 @@ function enforceAccess(
 
     const role = c.var.role;
     const namespace = getPluginIdentity(name)?.permissionNamespace ?? name;
-    const permission = `plugin:${namespace}:${access.permission}` as Permission;
+    const permission = resolvePluginPermission(
+        namespace,
+        access.permission
+    ) as Permission;
     if (!role || !can(role, permission)) return forbidden(c);
     return null;
 }
@@ -57,7 +61,10 @@ for (const { identity, route } of getPluginRawRoutes()) {
     pluginsRouter.on(method, path, (c) => {
         const denied = enforceAccess(c, route.access, identity.name);
         if (denied) return denied;
-        return route.handler(c.req.raw, createPluginContext(identity, c.var.user ?? null));
+        return route.handler(
+            c.req.raw,
+            createPluginContext(identity, c.var.user ?? null)
+        );
     });
 }
 
@@ -78,7 +85,10 @@ pluginsRouter.post('/:name/:method', async (c) => {
     if (!identity) return notFound(c, `Plugin "${name}" not found`);
 
     const input = await c.req.json().catch(() => undefined);
-    const result = await sdkMethod.handler(input, createPluginContext(identity, c.var.user ?? null));
+    const result = await sdkMethod.handler(
+        input,
+        createPluginContext(identity, c.var.user ?? null)
+    );
     // Build the JSON Response directly: c.json's generic chokes on the
     // recursive JsonValue type. RPC returns the raw handler result.
     return new Response(JSON.stringify(result ?? null), {

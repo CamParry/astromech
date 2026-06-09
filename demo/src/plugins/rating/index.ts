@@ -22,47 +22,35 @@ export const rating = definePlugin(() => ({
         },
     ],
     admin: {
-        nav: [
-            {
-                label: 'Ratings',
-                icon: 'Star',
-                permission: 'plugin:demo-rating:view',
-                children: [
-                    {
-                        label: 'Overview',
-                        to: '/plugin/demo-rating/overview',
-                        icon: 'ChartBar',
-                    },
-                    {
-                        label: 'Settings',
-                        to: '/plugin/demo-rating/settings',
-                        icon: 'Settings',
-                    },
-                ],
-            },
-        ],
+        nav: { label: 'Ratings', icon: 'Star' },
         pages: [
             {
                 path: '/overview',
-                component: fileURLToPath(new URL('./overview-page.tsx', import.meta.url)),
                 label: 'Ratings Overview',
-                permission: 'plugin:demo-rating:view',
+                component: fileURLToPath(new URL('./overview-page.tsx', import.meta.url)),
+                permission: 'view',
+                nav: { label: 'Overview', icon: 'ChartBar' },
+            },
+            {
+                path: '/settings',
+                label: 'Rating Settings',
+                settings: {
+                    fields: [
+                        {
+                            name: 'minimumQuality',
+                            type: 'number',
+                            label: 'Minimum quality to publish',
+                            description: 'Pages below this rating show a warning.',
+                        },
+                        {
+                            name: 'showInListing',
+                            type: 'boolean',
+                            label: 'Show ratings in entry lists',
+                        },
+                    ],
+                },
+                nav: { label: 'Settings', icon: 'Settings' },
             },
         ],
-        settings: {
-            fields: [
-                {
-                    name: 'minimumQuality',
-                    type: 'number',
-                    label: 'Minimum quality to publish',
-                    description: 'Pages below this rating show a warning.',
-                },
-                {
-                    name: 'showInListing',
-                    type: 'boolean',
-                    label: 'Show ratings in entry lists',
-                },
-            ],
-        },
     },
 }));

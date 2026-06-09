@@ -27,7 +27,11 @@ import { setDb, getDb } from '@/db/registry.js';
 import { registerBuiltInCronJobs } from '@/cron/index.js';
 import { bootPlugins, registerPlugins } from '@/core/plugin-runtime.js';
 import { collectPluginFieldTypes } from '@/core/plugin-fields.js';
-import { resolvePluginIdentity } from '@/core/plugin-identity.js';
+import {
+    resolvePluginIdentity,
+    resolvePluginPermission,
+} from '@/core/plugin-identity.js';
+import { derivePluginNav, derivePluginPages } from '@/core/plugin-admin.js';
 
 async function runMigrations(logger: {
     info: (msg: string) => void;
@@ -157,8 +161,14 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                                                     name: identity.name,
                                                     permissionNamespace:
                                                         identity.permissionNamespace,
-                                                    nav: p.admin?.nav ?? [],
-                                                    settings: p.admin?.settings ?? null,
+                                                    nav: derivePluginNav(
+                                                        identity,
+                                                        p.admin
+                                                    ),
+                                                    pages: derivePluginPages(
+                                                        identity,
+                                                        p.admin
+                                                    ),
                                                 };
                                             }),
                                             adminRoute: resolvedConfig.adminRoute,
@@ -224,16 +234,29 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                                                     `\t${JSON.stringify(reg.type)}: { load: () => import(${JSON.stringify(reg.component)}), defaultValue: ${JSON.stringify(reg.defaultValue ?? null)}, plugin: ${JSON.stringify(identity.name)}, namespace: ${JSON.stringify(identity.permissionNamespace)} },`
                                             );
                                         });
-                                        // Pages keyed `{name}{path}` (e.g. `seo/dashboard`),
-                                        // matching the catch-all's `/plugin/$` splat.
+                                        // Component pages keyed `{name}{path}` (e.g.
+                                        // `seo/overview`), matching the catch-all's
+                                        // `/plugin/$` splat. Settings-only pages have no
+                                        // import — they ship via admin-config metadata.
                                         const pageLines = (config.plugins ?? []).flatMap(
                                             (def) => {
-                                                const name =
-                                                    resolvePluginIdentity(def).name;
-                                                return (def.admin?.pages ?? []).map(
-                                                    (page) =>
-                                                        `\t${JSON.stringify(`${name}${page.path}`)}: { load: () => import(${JSON.stringify(page.component)}), plugin: ${JSON.stringify(name)}, permission: ${JSON.stringify(page.permission ?? null)}, label: ${JSON.stringify(page.label ?? null)} },`
-                                                );
+                                                const identity =
+                                                    resolvePluginIdentity(def);
+                                                return (def.admin?.pages ?? [])
+                                                    .filter(
+                                                        (page) =>
+                                                            page.component !== undefined
+                                                    )
+                                                    .map((page) => {
+                                                        const permission =
+                                                            page.permission !== undefined
+                                                                ? resolvePluginPermission(
+                                                                      identity.permissionNamespace,
+                                                                      page.permission
+                                                                  )
+                                                                : null;
+                                                        return `\t${JSON.stringify(`${identity.name}${page.path}`)}: { load: () => import(${JSON.stringify(page.component)}), plugin: ${JSON.stringify(identity.name)}, permission: ${JSON.stringify(permission)}, label: ${JSON.stringify(page.label)} },`;
+                                                    });
                                             }
                                         );
                                         // Locale bundles keyed by i18n namespace

@@ -117,6 +117,11 @@ export type PluginCronJob = {
 // Admin surfaces (consumed in 18b; declared here for a stable shape)
 // ============================================================================
 
+/**
+ * Derived sidebar tree node. Plugin authors don't write these — core derives
+ * the tree from `admin.pages` (nav-visible pages group under the plugin's
+ * `admin.nav` identity).
+ */
 export type PluginNavItem = {
     label: string;
     /** Where the item points — any admin path. */
@@ -127,16 +132,37 @@ export type PluginNavItem = {
     children?: PluginNavItem[];
 };
 
+export type PluginPageNav = {
+    /** Sidebar label. Defaults to the page `label`. */
+    label?: string;
+    icon?: string;
+};
+
 export type PluginPage = {
     /** Path relative to `/admin/plugin/{name}`. */
     path: string;
+    /** Page title — also the default sidebar label. */
+    label: string;
     /**
      * Import specifier (a STRING, not a thunk) for the page component, so the
      * Node-side generator can statically emit `import(specifier)`.
+     * Omit for an auto-rendered settings page (declare `settings` instead).
      */
-    component: string;
-    label?: string;
+    component?: string;
+    /**
+     * Settings schema for an auto-rendered settings form (used when no
+     * `component` is given). Values store under
+     * `plugin:<permissionNamespace>:<field>` in the core settings table.
+     */
+    settings?: PluginSettingsSchema;
+    /**
+     * Bare keys are plugin-scoped (`'view'` → `plugin:<ns>:view`); strings
+     * containing `:` pass through unchanged (core permissions like
+     * `settings:read`). Settings pages default to `settings:read`.
+     */
     permission?: string;
+    /** Show in the sidebar. `true` uses the page label with no icon. */
+    nav?: boolean | PluginPageNav;
 };
 
 export type PluginSettingsSchema = {
@@ -144,9 +170,12 @@ export type PluginSettingsSchema = {
 };
 
 export type PluginAdmin = {
-    nav?: PluginNavItem[];
+    /**
+     * Sidebar group identity for this plugin's nav-visible pages. Label
+     * defaults to the access key, icon to a generic puzzle piece.
+     */
+    nav?: PluginPageNav;
     pages?: PluginPage[];
-    settings?: PluginSettingsSchema;
 };
 
 /**

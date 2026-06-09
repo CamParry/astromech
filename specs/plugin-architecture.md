@@ -74,6 +74,7 @@ The design introduced several near-synonyms that must stay distinct:
 15. Plugin **custom pages** mount under `/admin/plugin/{name}/*` (forced namespace), merged into the TanStack file-based tree via a **single catch-all route** (`_protected/plugin/$.tsx`) resolved at runtime. This closes the Phase 17.5 deferred "verify plugin route merging" item.
 16. Plugin-contributed **entry types live flat at `/admin/entries/{type}`** like user entry types — fully first-class, no special-casing. Sidebar grouping is a nav-tree concern, not a URL concern.
 17. **`nav` is a tree** (one parent + children); items can point anywhere; a `permission: '<action>'` field auto-hides items the user can't access.
+    **Implementation note (18b review):** plugin authors no longer write the nav tree — **pages are the core concept**. Each `admin.pages` entry opts into the sidebar via `nav: true | { label, icon }`; core derives the tree (nav-visible pages group under the plugin's `admin.nav: { label, icon }` identity, single-child groups auto-flatten in the sidebar). A page is a `component` view **or** an auto-rendered `settings` form (`admin.settings` as a separate concept is gone). Page `permission` strings auto-namespace: bare keys → `plugin:<ns>:<key>`, strings containing `:` pass through (core permissions like `settings:read`, which is also the settings-page default). `defineAdminPage()` is the typed helper.
 
 ### 3.6 Visual consistency & dependencies
 
@@ -107,7 +108,8 @@ The design introduced several near-synonyms that must stay distinct:
 ### 3.10 Settings & secrets
 
 35. **Build-time options** → factory args (committed code).
-36. **Runtime-editable settings** → the **existing settings table**, namespaced `plugin:<pkg>:<key>`, with an **auto-rendered settings page** at `/admin/plugin/{name}/settings` from a declared schema (a field group bound to settings keys).
+36. **Runtime-editable settings** → the **existing settings table**, namespaced `plugin:<pkg>:<key>`, with an **auto-rendered settings page** from a declared schema (a field group bound to settings keys).
+    **Implementation note (18b review):** the schema is declared on a _page_ (an `admin.pages` entry with `settings` instead of `component`) at any path the plugin chooses — any page can be a view or a settings holder. Settings pages default to `permission: 'settings:read'`.
 37. **Secrets → env vars only.** Plugin declares `requiredEnv: [...]`, validated at boot, read from the **unified `ctx.env`** (never the settings table, never the browser). `ctx.env` resolves via `import.meta.env` in Vite/Astro SSR (project convention — see memory `feedback_vite_env_vars`).
 
 ### 3.11 i18n
@@ -168,9 +170,8 @@ export type PluginDefinition = {
     hookEvents?: string[]; // events this plugin fires (type-augmented)
     cron?: CronJob[]; // { name, schedule, handler }
     admin?: {
-        nav?: NavTree; // tree; items carry optional permission
-        pages?: PluginPage[]; // mounted under /admin/plugin/{name}/*
-        settings?: SettingsSchema; // auto-rendered settings page
+        nav?: { label?: string; icon?: string }; // sidebar group identity
+        pages?: PluginPage[]; // mounted under /admin/plugin/{name}/*; nav + settings live on pages
     };
     i18n?: Record<string, () => Promise<unknown>>; // lazy locale thunks
     requiredEnv?: string[];
@@ -232,8 +233,9 @@ The **raw escape hatch** (`rawRoutes`) is for payloads RPC-JSON can't carry (fil
 
 - **Pages:** `admin.pages` mount under `/admin/plugin/{name}/*`. A single runtime-resolved catch-all route `src/admin/pages/_protected/plugin/$.tsx` dispatches to the registered plugin page component (declared via string import specifier, lazy-loaded). This is how plugin routes merge into the file-based tree without codegen into `routeTree.gen.ts`.
 - **Entry types:** flat at `/admin/entries/{type}`, identical to user types.
-- **Nav:** `admin.nav` is a tree; each item may carry `permission`. The sidebar renderer auto-hides items the current user lacks permission for. Items can link anywhere (`/admin/entries/redirects`, `/admin/plugin/seo/dashboard`, etc.).
-- **Settings page:** auto-rendered at `/admin/plugin/{name}/settings` from `admin.settings` (a field group bound to `plugin:<pkg>:<key>` settings rows).
+- **Nav:** derived from pages — a page opts in via `nav: true | { label, icon }` and groups under the plugin's `admin.nav: { label, icon }` identity. The derived tree still carries per-item `permission` (resolved); the sidebar renderer auto-hides items the current user lacks permission for and auto-flattens single-child groups.
+- **Settings pages:** any `admin.pages` entry declaring `settings` (instead of `component`) auto-renders a settings form bound to `plugin:<pkg>:<key>` settings rows, defaulting to `permission: 'settings:read'`.
+- **Permissions on pages:** bare keys auto-namespace (`'view'` → `plugin:<ns>:view`); qualified strings pass through — same rule as SDK `access.permission`.
 
 ---
 
@@ -377,11 +379,13 @@ Standard directory layout for first-party plugins (adopted during 18b review; `s
 ```
 src/plugins/<name>/
 ├── README.md              # recipes + integration docs
-├── index.ts               # public entry, thin: definePlugin factory, options
-│                          #   type, composition helpers (e.g. seoFields),
-│                          #   type re-exports
+├── index.ts               # LITERALLY just the plugin definition: the
+│                          #   definePlugin call + re-exports of public API
 ├── shared.ts              # isomorphic types/constants/pure helpers — the only
-│                          #   module both sides may import (→ shared/ if it grows)
+│                          #   module both sides may import (→ shared/ if it grows);
+│                          #   options types + their defaults live here
+├── field-groups.ts        # composition helpers (e.g. seoFields) — when present
+├── entries.ts             # entry-type configs — when bulky enough to leave index
 ├── server/
 │   ├── sdk.ts             # SDK methods (→ sdk/<method>.ts when big)
 │   ├── hooks.ts           # entry hooks
@@ -398,6 +402,7 @@ src/plugins/<name>/
 
 Rules:
 
+- **`index.ts` is the definition and nothing else** — the `definePlugin` call plus re-exports. Implementation lives in `shared.ts` / `server/` / sibling modules.
 - **`index.ts` never imports from `admin/`** — keeps the package entry server/config-safe; admin code is reached only via string specifiers (`@/plugins/<name>/admin/fields/*.tsx`).
 - **`server/` modules export builders taking resolved options** (`seoSdk(pathForEntry)`) when handlers close over options; plain objects otherwise (`redirectsSdk`).
 - **`shared.ts` is pure and dependency-free.** Plugin identity constants (field names, permission namespace) live here.

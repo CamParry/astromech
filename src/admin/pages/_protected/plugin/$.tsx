@@ -52,18 +52,33 @@ function PluginPage(): React.ReactElement {
     const registration = pages[splat];
 
     if (!registration) {
-        // Auto-rendered settings page: `{name}/settings` when the plugin
-        // declares `admin.settings` and no explicit page claims the path.
-        const settingsPlugin = adminConfig.plugins.find(
-            (plugin) => plugin.settings !== null && splat === `${plugin.name}/settings`
+        // Auto-rendered settings page: a page declaring `settings` instead of
+        // a component (metadata ships via admin-config, no import to load).
+        const settingsPlugin = adminConfig.plugins.find((plugin) =>
+            plugin.pages.some((page) => page.key === splat && page.settings !== null)
         );
-        if (settingsPlugin?.settings) {
+        const settingsPage = settingsPlugin?.pages.find(
+            (page) => page.key === splat && page.settings !== null
+        );
+        if (settingsPlugin && settingsPage?.settings) {
+            if (
+                settingsPage.permission !== null &&
+                !hasPermission(settingsPage.permission)
+            ) {
+                return (
+                    <Page>
+                        <PageContent>
+                            <div className="am-banner am-banner-error" role="alert">
+                                {t('plugins.accessDenied')}
+                            </div>
+                        </PageContent>
+                    </Page>
+                );
+            }
             return (
                 <Page>
                     <PageHeader>
-                        <PageTitle>
-                            {t('plugins.settingsTitle', { plugin: settingsPlugin.name })}
-                        </PageTitle>
+                        <PageTitle>{settingsPage.label}</PageTitle>
                     </PageHeader>
                     <PageContent>
                         <PluginUiProvider
@@ -78,7 +93,7 @@ function PluginPage(): React.ReactElement {
                                     permissionNamespace={
                                         settingsPlugin.permissionNamespace
                                     }
-                                    schema={settingsPlugin.settings}
+                                    schema={settingsPage.settings}
                                 />
                             </PluginErrorBoundary>
                         </PluginUiProvider>

@@ -1,6 +1,6 @@
 /**
  * Auto-rendered plugin settings page (spec §3.10): renders the field schema a
- * plugin declares in `admin.settings`, backed by the core settings table with
+ * plugin page declares via `settings`, backed by the core settings table with
  * keys namespaced `plugin:<permissionNamespace>:<key>`. Reading requires
  * `settings:read` (enforced by the API); saving is gated on
  * `settings:update`.

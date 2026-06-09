@@ -367,7 +367,6 @@
         "componentError": "The \"{{plugin}}\" plugin component failed to render.",
         "pageNotFound": "Plugin page not found",
         "accessDenied": "You don't have permission to view this page.",
-        "settingsTitle": "{{plugin}} settings",
         "settingsSaved": "Settings saved."
     }
 }

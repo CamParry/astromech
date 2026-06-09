@@ -16,25 +16,13 @@
 
 import { definePlugin } from '@/index.js';
 import type { PluginDefinition } from '@/types/index.js';
-import { REDIRECT_TYPE } from './shared.js';
+import type { RedirectsOptions } from './shared.js';
+import { REDIRECT_TYPE, defaultPathForEntry } from './shared.js';
+import { redirectEntryType } from './entries.js';
 import { redirectsSdk } from './server/sdk.js';
 import { slugChangeHooks } from './server/hooks.js';
 
-export type { RedirectMatch, RedirectStatus } from './shared.js';
-
-export type RedirectsOptions = {
-    /** Auto-create a redirect when an entry's slug changes. Default: true. */
-    generateOnSlugChange?: boolean;
-    /**
-     * Map an entry to the public path it is served at. Return null to skip.
-     * Default: `/${slug}` (ignores type).
-     */
-    pathForEntry?: (entry: { type: string; slug: string | null }) => string | null;
-};
-
-function defaultPathForEntry(entry: { slug: string | null }): string | null {
-    return entry.slug ? `/${entry.slug}` : null;
-}
+export type { RedirectMatch, RedirectStatus, RedirectsOptions } from './shared.js';
 
 export const redirects = definePlugin<RedirectsOptions>((options) => {
     const generateOnSlugChange = options?.generateOnSlugChange ?? true;
@@ -45,54 +33,7 @@ export const redirects = definePlugin<RedirectsOptions>((options) => {
         version: '0.1.0',
 
         entries: {
-            [REDIRECT_TYPE]: {
-                single: 'Redirect',
-                plural: 'Redirects',
-                adminColumns: [
-                    { field: 'from', label: 'From' },
-                    { field: 'to', label: 'To' },
-                    { field: 'status', label: 'Status' },
-                ],
-                fieldGroups: [
-                    {
-                        name: 'redirect',
-                        label: 'Redirect',
-                        placement: 'main',
-                        priority: 0,
-                        fields: [
-                            {
-                                name: 'from',
-                                type: 'text',
-                                label: 'From path',
-                                required: true,
-                            },
-                            {
-                                name: 'to',
-                                type: 'text',
-                                label: 'To path',
-                                required: true,
-                            },
-                            {
-                                name: 'status',
-                                type: 'select',
-                                label: 'Type',
-                                defaultValue: '301',
-                                options: [
-                                    { value: '301', label: 'Permanent (301)' },
-                                    { value: '302', label: 'Temporary (302)' },
-                                ],
-                            },
-                            {
-                                name: 'enabled',
-                                type: 'boolean',
-                                label: 'Enabled',
-                                defaultValue: true,
-                                checkboxLabel: 'This redirect is active',
-                            },
-                        ],
-                    },
-                ],
-            },
+            [REDIRECT_TYPE]: redirectEntryType,
         },
 
         sdk: redirectsSdk,

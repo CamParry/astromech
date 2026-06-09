@@ -12,6 +12,18 @@ export const SEO_FIELD_NAME = 'seo-meta';
 
 export const PERMISSION_NAMESPACE = 'astromech-seo';
 
+export type SeoOptions = {
+    /**
+     * Map an entry to the public path it is served at (used by `sitemap` and
+     * `meta`). Return null to skip. Default: `/${slug}` (ignores type).
+     */
+    pathForEntry?: (entry: { type: string; slug: string | null }) => string | null;
+};
+
+export function defaultPathForEntry(entry: { slug: string | null }): string | null {
+    return entry.slug ? `/${entry.slug}` : null;
+}
+
 export type SeoMetaValue = {
     title?: string;
     description?: string;

@@ -17,10 +17,13 @@
  */
 
 import { definePlugin } from '@/index.js';
-import type { FieldGroup, FieldGroupPlacement, PluginDefinition } from '@/types/index.js';
-import { PERMISSION_NAMESPACE, SEO_FIELD_NAME } from './shared.js';
+import type { PluginDefinition } from '@/types/index.js';
+import type { SeoOptions } from './shared.js';
+import { PERMISSION_NAMESPACE, defaultPathForEntry } from './shared.js';
 import { seoSdk } from './server/sdk.js';
 
+export { seoFields } from './field-groups.js';
+export type { SeoFieldsOptions } from './field-groups.js';
 export {
     SEO_DESCRIPTION_RANGE,
     SEO_FIELD_NAME,
@@ -33,48 +36,13 @@ export type {
     LengthStatus,
     SeoFieldHealth,
     SeoMetaValue,
+    SeoOptions,
     SeoOverview,
     SeoOverviewItem,
     SeoResolvedMeta,
     SeoSitemap,
     SeoSitemapUrl,
 } from './shared.js';
-
-export type SeoFieldsOptions = {
-    /** Where the group renders on the edit page. Default: `'tab'`. */
-    placement?: FieldGroupPlacement;
-    label?: string;
-    priority?: number;
-};
-
-/** Field-group factory — compose into an entry type's `fieldGroups`. */
-export function seoFields(options?: SeoFieldsOptions): FieldGroup {
-    return {
-        name: 'seo',
-        label: options?.label ?? 'SEO',
-        placement: options?.placement ?? 'tab',
-        priority: options?.priority ?? 50,
-        fields: [
-            {
-                name: SEO_FIELD_NAME,
-                type: 'seo-meta',
-                label: 'Search appearance',
-            },
-        ],
-    };
-}
-
-export type SeoOptions = {
-    /**
-     * Map an entry to the public path it is served at (used by `sitemap` and
-     * `meta`). Return null to skip. Default: `/${slug}` (ignores type).
-     */
-    pathForEntry?: (entry: { type: string; slug: string | null }) => string | null;
-};
-
-function defaultPathForEntry(entry: { slug: string | null }): string | null {
-    return entry.slug ? `/${entry.slug}` : null;
-}
 
 export const seo = definePlugin<SeoOptions>((options) => {
     const pathForEntry = options?.pathForEntry ?? defaultPathForEntry;
@@ -107,45 +75,32 @@ export const seo = definePlugin<SeoOptions>((options) => {
         ],
 
         admin: {
-            nav: [
-                {
-                    label: 'SEO',
-                    icon: 'Search',
-                    children: [
-                        {
-                            label: 'Overview',
-                            to: '/plugin/seo/overview',
-                            icon: 'Gauge',
-                            permission: `plugin:${PERMISSION_NAMESPACE}:view`,
-                        },
-                        {
-                            label: 'Settings',
-                            to: '/plugin/seo/settings',
-                            icon: 'Settings',
-                            permission: 'settings:read',
-                        },
-                    ],
-                },
-            ],
+            nav: { label: 'SEO', icon: 'Search' },
             pages: [
                 {
                     path: '/overview',
-                    component: '@/plugins/seo/admin/pages/overview-page.tsx',
                     label: 'SEO Overview',
-                    permission: `plugin:${PERMISSION_NAMESPACE}:view`,
+                    component: '@/plugins/seo/admin/pages/overview-page.tsx',
+                    permission: 'view',
+                    nav: { label: 'Overview', icon: 'Gauge' },
+                },
+                {
+                    path: '/settings',
+                    label: 'SEO Settings',
+                    settings: {
+                        fields: [
+                            {
+                                name: 'defaultOgImage',
+                                type: 'media',
+                                label: 'Default Open Graph image',
+                                description:
+                                    'Returned by the meta SDK method when an entry has no image of its own.',
+                            },
+                        ],
+                    },
+                    nav: { label: 'Settings', icon: 'Settings' },
                 },
             ],
-            settings: {
-                fields: [
-                    {
-                        name: 'defaultOgImage',
-                        type: 'media',
-                        label: 'Default Open Graph image',
-                        description:
-                            'Returned by the meta SDK method when an entry has no image of its own.',
-                    },
-                ],
-            },
         },
 
         sdk: seoSdk(pathForEntry),

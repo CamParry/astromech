@@ -4,10 +4,11 @@
  */
 
 import type {
-	AstromechConfig,
-	EntryTypeConfig,
-	PluginDefinition,
-	PluginFactory,
+    AstromechConfig,
+    EntryTypeConfig,
+    PluginDefinition,
+    PluginFactory,
+    PluginPage,
 } from '@/types/index.js';
 
 // ============================================================================
@@ -30,11 +31,11 @@ export { runScheduledJobs } from '@/cron/index.js';
 // ============================================================================
 
 export function defineConfig(config: AstromechConfig): AstromechConfig {
-	return config;
+    return config;
 }
 
 export function defineEntryType(config: EntryTypeConfig): EntryTypeConfig {
-	return config;
+    return config;
 }
 
 /**
@@ -50,7 +51,17 @@ export function defineEntryType(config: EntryTypeConfig): EntryTypeConfig {
  * }));
  */
 export function definePlugin<Options = void>(
-	factory: (options?: Options) => PluginDefinition
+    factory: (options?: Options) => PluginDefinition
 ): PluginFactory<Options> {
-	return (options?: Options) => factory(options);
+    return (options?: Options) => factory(options);
+}
+
+/**
+ * Define an admin page for a plugin's `admin.pages`. A page is a `component`
+ * view or an auto-rendered `settings` form, and opts into the sidebar with
+ * `nav`. Typed identity helper — useful when pages are authored outside the
+ * plugin definition.
+ */
+export function defineAdminPage(page: PluginPage): PluginPage {
+    return page;
 }

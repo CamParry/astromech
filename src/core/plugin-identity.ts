@@ -37,10 +37,21 @@ export function resolvePluginIdentity(def: PluginDefinition): ResolvedPluginIden
 }
 
 /**
+ * Resolve a plugin-declared permission string: bare keys are plugin-scoped
+ * (`'view'` → `plugin:<namespace>:view`); strings containing `:` pass through
+ * unchanged so core permissions (`settings:read`) remain expressible.
+ */
+export function resolvePluginPermission(namespace: string, permission: string): string {
+    return permission.includes(':') ? permission : `plugin:${namespace}:${permission}`;
+}
+
+/**
  * Throw a build error if two plugins resolve to the same access key. The user
  * resolves collisions by setting `alias` on one of them.
  */
-export function assertNoPluginCollisions(defs: PluginDefinition[]): ResolvedPluginIdentity[] {
+export function assertNoPluginCollisions(
+    defs: PluginDefinition[]
+): ResolvedPluginIdentity[] {
     const identities = defs.map(resolvePluginIdentity);
     const seen = new Map<string, string>();
 
@@ -141,7 +152,8 @@ export function checkPluginDependencies(defs: PluginDefinition[]): void {
                         `Add it to your \`plugins\` array.`
                 );
             }
-            const dep = defs[depIndex]!;
+            const dep = defs[depIndex];
+            if (dep === undefined) continue;
             if (dep.version !== undefined && !satisfiesRange(dep.version, range)) {
                 throw new Error(
                     `Astromech plugin "${def.package}" requires "${depPackage}@${range}", ` +

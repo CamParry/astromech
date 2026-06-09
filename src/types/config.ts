@@ -164,7 +164,16 @@ export type AdminConfig = {
         name: string;
         /** Anchors permission strings and settings keys. */
         permissionNamespace: string;
+        /** Sidebar tree derived from nav-visible pages. */
         nav: PluginNavItem[];
-        settings: PluginSettingsSchema | null;
+        /** Page metadata: permissions pre-resolved, settings schema inline. */
+        pages: {
+            /** Splat key, `{name}{path}` — matches the `/plugin/$` route. */
+            key: string;
+            label: string;
+            permission: string | null;
+            settings: PluginSettingsSchema | null;
+            hasComponent: boolean;
+        }[];
     }[];
 };

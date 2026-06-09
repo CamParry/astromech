@@ -4,6 +4,20 @@
 
 export const REDIRECT_TYPE = 'redirect';
 
+export type RedirectsOptions = {
+    /** Auto-create a redirect when an entry's slug changes. Default: true. */
+    generateOnSlugChange?: boolean;
+    /**
+     * Map an entry to the public path it is served at. Return null to skip.
+     * Default: `/${slug}` (ignores type).
+     */
+    pathForEntry?: (entry: { type: string; slug: string | null }) => string | null;
+};
+
+export function defaultPathForEntry(entry: { slug: string | null }): string | null {
+    return entry.slug ? `/${entry.slug}` : null;
+}
+
 export type RedirectStatus = '301' | '302';
 
 export type RedirectMatch = {
