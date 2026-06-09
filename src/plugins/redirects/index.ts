@@ -68,11 +68,21 @@ export const redirects = definePlugin<RedirectsOptions>((options) => {
                     {
                         name: 'redirect',
                         label: 'Redirect',
-                        location: 'main',
+                        placement: 'main',
                         priority: 0,
                         fields: [
-                            { name: 'from', type: 'text', label: 'From path', required: true },
-                            { name: 'to', type: 'text', label: 'To path', required: true },
+                            {
+                                name: 'from',
+                                type: 'text',
+                                label: 'From path',
+                                required: true,
+                            },
+                            {
+                                name: 'to',
+                                type: 'text',
+                                label: 'To path',
+                                required: true,
+                            },
                             {
                                 name: 'status',
                                 type: 'select',
@@ -120,7 +130,8 @@ export const redirects = definePlugin<RedirectsOptions>((options) => {
                     if (!match) return null;
 
                     const fields = (match.fields ?? {}) as RedirectFields;
-                    const status: RedirectStatus = fields.status === '302' ? '302' : '301';
+                    const status: RedirectStatus =
+                        fields.status === '302' ? '302' : '301';
                     return { to: String(fields.to ?? ''), status };
                 },
             },

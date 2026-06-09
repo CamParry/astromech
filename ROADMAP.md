@@ -350,6 +350,7 @@ Implementation of [`specs/symmetric-locale-model.md`](specs/symmetric-locale-mod
 - [x] No SDK-level locale fallback — missing locales return null/empty; redirects deferred to Phase 19
 
 Deferred from spec:
+
 - "Link to existing translation group" rescue action on the edit page (out of scope for v1)
 - SDK integration test harness (vitest doesn't currently resolve the `virtual:astromech/config` module; manual verification via the seed covers the §15 checklist)
 
@@ -496,7 +497,7 @@ Architecture fully designed and locked — see [`specs/plugin-architecture.md`](
 
 ### 18b — Plugin Admin UI
 
-- [ ] Field-group `placement: 'tab'` + edit-page tab strip
+- [x] Field-group `placement: 'tab'` + edit-page tab strip (renamed `FieldGroup.location` → `placement` per spec terminology; shared `FieldGroupPanel`/`FieldGroupTabs` components)
 - [ ] `registerFieldType` (renderer + validator + defaultValue + typeGen)
 - [ ] Plugin nav tree; permission-gated auto-hide
 - [ ] Pages under `/admin/plugin/{name}/*` + catch-all `_protected/plugin/$.tsx` (closes Phase 17.5 deferred item)

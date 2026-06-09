@@ -105,12 +105,13 @@ export type BaseFieldProps = {
 // Field Groups
 // ============================================================================
 
-export type FieldGroupLocation = 'main' | 'sidebar';
+export type FieldGroupPlacement = 'main' | 'sidebar' | 'tab';
 
 export type FieldGroup = {
     name: string;
     label: string;
-    location: FieldGroupLocation;
+    /** Where the group renders on the edit page. `'tab'` adds it to the tab strip. */
+    placement: FieldGroupPlacement;
     priority?: number;
     collapsed?: boolean;
     description?: string;

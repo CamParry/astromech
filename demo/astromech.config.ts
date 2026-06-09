@@ -3,7 +3,9 @@ import { defineConfig, FilesystemStorage, libsqlDriver } from 'astromech';
 import { redirects } from 'astromech/plugins/redirects';
 
 export default defineConfig({
-    db: libsqlDriver({ url: 'file:' + fileURLToPath(new URL('./database.db', import.meta.url)) }),
+    db: libsqlDriver({
+        url: 'file:' + fileURLToPath(new URL('./database.db', import.meta.url)),
+    }),
     storage: new FilesystemStorage({ dir: './public/uploads' }),
     locales: ['en', 'fr'],
     defaultLocale: 'en',
@@ -18,7 +20,7 @@ export default defineConfig({
                 {
                     name: 'content',
                     label: 'Content',
-                    location: 'main',
+                    placement: 'main',
                     priority: 0,
                     fields: [
                         {
@@ -40,20 +42,52 @@ export default defineConfig({
                                     name: 'layout',
                                     type: 'select',
                                     label: 'Layout',
-                                    options: [
-                                        'full-width',
-                                        'two-column',
-                                        'three-column',
-                                    ],
+                                    options: ['full-width', 'two-column', 'three-column'],
                                 },
                             ],
                         },
                     ],
                 },
                 {
+                    name: 'seo',
+                    label: 'SEO',
+                    placement: 'tab',
+                    priority: 0,
+                    fields: [
+                        {
+                            name: 'metaTitle',
+                            type: 'text',
+                            label: 'Meta Title',
+                        },
+                        {
+                            name: 'metaDescription',
+                            type: 'textarea',
+                            label: 'Meta Description',
+                        },
+                    ],
+                },
+                {
+                    name: 'social',
+                    label: 'Social Sharing',
+                    placement: 'tab',
+                    priority: 10,
+                    fields: [
+                        {
+                            name: 'ogTitle',
+                            type: 'text',
+                            label: 'Open Graph Title',
+                        },
+                        {
+                            name: 'ogImage',
+                            type: 'media',
+                            label: 'Open Graph Image',
+                        },
+                    ],
+                },
+                {
                     name: 'metadata',
                     label: 'Metadata',
-                    location: 'sidebar',
+                    placement: 'sidebar',
                     priority: 0,
                     fields: [
                         {
@@ -92,7 +126,7 @@ export default defineConfig({
                 {
                     name: 'settings',
                     label: 'Page Settings',
-                    location: 'sidebar',
+                    placement: 'sidebar',
                     priority: 10,
                     fields: [
                         {
@@ -100,12 +134,7 @@ export default defineConfig({
                             type: 'select',
                             label: 'Template',
                             translatable: false,
-                            options: [
-                                'default',
-                                'landing',
-                                'full-width',
-                                'sidebar',
-                            ],
+                            options: ['default', 'landing', 'full-width', 'sidebar'],
                         },
                         {
                             name: 'theme_color',
@@ -147,7 +176,7 @@ export default defineConfig({
                 {
                     name: 'content',
                     label: 'Content',
-                    location: 'main',
+                    placement: 'main',
                     priority: 0,
                     fields: [
                         { name: 'body', type: 'richtext', required: true },
@@ -157,7 +186,7 @@ export default defineConfig({
                 {
                     name: 'taxonomy',
                     label: 'Taxonomy',
-                    location: 'sidebar',
+                    placement: 'sidebar',
                     priority: 10,
                     fields: [
                         {
@@ -196,7 +225,7 @@ export default defineConfig({
                 {
                     name: 'content',
                     label: 'Content',
-                    location: 'main',
+                    placement: 'main',
                     priority: 0,
                     fields: [{ name: 'description', type: 'textarea' }],
                 },
@@ -209,7 +238,7 @@ export default defineConfig({
                 {
                     name: 'content',
                     label: 'Content',
-                    location: 'main',
+                    placement: 'main',
                     priority: 0,
                     fields: [{ name: 'color', type: 'text' }],
                 },
@@ -222,7 +251,7 @@ export default defineConfig({
                 {
                     name: 'basic',
                     label: 'Basic Fields',
-                    location: 'main',
+                    placement: 'main',
                     priority: 0,
                     fields: [
                         { name: 'summary', type: 'textarea', label: 'Summary' },
@@ -268,19 +297,14 @@ export default defineConfig({
                 {
                     name: 'choices',
                     label: 'Choice Fields',
-                    location: 'main',
+                    placement: 'main',
                     priority: 10,
                     fields: [
                         {
                             name: 'status_select',
                             type: 'select',
                             label: 'Status',
-                            options: [
-                                'active',
-                                'inactive',
-                                'pending',
-                                'archived',
-                            ],
+                            options: ['active', 'inactive', 'pending', 'archived'],
                         },
                         {
                             name: 'features',
@@ -317,7 +341,7 @@ export default defineConfig({
                 {
                     name: 'structured',
                     label: 'Structured Fields',
-                    location: 'main',
+                    placement: 'main',
                     priority: 20,
                     fields: [
                         { name: 'cta_link', type: 'link', label: 'CTA Link' },
@@ -336,7 +360,7 @@ export default defineConfig({
                 {
                     name: 'layout_demo',
                     label: 'Layout Fields',
-                    location: 'main',
+                    placement: 'main',
                     priority: 30,
                     fields: [
                         {
@@ -388,7 +412,7 @@ export default defineConfig({
                 {
                     name: 'media_relations',
                     label: 'Media & Relations',
-                    location: 'sidebar',
+                    placement: 'sidebar',
                     priority: 0,
                     fields: [
                         {
@@ -420,7 +444,7 @@ export default defineConfig({
             {
                 name: 'metadata',
                 label: 'Metadata',
-                location: 'main',
+                placement: 'main',
                 priority: 0,
                 fields: [
                     { name: 'photographer', type: 'text' },
@@ -436,7 +460,7 @@ export default defineConfig({
             {
                 name: 'profile',
                 label: 'Profile',
-                location: 'main',
+                placement: 'main',
                 priority: 0,
                 fields: [
                     { name: 'bio', type: 'textarea' },

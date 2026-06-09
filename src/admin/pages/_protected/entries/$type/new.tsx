@@ -30,7 +30,10 @@ import {
     FormLayoutMain,
     FormLayoutSidebar,
 } from '@/admin/components/ui/index.js';
-import { FormField } from '@/admin/components/fields/form-field.js';
+import {
+    FieldGroupPanel,
+    FieldGroupTabs,
+} from '@/admin/components/entries/FieldGroupPanel.js';
 import { PublishPanel } from '@/admin/components/entries/PublishPanel.js';
 import { Astromech } from '@/sdk/fetch/index.js';
 import { useEntryForm, useEntriesQuery, usePermissions } from '@/admin/hooks/index.js';
@@ -93,7 +96,8 @@ function CreateLocaleModal({
         const source = sourceEntries.find((e) => e.id === selectedId);
         if (!source) return;
         if (mode === 'translate') onChooseTranslate(source);
-        if (mode === 'blank-in-group') onChooseBlankInGroup(source.id, source.localeGroup);
+        if (mode === 'blank-in-group')
+            onChooseBlankInGroup(source.id, source.localeGroup);
     }
 
     const needsPicker = mode === 'translate' || mode === 'blank-in-group';
@@ -109,7 +113,11 @@ function CreateLocaleModal({
                     <Button variant="secondary" onClick={onCancel}>
                         {t('common.cancel')}
                     </Button>
-                    <Button variant="primary" onClick={handleProceed} disabled={!proceedEnabled}>
+                    <Button
+                        variant="primary"
+                        onClick={handleProceed}
+                        disabled={!proceedEnabled}
+                    >
                         {t('common.continue')}
                     </Button>
                 </>
@@ -171,7 +179,12 @@ function RadioOption({
     return (
         <label
             className="am-field"
-            style={{ cursor: 'pointer', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}
+            style={{
+                cursor: 'pointer',
+                display: 'flex',
+                gap: '0.5rem',
+                alignItems: 'flex-start',
+            }}
         >
             <input
                 type="radio"
@@ -222,8 +235,11 @@ function EntryCreatePage(): React.ReactElement {
     const hasSlug = entryTypeConfig?.slug != null;
     const fieldGroups = entryTypeConfig?.fieldGroups ?? [];
 
-    const mainGroups = fieldGroups.filter((g) => g.location === 'main');
-    const sidebarGroups = fieldGroups.filter((g) => g.location === 'sidebar');
+    const mainGroups = fieldGroups.filter(
+        (g) => g.placement !== 'sidebar' && g.placement !== 'tab'
+    );
+    const sidebarGroups = fieldGroups.filter((g) => g.placement === 'sidebar');
+    const tabGroups = fieldGroups.filter((g) => g.placement === 'tab');
 
     const { form, saveMutation, handleSave, handlePublish } = useEntryForm({
         hasSlug,
@@ -412,34 +428,35 @@ function EntryCreatePage(): React.ReactElement {
                             )}
                         </Panel>
 
-                        {mainGroups.map((group) => (
-                            <Panel
-                                key={group.name}
-                                title={group.label}
-                                {...(group.description !== undefined && {
-                                    description: group.description,
-                                })}
-                            >
-                                <div className="am-field-list">
-                                    {group.fields.map((field) => (
-                                        <form.Field key={field.name} name="fields">
-                                            {(f) => (
-                                                <FormField
-                                                    field={field}
-                                                    value={f.state.value[field.name]}
-                                                    onChange={(_name, value) =>
-                                                        f.handleChange({
-                                                            ...f.state.value,
-                                                            [field.name]: value,
-                                                        })
-                                                    }
-                                                />
-                                            )}
-                                        </form.Field>
+                        <form.Field name="fields">
+                            {(f) => (
+                                <>
+                                    {mainGroups.map((group) => (
+                                        <FieldGroupPanel
+                                            key={group.name}
+                                            group={group}
+                                            values={f.state.value}
+                                            onChange={(name, value) =>
+                                                f.handleChange({
+                                                    ...f.state.value,
+                                                    [name]: value,
+                                                })
+                                            }
+                                        />
                                     ))}
-                                </div>
-                            </Panel>
-                        ))}
+                                    <FieldGroupTabs
+                                        groups={tabGroups}
+                                        values={f.state.value}
+                                        onChange={(name, value) =>
+                                            f.handleChange({
+                                                ...f.state.value,
+                                                [name]: value,
+                                            })
+                                        }
+                                    />
+                                </>
+                            )}
+                        </form.Field>
                     </FormLayoutMain>
 
                     {/* Sidebar column */}
@@ -463,34 +480,25 @@ function EntryCreatePage(): React.ReactElement {
                             )}
                         </form.Field>
 
-                        {sidebarGroups.map((group) => (
-                            <Panel
-                                key={group.name}
-                                title={group.label}
-                                {...(group.description !== undefined && {
-                                    description: group.description,
-                                })}
-                            >
-                                <div className="am-field-list">
-                                    {group.fields.map((field) => (
-                                        <form.Field key={field.name} name="fields">
-                                            {(f) => (
-                                                <FormField
-                                                    field={field}
-                                                    value={f.state.value[field.name]}
-                                                    onChange={(_name, value) =>
-                                                        f.handleChange({
-                                                            ...f.state.value,
-                                                            [field.name]: value,
-                                                        })
-                                                    }
-                                                />
-                                            )}
-                                        </form.Field>
+                        <form.Field name="fields">
+                            {(f) => (
+                                <>
+                                    {sidebarGroups.map((group) => (
+                                        <FieldGroupPanel
+                                            key={group.name}
+                                            group={group}
+                                            values={f.state.value}
+                                            onChange={(name, value) =>
+                                                f.handleChange({
+                                                    ...f.state.value,
+                                                    [name]: value,
+                                                })
+                                            }
+                                        />
                                     ))}
-                                </div>
-                            </Panel>
-                        ))}
+                                </>
+                            )}
+                        </form.Field>
                     </FormLayoutSidebar>
                 </FormLayout>
             </PageContent>

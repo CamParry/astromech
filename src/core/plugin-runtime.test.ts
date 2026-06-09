@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PluginContext, PluginDefinition, ResolvedConfig, User } from '@/types/index.js';
+import type {
+    PluginContext,
+    PluginDefinition,
+    ResolvedConfig,
+    User,
+} from '@/types/index.js';
 import {
     bootPlugins,
     createPluginContext,
@@ -21,15 +26,30 @@ const config: ResolvedConfig = {
             single: 'Post',
             plural: 'Posts',
             fieldGroups: [
-                { name: 'main', label: 'Main', location: 'main', fields: [{ name: 'body', type: 'richtext' }] },
-                { name: 'seo', label: 'SEO', location: 'sidebar', fields: [{ name: 'seo-meta', type: 'json' }] },
+                {
+                    name: 'main',
+                    label: 'Main',
+                    placement: 'main',
+                    fields: [{ name: 'body', type: 'richtext' }],
+                },
+                {
+                    name: 'seo',
+                    label: 'SEO',
+                    placement: 'sidebar',
+                    fields: [{ name: 'seo-meta', type: 'json' }],
+                },
             ],
         },
         pages: {
             single: 'Page',
             plural: 'Pages',
             fieldGroups: [
-                { name: 'main', label: 'Main', location: 'main', fields: [{ name: 'body', type: 'richtext' }] },
+                {
+                    name: 'main',
+                    label: 'Main',
+                    placement: 'main',
+                    fields: [{ name: 'body', type: 'richtext' }],
+                },
             ],
         },
     },
@@ -42,7 +62,9 @@ const config: ResolvedConfig = {
     },
 };
 
-const def = (partial: Partial<PluginDefinition> & { package: string }): PluginDefinition => ({
+const def = (
+    partial: Partial<PluginDefinition> & { package: string }
+): PluginDefinition => ({
     ...partial,
 });
 
@@ -72,7 +94,12 @@ describe('registerPlugins indexing', () => {
                     package: '@astromech/redirects',
                     sdk: { lookup: { access: 'public', handler: async () => null } },
                     rawRoutes: [
-                        { path: '/upload', method: 'POST', access: 'authenticated', handler: () => new Response() },
+                        {
+                            path: '/upload',
+                            method: 'POST',
+                            access: 'authenticated',
+                            handler: () => new Response(),
+                        },
                     ],
                 }),
             ],
@@ -88,7 +115,10 @@ describe('registerPlugins indexing', () => {
 describe('createPluginContext', () => {
     it('exposes the acting user, a scoped logger, and a footprint helper', () => {
         registerPlugins([def({ package: '@astromech/seo' })], config);
-        const ctx = createPluginContext(resolvePluginIdentity(def({ package: '@astromech/seo' })), user);
+        const ctx = createPluginContext(
+            resolvePluginIdentity(def({ package: '@astromech/seo' })),
+            user
+        );
 
         expect(ctx.user).toBe(user);
         expect(ctx.config.entryTypesWithField('seo-meta')).toEqual(['posts']);
@@ -133,7 +163,9 @@ describe('runBeforeHooks', () => {
             config
         );
 
-        await expect(runBeforeHooks('entry:beforeCreate', {}, null)).rejects.toThrow('blocked');
+        await expect(runBeforeHooks('entry:beforeCreate', {}, null)).rejects.toThrow(
+            'blocked'
+        );
     });
 });
 
@@ -164,7 +196,9 @@ describe('runAfterHooks', () => {
             config
         );
 
-        await expect(runAfterHooks('entry:afterUpdate', {}, null)).resolves.toBeUndefined();
+        await expect(
+            runAfterHooks('entry:afterUpdate', {}, null)
+        ).resolves.toBeUndefined();
         expect(secondRan).toBe(true);
         expect(errorSpy).toHaveBeenCalledWith(
             expect.stringContaining('[plugin:boom]'),
@@ -177,7 +211,10 @@ describe('bootPlugins', () => {
     it('throws naming the plugin when a required env var is missing', async () => {
         await expect(
             bootPlugins([
-                def({ package: '@astromech/mail', requiredEnv: ['ASTROMECH_TEST_MISSING_VAR'] }),
+                def({
+                    package: '@astromech/mail',
+                    requiredEnv: ['ASTROMECH_TEST_MISSING_VAR'],
+                }),
             ])
         ).rejects.toThrow(/@astromech\/mail.*ASTROMECH_TEST_MISSING_VAR/);
     });

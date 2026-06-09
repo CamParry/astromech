@@ -28,7 +28,10 @@ import {
     PageContent,
 } from '@/admin/components/ui/index.js';
 import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal.js';
-import { FormField } from '@/admin/components/fields/form-field.js';
+import {
+    FieldGroupPanel,
+    FieldGroupTabs,
+} from '@/admin/components/entries/FieldGroupPanel.js';
 import { LocaleSwitcher } from '@/admin/components/translations/LocaleSwitcher.js';
 import { PublishPanel } from '@/admin/components/entries/PublishPanel.js';
 import { Astromech } from '@/sdk/fetch/index.js';
@@ -83,8 +86,11 @@ function EntryEditPage(): React.ReactElement {
     const plural = entryTypeConfig?.plural ?? type;
     const hasSlug = entryTypeConfig?.slug != null;
     const fieldGroups = entryTypeConfig?.fieldGroups ?? [];
-    const mainGroups = fieldGroups.filter((g) => g.location !== 'sidebar');
-    const sidebarGroups = fieldGroups.filter((g) => g.location === 'sidebar');
+    const mainGroups = fieldGroups.filter(
+        (g) => g.placement !== 'sidebar' && g.placement !== 'tab'
+    );
+    const sidebarGroups = fieldGroups.filter((g) => g.placement === 'sidebar');
+    const tabGroups = fieldGroups.filter((g) => g.placement === 'tab');
 
     const isReadOnly = !canUpdate(type);
 
@@ -303,35 +309,37 @@ function EntryEditPage(): React.ReactElement {
                                 </form.Field>
                             </Panel>
 
-                            {mainGroups.map((group) => (
-                                <Panel
-                                    key={group.name}
-                                    title={group.label}
-                                    {...(group.description !== undefined && {
-                                        description: group.description,
-                                    })}
-                                >
-                                    <div className="am-field-list">
-                                        {group.fields.map((field) => (
-                                            <form.Field key={field.name} name="fields">
-                                                {(f) => (
-                                                    <FormField
-                                                        field={field}
-                                                        value={f.state.value[field.name]}
-                                                        onChange={(_name, value) =>
-                                                            f.handleChange({
-                                                                ...f.state.value,
-                                                                [field.name]: value,
-                                                            })
-                                                        }
-                                                        disabled={isReadOnly}
-                                                    />
-                                                )}
-                                            </form.Field>
+                            <form.Field name="fields">
+                                {(f) => (
+                                    <>
+                                        {mainGroups.map((group) => (
+                                            <FieldGroupPanel
+                                                key={group.name}
+                                                group={group}
+                                                values={f.state.value}
+                                                onChange={(name, value) =>
+                                                    f.handleChange({
+                                                        ...f.state.value,
+                                                        [name]: value,
+                                                    })
+                                                }
+                                                disabled={isReadOnly}
+                                            />
                                         ))}
-                                    </div>
-                                </Panel>
-                            ))}
+                                        <FieldGroupTabs
+                                            groups={tabGroups}
+                                            values={f.state.value}
+                                            onChange={(name, value) =>
+                                                f.handleChange({
+                                                    ...f.state.value,
+                                                    [name]: value,
+                                                })
+                                            }
+                                            disabled={isReadOnly}
+                                        />
+                                    </>
+                                )}
+                            </form.Field>
                         </FormLayoutMain>
 
                         <FormLayoutSidebar>
@@ -377,35 +385,26 @@ function EntryEditPage(): React.ReactElement {
                                 </form.Field>
                             )}
 
-                            {sidebarGroups.map((group) => (
-                                <Panel
-                                    key={group.name}
-                                    title={group.label}
-                                    {...(group.description !== undefined && {
-                                        description: group.description,
-                                    })}
-                                >
-                                    <div className="am-field-list">
-                                        {group.fields.map((field) => (
-                                            <form.Field key={field.name} name="fields">
-                                                {(f) => (
-                                                    <FormField
-                                                        field={field}
-                                                        value={f.state.value[field.name]}
-                                                        onChange={(_name, value) =>
-                                                            f.handleChange({
-                                                                ...f.state.value,
-                                                                [field.name]: value,
-                                                            })
-                                                        }
-                                                        disabled={isReadOnly}
-                                                    />
-                                                )}
-                                            </form.Field>
+                            <form.Field name="fields">
+                                {(f) => (
+                                    <>
+                                        {sidebarGroups.map((group) => (
+                                            <FieldGroupPanel
+                                                key={group.name}
+                                                group={group}
+                                                values={f.state.value}
+                                                onChange={(name, value) =>
+                                                    f.handleChange({
+                                                        ...f.state.value,
+                                                        [name]: value,
+                                                    })
+                                                }
+                                                disabled={isReadOnly}
+                                            />
                                         ))}
-                                    </div>
-                                </Panel>
-                            ))}
+                                    </>
+                                )}
+                            </form.Field>
                             {hasVersioning && (
                                 <Panel>
                                     {versionCount > 0 ? (

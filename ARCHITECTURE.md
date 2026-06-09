@@ -338,7 +338,7 @@ export default defineConfig({
                         {
                             name: 'content',
                             label: 'Content',
-                            location: 'main',
+                            placement: 'main',
                             priority: 0,
                             fields: [
                                 { name: 'body', type: 'richtext' },
@@ -353,7 +353,7 @@ export default defineConfig({
                         {
                             name: 'content',
                             label: 'Content',
-                            location: 'main',
+                            placement: 'main',
                             priority: 0,
                             fields: [
                                 { name: 'body', type: 'richtext' },
@@ -363,7 +363,7 @@ export default defineConfig({
                         {
                             name: 'taxonomy',
                             label: 'Taxonomy',
-                            location: 'sidebar',
+                            placement: 'sidebar',
                             priority: 10,
                             fields: [
                                 {
@@ -388,7 +388,7 @@ export default defineConfig({
                         {
                             name: 'content',
                             label: 'Content',
-                            location: 'main',
+                            placement: 'main',
                             priority: 0,
                             fields: [{ name: 'description', type: 'textarea' }],
                         },
@@ -492,7 +492,7 @@ fieldGroups: [
     {
         name: 'content',
         label: 'Content',
-        location: 'main',
+        placement: 'main',
         priority: 0,
         fields: [
             { name: 'body', type: 'richtext', required: true },
@@ -513,7 +513,7 @@ fieldGroups: [
     {
         name: 'taxonomy',
         label: 'Taxonomy',
-        location: 'sidebar',
+        placement: 'sidebar',
         priority: 10,
         fields: [
             {
@@ -549,7 +549,7 @@ interface FieldGroup {
     label: string; // Display label in admin UI
 
     // UI positioning
-    location: 'main' | 'sidebar'; // Which zone in admin UI
+    placement: 'main' | 'sidebar'; // Which zone in admin UI
     priority?: number; // Lower = renders first (default: 10)
 
     // Optional UI settings
@@ -574,7 +574,7 @@ astromech({
                 {
                     name: 'content',
                     label: 'Content',
-                    location: 'main',
+                    placement: 'main',
                     priority: 0,
                     fields: [
                         { name: 'body', type: 'richtext', required: true },
@@ -584,7 +584,7 @@ astromech({
                 {
                     name: 'taxonomy',
                     label: 'Taxonomy',
-                    location: 'sidebar',
+                    placement: 'sidebar',
                     priority: 10,
                     fields: [
                         {
@@ -615,7 +615,7 @@ astromech({
                 {
                     name: 'content',
                     label: 'Content',
-                    location: 'main',
+                    placement: 'main',
                     priority: 0,
                     fields: [{ name: 'body', type: 'richtext' }],
                 },
@@ -629,7 +629,7 @@ astromech({
             {
                 name: 'metadata',
                 label: 'Metadata',
-                location: 'main',
+                placement: 'main',
                 priority: 0,
                 fields: [
                     { name: 'photographer', type: 'text' },
@@ -646,7 +646,7 @@ astromech({
             {
                 name: 'profile',
                 label: 'Profile',
-                location: 'main',
+                placement: 'main',
                 priority: 0,
                 fields: [
                     { name: 'bio', type: 'textarea' },
@@ -1519,7 +1519,7 @@ export function seoPlugin(options: {
                     {
                         name: 'seo',
                         label: 'SEO',
-                        location: 'sidebar',
+                        placement: 'sidebar',
                         priority: 10,
                         collapsed: true,
                         fields: [
@@ -1570,7 +1570,7 @@ export function redirectsPlugin(options: {
                     {
                         name: 'redirect',
                         label: 'Redirect',
-                        location: 'main',
+                        placement: 'main',
                         priority: 0,
                         fields: [
                             {
