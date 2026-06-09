@@ -1,14 +1,15 @@
 /**
  * Derivation of a plugin's admin-shell metadata from `admin.pages` — pages
- * are the core concept (spec §3.5): each page may declare `nav` to appear in
- * the sidebar and `settings` to auto-render a settings form. The sidebar
- * tree and the serializable page list are both derived here, with permission
- * strings resolved (`resolvePluginPermission`) so the browser never needs to
- * know the namespacing rule.
+ * are the core concept (spec §3.5): each page is a `component` view or an
+ * auto-rendered `settings` form, and appears in the sidebar unless it opts
+ * out (`nav: false`). The sidebar tree (grouped under the plugin's
+ * `label`/`icon`) and the serializable page list are both derived here, with
+ * permission strings resolved (`resolvePluginPermission`) so the browser
+ * never needs to know the namespacing rule.
  */
 
 import type {
-    PluginAdmin,
+    PluginDefinition,
     PluginNavItem,
     PluginPage,
     PluginSettingsSchema,
@@ -25,11 +26,20 @@ export type DerivedPluginPage = {
     hasComponent: boolean;
 };
 
+/** Admin display name: plugin `label`, falling back to the access key. */
+export function resolvePluginLabel(
+    def: PluginDefinition,
+    identity: ResolvedPluginIdentity
+): string {
+    return def.label ?? identity.name;
+}
+
 function resolvePagePermission(namespace: string, page: PluginPage): string | null {
     if (page.permission !== undefined) {
         return resolvePluginPermission(namespace, page.permission);
     }
-    // Settings pages read/write the core settings table — gate accordingly.
+    // Settings pages read/write the core settings table, whose API enforces
+    // the core settings permissions — keep the page guard aligned.
     if (page.settings !== undefined) return 'settings:read';
     return null;
 }
@@ -37,9 +47,9 @@ function resolvePagePermission(namespace: string, page: PluginPage): string | nu
 /** Validate and flatten a plugin's pages into serializable metadata. */
 export function derivePluginPages(
     identity: ResolvedPluginIdentity,
-    admin: PluginAdmin | undefined
+    def: PluginDefinition
 ): DerivedPluginPage[] {
-    return (admin?.pages ?? []).map((page) => {
+    return (def.admin?.pages ?? []).map((page) => {
         if (page.component === undefined && page.settings === undefined) {
             throw new Error(
                 `Astromech plugin "${identity.package}" page "${page.path}" needs ` +
@@ -57,35 +67,32 @@ export function derivePluginPages(
 }
 
 /**
- * Sidebar tree for one plugin: nav-visible pages become children of a single
- * group labelled by `admin.nav` (default: the access key). The sidebar
- * auto-flattens single-child groups.
+ * Sidebar tree for one plugin: pages become children of a single group
+ * carrying the plugin's `label`/`icon` (no separate nav declaration). The
+ * sidebar auto-flattens single-child groups.
  */
 export function derivePluginNav(
     identity: ResolvedPluginIdentity,
-    admin: PluginAdmin | undefined
+    def: PluginDefinition
 ): PluginNavItem[] {
-    const visible = (admin?.pages ?? []).filter(
-        (page) => page.nav !== undefined && page.nav !== false
-    );
+    const visible = (def.admin?.pages ?? []).filter((page) => page.nav !== false);
     if (visible.length === 0) return [];
 
     const children = visible.map((page) => {
-        const nav = typeof page.nav === 'object' ? page.nav : {};
         const item: PluginNavItem = {
-            label: nav.label ?? page.label,
+            label: page.label,
             to: `/plugin/${identity.name}${page.path}`,
         };
-        if (nav.icon !== undefined) item.icon = nav.icon;
+        if (page.icon !== undefined) item.icon = page.icon;
         const permission = resolvePagePermission(identity.permissionNamespace, page);
         if (permission !== null) item.permission = permission;
         return item;
     });
 
     const group: PluginNavItem = {
-        label: admin?.nav?.label ?? identity.name,
+        label: resolvePluginLabel(def, identity),
         children,
     };
-    if (admin?.nav?.icon !== undefined) group.icon = admin.nav.icon;
+    if (def.icon !== undefined) group.icon = def.icon;
     return [group];
 }

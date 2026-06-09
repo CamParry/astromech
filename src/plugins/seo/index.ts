@@ -20,10 +20,11 @@ import { definePlugin } from '@/index.js';
 import type { PluginDefinition } from '@/types/index.js';
 import type { SeoOptions } from './shared.js';
 import { PERMISSION_NAMESPACE, defaultPathForEntry } from './shared.js';
+import { seoMetaField } from './fields/seo-meta.js';
 import { seoSdk } from './server/sdk.js';
 
-export { seoFields } from './field-groups.js';
-export type { SeoFieldsOptions } from './field-groups.js';
+export { seoFields } from './fields/groups.js';
+export type { SeoFieldsOptions } from './fields/groups.js';
 export {
     SEO_DESCRIPTION_RANGE,
     SEO_FIELD_NAME,
@@ -51,6 +52,8 @@ export const seo = definePlugin<SeoOptions>((options) => {
         package: '@astromech/seo',
         version: '0.1.0',
         permissionNamespace: PERMISSION_NAMESPACE,
+        label: 'SEO',
+        icon: 'Search',
 
         permissions: [
             {
@@ -65,28 +68,21 @@ export const seo = definePlugin<SeoOptions>((options) => {
             fr: '@/plugins/seo/locales/fr.json',
         },
 
-        fields: [
-            {
-                type: 'seo-meta',
-                component: '@/plugins/seo/admin/fields/seo-meta-field.tsx',
-                defaultValue: null,
-                typeGen: () => '{ title?: string; description?: string }',
-            },
-        ],
+        fields: [seoMetaField],
 
         admin: {
-            nav: { label: 'SEO', icon: 'Search' },
             pages: [
                 {
                     path: '/overview',
-                    label: 'SEO Overview',
+                    label: 'Overview',
+                    icon: 'Gauge',
                     component: '@/plugins/seo/admin/pages/overview-page.tsx',
                     permission: 'view',
-                    nav: { label: 'Overview', icon: 'Gauge' },
                 },
                 {
                     path: '/settings',
-                    label: 'SEO Settings',
+                    label: 'Settings',
+                    icon: 'Settings',
                     settings: {
                         fields: [
                             {
@@ -98,7 +94,6 @@ export const seo = definePlugin<SeoOptions>((options) => {
                             },
                         ],
                     },
-                    nav: { label: 'Settings', icon: 'Settings' },
                 },
             ],
         },

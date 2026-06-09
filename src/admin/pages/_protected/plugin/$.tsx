@@ -78,7 +78,9 @@ function PluginPage(): React.ReactElement {
             return (
                 <Page>
                     <PageHeader>
-                        <PageTitle>{settingsPage.label}</PageTitle>
+                        <PageTitle>
+                            {`${settingsPlugin.label} ${settingsPage.label}`}
+                        </PageTitle>
                     </PageHeader>
                     <PageContent>
                         <PluginUiProvider
@@ -126,12 +128,19 @@ function PluginPage(): React.ReactElement {
     }
 
     const LazyComponent = lazyPageFor(splat);
+    const owner = adminConfig.plugins.find(
+        (plugin) => plugin.name === registration.plugin
+    );
 
     return (
         <Page>
             {registration.label !== null && (
                 <PageHeader>
-                    <PageTitle>{registration.label}</PageTitle>
+                    <PageTitle>
+                        {owner !== undefined
+                            ? `${owner.label} ${registration.label}`
+                            : registration.label}
+                    </PageTitle>
                 </PageHeader>
             )}
             <PageContent>
@@ -139,9 +148,7 @@ function PluginPage(): React.ReactElement {
                     identity={{
                         name: registration.plugin,
                         permissionNamespace:
-                            adminConfig.plugins.find(
-                                (plugin) => plugin.name === registration.plugin
-                            )?.permissionNamespace ?? registration.plugin,
+                            owner?.permissionNamespace ?? registration.plugin,
                     }}
                 >
                     <PluginErrorBoundary plugin={registration.plugin}>

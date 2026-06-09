@@ -132,17 +132,17 @@ export type PluginNavItem = {
     children?: PluginNavItem[];
 };
 
-export type PluginPageNav = {
-    /** Sidebar label. Defaults to the page `label`. */
-    label?: string;
-    icon?: string;
-};
-
 export type PluginPage = {
     /** Path relative to `/admin/plugin/{name}`. */
     path: string;
-    /** Page title — also the default sidebar label. */
+    /**
+     * Short page name — the sidebar label. Page titles compose it with the
+     * plugin label: `'Overview'` under a plugin labelled `'SEO'` renders as
+     * "SEO Overview".
+     */
     label: string;
+    /** Lucide icon name — shown in the sidebar (page chrome later). */
+    icon?: string;
     /**
      * Import specifier (a STRING, not a thunk) for the page component, so the
      * Node-side generator can statically emit `import(specifier)`.
@@ -161,8 +161,8 @@ export type PluginPage = {
      * `settings:read`). Settings pages default to `settings:read`.
      */
     permission?: string;
-    /** Show in the sidebar. `true` uses the page label with no icon. */
-    nav?: boolean | PluginPageNav;
+    /** Pages appear in the sidebar by default; `false` opts out. */
+    nav?: boolean;
 };
 
 export type PluginSettingsSchema = {
@@ -170,11 +170,6 @@ export type PluginSettingsSchema = {
 };
 
 export type PluginAdmin = {
-    /**
-     * Sidebar group identity for this plugin's nav-visible pages. Label
-     * defaults to the access key, icon to a generic puzzle piece.
-     */
-    nav?: PluginPageNav;
     pages?: PluginPage[];
 };
 
@@ -215,6 +210,13 @@ export type PluginDefinition = {
     alias?: string;
     /** Defaults to the sanitised package. Anchors permission strings. */
     permissionNamespace?: string;
+    /**
+     * Display name in the admin — sidebar group and page-title prefix.
+     * Defaults to the access key.
+     */
+    label?: string;
+    /** Lucide icon name for the sidebar group. Defaults to a puzzle piece. */
+    icon?: string;
 
     // ── Declarative surfaces ────────────────────────────────────────────
     permissions?: PluginPermission[];

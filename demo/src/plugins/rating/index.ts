@@ -21,19 +21,21 @@ export const rating = definePlugin(() => ({
             typeGen: () => 'number',
         },
     ],
+    label: 'Ratings',
+    icon: 'Star',
     admin: {
-        nav: { label: 'Ratings', icon: 'Star' },
         pages: [
             {
                 path: '/overview',
-                label: 'Ratings Overview',
+                label: 'Overview',
+                icon: 'ChartBar',
                 component: fileURLToPath(new URL('./overview-page.tsx', import.meta.url)),
                 permission: 'view',
-                nav: { label: 'Overview', icon: 'ChartBar' },
             },
             {
                 path: '/settings',
-                label: 'Rating Settings',
+                label: 'Settings',
+                icon: 'Settings',
                 settings: {
                     fields: [
                         {
@@ -49,7 +51,6 @@ export const rating = definePlugin(() => ({
                         },
                     ],
                 },
-                nav: { label: 'Settings', icon: 'Settings' },
             },
         ],
     },

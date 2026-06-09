@@ -31,7 +31,11 @@ import {
     resolvePluginIdentity,
     resolvePluginPermission,
 } from '@/core/plugin-identity.js';
-import { derivePluginNav, derivePluginPages } from '@/core/plugin-admin.js';
+import {
+    derivePluginNav,
+    derivePluginPages,
+    resolvePluginLabel,
+} from '@/core/plugin-admin.js';
 
 async function runMigrations(logger: {
     info: (msg: string) => void;
@@ -159,16 +163,14 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                                                 const identity = resolvePluginIdentity(p);
                                                 return {
                                                     name: identity.name,
+                                                    label: resolvePluginLabel(
+                                                        p,
+                                                        identity
+                                                    ),
                                                     permissionNamespace:
                                                         identity.permissionNamespace,
-                                                    nav: derivePluginNav(
-                                                        identity,
-                                                        p.admin
-                                                    ),
-                                                    pages: derivePluginPages(
-                                                        identity,
-                                                        p.admin
-                                                    ),
+                                                    nav: derivePluginNav(identity, p),
+                                                    pages: derivePluginPages(identity, p),
                                                 };
                                             }),
                                             adminRoute: resolvedConfig.adminRoute,

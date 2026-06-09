@@ -162,6 +162,8 @@ export type AdminConfig = {
     plugins: {
         /** Access key (resolved identity name). */
         name: string;
+        /** Display name — sidebar group and page-title prefix. */
+        label: string;
         /** Anchors permission strings and settings keys. */
         permissionNamespace: string;
         /** Sidebar tree derived from nav-visible pages. */

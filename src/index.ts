@@ -58,9 +58,9 @@ export function definePlugin<Options = void>(
 
 /**
  * Define an admin page for a plugin's `admin.pages`. A page is a `component`
- * view or an auto-rendered `settings` form, and opts into the sidebar with
- * `nav`. Typed identity helper — useful when pages are authored outside the
- * plugin definition.
+ * view or an auto-rendered `settings` form, and appears in the sidebar
+ * unless it opts out (`nav: false`). Typed identity helper — useful when
+ * pages are authored outside the plugin definition.
  */
 export function defineAdminPage(page: PluginPage): PluginPage {
     return page;

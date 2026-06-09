@@ -4,7 +4,7 @@
  */
 
 import type { FieldGroup, FieldGroupPlacement } from '@/types/index.js';
-import { SEO_FIELD_NAME } from './shared.js';
+import { SEO_FIELD_NAME } from '../shared.js';
 
 export type SeoFieldsOptions = {
     /** Where the group renders on the edit page. Default: `'tab'`. */
