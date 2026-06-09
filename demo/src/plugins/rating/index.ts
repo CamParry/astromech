@@ -30,6 +30,11 @@ export const rating = definePlugin(() => ({
                         to: '/plugin/demo-rating/overview',
                         icon: 'ChartBar',
                     },
+                    {
+                        label: 'Settings',
+                        to: '/plugin/demo-rating/settings',
+                        icon: 'Settings',
+                    },
                 ],
             },
         ],
@@ -41,5 +46,20 @@ export const rating = definePlugin(() => ({
                 permission: 'plugin:demo-rating:view',
             },
         ],
+        settings: {
+            fields: [
+                {
+                    name: 'minimumQuality',
+                    type: 'number',
+                    label: 'Minimum quality to publish',
+                    description: 'Pages below this rating show a warning.',
+                },
+                {
+                    name: 'showInListing',
+                    type: 'boolean',
+                    label: 'Show ratings in entry lists',
+                },
+            ],
+        },
     },
 }));

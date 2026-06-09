@@ -5,7 +5,7 @@
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Permission } from './domain.js';
 import type { FieldGroup } from './fields.js';
-import type { PluginDefinition, PluginNavItem } from './plugins.js';
+import type { PluginDefinition, PluginNavItem, PluginSettingsSchema } from './plugins.js';
 
 // ============================================================================
 // Drivers
@@ -162,6 +162,9 @@ export type AdminConfig = {
     plugins: {
         /** Access key (resolved identity name). */
         name: string;
+        /** Anchors permission strings and settings keys. */
+        permissionNamespace: string;
         nav: PluginNavItem[];
+        settings: PluginSettingsSchema | null;
     }[];
 };

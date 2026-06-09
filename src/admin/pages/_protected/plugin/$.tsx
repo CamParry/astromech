@@ -12,8 +12,10 @@ import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { pages } from 'virtual:astromech/plugins/components';
+import adminConfig from 'virtual:astromech/admin-config';
 import { usePermissions } from '@/admin/hooks/index.js';
 import { PluginErrorBoundary } from '@/admin/components/plugins/PluginErrorBoundary.js';
+import { PluginSettingsPage } from '@/admin/components/plugins/PluginSettingsPage.js';
 import {
     EmptyState,
     Page,
@@ -49,6 +51,31 @@ function PluginPage(): React.ReactElement {
     const registration = pages[splat];
 
     if (!registration) {
+        // Auto-rendered settings page: `{name}/settings` when the plugin
+        // declares `admin.settings` and no explicit page claims the path.
+        const settingsPlugin = adminConfig.plugins.find(
+            (plugin) => plugin.settings !== null && splat === `${plugin.name}/settings`
+        );
+        if (settingsPlugin?.settings) {
+            return (
+                <Page>
+                    <PageHeader>
+                        <PageTitle>
+                            {t('plugins.settingsTitle', { plugin: settingsPlugin.name })}
+                        </PageTitle>
+                    </PageHeader>
+                    <PageContent>
+                        <PluginErrorBoundary plugin={settingsPlugin.name}>
+                            <PluginSettingsPage
+                                plugin={settingsPlugin.name}
+                                permissionNamespace={settingsPlugin.permissionNamespace}
+                                schema={settingsPlugin.settings}
+                            />
+                        </PluginErrorBoundary>
+                    </PageContent>
+                </Page>
+            );
+        }
         return (
             <Page>
                 <PageContent>

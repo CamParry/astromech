@@ -140,10 +140,16 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                                     if (id === '\0virtual:astromech/admin-config') {
                                         const resolvedRoles = resolveRoles(config);
                                         const adminConfig = {
-                                            plugins: (config.plugins ?? []).map((p) => ({
-                                                name: resolvePluginIdentity(p).name,
-                                                nav: p.admin?.nav ?? [],
-                                            })),
+                                            plugins: (config.plugins ?? []).map((p) => {
+                                                const identity = resolvePluginIdentity(p);
+                                                return {
+                                                    name: identity.name,
+                                                    permissionNamespace:
+                                                        identity.permissionNamespace,
+                                                    nav: p.admin?.nav ?? [],
+                                                    settings: p.admin?.settings ?? null,
+                                                };
+                                            }),
                                             adminRoute: resolvedConfig.adminRoute,
                                             apiRoute: resolvedConfig.apiRoute,
                                             locales: resolvedConfig.locales ?? [],
