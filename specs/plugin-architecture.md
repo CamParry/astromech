@@ -367,3 +367,40 @@ EmDash (Cloudflare CMS): DB-first editor-mutable schema, per-collection tables (
 - **Auto-install / dependency negotiation** (`dependsOn` is check-only).
 - **Per-plugin namespaced KV** (filed from EmDash; not v1).
 - **Deep framework integrations** (`@astrojs/sitemap`, `astro-seo`) — README recipes only.
+
+---
+
+## 16. First-party Plugin Code Layout
+
+Standard directory layout for first-party plugins (adopted during 18b review; `seo` and `redirects` conform). The organizing principle is the **browser/server boundary** (§11): admin components load via `@/plugins/<name>/*` string specifiers and may only import `astromech/ui*`; server code runs in `PluginContext` and must never touch React.
+
+```
+src/plugins/<name>/
+├── README.md              # recipes + integration docs
+├── index.ts               # public entry, thin: definePlugin factory, options
+│                          #   type, composition helpers (e.g. seoFields),
+│                          #   type re-exports
+├── shared.ts              # isomorphic types/constants/pure helpers — the only
+│                          #   module both sides may import (→ shared/ if it grows)
+├── server/
+│   ├── sdk.ts             # SDK methods (→ sdk/<method>.ts when big)
+│   ├── hooks.ts           # entry hooks
+│   ├── cron.ts
+│   ├── schema.ts          # Drizzle tables
+│   └── routes.ts          # raw Hono routes
+├── admin/
+│   ├── fields/            # field components, css co-located
+│   ├── pages/             # page components, css co-located
+│   └── components/        # plugin-internal shared UI
+└── locales/
+    └── en.json
+```
+
+Rules:
+
+- **`index.ts` never imports from `admin/`** — keeps the package entry server/config-safe; admin code is reached only via string specifiers (`@/plugins/<name>/admin/fields/*.tsx`).
+- **`server/` modules export builders taking resolved options** (`seoSdk(pathForEntry)`) when handlers close over options; plain objects otherwise (`redirectsSdk`).
+- **`shared.ts` is pure and dependency-free.** Plugin identity constants (field names, permission namespace) live here.
+- Field _definitions_ (`type`, `defaultValue`, `typeGen`) stay in the manifest in `index.ts`; only the _component_ lives in `admin/fields/`.
+- Naming mirrors the manifest keys (`sdk`, `admin`, `hooks`) — no `services`/`actions` synonyms.
+- Tests co-located (`*.test.ts`). Empty directories omitted — the standard says where things go _when they exist_.

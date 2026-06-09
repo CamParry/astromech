@@ -4,6 +4,14 @@
  * dependency-free — the browser modules must not pull core server code.
  */
 
+/**
+ * The field name `seoFields()` attaches — also the footprint anchor:
+ * `ctx.config.entryTypesWithField(SEO_FIELD_NAME)`.
+ */
+export const SEO_FIELD_NAME = 'seo-meta';
+
+export const PERMISSION_NAMESPACE = 'astromech-seo';
+
 export type SeoMetaValue = {
     title?: string;
     description?: string;

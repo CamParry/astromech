@@ -15,9 +15,12 @@
  */
 
 import { definePlugin } from '@/index.js';
-import type { Entry, JsonObject, PluginDefinition } from '@/types/index.js';
+import type { PluginDefinition } from '@/types/index.js';
+import { REDIRECT_TYPE } from './shared.js';
+import { redirectsSdk } from './server/sdk.js';
+import { slugChangeHooks } from './server/hooks.js';
 
-export type RedirectStatus = '301' | '302';
+export type { RedirectMatch, RedirectStatus } from './shared.js';
 
 export type RedirectsOptions = {
     /** Auto-create a redirect when an entry's slug changes. Default: true. */
@@ -28,20 +31,6 @@ export type RedirectsOptions = {
      */
     pathForEntry?: (entry: { type: string; slug: string | null }) => string | null;
 };
-
-export type RedirectMatch = {
-    to: string;
-    status: RedirectStatus;
-};
-
-type RedirectFields = {
-    from?: unknown;
-    to?: unknown;
-    status?: unknown;
-    enabled?: unknown;
-};
-
-const REDIRECT_TYPE = 'redirect';
 
 function defaultPathForEntry(entry: { slug: string | null }): string | null {
     return entry.slug ? `/${entry.slug}` : null;
@@ -106,60 +95,11 @@ export const redirects = definePlugin<RedirectsOptions>((options) => {
             },
         },
 
-        sdk: {
-            // Resolve a request path to its redirect target. Public so a
-            // frontend middleware can call it without a session.
-            lookup: {
-                access: 'public',
-                handler: async (input, ctx): Promise<RedirectMatch | null> => {
-                    const from =
-                        input && typeof input === 'object' && 'from' in input
-                            ? String((input as { from: unknown }).from)
-                            : null;
-                    if (!from) return null;
-
-                    const { data } = await ctx.sdk.entries.query({
-                        type: REDIRECT_TYPE,
-                        limit: 'all',
-                    });
-
-                    const match = (data as Entry[]).find((entry) => {
-                        const fields = (entry.fields ?? {}) as RedirectFields;
-                        return fields.enabled !== false && fields.from === from;
-                    });
-                    if (!match) return null;
-
-                    const fields = (match.fields ?? {}) as RedirectFields;
-                    const status: RedirectStatus =
-                        fields.status === '302' ? '302' : '301';
-                    return { to: String(fields.to ?? ''), status };
-                },
-            },
-        },
+        sdk: redirectsSdk,
     };
 
     if (generateOnSlugChange) {
-        definition.hooks = {
-            // When an entry's slug changes, record a redirect old → new.
-            'entry:afterUpdate': async (event, ctx) => {
-                if (event.type === REDIRECT_TYPE) return;
-
-                const oldSlug = event.entry.slug;
-                const newSlug = event.data.slug;
-                if (!oldSlug || !newSlug || oldSlug === newSlug) return;
-
-                const from = pathForEntry({ type: event.type, slug: oldSlug });
-                const to = pathForEntry({ type: event.type, slug: newSlug });
-                if (!from || !to || from === to) return;
-
-                const fields: JsonObject = { from, to, status: '301', enabled: true };
-                await ctx.sdk.entries.create({
-                    type: REDIRECT_TYPE,
-                    title: `${from} → ${to}`,
-                    fields,
-                });
-            },
-        };
+        definition.hooks = slugChangeHooks(pathForEntry);
     }
 
     return definition;

@@ -7,13 +7,13 @@
 import React from 'react';
 import type { BaseFieldProps } from 'astromech';
 import { Input, Textarea, useAstromechPlugin } from 'astromech/ui';
-import type { LengthRange } from './shared.js';
+import type { LengthRange } from '../../shared.js';
 import {
     SEO_DESCRIPTION_RANGE,
     SEO_TITLE_RANGE,
     lengthStatus,
     parseSeoMetaValue,
-} from './shared.js';
+} from '../../shared.js';
 import './seo-meta-field.css';
 
 function SubFieldHeader({

@@ -17,29 +17,13 @@
  */
 
 import { definePlugin } from '@/index.js';
-import type {
-    Entry,
-    FieldGroup,
-    FieldGroupPlacement,
-    PluginContext,
-    PluginDefinition,
-} from '@/types/index.js';
-import {
-    SEO_DESCRIPTION_RANGE,
-    SEO_TITLE_RANGE,
-    lengthStatus,
-    parseSeoMetaValue,
-} from './shared.js';
-import type {
-    SeoOverview,
-    SeoOverviewItem,
-    SeoResolvedMeta,
-    SeoSitemap,
-    SeoSitemapUrl,
-} from './shared.js';
+import type { FieldGroup, FieldGroupPlacement, PluginDefinition } from '@/types/index.js';
+import { PERMISSION_NAMESPACE, SEO_FIELD_NAME } from './shared.js';
+import { seoSdk } from './server/sdk.js';
 
 export {
     SEO_DESCRIPTION_RANGE,
+    SEO_FIELD_NAME,
     SEO_TITLE_RANGE,
     lengthStatus,
     parseSeoMetaValue,
@@ -55,15 +39,6 @@ export type {
     SeoSitemap,
     SeoSitemapUrl,
 } from './shared.js';
-
-/**
- * The field name `seoFields()` attaches — also the footprint anchor:
- * `ctx.config.entryTypesWithField(SEO_FIELD_NAME)`.
- */
-export const SEO_FIELD_NAME = 'seo-meta';
-
-const PERMISSION_NAMESPACE = 'astromech-seo';
-const DEFAULT_OG_IMAGE_KEY = `plugin:${PERMISSION_NAMESPACE}:defaultOgImage`;
 
 export type SeoFieldsOptions = {
     /** Where the group renders on the edit page. Default: `'tab'`. */
@@ -101,27 +76,6 @@ function defaultPathForEntry(entry: { slug: string | null }): string | null {
     return entry.slug ? `/${entry.slug}` : null;
 }
 
-async function footprintEntries(
-    ctx: PluginContext
-): Promise<{ type: string; entry: Entry }[]> {
-    const types = ctx.config.entryTypesWithField(SEO_FIELD_NAME);
-    const collected: { type: string; entry: Entry }[] = [];
-    for (const type of types) {
-        const { data } = await ctx.sdk.entries.query({ type, limit: 'all' });
-        for (const entry of data as Entry[]) {
-            collected.push({ type, entry });
-        }
-    }
-    return collected;
-}
-
-async function resolveDefaultOgImage(ctx: PluginContext): Promise<string | null> {
-    const mediaId = await ctx.sdk.settings.get(DEFAULT_OG_IMAGE_KEY);
-    if (typeof mediaId !== 'string' || mediaId === '') return null;
-    const media = await ctx.sdk.media.get(mediaId);
-    return media?.url ?? null;
-}
-
 export const seo = definePlugin<SeoOptions>((options) => {
     const pathForEntry = options?.pathForEntry ?? defaultPathForEntry;
 
@@ -146,7 +100,7 @@ export const seo = definePlugin<SeoOptions>((options) => {
         fields: [
             {
                 type: 'seo-meta',
-                component: '@/plugins/seo/seo-meta-field.tsx',
+                component: '@/plugins/seo/admin/fields/seo-meta-field.tsx',
                 defaultValue: null,
                 typeGen: () => '{ title?: string; description?: string }',
             },
@@ -176,7 +130,7 @@ export const seo = definePlugin<SeoOptions>((options) => {
             pages: [
                 {
                     path: '/overview',
-                    component: '@/plugins/seo/overview-page.tsx',
+                    component: '@/plugins/seo/admin/pages/overview-page.tsx',
                     label: 'SEO Overview',
                     permission: `plugin:${PERMISSION_NAMESPACE}:view`,
                 },
@@ -194,104 +148,7 @@ export const seo = definePlugin<SeoOptions>((options) => {
             },
         },
 
-        sdk: {
-            // Published entries across the plugin footprint, as sitemap URL
-            // data. Public so the app's /sitemap.xml endpoint can call it.
-            sitemap: {
-                access: 'public',
-                handler: async (_input, ctx): Promise<SeoSitemap> => {
-                    const urls: SeoSitemapUrl[] = [];
-                    for (const { type, entry } of await footprintEntries(ctx)) {
-                        if (entry.status !== 'published') continue;
-                        const loc = pathForEntry({ type, slug: entry.slug });
-                        if (!loc) continue;
-                        urls.push({
-                            loc,
-                            lastmod: new Date(entry.updatedAt).toISOString(),
-                        });
-                    }
-                    return { urls };
-                },
-            },
-
-            // Resolved meta for one published entry: seo-meta with fallbacks
-            // to the entry title and the default OG image setting.
-            meta: {
-                access: 'public',
-                handler: async (input, ctx): Promise<SeoResolvedMeta | null> => {
-                    const params = (input ?? {}) as { type?: unknown; slug?: unknown };
-                    const type = typeof params.type === 'string' ? params.type : null;
-                    const slug = typeof params.slug === 'string' ? params.slug : null;
-                    if (!type || !slug) return null;
-                    if (!ctx.config.entryTypesWithField(SEO_FIELD_NAME).includes(type)) {
-                        return null;
-                    }
-
-                    const { data } = await ctx.sdk.entries.query({
-                        type,
-                        limit: 'all',
-                    });
-                    const entry = (data as Entry[]).find(
-                        (candidate) =>
-                            candidate.slug === slug && candidate.status === 'published'
-                    );
-                    if (!entry) return null;
-
-                    const meta = parseSeoMetaValue(entry.fields[SEO_FIELD_NAME]);
-                    return {
-                        title: meta.title?.trim() ? meta.title : entry.title,
-                        description: meta.description?.trim() ? meta.description : null,
-                        ogImage: await resolveDefaultOgImage(ctx),
-                        path: pathForEntry({ type, slug }),
-                    };
-                },
-            },
-
-            // SEO health across every entry in the footprint — drives the
-            // overview dashboard page.
-            overview: {
-                access: { permission: 'view' },
-                handler: async (_input, ctx): Promise<SeoOverview> => {
-                    const items: SeoOverviewItem[] = [];
-                    for (const { type, entry } of await footprintEntries(ctx)) {
-                        const meta = parseSeoMetaValue(entry.fields[SEO_FIELD_NAME]);
-                        const titleLength = (meta.title ?? '').length;
-                        const descriptionLength = (meta.description ?? '').length;
-                        items.push({
-                            id: entry.id,
-                            type,
-                            title: entry.title,
-                            slug: entry.slug,
-                            entryStatus: entry.status,
-                            metaTitle: {
-                                length: titleLength,
-                                status: lengthStatus(titleLength, SEO_TITLE_RANGE),
-                            },
-                            metaDescription: {
-                                length: descriptionLength,
-                                status: lengthStatus(
-                                    descriptionLength,
-                                    SEO_DESCRIPTION_RANGE
-                                ),
-                            },
-                        });
-                    }
-                    const complete = items.filter(
-                        (item) =>
-                            item.metaTitle.status === 'good' &&
-                            item.metaDescription.status === 'good'
-                    ).length;
-                    return {
-                        totals: {
-                            entries: items.length,
-                            complete,
-                            needsAttention: items.length - complete,
-                        },
-                        items,
-                    };
-                },
-            },
-        },
+        sdk: seoSdk(pathForEntry),
     };
 
     return definition;

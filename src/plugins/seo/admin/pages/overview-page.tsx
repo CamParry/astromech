@@ -8,7 +8,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { BadgeVariant } from 'astromech/ui';
 import { Badge, EmptyState, Spinner, Table, useAstromechPlugin } from 'astromech/ui';
-import type { LengthStatus, SeoOverview } from './shared.js';
+import type { LengthStatus, SeoOverview } from '../../shared.js';
 import './overview-page.css';
 
 const STATUS_VARIANTS: Record<LengthStatus, BadgeVariant> = {
