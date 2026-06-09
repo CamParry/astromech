@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PluginContext, PluginDefinition, ResolvedConfig, User } from '@/types/index.js';
 import {
+    bootPlugins,
     createPluginContext,
     emitEvent,
     getPluginRawRoutes,
@@ -10,6 +11,7 @@ import {
     runBeforeHooks,
 } from '@/core/plugin-runtime.js';
 import { resolvePluginIdentity } from '@/core/plugin-identity.js';
+import { getCronJobs } from '@/cron/registry.js';
 
 const config: ResolvedConfig = {
     adminRoute: '/admin',
@@ -58,6 +60,7 @@ const user: User = {
 
 beforeEach(() => {
     globalThis.__astromechPluginRuntime = undefined;
+    globalThis.__astromechCronJobs = undefined;
     vi.restoreAllMocks();
 });
 
@@ -167,6 +170,67 @@ describe('runAfterHooks', () => {
             expect.stringContaining('[plugin:boom]'),
             expect.any(Error)
         );
+    });
+});
+
+describe('bootPlugins', () => {
+    it('throws naming the plugin when a required env var is missing', async () => {
+        await expect(
+            bootPlugins([
+                def({ package: '@astromech/mail', requiredEnv: ['ASTROMECH_TEST_MISSING_VAR'] }),
+            ])
+        ).rejects.toThrow(/@astromech\/mail.*ASTROMECH_TEST_MISSING_VAR/);
+    });
+
+    it('registers cron jobs under an auto-namespaced name with a PluginContext', async () => {
+        registerPlugins([def({ package: '@astromech/seo' })], config);
+        let seenUser: User | null | undefined;
+        await bootPlugins([
+            def({
+                package: '@astromech/seo',
+                cron: [
+                    {
+                        name: 'reindex',
+                        schedule: '0 3 * * *',
+                        handler: (ctx) => {
+                            seenUser = ctx.user;
+                        },
+                    },
+                ],
+            }),
+        ]);
+
+        const job = getCronJobs().find((j) => j.name === 'plugin:seo:reindex');
+        expect(job).toBeDefined();
+        expect(job?.schedule).toBe('0 3 * * *');
+
+        await job?.handler({} as never);
+        expect(seenUser).toBeNull();
+    });
+
+    it('runs setup() with a PluginContext and wraps a throw with the plugin name', async () => {
+        registerPlugins([def({ package: '@astromech/ok' })], config);
+        let ranWith: PluginContext | undefined;
+        await bootPlugins([
+            def({
+                package: '@astromech/ok',
+                setup: (ctx) => {
+                    ranWith = ctx;
+                },
+            }),
+        ]);
+        expect(ranWith?.user).toBeNull();
+
+        await expect(
+            bootPlugins([
+                def({
+                    package: '@astromech/boom',
+                    setup: () => {
+                        throw new Error('db unreachable');
+                    },
+                }),
+            ])
+        ).rejects.toThrow(/@astromech\/boom.*setup\(\) failed.*db unreachable/);
     });
 });
 

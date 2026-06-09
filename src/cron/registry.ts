@@ -8,19 +8,23 @@
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { ResolvedConfig } from '@/types/index.js';
 
-export interface CronContext {
+export type CronContext = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     db: LibSQLDatabase<any>;
     config: ResolvedConfig;
-}
+};
 
-export interface CronJob {
+export type CronJob = {
     name: string;
+    /**
+     * Declared cadence (plugin cron jobs). Currently metadata only — the
+     * runner executes every registered job on each scheduled tick.
+     */
+    schedule?: string;
     handler: (ctx: CronContext) => Promise<void>;
-}
+};
 
 declare global {
-    // eslint-disable-next-line no-var
     var __astromechCronJobs: CronJob[] | undefined;
 }
 

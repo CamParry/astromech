@@ -28,6 +28,7 @@ import { getDb } from '@/db/registry.js';
 import { getEmailConfig } from '@/email/registry.js';
 import { renderEmail } from '@/email/render.js';
 import { resolvePluginIdentity } from '@/core/plugin-identity.js';
+import { registerCronJob } from '@/cron/registry.js';
 
 // ============================================================================
 // Registry (globalThis — visible from config:setup through request time)
@@ -95,6 +96,50 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
 
         for (const route of def.rawRoutes ?? []) {
             s.rawRoutes.push({ identity, route });
+        }
+    }
+}
+
+/**
+ * Boot all plugins, in `plugins: []` order: validate `requiredEnv`, register
+ * cron jobs (names auto-namespaced as `plugin:{name}:{job}`), and run
+ * `setup()`. Called once at boot, after `registerPlugins`. Failures crash
+ * loud, naming the plugin.
+ */
+export async function bootPlugins(defs: PluginDefinition[]): Promise<void> {
+    const env = resolveEnv();
+
+    for (const def of defs) {
+        const identity = resolvePluginIdentity(def);
+
+        const missing = (def.requiredEnv ?? []).filter((key) => !env[key]);
+        if (missing.length > 0) {
+            throw new Error(
+                `Astromech plugin "${def.package}" requires missing env var(s): ` +
+                    `${missing.join(', ')}. Set them in your environment or .env file.`
+            );
+        }
+
+        for (const job of def.cron ?? []) {
+            registerCronJob({
+                name: `plugin:${identity.name}:${job.name}`,
+                schedule: job.schedule,
+                handler: async () => {
+                    await job.handler(createPluginContext(identity, null));
+                },
+            });
+        }
+
+        if (def.setup) {
+            try {
+                await def.setup(createPluginContext(identity, null));
+            } catch (error) {
+                throw new Error(
+                    `Astromech plugin "${def.package}" setup() failed during boot: ` +
+                        `${error instanceof Error ? error.message : String(error)}`,
+                    { cause: error }
+                );
+            }
         }
     }
 }

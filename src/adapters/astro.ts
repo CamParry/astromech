@@ -25,7 +25,7 @@ import { setStorageDriver } from '@/storage/registry.js';
 import { setEmailConfig } from '@/email/registry.js';
 import { setDb, getDb } from '@/db/registry.js';
 import { registerBuiltInCronJobs } from '@/cron/index.js';
-import { registerPlugins } from '@/core/plugin-runtime.js';
+import { bootPlugins, registerPlugins } from '@/core/plugin-runtime.js';
 
 async function runMigrations(logger: { info: (msg: string) => void; error: (msg: string) => void }): Promise<void> {
 	try {
@@ -49,7 +49,7 @@ export function astromech(config: AstromechConfig): AstroIntegration {
 	return {
 		name: 'astromech',
 		hooks: {
-			'astro:config:setup': ({ updateConfig, injectRoute, addMiddleware, logger }) => {
+			'astro:config:setup': async ({ updateConfig, injectRoute, addMiddleware, logger }) => {
 				logger.info('Initializing Astromech CMS');
 
 				setDb(config.db.getInstance());
@@ -59,6 +59,8 @@ export function astromech(config: AstromechConfig): AstroIntegration {
 				}
 				registerBuiltInCronJobs();
 				registerPlugins(config.plugins ?? [], resolvedConfig);
+				// Boot crash-loud: requiredEnv validation, cron registration, setup().
+				await bootPlugins(config.plugins ?? []);
 
 				process.env.ASTROMECH_API_ROUTE = resolvedConfig.apiRoute;
 

@@ -480,19 +480,19 @@ Architecture fully designed and locked — see [`specs/plugin-architecture.md`](
 
 ### 18a — Plugin Runtime (headless)
 
-- [ ] `definePlugin` **factory** `(options) => PluginDefinition`; identity derivation (`package`/`name`/`alias`/`permissionNamespace`); collision → build error
-- [ ] Declarative `PluginDefinition` type; replace old `AstromechPlugin` (`src/types/plugins.ts`)
-- [ ] Rewrite `src/core/plugin-resolver.ts` — remove `targets` injection (`resolveTargets`/`mergePluginFieldGroups`); add SDK/hook/cron/schema/API collection; update `src/core/config-resolver.ts`
-- [ ] Unified `PluginContext` (`{ db, config, user, sdk, sendEmail, logger, env, emit }`)
-- [ ] Open hook registry (`src/types/hooks.ts` → `KnownCoreEvent | string`) + `hooks: {}` declaration + `ctx.emit`
-- [ ] SDK namespace `Astromech.plugins.X` (local + fetch) via code-gen virtual modules
-- [ ] Auto-mounted RPC API `/api/plugins/{name}/{method}` + `access` enforcement + raw escape hatch (`src/api/plugins/*`)
+- [x] `definePlugin` **factory** `(options) => PluginDefinition`; identity derivation (`package`/`name`/`alias`/`permissionNamespace`); collision → build error
+- [x] Declarative `PluginDefinition` type; replace old `AstromechPlugin` (`src/types/plugins.ts`)
+- [x] Rewrite `src/core/plugin-resolver.ts` — remove `targets` injection (`resolveTargets`/`mergePluginFieldGroups`); add SDK/hook/cron/schema/API collection; update `src/core/config-resolver.ts`
+- [x] Unified `PluginContext` (`{ db, config, user, sdk, sendEmail, logger, env, emit }`)
+- [x] Open hook registry (`src/types/hooks.ts` → `KnownCoreEvent | string`) + `hooks: {}` declaration + `ctx.emit`
+- [x] SDK namespace `Astromech.plugins.X` (local + fetch) — via runtime registry + Proxy, not code-gen (see spec §14 implementation note)
+- [x] Auto-mounted RPC API `/api/plugins/{name}/{method}` + `access` enforcement + raw escape hatch (`src/api/routes/plugins.ts`)
 - [x] Plugin Drizzle schema collection + `plugin_{alias}_` prefix convention guard (crash-loud at config resolution)
 - [ ] `db:generate`/`db:migrate` CLI wrappers feeding plugin schemas to drizzle-kit (SQLite-only) — **deferred** until the first table-shipping plugin exists to validate against; no v1 plugin ships tables ("build the road, drive later")
-- [ ] Failure isolation (boot crash-loud; before-aborts/after-swallows; per-request & per-job containment)
+- [x] Failure isolation (boot crash-loud: `requiredEnv` validation + `setup()` via `bootPlugins`; before-aborts/after-swallows; per-request via `app.onError`; per-job via cron runner try/catch). Plugin `cron` jobs registered auto-namespaced (`plugin:{name}:{job}`); `schedule` is metadata until the runner supports cadences
 - [x] `dependsOn` existence + semver checks; ordering by `plugins: []` (dependency must be listed before its dependent — crash-loud)
-- [ ] Non-UI code-gen virtual modules (`local`, `fetch`, `server`)
-- [ ] **Ship `@astromech/redirects`** — redirect entry type + slug-change `entry:afterUpdate` hook + `lookup` SDK; near-zero UI
+- [x] ~~Non-UI code-gen virtual modules (`local`, `fetch`, `server`)~~ — **obsolete**: the runtime registry + Proxy approach made non-UI codegen unnecessary (spec §14 implementation note); codegen remains for 18b browser surfaces (components/i18n)
+- [x] **Ship `@astromech/redirects`** — redirect entry type + slug-change `entry:afterUpdate` hook + `lookup` SDK; near-zero UI
 
 ### 18b — Plugin Admin UI
 
