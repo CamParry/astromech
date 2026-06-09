@@ -18,4 +18,19 @@ declare module 'virtual:astromech/plugins/components' {
         string,
         { load: () => Promise<PluginFieldModule>; defaultValue: unknown }
     >;
+
+    type PluginPageModule = {
+        default: ComponentType;
+    };
+
+    /** Keyed `{name}{path}`, e.g. `seo/dashboard` — matches the `/plugin/$` splat. */
+    export const pages: Record<
+        string,
+        {
+            load: () => Promise<PluginPageModule>;
+            plugin: string;
+            permission: string | null;
+            label: string | null;
+        }
+    >;
 }

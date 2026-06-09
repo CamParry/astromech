@@ -206,7 +206,23 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                                                     `\t${JSON.stringify(reg.type)}: { load: () => import(${JSON.stringify(reg.component)}), defaultValue: ${JSON.stringify(reg.defaultValue ?? null)} },`
                                             )
                                         );
-                                        return `export const fieldTypes = {\n${fieldTypeLines.join('\n')}\n};\n`;
+                                        // Pages keyed `{name}{path}` (e.g. `seo/dashboard`),
+                                        // matching the catch-all's `/plugin/$` splat.
+                                        const pageLines = (config.plugins ?? []).flatMap(
+                                            (def) => {
+                                                const name =
+                                                    resolvePluginIdentity(def).name;
+                                                return (def.admin?.pages ?? []).map(
+                                                    (page) =>
+                                                        `\t${JSON.stringify(`${name}${page.path}`)}: { load: () => import(${JSON.stringify(page.component)}), plugin: ${JSON.stringify(name)}, permission: ${JSON.stringify(page.permission ?? null)}, label: ${JSON.stringify(page.label ?? null)} },`
+                                                );
+                                            }
+                                        );
+                                        return [
+                                            `export const fieldTypes = {\n${fieldTypeLines.join('\n')}\n};`,
+                                            `export const pages = {\n${pageLines.join('\n')}\n};`,
+                                            '',
+                                        ].join('\n');
                                     }
                                     return undefined;
                                 },

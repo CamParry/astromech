@@ -471,7 +471,7 @@ Hooks stay internal to the admin SPA — no `astromech/react` public export. Con
     - `validateSearch` added to `_auth/reset-password.tsx` and `_protected/media/index.tsx` (replaces the custom `useQueryState` hook, now deleted)
     - Loaders pre-fetch on `entries/$type/$id` (entry), `entries/$type/$id/versions` (entry + versions), `media/$id`, `users/$id` — shared `queryOptions` factories exported from each hooks module
     - All `useParams({ strict: false })` / `useSearch({ strict: false })` casts replaced with `Route.useParams()` / `Route.useSearch()`
-- [ ] Verify plugin route merging still works (deferred to Phase 18)
+- [x] Verify plugin route merging still works (deferred to Phase 18) — closed by the 18b `/plugin/$` catch-all
 
 ---
 
@@ -500,8 +500,8 @@ Architecture fully designed and locked — see [`specs/plugin-architecture.md`](
 - [x] Field-group `placement: 'tab'` + edit-page tab strip (renamed `FieldGroup.location` → `placement` per spec terminology; shared `FieldGroupPanel`/`FieldGroupTabs` components)
 - [x] `registerFieldType` (renderer + validator + defaultValue + typeGen) — declarative `fields: []` registrations; renderers lazy-load via the code-gen `virtual:astromech/plugins/components`; core-type/cross-plugin collisions crash at config resolution
 - [x] Plugin nav tree; permission-gated auto-hide (admin-config carries `plugins[].nav`; sidebar renders a divided Plugins section, one nesting level, lucide icons by name; client `hasPermission` taught the `plugin:*` wildcard)
-- [ ] Pages under `/admin/plugin/{name}/*` + catch-all `_protected/plugin/$.tsx` (closes Phase 17.5 deferred item)
-- [ ] Per-plugin React error boundaries with localized fallback
+- [x] Pages under `/admin/plugin/{name}/*` + catch-all `_protected/plugin/$.tsx` (closes Phase 17.5 deferred item) — splat keys into code-gen'd `pages` map; lazy-loaded, permission-gated
+- [x] Per-plugin React error boundaries with localized fallback (`PluginErrorBoundary` wraps plugin pages and field renderers; logs with plugin attribution)
 - [ ] Auto-rendered settings page from `admin.settings`
 - [ ] Public exports: `astromech/ui/fields`, `astromech/ui/layout`, `astromech/db`, `useAstromechPlugin()`
 - [ ] Component + i18n code-gen virtual modules; type augmentation in `astromech.d.ts`

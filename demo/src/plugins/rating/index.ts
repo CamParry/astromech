@@ -24,7 +24,21 @@ export const rating = definePlugin(() => ({
                 label: 'Ratings',
                 icon: 'Star',
                 permission: 'plugin:demo-rating:view',
-                children: [{ label: 'Overview', to: '/entries/page', icon: 'ChartBar' }],
+                children: [
+                    {
+                        label: 'Overview',
+                        to: '/plugin/demo-rating/overview',
+                        icon: 'ChartBar',
+                    },
+                ],
+            },
+        ],
+        pages: [
+            {
+                path: '/overview',
+                component: fileURLToPath(new URL('./overview-page.tsx', import.meta.url)),
+                label: 'Ratings Overview',
+                permission: 'plugin:demo-rating:view',
             },
         ],
     },

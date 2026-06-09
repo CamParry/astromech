@@ -360,5 +360,10 @@
         "unauthorized": "You must be logged in to access this page",
         "forbidden": "You do not have permission to access this page",
         "generic": "An unexpected error occurred"
+    },
+    "plugins": {
+        "componentError": "The \"{{plugin}}\" plugin component failed to render.",
+        "pageNotFound": "Plugin page not found",
+        "accessDenied": "You don't have permission to view this page."
     }
 }

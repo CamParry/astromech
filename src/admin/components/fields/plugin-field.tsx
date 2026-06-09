@@ -12,6 +12,7 @@ import React from 'react';
 import { fieldTypes } from 'virtual:astromech/plugins/components';
 import type { BaseFieldProps } from '@/types/index.js';
 import { Spinner } from '@/admin/components/ui/index.js';
+import { PluginErrorBoundary } from '@/admin/components/plugins/PluginErrorBoundary.js';
 
 export function hasPluginFieldType(type: string): boolean {
     return type in fieldTypes;
@@ -62,8 +63,10 @@ function lazyFieldFor(type: string): LazyField {
 export function PluginField(props: BaseFieldProps): React.ReactElement {
     const Lazy = lazyFieldFor(props.field.type);
     return (
-        <React.Suspense fallback={<Spinner size="sm" />}>
-            <Lazy {...props} />
-        </React.Suspense>
+        <PluginErrorBoundary plugin={props.field.type}>
+            <React.Suspense fallback={<Spinner size="sm" />}>
+                <Lazy {...props} />
+            </React.Suspense>
+        </PluginErrorBoundary>
     );
 }
