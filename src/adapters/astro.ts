@@ -27,6 +27,7 @@ import { setDb, getDb } from '@/db/registry.js';
 import { registerBuiltInCronJobs } from '@/cron/index.js';
 import { bootPlugins, registerPlugins } from '@/core/plugin-runtime.js';
 import { collectPluginFieldTypes } from '@/core/plugin-fields.js';
+import { resolvePluginIdentity } from '@/core/plugin-identity.js';
 
 async function runMigrations(logger: {
     info: (msg: string) => void;
@@ -139,6 +140,10 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                                     if (id === '\0virtual:astromech/admin-config') {
                                         const resolvedRoles = resolveRoles(config);
                                         const adminConfig = {
+                                            plugins: (config.plugins ?? []).map((p) => ({
+                                                name: resolvePluginIdentity(p).name,
+                                                nav: p.admin?.nav ?? [],
+                                            })),
                                             adminRoute: resolvedConfig.adminRoute,
                                             apiRoute: resolvedConfig.apiRoute,
                                             locales: resolvedConfig.locales ?? [],

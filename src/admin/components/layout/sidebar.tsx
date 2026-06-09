@@ -9,17 +9,44 @@ import {
     Database,
     ChevronLeft,
     ChevronRight,
+    Puzzle,
+    icons,
 } from 'lucide-react';
 import adminConfig from 'virtual:astromech/admin-config';
+import type { PluginNavItem } from '@/types/index.js';
 import { useUI } from '../../context/ui.js';
 import { usePermissions } from '../../hooks/index.js';
 import { Logo } from '../brand/Brand.js';
 
+/**
+ * Drop nav items the user lacks permission for, recursively. A linkless
+ * parent whose children are all hidden disappears too.
+ */
+function filterNavItems(
+    items: PluginNavItem[],
+    allowed: (permission: string) => boolean
+): PluginNavItem[] {
+    return items
+        .filter((item) => item.permission === undefined || allowed(item.permission))
+        .map((item) => ({
+            ...item,
+            ...(item.children !== undefined && {
+                children: filterNavItems(item.children, allowed),
+            }),
+        }))
+        .filter((item) => item.to !== undefined || (item.children?.length ?? 0) > 0);
+}
+
 export function Sidebar() {
     const { t } = useTranslation();
     const { sidebarOpen, toggleSidebar, setSidebarOpen } = useUI();
-    const { canReadMedia, canReadUsers, canReadSettings } = usePermissions();
+    const { canReadMedia, canReadUsers, canReadSettings, hasPermission } =
+        usePermissions();
     const entryTypes = Object.entries(adminConfig.entries);
+    const pluginNavItems = filterNavItems(
+        adminConfig.plugins.flatMap((plugin) => plugin.nav),
+        hasPermission
+    );
 
     return (
         <aside
@@ -74,6 +101,18 @@ export function Sidebar() {
                         </ul>
                     </nav>
                 )}
+                {pluginNavItems.length > 0 && (
+                    <>
+                        <div className="am-sidebar-nav-divider"></div>
+                        <nav className="am-sidebar-nav" aria-label={t('nav.plugins')}>
+                            <ul className="am-sidebar-nav-list" role="list">
+                                {pluginNavItems.map((item) => (
+                                    <PluginNavEntry key={item.label} item={item} />
+                                ))}
+                            </ul>
+                        </nav>
+                    </>
+                )}
             </div>
             <div className="am-sidebar-end">
                 <nav className="am-sidebar-nav" aria-label={t('nav.system')}>
@@ -112,6 +151,45 @@ export function Sidebar() {
                 </nav>
             </div>
         </aside>
+    );
+}
+
+function PluginNavIcon({ name }: { name?: string | undefined }) {
+    const Icon =
+        name !== undefined ? (icons[name as keyof typeof icons] ?? Puzzle) : Puzzle;
+    return <Icon size={16} />;
+}
+
+function PluginNavEntry({ item }: { item: PluginNavItem }) {
+    const children = item.children ?? [];
+    return (
+        <>
+            {item.to !== undefined ? (
+                <SidebarNavItem
+                    to={item.to}
+                    label={item.label}
+                    icon={<PluginNavIcon name={item.icon} />}
+                />
+            ) : (
+                <li className="am-sidebar-nav-item">
+                    <span className="am-sidebar-nav-item-link am-sidebar-nav-item-static">
+                        <span className="am-sidebar-nav-item-icon">
+                            <PluginNavIcon name={item.icon} />
+                        </span>
+                        <span className="am-sidebar-nav-item-label">{item.label}</span>
+                    </span>
+                </li>
+            )}
+            {children.length > 0 && (
+                <li>
+                    <ul className="am-sidebar-nav-sublist" role="list">
+                        {children.map((child) => (
+                            <PluginNavEntry key={child.label} item={child} />
+                        ))}
+                    </ul>
+                </li>
+            )}
+        </>
     );
 }
 

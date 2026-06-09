@@ -5,7 +5,7 @@
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Permission } from './domain.js';
 import type { FieldGroup } from './fields.js';
-import type { PluginDefinition } from './plugins.js';
+import type { PluginDefinition, PluginNavItem } from './plugins.js';
 
 // ============================================================================
 // Drivers
@@ -141,18 +141,27 @@ export type AdminConfig = {
     apiRoute: string;
     locales: string[];
     defaultLocale: string;
-    roles: Array<{ slug: string; name: string }>;
-    entries: Record<string, {
-        single: string;
-        plural: string;
-        versioning: boolean;
-        translatable: boolean;
-        slug: SlugConfig | null;
-        adminColumns: AdminColumn[];
-        fieldGroups: FieldGroup[];
-        views?: ('list' | 'grid')[];
-        defaultView?: 'list' | 'grid';
-        gridFields?: { field: string; label?: string }[];
-        previewUrl: string | null;
-    }>;
+    roles: { slug: string; name: string }[];
+    entries: Record<
+        string,
+        {
+            single: string;
+            plural: string;
+            versioning: boolean;
+            translatable: boolean;
+            slug: SlugConfig | null;
+            adminColumns: AdminColumn[];
+            fieldGroups: FieldGroup[];
+            views?: ('list' | 'grid')[];
+            defaultView?: 'list' | 'grid';
+            gridFields?: { field: string; label?: string }[];
+            previewUrl: string | null;
+        }
+    >;
+    /** Static plugin metadata for the admin shell (serializable only). */
+    plugins: {
+        /** Access key (resolved identity name). */
+        name: string;
+        nav: PluginNavItem[];
+    }[];
 };

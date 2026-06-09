@@ -45,7 +45,8 @@
         "collapseSidebar": "Collapse sidebar",
         "expandSidebar": "Expand sidebar",
         "primary": "Primary",
-        "system": "System"
+        "system": "System",
+        "plugins": "Plugins"
     },
     "auth": {
         "login": "Log in",
