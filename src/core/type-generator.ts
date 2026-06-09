@@ -6,7 +6,12 @@
  * to the `posts` entry type.
  */
 
-import type { FieldDefinition, FieldGroup, ResolvedConfig } from '@/types/index.js';
+import type {
+    FieldDefinition,
+    FieldGroup,
+    PluginFieldTypeRegistration,
+    ResolvedConfig,
+} from '@/types/index.js';
 
 // ============================================================================
 // Naming Helpers
@@ -38,10 +43,19 @@ const RELATION_TYPES = new Set(['relationship', 'media']);
 
 /**
  * Map a FieldDefinition to its TypeScript type string for the Fields interface.
- * Returns null for unknown or container types (caller should skip them).
+ * Plugin-registered types use their `typeGen` (default `JsonValue`). Returns
+ * null for unknown or container types (caller should skip them).
  */
-function fieldToTsType(field: FieldDefinition): string | null {
+function fieldToTsType(
+    field: FieldDefinition,
+    pluginFieldTypes: Map<string, PluginFieldTypeRegistration>
+): string | null {
     if (CONTAINER_TYPES.has(field.type)) return null;
+
+    const pluginType = pluginFieldTypes.get(field.type);
+    if (pluginType) {
+        return pluginType.typeGen?.(field) ?? "import('astromech').JsonValue";
+    }
 
     switch (field.type) {
         case 'text':
@@ -148,7 +162,8 @@ type CollectionTypeBlock = {
 function generateCollectionTypes(
     collectionKey: string,
     fieldGroups: FieldGroup[],
-    knownCollections: Set<string>
+    knownCollections: Set<string>,
+    pluginFieldTypes: Map<string, PluginFieldTypeRegistration>
 ): CollectionTypeBlock {
     const pascal = toPascalCase(collectionKey);
     const fieldsName = `${pascal}Fields`;
@@ -185,7 +200,7 @@ function generateCollectionTypes(
     // Build Fields interface lines
     const fieldLines: string[] = [];
     for (const field of allFields) {
-        const tsType = fieldToTsType(field);
+        const tsType = fieldToTsType(field, pluginFieldTypes);
         if (tsType === null) continue;
         const optional = field.required === true ? '' : '?';
         fieldLines.push(`  ${field.name}${optional}: ${tsType};`);
@@ -219,15 +234,19 @@ function generateCollectionTypes(
 /**
  * Generate the full content of the `.astro/astromech.d.ts` type declaration file.
  */
-export function generateSdkTypes(config: ResolvedConfig): string {
+export function generateSdkTypes(
+    config: ResolvedConfig,
+    pluginFieldTypes = new Map<string, PluginFieldTypeRegistration>()
+): string {
     const collectionKeys = Object.keys(config.entries);
     const knownCollections = new Set(collectionKeys);
 
-    const blocks = collectionKeys.map((key) =>
+    const blocks = Object.entries(config.entries).map(([key, entryType]) =>
         generateCollectionTypes(
             key,
-            config.entries[key]!.fieldGroups,
-            knownCollections
+            entryType.fieldGroups,
+            knownCollections,
+            pluginFieldTypes
         )
     );
 

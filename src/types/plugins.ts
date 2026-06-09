@@ -149,11 +149,22 @@ export type PluginAdmin = {
     settings?: PluginSettingsSchema;
 };
 
-/** Custom field type registration (renderer wired in 18b). */
+/**
+ * Custom field type registration. The renderer module (resolved from the
+ * `component` import specifier by the code-gen virtual module) must default-
+ * export a component taking the standard field props (`BaseFieldProps`), and
+ * may export `validate(value, field)` returning an error message or
+ * `undefined`.
+ */
 export type PluginFieldTypeRegistration = {
+    /** Field type key, e.g. `seo-meta`. Colliding with a core type or another plugin is a build error. */
     type: string;
-    /** Import specifier (STRING) for the renderer component. */
+    /** Import specifier (STRING) for the renderer module. */
     component: string;
+    /** Serializable value shown when the field has no stored value yet. */
+    defaultValue?: unknown;
+    /** TS type for generated entry `Fields` interfaces. Defaults to `JsonValue`. */
+    typeGen?: (field: FieldDefinition) => string;
 };
 
 // ============================================================================

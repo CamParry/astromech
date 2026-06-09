@@ -498,7 +498,7 @@ Architecture fully designed and locked — see [`specs/plugin-architecture.md`](
 ### 18b — Plugin Admin UI
 
 - [x] Field-group `placement: 'tab'` + edit-page tab strip (renamed `FieldGroup.location` → `placement` per spec terminology; shared `FieldGroupPanel`/`FieldGroupTabs` components)
-- [ ] `registerFieldType` (renderer + validator + defaultValue + typeGen)
+- [x] `registerFieldType` (renderer + validator + defaultValue + typeGen) — declarative `fields: []` registrations; renderers lazy-load via the code-gen `virtual:astromech/plugins/components`; core-type/cross-plugin collisions crash at config resolution
 - [ ] Plugin nav tree; permission-gated auto-hide
 - [ ] Pages under `/admin/plugin/{name}/*` + catch-all `_protected/plugin/$.tsx` (closes Phase 17.5 deferred item)
 - [ ] Per-plugin React error boundaries with localized fallback

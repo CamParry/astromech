@@ -8,33 +8,42 @@ import type { Entry } from './domain.js';
 // Field Types
 // ============================================================================
 
-export type FieldType =
-    | 'text'
-    | 'textarea'
-    | 'richtext'
-    | 'number'
-    | 'boolean'
-    | 'date'
-    | 'datetime'
-    | 'select'
-    | 'multiselect'
-    | 'media'
-    | 'relationship'
-    | 'json'
-    | 'group'
-    | 'repeater'
-    | 'blocks'
-    | 'email'
-    | 'url'
-    | 'color'
-    | 'slug'
-    | 'range'
-    | 'checkbox-group'
-    | 'radio-group'
-    | 'link'
-    | 'key-value'
-    | 'accordion'
-    | 'tab';
+export const CORE_FIELD_TYPES = [
+    'text',
+    'textarea',
+    'richtext',
+    'number',
+    'boolean',
+    'date',
+    'datetime',
+    'select',
+    'multiselect',
+    'media',
+    'relationship',
+    'json',
+    'group',
+    'repeater',
+    'blocks',
+    'email',
+    'url',
+    'color',
+    'slug',
+    'range',
+    'checkbox-group',
+    'radio-group',
+    'link',
+    'key-value',
+    'accordion',
+    'tab',
+] as const;
+
+export type FieldType = (typeof CORE_FIELD_TYPES)[number];
+
+/**
+ * A field's `type` — a core type (autocompleted) or a plugin-registered
+ * custom type. The intersection keeps literal autocomplete working.
+ */
+export type AnyFieldType = FieldType | (string & Record<never, never>);
 
 export type SelectOption = {
     value: string;
@@ -61,7 +70,7 @@ export type ValidationRule =
 
 export type FieldDefinition = {
     name: string;
-    type: FieldType;
+    type: AnyFieldType;
     label?: string;
     required?: boolean;
     defaultValue?: unknown;

@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig, FilesystemStorage, libsqlDriver } from 'astromech';
 import { redirects } from 'astromech/plugins/redirects';
+import { rating } from './src/plugins/rating/index.js';
 
 export default defineConfig({
     db: libsqlDriver({
@@ -9,7 +10,7 @@ export default defineConfig({
     storage: new FilesystemStorage({ dir: './public/uploads' }),
     locales: ['en', 'fr'],
     defaultLocale: 'en',
-    plugins: [redirects()],
+    plugins: [redirects(), rating()],
     entries: {
         page: {
             single: 'Page',
@@ -63,6 +64,11 @@ export default defineConfig({
                             name: 'metaDescription',
                             type: 'textarea',
                             label: 'Meta Description',
+                        },
+                        {
+                            name: 'contentQuality',
+                            type: 'rating',
+                            label: 'Content Quality',
                         },
                     ],
                 },

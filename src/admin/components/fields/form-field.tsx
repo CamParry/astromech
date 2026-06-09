@@ -27,6 +27,7 @@ import { KeyValueField } from './key-value-field';
 import { AccordionField } from './accordion-field';
 import { TabField } from './tab-field';
 import { BlocksField } from './blocks-field';
+import { hasPluginFieldType, PluginField } from './plugin-field';
 
 export type FormFieldProps = {
     field: FieldDefinition;
@@ -109,6 +110,9 @@ export function FormField({
             case 'blocks':
                 return <BlocksField {...commonProps} />;
             default:
+                if (hasPluginFieldType(field.type)) {
+                    return <PluginField {...commonProps} />;
+                }
                 return (
                     <Input
                         type="text"
