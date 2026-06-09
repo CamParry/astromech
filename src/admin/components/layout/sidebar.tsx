@@ -160,36 +160,141 @@ function PluginNavIcon({ name }: { name?: string | undefined }) {
     return <Icon size={16} />;
 }
 
+/** True when the pathname matches this item's link or any descendant's. */
+function navItemContains(item: PluginNavItem, pathname: string): boolean {
+    if (
+        item.to !== undefined &&
+        (pathname === item.to || pathname.startsWith(item.to + '/'))
+    ) {
+        return true;
+    }
+    return (item.children ?? []).some((child) => navItemContains(child, pathname));
+}
+
 function PluginNavEntry({ item }: { item: PluginNavItem }) {
     const children = item.children ?? [];
+    const onlyChild = children.length === 1 ? children[0] : undefined;
+
+    // A linkless group with a single leaf child flattens to one top-level
+    // link — parent's label and icon, child's destination.
+    if (
+        item.to === undefined &&
+        onlyChild !== undefined &&
+        onlyChild.to !== undefined &&
+        (onlyChild.children?.length ?? 0) === 0
+    ) {
+        return (
+            <SidebarNavItem
+                to={onlyChild.to}
+                label={item.label}
+                icon={<PluginNavIcon name={item.icon ?? onlyChild.icon} />}
+            />
+        );
+    }
+
+    if (children.length === 0) {
+        if (item.to === undefined) return null;
+        return (
+            <SidebarNavItem
+                to={item.to}
+                label={item.label}
+                icon={<PluginNavIcon name={item.icon} />}
+            />
+        );
+    }
+
+    return <PluginNavGroup item={item} children_={children} />;
+}
+
+function PluginNavGroup({
+    item,
+    children_,
+}: {
+    item: PluginNavItem;
+    children_: PluginNavItem[];
+}) {
+    const { t } = useTranslation();
+    const { sidebarOpen, setSidebarOpen } = useUI();
+    const pathname = useRouterState().location.pathname;
+    const childActive = children_.some((child) => navItemContains(child, pathname));
+    const [expanded, setExpanded] = React.useState(childActive);
+
+    React.useEffect(() => {
+        if (childActive) setExpanded(true);
+    }, [childActive]);
+
+    const handleToggle = () => {
+        // In icon-only mode children are hidden, so open the sidebar instead
+        // of toggling into an invisible state.
+        if (!sidebarOpen) {
+            setSidebarOpen(true);
+            setExpanded(true);
+            return;
+        }
+        setExpanded((value) => !value);
+    };
+
+    // The parent stands in for its children while they're hidden.
+    const parentActive = childActive && (!expanded || !sidebarOpen);
+    const parentExact = item.to !== undefined && pathname === item.to;
+
     return (
-        <>
+        <li
+            className={
+                'am-sidebar-nav-item' +
+                (parentActive || parentExact ? ' am-sidebar-nav-item-active' : '')
+            }
+        >
             {item.to !== undefined ? (
-                <SidebarNavItem
-                    to={item.to}
-                    label={item.label}
-                    icon={<PluginNavIcon name={item.icon} />}
-                />
-            ) : (
-                <li className="am-sidebar-nav-item">
-                    <span className="am-sidebar-nav-item-link am-sidebar-nav-item-static">
+                <div className="am-sidebar-nav-group-row">
+                    <Link
+                        to={item.to}
+                        className="am-sidebar-nav-item-link"
+                        aria-current={parentExact ? 'page' : undefined}
+                    >
                         <span className="am-sidebar-nav-item-icon">
                             <PluginNavIcon name={item.icon} />
                         </span>
                         <span className="am-sidebar-nav-item-label">{item.label}</span>
+                    </Link>
+                    <button
+                        type="button"
+                        className="am-sidebar-nav-group-chevron"
+                        aria-expanded={expanded}
+                        aria-label={
+                            expanded
+                                ? t('nav.collapseSection', { section: item.label })
+                                : t('nav.expandSection', { section: item.label })
+                        }
+                        onClick={handleToggle}
+                    >
+                        <ChevronRight size={14} />
+                    </button>
+                </div>
+            ) : (
+                <button
+                    type="button"
+                    className="am-sidebar-nav-item-link am-sidebar-nav-group-toggle"
+                    aria-expanded={expanded}
+                    onClick={handleToggle}
+                >
+                    <span className="am-sidebar-nav-item-icon">
+                        <PluginNavIcon name={item.icon} />
                     </span>
-                </li>
+                    <span className="am-sidebar-nav-item-label">{item.label}</span>
+                    <span className="am-sidebar-nav-item-chevron">
+                        <ChevronRight size={14} />
+                    </span>
+                </button>
             )}
-            {children.length > 0 && (
-                <li>
-                    <ul className="am-sidebar-nav-sublist" role="list">
-                        {children.map((child) => (
-                            <PluginNavEntry key={child.label} item={child} />
-                        ))}
-                    </ul>
-                </li>
+            {expanded && (
+                <ul className="am-sidebar-nav-sublist" role="list">
+                    {children_.map((child) => (
+                        <PluginNavEntry key={child.label} item={child} />
+                    ))}
+                </ul>
             )}
-        </>
+        </li>
     );
 }
 

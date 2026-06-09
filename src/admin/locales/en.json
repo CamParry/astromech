@@ -44,6 +44,8 @@
         "closeNav": "Close navigation",
         "collapseSidebar": "Collapse sidebar",
         "expandSidebar": "Expand sidebar",
+        "collapseSection": "Collapse {{section}}",
+        "expandSection": "Expand {{section}}",
         "primary": "Primary",
         "system": "System",
         "plugins": "Plugins"

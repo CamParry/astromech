@@ -70,13 +70,76 @@
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    padding-top: 0.25rem;
     padding-left: 1.5rem;
     list-style: none;
 }
 
-/* Linkless plugin nav group label */
-.am-sidebar-nav-item-static {
-    cursor: default;
+/* Linkless plugin nav group header — full row toggles expansion */
+.am-sidebar-nav-group-toggle {
+    width: 100%;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    background: none;
+    border: none;
+}
+
+.am-sidebar-nav-item-chevron {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    transition: transform var(--am-duration-base) var(--am-easing);
+}
+
+.am-sidebar-nav-group-toggle[aria-expanded='true'] .am-sidebar-nav-item-chevron,
+.am-sidebar-nav-group-chevron[aria-expanded='true'] {
+    transform: rotate(90deg);
+}
+
+/* Linked group header — link and chevron are separate targets */
+.am-sidebar-nav-group-row {
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+
+    & > .am-sidebar-nav-item-link {
+        flex: 1;
+    }
+}
+
+.am-sidebar-nav-group-chevron {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2.25rem;
+    color: var(--am-color-text-muted);
+    cursor: pointer;
+    background: none;
+    border: none;
+    border-radius: var(--am-radius-md);
+    transition:
+        background-color var(--am-duration-base) var(--am-easing),
+        color var(--am-duration-base) var(--am-easing),
+        transform var(--am-duration-base) var(--am-easing);
+}
+
+@media (hover: hover) {
+    .am-sidebar-nav-group-chevron:hover {
+        color: var(--am-color-text-default);
+        background-color: var(--am-color-bg-subtle);
+    }
+}
+
+/* Icon-only sidebar: children and chevrons are unreachable until expanded */
+.am-shell[data-sidebar-open='false'] .am-sidebar-nav-sublist,
+.am-shell[data-sidebar-open='false'] .am-sidebar-nav-item-chevron,
+.am-shell[data-sidebar-open='false'] .am-sidebar-nav-group-chevron {
+    display: none;
 }
 
 .am-sidebar-nav-item {
@@ -110,8 +173,8 @@
     justify-content: center;
 }
 
-.am-sidebar-nav-item-active .am-sidebar-nav-item-link,
-.am-sidebar-nav-item[aria-current='page'] .am-sidebar-nav-item-link {
+.am-sidebar-nav-item-active > .am-sidebar-nav-item-link,
+.am-sidebar-nav-item-active > .am-sidebar-nav-group-row > .am-sidebar-nav-item-link {
     color: var(--am-color-primary-emphasis);
     background-color: var(--am-color-primary-subtle);
 
