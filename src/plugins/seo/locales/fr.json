@@ -1,0 +1,39 @@
+{
+    "field": {
+        "titleLabel": "Titre meta",
+        "descriptionLabel": "Description meta",
+        "counter": "{{length}} / {{max}}",
+        "status": {
+            "empty": "Pas encore défini",
+            "short": "Un peu court — visez au moins {{min}} caractères",
+            "good": "Bonne longueur",
+            "long": "Trop long — les moteurs de recherche peuvent tronquer au-delà de {{max}} caractères"
+        },
+        "previewCaption": "Aperçu de recherche",
+        "previewTitlePlaceholder": "Aperçu du titre meta",
+        "previewDescriptionPlaceholder": "La description meta apparaîtra ici telle qu'elle serait affichée dans les résultats de recherche."
+    },
+    "overview": {
+        "loadError": "Impossible de charger l'aperçu SEO.",
+        "emptyTitle": "Rien à analyser",
+        "emptyDescription": "Aucun type d'entrée n'inclut encore le champ seo-meta. Ajoutez seoFields() aux fieldGroups d'un type d'entrée.",
+        "totals": {
+            "entries": "Entrées",
+            "complete": "Complètes",
+            "needsAttention": "À améliorer"
+        },
+        "columns": {
+            "entry": "Entrée",
+            "type": "Type",
+            "status": "Statut",
+            "metaTitle": "Titre meta",
+            "metaDescription": "Description meta"
+        },
+        "health": {
+            "empty": "Manquant",
+            "short": "Court",
+            "good": "Bon",
+            "long": "Trop long"
+        }
+    }
+}

@@ -16,6 +16,7 @@ export default defineConfig([
             'db/plugin-helpers': 'src/db/plugin-helpers.ts',
             'email/index': 'src/email/index.ts',
             'plugins/redirects/index': 'src/plugins/redirects/index.ts',
+            'plugins/seo/index': 'src/plugins/seo/index.ts',
         },
         format: ['esm'],
         dts: true,

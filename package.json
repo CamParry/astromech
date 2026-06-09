@@ -64,6 +64,10 @@
             "types": "./dist/plugins/redirects/index.d.ts",
             "default": "./dist/plugins/redirects/index.js"
         },
+        "./plugins/seo": {
+            "types": "./dist/plugins/seo/index.d.ts",
+            "default": "./dist/plugins/seo/index.js"
+        },
         "./ui/fields": {
             "types": "./dist/admin/components/fields/index.d.ts",
             "default": "./dist/admin/components/fields/index.js"

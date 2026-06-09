@@ -1,0 +1,39 @@
+{
+    "field": {
+        "titleLabel": "Meta title",
+        "descriptionLabel": "Meta description",
+        "counter": "{{length}} / {{max}}",
+        "status": {
+            "empty": "Not set yet",
+            "short": "A bit short — aim for at least {{min}} characters",
+            "good": "Good length",
+            "long": "Too long — search engines may truncate past {{max}} characters"
+        },
+        "previewCaption": "Search preview",
+        "previewTitlePlaceholder": "Meta title preview",
+        "previewDescriptionPlaceholder": "The meta description will be shown here as it would appear in search results."
+    },
+    "overview": {
+        "loadError": "Could not load the SEO overview.",
+        "emptyTitle": "Nothing to analyse",
+        "emptyDescription": "No entry types include the seo-meta field yet. Add seoFields() to an entry type's fieldGroups.",
+        "totals": {
+            "entries": "Entries",
+            "complete": "Complete",
+            "needsAttention": "Needs attention"
+        },
+        "columns": {
+            "entry": "Entry",
+            "type": "Type",
+            "status": "Status",
+            "metaTitle": "Meta title",
+            "metaDescription": "Meta description"
+        },
+        "health": {
+            "empty": "Missing",
+            "short": "Short",
+            "good": "Good",
+            "long": "Too long"
+        }
+    }
+}

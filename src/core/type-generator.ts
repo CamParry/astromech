@@ -161,6 +161,11 @@ type CollectionTypeBlock = {
     relationsType: string;
 };
 
+/** Quote property names that aren't valid TS identifiers (e.g. `seo-meta`). */
+function propertyKey(name: string): string {
+    return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name) ? name : JSON.stringify(name);
+}
+
 function generateCollectionTypes(
     collectionKey: string,
     fieldGroups: FieldGroup[],
@@ -205,7 +210,7 @@ function generateCollectionTypes(
         const tsType = fieldToTsType(field, pluginFieldTypes);
         if (tsType === null) continue;
         const optional = field.required === true ? '' : '?';
-        fieldLines.push(`  ${field.name}${optional}: ${tsType};`);
+        fieldLines.push(`  ${propertyKey(field.name)}${optional}: ${tsType};`);
     }
 
     const fieldsInterface =
@@ -218,7 +223,7 @@ function generateCollectionTypes(
     for (const field of allFields) {
         const relType = fieldToRelationType(field, knownCollections);
         if (relType === null) continue;
-        relationLines.push(`  ${field.name}: ${relType};`);
+        relationLines.push(`  ${propertyKey(field.name)}: ${relType};`);
     }
 
     const relationsType =

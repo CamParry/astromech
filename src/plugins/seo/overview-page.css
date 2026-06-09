@@ -1,0 +1,43 @@
+/* SEO overview dashboard (@astromech/seo) */
+
+.am-seo-overview {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.am-seo-overview-totals {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+.am-seo-overview-total {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 1rem;
+    background-color: var(--am-color-bg-base);
+    border: 1px solid var(--am-color-border);
+    border-radius: var(--am-radius-lg);
+}
+
+.am-seo-overview-total-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--am-color-text-default);
+}
+
+.am-seo-overview-total-value--good {
+    color: var(--am-color-success);
+}
+
+.am-seo-overview-total-value--attention {
+    color: var(--am-color-warning);
+}
+
+.am-seo-overview-total-label {
+    font-size: 0.8125rem;
+    color: var(--am-color-text-muted);
+}

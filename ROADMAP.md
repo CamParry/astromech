@@ -505,7 +505,7 @@ Architecture fully designed and locked — see [`specs/plugin-architecture.md`](
 - [x] Auto-rendered settings page from `admin.settings` — served by the `/plugin/$` catch-all at `{name}/settings`; keys namespaced `plugin:<permissionNamespace>:<key>` in the core settings table; save gated on `settings:update`
 - [x] Public exports: `astromech/ui/fields`, `astromech/ui/layout`, `astromech/db`, `useAstromechPlugin()` — browser entries vite-alias to package src so plugin components share module identity (React context) with the admin app
 - [x] Component + i18n code-gen virtual modules; type augmentation in `astromech.d.ts` — i18n declared as string specifiers (spec §38 implementation note); lazy bundles load into per-plugin namespaces; generated d.ts augments `AstromechPluginSdks` (method names) + `AstromechPluginHookEvents`
-- [ ] **Ship `@astromech/seo`** — `seo-meta` field type + edit-page panel + dashboard + settings + sitemap/OG via SDK + length recommendations (non-AI)
+- [x] **Ship `@astromech/seo`** — `seo-meta` field type + edit-page panel + dashboard + settings + sitemap/OG via SDK + length recommendations (non-AI) (`src/plugins/seo/`: `seoFields()` tab-group factory + counter/preview renderer composing `astromech/ui` atoms; overview dashboard fed by a permission-gated `overview` SDK method; `defaultOgImage` media setting read by public `meta`; `sitemap` covers the derived footprint; README sitemap/meta recipes; components declared as `@/plugins/seo/*` specifiers — first hyphenated field name, so the type generator now quotes non-identifier keys)
 
 ### 18c — Compositional Integrations
 

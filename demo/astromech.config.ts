@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig, FilesystemStorage, libsqlDriver } from 'astromech';
 import { redirects } from 'astromech/plugins/redirects';
+import { seo, seoFields } from 'astromech/plugins/seo';
 import { rating } from './src/plugins/rating/index.js';
 
 export default defineConfig({
@@ -10,7 +11,7 @@ export default defineConfig({
     storage: new FilesystemStorage({ dir: './public/uploads' }),
     locales: ['en', 'fr'],
     defaultLocale: 'en',
-    plugins: [redirects(), rating()],
+    plugins: [redirects(), seo(), rating()],
     entries: {
         page: {
             single: 'Page',
@@ -49,29 +50,7 @@ export default defineConfig({
                         },
                     ],
                 },
-                {
-                    name: 'seo',
-                    label: 'SEO',
-                    placement: 'tab',
-                    priority: 0,
-                    fields: [
-                        {
-                            name: 'metaTitle',
-                            type: 'text',
-                            label: 'Meta Title',
-                        },
-                        {
-                            name: 'metaDescription',
-                            type: 'textarea',
-                            label: 'Meta Description',
-                        },
-                        {
-                            name: 'contentQuality',
-                            type: 'rating',
-                            label: 'Content Quality',
-                        },
-                    ],
-                },
+                seoFields({ priority: 0 }),
                 {
                     name: 'social',
                     label: 'Social Sharing',
@@ -87,6 +66,11 @@ export default defineConfig({
                             name: 'ogImage',
                             type: 'media',
                             label: 'Open Graph Image',
+                        },
+                        {
+                            name: 'contentQuality',
+                            type: 'rating',
+                            label: 'Content Quality',
                         },
                     ],
                 },
@@ -189,6 +173,7 @@ export default defineConfig({
                         { name: 'excerpt', type: 'textarea' },
                     ],
                 },
+                seoFields(),
                 {
                     name: 'taxonomy',
                     label: 'Taxonomy',
