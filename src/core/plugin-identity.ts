@@ -121,29 +121,37 @@ export function satisfiesRange(version: string, range: string): boolean {
 
 /**
  * Validate `dependsOn` declarations across the loaded plugin set: each
- * dependency must be present, and (when both versions are known) satisfy the
- * declared range. No auto-install / negotiation. Throws a build error on
- * failure.
+ * dependency must be present, satisfy the declared range (when both versions
+ * are known), and appear *before* its dependent in `plugins: []` — execution
+ * order is array order, so dependencies must resolve first. No auto-install /
+ * negotiation / reordering. Throws a build error on failure.
  */
 export function checkPluginDependencies(defs: PluginDefinition[]): void {
-    const byPackage = new Map<string, PluginDefinition>();
-    for (const def of defs) {
-        byPackage.set(def.package, def);
+    const indexByPackage = new Map<string, number>();
+    for (const [index, def] of defs.entries()) {
+        indexByPackage.set(def.package, index);
     }
 
-    for (const def of defs) {
+    for (const [index, def] of defs.entries()) {
         for (const [depPackage, range] of Object.entries(def.dependsOn ?? {})) {
-            const dep = byPackage.get(depPackage);
-            if (!dep) {
+            const depIndex = indexByPackage.get(depPackage);
+            if (depIndex === undefined) {
                 throw new Error(
                     `Astromech plugin "${def.package}" depends on "${depPackage}", which is not installed. ` +
                         `Add it to your \`plugins\` array.`
                 );
             }
+            const dep = defs[depIndex]!;
             if (dep.version !== undefined && !satisfiesRange(dep.version, range)) {
                 throw new Error(
                     `Astromech plugin "${def.package}" requires "${depPackage}@${range}", ` +
                         `but version ${dep.version} is installed.`
+                );
+            }
+            if (depIndex > index) {
+                throw new Error(
+                    `Astromech plugin "${def.package}" depends on "${depPackage}", which is listed after it ` +
+                        `in \`plugins\`. Plugins load in array order — move "${depPackage}" before "${def.package}".`
                 );
             }
         }

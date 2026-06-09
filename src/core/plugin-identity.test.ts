@@ -103,11 +103,11 @@ describe('satisfiesRange', () => {
 });
 
 describe('checkPluginDependencies', () => {
-    it('passes when a declared dependency is present and in range', () => {
+    it('passes when a declared dependency is present, in range, and listed first', () => {
         expect(() =>
             checkPluginDependencies([
-                def({ package: '@astromech/forms', dependsOn: { '@astromech/seo': '^1.0.0' } }),
                 def({ package: '@astromech/seo', version: '1.4.0' }),
+                def({ package: '@astromech/forms', dependsOn: { '@astromech/seo': '^1.0.0' } }),
             ])
         ).not.toThrow();
     });
@@ -123,18 +123,27 @@ describe('checkPluginDependencies', () => {
     it('throws when an installed dependency is out of range', () => {
         expect(() =>
             checkPluginDependencies([
-                def({ package: '@astromech/forms', dependsOn: { '@astromech/seo': '^2.0.0' } }),
                 def({ package: '@astromech/seo', version: '1.4.0' }),
+                def({ package: '@astromech/forms', dependsOn: { '@astromech/seo': '^2.0.0' } }),
             ])
         ).toThrow(/version 1\.4\.0/i);
     });
 
-    it('only checks existence when the dependency declares no version', () => {
+    it('only checks existence and ordering when the dependency declares no version', () => {
         expect(() =>
             checkPluginDependencies([
-                def({ package: '@astromech/forms', dependsOn: { '@astromech/seo': '^2.0.0' } }),
                 def({ package: '@astromech/seo' }),
+                def({ package: '@astromech/forms', dependsOn: { '@astromech/seo': '^2.0.0' } }),
             ])
         ).not.toThrow();
+    });
+
+    it('throws when a dependency is listed after its dependent', () => {
+        expect(() =>
+            checkPluginDependencies([
+                def({ package: '@astromech/forms', dependsOn: { '@astromech/seo': '^1.0.0' } }),
+                def({ package: '@astromech/seo', version: '1.4.0' }),
+            ])
+        ).toThrow(/move "@astromech\/seo" before "@astromech\/forms"/i);
     });
 });

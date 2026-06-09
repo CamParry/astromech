@@ -490,7 +490,7 @@ Architecture fully designed and locked — see [`specs/plugin-architecture.md`](
 - [x] Plugin Drizzle schema collection + `plugin_{alias}_` prefix convention guard (crash-loud at config resolution)
 - [ ] `db:generate`/`db:migrate` CLI wrappers feeding plugin schemas to drizzle-kit (SQLite-only) — **deferred** until the first table-shipping plugin exists to validate against; no v1 plugin ships tables ("build the road, drive later")
 - [ ] Failure isolation (boot crash-loud; before-aborts/after-swallows; per-request & per-job containment)
-- [ ] `dependsOn` existence + semver checks; ordering by `plugins: []`
+- [x] `dependsOn` existence + semver checks; ordering by `plugins: []` (dependency must be listed before its dependent — crash-loud)
 - [ ] Non-UI code-gen virtual modules (`local`, `fetch`, `server`)
 - [ ] **Ship `@astromech/redirects`** — redirect entry type + slug-change `entry:afterUpdate` hook + `lookup` SDK; near-zero UI
 
