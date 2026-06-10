@@ -73,6 +73,10 @@ const noopDriver: DatabaseDriver = {
  * - `post`: titled, versioning on, translatable on, slug on, with a text field,
  *   a non-translatable field, and a relationship field targeting `post`.
  * - `note`: titled, versioning off, translatable off.
+ * - `snippet`: titleless, statuses off, slug off — the titleField:false testbed.
+ * - `card`: titleless with slug capability on — exercises explicit slugs on a
+ *   titleless type. Has a relationship field targeting `post` so titled →
+ *   titleless and titled → titled incoming relations are both reachable.
  * Two locales (en default + de) so translation flows are exercisable.
  */
 export function makeTestConfig(): AstromechConfig {
@@ -129,6 +133,56 @@ export function makeTestConfig(): AstromechConfig {
                         label: 'Content',
                         placement: 'main',
                         fields: [{ name: 'body', type: 'text', label: 'Body' }],
+                    },
+                ],
+            },
+            snippet: {
+                single: 'Snippet',
+                plural: 'Snippets',
+                titleField: false,
+                statuses: false,
+                slug: false,
+                fieldGroups: [
+                    {
+                        name: 'main',
+                        label: 'Snippet',
+                        placement: 'main',
+                        fields: [
+                            { name: 'key', type: 'text', label: 'Key' },
+                            { name: 'value', type: 'text', label: 'Value' },
+                        ],
+                    },
+                ],
+            },
+            card: {
+                single: 'Card',
+                plural: 'Cards',
+                titleField: false,
+                fieldGroups: [
+                    {
+                        name: 'main',
+                        label: 'Card',
+                        placement: 'main',
+                        fields: [{ name: 'label', type: 'text', label: 'Label' }],
+                    },
+                ],
+            },
+            bookmark: {
+                single: 'Bookmark',
+                plural: 'Bookmarks',
+                fieldGroups: [
+                    {
+                        name: 'relations',
+                        label: 'Relations',
+                        placement: 'main',
+                        fields: [
+                            {
+                                name: 'snippet',
+                                type: 'relationship',
+                                label: 'Snippet',
+                                target: 'snippet',
+                            },
+                        ],
                     },
                 ],
             },

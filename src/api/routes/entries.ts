@@ -23,8 +23,9 @@ import type {
     SortOption,
 } from '@/types/index.js';
 import {
-    createEntrySchema,
     updateEntrySchema,
+    createEntrySchemaFor,
+    updateEntrySchemaFor,
     scheduleEntrySchema,
 } from '@/schemas/entries.js';
 
@@ -108,6 +109,10 @@ function getTypeCapabilities(type: string) {
     return Astromech.config.entries[type]?.capabilities;
 }
 
+function getTypeTitleField(type: string): 'title' | false {
+    return Astromech.config.entries[type]?.titleField ?? 'title';
+}
+
 function capabilityDenied(
     c: Parameters<typeof forbidden>[0],
     type: string,
@@ -123,6 +128,16 @@ function capabilityDenied(
         },
         409
     );
+}
+
+/**
+ * Reproduce OpenAPIHono's default request-validation envelope. Body validation
+ * is per-type (titled vs titleless), so it happens in the handler rather than
+ * the route's static schema; titled types must still fail with the exact same
+ * `{ success: false, error }` 400 they did when the route schema validated them.
+ */
+function zodValidationError(c: Parameters<typeof forbidden>[0], err: z.ZodError): Response {
+    return c.json({ success: false, error: err }, 400);
 }
 
 const bulkIdsSchema = z.object({
@@ -284,13 +299,20 @@ router.openapi(getEntryRoute, async (c) => {
 // POST /entries/:type
 // ============================================================================
 
+// The route body is validated per entry type in the handler (titled vs
+// titleless). The OpenAPI registration advertises the titled schema (the
+// documented default); the handler runs the type-specific schema and emits the
+// same `{ success: false, error }` envelope OpenAPIHono's validator would, so
+// titled types behave byte-for-byte as before while titleless types are admitted.
 const createEntryRoute = createRoute({
     method: 'post',
     path: '/{type}',
     request: {
         params: z.object({ type: z.string().openapi({ example: 'post' }) }),
         body: {
-            content: { 'application/json': { schema: createEntrySchema } },
+            content: {
+                'application/json': { schema: createEntrySchemaFor(false) },
+            },
             required: true,
         },
     },
@@ -309,8 +331,8 @@ router.openapi(createEntryRoute, async (c) => {
 
     try {
         const raw = await c.req.json();
-        const parsed = createEntrySchema.safeParse(raw);
-        if (!parsed.success) return fromZodError(c, parsed.error);
+        const parsed = createEntrySchemaFor(getTypeTitleField(type)).safeParse(raw);
+        if (!parsed.success) return zodValidationError(c, parsed.error);
 
         const caps = getTypeCapabilities(type);
 
@@ -330,7 +352,7 @@ router.openapi(createEntryRoute, async (c) => {
 
         const entry = await Astromech.entries.create({
             type,
-            title,
+            ...(title !== undefined && { title }),
             ...(slug !== undefined && { slug }),
             ...(locale !== undefined && { locale }),
             ...(localeGroup !== undefined && { localeGroup }),
@@ -654,7 +676,9 @@ const updateEntryRoute = createRoute({
             id: z.string().openapi({ example: 'clx1234abc' }),
         }),
         body: {
-            content: { 'application/json': { schema: updateEntrySchema } },
+            content: {
+                'application/json': { schema: updateEntrySchemaFor(false) },
+            },
             required: true,
         },
     },
@@ -673,7 +697,7 @@ router.openapi(updateEntryRoute, async (c) => {
 
     try {
         const raw = await c.req.json();
-        const parsed = updateEntrySchema.safeParse(raw);
+        const parsed = updateEntrySchemaFor(getTypeTitleField(type)).safeParse(raw);
         if (!parsed.success) return fromZodError(c, parsed.error);
 
         const caps = getTypeCapabilities(type);

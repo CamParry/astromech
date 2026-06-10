@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import adminConfig from 'virtual:astromech/admin-config';
 import type { BaseFieldProps } from '@/types/index.js';
 import { Astromech } from '@/sdk/fetch/index.js';
 import { MultiSelect } from '@/admin/components/ui/multi-select.js';
@@ -14,6 +15,9 @@ export function RelationshipField({ name, value, field, required, onChange, disa
     const { t } = useTranslation();
     const target = field.target || '';
     const multiple = field.multiple || false;
+    // When the target is a titleless entry type, never fall back to a field
+    // value for the label (data-leak rule) — show the entry id instead.
+    const targetTitleless = adminConfig.entries[target]?.titleField === false;
     const [options, setOptions] = useState<EntryOption[]>([]);
 
     useEffect(() => {
@@ -37,7 +41,7 @@ export function RelationshipField({ name, value, field, required, onChange, disa
             options={options}
             value={currentValue}
             itemToStringValue={(e) => e.id}
-            itemToStringLabel={(e) => e.title}
+            itemToStringLabel={(e) => (targetTitleless ? e.id : e.title)}
             multiple={multiple}
             name={name}
             required={!!required}

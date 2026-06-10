@@ -92,7 +92,11 @@ export function DeleteEntryModal({
                     : t('entries.confirmDeleteMessage', { name: typeLabel.toLowerCase() })}
             </p>
             <p>
-                <strong>{entry.title}</strong>{' '}
+                {entry.title ? (
+                    <strong>{entry.title}</strong>
+                ) : (
+                    <strong className="am-text-mono">{entry.id}</strong>
+                )}{' '}
                 <span className="am-text-muted am-text-sm">
                     ({entry.locale.toUpperCase()})
                 </span>
@@ -127,7 +131,7 @@ export function DeleteEntryModal({
                             >
                                 {(incoming ?? []).slice(0, 10).map((r: IncomingRelation) => (
                                     <li key={`${r.sourceId}-${r.name}`}>
-                                        {r.sourceTitle}{' '}
+                                        {r.sourceTitle || r.sourceId}{' '}
                                         <span className="am-text-mono">
                                             ({r.sourceType}.{r.name})
                                         </span>

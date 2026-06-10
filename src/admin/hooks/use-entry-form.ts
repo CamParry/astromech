@@ -32,13 +32,20 @@ export type EntryPayload = {
     title: string;
     slug?: string;
     fields: JsonObject;
-    status: EntryStatus;
+    /** Omitted for statuses-off types so the API doesn't 409 on a status write. */
+    status?: EntryStatus;
     publishAt?: Date | null;
 };
 
 type UseEntryFormOptions = {
     /** Whether this collection has a slug field. */
     hasSlug: boolean;
+    /**
+     * Whether the statuses capability is on. When off, the payload omits
+     * `status`/`publishAt` so the API doesn't 409 on a statuses-off type.
+     * Defaults to true (titled/standard types are unaffected).
+     */
+    hasStatuses?: boolean;
     /** Initial form values; defaults to empty/draft. */
     defaultValues?: Partial<EntryFormValues>;
     /**
@@ -63,6 +70,7 @@ type UseEntryFormOptions = {
 
 export function useEntryForm({
     hasSlug,
+    hasStatuses = true,
     defaultValues,
     saveFn,
     publishFn,
@@ -92,12 +100,14 @@ export function useEntryForm({
         const payload: EntryPayload = {
             title: values.title,
             fields: values.fields as JsonObject,
-            status,
+            // Omit status entirely for statuses-off types (the API 409s on a
+            // status write there); the orchestrator defaults to 'draft'.
+            ...(hasStatuses ? { status } : {}),
         };
         if (hasSlug && values.slug.trim()) {
             payload.slug = values.slug.trim();
         }
-        if (status === 'scheduled' && values.publishAt) {
+        if (hasStatuses && status === 'scheduled' && values.publishAt) {
             payload.publishAt = new Date(values.publishAt);
         }
         return payload;

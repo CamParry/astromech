@@ -123,7 +123,12 @@ export type EntriesApi = {
 
     create(params: {
         type: string;
-        title: string;
+        /**
+         * Required for titled types (runtime-enforced by the per-type schema,
+         * identical 422). Optional for `titleField: false` types; Phase 3 typegen
+         * restores per-type static strictness.
+         */
+        title?: string;
         slug?: string;
         locale?: string;
         /** Existing localeGroup to join. Omit for a fresh group (UUID generated). */

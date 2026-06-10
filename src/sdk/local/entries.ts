@@ -24,8 +24,8 @@ import { EntryTypeMismatchError } from '@/errors/entry-type-mismatch.js';
 import { BulkOperationError } from '@/errors/bulk-operation.js';
 import { CapabilityError } from '@/errors/capability.js';
 import {
-    createEntrySchema,
-    updateEntrySchema,
+    createEntrySchemaFor,
+    updateEntrySchemaFor,
     scheduleEntrySchema,
 } from '@/schemas/entries.js';
 import { getDb } from '@/db/registry.js';
@@ -147,6 +147,10 @@ async function saveRelationships(
             );
         }
     }
+}
+
+function getTitleField(typeName: string): 'title' | false {
+    return config.entries[typeName]?.titleField ?? 'title';
 }
 
 function isVersioningEnabled(typeName: string): boolean {
@@ -314,7 +318,7 @@ async function _updateOne(
     id: string,
     data: EntryUpdateData
 ): Promise<Entry> {
-    const validatedData = validate(updateEntrySchema, data);
+    const validatedData = validate(updateEntrySchemaFor(getTitleField(type)), data);
     const currentEntry = await loadAndAssertType(storage, type, id);
 
     if (isVersioningEnabled(type) && storage.versions) {
@@ -573,7 +577,7 @@ export const entries: EntriesApi = {
 
     async create(params: {
         type: string;
-        title: string;
+        title?: string;
         slug?: string;
         locale?: string;
         localeGroup?: string;
@@ -581,7 +585,9 @@ export const entries: EntriesApi = {
         status?: EntryStatus;
         publishAt?: Date | null;
     }): Promise<Entry> {
-        const validated = validate(createEntrySchema, {
+        const { type } = params;
+        const titleField = getTitleField(type);
+        const validated = validate(createEntrySchemaFor(titleField), {
             title: params.title,
             slug: params.slug,
             fields: params.fields,
@@ -589,7 +595,11 @@ export const entries: EntriesApi = {
             publishAt: params.publishAt,
         });
 
-        const { type } = params;
+        // Titleless types persist `''` rather than undefined (title column is
+        // notNull) and never derive a slug from the (absent) title. Titled types
+        // are guaranteed a string by the schema; `?? ''` is a no-op narrow there.
+        const title = validated.title ?? '';
+
         const storage = getEntryStorage(type);
         const status = validated.status || 'draft';
         const publishedAt =
@@ -598,12 +608,20 @@ export const entries: EntriesApi = {
         const locale = params.locale ?? getDefaultLocale();
         const localeGroup = params.localeGroup ?? crypto.randomUUID();
 
-        const baseSlug = validated.slug ? validated.slug : titleToSlug(validated.title);
-        const slug = await storage.uniqueSlug(type, locale, baseSlug);
+        let slug: string | null;
+        if (validated.slug) {
+            slug = await storage.uniqueSlug(type, locale, validated.slug);
+        } else if (titleField === false) {
+            // No explicit slug on a titleless type: leave slug null rather than
+            // deriving one from the empty title (avoids "-2" style generated slugs).
+            slug = null;
+        } else {
+            slug = await storage.uniqueSlug(type, locale, titleToSlug(title));
+        }
 
         const user = getCurrentUser();
         const createData = {
-            title: validated.title,
+            title,
             slug,
             locale,
             fields: (validated.fields ?? {}) as JsonObject,
@@ -619,7 +637,7 @@ export const entries: EntriesApi = {
         const created = asEntry(
             await storage.create({
                 type,
-                title: validated.title,
+                title,
                 slug,
                 locale,
                 localeGroup,

@@ -189,7 +189,8 @@ const entriesApi: EntriesApi = {
 
     async create(params: {
         type: string;
-        title: string;
+        /** Optional for `titleField: false` types; runtime-enforced otherwise. */
+        title?: string;
         slug?: string;
         locale?: string;
         localeGroup?: string;

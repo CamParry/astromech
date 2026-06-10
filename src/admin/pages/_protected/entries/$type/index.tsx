@@ -101,17 +101,29 @@ function colStorageKey(type: string): string {
     return `am-cols-${type}`;
 }
 
-function readStoredColumns(type: string, adminCols: { field: string }[]): Set<string> {
+function defaultColumns(hasTitle: boolean): readonly string[] {
+    return hasTitle ? ALL_COLUMNS : ALL_COLUMNS.filter((c) => c !== 'title');
+}
+
+function readStoredColumns(
+    type: string,
+    adminCols: { field: string }[],
+    hasTitle: boolean
+): Set<string> {
     try {
         const stored = localStorage.getItem(colStorageKey(type));
         if (stored) {
             const parsed = JSON.parse(stored) as string[];
-            if (Array.isArray(parsed)) return new Set(parsed);
+            if (Array.isArray(parsed)) {
+                const cols = new Set(parsed);
+                if (!hasTitle) cols.delete('title');
+                return cols;
+            }
         }
     } catch {
         // ignore
     }
-    return new Set([...ALL_COLUMNS, ...adminCols.map((c) => c.field)]);
+    return new Set([...defaultColumns(hasTitle), ...adminCols.map((c) => c.field)]);
 }
 
 function writeStoredColumns(type: string, cols: Set<string>): void {
@@ -271,6 +283,7 @@ type EntryTableRowProps = RowActionsProps & {
     showLocale: boolean;
     configuredLocales: string[];
     hasStatusesCap: boolean;
+    hasTitle: boolean;
 };
 
 function EntryTableRow({
@@ -292,6 +305,7 @@ function EntryTableRow({
     showLocale,
     configuredLocales,
     hasStatusesCap,
+    hasTitle,
 }: EntryTableRowProps): React.ReactElement {
     const { t } = useTranslation();
     const items = buildRowItems({
@@ -329,7 +343,7 @@ function EntryTableRow({
                         onChange={() => onToggleSelect(entry.id)}
                     />
                 </Table.Td>
-                {visibleColumns.has('title') && (
+                {hasTitle && visibleColumns.has('title') && (
                     <Table.Td>
                         {isTrash ? (
                             <span className="am-text-muted">{entry.title}</span>
@@ -409,6 +423,7 @@ function EntryTableRow({
 type EntryCardProps = RowActionsProps & {
     gridFields: { field: string; label?: string }[];
     navigate: (opts: { to: string; params: { type: string; id: string } }) => void;
+    hasTitle: boolean;
 };
 
 function EntryCard({
@@ -423,6 +438,7 @@ function EntryCard({
     gridFields,
     navigate,
     rowLabels,
+    hasTitle,
 }: EntryCardProps): React.ReactElement {
     const { t } = useTranslation();
     const items = buildRowItems({
@@ -465,17 +481,27 @@ function EntryCard({
                 </div>
 
                 {isTrash ? (
-                    <span className="am-collection-card-title am-text-muted">
-                        {entry.title}
+                    <span
+                        className={
+                            hasTitle
+                                ? 'am-collection-card-title am-text-muted'
+                                : 'am-collection-card-title am-text-muted am-text-mono am-text-sm'
+                        }
+                    >
+                        {hasTitle ? entry.title : entry.id}
                     </span>
                 ) : (
                     <Link
                         to="/entries/$type/$id"
                         params={{ type, id: entry.id }}
-                        className="am-collection-card-title"
+                        className={
+                            hasTitle
+                                ? 'am-collection-card-title'
+                                : 'am-collection-card-title am-text-mono am-text-sm'
+                        }
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {entry.title}
+                        {hasTitle ? entry.title : entry.id}
                     </Link>
                 )}
 
@@ -521,6 +547,7 @@ function EntryIndexPage(): React.ReactElement {
     const hasStatuses = capabilities?.statuses !== false;
     const hasTrash = capabilities?.trash !== false;
     const hasSlugCap = capabilities?.slug !== false;
+    const hasTitle = entryTypeConfig?.titleField !== false;
 
     const availableViews = entryTypeConfig?.views ?? ['list'];
     const defaultView: ViewMode =
@@ -541,7 +568,7 @@ function EntryIndexPage(): React.ReactElement {
         null
     );
     const [visibleColumns, setVisibleColumns] = useState<Set<string>>(() =>
-        readStoredColumns(type, adminColumns)
+        readStoredColumns(type, adminColumns, hasTitle)
     );
 
     const STATUS_LABELS: Record<StatusFilter, string> = {
@@ -573,7 +600,7 @@ function EntryIndexPage(): React.ReactElement {
     };
 
     useEffect(() => {
-        setVisibleColumns(readStoredColumns(type, adminColumns));
+        setVisibleColumns(readStoredColumns(type, adminColumns, hasTitle));
     }, [type]);
 
     const isTrash = statusFilter === 'trashed';
@@ -687,7 +714,8 @@ function EntryIndexPage(): React.ReactElement {
     }
 
     const colSpan =
-        2 +
+        1 +
+        (hasTitle && visibleColumns.has('title') ? 1 : 0) +
         (visibleColumns.has('status') ? 1 : 0) +
         (visibleColumns.has('slug') ? 1 : 0) +
         (showLocaleColumn && visibleColumns.has('locale') ? 1 : 0) +
@@ -845,17 +873,19 @@ function EntryIndexPage(): React.ReactElement {
                                 />
                             )}
 
-                            {/* Search */}
-                            <SearchInput
-                                placeholder={t('entries.searchPlaceholder', {
-                                    name: plural.toLowerCase(),
-                                })}
-                                value={search}
-                                onChange={(e) => {
-                                    setSearch(e.target.value);
-                                    setPage(1);
-                                }}
-                            />
+                            {/* Search — only for titled types (search matches on title) */}
+                            {hasTitle && (
+                                <SearchInput
+                                    placeholder={t('entries.searchPlaceholder', {
+                                        name: plural.toLowerCase(),
+                                    })}
+                                    value={search}
+                                    onChange={(e) => {
+                                        setSearch(e.target.value);
+                                        setPage(1);
+                                    }}
+                                />
+                            )}
 
                             {/* Status filter — only when statuses or trash capabilities are on */}
                             {(hasStatuses || hasTrash) && (
@@ -912,10 +942,16 @@ function EntryIndexPage(): React.ReactElement {
                                     >
                                         <Menu.Popup className="am-dropdown-popup">
                                             {[
-                                                {
-                                                    key: 'title',
-                                                    label: t('entries.columnTitle'),
-                                                },
+                                                ...(hasTitle
+                                                    ? [
+                                                          {
+                                                              key: 'title',
+                                                              label: t(
+                                                                  'entries.columnTitle'
+                                                              ),
+                                                          },
+                                                      ]
+                                                    : []),
                                                 ...(hasStatuses
                                                     ? [
                                                           {
@@ -1063,6 +1099,7 @@ function EntryIndexPage(): React.ReactElement {
                                             gridFields={gridFields}
                                             navigate={navigateCompat}
                                             rowLabels={rowLabels}
+                                            hasTitle={hasTitle}
                                         />
                                     ))}
                                 </div>
@@ -1081,7 +1118,7 @@ function EntryIndexPage(): React.ReactElement {
                                             onChange={() => toggleAll()}
                                         />
                                     </Table.Th>
-                                    {visibleColumns.has('title') && (
+                                    {hasTitle && visibleColumns.has('title') && (
                                         <Table.SortTh
                                             sortKey="title"
                                             currentSort={sort}
@@ -1193,6 +1230,7 @@ function EntryIndexPage(): React.ReactElement {
                                             showTranslations={hasI18n}
                                             showLocale={showLocaleColumn}
                                             configuredLocales={configuredLocales}
+                                            hasTitle={hasTitle}
                                         />
                                     ))
                                 )}

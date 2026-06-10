@@ -49,15 +49,19 @@ type DiffEntry = {
     newValue: unknown;
 };
 
-function computeDiff(older: EntryVersion | null, newer: EntryVersion): DiffEntry[] {
+function computeDiff(
+    older: EntryVersion | null,
+    newer: EntryVersion,
+    hasTitle: boolean
+): DiffEntry[] {
     const olderFields: Record<string, unknown> = {
-        title: older?.title ?? '',
+        ...(hasTitle ? { title: older?.title ?? '' } : {}),
         slug: older?.slug ?? '',
         status: older?.status ?? '',
         ...(older?.fields ?? {}),
     };
     const newerFields: Record<string, unknown> = {
-        title: newer.title,
+        ...(hasTitle ? { title: newer.title } : {}),
         slug: newer.slug ?? '',
         status: newer.status ?? '',
         ...(newer.fields ?? {}),
@@ -137,6 +141,7 @@ type DiffViewProps = {
     previous: EntryVersion | null;
     onRestore: () => void;
     isRestoring: boolean;
+    hasTitle: boolean;
 };
 
 function DiffView({
@@ -144,9 +149,10 @@ function DiffView({
     previous,
     onRestore,
     isRestoring,
+    hasTitle,
 }: DiffViewProps): React.ReactElement {
     const { t } = useTranslation();
-    const diff = computeDiff(previous, selected);
+    const diff = computeDiff(previous, selected, hasTitle);
 
     return (
         <div className="am-versions-diff">
@@ -219,6 +225,7 @@ function EntryVersionsPage(): React.ReactElement {
 
     const entryTypeConfig = adminConfig.entries[type];
     const plural = entryTypeConfig?.plural ?? type;
+    const hasTitle = entryTypeConfig?.titleField !== false;
 
     const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
 
@@ -271,7 +278,7 @@ function EntryVersionsPage(): React.ReactElement {
                     items={[
                         { label: plural, to: `/entries/${type}` },
                         {
-                            label: entry?.title ?? id,
+                            label: (hasTitle ? entry?.title : undefined) || id,
                             to: `/entries/${type}/${id}`,
                         },
                         { label: t('versions.pageTitle') },
@@ -335,6 +342,7 @@ function EntryVersionsPage(): React.ReactElement {
                                 previous={previousVersion}
                                 onRestore={handleRestore}
                                 isRestoring={restoreMutation.isPending}
+                                hasTitle={hasTitle}
                             />
                         )}
                     </div>

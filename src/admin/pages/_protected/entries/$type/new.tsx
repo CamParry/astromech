@@ -155,7 +155,7 @@ function CreateLocaleModal({
                             onValueChange={(v) => setSelectedId(v ?? '')}
                             options={sourceEntries.map((e) => ({
                                 value: e.id,
-                                label: e.title,
+                                label: e.title || e.id,
                             }))}
                         />
                     </div>
@@ -217,6 +217,7 @@ function EntryCreatePage(): React.ReactElement {
     const hasI18n = capabilities?.translatable === true;
     const hasStatuses = capabilities?.statuses !== false;
     const hasSlugCap = capabilities?.slug !== false;
+    const hasTitle = entryTypeConfig?.titleField !== false;
     const requestedLocale = search.locale ?? adminConfig.defaultLocale;
     const isNonDefaultLocale = hasI18n && requestedLocale !== adminConfig.defaultLocale;
 
@@ -246,6 +247,7 @@ function EntryCreatePage(): React.ReactElement {
 
     const { form, saveMutation, handleSave, handlePublish } = useEntryForm({
         hasSlug,
+        hasStatuses,
         saveFn: (payload) =>
             Astromech.entries.create({
                 type,
@@ -375,7 +377,9 @@ function EntryCreatePage(): React.ReactElement {
                     {/* Main column */}
                     <FormLayoutMain>
                         {/* Title + optional slug */}
+                        {(hasTitle || hasSlug) && (
                         <Panel>
+                            {hasTitle && (
                             <form.Field
                                 name="title"
                                 validators={{
@@ -413,6 +417,7 @@ function EntryCreatePage(): React.ReactElement {
                                     </div>
                                 )}
                             </form.Field>
+                            )}
 
                             {hasSlug && (
                                 <form.Field name="slug">
@@ -443,6 +448,7 @@ function EntryCreatePage(): React.ReactElement {
                                 </form.Field>
                             )}
                         </Panel>
+                        )}
 
                         <form.Field name="fields">
                             {(f) => (

@@ -87,6 +87,7 @@ function EntryEditPage(): React.ReactElement {
     const capabilities = entryTypeConfig?.capabilities;
     const hasStatuses = capabilities?.statuses !== false;
     const hasSlugCap = capabilities?.slug !== false;
+    const hasTitle = entryTypeConfig?.titleField !== false;
     const hasSlug = hasSlugCap && entryTypeConfig?.slug != null;
     const fieldGroups = entryTypeConfig?.fieldGroups ?? [];
     const mainGroups = fieldGroups.filter(
@@ -124,6 +125,7 @@ function EntryEditPage(): React.ReactElement {
             fields: (entry?.fields as Record<string, unknown>) ?? {},
         },
         hasSlug,
+        hasStatuses,
         readOnly: isReadOnly,
         saveFn: (data) => Astromech.entries.update({ type, id, data }),
         publishFn: (data) => Astromech.entries.update({ type, id, data }),
@@ -171,7 +173,7 @@ function EntryEditPage(): React.ReactElement {
                             { label: plural, to: `/entries/${type}` },
                             {
                                 label: t('entries.editTitle', {
-                                    title: entry?.title ?? single,
+                                    title: hasTitle ? (entry?.title ?? single) : single,
                                 }),
                             },
                         ]}
@@ -271,46 +273,48 @@ function EntryEditPage(): React.ReactElement {
                 <FormLayout>
                     <FormLayoutContent>
                         <FormLayoutMain>
-                            <Panel>
-                                <form.Field
-                                    name="title"
-                                    validators={{
-                                        onChange: ({ value }) =>
-                                            value.trim() === ''
-                                                ? t('entries.titleRequired')
-                                                : undefined,
-                                    }}
-                                >
-                                    {(field) => (
-                                        <div className="am-field">
-                                            <label
-                                                className="am-field-label"
-                                                htmlFor="entry-title"
-                                            >
-                                                {t('entries.titleField')}{' '}
-                                                <span className="am-field-required">
-                                                    *
-                                                </span>
-                                            </label>
-                                            <Input
-                                                id="entry-title"
-                                                type="text"
-                                                value={field.state.value}
-                                                onChange={(e) =>
-                                                    field.handleChange(e.target.value)
-                                                }
-                                                onBlur={field.handleBlur}
-                                                required
-                                            />
-                                            {field.state.meta.errors.length > 0 && (
-                                                <p className="am-field-error">
-                                                    {field.state.meta.errors[0]}
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-                                </form.Field>
-                            </Panel>
+                            {hasTitle && (
+                                <Panel>
+                                    <form.Field
+                                        name="title"
+                                        validators={{
+                                            onChange: ({ value }) =>
+                                                value.trim() === ''
+                                                    ? t('entries.titleRequired')
+                                                    : undefined,
+                                        }}
+                                    >
+                                        {(field) => (
+                                            <div className="am-field">
+                                                <label
+                                                    className="am-field-label"
+                                                    htmlFor="entry-title"
+                                                >
+                                                    {t('entries.titleField')}{' '}
+                                                    <span className="am-field-required">
+                                                        *
+                                                    </span>
+                                                </label>
+                                                <Input
+                                                    id="entry-title"
+                                                    type="text"
+                                                    value={field.state.value}
+                                                    onChange={(e) =>
+                                                        field.handleChange(e.target.value)
+                                                    }
+                                                    onBlur={field.handleBlur}
+                                                    required
+                                                />
+                                                {field.state.meta.errors.length > 0 && (
+                                                    <p className="am-field-error">
+                                                        {field.state.meta.errors[0]}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
+                                    </form.Field>
+                                </Panel>
+                            )}
 
                             <form.Field name="fields">
                                 {(f) => (
