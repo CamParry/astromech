@@ -22,6 +22,7 @@ import { z } from 'zod';
 import { ValidationError } from '@/errors/validation.js';
 import { EntryTypeMismatchError } from '@/errors/entry-type-mismatch.js';
 import { BulkOperationError } from '@/errors/bulk-operation.js';
+import { CapabilityError } from '@/errors/capability.js';
 import {
     createEntrySchema,
     updateEntrySchema,
@@ -153,6 +154,16 @@ function isVersioningEnabled(typeName: string): boolean {
         getEntryStorage(typeName).versions !== undefined &&
         !!config.entries[typeName]?.versioning
     );
+}
+
+function assertCapability(
+    typeName: string,
+    capability: 'statuses' | 'slug' | 'trash' | 'versioning' | 'translatable'
+): void {
+    const caps = config.entries[typeName]?.capabilities;
+    if (caps && !caps[capability]) {
+        throw new CapabilityError(typeName, capability);
+    }
 }
 
 async function buildRelationsSnapshot(
@@ -748,6 +759,7 @@ export const entries: EntriesApi = {
         id: string | readonly string[];
         cascadeLocales?: boolean;
     }): Promise<void> {
+        assertCapability(params.type, 'trash');
         const cascade = !!params.cascadeLocales;
         await runDeleteWithHooks(params.type, params.id, false, async () => {
             if (Array.isArray(params.id)) {
@@ -769,6 +781,7 @@ export const entries: EntriesApi = {
         type: string;
         id: string | readonly string[];
     }): Promise<Entry | Entry[]> => {
+        assertCapability(params.type, 'trash');
         if (Array.isArray(params.id)) {
             return runBulk(params.type, params.id, (txStorage, _txDb, id) =>
                 _restoreOne(txStorage, params.type, id)
@@ -805,6 +818,7 @@ export const entries: EntriesApi = {
     },
 
     async emptyTrash(params: { type: string }): Promise<void> {
+        assertCapability(params.type, 'trash');
         const { type } = params;
         const storage = getEntryStorage(type);
         if (!storage.trash)
@@ -933,6 +947,7 @@ export const entries: EntriesApi = {
         type: string;
         id: string | readonly string[];
     }): Promise<Entry | Entry[]> => {
+        assertCapability(params.type, 'statuses');
         return entries.update({
             type: params.type,
             id: params.id,
@@ -944,6 +959,7 @@ export const entries: EntriesApi = {
         type: string;
         id: string | readonly string[];
     }): Promise<Entry | Entry[]> => {
+        assertCapability(params.type, 'statuses');
         return entries.update({
             type: params.type,
             id: params.id,
@@ -956,6 +972,7 @@ export const entries: EntriesApi = {
         id: string | readonly string[];
         publishAt: Date;
     }): Promise<Entry | Entry[]> => {
+        assertCapability(params.type, 'statuses');
         const validated = validate(scheduleEntrySchema, { publishAt: params.publishAt });
         return entries.update({
             type: params.type,

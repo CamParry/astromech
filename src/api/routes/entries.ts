@@ -104,6 +104,27 @@ function requireEntryType(type: string) {
     return type;
 }
 
+function getTypeCapabilities(type: string) {
+    return Astromech.config.entries[type]?.capabilities;
+}
+
+function capabilityDenied(
+    c: Parameters<typeof forbidden>[0],
+    type: string,
+    capability: string
+): Response {
+    return c.json(
+        {
+            error: {
+                code: 'capability_not_supported',
+                message: `Entry type "${type}" does not support capability: ${capability}`,
+                status: 409,
+            },
+        },
+        409
+    );
+}
+
 const bulkIdsSchema = z.object({
     ids: z.array(z.string().min(1)).min(1),
 });
@@ -291,6 +312,19 @@ router.openapi(createEntryRoute, async (c) => {
         const parsed = createEntrySchema.safeParse(raw);
         if (!parsed.success) return fromZodError(c, parsed.error);
 
+        const caps = getTypeCapabilities(type);
+
+        if (
+            !caps?.statuses &&
+            (parsed.data.status !== undefined || parsed.data.publishAt !== undefined)
+        ) {
+            return capabilityDenied(c, type, 'statuses');
+        }
+
+        if (!caps?.slug && parsed.data.slug !== undefined) {
+            return capabilityDenied(c, type, 'slug');
+        }
+
         const { title, slug, fields, status, publishAt, locale, localeGroup } =
             parsed.data;
 
@@ -352,6 +386,18 @@ router.post('/:type/bulk-update', async (c) => {
         if (!parsed.success) return fromZodError(c, parsed.error);
 
         const { ids, data } = parsed.data;
+        const caps = getTypeCapabilities(type);
+
+        if (
+            !caps?.statuses &&
+            (data.status !== undefined || data.publishAt !== undefined)
+        ) {
+            return capabilityDenied(c, type, 'statuses');
+        }
+
+        if (!caps?.slug && data.slug !== undefined) {
+            return capabilityDenied(c, type, 'slug');
+        }
 
         if (data.status === 'published') {
             if (!can(role, `entry:${type}:publish`)) return forbidden(c);
@@ -377,6 +423,9 @@ router.post('/:type/bulk-trash', async (c) => {
     const role = c.var.role;
     if (!can(role, `entry:${type}:delete`)) return forbidden(c);
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
+
+    const caps = getTypeCapabilities(type);
+    if (!caps?.trash) return capabilityDenied(c, type, 'trash');
 
     try {
         const raw = await c.req.json();
@@ -430,6 +479,9 @@ router.post('/:type/bulk-restore', async (c) => {
     if (!can(role, `entry:${type}:update`)) return forbidden(c);
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
+    const caps = getTypeCapabilities(type);
+    if (!caps?.trash) return capabilityDenied(c, type, 'trash');
+
     try {
         const raw = await c.req.json();
         const parsed = bulkIdsSchema.safeParse(raw);
@@ -451,6 +503,9 @@ router.post('/:type/bulk-publish', async (c) => {
     const role = c.var.role;
     if (!can(role, `entry:${type}:publish`)) return forbidden(c);
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
+
+    const caps = getTypeCapabilities(type);
+    if (!caps?.statuses) return capabilityDenied(c, type, 'statuses');
 
     try {
         const raw = await c.req.json();
@@ -474,6 +529,9 @@ router.post('/:type/bulk-unpublish', async (c) => {
     if (!can(role, `entry:${type}:publish`)) return forbidden(c);
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
+    const caps = getTypeCapabilities(type);
+    if (!caps?.statuses) return capabilityDenied(c, type, 'statuses');
+
     try {
         const raw = await c.req.json();
         const parsed = bulkIdsSchema.safeParse(raw);
@@ -495,6 +553,9 @@ router.post('/:type/bulk-schedule', async (c) => {
     const role = c.var.role;
     if (!can(role, `entry:${type}:publish`)) return forbidden(c);
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
+
+    const caps = getTypeCapabilities(type);
+    if (!caps?.statuses) return capabilityDenied(c, type, 'statuses');
 
     try {
         const raw = await c.req.json();
@@ -522,6 +583,9 @@ router.post('/:type/:id/restore', async (c) => {
     if (!can(role, `entry:${type}:update`)) return forbidden(c);
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
+
+    const caps = getTypeCapabilities(type);
+    if (!caps?.trash) return capabilityDenied(c, type, 'trash');
 
     try {
         const entry = await Astromech.entries.restore({ type, id });
@@ -612,6 +676,19 @@ router.openapi(updateEntryRoute, async (c) => {
         const parsed = updateEntrySchema.safeParse(raw);
         if (!parsed.success) return fromZodError(c, parsed.error);
 
+        const caps = getTypeCapabilities(type);
+
+        if (
+            !caps?.statuses &&
+            (parsed.data.status !== undefined || parsed.data.publishAt !== undefined)
+        ) {
+            return capabilityDenied(c, type, 'statuses');
+        }
+
+        if (!caps?.slug && parsed.data.slug !== undefined) {
+            return capabilityDenied(c, type, 'slug');
+        }
+
         const { title, slug, fields, status, publishAt } = parsed.data;
 
         if (parsed.data.status === 'published') {
@@ -646,6 +723,9 @@ router.delete('/:type/trash', async (c) => {
     if (!can(role, `entry:${type}:delete`)) return forbidden(c);
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
+
+    const caps = getTypeCapabilities(type);
+    if (!caps?.trash) return capabilityDenied(c, type, 'trash');
 
     try {
         await Astromech.entries.emptyTrash({ type });
@@ -704,12 +784,16 @@ router.openapi(trashEntryRoute, async (c) => {
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
+    const cascade = cascadeLocalesFromQuery(c.req.query());
+    const caps = getTypeCapabilities(type);
+
     try {
-        await Astromech.entries.trash({
-            type,
-            id,
-            cascadeLocales: cascadeLocalesFromQuery(c.req.query()),
-        });
+        if (!caps?.trash) {
+            // trash is off → hard delete
+            await Astromech.entries.delete({ type, id, cascadeLocales: cascade });
+        } else {
+            await Astromech.entries.trash({ type, id, cascadeLocales: cascade });
+        }
         return c.json({ success: true });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -726,6 +810,9 @@ router.post('/:type/:id/publish', async (c) => {
     if (!can(role, `entry:${type}:publish`)) return forbidden(c);
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
+
+    const caps = getTypeCapabilities(type);
+    if (!caps?.statuses) return capabilityDenied(c, type, 'statuses');
 
     try {
         const entry = await Astromech.entries.publish({ type, id });
@@ -746,6 +833,9 @@ router.post('/:type/:id/unpublish', async (c) => {
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
+    const caps = getTypeCapabilities(type);
+    if (!caps?.statuses) return capabilityDenied(c, type, 'statuses');
+
     try {
         const entry = await Astromech.entries.unpublish({ type, id });
         return c.json({ data: entry });
@@ -764,6 +854,9 @@ router.post('/:type/:id/schedule', async (c) => {
     if (!can(role, `entry:${type}:publish`)) return forbidden(c);
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
+
+    const caps = getTypeCapabilities(type);
+    if (!caps?.statuses) return capabilityDenied(c, type, 'statuses');
 
     try {
         const raw = await c.req.json();

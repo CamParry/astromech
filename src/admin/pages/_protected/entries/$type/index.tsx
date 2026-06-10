@@ -87,17 +87,21 @@ function statusVariant(status: string): 'draft' | 'published' | 'scheduled' | 'd
     return 'default';
 }
 
-const ALL_COLUMNS = ['title', 'status', 'slug', 'locale', 'translations', 'updatedAt'] as const;
+const ALL_COLUMNS = [
+    'title',
+    'status',
+    'slug',
+    'locale',
+    'translations',
+    'updatedAt',
+] as const;
 const LOCALE_FILTER_ALL = '__all__';
 
 function colStorageKey(type: string): string {
     return `am-cols-${type}`;
 }
 
-function readStoredColumns(
-    type: string,
-    adminCols: { field: string }[]
-): Set<string> {
+function readStoredColumns(type: string, adminCols: { field: string }[]): Set<string> {
     try {
         const stored = localStorage.getItem(colStorageKey(type));
         if (stored) {
@@ -186,6 +190,7 @@ type RowActionsProps = {
     isTrash: boolean;
     type: string;
     canDelete: boolean;
+    hasTrashCap: boolean;
     onRestore: (id: string) => void;
     onConfirmDelete: (id: string, force: boolean) => void;
     onDuplicate: (id: string) => void;
@@ -204,6 +209,7 @@ function buildRowItems(props: RowActionsProps): DropdownItem[] {
         isTrash,
         type,
         canDelete,
+        hasTrashCap,
         onRestore,
         onConfirmDelete,
         onDuplicate,
@@ -240,10 +246,11 @@ function buildRowItems(props: RowActionsProps): DropdownItem[] {
         },
     ];
     if (canDelete) {
+        // When trash is off, the action is a permanent delete (force=true).
         items.push({
-            label: rowLabels.moveToTrash,
+            label: hasTrashCap ? rowLabels.moveToTrash : rowLabels.deletePermanently,
             variant: 'danger' as const,
-            onClick: () => onConfirmDelete(entry.id, false),
+            onClick: () => onConfirmDelete(entry.id, !hasTrashCap),
             icon: <Trash2 size={14} />,
         });
     }
@@ -263,6 +270,7 @@ type EntryTableRowProps = RowActionsProps & {
     showTranslations: boolean;
     showLocale: boolean;
     configuredLocales: string[];
+    hasStatusesCap: boolean;
 };
 
 function EntryTableRow({
@@ -270,6 +278,7 @@ function EntryTableRow({
     isTrash,
     type,
     canDelete,
+    hasTrashCap,
     onRestore,
     onConfirmDelete,
     onDuplicate,
@@ -282,6 +291,7 @@ function EntryTableRow({
     showTranslations,
     showLocale,
     configuredLocales,
+    hasStatusesCap,
 }: EntryTableRowProps): React.ReactElement {
     const { t } = useTranslation();
     const items = buildRowItems({
@@ -289,6 +299,7 @@ function EntryTableRow({
         isTrash,
         type,
         canDelete,
+        hasTrashCap,
         onRestore,
         onConfirmDelete,
         onDuplicate,
@@ -333,7 +344,7 @@ function EntryTableRow({
                         )}
                     </Table.Td>
                 )}
-                {visibleColumns.has('status') && (
+                {hasStatusesCap && visibleColumns.has('status') && (
                     <Table.Td>
                         <Badge variant={statusVariant(entry.status)}>
                             {entry.status}
@@ -405,6 +416,7 @@ function EntryCard({
     isTrash,
     type,
     canDelete,
+    hasTrashCap,
     onRestore,
     onConfirmDelete,
     onDuplicate,
@@ -418,6 +430,7 @@ function EntryCard({
         isTrash,
         type,
         canDelete,
+        hasTrashCap,
         onRestore,
         onConfirmDelete,
         onDuplicate,
@@ -504,6 +517,10 @@ function EntryIndexPage(): React.ReactElement {
     const plural = entryTypeConfig?.plural ?? type;
     const adminColumns = entryTypeConfig?.adminColumns ?? [];
     const gridFields = entryTypeConfig?.gridFields ?? [];
+    const capabilities = entryTypeConfig?.capabilities;
+    const hasStatuses = capabilities?.statuses !== false;
+    const hasTrash = capabilities?.trash !== false;
+    const hasSlugCap = capabilities?.slug !== false;
 
     const availableViews = entryTypeConfig?.views ?? ['list'];
     const defaultView: ViewMode =
@@ -514,11 +531,9 @@ function EntryIndexPage(): React.ReactElement {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [page, setPage] = useState(1);
-    const hasI18n = entryTypeConfig?.translatable === true;
+    const hasI18n = capabilities?.translatable === true;
     const configuredLocales = adminConfig.locales;
-    const [localeFilter, setLocaleFilter] = useState<string>(
-        adminConfig.defaultLocale
-    );
+    const [localeFilter, setLocaleFilter] = useState<string>(adminConfig.defaultLocale);
 
     const [viewMode, setViewMode] = useViewMode(`entry:${type}`, defaultView);
 
@@ -537,10 +552,17 @@ function EntryIndexPage(): React.ReactElement {
         trashed: t('entries.trashed'),
     };
 
-    const STATUS_FILTER_OPTIONS = (Object.keys(STATUS_LABELS) as StatusFilter[]).map((s) => ({
-        value: s,
-        label: STATUS_LABELS[s],
-    }));
+    const STATUS_FILTER_OPTIONS = (Object.keys(STATUS_LABELS) as StatusFilter[])
+        .filter((s) => {
+            if (!hasStatuses && (s === 'draft' || s === 'published' || s === 'scheduled'))
+                return false;
+            if (!hasTrash && s === 'trashed') return false;
+            return true;
+        })
+        .map((s) => ({
+            value: s,
+            label: STATUS_LABELS[s],
+        }));
 
     const rowLabels = {
         edit: t('entries.rowEdit'),
@@ -565,7 +587,11 @@ function EntryIndexPage(): React.ReactElement {
     const { data: listData, isLoading } = useEntriesQuery({
         type,
         locale: effectiveLocale,
-        ...(statusFilter === 'trashed' ? { trashed: true } : statusFilter !== 'all' ? { where: { status: statusFilter } } : {}),
+        ...(statusFilter === 'trashed'
+            ? { trashed: true }
+            : statusFilter !== 'all'
+              ? { where: { status: statusFilter } }
+              : {}),
         page,
         limit: PER_PAGE,
         search,
@@ -753,10 +779,53 @@ function EntryIndexPage(): React.ReactElement {
                                     variant="secondary"
                                     align="start"
                                     items={[
+                                        ...(hasStatuses && !isTrash
+                                            ? [
+                                                  {
+                                                      label: t(
+                                                          'entries.bulkPublishSelected'
+                                                      ),
+                                                      icon: <Check size={14} />,
+                                                      onClick: () =>
+                                                          handleBulkAction('publish'),
+                                                  },
+                                                  {
+                                                      label: t(
+                                                          'entries.bulkUnpublishSelected'
+                                                      ),
+                                                      icon: <RotateCcw size={14} />,
+                                                      onClick: () =>
+                                                          handleBulkAction('unpublish'),
+                                                  },
+                                              ]
+                                            : []),
+                                        ...(hasTrash && !isTrash
+                                            ? [
+                                                  {
+                                                      label: t('entries.bulkMoveToTrash'),
+                                                      icon: <Trash2 size={14} />,
+                                                      variant: 'danger' as const,
+                                                      onClick: () =>
+                                                          handleBulkAction('trash'),
+                                                  },
+                                              ]
+                                            : []),
+                                        ...(isTrash && hasTrash
+                                            ? [
+                                                  {
+                                                      label: t(
+                                                          'entries.bulkRestoreSelected'
+                                                      ),
+                                                      icon: <RotateCcw size={14} />,
+                                                      onClick: () =>
+                                                          handleBulkAction('restore'),
+                                                  },
+                                              ]
+                                            : []),
                                         {
                                             label: t('media.bulkDeleteButton'),
                                             icon: <Trash2 size={14} />,
-                                            variant: 'danger',
+                                            variant: 'danger' as const,
                                             onClick: () => {
                                                 const ids = Array.from(checkedIds);
                                                 confirm({
@@ -788,17 +857,19 @@ function EntryIndexPage(): React.ReactElement {
                                 }}
                             />
 
-                            {/* Status filter */}
-                            <Select
-                                value={statusFilter}
-                                onValueChange={(v) => {
-                                    setStatusFilter((v ?? 'all') as StatusFilter);
-                                    setPage(1);
-                                    reset();
-                                }}
-                                options={STATUS_FILTER_OPTIONS}
-                                triggerPrefix={t('entries.statusFilterPrefix')}
-                            />
+                            {/* Status filter — only when statuses or trash capabilities are on */}
+                            {(hasStatuses || hasTrash) && (
+                                <Select
+                                    value={statusFilter}
+                                    onValueChange={(v) => {
+                                        setStatusFilter((v ?? 'all') as StatusFilter);
+                                        setPage(1);
+                                        reset();
+                                    }}
+                                    options={STATUS_FILTER_OPTIONS}
+                                    triggerPrefix={t('entries.statusFilterPrefix')}
+                                />
+                            )}
 
                             {/* Locale filter (only when translatable) */}
                             {hasI18n && (
@@ -845,14 +916,26 @@ function EntryIndexPage(): React.ReactElement {
                                                     key: 'title',
                                                     label: t('entries.columnTitle'),
                                                 },
-                                                {
-                                                    key: 'status',
-                                                    label: t('entries.columnStatus'),
-                                                },
-                                                {
-                                                    key: 'slug',
-                                                    label: t('entries.columnSlug'),
-                                                },
+                                                ...(hasStatuses
+                                                    ? [
+                                                          {
+                                                              key: 'status',
+                                                              label: t(
+                                                                  'entries.columnStatus'
+                                                              ),
+                                                          },
+                                                      ]
+                                                    : []),
+                                                ...(hasSlugCap
+                                                    ? [
+                                                          {
+                                                              key: 'slug',
+                                                              label: t(
+                                                                  'entries.columnSlug'
+                                                              ),
+                                                          },
+                                                      ]
+                                                    : []),
                                                 ...(showLocaleColumn
                                                     ? [
                                                           {
@@ -863,7 +946,7 @@ function EntryIndexPage(): React.ReactElement {
                                                           },
                                                       ]
                                                     : []),
-                                                ...(hasI18n
+                                                ...(capabilities?.translatable
                                                     ? [
                                                           {
                                                               key: 'translations',
@@ -973,6 +1056,7 @@ function EntryIndexPage(): React.ReactElement {
                                             isTrash={isTrash}
                                             type={type}
                                             canDelete={canDelete(type)}
+                                            hasTrashCap={hasTrash}
                                             onRestore={handleRestore}
                                             onConfirmDelete={handleConfirmDelete}
                                             onDuplicate={handleDuplicate}
@@ -1006,20 +1090,21 @@ function EntryIndexPage(): React.ReactElement {
                                             {t('entries.columnTitle')}
                                         </Table.SortTh>
                                     )}
-                                    {visibleColumns.has('status') && (
-                                        <Table.Th>
-                                            {t('entries.columnStatus')}
-                                        </Table.Th>
+                                    {hasStatuses && visibleColumns.has('status') && (
+                                        <Table.Th>{t('entries.columnStatus')}</Table.Th>
                                     )}
-                                    {visibleColumns.has('slug') && (
+                                    {hasSlugCap && visibleColumns.has('slug') && (
                                         <Table.Th>{t('entries.columnSlug')}</Table.Th>
                                     )}
                                     {showLocaleColumn && visibleColumns.has('locale') && (
                                         <Table.Th>{t('entries.columnLocale')}</Table.Th>
                                     )}
-                                    {hasI18n && visibleColumns.has('translations') && (
-                                        <Table.Th>{t('entries.columnTranslations')}</Table.Th>
-                                    )}
+                                    {capabilities?.translatable &&
+                                        visibleColumns.has('translations') && (
+                                            <Table.Th>
+                                                {t('entries.columnTranslations')}
+                                            </Table.Th>
+                                        )}
                                     {adminColumns
                                         .filter((c) => visibleColumns.has(c.field))
                                         .map((col) =>
@@ -1094,6 +1179,8 @@ function EntryIndexPage(): React.ReactElement {
                                             isTrash={isTrash}
                                             type={type}
                                             canDelete={canDelete(type)}
+                                            hasTrashCap={hasTrash}
+                                            hasStatusesCap={hasStatuses}
                                             onRestore={handleRestore}
                                             onConfirmDelete={handleConfirmDelete}
                                             onDuplicate={handleDuplicate}
@@ -1126,5 +1213,5 @@ function EntryIndexPage(): React.ReactElement {
 }
 
 export const Route = createFileRoute('/_protected/entries/$type/')({
-	component: EntryIndexPage,
+    component: EntryIndexPage,
 });

@@ -213,7 +213,10 @@ function EntryCreatePage(): React.ReactElement {
     const { canCreate } = usePermissions();
 
     const entryTypeConfig = adminConfig.entries[type];
-    const hasI18n = entryTypeConfig?.translatable === true;
+    const capabilities = entryTypeConfig?.capabilities;
+    const hasI18n = capabilities?.translatable === true;
+    const hasStatuses = capabilities?.statuses !== false;
+    const hasSlugCap = capabilities?.slug !== false;
     const requestedLocale = search.locale ?? adminConfig.defaultLocale;
     const isNonDefaultLocale = hasI18n && requestedLocale !== adminConfig.defaultLocale;
 
@@ -232,7 +235,7 @@ function EntryCreatePage(): React.ReactElement {
     }
     const single = entryTypeConfig?.single ?? type;
     const plural = entryTypeConfig?.plural ?? type;
-    const hasSlug = entryTypeConfig?.slug != null;
+    const hasSlug = hasSlugCap && entryTypeConfig?.slug != null;
     const fieldGroups = entryTypeConfig?.fieldGroups ?? [];
 
     const mainGroups = fieldGroups.filter(
@@ -335,22 +338,35 @@ function EntryCreatePage(): React.ReactElement {
                     ]}
                 />
                 <ButtonGroup>
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={handleSave}
-                        disabled={saveMutation.isPending}
-                    >
-                        {t('entries.saveAsDraft')}
-                    </Button>
-                    <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={handlePublish}
-                        loading={saveMutation.isPending}
-                    >
-                        {t('common.publish')}
-                    </Button>
+                    {hasStatuses ? (
+                        <>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={handleSave}
+                                disabled={saveMutation.isPending}
+                            >
+                                {t('entries.saveAsDraft')}
+                            </Button>
+                            <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={handlePublish}
+                                loading={saveMutation.isPending}
+                            >
+                                {t('common.publish')}
+                            </Button>
+                        </>
+                    ) : (
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={handleSave}
+                            loading={saveMutation.isPending}
+                        >
+                            {t('common.save')}
+                        </Button>
+                    )}
                 </ButtonGroup>
             </PageHeader>
 
@@ -461,24 +477,26 @@ function EntryCreatePage(): React.ReactElement {
 
                     {/* Sidebar column */}
                     <FormLayoutSidebar>
-                        <form.Field name="status">
-                            {(statusField) => (
-                                <form.Field name="publishAt">
-                                    {(publishAtField) => (
-                                        <PublishPanel
-                                            status={statusField.state.value}
-                                            publishAt={publishAtField.state.value}
-                                            onStatusChange={(s) =>
-                                                statusField.handleChange(s)
-                                            }
-                                            onPublishAtChange={(v) =>
-                                                publishAtField.handleChange(v)
-                                            }
-                                        />
-                                    )}
-                                </form.Field>
-                            )}
-                        </form.Field>
+                        {hasStatuses && (
+                            <form.Field name="status">
+                                {(statusField) => (
+                                    <form.Field name="publishAt">
+                                        {(publishAtField) => (
+                                            <PublishPanel
+                                                status={statusField.state.value}
+                                                publishAt={publishAtField.state.value}
+                                                onStatusChange={(s) =>
+                                                    statusField.handleChange(s)
+                                                }
+                                                onPublishAtChange={(v) =>
+                                                    publishAtField.handleChange(v)
+                                                }
+                                            />
+                                        )}
+                                    </form.Field>
+                                )}
+                            </form.Field>
+                        )}
 
                         <form.Field name="fields">
                             {(f) => (

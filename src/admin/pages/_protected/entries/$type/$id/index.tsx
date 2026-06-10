@@ -84,7 +84,10 @@ function EntryEditPage(): React.ReactElement {
     const entryTypeConfig = adminConfig.entries[type];
     const single = entryTypeConfig?.single ?? type;
     const plural = entryTypeConfig?.plural ?? type;
-    const hasSlug = entryTypeConfig?.slug != null;
+    const capabilities = entryTypeConfig?.capabilities;
+    const hasStatuses = capabilities?.statuses !== false;
+    const hasSlugCap = capabilities?.slug !== false;
+    const hasSlug = hasSlugCap && entryTypeConfig?.slug != null;
     const fieldGroups = entryTypeConfig?.fieldGroups ?? [];
     const mainGroups = fieldGroups.filter(
         (g) => g.placement !== 'sidebar' && g.placement !== 'tab'
@@ -97,11 +100,9 @@ function EntryEditPage(): React.ReactElement {
     const { data: entry, isLoading } = useEntry(type, id);
 
     // Versioning
-    const hasVersioning = entryTypeConfig?.versioning === true;
+    const hasVersioning = capabilities?.versioning === true;
     const { data: versions } = useEntryVersions(type, id, hasVersioning);
     const versionCount = versions?.length ?? 0;
-
-    const hasI18n = entryTypeConfig?.translatable === true;
 
     const trashEntry = useTrashEntry(type, {
         onSuccess: () => void navigate({ to: `/entries/${type}` }),
@@ -182,7 +183,9 @@ function EntryEditPage(): React.ReactElement {
                             {t('common.unsavedChanges')}
                         </span>
                     )}
-                    {entry != null && <StatusBadge status={entry.status} />}
+                    {hasStatuses && entry != null && (
+                        <StatusBadge status={entry.status} />
+                    )}
                     {entryTypeConfig?.previewUrl && entry?.status === 'published' && (
                         <a
                             href={resolvePreviewUrl(entryTypeConfig.previewUrl, entry)}
@@ -203,7 +206,7 @@ function EntryEditPage(): React.ReactElement {
                             {t('common.update')}
                         </Button>
                     )}
-                    {hasI18n && entry != null && (
+                    {capabilities?.translatable && entry != null && (
                         <LocaleSwitcher
                             currentEntryId={id}
                             type={type}
@@ -343,26 +346,28 @@ function EntryEditPage(): React.ReactElement {
                         </FormLayoutMain>
 
                         <FormLayoutSidebar>
-                            <form.Field name="status">
-                                {(statusField) => (
-                                    <form.Field name="publishAt">
-                                        {(publishAtField) => (
-                                            <PublishPanel
-                                                status={statusField.state.value}
-                                                publishAt={publishAtField.state.value}
-                                                publishedAt={entry?.publishedAt}
-                                                onStatusChange={(s) =>
-                                                    statusField.handleChange(s)
-                                                }
-                                                onPublishAtChange={(v) =>
-                                                    publishAtField.handleChange(v)
-                                                }
-                                                readOnly={isReadOnly}
-                                            />
-                                        )}
-                                    </form.Field>
-                                )}
-                            </form.Field>
+                            {hasStatuses && (
+                                <form.Field name="status">
+                                    {(statusField) => (
+                                        <form.Field name="publishAt">
+                                            {(publishAtField) => (
+                                                <PublishPanel
+                                                    status={statusField.state.value}
+                                                    publishAt={publishAtField.state.value}
+                                                    publishedAt={entry?.publishedAt}
+                                                    onStatusChange={(s) =>
+                                                        statusField.handleChange(s)
+                                                    }
+                                                    onPublishAtChange={(v) =>
+                                                        publishAtField.handleChange(v)
+                                                    }
+                                                    readOnly={isReadOnly}
+                                                />
+                                            )}
+                                        </form.Field>
+                                    )}
+                                </form.Field>
+                            )}
 
                             {hasSlug && (
                                 <form.Field name="slug">
