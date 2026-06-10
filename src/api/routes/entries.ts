@@ -20,7 +20,6 @@ import type {
     EntryQueryParams,
     EntryUpdateData,
     JsonObject,
-    Permission,
     SortOption,
 } from '@/types/index.js';
 import {
@@ -37,7 +36,14 @@ const router = new OpenAPIHono<Env>();
 // Helpers
 // ============================================================================
 
-const SORTABLE_FIELDS = new Set(['title', 'status', 'createdAt', 'updatedAt', 'publishedAt', 'slug']);
+const SORTABLE_FIELDS = new Set([
+    'title',
+    'status',
+    'createdAt',
+    'updatedAt',
+    'publishedAt',
+    'slug',
+]);
 
 function validateSort(sort: unknown): SortOption | SortOption[] | undefined {
     if (!sort) return undefined;
@@ -111,7 +117,10 @@ const bulkScheduleSchema = z.object({
     ids: z.array(z.string().min(1)).min(1),
     publishAt: z.union([
         z.date(),
-        z.string().datetime({ offset: true }).transform((v) => new Date(v)),
+        z
+            .string()
+            .datetime({ offset: true })
+            .transform((v) => new Date(v)),
     ]),
 });
 
@@ -138,14 +147,20 @@ router.post('/query', async (c) => {
 
         if (types.length === 0) {
             return c.json(
-                { error: { code: 'invalid_input', message: '`type` is required (string or string[])', status: 400 } },
+                {
+                    error: {
+                        code: 'invalid_input',
+                        message: '`type` is required (string or string[])',
+                        status: 400,
+                    },
+                },
                 400
             );
         }
 
         for (const t of types) {
             if (!requireEntryType(t)) return notFound(c, `Entry type '${t}' not found`);
-            if (!can(role, `entry:read:${t}` as Permission)) return forbidden(c);
+            if (!can(role, `entry:${t}:read`)) return forbidden(c);
         }
 
         const validatedSort = validateSort(body.sort);
@@ -188,7 +203,7 @@ const listEntriesRoute = createRoute({
 router.openapi(listEntriesRoute, async (c) => {
     const { type } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:read:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:read`)) return forbidden(c);
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
@@ -225,7 +240,7 @@ const getEntryRoute = createRoute({
 router.openapi(getEntryRoute, async (c) => {
     const { type, id } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:read:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:read`)) return forbidden(c);
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -267,7 +282,7 @@ const createEntryRoute = createRoute({
 router.openapi(createEntryRoute, async (c) => {
     const { type } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:create:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:create`)) return forbidden(c);
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -276,7 +291,8 @@ router.openapi(createEntryRoute, async (c) => {
         const parsed = createEntrySchema.safeParse(raw);
         if (!parsed.success) return fromZodError(c, parsed.error);
 
-        const { title, slug, fields, status, publishAt, locale, localeGroup } = parsed.data;
+        const { title, slug, fields, status, publishAt, locale, localeGroup } =
+            parsed.data;
 
         const entry = await Astromech.entries.create({
             type,
@@ -302,7 +318,7 @@ router.openapi(createEntryRoute, async (c) => {
 router.post('/:type/query', async (c) => {
     const { type } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:read:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:read`)) return forbidden(c);
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -327,7 +343,7 @@ router.post('/:type/query', async (c) => {
 router.post('/:type/bulk-update', async (c) => {
     const { type } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:update:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:update`)) return forbidden(c);
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
@@ -338,7 +354,7 @@ router.post('/:type/bulk-update', async (c) => {
         const { ids, data } = parsed.data;
 
         if (data.status === 'published') {
-            if (!can(role, `entry:publish:${type}` as Permission)) return forbidden(c);
+            if (!can(role, `entry:${type}:publish`)) return forbidden(c);
         }
 
         const entries = await Astromech.entries.update({
@@ -359,7 +375,7 @@ router.post('/:type/bulk-update', async (c) => {
 router.post('/:type/bulk-trash', async (c) => {
     const { type } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:delete:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:delete`)) return forbidden(c);
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
@@ -385,7 +401,7 @@ router.post('/:type/bulk-trash', async (c) => {
 router.post('/:type/bulk-delete', async (c) => {
     const { type } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:delete:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:delete`)) return forbidden(c);
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
@@ -411,7 +427,7 @@ router.post('/:type/bulk-delete', async (c) => {
 router.post('/:type/bulk-restore', async (c) => {
     const { type } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:update:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:update`)) return forbidden(c);
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
@@ -433,7 +449,7 @@ router.post('/:type/bulk-restore', async (c) => {
 router.post('/:type/bulk-publish', async (c) => {
     const { type } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:publish:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:publish`)) return forbidden(c);
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
@@ -455,7 +471,7 @@ router.post('/:type/bulk-publish', async (c) => {
 router.post('/:type/bulk-unpublish', async (c) => {
     const { type } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:publish:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:publish`)) return forbidden(c);
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
@@ -477,7 +493,7 @@ router.post('/:type/bulk-unpublish', async (c) => {
 router.post('/:type/bulk-schedule', async (c) => {
     const { type } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:publish:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:publish`)) return forbidden(c);
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
     try {
@@ -503,7 +519,7 @@ router.post('/:type/bulk-schedule', async (c) => {
 router.post('/:type/:id/restore', async (c) => {
     const { type, id } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:update:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:update`)) return forbidden(c);
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -536,7 +552,7 @@ const duplicateOverridesSchema = z
 router.post('/:type/:id/duplicate', async (c) => {
     const { type, id } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:create:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:create`)) return forbidden(c);
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -587,7 +603,7 @@ const updateEntryRoute = createRoute({
 router.openapi(updateEntryRoute, async (c) => {
     const { type, id } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:update:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:update`)) return forbidden(c);
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -599,7 +615,7 @@ router.openapi(updateEntryRoute, async (c) => {
         const { title, slug, fields, status, publishAt } = parsed.data;
 
         if (parsed.data.status === 'published') {
-            if (!can(role, `entry:publish:${type}` as Permission)) return forbidden(c);
+            if (!can(role, `entry:${type}:publish`)) return forbidden(c);
         }
 
         const entry = await Astromech.entries.update({
@@ -627,7 +643,7 @@ router.openapi(updateEntryRoute, async (c) => {
 router.delete('/:type/trash', async (c) => {
     const { type } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:delete:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:delete`)) return forbidden(c);
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -646,7 +662,7 @@ router.delete('/:type/trash', async (c) => {
 router.delete('/:type/:id/force', async (c) => {
     const { type, id } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:delete:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:delete`)) return forbidden(c);
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -684,7 +700,7 @@ const trashEntryRoute = createRoute({
 router.openapi(trashEntryRoute, async (c) => {
     const { type, id } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:delete:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:delete`)) return forbidden(c);
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -707,7 +723,7 @@ router.openapi(trashEntryRoute, async (c) => {
 router.post('/:type/:id/publish', async (c) => {
     const { type, id } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:publish:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:publish`)) return forbidden(c);
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -726,7 +742,7 @@ router.post('/:type/:id/publish', async (c) => {
 router.post('/:type/:id/unpublish', async (c) => {
     const { type, id } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:publish:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:publish`)) return forbidden(c);
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -745,7 +761,7 @@ router.post('/:type/:id/unpublish', async (c) => {
 router.post('/:type/:id/schedule', async (c) => {
     const { type, id } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:publish:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:publish`)) return forbidden(c);
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -771,7 +787,7 @@ router.post('/:type/:id/schedule', async (c) => {
 router.get('/:type/:id/versions', async (c) => {
     const { type, id } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:read:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:read`)) return forbidden(c);
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -790,7 +806,7 @@ router.get('/:type/:id/versions', async (c) => {
 router.post('/:type/:id/versions/:versionId/restore', async (c) => {
     const { type, id, versionId } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:update:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:update`)) return forbidden(c);
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -809,7 +825,7 @@ router.post('/:type/:id/versions/:versionId/restore', async (c) => {
 router.get('/:type/:id/incoming-relations', async (c) => {
     const { type, id } = c.req.param();
     const role = c.var.role;
-    if (!can(role, `entry:read:${type}` as Permission)) return forbidden(c);
+    if (!can(role, `entry:${type}:read`)) return forbidden(c);
 
     if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 

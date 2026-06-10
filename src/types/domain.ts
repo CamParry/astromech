@@ -91,20 +91,23 @@ export type Media = {
 // Users & Roles
 // ============================================================================
 
+/**
+ * Permission strings follow `resource[:identifier]:action` — action always last.
+ * Segment wildcards: `*` matches one segment; trailing `*` matches all remaining segments.
+ *
+ * Examples: `entry:posts:read`, `entry:*:read`, `entry:*`, `plugin:my-plugin:*`
+ */
 export type Permission =
-    | 'entry:create:*'
-    | `entry:create:${string}`
-    | 'entry:read:*'
-    | `entry:read:${string}`
-    | 'entry:update:*'
-    | `entry:update:${string}`
-    | 'entry:delete:*'
-    | `entry:delete:${string}`
-    | 'entry:publish:*'
-    | `entry:publish:${string}`
+    | 'entry:*'
+    | `entry:${string}:create`
+    | `entry:${string}:read`
+    | `entry:${string}:update`
+    | `entry:${string}:delete`
+    | `entry:${string}:publish`
+    | `entry:${string}:*`
+    | 'media:read'
     | 'media:upload'
     | 'media:delete'
-    | 'media:read'
     | 'settings:read'
     | 'settings:update'
     | 'users:read'
@@ -112,6 +115,7 @@ export type Permission =
     | 'users:update'
     | 'users:delete'
     | 'admin:access'
+    | `plugin:${string}`
     | '*'
     | (string & {});
 

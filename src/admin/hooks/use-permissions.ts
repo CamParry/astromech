@@ -19,15 +19,15 @@ export function usePermissions() {
     return {
         hasPermission: (p: string) => hasPermission(permissions, p),
         canRead: (collection: string) =>
-            hasPermission(permissions, `entry:read:${collection}`),
+            hasPermission(permissions, `entry:${collection}:read`),
         canCreate: (collection: string) =>
-            hasPermission(permissions, `entry:create:${collection}`),
+            hasPermission(permissions, `entry:${collection}:create`),
         canUpdate: (collection: string) =>
-            hasPermission(permissions, `entry:update:${collection}`),
+            hasPermission(permissions, `entry:${collection}:update`),
         canDelete: (collection: string) =>
-            hasPermission(permissions, `entry:delete:${collection}`),
+            hasPermission(permissions, `entry:${collection}:delete`),
         canPublish: (collection: string) =>
-            hasPermission(permissions, `entry:publish:${collection}`),
+            hasPermission(permissions, `entry:${collection}:publish`),
         canReadMedia: () => hasPermission(permissions, 'media:read'),
         canUploadMedia: () => hasPermission(permissions, 'media:upload'),
         canDeleteMedia: () => hasPermission(permissions, 'media:delete'),

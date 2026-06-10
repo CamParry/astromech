@@ -17,13 +17,10 @@ type ConfigWithRoles = Pick<AstromechConfig, 'roles'> | Pick<ResolvedConfig, 'ro
 // Built-in Roles
 // ============================================================================
 
+// `entry:*` trailing wildcard covers all entry types and all actions.
 const EDITOR_PERMISSIONS: Permission[] = [
     'admin:access',
-    'entry:create:*',
-    'entry:read:*',
-    'entry:update:*',
-    'entry:delete:*',
-    'entry:publish:*',
+    'entry:*',
     'media:read',
     'media:upload',
     'media:delete',

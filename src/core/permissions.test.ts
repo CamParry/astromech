@@ -1,42 +1,159 @@
 import { describe, expect, it } from 'vitest';
-import type { Permission } from '@/types/index.js';
-import { hasPermission } from '@/core/permissions.js';
+import type { Permission, Role } from '@/types/index.js';
+import { hasPermission, can, BUILT_IN_ROLES, resolveRoles } from '@/core/permissions.js';
+
+// ============================================================================
+// hasPermission — new grammar (resource[:identifier]:action, action last)
+// ============================================================================
 
 describe('hasPermission', () => {
-    it('grants on global wildcard and exact match', () => {
-        expect(hasPermission(['*'], 'entry:read:posts')).toBe(true);
-        expect(hasPermission(['entry:read:posts'], 'entry:read:posts')).toBe(true);
-        expect(hasPermission(['entry:read:posts'], 'entry:read:pages')).toBe(false);
-    });
-
-    it('grants on a three-part scope wildcard', () => {
-        expect(hasPermission(['entry:read:*'], 'entry:read:posts')).toBe(true);
-        expect(hasPermission(['entry:read:*'], 'entry:update:posts')).toBe(false);
-    });
-
-    describe('plugin permissions', () => {
-        const lookup = 'plugin:astromech-redirects:lookup' as Permission;
-
-        it('grants on exact plugin permission', () => {
-            expect(hasPermission([lookup], lookup)).toBe(true);
+    describe('exact match', () => {
+        it('grants exact permission', () => {
+            expect(hasPermission(['entry:redirect:read'], 'entry:redirect:read')).toBe(
+                true
+            );
         });
 
-        it('grants on per-plugin wildcard (plugin:<pkg>:*)', () => {
-            expect(hasPermission(['plugin:astromech-redirects:*' as Permission], lookup)).toBe(true);
+        it('rejects wrong action', () => {
+            expect(hasPermission(['entry:redirect:read'], 'entry:redirect:update')).toBe(
+                false
+            );
+        });
+    });
+
+    describe('viewer shape — action-last with mid-wildcard', () => {
+        it('entry:*:read grants any collection:read', () => {
+            expect(hasPermission(['entry:*:read'], 'entry:posts:read')).toBe(true);
+        });
+
+        it('entry:*:read does not grant different action', () => {
+            expect(hasPermission(['entry:*:read'], 'entry:posts:update')).toBe(false);
+        });
+    });
+
+    describe('editor collapse — trailing wildcard', () => {
+        it('entry:* grants any entry action on any collection', () => {
+            expect(hasPermission(['entry:*'], 'entry:posts:publish')).toBe(true);
+            expect(hasPermission(['entry:*'], 'entry:pages:create')).toBe(true);
+        });
+
+        it('entry:* does not grant non-entry permissions', () => {
+            expect(hasPermission(['entry:*'], 'media:read')).toBe(false);
+        });
+
+        it('entry:* does not leak into plugin tree', () => {
             expect(
-                hasPermission(['plugin:astromech-seo:*' as Permission], lookup)
+                hasPermission(
+                    ['entry:*'],
+                    'plugin:astromech-redirects:entry:redirect:read'
+                )
             ).toBe(false);
         });
+    });
 
-        it('grants on the plugin-wide wildcard (plugin:*)', () => {
-            expect(hasPermission(['plugin:*' as Permission], lookup)).toBe(true);
+    describe('plugin tree', () => {
+        it('per-plugin wildcard grants own keys, including deep paths', () => {
+            const granted = ['plugin:astromech-redirects:*'] as Permission[];
+            expect(hasPermission(granted, 'plugin:astromech-redirects:lookup')).toBe(
+                true
+            );
             expect(
-                hasPermission(['plugin:*' as Permission], 'plugin:astromech-seo:write' as Permission)
+                hasPermission(granted, 'plugin:astromech-redirects:entry:redirect:read')
             ).toBe(true);
         });
 
-        it('does not let plugin:* leak into non-plugin permissions', () => {
-            expect(hasPermission(['plugin:*' as Permission], 'entry:read:posts')).toBe(false);
+        it('per-plugin wildcard does not grant sibling plugin', () => {
+            const granted = ['plugin:astromech-redirects:*'] as Permission[];
+            expect(hasPermission(granted, 'plugin:astromech-seo:write')).toBe(false);
         });
+
+        it('plugin:* grants all plugin permissions', () => {
+            const granted = ['plugin:*'] as Permission[];
+            expect(hasPermission(granted, 'plugin:astromech-redirects:lookup')).toBe(
+                true
+            );
+            expect(hasPermission(granted, 'plugin:astromech-seo:write')).toBe(true);
+        });
+
+        it('plugin:* does not grant non-plugin permissions', () => {
+            expect(hasPermission(['plugin:*' as Permission], 'entry:posts:read')).toBe(
+                false
+            );
+        });
+    });
+
+    describe('global wildcard', () => {
+        it('* grants everything', () => {
+            expect(hasPermission(['*'], 'entry:posts:publish')).toBe(true);
+            expect(hasPermission(['*'], 'users:delete')).toBe(true);
+            expect(hasPermission(['*'], 'plugin:astromech-seo:view')).toBe(true);
+        });
+    });
+});
+
+// ============================================================================
+// can() — built-in roles secure-by-default
+// ============================================================================
+
+describe('can — built-in roles', () => {
+    const roles = resolveRoles({});
+    const editorRole = roles['editor'] as Role;
+    const adminRole = roles['admin'] as Role;
+
+    describe('editor role', () => {
+        it('can publish entries', () => {
+            expect(can(editorRole, 'entry:posts:publish')).toBe(true);
+        });
+
+        it('can upload media', () => {
+            expect(can(editorRole, 'media:upload')).toBe(true);
+        });
+
+        it('cannot read users', () => {
+            expect(can(editorRole, 'users:read')).toBe(false);
+        });
+
+        it('cannot update settings', () => {
+            expect(can(editorRole, 'settings:update')).toBe(false);
+        });
+
+        it('cannot access plugin permissions', () => {
+            expect(can(editorRole, 'plugin:astromech-seo:view' as Permission)).toBe(
+                false
+            );
+        });
+    });
+
+    describe('admin role', () => {
+        it('grants everything via * wildcard', () => {
+            expect(can(adminRole, 'entry:posts:publish')).toBe(true);
+            expect(can(adminRole, 'users:delete')).toBe(true);
+            expect(can(adminRole, 'settings:update')).toBe(true);
+            expect(can(adminRole, 'plugin:astromech-seo:view' as Permission)).toBe(true);
+        });
+    });
+});
+
+// ============================================================================
+// BUILT_IN_ROLES shape check
+// ============================================================================
+
+describe('BUILT_IN_ROLES', () => {
+    it('editor has entry:* and media permissions but not users/settings', () => {
+        const editorBuiltIn = BUILT_IN_ROLES['editor'];
+        if (!editorBuiltIn) throw new Error('editor built-in role missing');
+        const { permissions } = editorBuiltIn;
+        expect(permissions).toContain('entry:*');
+        expect(permissions).toContain('media:read');
+        expect(permissions).toContain('media:upload');
+        expect(permissions).toContain('media:delete');
+        expect(permissions).not.toContain('users:read');
+        expect(permissions).not.toContain('settings:read');
+    });
+
+    it('admin has * wildcard only', () => {
+        const adminBuiltIn = BUILT_IN_ROLES['admin'];
+        if (!adminBuiltIn) throw new Error('admin built-in role missing');
+        expect(adminBuiltIn.permissions).toEqual(['*']);
     });
 });
