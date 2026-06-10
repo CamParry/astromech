@@ -24,16 +24,16 @@ The reference target is the way Payload / Strapi / Sanity treat plugins: **a plu
 
 The design introduced several near-synonyms that must stay distinct:
 
-| Term                       | Meaning                                                                                                                                                                                            |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **canonical package**      | The npm package name, e.g. `@astromech/redirects`. The stable identity that survives renames.                                                                                                      |
-| **access key** (`name`)    | The key a plugin is reached by on the SDK: `Astromech.plugins.redirects`. Defaults to the last path segment of the package; user-overridable via `alias`.                                          |
-| **permissionNamespace**    | Sanitised package (`@`→stripped, `/`→`-`, lowercased) used to anchor permission strings: `plugin:astromech-redirects:lookup`. Anchored to the package so it survives `alias` renames. Overridable. |
-| **plugin footprint**       | The set of entry types that actually use a plugin. **Derived** from field presence (`ctx.config.entryTypesWithField('seo-meta')`), never declared.                                                 |
-| **field-group placement**  | Where a field group renders on the edit page: `'main' \| 'sidebar' \| 'tab'`. Replaces the old panel/tab API.                                                                                      |
-| **hook event**             | A named lifecycle point. Core events are known/typed; plugins declare their own via `hookEvents` and fire them with `ctx.emit(event, payload)`.                                                    |
-| **raw escape hatch**       | A raw request handler mounted inside `/api/plugins/{name}/*` for binary/multipart/streaming, via a thin wrapper (not raw Hono).                                                                    |
-| **declarative definition** | The plugin object is almost entirely data; `setup(ctx)` is the only imperative escape hatch.                                                                                                       |
+| Term                       | Meaning                                                                                                                                                                                                     |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **canonical package**      | The npm package name, e.g. `@astromech/redirects`. The stable identity that survives renames.                                                                                                               |
+| **access key** (`name`)    | The key a plugin is reached by on the SDK: `Astromech.plugins.redirects`. Defaults to the last path segment of the package; user-overridable via `alias`.                                                   |
+| **permissionNamespace**    | Sanitised package (`@`→stripped, `/`→`-`, lowercased) used to anchor permission strings: `plugin:astromech-redirects:lookup`. Always derived from the package (no override) so it survives `alias` renames. |
+| **plugin footprint**       | The set of entry types that actually use a plugin. **Derived** from field presence (`ctx.config.entryTypesWithField('seo-meta')`), never declared.                                                          |
+| **field-group placement**  | Where a field group renders on the edit page: `'main' \| 'sidebar' \| 'tab'`. Replaces the old panel/tab API.                                                                                               |
+| **hook event**             | A named lifecycle point. Core events are known/typed; plugins declare their own via `hookEvents` and fire them with `ctx.emit(event, payload)`.                                                             |
+| **raw escape hatch**       | A raw request handler mounted inside `/api/plugins/{name}/*` for binary/multipart/streaming, via a thin wrapper (not raw Hono).                                                                             |
+| **declarative definition** | The plugin object is almost entirely data; `setup(ctx)` is the only imperative escape hatch.                                                                                                                |
 
 ---
 
@@ -43,7 +43,7 @@ The design introduced several near-synonyms that must stay distinct:
 
 1. **`definePlugin` accepts a factory** `(options) => PluginDefinition`. First-party plugins export a function (`redirects()`, `seo()`, `forms()`) callable with **zero args**; `options` is always optional / `Partial`. The author validates options inside the factory (Zod recommended, not enforced).
 2. **Identity** = `package` (canonical) + `name` (access key, defaults to last path segment). Name collisions → **build error**; the user resolves via an `alias` option.
-3. **`permissionNamespace`** = sanitised package, overridable. Permissions anchor to the package, not the alias.
+3. **`permissionNamespace`** = sanitised package, always derived (no override). Permissions anchor to the package, not the alias.
 
 ### 3.2 Distribution & frontend
 
@@ -156,7 +156,7 @@ export type PluginDefinition = {
     package: string; // canonical, e.g. '@astromech/redirects'
     name?: string; // access key; defaults to last path segment
     alias?: string; // user override for collisions
-    permissionNamespace?: string; // defaults to sanitised(package)
+    // permissionNamespace is always sanitised(package) — derived, not user-set
     label?: string; // admin display name (sidebar group, page-title prefix); defaults to access key
     icon?: string; // Lucide icon for the sidebar group
 

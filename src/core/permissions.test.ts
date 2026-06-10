@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { Permission, Role } from '@/types/index.js';
-import { hasPermission, can, BUILT_IN_ROLES, resolveRoles } from '@/core/permissions.js';
+import {
+    hasPermission,
+    can,
+    builtInRole,
+    definePermissionBundles,
+    BUILT_IN_ROLES,
+    resolveRoles,
+} from '@/core/permissions.js';
 
 // ============================================================================
 // hasPermission — new grammar (resource[:identifier]:action, action last)
@@ -155,5 +162,57 @@ describe('BUILT_IN_ROLES', () => {
         const adminBuiltIn = BUILT_IN_ROLES['admin'];
         if (!adminBuiltIn) throw new Error('admin built-in role missing');
         expect(adminBuiltIn.permissions).toEqual(['*']);
+    });
+});
+
+// ============================================================================
+// builtInRole — defensive copy of a built-in role's permissions
+// ============================================================================
+
+describe('builtInRole', () => {
+    it('returns the editor permissions including entry:*', () => {
+        expect(builtInRole('editor')).toContain('entry:*');
+    });
+
+    it('returns a defensive copy — mutating it does not affect BUILT_IN_ROLES', () => {
+        const copy = builtInRole('editor');
+        copy.push('users:read');
+        expect(BUILT_IN_ROLES.editor.permissions).not.toContain('users:read');
+    });
+});
+
+// ============================================================================
+// definePermissionBundles — owner-prefixed bundles, never core permissions
+// ============================================================================
+
+describe('definePermissionBundles', () => {
+    const bundle = definePermissionBundles('@astromech/redirects', {
+        manage: ['entry:redirect:*', 'lookup'],
+        view: ['entry:redirect:read'],
+    });
+
+    it('prefixes every key with plugin:{ns}: — including nested keys', () => {
+        expect(bundle('manage')).toEqual([
+            'plugin:astromech-redirects:entry:redirect:*',
+            'plugin:astromech-redirects:lookup',
+        ]);
+    });
+
+    it('throws on an unknown bundle name', () => {
+        // @ts-expect-error — unknown bundle name is rejected at the type level
+        expect(() => bundle('nope')).toThrow(/Unknown permission bundle/);
+    });
+
+    it('composes with builtInRole into a working role', () => {
+        const permissions = [...builtInRole('editor'), ...bundle('manage')];
+        expect(hasPermission(permissions, 'entry:posts:publish')).toBe(true);
+        expect(
+            hasPermission(permissions, 'plugin:astromech-redirects:entry:redirect:read')
+        ).toBe(true);
+        expect(hasPermission(permissions, 'plugin:astromech-redirects:lookup')).toBe(
+            true
+        );
+        expect(hasPermission(permissions, 'users:read')).toBe(false);
+        expect(hasPermission(permissions, 'plugin:astromech-seo:view')).toBe(false);
     });
 });

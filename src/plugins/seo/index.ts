@@ -16,10 +16,10 @@
  * surface (custom field type, tab placement, nav, pages, settings, i18n).
  */
 
-import { definePlugin } from '@/index.js';
+import { definePlugin, definePermissionBundles } from '@/index.js';
 import type { PluginDefinition } from '@/types/index.js';
 import type { SeoOptions } from './shared.js';
-import { PERMISSION_NAMESPACE, defaultPathForEntry } from './shared.js';
+import { defaultPathForEntry } from './shared.js';
 import { seoMetaField } from './fields/seo-meta.js';
 import { seoSdk } from './server/sdk.js';
 
@@ -45,13 +45,16 @@ export type {
     SeoSitemapUrl,
 } from './shared.js';
 
+export const seoPermissions = definePermissionBundles('@astromech/seo', {
+    view: ['view'],
+});
+
 export const seo = definePlugin<SeoOptions>((options) => {
     const pathForEntry = options?.pathForEntry ?? defaultPathForEntry;
 
     const definition: PluginDefinition = {
         package: '@astromech/seo',
         version: '0.1.0',
-        permissionNamespace: PERMISSION_NAMESPACE,
         label: 'SEO',
         icon: 'Search',
 

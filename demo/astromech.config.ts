@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url';
-import { defineConfig, FilesystemStorage, libsqlDriver } from 'astromech';
+import { builtInRole, defineConfig, FilesystemStorage, libsqlDriver } from 'astromech';
 import { redirects } from 'astromech/plugins/redirects';
-import { seo, seoFields } from 'astromech/plugins/seo';
+import { seo, seoFields, seoPermissions } from 'astromech/plugins/seo';
 import { rating } from './src/plugins/rating/index.js';
 
 export default defineConfig({
@@ -12,6 +12,12 @@ export default defineConfig({
     locales: ['en', 'fr'],
     defaultLocale: 'en',
     plugins: [redirects(), seo(), rating()],
+    roles: {
+        'content-editor': {
+            name: 'Content Editor',
+            permissions: [...builtInRole('editor'), ...seoPermissions('view')],
+        },
+    },
     entries: {
         page: {
             single: 'Page',

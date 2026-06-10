@@ -96,13 +96,6 @@ export type PluginPermission = {
     description?: string;
 };
 
-/** Advisory only — surfaced as a one-click admin notice, never auto-applied. */
-export type PluginSuggestedGrant = {
-    role: string;
-    /** Permission action keys (as in `PluginPermission.key`). */
-    permissions: string[];
-};
-
 // ============================================================================
 // CRON
 // ============================================================================
@@ -208,8 +201,6 @@ export type PluginDefinition = {
     name?: string;
     /** User override for access-key collisions. */
     alias?: string;
-    /** Defaults to the sanitised package. Anchors permission strings. */
-    permissionNamespace?: string;
     /**
      * Display name in the admin — sidebar group and page-title prefix.
      * Defaults to the access key.
@@ -220,7 +211,6 @@ export type PluginDefinition = {
 
     // ── Declarative surfaces ────────────────────────────────────────────
     permissions?: PluginPermission[];
-    suggestedRoleGrants?: PluginSuggestedGrant[];
     entries?: Record<string, EntryTypeConfig>;
     fields?: PluginFieldTypeRegistration[];
     schema?: PluginDrizzleSchema;
@@ -235,7 +225,7 @@ export type PluginDefinition = {
      * Admin-UI locale resources, keyed by locale code. Values are import
      * specifiers (STRINGS, e.g. `'./locales/en.json'` resolved by the
      * plugin) so the code-gen virtual module can emit lazy `import()` calls
-     * (spec §11). Namespace = `permissionNamespace`.
+     * (spec §11). Namespace = the sanitised package.
      */
     i18n?: Record<string, string>;
     requiredEnv?: string[];

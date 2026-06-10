@@ -4,7 +4,7 @@
  * Identity = canonical `package` (stable, survives renames) + `name` (access
  * key on `Astromech.plugins.X`). The access key defaults to the last path
  * segment of the package and is overridable via `alias`. The
- * `permissionNamespace` defaults to the sanitised package and anchors
+ * `permissionNamespace` is always the sanitised package and anchors
  * permission strings.
  */
 
@@ -28,7 +28,7 @@ export function resolvePluginIdentity(def: PluginDefinition): ResolvedPluginIden
         package: def.package,
         name,
         alias: name,
-        permissionNamespace: def.permissionNamespace ?? sanitisePackage(def.package),
+        permissionNamespace: sanitisePackage(def.package),
     };
     if (def.version !== undefined) {
         identity.version = def.version;

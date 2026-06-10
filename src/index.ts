@@ -25,6 +25,12 @@ export type { SmtpDriverOptions } from '@/email/drivers/smtp.js';
 export { libsqlDriver } from '@/db/drivers/libsql.js';
 export { d1Driver } from '@/db/drivers/d1.js';
 export { runScheduledJobs } from '@/cron/index.js';
+export {
+    builtInRole,
+    definePermissionBundles,
+    BUILT_IN_ROLES,
+} from '@/core/permissions.js';
+export type { BuiltInRoleSlug } from '@/core/permissions.js';
 
 // ============================================================================
 // Config / Collection / Plugin Helpers

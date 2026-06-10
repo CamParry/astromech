@@ -9,7 +9,9 @@ import {
     satisfiesRange,
 } from '@/core/plugin-identity.js';
 
-const def = (partial: Partial<PluginDefinition> & { package: string }): PluginDefinition => ({
+const def = (
+    partial: Partial<PluginDefinition> & { package: string }
+): PluginDefinition => ({
     ...partial,
 });
 
@@ -47,11 +49,11 @@ describe('resolvePluginIdentity', () => {
         expect(id.name).toBe('my-redirects');
     });
 
-    it('honours an explicit permissionNamespace and carries version', () => {
+    it('always derives namespace from the package and carries version', () => {
         const id = resolvePluginIdentity(
-            def({ package: '@x/y', permissionNamespace: 'custom', version: '1.2.3' })
+            def({ package: '@x/y', alias: 'why', version: '1.2.3' })
         );
-        expect(id.permissionNamespace).toBe('custom');
+        expect(id.permissionNamespace).toBe('x-y');
         expect(id.version).toBe('1.2.3');
     });
 });
@@ -59,13 +61,19 @@ describe('resolvePluginIdentity', () => {
 describe('assertNoPluginCollisions', () => {
     it('passes when access keys are unique', () => {
         expect(() =>
-            assertNoPluginCollisions([def({ package: '@a/seo' }), def({ package: '@b/redirects' })])
+            assertNoPluginCollisions([
+                def({ package: '@a/seo' }),
+                def({ package: '@b/redirects' }),
+            ])
         ).not.toThrow();
     });
 
     it('throws when two packages resolve to the same access key', () => {
         expect(() =>
-            assertNoPluginCollisions([def({ package: '@a/seo' }), def({ package: '@b/seo' })])
+            assertNoPluginCollisions([
+                def({ package: '@a/seo' }),
+                def({ package: '@b/seo' }),
+            ])
         ).toThrow(/collision/i);
     });
 
@@ -107,7 +115,10 @@ describe('checkPluginDependencies', () => {
         expect(() =>
             checkPluginDependencies([
                 def({ package: '@astromech/seo', version: '1.4.0' }),
-                def({ package: '@astromech/forms', dependsOn: { '@astromech/seo': '^1.0.0' } }),
+                def({
+                    package: '@astromech/forms',
+                    dependsOn: { '@astromech/seo': '^1.0.0' },
+                }),
             ])
         ).not.toThrow();
     });
@@ -115,7 +126,10 @@ describe('checkPluginDependencies', () => {
     it('throws when a dependency is missing', () => {
         expect(() =>
             checkPluginDependencies([
-                def({ package: '@astromech/forms', dependsOn: { '@astromech/seo': '^1.0.0' } }),
+                def({
+                    package: '@astromech/forms',
+                    dependsOn: { '@astromech/seo': '^1.0.0' },
+                }),
             ])
         ).toThrow(/not installed/i);
     });
@@ -124,7 +138,10 @@ describe('checkPluginDependencies', () => {
         expect(() =>
             checkPluginDependencies([
                 def({ package: '@astromech/seo', version: '1.4.0' }),
-                def({ package: '@astromech/forms', dependsOn: { '@astromech/seo': '^2.0.0' } }),
+                def({
+                    package: '@astromech/forms',
+                    dependsOn: { '@astromech/seo': '^2.0.0' },
+                }),
             ])
         ).toThrow(/version 1\.4\.0/i);
     });
@@ -133,7 +150,10 @@ describe('checkPluginDependencies', () => {
         expect(() =>
             checkPluginDependencies([
                 def({ package: '@astromech/seo' }),
-                def({ package: '@astromech/forms', dependsOn: { '@astromech/seo': '^2.0.0' } }),
+                def({
+                    package: '@astromech/forms',
+                    dependsOn: { '@astromech/seo': '^2.0.0' },
+                }),
             ])
         ).not.toThrow();
     });
@@ -141,7 +161,10 @@ describe('checkPluginDependencies', () => {
     it('throws when a dependency is listed after its dependent', () => {
         expect(() =>
             checkPluginDependencies([
-                def({ package: '@astromech/forms', dependsOn: { '@astromech/seo': '^1.0.0' } }),
+                def({
+                    package: '@astromech/forms',
+                    dependsOn: { '@astromech/seo': '^1.0.0' },
+                }),
                 def({ package: '@astromech/seo', version: '1.4.0' }),
             ])
         ).toThrow(/move "@astromech\/seo" before "@astromech\/forms"/i);
