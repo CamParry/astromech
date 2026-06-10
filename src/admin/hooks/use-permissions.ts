@@ -1,33 +1,12 @@
 /**
- * Client-side permission checking hook.
- *
- * Mirrors the server-side hasPermission() logic from src/core/permissions.ts.
- * Imported separately to avoid pulling server-only code into the client bundle.
+ * Client-side permission hook. Uses the same segment-wise matcher as the
+ * server (src/core/permission-match.ts).
  */
 
+import { hasPermission } from '@/core/permission-match.js';
 import { useAuth } from '../context/auth.js';
 
-// ============================================================================
-// Client-side permission checker (mirrors src/core/permissions.ts)
-// ============================================================================
-
-export function hasPermission(permissions: string[], check: string): boolean {
-    if (permissions.includes('*')) return true;
-    if (permissions.includes(check)) return true;
-
-    const parts = check.split(':');
-    if (parts.length === 3) {
-        const wildcard = `${parts[0]}:${parts[1]}:*`;
-        if (permissions.includes(wildcard)) return true;
-    }
-
-    // Plugin-wide wildcard: plugin:* covers any plugin:<pkg>:<action>
-    if (parts[0] === 'plugin' && permissions.includes('plugin:*')) {
-        return true;
-    }
-
-    return false;
-}
+export { hasPermission };
 
 // ============================================================================
 // Hook

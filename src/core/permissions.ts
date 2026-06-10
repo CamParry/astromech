@@ -8,6 +8,9 @@
 import type { AstromechConfig, ResolvedConfig } from '@/types/config.js';
 import type { Permission, Role } from '@/types/domain.js';
 
+import { hasPermission as hasPermissionImpl } from '@/core/permission-match.js';
+export { hasPermission, matchesPermission } from '@/core/permission-match.js';
+
 type ConfigWithRoles = Pick<AstromechConfig, 'roles'> | Pick<ResolvedConfig, 'roles'>;
 
 // ============================================================================
@@ -70,44 +73,22 @@ export function resolveRoles(config: ConfigWithRoles): Record<string, Role> {
 /** Look up a single role by slug. Returns the admin role as fallback. */
 export function resolveRole(config: ConfigWithRoles, slug: string): Role {
     const roles = resolveRoles(config);
-    return roles[slug] ?? roles['admin'] ?? { slug: 'admin', name: 'Administrator', permissions: ['*'], isBuiltIn: true };
+    return (
+        roles[slug] ??
+        roles['admin'] ?? {
+            slug: 'admin',
+            name: 'Administrator',
+            permissions: ['*'],
+            isBuiltIn: true,
+        }
+    );
 }
 
 // ============================================================================
-// Permission Checking
+// Permission Checking (segment-wise matcher re-exported from permission-match.ts)
 // ============================================================================
-
-/**
- * Check if a permissions array grants the requested permission.
- *
- * Handles:
- * - Exact match: 'entry:read:posts' in permissions
- * - Global wildcard: '*' in permissions → grants everything
- * - Scope wildcard: 'entry:read:*' in permissions → grants 'entry:read:posts'
- *   (this also covers per-plugin 'plugin:<pkg>:*' → 'plugin:<pkg>:lookup')
- * - Plugin-wide wildcard: 'plugin:*' grants any 'plugin:<pkg>:<action>'
- */
-export function hasPermission(permissions: Permission[], check: Permission): boolean {
-    if (permissions.includes('*' as Permission)) return true;
-    if (permissions.includes(check)) return true;
-
-    const parts = check.split(':');
-
-    // Handle scope wildcard: entry:read:* covers entry:read:posts
-    if (parts.length === 3) {
-        const wildcard = `${parts[0]}:${parts[1]}:*` as Permission;
-        if (permissions.includes(wildcard)) return true;
-    }
-
-    // Plugin-wide wildcard: plugin:* covers any plugin:<pkg>:<action>
-    if (parts[0] === 'plugin' && permissions.includes('plugin:*' as Permission)) {
-        return true;
-    }
-
-    return false;
-}
 
 /** Convenience wrapper: check whether a role grants a permission. */
 export function can(role: Role, permission: Permission): boolean {
-    return hasPermission(role.permissions, permission);
+    return hasPermissionImpl(role.permissions, permission);
 }
