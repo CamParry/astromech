@@ -34,6 +34,8 @@ router.get('/', (c) => {
             slug: config.slug ?? null,
             adminColumns: config.adminColumns ?? [],
             fieldGroups: config.fieldGroups,
+            capabilities: config.capabilities,
+            titleField: config.titleField,
         }));
 
         return c.json(meta);
@@ -61,6 +63,8 @@ router.get('/:type', (c) => {
             slug: config.slug ?? null,
             adminColumns: config.adminColumns ?? [],
             fieldGroups: config.fieldGroups,
+            capabilities: config.capabilities,
+            titleField: config.titleField,
         });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);

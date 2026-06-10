@@ -60,7 +60,27 @@ export type EntryTypeConfig = {
     fieldGroups: FieldGroup[];
     versioning?: boolean | VersioningConfig;
     translatable?: boolean;
-    slug?: SlugConfig;
+    /**
+     * Disable slug generation for this entry type by setting `false`.
+     * Defaults are storage-dependent; built-in storage defaults slug ON.
+     */
+    slug?: SlugConfig | false;
+    /**
+     * Whether entries have status (draft/published/scheduled).
+     * Defaults are storage-dependent; built-in storage defaults statuses ON.
+     */
+    statuses?: boolean;
+    /**
+     * Whether entries can be soft-deleted (trashed).
+     * Defaults are storage-dependent; built-in storage defaults trash ON.
+     */
+    trash?: boolean;
+    /**
+     * Which field to use as the entry title.
+     * Defaults are storage-dependent; built-in storage defaults titleField 'title'.
+     * Set `false` to make the entry titleless.
+     */
+    titleField?: 'title' | false;
     single: string;
     plural: string;
     adminColumns?: AdminColumn[];
@@ -68,6 +88,19 @@ export type EntryTypeConfig = {
     defaultView?: 'list' | 'grid';
     gridFields?: { field: string; label?: string }[];
     previewUrl?: string;
+};
+
+export type ResolvedEntryCapabilities = {
+    statuses: boolean;
+    slug: boolean;
+    translatable: boolean;
+    versioning: boolean;
+    trash: boolean;
+};
+
+export type ResolvedEntryTypeConfig = EntryTypeConfig & {
+    capabilities: ResolvedEntryCapabilities;
+    titleField: 'title' | false;
 };
 
 // ============================================================================
@@ -128,7 +161,7 @@ export type AstromechConfig = {
 export type ResolvedConfig = Omit<AstromechConfig, 'plugins' | 'db'> & {
     adminRoute: string;
     apiRoute: string;
-    entries: Record<string, EntryTypeConfig>;
+    entries: Record<string, ResolvedEntryTypeConfig>;
     trash: Required<TrashConfig>;
 };
 
@@ -156,6 +189,8 @@ export type AdminConfig = {
             defaultView?: 'list' | 'grid';
             gridFields?: { field: string; label?: string }[];
             previewUrl: string | null;
+            capabilities: ResolvedEntryCapabilities;
+            titleField: 'title' | false;
         }
     >;
     /** Static plugin metadata for the admin shell (serializable only). */

@@ -3,7 +3,12 @@
  * Processes and resolves Astromech configuration with defaults
  */
 
-import type { AstromechConfig, FieldGroup, ResolvedConfig } from '@/types/index.js';
+import type {
+    AstromechConfig,
+    FieldGroup,
+    ResolvedConfig,
+    ResolvedEntryTypeConfig,
+} from '@/types/index.js';
 import { mergePluginEntries } from '@/core/plugin-resolver.js';
 import {
     assertNoPluginCollisions,
@@ -11,6 +16,11 @@ import {
 } from '@/core/plugin-identity.js';
 import { assertPluginTablePrefixes } from '@/core/plugin-schema.js';
 import { assertNoFieldTypeCollisions } from '@/core/plugin-fields.js';
+import {
+    BUILT_IN_SUPPORTS,
+    resolveEntryCapabilities,
+    assertEntryTypeValid,
+} from '@/core/entry-storage/capabilities.js';
 
 /**
  * Sort field groups by priority within each collection and resource
@@ -61,7 +71,19 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     // Step 3: Sort field groups by priority
     sortFieldGroups(config);
 
-    // Step 4: Return resolved config with defaults
+    // Step 4: Resolve entry capabilities and titleField (crash-loud on mismatch).
+    const resolvedEntries: Record<string, ResolvedEntryTypeConfig> = {};
+    for (const [typeKey, cfg] of Object.entries(config.entries)) {
+        const capabilities = resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS);
+        assertEntryTypeValid(typeKey, cfg, capabilities, BUILT_IN_SUPPORTS);
+        resolvedEntries[typeKey] = {
+            ...cfg,
+            capabilities,
+            titleField: cfg.titleField ?? 'title',
+        };
+    }
+
+    // Step 5: Return resolved config with defaults
     // Destructure out `db` so the driver instance is not included in the
     // resolved config (it cannot be JSON.stringify'd into the virtual module).
     const { db: _db, ...rest } = config;
@@ -69,6 +91,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
         ...rest,
         adminRoute: config.adminRoute ?? '/admin',
         apiRoute: config.apiRoute ?? '/api',
+        entries: resolvedEntries,
         trash: {
             enabled: config.trash?.enabled ?? true,
             retentionDays: config.trash?.retentionDays ?? 30,

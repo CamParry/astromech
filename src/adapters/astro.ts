@@ -205,6 +205,9 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                                                         gridFields: entryType.gridFields,
                                                         previewUrl:
                                                             entryType.previewUrl ?? null,
+                                                        capabilities:
+                                                            entryType.capabilities,
+                                                        titleField: entryType.titleField,
                                                     },
                                                 ])
                                             ),
