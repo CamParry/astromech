@@ -139,7 +139,7 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
                     message: string;
                     status: number;
                     details?: Record<string, unknown>;
-                },
+                }
             );
             emitApiError(apiErr);
             throw apiErr;
@@ -157,7 +157,9 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
 // ============================================================================
 
 const entriesApi: EntriesApi = {
-    async query(params: EntryQueryParams & { type: string | readonly string[] }): Promise<QueryResult<Entry>> {
+    async query(
+        params: EntryQueryParams & { type: string | readonly string[] }
+    ): Promise<QueryResult<Entry>> {
         const typeParam = params.type;
         const isArray = Array.isArray(typeParam);
         // Cross-type: /entries/query (no :type). Single-type: /entries/:type/query.
@@ -231,13 +233,13 @@ const entriesApi: EntriesApi = {
         cascadeLocales?: boolean;
     }): Promise<void> {
         if (Array.isArray(params.id)) {
-            await apiFetch<void>(`/entries/${params.type}/bulk-trash`, {
+            await apiFetch<unknown>(`/entries/${params.type}/bulk-trash`, {
                 method: 'POST',
                 body: { ids: params.id, cascadeLocales: !!params.cascadeLocales },
             });
             return;
         }
-        await apiFetch<void>(`/entries/${params.type}/${params.id as string}`, {
+        await apiFetch<unknown>(`/entries/${params.type}/${params.id as string}`, {
             method: 'DELETE',
             ...(params.cascadeLocales ? { params: { cascadeLocales: true } } : {}),
         });
@@ -279,20 +281,20 @@ const entriesApi: EntriesApi = {
         cascadeLocales?: boolean;
     }): Promise<void> {
         if (Array.isArray(params.id)) {
-            await apiFetch<void>(`/entries/${params.type}/bulk-delete`, {
+            await apiFetch<unknown>(`/entries/${params.type}/bulk-delete`, {
                 method: 'POST',
                 body: { ids: params.id, cascadeLocales: !!params.cascadeLocales },
             });
             return;
         }
-        await apiFetch<void>(`/entries/${params.type}/${params.id as string}/force`, {
+        await apiFetch<unknown>(`/entries/${params.type}/${params.id as string}/force`, {
             method: 'DELETE',
             ...(params.cascadeLocales ? { params: { cascadeLocales: true } } : {}),
         });
     },
 
     async emptyTrash(params: { type: string }): Promise<void> {
-        await apiFetch<void>(`/entries/${params.type}/trash`, { method: 'DELETE' });
+        await apiFetch<unknown>(`/entries/${params.type}/trash`, { method: 'DELETE' });
     },
 
     async versions(params: { type: string; id: string }): Promise<EntryVersion[]> {
@@ -428,7 +430,7 @@ const mediaApi: MediaApi = {
                         message: string;
                         status: number;
                         details?: Record<string, unknown>;
-                    },
+                    }
                 );
                 emitApiError(apiErr);
                 throw apiErr;
@@ -454,7 +456,7 @@ const mediaApi: MediaApi = {
     },
 
     async delete(id: string): Promise<void> {
-        await apiFetch<void>(`/media/${id}`, {
+        await apiFetch<unknown>(`/media/${id}`, {
             method: 'DELETE',
         });
     },
@@ -495,8 +497,14 @@ const usersApi: UsersApi = {
                 search: params?.search,
                 page: params?.page,
                 limit: params?.limit,
-                sort: params?.sort && !Array.isArray(params.sort) ? Object.keys(params.sort)[0] : undefined,
-                dir: params?.sort && !Array.isArray(params.sort) ? Object.values(params.sort)[0] : undefined,
+                sort:
+                    params?.sort && !Array.isArray(params.sort)
+                        ? Object.keys(params.sort)[0]
+                        : undefined,
+                dir:
+                    params?.sort && !Array.isArray(params.sort)
+                        ? Object.values(params.sort)[0]
+                        : undefined,
             },
         });
     },
@@ -530,7 +538,7 @@ const usersApi: UsersApi = {
     },
 
     async delete(id: string): Promise<void> {
-        await apiFetch<void>(`/users/${id}`, {
+        await apiFetch<unknown>(`/users/${id}`, {
             method: 'DELETE',
         });
     },
@@ -551,7 +559,8 @@ const pluginsApi: PluginSdkNamespace = new Proxy({} as PluginSdkNamespace, {
         const name = nameProp;
         return new Proxy({} as FetchMethodMap, {
             get(_t, methodProp) {
-                if (typeof methodProp !== 'string' || methodProp === 'then') return undefined;
+                if (typeof methodProp !== 'string' || methodProp === 'then')
+                    return undefined;
                 const method = methodProp;
                 return (input?: unknown) =>
                     apiFetch<unknown>(`/plugins/${name}/${method}`, {

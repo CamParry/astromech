@@ -179,7 +179,6 @@ export function useEntryForm({
         window.addEventListener('beforeunload', handleBeforeUnload);
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
         // form is stable; isDirty is read via the ref on the stable form object
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return {
