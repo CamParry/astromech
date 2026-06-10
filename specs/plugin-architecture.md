@@ -1,6 +1,6 @@
 # Plugin Architecture
 
-**Status:** Designed (2026-05-29), not yet implemented. Architecture fully resolved via a `grill-me` design session; every major decision below is locked. No code written yet.
+**Status:** Designed (2026-05-29); 18a/18b implemented. **Partially superseded (2026-06-10)** by [[unified-architecture.md]] — plugin entry types are now namespaced (never merged into root `config.entries`), the entries API mounts per plugin namespace, permission grammar moves to `resource:identifier:action` with owner-first plugin trees, `suggestedRoleGrants` is replaced by permission bundles, hooks become an array of `defineHook` results, and "specified SDK methods only" is superseded by auto-exposed namespaced entries. Sections here remain authoritative where not contradicted; see unified-architecture.md §6 for the precise list.
 **Supersedes:** [[plugins.md]] (early design sketch — `targets` injection, `collections`, `hooks.on()`, the translations plugin, and positional SDK calls are all obsolete).
 **Touches:** `src/types/plugins.ts`, `src/types/hooks.ts`, `src/core/plugin-resolver.ts`, `src/core/config-resolver.ts`, `src/index.ts` (`definePlugin`), `src/adapters/astro.ts` (Vite plugins / virtual modules), `src/core/type-generator.ts`, `src/sdk/{local,fetch}`, `src/core/permissions.ts`, `src/cron/registry.ts`, `src/db/schema.ts`, new `src/api/plugins/*`.
 

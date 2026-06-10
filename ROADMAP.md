@@ -507,6 +507,16 @@ Architecture fully designed and locked — see [`specs/plugin-architecture.md`](
 - [x] Component + i18n code-gen virtual modules; type augmentation in `astromech.d.ts` — i18n declared as string specifiers (spec §38 implementation note); lazy bundles load into per-plugin namespaces; generated d.ts augments `AstromechPluginSdks` (method names) + `AstromechPluginHookEvents`
 - [x] **Ship `@astromech/seo`** — `seo-meta` field type + edit-page panel + dashboard + settings + sitemap/OG via SDK + length recommendations (non-AI) (`src/plugins/seo/`: `seoFields()` tab-group factory + counter/preview renderer composing `astromech/ui` atoms; overview dashboard fed by a permission-gated `overview` SDK method; `defaultOgImage` media setting read by public `meta`; `sitemap` covers the derived footprint; README sitemap/meta recipes; components declared as `@/plugins/seo/*` specifiers — first hyphenated field name, so the type generator now quotes non-identifier keys)
 
+### 18.5 — Unified Architecture (Entries, Storage, Definitions, Permissions)
+
+Direction locked 2026-06-10 in `specs/unified-architecture.md` (supersedes parts of the plugin spec — see its §6). Triggered by the redirects review: entries-as-storage leaked into nav/URLs/SDK; resolution deepens the entry abstraction instead of patching surfaces. Breaking changes in scope (nothing live). 18c (forms) builds on this foundation.
+
+- [ ] **Permissions overhaul** — `resource:identifier:action` grammar, segment-wise wildcards, owner-first plugin permission trees, `definePermissionBundles` + `builtInRole()`, secure-by-default plugin data
+- [ ] **Abstract entry core** — universal contract (`id`/`fields`/timestamps), capabilities (`statuses`/`slug`/`translatable`/`versioning`/`trash`) with boot validation, `titleField: string | false`, `EntryStorage` interface (built-in storage = first implementation)
+- [ ] **Namespaced plugin entries** — qualified identity `{plugin}/{type}`, entries API mounted per plugin namespace, auto-exposed wire + typed SDK, `ctx.entries` scoping, `tableStorage()`, app-owned `db:generate` orchestration for plugin schemas; **redirects moves to its own table** (validating plugin)
+- [ ] **Definition-driven admin** — `TableDefinition`/`FormDefinition`/`PageDefinition`, core entry pages refit onto the shared renderer (dogfooding rule), registry generalization
+- [ ] **Builders + `define*` family** — fluent builders for fields/columns/tables/forms/pages; singular `define*` factories (`defineSdkMethod` typed-into-d.ts, `defineHook` with event-inferred payloads, hooks record → array)
+
 ### 18c — Compositional Integrations
 
 - [ ] Form-builder custom field type
