@@ -44,3 +44,30 @@ export const queryKeys = {
         detail: (name: string) => ['entry-types-meta', 'detail', name] as const,
     },
 } as const;
+
+/**
+ * Cache-scope-aware entry query keys.
+ *
+ * Root types use scope `''`, which produces keys byte-identical to
+ * `queryKeys.entries.*` so existing invalidations keep working unchanged.
+ * Plugin types pass the plugin name as the scope, which prefixes a
+ * disambiguating segment so a plugin `redirect` type can't collide with a
+ * root `redirect` type in the cache.
+ */
+export function scopedEntryKeys(cacheScope: string) {
+    if (cacheScope === '') return queryKeys.entries;
+    const prefix = ['plugin', cacheScope] as const;
+    return {
+        all: (collection: string) => [...prefix, 'entries', collection] as const,
+        list: (collection: string, filters?: Record<string, unknown>) =>
+            [...prefix, 'entries', collection, 'list', filters] as const,
+        get: (collection: string, id: string) =>
+            [...prefix, 'entries', collection, 'detail', id] as const,
+        trashed: (collection: string) =>
+            [...prefix, 'entries', collection, 'trashed'] as const,
+        versions: (collection: string, id: string) =>
+            [...prefix, 'entries', collection, 'versions', id] as const,
+        translations: (collection: string, id: string) =>
+            [...prefix, 'entries', collection, 'translations', id] as const,
+    };
+}

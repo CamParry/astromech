@@ -75,19 +75,39 @@ export function derivePluginNav(
     identity: ResolvedPluginIdentity,
     def: PluginDefinition
 ): PluginNavItem[] {
-    const visible = (def.admin?.pages ?? []).filter((page) => page.nav !== false);
-    if (visible.length === 0) return [];
+    // Entry types contributed by the plugin become nav children, listed before
+    // the plugin's pages. Each links to its namespaced list route and gates on
+    // the type's read permission (`plugin:{ns}:entry:{type}:read`).
+    const entryChildren: PluginNavItem[] = Object.entries(def.entries ?? {}).map(
+        ([type, entryType]) => {
+            // Matches the mounted entries API guard exactly:
+            // `plugin:{permissionNamespace}:entry:{type}:{action}`. Built
+            // directly (not via resolvePluginPermission, which only namespaces
+            // bare keys and would pass this `:`-containing string through).
+            const item: PluginNavItem = {
+                label: entryType.plural,
+                to: `/plugin/${identity.name}/entries/${type}`,
+                permission: `plugin:${identity.permissionNamespace}:entry:${type}:read`,
+            };
+            return item;
+        }
+    );
 
-    const children = visible.map((page) => {
-        const item: PluginNavItem = {
-            label: page.label,
-            to: `/plugin/${identity.name}${page.path}`,
-        };
-        if (page.icon !== undefined) item.icon = page.icon;
-        const permission = resolvePagePermission(identity.permissionNamespace, page);
-        if (permission !== null) item.permission = permission;
-        return item;
-    });
+    const pageChildren = (def.admin?.pages ?? [])
+        .filter((page) => page.nav !== false)
+        .map((page) => {
+            const item: PluginNavItem = {
+                label: page.label,
+                to: `/plugin/${identity.name}${page.path}`,
+            };
+            if (page.icon !== undefined) item.icon = page.icon;
+            const permission = resolvePagePermission(identity.permissionNamespace, page);
+            if (permission !== null) item.permission = permission;
+            return item;
+        });
+
+    const children = [...entryChildren, ...pageChildren];
+    if (children.length === 0) return [];
 
     const group: PluginNavItem = {
         label: resolvePluginLabel(def, identity),

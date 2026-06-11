@@ -156,7 +156,7 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
 // Entries API Implementation
 // ============================================================================
 
-function createEntriesApi(basePath: string): EntriesApi {
+export function createEntriesApi(basePath: string): EntriesApi {
     return {
         async query(
             params: EntryQueryParams & { type: string | readonly string[] }

@@ -34,5 +34,18 @@ export {
     useRestoreEntryVersion,
     useCreateTranslation,
 } from './entries.js';
-export { useMediaQuery, useMediaItem, useUpdateMedia, useDeleteMedia, useBulkDeleteMedia } from './media.js';
-export { useUsersQuery, useUser, useCreateUser, useUpdateUser, useDeleteUser } from './users.js';
+export type { EntryHookScope } from './entries.js';
+export {
+    useMediaQuery,
+    useMediaItem,
+    useUpdateMedia,
+    useDeleteMedia,
+    useBulkDeleteMedia,
+} from './media.js';
+export {
+    useUsersQuery,
+    useUser,
+    useCreateUser,
+    useUpdateUser,
+    useDeleteUser,
+} from './users.js';

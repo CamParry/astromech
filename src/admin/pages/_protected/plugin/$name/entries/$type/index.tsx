@@ -1,0 +1,42 @@
+/**
+ * Plugin entry-type list route.
+ *
+ * Static segments (`/plugin/$name/entries/$type`) outrank the `/plugin/$`
+ * splat, so plugin entry types get real file-based routes. Builds a plugin
+ * `EntriesSurface` from `adminConfig.plugins` + a `/plugins/{name}/entries`-
+ * bound client and renders the shared `EntriesListPage`. Unknown plugin/type
+ * falls back to the standard not-found UI.
+ */
+
+import React from 'react';
+import { createFileRoute } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
+import { createEntriesApi } from '@/sdk/fetch/index.js';
+import adminConfig from 'virtual:astromech/admin-config';
+import { EntriesListPage } from '@/admin/components/entries/entries-list-page.js';
+import { buildPluginEntriesSurface } from '@/admin/components/entries/surface.js';
+import { EmptyState, Page, PageContent } from '@/admin/components/ui/index.js';
+
+function PluginEntryListPage(): React.ReactElement {
+    const { name, type } = Route.useParams();
+    const { t } = useTranslation();
+    const api = createEntriesApi(`/plugins/${name}/entries`);
+    const surface = buildPluginEntriesSurface(adminConfig.plugins, name, type, api);
+    if (!surface) {
+        return (
+            <Page>
+                <PageContent>
+                    <EmptyState
+                        title={t('plugins.pageNotFound')}
+                        description={`/plugin/${name}/entries/${type}`}
+                    />
+                </PageContent>
+            </Page>
+        );
+    }
+    return <EntriesListPage surface={surface} />;
+}
+
+export const Route = createFileRoute('/_protected/plugin/$name/entries/$type/')({
+    component: PluginEntryListPage,
+});

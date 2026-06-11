@@ -190,24 +190,7 @@ export type AdminConfig = {
     locales: string[];
     defaultLocale: string;
     roles: { slug: string; name: string }[];
-    entries: Record<
-        string,
-        {
-            single: string;
-            plural: string;
-            versioning: boolean;
-            translatable: boolean;
-            slug: SlugConfig | null;
-            adminColumns: AdminColumn[];
-            fieldGroups: FieldGroup[];
-            views?: ('list' | 'grid')[];
-            defaultView?: 'list' | 'grid';
-            gridFields?: { field: string; label?: string }[];
-            previewUrl: string | null;
-            capabilities: ResolvedEntryCapabilities;
-            titleField: 'title' | false;
-        }
-    >;
+    entries: Record<string, AdminEntryTypeConfig>;
     /** Static plugin metadata for the admin shell (serializable only). */
     plugins: {
         /** Access key (resolved identity name). */
@@ -218,6 +201,12 @@ export type AdminConfig = {
         permissionNamespace: string;
         /** Sidebar tree derived from nav-visible pages. */
         nav: PluginNavItem[];
+        /**
+         * Plugin-contributed entry types, keyed by bare type. Same single-type
+         * shape as root `entries`, so the shared entry page components consume
+         * either without divergence.
+         */
+        entries: Record<string, AdminEntryTypeConfig>;
         /** Page metadata: permissions pre-resolved, settings schema inline. */
         pages: {
             /** Splat key, `{name}{path}` — matches the `/plugin/$` route. */
@@ -228,4 +217,23 @@ export type AdminConfig = {
             hasComponent: boolean;
         }[];
     }[];
+};
+
+/** Single entry-type admin config, shared by root and plugin entry types. */
+export type AdminEntryTypeConfig = {
+    single: string;
+    plural: string;
+    versioning: boolean;
+    translatable: boolean;
+    slug: SlugConfig | null;
+    adminColumns: AdminColumn[];
+    fieldGroups: FieldGroup[];
+    views?: ('list' | 'grid')[];
+    defaultView?: 'list' | 'grid';
+    gridFields?: { field: string; label?: string }[];
+    previewUrl: string | null;
+    capabilities: ResolvedEntryCapabilities;
+    titleField: 'title' | false;
+    /** Field names a multi-type storage indexes for free-text search. */
+    search?: string[];
 };

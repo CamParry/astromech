@@ -1,0 +1,1285 @@
+/**
+ * Shared entry-type list page body.
+ *
+ * Extracted (Phase 3 Slice 6) verbatim from
+ * `pages/_protected/entries/$type/index.tsx` and parameterized by a single
+ * `EntriesSurface` so it serves both root entry types and plugin-namespaced
+ * entry types. Behaviour, markup, and capability gating are unchanged from the
+ * original page; the only differences are the surface-bound api/cacheScope,
+ * the `basePath`-built links, and the surface permission strings.
+ *
+ * Shows a searchable, filterable, paginated table or grid of entries. Supports
+ * bulk selection and row-level actions (edit, duplicate, trash/restore).
+ * Per-type view preference is persisted to localStorage.
+ */
+
+import { formatDate } from '@/support/dates.js';
+import { Menu } from '@base-ui/react/menu';
+import { Link as RouterLink, useNavigate } from '@tanstack/react-router';
+import {
+    Check,
+    Copy,
+    LayoutGrid,
+    LayoutList,
+    MoreHorizontalIcon,
+    Pencil,
+    PlusIcon,
+    RotateCcw,
+    SlidersHorizontal,
+    Trash2,
+} from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import adminConfig from 'virtual:astromech/admin-config';
+import type { Entry } from '@/types/index.js';
+import type { DropdownItem } from '@/admin/components/ui/dropdown.js';
+import {
+    Badge,
+    Button,
+    Checkbox,
+    Dropdown,
+    EmptyState,
+    Page,
+    PageContent,
+    PageHeader,
+    PageTitle,
+    Pagination,
+    SearchInput,
+    Select,
+    Spinner,
+    Table,
+    ToggleGroup,
+    Toolbar,
+    ToolbarStart,
+    ToolbarEnd,
+    useConfirm,
+    useContextMenu,
+    useToast,
+} from '@/admin/components/ui/index.js';
+import type { SortDirection } from '@/admin/components/ui/table.js';
+import {
+    useSelection,
+    useViewMode,
+    usePermissions,
+    useEntriesQuery,
+    useTrashEntry,
+    useDeleteEntry,
+    useDuplicateEntry,
+    useRestoreEntry,
+    useBulkTrashEntries,
+    useBulkDeleteEntries,
+    useBulkPublishEntries,
+    useBulkUnpublishEntries,
+} from '@/admin/hooks/index.js';
+import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal.js';
+import type { EntriesSurface } from './surface.js';
+
+// ============================================================================
+// Types
+// ============================================================================
+
+type StatusFilter = 'all' | 'draft' | 'published' | 'scheduled' | 'trashed';
+
+type BulkAction = 'publish' | 'unpublish' | 'trash' | 'delete' | 'restore';
+
+type ViewMode = 'list' | 'grid';
+
+/**
+ * Surface link bases are runtime strings (`/entries/post`,
+ * `/plugin/redirects/entries/redirect`), so the shared components address them
+ * by string `to` rather than the typed route union. This is a thin extraction
+ * for Phase 3 Slice 6; Phase 4 reworks the link model. The cast preserves the
+ * rest of `Link`'s props (className, search, onClick, children).
+ */
+type LinkProps = Omit<React.ComponentProps<typeof RouterLink>, 'to' | 'search'> & {
+    to: string;
+    search?: Record<string, unknown>;
+};
+const Link = RouterLink as unknown as (props: LinkProps) => React.ReactElement;
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+function statusVariant(status: string): 'draft' | 'published' | 'scheduled' | 'default' {
+    if (status === 'draft') return 'draft';
+    if (status === 'published') return 'published';
+    if (status === 'scheduled') return 'scheduled';
+    return 'default';
+}
+
+const ALL_COLUMNS = [
+    'title',
+    'status',
+    'slug',
+    'locale',
+    'translations',
+    'updatedAt',
+] as const;
+const LOCALE_FILTER_ALL = '__all__';
+
+function colStorageKey(type: string): string {
+    return `am-cols-${type}`;
+}
+
+function defaultColumns(hasTitle: boolean): readonly string[] {
+    return hasTitle ? ALL_COLUMNS : ALL_COLUMNS.filter((c) => c !== 'title');
+}
+
+function readStoredColumns(
+    type: string,
+    adminCols: { field: string }[],
+    hasTitle: boolean
+): Set<string> {
+    try {
+        const stored = localStorage.getItem(colStorageKey(type));
+        if (stored) {
+            const parsed = JSON.parse(stored) as string[];
+            if (Array.isArray(parsed)) {
+                const cols = new Set(parsed);
+                if (!hasTitle) cols.delete('title');
+                return cols;
+            }
+        }
+    } catch {
+        // ignore
+    }
+    return new Set([...defaultColumns(hasTitle), ...adminCols.map((c) => c.field)]);
+}
+
+function writeStoredColumns(type: string, cols: Set<string>): void {
+    try {
+        localStorage.setItem(colStorageKey(type), JSON.stringify(Array.from(cols)));
+    } catch {
+        // ignore
+    }
+}
+
+const PER_PAGE = 20;
+
+// ============================================================================
+// Sub-components
+// ============================================================================
+
+type TranslationsCellProps = {
+    entry: Entry;
+    basePath: string;
+    configuredLocales: string[];
+};
+
+function TranslationsCell({
+    entry,
+    basePath,
+    configuredLocales,
+}: TranslationsCellProps): React.ReactElement {
+    return (
+        <span style={{ display: 'inline-flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+            {configuredLocales.map((loc) => {
+                const siblingId = entry.locales[loc];
+                const isCurrent = siblingId === entry.id;
+                const present = siblingId != null;
+                if (!present) {
+                    return (
+                        <span
+                            key={loc}
+                            className="am-text-mono am-text-muted"
+                            style={{ opacity: 0.4, fontSize: '0.75rem' }}
+                            title={`${loc.toUpperCase()} translation does not exist`}
+                        >
+                            {loc.toUpperCase()}
+                        </span>
+                    );
+                }
+                if (isCurrent) {
+                    return (
+                        <span
+                            key={loc}
+                            className="am-text-mono"
+                            style={{ fontWeight: 600, fontSize: '0.75rem' }}
+                        >
+                            {loc.toUpperCase()}
+                        </span>
+                    );
+                }
+                return (
+                    <Link
+                        key={loc}
+                        to={`${basePath}/${siblingId}`}
+                        className="am-link am-text-mono"
+                        style={{ fontSize: '0.75rem' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {loc.toUpperCase()}
+                    </Link>
+                );
+            })}
+        </span>
+    );
+}
+
+type RowActionsProps = {
+    entry: Entry;
+    isTrash: boolean;
+    type: string;
+    basePath: string;
+    canDelete: boolean;
+    hasTrashCap: boolean;
+    onRestore: (id: string) => void;
+    onConfirmDelete: (id: string, force: boolean) => void;
+    onDuplicate: (id: string) => void;
+    rowLabels: {
+        edit: string;
+        duplicate: string;
+        moveToTrash: string;
+        restore: string;
+        deletePermanently: string;
+    };
+};
+
+function buildRowItems(props: RowActionsProps): DropdownItem[] {
+    const {
+        entry,
+        isTrash,
+        basePath,
+        canDelete,
+        hasTrashCap,
+        onRestore,
+        onConfirmDelete,
+        onDuplicate,
+        rowLabels,
+    } = props;
+    if (isTrash) {
+        const items: DropdownItem[] = [
+            {
+                label: rowLabels.restore,
+                onClick: () => onRestore(entry.id),
+                icon: <RotateCcw size={14} />,
+            },
+        ];
+        if (canDelete) {
+            items.push({
+                label: rowLabels.deletePermanently,
+                variant: 'danger' as const,
+                onClick: () => onConfirmDelete(entry.id, true),
+                icon: <Trash2 size={14} />,
+            });
+        }
+        return items;
+    }
+    const items: DropdownItem[] = [
+        {
+            label: rowLabels.edit,
+            href: `${basePath}/${entry.id}`,
+            icon: <Pencil size={14} />,
+        },
+        {
+            label: rowLabels.duplicate,
+            onClick: () => onDuplicate(entry.id),
+            icon: <Copy size={14} />,
+        },
+    ];
+    if (canDelete) {
+        // When trash is off, the action is a permanent delete (force=true).
+        items.push({
+            label: hasTrashCap ? rowLabels.moveToTrash : rowLabels.deletePermanently,
+            variant: 'danger' as const,
+            onClick: () => onConfirmDelete(entry.id, !hasTrashCap),
+            icon: <Trash2 size={14} />,
+        });
+    }
+    return items;
+}
+
+// ============================================================================
+// Table row with context menu
+// ============================================================================
+
+type EntryTableRowProps = RowActionsProps & {
+    selected: boolean;
+    onToggleSelect: (id: string) => void;
+    adminColumns: { field: string; label?: string; sortable?: boolean }[];
+    navigate: (opts: { id: string }) => void;
+    visibleColumns: Set<string>;
+    showTranslations: boolean;
+    showLocale: boolean;
+    configuredLocales: string[];
+    hasStatusesCap: boolean;
+    hasTitle: boolean;
+};
+
+function EntryTableRow({
+    entry,
+    isTrash,
+    type,
+    basePath,
+    canDelete,
+    hasTrashCap,
+    onRestore,
+    onConfirmDelete,
+    onDuplicate,
+    selected,
+    onToggleSelect,
+    adminColumns,
+    navigate,
+    visibleColumns,
+    rowLabels,
+    showTranslations,
+    showLocale,
+    configuredLocales,
+    hasStatusesCap,
+    hasTitle,
+}: EntryTableRowProps): React.ReactElement {
+    const { t } = useTranslation();
+    const items = buildRowItems({
+        entry,
+        isTrash,
+        type,
+        basePath,
+        canDelete,
+        hasTrashCap,
+        onRestore,
+        onConfirmDelete,
+        onDuplicate,
+        rowLabels,
+    });
+    const { onContextMenu, contextMenuNode } = useContextMenu(items);
+
+    return (
+        <>
+            <Table.Row
+                key={entry.id}
+                onContextMenu={onContextMenu}
+                onClick={
+                    !isTrash
+                        ? () =>
+                              void navigate({
+                                  id: entry.id,
+                              })
+                        : undefined
+                }
+                style={!isTrash ? { cursor: 'pointer' } : undefined}
+            >
+                <Table.Td onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                        checked={selected}
+                        onChange={() => onToggleSelect(entry.id)}
+                    />
+                </Table.Td>
+                {hasTitle && visibleColumns.has('title') && (
+                    <Table.Td>
+                        {isTrash ? (
+                            <span className="am-text-muted">{entry.title}</span>
+                        ) : (
+                            <Link to={`${basePath}/${entry.id}`} className="am-link">
+                                {entry.title}
+                            </Link>
+                        )}
+                    </Table.Td>
+                )}
+                {hasStatusesCap && visibleColumns.has('status') && (
+                    <Table.Td>
+                        <Badge variant={statusVariant(entry.status)}>
+                            {entry.status}
+                        </Badge>
+                    </Table.Td>
+                )}
+                {visibleColumns.has('slug') && (
+                    <Table.Td>
+                        <span className="am-text-mono am-text-muted">
+                            {entry.slug ?? '—'}
+                        </span>
+                    </Table.Td>
+                )}
+                {showLocale && visibleColumns.has('locale') && (
+                    <Table.Td>
+                        <span className="am-text-mono am-text-muted">
+                            {entry.locale.toUpperCase()}
+                        </span>
+                    </Table.Td>
+                )}
+                {showTranslations && visibleColumns.has('translations') && (
+                    <Table.Td>
+                        <TranslationsCell
+                            entry={entry}
+                            basePath={basePath}
+                            configuredLocales={configuredLocales}
+                        />
+                    </Table.Td>
+                )}
+                {adminColumns
+                    .filter((col) => visibleColumns.has(col.field))
+                    .map((col) => (
+                        <Table.Td key={col.field}>
+                            {String(
+                                (entry.fields as Record<string, unknown>)[col.field] ??
+                                    '—'
+                            )}
+                        </Table.Td>
+                    ))}
+                {visibleColumns.has('updatedAt') && (
+                    <Table.Td className="am-text-sm am-text-muted">
+                        {formatDate(entry.updatedAt)}
+                    </Table.Td>
+                )}
+                <Table.Td onClick={(e) => e.stopPropagation()}>
+                    <Dropdown
+                        icon={<MoreHorizontalIcon size={16} />}
+                        ariaLabel={t('common.actions')}
+                        items={items}
+                    />
+                </Table.Td>
+            </Table.Row>
+            {contextMenuNode}
+        </>
+    );
+}
+
+// ============================================================================
+// Grid card with context menu
+// ============================================================================
+
+type EntryCardProps = RowActionsProps & {
+    gridFields: { field: string; label?: string }[];
+    navigate: (opts: { id: string }) => void;
+    hasTitle: boolean;
+};
+
+function EntryCard({
+    entry,
+    isTrash,
+    type,
+    basePath,
+    canDelete,
+    hasTrashCap,
+    onRestore,
+    onConfirmDelete,
+    onDuplicate,
+    gridFields,
+    navigate,
+    rowLabels,
+    hasTitle,
+}: EntryCardProps): React.ReactElement {
+    const { t } = useTranslation();
+    const items = buildRowItems({
+        entry,
+        isTrash,
+        type,
+        basePath,
+        canDelete,
+        hasTrashCap,
+        onRestore,
+        onConfirmDelete,
+        onDuplicate,
+        rowLabels,
+    });
+    const { onContextMenu, contextMenuNode } = useContextMenu(items);
+
+    function handleCardClick() {
+        if (isTrash) return;
+        void navigate({
+            id: entry.id,
+        });
+    }
+
+    return (
+        <>
+            <div
+                className="am-collection-card"
+                onContextMenu={onContextMenu}
+                onClick={handleCardClick}
+            >
+                <div
+                    className="am-collection-card-actions"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <Dropdown
+                        icon={<MoreHorizontalIcon size={16} />}
+                        ariaLabel={t('common.actions')}
+                        items={items}
+                    />
+                </div>
+
+                {isTrash ? (
+                    <span
+                        className={
+                            hasTitle
+                                ? 'am-collection-card-title am-text-muted'
+                                : 'am-collection-card-title am-text-muted am-text-mono am-text-sm'
+                        }
+                    >
+                        {hasTitle ? entry.title : entry.id}
+                    </span>
+                ) : (
+                    <Link
+                        to={`${basePath}/${entry.id}`}
+                        className={
+                            hasTitle
+                                ? 'am-collection-card-title'
+                                : 'am-collection-card-title am-text-mono am-text-sm'
+                        }
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {hasTitle ? entry.title : entry.id}
+                    </Link>
+                )}
+
+                <div className="am-collection-card-meta">
+                    <Badge variant={statusVariant(entry.status)}>{entry.status}</Badge>
+                </div>
+
+                {gridFields.map((gf) => (
+                    <div key={gf.field} className="am-collection-card-field">
+                        <span className="am-collection-card-field-label">
+                            {gf.label ?? gf.field}
+                        </span>
+                        <span>
+                            {String(
+                                (entry.fields as Record<string, unknown>)[gf.field] ?? '—'
+                            )}
+                        </span>
+                    </div>
+                ))}
+            </div>
+            {contextMenuNode}
+        </>
+    );
+}
+
+// ============================================================================
+// Page
+// ============================================================================
+
+export function EntriesListPage({
+    surface,
+}: {
+    surface: EntriesSurface;
+}): React.ReactElement {
+    const { type, api, cacheScope, config: entryTypeConfig, basePath } = surface;
+    const scope = { api, cacheScope };
+    const navigate = useNavigate();
+    const { toast } = useToast();
+    const { t } = useTranslation();
+    const { hasPermission } = usePermissions();
+    const canCreate = hasPermission(surface.permissionFor('create'));
+    const canDelete = hasPermission(surface.permissionFor('delete'));
+
+    const single = entryTypeConfig?.single ?? type;
+    const plural = entryTypeConfig?.plural ?? type;
+    const adminColumns = entryTypeConfig?.adminColumns ?? [];
+    const gridFields = entryTypeConfig?.gridFields ?? [];
+    const capabilities = entryTypeConfig?.capabilities;
+    const hasStatuses = capabilities?.statuses !== false;
+    const hasTrash = capabilities?.trash !== false;
+    const hasSlugCap = capabilities?.slug !== false;
+    const hasTitle = entryTypeConfig?.titleField !== false;
+    const showSearch =
+        entryTypeConfig?.titleField !== false ||
+        (entryTypeConfig?.search?.length ?? 0) > 0;
+
+    const availableViews = entryTypeConfig?.views ?? ['list'];
+    const defaultView: ViewMode =
+        (entryTypeConfig?.defaultView as ViewMode | undefined) ?? 'list';
+    const showViewToggle =
+        availableViews.includes('list') && availableViews.includes('grid');
+
+    const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+    const [page, setPage] = useState(1);
+    const hasI18n = capabilities?.translatable === true;
+    const configuredLocales = adminConfig.locales;
+    const [localeFilter, setLocaleFilter] = useState<string>(adminConfig.defaultLocale);
+
+    const [viewMode, setViewMode] = useViewMode(`entry:${type}`, defaultView);
+
+    const [sort, setSort] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(
+        null
+    );
+    const [visibleColumns, setVisibleColumns] = useState<Set<string>>(() =>
+        readStoredColumns(type, adminColumns, hasTitle)
+    );
+
+    const STATUS_LABELS: Record<StatusFilter, string> = {
+        all: t('entries.all'),
+        draft: t('entries.draft'),
+        published: t('entries.published'),
+        scheduled: t('entries.scheduled'),
+        trashed: t('entries.trashed'),
+    };
+
+    const STATUS_FILTER_OPTIONS = (Object.keys(STATUS_LABELS) as StatusFilter[])
+        .filter((s) => {
+            if (!hasStatuses && (s === 'draft' || s === 'published' || s === 'scheduled'))
+                return false;
+            if (!hasTrash && s === 'trashed') return false;
+            return true;
+        })
+        .map((s) => ({
+            value: s,
+            label: STATUS_LABELS[s],
+        }));
+
+    const rowLabels = {
+        edit: t('entries.rowEdit'),
+        duplicate: t('entries.rowDuplicate'),
+        moveToTrash: t('entries.rowMoveToTrash'),
+        restore: t('common.restore'),
+        deletePermanently: t('entries.rowDeletePermanently'),
+    };
+
+    useEffect(() => {
+        setVisibleColumns(readStoredColumns(type, adminColumns, hasTitle));
+    }, [type]);
+
+    const isTrash = statusFilter === 'trashed';
+
+    // Fetch entries (normal or trashed)
+    const effectiveLocale = hasI18n
+        ? localeFilter === LOCALE_FILTER_ALL
+            ? 'all'
+            : localeFilter
+        : 'all';
+    const { data: listData, isLoading } = useEntriesQuery(
+        {
+            type,
+            locale: effectiveLocale,
+            ...(statusFilter === 'trashed'
+                ? { trashed: true }
+                : statusFilter !== 'all'
+                  ? { where: { status: statusFilter } }
+                  : {}),
+            page,
+            limit: PER_PAGE,
+            search,
+            ...(sort ? { sort: { [sort.key]: sort.direction } } : {}),
+        },
+        scope
+    );
+    const showLocaleColumn = hasI18n && localeFilter === LOCALE_FILTER_ALL;
+
+    const entries = listData?.data ?? [];
+    const pagination = listData?.pagination;
+    const totalPages = pagination?.pages ?? 1;
+    const totalItems = pagination?.total ?? 0;
+
+    const sortedEntries = React.useMemo(() => {
+        if (!sort) return entries;
+        return [...entries].sort((a, b) => {
+            let aVal: unknown;
+            let bVal: unknown;
+            if (sort.key === 'title') {
+                aVal = a.title;
+                bVal = b.title;
+            } else if (sort.key === 'updatedAt') {
+                aVal = a.updatedAt;
+                bVal = b.updatedAt;
+            } else {
+                aVal = (a.fields as Record<string, unknown>)[sort.key];
+                bVal = (b.fields as Record<string, unknown>)[sort.key];
+            }
+            const aStr = String(aVal ?? '');
+            const bStr = String(bVal ?? '');
+            return sort.direction === 'asc'
+                ? aStr.localeCompare(bStr)
+                : bStr.localeCompare(aStr);
+        });
+    }, [entries, sort]);
+
+    const { checkedIds, toggle, toggleAll, allChecked, someChecked, reset } =
+        useSelection(sortedEntries);
+    const confirm = useConfirm();
+
+    // Mutations
+    const trashMutation = useTrashEntry(type, scope);
+    const deleteMutation = useDeleteEntry(type, scope);
+    const duplicateMutation = useDuplicateEntry(type, {
+        ...scope,
+        onSuccess: (entry) => {
+            void navigate({
+                to: `${basePath}/${entry.id}`,
+            });
+        },
+    });
+    const restoreMutation = useRestoreEntry(type, scope);
+    const bulkPublishMutation = useBulkPublishEntries(type, {
+        ...scope,
+        onSuccess: reset,
+    });
+    const bulkUnpublishMutation = useBulkUnpublishEntries(type, {
+        ...scope,
+        onSuccess: reset,
+    });
+    const bulkTrashMutation = useBulkTrashEntries(type, { ...scope, onSuccess: reset });
+    const bulkForceDeleteMutation = useBulkDeleteEntries(type, {
+        ...scope,
+        onSuccess: reset,
+    });
+
+    function handleBulkAction(action: BulkAction) {
+        const ids = Array.from(checkedIds);
+        if (ids.length === 0) return;
+        if (action === 'publish') bulkPublishMutation.mutate(ids);
+        if (action === 'unpublish') bulkUnpublishMutation.mutate(ids);
+        if (action === 'trash') bulkTrashMutation.mutate(ids);
+        if (action === 'delete') bulkForceDeleteMutation.mutate(ids);
+        if (action === 'restore') {
+            void Promise.all(ids.map((id) => restoreMutation.mutateAsync(id))).then(
+                () => {
+                    reset();
+                    toast({ message: t('entries.bulkRestored'), variant: 'success' });
+                }
+            );
+        }
+    }
+
+    function handleSort(key: string, direction: SortDirection) {
+        if (direction === null) {
+            setSort(null);
+        } else {
+            setSort({ key, direction });
+        }
+    }
+
+    function toggleColumn(key: string) {
+        setVisibleColumns((prev) => {
+            const next = new Set(prev);
+            if (next.has(key)) {
+                next.delete(key);
+            } else {
+                next.add(key);
+            }
+            writeStoredColumns(type, next);
+            return next;
+        });
+    }
+
+    const colSpan =
+        1 +
+        (hasTitle && visibleColumns.has('title') ? 1 : 0) +
+        (visibleColumns.has('status') ? 1 : 0) +
+        (visibleColumns.has('slug') ? 1 : 0) +
+        (showLocaleColumn && visibleColumns.has('locale') ? 1 : 0) +
+        (hasI18n && visibleColumns.has('translations') ? 1 : 0) +
+        adminColumns.filter((c) => visibleColumns.has(c.field)).length +
+        (visibleColumns.has('updatedAt') ? 1 : 0) +
+        1;
+
+    // Delete modal state — drives DeleteEntryModal for both trash and force-delete.
+    const [deleteTarget, setDeleteTarget] = useState<{
+        entry: Entry;
+        force: boolean;
+    } | null>(null);
+
+    function handleRestore(id: string) {
+        restoreMutation.mutate(id);
+    }
+
+    function handleConfirmDelete(id: string, force: boolean) {
+        const entry = sortedEntries.find((e) => e.id === id);
+        if (!entry) return;
+        setDeleteTarget({ entry, force });
+    }
+
+    function handleDuplicate(id: string) {
+        duplicateMutation.mutate(id);
+    }
+
+    const navigateCompat = useCallback(
+        (opts: { id: string }) => {
+            void navigate({
+                to: `${basePath}/${opts.id}`,
+            });
+        },
+        [navigate, basePath]
+    );
+
+    function handleDeleteConfirm(options: { cascadeLocales: boolean }) {
+        if (!deleteTarget) return;
+        const { entry, force } = deleteTarget;
+        const input = options.cascadeLocales
+            ? { id: entry.id, cascadeLocales: true }
+            : entry.id;
+        if (force) {
+            deleteMutation.mutate(input, { onSuccess: () => setDeleteTarget(null) });
+        } else {
+            trashMutation.mutate(input, { onSuccess: () => setDeleteTarget(null) });
+        }
+    }
+
+    return (
+        <>
+            <DeleteEntryModal
+                open={deleteTarget != null}
+                entry={deleteTarget?.entry ?? null}
+                typeLabel={single}
+                force={deleteTarget?.force ?? false}
+                onCancel={() => setDeleteTarget(null)}
+                onConfirm={handleDeleteConfirm}
+                loading={trashMutation.isPending || deleteMutation.isPending}
+            />
+            <Page>
+                <PageHeader>
+                    <PageTitle>{plural}</PageTitle>
+                    {canCreate && (
+                        <Link
+                            to={`${basePath}/new`}
+                            search={
+                                hasI18n && localeFilter !== LOCALE_FILTER_ALL
+                                    ? { locale: localeFilter }
+                                    : {}
+                            }
+                        >
+                            <Button icon={<PlusIcon size={16} />}>
+                                {t('entries.new', { name: single })}
+                            </Button>
+                        </Link>
+                    )}
+                </PageHeader>
+
+                <PageContent>
+                    <Toolbar>
+                        <ToolbarStart>
+                            {someChecked && canDelete && (
+                                <Dropdown
+                                    label={`${t('media.bulkActions')} (${checkedIds.size})`}
+                                    variant="secondary"
+                                    align="start"
+                                    items={[
+                                        ...(hasStatuses && !isTrash
+                                            ? [
+                                                  {
+                                                      label: t(
+                                                          'entries.bulkPublishSelected'
+                                                      ),
+                                                      icon: <Check size={14} />,
+                                                      onClick: () =>
+                                                          handleBulkAction('publish'),
+                                                  },
+                                                  {
+                                                      label: t(
+                                                          'entries.bulkUnpublishSelected'
+                                                      ),
+                                                      icon: <RotateCcw size={14} />,
+                                                      onClick: () =>
+                                                          handleBulkAction('unpublish'),
+                                                  },
+                                              ]
+                                            : []),
+                                        ...(hasTrash && !isTrash
+                                            ? [
+                                                  {
+                                                      label: t('entries.bulkMoveToTrash'),
+                                                      icon: <Trash2 size={14} />,
+                                                      variant: 'danger' as const,
+                                                      onClick: () =>
+                                                          handleBulkAction('trash'),
+                                                  },
+                                              ]
+                                            : []),
+                                        ...(isTrash && hasTrash
+                                            ? [
+                                                  {
+                                                      label: t(
+                                                          'entries.bulkRestoreSelected'
+                                                      ),
+                                                      icon: <RotateCcw size={14} />,
+                                                      onClick: () =>
+                                                          handleBulkAction('restore'),
+                                                  },
+                                              ]
+                                            : []),
+                                        {
+                                            label: t('media.bulkDeleteButton'),
+                                            icon: <Trash2 size={14} />,
+                                            variant: 'danger' as const,
+                                            onClick: () => {
+                                                const ids = Array.from(checkedIds);
+                                                confirm({
+                                                    title: t('media.bulkDeleteTitle', {
+                                                        count: ids.length,
+                                                    }),
+                                                    description: t(
+                                                        'media.bulkDeleteDescription'
+                                                    ),
+                                                    confirmLabel: t('common.delete'),
+                                                    onConfirm: () =>
+                                                        handleBulkAction('delete'),
+                                                });
+                                            },
+                                        },
+                                    ]}
+                                />
+                            )}
+
+                            {/* Search — shown for titled types, or titleless types
+                                that declare searchable fields. */}
+                            {showSearch && (
+                                <SearchInput
+                                    placeholder={t('entries.searchPlaceholder', {
+                                        name: plural.toLowerCase(),
+                                    })}
+                                    value={search}
+                                    onChange={(e) => {
+                                        setSearch(e.target.value);
+                                        setPage(1);
+                                    }}
+                                />
+                            )}
+
+                            {/* Status filter — only when statuses or trash capabilities are on */}
+                            {(hasStatuses || hasTrash) && (
+                                <Select
+                                    value={statusFilter}
+                                    onValueChange={(v) => {
+                                        setStatusFilter((v ?? 'all') as StatusFilter);
+                                        setPage(1);
+                                        reset();
+                                    }}
+                                    options={STATUS_FILTER_OPTIONS}
+                                    triggerPrefix={t('entries.statusFilterPrefix')}
+                                />
+                            )}
+
+                            {/* Locale filter (only when translatable) */}
+                            {hasI18n && (
+                                <Select
+                                    value={localeFilter}
+                                    onValueChange={(v) => {
+                                        setLocaleFilter(v ?? adminConfig.defaultLocale);
+                                        setPage(1);
+                                        reset();
+                                    }}
+                                    options={[
+                                        ...configuredLocales.map((loc) => ({
+                                            value: loc,
+                                            label: loc.toUpperCase(),
+                                        })),
+                                        {
+                                            value: LOCALE_FILTER_ALL,
+                                            label: t('entries.allLocales'),
+                                        },
+                                    ]}
+                                    triggerPrefix={t('entries.localeFilterPrefix')}
+                                />
+                            )}
+                        </ToolbarStart>
+
+                        <ToolbarEnd>
+                            {/* Columns visibility */}
+                            <Menu.Root>
+                                <Menu.Trigger
+                                    className="am-btn am-btn-secondary am-btn-md am-btn-icon"
+                                    aria-label={t('entries.toggleColumns')}
+                                >
+                                    <SlidersHorizontal size={14} />
+                                </Menu.Trigger>
+                                <Menu.Portal>
+                                    <Menu.Positioner
+                                        className="am-dropdown-positioner"
+                                        sideOffset={4}
+                                        align="end"
+                                    >
+                                        <Menu.Popup className="am-dropdown-popup">
+                                            {[
+                                                ...(hasTitle
+                                                    ? [
+                                                          {
+                                                              key: 'title',
+                                                              label: t(
+                                                                  'entries.columnTitle'
+                                                              ),
+                                                          },
+                                                      ]
+                                                    : []),
+                                                ...(hasStatuses
+                                                    ? [
+                                                          {
+                                                              key: 'status',
+                                                              label: t(
+                                                                  'entries.columnStatus'
+                                                              ),
+                                                          },
+                                                      ]
+                                                    : []),
+                                                ...(hasSlugCap
+                                                    ? [
+                                                          {
+                                                              key: 'slug',
+                                                              label: t(
+                                                                  'entries.columnSlug'
+                                                              ),
+                                                          },
+                                                      ]
+                                                    : []),
+                                                ...(showLocaleColumn
+                                                    ? [
+                                                          {
+                                                              key: 'locale',
+                                                              label: t(
+                                                                  'entries.columnLocale'
+                                                              ),
+                                                          },
+                                                      ]
+                                                    : []),
+                                                ...(capabilities?.translatable
+                                                    ? [
+                                                          {
+                                                              key: 'translations',
+                                                              label: t(
+                                                                  'entries.columnTranslations'
+                                                              ),
+                                                          },
+                                                      ]
+                                                    : []),
+                                                ...adminColumns.map((c) => ({
+                                                    key: c.field,
+                                                    label: c.label ?? c.field,
+                                                })),
+                                                {
+                                                    key: 'updatedAt',
+                                                    label: t('entries.columnUpdated'),
+                                                },
+                                            ].map((col) => (
+                                                <Menu.Item
+                                                    key={col.key}
+                                                    className="am-dropdown-item"
+                                                    onClick={() => toggleColumn(col.key)}
+                                                >
+                                                    <span className="am-dropdown-item-icon">
+                                                        {visibleColumns.has(col.key) ? (
+                                                            <Check size={14} />
+                                                        ) : (
+                                                            <span style={{ width: 14 }} />
+                                                        )}
+                                                    </span>
+                                                    {col.label}
+                                                </Menu.Item>
+                                            ))}
+                                        </Menu.Popup>
+                                    </Menu.Positioner>
+                                </Menu.Portal>
+                            </Menu.Root>
+                            {showViewToggle && (
+                                <ToggleGroup
+                                    value={viewMode}
+                                    onValueChange={setViewMode}
+                                    items={[
+                                        {
+                                            value: 'grid',
+                                            icon: <LayoutGrid size={15} />,
+                                            label: t('common.gridView'),
+                                        },
+                                        {
+                                            value: 'list',
+                                            icon: <LayoutList size={15} />,
+                                            label: t('common.listView'),
+                                        },
+                                    ]}
+                                />
+                            )}
+                        </ToolbarEnd>
+                    </Toolbar>
+
+                    {/* Grid view */}
+                    {viewMode === 'grid' && (
+                        <>
+                            {isLoading ? (
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        padding: '2rem',
+                                    }}
+                                >
+                                    <Spinner />
+                                </div>
+                            ) : entries.length === 0 ? (
+                                <EmptyState
+                                    title={t('entries.empty', {
+                                        name: plural.toLowerCase(),
+                                    })}
+                                    description={
+                                        search
+                                            ? t('entries.emptySearch')
+                                            : isTrash
+                                              ? t('entries.emptyTrash')
+                                              : t('entries.emptyCreate', {
+                                                    name: single.toLowerCase(),
+                                                })
+                                    }
+                                    action={
+                                        !isTrash && !search ? (
+                                            <Link to={`${basePath}/new`}>
+                                                <Button size="sm">
+                                                    {t('entries.new', {
+                                                        name: single,
+                                                    })}
+                                                </Button>
+                                            </Link>
+                                        ) : undefined
+                                    }
+                                />
+                            ) : (
+                                <div className="am-collection-grid">
+                                    {sortedEntries.map((entry) => (
+                                        <EntryCard
+                                            key={entry.id}
+                                            entry={entry}
+                                            isTrash={isTrash}
+                                            type={type}
+                                            basePath={basePath}
+                                            canDelete={canDelete}
+                                            hasTrashCap={hasTrash}
+                                            onRestore={handleRestore}
+                                            onConfirmDelete={handleConfirmDelete}
+                                            onDuplicate={handleDuplicate}
+                                            gridFields={gridFields}
+                                            navigate={navigateCompat}
+                                            rowLabels={rowLabels}
+                                            hasTitle={hasTitle}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    {/* List (table) view */}
+                    {viewMode === 'list' && (
+                        <Table.Root>
+                            <Table.Head>
+                                <Table.Row>
+                                    <Table.Th style={{ width: '2.5rem' }}>
+                                        <Checkbox
+                                            checked={allChecked}
+                                            onChange={() => toggleAll()}
+                                        />
+                                    </Table.Th>
+                                    {hasTitle && visibleColumns.has('title') && (
+                                        <Table.SortTh
+                                            sortKey="title"
+                                            currentSort={sort}
+                                            onSort={handleSort}
+                                        >
+                                            {t('entries.columnTitle')}
+                                        </Table.SortTh>
+                                    )}
+                                    {hasStatuses && visibleColumns.has('status') && (
+                                        <Table.Th>{t('entries.columnStatus')}</Table.Th>
+                                    )}
+                                    {hasSlugCap && visibleColumns.has('slug') && (
+                                        <Table.Th>{t('entries.columnSlug')}</Table.Th>
+                                    )}
+                                    {showLocaleColumn && visibleColumns.has('locale') && (
+                                        <Table.Th>{t('entries.columnLocale')}</Table.Th>
+                                    )}
+                                    {capabilities?.translatable &&
+                                        visibleColumns.has('translations') && (
+                                            <Table.Th>
+                                                {t('entries.columnTranslations')}
+                                            </Table.Th>
+                                        )}
+                                    {adminColumns
+                                        .filter((c) => visibleColumns.has(c.field))
+                                        .map((col) =>
+                                            col.sortable ? (
+                                                <Table.SortTh
+                                                    key={col.field}
+                                                    sortKey={col.field}
+                                                    currentSort={sort}
+                                                    onSort={handleSort}
+                                                >
+                                                    {col.label ?? col.field}
+                                                </Table.SortTh>
+                                            ) : (
+                                                <Table.Th key={col.field}>
+                                                    {col.label ?? col.field}
+                                                </Table.Th>
+                                            )
+                                        )}
+                                    {visibleColumns.has('updatedAt') && (
+                                        <Table.SortTh
+                                            sortKey="updatedAt"
+                                            currentSort={sort}
+                                            onSort={handleSort}
+                                        >
+                                            {t('entries.columnUpdated')}
+                                        </Table.SortTh>
+                                    )}
+                                    <Table.Th style={{ width: '3rem' }} />
+                                </Table.Row>
+                            </Table.Head>
+                            <Table.Body>
+                                {isLoading ? (
+                                    <Table.Empty colSpan={colSpan}>
+                                        <Spinner />
+                                    </Table.Empty>
+                                ) : entries.length === 0 ? (
+                                    <Table.Empty colSpan={colSpan}>
+                                        <EmptyState
+                                            title={t('entries.empty', {
+                                                name: plural.toLowerCase(),
+                                            })}
+                                            description={
+                                                search
+                                                    ? t('entries.emptySearch')
+                                                    : isTrash
+                                                      ? t('entries.emptyTrash')
+                                                      : t('entries.emptyCreate', {
+                                                            name: single.toLowerCase(),
+                                                        })
+                                            }
+                                            action={
+                                                !isTrash && !search ? (
+                                                    <Link to={`${basePath}/new`}>
+                                                        <Button size="sm">
+                                                            {t('entries.new', {
+                                                                name: single,
+                                                            })}
+                                                        </Button>
+                                                    </Link>
+                                                ) : undefined
+                                            }
+                                        />
+                                    </Table.Empty>
+                                ) : (
+                                    sortedEntries.map((entry) => (
+                                        <EntryTableRow
+                                            key={entry.id}
+                                            entry={entry}
+                                            isTrash={isTrash}
+                                            type={type}
+                                            basePath={basePath}
+                                            canDelete={canDelete}
+                                            hasTrashCap={hasTrash}
+                                            hasStatusesCap={hasStatuses}
+                                            onRestore={handleRestore}
+                                            onConfirmDelete={handleConfirmDelete}
+                                            onDuplicate={handleDuplicate}
+                                            selected={checkedIds.has(entry.id)}
+                                            onToggleSelect={toggle}
+                                            adminColumns={adminColumns}
+                                            navigate={navigateCompat}
+                                            visibleColumns={visibleColumns}
+                                            rowLabels={rowLabels}
+                                            showTranslations={hasI18n}
+                                            showLocale={showLocaleColumn}
+                                            configuredLocales={configuredLocales}
+                                            hasTitle={hasTitle}
+                                        />
+                                    ))
+                                )}
+                            </Table.Body>
+                        </Table.Root>
+                    )}
+
+                    <Pagination
+                        currentPage={page}
+                        totalPages={totalPages}
+                        onPage={setPage}
+                        totalItems={totalItems}
+                    />
+                </PageContent>
+            </Page>
+        </>
+    );
+}

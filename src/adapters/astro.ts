@@ -36,6 +36,34 @@ import {
     derivePluginPages,
     resolvePluginLabel,
 } from '@/core/plugin-admin.js';
+import type { AdminEntryTypeConfig, ResolvedEntryTypeConfig } from '@/types/config.js';
+
+/**
+ * Project a resolved entry type into the serializable admin shape. Shared by
+ * root entries and plugin-namespaced entries so the two never drift.
+ */
+function toAdminEntryType(entryType: ResolvedEntryTypeConfig): AdminEntryTypeConfig {
+    return {
+        single: entryType.single,
+        plural: entryType.plural,
+        versioning: !!entryType.versioning,
+        translatable: entryType.translatable ?? false,
+        slug: entryType.slug ? entryType.slug : null,
+        adminColumns: entryType.adminColumns ?? [],
+        fieldGroups: entryType.fieldGroups,
+        previewUrl: entryType.previewUrl ?? null,
+        capabilities: entryType.capabilities,
+        titleField: entryType.titleField,
+        ...(entryType.views !== undefined ? { views: entryType.views } : {}),
+        ...(entryType.defaultView !== undefined
+            ? { defaultView: entryType.defaultView }
+            : {}),
+        ...(entryType.gridFields !== undefined
+            ? { gridFields: entryType.gridFields }
+            : {}),
+        ...(entryType.search !== undefined ? { search: entryType.search } : {}),
+    };
+}
 
 async function runMigrations(logger: {
     info: (msg: string) => void;
@@ -161,6 +189,10 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                                         const adminConfig = {
                                             plugins: (config.plugins ?? []).map((p) => {
                                                 const identity = resolvePluginIdentity(p);
+                                                const pluginEntries =
+                                                    resolvedConfig.pluginEntries[
+                                                        identity.name
+                                                    ] ?? {};
                                                 return {
                                                     name: identity.name,
                                                     label: resolvePluginLabel(
@@ -170,6 +202,16 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                                                     permissionNamespace:
                                                         identity.permissionNamespace,
                                                     nav: derivePluginNav(identity, p),
+                                                    entries: Object.fromEntries(
+                                                        Object.entries(pluginEntries).map(
+                                                            ([name, entryType]) => [
+                                                                name,
+                                                                toAdminEntryType(
+                                                                    entryType
+                                                                ),
+                                                            ]
+                                                        )
+                                                    ),
                                                     pages: derivePluginPages(identity, p),
                                                 };
                                             }),
@@ -186,29 +228,7 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                                                     resolvedConfig.entries
                                                 ).map(([name, entryType]) => [
                                                     name,
-                                                    {
-                                                        single: entryType.single,
-                                                        plural: entryType.plural,
-                                                        versioning:
-                                                            !!entryType.versioning,
-                                                        translatable:
-                                                            entryType.translatable ??
-                                                            false,
-                                                        slug: entryType.slug ?? null,
-                                                        adminColumns:
-                                                            entryType.adminColumns ?? [],
-                                                        fieldGroups:
-                                                            entryType.fieldGroups,
-                                                        views: entryType.views,
-                                                        defaultView:
-                                                            entryType.defaultView,
-                                                        gridFields: entryType.gridFields,
-                                                        previewUrl:
-                                                            entryType.previewUrl ?? null,
-                                                        capabilities:
-                                                            entryType.capabilities,
-                                                        titleField: entryType.titleField,
-                                                    },
+                                                    toAdminEntryType(entryType),
                                                 ])
                                             ),
                                         };

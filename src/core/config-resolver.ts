@@ -167,9 +167,11 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     assertQualifiedRelationshipTargets({ entries: resolvedEntries, pluginEntries });
 
     // Step 6: Return resolved config with defaults
-    // Destructure out `db` so the driver instance is not included in the
-    // resolved config (it cannot be JSON.stringify'd into the virtual module).
-    const { db: _db, ...rest } = config;
+    // Destructure out `db` and `plugins` so neither is included in the resolved
+    // config: the driver instance and plugin definitions (which carry live
+    // Drizzle table objects in `schema`) cannot be JSON.stringify'd into the
+    // virtual config module — `ResolvedConfig` already omits both.
+    const { db: _db, plugins: _plugins, ...rest } = config;
     return {
         ...rest,
         adminRoute: config.adminRoute ?? '/admin',

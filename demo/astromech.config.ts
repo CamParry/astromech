@@ -245,29 +245,6 @@ export default defineConfig({
                 },
             ],
         },
-        // Phase 2 (Slice 4) testbed for titleless + capability-off admin
-        // surfaces: no title column/input/search, no status UI. Trash stays on.
-        // Remove once Phase 3's redirects-on-tableStorage validates the surfaces
-        // for real.
-        snippet: {
-            single: 'Snippet',
-            plural: 'Snippets',
-            titleField: false,
-            statuses: false,
-            slug: false,
-            fieldGroups: [
-                {
-                    name: 'main',
-                    label: 'Snippet',
-                    placement: 'main',
-                    priority: 0,
-                    fields: [
-                        { name: 'key', type: 'text', label: 'Key' },
-                        { name: 'value', type: 'textarea', label: 'Value' },
-                    ],
-                },
-            ],
-        },
         showcase: {
             single: 'Showcase',
             plural: 'Showcase',
