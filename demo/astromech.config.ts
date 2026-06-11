@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { builtInRole, defineConfig, FilesystemStorage, libsqlDriver } from 'astromech';
-import { redirects } from 'astromech/plugins/redirects';
+import { redirects, redirectsPermissions } from 'astromech/plugins/redirects';
 import { seo, seoFields, seoPermissions } from 'astromech/plugins/seo';
 import { rating } from './src/plugins/rating/index.js';
 
@@ -15,7 +15,11 @@ export default defineConfig({
     roles: {
         'content-editor': {
             name: 'Content Editor',
-            permissions: [...builtInRole('editor'), ...seoPermissions('view')],
+            permissions: [
+                ...builtInRole('editor'),
+                ...seoPermissions('view'),
+                ...redirectsPermissions('manage'),
+            ],
         },
     },
     entries: {

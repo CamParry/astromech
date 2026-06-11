@@ -19,7 +19,7 @@ export const redirectsSdk: NonNullable<PluginDefinition['sdk']> = {
                     : null;
             if (!from) return null;
 
-            const { data } = await ctx.sdk.entries.query({
+            const { data } = await ctx.entries.query({
                 type: REDIRECT_TYPE,
                 limit: 'all',
             });

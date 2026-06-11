@@ -15,10 +15,10 @@ export function slugChangeHooks(
     pathForEntry: PathForEntry
 ): NonNullable<PluginDefinition['hooks']> {
     return {
-        // When an entry's slug changes, record a redirect old → new.
+        // When an entry's slug changes, record a redirect old → new. The redirect
+        // type has no slug capability so it never emits this event itself — no
+        // self-guard needed (and the qualified id isn't knowable from in here).
         'entry:afterUpdate': async (event, ctx) => {
-            if (event.type === REDIRECT_TYPE) return;
-
             const oldSlug = event.entry.slug;
             const newSlug = event.data.slug;
             if (!oldSlug || !newSlug || oldSlug === newSlug) return;
@@ -28,11 +28,7 @@ export function slugChangeHooks(
             if (!from || !to || from === to) return;
 
             const fields: JsonObject = { from, to, status: '301', enabled: true };
-            await ctx.sdk.entries.create({
-                type: REDIRECT_TYPE,
-                title: `${from} → ${to}`,
-                fields,
-            });
+            await ctx.entries.create({ type: REDIRECT_TYPE, fields });
         },
     };
 }
