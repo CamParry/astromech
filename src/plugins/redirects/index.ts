@@ -32,6 +32,8 @@ export const redirects = definePlugin<RedirectsOptions>((options) => {
         package: '@astromech/redirects',
         version: '0.1.0',
 
+        schemaModule: 'astromech/plugins/redirects/schema',
+
         entries: {
             [REDIRECT_TYPE]: redirectEntryType,
         },

@@ -7,9 +7,10 @@
  * only). This module collects plugin table objects and enforces the prefix at
  * config-resolution time (crash loud).
  *
- * The `db:generate` / `db:migrate` CLI orchestration (feeding these schemas to
- * drizzle-kit for a single migration log) is deferred until the first
- * table-shipping plugin exists to validate against — see ROADMAP Phase 18a.
+ * The `db:generate` CLI command (`astromech db:generate`, implemented in
+ * `src/cli/commands/db-generate.ts`) reads each plugin's `schemaModule`
+ * specifier, generates a combined `.astromech/drizzle.schema.ts`, and spawns
+ * drizzle-kit to produce the app's migration log. See ROADMAP Phase 18a.
  */
 
 import { getTableName, is, Table } from 'drizzle-orm';

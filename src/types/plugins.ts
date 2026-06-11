@@ -240,6 +240,18 @@ export type PluginDefinition = {
     dependsOn?: Record<string, string>;
     emails?: EmailTemplateOverride[];
 
+    /**
+     * Import specifier of a module whose top-level exports are the plugin's
+     * Drizzle tables. Consumed by `astromech db:generate` to feed drizzle-kit
+     * (which only reads top-level exports from the schema file).
+     *
+     * Example: `'my-plugin/schema'` or `'astromech/plugins/redirects/schema'`
+     *
+     * Plugins that ship `schema` tables without a `schemaModule` will be warned
+     * at `db:generate` time — their tables cannot be included in the migration.
+     */
+    schemaModule?: string;
+
     // ── Imperative escape hatch ─────────────────────────────────────────
     /** Runs once per runtime boot. Optional. */
     setup?: (ctx: PluginContext) => void | Promise<void>;

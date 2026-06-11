@@ -64,6 +64,10 @@
             "types": "./dist/plugins/redirects/index.d.ts",
             "default": "./dist/plugins/redirects/index.js"
         },
+        "./plugins/redirects/schema": {
+            "types": "./dist/plugins/redirects/schema.d.ts",
+            "default": "./dist/plugins/redirects/schema.js"
+        },
         "./plugins/seo": {
             "types": "./dist/plugins/seo/index.d.ts",
             "default": "./dist/plugins/seo/index.js"

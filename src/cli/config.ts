@@ -12,12 +12,17 @@ import { resolveConfig } from '@/core/config-resolver.js';
 import { setCliConfig } from './virtual-config-shim.js';
 import type { AstromechConfig, ResolvedConfig } from '@/types/index.js';
 
-export async function loadConfig(configPath?: string): Promise<ResolvedConfig> {
+export async function loadRawConfig(configPath?: string): Promise<AstromechConfig> {
     const jiti = createJiti(import.meta.url);
-    const path = configPath ? resolve(process.cwd(), configPath) : resolve(process.cwd(), 'astromech.config.ts');
+    const path = configPath
+        ? resolve(process.cwd(), configPath)
+        : resolve(process.cwd(), 'astromech.config.ts');
+    const mod = (await jiti.import(path)) as { default: AstromechConfig };
+    return mod.default;
+}
 
-    const mod = await jiti.import(path) as { default: AstromechConfig };
-    const rawConfig = mod.default;
+export async function loadConfig(configPath?: string): Promise<ResolvedConfig> {
+    const rawConfig = await loadRawConfig(configPath);
 
     // Initialise DB before resolving — resolveConfig strips db from the result
     const db = rawConfig.db.getInstance();
