@@ -27,3 +27,11 @@ export function getEntryStorage(type: string): EntryStorage {
 export function setEntryStorage(type: string, storage: EntryStorage): void {
     overrides.set(type, storage);
 }
+
+/**
+ * Clear all per-type storage overrides. Called at the start of `registerPlugins`
+ * so repeated registrations (notably in tests) don't leak stale plugin storages.
+ */
+export function resetEntryStorageOverrides(): void {
+    overrides.clear();
+}

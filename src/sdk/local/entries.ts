@@ -32,6 +32,7 @@ import { getDb } from '@/db/registry.js';
 import { RelationshipsRepository } from '@/db/repositories/relationships.js';
 import { populateEntries } from '@/db/repositories/populate.js';
 import { getEntryStorage } from '@/core/entry-storage/registry.js';
+import { resolveEntryType } from '@/core/entry-types.js';
 import type { EntryRecord, EntryStorage, StorageDb } from '@/core/entry-storage/types.js';
 import type {
     Entry,
@@ -120,7 +121,7 @@ async function saveRelationships(
     typeName: string
 ): Promise<void> {
     const relationshipsRepo = new RelationshipsRepository(db);
-    const entryTypeConfig = config.entries[typeName];
+    const entryTypeConfig = resolveEntryType(config, typeName);
 
     if (!entryTypeConfig) return;
 
@@ -150,13 +151,13 @@ async function saveRelationships(
 }
 
 function getTitleField(typeName: string): 'title' | false {
-    return config.entries[typeName]?.titleField ?? 'title';
+    return resolveEntryType(config, typeName)?.titleField ?? 'title';
 }
 
 function isVersioningEnabled(typeName: string): boolean {
     return (
         getEntryStorage(typeName).versions !== undefined &&
-        !!config.entries[typeName]?.versioning
+        !!resolveEntryType(config, typeName)?.versioning
     );
 }
 
@@ -164,7 +165,7 @@ function assertCapability(
     typeName: string,
     capability: 'statuses' | 'slug' | 'trash' | 'versioning' | 'translatable'
 ): void {
-    const caps = config.entries[typeName]?.capabilities;
+    const caps = resolveEntryType(config, typeName)?.capabilities;
     if (caps && !caps[capability]) {
         throw new CapabilityError(typeName, capability);
     }
@@ -208,7 +209,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
 }
 
 function getNonTranslatableFieldNames(typeName: string, fieldNames: string[]): string[] {
-    const entryTypeConfig = config.entries[typeName];
+    const entryTypeConfig = resolveEntryType(config, typeName);
     if (!entryTypeConfig?.translatable) return [];
     const nonTranslatable: string[] = [];
     for (const group of entryTypeConfig.fieldGroups) {
@@ -225,7 +226,7 @@ function buildIncomingRelations(
     typeName: string,
     fields: JsonObject
 ): Record<string, string | string[]> {
-    const entryTypeConfig = config.entries[typeName];
+    const entryTypeConfig = resolveEntryType(config, typeName);
     if (!entryTypeConfig) return {};
     const relations: Record<string, string | string[]> = {};
     for (const group of entryTypeConfig.fieldGroups) {
@@ -519,7 +520,7 @@ export const entries: EntriesApi = {
         let data = rows.map(asEntry);
 
         if (singleType && params.populate && params.populate.length > 0) {
-            const entryTypeConfig = config.entries[singleType];
+            const entryTypeConfig = resolveEntryType(config, singleType);
             if (entryTypeConfig) {
                 data = await populateEntries(
                     getDb(),
@@ -560,7 +561,7 @@ export const entries: EntriesApi = {
         let result = record as Entry;
 
         if (params.populate && params.populate.length > 0) {
-            const entryTypeConfig = config.entries[type];
+            const entryTypeConfig = resolveEntryType(config, type);
             if (entryTypeConfig) {
                 const populated = await populateEntries(
                     getDb(),
@@ -911,7 +912,7 @@ export const entries: EntriesApi = {
                 const ids = Array.isArray(targetIds)
                     ? (targetIds as string[])
                     : [targetIds as string];
-                const entryTypeConfig = config.entries[type];
+                const entryTypeConfig = resolveEntryType(config, type);
                 let targetType: 'entry' | 'user' | 'media' = 'entry';
                 if (entryTypeConfig) {
                     for (const group of entryTypeConfig.fieldGroups) {

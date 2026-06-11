@@ -69,6 +69,7 @@ const config: ResolvedConfig = {
             titleField: 'title',
         },
     },
+    pluginEntries: {},
     trash: { enabled: true, retentionDays: 30 },
     storage: {
         name: 'noop',

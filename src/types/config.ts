@@ -6,6 +6,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Permission } from './domain.js';
 import type { FieldGroup } from './fields.js';
 import type { PluginDefinition, PluginNavItem, PluginSettingsSchema } from './plugins.js';
+import type { EntryStorage } from '@/core/entry-storage/types.js';
 
 // ============================================================================
 // Drivers
@@ -88,6 +89,15 @@ export type EntryTypeConfig = {
     defaultView?: 'list' | 'grid';
     gridFields?: { field: string; label?: string }[];
     previewUrl?: string;
+    /**
+     * Custom storage backend for this entry type. Plugin entry types may mount
+     * their own storage; absent means built-in storage. Stripped from the
+     * resolved config (a live instance cannot be serialised into the virtual
+     * module) and registered into the storage registry at boot.
+     */
+    storage?: EntryStorage;
+    /** Field names a multi-type storage should index for free-text search. */
+    search?: string[];
 };
 
 export type ResolvedEntryCapabilities = {
@@ -98,7 +108,7 @@ export type ResolvedEntryCapabilities = {
     trash: boolean;
 };
 
-export type ResolvedEntryTypeConfig = EntryTypeConfig & {
+export type ResolvedEntryTypeConfig = Omit<EntryTypeConfig, 'storage'> & {
     capabilities: ResolvedEntryCapabilities;
     titleField: 'title' | false;
 };
@@ -162,6 +172,11 @@ export type ResolvedConfig = Omit<AstromechConfig, 'plugins' | 'db'> & {
     adminRoute: string;
     apiRoute: string;
     entries: Record<string, ResolvedEntryTypeConfig>;
+    /**
+     * Plugin-contributed entry types, namespaced by plugin name → bare type →
+     * resolved config. Always present (empty when no plugins contribute types).
+     */
+    pluginEntries: Record<string, Record<string, ResolvedEntryTypeConfig>>;
     trash: Required<TrashConfig>;
 };
 

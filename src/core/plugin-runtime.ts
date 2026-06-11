@@ -29,6 +29,11 @@ import { getEmailConfig } from '@/email/registry.js';
 import { renderEmail } from '@/email/render.js';
 import { resolvePluginIdentity } from '@/core/plugin-identity.js';
 import { registerCronJob } from '@/cron/registry.js';
+import { qualifyEntryType } from '@/core/entry-types.js';
+import {
+    resetEntryStorageOverrides,
+    setEntryStorage,
+} from '@/core/entry-storage/registry.js';
 
 // ============================================================================
 // Registry (globalThis — visible from config:setup through request time)
@@ -78,6 +83,8 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
     s.hooks = new Map();
     s.sdk = new Map();
     s.rawRoutes = [];
+    // Drop stale plugin storages before re-registering (test setups re-run this).
+    resetEntryStorageOverrides();
 
     for (const def of defs) {
         const identity = resolvePluginIdentity(def);
@@ -91,11 +98,32 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
         }
 
         if (def.sdk) {
+            // `entries` is reserved for the Phase 3 entries sub-namespace.
+            if ('entries' in def.sdk) {
+                throw new Error(
+                    `Astromech plugin "${def.package}" defines a reserved SDK method "entries". ` +
+                        `The "entries" key is reserved for plugin entry types — rename your method.`
+                );
+            }
             s.sdk.set(identity.name, def.sdk);
         }
 
         for (const route of def.rawRoutes ?? []) {
+            // `/entries` is reserved for the Phase 3 plugin entries surface.
+            if (route.path === '/entries' || route.path.startsWith('/entries/')) {
+                throw new Error(
+                    `Astromech plugin "${def.package}" defines a raw route "${route.path}" under the ` +
+                        `reserved "/entries" path. That path is reserved for plugin entry types.`
+                );
+            }
             s.rawRoutes.push({ identity, route });
+        }
+
+        // Register per-type custom storages under the qualified id.
+        for (const [type, cfg] of Object.entries(def.entries ?? {})) {
+            if (cfg.storage) {
+                setEntryStorage(qualifyEntryType(identity.name, type), cfg.storage);
+            }
         }
     }
 }
@@ -181,7 +209,8 @@ function resolveEnv(): Record<string, string | undefined> {
     try {
         // Populated by Vite in Astro SSR; absent in plain Node — guard for both.
         fromImportMeta =
-            (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
+            (import.meta as unknown as { env?: Record<string, string | undefined> })
+                .env ?? {};
     } catch {
         fromImportMeta = {};
     }
@@ -212,10 +241,16 @@ function makeConfigView(config: ResolvedConfig): PluginConfigView {
     };
 }
 
-async function sendEmail(to: string, subject: string, element: ReactElement): Promise<void> {
+async function sendEmail(
+    to: string,
+    subject: string,
+    element: ReactElement
+): Promise<void> {
     const emailConfig = getEmailConfig();
     if (!emailConfig) {
-        throw new Error('[Astromech] Email is not configured; cannot send from a plugin.');
+        throw new Error(
+            '[Astromech] Email is not configured; cannot send from a plugin.'
+        );
     }
     const { html, text } = await renderEmail(element);
     await emailConfig.driver.send({ to, from: emailConfig.from, subject, html, text });
@@ -242,7 +277,9 @@ export function createPluginContext(
         get sdk(): AstromechClient {
             const client = state().sdkClient;
             if (!client) {
-                throw new Error('[Astromech] Plugin SDK client is not available in this context.');
+                throw new Error(
+                    '[Astromech] Plugin SDK client is not available in this context.'
+                );
             }
             return client;
         },
@@ -258,6 +295,7 @@ function emptyConfig(): ResolvedConfig {
         adminRoute: '/admin',
         apiRoute: '/api',
         entries: {},
+        pluginEntries: {},
         trash: { enabled: true, retentionDays: 30 },
         storage: {
             name: 'noop',
