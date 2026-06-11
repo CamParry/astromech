@@ -156,232 +156,246 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
 // Entries API Implementation
 // ============================================================================
 
-const entriesApi: EntriesApi = {
-    async query(
-        params: EntryQueryParams & { type: string | readonly string[] }
-    ): Promise<QueryResult<Entry>> {
-        const typeParam = params.type;
-        const isArray = Array.isArray(typeParam);
-        // Cross-type: /entries/query (no :type). Single-type: /entries/:type/query.
-        const path = isArray ? '/entries/query' : `/entries/${typeParam as string}/query`;
-        const body = isArray ? params : { ...params, type: undefined };
-        return apiFetch<QueryResult<Entry>>(path, {
-            method: 'POST',
-            body,
-        });
-    },
+function createEntriesApi(basePath: string): EntriesApi {
+    return {
+        async query(
+            params: EntryQueryParams & { type: string | readonly string[] }
+        ): Promise<QueryResult<Entry>> {
+            const typeParam = params.type;
+            const isArray = Array.isArray(typeParam);
+            // Cross-type: /entries/query (no :type). Single-type: /entries/:type/query.
+            const path = isArray
+                ? `${basePath}/query`
+                : `${basePath}/${typeParam as string}/query`;
+            const body = isArray ? params : { ...params, type: undefined };
+            return apiFetch<QueryResult<Entry>>(path, {
+                method: 'POST',
+                body,
+            });
+        },
 
-    async get(params: {
-        type: string;
-        id: string;
-        locale?: string;
-        populate?: string[];
-    }): Promise<Entry | null> {
-        const res = await apiFetch<{ data: Entry } | null>(
-            `/entries/${params.type}/${params.id}`,
-            {
-                params: {
-                    populate: params.populate?.join(','),
-                    locale: params.locale,
-                },
+        async get(params: {
+            type: string;
+            id: string;
+            locale?: string;
+            populate?: string[];
+        }): Promise<Entry | null> {
+            const res = await apiFetch<{ data: Entry } | null>(
+                `${basePath}/${params.type}/${params.id}`,
+                {
+                    params: {
+                        populate: params.populate?.join(','),
+                        locale: params.locale,
+                    },
+                }
+            );
+            return res?.data ?? null;
+        },
+
+        async create(params: {
+            type: string;
+            /** Optional for `titleField: false` types; runtime-enforced otherwise. */
+            title?: string;
+            slug?: string;
+            locale?: string;
+            localeGroup?: string;
+            fields?: JsonObject;
+            status?: EntryStatus;
+            publishAt?: Date | null;
+        }): Promise<Entry> {
+            const { type, ...rest } = params;
+            const res = await apiFetch<{ data: Entry }>(`${basePath}/${type}`, {
+                method: 'POST',
+                body: rest,
+            });
+            return res.data;
+        },
+
+        update: (async (params: {
+            type: string;
+            id: string | readonly string[];
+            data: EntryUpdateData;
+        }): Promise<Entry | Entry[]> => {
+            if (Array.isArray(params.id)) {
+                const res = await apiFetch<{ data: Entry[] }>(
+                    `${basePath}/${params.type}/bulk-update`,
+                    { method: 'POST', body: { ids: params.id, data: params.data } }
+                );
+                return res.data;
             }
-        );
-        return res?.data ?? null;
-    },
-
-    async create(params: {
-        type: string;
-        /** Optional for `titleField: false` types; runtime-enforced otherwise. */
-        title?: string;
-        slug?: string;
-        locale?: string;
-        localeGroup?: string;
-        fields?: JsonObject;
-        status?: EntryStatus;
-        publishAt?: Date | null;
-    }): Promise<Entry> {
-        const { type, ...rest } = params;
-        const res = await apiFetch<{ data: Entry }>(`/entries/${type}`, {
-            method: 'POST',
-            body: rest,
-        });
-        return res.data;
-    },
-
-    update: (async (params: {
-        type: string;
-        id: string | readonly string[];
-        data: EntryUpdateData;
-    }): Promise<Entry | Entry[]> => {
-        if (Array.isArray(params.id)) {
-            const res = await apiFetch<{ data: Entry[] }>(
-                `/entries/${params.type}/bulk-update`,
-                { method: 'POST', body: { ids: params.id, data: params.data } }
+            const res = await apiFetch<{ data: Entry }>(
+                `${basePath}/${params.type}/${params.id as string}`,
+                { method: 'PUT', body: params.data }
             );
             return res.data;
-        }
-        const res = await apiFetch<{ data: Entry }>(
-            `/entries/${params.type}/${params.id as string}`,
-            { method: 'PUT', body: params.data }
-        );
-        return res.data;
-    }) as EntriesApi['update'],
+        }) as EntriesApi['update'],
 
-    async trash(params: {
-        type: string;
-        id: string | readonly string[];
-        cascadeLocales?: boolean;
-    }): Promise<void> {
-        if (Array.isArray(params.id)) {
-            await apiFetch<unknown>(`/entries/${params.type}/bulk-trash`, {
-                method: 'POST',
-                body: { ids: params.id, cascadeLocales: !!params.cascadeLocales },
+        async trash(params: {
+            type: string;
+            id: string | readonly string[];
+            cascadeLocales?: boolean;
+        }): Promise<void> {
+            if (Array.isArray(params.id)) {
+                await apiFetch<unknown>(`${basePath}/${params.type}/bulk-trash`, {
+                    method: 'POST',
+                    body: { ids: params.id, cascadeLocales: !!params.cascadeLocales },
+                });
+                return;
+            }
+            await apiFetch<unknown>(`${basePath}/${params.type}/${params.id as string}`, {
+                method: 'DELETE',
+                ...(params.cascadeLocales ? { params: { cascadeLocales: true } } : {}),
             });
-            return;
-        }
-        await apiFetch<unknown>(`/entries/${params.type}/${params.id as string}`, {
-            method: 'DELETE',
-            ...(params.cascadeLocales ? { params: { cascadeLocales: true } } : {}),
-        });
-    },
+        },
 
-    async duplicate(params: {
-        type: string;
-        id: string;
-        overrides?: EntryDuplicateOverrides;
-    }): Promise<Entry> {
-        const res = await apiFetch<{ data: Entry }>(
-            `/entries/${params.type}/${params.id}/duplicate`,
-            { method: 'POST', body: params.overrides ?? {} }
-        );
-        return res.data;
-    },
-
-    restore: (async (params: {
-        type: string;
-        id: string | readonly string[];
-    }): Promise<Entry | Entry[]> => {
-        if (Array.isArray(params.id)) {
-            const res = await apiFetch<{ data: Entry[] }>(
-                `/entries/${params.type}/bulk-restore`,
-                { method: 'POST', body: { ids: params.id } }
+        async duplicate(params: {
+            type: string;
+            id: string;
+            overrides?: EntryDuplicateOverrides;
+        }): Promise<Entry> {
+            const res = await apiFetch<{ data: Entry }>(
+                `${basePath}/${params.type}/${params.id}/duplicate`,
+                { method: 'POST', body: params.overrides ?? {} }
             );
             return res.data;
-        }
-        const res = await apiFetch<{ data: Entry }>(
-            `/entries/${params.type}/${params.id as string}/restore`,
-            { method: 'POST' }
-        );
-        return res.data;
-    }) as EntriesApi['restore'],
+        },
 
-    async delete(params: {
-        type: string;
-        id: string | readonly string[];
-        cascadeLocales?: boolean;
-    }): Promise<void> {
-        if (Array.isArray(params.id)) {
-            await apiFetch<unknown>(`/entries/${params.type}/bulk-delete`, {
-                method: 'POST',
-                body: { ids: params.id, cascadeLocales: !!params.cascadeLocales },
+        restore: (async (params: {
+            type: string;
+            id: string | readonly string[];
+        }): Promise<Entry | Entry[]> => {
+            if (Array.isArray(params.id)) {
+                const res = await apiFetch<{ data: Entry[] }>(
+                    `${basePath}/${params.type}/bulk-restore`,
+                    { method: 'POST', body: { ids: params.id } }
+                );
+                return res.data;
+            }
+            const res = await apiFetch<{ data: Entry }>(
+                `${basePath}/${params.type}/${params.id as string}/restore`,
+                { method: 'POST' }
+            );
+            return res.data;
+        }) as EntriesApi['restore'],
+
+        async delete(params: {
+            type: string;
+            id: string | readonly string[];
+            cascadeLocales?: boolean;
+        }): Promise<void> {
+            if (Array.isArray(params.id)) {
+                await apiFetch<unknown>(`${basePath}/${params.type}/bulk-delete`, {
+                    method: 'POST',
+                    body: { ids: params.id, cascadeLocales: !!params.cascadeLocales },
+                });
+                return;
+            }
+            await apiFetch<unknown>(
+                `${basePath}/${params.type}/${params.id as string}/force`,
+                {
+                    method: 'DELETE',
+                    ...(params.cascadeLocales
+                        ? { params: { cascadeLocales: true } }
+                        : {}),
+                }
+            );
+        },
+
+        async emptyTrash(params: { type: string }): Promise<void> {
+            await apiFetch<unknown>(`${basePath}/${params.type}/trash`, {
+                method: 'DELETE',
             });
-            return;
-        }
-        await apiFetch<unknown>(`/entries/${params.type}/${params.id as string}/force`, {
-            method: 'DELETE',
-            ...(params.cascadeLocales ? { params: { cascadeLocales: true } } : {}),
-        });
-    },
+        },
 
-    async emptyTrash(params: { type: string }): Promise<void> {
-        await apiFetch<unknown>(`/entries/${params.type}/trash`, { method: 'DELETE' });
-    },
-
-    async versions(params: { type: string; id: string }): Promise<EntryVersion[]> {
-        const res = await apiFetch<{ data: EntryVersion[] }>(
-            `/entries/${params.type}/${params.id}/versions`
-        );
-        return res.data;
-    },
-
-    async restoreVersion(params: {
-        type: string;
-        id: string;
-        versionId: string;
-    }): Promise<Entry> {
-        const res = await apiFetch<{ data: Entry }>(
-            `/entries/${params.type}/${params.id}/versions/${params.versionId}/restore`,
-            { method: 'POST' }
-        );
-        return res.data;
-    },
-
-    async incomingRelations(params: {
-        type: string;
-        id: string;
-    }): Promise<IncomingRelation[]> {
-        const res = await apiFetch<{ data: IncomingRelation[] }>(
-            `/entries/${params.type}/${params.id}/incoming-relations`
-        );
-        return res.data;
-    },
-
-    publish: (async (params: {
-        type: string;
-        id: string | readonly string[];
-    }): Promise<Entry | Entry[]> => {
-        if (Array.isArray(params.id)) {
-            const res = await apiFetch<{ data: Entry[] }>(
-                `/entries/${params.type}/bulk-publish`,
-                { method: 'POST', body: { ids: params.id } }
+        async versions(params: { type: string; id: string }): Promise<EntryVersion[]> {
+            const res = await apiFetch<{ data: EntryVersion[] }>(
+                `${basePath}/${params.type}/${params.id}/versions`
             );
             return res.data;
-        }
-        const res = await apiFetch<{ data: Entry }>(
-            `/entries/${params.type}/${params.id as string}/publish`,
-            { method: 'POST' }
-        );
-        return res.data;
-    }) as EntriesApi['publish'],
+        },
 
-    unpublish: (async (params: {
-        type: string;
-        id: string | readonly string[];
-    }): Promise<Entry | Entry[]> => {
-        if (Array.isArray(params.id)) {
-            const res = await apiFetch<{ data: Entry[] }>(
-                `/entries/${params.type}/bulk-unpublish`,
-                { method: 'POST', body: { ids: params.id } }
+        async restoreVersion(params: {
+            type: string;
+            id: string;
+            versionId: string;
+        }): Promise<Entry> {
+            const res = await apiFetch<{ data: Entry }>(
+                `${basePath}/${params.type}/${params.id}/versions/${params.versionId}/restore`,
+                { method: 'POST' }
             );
             return res.data;
-        }
-        const res = await apiFetch<{ data: Entry }>(
-            `/entries/${params.type}/${params.id as string}/unpublish`,
-            { method: 'POST' }
-        );
-        return res.data;
-    }) as EntriesApi['unpublish'],
+        },
 
-    schedule: (async (params: {
-        type: string;
-        id: string | readonly string[];
-        publishAt: Date;
-    }): Promise<Entry | Entry[]> => {
-        const publishAtIso = params.publishAt.toISOString();
-        if (Array.isArray(params.id)) {
-            const res = await apiFetch<{ data: Entry[] }>(
-                `/entries/${params.type}/bulk-schedule`,
-                { method: 'POST', body: { ids: params.id, publishAt: publishAtIso } }
+        async incomingRelations(params: {
+            type: string;
+            id: string;
+        }): Promise<IncomingRelation[]> {
+            const res = await apiFetch<{ data: IncomingRelation[] }>(
+                `${basePath}/${params.type}/${params.id}/incoming-relations`
             );
             return res.data;
-        }
-        const res = await apiFetch<{ data: Entry }>(
-            `/entries/${params.type}/${params.id as string}/schedule`,
-            { method: 'POST', body: { publishAt: publishAtIso } }
-        );
-        return res.data;
-    }) as EntriesApi['schedule'],
-};
+        },
+
+        publish: (async (params: {
+            type: string;
+            id: string | readonly string[];
+        }): Promise<Entry | Entry[]> => {
+            if (Array.isArray(params.id)) {
+                const res = await apiFetch<{ data: Entry[] }>(
+                    `${basePath}/${params.type}/bulk-publish`,
+                    { method: 'POST', body: { ids: params.id } }
+                );
+                return res.data;
+            }
+            const res = await apiFetch<{ data: Entry }>(
+                `${basePath}/${params.type}/${params.id as string}/publish`,
+                { method: 'POST' }
+            );
+            return res.data;
+        }) as EntriesApi['publish'],
+
+        unpublish: (async (params: {
+            type: string;
+            id: string | readonly string[];
+        }): Promise<Entry | Entry[]> => {
+            if (Array.isArray(params.id)) {
+                const res = await apiFetch<{ data: Entry[] }>(
+                    `${basePath}/${params.type}/bulk-unpublish`,
+                    { method: 'POST', body: { ids: params.id } }
+                );
+                return res.data;
+            }
+            const res = await apiFetch<{ data: Entry }>(
+                `${basePath}/${params.type}/${params.id as string}/unpublish`,
+                { method: 'POST' }
+            );
+            return res.data;
+        }) as EntriesApi['unpublish'],
+
+        schedule: (async (params: {
+            type: string;
+            id: string | readonly string[];
+            publishAt: Date;
+        }): Promise<Entry | Entry[]> => {
+            const publishAtIso = params.publishAt.toISOString();
+            if (Array.isArray(params.id)) {
+                const res = await apiFetch<{ data: Entry[] }>(
+                    `${basePath}/${params.type}/bulk-schedule`,
+                    { method: 'POST', body: { ids: params.id, publishAt: publishAtIso } }
+                );
+                return res.data;
+            }
+            const res = await apiFetch<{ data: Entry }>(
+                `${basePath}/${params.type}/${params.id as string}/schedule`,
+                { method: 'POST', body: { publishAt: publishAtIso } }
+            );
+            return res.data;
+        }) as EntriesApi['schedule'],
+    };
+}
+
+/** Root entries API — byte-identical request paths to the pre-factory client. */
+const entriesApi: EntriesApi = createEntriesApi('/entries');
 
 // ============================================================================
 // Media API Implementation
@@ -553,14 +567,29 @@ const usersApi: UsersApi = {
 
 type FetchMethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
 
+// One entries API per plugin name (paths rooted at `/plugins/{name}/entries`).
+const pluginEntriesCache = new Map<string, EntriesApi>();
+
+function pluginEntriesApi(name: string): EntriesApi {
+    let api = pluginEntriesCache.get(name);
+    if (!api) {
+        api = createEntriesApi(`/plugins/${name}/entries`);
+        pluginEntriesCache.set(name, api);
+    }
+    return api;
+}
+
 const pluginsApi: PluginSdkNamespace = new Proxy({} as PluginSdkNamespace, {
-    get(_target, nameProp): FetchMethodMap | undefined {
+    get(_target, nameProp): FetchMethodMap | EntriesApi | undefined {
         if (typeof nameProp !== 'string' || nameProp === 'then') return undefined;
         const name = nameProp;
         return new Proxy({} as FetchMethodMap, {
             get(_t, methodProp) {
                 if (typeof methodProp !== 'string' || methodProp === 'then')
                     return undefined;
+                // `entries` is a reserved key: the per-plugin entries sub-API,
+                // not an RPC method.
+                if (methodProp === 'entries') return pluginEntriesApi(name);
                 const method = methodProp;
                 return (input?: unknown) =>
                     apiFetch<unknown>(`/plugins/${name}/${method}`, {

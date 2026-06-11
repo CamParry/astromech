@@ -10,8 +10,10 @@
  * at module-load time.
  */
 
-import type { PluginSdkNamespace } from '@/types/index.js';
+import type { EntriesApi, PluginSdkNamespace } from '@/types/index.js';
 import { getCurrentUser } from '@/sdk/local/context.js';
+import { entries as localEntries } from '@/sdk/local/entries.js';
+import { createScopedEntries } from '@/sdk/local/scoped-entries.js';
 import {
     createPluginContext,
     getPluginIdentity,
@@ -21,15 +23,22 @@ import {
 type MethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
 
 export const localPlugins: PluginSdkNamespace = new Proxy({} as PluginSdkNamespace, {
-    get(_target, nameProp): MethodMap | undefined {
+    get(_target, nameProp): MethodMap | EntriesApi | undefined {
         if (typeof nameProp !== 'string' || nameProp === 'then') return undefined;
         const name = nameProp;
-        const methods = getPluginSdkMethods().get(name);
-        if (!methods) return undefined;
+        // Unknown plugin → undefined; a known plugin with no SDK methods still
+        // exposes its `entries` sub-API.
+        if (!getPluginIdentity(name)) return undefined;
+        const methods = getPluginSdkMethods().get(name) ?? {};
 
         return new Proxy({} as MethodMap, {
             get(_t, methodProp) {
-                if (typeof methodProp !== 'string' || methodProp === 'then') return undefined;
+                if (typeof methodProp !== 'string' || methodProp === 'then')
+                    return undefined;
+                // `entries` is the reserved per-plugin entries sub-API, not RPC.
+                if (methodProp === 'entries') {
+                    return createScopedEntries(name, localEntries);
+                }
                 const method = methods[methodProp];
                 if (!method) return undefined;
 
@@ -38,7 +47,10 @@ export const localPlugins: PluginSdkNamespace = new Proxy({} as PluginSdkNamespa
                     if (!identity) {
                         throw new Error(`[Astromech] Unknown plugin "${name}".`);
                     }
-                    return method.handler(input, createPluginContext(identity, getCurrentUser()));
+                    return method.handler(
+                        input,
+                        createPluginContext(identity, getCurrentUser())
+                    );
                 };
             },
         });

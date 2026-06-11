@@ -14,6 +14,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { ReactElement } from 'react';
 import type {
     AstromechClient,
+    EntriesApi,
     PluginContext,
     PluginConfigView,
     PluginDefinition,
@@ -21,6 +22,7 @@ import type {
     PluginRawRoute,
     PluginSdkMethod,
     ResolvedConfig,
+    ResolvedEntryTypeConfig,
     ResolvedPluginIdentity,
     User,
 } from '@/types/index.js';
@@ -30,6 +32,7 @@ import { renderEmail } from '@/email/render.js';
 import { resolvePluginIdentity } from '@/core/plugin-identity.js';
 import { registerCronJob } from '@/cron/registry.js';
 import { qualifyEntryType } from '@/core/entry-types.js';
+import { createScopedEntries } from '@/sdk/local/scoped-entries.js';
 import {
     resetEntryStorageOverrides,
     setEntryStorage,
@@ -194,9 +197,44 @@ export function getPluginRawRoutes(): RegisteredRawRoute[] {
     return state().rawRoutes;
 }
 
+export type PluginEntryMount = {
+    identity: ResolvedPluginIdentity;
+    entryTypes: Record<string, ResolvedEntryTypeConfig>;
+};
+
+/**
+ * The plugin identities that contribute entry types, paired with the resolved
+ * config so the API layer can mount a per-plugin entries router. Returns an
+ * empty list when config has not been registered. Mirrors `getPluginRawRoutes`:
+ * read once at router-build time, after `registerPlugins`.
+ */
+export function getPluginEntryMounts(): PluginEntryMount[] {
+    const s = state();
+    if (!s.config) return [];
+    const mounts: PluginEntryMount[] = [];
+    for (const identity of s.identities) {
+        const entryTypes = s.config.pluginEntries[identity.name];
+        if (entryTypes && Object.keys(entryTypes).length > 0) {
+            mounts.push({ identity, entryTypes });
+        }
+    }
+    return mounts;
+}
+
 /** Set by the local SDK at module load to break the import cycle. */
 export function setPluginSdkClient(client: AstromechClient): void {
     state().sdkClient = client;
+}
+
+/** The registered SDK client, or crash-loud if a context reaches for it too early. */
+function requireSdkClient(): AstromechClient {
+    const client = state().sdkClient;
+    if (!client) {
+        throw new Error(
+            '[Astromech] Plugin SDK client is not available in this context.'
+        );
+    }
+    return client;
 }
 
 // ============================================================================
@@ -275,13 +313,15 @@ export function createPluginContext(
         config: configView,
         user,
         get sdk(): AstromechClient {
-            const client = state().sdkClient;
-            if (!client) {
-                throw new Error(
-                    '[Astromech] Plugin SDK client is not available in this context.'
-                );
-            }
-            return client;
+            return requireSdkClient();
+        },
+        get entries(): EntriesApi {
+            // Auto-scoped to this plugin's own entry types: bare keys in, qualified
+            // ids out. Shares the lazy sdkClient so it works wherever `sdk` does.
+            return createScopedEntries(
+                identity.name,
+                requireSdkClient().entries as unknown as EntriesApi
+            );
         },
         sendEmail,
         logger: makeLogger(identity.name),

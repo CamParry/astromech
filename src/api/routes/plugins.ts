@@ -13,16 +13,19 @@
 
 import { Hono } from 'hono';
 import type { AuthVariables } from '@/api/middleware/auth.js';
-import { optionalAuth } from '@/api/middleware/auth.js';
+import { optionalAuth, requireAuth } from '@/api/middleware/auth.js';
 import { forbidden, notFound, unauthorized } from '@/api/middleware/errors.js';
 import {
     createPluginContext,
+    getPluginEntryMounts,
     getPluginIdentity,
     getPluginRawRoutes,
     getPluginSdkMethods,
 } from '@/core/plugin-runtime.js';
 import { can } from '@/core/permissions.js';
 import { resolvePluginPermission } from '@/core/plugin-identity.js';
+import { qualifyEntryType } from '@/core/entry-types.js';
+import { createEntriesRouter } from '@/api/routes/entries.js';
 import type { Context } from 'hono';
 import type { Permission, PluginAccess } from '@/types/index.js';
 
@@ -52,6 +55,29 @@ function enforceAccess(
     ) as Permission;
     if (!role || !can(role, permission)) return forbidden(c);
     return null;
+}
+
+// ── Per-plugin entries mounts (registered before the RPC catch-all so the
+//    static `/{name}/entries` segments win over `/:name/:method`) ────────────
+//
+// Each mount is its own entries router, namespaced to the plugin: bare wire
+// types resolve against `pluginEntries[name]`, the orchestrator sees the
+// qualified id, and permissions root at `plugin:{ns}:entry:{type}:{action}`.
+// The plugins router runs `optionalAuth` (public RPC), so the entries subtree
+// gets an explicit `requireAuth` — these routes are never public.
+for (const { identity, entryTypes } of getPluginEntryMounts()) {
+    pluginsRouter.use(`/${identity.name}/entries/*`, requireAuth);
+    // The entries router needs full `AuthVariables` (requireAuth guarantees them
+    // upstream); `.route` onto the partial-typed plugins router needs the cast.
+    pluginsRouter.route(
+        `/${identity.name}/entries`,
+        createEntriesRouter({
+            lookup: (t) => entryTypes[t],
+            qualify: (t) => qualifyEntryType(identity.name, t),
+            permissionFor: (t, a) =>
+                `plugin:${identity.permissionNamespace}:entry:${t}:${a}`,
+        }) as unknown as Hono<PluginEnv>
+    );
 }
 
 // ── Raw escape-hatch routes (registered before the RPC catch-all) ──────────

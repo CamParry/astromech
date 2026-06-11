@@ -13,6 +13,7 @@ import type { FieldDefinition } from './fields.js';
 import type { User } from './domain.js';
 import type { PluginHooks } from './hooks.js';
 import type { AstromechClient } from './sdk.js';
+import type { EntriesApi } from './api.js';
 
 // ============================================================================
 // Email overrides (carried over from the prior plugin surface)
@@ -50,6 +51,12 @@ export type PluginContext = {
     /** The acting user, or null for unauthenticated / system contexts. */
     user: User | null;
     sdk: AstromechClient;
+    /**
+     * Entries API auto-scoped to this plugin's own entry types. Address types by
+     * their bare keys (`'redirect'`, not `'myplugin/redirect'`); the wrapper
+     * qualifies them. No permission checks — server-side plugin altitude.
+     */
+    entries: EntriesApi;
     sendEmail: (to: string, subject: string, element: ReactElement) => Promise<void>;
     logger: PluginLogger;
     /** Env vars (resolved via import.meta.env in Vite/Astro SSR). Never the browser. */
