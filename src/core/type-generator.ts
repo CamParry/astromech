@@ -119,10 +119,14 @@ function fieldToTsType(
 /**
  * Map a FieldDefinition to its populated TypeScript type string for the Relations type.
  * Returns null if the field is not a relation/media field.
+ *
+ * `knownCollections` — bare root collection keys.
+ * `qualifiedTargetMap` — qualified target ids (`plugin/type`) → Fields interface name.
  */
 function fieldToRelationType(
     field: FieldDefinition,
-    knownCollections: Set<string>
+    knownCollections: Set<string>,
+    qualifiedTargetMap: Map<string, string> = new Map<string, string>()
 ): string | null {
     if (!RELATION_TYPES.has(field.type)) return null;
 
@@ -141,6 +145,10 @@ function fieldToRelationType(
         single = "import('astromech').User";
     } else if (field.target === 'media') {
         single = "import('astromech').Media";
+    } else if (qualifiedTargetMap.has(field.target)) {
+        // Qualified target: `plugin/type` → resolved plugin Fields interface
+        const fieldsName = qualifiedTargetMap.get(field.target) ?? 'never';
+        single = `import('astromech').TypedEntry<${fieldsName}>`;
     } else if (knownCollections.has(field.target)) {
         const pascal = toPascalCase(field.target);
         single = `import('astromech').TypedEntry<${pascal}Fields>`;
@@ -170,7 +178,8 @@ function generateCollectionTypes(
     collectionKey: string,
     fieldGroups: FieldGroup[],
     knownCollections: Set<string>,
-    pluginFieldTypes: Map<string, PluginFieldTypeRegistration>
+    pluginFieldTypes: Map<string, PluginFieldTypeRegistration>,
+    qualifiedTargetMap: Map<string, string> = new Map<string, string>()
 ): CollectionTypeBlock {
     const pascal = toPascalCase(collectionKey);
     const fieldsName = `${pascal}Fields`;
@@ -221,7 +230,7 @@ function generateCollectionTypes(
     // Build Relations type (only populate-able fields)
     const relationLines: string[] = [];
     for (const field of allFields) {
-        const relType = fieldToRelationType(field, knownCollections);
+        const relType = fieldToRelationType(field, knownCollections, qualifiedTargetMap);
         if (relType === null) continue;
         relationLines.push(`  ${propertyKey(field.name)}: ${relType};`);
     }
@@ -241,13 +250,72 @@ function generateCollectionTypes(
 /**
  * Generate the full content of the `.astro/astromech.d.ts` type declaration file.
  */
+
+/** Derive the interface-name prefix for a plugin entry type. */
+function pluginEntryPrefix(pluginName: string, typeName: string): string {
+    return `Plugin${toPascalCase(pluginName)}${toPascalCase(typeName)}`;
+}
+
+type PluginEntryBlock = {
+    pluginName: string;
+    typeName: string;
+    fieldsInterface: string;
+    relationsType: string;
+};
+
+/**
+ * Generate per-plugin entry type interfaces and the `AstromechPluginEntryTypes`
+ * augmentation block. Returns an empty array when there are no plugin entries.
+ */
+function generatePluginEntryBlocks(
+    pluginEntries: Record<string, Record<string, { fieldGroups: FieldGroup[] }>>,
+    knownCollections: Set<string>,
+    qualifiedTargetMap: Map<string, string>,
+    pluginFieldTypes: Map<string, PluginFieldTypeRegistration>
+): PluginEntryBlock[] {
+    const blocks: PluginEntryBlock[] = [];
+
+    for (const [pluginName, types] of Object.entries(pluginEntries)) {
+        for (const [typeName, entryType] of Object.entries(types)) {
+            const prefix = pluginEntryPrefix(pluginName, typeName);
+
+            // Reuse collection codegen with plugin-prefixed interface names.
+            // collectionKey === prefix → pascal === prefix (already PascalCase),
+            // so the generated names are `${prefix}Fields` / `${prefix}Relations`.
+            const block = generateCollectionTypes(
+                prefix,
+                entryType.fieldGroups,
+                knownCollections,
+                pluginFieldTypes,
+                qualifiedTargetMap
+            );
+
+            blocks.push({
+                pluginName,
+                typeName,
+                fieldsInterface: block.fieldsInterface,
+                relationsType: block.relationsType,
+            });
+
+            // Register qualified target so other fields can reference it
+            qualifiedTargetMap.set(`${pluginName}/${typeName}`, `${prefix}Fields`);
+        }
+    }
+
+    return blocks;
+}
+
 /**
  * `declare module` augmentation for installed plugins: SDK method names on
  * `AstromechPluginSdks` (method-name autocomplete; IO stays `unknown` — only
- * runtime values are available here) and declared `hookEvents` on
- * `AstromechPluginHookEvents`.
+ * runtime values are available here), declared `hookEvents` on
+ * `AstromechPluginHookEvents`, and per-plugin entry types on
+ * `AstromechPluginEntryTypes`.
  */
-function generatePluginAugmentations(plugins: PluginDefinition[]): string[] {
+function generatePluginAugmentations(
+    plugins: PluginDefinition[],
+    pluginEntryBlocks: PluginEntryBlock[]
+): string[] {
     const sdkLines = plugins.flatMap((def) => {
         const methods = Object.keys(def.sdk ?? {});
         if (methods.length === 0) return [];
@@ -263,7 +331,30 @@ function generatePluginAugmentations(plugins: PluginDefinition[]): string[] {
         (def.hookEvents ?? []).map((event) => `    '${event}': unknown;`)
     );
 
-    if (sdkLines.length === 0 && eventLines.length === 0) return [];
+    // Group plugin entry blocks by plugin name for the augmentation
+    const entryAugLines: string[] = [];
+    const byPlugin = new Map<string, PluginEntryBlock[]>();
+    for (const block of pluginEntryBlocks) {
+        const arr = byPlugin.get(block.pluginName) ?? [];
+        arr.push(block);
+        byPlugin.set(block.pluginName, arr);
+    }
+    for (const [pluginName, blocks] of byPlugin) {
+        const key = propertyKey(pluginName);
+        entryAugLines.push(`    ${key}: {`);
+        for (const block of blocks) {
+            const prefix = pluginEntryPrefix(block.pluginName, block.typeName);
+            const typeKey = propertyKey(block.typeName);
+            entryAugLines.push(
+                `      ${typeKey}: { fields: ${prefix}Fields; relations: ${prefix}Relations };`
+            );
+        }
+        entryAugLines.push('    };');
+    }
+
+    if (sdkLines.length === 0 && eventLines.length === 0 && entryAugLines.length === 0) {
+        return [];
+    }
 
     return [
         '',
@@ -275,6 +366,9 @@ function generatePluginAugmentations(plugins: PluginDefinition[]): string[] {
         '  }',
         '  interface AstromechPluginHookEvents {',
         ...eventLines,
+        '  }',
+        '  interface AstromechPluginEntryTypes {',
+        ...entryAugLines,
         '  }',
         '}',
     ];
@@ -288,12 +382,27 @@ export function generateSdkTypes(
     const collectionKeys = Object.keys(config.entries);
     const knownCollections = new Set(collectionKeys);
 
+    // Build a qualified-target map so root collection relation fields can
+    // reference plugin entry types (e.g. target: 'redirects/redirect').
+    // Pre-populate with all plugin entry keys so forward references work.
+    const qualifiedTargetMap = new Map<string, string>();
+    const pluginEntriesInput = config.pluginEntries ?? {};
+    for (const [pluginName, types] of Object.entries(pluginEntriesInput)) {
+        for (const typeName of Object.keys(types)) {
+            qualifiedTargetMap.set(
+                `${pluginName}/${typeName}`,
+                `${pluginEntryPrefix(pluginName, typeName)}Fields`
+            );
+        }
+    }
+
     const blocks = Object.entries(config.entries).map(([key, entryType]) =>
         generateCollectionTypes(
             key,
             entryType.fieldGroups,
             knownCollections,
-            pluginFieldTypes
+            pluginFieldTypes,
+            qualifiedTargetMap
         )
     );
 
@@ -317,7 +426,28 @@ export function generateSdkTypes(
         })
         .join('\n\n');
 
-    return [
+    // Generate plugin entry type blocks
+    const pluginEntryBlocks = generatePluginEntryBlocks(
+        pluginEntriesInput,
+        knownCollections,
+        qualifiedTargetMap,
+        pluginFieldTypes
+    );
+
+    const pluginEntryTypeBlocks = pluginEntryBlocks
+        .map((block) => {
+            const prefix = pluginEntryPrefix(block.pluginName, block.typeName);
+            return [
+                `// --- Plugin entry: ${block.pluginName}/${block.typeName} (${prefix}) ---`,
+                '',
+                block.fieldsInterface,
+                '',
+                block.relationsType,
+            ].join('\n');
+        })
+        .join('\n\n');
+
+    const parts: string[] = [
         '// Auto-generated by Astromech. Do not edit.',
         '',
         "declare module 'astromech' {",
@@ -327,9 +457,18 @@ export function generateSdkTypes(
         '}',
         '',
         collectionTypeBlocks,
-        ...generatePluginAugmentations(plugins),
+    ];
+
+    if (pluginEntryTypeBlocks) {
+        parts.push('', pluginEntryTypeBlocks);
+    }
+
+    parts.push(
+        ...generatePluginAugmentations(plugins, pluginEntryBlocks),
         '',
         'export {};',
-        '',
-    ].join('\n');
+        ''
+    );
+
+    return parts.join('\n');
 }

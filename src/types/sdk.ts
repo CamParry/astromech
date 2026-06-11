@@ -28,15 +28,11 @@ import type { ResolvedConfig } from './config.js';
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
 export interface AstromechEntryTypes {}
 
-// Helper types — extract fields/relations from AstromechEntryTypes by key
-type FieldsFor<T extends keyof AstromechEntryTypes> = AstromechEntryTypes[T] extends {
-    fields: infer F;
-}
+// Generic helpers — extract fields/relations from any entry-type map by key
+type FieldsForMap<Map, T extends keyof Map> = Map[T] extends { fields: infer F }
     ? F
     : never;
-type RelationsFor<T extends keyof AstromechEntryTypes> = AstromechEntryTypes[T] extends {
-    relations: infer R;
-}
+type RelationsForMap<Map, T extends keyof Map> = Map[T] extends { relations: infer R }
     ? R
     : never;
 
@@ -50,23 +46,37 @@ export type TypedEntry<TFields> = Omit<Entry, 'fields'> & {
 // ============================================================================
 
 /**
- * Layered overloads above the wide `EntriesApi`. Literal-type `type` args
- * return `TypedEntry<FieldsFor<T>>`; the wide overload fallback returns `Entry`.
+ * Layered overloads above the wide `EntriesApi`, parameterised by an entry-type
+ * map. Literal-type `type` args return `TypedEntry<FieldsFor<T>>`; the wide
+ * overload fallback returns `Entry`.
+ *
+ * `TypedEntriesApi` is the standard alias bound to the global
+ * `AstromechEntryTypes`; plugin entry APIs are typed via
+ * `TypedEntriesApiFor<AstromechPluginEntryTypes[Name]>`.
  */
-export type TypedEntriesApi = {
+export type TypedEntriesApiFor<EntryMap> = {
     // ── query ────────────────────────────────────────────────────────────────
-    query<T extends keyof AstromechEntryTypes, K extends keyof RelationsFor<T> & string>(
+    query<
+        T extends keyof EntryMap,
+        K extends keyof RelationsForMap<EntryMap, T> & string,
+    >(
         params: { type: T; populate: K[] } & Omit<EntryQueryParams, 'type' | 'populate'>
-    ): Promise<QueryResult<TypedEntry<Omit<FieldsFor<T>, K> & Pick<RelationsFor<T>, K>>>>;
-    query<T extends keyof AstromechEntryTypes>(
+    ): Promise<
+        QueryResult<
+            TypedEntry<
+                Omit<FieldsForMap<EntryMap, T>, K> & Pick<RelationsForMap<EntryMap, T>, K>
+            >
+        >
+    >;
+    query<T extends keyof EntryMap>(
         params: { type: T } & Omit<EntryQueryParams, 'type'>
-    ): Promise<QueryResult<TypedEntry<FieldsFor<T>>>>;
+    ): Promise<QueryResult<TypedEntry<FieldsForMap<EntryMap, T>>>>;
     // Deliberately separate from the single-type overload: a union parameter
     // would degrade inference of T at call sites.
     /* eslint-disable @typescript-eslint/unified-signatures */
-    query<T extends keyof AstromechEntryTypes>(
+    query<T extends keyof EntryMap>(
         params: { type: readonly T[] } & Omit<EntryQueryParams, 'type'>
-    ): Promise<QueryResult<TypedEntry<FieldsFor<T>>>>;
+    ): Promise<QueryResult<TypedEntry<FieldsForMap<EntryMap, T>>>>;
     /* eslint-enable @typescript-eslint/unified-signatures */
     query(
         params: { type: string | readonly string[] } & Omit<EntryQueryParams, 'type'>
@@ -74,20 +84,22 @@ export type TypedEntriesApi = {
 
     // ── get ──────────────────────────────────────────────────────────────────
     get<
-        T extends keyof AstromechEntryTypes,
-        K extends keyof RelationsFor<T> & string,
+        T extends keyof EntryMap,
+        K extends keyof RelationsForMap<EntryMap, T> & string,
     >(params: {
         type: T;
         id: string;
         populate: K[];
         locale?: string;
-    }): Promise<TypedEntry<Omit<FieldsFor<T>, K> & Pick<RelationsFor<T>, K>> | null>;
-    get<T extends keyof AstromechEntryTypes>(params: {
+    }): Promise<TypedEntry<
+        Omit<FieldsForMap<EntryMap, T>, K> & Pick<RelationsForMap<EntryMap, T>, K>
+    > | null>;
+    get<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
         populate?: string[];
         locale?: string;
-    }): Promise<TypedEntry<FieldsFor<T>> | null>;
+    }): Promise<TypedEntry<FieldsForMap<EntryMap, T>> | null>;
     get(params: {
         type: string;
         id: string;
@@ -96,16 +108,16 @@ export type TypedEntriesApi = {
     }): Promise<Entry | null>;
 
     // ── create ───────────────────────────────────────────────────────────────
-    create<T extends keyof AstromechEntryTypes>(params: {
+    create<T extends keyof EntryMap>(params: {
         type: T;
         title: string;
         slug?: string;
         locale?: string;
         localeGroup?: string;
-        fields?: Partial<FieldsFor<T>>;
+        fields?: Partial<FieldsForMap<EntryMap, T>>;
         status?: EntryStatus;
         publishAt?: Date | null;
-    }): Promise<TypedEntry<FieldsFor<T>>>;
+    }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>>;
     create(params: {
         type: string;
         /** Optional for `titleField: false` types; runtime-enforced otherwise. */
@@ -119,28 +131,28 @@ export type TypedEntriesApi = {
     }): Promise<Entry>;
 
     // ── update ───────────────────────────────────────────────────────────────
-    update<T extends keyof AstromechEntryTypes>(params: {
+    update<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
         data: Partial<{
             title: string;
             slug: string;
-            fields: Partial<FieldsFor<T>>;
+            fields: Partial<FieldsForMap<EntryMap, T>>;
             status: EntryStatus;
             publishAt: Date | null;
         }>;
-    }): Promise<TypedEntry<FieldsFor<T>>>;
-    update<T extends keyof AstromechEntryTypes>(params: {
+    }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>>;
+    update<T extends keyof EntryMap>(params: {
         type: T;
         id: readonly string[];
         data: Partial<{
             title: string;
             slug: string;
-            fields: Partial<FieldsFor<T>>;
+            fields: Partial<FieldsForMap<EntryMap, T>>;
             status: EntryStatus;
             publishAt: Date | null;
         }>;
-    }): Promise<TypedEntry<FieldsFor<T>>[]>;
+    }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>[]>;
     update(params: { type: string; id: string; data: EntryUpdateData }): Promise<Entry>;
     update(params: {
         type: string;
@@ -149,7 +161,7 @@ export type TypedEntriesApi = {
     }): Promise<Entry[]>;
 
     // ── duplicate ────────────────────────────────────────────────────────────
-    duplicate<T extends keyof AstromechEntryTypes>(params: {
+    duplicate<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
         overrides?: Partial<{
@@ -157,10 +169,10 @@ export type TypedEntriesApi = {
             slug: string;
             locale: string;
             localeGroup: string;
-            fields: Partial<FieldsFor<T>>;
+            fields: Partial<FieldsForMap<EntryMap, T>>;
             status: EntryStatus;
         }>;
-    }): Promise<TypedEntry<FieldsFor<T>>>;
+    }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>>;
     duplicate(params: {
         type: string;
         id: string;
@@ -168,40 +180,40 @@ export type TypedEntriesApi = {
     }): Promise<Entry>;
 
     // ── publish ──────────────────────────────────────────────────────────────
-    publish<T extends keyof AstromechEntryTypes>(params: {
+    publish<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
-    }): Promise<TypedEntry<FieldsFor<T>>>;
-    publish<T extends keyof AstromechEntryTypes>(params: {
+    }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>>;
+    publish<T extends keyof EntryMap>(params: {
         type: T;
         id: readonly string[];
-    }): Promise<TypedEntry<FieldsFor<T>>[]>;
+    }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>[]>;
     publish(params: { type: string; id: string }): Promise<Entry>;
     publish(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
 
     // ── unpublish ────────────────────────────────────────────────────────────
-    unpublish<T extends keyof AstromechEntryTypes>(params: {
+    unpublish<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
-    }): Promise<TypedEntry<FieldsFor<T>>>;
-    unpublish<T extends keyof AstromechEntryTypes>(params: {
+    }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>>;
+    unpublish<T extends keyof EntryMap>(params: {
         type: T;
         id: readonly string[];
-    }): Promise<TypedEntry<FieldsFor<T>>[]>;
+    }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>[]>;
     unpublish(params: { type: string; id: string }): Promise<Entry>;
     unpublish(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
 
     // ── schedule ─────────────────────────────────────────────────────────────
-    schedule<T extends keyof AstromechEntryTypes>(params: {
+    schedule<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
         publishAt: Date;
-    }): Promise<TypedEntry<FieldsFor<T>>>;
-    schedule<T extends keyof AstromechEntryTypes>(params: {
+    }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>>;
+    schedule<T extends keyof EntryMap>(params: {
         type: T;
         id: readonly string[];
         publishAt: Date;
-    }): Promise<TypedEntry<FieldsFor<T>>[]>;
+    }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>[]>;
     schedule(params: { type: string; id: string; publishAt: Date }): Promise<Entry>;
     schedule(params: {
         type: string;
@@ -210,24 +222,24 @@ export type TypedEntriesApi = {
     }): Promise<Entry[]>;
 
     // ── restore ──────────────────────────────────────────────────────────────
-    restore<T extends keyof AstromechEntryTypes>(params: {
+    restore<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
-    }): Promise<TypedEntry<FieldsFor<T>>>;
-    restore<T extends keyof AstromechEntryTypes>(params: {
+    }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>>;
+    restore<T extends keyof EntryMap>(params: {
         type: T;
         id: readonly string[];
-    }): Promise<TypedEntry<FieldsFor<T>>[]>;
+    }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>[]>;
     restore(params: { type: string; id: string }): Promise<Entry>;
     restore(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
 
     // ── versions / restoreVersion ────────────────────────────────────────────
     versions(params: { type: string; id: string }): Promise<EntryVersion[]>;
-    restoreVersion<T extends keyof AstromechEntryTypes>(params: {
+    restoreVersion<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
         versionId: string;
-    }): Promise<TypedEntry<FieldsFor<T>>>;
+    }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>>;
     restoreVersion(params: {
         type: string;
         id: string;
@@ -248,15 +260,13 @@ export type TypedEntriesApi = {
     | 'restoreVersion'
 >;
 
+/** `TypedEntriesApi` — alias of `TypedEntriesApiFor` bound to the global map. */
+export type TypedEntriesApi = TypedEntriesApiFor<AstromechEntryTypes>;
+
 // ============================================================================
 // AstromechClient
 // ============================================================================
 
-/**
- * Plugin SDK namespace. Each plugin's access key maps to its set of RPC
- * methods. Strongly-typed per-plugin augmentation is layered on in 18b via
- * generated `declare module` types; the base shape stays loose.
- */
 /**
  * Augmented by the generated `astromech.d.ts`: each installed plugin's access
  * key maps to its SDK method signatures. Empty by default.
@@ -264,8 +274,28 @@ export type TypedEntriesApi = {
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
 export interface AstromechPluginSdks {}
 
+/**
+ * Augmented by generated `astromech.d.ts` with per-plugin entry type maps.
+ * Each key is a plugin name; the value maps bare type names to
+ * `{ fields: ...; relations: ... }` shapes.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
+export interface AstromechPluginEntryTypes {}
+
+/**
+ * For a plugin name `Name`, produce an `entries` member typed against the
+ * plugin's registered entry types (when present in `AstromechPluginEntryTypes`),
+ * or fall back to the wide `EntriesApi`.
+ */
+type PluginEntriesFor<Name extends string> = Name extends keyof AstromechPluginEntryTypes
+    ? { entries: TypedEntriesApiFor<AstromechPluginEntryTypes[Name]> }
+    : { entries: EntriesApi };
+
 export type PluginSdkNamespace = AstromechPluginSdks &
-    Record<string, Record<string, (input?: unknown) => Promise<unknown>>>;
+    Record<string, Record<string, (input?: unknown) => Promise<unknown>>> & {
+        [Name in string]: PluginEntriesFor<Name> &
+            Record<string, (input?: unknown) => Promise<unknown>>;
+    };
 
 export type AstromechClient = {
     entries: TypedEntriesApi;

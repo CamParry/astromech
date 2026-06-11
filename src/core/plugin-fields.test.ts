@@ -146,3 +146,180 @@ describe('generateSdkTypes with plugin field types', () => {
         expect(output).not.toContain('AstromechPluginSdks');
     });
 });
+
+// ============================================================================
+// Plugin entry typegen
+// ============================================================================
+
+describe('generateSdkTypes — plugin entry types', () => {
+    const baseConfig = {
+        adminRoute: '/admin',
+        apiRoute: '/api',
+        entries: {
+            posts: {
+                single: 'Post',
+                plural: 'Posts',
+                fieldGroups: [],
+            },
+        },
+        pluginEntries: {},
+        trash: { enabled: true, retentionDays: 30 },
+    } as unknown as ResolvedConfig;
+
+    const redirectFieldGroups = [
+        {
+            name: 'redirect',
+            label: 'Redirect',
+            placement: 'main' as const,
+            priority: 0,
+            fields: [
+                {
+                    name: 'from',
+                    type: 'text' as const,
+                    label: 'From',
+                    required: true as const,
+                },
+                {
+                    name: 'to',
+                    type: 'text' as const,
+                    label: 'To',
+                    required: true as const,
+                },
+                {
+                    name: 'status',
+                    type: 'select' as const,
+                    label: 'Type',
+                    options: ['301', '302'],
+                },
+                { name: 'enabled', type: 'boolean' as const, label: 'Enabled' },
+            ],
+        },
+    ];
+
+    const configWithPluginEntries = {
+        ...baseConfig,
+        pluginEntries: {
+            redirects: {
+                redirect: {
+                    single: 'Redirect',
+                    plural: 'Redirects',
+                    fieldGroups: redirectFieldGroups,
+                },
+            },
+        },
+    } as unknown as ResolvedConfig;
+
+    it('generates PluginRedirectsRedirectFields interface', () => {
+        const output = generateSdkTypes(configWithPluginEntries);
+        expect(output).toContain('export interface PluginRedirectsRedirectFields {');
+        expect(output).toContain('from: string;');
+        expect(output).toContain('to: string;');
+        expect(output).toContain('status?: string;');
+        expect(output).toContain('enabled?: boolean;');
+    });
+
+    it('generates PluginRedirectsRedirectRelations type', () => {
+        const output = generateSdkTypes(configWithPluginEntries);
+        expect(output).toContain('export type PluginRedirectsRedirectRelations =');
+    });
+
+    it('augments AstromechPluginEntryTypes with the redirects plugin block', () => {
+        const output = generateSdkTypes(configWithPluginEntries);
+        expect(output).toContain('interface AstromechPluginEntryTypes {');
+        expect(output).toContain('redirects: {');
+        expect(output).toContain(
+            'redirect: { fields: PluginRedirectsRedirectFields; relations: PluginRedirectsRedirectRelations };'
+        );
+    });
+
+    it('uses plugin entry prefix comment marker', () => {
+        const output = generateSdkTypes(configWithPluginEntries);
+        expect(output).toContain(
+            '// --- Plugin entry: redirects/redirect (PluginRedirectsRedirect) ---'
+        );
+    });
+
+    it('resolves qualified relation target to plugin Fields interface', () => {
+        const configWithRelation = {
+            ...configWithPluginEntries,
+            entries: {
+                posts: {
+                    single: 'Post',
+                    plural: 'Posts',
+                    fieldGroups: [
+                        {
+                            name: 'links',
+                            label: 'Links',
+                            placement: 'main',
+                            priority: 0,
+                            fields: [
+                                {
+                                    name: 'related_redirect',
+                                    type: 'relationship',
+                                    target: 'redirects/redirect',
+                                    label: 'Related Redirect',
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        } as unknown as ResolvedConfig;
+
+        const output = generateSdkTypes(configWithRelation);
+        expect(output).toContain(
+            "import('astromech').TypedEntry<PluginRedirectsRedirectFields>"
+        );
+    });
+
+    it('produces no AstromechPluginEntryTypes augmentation when pluginEntries is empty', () => {
+        const output = generateSdkTypes(baseConfig);
+        const hasEmptyBlock = output.includes(
+            'interface AstromechPluginEntryTypes {\n  }'
+        );
+        expect(hasEmptyBlock).toBe(false);
+    });
+
+    it('empty pluginEntries produces output identical to baseline (regression)', () => {
+        const baseline = generateSdkTypes(baseConfig);
+        const withEmpty = generateSdkTypes({
+            ...baseConfig,
+            pluginEntries: {},
+        } as unknown as ResolvedConfig);
+        expect(withEmpty).toBe(baseline);
+    });
+
+    it('quotes non-identifier plugin/type keys in augmentation', () => {
+        const configWithHyphenated = {
+            ...baseConfig,
+            pluginEntries: {
+                'my-plugin': {
+                    'some-type': {
+                        single: 'Some Type',
+                        plural: 'Some Types',
+                        fieldGroups: [
+                            {
+                                name: 'main',
+                                label: 'Main',
+                                placement: 'main' as const,
+                                priority: 0,
+                                fields: [
+                                    {
+                                        name: 'title',
+                                        type: 'text' as const,
+                                        label: 'Title',
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                },
+            },
+        } as unknown as ResolvedConfig;
+
+        const output = generateSdkTypes(configWithHyphenated);
+        expect(output).toContain('"my-plugin": {');
+        expect(output).toContain('"some-type": {');
+        expect(output).toContain('export interface PluginMyPluginSomeTypeFields {');
+    });
+});
