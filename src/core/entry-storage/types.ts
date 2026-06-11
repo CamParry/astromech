@@ -77,6 +77,11 @@ export type ListParams = {
     locale?: string | 'all' | undefined;
     trashed?: boolean | undefined;
     search?: string | undefined;
+    /**
+     * Fields to apply `search` over; honored by storages that map fields to
+     * columns (tableStorage); built-in storage ignores it (title search).
+     */
+    searchFields?: readonly string[] | undefined;
     where?: WhereFilters | undefined;
     sort?: SortOption | SortOption[] | undefined;
     page?: number | undefined;

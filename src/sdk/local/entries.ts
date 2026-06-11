@@ -506,11 +506,16 @@ export const entries: EntriesApi = {
         const firstType = types[0] ?? '';
         const storage = getEntryStorage(firstType);
 
+        const singleTypeCfg = singleType
+            ? resolveEntryType(config, singleType)
+            : undefined;
+
         const { data: rows, total } = await storage.list({
             type: singleType ?? types,
             locale: params.locale ?? getDefaultLocale(),
             trashed: params.trashed ?? false,
             search: params.search,
+            ...(singleTypeCfg?.search ? { searchFields: singleTypeCfg.search } : {}),
             where: params.where,
             sort: params.sort,
             page: params.page ?? 1,
