@@ -42,6 +42,10 @@ import {
 import { PublishPanel } from '@/admin/components/entries/PublishPanel.js';
 import { useEntryForm, useEntriesQuery, usePermissions } from '@/admin/hooks/index.js';
 import type { Entry } from '@/types/index.js';
+import {
+    deriveFormDefinition,
+    resolveConfigForDerive,
+} from '@/admin/definitions/derive.js';
 import type { EntriesSurface } from './surface.js';
 
 // ============================================================================
@@ -225,9 +229,6 @@ export function EntryNewPage({
 
     const capabilities = entryTypeConfig?.capabilities;
     const hasI18n = capabilities?.translatable === true;
-    const hasStatuses = capabilities?.statuses !== false;
-    const hasSlugCap = capabilities?.slug !== false;
-    const hasTitle = entryTypeConfig?.titleField !== false;
     const requestedLocale = requestedLocaleProp ?? adminConfig.defaultLocale;
     const isNonDefaultLocale = hasI18n && requestedLocale !== adminConfig.defaultLocale;
 
@@ -246,14 +247,9 @@ export function EntryNewPage({
     }
     const single = entryTypeConfig?.single ?? type;
     const plural = entryTypeConfig?.plural ?? type;
-    const hasSlug = hasSlugCap && entryTypeConfig?.slug != null;
-    const fieldGroups = entryTypeConfig?.fieldGroups ?? [];
-
-    const mainGroups = fieldGroups.filter(
-        (g) => g.placement !== 'sidebar' && g.placement !== 'tab'
-    );
-    const sidebarGroups = fieldGroups.filter((g) => g.placement === 'sidebar');
-    const tabGroups = fieldGroups.filter((g) => g.placement === 'tab');
+    const formDef = deriveFormDefinition(resolveConfigForDerive(entryTypeConfig, type));
+    const { hasTitle, hasSlug, hasStatuses, mainGroups, sidebarGroups, tabGroups } =
+        formDef;
 
     const { form, saveMutation, handleSave, handlePublish } = useEntryForm({
         hasSlug,

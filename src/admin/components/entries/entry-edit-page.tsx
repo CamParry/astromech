@@ -50,6 +50,10 @@ import {
     useDuplicateEntry,
 } from '@/admin/hooks/index.js';
 import type { EntryStatus } from '@/types/index.js';
+import {
+    deriveFormDefinition,
+    resolveConfigForDerive,
+} from '@/admin/definitions/derive.js';
 import type { EntriesSurface } from './surface.js';
 
 // Surface link bases are runtime strings; address `Link` by string `to`.
@@ -102,16 +106,9 @@ export function EntryEditPage({
     const single = entryTypeConfig?.single ?? type;
     const plural = entryTypeConfig?.plural ?? type;
     const capabilities = entryTypeConfig?.capabilities;
-    const hasStatuses = capabilities?.statuses !== false;
-    const hasSlugCap = capabilities?.slug !== false;
-    const hasTitle = entryTypeConfig?.titleField !== false;
-    const hasSlug = hasSlugCap && entryTypeConfig?.slug != null;
-    const fieldGroups = entryTypeConfig?.fieldGroups ?? [];
-    const mainGroups = fieldGroups.filter(
-        (g) => g.placement !== 'sidebar' && g.placement !== 'tab'
-    );
-    const sidebarGroups = fieldGroups.filter((g) => g.placement === 'sidebar');
-    const tabGroups = fieldGroups.filter((g) => g.placement === 'tab');
+    const formDef = deriveFormDefinition(resolveConfigForDerive(entryTypeConfig, type));
+    const { hasTitle, hasSlug, hasStatuses, mainGroups, sidebarGroups, tabGroups } =
+        formDef;
 
     const isReadOnly = !hasPermission(surface.permissionFor('update'));
 

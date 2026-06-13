@@ -1,6 +1,5 @@
 import type {
     AdminEntryTypeConfig,
-    FieldGroup,
     FormDefinition,
     TableColumn,
     TableDefinition,
@@ -103,15 +102,46 @@ export function deriveTableDefinition(config: AdminEntryTypeConfig): TableDefini
 }
 
 export function deriveFormDefinition(config: AdminEntryTypeConfig): FormDefinition {
-    const byPlacement = (p: FieldGroup['placement']) =>
-        config.fieldGroups.filter((g) => g.placement === p);
     return {
         type: config.single,
         hasTitle: config.titleField !== false,
-        hasSlug: config.capabilities.slug && config.slug !== null,
+        hasSlug: config.capabilities.slug && config.slug != null,
         hasStatuses: config.capabilities.statuses,
-        mainGroups: byPlacement('main'),
-        sidebarGroups: byPlacement('sidebar'),
-        tabGroups: byPlacement('tab'),
+        mainGroups: config.fieldGroups.filter(
+            (g) => g.placement !== 'sidebar' && g.placement !== 'tab'
+        ),
+        sidebarGroups: config.fieldGroups.filter((g) => g.placement === 'sidebar'),
+        tabGroups: config.fieldGroups.filter((g) => g.placement === 'tab'),
     };
+}
+
+/**
+ * Resolve a full AdminEntryTypeConfig for derivation, defaulting an absent
+ * config to the current built-in behaviour (title on, statuses on, slug off
+ * since slug config is null, no i18n, no admin columns).
+ */
+export function resolveConfigForDerive(
+    config: AdminEntryTypeConfig | undefined,
+    type: string
+): AdminEntryTypeConfig {
+    return (
+        config ?? {
+            single: type,
+            plural: type,
+            versioning: false,
+            translatable: false,
+            slug: null,
+            adminColumns: [],
+            fieldGroups: [],
+            previewUrl: null,
+            capabilities: {
+                statuses: true,
+                slug: true,
+                translatable: false,
+                versioning: false,
+                trash: true,
+            },
+            titleField: 'title',
+        }
+    );
 }

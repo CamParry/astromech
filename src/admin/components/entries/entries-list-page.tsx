@@ -30,14 +30,13 @@ import {
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import type {
-    AdminEntryTypeConfig,
-    CellRenderContext,
-    Entry,
-    TableColumn,
-} from '@/types/index.js';
+import type { CellRenderContext, Entry, TableColumn } from '@/types/index.js';
 import type { DropdownItem } from '@/admin/components/ui/dropdown.js';
-import { deriveTableDefinition, fieldTypeOf } from '@/admin/definitions/derive.js';
+import {
+    deriveTableDefinition,
+    fieldTypeOf,
+    resolveConfigForDerive,
+} from '@/admin/definitions/derive.js';
 import { defaultCellKind } from '@/admin/definitions/cell-kind-map.js';
 import { getCellRenderer } from '@/admin/definitions/cell-registry.js';
 import { statusVariant } from '@/admin/definitions/cells/status-variant.js';
@@ -467,29 +466,10 @@ export function EntriesListPage({
         (entryTypeConfig?.search?.length ?? 0) > 0;
 
     // `deriveTableDefinition` needs a full AdminEntryTypeConfig. When the surface
-    // config is undefined (unknown root type), synthesize a default that
-    // reproduces the historical undefined-config behaviour: title on, statuses
-    // on, slug on, no i18n, no admin columns.
-    const resolvedConfigForDerive: AdminEntryTypeConfig = React.useMemo(
-        () =>
-            entryTypeConfig ?? {
-                single: type,
-                plural: type,
-                versioning: false,
-                translatable: false,
-                slug: null,
-                adminColumns: [],
-                fieldGroups: [],
-                previewUrl: null,
-                capabilities: {
-                    statuses: true,
-                    slug: true,
-                    translatable: false,
-                    versioning: false,
-                    trash: true,
-                },
-                titleField: 'title',
-            },
+    // config is undefined (unknown root type), resolveConfigForDerive synthesizes
+    // a default reproducing the historical undefined-config behaviour.
+    const resolvedConfigForDerive = React.useMemo(
+        () => resolveConfigForDerive(entryTypeConfig, type),
         [entryTypeConfig, type]
     );
     const tableDef = React.useMemo(

@@ -226,6 +226,14 @@ describe('deriveFormDefinition', () => {
         expect(deriveFormDefinition(config).hasSlug).toBe(false);
     });
 
+    it('hasSlug is false when slug config is undefined (nullish parity)', () => {
+        const config = {
+            ...fullConfig,
+            slug: undefined,
+        } as unknown as AdminEntryTypeConfig;
+        expect(deriveFormDefinition(config).hasSlug).toBe(false);
+    });
+
     it('reflects titleless / disabled-capabilities config', () => {
         const def = deriveFormDefinition(titlelessConfig);
         expect(def.hasTitle).toBe(false);

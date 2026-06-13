@@ -11,6 +11,13 @@ export default defineConfig({
             'virtual:astromech/config': fileURLToPath(
                 new URL('./src/cli/virtual-config-shim.ts', import.meta.url)
             ),
+            // Admin virtual modules, normally injected by the Astro integration.
+            'virtual:astromech/admin-config': fileURLToPath(
+                new URL('./src/test/admin-config-shim.ts', import.meta.url)
+            ),
+            'virtual:astromech/plugins/components': fileURLToPath(
+                new URL('./src/test/plugins-components-shim.ts', import.meta.url)
+            ),
             '@': fileURLToPath(new URL('./src', import.meta.url)),
         },
     },
