@@ -3,7 +3,8 @@
  * closes over the resolved `pathForEntry` option.
  */
 
-import type { JsonObject, PluginDefinition } from '@/types/index.js';
+import type { DefinedHook, JsonObject } from '@/types/index.js';
+import { defineHook } from '@/index.js';
 import { REDIRECT_TYPE } from '../shared.js';
 
 export type PathForEntry = (entry: {
@@ -11,14 +12,12 @@ export type PathForEntry = (entry: {
     slug: string | null;
 }) => string | null;
 
-export function slugChangeHooks(
-    pathForEntry: PathForEntry
-): NonNullable<PluginDefinition['hooks']> {
-    return {
+export function slugChangeHooks(pathForEntry: PathForEntry): DefinedHook[] {
+    return [
         // When an entry's slug changes, record a redirect old → new. The redirect
         // type has no slug capability so it never emits this event itself — no
         // self-guard needed (and the qualified id isn't knowable from in here).
-        'entry:afterUpdate': async (event, ctx) => {
+        defineHook('entry:afterUpdate', async (event, ctx) => {
             const oldSlug = event.entry.slug;
             const newSlug = event.data.slug;
             if (!oldSlug || !newSlug || oldSlug === newSlug) return;
@@ -29,6 +28,6 @@ export function slugChangeHooks(
 
             const fields: JsonObject = { from, to, status: '301', enabled: true };
             await ctx.entries.create({ type: REDIRECT_TYPE, fields });
-        },
-    };
+        }),
+    ];
 }

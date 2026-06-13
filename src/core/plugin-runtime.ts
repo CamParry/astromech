@@ -93,7 +93,7 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
         const identity = resolvePluginIdentity(def);
         s.identities.push(identity);
 
-        for (const [event, handler] of Object.entries(def.hooks ?? {})) {
+        for (const { event, handler } of def.hooks ?? []) {
             if (!handler) continue;
             const list = s.hooks.get(event) ?? [];
             list.push({ identity, handler: handler as HookCallback });

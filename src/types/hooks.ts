@@ -160,12 +160,20 @@ export type HookHandler<Payload = unknown> = (
 ) => Promise<void> | void;
 
 /** Union of every core handler signature — the index-signature value type. */
-type AnyCoreHookHandler = CoreHookHandlers[KnownCoreEvent];
+export type AnyCoreHookHandler = CoreHookHandlers[KnownCoreEvent];
 
-/**
- * The `hooks` map on a plugin definition: known events are strongly typed,
- * custom events accept an opaque payload. One handler per event per plugin —
- * compose internally if you need several.
- */
-export type PluginHooks = Partial<CoreHookHandlers> &
-    Record<string, AnyCoreHookHandler | HookHandler | undefined>;
+/** Resolve the correct handler signature for an event key. */
+export type HookHandlerFor<E extends HookEvent> = E extends keyof CoreHookHandlers
+    ? CoreHookHandlers[E]
+    : E extends keyof AstromechPluginHookEvents
+      ? HookHandler<AstromechPluginHookEvents[E]>
+      : HookHandler;
+
+/** One defined hook: an event key bound to its handler. */
+export type DefinedHook = {
+    event: HookEvent;
+    handler: AnyCoreHookHandler | HookHandler;
+};
+
+/** A plugin's hooks: an array of `defineHook(...)` results. Multiple handlers per event are allowed. */
+export type PluginHooks = DefinedHook[];

@@ -15,6 +15,7 @@ import {
     runAfterHooks,
     runBeforeHooks,
 } from '@/core/plugin-runtime.js';
+import { defineHook } from '@/index.js';
 import { resolvePluginIdentity } from '@/core/plugin-identity.js';
 import { getCronJobs } from '@/cron/registry.js';
 
@@ -151,11 +152,14 @@ describe('runBeforeHooks', () => {
             [
                 def({
                     package: '@astromech/x',
-                    hooks: {
-                        'entry:beforeCreate': (eventCtx, ctx: PluginContext) => {
-                            seen.push({ event: eventCtx, user: ctx.user });
-                        },
-                    },
+                    hooks: [
+                        defineHook(
+                            'entry:beforeCreate',
+                            (eventCtx, ctx: PluginContext) => {
+                                seen.push({ event: eventCtx, user: ctx.user });
+                            }
+                        ),
+                    ],
                 }),
             ],
             config
@@ -170,11 +174,11 @@ describe('runBeforeHooks', () => {
             [
                 def({
                     package: '@astromech/x',
-                    hooks: {
-                        'entry:beforeCreate': () => {
+                    hooks: [
+                        defineHook('entry:beforeCreate', () => {
                             throw new Error('blocked');
-                        },
-                    },
+                        }),
+                    ],
                 }),
             ],
             config
@@ -195,19 +199,19 @@ describe('runAfterHooks', () => {
             [
                 def({
                     package: '@astromech/boom',
-                    hooks: {
-                        'entry:afterUpdate': () => {
+                    hooks: [
+                        defineHook('entry:afterUpdate', () => {
                             throw new Error('after-fail');
-                        },
-                    },
+                        }),
+                    ],
                 }),
                 def({
                     package: '@astromech/ok',
-                    hooks: {
-                        'entry:afterUpdate': () => {
+                    hooks: [
+                        defineHook('entry:afterUpdate', () => {
                             secondRan = true;
-                        },
-                    },
+                        }),
+                    ],
                 }),
             ],
             config
@@ -295,11 +299,11 @@ describe('emitEvent', () => {
             [
                 def({
                     package: '@astromech/sub',
-                    hooks: {
-                        'forms:afterSubmit': (payload: unknown) => {
+                    hooks: [
+                        defineHook('forms:afterSubmit', (payload: unknown) => {
                             payloads.push(payload);
-                        },
-                    },
+                        }),
+                    ],
                 }),
             ],
             config

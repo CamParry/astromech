@@ -11,6 +11,7 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
+import { defineHook } from '@/index.js';
 import { eq } from 'drizzle-orm';
 import { createTestDb, registerTestPlugins, setupTestConfig } from '@/test/harness.js';
 import { Astromech } from '@/sdk/local/index.js';
@@ -646,15 +647,15 @@ describe('hooks', () => {
         const resolved = setupTestConfig();
         const probe: PluginDefinition = {
             package: '@test/probe',
-            hooks: {
-                'entry:beforeCreate': (ctx) => {
+            hooks: [
+                defineHook('entry:beforeCreate', (ctx) => {
                     seen.before = (ctx.data as { title: string }).title;
-                },
-                'entry:afterCreate': (ctx) => {
+                }),
+                defineHook('entry:afterCreate', (ctx) => {
                     seen.afterId = ctx.entry.id;
                     seen.afterTitle = ctx.entry.title;
-                },
-            },
+                }),
+            ],
         };
         registerTestPlugins([probe], resolved);
 
@@ -668,11 +669,11 @@ describe('hooks', () => {
         const resolved = setupTestConfig();
         const probe: PluginDefinition = {
             package: '@test/probe',
-            hooks: {
-                'entry:beforeCreate': () => {
+            hooks: [
+                defineHook('entry:beforeCreate', () => {
                     throw new Error('blocked');
-                },
-            },
+                }),
+            ],
         };
         registerTestPlugins([probe], resolved);
 

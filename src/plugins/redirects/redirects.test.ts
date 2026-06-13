@@ -12,6 +12,7 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
+import { defineHook } from '@/index.js';
 import { sql } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import {
@@ -149,11 +150,11 @@ describe('redirects — hooks observe the qualified type', () => {
 
         const probe: PluginDefinition = {
             package: '@astromech/probe',
-            hooks: {
-                'entry:afterCreate': (event) => {
+            hooks: [
+                defineHook('entry:afterCreate', (event) => {
                     observed.push(event.type);
-                },
-            },
+                }),
+            ],
         };
 
         // Re-register both plugins so the probe and redirects coexist.

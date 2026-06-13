@@ -5,7 +5,10 @@
 
 import type {
     AstromechConfig,
+    DefinedHook,
     EntryTypeConfig,
+    HookEvent,
+    HookHandlerFor,
     PluginDefinition,
     PluginFactory,
     PluginPage,
@@ -76,4 +79,15 @@ export function definePlugin<Options = void>(
  */
 export function defineAdminPage(page: PluginPage): PluginPage {
     return page;
+}
+
+/**
+ * Define a single plugin hook; payload type is inferred from the event key.
+ * Collected into the plugin's `hooks` array.
+ */
+export function defineHook<E extends HookEvent>(
+    event: E,
+    handler: HookHandlerFor<E>
+): DefinedHook {
+    return { event, handler: handler as DefinedHook['handler'] };
 }
