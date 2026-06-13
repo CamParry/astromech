@@ -18,6 +18,7 @@ import type {
     UsersApi,
 } from './api.js';
 import type { ResolvedConfig } from './config.js';
+import type { PluginSdkMethod } from './plugins.js';
 
 // ============================================================================
 // Typed Entry
@@ -267,9 +268,17 @@ export type TypedEntriesApi = TypedEntriesApiFor<AstromechEntryTypes>;
 // AstromechClient
 // ============================================================================
 
+/** Map a plugin's SDK object type to its caller-facing callable signatures. */
+export type SdkInterface<T> = {
+    [K in keyof T]: T[K] extends PluginSdkMethod<infer I, infer O>
+        ? (input: I) => Promise<O>
+        : (input?: unknown) => Promise<unknown>;
+};
+
 /**
- * Augmented by the generated `astromech.d.ts`: each installed plugin's access
- * key maps to its SDK method signatures. Empty by default.
+ * Augmented by plugins' own `.d.ts` via `declare module 'astromech'`: each
+ * installed plugin's access key maps to its SDK method signatures. Empty by
+ * default; plugins self-augment using `SdkInterface<typeof sdk>`.
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
 export interface AstromechPluginSdks {}
@@ -291,11 +300,10 @@ type PluginEntriesFor<Name extends string> = Name extends keyof AstromechPluginE
     ? { entries: TypedEntriesApiFor<AstromechPluginEntryTypes[Name]> }
     : { entries: EntriesApi };
 
-export type PluginSdkNamespace = AstromechPluginSdks &
-    Record<string, Record<string, (input?: unknown) => Promise<unknown>>> & {
-        [Name in string]: PluginEntriesFor<Name> &
-            Record<string, (input?: unknown) => Promise<unknown>>;
-    };
+export type PluginSdkNamespace = AstromechPluginSdks & {
+    [Name in string]: PluginEntriesFor<Name> &
+        Record<string, (input?: unknown) => Promise<unknown>>;
+};
 
 export type AstromechClient = {
     entries: TypedEntriesApi;

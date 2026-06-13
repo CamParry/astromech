@@ -15,13 +15,20 @@
  */
 
 import { definePlugin, definePermissionBundles } from '@/index.js';
-import type { PluginDefinition } from '@/types/index.js';
+import type { PluginDefinition, SdkInterface } from '@/types/index.js';
 import type { RedirectsOptions } from './shared.js';
 import { REDIRECT_TYPE, defaultPathForEntry } from './shared.js';
 import { redirectEntryType } from './entries.js';
 import { redirectsTable } from './schema.js';
 import { redirectsSdk } from './server/sdk.js';
 import { slugChangeHooks } from './server/hooks.js';
+
+declare module 'astromech' {
+    // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+    interface AstromechPluginSdks {
+        redirects: SdkInterface<typeof redirectsSdk>;
+    }
+}
 
 export type { RedirectMatch, RedirectStatus, RedirectsOptions } from './shared.js';
 

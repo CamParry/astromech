@@ -17,11 +17,18 @@
  */
 
 import { definePlugin, definePermissionBundles } from '@/index.js';
-import type { PluginDefinition } from '@/types/index.js';
+import type { PluginDefinition, SdkInterface } from '@/types/index.js';
 import type { SeoOptions } from './shared.js';
 import { defaultPathForEntry } from './shared.js';
 import { seoMetaField } from './fields/seo-meta.js';
 import { seoSdk } from './server/sdk.js';
+
+declare module 'astromech' {
+    // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+    interface AstromechPluginSdks {
+        seo: SdkInterface<ReturnType<typeof seoSdk>>;
+    }
+}
 
 export { seoFields } from './fields/groups.js';
 export type { SeoFieldsOptions } from './fields/groups.js';

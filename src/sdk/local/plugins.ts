@@ -10,7 +10,7 @@
  * at module-load time.
  */
 
-import type { EntriesApi, PluginSdkNamespace } from '@/types/index.js';
+import type { EntriesApi, PluginContext, PluginSdkNamespace } from '@/types/index.js';
 import { getCurrentUser } from '@/sdk/local/context.js';
 import { entries as localEntries } from '@/sdk/local/entries.js';
 import { createScopedEntries } from '@/sdk/local/scoped-entries.js';
@@ -47,7 +47,7 @@ export const localPlugins: PluginSdkNamespace = new Proxy({} as PluginSdkNamespa
                     if (!identity) {
                         throw new Error(`[Astromech] Unknown plugin "${name}".`);
                     }
-                    return method.handler(
+                    return (method.handler as (i: unknown, c: PluginContext) => unknown)(
                         input,
                         createPluginContext(identity, getCurrentUser())
                     );

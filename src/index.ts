@@ -12,6 +12,7 @@ import type {
     PluginDefinition,
     PluginFactory,
     PluginPage,
+    PluginSdkMethod,
 } from '@/types/index.js';
 
 // ============================================================================
@@ -79,6 +80,17 @@ export function definePlugin<Options = void>(
  */
 export function defineAdminPage(page: PluginPage): PluginPage {
     return page;
+}
+
+/**
+ * Define a typed plugin SDK method. The Input/Output generics flow into the
+ * plugin's self-augmentation of `AstromechPluginSdks` so callers see real
+ * signatures.
+ */
+export function defineSdkMethod<Input = unknown, Output = unknown>(
+    method: PluginSdkMethod<Input, Output>
+): PluginSdkMethod<Input, Output> {
+    return method;
 }
 
 /**

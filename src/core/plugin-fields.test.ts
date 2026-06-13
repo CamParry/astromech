@@ -128,7 +128,7 @@ describe('generateSdkTypes with plugin field types', () => {
         expect(output).not.toContain('seo?:');
     });
 
-    it('emits plugin SDK and hook-event augmentations', () => {
+    it('emits hook-event augmentations (SDK lines no longer generated)', () => {
         const output = generateSdkTypes(config, new Map(), [
             def({
                 package: '@astromech/redirects',
@@ -136,9 +136,8 @@ describe('generateSdkTypes with plugin field types', () => {
                 hookEvents: ['redirects:resolved'],
             }),
         ]);
-        expect(output).toContain("'redirects': {");
-        expect(output).toContain('lookup(input?: unknown): Promise<unknown>;');
         expect(output).toContain("'redirects:resolved': unknown;");
+        expect(output).not.toContain('lookup(');
     });
 
     it('omits the plugin augmentation block when no plugin contributes', () => {

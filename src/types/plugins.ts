@@ -80,6 +80,9 @@ export type PluginSdkMethod<Input = unknown, Output = unknown> = {
     handler: (input: Input, ctx: PluginContext) => Promise<Output> | Output;
 };
 
+/** Collection element for a plugin's sdk record: variance-safe over any concrete method. */
+export type AnyPluginSdkMethod = PluginSdkMethod<never, unknown>;
+
 /**
  * Raw request handler for payloads RPC-JSON can't carry (binary / multipart /
  * streaming). Mounted inside `/api/plugins/{name}/*`.
@@ -221,7 +224,7 @@ export type PluginDefinition = {
     entries?: Record<string, EntryTypeConfig>;
     fields?: PluginFieldTypeRegistration[];
     schema?: PluginDrizzleSchema;
-    sdk?: Record<string, PluginSdkMethod>;
+    sdk?: Record<string, AnyPluginSdkMethod>;
     rawRoutes?: PluginRawRoute[];
     hooks?: PluginHooks;
     /** Custom events this plugin fires via `ctx.emit`. Type-augmented in 18b. */

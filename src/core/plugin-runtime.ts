@@ -13,6 +13,7 @@
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { ReactElement } from 'react';
 import type {
+    AnyPluginSdkMethod,
     AstromechClient,
     EntriesApi,
     PluginContext,
@@ -20,7 +21,6 @@ import type {
     PluginDefinition,
     PluginLogger,
     PluginRawRoute,
-    PluginSdkMethod,
     ResolvedConfig,
     ResolvedEntryTypeConfig,
     ResolvedPluginIdentity,
@@ -51,7 +51,7 @@ type PluginRuntimeState = {
     config: ResolvedConfig | null;
     identities: ResolvedPluginIdentity[];
     hooks: Map<string, RegisteredHook[]>;
-    sdk: Map<string, Record<string, PluginSdkMethod>>;
+    sdk: Map<string, Record<string, AnyPluginSdkMethod>>;
     rawRoutes: RegisteredRawRoute[];
     sdkClient: AstromechClient | null;
 };
@@ -189,7 +189,7 @@ export function getPluginIdentity(name: string): ResolvedPluginIdentity | undefi
     return state().identities.find((identity) => identity.name === name);
 }
 
-export function getPluginSdkMethods(): Map<string, Record<string, PluginSdkMethod>> {
+export function getPluginSdkMethods(): Map<string, Record<string, AnyPluginSdkMethod>> {
     return state().sdk;
 }
 

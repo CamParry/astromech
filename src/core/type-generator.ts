@@ -13,7 +13,6 @@ import type {
     PluginFieldTypeRegistration,
     ResolvedConfig,
 } from '@/types/index.js';
-import { resolvePluginIdentity } from '@/core/plugin-identity.js';
 
 // ============================================================================
 // Naming Helpers
@@ -306,27 +305,15 @@ function generatePluginEntryBlocks(
 }
 
 /**
- * `declare module` augmentation for installed plugins: SDK method names on
- * `AstromechPluginSdks` (method-name autocomplete; IO stays `unknown` — only
- * runtime values are available here), declared `hookEvents` on
- * `AstromechPluginHookEvents`, and per-plugin entry types on
- * `AstromechPluginEntryTypes`.
+ * `declare module` augmentation for installed plugins: declared `hookEvents`
+ * on `AstromechPluginHookEvents`, and per-plugin entry types on
+ * `AstromechPluginEntryTypes`. SDK method signatures are no longer emitted
+ * here — plugins self-augment `AstromechPluginSdks` in their own `.d.ts`.
  */
 function generatePluginAugmentations(
     plugins: PluginDefinition[],
     pluginEntryBlocks: PluginEntryBlock[]
 ): string[] {
-    const sdkLines = plugins.flatMap((def) => {
-        const methods = Object.keys(def.sdk ?? {});
-        if (methods.length === 0) return [];
-        const name = resolvePluginIdentity(def).name;
-        return [
-            `    '${name}': {`,
-            ...methods.map((m) => `      ${m}(input?: unknown): Promise<unknown>;`),
-            '    };',
-        ];
-    });
-
     const eventLines = plugins.flatMap((def) =>
         (def.hookEvents ?? []).map((event) => `    '${event}': unknown;`)
     );
@@ -352,7 +339,7 @@ function generatePluginAugmentations(
         entryAugLines.push('    };');
     }
 
-    if (sdkLines.length === 0 && eventLines.length === 0 && entryAugLines.length === 0) {
+    if (eventLines.length === 0 && entryAugLines.length === 0) {
         return [];
     }
 
@@ -361,9 +348,6 @@ function generatePluginAugmentations(
         '// --- Installed plugins ---',
         '',
         "declare module 'astromech' {",
-        '  interface AstromechPluginSdks {',
-        ...sdkLines,
-        '  }',
         '  interface AstromechPluginHookEvents {',
         ...eventLines,
         '  }',

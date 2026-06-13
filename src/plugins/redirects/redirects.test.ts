@@ -27,11 +27,20 @@ import { entries as localEntries } from '@/sdk/local/entries.js';
 import { redirects } from '@/plugins/redirects/index.js';
 import type { RedirectMatch } from '@/plugins/redirects/index.js';
 import type {
+    AstromechClient,
     AstromechConfig,
     EntriesApi,
     PluginDefinition,
     ResolvedConfig,
 } from '@/types/index.js';
+
+// Type-level proof: redirects.lookup carries real Input/Output via self-augmentation.
+async function _sdkTypeProof(client: AstromechClient) {
+    const result: RedirectMatch | null =
+        (await client.plugins?.redirects.lookup({ from: '/x' })) ?? null;
+    void result;
+}
+void _sdkTypeProof;
 
 // `Astromech.plugins.redirects` — the loosely-typed RPC method map, with the
 // reserved `entries` sub-API. Cast narrowly at each access point.

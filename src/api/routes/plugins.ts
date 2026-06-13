@@ -27,7 +27,7 @@ import { resolvePluginPermission } from '@/core/plugin-identity.js';
 import { qualifyEntryType } from '@/core/entry-types.js';
 import { createEntriesRouter } from '@/api/routes/entries.js';
 import type { Context } from 'hono';
-import type { Permission, PluginAccess } from '@/types/index.js';
+import type { Permission, PluginAccess, PluginContext } from '@/types/index.js';
 
 type PluginEnv = { Variables: Partial<AuthVariables> };
 
@@ -111,7 +111,7 @@ pluginsRouter.post('/:name/:method', async (c) => {
     if (!identity) return notFound(c, `Plugin "${name}" not found`);
 
     const input = await c.req.json().catch(() => undefined);
-    const result = await sdkMethod.handler(
+    const result = await (sdkMethod.handler as (i: unknown, c: PluginContext) => unknown)(
         input,
         createPluginContext(identity, c.var.user ?? null)
     );

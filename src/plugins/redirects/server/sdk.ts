@@ -3,20 +3,18 @@
  * plain object rather than a per-instance builder.
  */
 
-import type { Entry, PluginDefinition } from '@/types/index.js';
+import type { Entry } from '@/types/index.js';
+import { defineSdkMethod } from '@/index.js';
 import { REDIRECT_TYPE } from '../shared.js';
 import type { RedirectFields, RedirectMatch, RedirectStatus } from '../shared.js';
 
-export const redirectsSdk: NonNullable<PluginDefinition['sdk']> = {
+export const redirectsSdk = {
     // Resolve a request path to its redirect target. Public so a
     // frontend middleware can call it without a session.
-    lookup: {
+    lookup: defineSdkMethod<{ from: string }, RedirectMatch | null>({
         access: 'public',
         handler: async (input, ctx): Promise<RedirectMatch | null> => {
-            const from =
-                input && typeof input === 'object' && 'from' in input
-                    ? String((input as { from: unknown }).from)
-                    : null;
+            const from = typeof input?.from === 'string' ? input.from : null;
             if (!from) return null;
 
             const { data } = await ctx.entries.query({
@@ -34,5 +32,5 @@ export const redirectsSdk: NonNullable<PluginDefinition['sdk']> = {
             const status: RedirectStatus = fields.status === '302' ? '302' : '301';
             return { to: String(fields.to ?? ''), status };
         },
-    },
+    }),
 };

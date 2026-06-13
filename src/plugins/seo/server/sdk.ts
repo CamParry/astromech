@@ -3,7 +3,12 @@
  * because the handlers close over the resolved `pathForEntry` option.
  */
 
-import type { Entry, PluginContext, PluginDefinition } from '@/types/index.js';
+import type {
+    AnyPluginSdkMethod,
+    Entry,
+    PluginAccess,
+    PluginContext,
+} from '@/types/index.js';
 import {
     PERMISSION_NAMESPACE,
     SEO_DESCRIPTION_RANGE,
@@ -48,13 +53,17 @@ async function resolveDefaultOgImage(ctx: PluginContext): Promise<string | null>
     return media?.url ?? null;
 }
 
-export function seoSdk(pathForEntry: PathForEntry): NonNullable<PluginDefinition['sdk']> {
+export function seoSdk(pathForEntry: PathForEntry): Record<string, AnyPluginSdkMethod> & {
+    sitemap: AnyPluginSdkMethod;
+    meta: AnyPluginSdkMethod;
+    overview: AnyPluginSdkMethod;
+} {
     return {
         // Published entries across the plugin footprint, as sitemap URL
         // data. Public so the app's /sitemap.xml endpoint can call it.
         sitemap: {
-            access: 'public',
-            handler: async (_input, ctx): Promise<SeoSitemap> => {
+            access: 'public' as PluginAccess,
+            handler: async (_input: unknown, ctx: PluginContext): Promise<SeoSitemap> => {
                 const urls: SeoSitemapUrl[] = [];
                 for (const { type, entry } of await footprintEntries(ctx)) {
                     if (entry.status !== 'published') continue;
@@ -72,8 +81,11 @@ export function seoSdk(pathForEntry: PathForEntry): NonNullable<PluginDefinition
         // Resolved meta for one published entry: seo-meta with fallbacks
         // to the entry title and the default OG image setting.
         meta: {
-            access: 'public',
-            handler: async (input, ctx): Promise<SeoResolvedMeta | null> => {
+            access: 'public' as PluginAccess,
+            handler: async (
+                input: unknown,
+                ctx: PluginContext
+            ): Promise<SeoResolvedMeta | null> => {
                 const params = (input ?? {}) as { type?: unknown; slug?: unknown };
                 const type = typeof params.type === 'string' ? params.type : null;
                 const slug = typeof params.slug === 'string' ? params.slug : null;
@@ -105,8 +117,11 @@ export function seoSdk(pathForEntry: PathForEntry): NonNullable<PluginDefinition
         // SEO health across every entry in the footprint — drives the
         // overview dashboard page.
         overview: {
-            access: { permission: 'view' },
-            handler: async (_input, ctx): Promise<SeoOverview> => {
+            access: { permission: 'view' } as PluginAccess,
+            handler: async (
+                _input: unknown,
+                ctx: PluginContext
+            ): Promise<SeoOverview> => {
                 const items: SeoOverviewItem[] = [];
                 for (const { type, entry } of await footprintEntries(ctx)) {
                     const meta = parseSeoMetaValue(entry.fields[SEO_FIELD_NAME]);
