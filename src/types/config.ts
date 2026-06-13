@@ -3,6 +3,7 @@
  */
 
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { CellKind } from './definitions.js';
 import type { Permission } from './domain.js';
 import type { FieldGroup } from './fields.js';
 import type { PluginDefinition, PluginNavItem, PluginSettingsSchema } from './plugins.js';
@@ -51,6 +52,7 @@ export type AdminColumn = {
     field: string;
     label?: string;
     sortable?: boolean;
+    kind?: CellKind;
 };
 
 export type VersioningConfig = {

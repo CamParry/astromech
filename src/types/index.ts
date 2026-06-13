@@ -9,3 +9,4 @@ export * from './hooks.js';
 export * from './plugins.js';
 export * from './api.js';
 export * from './sdk.js';
+export * from './definitions.js';
