@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import { Astromech } from '../sdk/fetch/index.js';
 import { createAppRouter } from './router.js';
+import './definitions/cells/register-cells.js';
 import './i18n.js';
 import './styles/main.css';
 

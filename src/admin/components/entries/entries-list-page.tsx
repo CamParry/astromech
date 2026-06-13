@@ -13,9 +13,8 @@
  * Per-type view preference is persisted to localStorage.
  */
 
-import { formatDate } from '@/support/dates.js';
 import { Menu } from '@base-ui/react/menu';
-import { Link as RouterLink, useNavigate } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import {
     Check,
     Copy,
@@ -31,8 +30,18 @@ import {
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import type { Entry } from '@/types/index.js';
+import type {
+    AdminEntryTypeConfig,
+    CellRenderContext,
+    Entry,
+    TableColumn,
+} from '@/types/index.js';
 import type { DropdownItem } from '@/admin/components/ui/dropdown.js';
+import { deriveTableDefinition, fieldTypeOf } from '@/admin/definitions/derive.js';
+import { defaultCellKind } from '@/admin/definitions/cell-kind-map.js';
+import { getCellRenderer } from '@/admin/definitions/cell-registry.js';
+import { statusVariant } from '@/admin/definitions/cells/status-variant.js';
+import { Link } from '@/admin/definitions/cells/link.js';
 import {
     Badge,
     Button,
@@ -84,29 +93,9 @@ type BulkAction = 'publish' | 'unpublish' | 'trash' | 'delete' | 'restore';
 
 type ViewMode = 'list' | 'grid';
 
-/**
- * Surface link bases are runtime strings (`/entries/post`,
- * `/plugin/redirects/entries/redirect`), so the shared components address them
- * by string `to` rather than the typed route union. This is a thin extraction
- * for Phase 3 Slice 6; Phase 4 reworks the link model. The cast preserves the
- * rest of `Link`'s props (className, search, onClick, children).
- */
-type LinkProps = Omit<React.ComponentProps<typeof RouterLink>, 'to' | 'search'> & {
-    to: string;
-    search?: Record<string, unknown>;
-};
-const Link = RouterLink as unknown as (props: LinkProps) => React.ReactElement;
-
 // ============================================================================
 // Helpers
 // ============================================================================
-
-function statusVariant(status: string): 'draft' | 'published' | 'scheduled' | 'default' {
-    if (status === 'draft') return 'draft';
-    if (status === 'published') return 'published';
-    if (status === 'scheduled') return 'scheduled';
-    return 'default';
-}
 
 const ALL_COLUMNS = [
     'title',
@@ -160,62 +149,6 @@ const PER_PAGE = 20;
 // ============================================================================
 // Sub-components
 // ============================================================================
-
-type TranslationsCellProps = {
-    entry: Entry;
-    basePath: string;
-    configuredLocales: string[];
-};
-
-function TranslationsCell({
-    entry,
-    basePath,
-    configuredLocales,
-}: TranslationsCellProps): React.ReactElement {
-    return (
-        <span style={{ display: 'inline-flex', gap: '0.25rem', flexWrap: 'wrap' }}>
-            {configuredLocales.map((loc) => {
-                const siblingId = entry.locales[loc];
-                const isCurrent = siblingId === entry.id;
-                const present = siblingId != null;
-                if (!present) {
-                    return (
-                        <span
-                            key={loc}
-                            className="am-text-mono am-text-muted"
-                            style={{ opacity: 0.4, fontSize: '0.75rem' }}
-                            title={`${loc.toUpperCase()} translation does not exist`}
-                        >
-                            {loc.toUpperCase()}
-                        </span>
-                    );
-                }
-                if (isCurrent) {
-                    return (
-                        <span
-                            key={loc}
-                            className="am-text-mono"
-                            style={{ fontWeight: 600, fontSize: '0.75rem' }}
-                        >
-                            {loc.toUpperCase()}
-                        </span>
-                    );
-                }
-                return (
-                    <Link
-                        key={loc}
-                        to={`${basePath}/${siblingId}`}
-                        className="am-link am-text-mono"
-                        style={{ fontSize: '0.75rem' }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        {loc.toUpperCase()}
-                    </Link>
-                );
-            })}
-        </span>
-    );
-}
 
 type RowActionsProps = {
     entry: Entry;
@@ -297,14 +230,9 @@ function buildRowItems(props: RowActionsProps): DropdownItem[] {
 type EntryTableRowProps = RowActionsProps & {
     selected: boolean;
     onToggleSelect: (id: string) => void;
-    adminColumns: { field: string; label?: string; sortable?: boolean }[];
+    columns: TableColumn[];
     navigate: (opts: { id: string }) => void;
-    visibleColumns: Set<string>;
-    showTranslations: boolean;
-    showLocale: boolean;
     configuredLocales: string[];
-    hasStatusesCap: boolean;
-    hasTitle: boolean;
 };
 
 function EntryTableRow({
@@ -319,15 +247,10 @@ function EntryTableRow({
     onDuplicate,
     selected,
     onToggleSelect,
-    adminColumns,
+    columns,
     navigate,
-    visibleColumns,
     rowLabels,
-    showTranslations,
-    showLocale,
     configuredLocales,
-    hasStatusesCap,
-    hasTitle,
 }: EntryTableRowProps): React.ReactElement {
     const { t } = useTranslation();
     const items = buildRowItems({
@@ -343,6 +266,7 @@ function EntryTableRow({
         rowLabels,
     });
     const { onContextMenu, contextMenuNode } = useContextMenu(items);
+    const ctx: CellRenderContext = { basePath, configuredLocales, isTrash };
 
     return (
         <>
@@ -365,62 +289,22 @@ function EntryTableRow({
                         onChange={() => onToggleSelect(entry.id)}
                     />
                 </Table.Td>
-                {hasTitle && visibleColumns.has('title') && (
-                    <Table.Td>
-                        {isTrash ? (
-                            <span className="am-text-muted">{entry.title}</span>
-                        ) : (
-                            <Link to={`${basePath}/${entry.id}`} className="am-link">
-                                {entry.title}
-                            </Link>
-                        )}
-                    </Table.Td>
-                )}
-                {hasStatusesCap && visibleColumns.has('status') && (
-                    <Table.Td>
-                        <Badge variant={statusVariant(entry.status)}>
-                            {entry.status}
-                        </Badge>
-                    </Table.Td>
-                )}
-                {visibleColumns.has('slug') && (
-                    <Table.Td>
-                        <span className="am-text-mono am-text-muted">
-                            {entry.slug ?? '—'}
-                        </span>
-                    </Table.Td>
-                )}
-                {showLocale && visibleColumns.has('locale') && (
-                    <Table.Td>
-                        <span className="am-text-mono am-text-muted">
-                            {entry.locale.toUpperCase()}
-                        </span>
-                    </Table.Td>
-                )}
-                {showTranslations && visibleColumns.has('translations') && (
-                    <Table.Td>
-                        <TranslationsCell
-                            entry={entry}
-                            basePath={basePath}
-                            configuredLocales={configuredLocales}
-                        />
-                    </Table.Td>
-                )}
-                {adminColumns
-                    .filter((col) => visibleColumns.has(col.field))
-                    .map((col) => (
-                        <Table.Td key={col.field}>
-                            {String(
-                                (entry.fields as Record<string, unknown>)[col.field] ??
-                                    '—'
-                            )}
+                {columns.map((col) => {
+                    const value =
+                        col.source === 'field'
+                            ? (entry.fields as Record<string, unknown>)[col.key]
+                            : (entry as unknown as Record<string, unknown>)[col.key];
+                    return (
+                        <Table.Td key={col.key}>
+                            {getCellRenderer(col.kind)({
+                                entry,
+                                column: col,
+                                value,
+                                ctx,
+                            })}
                         </Table.Td>
-                    ))}
-                {visibleColumns.has('updatedAt') && (
-                    <Table.Td className="am-text-sm am-text-muted">
-                        {formatDate(entry.updatedAt)}
-                    </Table.Td>
-                )}
+                    );
+                })}
                 <Table.Td onClick={(e) => e.stopPropagation()}>
                     <Dropdown
                         icon={<MoreHorizontalIcon size={16} />}
@@ -439,9 +323,10 @@ function EntryTableRow({
 // ============================================================================
 
 type EntryCardProps = RowActionsProps & {
-    gridFields: { field: string; label?: string }[];
+    columns: TableColumn[];
     navigate: (opts: { id: string }) => void;
     hasTitle: boolean;
+    configuredLocales: string[];
 };
 
 function EntryCard({
@@ -454,10 +339,11 @@ function EntryCard({
     onRestore,
     onConfirmDelete,
     onDuplicate,
-    gridFields,
+    columns,
     navigate,
     rowLabels,
     hasTitle,
+    configuredLocales,
 }: EntryCardProps): React.ReactElement {
     const { t } = useTranslation();
     const items = buildRowItems({
@@ -473,6 +359,7 @@ function EntryCard({
         rowLabels,
     });
     const { onContextMenu, contextMenuNode } = useContextMenu(items);
+    const ctx: CellRenderContext = { basePath, configuredLocales, isTrash };
 
     function handleCardClick() {
         if (isTrash) return;
@@ -527,15 +414,18 @@ function EntryCard({
                     <Badge variant={statusVariant(entry.status)}>{entry.status}</Badge>
                 </div>
 
-                {gridFields.map((gf) => (
-                    <div key={gf.field} className="am-collection-card-field">
+                {columns.map((col) => (
+                    <div key={col.key} className="am-collection-card-field">
                         <span className="am-collection-card-field-label">
-                            {gf.label ?? gf.field}
+                            {col.label}
                         </span>
                         <span>
-                            {String(
-                                (entry.fields as Record<string, unknown>)[gf.field] ?? '—'
-                            )}
+                            {getCellRenderer(col.kind)({
+                                entry,
+                                column: col,
+                                value: (entry.fields as Record<string, unknown>)[col.key],
+                                ctx,
+                            })}
                         </span>
                     </div>
                 ))}
@@ -575,6 +465,37 @@ export function EntriesListPage({
     const showSearch =
         entryTypeConfig?.titleField !== false ||
         (entryTypeConfig?.search?.length ?? 0) > 0;
+
+    // `deriveTableDefinition` needs a full AdminEntryTypeConfig. When the surface
+    // config is undefined (unknown root type), synthesize a default that
+    // reproduces the historical undefined-config behaviour: title on, statuses
+    // on, slug on, no i18n, no admin columns.
+    const resolvedConfigForDerive: AdminEntryTypeConfig = React.useMemo(
+        () =>
+            entryTypeConfig ?? {
+                single: type,
+                plural: type,
+                versioning: false,
+                translatable: false,
+                slug: null,
+                adminColumns: [],
+                fieldGroups: [],
+                previewUrl: null,
+                capabilities: {
+                    statuses: true,
+                    slug: true,
+                    translatable: false,
+                    versioning: false,
+                    trash: true,
+                },
+                titleField: 'title',
+            },
+        [entryTypeConfig, type]
+    );
+    const tableDef = React.useMemo(
+        () => deriveTableDefinition(resolvedConfigForDerive),
+        [resolvedConfigForDerive]
+    );
 
     const availableViews = entryTypeConfig?.views ?? ['list'];
     const defaultView: ViewMode =
@@ -655,6 +576,40 @@ export function EntriesListPage({
         scope
     );
     const showLocaleColumn = hasI18n && localeFilter === LOCALE_FILTER_ALL;
+
+    // Evaluate a derived column's declarative `requires` gate against the page's
+    // runtime capability/visibility flags.
+    function capabilityGate(col: TableColumn): boolean {
+        switch (col.requires) {
+            case 'title':
+                return hasTitle;
+            case 'statuses':
+                return hasStatuses;
+            case 'slug':
+                return hasSlugCap;
+            case 'locale':
+                return showLocaleColumn;
+            case 'translatable':
+                return hasI18n;
+            default:
+                return true;
+        }
+    }
+    const visibleColumnDefs = tableDef.columns.filter(
+        (col) => capabilityGate(col) && visibleColumns.has(col.key)
+    );
+    const menuColumnDefs = tableDef.columns.filter((col) => capabilityGate(col));
+
+    // Grid card field columns, routed through the cell registry so booleans
+    // render consistently with the list view.
+    const gridColumnDefs: TableColumn[] = gridFields.map((gf) => ({
+        key: gf.field,
+        label: gf.label ?? gf.field,
+        kind: defaultCellKind(fieldTypeOf(resolvedConfigForDerive, gf.field)),
+        source: 'field' as const,
+        sortable: false,
+        system: false,
+    }));
 
     const entries = listData?.data ?? [];
     const pagination = listData?.pagination;
@@ -752,16 +707,7 @@ export function EntriesListPage({
         });
     }
 
-    const colSpan =
-        1 +
-        (hasTitle && visibleColumns.has('title') ? 1 : 0) +
-        (visibleColumns.has('status') ? 1 : 0) +
-        (visibleColumns.has('slug') ? 1 : 0) +
-        (showLocaleColumn && visibleColumns.has('locale') ? 1 : 0) +
-        (hasI18n && visibleColumns.has('translations') ? 1 : 0) +
-        adminColumns.filter((c) => visibleColumns.has(c.field)).length +
-        (visibleColumns.has('updatedAt') ? 1 : 0) +
-        1;
+    const colSpan = 1 + visibleColumnDefs.length + 1; // checkbox + data columns + actions
 
     // Delete modal state — drives DeleteEntryModal for both trash and force-delete.
     const [deleteTarget, setDeleteTarget] = useState<{
@@ -979,81 +925,35 @@ export function EntriesListPage({
                                         align="end"
                                     >
                                         <Menu.Popup className="am-dropdown-popup">
-                                            {[
-                                                ...(hasTitle
-                                                    ? [
-                                                          {
-                                                              key: 'title',
-                                                              label: t(
-                                                                  'entries.columnTitle'
-                                                              ),
-                                                          },
-                                                      ]
-                                                    : []),
-                                                ...(hasStatuses
-                                                    ? [
-                                                          {
-                                                              key: 'status',
-                                                              label: t(
-                                                                  'entries.columnStatus'
-                                                              ),
-                                                          },
-                                                      ]
-                                                    : []),
-                                                ...(hasSlugCap
-                                                    ? [
-                                                          {
-                                                              key: 'slug',
-                                                              label: t(
-                                                                  'entries.columnSlug'
-                                                              ),
-                                                          },
-                                                      ]
-                                                    : []),
-                                                ...(showLocaleColumn
-                                                    ? [
-                                                          {
-                                                              key: 'locale',
-                                                              label: t(
-                                                                  'entries.columnLocale'
-                                                              ),
-                                                          },
-                                                      ]
-                                                    : []),
-                                                ...(capabilities?.translatable
-                                                    ? [
-                                                          {
-                                                              key: 'translations',
-                                                              label: t(
-                                                                  'entries.columnTranslations'
-                                                              ),
-                                                          },
-                                                      ]
-                                                    : []),
-                                                ...adminColumns.map((c) => ({
-                                                    key: c.field,
-                                                    label: c.label ?? c.field,
-                                                })),
-                                                {
-                                                    key: 'updatedAt',
-                                                    label: t('entries.columnUpdated'),
-                                                },
-                                            ].map((col) => (
-                                                <Menu.Item
-                                                    key={col.key}
-                                                    className="am-dropdown-item"
-                                                    onClick={() => toggleColumn(col.key)}
-                                                >
-                                                    <span className="am-dropdown-item-icon">
-                                                        {visibleColumns.has(col.key) ? (
-                                                            <Check size={14} />
-                                                        ) : (
-                                                            <span style={{ width: 14 }} />
-                                                        )}
-                                                    </span>
-                                                    {col.label}
-                                                </Menu.Item>
-                                            ))}
+                                            {menuColumnDefs
+                                                .map((col) => ({
+                                                    key: col.key,
+                                                    label: col.system
+                                                        ? t(col.label)
+                                                        : col.label,
+                                                }))
+                                                .map((col) => (
+                                                    <Menu.Item
+                                                        key={col.key}
+                                                        className="am-dropdown-item"
+                                                        onClick={() =>
+                                                            toggleColumn(col.key)
+                                                        }
+                                                    >
+                                                        <span className="am-dropdown-item-icon">
+                                                            {visibleColumns.has(
+                                                                col.key
+                                                            ) ? (
+                                                                <Check size={14} />
+                                                            ) : (
+                                                                <span
+                                                                    style={{ width: 14 }}
+                                                                />
+                                                            )}
+                                                        </span>
+                                                        {col.label}
+                                                    </Menu.Item>
+                                                ))}
                                         </Menu.Popup>
                                     </Menu.Positioner>
                                 </Menu.Portal>
@@ -1132,10 +1032,11 @@ export function EntriesListPage({
                                             onRestore={handleRestore}
                                             onConfirmDelete={handleConfirmDelete}
                                             onDuplicate={handleDuplicate}
-                                            gridFields={gridFields}
+                                            columns={gridColumnDefs}
                                             navigate={navigateCompat}
                                             rowLabels={rowLabels}
                                             hasTitle={hasTitle}
+                                            configuredLocales={configuredLocales}
                                         />
                                     ))}
                                 </div>
@@ -1154,56 +1055,21 @@ export function EntriesListPage({
                                             onChange={() => toggleAll()}
                                         />
                                     </Table.Th>
-                                    {hasTitle && visibleColumns.has('title') && (
-                                        <Table.SortTh
-                                            sortKey="title"
-                                            currentSort={sort}
-                                            onSort={handleSort}
-                                        >
-                                            {t('entries.columnTitle')}
-                                        </Table.SortTh>
-                                    )}
-                                    {hasStatuses && visibleColumns.has('status') && (
-                                        <Table.Th>{t('entries.columnStatus')}</Table.Th>
-                                    )}
-                                    {hasSlugCap && visibleColumns.has('slug') && (
-                                        <Table.Th>{t('entries.columnSlug')}</Table.Th>
-                                    )}
-                                    {showLocaleColumn && visibleColumns.has('locale') && (
-                                        <Table.Th>{t('entries.columnLocale')}</Table.Th>
-                                    )}
-                                    {capabilities?.translatable &&
-                                        visibleColumns.has('translations') && (
-                                            <Table.Th>
-                                                {t('entries.columnTranslations')}
+                                    {visibleColumnDefs.map((col) =>
+                                        col.sortable ? (
+                                            <Table.SortTh
+                                                key={col.key}
+                                                sortKey={col.key}
+                                                currentSort={sort}
+                                                onSort={handleSort}
+                                            >
+                                                {col.system ? t(col.label) : col.label}
+                                            </Table.SortTh>
+                                        ) : (
+                                            <Table.Th key={col.key}>
+                                                {col.system ? t(col.label) : col.label}
                                             </Table.Th>
-                                        )}
-                                    {adminColumns
-                                        .filter((c) => visibleColumns.has(c.field))
-                                        .map((col) =>
-                                            col.sortable ? (
-                                                <Table.SortTh
-                                                    key={col.field}
-                                                    sortKey={col.field}
-                                                    currentSort={sort}
-                                                    onSort={handleSort}
-                                                >
-                                                    {col.label ?? col.field}
-                                                </Table.SortTh>
-                                            ) : (
-                                                <Table.Th key={col.field}>
-                                                    {col.label ?? col.field}
-                                                </Table.Th>
-                                            )
-                                        )}
-                                    {visibleColumns.has('updatedAt') && (
-                                        <Table.SortTh
-                                            sortKey="updatedAt"
-                                            currentSort={sort}
-                                            onSort={handleSort}
-                                        >
-                                            {t('entries.columnUpdated')}
-                                        </Table.SortTh>
+                                        )
                                     )}
                                     <Table.Th style={{ width: '3rem' }} />
                                 </Table.Row>
@@ -1251,20 +1117,15 @@ export function EntriesListPage({
                                             basePath={basePath}
                                             canDelete={canDelete}
                                             hasTrashCap={hasTrash}
-                                            hasStatusesCap={hasStatuses}
                                             onRestore={handleRestore}
                                             onConfirmDelete={handleConfirmDelete}
                                             onDuplicate={handleDuplicate}
                                             selected={checkedIds.has(entry.id)}
                                             onToggleSelect={toggle}
-                                            adminColumns={adminColumns}
+                                            columns={visibleColumnDefs}
                                             navigate={navigateCompat}
-                                            visibleColumns={visibleColumns}
                                             rowLabels={rowLabels}
-                                            showTranslations={hasI18n}
-                                            showLocale={showLocaleColumn}
                                             configuredLocales={configuredLocales}
-                                            hasTitle={hasTitle}
                                         />
                                     ))
                                 )}

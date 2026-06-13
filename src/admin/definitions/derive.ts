@@ -8,7 +8,7 @@ import type {
 import { defaultCellKind } from './cell-kind-map.js';
 
 /** Resolve a field's declared type by scanning the config's field groups. */
-function fieldTypeOf(config: AdminEntryTypeConfig, fieldName: string): string {
+export function fieldTypeOf(config: AdminEntryTypeConfig, fieldName: string): string {
     for (const group of config.fieldGroups) {
         const f = group.fields.find((x) => x.name === fieldName);
         if (f) return f.type;
