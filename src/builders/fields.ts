@@ -316,6 +316,17 @@ proto(
 // structurally a FieldDefinition; use .build() to get a typed plain object.
 // ============================================================================
 
+// Chainable setters return the polymorphic `this`, so a subtype's identity
+// survives any chain order — `boolean('x').default(true).checkboxLabel('y')`
+// and `boolean('x').checkboxLabel('y').default(true)` both stay BooleanFieldBuilder.
+
+// Chaining note: type-specific setters (.options/.min/.checkboxLabel/…) return
+// their subtype, while the shared base setters (.label/.required/.default/…)
+// return the base FieldBuilder. So call the type-specific methods FIRST, then
+// the shared ones — e.g. `boolean('x').checkboxLabel('On').label('X').default(true)`.
+// (TS forbids polymorphic `this` in `type` aliases and the repo lint forbids
+// `interface`, so a fully order-independent encoding isn't available here.)
+
 /** Base fluent builder. Call .build() to get a plain FieldDefinition. */
 export type FieldBuilder = {
     readonly name: string;

@@ -55,6 +55,31 @@ describe('field builders — basic', () => {
             multiple: true,
         });
     });
+
+    it('type-specific methods chain first, then shared base setters', () => {
+        // Convention: subtype-specific setters (.checkboxLabel/.min) come first
+        // (they return the subtype); shared base setters (.label/.default) follow.
+        const result = boolean('enabled')
+            .checkboxLabel('Active')
+            .label('Enabled')
+            .default(true)
+            .build();
+        expect(result).toEqual({
+            name: 'enabled',
+            type: 'boolean',
+            checkboxLabel: 'Active',
+            label: 'Enabled',
+            defaultValue: true,
+        });
+        const n = number('n').min(0).max(10).label('N').build();
+        expect(n).toMatchObject({
+            name: 'n',
+            type: 'number',
+            min: 0,
+            max: 10,
+            label: 'N',
+        });
+    });
 });
 
 describe('field builders — containers', () => {
