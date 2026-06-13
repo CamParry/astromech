@@ -96,6 +96,12 @@ export type FieldDefinition = {
 
     // Translation support
     translatable?: boolean;
+
+    /**
+     * Multi-type storage indexes this field for free-text search; collected
+     * into the entry type's `search` list at resolve time.
+     */
+    searchable?: boolean;
 };
 
 /**

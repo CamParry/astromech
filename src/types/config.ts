@@ -5,7 +5,7 @@
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { CellKind } from './definitions.js';
 import type { Permission } from './domain.js';
-import type { FieldGroup } from './fields.js';
+import type { FieldDefinition, FieldGroup } from './fields.js';
 import type { PluginDefinition, PluginNavItem, PluginSettingsSchema } from './plugins.js';
 import type { EntryStorage } from '@/core/entry-storage/types.js';
 
@@ -60,7 +60,16 @@ export type VersioningConfig = {
 };
 
 export type EntryTypeConfig = {
-    fieldGroups: FieldGroup[];
+    /**
+     * Field groups for this entry type. Mutually exclusive with `fields`.
+     * Provide one or the other — not both.
+     */
+    fieldGroups?: FieldGroup[];
+    /**
+     * Flat field list shortcut — resolves to a single default "main" group.
+     * Mutually exclusive with `fieldGroups`.
+     */
+    fields?: FieldDefinition[];
     versioning?: boolean | VersioningConfig;
     translatable?: boolean;
     /**
@@ -110,9 +119,10 @@ export type ResolvedEntryCapabilities = {
     trash: boolean;
 };
 
-export type ResolvedEntryTypeConfig = Omit<EntryTypeConfig, 'storage'> & {
+export type ResolvedEntryTypeConfig = Omit<EntryTypeConfig, 'storage' | 'fields'> & {
     capabilities: ResolvedEntryCapabilities;
     titleField: 'title' | false;
+    fieldGroups: FieldGroup[];
 };
 
 // ============================================================================

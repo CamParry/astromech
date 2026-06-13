@@ -10,6 +10,7 @@ import type {
     ResolvedConfig,
     ResolvedEntryTypeConfig,
 } from '@/types/index.js';
+import type { FieldDefinition } from '@/types/fields.js';
 import {
     assertNoPluginCollisions,
     checkPluginDependencies,
@@ -39,13 +40,13 @@ export function sortFieldGroups(config: AstromechConfig): void {
 
     // Sort entry type field groups
     for (const entryType of Object.values(config.entries)) {
-        sortGroups(entryType.fieldGroups);
+        if (entryType.fieldGroups) sortGroups(entryType.fieldGroups);
     }
 
     // Sort plugin-contributed entry type field groups
     for (const plugin of config.plugins ?? []) {
         for (const entryType of Object.values(plugin.entries ?? {})) {
-            sortGroups(entryType.fieldGroups);
+            if (entryType.fieldGroups) sortGroups(entryType.fieldGroups);
         }
     }
 
@@ -61,10 +62,28 @@ export function sortFieldGroups(config: AstromechConfig): void {
 }
 
 /**
+ * Duck-typed normalizer: if a value has a `.build()` function, call it;
+ * otherwise return it as-is. Also recurses into nested `fields`.
+ * Does NOT import from builders so the core stays dependency-free.
+ */
+function normalizeField(f: FieldDefinition): FieldDefinition {
+    const built =
+        typeof (f as { build?: unknown }).build === 'function'
+            ? (f as unknown as { build: () => FieldDefinition }).build()
+            : f;
+    if (built.fields) {
+        return { ...built, fields: built.fields.map(normalizeField) };
+    }
+    return built;
+}
+
+/**
  * Resolve a single entry type: validate capabilities + titleField (crash-loud
  * on mismatch) and strip the live `storage` instance (it cannot be serialised
  * into the virtual config module). `typeKey` is used in error messages — the
  * qualified `{plugin}/{type}` key for plugin types.
+ *
+ * Handles flat `fields` → fieldGroups synthesis and builder normalization.
  */
 function resolveEntryTypeConfig(
     typeKey: string,
@@ -73,9 +92,51 @@ function resolveEntryTypeConfig(
 ): ResolvedEntryTypeConfig {
     const capabilities = resolveEntryCapabilities(cfg, storageSupports);
     assertEntryTypeValid(typeKey, cfg, capabilities, storageSupports);
-    const { storage: _storage, ...rest } = cfg;
+
+    // Validate mutual exclusivity
+    if (cfg.fields !== undefined && cfg.fieldGroups !== undefined) {
+        throw new Error(
+            `Astromech entry type "${typeKey}": provide either \`fields\` or \`fieldGroups\`, not both.`
+        );
+    }
+
+    // Resolve fieldGroups from flat fields or existing groups
+    let resolvedGroups: FieldGroup[];
+    if (cfg.fields !== undefined) {
+        const normalized = cfg.fields.map(normalizeField);
+        resolvedGroups = [
+            {
+                name: 'main',
+                label: cfg.single,
+                placement: 'main',
+                priority: 0,
+                fields: normalized,
+            },
+        ];
+    } else {
+        resolvedGroups = (cfg.fieldGroups ?? []).map((group) => ({
+            ...group,
+            fields: group.fields.map(normalizeField),
+        }));
+    }
+
+    // Derive search from searchable fields if not explicitly set
+    let resolvedSearch = cfg.search;
+    if (resolvedSearch === undefined) {
+        const searchableNames: string[] = [];
+        for (const group of resolvedGroups) {
+            for (const field of group.fields) {
+                if (field.searchable === true) searchableNames.push(field.name);
+            }
+        }
+        if (searchableNames.length > 0) resolvedSearch = searchableNames;
+    }
+
+    const { storage: _storage, fields: _fields, ...rest } = cfg;
     return {
         ...rest,
+        fieldGroups: resolvedGroups,
+        ...(resolvedSearch !== undefined ? { search: resolvedSearch } : {}),
         capabilities,
         titleField: cfg.titleField ?? 'title',
     };

@@ -8,6 +8,7 @@ import type {
     StorageDriver,
 } from '@/types/index.js';
 import type { EntryStorage } from '@/core/entry-storage/types.js';
+import { text } from '@/builders/fields.js';
 
 const driver: DatabaseDriver = {
     type: 'test',
@@ -129,6 +130,79 @@ describe('resolveConfig pluginEntries', () => {
                 ])
             )
         ).toThrow(/store\/item/);
+    });
+});
+
+describe('resolveConfig flat fields shortcut', () => {
+    const flatConfig = (extra: Partial<EntryTypeConfig> = {}): AstromechConfig => ({
+        db: driver,
+        storage: storageDriver,
+        entries: {
+            post: {
+                single: 'Post',
+                plural: 'Posts',
+                fields: [
+                    text('from').required().build(),
+                    text('to').searchable().build(),
+                ],
+                ...extra,
+            },
+        },
+        plugins: [],
+    });
+
+    it('synthesizes one main group from flat fields', () => {
+        const resolved = resolveConfig(flatConfig());
+        const groups = resolved.entries['post']?.fieldGroups;
+        expect(groups).toHaveLength(1);
+        const group0 = groups?.[0];
+        expect(group0?.name).toBe('main');
+        expect(group0?.fields).toHaveLength(2);
+        expect(group0?.fields[0]?.name).toBe('from');
+        expect(group0?.fields[0]?.required).toBe(true);
+    });
+
+    it('fields in the resolved group are plain objects (no builder methods)', () => {
+        const resolved = resolveConfig(flatConfig());
+        const field = resolved.entries['post']?.fieldGroups[0]?.fields[0] as
+            | Record<string, unknown>
+            | undefined;
+        expect(typeof field?.['build']).toBe('undefined');
+    });
+
+    it('derives search from searchable fields', () => {
+        const resolved = resolveConfig(flatConfig());
+        expect(resolved.entries.post?.search).toEqual(['to']);
+    });
+
+    it('explicit search wins over derived', () => {
+        const resolved = resolveConfig(flatConfig({ search: ['from'] }));
+        expect(resolved.entries.post?.search).toEqual(['from']);
+    });
+
+    it('throws when both fields and fieldGroups are provided', () => {
+        expect(() =>
+            resolveConfig({
+                db: driver,
+                storage: storageDriver,
+                entries: {
+                    post: {
+                        single: 'Post',
+                        plural: 'Posts',
+                        fields: [text('x').build()],
+                        fieldGroups: [
+                            {
+                                name: 'main',
+                                label: 'Main',
+                                placement: 'main',
+                                fields: [],
+                            },
+                        ],
+                    },
+                },
+                plugins: [],
+            })
+        ).toThrow(/post/);
     });
 });
 
