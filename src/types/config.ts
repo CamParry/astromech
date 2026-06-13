@@ -5,7 +5,7 @@
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { CellKind } from './definitions.js';
 import type { Permission } from './domain.js';
-import type { FieldDefinition, FieldGroup } from './fields.js';
+import type { FieldBuilderLike, FieldDefinition, FieldGroup } from './fields.js';
 import type { PluginDefinition, PluginNavItem, PluginSettingsSchema } from './plugins.js';
 import type { EntryStorage } from '@/core/entry-storage/types.js';
 
@@ -68,8 +68,9 @@ export type EntryTypeConfig = {
     /**
      * Flat field list shortcut — resolves to a single default "main" group.
      * Mutually exclusive with `fieldGroups`.
+     * Accepts plain FieldDefinition objects or any FieldBuilderLike (field builders).
      */
-    fields?: FieldDefinition[];
+    fields?: (FieldDefinition | FieldBuilderLike)[];
     versioning?: boolean | VersioningConfig;
     translatable?: boolean;
     /**

@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
+import type { EntryTypeConfig } from '@/types/index.js';
 import type { FieldDefinition } from '@/types/fields.js';
 import { boolean, group, number, relationship, select, text } from './fields.js';
+
+// Compile-proof: builders assignable to EntryTypeConfig['fields'] WITHOUT .build()
+const _fields: EntryTypeConfig['fields'] = [
+    text('from').required().searchable(),
+    select('status', ['301', '302']).default('301'),
+    boolean('enabled').default(true),
+];
+void _fields;
 
 describe('field builders — basic', () => {
     it('text().required() builds to plain object', () => {

@@ -104,6 +104,11 @@ export type FieldDefinition = {
     searchable?: boolean;
 };
 
+/** Anything that can produce a FieldDefinition — i.e. a field builder. */
+export type FieldBuilderLike = {
+    build(): FieldDefinition;
+};
+
 /**
  * Base props for all field components
  */

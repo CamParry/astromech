@@ -10,7 +10,7 @@ import type {
     ResolvedConfig,
     ResolvedEntryTypeConfig,
 } from '@/types/index.js';
-import type { FieldDefinition } from '@/types/fields.js';
+import type { FieldBuilderLike, FieldDefinition } from '@/types/fields.js';
 import {
     assertNoPluginCollisions,
     checkPluginDependencies,
@@ -66,11 +66,11 @@ export function sortFieldGroups(config: AstromechConfig): void {
  * otherwise return it as-is. Also recurses into nested `fields`.
  * Does NOT import from builders so the core stays dependency-free.
  */
-function normalizeField(f: FieldDefinition): FieldDefinition {
-    const built =
+function normalizeField(f: FieldDefinition | FieldBuilderLike): FieldDefinition {
+    const built: FieldDefinition =
         typeof (f as { build?: unknown }).build === 'function'
             ? (f as unknown as { build: () => FieldDefinition }).build()
-            : f;
+            : (f as FieldDefinition);
     if (built.fields) {
         return { ...built, fields: built.fields.map(normalizeField) };
     }

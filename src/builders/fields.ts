@@ -8,6 +8,7 @@
 import type {
     AnyFieldType,
     BlockDefinition,
+    FieldBuilderLike,
     FieldDefinition,
     SelectOption,
     ValidationRule,
@@ -40,7 +41,7 @@ function proto(target: object, name: string, fn: object): void {
 // Base runtime class (internal — public type is FieldBuilder interface below)
 // ============================================================================
 
-class FieldBuilderImpl {
+class FieldBuilderImpl implements FieldBuilderLike {
     name: string;
     type: AnyFieldType;
 
