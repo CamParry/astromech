@@ -1,11 +1,11 @@
 /**
  * Shared entry create page body.
  *
- * Extracted (Phase 3 Slice 6) verbatim from
- * `pages/_protected/entries/$type/new.tsx`, parameterized by an
- * `EntriesSurface`. Behaviour and markup are unchanged from the original page;
- * the differences are the surface-bound api, the `basePath`-built links, and
- * the surface permission string.
+ * Parameterized by an `EntriesSurface`; serves root and plugin-namespaced
+ * entry types. Field layout comes from the definition layer:
+ * `deriveFormDefinition(config)` splits field groups into main/sidebar/tab and
+ * resolves the title/slug/status capability flags; each field input is
+ * resolved from the field registry by type (Phase 4).
  *
  * Two-column layout with field groups in main/sidebar positions. Includes
  * title, optional slug, and a status panel. Non-default-locale creation

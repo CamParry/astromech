@@ -11,8 +11,9 @@
  * scope, `/plugin/{name}/entries/{type}` link bases, and
  * `plugin:{namespace}:entry:{type}:{action}` permission strings.
  *
- * This is a deliberately thin extraction for Phase 3 Slice 6; Phase 4 redoes
- * the page composition properly.
+ * Phase 4 refits the page bodies onto the definition layer (derived
+ * Table/Form definitions + cell/field registries); the page shells stay
+ * hand-written and consume those definitions.
  */
 
 import type { AdminConfig } from '@/types/index.js';

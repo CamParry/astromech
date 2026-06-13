@@ -34,7 +34,6 @@ import type { EntryVersion } from '@/types/index.js';
 import type { EntriesSurface } from './surface.js';
 
 // Surface link bases are runtime strings; address `Link` by string `to`.
-// Thin extraction for Phase 3 Slice 6 (Phase 4 reworks the link model).
 type LinkProps = Omit<React.ComponentProps<typeof RouterLink>, 'to'> & { to: string };
 const Link = RouterLink as unknown as (props: LinkProps) => React.ReactElement;
 

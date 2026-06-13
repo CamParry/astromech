@@ -1,11 +1,11 @@
 /**
  * Shared entry edit page body.
  *
- * Extracted (Phase 3 Slice 6) verbatim from
- * `pages/_protected/entries/$type/$id/index.tsx`, parameterized by an
- * `EntriesSurface`. Behaviour and markup are unchanged from the original page;
- * the differences are the surface-bound api/cacheScope, the `basePath`-built
- * links, and the surface permission strings.
+ * Parameterized by an `EntriesSurface`; serves root and plugin-namespaced
+ * entry types. Field layout comes from the definition layer:
+ * `deriveFormDefinition(config)` splits field groups into main/sidebar/tab and
+ * resolves the title/slug/status capability flags; each field input is
+ * resolved from the field registry by type (Phase 4).
  *
  * Two-column layout: sticky action bar, main content fields left, metadata
  * sidebar right.
@@ -57,7 +57,6 @@ import {
 import type { EntriesSurface } from './surface.js';
 
 // Surface link bases are runtime strings; address `Link` by string `to`.
-// Thin extraction for Phase 3 Slice 6 (Phase 4 reworks the link model).
 type LinkProps = Omit<React.ComponentProps<typeof RouterLink>, 'to'> & { to: string };
 const Link = RouterLink as unknown as (props: LinkProps) => React.ReactElement;
 

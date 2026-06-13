@@ -1,12 +1,12 @@
 /**
  * Shared entry-type list page body.
  *
- * Extracted (Phase 3 Slice 6) verbatim from
- * `pages/_protected/entries/$type/index.tsx` and parameterized by a single
- * `EntriesSurface` so it serves both root entry types and plugin-namespaced
- * entry types. Behaviour, markup, and capability gating are unchanged from the
- * original page; the only differences are the surface-bound api/cacheScope,
- * the `basePath`-built links, and the surface permission strings.
+ * Parameterized by a single `EntriesSurface` so it serves both root entry
+ * types and plugin-namespaced entry types. Columns render through the
+ * definition layer: `deriveTableDefinition(config)` builds the ordered column
+ * set and each cell is resolved from the cell registry by kind (Phase 4). The
+ * page shell — toolbar, filters, bulk actions, view toggle, context menus —
+ * stays hand-written and consumes the derived definition.
  *
  * Shows a searchable, filterable, paginated table or grid of entries. Supports
  * bulk selection and row-level actions (edit, duplicate, trash/restore).

@@ -21,34 +21,6 @@ export const ENTRY_LEVEL_FIELDS = [
 export const READ_ONLY_FIELDS = ['createdAt', 'updatedAt'] as const;
 
 /**
- * Map field types to component names
- */
-export const FIELD_COMPONENTS = {
-    text: 'TextField',
-    textarea: 'TextareaField',
-    richtext: 'RichtextField',
-    number: 'NumberField',
-    boolean: 'BooleanField',
-    date: 'DateField',
-    datetime: 'DatetimeField',
-    select: 'SelectField',
-    multiselect: 'MultiselectField',
-    media: 'MediaField',
-    relationship: 'RelationshipField',
-    repeater: 'RepeaterField',
-    blocks: 'BlocksField',
-    email: 'EmailField',
-    url: 'UrlField',
-    color: 'ColorField',
-    slug: 'SlugField',
-} as const;
-
-/**
- * Field types that are implemented
- */
-export const IMPLEMENTED_TYPES = Object.keys(FIELD_COMPONENTS);
-
-/**
  * Check if field is entry-level
  */
 export function isEntryField(fieldName: string): boolean {
