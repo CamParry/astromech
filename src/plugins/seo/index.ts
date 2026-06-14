@@ -7,8 +7,8 @@
  * `meta` SDK methods. The user renders `/sitemap.xml` and meta tags
  * themselves — see the README recipes; the plugin exposes data only.
  *
- * Attachment is explicit composition (spec §3.6): add `seoFields()` to an
- * entry type's `fieldGroups`. The plugin footprint — which entry types the
+ * Attachment is explicit composition (spec §3.6): add `seoSection()` to an
+ * entry type's `fields`. The plugin footprint — which entry types the
  * dashboard and sitemap cover — is derived from presence of the `seo-meta`
  * field, never declared.
  *
@@ -30,8 +30,8 @@ declare module 'astromech' {
     }
 }
 
-export { seoFields } from './fields/groups.js';
-export type { SeoFieldsOptions } from './fields/groups.js';
+export { seoSection } from './fields/groups.js';
+export type { SeoSectionOptions } from './fields/groups.js';
 export {
     SEO_DESCRIPTION_RANGE,
     SEO_FIELD_NAME,

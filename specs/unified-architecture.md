@@ -39,9 +39,11 @@ concrete demands them. Astromech's admin serves the CMS; we are not building Fil
   serialized, rendered from. Chosen over "descriptor"/"schema"/"config" for consistency
   with existing `FieldDefinition`/`PluginDefinition` ("we have _defined_ a table").
   `Resolved*`/`Derived*` prefixes remain for post-processed browser-bound shapes.
-- **Builder** — fluent chained authoring API that emits a definition
-  (`table(...).columns([text('from').searchable()])` → `TableDefinition`). Pure veneer:
-  zero runtime, object literals always equally valid.
+- **Builder / factory** — a thin authoring function that emits a definition.
+  Field/layout factories are now pure POJO object-settings factories
+  (`text('from', { searchable: true })`, `section('Content', […])`), not chained
+  builders — see `specs/entry-schema-authoring.md`. Pure veneer: zero runtime,
+  object literals always equally valid.
 - **`define*` factory** — typed identity function for an authored shape
   (`defineSdkMethod`, `defineHook`, `defineEntryType`). Enables file-splitting with full
   inference, no annotation ceremony.

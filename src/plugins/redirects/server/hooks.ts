@@ -14,9 +14,7 @@ export type PathForEntry = (entry: {
 
 export function slugChangeHooks(pathForEntry: PathForEntry): DefinedHook[] {
     return [
-        // When an entry's slug changes, record a redirect old → new. The redirect
-        // type has no slug capability so it never emits this event itself — no
-        // self-guard needed (and the qualified id isn't knowable from in here).
+        // When an entry's slug changes, record a redirect old to new.
         defineHook('entry:afterUpdate', async (event, ctx) => {
             const oldSlug = event.entry.slug;
             const newSlug = event.data.slug;

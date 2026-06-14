@@ -13,6 +13,10 @@
         "previewTitlePlaceholder": "Meta title preview",
         "previewDescriptionPlaceholder": "The meta description will be shown here as it would appear in search results."
     },
+    "seo": {
+        "sectionTitle": "Search appearance",
+        "fieldLabel": "Search appearance"
+    },
     "overview": {
         "loadError": "Could not load the SEO overview.",
         "emptyTitle": "Nothing to analyse",

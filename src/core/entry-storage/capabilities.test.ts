@@ -14,7 +14,6 @@ describe('resolveEntryCapabilities — defaults', () => {
     const emptyCfg: EntryTypeConfig = {
         single: 'Item',
         plural: 'Items',
-        fieldGroups: [],
     };
 
     it('statuses defaults ON with built-in storage', () => {
@@ -52,7 +51,6 @@ describe('resolveEntryCapabilities — explicit opt-outs', () => {
         const cfg: EntryTypeConfig = {
             single: 'Item',
             plural: 'Items',
-            fieldGroups: [],
             statuses: false,
         };
         expect(resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS).statuses).toBe(false);
@@ -62,7 +60,6 @@ describe('resolveEntryCapabilities — explicit opt-outs', () => {
         const cfg: EntryTypeConfig = {
             single: 'Item',
             plural: 'Items',
-            fieldGroups: [],
             slug: false,
         };
         expect(resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS).slug).toBe(false);
@@ -72,7 +69,6 @@ describe('resolveEntryCapabilities — explicit opt-outs', () => {
         const cfg: EntryTypeConfig = {
             single: 'Item',
             plural: 'Items',
-            fieldGroups: [],
             trash: false,
         };
         expect(resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS).trash).toBe(false);
@@ -88,7 +84,6 @@ describe('resolveEntryCapabilities — versioning', () => {
         const cfg: EntryTypeConfig = {
             single: 'Item',
             plural: 'Items',
-            fieldGroups: [],
             versioning: true,
         };
         expect(resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS).versioning).toBe(true);
@@ -98,7 +93,6 @@ describe('resolveEntryCapabilities — versioning', () => {
         const cfg: EntryTypeConfig = {
             single: 'Item',
             plural: 'Items',
-            fieldGroups: [],
             versioning: false,
         };
         expect(resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS).versioning).toBe(false);
@@ -108,7 +102,6 @@ describe('resolveEntryCapabilities — versioning', () => {
         const cfg: EntryTypeConfig = {
             single: 'Item',
             plural: 'Items',
-            fieldGroups: [],
             versioning: { maxVersions: 10 },
         };
         expect(resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS).versioning).toBe(true);
@@ -123,7 +116,6 @@ describe('resolveEntryCapabilities — narrower storageSupports', () => {
     const emptyCfg: EntryTypeConfig = {
         single: 'Item',
         plural: 'Items',
-        fieldGroups: [],
     };
 
     it('unrequested capabilities default off when not in storageSupports', () => {
@@ -152,7 +144,6 @@ describe('assertEntryTypeValid — capability mismatch', () => {
         const cfg: EntryTypeConfig = {
             single: 'Item',
             plural: 'Items',
-            fieldGroups: [],
             versioning: true,
             trash: true,
         };
@@ -166,7 +157,6 @@ describe('assertEntryTypeValid — capability mismatch', () => {
         const cfg: EntryTypeConfig = {
             single: 'Item',
             plural: 'Items',
-            fieldGroups: [],
             versioning: true,
         };
         const narrowSupports = ['statuses'] as const;
@@ -180,7 +170,6 @@ describe('assertEntryTypeValid — capability mismatch', () => {
         const cfg: EntryTypeConfig = {
             single: 'Item',
             plural: 'Items',
-            fieldGroups: [],
             versioning: true,
             translatable: true,
         };
@@ -197,7 +186,7 @@ describe('assertEntryTypeValid — capability mismatch', () => {
 
 describe('assertEntryTypeValid — titleField', () => {
     const caps = resolveEntryCapabilities(
-        { single: 'Item', plural: 'Items', fieldGroups: [] },
+        { single: 'Item', plural: 'Items' },
         BUILT_IN_SUPPORTS
     );
 
@@ -205,7 +194,6 @@ describe('assertEntryTypeValid — titleField', () => {
         const cfg: EntryTypeConfig = {
             single: 'Item',
             plural: 'Items',
-            fieldGroups: [],
             titleField: 'title',
         };
         expect(() =>
@@ -217,7 +205,6 @@ describe('assertEntryTypeValid — titleField', () => {
         const cfg: EntryTypeConfig = {
             single: 'Item',
             plural: 'Items',
-            fieldGroups: [],
             titleField: false,
         };
         expect(() =>
@@ -229,7 +216,6 @@ describe('assertEntryTypeValid — titleField', () => {
         const cfg: EntryTypeConfig = {
             single: 'Item',
             plural: 'Items',
-            fieldGroups: [],
         };
         expect(() =>
             assertEntryTypeValid('widget', cfg, caps, BUILT_IN_SUPPORTS)
@@ -241,7 +227,6 @@ describe('assertEntryTypeValid — titleField', () => {
         const cfg = {
             single: 'Item',
             plural: 'Items',
-            fieldGroups: [],
             titleField: 'name',
         } as unknown as EntryTypeConfig;
         expect(() =>

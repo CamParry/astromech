@@ -35,10 +35,11 @@ import {
     PageContent,
 } from '@/admin/components/ui/index.js';
 import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal.js';
+import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer.js';
 import {
-    FieldGroupPanel,
-    FieldGroupTabs,
-} from '@/admin/components/entries/FieldGroupPanel.js';
+    EntryNamespaceProvider,
+    namespaceForScope,
+} from '@/admin/i18n/entry-namespace.js';
 import { LocaleSwitcher } from '@/admin/components/translations/LocaleSwitcher.js';
 import { PublishPanel } from '@/admin/components/entries/PublishPanel.js';
 import {
@@ -106,8 +107,7 @@ export function EntryEditPage({
     const plural = entryTypeConfig?.plural ?? type;
     const capabilities = entryTypeConfig?.capabilities;
     const formDef = deriveFormDefinition(resolveConfigForDerive(entryTypeConfig, type));
-    const { hasTitle, hasSlug, hasStatuses, mainGroups, sidebarGroups, tabGroups } =
-        formDef;
+    const { hasTitle, hasSlug, hasStatuses, main, sidebar } = formDef;
 
     const isReadOnly = !hasPermission(surface.permissionFor('update'));
 
@@ -167,189 +167,186 @@ export function EntryEditPage({
     }
 
     return (
-        <Page>
-            <DeleteEntryModal
-                open={deleteOpen}
-                entry={entry ?? null}
-                typeLabel={single}
-                force={false}
-                onCancel={() => setDeleteOpen(false)}
-                onConfirm={(opts) =>
-                    trashEntry.mutate(
-                        opts.cascadeLocales ? { id, cascadeLocales: true } : id
-                    )
-                }
-                loading={trashEntry.isPending}
-            />
-            <PageHeader>
-                <PageTitle>
-                    <Breadcrumb
-                        items={[
-                            { label: plural, to: basePath },
-                            {
-                                label: t('entries.editTitle', {
-                                    title: hasTitle ? (entry?.title ?? single) : single,
-                                }),
-                            },
-                        ]}
-                    />
-                </PageTitle>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    {!isReadOnly && form.state.isDirty && (
-                        <span className="am-form-layout-dirty-indicator">
-                            {t('common.unsavedChanges')}
-                        </span>
-                    )}
-                    {hasStatuses && entry != null && (
-                        <StatusBadge status={entry.status} />
-                    )}
-                    {entryTypeConfig?.previewUrl && entry?.status === 'published' && (
-                        <a
-                            href={resolvePreviewUrl(entryTypeConfig.previewUrl, entry)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="am-btn am-btn-ghost am-btn-sm"
-                        >
-                            <ExternalLink size={14} style={{ marginRight: '0.25rem' }} />
-                            {t('common.view')}
-                        </a>
-                    )}
-                    {!isReadOnly && (
-                        <Button
-                            variant="primary"
-                            onClick={handleSave}
-                            loading={saveMutation.isPending}
-                        >
-                            {t('common.update')}
-                        </Button>
-                    )}
-                    {capabilities?.translatable && entry != null && (
-                        <LocaleSwitcher
-                            currentEntryId={id}
-                            type={type}
-                            locales={entry.locales}
-                            allLocales={adminConfig.locales}
-                            defaultLocale={adminConfig.defaultLocale}
-                            compact
+        <EntryNamespaceProvider namespace={namespaceForScope(cacheScope)}>
+            <Page>
+                <DeleteEntryModal
+                    open={deleteOpen}
+                    entry={entry ?? null}
+                    typeLabel={single}
+                    force={false}
+                    onCancel={() => setDeleteOpen(false)}
+                    onConfirm={(opts) =>
+                        trashEntry.mutate(
+                            opts.cascadeLocales ? { id, cascadeLocales: true } : id
+                        )
+                    }
+                    loading={trashEntry.isPending}
+                />
+                <PageHeader>
+                    <PageTitle>
+                        <Breadcrumb
+                            items={[
+                                { label: plural, to: basePath },
+                                {
+                                    label: t('entries.editTitle', {
+                                        title: hasTitle
+                                            ? (entry?.title ?? single)
+                                            : single,
+                                    }),
+                                },
+                            ]}
                         />
-                    )}
-                    {!isReadOnly && (
-                        <Menu.Root>
-                            <Menu.Trigger
-                                className="am-btn am-btn-secondary am-btn-md am-btn-icon"
-                                aria-label={t('entries.moreActions')}
+                    </PageTitle>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        {!isReadOnly && form.state.isDirty && (
+                            <span className="am-form-layout-dirty-indicator">
+                                {t('common.unsavedChanges')}
+                            </span>
+                        )}
+                        {hasStatuses && entry != null && (
+                            <StatusBadge status={entry.status} />
+                        )}
+                        {entryTypeConfig?.previewUrl && entry?.status === 'published' && (
+                            <a
+                                href={resolvePreviewUrl(
+                                    entryTypeConfig.previewUrl,
+                                    entry
+                                )}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="am-btn am-btn-ghost am-btn-sm"
                             >
-                                <MoreHorizontal size={14} />
-                            </Menu.Trigger>
-                            <Menu.Portal>
-                                <Menu.Positioner
-                                    className="am-topbar-menu-positioner"
-                                    sideOffset={6}
-                                    align="end"
+                                <ExternalLink
+                                    size={14}
+                                    style={{ marginRight: '0.25rem' }}
+                                />
+                                {t('common.view')}
+                            </a>
+                        )}
+                        {!isReadOnly && (
+                            <Button
+                                variant="primary"
+                                onClick={handleSave}
+                                loading={saveMutation.isPending}
+                            >
+                                {t('common.update')}
+                            </Button>
+                        )}
+                        {capabilities?.translatable && entry != null && (
+                            <LocaleSwitcher
+                                currentEntryId={id}
+                                type={type}
+                                locales={entry.locales}
+                                allLocales={adminConfig.locales}
+                                defaultLocale={adminConfig.defaultLocale}
+                                compact
+                            />
+                        )}
+                        {!isReadOnly && (
+                            <Menu.Root>
+                                <Menu.Trigger
+                                    className="am-btn am-btn-secondary am-btn-md am-btn-icon"
+                                    aria-label={t('entries.moreActions')}
                                 >
-                                    <Menu.Popup className="am-topbar-menu-popup">
-                                        <Menu.Item
-                                            className="am-topbar-menu-item"
-                                            onClick={() => duplicateEntry.mutate(id)}
-                                            disabled={duplicateEntry.isPending}
-                                        >
-                                            <span className="am-topbar-menu-item-icon">
-                                                <Copy size={14} />
-                                            </span>
-                                            {t('common.duplicate')}
-                                        </Menu.Item>
-                                        <Menu.Separator className="am-topbar-menu-separator" />
-                                        <Menu.Item
-                                            className="am-topbar-menu-item am-topbar-menu-item-danger"
-                                            onClick={() => setDeleteOpen(true)}
-                                        >
-                                            <span className="am-topbar-menu-item-icon">
-                                                <Trash2 size={14} />
-                                            </span>
-                                            {t('common.delete')}
-                                        </Menu.Item>
-                                    </Menu.Popup>
-                                </Menu.Positioner>
-                            </Menu.Portal>
-                        </Menu.Root>
-                    )}
-                </div>
-            </PageHeader>
-
-            <PageContent>
-                {isReadOnly && (
-                    <div
-                        className="am-banner am-banner-info"
-                        style={{ marginBottom: '1rem' }}
-                    >
-                        {t('permissions.readOnly')}
-                    </div>
-                )}
-                <FormLayout>
-                    <FormLayoutContent>
-                        <FormLayoutMain>
-                            {hasTitle && (
-                                <Panel>
-                                    <form.Field
-                                        name="title"
-                                        validators={{
-                                            onChange: ({ value }) =>
-                                                value.trim() === ''
-                                                    ? t('entries.titleRequired')
-                                                    : undefined,
-                                        }}
+                                    <MoreHorizontal size={14} />
+                                </Menu.Trigger>
+                                <Menu.Portal>
+                                    <Menu.Positioner
+                                        className="am-topbar-menu-positioner"
+                                        sideOffset={6}
+                                        align="end"
                                     >
-                                        {(field) => (
-                                            <div className="am-field">
-                                                <label
-                                                    className="am-field-label"
-                                                    htmlFor="entry-title"
-                                                >
-                                                    {t('entries.titleField')}{' '}
-                                                    <span className="am-field-required">
-                                                        *
-                                                    </span>
-                                                </label>
-                                                <Input
-                                                    id="entry-title"
-                                                    type="text"
-                                                    value={field.state.value}
-                                                    onChange={(e) =>
-                                                        field.handleChange(e.target.value)
-                                                    }
-                                                    onBlur={field.handleBlur}
-                                                    required
-                                                />
-                                                {field.state.meta.errors.length > 0 && (
-                                                    <p className="am-field-error">
-                                                        {field.state.meta.errors[0]}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
-                                    </form.Field>
-                                </Panel>
-                            )}
+                                        <Menu.Popup className="am-topbar-menu-popup">
+                                            <Menu.Item
+                                                className="am-topbar-menu-item"
+                                                onClick={() => duplicateEntry.mutate(id)}
+                                                disabled={duplicateEntry.isPending}
+                                            >
+                                                <span className="am-topbar-menu-item-icon">
+                                                    <Copy size={14} />
+                                                </span>
+                                                {t('common.duplicate')}
+                                            </Menu.Item>
+                                            <Menu.Separator className="am-topbar-menu-separator" />
+                                            <Menu.Item
+                                                className="am-topbar-menu-item am-topbar-menu-item-danger"
+                                                onClick={() => setDeleteOpen(true)}
+                                            >
+                                                <span className="am-topbar-menu-item-icon">
+                                                    <Trash2 size={14} />
+                                                </span>
+                                                {t('common.delete')}
+                                            </Menu.Item>
+                                        </Menu.Popup>
+                                    </Menu.Positioner>
+                                </Menu.Portal>
+                            </Menu.Root>
+                        )}
+                    </div>
+                </PageHeader>
 
-                            <form.Field name="fields">
-                                {(f) => (
-                                    <>
-                                        {mainGroups.map((group) => (
-                                            <FieldGroupPanel
-                                                key={group.name}
-                                                group={group}
-                                                values={f.state.value}
-                                                onChange={(name, value) =>
-                                                    f.handleChange({
-                                                        ...f.state.value,
-                                                        [name]: value,
-                                                    })
-                                                }
-                                                disabled={isReadOnly}
-                                            />
-                                        ))}
-                                        <FieldGroupTabs
-                                            groups={tabGroups}
+                <PageContent>
+                    {isReadOnly && (
+                        <div
+                            className="am-banner am-banner-info"
+                            style={{ marginBottom: '1rem' }}
+                        >
+                            {t('permissions.readOnly')}
+                        </div>
+                    )}
+                    <FormLayout>
+                        <FormLayoutContent>
+                            <FormLayoutMain>
+                                {hasTitle && (
+                                    <Panel>
+                                        <form.Field
+                                            name="title"
+                                            validators={{
+                                                onChange: ({ value }) =>
+                                                    value.trim() === ''
+                                                        ? t('entries.titleRequired')
+                                                        : undefined,
+                                            }}
+                                        >
+                                            {(field) => (
+                                                <div className="am-field">
+                                                    <label
+                                                        className="am-field-label"
+                                                        htmlFor="entry-title"
+                                                    >
+                                                        {t('entries.titleField')}{' '}
+                                                        <span className="am-field-required">
+                                                            *
+                                                        </span>
+                                                    </label>
+                                                    <Input
+                                                        id="entry-title"
+                                                        type="text"
+                                                        value={field.state.value}
+                                                        onChange={(e) =>
+                                                            field.handleChange(
+                                                                e.target.value
+                                                            )
+                                                        }
+                                                        onBlur={field.handleBlur}
+                                                        required
+                                                    />
+                                                    {field.state.meta.errors.length >
+                                                        0 && (
+                                                        <p className="am-field-error">
+                                                            {field.state.meta.errors[0]}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </form.Field>
+                                    </Panel>
+                                )}
+
+                                <form.Field name="fields">
+                                    {(f) => (
+                                        <EntryFieldColumn
+                                            nodes={main}
                                             values={f.state.value}
                                             onChange={(name, value) =>
                                                 f.handleChange({
@@ -359,98 +356,97 @@ export function EntryEditPage({
                                             }
                                             disabled={isReadOnly}
                                         />
-                                    </>
-                                )}
-                            </form.Field>
-                        </FormLayoutMain>
-
-                        <FormLayoutSidebar>
-                            {hasStatuses && (
-                                <form.Field name="status">
-                                    {(statusField) => (
-                                        <form.Field name="publishAt">
-                                            {(publishAtField) => (
-                                                <PublishPanel
-                                                    status={statusField.state.value}
-                                                    publishAt={publishAtField.state.value}
-                                                    publishedAt={entry?.publishedAt}
-                                                    onStatusChange={(s) =>
-                                                        statusField.handleChange(s)
-                                                    }
-                                                    onPublishAtChange={(v) =>
-                                                        publishAtField.handleChange(v)
-                                                    }
-                                                    readOnly={isReadOnly}
-                                                />
-                                            )}
-                                        </form.Field>
                                     )}
                                 </form.Field>
-                            )}
+                            </FormLayoutMain>
 
-                            {hasSlug && (
-                                <form.Field name="slug">
-                                    {(field) => (
-                                        <Panel title={t('entries.slugPanel')}>
-                                            <div className="am-field">
-                                                <Input
-                                                    id="entry-slug"
-                                                    type="text"
-                                                    value={field.state.value}
-                                                    onChange={(e) =>
-                                                        field.handleChange(e.target.value)
-                                                    }
-                                                    onBlur={field.handleBlur}
-                                                    pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
-                                                />
-                                            </div>
-                                        </Panel>
+                            <FormLayoutSidebar>
+                                {hasStatuses && (
+                                    <form.Field name="status">
+                                        {(statusField) => (
+                                            <form.Field name="publishAt">
+                                                {(publishAtField) => (
+                                                    <PublishPanel
+                                                        status={statusField.state.value}
+                                                        publishAt={
+                                                            publishAtField.state.value
+                                                        }
+                                                        publishedAt={entry?.publishedAt}
+                                                        onStatusChange={(s) =>
+                                                            statusField.handleChange(s)
+                                                        }
+                                                        onPublishAtChange={(v) =>
+                                                            publishAtField.handleChange(v)
+                                                        }
+                                                        readOnly={isReadOnly}
+                                                    />
+                                                )}
+                                            </form.Field>
+                                        )}
+                                    </form.Field>
+                                )}
+
+                                {hasSlug && (
+                                    <form.Field name="slug">
+                                        {(field) => (
+                                            <Panel title={t('entries.slugPanel')}>
+                                                <div className="am-field">
+                                                    <Input
+                                                        id="entry-slug"
+                                                        type="text"
+                                                        value={field.state.value}
+                                                        onChange={(e) =>
+                                                            field.handleChange(
+                                                                e.target.value
+                                                            )
+                                                        }
+                                                        onBlur={field.handleBlur}
+                                                        pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                                                    />
+                                                </div>
+                                            </Panel>
+                                        )}
+                                    </form.Field>
+                                )}
+
+                                <form.Field name="fields">
+                                    {(f) => (
+                                        <EntryFieldColumn
+                                            nodes={sidebar}
+                                            values={f.state.value}
+                                            onChange={(name, value) =>
+                                                f.handleChange({
+                                                    ...f.state.value,
+                                                    [name]: value,
+                                                })
+                                            }
+                                            disabled={isReadOnly}
+                                        />
                                     )}
                                 </form.Field>
-                            )}
-
-                            <form.Field name="fields">
-                                {(f) => (
-                                    <>
-                                        {sidebarGroups.map((group) => (
-                                            <FieldGroupPanel
-                                                key={group.name}
-                                                group={group}
-                                                values={f.state.value}
-                                                onChange={(name, value) =>
-                                                    f.handleChange({
-                                                        ...f.state.value,
-                                                        [name]: value,
-                                                    })
-                                                }
-                                                disabled={isReadOnly}
-                                            />
-                                        ))}
-                                    </>
+                                {hasVersioning && (
+                                    <Panel>
+                                        {versionCount > 0 ? (
+                                            <Link
+                                                to={`${basePath}/${id}/versions`}
+                                                className="am-link am-text-sm"
+                                            >
+                                                {t('versions.revisionsLink', {
+                                                    count: versionCount,
+                                                })}
+                                            </Link>
+                                        ) : (
+                                            <span className="am-text-sm am-text-muted">
+                                                {t('versions.noRevisionsYet')}
+                                            </span>
+                                        )}
+                                    </Panel>
                                 )}
-                            </form.Field>
-                            {hasVersioning && (
-                                <Panel>
-                                    {versionCount > 0 ? (
-                                        <Link
-                                            to={`${basePath}/${id}/versions`}
-                                            className="am-link am-text-sm"
-                                        >
-                                            {t('versions.revisionsLink', {
-                                                count: versionCount,
-                                            })}
-                                        </Link>
-                                    ) : (
-                                        <span className="am-text-sm am-text-muted">
-                                            {t('versions.noRevisionsYet')}
-                                        </span>
-                                    )}
-                                </Panel>
-                            )}
-                        </FormLayoutSidebar>
-                    </FormLayoutContent>
-                </FormLayout>
-            </PageContent>
-        </Page>
+                            </FormLayoutSidebar>
+                        </FormLayoutContent>
+                    </FormLayout>
+                </PageContent>
+            </Page>
+        </EntryNamespaceProvider>
     );
 }

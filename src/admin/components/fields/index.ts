@@ -31,6 +31,4 @@ export { CheckboxGroupField } from './checkbox-group-field.js';
 export { RadioGroupField } from './radio-group-field.js';
 export { LinkField } from './link-field.js';
 export { KeyValueField } from './key-value-field.js';
-export { AccordionField } from './accordion-field.js';
-export { TabField } from './tab-field.js';
 export { BlocksField } from './blocks-field.js';

@@ -30,8 +30,6 @@ import { CheckboxGroupField } from '@/admin/components/fields/checkbox-group-fie
 import { RadioGroupField } from '@/admin/components/fields/radio-group-field';
 import { LinkField } from '@/admin/components/fields/link-field';
 import { KeyValueField } from '@/admin/components/fields/key-value-field';
-import { AccordionField } from '@/admin/components/fields/accordion-field';
-import { TabField } from '@/admin/components/fields/tab-field';
 import { BlocksField } from '@/admin/components/fields/blocks-field';
 
 registerField('text', TextField);
@@ -57,6 +55,4 @@ registerField('checkbox-group', CheckboxGroupField);
 registerField('radio-group', RadioGroupField);
 registerField('link', LinkField);
 registerField('key-value', KeyValueField);
-registerField('accordion', AccordionField);
-registerField('tab', TabField);
 registerField('blocks', BlocksField);

@@ -45,14 +45,7 @@ function makeCapabilityTestConfig(): AstromechConfig {
                 plural: 'Fulls',
                 versioning: true,
                 translatable: false,
-                fieldGroups: [
-                    {
-                        name: 'content',
-                        label: 'Content',
-                        placement: 'main' as const,
-                        fields: [{ name: 'body', type: 'text' as const, label: 'Body' }],
-                    },
-                ],
+                fields: [{ name: 'body', type: 'text' as const, label: 'Body' }],
             },
             // statuses explicitly off.
             nostatuses: {
@@ -61,14 +54,7 @@ function makeCapabilityTestConfig(): AstromechConfig {
                 statuses: false,
                 versioning: false,
                 translatable: false,
-                fieldGroups: [
-                    {
-                        name: 'content',
-                        label: 'Content',
-                        placement: 'main' as const,
-                        fields: [{ name: 'body', type: 'text' as const, label: 'Body' }],
-                    },
-                ],
+                fields: [{ name: 'body', type: 'text' as const, label: 'Body' }],
             },
             // trash explicitly off.
             notrash: {
@@ -77,14 +63,7 @@ function makeCapabilityTestConfig(): AstromechConfig {
                 trash: false,
                 versioning: false,
                 translatable: false,
-                fieldGroups: [
-                    {
-                        name: 'content',
-                        label: 'Content',
-                        placement: 'main' as const,
-                        fields: [{ name: 'body', type: 'text' as const, label: 'Body' }],
-                    },
-                ],
+                fields: [{ name: 'body', type: 'text' as const, label: 'Body' }],
             },
             // versioning explicitly off.
             noversioning: {
@@ -92,14 +71,7 @@ function makeCapabilityTestConfig(): AstromechConfig {
                 plural: 'NoVersioning',
                 versioning: false,
                 translatable: false,
-                fieldGroups: [
-                    {
-                        name: 'content',
-                        label: 'Content',
-                        placement: 'main' as const,
-                        fields: [{ name: 'body', type: 'text' as const, label: 'Body' }],
-                    },
-                ],
+                fields: [{ name: 'body', type: 'text' as const, label: 'Body' }],
             },
         },
     };

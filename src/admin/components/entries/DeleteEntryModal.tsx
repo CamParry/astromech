@@ -47,7 +47,7 @@ export function DeleteEntryModal({
 
     const localeSiblings =
         entry != null
-            ? Object.entries(entry.locales).filter(([, id]) => id !== entry.id)
+            ? Object.entries(entry.locales ?? {}).filter(([, id]) => id !== entry.id)
             : [];
     const hasSiblings = localeSiblings.length > 0;
 
@@ -89,7 +89,9 @@ export function DeleteEntryModal({
             <p>
                 {force
                     ? t('entries.confirmForceDeleteMessage')
-                    : t('entries.confirmDeleteMessage', { name: typeLabel.toLowerCase() })}
+                    : t('entries.confirmDeleteMessage', {
+                          name: typeLabel.toLowerCase(),
+                      })}
             </p>
             <p>
                 {entry.title ? (
@@ -97,9 +99,11 @@ export function DeleteEntryModal({
                 ) : (
                     <strong className="am-text-mono">{entry.id}</strong>
                 )}{' '}
-                <span className="am-text-muted am-text-sm">
-                    ({entry.locale.toUpperCase()})
-                </span>
+                {entry.locale && (
+                    <span className="am-text-muted am-text-sm">
+                        ({entry.locale.toUpperCase()})
+                    </span>
+                )}
             </p>
 
             {hasSiblings && (
@@ -129,14 +133,16 @@ export function DeleteEntryModal({
                                 className="am-text-sm am-text-muted"
                                 style={{ paddingLeft: '1.25rem' }}
                             >
-                                {(incoming ?? []).slice(0, 10).map((r: IncomingRelation) => (
-                                    <li key={`${r.sourceId}-${r.name}`}>
-                                        {r.sourceTitle || r.sourceId}{' '}
-                                        <span className="am-text-mono">
-                                            ({r.sourceType}.{r.name})
-                                        </span>
-                                    </li>
-                                ))}
+                                {(incoming ?? [])
+                                    .slice(0, 10)
+                                    .map((r: IncomingRelation) => (
+                                        <li key={`${r.sourceId}-${r.name}`}>
+                                            {r.sourceTitle || r.sourceId}{' '}
+                                            <span className="am-text-mono">
+                                                ({r.sourceType}.{r.name})
+                                            </span>
+                                        </li>
+                                    ))}
                                 {incomingCount > 10 && (
                                     <li>… +{incomingCount - 10} more</li>
                                 )}

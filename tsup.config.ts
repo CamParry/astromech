@@ -5,6 +5,8 @@ export default defineConfig([
     {
         entry: {
             index: 'src/index.ts',
+            fields: 'src/fields.ts',
+            columns: 'src/columns.ts',
             'adapters/astro': 'src/adapters/astro.ts',
             'sdk/local/index': 'src/sdk/local/index.ts',
             'sdk/fetch/index': 'src/sdk/fetch/index.ts',

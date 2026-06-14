@@ -474,17 +474,10 @@ describe('orchestrator integration', () => {
                     trash: false,
                     storage: tableStorage(testLinksTable),
                     search: ['from', 'to'],
-                    fieldGroups: [
-                        {
-                            name: 'main',
-                            label: 'Link',
-                            placement: 'main',
-                            fields: [
-                                { name: 'from', type: 'text', label: 'From' },
-                                { name: 'to', type: 'text', label: 'To' },
-                                { name: 'status', type: 'text', label: 'Status' },
-                            ],
-                        },
+                    fields: [
+                        { name: 'from', type: 'text', label: 'From' },
+                        { name: 'to', type: 'text', label: 'To' },
+                        { name: 'status', type: 'text', label: 'Status' },
                     ],
                 },
             },

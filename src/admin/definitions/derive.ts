@@ -4,15 +4,13 @@ import type {
     TableColumn,
     TableDefinition,
 } from '@/types/index.js';
+import { flattenEntryFields } from '@/core/entry-fields.js';
 import { defaultCellKind } from './cell-kind-map.js';
 
-/** Resolve a field's declared type by scanning the config's field groups. */
+/** Resolve a field's declared type by scanning the config's field tree. */
 export function fieldTypeOf(config: AdminEntryTypeConfig, fieldName: string): string {
-    for (const group of config.fieldGroups) {
-        const f = group.fields.find((x) => x.name === fieldName);
-        if (f) return f.type;
-    }
-    return 'text';
+    const f = flattenEntryFields(config.fields).find((x) => x.name === fieldName);
+    return f ? f.type : 'text';
 }
 
 export function deriveTableDefinition(config: AdminEntryTypeConfig): TableDefinition {
@@ -107,11 +105,8 @@ export function deriveFormDefinition(config: AdminEntryTypeConfig): FormDefiniti
         hasTitle: config.titleField !== false,
         hasSlug: config.capabilities.slug && config.slug != null,
         hasStatuses: config.capabilities.statuses,
-        mainGroups: config.fieldGroups.filter(
-            (g) => g.placement !== 'sidebar' && g.placement !== 'tab'
-        ),
-        sidebarGroups: config.fieldGroups.filter((g) => g.placement === 'sidebar'),
-        tabGroups: config.fieldGroups.filter((g) => g.placement === 'tab'),
+        main: config.fields.main,
+        sidebar: config.fields.sidebar,
     };
 }
 
@@ -132,7 +127,7 @@ export function resolveConfigForDerive(
             translatable: false,
             slug: null,
             adminColumns: [],
-            fieldGroups: [],
+            fields: { main: [], sidebar: [] },
             previewUrl: null,
             capabilities: {
                 statuses: true,

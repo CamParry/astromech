@@ -44,7 +44,7 @@ describe('create', () => {
         expect(e.localeGroup).toMatch(/[0-9a-f-]{36}/);
         expect(e.status).toBe('draft');
         expect(e.title).toBe('Hello World');
-        expect(e.slug).toBe('hello-world'); // titleToSlug
+        expect(e.slug).toBe('hello-world'); // slugify
         expect(e.fields).toEqual({ body: 'hi' });
         expect(e.publishedAt).toBeNull();
         expect(e.createdAt).toBeInstanceOf(Date);

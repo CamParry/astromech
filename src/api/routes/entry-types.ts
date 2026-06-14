@@ -33,7 +33,7 @@ router.get('/', (c) => {
             versioning: config.versioning ?? false,
             slug: config.slug ?? null,
             adminColumns: config.adminColumns ?? [],
-            fieldGroups: config.fieldGroups,
+            fields: config.fields,
             capabilities: config.capabilities,
             titleField: config.titleField,
         }));
@@ -62,7 +62,7 @@ router.get('/:type', (c) => {
             versioning: config.versioning ?? false,
             slug: config.slug ?? null,
             adminColumns: config.adminColumns ?? [],
-            fieldGroups: config.fieldGroups,
+            fields: config.fields,
             capabilities: config.capabilities,
             titleField: config.titleField,
         });

@@ -6,11 +6,14 @@
 import type {
     AstromechConfig,
     EntryTypeConfig,
-    FieldGroup,
     ResolvedConfig,
     ResolvedEntryTypeConfig,
 } from '@/types/index.js';
-import type { FieldBuilderLike, FieldDefinition } from '@/types/fields.js';
+import type {
+    EntryFields,
+    FieldDefinition,
+    ResolvedEntryFields,
+} from '@/types/fields.js';
 import {
     assertNoPluginCollisions,
     checkPluginDependencies,
@@ -26,55 +29,63 @@ import {
 } from '@/core/entry-storage/capabilities.js';
 import { parseEntryTypeId, resolveEntryType } from '@/core/entry-types.js';
 
+/** Layout containers — flat data, pure chrome. Their children stay top-level. */
+const LAYOUT_TYPES = new Set(['section', 'tabs', 'tab', 'accordion']);
+
+/** Normalize the authored `fields` shape into the resolved two-column layout. */
+function toResolvedFields(fields: EntryFields | undefined): ResolvedEntryFields {
+    if (fields === undefined) return { main: [], sidebar: [] };
+    if (Array.isArray(fields)) return { main: fields, sidebar: [] };
+    return { main: fields.main, sidebar: fields.sidebar ?? [] };
+}
+
 /**
- * Sort field groups by priority within each collection and resource
- *
- * Lower priority numbers appear first.
- *
- * @param config - Astromech configuration
+ * Structural-rule validation (spec §3.3), crash-loud naming the entry type:
+ * `tab` is only valid as a direct child of `tabs`, and `tabs` may only contain
+ * `tab` children.
  */
-export function sortFieldGroups(config: AstromechConfig): void {
-    const sortGroups = (groups: FieldGroup[]): void => {
-        groups.sort((a, b) => (a.priority ?? 10) - (b.priority ?? 10));
-    };
-
-    // Sort entry type field groups
-    for (const entryType of Object.values(config.entries)) {
-        if (entryType.fieldGroups) sortGroups(entryType.fieldGroups);
-    }
-
-    // Sort plugin-contributed entry type field groups
-    for (const plugin of config.plugins ?? []) {
-        for (const entryType of Object.values(plugin.entries ?? {})) {
-            if (entryType.fieldGroups) sortGroups(entryType.fieldGroups);
+function validateFieldTree(
+    typeKey: string,
+    nodes: FieldDefinition[],
+    insideTabs: boolean
+): void {
+    for (const node of nodes) {
+        if (node.type === 'tab' && !insideTabs) {
+            throw new Error(
+                `Astromech entry type "${typeKey}": \`tab\` ("${node.name}") must be a ` +
+                    `direct child of \`tabs\`.`
+            );
         }
-    }
-
-    // Sort media field groups
-    if (config.media?.fieldGroups) {
-        sortGroups(config.media.fieldGroups);
-    }
-
-    // Sort users field groups
-    if (config.users?.fieldGroups) {
-        sortGroups(config.users.fieldGroups);
+        if (node.type === 'tabs') {
+            const children = node.fields ?? [];
+            for (const child of children) {
+                if (child.type !== 'tab') {
+                    throw new Error(
+                        `Astromech entry type "${typeKey}": \`tabs\` may only contain ` +
+                            `\`tab\` children (got "${child.type}").`
+                    );
+                }
+                validateFieldTree(typeKey, child.fields ?? [], false);
+            }
+            continue;
+        }
+        if (node.fields) validateFieldTree(typeKey, node.fields, false);
     }
 }
 
 /**
- * Duck-typed normalizer: if a value has a `.build()` function, call it;
- * otherwise return it as-is. Also recurses into nested `fields`.
- * Does NOT import from builders so the core stays dependency-free.
+ * Collect names of fields flagged `searchable`. Recurses through layout
+ * containers (their children are top-level data) but not data containers
+ * (`group`/`repeater`/`blocks`), whose child names are not top-level keys.
  */
-function normalizeField(f: FieldDefinition | FieldBuilderLike): FieldDefinition {
-    const built: FieldDefinition =
-        typeof (f as { build?: unknown }).build === 'function'
-            ? (f as unknown as { build: () => FieldDefinition }).build()
-            : (f as FieldDefinition);
-    if (built.fields) {
-        return { ...built, fields: built.fields.map(normalizeField) };
+function collectSearchable(nodes: FieldDefinition[], out: string[]): void {
+    for (const node of nodes) {
+        if (LAYOUT_TYPES.has(node.type)) {
+            collectSearchable(node.fields ?? [], out);
+            continue;
+        }
+        if (node.searchable === true) out.push(node.name);
     }
-    return built;
 }
 
 /**
@@ -82,8 +93,6 @@ function normalizeField(f: FieldDefinition | FieldBuilderLike): FieldDefinition 
  * on mismatch) and strip the live `storage` instance (it cannot be serialised
  * into the virtual config module). `typeKey` is used in error messages — the
  * qualified `{plugin}/{type}` key for plugin types.
- *
- * Handles flat `fields` → fieldGroups synthesis and builder normalization.
  */
 function resolveEntryTypeConfig(
     typeKey: string,
@@ -93,49 +102,23 @@ function resolveEntryTypeConfig(
     const capabilities = resolveEntryCapabilities(cfg, storageSupports);
     assertEntryTypeValid(typeKey, cfg, capabilities, storageSupports);
 
-    // Validate mutual exclusivity
-    if (cfg.fields !== undefined && cfg.fieldGroups !== undefined) {
-        throw new Error(
-            `Astromech entry type "${typeKey}": provide either \`fields\` or \`fieldGroups\`, not both.`
-        );
-    }
+    const resolvedFields = toResolvedFields(cfg.fields);
+    validateFieldTree(typeKey, resolvedFields.main, false);
+    validateFieldTree(typeKey, resolvedFields.sidebar, false);
 
-    // Resolve fieldGroups from flat fields or existing groups
-    let resolvedGroups: FieldGroup[];
-    if (cfg.fields !== undefined) {
-        const normalized = cfg.fields.map(normalizeField);
-        resolvedGroups = [
-            {
-                name: 'main',
-                label: cfg.single,
-                placement: 'main',
-                priority: 0,
-                fields: normalized,
-            },
-        ];
-    } else {
-        resolvedGroups = (cfg.fieldGroups ?? []).map((group) => ({
-            ...group,
-            fields: group.fields.map(normalizeField),
-        }));
-    }
-
-    // Derive search from searchable fields if not explicitly set
+    // Derive search from searchable fields if not explicitly set.
     let resolvedSearch = cfg.search;
     if (resolvedSearch === undefined) {
         const searchableNames: string[] = [];
-        for (const group of resolvedGroups) {
-            for (const field of group.fields) {
-                if (field.searchable === true) searchableNames.push(field.name);
-            }
-        }
+        collectSearchable(resolvedFields.main, searchableNames);
+        collectSearchable(resolvedFields.sidebar, searchableNames);
         if (searchableNames.length > 0) resolvedSearch = searchableNames;
     }
 
     const { storage: _storage, fields: _fields, ...rest } = cfg;
     return {
         ...rest,
-        fieldGroups: resolvedGroups,
+        fields: resolvedFields,
         ...(resolvedSearch !== undefined ? { search: resolvedSearch } : {}),
         capabilities,
         titleField: cfg.titleField ?? 'title',
@@ -151,28 +134,33 @@ function resolveEntryTypeConfig(
 function assertQualifiedRelationshipTargets(
     config: Pick<ResolvedConfig, 'entries' | 'pluginEntries'>
 ): void {
-    const check = (ownerKey: string, groups: FieldGroup[]): void => {
-        for (const group of groups) {
-            for (const field of group.fields) {
-                if (field.type !== 'relationship') continue;
+    const checkNodes = (ownerKey: string, nodes: FieldDefinition[]): void => {
+        for (const field of nodes) {
+            if (field.type === 'relationship') {
                 const target = field.target;
-                if (!target || !parseEntryTypeId(target)) continue;
-                if (resolveEntryType(config, target) === undefined) {
-                    throw new Error(
-                        `Astromech entry type "${ownerKey}": relationship field "${field.name}" ` +
-                            `targets unknown entry type "${target}".`
-                    );
+                if (target && parseEntryTypeId(target)) {
+                    if (resolveEntryType(config, target) === undefined) {
+                        throw new Error(
+                            `Astromech entry type "${ownerKey}": relationship field ` +
+                                `"${field.name}" targets unknown entry type "${target}".`
+                        );
+                    }
                 }
             }
+            if (field.fields) checkNodes(ownerKey, field.fields);
         }
+    };
+    const check = (ownerKey: string, fields: ResolvedEntryFields): void => {
+        checkNodes(ownerKey, fields.main);
+        checkNodes(ownerKey, fields.sidebar);
     };
 
     for (const [typeKey, cfg] of Object.entries(config.entries)) {
-        check(typeKey, cfg.fieldGroups);
+        check(typeKey, cfg.fields);
     }
     for (const [plugin, types] of Object.entries(config.pluginEntries)) {
         for (const [type, cfg] of Object.entries(types)) {
-            check(`${plugin}/${type}`, cfg.fieldGroups);
+            check(`${plugin}/${type}`, cfg.fields);
         }
     }
 }
@@ -192,10 +180,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     assertPluginTablePrefixes(plugins);
     assertNoFieldTypeCollisions(plugins);
 
-    // Step 2: Sort field groups by priority (root + plugin entry types).
-    sortFieldGroups(config);
-
-    // Step 3: Resolve root entry capabilities and titleField (crash-loud).
+    // Step 2: Resolve root entry capabilities and titleField (crash-loud).
     const resolvedEntries: Record<string, ResolvedEntryTypeConfig> = {};
     for (const [typeKey, cfg] of Object.entries(config.entries)) {
         resolvedEntries[typeKey] = resolveEntryTypeConfig(
@@ -205,7 +190,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
         );
     }
 
-    // Step 4: Resolve plugin entry types into the namespaced map. Plugin types
+    // Step 3: Resolve plugin entry types into the namespaced map. Plugin types
     // are not flat-merged into root `entries` — they live under their plugin
     // name. The live `storage` instance is stripped here and registered into
     // the storage registry at boot (`registerPlugins`).
@@ -224,10 +209,10 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
         pluginEntries[name] = types;
     }
 
-    // Step 5: Validate qualified relationship targets against the built maps.
+    // Step 4: Validate qualified relationship targets against the built maps.
     assertQualifiedRelationshipTargets({ entries: resolvedEntries, pluginEntries });
 
-    // Step 6: Return resolved config with defaults
+    // Step 5: Return resolved config with defaults
     // Destructure out `db` and `plugins` so neither is included in the resolved
     // config: the driver instance and plugin definitions (which carry live
     // Drizzle table objects in `schema`) cannot be JSON.stringify'd into the

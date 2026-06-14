@@ -91,34 +91,20 @@ export function makeTestConfig(): AstromechConfig {
                 plural: 'Posts',
                 versioning: true,
                 translatable: true,
-                fieldGroups: [
+                fields: [
+                    { name: 'body', type: 'text', label: 'Body' },
                     {
-                        name: 'content',
-                        label: 'Content',
-                        placement: 'main',
-                        fields: [
-                            { name: 'body', type: 'text', label: 'Body' },
-                            {
-                                name: 'category',
-                                type: 'text',
-                                label: 'Category',
-                                translatable: false,
-                            },
-                        ],
+                        name: 'category',
+                        type: 'text',
+                        label: 'Category',
+                        translatable: false,
                     },
                     {
-                        name: 'relations',
-                        label: 'Relations',
-                        placement: 'sidebar',
-                        fields: [
-                            {
-                                name: 'related',
-                                type: 'relationship',
-                                label: 'Related',
-                                target: 'post',
-                                multiple: true,
-                            },
-                        ],
+                        name: 'related',
+                        type: 'relationship',
+                        label: 'Related',
+                        target: 'post',
+                        multiple: true,
                     },
                 ],
             },
@@ -127,14 +113,7 @@ export function makeTestConfig(): AstromechConfig {
                 plural: 'Notes',
                 versioning: false,
                 translatable: false,
-                fieldGroups: [
-                    {
-                        name: 'content',
-                        label: 'Content',
-                        placement: 'main',
-                        fields: [{ name: 'body', type: 'text', label: 'Body' }],
-                    },
-                ],
+                fields: [{ name: 'body', type: 'text', label: 'Body' }],
             },
             snippet: {
                 single: 'Snippet',
@@ -142,47 +121,26 @@ export function makeTestConfig(): AstromechConfig {
                 titleField: false,
                 statuses: false,
                 slug: false,
-                fieldGroups: [
-                    {
-                        name: 'main',
-                        label: 'Snippet',
-                        placement: 'main',
-                        fields: [
-                            { name: 'key', type: 'text', label: 'Key' },
-                            { name: 'value', type: 'text', label: 'Value' },
-                        ],
-                    },
+                fields: [
+                    { name: 'key', type: 'text', label: 'Key' },
+                    { name: 'value', type: 'text', label: 'Value' },
                 ],
             },
             card: {
                 single: 'Card',
                 plural: 'Cards',
                 titleField: false,
-                fieldGroups: [
-                    {
-                        name: 'main',
-                        label: 'Card',
-                        placement: 'main',
-                        fields: [{ name: 'label', type: 'text', label: 'Label' }],
-                    },
-                ],
+                fields: [{ name: 'label', type: 'text', label: 'Label' }],
             },
             bookmark: {
                 single: 'Bookmark',
                 plural: 'Bookmarks',
-                fieldGroups: [
+                fields: [
                     {
-                        name: 'relations',
-                        label: 'Relations',
-                        placement: 'main',
-                        fields: [
-                            {
-                                name: 'snippet',
-                                type: 'relationship',
-                                label: 'Snippet',
-                                target: 'snippet',
-                            },
-                        ],
+                        name: 'snippet',
+                        type: 'relationship',
+                        label: 'Snippet',
+                        target: 'snippet',
                     },
                 ],
             },

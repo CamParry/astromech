@@ -16,14 +16,7 @@ const redirectsPlugin: PluginDefinition = {
         redirect: {
             single: 'Redirect',
             plural: 'Redirects',
-            fieldGroups: [
-                {
-                    name: 'main',
-                    label: 'Main',
-                    placement: 'main',
-                    fields: [{ name: 'to', type: 'text', label: 'To' }],
-                },
-            ],
+            fields: [{ name: 'to', type: 'text', label: 'To' }],
         },
     },
 };

@@ -30,14 +30,7 @@ const widgetsPlugin: PluginDefinition = {
         widget: {
             single: 'Widget',
             plural: 'Widgets',
-            fieldGroups: [
-                {
-                    name: 'main',
-                    label: 'Main',
-                    placement: 'main',
-                    fields: [{ name: 'label', type: 'text', label: 'Label' }],
-                },
-            ],
+            fields: [{ name: 'label', type: 'text', label: 'Label' }],
         },
     },
 };

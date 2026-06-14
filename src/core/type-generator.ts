@@ -8,10 +8,10 @@
 
 import type {
     FieldDefinition,
-    FieldGroup,
     PluginDefinition,
     PluginFieldTypeRegistration,
     ResolvedConfig,
+    ResolvedEntryFields,
 } from '@/types/index.js';
 
 // ============================================================================
@@ -33,25 +33,74 @@ function toPascalCase(name: string): string {
 // ============================================================================
 
 /**
- * Visual container field types — they have no stored value and are skipped.
+ * Layout container field types — pure chrome, no stored value. Their children
+ * are flattened into the parent data level (no key nesting).
  */
-const CONTAINER_TYPES = new Set(['group', 'accordion', 'tab']);
+const LAYOUT_TYPES = new Set(['section', 'tabs', 'tab', 'accordion']);
 
 /**
  * Field types that produce a relation (populate-able) value.
  */
 const RELATION_TYPES = new Set(['relationship', 'media']);
 
+/** Quote property names that aren't valid TS identifiers (e.g. `seo-meta`). */
+function propertyKey(name: string): string {
+    return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name) ? name : JSON.stringify(name);
+}
+
+/**
+ * Walk a FieldDefinition[] and return all data-bearing nodes, with layout
+ * containers (section/tabs/tab/accordion) transparently flattened in-place.
+ * Data containers (group/repeater/blocks) and leaf fields are returned as-is —
+ * they each become a single property on the containing object.
+ */
+function collectDataFields(fields: FieldDefinition[]): FieldDefinition[] {
+    const result: FieldDefinition[] = [];
+    for (const field of fields) {
+        if (LAYOUT_TYPES.has(field.type)) {
+            // Flatten layout container children at the same level.
+            result.push(...collectDataFields(field.fields ?? []));
+        } else {
+            result.push(field);
+        }
+    }
+    return result;
+}
+
+/**
+ * Build the body lines of an object type from a FieldDefinition[].
+ * Used for top-level collections and recursively for group/repeater children.
+ * Each line is indented by `indent` spaces.
+ */
+function buildObjectLines(
+    fields: FieldDefinition[],
+    pluginFieldTypes: Map<string, PluginFieldTypeRegistration>,
+    indent: string
+): string[] {
+    const dataFields = collectDataFields(fields);
+    const lines: string[] = [];
+    for (const field of dataFields) {
+        const tsType = fieldToTsType(field, pluginFieldTypes);
+        if (tsType === null) continue;
+        const optional = field.required === true ? '' : '?';
+        lines.push(`${indent}${propertyKey(field.name)}${optional}: ${tsType};`);
+    }
+    return lines;
+}
+
 /**
  * Map a FieldDefinition to its TypeScript type string for the Fields interface.
  * Plugin-registered types use their `typeGen` (default `JsonValue`). Returns
- * null for unknown or container types (caller should skip them).
+ * null for layout container types (they never appear as a field line —
+ * collectDataFields flattens them away before this is called) and for
+ * unrecognised types.
  */
 function fieldToTsType(
     field: FieldDefinition,
     pluginFieldTypes: Map<string, PluginFieldTypeRegistration>
 ): string | null {
-    if (CONTAINER_TYPES.has(field.type)) return null;
+    // Layout containers are flattened by collectDataFields before we reach here.
+    if (LAYOUT_TYPES.has(field.type)) return null;
 
     const pluginType = pluginFieldTypes.get(field.type);
     if (pluginType) {
@@ -98,8 +147,28 @@ function fieldToTsType(
         case 'json':
             return "import('astromech').JsonValue";
 
-        case 'repeater':
-            return "import('astromech').JsonValue[]";
+        case 'group': {
+            // Nested object: children are recursively typed.
+            // Layout containers within the children are flattened.
+            const childLines = buildObjectLines(
+                field.fields ?? [],
+                pluginFieldTypes,
+                '  '
+            );
+            if (childLines.length === 0) return '{}';
+            return `{\n${childLines.join('\n')}\n}`;
+        }
+
+        case 'repeater': {
+            // Typed array of the child object shape.
+            const childLines = buildObjectLines(
+                field.fields ?? [],
+                pluginFieldTypes,
+                '  '
+            );
+            if (childLines.length === 0) return 'Array<Record<string, never>>';
+            return `Array<{\n${childLines.join('\n')}\n}>`;
+        }
 
         case 'blocks':
             return "Array<{ type: string; disabled?: boolean; [key: string]: import('astromech').JsonValue | undefined }>";
@@ -168,14 +237,9 @@ type CollectionTypeBlock = {
     relationsType: string;
 };
 
-/** Quote property names that aren't valid TS identifiers (e.g. `seo-meta`). */
-function propertyKey(name: string): string {
-    return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name) ? name : JSON.stringify(name);
-}
-
 function generateCollectionTypes(
     collectionKey: string,
-    fieldGroups: FieldGroup[],
+    fields: ResolvedEntryFields,
     knownCollections: Set<string>,
     pluginFieldTypes: Map<string, PluginFieldTypeRegistration>,
     qualifiedTargetMap: Map<string, string> = new Map<string, string>()
@@ -184,33 +248,8 @@ function generateCollectionTypes(
     const fieldsName = `${pascal}Fields`;
     const relationsName = `${pascal}Relations`;
 
-    // Flatten all fields from all groups, recursing into container types
-    const allFields: FieldDefinition[] = [];
-
-    function collectFields(fields: FieldDefinition[], prefix: string): void {
-        for (const field of fields) {
-            if (CONTAINER_TYPES.has(field.type)) {
-                // Recurse into container children with a prefixed name
-                if (field.fields && field.fields.length > 0) {
-                    collectFields(
-                        field.fields.map((child) => ({
-                            ...child,
-                            name: `${prefix}${field.name}_${child.name}`,
-                        })),
-                        ''
-                    );
-                }
-            } else {
-                allFields.push(
-                    prefix ? { ...field, name: `${prefix}${field.name}` } : field
-                );
-            }
-        }
-    }
-
-    for (const group of fieldGroups) {
-        collectFields(group.fields, '');
-    }
+    // Collect all data-bearing fields from both columns, layout containers flattened.
+    const allFields = collectDataFields([...fields.main, ...fields.sidebar]);
 
     // Build Fields interface lines
     const fieldLines: string[] = [];
@@ -226,7 +265,7 @@ function generateCollectionTypes(
             ? `export interface ${fieldsName} {\n${fieldLines.join('\n')}\n}`
             : `export interface ${fieldsName} {}`;
 
-    // Build Relations type (only populate-able fields)
+    // Build Relations type (only populate-able fields from flat top-level data fields)
     const relationLines: string[] = [];
     for (const field of allFields) {
         const relType = fieldToRelationType(field, knownCollections, qualifiedTargetMap);
@@ -267,7 +306,7 @@ type PluginEntryBlock = {
  * augmentation block. Returns an empty array when there are no plugin entries.
  */
 function generatePluginEntryBlocks(
-    pluginEntries: Record<string, Record<string, { fieldGroups: FieldGroup[] }>>,
+    pluginEntries: Record<string, Record<string, { fields: ResolvedEntryFields }>>,
     knownCollections: Set<string>,
     qualifiedTargetMap: Map<string, string>,
     pluginFieldTypes: Map<string, PluginFieldTypeRegistration>
@@ -283,7 +322,7 @@ function generatePluginEntryBlocks(
             // so the generated names are `${prefix}Fields` / `${prefix}Relations`.
             const block = generateCollectionTypes(
                 prefix,
-                entryType.fieldGroups,
+                entryType.fields,
                 knownCollections,
                 pluginFieldTypes,
                 qualifiedTargetMap
@@ -383,7 +422,7 @@ export function generateSdkTypes(
     const blocks = Object.entries(config.entries).map(([key, entryType]) =>
         generateCollectionTypes(
             key,
-            entryType.fieldGroups,
+            entryType.fields,
             knownCollections,
             pluginFieldTypes,
             qualifiedTargetMap

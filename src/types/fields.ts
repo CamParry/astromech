@@ -1,5 +1,10 @@
 /**
- * Field system types — field definitions, validation, groups
+ * Field system types — field definitions, validation, layout containers.
+ *
+ * An entry's schema is a tree of `FieldDefinition` nodes. Layout containers
+ * (`section`/`tabs`/`tab`/`accordion`) are field *types*, not a separate
+ * hierarchy — their children keep top-level data keys (flat). Only data
+ * containers (`group`/`repeater`/`blocks`) introduce a nested data key.
  */
 
 import type { Entry } from './domain.js';
@@ -33,8 +38,11 @@ export const CORE_FIELD_TYPES = [
     'radio-group',
     'link',
     'key-value',
-    'accordion',
+    // Layout containers — flat data, pure chrome.
+    'section',
+    'tabs',
     'tab',
+    'accordion',
 ] as const;
 
 export type FieldType = (typeof CORE_FIELD_TYPES)[number];
@@ -45,14 +53,24 @@ export type FieldType = (typeof CORE_FIELD_TYPES)[number];
  */
 export type AnyFieldType = FieldType | (string & Record<never, never>);
 
+/**
+ * Config-time i18n key descriptor. `t(key)` returns one of these; it survives
+ * JSON serialization into the virtual config module and is resolved to a
+ * translated string by the admin renderer (`resolveLabel`).
+ */
+export type MessageDescriptor = { $t: string };
+
+/** A user-facing label — a literal string or a captured i18n key. */
+export type Label = string | MessageDescriptor;
+
 export type SelectOption = {
     value: string;
-    label: string;
+    label: Label;
 };
 
 export type BlockDefinition = {
     type: string;
-    label: string;
+    label?: Label;
     icon?: string;
     fields: FieldDefinition[];
 };
@@ -71,10 +89,10 @@ export type ValidationRule =
 export type FieldDefinition = {
     name: string;
     type: AnyFieldType;
-    label?: string;
+    label?: Label;
     required?: boolean;
     defaultValue?: unknown;
-    description?: string;
+    description?: Label;
     validation?: ValidationRule[];
 
     // Type-specific options
@@ -84,13 +102,12 @@ export type FieldDefinition = {
     inverse?: string;
     ordered?: boolean;
     onDelete?: 'cascade' | 'set-null' | 'restrict';
+    /** Children for layout containers and `group`/`repeater`. */
     fields?: FieldDefinition[];
     min?: number;
     max?: number;
     step?: number;
-    checkboxLabel?: string;
     collapsed?: boolean;
-    tab?: string;
     accept?: string;
     blocks?: BlockDefinition[];
 
@@ -104,9 +121,19 @@ export type FieldDefinition = {
     searchable?: boolean;
 };
 
-/** Anything that can produce a FieldDefinition — i.e. a field builder. */
-export type FieldBuilderLike = {
-    build(): FieldDefinition;
+/**
+ * Top-level entry field declaration. Either a flat list (chrome-less, single
+ * column) or an explicit two-column split. The *shape* signals the layout —
+ * there is no `layout()` helper.
+ */
+export type EntryFields =
+    | FieldDefinition[]
+    | { main: FieldDefinition[]; sidebar?: FieldDefinition[] };
+
+/** Resolved two-column field layout consumed by the renderer + type-gen. */
+export type ResolvedEntryFields = {
+    main: FieldDefinition[];
+    sidebar: FieldDefinition[];
 };
 
 /**
@@ -119,21 +146,4 @@ export type BaseFieldProps = {
     required?: boolean;
     onChange: (name: string, value: unknown) => void;
     disabled?: boolean;
-};
-
-// ============================================================================
-// Field Groups
-// ============================================================================
-
-export type FieldGroupPlacement = 'main' | 'sidebar' | 'tab';
-
-export type FieldGroup = {
-    name: string;
-    label: string;
-    /** Where the group renders on the edit page. `'tab'` adds it to the tab strip. */
-    placement: FieldGroupPlacement;
-    priority?: number;
-    collapsed?: boolean;
-    description?: string;
-    fields: FieldDefinition[];
 };

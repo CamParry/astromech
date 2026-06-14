@@ -5,7 +5,12 @@
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { CellKind } from './definitions.js';
 import type { Permission } from './domain.js';
-import type { FieldBuilderLike, FieldDefinition, FieldGroup } from './fields.js';
+import type {
+    EntryFields,
+    FieldDefinition,
+    Label,
+    ResolvedEntryFields,
+} from './fields.js';
 import type { PluginDefinition, PluginNavItem, PluginSettingsSchema } from './plugins.js';
 import type { EntryStorage } from '@/core/entry-storage/types.js';
 
@@ -50,7 +55,7 @@ export type SlugConfig = {
 
 export type AdminColumn = {
     field: string;
-    label?: string;
+    label?: Label;
     sortable?: boolean;
     kind?: CellKind;
 };
@@ -61,16 +66,11 @@ export type VersioningConfig = {
 
 export type EntryTypeConfig = {
     /**
-     * Field groups for this entry type. Mutually exclusive with `fields`.
-     * Provide one or the other — not both.
+     * Field tree for this entry type. Either a flat list (single column) or an
+     * explicit `{ main, sidebar }` two-column split. Layout containers
+     * (`section`/`tabs`/`tab`/`accordion`) are field types within the tree.
      */
-    fieldGroups?: FieldGroup[];
-    /**
-     * Flat field list shortcut — resolves to a single default "main" group.
-     * Mutually exclusive with `fieldGroups`.
-     * Accepts plain FieldDefinition objects or any FieldBuilderLike (field builders).
-     */
-    fields?: (FieldDefinition | FieldBuilderLike)[];
+    fields?: EntryFields;
     versioning?: boolean | VersioningConfig;
     translatable?: boolean;
     /**
@@ -123,7 +123,7 @@ export type ResolvedEntryCapabilities = {
 export type ResolvedEntryTypeConfig = Omit<EntryTypeConfig, 'storage' | 'fields'> & {
     capabilities: ResolvedEntryCapabilities;
     titleField: 'title' | false;
-    fieldGroups: FieldGroup[];
+    fields: ResolvedEntryFields;
 };
 
 // ============================================================================
@@ -141,11 +141,11 @@ export type RoleConfig = {
 };
 
 export type MediaConfig = {
-    fieldGroups?: FieldGroup[];
+    fields?: FieldDefinition[];
 };
 
 export type UsersConfig = {
-    fieldGroups?: FieldGroup[];
+    fields?: FieldDefinition[];
 };
 
 export type AstromechConfig = {
@@ -240,7 +240,7 @@ export type AdminEntryTypeConfig = {
     translatable: boolean;
     slug: SlugConfig | null;
     adminColumns: AdminColumn[];
-    fieldGroups: FieldGroup[];
+    fields: ResolvedEntryFields;
     views?: ('list' | 'grid')[];
     defaultView?: 'list' | 'grid';
     gridFields?: { field: string; label?: string }[];

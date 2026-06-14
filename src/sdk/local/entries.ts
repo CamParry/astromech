@@ -49,7 +49,8 @@ import type {
 } from '@/types/index.js';
 import { getCurrentUser, setCurrentUser } from '@/sdk/local/context.js';
 import { hasHookHandlers, runAfterHooks, runBeforeHooks } from '@/core/plugin-runtime.js';
-import { titleToSlug } from '@/support/strings.js';
+import { slugify } from '@/support/strings.js';
+import { flattenEntryFields } from '@/core/entry-fields.js';
 
 // ============================================================================
 // Validation Helper
@@ -125,28 +126,26 @@ async function saveRelationships(
 
     if (!entryTypeConfig) return;
 
-    for (const group of entryTypeConfig.fieldGroups) {
-        for (const field of group.fields) {
-            if (field.type !== 'relationship') continue;
-            if (!field.target) continue;
+    for (const field of flattenEntryFields(entryTypeConfig.fields)) {
+        if (field.type !== 'relationship') continue;
+        if (!field.target) continue;
 
-            const fieldValue = fields[field.name];
-            if (!fieldValue) continue;
+        const fieldValue = fields[field.name];
+        if (!fieldValue) continue;
 
-            const targetType = field.target === 'users' ? 'user' : 'entry';
+        const targetType = field.target === 'users' ? 'user' : 'entry';
 
-            const targetIds = Array.isArray(fieldValue)
-                ? (fieldValue as string[])
-                : [fieldValue as string];
+        const targetIds = Array.isArray(fieldValue)
+            ? (fieldValue as string[])
+            : [fieldValue as string];
 
-            await relationshipsRepo.replaceAll(
-                entryId,
-                'entry',
-                field.name,
-                targetIds,
-                targetType
-            );
-        }
+        await relationshipsRepo.replaceAll(
+            entryId,
+            'entry',
+            field.name,
+            targetIds,
+            targetType
+        );
     }
 }
 
@@ -212,11 +211,9 @@ function getNonTranslatableFieldNames(typeName: string, fieldNames: string[]): s
     const entryTypeConfig = resolveEntryType(config, typeName);
     if (!entryTypeConfig?.translatable) return [];
     const nonTranslatable: string[] = [];
-    for (const group of entryTypeConfig.fieldGroups) {
-        for (const field of group.fields) {
-            if (fieldNames.includes(field.name) && field.translatable === false) {
-                nonTranslatable.push(field.name);
-            }
+    for (const field of flattenEntryFields(entryTypeConfig.fields)) {
+        if (fieldNames.includes(field.name) && field.translatable === false) {
+            nonTranslatable.push(field.name);
         }
     }
     return nonTranslatable;
@@ -229,13 +226,11 @@ function buildIncomingRelations(
     const entryTypeConfig = resolveEntryType(config, typeName);
     if (!entryTypeConfig) return {};
     const relations: Record<string, string | string[]> = {};
-    for (const group of entryTypeConfig.fieldGroups) {
-        for (const field of group.fields) {
-            if (field.type !== 'relationship') continue;
-            const val = fields[field.name];
-            if (val !== undefined && val !== null) {
-                relations[field.name] = val as string | string[];
-            }
+    for (const field of flattenEntryFields(entryTypeConfig.fields)) {
+        if (field.type !== 'relationship') continue;
+        const val = fields[field.name];
+        if (val !== undefined && val !== null) {
+            relations[field.name] = val as string | string[];
         }
     }
     return relations;
@@ -530,7 +525,7 @@ export const entries: EntriesApi = {
                 data = await populateEntries(
                     getDb(),
                     data,
-                    entryTypeConfig.fieldGroups,
+                    flattenEntryFields(entryTypeConfig.fields),
                     params.populate
                 );
             }
@@ -571,7 +566,7 @@ export const entries: EntriesApi = {
                 const populated = await populateEntries(
                     getDb(),
                     [result],
-                    entryTypeConfig.fieldGroups,
+                    flattenEntryFields(entryTypeConfig.fields),
                     params.populate
                 );
                 result = populated[0] || result;
@@ -622,7 +617,7 @@ export const entries: EntriesApi = {
             // deriving one from the empty title (avoids "-2" style generated slugs).
             slug = null;
         } else {
-            slug = await storage.uniqueSlug(type, locale, titleToSlug(title));
+            slug = await storage.uniqueSlug(type, locale, slugify(title));
         }
 
         const user = getCurrentUser();
@@ -920,11 +915,11 @@ export const entries: EntriesApi = {
                 const entryTypeConfig = resolveEntryType(config, type);
                 let targetType: 'entry' | 'user' | 'media' = 'entry';
                 if (entryTypeConfig) {
-                    for (const group of entryTypeConfig.fieldGroups) {
-                        const field = group.fields.find((f) => f.name === fieldName);
-                        if (field?.type === 'relationship' && field.target === 'users') {
-                            targetType = 'user';
-                        }
+                    const field = flattenEntryFields(entryTypeConfig.fields).find(
+                        (f) => f.name === fieldName
+                    );
+                    if (field?.type === 'relationship' && field.target === 'users') {
+                        targetType = 'user';
                     }
                 }
                 await relRepo.replaceAll(id, 'entry', fieldName, ids, targetType);

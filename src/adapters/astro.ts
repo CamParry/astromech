@@ -50,7 +50,7 @@ function toAdminEntryType(entryType: ResolvedEntryTypeConfig): AdminEntryTypeCon
         translatable: entryType.translatable ?? false,
         slug: entryType.slug ? entryType.slug : null,
         adminColumns: entryType.adminColumns ?? [],
-        fieldGroups: entryType.fieldGroups,
+        fields: entryType.fields,
         previewUrl: entryType.previewUrl ?? null,
         capabilities: entryType.capabilities,
         titleField: entryType.titleField,

@@ -32,6 +32,7 @@ import { renderEmail } from '@/email/render.js';
 import { resolvePluginIdentity } from '@/core/plugin-identity.js';
 import { registerCronJob } from '@/cron/registry.js';
 import { qualifyEntryType } from '@/core/entry-types.js';
+import { flattenEntryFields } from '@/core/entry-fields.js';
 import { createScopedEntries } from '@/sdk/local/scoped-entries.js';
 import {
     resetEntryStorageOverrides,
@@ -270,8 +271,8 @@ function makeConfigView(config: ResolvedConfig): PluginConfigView {
         entryTypesWithField(fieldName: string): string[] {
             return Object.entries(config.entries)
                 .filter(([, entryType]) =>
-                    entryType.fieldGroups.some((group) =>
-                        group.fields.some((field) => field.name === fieldName)
+                    flattenEntryFields(entryType.fields).some(
+                        (field) => field.name === fieldName
                     )
                 )
                 .map(([name]) => name);

@@ -39,6 +39,8 @@ import {
 } from '@/admin/definitions/derive.js';
 import { defaultCellKind } from '@/admin/definitions/cell-kind-map.js';
 import { getCellRenderer } from '@/admin/definitions/cell-registry.js';
+import { resolveLabel } from '@/admin/i18n/labels.js';
+import { namespaceForScope } from '@/admin/i18n/entry-namespace.js';
 import { statusVariant } from '@/admin/definitions/cells/status-variant.js';
 import { Link } from '@/admin/definitions/cells/link.js';
 import {
@@ -323,6 +325,7 @@ function EntryTableRow({
 
 type EntryCardProps = RowActionsProps & {
     columns: TableColumn[];
+    columnLabel: (col: TableColumn) => string;
     navigate: (opts: { id: string }) => void;
     hasTitle: boolean;
     configuredLocales: string[];
@@ -339,6 +342,7 @@ function EntryCard({
     onConfirmDelete,
     onDuplicate,
     columns,
+    columnLabel,
     navigate,
     rowLabels,
     hasTitle,
@@ -416,7 +420,7 @@ function EntryCard({
                 {columns.map((col) => (
                     <div key={col.key} className="am-collection-card-field">
                         <span className="am-collection-card-field-label">
-                            {col.label}
+                            {columnLabel(col)}
                         </span>
                         <span>
                             {getCellRenderer(col.kind)({
@@ -448,6 +452,15 @@ export function EntriesListPage({
     const navigate = useNavigate();
     const { toast } = useToast();
     const { t } = useTranslation();
+    const ns = namespaceForScope(cacheScope);
+    // System columns label via i18n key; admin/grid columns via the Label seam.
+    const columnLabel = useCallback(
+        (col: TableColumn): string =>
+            col.system
+                ? t(typeof col.label === 'string' ? col.label : col.label.$t)
+                : resolveLabel(col.label, col.key, t, ns),
+        [t, ns]
+    );
     const { hasPermission } = usePermissions();
     const canCreate = hasPermission(surface.permissionFor('create'));
     const canDelete = hasPermission(surface.permissionFor('delete'));
@@ -908,9 +921,7 @@ export function EntriesListPage({
                                             {menuColumnDefs
                                                 .map((col) => ({
                                                     key: col.key,
-                                                    label: col.system
-                                                        ? t(col.label)
-                                                        : col.label,
+                                                    label: columnLabel(col),
                                                 }))
                                                 .map((col) => (
                                                     <Menu.Item
@@ -1013,6 +1024,7 @@ export function EntriesListPage({
                                             onConfirmDelete={handleConfirmDelete}
                                             onDuplicate={handleDuplicate}
                                             columns={gridColumnDefs}
+                                            columnLabel={columnLabel}
                                             navigate={navigateCompat}
                                             rowLabels={rowLabels}
                                             hasTitle={hasTitle}
@@ -1043,11 +1055,11 @@ export function EntriesListPage({
                                                 currentSort={sort}
                                                 onSort={handleSort}
                                             >
-                                                {col.system ? t(col.label) : col.label}
+                                                {columnLabel(col)}
                                             </Table.SortTh>
                                         ) : (
                                             <Table.Th key={col.key}>
-                                                {col.system ? t(col.label) : col.label}
+                                                {columnLabel(col)}
                                             </Table.Th>
                                         )
                                     )}

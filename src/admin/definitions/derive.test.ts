@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type {
-    AdminEntryTypeConfig,
-    FieldGroup,
-    ResolvedEntryCapabilities,
-} from '@/types/index.js';
+import type { AdminEntryTypeConfig, ResolvedEntryCapabilities } from '@/types/index.js';
 import { deriveFormDefinition, deriveTableDefinition } from './derive.js';
 
 function caps(
@@ -19,31 +15,6 @@ function caps(
     };
 }
 
-const fullGroups: FieldGroup[] = [
-    {
-        name: 'content',
-        label: 'Content',
-        placement: 'main',
-        fields: [
-            { name: 'body', type: 'richtext' },
-            { name: 'featured', type: 'boolean' },
-            { name: 'category', type: 'select' },
-        ],
-    },
-    {
-        name: 'meta',
-        label: 'Meta',
-        placement: 'sidebar',
-        fields: [{ name: 'author', type: 'text' }],
-    },
-    {
-        name: 'seo',
-        label: 'SEO',
-        placement: 'tab',
-        fields: [{ name: 'metaTitle', type: 'text' }],
-    },
-];
-
 const fullConfig: AdminEntryTypeConfig = {
     single: 'Post',
     plural: 'Posts',
@@ -51,7 +22,14 @@ const fullConfig: AdminEntryTypeConfig = {
     translatable: true,
     slug: { source: 'title' },
     adminColumns: [{ field: 'featured', label: 'Featured' }, { field: 'category' }],
-    fieldGroups: fullGroups,
+    fields: {
+        main: [
+            { name: 'body', type: 'richtext' },
+            { name: 'featured', type: 'boolean' },
+            { name: 'category', type: 'select' },
+        ],
+        sidebar: [{ name: 'author', type: 'text' }],
+    },
     previewUrl: null,
     capabilities: caps(),
     titleField: 'title',
@@ -69,19 +47,15 @@ const titlelessConfig: AdminEntryTypeConfig = {
         { field: 'status' },
         { field: 'enabled' },
     ],
-    fieldGroups: [
-        {
-            name: 'main',
-            label: 'Main',
-            placement: 'main',
-            fields: [
-                { name: 'from', type: 'text' },
-                { name: 'to', type: 'url' },
-                { name: 'status', type: 'select' },
-                { name: 'enabled', type: 'boolean' },
-            ],
-        },
-    ],
+    fields: {
+        main: [
+            { name: 'from', type: 'text' },
+            { name: 'to', type: 'url' },
+            { name: 'status', type: 'select' },
+            { name: 'enabled', type: 'boolean' },
+        ],
+        sidebar: [],
+    },
     previewUrl: null,
     capabilities: caps({
         statuses: false,
@@ -189,7 +163,7 @@ describe('deriveTableDefinition', () => {
         expect(featured?.kind).toBe('badge');
     });
 
-    it('defaults to text for an admin column in no field group (no throw)', () => {
+    it('defaults to text for an admin column not in the field tree (no throw)', () => {
         const config: AdminEntryTypeConfig = {
             ...fullConfig,
             adminColumns: [{ field: 'orphan' }],
@@ -206,12 +180,11 @@ describe('deriveTableDefinition', () => {
 });
 
 describe('deriveFormDefinition', () => {
-    it('splits groups by placement', () => {
+    it('returns main and sidebar from the fields shape', () => {
         const def = deriveFormDefinition(fullConfig);
         expect(def.type).toBe('Post');
-        expect(def.mainGroups.map((g) => g.name)).toEqual(['content']);
-        expect(def.sidebarGroups.map((g) => g.name)).toEqual(['meta']);
-        expect(def.tabGroups.map((g) => g.name)).toEqual(['seo']);
+        expect(def.main.map((f) => f.name)).toEqual(['body', 'featured', 'category']);
+        expect(def.sidebar.map((f) => f.name)).toEqual(['author']);
     });
 
     it('reflects title/slug/statuses flags from config', () => {
@@ -239,5 +212,10 @@ describe('deriveFormDefinition', () => {
         expect(def.hasTitle).toBe(false);
         expect(def.hasSlug).toBe(false);
         expect(def.hasStatuses).toBe(false);
+    });
+
+    it('sidebar is empty array for a main-only config', () => {
+        const def = deriveFormDefinition(titlelessConfig);
+        expect(def.sidebar).toEqual([]);
     });
 });

@@ -9,7 +9,7 @@ import type { ResolvedConfig, ResolvedEntryTypeConfig } from '@/types/index.js';
 const entryType = (single: string): ResolvedEntryTypeConfig => ({
     single,
     plural: `${single}s`,
-    fieldGroups: [],
+    fields: { main: [], sidebar: [] },
     capabilities: {
         statuses: true,
         slug: true,

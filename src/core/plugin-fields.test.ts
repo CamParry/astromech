@@ -78,14 +78,10 @@ describe('generateSdkTypes with plugin field types', () => {
             posts: {
                 single: 'Post',
                 plural: 'Posts',
-                fieldGroups: [
-                    {
-                        name: 'seo',
-                        label: 'SEO',
-                        placement: 'tab',
-                        fields: [{ name: 'seo', type: 'seo-meta' }],
-                    },
-                ],
+                fields: {
+                    main: [{ name: 'seo', type: 'seo-meta' }],
+                    sidebar: [],
+                },
             },
         },
         trash: { enabled: true, retentionDays: 30 },
@@ -158,42 +154,37 @@ describe('generateSdkTypes — plugin entry types', () => {
             posts: {
                 single: 'Post',
                 plural: 'Posts',
-                fieldGroups: [],
+                fields: { main: [], sidebar: [] },
             },
         },
         pluginEntries: {},
         trash: { enabled: true, retentionDays: 30 },
     } as unknown as ResolvedConfig;
 
-    const redirectFieldGroups = [
-        {
-            name: 'redirect',
-            label: 'Redirect',
-            placement: 'main' as const,
-            priority: 0,
-            fields: [
-                {
-                    name: 'from',
-                    type: 'text' as const,
-                    label: 'From',
-                    required: true as const,
-                },
-                {
-                    name: 'to',
-                    type: 'text' as const,
-                    label: 'To',
-                    required: true as const,
-                },
-                {
-                    name: 'status',
-                    type: 'select' as const,
-                    label: 'Type',
-                    options: ['301', '302'],
-                },
-                { name: 'enabled', type: 'boolean' as const, label: 'Enabled' },
-            ],
-        },
-    ];
+    const redirectFields = {
+        main: [
+            {
+                name: 'from',
+                type: 'text' as const,
+                label: 'From',
+                required: true as const,
+            },
+            {
+                name: 'to',
+                type: 'text' as const,
+                label: 'To',
+                required: true as const,
+            },
+            {
+                name: 'status',
+                type: 'select' as const,
+                label: 'Type',
+                options: ['301', '302'],
+            },
+            { name: 'enabled', type: 'boolean' as const, label: 'Enabled' },
+        ],
+        sidebar: [],
+    };
 
     const configWithPluginEntries = {
         ...baseConfig,
@@ -202,7 +193,7 @@ describe('generateSdkTypes — plugin entry types', () => {
                 redirect: {
                     single: 'Redirect',
                     plural: 'Redirects',
-                    fieldGroups: redirectFieldGroups,
+                    fields: redirectFields,
                 },
             },
         },
@@ -245,22 +236,17 @@ describe('generateSdkTypes — plugin entry types', () => {
                 posts: {
                     single: 'Post',
                     plural: 'Posts',
-                    fieldGroups: [
-                        {
-                            name: 'links',
-                            label: 'Links',
-                            placement: 'main',
-                            priority: 0,
-                            fields: [
-                                {
-                                    name: 'related_redirect',
-                                    type: 'relationship',
-                                    target: 'redirects/redirect',
-                                    label: 'Related Redirect',
-                                },
-                            ],
-                        },
-                    ],
+                    fields: {
+                        main: [
+                            {
+                                name: 'related_redirect',
+                                type: 'relationship',
+                                target: 'redirects/redirect',
+                                label: 'Related Redirect',
+                            },
+                        ],
+                        sidebar: [],
+                    },
                 },
             },
         } as unknown as ResolvedConfig;
@@ -296,21 +282,16 @@ describe('generateSdkTypes — plugin entry types', () => {
                     'some-type': {
                         single: 'Some Type',
                         plural: 'Some Types',
-                        fieldGroups: [
-                            {
-                                name: 'main',
-                                label: 'Main',
-                                placement: 'main' as const,
-                                priority: 0,
-                                fields: [
-                                    {
-                                        name: 'title',
-                                        type: 'text' as const,
-                                        label: 'Title',
-                                    },
-                                ],
-                            },
-                        ],
+                        fields: {
+                            main: [
+                                {
+                                    name: 'title',
+                                    type: 'text' as const,
+                                    label: 'Title',
+                                },
+                            ],
+                            sidebar: [],
+                        },
                     },
                 },
             },

@@ -6,7 +6,6 @@ import { derivePluginNav } from '@/core/plugin-admin.js';
 const entryType = (single: string, plural: string): EntryTypeConfig => ({
     single,
     plural,
-    fieldGroups: [],
 });
 
 function nav(def: PluginDefinition): PluginNavItem[] {

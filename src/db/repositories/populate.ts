@@ -4,7 +4,7 @@
  */
 
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import type { Entry, FieldDefinition, FieldGroup } from '@/types/index.js';
+import type { Entry, FieldDefinition, JsonValue } from '@/types/index.js';
 import { RelationshipsRepository } from '@/db/repositories/relationships';
 import { inArray } from 'drizzle-orm';
 import { entriesTable, usersTable } from '@/db/schema';
@@ -19,7 +19,7 @@ type PopulatedEntry = Entry & {
 export async function populateEntries(
     db: LibSQLDatabase,
     entries: Entry[],
-    fieldGroups: FieldGroup[],
+    fields: FieldDefinition[],
     populate: string[]
 ): Promise<Entry[]> {
     if (!populate || populate.length === 0) {
@@ -30,11 +30,9 @@ export async function populateEntries(
 
     // Build a map of field names to their definitions
     const relationFields = new Map<string, FieldDefinition>();
-    for (const group of fieldGroups) {
-        for (const field of group.fields) {
-            if (field.type === 'relationship' && populate.includes(field.name)) {
-                relationFields.set(field.name, field);
-            }
+    for (const field of fields) {
+        if (field.type === 'relationship' && populate.includes(field.name)) {
+            relationFields.set(field.name, field);
         }
     }
 
@@ -109,7 +107,7 @@ export async function populateEntries(
         // Merge populated values into entry.fields and strip the internal _populated map
         const mergedFields = { ...populatedEntry.fields };
         for (const [fieldName, value] of Object.entries(populatedEntry._populated)) {
-            mergedFields[fieldName] = value as import('@/types/index.js').JsonValue;
+            mergedFields[fieldName] = value as JsonValue;
         }
         const { _populated: _, ...rest } = populatedEntry;
         populated.push({ ...rest, fields: mergedFields });

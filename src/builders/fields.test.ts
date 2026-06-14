@@ -1,34 +1,55 @@
 import { describe, expect, it } from 'vitest';
 import type { EntryTypeConfig } from '@/types/index.js';
 import type { FieldDefinition } from '@/types/fields.js';
-import { boolean, group, number, relationship, select, text } from './fields.js';
+import {
+    accordion,
+    block,
+    blocks,
+    boolean,
+    group,
+    number,
+    relationship,
+    section,
+    select,
+    t,
+    tab,
+    tabs,
+    text,
+    textarea,
+} from './fields.js';
 
-// Compile-proof: builders assignable to EntryTypeConfig['fields'] WITHOUT .build()
-const _fields: EntryTypeConfig['fields'] = [
-    text('from').required().searchable(),
-    select('status', ['301', '302']).default('301'),
-    boolean('enabled').default(true),
+// Compile-proof: factory output assignable to EntryTypeConfig['fields'].
+const _flat: EntryTypeConfig['fields'] = [
+    text('from', { required: true, searchable: true }),
+    select('status', { options: ['301', '302'], defaultValue: '301' }),
+    boolean('enabled', { defaultValue: true }),
 ];
-void _fields;
+void _flat;
 
-describe('field builders — basic', () => {
-    it('text().required() builds to plain object', () => {
-        const result = text('from').required().build();
-        expect(result).toEqual({ name: 'from', type: 'text', required: true });
+const _twoColumn: EntryTypeConfig['fields'] = {
+    main: [text('title')],
+    sidebar: [boolean('featured')],
+};
+void _twoColumn;
+
+describe('field factories — leaves', () => {
+    it('text(name, options) returns a plain object', () => {
+        expect(text('from', { required: true })).toEqual({
+            name: 'from',
+            type: 'text',
+            required: true,
+        });
     });
 
-    it('JSON.stringify emits a clean plain object (no prototype methods)', () => {
-        const parsed = JSON.parse(JSON.stringify(text('x').label('X'))) as unknown;
+    it('emits a clean POJO (no prototype methods)', () => {
+        const parsed = JSON.parse(JSON.stringify(text('x', { label: 'X' }))) as unknown;
         expect(parsed).toEqual({ name: 'x', type: 'text', label: 'X' });
-        // Verify no function properties leaked through
-        const obj = parsed as Record<string, unknown>;
-        expect(typeof obj['label']).toBe('string');
-        expect(typeof obj['required']).toBe('undefined');
     });
 
-    it('select() with options arg + .default()', () => {
-        const result = select('status', ['301', '302']).default('301').build();
-        expect(result).toMatchObject({
+    it('select carries options + defaultValue from the settings object', () => {
+        expect(
+            select('status', { options: ['301', '302'], defaultValue: '301' })
+        ).toEqual({
             name: 'status',
             type: 'select',
             options: ['301', '302'],
@@ -36,80 +57,161 @@ describe('field builders — basic', () => {
         });
     });
 
-    it('number().min().max().step()', () => {
-        const result = number('n').min(0).max(10).step(2).build();
-        expect(result).toEqual({ name: 'n', type: 'number', min: 0, max: 10, step: 2 });
+    it('number carries min/max/step', () => {
+        expect(number('n', { min: 0, max: 10, step: 2 })).toEqual({
+            name: 'n',
+            type: 'number',
+            min: 0,
+            max: 10,
+            step: 2,
+        });
     });
 
-    it('boolean().checkboxLabel()', () => {
-        const result = boolean('b').checkboxLabel('on').build();
-        expect(result).toEqual({ name: 'b', type: 'boolean', checkboxLabel: 'on' });
+    it('boolean carries defaultValue', () => {
+        expect(boolean('b', { defaultValue: true })).toEqual({
+            name: 'b',
+            type: 'boolean',
+            defaultValue: true,
+        });
     });
 
-    it('relationship().multiple()', () => {
-        const result = relationship('author', 'users').multiple().build();
-        expect(result).toMatchObject({
+    it('relationship carries target + multiple', () => {
+        expect(relationship('author', { target: 'users', multiple: true })).toEqual({
             name: 'author',
             type: 'relationship',
             target: 'users',
             multiple: true,
         });
     });
+});
 
-    it('type-specific methods chain first, then shared base setters', () => {
-        // Convention: subtype-specific setters (.checkboxLabel/.min) come first
-        // (they return the subtype); shared base setters (.label/.default) follow.
-        const result = boolean('enabled')
-            .checkboxLabel('Active')
-            .label('Enabled')
-            .default(true)
-            .build();
+describe('field factories — data containers (name-first, nested)', () => {
+    it('group(name, { fields })', () => {
+        const result = group('address', { fields: [text('street'), text('city')] });
         expect(result).toEqual({
-            name: 'enabled',
-            type: 'boolean',
-            checkboxLabel: 'Active',
-            label: 'Enabled',
-            defaultValue: true,
+            name: 'address',
+            type: 'group',
+            fields: [
+                { name: 'street', type: 'text' },
+                { name: 'city', type: 'text' },
+            ],
         });
-        const n = number('n').min(0).max(10).label('N').build();
-        expect(n).toMatchObject({
-            name: 'n',
-            type: 'number',
-            min: 0,
-            max: 10,
-            label: 'N',
+    });
+
+    it('group(name, { label, fields })', () => {
+        const result = group('address', { label: 'Address', fields: [text('street')] });
+        expect(result).toMatchObject({
+            name: 'address',
+            type: 'group',
+            label: 'Address',
+            fields: [{ name: 'street', type: 'text' }],
+        });
+    });
+
+    it('block(type, { fields }) — label omitted, derived by the renderer', () => {
+        const result = block('hero', { fields: [text('heading')] });
+        expect(result).toEqual({
+            type: 'hero',
+            fields: [{ name: 'heading', type: 'text' }],
+        });
+    });
+
+    it('blocks(name, { blocks: [block(...)] })', () => {
+        const result = blocks('content', {
+            blocks: [
+                block('hero', {
+                    label: 'Hero',
+                    icon: 'image',
+                    fields: [text('heading')],
+                }),
+                block('quote', { fields: [textarea('text')] }),
+            ],
+        });
+        expect(result).toMatchObject({ name: 'content', type: 'blocks' });
+        expect(result.blocks).toHaveLength(2);
+        expect(result.blocks?.[0]).toEqual({
+            type: 'hero',
+            label: 'Hero',
+            icon: 'image',
+            fields: [{ name: 'heading', type: 'text' }],
         });
     });
 });
 
-describe('field builders — containers', () => {
-    it('group().fields() recursively builds nested builders', () => {
-        const result = group('g').fields(text('a'), text('b')).build();
+describe('field factories — layout containers (name-first, flat, chrome)', () => {
+    it('section(name, { fields }) — label omitted, derived by the renderer', () => {
+        const result = section('content', { fields: [richtextStub()] });
+        expect(result).toMatchObject({ name: 'content', type: 'section' });
+        expect(result.label).toBeUndefined();
+        expect(result.fields).toHaveLength(1);
+    });
+
+    it('section(name, { label, fields }) — explicit label kept', () => {
+        const result = section('content', {
+            label: 'Page Content',
+            fields: [richtextStub()],
+        });
+        expect(result).toMatchObject({
+            name: 'content',
+            type: 'section',
+            label: 'Page Content',
+        });
+    });
+
+    it('accordion(name, { collapsed, fields })', () => {
+        const result = accordion('advanced', {
+            collapsed: true,
+            fields: [number('cache_ttl')],
+        });
+        expect(result).toMatchObject({
+            name: 'advanced',
+            type: 'accordion',
+            collapsed: true,
+        });
+        expect(result.label).toBeUndefined();
+    });
+
+    it('tabs({ fields: [tab(...)] })', () => {
+        const result = tabs({
+            fields: [
+                tab('content', { label: 'Content', fields: [text('title')] }),
+                tab('seo', { fields: [text('meta')] }),
+            ],
+        });
+        expect(result.type).toBe('tabs');
         expect(result.fields).toHaveLength(2);
-        // Nested should be plain objects, not builders
-        const a = result.fields?.[0];
-        expect(a).toEqual({ name: 'a', type: 'text' });
-        expect(typeof (a as Record<string, unknown>)['required']).toBe('undefined');
-        // No builder methods on the output
-        expect(typeof (a as Record<string, unknown>)['build']).toBe('undefined');
+        expect(result.fields?.[0]).toMatchObject({
+            name: 'content',
+            type: 'tab',
+            label: 'Content',
+        });
     });
 });
 
-describe('field builders — searchable', () => {
-    it('text().searchable() sets searchable:true', () => {
-        const result = text('q').searchable().build();
-        expect(result).toMatchObject({ name: 'q', type: 'text', searchable: true });
+describe('t() label descriptor', () => {
+    it('captures a key as a serializable descriptor', () => {
+        expect(t('seo.section')).toEqual({ $t: 'seo.section' });
+    });
+
+    it('a chrome container carries a `t()` label descriptor in options', () => {
+        const node = section('seo', {
+            label: t('seo.section'),
+            fields: [text('metaTitle')],
+        });
+        expect(node.name).toBe('seo');
+        expect(node.label).toEqual({ $t: 'seo.section' });
     });
 });
 
-describe('field builders — type assignability', () => {
-    it('builders build to FieldDefinition', () => {
-        // Compile-time assignability checks
-        const f: FieldDefinition = text('x').build();
-        const arr: FieldDefinition[] = [text('a').build(), select('s', ['x']).build()];
-
-        // Runtime sanity
+describe('type assignability', () => {
+    it('factory output is FieldDefinition', () => {
+        const f: FieldDefinition = text('x');
+        const arr: FieldDefinition[] = [text('a'), select('s', { options: ['x'] })];
         expect(f.name).toBe('x');
         expect(arr).toHaveLength(2);
     });
 });
+
+function richtextStub(): FieldDefinition {
+    return text('body');
+}

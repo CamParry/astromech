@@ -2,6 +2,7 @@ import React from 'react';
 import type { FieldDefinition } from '@/types/index.js';
 import { Input } from '@/admin/components/ui/input';
 import { getFieldComponent } from '@/admin/definitions/field-registry.js';
+import { useLabel } from '@/admin/i18n/entry-namespace.js';
 import { hasPluginFieldType, PluginField } from './plugin-field';
 
 export type FormFieldProps = {
@@ -20,6 +21,7 @@ export function FormField({
     disabled,
 }: FormFieldProps): React.ReactElement {
     const required = field.required ?? false;
+    const label = useLabel();
 
     const commonProps = {
         name: name ?? field.name,
@@ -48,11 +50,11 @@ export function FormField({
     return (
         <div className="am-field">
             <label className="am-field-label">
-                {field.label ?? field.name}
+                {label(field.label, field.name)}
                 {required && <span className="am-field-required">*</span>}
             </label>
             {field.description !== undefined && (
-                <p className="am-field-hint">{field.description}</p>
+                <p className="am-field-hint">{label(field.description, field.name)}</p>
             )}
             {control}
         </div>

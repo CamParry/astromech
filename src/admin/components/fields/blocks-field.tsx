@@ -31,6 +31,7 @@ import {
 import type { BaseFieldProps, BlockDefinition, FieldDefinition } from '@/types/index.js';
 import { FormField } from '@/admin/components/fields/form-field';
 import { useBlocksField } from '@/admin/hooks/use-blocks-field';
+import { useLabel } from '@/admin/i18n/entry-namespace.js';
 import type { BlockWithId } from '@/admin/hooks/use-blocks-field';
 import './blocks-field.css';
 
@@ -68,6 +69,7 @@ function BlockPicker({
     onClose,
 }: BlockPickerProps): React.ReactElement {
     const { t } = useTranslation();
+    const label = useLabel();
     return (
         <div
             className="am-blocks-picker"
@@ -90,7 +92,9 @@ function BlockPicker({
                             {bd.icon}
                         </span>
                     )}
-                    <span className="am-blocks-picker-label">{bd.label}</span>
+                    <span className="am-blocks-picker-label">
+                        {label(bd.label, bd.type)}
+                    </span>
                 </button>
             ))}
         </div>
@@ -125,6 +129,7 @@ function SortableBlock({
     onFieldChange,
 }: SortableBlockProps): React.ReactElement {
     const { t } = useTranslation();
+    const resolveLabelText = useLabel();
     const [open, setOpen] = useState(true);
 
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -137,7 +142,9 @@ function SortableBlock({
         transition: transition ?? undefined,
     };
 
-    const label = blockDef?.label ?? block.type;
+    const blockLabel = blockDef
+        ? resolveLabelText(blockDef.label, block.type)
+        : block.type;
 
     return (
         <div
@@ -171,7 +178,7 @@ function SortableBlock({
                                     {blockDef.icon}
                                 </span>
                             )}
-                            {label}
+                            {blockLabel}
                         </span>
                         <span className="am-blocks-block-type-badge">{block.type}</span>
                         {block.disabled === true && (

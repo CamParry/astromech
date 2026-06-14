@@ -8,7 +8,6 @@ import type {
     StorageDriver,
 } from '@/types/index.js';
 import type { EntryStorage } from '@/core/entry-storage/types.js';
-import { text } from '@/builders/fields.js';
 
 const driver: DatabaseDriver = {
     type: 'test',
@@ -27,14 +26,7 @@ const storageDriver: StorageDriver = {
 const entryType = (single: string): EntryTypeConfig => ({
     single,
     plural: `${single}s`,
-    fieldGroups: [
-        {
-            name: 'main',
-            label: 'Main',
-            placement: 'main',
-            fields: [{ name: 'body', type: 'text' }],
-        },
-    ],
+    fields: [{ name: 'body', type: 'text' }],
 });
 
 const baseConfig = (plugins: PluginDefinition[]): AstromechConfig => ({
@@ -133,7 +125,7 @@ describe('resolveConfig pluginEntries', () => {
     });
 });
 
-describe('resolveConfig flat fields shortcut', () => {
+describe('resolveConfig flat fields', () => {
     const flatConfig = (extra: Partial<EntryTypeConfig> = {}): AstromechConfig => ({
         db: driver,
         storage: storageDriver,
@@ -142,8 +134,8 @@ describe('resolveConfig flat fields shortcut', () => {
                 single: 'Post',
                 plural: 'Posts',
                 fields: [
-                    text('from').required().build(),
-                    text('to').searchable().build(),
+                    { name: 'from', type: 'text', required: true },
+                    { name: 'to', type: 'text', searchable: true },
                 ],
                 ...extra,
             },
@@ -151,20 +143,16 @@ describe('resolveConfig flat fields shortcut', () => {
         plugins: [],
     });
 
-    it('synthesizes one main group from flat fields', () => {
+    it('resolves a flat fields array to { main, sidebar: [] }', () => {
         const resolved = resolveConfig(flatConfig());
-        const groups = resolved.entries['post']?.fieldGroups;
-        expect(groups).toHaveLength(1);
-        const group0 = groups?.[0];
-        expect(group0?.name).toBe('main');
-        expect(group0?.fields).toHaveLength(2);
-        expect(group0?.fields[0]?.name).toBe('from');
-        expect(group0?.fields[0]?.required).toBe(true);
+        expect(resolved.entries['post']?.fields.main).toHaveLength(2);
+        expect(resolved.entries['post']?.fields.sidebar).toEqual([]);
+        expect(resolved.entries['post']?.fields.main[0]?.name).toBe('from');
     });
 
-    it('fields in the resolved group are plain objects (no builder methods)', () => {
+    it('fields in resolved are plain objects', () => {
         const resolved = resolveConfig(flatConfig());
-        const field = resolved.entries['post']?.fieldGroups[0]?.fields[0] as
+        const field = resolved.entries['post']?.fields.main[0] as
             | Record<string, unknown>
             | undefined;
         expect(typeof field?.['build']).toBe('undefined');
@@ -179,8 +167,64 @@ describe('resolveConfig flat fields shortcut', () => {
         const resolved = resolveConfig(flatConfig({ search: ['from'] }));
         expect(resolved.entries.post?.search).toEqual(['from']);
     });
+});
 
-    it('throws when both fields and fieldGroups are provided', () => {
+describe('resolveConfig { main, sidebar } fields shape', () => {
+    it('resolves a { main, sidebar } shape through unchanged', () => {
+        const resolved = resolveConfig({
+            db: driver,
+            storage: storageDriver,
+            entries: {
+                post: {
+                    single: 'Post',
+                    plural: 'Posts',
+                    fields: {
+                        main: [{ name: 'body', type: 'text' }],
+                        sidebar: [{ name: 'author', type: 'text' }],
+                    },
+                },
+            },
+            plugins: [],
+        });
+        expect(resolved.entries['post']?.fields.main).toHaveLength(1);
+        expect(resolved.entries['post']?.fields.sidebar).toHaveLength(1);
+        expect(resolved.entries['post']?.fields.main[0]?.name).toBe('body');
+        expect(resolved.entries['post']?.fields.sidebar[0]?.name).toBe('author');
+    });
+
+    it('sidebar defaults to [] when omitted from { main } shape', () => {
+        const resolved = resolveConfig({
+            db: driver,
+            storage: storageDriver,
+            entries: {
+                post: {
+                    single: 'Post',
+                    plural: 'Posts',
+                    fields: { main: [{ name: 'body', type: 'text' }] },
+                },
+            },
+            plugins: [],
+        });
+        expect(resolved.entries['post']?.fields.sidebar).toEqual([]);
+    });
+});
+
+describe('resolveConfig undefined fields', () => {
+    it('resolves to empty { main: [], sidebar: [] } when fields is absent', () => {
+        const resolved = resolveConfig({
+            db: driver,
+            storage: storageDriver,
+            entries: {
+                post: { single: 'Post', plural: 'Posts' },
+            },
+            plugins: [],
+        });
+        expect(resolved.entries['post']?.fields).toEqual({ main: [], sidebar: [] });
+    });
+});
+
+describe('resolveConfig structural validation', () => {
+    it('throws when a tab appears outside of tabs', () => {
         expect(() =>
             resolveConfig({
                 db: driver,
@@ -189,20 +233,35 @@ describe('resolveConfig flat fields shortcut', () => {
                     post: {
                         single: 'Post',
                         plural: 'Posts',
-                        fields: [text('x').build()],
-                        fieldGroups: [
+                        fields: [{ name: 'bad', type: 'tab', fields: [] }],
+                    },
+                },
+                plugins: [],
+            })
+        ).toThrow(/post.*tab.*must be a direct child of `tabs`/);
+    });
+
+    it('throws when tabs contains a non-tab child', () => {
+        expect(() =>
+            resolveConfig({
+                db: driver,
+                storage: storageDriver,
+                entries: {
+                    post: {
+                        single: 'Post',
+                        plural: 'Posts',
+                        fields: [
                             {
-                                name: 'main',
-                                label: 'Main',
-                                placement: 'main',
-                                fields: [],
+                                name: 'myTabs',
+                                type: 'tabs',
+                                fields: [{ name: 'oops', type: 'text' }],
                             },
                         ],
                     },
                 },
                 plugins: [],
             })
-        ).toThrow(/post/);
+        ).toThrow(/post.*tabs.*may only contain.*tab.*children/);
     });
 });
 
@@ -210,14 +269,7 @@ describe('resolveConfig qualified relationship targets', () => {
     const withTarget = (target: string): EntryTypeConfig => ({
         single: 'Linker',
         plural: 'Linkers',
-        fieldGroups: [
-            {
-                name: 'rel',
-                label: 'Rel',
-                placement: 'main',
-                fields: [{ name: 'ref', type: 'relationship', target }],
-            },
-        ],
+        fields: [{ name: 'ref', type: 'relationship', target }],
     });
 
     it('passes when a qualified target resolves', () => {

@@ -21,6 +21,14 @@
             "types": "./dist/index.d.ts",
             "default": "./dist/index.js"
         },
+        "./fields": {
+            "types": "./dist/fields.d.ts",
+            "default": "./dist/fields.js"
+        },
+        "./columns": {
+            "types": "./dist/columns.d.ts",
+            "default": "./dist/columns.js"
+        },
         "./astro": {
             "types": "./dist/adapters/astro.d.ts",
             "default": "./dist/adapters/astro.js"

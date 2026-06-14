@@ -13,6 +13,10 @@
         "previewTitlePlaceholder": "Aperçu du titre meta",
         "previewDescriptionPlaceholder": "La description meta apparaîtra ici telle qu'elle serait affichée dans les résultats de recherche."
     },
+    "seo": {
+        "sectionTitle": "Apparence dans la recherche",
+        "fieldLabel": "Apparence dans la recherche"
+    },
     "overview": {
         "loadError": "Impossible de charger l'aperçu SEO.",
         "emptyTitle": "Rien à analyser",

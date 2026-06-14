@@ -10,7 +10,7 @@
  * Implementation choices characterized here:
  * - A titleless create persists `title === ''` (the DB column is notNull).
  * - With no explicit slug, a titleless create leaves `slug` NULL — the empty
- *   title is never run through `titleToSlug` (avoids "-2"-style derived slugs).
+ *   title is never run through `slugify` (avoids "-2"-style derived slugs).
  * - Passing an explicit `title` to a titleless type is ACCEPTED AND STORED (the
  *   schema keeps title optional rather than stripping it); the admin never sends
  *   one, so this is a tolerant-not-strict choice.
@@ -107,7 +107,10 @@ describe('titled types still require a title', () => {
 
 describe('titleless update', () => {
     it('updates fields and leaves title empty', async () => {
-        const e = await api.create({ type: 'snippet', fields: { key: 'k', value: 'v1' } });
+        const e = await api.create({
+            type: 'snippet',
+            fields: { key: 'k', value: 'v1' },
+        });
         const updated = await api.update({
             type: 'snippet',
             id: e.id,

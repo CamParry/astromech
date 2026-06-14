@@ -11,7 +11,7 @@
  */
 import type * as React from 'react';
 import type { Entry } from './domain.js';
-import type { FieldGroup } from './fields.js';
+import type { FieldDefinition, Label } from './fields.js';
 
 export const CELL_KINDS = [
     'text',
@@ -30,8 +30,11 @@ export type CellKind = (typeof CELL_KINDS)[number];
 export type TableColumn = {
     /** Stable key — field name for field columns, system key for system columns. */
     key: string;
-    /** System columns carry an i18n key (shell calls t()); admin columns carry a literal. */
-    label: string;
+    /**
+     * System columns carry an i18n key (shell calls `t()`); admin columns carry
+     * a `Label` (literal string or a `t()` descriptor), resolved at render.
+     */
+    label: Label;
     kind: CellKind;
     /** 'field' reads entry.fields[key]; 'entry' reads (entry as Record)[key]. */
     source: 'field' | 'entry';
@@ -52,9 +55,10 @@ export type FormDefinition = {
     hasTitle: boolean;
     hasSlug: boolean;
     hasStatuses: boolean;
-    mainGroups: FieldGroup[];
-    sidebarGroups: FieldGroup[];
-    tabGroups: FieldGroup[];
+    /** Recursive field tree for the main (left) column. */
+    main: FieldDefinition[];
+    /** Recursive field tree for the sidebar (right) column. */
+    sidebar: FieldDefinition[];
 };
 
 export type CellRenderContext = {

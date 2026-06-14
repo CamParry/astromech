@@ -3,15 +3,18 @@
  */
 
 /**
- * Convert a title string into a URL-friendly slug.
- * Lowercase, spaces to hyphens, strip non-alphanumeric.
+ * Slugify any string into a URL-friendly hyphenated token: lowercase, strip
+ * apostrophes (so `Mother's Day` → `mothers-day`, not `mother-s-day`), collapse
+ * every remaining run of non-alphanumeric characters (spaces, punctuation,
+ * underscores) to a single hyphen, trim edge hyphens. `seo.section` →
+ * `seo-section`.
  */
-export function titleToSlug(title: string): string {
-    return title
+export function slugify(s: string): string {
+    return s
         .toLowerCase()
         .trim()
-        .replace(/[^\w\s-]/g, '')
-        .replace(/[\s_]+/g, '-')
+        .replace(/['’]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
 }
 

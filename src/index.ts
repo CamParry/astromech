@@ -36,11 +36,7 @@ export {
 } from '@/core/permissions.js';
 export type { BuiltInRoleSlug } from '@/core/permissions.js';
 
-// ============================================================================
-// Field Builders
-// ============================================================================
-
-export * from '@/builders/fields.js';
+// Field factories now live in the `astromech/fields` subpath (see src/fields.ts).
 
 // ============================================================================
 // Config / Collection / Plugin Helpers

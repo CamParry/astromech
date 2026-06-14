@@ -1,7 +1,8 @@
 import { fileURLToPath } from 'node:url';
 import { builtInRole, defineConfig, FilesystemStorage, libsqlDriver } from 'astromech';
+import * as fields from 'astromech/fields';
 import { redirects, redirectsPermissions } from 'astromech/plugins/redirects';
-import { seo, seoFields, seoPermissions } from 'astromech/plugins/seo';
+import { seo, seoSection, seoPermissions } from 'astromech/plugins/seo';
 import { rating } from './src/plugins/rating/index.js';
 
 export default defineConfig({
@@ -28,141 +29,87 @@ export default defineConfig({
             plural: 'Pages',
             translatable: true,
             versioning: true,
-            fieldGroups: [
-                {
-                    name: 'content',
-                    label: 'Content',
-                    placement: 'main',
-                    priority: 0,
-                    fields: [
-                        {
-                            name: 'sections',
-                            type: 'repeater',
-                            label: 'Page Sections',
-                            fields: [
-                                {
-                                    name: 'title',
-                                    type: 'text',
-                                    label: 'Title',
-                                },
-                                {
-                                    name: 'content',
-                                    type: 'richtext',
-                                    label: 'Content',
-                                },
-                                {
-                                    name: 'layout',
-                                    type: 'select',
-                                    label: 'Layout',
-                                    options: ['full-width', 'two-column', 'three-column'],
-                                },
-                            ],
-                        },
-                    ],
-                },
-                seoFields({ priority: 0 }),
-                {
-                    name: 'social',
-                    label: 'Social Sharing',
-                    placement: 'tab',
-                    priority: 10,
-                    fields: [
-                        {
-                            name: 'ogTitle',
-                            type: 'text',
-                            label: 'Open Graph Title',
-                        },
-                        {
-                            name: 'ogImage',
-                            type: 'media',
-                            label: 'Open Graph Image',
-                        },
-                        {
-                            name: 'contentQuality',
-                            type: 'rating',
-                            label: 'Content Quality',
-                        },
-                    ],
-                },
-                {
-                    name: 'metadata',
-                    label: 'Metadata',
-                    placement: 'sidebar',
-                    priority: 0,
-                    fields: [
-                        {
-                            name: 'author',
-                            type: 'relation',
-                            target: 'users',
-                            label: 'Author',
-                        },
-                        {
-                            name: 'parent_pages',
-                            type: 'relation',
-                            target: 'page',
-                            label: 'Parent Page',
-                        },
-                        {
-                            name: 'category',
-                            type: 'relation',
-                            target: 'category',
-                            multiple: true,
-                            label: 'Category',
-                        },
-                        {
-                            name: 'tags',
-                            type: 'multiselect',
-                            label: 'Tags',
-                            options: [
-                                'Featured',
-                                'Popular',
-                                'New',
-                                'Updated',
-                                'Archived',
-                            ],
-                        },
-                    ],
-                },
-                {
-                    name: 'settings',
-                    label: 'Page Settings',
-                    placement: 'sidebar',
-                    priority: 10,
-                    fields: [
-                        {
-                            name: 'template',
-                            type: 'select',
-                            label: 'Template',
-                            translatable: false,
-                            options: ['default', 'landing', 'full-width', 'sidebar'],
-                        },
-                        {
-                            name: 'theme_color',
-                            type: 'color',
-                            label: 'Theme Color',
-                            translatable: false,
-                        },
-                        {
-                            name: 'custom_css',
-                            type: 'textarea',
-                            label: 'Custom CSS',
-                        },
-                        {
-                            name: 'og_image',
-                            type: 'media',
-                            label: 'Open Graph Image',
-                        },
-                        {
-                            name: 'noindex',
-                            type: 'boolean',
-                            label: 'No Index',
-                            translatable: false,
-                            checkboxLabel:
-                                'Prevent search engines from indexing this page',
-                        },
-                    ],
-                },
-            ],
+            fields: {
+                main: [
+                    fields.repeater('sections', {
+                        label: 'Page Sections',
+                        fields: [
+                            fields.text('title', { label: 'Title' }),
+                            fields.richtext('content', { label: 'Content' }),
+                            fields.select('layout', {
+                                label: 'Layout',
+                                options: ['full-width', 'two-column', 'three-column'],
+                            }),
+                        ],
+                    }),
+                    fields.tabs({
+                        fields: [
+                            fields.tab('seo', { label: 'SEO', fields: [seoSection()] }),
+                            fields.tab('social-sharing', {
+                                fields: [
+                                    fields.text('ogTitle', { label: 'Open Graph Title' }),
+                                    fields.media('ogImage', {
+                                        label: 'Open Graph Image',
+                                    }),
+                                    {
+                                        name: 'contentQuality',
+                                        type: 'rating',
+                                        label: 'Content Quality',
+                                    },
+                                ],
+                            }),
+                        ],
+                    }),
+                ],
+                sidebar: [
+                    fields.section('metadata', {
+                        fields: [
+                            fields.relationship('author', {
+                                label: 'Author',
+                                target: 'users',
+                            }),
+                            fields.relationship('parent_pages', {
+                                label: 'Parent Page',
+                                target: 'page',
+                            }),
+                            fields.relationship('category', {
+                                label: 'Category',
+                                target: 'category',
+                                multiple: true,
+                            }),
+                            fields.multiselect('tags', {
+                                label: 'Tags',
+                                options: [
+                                    'Featured',
+                                    'Popular',
+                                    'New',
+                                    'Updated',
+                                    'Archived',
+                                ],
+                            }),
+                        ],
+                    }),
+                    fields.section('page-settings', {
+                        fields: [
+                            fields.select('template', {
+                                label: 'Template',
+                                translatable: false,
+                                options: ['default', 'landing', 'full-width', 'sidebar'],
+                            }),
+                            fields.color('theme_color', {
+                                label: 'Theme Color',
+                                translatable: false,
+                            }),
+                            fields.textarea('custom_css', { label: 'Custom CSS' }),
+                            fields.media('og_image', { label: 'Open Graph Image' }),
+                            fields.boolean('noindex', {
+                                label: 'No Index',
+                                translatable: false,
+                            }),
+                        ],
+                    }),
+                ],
+            },
         },
         post: {
             single: 'Post',
@@ -172,302 +119,177 @@ export default defineConfig({
             views: ['list', 'grid'],
             defaultView: 'list',
             gridFields: [{ field: 'excerpt', label: 'Excerpt' }],
-            fieldGroups: [
-                {
-                    name: 'content',
-                    label: 'Content',
-                    placement: 'main',
-                    priority: 0,
-                    fields: [
-                        { name: 'body', type: 'richtext', required: true },
-                        { name: 'excerpt', type: 'textarea' },
-                    ],
-                },
-                seoFields(),
-                {
-                    name: 'taxonomy',
-                    label: 'Taxonomy',
-                    placement: 'sidebar',
-                    priority: 10,
-                    fields: [
-                        {
-                            name: 'featured_image',
-                            type: 'media',
-                            label: 'Featured Image',
-                            translatable: false,
-                        },
-                        {
-                            name: 'category',
-                            type: 'relation',
-                            target: 'category',
-                            inverse: 'post',
-                        },
-                        {
-                            name: 'tags',
-                            type: 'relation',
-                            target: 'tag',
-                            multiple: true,
-                            inverse: 'post',
-                        },
-                        {
-                            name: 'author',
-                            type: 'relation',
-                            target: 'users',
-                            inverse: 'post',
-                        },
-                    ],
-                },
-            ],
+            fields: {
+                main: [
+                    fields.richtext('body', { required: true }),
+                    fields.textarea('excerpt'),
+                    seoSection(),
+                ],
+                sidebar: [
+                    fields.section('taxonomy', {
+                        fields: [
+                            fields.media('featured_image', {
+                                label: 'Featured Image',
+                                translatable: false,
+                            }),
+                            fields.relationship('category', {
+                                target: 'category',
+                                inverse: 'post',
+                            }),
+                            fields.relationship('tags', {
+                                target: 'tag',
+                                multiple: true,
+                                inverse: 'post',
+                            }),
+                            fields.relationship('author', {
+                                target: 'users',
+                                inverse: 'post',
+                            }),
+                        ],
+                    }),
+                ],
+            },
         },
         category: {
             single: 'Category',
             plural: 'Categories',
-            fieldGroups: [
-                {
-                    name: 'content',
-                    label: 'Content',
-                    placement: 'main',
-                    priority: 0,
-                    fields: [{ name: 'description', type: 'textarea' }],
-                },
-            ],
+            fields: [fields.textarea('description')],
         },
         tag: {
             single: 'Tag',
             plural: 'Tags',
-            fieldGroups: [
-                {
-                    name: 'content',
-                    label: 'Content',
-                    placement: 'main',
-                    priority: 0,
-                    fields: [{ name: 'color', type: 'text' }],
-                },
-            ],
+            fields: [fields.text('color')],
         },
         showcase: {
             single: 'Showcase',
             plural: 'Showcase',
-            fieldGroups: [
-                {
-                    name: 'basic',
-                    label: 'Basic Fields',
-                    placement: 'main',
-                    priority: 0,
-                    fields: [
-                        { name: 'summary', type: 'textarea', label: 'Summary' },
-                        {
-                            name: 'score',
-                            type: 'range',
-                            label: 'Score',
-                            min: 0,
-                            max: 100,
-                            step: 5,
-                        },
-                        {
-                            name: 'rating',
-                            type: 'number',
-                            label: 'Rating',
-                            min: 1,
-                            max: 5,
-                        },
-                        {
-                            name: 'published_date',
-                            type: 'date',
-                            label: 'Published Date',
-                        },
-                        {
-                            name: 'active',
-                            type: 'boolean',
-                            label: 'Active',
-                            checkboxLabel: 'This item is active',
-                        },
-                        {
-                            name: 'color_theme',
-                            type: 'color',
-                            label: 'Color Theme',
-                        },
-                        { name: 'website', type: 'url', label: 'Website' },
-                        {
-                            name: 'contact_email',
-                            type: 'email',
-                            label: 'Contact Email',
-                        },
-                    ],
-                },
-                {
-                    name: 'choices',
-                    label: 'Choice Fields',
-                    placement: 'main',
-                    priority: 10,
-                    fields: [
-                        {
-                            name: 'status_select',
-                            type: 'select',
-                            label: 'Status',
-                            options: ['active', 'inactive', 'pending', 'archived'],
-                        },
-                        {
-                            name: 'features',
-                            type: 'checkbox-group',
-                            label: 'Features',
-                            options: [
-                                'Dark Mode',
-                                'Notifications',
-                                'Analytics',
-                                'API Access',
-                                'SSO',
-                            ],
-                        },
-                        {
-                            name: 'priority',
-                            type: 'radio-group',
-                            label: 'Priority',
-                            options: ['low', 'medium', 'high', 'critical'],
-                        },
-                        {
-                            name: 'tags',
-                            type: 'multiselect',
-                            label: 'Tags',
-                            options: [
-                                'frontend',
-                                'backend',
-                                'design',
-                                'devops',
-                                'mobile',
-                            ],
-                        },
-                    ],
-                },
-                {
-                    name: 'structured',
-                    label: 'Structured Fields',
-                    placement: 'main',
-                    priority: 20,
-                    fields: [
-                        { name: 'cta_link', type: 'link', label: 'CTA Link' },
-                        {
-                            name: 'metadata',
-                            type: 'key-value',
-                            label: 'Metadata',
-                        },
-                        {
-                            name: 'config',
-                            type: 'json',
-                            label: 'Config JSON',
-                        },
-                    ],
-                },
-                {
-                    name: 'layout_demo',
-                    label: 'Layout Fields',
-                    placement: 'main',
-                    priority: 30,
-                    fields: [
-                        {
-                            name: 'advanced_settings',
-                            type: 'accordion',
-                            label: 'Advanced Settings',
-                            collapsed: true,
-                            fields: [
-                                {
-                                    name: 'cache_ttl',
-                                    type: 'number',
-                                    label: 'Cache TTL (seconds)',
-                                },
-                                {
-                                    name: 'robots',
-                                    type: 'text',
-                                    label: 'Robots Directive',
-                                },
-                            ],
-                        },
-                        {
-                            name: 'content_tabs',
-                            type: 'tab',
-                            label: 'Content Tabs',
-                            options: ['English', 'French', 'Spanish'],
-                            fields: [
-                                {
-                                    name: 'en_content',
-                                    type: 'textarea',
-                                    label: 'English Content',
-                                    tab: 'English',
-                                },
-                                {
-                                    name: 'fr_content',
-                                    type: 'textarea',
-                                    label: 'French Content',
-                                    tab: 'French',
-                                },
-                                {
-                                    name: 'es_content',
-                                    type: 'textarea',
-                                    label: 'Spanish Content',
-                                    tab: 'Spanish',
-                                },
-                            ],
-                        },
-                    ],
-                },
-                {
-                    name: 'media_relations',
-                    label: 'Media & Relations',
-                    placement: 'sidebar',
-                    priority: 0,
-                    fields: [
-                        {
-                            name: 'hero_image',
-                            type: 'media',
-                            label: 'Hero Image',
-                        },
-                        {
-                            name: 'gallery',
-                            type: 'media',
-                            label: 'Gallery',
-                            multiple: true,
-                        },
-                        {
-                            name: 'related_posts',
-                            type: 'relation',
-                            target: 'post',
-                            multiple: true,
-                            label: 'Related Posts',
-                        },
-                    ],
-                },
-            ],
+            fields: {
+                main: [
+                    fields.section('basic-fields', {
+                        fields: [
+                            fields.textarea('summary', { label: 'Summary' }),
+                            fields.range('score', {
+                                label: 'Score',
+                                min: 0,
+                                max: 100,
+                                step: 5,
+                            }),
+                            fields.number('rating', { label: 'Rating', min: 1, max: 5 }),
+                            fields.date('published_date', { label: 'Published Date' }),
+                            fields.boolean('active', { label: 'Active' }),
+                            fields.color('color_theme', { label: 'Color Theme' }),
+                            fields.url('website', { label: 'Website' }),
+                            fields.email('contact_email', { label: 'Contact Email' }),
+                        ],
+                    }),
+                    fields.section('choice-fields', {
+                        fields: [
+                            fields.select('status_select', {
+                                label: 'Status',
+                                options: ['active', 'inactive', 'pending', 'archived'],
+                            }),
+                            fields.checkboxGroup('features', {
+                                label: 'Features',
+                                options: [
+                                    'Dark Mode',
+                                    'Notifications',
+                                    'Analytics',
+                                    'API Access',
+                                    'SSO',
+                                ],
+                            }),
+                            fields.radioGroup('priority', {
+                                label: 'Priority',
+                                options: ['low', 'medium', 'high', 'critical'],
+                            }),
+                            fields.multiselect('tags', {
+                                label: 'Tags',
+                                options: [
+                                    'frontend',
+                                    'backend',
+                                    'design',
+                                    'devops',
+                                    'mobile',
+                                ],
+                            }),
+                        ],
+                    }),
+                    fields.section('structured-fields', {
+                        fields: [
+                            fields.link('cta_link', { label: 'CTA Link' }),
+                            fields.keyValue('metadata', { label: 'Metadata' }),
+                            fields.json('config', { label: 'Config JSON' }),
+                        ],
+                    }),
+                    fields.section('layout-fields', {
+                        fields: [
+                            fields.accordion('advanced-settings', {
+                                collapsed: true,
+                                fields: [
+                                    fields.number('cache_ttl', {
+                                        label: 'Cache TTL (seconds)',
+                                    }),
+                                    fields.text('robots', { label: 'Robots Directive' }),
+                                ],
+                            }),
+                            fields.tabs({
+                                fields: [
+                                    fields.tab('english', {
+                                        fields: [
+                                            fields.textarea('en_content', {
+                                                label: 'English Content',
+                                            }),
+                                        ],
+                                    }),
+                                    fields.tab('french', {
+                                        fields: [
+                                            fields.textarea('fr_content', {
+                                                label: 'French Content',
+                                            }),
+                                        ],
+                                    }),
+                                    fields.tab('spanish', {
+                                        fields: [
+                                            fields.textarea('es_content', {
+                                                label: 'Spanish Content',
+                                            }),
+                                        ],
+                                    }),
+                                ],
+                            }),
+                        ],
+                    }),
+                ],
+                sidebar: [
+                    fields.section('media-relations', {
+                        label: 'Media & Relations',
+                        fields: [
+                            fields.media('hero_image', { label: 'Hero Image' }),
+                            fields.media('gallery', { label: 'Gallery', multiple: true }),
+                            fields.relationship('related_posts', {
+                                target: 'post',
+                                multiple: true,
+                                label: 'Related Posts',
+                            }),
+                        ],
+                    }),
+                ],
+            },
         },
     },
 
     media: {
-        fieldGroups: [
-            {
-                name: 'metadata',
-                label: 'Metadata',
-                placement: 'main',
-                priority: 0,
-                fields: [
-                    { name: 'photographer', type: 'text' },
-                    { name: 'copyright', type: 'text' },
-                    { name: 'alt_text', type: 'text' },
-                ],
-            },
+        fields: [
+            fields.text('photographer'),
+            fields.text('copyright'),
+            fields.text('alt_text'),
         ],
     },
 
     users: {
-        fieldGroups: [
-            {
-                name: 'profile',
-                label: 'Profile',
-                placement: 'main',
-                priority: 0,
-                fields: [
-                    { name: 'bio', type: 'textarea' },
-                    { name: 'avatar', type: 'relation', target: 'media' },
-                ],
-            },
+        fields: [
+            fields.textarea('bio'),
+            fields.relationship('avatar', { target: 'media' }),
         ],
     },
 });

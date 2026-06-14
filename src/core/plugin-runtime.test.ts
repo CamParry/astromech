@@ -26,20 +26,13 @@ const config: ResolvedConfig = {
         posts: {
             single: 'Post',
             plural: 'Posts',
-            fieldGroups: [
-                {
-                    name: 'main',
-                    label: 'Main',
-                    placement: 'main',
-                    fields: [{ name: 'body', type: 'richtext' }],
-                },
-                {
-                    name: 'seo',
-                    label: 'SEO',
-                    placement: 'sidebar',
-                    fields: [{ name: 'seo-meta', type: 'json' }],
-                },
-            ],
+            fields: {
+                main: [
+                    { name: 'body', type: 'richtext' },
+                    { name: 'seo-meta', type: 'json' },
+                ],
+                sidebar: [],
+            },
             capabilities: {
                 statuses: true,
                 slug: true,
@@ -52,14 +45,10 @@ const config: ResolvedConfig = {
         pages: {
             single: 'Page',
             plural: 'Pages',
-            fieldGroups: [
-                {
-                    name: 'main',
-                    label: 'Main',
-                    placement: 'main',
-                    fields: [{ name: 'body', type: 'richtext' }],
-                },
-            ],
+            fields: {
+                main: [{ name: 'body', type: 'richtext' }],
+                sidebar: [],
+            },
             capabilities: {
                 statuses: true,
                 slug: true,
