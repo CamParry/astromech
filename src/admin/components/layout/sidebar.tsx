@@ -6,7 +6,6 @@ import {
     Image,
     Users,
     Settings,
-    Database,
     ChevronLeft,
     ChevronRight,
     Puzzle,
@@ -17,6 +16,9 @@ import type { PluginNavItem } from '@/types/index.js';
 import { useUI } from '../../context/ui.js';
 import { usePermissions } from '../../hooks/index.js';
 import { Logo } from '../brand/Brand.js';
+import { EntryTypeIcon } from '../ui/entry-type-icon.js';
+import { resolveLabel } from '../../i18n/labels.js';
+
 
 /**
  * Drop nav items the user lacks permission for, recursively. A linkless
@@ -43,6 +45,7 @@ export function Sidebar() {
     const { canReadMedia, canReadUsers, canReadSettings, hasPermission } =
         usePermissions();
     const entryTypes = Object.entries(adminConfig.entries);
+    const appPages = adminConfig.pages ?? [];
     const pluginNavItems = filterNavItems(
         adminConfig.plugins.flatMap((plugin) => plugin.nav),
         hasPermission
@@ -95,11 +98,28 @@ export function Sidebar() {
                                     key={key}
                                     to={`/entries/${key}`}
                                     label={entryType.plural}
-                                    icon={<Database size={16} />}
+                                    icon={<EntryTypeIcon name={entryType.icon} />}
                                 />
                             ))}
                         </ul>
                     </nav>
+                )}
+                {appPages.length > 0 && canReadSettings() && (
+                    <>
+                        <div className="am-sidebar-nav-divider"></div>
+                        <nav className="am-sidebar-nav" aria-label={t('nav.pages')}>
+                            <ul className="am-sidebar-nav-list" role="list">
+                                {appPages.map((page) => (
+                                    <SidebarNavItem
+                                        key={page.path}
+                                        to={`/page/${page.path}`}
+                                        label={resolveLabel(page.label, page.path, t, 'translation')}
+                                        icon={<PluginNavIcon name={page.icon} />}
+                                    />
+                                ))}
+                            </ul>
+                        </nav>
+                    </>
                 )}
                 {pluginNavItems.length > 0 && (
                     <>

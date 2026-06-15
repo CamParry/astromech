@@ -7,12 +7,13 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui/react/menu';
-import { Bell, CircleHelp, FilePlus, LogOut, Menu as MenuIcon, Monitor, Moon, Plus, Search, Sun, UserIcon } from 'lucide-react';
+import { Bell, CircleHelp, LogOut, Menu as MenuIcon, Moon, Plus, Search, Sun, UserIcon } from 'lucide-react';
 import adminConfig from 'virtual:astromech/admin-config';
 import { useAuth } from '../../context/auth.js';
 import { useUI } from '../../context/ui.js';
 import { useTheme } from '../../context/theme.js';
 import { useCommandPalette } from '../ui/command-palette.js';
+import { EntryTypeIcon } from '../ui/entry-type-icon.js';
 
 export function Topbar() {
     const { user, logout } = useAuth();
@@ -56,7 +57,6 @@ export function Topbar() {
                     >
                         <Search size={15} className="am-topbar-search-icon" />
                         <span className="am-topbar-search-placeholder">{t('topbar.searchPlaceholder')}</span>
-                        <kbd className="am-topbar-search-kbd">⌘K</kbd>
                     </button>
                 </div>
             </div>
@@ -87,25 +87,13 @@ export function Topbar() {
                     type="button"
                     className="am-topbar-action-btn"
                     aria-label={
-                        theme === 'light'
+                        theme === 'dark'
                             ? t('topbar.themeLight')
-                            : theme === 'dark'
-                              ? t('topbar.themeDark')
-                              : t('topbar.themeSystem')
+                            : t('topbar.themeDark')
                     }
-                    onClick={() => {
-                        const next =
-                            theme === 'auto' ? 'light' : theme === 'light' ? 'dark' : 'auto';
-                        setTheme(next);
-                    }}
+                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 >
-                    {theme === 'light' ? (
-                        <Sun size={17} />
-                    ) : theme === 'dark' ? (
-                        <Moon size={17} />
-                    ) : (
-                        <Monitor size={17} />
-                    )}
+                    {theme === 'dark' ? <Moon size={17} /> : <Sun size={17} />}
                 </button>
 
                 {/* Quick create */}
@@ -137,7 +125,7 @@ export function Topbar() {
                                                 })
                                             }
                                         >
-                                            <span className="am-topbar-menu-item-icon"><FilePlus size={14} /></span>
+                                            <span className="am-topbar-menu-item-icon"><EntryTypeIcon name={entryType.icon} size={14} /></span>
                                             {entryType.single}
                                         </Menu.Item>
                                     ))}

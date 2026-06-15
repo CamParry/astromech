@@ -29,6 +29,7 @@ export const CORE_FIELD_TYPES = [
     'group',
     'repeater',
     'blocks',
+    'tree',
     'email',
     'url',
     'color',
@@ -71,7 +72,6 @@ export type SelectOption = {
 export type BlockDefinition = {
     type: string;
     label?: Label;
-    icon?: string;
     fields: FieldDefinition[];
 };
 
@@ -102,14 +102,32 @@ export type FieldDefinition = {
     inverse?: string;
     ordered?: boolean;
     onDelete?: 'cascade' | 'set-null' | 'restrict';
-    /** Children for layout containers and `group`/`repeater`. */
+    /** Children for layout containers and `group`/`repeater`/`tree`. */
     fields?: FieldDefinition[];
     min?: number;
     max?: number;
+    /** Maximum nesting depth for `tree` fields. Unlimited when omitted. */
+    maxDepth?: number;
+    /**
+     * `group` only. When `false` the group becomes invisible chrome: box AND
+     * label are dropped and the sub-fields render inline, keeping only the nested
+     * data key. Wrap it in a `section` when a heading/surface is wanted. Defaults
+     * to `true`.
+     */
+    container?: boolean;
     step?: number;
     collapsed?: boolean;
     accept?: string;
     blocks?: BlockDefinition[];
+
+    /**
+     * Advisory character counter for `text`/`textarea`. `true` shows the length
+     * only; a range adds under/good/over status colouring. Soft — exceeding
+     * `max` is allowed and merely flagged. For a hard cap use `maxLength`.
+     */
+    count?: boolean | { min?: number; max?: number };
+    /** Enforced maximum input length (HTML `maxlength`) on text inputs. */
+    maxLength?: number;
 
     // Translation support
     translatable?: boolean;
@@ -119,6 +137,9 @@ export type FieldDefinition = {
      * into the entry type's `search` list at resolve time.
      */
     searchable?: boolean;
+
+    /** When true, this field is omitted from `public`-shape reads. Default: false (public). */
+    private?: boolean;
 };
 
 /**

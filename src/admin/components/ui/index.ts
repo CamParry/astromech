@@ -67,8 +67,7 @@ export {
     FormLayout,
     FormLayoutActions,
     FormLayoutContent,
-    FormLayoutMain,
-    FormLayoutSidebar,
+    Stack,
     ButtonGroup,
     PageLoading,
 } from './page.js';
@@ -140,3 +139,6 @@ export type { PaginationProps } from './pagination.js';
 
 // Plugin runtime context hook (spec §8) — only usable inside plugin surfaces.
 export { useAstromechPlugin } from '../../context/plugin.js';
+
+// Sibling-value access for custom field renderers (e.g. computed/preview fields).
+export { useFieldValue } from '../fields/field-context.js';

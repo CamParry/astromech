@@ -8,7 +8,11 @@
  * permission strings.
  */
 
-import type { PluginDefinition, ResolvedPluginIdentity } from '@/types/index.js';
+import type {
+    EntryTypeConfig,
+    PluginDefinition,
+    ResolvedPluginIdentity,
+} from '@/types/index.js';
 
 /** `@astromech/redirects` → `astromech-redirects` (lowercase, no `@`, `/`→`-`). */
 export function sanitisePackage(pkg: string): string {
@@ -19,6 +23,56 @@ export function sanitisePackage(pkg: string): string {
 export function derivePluginName(pkg: string): string {
     const segments = pkg.split('/');
     return segments[segments.length - 1] ?? pkg;
+}
+
+/** Drizzle table-name prefix for a plugin's own tables: `plugin_{alias}_`. */
+export function pluginTablePrefix(alias: string): string {
+    return `plugin_${alias}_`;
+}
+
+/**
+ * Default `schemaModule` specifier for a first-party plugin: the published
+ * subpath `astromech/plugins/{alias}/schema`. When a plugin graduates to its
+ * own npm package this becomes `{package}/schema` — derive from identity then.
+ */
+export function pluginSchemaModule(alias: string): string {
+    return `astromech/plugins/${alias}/schema`;
+}
+
+/**
+ * In-tree module-specifier root for a plugin's admin assets (page/field
+ * components, locale bundles) — `@/plugins/{alias}`. Mirrors
+ * `pluginSchemaModule`: when a plugin graduates to its own package this becomes
+ * `{package}`, swapped here in one place rather than at every asset site.
+ */
+export function pluginAssetRoot(alias: string): string {
+    return `@/plugins/${alias}`;
+}
+
+/** `redirects` → `Redirects`, `my-plugin` → `My Plugin`. Fallback admin label. */
+export function titleCaseAlias(alias: string): string {
+    return alias
+        .split(/[-_]/)
+        .filter(Boolean)
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+}
+
+/**
+ * Plugin entry types as `[type, config]` pairs. Configs in the `entries` array
+ * self-declare their `type`; this validates presence and adapts to the keyed
+ * shape the resolver, nav, and storage registry consume.
+ */
+export function pluginEntryTypes(def: PluginDefinition): [string, EntryTypeConfig][] {
+    return (def.entries ?? []).map((cfg) => {
+        if (!cfg.type) {
+            throw new Error(
+                `Astromech plugin "${def.package}" declares an entry type without a "type". ` +
+                    `Plugin entry configs must set their own \`type\` key.`
+            );
+        }
+        return [cfg.type, cfg];
+    });
 }
 
 /** Compute the full identity for a single plugin definition. */

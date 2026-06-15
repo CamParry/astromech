@@ -218,7 +218,7 @@ describe('generateSdkTypes — plugin entry types', () => {
         expect(output).toContain('interface AstromechPluginEntryTypes {');
         expect(output).toContain('redirects: {');
         expect(output).toContain(
-            'redirect: { fields: PluginRedirectsRedirectFields; relations: PluginRedirectsRedirectRelations };'
+            'redirect: { fields: PluginRedirectsRedirectFields; fieldsPublic: PluginRedirectsRedirectFieldsPublic; relations: PluginRedirectsRedirectRelations };'
         );
     });
 

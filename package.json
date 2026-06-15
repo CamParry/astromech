@@ -80,6 +80,10 @@
             "types": "./dist/plugins/seo/index.d.ts",
             "default": "./dist/plugins/seo/index.js"
         },
+        "./plugins/menus": {
+            "types": "./dist/plugins/menus/index.d.ts",
+            "default": "./dist/plugins/menus/index.js"
+        },
         "./ui/fields": {
             "types": "./dist/admin/components/fields/index.d.ts",
             "default": "./dist/admin/components/fields/index.js"
@@ -115,6 +119,7 @@
         "db:migrate": "drizzle-kit migrate",
         "db:push": "drizzle-kit push",
         "db:seed": "tsx scripts/seed.ts",
+        "db:seed:demo": "tsx demo/seed.ts",
         "changeset": "changeset",
         "version": "changeset version",
         "release": "npm run build && changeset publish",

@@ -26,13 +26,14 @@ const widgetsPlugin: PluginDefinition = {
     sdk: {
         ping: { access: 'public', handler: () => 'pong' },
     },
-    entries: {
-        widget: {
+    entries: [
+        {
+            type: 'widget',
             single: 'Widget',
             plural: 'Widgets',
             fields: [{ name: 'label', type: 'text', label: 'Label' }],
         },
-    },
+    ],
 };
 
 function configWithWidgets(): AstromechConfig {
@@ -97,7 +98,7 @@ describe('plugin entries mount — permission matrix + CRUD', () => {
         const created = await app.request('/plugins/widgets/entries/widget', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: 'W1', fields: { label: 'hi' } }),
+            body: JSON.stringify({ title: 'W1', fields: { label: 'hi' }, status: 'published' }),
         });
         expect(created.status).toBe(201);
         const createdBody = (await created.json()) as {
@@ -130,6 +131,104 @@ describe('plugin entries mount — permission matrix + CRUD', () => {
     it('allows the broad plugin wildcard grant', async () => {
         const app = mountedApp(roleWith(['plugin:widgets:*']));
         const res = await app.request('/plugins/widgets/entries/widget');
+        expect(res.status).toBe(200);
+    });
+
+    it('GET list ?full=true — 403 when role lacks entry:read:full', async () => {
+        // plugin:widgets:entry:widget:* grants type-level read but not the
+        // cross-cutting entry:read:full capability
+        const app = mountedApp(roleWith(['plugin:widgets:entry:widget:*']));
+        const res = await app.request('/plugins/widgets/entries/widget?full=true');
+        expect(res.status).toBe(403);
+    });
+
+    it('GET list ?full=true — 200 when role has entry:read:full via entry:*', async () => {
+        // entry:* trailing wildcard covers entry:read:full
+        const app = mountedApp(roleWith(['plugin:widgets:entry:widget:*', 'entry:*']));
+        const res = await app.request('/plugins/widgets/entries/widget?full=true');
+        expect(res.status).toBe(200);
+    });
+
+    it('GET list ?full=true — 200 when role has entry:read:full via *', async () => {
+        // * (admin) covers everything
+        const app = mountedApp(roleWith(['*']));
+        const res = await app.request('/plugins/widgets/entries/widget?full=true');
+        expect(res.status).toBe(200);
+    });
+
+    it('GET list without full — 200 regardless of entry:read:full capability', async () => {
+        // No full flag → no capability check; passes as public read
+        const app = mountedApp(roleWith(['plugin:widgets:entry:widget:*']));
+        const res = await app.request('/plugins/widgets/entries/widget');
+        expect(res.status).toBe(200);
+    });
+
+    it('GET :id ?full=true — 403 when role lacks entry:read:full', async () => {
+        const app = mountedApp(roleWith(['plugin:widgets:entry:widget:*']));
+        // Create an entry first so we have an id to fetch
+        const created = await app.request('/plugins/widgets/entries/widget', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'FullTest', fields: { label: 'test' } }),
+        });
+        const { data } = (await created.json()) as { data: { id: string } };
+        const res = await app.request(
+            `/plugins/widgets/entries/widget/${data.id}?full=true`
+        );
+        expect(res.status).toBe(403);
+    });
+
+    it('GET :id ?full=true — 200 when role has entry:*', async () => {
+        const app = mountedApp(roleWith(['plugin:widgets:entry:widget:*', 'entry:*']));
+        const created = await app.request('/plugins/widgets/entries/widget', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'FullTest2', fields: { label: 'test2' } }),
+        });
+        const { data } = (await created.json()) as { data: { id: string } };
+        const res = await app.request(
+            `/plugins/widgets/entries/widget/${data.id}?full=true`
+        );
+        expect(res.status).toBe(200);
+    });
+
+    it('POST :type/query full=true — 403 when role lacks entry:read:full', async () => {
+        const app = mountedApp(roleWith(['plugin:widgets:entry:widget:*']));
+        const res = await app.request('/plugins/widgets/entries/widget/query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ full: true }),
+        });
+        expect(res.status).toBe(403);
+    });
+
+    it('POST :type/query full=true — 200 when role has entry:*', async () => {
+        const app = mountedApp(roleWith(['plugin:widgets:entry:widget:*', 'entry:*']));
+        const res = await app.request('/plugins/widgets/entries/widget/query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ full: true }),
+        });
+        expect(res.status).toBe(200);
+    });
+
+    it('POST /query full=true — 403 when role lacks entry:read:full', async () => {
+        const app = mountedApp(roleWith(['plugin:widgets:entry:widget:*']));
+        const res = await app.request('/plugins/widgets/entries/query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'widget', full: true }),
+        });
+        expect(res.status).toBe(403);
+    });
+
+    it('POST /query full=true — 200 when role has entry:*', async () => {
+        const app = mountedApp(roleWith(['plugin:widgets:entry:widget:*', 'entry:*']));
+        const res = await app.request('/plugins/widgets/entries/query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'widget', full: true }),
+        });
         expect(res.status).toBe(200);
     });
 });

@@ -4,6 +4,7 @@ import { Input } from '@/admin/components/ui/input';
 import { getFieldComponent } from '@/admin/definitions/field-registry.js';
 import { useLabel } from '@/admin/i18n/entry-namespace.js';
 import { hasPluginFieldType, PluginField } from './plugin-field';
+import { FieldPathProvider } from './field-context';
 
 export type FormFieldProps = {
     field: FieldDefinition;
@@ -47,6 +48,13 @@ export function FormField({
         />
     );
 
+    // A container-less group is invisible chrome — pure data nesting. It renders
+    // its sub-fields inline with no label or box; pair it with a `section` for a
+    // heading/surface.
+    if (field.type === 'group' && field.container === false) {
+        return <FieldPathProvider path={commonProps.name}>{control}</FieldPathProvider>;
+    }
+
     return (
         <div className="am-field">
             <label className="am-field-label">
@@ -56,7 +64,7 @@ export function FormField({
             {field.description !== undefined && (
                 <p className="am-field-hint">{label(field.description, field.name)}</p>
             )}
-            {control}
+            <FieldPathProvider path={commonProps.name}>{control}</FieldPathProvider>
         </div>
     );
 }

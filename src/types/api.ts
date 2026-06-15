@@ -54,6 +54,8 @@ export type EntryQueryParams = {
     populate?: string[];
     /** Locale code, or `'all'` for rows across every locale. Defaults to configured `defaultLocale`. */
     locale?: string | AllLocales;
+    /** Request the full (admin) shape instead of the default public shape. */
+    full?: boolean;
 };
 
 export type QueryResult<T = Entry> = {
@@ -119,6 +121,8 @@ export type EntriesApi = {
         id: string;
         locale?: string;
         populate?: string[];
+        /** Request the full (admin) shape instead of the default public shape. */
+        full?: boolean;
     }): Promise<Entry | null>;
 
     create(params: {
@@ -233,8 +237,17 @@ export type MediaApi = {
 };
 
 export type SettingsApi = {
-    all(): Promise<Setting[]>;
-    get(key: string): Promise<JsonValue | null>;
+    /**
+     * Return all settings. Without `full: true` only public-marked keys are
+     * returned (private keys are omitted). Pass `{ full: true }` from a trusted
+     * (server-side / authenticated) context to receive all keys.
+     */
+    all(opts?: { full?: boolean }): Promise<Setting[]>;
+    /**
+     * Return a single setting value. Without `full: true` only public-marked
+     * keys resolve; a non-public key returns `null` on a public read.
+     */
+    get(key: string, opts?: { locale?: string; full?: boolean }): Promise<JsonValue | null>;
     set(key: string, value: JsonValue): Promise<Setting>;
 };
 

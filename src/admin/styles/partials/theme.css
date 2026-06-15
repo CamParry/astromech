@@ -1,4 +1,6 @@
 :root {
+    color-scheme: light;
+
     /* ------------------------------------------------------------------ */
     /* Primitive tokens — Neutral (Stone: warm undertone)                  */
     /* ------------------------------------------------------------------ */
@@ -82,6 +84,11 @@
     --am-color-bg-base: var(--am-color-neutral-0);
     --am-color-bg-muted: var(--am-color-neutral-50);
     --am-color-bg-subtle: var(--am-color-neutral-100);
+    /* Raised surfaces — cards/panels that sit above the page canvas. In dark
+       mode these go lighter than the canvas (raised = lighter); in light mode
+       they mirror muted/subtle so existing light surfaces are unchanged. */
+    --am-color-bg-surface: var(--am-color-neutral-50);
+    --am-color-bg-surface-header: var(--am-color-neutral-100);
     --am-color-text-default: var(--am-color-neutral-900);
     --am-color-text-muted: var(--am-color-neutral-500);
     --am-color-text-placeholder: var(--am-color-neutral-400);
@@ -149,10 +156,14 @@
     --am-popup-background-color: var(--am-color-bg-base);
     --am-popup-min-width: 11rem;
     --am-menu-item-highlighted-background-color: var(--am-color-bg-subtle);
+    /* Shadows cast with black-alpha so they read on any surface; dark themes
+       override --am-shadow-color with a stronger alpha (a border-colored shadow
+       is invisible on a dark canvas). */
+    --am-shadow-color: rgb(0 0 0 / 0.1);
     --am-popup-shadow:
-        0 10px 15px -3px var(--am-color-border), 0 4px 6px -4px var(--am-color-border);
+        0 10px 15px -3px var(--am-shadow-color), 0 4px 6px -4px var(--am-shadow-color);
     --am-modal-shadow:
-        0 20px 25px -5px var(--am-color-border), 0 8px 10px -6px var(--am-color-border);
+        0 20px 25px -5px var(--am-shadow-color), 0 8px 10px -6px var(--am-shadow-color);
 
     /* Focus outline — applied globally via :focus-visible in base.css */
     --am-focus-color: var(--am-color-primary-500);
@@ -166,14 +177,20 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Dark theme — explicit data-theme attribute                           */
+/* Dark theme — driven solely by the data-theme attribute.             */
+/* data-theme is set before first paint (server from cookie, or the    */
+/* inline shell script from system preference), so it is the single     */
+/* source of truth — no prefers-color-scheme media query needed.        */
 /* In dark mode: bg-muted is the darkest canvas, bg-base is the        */
 /* surface (cards, sidebar, topbar) sitting on top of it.              */
 /* ------------------------------------------------------------------ */
 [data-theme='dark'] {
+    color-scheme: dark;
     --am-color-bg-base: var(--am-color-neutral-900);
     --am-color-bg-muted: var(--am-color-neutral-950);
     --am-color-bg-subtle: var(--am-color-neutral-800);
+    --am-color-bg-surface: var(--am-color-neutral-800);
+    --am-color-bg-surface-header: var(--am-color-neutral-900);
     --am-color-text-default: var(--am-color-neutral-50);
     --am-color-text-muted: var(--am-color-neutral-300);
     --am-color-text-placeholder: var(--am-color-neutral-500);
@@ -195,38 +212,7 @@
     --am-color-primary-emphasis: var(--am-color-primary-300);
     --am-color-interactive-bg: var(--am-color-neutral-700);
     --am-color-interactive-bg-hover: var(--am-color-neutral-600);
-}
-
-/* ------------------------------------------------------------------ */
-/* Dark theme — system preference (only when no explicit override)     */
-/* ------------------------------------------------------------------ */
-@media (prefers-color-scheme: dark) {
-    :root:not([data-theme='light']) {
-        --am-color-bg-base: var(--am-color-neutral-900);
-        --am-color-bg-muted: var(--am-color-neutral-950);
-        --am-color-bg-subtle: var(--am-color-neutral-800);
-        --am-color-text-default: var(--am-color-neutral-50);
-        --am-color-text-muted: var(--am-color-neutral-300);
-        --am-color-text-placeholder: var(--am-color-neutral-500);
-        --am-color-border: var(--am-color-neutral-800);
-        --am-color-border-strong: var(--am-color-neutral-700);
-        --am-color-primary: var(--am-color-primary-400);
-        --am-color-text-secondary: var(--am-color-neutral-400);
-        --am-color-danger: var(--am-color-danger-400);
-        --am-color-danger-emphasis: var(--am-color-danger-300);
-        --am-color-danger-bg: var(--am-color-danger-950);
-        --am-color-danger-border: var(--am-color-danger-800);
-        --am-color-success: var(--am-color-success-400);
-        --am-color-success-bg: var(--am-color-success-950);
-        --am-color-warning: var(--am-color-warning-300);
-        --am-color-warning-bg: var(--am-color-warning-950);
-        --am-color-warning-border: var(--am-color-warning-700);
-        --am-color-primary-subtle: var(--am-color-primary-950);
-        --am-color-primary-subtle-hover: var(--am-color-primary-900);
-        --am-color-primary-emphasis: var(--am-color-primary-300);
-        --am-color-interactive-bg: var(--am-color-neutral-700);
-        --am-color-interactive-bg-hover: var(--am-color-neutral-600);
-    }
+    --am-shadow-color: rgb(0 0 0 / 0.5);
 }
 
 /* ------------------------------------------------------------------ */

@@ -4,6 +4,7 @@
  */
 
 import type {
+    AdminPage,
     AstromechConfig,
     DefinedHook,
     EntryTypeConfig,
@@ -11,7 +12,6 @@ import type {
     HookHandlerFor,
     PluginDefinition,
     PluginFactory,
-    PluginPage,
     PluginSdkMethod,
 } from '@/types/index.js';
 
@@ -35,6 +35,9 @@ export {
     BUILT_IN_ROLES,
 } from '@/core/permissions.js';
 export type { BuiltInRoleSlug } from '@/core/permissions.js';
+export { withDefaults } from '@/core/options.js';
+export { resolveEntryUrl, resolveEntryPath } from '@/core/entry-url.js';
+export type { UrlEntry } from '@/core/entry-url.js';
 
 // Field factories now live in the `astromech/fields` subpath (see src/fields.ts).
 
@@ -69,12 +72,13 @@ export function definePlugin<Options = void>(
 }
 
 /**
- * Define an admin page for a plugin's `admin.pages`. A page is a `component`
- * view or an auto-rendered `settings` form, and appears in the sidebar
- * unless it opts out (`nav: false`). Typed identity helper — useful when
- * pages are authored outside the plugin definition.
+ * Define an admin page for use in `admin.pages` (both host app and plugins).
+ * A page is a `component` view or a `fields` settings form, and appears in
+ * the sidebar unless it opts out (`nav: false`). Exactly one of `fields` or
+ * `component` must be provided; this is validated crash-loud at config
+ * resolution.
  */
-export function defineAdminPage(page: PluginPage): PluginPage {
+export function defineAdminPage(page: AdminPage): AdminPage {
     return page;
 }
 

@@ -121,7 +121,6 @@ describe('field factories — data containers (name-first, nested)', () => {
             blocks: [
                 block('hero', {
                     label: 'Hero',
-                    icon: 'image',
                     fields: [text('heading')],
                 }),
                 block('quote', { fields: [textarea('text')] }),
@@ -132,7 +131,6 @@ describe('field factories — data containers (name-first, nested)', () => {
         expect(result.blocks?.[0]).toEqual({
             type: 'hero',
             label: 'Hero',
-            icon: 'image',
             fields: [{ name: 'heading', type: 'text' }],
         });
     });

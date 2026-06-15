@@ -14,13 +14,16 @@ import { useTranslation } from 'react-i18next';
 import { createEntriesApi } from '@/sdk/fetch/index.js';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntriesListPage } from '@/admin/components/entries/entries-list-page.js';
-import { buildPluginEntriesSurface } from '@/admin/components/entries/surface.js';
+import {
+    buildPluginEntriesSurface,
+    validateEntriesListSearch,
+} from '@/admin/components/entries/surface.js';
 import { EmptyState, Page, PageContent } from '@/admin/components/ui/index.js';
 
 function PluginEntryListPage(): React.ReactElement {
     const { name, type } = Route.useParams();
     const { t } = useTranslation();
-    const api = createEntriesApi(`/plugins/${name}/entries`);
+    const api = createEntriesApi(`/plugins/${name}/entries`, 'full');
     const surface = buildPluginEntriesSurface(adminConfig.plugins, name, type, api);
     if (!surface) {
         return (
@@ -38,5 +41,6 @@ function PluginEntryListPage(): React.ReactElement {
 }
 
 export const Route = createFileRoute('/_protected/plugin/$name/entries/$type/')({
+    validateSearch: validateEntriesListSearch,
     component: PluginEntryListPage,
 });

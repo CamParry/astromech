@@ -4,8 +4,10 @@
  */
 
 import type {
+    AdminPage,
     AstromechConfig,
     EntryTypeConfig,
+    ResolvedAdminPage,
     ResolvedConfig,
     ResolvedEntryTypeConfig,
 } from '@/types/index.js';
@@ -17,6 +19,7 @@ import type {
 import {
     assertNoPluginCollisions,
     checkPluginDependencies,
+    pluginEntryTypes,
     resolvePluginIdentity,
 } from '@/core/plugin-identity.js';
 import { assertPluginTablePrefixes } from '@/core/plugin-schema.js';
@@ -125,6 +128,49 @@ function resolveEntryTypeConfig(
     };
 }
 
+/** Resolve a single host admin page to the unified ResolvedAdminPage. */
+function resolveAdminPage(page: AdminPage): ResolvedAdminPage {
+    // XOR validation: exactly one of fields / component.
+    if (page.fields === undefined && page.component === undefined) {
+        throw new Error(
+            `Astromech admin page "${page.path}" needs exactly one of \`fields\` or \`component\`.`
+        );
+    }
+    if (page.fields !== undefined && page.component !== undefined) {
+        throw new Error(
+            `Astromech admin page "${page.path}" must have exactly one of \`fields\` or \`component\`, not both.`
+        );
+    }
+
+    // Host component pages: not yet supported — guard with clear error.
+    if (page.component !== undefined) {
+        throw new Error(
+            `Astromech admin page "${page.path}": host custom-component admin pages are not yet supported. ` +
+                `Use \`fields\` for a managed settings form, or define the page as a plugin page.`
+            // TODO: extend the plugin-components codegen to scan host admin.pages and emit
+            // lazy imports for host component pages (see specs/unified-admin-pages.md §custom-component).
+        );
+    }
+
+    const fields = toResolvedFields(page.fields);
+    validateFieldTree(page.path, fields.main, false);
+    validateFieldTree(page.path, fields.sidebar, false);
+
+    return {
+        key: page.path,
+        path: page.path,
+        label: page.label,
+        ...(page.icon !== undefined ? { icon: page.icon } : {}),
+        baseKey: page.path,
+        fields,
+        componentKey: null,
+        translatable: page.translatable ?? false,
+        permission: page.permission ?? 'settings:read',
+        nav: page.nav !== false,
+        public: page.public ?? false,
+    };
+}
+
 /**
  * Boot-time validation for qualified relationship targets. Any relationship
  * field whose `target` is qualified (`{plugin}/{type}`) must resolve against the
@@ -199,7 +245,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
         if (!plugin.entries) continue;
         const name = resolvePluginIdentity(plugin).name;
         const types: Record<string, ResolvedEntryTypeConfig> = {};
-        for (const [type, cfg] of Object.entries(plugin.entries)) {
+        for (const [type, cfg] of pluginEntryTypes(plugin)) {
             types[type] = resolveEntryTypeConfig(
                 `${name}/${type}`,
                 cfg,
@@ -217,6 +263,38 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     // config: the driver instance and plugin definitions (which carry live
     // Drizzle table objects in `schema`) cannot be JSON.stringify'd into the
     // virtual config module — `ResolvedConfig` already omits both.
+    const adminPages: ResolvedAdminPage[] = (config.admin?.pages ?? []).map(resolveAdminPage);
+
+    // Derive the set of publicly-readable setting keys.
+    // 1. Host admin pages with `public: true` expose their baseKey (exact) and
+    //    a `baseKey:` prefix (covers per-locale variants like `globals:en`).
+    // 2. Plugin admin pages with `public: true` do the same for their
+    //    `plugin:<ns>:<path>` baseKey.
+    // 3. The raw `publicSettings` list from config is included verbatim.
+    const publicSettingKeys: string[] = [];
+
+    function addPublicBaseKey(baseKey: string): void {
+        if (!publicSettingKeys.includes(baseKey)) publicSettingKeys.push(baseKey);
+        const prefix = `${baseKey}:`;
+        if (!publicSettingKeys.includes(prefix)) publicSettingKeys.push(prefix);
+    }
+
+    for (const page of adminPages) {
+        if (page.public) addPublicBaseKey(page.baseKey);
+    }
+    for (const plugin of config.plugins ?? []) {
+        const identity = resolvePluginIdentity(plugin);
+        for (const page of plugin.admin?.pages ?? []) {
+            if (page.public) {
+                const baseKey = `plugin:${identity.permissionNamespace}:${page.path}`;
+                addPublicBaseKey(baseKey);
+            }
+        }
+    }
+    for (const key of config.publicSettings ?? []) {
+        if (!publicSettingKeys.includes(key)) publicSettingKeys.push(key);
+    }
+
     const { db: _db, plugins: _plugins, ...rest } = config;
     return {
         ...rest,
@@ -224,9 +302,11 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
         apiRoute: config.apiRoute ?? '/api',
         entries: resolvedEntries,
         pluginEntries,
+        adminPages,
         trash: {
             enabled: config.trash?.enabled ?? true,
             retentionDays: config.trash?.retentionDays ?? 30,
         },
+        publicSettingKeys,
     };
 }

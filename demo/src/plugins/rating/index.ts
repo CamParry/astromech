@@ -1,57 +1,41 @@
 /**
- * Demo plugin exercising `registerFieldType`: a 1-5 star rating field with a
- * renderer, validator, defaultValue, and typeGen contribution.
+ * demo-rating — a teaching plugin that exercises the external-plugin surface:
+ * a custom `rating` field type, a component admin page, an auto-rendered
+ * settings form, localized strings, and a permission bundle.
+ *
+ * It is structured exactly like a first-party plugin (manifest / types /
+ * permissions / fields / pages / a thin `index`), but authored as an *external*
+ * plugin: it imports from the published `astromech` package and resolves assets
+ * via `fileURLToPath` (see `manifest.ts`) rather than published module
+ * specifiers. See `docs/plugins/authoring.md` for the full convention.
  */
 
-import { fileURLToPath } from 'node:url';
 import { definePlugin } from 'astromech';
+import type { PluginDefinition } from 'astromech';
+import { PACKAGE, VERSION, LABEL, ICON, locales } from './manifest.js';
+import { ratingPermissionDefs } from './permissions/rating.js';
+import { ratingField } from './fields/rating.js';
+import { overviewPage } from './pages/overview.js';
+import { settingsPage } from './pages/settings.js';
 
-export const rating = definePlugin(() => ({
-    package: 'demo-rating',
-    version: '1.0.0',
-    permissions: [{ key: 'view', label: 'View rating reports' }],
-    i18n: {
-        en: fileURLToPath(new URL('./locales/en.json', import.meta.url)),
-    },
-    fields: [
-        {
-            type: 'rating',
-            component: fileURLToPath(new URL('./rating-field.tsx', import.meta.url)),
-            defaultValue: 0,
-            typeGen: () => 'number',
+export { ratingPermissions } from './permissions/rating.js';
+export { RATING_FIELD_TYPE } from './types.js';
+
+export const rating = definePlugin(() => {
+    const definition: PluginDefinition = {
+        package: PACKAGE,
+        version: VERSION,
+        label: LABEL,
+        icon: ICON,
+        permissions: ratingPermissionDefs,
+        i18n: locales(['en']),
+        fields: [ratingField],
+        admin: {
+            pages: [overviewPage, settingsPage],
         },
-    ],
-    label: 'Ratings',
-    icon: 'Star',
-    admin: {
-        pages: [
-            {
-                path: '/overview',
-                label: 'Overview',
-                icon: 'ChartBar',
-                component: fileURLToPath(new URL('./overview-page.tsx', import.meta.url)),
-                permission: 'view',
-            },
-            {
-                path: '/settings',
-                label: 'Settings',
-                icon: 'Settings',
-                settings: {
-                    fields: [
-                        {
-                            name: 'minimumQuality',
-                            type: 'number',
-                            label: 'Minimum quality to publish',
-                            description: 'Pages below this rating show a warning.',
-                        },
-                        {
-                            name: 'showInListing',
-                            type: 'boolean',
-                            label: 'Show ratings in entry lists',
-                        },
-                    ],
-                },
-            },
-        ],
-    },
-}));
+    };
+
+    return definition;
+});
+
+export default rating;

@@ -29,7 +29,7 @@ The design introduced several near-synonyms that must stay distinct:
 | **canonical package**      | The npm package name, e.g. `@astromech/redirects`. The stable identity that survives renames.                                                                                                               |
 | **access key** (`name`)    | The key a plugin is reached by on the SDK: `Astromech.plugins.redirects`. Defaults to the last path segment of the package; user-overridable via `alias`.                                                   |
 | **permissionNamespace**    | Sanitised package (`@`→stripped, `/`→`-`, lowercased) used to anchor permission strings: `plugin:astromech-redirects:lookup`. Always derived from the package (no override) so it survives `alias` renames. |
-| **plugin footprint**       | The set of entry types that actually use a plugin. **Derived** from field presence (`ctx.config.entryTypesWithField('seo-meta')`), never declared.                                                          |
+| **plugin footprint**       | The set of entry types that actually use a plugin. **Derived** from field presence (`ctx.config.entryTypesWithField('seo')`), never declared.                                                          |
 | **field-group placement**  | Where a field group renders on the edit page: `'main' \| 'sidebar' \| 'tab'`. Replaces the old panel/tab API.                                                                                               |
 | **hook event**             | A named lifecycle point. Core events are known/typed; plugins declare their own via `hookEvents` and fire them with `ctx.emit(event, payload)`.                                                             |
 | **raw escape hatch**       | A raw request handler mounted inside `/api/plugins/{name}/*` for binary/multipart/streaming, via a thin wrapper (not raw Hono).                                                                             |
@@ -64,10 +64,10 @@ The design introduced several near-synonyms that must stay distinct:
 
 ### 3.4 Fields & edit page
 
-11. **Field injection is explicit attachment only.** The user composes plugin field-group factories into their entry-type config (Filament-style): `fieldGroups: [mainFields, seoFields({ ai: true })]`. **Dynamic `targets` injection removed.**
+11. **Field injection is explicit attachment only.** The user composes plugin field factories into their entry-type `fields` (Filament-style): `fields: [...ownFields, seoSection()]`. **Dynamic `targets` injection removed.**
 12. **No separate panel/tab API.** Extend field-group `placement: 'main' | 'sidebar' | 'tab'`. The tab strip appears only when a group declares `placement: 'tab'` — zero-cost when unused.
 13. **Custom field types are first-class** via `registerFieldType` (renderer + validator + defaultValue + typeGen). Renderers compose from exported core field renderers + UI atoms.
-14. **Plugin footprint is derived, never declared** — `ctx.config.entryTypesWithField('seo-meta')` is the single source of truth for "which entry types use this plugin".
+14. **Plugin footprint is derived, never declared** — `ctx.config.entryTypesWithField('seo')` is the single source of truth for "which entry types use this plugin".
 
 ### 3.5 Admin nav, pages, URLs
 
@@ -225,7 +225,7 @@ The **raw escape hatch** (`rawRoutes`) is for payloads RPC-JSON can't carry (fil
 
 - **Composition, not configuration.** Plugins export field-group factories; the user attaches them in their entry-type `fieldGroups: [...]`. There is no implicit injection.
 - **`placement`** on a field group: `'main' | 'sidebar' | 'tab'`. The tab strip on the edit page renders only if at least one group is `placement: 'tab'`.
-- **`registerFieldType(reg)`** registers a custom field type with renderer, validator, defaultValue, and typeGen contributions. SEO's `seo-meta` and Forms' form-builder field are the driving use cases. Renderers compose from `astromech/ui/fields` + `astromech/ui` atoms.
+- **`registerFieldType(reg)`** registers a custom field type with renderer, validator, defaultValue, and typeGen contributions. SEO's `seo-preview` (a presentational search preview that reads sibling values) and Forms' form-builder field are the driving use cases. Renderers compose from `astromech/ui/fields` + `astromech/ui` atoms.
 - **Footprint derivation:** anything needing "which entry types use field X" calls `ctx.config.entryTypesWithField('X')`.
 
 ---
@@ -329,7 +329,7 @@ Build the spine:
 - [ ] Auto-rendered settings page from `admin.settings`.
 - [ ] Public exports: `astromech/ui/fields`, `astromech/ui/layout`, `astromech/db`, `useAstromechPlugin()`.
 - [ ] Component + i18n code-gen virtual modules; type augmentation in `astromech.d.ts`.
-- [ ] **Ship `@astromech/seo`** — `seo-meta` field type + edit-page panel + overview dashboard + settings (default OG image) + sitemap/OG data via SDK + length recommendations (non-AI). Proves the UI surface.
+- [ ] **Ship `@astromech/seo`** — composed `seoSection()` (core text/textarea with `count` length hints + a custom `seo-preview` field, data namespaced under the `seo` key) + overview dashboard + settings (default OG image) + sitemap/OG data via SDK + length recommendations (non-AI). Proves the UI surface.
 
 ### 18c — Compositional Integrations
 
@@ -348,7 +348,7 @@ Analytics, activity log, backups, comments, import/export — built on the prove
 ## 13. Reference: Per-Plugin Requirements (design-against)
 
 - **Redirects:** redirect entry type, admin-managed list, `lookup` SDK (local + fetch), slug-change auto-generation via `entry:afterUpdate`, frontend middleware = copy-paste README recipe.
-- **SEO:** `seo-meta` field type (composes text/textarea + length-recommendation UI), edit-page panel via placement, SEO overview dashboard page, sitemap + OG data via SDK (user renders `/sitemap.xml`), settings (default OG image). AI deferred.
+- **SEO:** `seoSection()` field-section factory composing core text/textarea (with `count` length hints) + a custom `seo-preview` search-preview field, data namespaced under the `seo` key; SEO overview dashboard page, sitemap + OG data via SDK (user renders `/sitemap.xml`), settings (default OG image). AI deferred.
 - **Forms:** `form` + `submission` entry types, form-builder field type, public `submit` API (+ file upload), `forms:beforeSubmit`/`forms:afterSubmit` events, built-in reCAPTCHA/Turnstile/Mailchimp via those hooks, frontend form helper/component.
 
 ---
@@ -386,8 +386,8 @@ src/plugins/<name>/
 │                          #   module both sides may import (→ shared/ if it grows);
 │                          #   options types + their defaults live here
 ├── fields/
-│   ├── groups.ts          # composition helpers (e.g. seoFields) — when present
-│   └── <type>.ts          # field type registrations (e.g. seo-meta.ts)
+│   ├── groups.ts          # composition helpers (e.g. seoSection) — when present
+│   └── <type>.ts          # field type registrations (e.g. seo-preview.ts)
 ├── entries.ts             # entry-type configs — when bulky enough to leave index
 ├── server/
 │   ├── sdk.ts             # SDK methods (→ sdk/<method>.ts when big)

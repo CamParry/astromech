@@ -1,6 +1,6 @@
 # @astromech/seo
 
-Search metadata for any entry type: a `seo-meta` field (meta title +
+Search metadata for any entry type: a composed `seo` field group (meta title +
 description with length recommendations and a search preview), an SEO health
 dashboard, a default Open Graph image setting, and public `sitemap` / `meta`
 SDK methods. Non-AI affordances only — AI metadata writing is a future phase.
@@ -10,53 +10,74 @@ SDK methods. Non-AI affordances only — AI metadata writing is a future phase.
 ```ts
 // astromech.config.ts
 import { defineConfig } from 'astromech';
-import { seo, seoFields } from 'astromech/plugins/seo';
+import * as fields from 'astromech/fields';
+import { seo, seoSection } from 'astromech/plugins/seo';
 
 export default defineConfig({
     plugins: [seo()],
     entries: {
         page: {
-            // ...
-            fieldGroups: [
-                mainFields,
-                seoFields(), // adds the SEO tab to the edit page
+            single: 'Page',
+            plural: 'Pages',
+            url: '/{slug}', // lets `sitemap` / `meta` resolve this type's paths
+            fields: [
+                // ...your fields
+                seoSection(), // adds the SEO field group
             ],
         },
     },
 });
 ```
 
-Attachment is explicit composition: the plugin never injects fields. Every
-entry type whose `fieldGroups` include `seoFields()` is part of the plugin's
-_footprint_ — the SEO overview dashboard and the `sitemap` method cover
-exactly those types.
-
-### Options
+Attachment is explicit composition — the plugin never injects fields. Every
+entry type whose `fields` include `seoSection()` is part of the plugin's
+_footprint_; the overview dashboard and the `sitemap` method cover exactly
+those types. Drop `seoSection()` inside a `fields.tab(...)` to give it its own
+tab on the edit page.
 
 ```ts
-seo({
-    // Map an entry to the public path it is served at (used by `sitemap`
-    // and `meta`). Return null to skip. Default: `/${slug}`.
-    pathForEntry: ({ type, slug }) => (slug ? `/${type}/${slug}` : null),
-});
+seoSection({ label: 'Search' }); // section heading; defaults to a localized "SEO"
+```
 
-seoFields({
-    // Where the group renders on the edit page. Default: 'tab'.
-    placement: 'sidebar',
-    label: 'Search',
-    priority: 10,
+## Paths
+
+`seo()` takes no options. The `sitemap` and `meta` methods derive each entry's
+public path from its entry type's `url` template (e.g. `url: '/blog/{slug}'`) —
+the same template that powers the admin **View** link and redirect generation.
+Entry types without a `url` template are skipped, so SEO never guesses a path.
+
+## Permissions
+
+The plugin exposes `seoPermissions` bundles for composing into roles:
+
+- `view` — read the SEO overview dashboard
+
+These resolve to `plugin:astromech-seo:view`.
+
+```ts
+// astromech.config.ts
+import { builtInRole } from 'astromech';
+import { seo, seoPermissions } from 'astromech/plugins/seo';
+
+export default defineConfig({
+    plugins: [seo()],
+    roles: {
+        'content-editor': {
+            name: 'Content Editor',
+            permissions: [...builtInRole('editor'), ...seoPermissions('view')],
+        },
+    },
 });
 ```
 
 ## Admin surface
 
-- **Edit page** — `seoFields()` adds an SEO tab with the `seo-meta` field:
-  meta title and description inputs with live character counters,
-  length-recommendation hints (title 30–60, description 70–160 characters),
-  and a search-result preview.
-- **Overview dashboard** — `/admin/plugin/seo/overview` (requires the
-  `plugin:astromech-seo:view` permission) shows SEO health totals and a
-  per-entry breakdown across the footprint.
+- **Edit page** — `seoSection()` adds the `seo` field group: meta title and
+  description inputs with live character counters
+  (title 30–60, description 70–160 characters), and a search-result preview.
+- **Overview dashboard** — `/admin/plugin/seo/overview` (requires
+  `plugin:astromech-seo:view`) shows SEO health totals and a per-entry
+  breakdown across the footprint.
 - **Settings** — `/admin/plugin/seo/settings` holds the default Open Graph
   image, returned by `meta` when an entry has no image of its own.
 
@@ -92,8 +113,8 @@ export const GET: APIRoute = async () => {
 
 ## Meta tags (recipe)
 
-`meta` resolves one published entry's metadata with fallbacks: the entry
-title when no meta title is set, and the default OG image setting:
+`meta` resolves one published entry's metadata with fallbacks: the entry title
+when no meta title is set, and the default OG image setting:
 
 ```astro
 ---

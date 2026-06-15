@@ -9,7 +9,7 @@ import {
     useSensors,
     closestCenter,
 } from '@dnd-kit/core';
-import type { DragEndEvent } from '@dnd-kit/core';
+import type { DragEndEvent, Modifier } from '@dnd-kit/core';
 import {
     SortableContext,
     useSortable,
@@ -30,10 +30,19 @@ import {
 } from 'lucide-react';
 import type { BaseFieldProps, BlockDefinition, FieldDefinition } from '@/types/index.js';
 import { FormField } from '@/admin/components/fields/form-field';
+import { InlineTitle } from '@/admin/components/fields/inline-title';
 import { useBlocksField } from '@/admin/hooks/use-blocks-field';
 import { useLabel } from '@/admin/i18n/entry-namespace.js';
 import type { BlockWithId } from '@/admin/hooks/use-blocks-field';
 import './blocks-field.css';
+
+// Lock dragging to the vertical axis — verticalListSortingStrategy only governs
+// reordering, not the drag transform, so without this the block follows the
+// cursor horizontally too.
+const restrictToVerticalAxis: Modifier = ({ transform }) => ({
+    ...transform,
+    x: 0,
+});
 
 // ============================================================================
 // useClickOutside
@@ -87,11 +96,6 @@ function BlockPicker({
                         onClose();
                     }}
                 >
-                    {bd.icon !== undefined && (
-                        <span className="am-blocks-picker-icon" aria-hidden="true">
-                            {bd.icon}
-                        </span>
-                    )}
                     <span className="am-blocks-picker-label">
                         {label(bd.label, bd.type)}
                     </span>
@@ -114,6 +118,7 @@ type SortableBlockProps = {
     onRemove: (id: string) => void;
     onDuplicate: (id: string) => void;
     onToggleDisabled: (id: string) => void;
+    onRename: (id: string, title: string | undefined) => void;
     onFieldChange: (id: string, fieldName: string, fieldValue: unknown) => void;
 };
 
@@ -126,6 +131,7 @@ function SortableBlock({
     onRemove,
     onDuplicate,
     onToggleDisabled,
+    onRename,
     onFieldChange,
 }: SortableBlockProps): React.ReactElement {
     const { t } = useTranslation();
@@ -143,8 +149,8 @@ function SortableBlock({
     };
 
     const blockLabel = blockDef
-        ? resolveLabelText(blockDef.label, block.type)
-        : block.type;
+        ? resolveLabelText(blockDef.label, block._type)
+        : block._type;
 
     return (
         <div
@@ -156,13 +162,13 @@ function SortableBlock({
                 <div
                     className={clsx(
                         'am-blocks-block-header',
-                        block.disabled === true && 'am-blocks-block-header-soft-disabled'
+                        block._disabled === true && 'am-blocks-block-header-soft-disabled'
                     )}
                 >
                     {!disabled && (
                         <button
                             type="button"
-                            className="am-blocks-btn am-blocks-btn-icon am-blocks-drag-handle"
+                            className="am-blocks-drag-handle"
                             aria-label={t('fields.blocksDragHandle')}
                             {...attributes}
                             {...listeners}
@@ -172,16 +178,15 @@ function SortableBlock({
                     )}
 
                     <div className="am-blocks-block-meta">
-                        <span className="am-blocks-block-label">
-                            {blockDef?.icon !== undefined && (
-                                <span className="am-blocks-block-icon" aria-hidden="true">
-                                    {blockDef.icon}
-                                </span>
-                            )}
-                            {blockLabel}
-                        </span>
-                        <span className="am-blocks-block-type-badge">{block.type}</span>
-                        {block.disabled === true && (
+                        <InlineTitle
+                            value={block._title}
+                            fallback={blockLabel}
+                            editLabel={t('fields.blocksRename')}
+                            onCommit={(next) => onRename(block._id, next)}
+                            {...(disabled !== undefined ? { disabled } : {})}
+                        />
+                        <span className="am-blocks-block-type-badge">{block._type}</span>
+                        {block._disabled === true && (
                             <span className="am-blocks-block-disabled-badge">
                                 {t('fields.blocksDisabledBadge')}
                             </span>
@@ -196,17 +201,17 @@ function SortableBlock({
                                     className="am-blocks-btn am-blocks-btn-icon"
                                     onClick={() => onToggleDisabled(block._id)}
                                     aria-label={
-                                        block.disabled === true
+                                        block._disabled === true
                                             ? t('fields.blocksEnable')
                                             : t('fields.blocksDisable')
                                     }
                                     title={
-                                        block.disabled === true
+                                        block._disabled === true
                                             ? t('fields.blocksEnable')
                                             : t('fields.blocksDisable')
                                     }
                                 >
-                                    {block.disabled === true ? (
+                                    {block._disabled === true ? (
                                         <Eye size={16} />
                                     ) : (
                                         <EyeOff size={16} />
@@ -245,7 +250,7 @@ function SortableBlock({
                     </div>
                 </div>
 
-                {block.disabled !== true && (
+                {block._disabled !== true && (
                     <Collapsible.Panel className="am-blocks-block-panel">
                         <div className="am-blocks-block-content">
                             {(blockDef?.fields ?? []).map((subField: FieldDefinition) => (
@@ -296,6 +301,7 @@ export function BlocksField({
         removeBlock,
         duplicateBlock,
         toggleDisabled,
+        renameBlock,
         updateBlock,
         reorder,
     } = useBlocksField({ name, value, onChange });
@@ -332,6 +338,7 @@ export function BlocksField({
                 <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
+                    modifiers={[restrictToVerticalAxis]}
                     onDragEnd={handleDragEnd}
                 >
                     <SortableContext
@@ -344,12 +351,13 @@ export function BlocksField({
                                     key={block._id}
                                     block={block}
                                     index={index}
-                                    blockDef={blockDefMap.get(block.type)}
+                                    blockDef={blockDefMap.get(block._type)}
                                     name={name}
                                     {...(disabled !== undefined ? { disabled } : {})}
                                     onRemove={removeBlock}
                                     onDuplicate={duplicateBlock}
                                     onToggleDisabled={toggleDisabled}
+                                    onRename={renameBlock}
                                     onFieldChange={updateBlock}
                                 />
                             ))}

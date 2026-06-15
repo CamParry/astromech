@@ -12,7 +12,10 @@ import { Astromech } from '@/sdk/fetch/index.js';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntriesListPage } from '@/admin/components/entries/entries-list-page.js';
 import type { EntriesApi } from '@/types/index.js';
-import type { EntriesSurface } from '@/admin/components/entries/surface.js';
+import {
+    validateEntriesListSearch,
+    type EntriesSurface,
+} from '@/admin/components/entries/surface.js';
 
 function EntryIndexPage(): React.ReactElement {
     const { type } = Route.useParams();
@@ -28,5 +31,6 @@ function EntryIndexPage(): React.ReactElement {
 }
 
 export const Route = createFileRoute('/_protected/entries/$type/')({
+    validateSearch: validateEntriesListSearch,
     component: EntryIndexPage,
 });

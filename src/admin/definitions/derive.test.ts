@@ -30,7 +30,7 @@ const fullConfig: AdminEntryTypeConfig = {
         ],
         sidebar: [{ name: 'author', type: 'text' }],
     },
-    previewUrl: null,
+    url: null,
     capabilities: caps(),
     titleField: 'title',
 };
@@ -56,7 +56,7 @@ const titlelessConfig: AdminEntryTypeConfig = {
         ],
         sidebar: [],
     },
-    previewUrl: null,
+    url: null,
     capabilities: caps({
         statuses: false,
         slug: false,

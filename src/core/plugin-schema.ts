@@ -15,11 +15,10 @@
 
 import { getTableName, is, Table } from 'drizzle-orm';
 import type { PluginDefinition } from '@/types/index.js';
-import { resolvePluginIdentity } from '@/core/plugin-identity.js';
+import { pluginTablePrefix, resolvePluginIdentity } from '@/core/plugin-identity.js';
 
 export type CollectedPluginTable = {
     alias: string;
-    exportName: string;
     tableName: string;
     table: Table;
 };
@@ -30,9 +29,9 @@ export function collectPluginSchemas(defs: PluginDefinition[]): CollectedPluginT
     for (const def of defs) {
         if (!def.schema) continue;
         const { alias } = resolvePluginIdentity(def);
-        for (const [exportName, table] of Object.entries(def.schema)) {
+        for (const table of def.schema) {
             if (!is(table, Table)) continue;
-            collected.push({ alias, exportName, tableName: getTableName(table), table });
+            collected.push({ alias, tableName: getTableName(table), table });
         }
     }
     return collected;
@@ -43,12 +42,12 @@ export function collectPluginSchemas(defs: PluginDefinition[]): CollectedPluginT
  * table. Throws a build error on the first violation.
  */
 export function assertPluginTablePrefixes(defs: PluginDefinition[]): void {
-    for (const { alias, tableName, exportName } of collectPluginSchemas(defs)) {
-        const prefix = `plugin_${alias}_`;
+    for (const { alias, tableName } of collectPluginSchemas(defs)) {
+        const prefix = pluginTablePrefix(alias);
         if (!tableName.startsWith(prefix)) {
             throw new Error(
-                `Astromech plugin table "${tableName}" (export "${exportName}") must be prefixed ` +
-                    `"${prefix}". Plugin tables are namespaced by alias to prevent collisions.`
+                `Astromech plugin table "${tableName}" must be prefixed "${prefix}". ` +
+                    `Plugin tables are namespaced by alias to prevent collisions.`
             );
         }
     }

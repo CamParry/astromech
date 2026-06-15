@@ -1,0 +1,114 @@
+---
+/**
+ * Blocks dispatcher — maps block._type to the corresponding component.
+ * Skips blocks with `_disabled: true`.
+ */
+import Hero from './Hero.astro';
+import RichText from './RichText.astro';
+import FeatureGrid from './FeatureGrid.astro';
+import Media from './Media.astro';
+import Cta from './Cta.astro';
+import Testimonial from './Testimonial.astro';
+import LogoCloud from './LogoCloud.astro';
+import Faq from './Faq.astro';
+import Stats from './Stats.astro';
+import TwoColumn from './TwoColumn.astro';
+
+interface Block {
+    _type: string;
+    _disabled?: boolean;
+    _id?: string;
+    [key: string]: unknown;
+}
+
+interface Props {
+    blocks?: Block[] | null;
+}
+
+const { blocks } = Astro.props;
+const activeBlocks = (blocks ?? []).filter((b) => !b._disabled);
+---
+
+{activeBlocks.map((block) => {
+    const key = block._id ?? block._type;
+    if (block._type === 'hero') {
+        return (
+            <Hero
+                heading={(block.heading as string) ?? ''}
+                subheading={block.subheading as string | null | undefined}
+                cta={block.cta as { label?: string; href?: string } | null | undefined}
+                image={block.image as { url?: string; alt?: string } | null | undefined}
+            />
+        );
+    }
+    if (block._type === 'richText') {
+        return <RichText body={block.body as string | null | undefined} />;
+    }
+    if (block._type === 'featureGrid') {
+        return (
+            <FeatureGrid
+                heading={block.heading as string | null | undefined}
+                features={block.features as { title?: string; description?: string; icon?: string }[] | null | undefined}
+            />
+        );
+    }
+    if (block._type === 'media') {
+        return (
+            <Media
+                image={block.image as { url?: string; alt?: string } | null | undefined}
+                caption={block.caption as string | null | undefined}
+            />
+        );
+    }
+    if (block._type === 'cta') {
+        return (
+            <Cta
+                heading={block.heading as string | null | undefined}
+                text={block.text as string | null | undefined}
+                button={block.button as { label?: string; href?: string } | null | undefined}
+            />
+        );
+    }
+    if (block._type === 'testimonial') {
+        return (
+            <Testimonial
+                quote={(block.quote as string) ?? ''}
+                author={block.author as string | null | undefined}
+                role={block.role as string | null | undefined}
+                avatar={block.avatar as { url?: string; alt?: string } | null | undefined}
+            />
+        );
+    }
+    if (block._type === 'logoCloud') {
+        return (
+            <LogoCloud
+                heading={block.heading as string | null | undefined}
+                logos={block.logos as { url?: string; alt?: string }[] | null | undefined}
+            />
+        );
+    }
+    if (block._type === 'faq') {
+        return (
+            <Faq
+                heading={block.heading as string | null | undefined}
+                items={block.items as { question?: string; answer?: string }[] | null | undefined}
+            />
+        );
+    }
+    if (block._type === 'stats') {
+        return (
+            <Stats
+                items={block.items as { value?: string; label?: string }[] | null | undefined}
+            />
+        );
+    }
+    if (block._type === 'twoColumn') {
+        return (
+            <TwoColumn
+                left={block.left as string | null | undefined}
+                right={block.right as string | null | undefined}
+            />
+        );
+    }
+    return null;
+})}

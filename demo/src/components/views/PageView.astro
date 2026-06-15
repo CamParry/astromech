@@ -1,0 +1,30 @@
+---
+import Site from '../../layouts/Site.astro';
+import Blocks from '../blocks/Blocks.astro';
+import type { Locale } from '../../lib/site.ts';
+import type { Entry } from 'astromech';
+
+interface Props {
+    locale: Locale;
+    page: Entry;
+}
+
+const { locale, page } = Astro.props;
+const blocks = (page.fields?.content as unknown[] | null | undefined) ?? [];
+---
+
+<Site
+    locale={locale}
+    seoType="page"
+    seoSlug={page.slug ?? undefined}
+    seoTitle={page.title}
+>
+    {blocks.length > 0
+        ? <Blocks blocks={blocks as { type: string; [key: string]: unknown }[]} />
+        : (
+            <div class="max-w-6xl mx-auto px-4 py-24 text-center">
+                <h1 class="text-3xl font-bold text-gray-900">{page.title}</h1>
+            </div>
+        )
+    }
+</Site>

@@ -1,0 +1,59 @@
+---
+import Astromech from 'astromech/local';
+import Site from '../../layouts/Site.astro';
+import Blocks from '../blocks/Blocks.astro';
+import type { Locale } from '../../lib/site.ts';
+
+interface Props {
+    locale: Locale;
+}
+
+const { locale } = Astro.props;
+
+let homePage = null;
+try {
+    const result = await Astromech.entries.query({
+        type: 'page',
+        where: { slug: 'home' },
+        locale,
+        limit: 1,
+    });
+    homePage = result.data[0] ?? null;
+} catch {
+    // DB not ready or no home page yet
+}
+
+// fr home page uses slug 'accueil', fall back if 'home' not found
+if (!homePage && locale !== 'en') {
+    try {
+        const result = await Astromech.entries.query({
+            type: 'page',
+            where: { slug: 'accueil' },
+            locale,
+            limit: 1,
+        });
+        homePage = result.data[0] ?? null;
+    } catch {
+        // ignore
+    }
+}
+
+const blocks = (homePage?.fields?.content as unknown[] | null | undefined) ?? [];
+---
+
+<Site
+    locale={locale}
+    seoType="page"
+    seoSlug={homePage?.slug ?? undefined}
+    seoTitle={homePage?.title ?? 'Home'}
+>
+    {blocks.length > 0
+        ? <Blocks blocks={blocks as { type: string; [key: string]: unknown }[]} />
+        : (
+            <div class="max-w-6xl mx-auto px-4 py-24 text-center">
+                <h1 class="text-4xl font-bold text-gray-900 mb-4">Welcome to Astromech</h1>
+                <p class="text-gray-500">The home page content will appear here once seeded.</p>
+            </div>
+        )
+    }
+</Site>

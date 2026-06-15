@@ -136,7 +136,7 @@ describe('titleless search', () => {
     });
 
     it('returns titleless entries when no search term is given', async () => {
-        await api.create({ type: 'snippet', fields: { key: 'k', value: 'v' } });
+        await api.create({ type: 'snippet', fields: { key: 'k', value: 'v' }, status: 'published' });
         const result = await api.query({ type: 'snippet' });
         expect(result.data).toHaveLength(1);
     });

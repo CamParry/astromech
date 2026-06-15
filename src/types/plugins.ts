@@ -8,7 +8,7 @@
 
 import type { ComponentType, ReactElement } from 'react';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import type { EntryTypeConfig, ResolvedConfig } from './config.js';
+import type { AdminPage, EntryTypeConfig, ResolvedConfig } from './config.js';
 import type { FieldDefinition } from './fields.js';
 import type { User } from './domain.js';
 import type { PluginHooks } from './hooks.js';
@@ -117,7 +117,7 @@ export type PluginCronJob = {
 };
 
 // ============================================================================
-// Admin surfaces (consumed in 18b; declared here for a stable shape)
+// Admin surfaces
 // ============================================================================
 
 /**
@@ -135,45 +135,14 @@ export type PluginNavItem = {
     children?: PluginNavItem[];
 };
 
-export type PluginPage = {
-    /** Path relative to `/admin/plugin/{name}`. */
-    path: string;
-    /**
-     * Short page name — the sidebar label. Page titles compose it with the
-     * plugin label: `'Overview'` under a plugin labelled `'SEO'` renders as
-     * "SEO Overview".
-     */
-    label: string;
-    /** Lucide icon name — shown in the sidebar (page chrome later). */
-    icon?: string;
-    /**
-     * Import specifier (a STRING, not a thunk) for the page component, so the
-     * Node-side generator can statically emit `import(specifier)`.
-     * Omit for an auto-rendered settings page (declare `settings` instead).
-     */
-    component?: string;
-    /**
-     * Settings schema for an auto-rendered settings form (used when no
-     * `component` is given). Values store under
-     * `plugin:<permissionNamespace>:<field>` in the core settings table.
-     */
-    settings?: PluginSettingsSchema;
-    /**
-     * Bare keys are plugin-scoped (`'view'` → `plugin:<ns>:view`); strings
-     * containing `:` pass through unchanged (core permissions like
-     * `settings:read`). Settings pages default to `settings:read`.
-     */
-    permission?: string;
-    /** Pages appear in the sidebar by default; `false` opts out. */
-    nav?: boolean;
-};
-
-export type PluginSettingsSchema = {
-    fields: FieldDefinition[];
-};
-
+/**
+ * Plugin admin pages use the unified `AdminPage` type. The plugin author
+ * declares exactly one of `fields` (settings form) or `component` (custom
+ * React page), with an optional `permission` override (bare keys are
+ * auto-namespaced to `plugin:<ns>:<key>`).
+ */
 export type PluginAdmin = {
-    pages?: PluginPage[];
+    pages?: AdminPage[];
 };
 
 /**
@@ -184,22 +153,23 @@ export type PluginAdmin = {
  * `undefined`.
  */
 export type PluginFieldTypeRegistration = {
-    /** Field type key, e.g. `seo-meta`. Colliding with a core type or another plugin is a build error. */
+    /** Field type key, e.g. `seo-preview`. Colliding with a core type or another plugin is a build error. */
     type: string;
     /** Import specifier (STRING) for the renderer module. */
     component: string;
     /** Serializable value shown when the field has no stored value yet. */
     defaultValue?: unknown;
-    /** TS type for generated entry `Fields` interfaces. Defaults to `JsonValue`. */
-    typeGen?: (field: FieldDefinition) => string;
+    /**
+     * TS type for generated entry `Fields` interfaces. Defaults to `JsonValue`.
+     * Return `null` for a presentational field that persists no data (e.g. a
+     * preview) so it is omitted from the generated type entirely.
+     */
+    typeGen?: (field: FieldDefinition) => string | null;
 };
 
 // ============================================================================
 // Plugin Definition
 // ============================================================================
-
-/** A Drizzle schema module: a map of exported table objects. */
-export type PluginDrizzleSchema = Record<string, unknown>;
 
 export type PluginDefinition = {
     // ── Identity ────────────────────────────────────────────────────────
@@ -221,9 +191,11 @@ export type PluginDefinition = {
 
     // ── Declarative surfaces ────────────────────────────────────────────
     permissions?: PluginPermission[];
-    entries?: Record<string, EntryTypeConfig>;
+    /** Entry types contributed by the plugin. Each self-declares its `type`. */
+    entries?: EntryTypeConfig[];
     fields?: PluginFieldTypeRegistration[];
-    schema?: PluginDrizzleSchema;
+    /** Drizzle tables shipped by the plugin (each prefixed `plugin_{alias}_`). */
+    schema?: unknown[];
     sdk?: Record<string, AnyPluginSdkMethod>;
     rawRoutes?: PluginRawRoute[];
     hooks?: PluginHooks;

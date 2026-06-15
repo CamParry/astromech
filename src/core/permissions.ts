@@ -18,7 +18,8 @@ type ConfigWithRoles = Pick<AstromechConfig, 'roles'> | Pick<ResolvedConfig, 'ro
 // Built-in Roles
 // ============================================================================
 
-// `entry:*` trailing wildcard covers all entry types and all actions.
+// `entry:*` trailing wildcard covers all entry types and all actions,
+// including cross-cutting permissions like `entry:read:full`.
 const EDITOR_PERMISSIONS: Permission[] = [
     'admin:access',
     'entry:*',
@@ -26,6 +27,14 @@ const EDITOR_PERMISSIONS: Permission[] = [
     'media:upload',
     'media:delete',
 ];
+
+/**
+ * Cross-cutting permission: request the full (admin/editor) shape on any
+ * entry read. Covered by `entry:*` (editor) and `*` (admin) via the trailing-
+ * wildcard matcher — future member/anonymous roles that lack `entry:*` will
+ * not have this permission.
+ */
+export const PERMISSION_ENTRY_READ_FULL = 'entry:read:full' as Permission;
 
 export const BUILT_IN_ROLES = {
     admin: { name: 'Administrator', permissions: ['*'], isBuiltIn: true },

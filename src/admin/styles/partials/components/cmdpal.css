@@ -28,7 +28,9 @@
 .am-cmdpal-results {
     max-height: 20rem;
     padding: calc(var(--am-space) * 2) 0;
-    overflow-y: auto;
+    /* Pin overflow-x: a lone overflow-y:auto computes overflow-x to auto,
+       which surfaces a phantom horizontal scrollbar on sub-pixel widths. */
+    overflow: hidden auto;
 }
 
 .am-cmdpal-empty {

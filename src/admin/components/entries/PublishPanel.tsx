@@ -8,6 +8,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Panel, Select, Input } from '../ui/index.js';
+import { formatDatetime } from '@/support/dates.js';
 import type { EntryStatus } from '../../../types/index.js';
 
 // ============================================================================
@@ -44,9 +45,7 @@ export function PublishPanel({
     ];
 
     const formattedPublishedAt =
-        publishedAt != null
-            ? new Date(publishedAt).toLocaleString()
-            : null;
+        publishedAt != null ? formatDatetime(publishedAt) : null;
 
     return (
         <Panel title={t('entries.statusPanel')}>

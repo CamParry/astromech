@@ -22,7 +22,7 @@ function PluginEntryNewPage(): React.ReactElement {
     const { name, type } = Route.useParams();
     const search = Route.useSearch();
     const { t } = useTranslation();
-    const api = createEntriesApi(`/plugins/${name}/entries`);
+    const api = createEntriesApi(`/plugins/${name}/entries`, 'full');
     const surface = buildPluginEntriesSurface(adminConfig.plugins, name, type, api);
     if (!surface) {
         return (

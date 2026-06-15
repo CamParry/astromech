@@ -29,11 +29,12 @@ import type {
 import { getDb } from '@/db/registry.js';
 import { getEmailConfig } from '@/email/registry.js';
 import { renderEmail } from '@/email/render.js';
-import { resolvePluginIdentity } from '@/core/plugin-identity.js';
+import { pluginEntryTypes, resolvePluginIdentity } from '@/core/plugin-identity.js';
 import { registerCronJob } from '@/cron/registry.js';
 import { qualifyEntryType } from '@/core/entry-types.js';
 import { flattenEntryFields } from '@/core/entry-fields.js';
 import { createScopedEntries } from '@/sdk/local/scoped-entries.js';
+import { withDefaultShape } from '@/sdk/local/with-default-shape.js';
 import {
     resetEntryStorageOverrides,
     setEntryStorage,
@@ -124,7 +125,7 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
         }
 
         // Register per-type custom storages under the qualified id.
-        for (const [type, cfg] of Object.entries(def.entries ?? {})) {
+        for (const [type, cfg] of pluginEntryTypes(def)) {
             if (cfg.storage) {
                 setEntryStorage(qualifyEntryType(identity.name, type), cfg.storage);
             }
@@ -318,10 +319,14 @@ export function createPluginContext(
         },
         get entries(): EntriesApi {
             // Auto-scoped to this plugin's own entry types: bare keys in, qualified
-            // ids out. Shares the lazy sdkClient so it works wherever `sdk` does.
+            // ids out. Default shape is `full` (privileged server RMW context, per
+            // spec §7.1 decision 7). An explicit per-call `full` still wins.
             return createScopedEntries(
                 identity.name,
-                requireSdkClient().entries as unknown as EntriesApi
+                withDefaultShape(
+                    requireSdkClient().entries as unknown as EntriesApi,
+                    'full'
+                )
             );
         },
         sendEmail,
@@ -337,7 +342,9 @@ function emptyConfig(): ResolvedConfig {
         apiRoute: '/api',
         entries: {},
         pluginEntries: {},
+        adminPages: [],
         trash: { enabled: true, retentionDays: 30 },
+        publicSettingKeys: [],
         storage: {
             name: 'noop',
             upload: () => Promise.resolve(''),

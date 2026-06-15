@@ -95,18 +95,19 @@ describe('get', () => {
             localeGroup: en.localeGroup,
         });
 
-        const got = await api.get({ type: 'post', id: en.id });
+        // full: true — admin read; drafts and all fields visible
+        const got = await api.get({ type: 'post', id: en.id, full: true });
         expect(got?.id).toBe(en.id);
         expect(got?.locales).toEqual({ en: en.id, de: de.id });
     });
 
     it('returns null for a missing id', async () => {
-        expect(await api.get({ type: 'post', id: 'does-not-exist' })).toBeNull();
+        expect(await api.get({ type: 'post', id: 'does-not-exist', full: true })).toBeNull();
     });
 
     it('returns null when the id exists but the type mismatches', async () => {
         const e = await api.create({ type: 'post', title: 'X' });
-        expect(await api.get({ type: 'note', id: e.id })).toBeNull();
+        expect(await api.get({ type: 'note', id: e.id, full: true })).toBeNull();
     });
 
     // CHARACTERIZED: `get` has no includeTrashed flag — it always filters
@@ -114,6 +115,11 @@ describe('get', () => {
     it('returns null for a trashed entry (no override flag exists)', async () => {
         const e = await api.create({ type: 'post', title: 'Trash me' });
         await api.trash({ type: 'post', id: e.id });
+        expect(await api.get({ type: 'post', id: e.id, full: true })).toBeNull();
+    });
+
+    it('returns null for a draft entry in public shape (default)', async () => {
+        const e = await api.create({ type: 'post', title: 'Draft' });
         expect(await api.get({ type: 'post', id: e.id })).toBeNull();
     });
 });
@@ -125,7 +131,8 @@ describe('get', () => {
 describe('query', () => {
     it('paginates with page/limit/total/pages', async () => {
         for (let i = 0; i < 5; i++) {
-            await api.create({ type: 'post', title: `P${i}` });
+            // Use published status so rows pass the default public filter
+            await api.create({ type: 'post', title: `P${i}`, status: 'published' });
         }
         const res = await api.query({ type: 'post', limit: 2, page: 1 });
         expect(res.data).toHaveLength(2);
@@ -133,15 +140,17 @@ describe('query', () => {
     });
 
     it("limit 'all' returns null pagination and every row", async () => {
-        for (let i = 0; i < 3; i++) await api.create({ type: 'post', title: `P${i}` });
+        for (let i = 0; i < 3; i++) {
+            await api.create({ type: 'post', title: `P${i}`, status: 'published' });
+        }
         const res = await api.query({ type: 'post', limit: 'all' });
         expect(res.pagination).toBeNull();
         expect(res.data).toHaveLength(3);
     });
 
     it('search matches title (LIKE) and not field content', async () => {
-        await api.create({ type: 'post', title: 'Findme', fields: { body: 'hidden' } });
-        await api.create({ type: 'post', title: 'Other', fields: { body: 'findme' } });
+        await api.create({ type: 'post', title: 'Findme', status: 'published', fields: { body: 'hidden' } });
+        await api.create({ type: 'post', title: 'Other', status: 'published', fields: { body: 'findme' } });
 
         const byTitle = await api.query({ type: 'post', search: 'Findme' });
         expect(byTitle.data).toHaveLength(1);
@@ -153,8 +162,8 @@ describe('query', () => {
     });
 
     it('sorts by title asc and desc', async () => {
-        await api.create({ type: 'post', title: 'Bravo' });
-        await api.create({ type: 'post', title: 'Alpha' });
+        await api.create({ type: 'post', title: 'Bravo', status: 'published' });
+        await api.create({ type: 'post', title: 'Alpha', status: 'published' });
         const asc = await api.query({ type: 'post', sort: { title: 'asc' } });
         expect(asc.data.map((e) => e.title)).toEqual(['Alpha', 'Bravo']);
         const desc = await api.query({ type: 'post', sort: { title: 'desc' } });
@@ -164,29 +173,31 @@ describe('query', () => {
     it('filters by status via where', async () => {
         await api.create({ type: 'post', title: 'Draft' });
         await api.create({ type: 'post', title: 'Pub', status: 'published' });
-        const res = await api.query({ type: 'post', where: { status: 'published' } });
+        // In full shape, we can see all statuses; where narrows further
+        const res = await api.query({ type: 'post', full: true, where: { status: 'published' } });
         expect(res.data.map((e) => e.title)).toEqual(['Pub']);
     });
 
     it('excludes trashed by default and includes them with trashed: true', async () => {
-        const a = await api.create({ type: 'post', title: 'A' });
-        await api.create({ type: 'post', title: 'B' });
+        const a = await api.create({ type: 'post', title: 'A', status: 'published' });
+        await api.create({ type: 'post', title: 'B', status: 'published' });
         await api.trash({ type: 'post', id: a.id });
 
         const live = await api.query({ type: 'post' });
         expect(live.data.map((e) => e.title).sort()).toEqual(['B']);
 
-        const trashed = await api.query({ type: 'post', trashed: true });
+        const trashed = await api.query({ type: 'post', full: true, trashed: true });
         expect(trashed.data.map((e) => e.title)).toEqual(['A']);
     });
 
     it('filters by locale and returns all locales with the all sentinel', async () => {
-        const en = await api.create({ type: 'post', title: 'EN', locale: 'en' });
+        const en = await api.create({ type: 'post', title: 'EN', locale: 'en', status: 'published' });
         await api.create({
             type: 'post',
             title: 'DE',
             locale: 'de',
             localeGroup: en.localeGroup,
+            status: 'published',
         });
 
         const enOnly = await api.query({ type: 'post', locale: 'en' });
@@ -194,6 +205,17 @@ describe('query', () => {
 
         const all = await api.query({ type: 'post', locale: 'all' });
         expect(all.data.map((e) => e.locale).sort()).toEqual(['de', 'en']);
+    });
+
+    it('draft entries visible in full shape, hidden in public (default)', async () => {
+        await api.create({ type: 'post', title: 'Draft' });
+        await api.create({ type: 'post', title: 'Published', status: 'published' });
+
+        const pub = await api.query({ type: 'post' });
+        expect(pub.data.map((e) => e.title)).toEqual(['Published']);
+
+        const full = await api.query({ type: 'post', full: true });
+        expect(full.data.map((e) => e.title).sort()).toEqual(['Draft', 'Published']);
     });
 });
 
@@ -365,7 +387,8 @@ describe('translatable', () => {
 
     it('reflects both locales in the locales map', async () => {
         const { en, de } = await makePair();
-        const got = await api.get({ type: 'post', id: en.id });
+        // full: true — admin read; entries are drafts
+        const got = await api.get({ type: 'post', id: en.id, full: true });
         expect(got?.locales).toEqual({ en: en.id, de: de.id });
     });
 
@@ -379,7 +402,7 @@ describe('translatable', () => {
             id: en.id,
             data: { fields: { body: 'enbody', category: 'updated' } },
         });
-        const deAfter = await api.get({ type: 'post', id: de.id });
+        const deAfter = await api.get({ type: 'post', id: de.id, full: true });
         expect(deAfter?.fields).toEqual({ body: 'debody', category: 'updated' });
     });
 
@@ -390,7 +413,7 @@ describe('translatable', () => {
             id: en.id,
             data: { fields: { body: 'enbody2', category: 'news' } },
         });
-        const deAfter = await api.get({ type: 'post', id: de.id });
+        const deAfter = await api.get({ type: 'post', id: de.id, full: true });
         expect(deAfter?.fields).toEqual({ body: 'debody', category: 'news' });
     });
 });
@@ -433,7 +456,7 @@ describe('publish / unpublish / schedule', () => {
 
 describe('trash / restore / delete / emptyTrash', () => {
     it('trash sets deletedAt and excludes from default query; restore clears it', async () => {
-        const e = await api.create({ type: 'post', title: 'T' });
+        const e = await api.create({ type: 'post', title: 'T', status: 'published' });
         await api.trash({ type: 'post', id: e.id });
 
         const trashedRows = await getDb()
@@ -444,6 +467,7 @@ describe('trash / restore / delete / emptyTrash', () => {
 
         const restored = await api.restore({ type: 'post', id: e.id });
         expect(restored.deletedAt).toBeNull();
+        // After restore, a published entry should appear in the public query
         const live = await api.query({ type: 'post' });
         expect(live.data.map((x) => x.id)).toContain(e.id);
     });
@@ -555,10 +579,11 @@ describe('relationships', () => {
     });
 
     it('populate hydrates relationship targets into fields', async () => {
-        const target = await api.create({ type: 'post', title: 'Target' });
+        const target = await api.create({ type: 'post', title: 'Target', status: 'published' });
         const src = await api.create({
             type: 'post',
             title: 'Source',
+            status: 'published',
             fields: { related: [target.id] },
         });
         const got = await api.get({ type: 'post', id: src.id, populate: ['related'] });

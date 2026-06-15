@@ -1,0 +1,20 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@plugin "@tailwindcss/forms";
+
+@layer base {
+    *, *::before, *::after {
+        box-sizing: border-box;
+    }
+
+    html {
+        font-family: system-ui, -apple-system, sans-serif;
+        color: #111;
+        background: #fff;
+    }
+
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+}

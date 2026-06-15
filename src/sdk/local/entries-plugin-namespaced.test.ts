@@ -12,13 +12,14 @@ import type { AstromechConfig, PluginDefinition } from '@/types/index.js';
 
 const redirectsPlugin: PluginDefinition = {
     package: '@astromech/redirects',
-    entries: {
-        redirect: {
+    entries: [
+        {
+            type: 'redirect',
             single: 'Redirect',
             plural: 'Redirects',
             fields: [{ name: 'to', type: 'text', label: 'To' }],
         },
-    },
+    ],
 };
 
 function configWithPlugin(): AstromechConfig {
@@ -39,7 +40,8 @@ describe('namespaced plugin entries via the orchestrator', () => {
         });
         expect(created.type).toBe('redirects/redirect');
 
-        const fetched = await entries.get({ type: 'redirects/redirect', id: created.id });
+        // full: true — admin read; entry is a draft
+        const fetched = await entries.get({ type: 'redirects/redirect', id: created.id, full: true });
         expect(fetched?.id).toBe(created.id);
         expect(fetched?.type).toBe('redirects/redirect');
 

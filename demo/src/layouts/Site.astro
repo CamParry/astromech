@@ -1,0 +1,188 @@
+---
+import Astromech from 'astromech/local';
+import Seo from '../components/Seo.astro';
+import { Icon } from 'astro-icon/components';
+import '../styles/global.css';
+import type { Locale } from '../lib/site.ts';
+import { localizedPath, LOCALES, DEFAULT_LOCALE } from '../lib/site.ts';
+import { socialIconName } from '../lib/icons.ts';
+
+interface Props {
+    locale?: Locale;
+    seoType?: string;
+    seoSlug?: string | null;
+    seoTitle?: string;
+    seoDescription?: string | null;
+    hreflangUrls?: Record<string, string>;
+}
+
+const {
+    locale = DEFAULT_LOCALE,
+    seoType,
+    seoSlug,
+    seoTitle,
+    seoDescription,
+    hreflangUrls,
+} = Astro.props;
+
+// Fetch globals settings
+let globals: Record<string, unknown> = {};
+try {
+    const raw = await Astromech.settings.get('globals', { locale });
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        globals = raw as Record<string, unknown>;
+    }
+} catch {
+    // settings not seeded yet — graceful fallback
+}
+
+const siteName = typeof globals.siteName === 'string' ? globals.siteName : 'Astromech';
+const logoMedia = globals.logo as { url?: string } | null | undefined;
+const footerText = typeof globals.footerText === 'string' ? globals.footerText : '';
+const copyright = typeof globals.copyright === 'string' ? globals.copyright : '';
+
+// Fetch menus from the menus plugin
+type MenuItem = { label?: string; url?: string; newTab?: boolean; children?: MenuItem[] };
+let mainMenu: MenuItem[] = [];
+let footerMenu: MenuItem[] = [];
+try {
+    const rawMain = await Astromech.plugins?.menus.get({ key: 'main', locale });
+    if (Array.isArray(rawMain)) mainMenu = rawMain as MenuItem[];
+} catch {
+    // menus plugin not seeded yet — graceful fallback
+}
+try {
+    const rawFooter = await Astromech.plugins?.menus.get({ key: 'footer', locale });
+    if (Array.isArray(rawFooter)) footerMenu = rawFooter as MenuItem[];
+} catch {
+    // menus plugin not seeded yet — graceful fallback
+}
+
+type SocialLink = { platform?: string; url?: string };
+const socials = Array.isArray(globals.socials) ? (globals.socials as SocialLink[]) : [];
+
+const otherLocales = LOCALES.filter((l) => l !== locale);
+---
+
+<!doctype html>
+<html lang={locale}>
+    <head>
+        <Seo
+            type={seoType}
+            slug={seoSlug ?? undefined}
+            title={seoTitle}
+            description={seoDescription}
+            hreflangUrls={hreflangUrls}
+            locale={locale}
+        />
+    </head>
+    <body class="min-h-screen flex flex-col bg-white text-gray-900">
+        <!-- Header -->
+        <header class="border-b border-gray-200 bg-white sticky top-0 z-10">
+            <div class="max-w-6xl mx-auto px-4 h-16 flex items-center gap-6">
+                <!-- Logo / site name -->
+                <a href={localizedPath('/', locale)} class="flex items-center gap-2 font-semibold text-gray-900 shrink-0">
+                    {logoMedia?.url
+                        ? <img src={logoMedia.url} alt={siteName} class="h-8 w-auto" />
+                        : <span class="text-lg">{siteName}</span>
+                    }
+                </a>
+
+                <!-- Main nav -->
+                <nav class="flex items-center gap-1 flex-1">
+                    {mainMenu.map((item) => (
+                        item.url && item.label && (
+                            <a
+                                href={item.url}
+                                target={item.newTab ? '_blank' : undefined}
+                                rel={item.newTab ? 'noopener noreferrer' : undefined}
+                                class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 rounded hover:bg-gray-100 transition-colors"
+                            >
+                                {item.label}
+                            </a>
+                        )
+                    ))}
+                </nav>
+
+                <!-- Locale switcher -->
+                {otherLocales.length > 0 && (
+                    <div class="flex items-center gap-1 shrink-0">
+                        {LOCALES.map((l) => (
+                            <a
+                                href={localizedPath(Astro.url.pathname.replace(`/${locale}`, '') || '/', l)}
+                                class={`px-2 py-1 text-xs font-mono rounded border transition-colors ${
+                                    l === locale
+                                        ? 'bg-gray-900 text-white border-gray-900'
+                                        : 'border-gray-300 text-gray-500 hover:border-gray-500 hover:text-gray-700'
+                                }`}
+                            >
+                                {l.toUpperCase()}
+                            </a>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </header>
+
+        <!-- Main content -->
+        <main class="flex-1">
+            <slot />
+        </main>
+
+        <!-- Footer -->
+        <footer class="border-t border-gray-200 bg-gray-50 mt-16">
+            <div class="max-w-6xl mx-auto px-4 py-12">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- Brand + text -->
+                    <div class="md:col-span-2">
+                        <p class="font-semibold text-gray-900 mb-2">{siteName}</p>
+                        {footerText && <p class="text-sm text-gray-500 leading-relaxed">{footerText}</p>}
+                    </div>
+
+                    <!-- Footer nav -->
+                    {footerMenu.length > 0 && (
+                        <nav class="flex flex-col gap-2">
+                            {footerMenu.map((item) => (
+                                item.url && item.label && (
+                                    <a
+                                        href={item.url}
+                                        target={item.newTab ? '_blank' : undefined}
+                                        rel={item.newTab ? 'noopener noreferrer' : undefined}
+                                        class="text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                                    >
+                                        {item.label}
+                                    </a>
+                                )
+                            ))}
+                        </nav>
+                    )}
+                </div>
+
+                <!-- Bottom bar -->
+                <div class="mt-8 pt-6 border-t border-gray-200 flex items-center justify-between gap-4 flex-wrap">
+                    <p class="text-xs text-gray-400">{copyright}</p>
+
+                    <!-- Socials -->
+                    {socials.length > 0 && (
+                        <div class="flex items-center gap-3">
+                            {socials.map((s) => (
+                                s.url && s.platform && (
+                                    <a
+                                        href={s.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        aria-label={s.platform}
+                                        class="text-gray-400 hover:text-gray-700 transition-colors"
+                                    >
+                                        <Icon name={socialIconName(s.platform)} class="w-5 h-5" />
+                                        <span class="sr-only">{s.platform}</span>
+                                    </a>
+                                )
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </footer>
+    </body>
+</html>

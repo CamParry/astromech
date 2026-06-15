@@ -1,57 +1,159 @@
+/* ============================================================================
+   am-repeater — Repeater field component
+   ============================================================================ */
+
 .am-repeater {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
 }
 
-.am-repeater-item {
-    border: 1px solid var(--am-color-border-strong);
-    border-radius: 0.25rem;
-    background: var(--am-color-bg-muted);
-    overflow: hidden;
+/* ============================================================================
+   Item list
+   ============================================================================ */
+
+.am-repeater-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
+
+/* ============================================================================
+   Individual item
+   ============================================================================ */
+
+.am-repeater-item {
+    overflow: hidden;
+    background: var(--am-color-bg-surface);
+    border: 1px solid var(--am-color-border-strong);
+    border-radius: var(--am-radius-md);
+    transition: box-shadow var(--am-duration-base) var(--am-easing);
+}
+
+.am-repeater-item-dragging {
+    z-index: 10;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    opacity: 0.95;
+}
+
+/* ============================================================================
+   Item header
+   ============================================================================ */
 
 .am-repeater-item-header {
     display: flex;
-    justify-content: space-between;
+    gap: 0.5rem;
     align-items: center;
-    padding: 0.25rem 0.25rem 0.25rem 1rem;
-    background: var(--am-color-bg-subtle);
+    min-height: 2.5rem;
+    padding: 0.25rem 0.25rem 0.25rem 0.5rem;
+    background: var(--am-color-bg-surface);
     border-bottom: 1px solid var(--am-color-border-strong);
 }
 
-.am-repeater-item-title {
-    font-weight: 600;
-    font-size: 1rem;
+.am-repeater-item-header-soft-disabled {
+    opacity: 0.55;
+}
+
+.am-repeater-drag-handle {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 2rem;
+    padding: 0;
+    color: var(--am-color-text-muted);
+    cursor: grab;
+    background: none;
+    border: none;
+}
+
+.am-repeater-drag-handle:active {
+    cursor: grabbing;
+}
+
+@media (hover: hover) {
+    .am-repeater-drag-handle:hover {
+        color: var(--am-color-text-default);
+    }
+}
+
+.am-repeater-item-meta {
+    display: flex;
+    flex: 1;
+    gap: 0.5rem;
+    align-items: center;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.am-repeater-item-disabled-badge {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--am-color-warning);
+    background: var(--am-color-warning-bg);
+    border: 1px solid var(--am-color-warning-border);
+    border-radius: var(--am-radius-full);
 }
 
 .am-repeater-item-controls {
     display: flex;
+    flex-shrink: 0;
     gap: 0.25rem;
+    align-items: center;
+    margin-left: auto;
 }
+
+/* ============================================================================
+   Item panel (collapsible body)
+   ============================================================================ */
 
 .am-repeater-item-panel {
     height: var(--collapsible-panel-height);
     overflow: hidden;
-    transition: height 0.2s ease;
+    transition: height var(--am-duration-slow) var(--am-easing);
 }
 
 .am-repeater-item-content {
-    padding: 1.5rem;
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    padding: 1.5rem;
 }
 
+/* ============================================================================
+   Footer / add-item area
+   ============================================================================ */
+
+.am-repeater-footer {
+    display: flex;
+    align-items: flex-start;
+}
+
+/* ============================================================================
+   Buttons
+   ============================================================================ */
+
 .am-repeater-btn {
+    display: inline-flex;
+    gap: 0.375rem;
+    align-items: center;
     padding: 0.5rem 1rem;
-    border: 1px solid var(--am-color-border-strong);
-    border-radius: 0.25rem;
-    background: var(--am-color-bg-base);
-    cursor: pointer;
+    font-family: inherit;
     font-size: 0.875rem;
     font-weight: 500;
-    transition: all 0.2s;
+    cursor: pointer;
+    background: var(--am-color-bg-base);
+    border: 1px solid var(--am-color-border-strong);
+    border-radius: var(--am-radius-md);
+    transition:
+        background-color var(--am-duration-base) var(--am-easing),
+        color var(--am-duration-base) var(--am-easing),
+        border-color var(--am-duration-base) var(--am-easing);
 }
 
 .am-repeater-btn:hover:not(:disabled) {
@@ -59,31 +161,47 @@
 }
 
 .am-repeater-btn:disabled {
-    opacity: 0.5;
     cursor: not-allowed;
+    opacity: 0.5;
 }
 
+/* Icon-only controls (drag/trash/collapse) read as ghost buttons, matching
+   icon buttons elsewhere — transparent until hovered. */
 .am-repeater-btn-icon {
+    flex-shrink: 0;
+    justify-content: center;
     width: 2rem;
     height: 2rem;
     padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    color: var(--am-color-text-muted);
+    background: none;
+    border-color: transparent;
+}
+
+.am-repeater-btn-icon:hover:not(:disabled) {
+    color: var(--am-color-text-default);
+    background: var(--am-color-bg-subtle);
 }
 
 .am-repeater-btn-remove {
-    color: var(--am-color-danger-600);
+    color: var(--am-color-danger);
+}
+
+.am-repeater-btn-remove:hover:not(:disabled) {
+    color: var(--am-color-danger);
+    background: var(--am-color-danger-bg);
+    border-color: var(--am-color-danger-border);
 }
 
 .am-repeater-btn-add {
-    background: var(--am-color-primary);
+    height: 2.25rem;
+    padding: 0 0.875rem;
     color: var(--am-color-neutral-0);
+    background: var(--am-color-primary);
     border-color: var(--am-color-primary);
-    align-self: flex-start;
 }
 
-.am-repeater-btn-add:hover {
-    background: var(--am-color-primary-700);
-    border-color: var(--am-color-primary-700);
+.am-repeater-btn-add:hover:not(:disabled) {
+    background: var(--am-color-primary-emphasis);
+    border-color: var(--am-color-primary-emphasis);
 }

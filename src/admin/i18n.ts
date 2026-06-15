@@ -11,12 +11,16 @@
 
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import adminConfig from 'virtual:astromech/admin-config';
 import { i18n as pluginLocales } from 'virtual:astromech/plugins/components';
 import en from './locales/en.json';
 
 void i18n.use(initReactI18next).init({
-    lng: 'en',
+    lng: adminConfig.defaultLocale,
     fallbackLng: 'en',
+    load: 'languageOnly',
+    nonExplicitSupportedLngs: true,
+    cleanCode: true,
     resources: {
         en: { translation: en },
     },

@@ -1,0 +1,25 @@
+/* seo-preview field renderer (@astromech/seo) */
+
+.am-seo-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.75rem 1rem;
+    background-color: var(--am-color-bg-muted);
+    border: 1px solid var(--am-color-border);
+    border-radius: var(--am-radius-md);
+}
+
+.am-seo-preview-title {
+    font-size: 1.125rem;
+    color: var(--am-color-primary);
+}
+
+.am-seo-preview-description {
+    font-size: 0.8125rem;
+    color: var(--am-color-text-secondary);
+}
+
+.am-seo-preview--placeholder {
+    color: var(--am-color-text-placeholder);
+}

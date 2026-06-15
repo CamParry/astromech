@@ -14,7 +14,7 @@ import {
     notFound,
 } from '@/api/middleware/errors.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
-import { can } from '@/core/permissions.js';
+import { can, PERMISSION_ENTRY_READ_FULL } from '@/core/permissions.js';
 import type {
     EntryDuplicateOverrides,
     EntryQueryParams,
@@ -128,6 +128,16 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
         return params;
     }
 
+    /** Parse the `full` flag from a GET query string. */
+    function parseFullFromQuery(query: Record<string, string>): boolean {
+        return query['full'] === 'true';
+    }
+
+    /** Parse the `full` flag from a POST JSON body. */
+    function parseFullFromBody(body: Record<string, unknown>): boolean {
+        return body['full'] === true;
+    }
+
     function cascadeLocalesFromQuery(query: Record<string, string>): boolean {
         return query['cascadeLocales'] === 'true' || query['cascadeLocales'] === '1';
     }
@@ -208,7 +218,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
     router.post('/query', async (c) => {
         const role = c.var.role;
         try {
-            const body = await c.req.json<EntryQueryParams>();
+            const body = await c.req.json<EntryQueryParams & Record<string, unknown>>();
             const typeParam = body.type;
             const types = Array.isArray(typeParam)
                 ? Array.from(typeParam)
@@ -235,10 +245,14 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
                 if (!can(role, options.permissionFor(t, 'read'))) return forbidden(c);
             }
 
+            const wantsFull = parseFullFromBody(body);
+            if (wantsFull && !can(role, PERMISSION_ENTRY_READ_FULL)) return forbidden(c);
+
             const validatedSort = validateSort(body.sort);
             const params: EntryQueryParams & { type: string | readonly string[] } = {
                 ...body,
                 type: types.map(options.qualify),
+                full: wantsFull,
                 ...(validatedSort !== undefined ? { sort: validatedSort } : {}),
             };
             return c.json(await Astromech.entries.query(params));
@@ -279,9 +293,14 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
         try {
+            const query = c.req.query();
+            const wantsFull = parseFullFromQuery(query);
+            if (wantsFull && !can(role, PERMISSION_ENTRY_READ_FULL)) return forbidden(c);
+
             const params = {
-                ...parseQueryParams(c.req.query()),
+                ...parseQueryParams(query),
                 type: options.qualify(type),
+                full: wantsFull,
             };
             return c.json(await Astromech.entries.query(params));
         } catch (err) {
@@ -320,10 +339,15 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
         try {
-            const qp = parseQueryParams(c.req.query());
+            const query = c.req.query();
+            const wantsFull = parseFullFromQuery(query);
+            if (wantsFull && !can(role, PERMISSION_ENTRY_READ_FULL)) return forbidden(c);
+
+            const qp = parseQueryParams(query);
             const entry = await Astromech.entries.get({
                 type: options.qualify(type),
                 id,
+                full: wantsFull,
                 ...(qp.populate ? { populate: qp.populate } : {}),
                 ...(qp.locale ? { locale: qp.locale } : {}),
             });
@@ -418,11 +442,15 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
         try {
-            const body = await c.req.json<Omit<EntryQueryParams, 'type'>>();
+            const body = await c.req.json<Omit<EntryQueryParams, 'type'> & Record<string, unknown>>();
+            const wantsFull = parseFullFromBody(body);
+            if (wantsFull && !can(role, PERMISSION_ENTRY_READ_FULL)) return forbidden(c);
+
             const validatedSort = validateSort(body.sort);
             const params: EntryQueryParams & { type: string } = {
                 ...body,
                 type: options.qualify(type),
+                full: wantsFull,
                 ...(validatedSort !== undefined ? { sort: validatedSort } : {}),
             };
             return c.json(await Astromech.entries.query(params));

@@ -6,7 +6,6 @@
  */
 
 import config from 'virtual:astromech/config';
-import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/registry.js';
 import { settingsTable } from '@/db/schema.js';
 import type {
@@ -22,6 +21,8 @@ import { mediaApi } from '@/sdk/local/media.js';
 import { setCurrentUser } from '@/sdk/local/context.js';
 import { setPluginSdkClient } from '@/core/plugin-runtime.js';
 import { localPlugins } from '@/sdk/local/plugins.js';
+import { mergeLocaleSetting } from '@/core/settings-page-values.js';
+import { isPublicSettingKey } from '@/core/settings-visibility.js';
 
 export { initServerContext, setCurrentUser };
 
@@ -32,26 +33,49 @@ export { initServerContext, setCurrentUser };
 // ============================================================================
 
 const settingsApi: SettingsApi = {
-    async all(): Promise<Setting[]> {
+    async all(opts?: { full?: boolean }): Promise<Setting[]> {
         const db = getDb();
         const rows = await db.select().from(settingsTable);
-        return rows.map((row) => ({
-            key: row.key,
-            value: row.value ?? null,
-            updatedAt: row.updatedAt,
-            updatedBy: row.updatedBy ?? null,
-        }));
+        const full = opts?.full ?? false;
+        const publicKeys = (config as { publicSettingKeys?: string[] }).publicSettingKeys ?? [];
+        return rows
+            .filter((row) => full || isPublicSettingKey(row.key, publicKeys))
+            .map((row) => ({
+                key: row.key,
+                value: row.value ?? null,
+                updatedAt: row.updatedAt,
+                updatedBy: row.updatedBy ?? null,
+            }));
     },
 
-    async get(key: string): Promise<JsonValue | null> {
+    async get(key: string, opts?: { locale?: string; full?: boolean }): Promise<JsonValue | null> {
         const db = getDb();
-        const rows = await db
-            .select()
-            .from(settingsTable)
-            .where(eq(settingsTable.key, key))
-            .limit(1);
-        if (!rows[0]) return null;
-        return rows[0].value ?? null;
+        const locale = opts?.locale ?? config.defaultLocale;
+        const full = opts?.full ?? false;
+        const publicKeys = (config as { publicSettingKeys?: string[] }).publicSettingKeys ?? [];
+
+        // On a public read, reject private keys immediately without a DB round-trip.
+        if (!full && !isPublicSettingKey(key, publicKeys)) {
+            return null;
+        }
+
+        const rows = await db.select().from(settingsTable);
+        const byKey: Record<string, JsonValue | null> = {};
+        for (const row of rows) {
+            byKey[row.key] = row.value ?? null;
+        }
+        const base = byKey[key] ?? null;
+        if (locale) {
+            const locKey = `${key}:${locale}`;
+            // Public read: the per-locale key must also be public (it will be,
+            // because the prefix `'<key>:'` covers all `<key>:<locale>` variants).
+            const loc =
+                full || isPublicSettingKey(locKey, publicKeys)
+                    ? byKey[locKey]
+                    : undefined;
+            return mergeLocaleSetting(base, loc);
+        }
+        return base;
     },
 
     async set(key: string, value: JsonValue): Promise<Setting> {

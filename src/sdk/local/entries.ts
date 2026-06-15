@@ -51,6 +51,13 @@ import { getCurrentUser, setCurrentUser } from '@/sdk/local/context.js';
 import { hasHookHandlers, runAfterHooks, runBeforeHooks } from '@/core/plugin-runtime.js';
 import { slugify } from '@/support/strings.js';
 import { flattenEntryFields } from '@/core/entry-fields.js';
+import {
+    applyVisibilityWithRelations,
+    isPublicBranded,
+    markPublic,
+    PublicShapeWriteError,
+    type VisibilityShape,
+} from '@/core/visibility.js';
 
 // ============================================================================
 // Validation Helper
@@ -496,6 +503,10 @@ export const entries: EntriesApi = {
             ? Array.from(typeParam)
             : [typeParam as string];
 
+        // Resolve effective visibility shape.
+        // Step 4 will layer client-level defaults; absent `full` ⇒ public is correct here.
+        const shape: VisibilityShape = params.full ? 'full' : 'public';
+
         // Populate only applies when all rows share a single type config.
         const singleType = types.length === 1 ? (types[0] ?? null) : null;
         const firstType = types[0] ?? '';
@@ -505,13 +516,27 @@ export const entries: EntriesApi = {
             ? resolveEntryType(config, singleType)
             : undefined;
 
+        // Open Q1 (pagination correctness): for public shape, push the status
+        // predicate into the storage where-clause so DB counts are correct.
+        // WhereFilters supports `status: 'published'` (eq). It does NOT support
+        // `publishedAt <= now` (no lte operator) — that check stays in applyVisibility.
+        // NOTE: scheduled rows with publishedAt <= now will be counted but then
+        // filtered in applyVisibility, slightly inflating total/pages when such rows exist.
+        // Only push for types that have the statuses capability; tableStorage-backed
+        // types (statuses: false) have no publication status column.
+        const hasStatuses = singleTypeCfg ? singleTypeCfg.capabilities.statuses !== false : true;
+        const effectiveWhere =
+            shape === 'public' && hasStatuses
+                ? { ...params.where, status: 'published' }
+                : params.where;
+
         const { data: rows, total } = await storage.list({
             type: singleType ?? types,
             locale: params.locale ?? getDefaultLocale(),
             trashed: params.trashed ?? false,
             search: params.search,
             ...(singleTypeCfg?.search ? { searchFields: singleTypeCfg.search } : {}),
-            where: params.where,
+            where: effectiveWhere,
             sort: params.sort,
             page: params.page ?? 1,
             limit: params.limit,
@@ -531,8 +556,36 @@ export const entries: EntriesApi = {
             }
         }
 
+        // Apply visibility filter after populate.
+        const user = getCurrentUser();
+        const audience = { roleSlug: user?.roleSlug ?? null, now: new Date() };
+
+        const visibleData: Entry[] = [];
+        for (const entry of data) {
+            // Resolve field definitions per row (supports cross-type queries).
+            const rowType = entry.type ?? (singleType ?? firstType);
+            const rowTypeCfg = resolveEntryType(config, rowType);
+            const rowFields = rowTypeCfg ? flattenEntryFields(rowTypeCfg.fields) : [];
+
+            // Resolver for populated related entries — look up the related type's fields.
+            const resolveRelatedFields = (related: Entry): import('@/types/index.js').FieldDefinition[] => {
+                const relTypeCfg = resolveEntryType(config, related.type);
+                return relTypeCfg ? flattenEntryFields(relTypeCfg.fields) : [];
+            };
+
+            const filtered = applyVisibilityWithRelations(
+                entry,
+                { shape, fields: rowFields, audience },
+                resolveRelatedFields
+            );
+
+            if (filtered !== null) {
+                visibleData.push(shape === 'public' ? markPublic(filtered) : filtered);
+            }
+        }
+
         if (params.limit === 'all') {
-            return { data, pagination: null };
+            return { data: visibleData, pagination: null };
         }
 
         const perPage = typeof params.limit === 'number' ? params.limit : 20;
@@ -540,7 +593,7 @@ export const entries: EntriesApi = {
         const pages = Math.ceil(total / perPage);
 
         return {
-            data,
+            data: visibleData,
             pagination: { page, limit: perPage, total, pages },
         };
     },
@@ -550,6 +603,7 @@ export const entries: EntriesApi = {
         id: string;
         locale?: string;
         populate?: string[];
+        full?: boolean;
     }): Promise<Entry | null> {
         const { type, id } = params;
         const storage = getEntryStorage(type);
@@ -573,7 +627,27 @@ export const entries: EntriesApi = {
             }
         }
 
-        return result;
+        // Apply visibility filter after populate.
+        const shape: VisibilityShape = params.full ? 'full' : 'public';
+        const user = getCurrentUser();
+        const audience = { roleSlug: user?.roleSlug ?? null, now: new Date() };
+        const entryTypeCfg = resolveEntryType(config, type);
+        const fields = entryTypeCfg ? flattenEntryFields(entryTypeCfg.fields) : [];
+
+        const resolveRelatedFields = (related: Entry): import('@/types/index.js').FieldDefinition[] => {
+            const relTypeCfg = resolveEntryType(config, related.type);
+            return relTypeCfg ? flattenEntryFields(relTypeCfg.fields) : [];
+        };
+
+        const filtered = applyVisibilityWithRelations(
+            result,
+            { shape, fields, audience },
+            resolveRelatedFields
+        );
+
+        if (filtered === null) return null;
+
+        return shape === 'public' ? markPublic(filtered) : filtered;
     },
 
     async create(params: {
@@ -586,6 +660,10 @@ export const entries: EntriesApi = {
         status?: EntryStatus;
         publishAt?: Date | null;
     }): Promise<Entry> {
+        // Write-back guard: reject public-branded fields objects (defense-in-depth).
+        if (params.fields !== undefined && isPublicBranded(params.fields)) {
+            throw new PublicShapeWriteError();
+        }
         const { type } = params;
         const titleField = getTitleField(type);
         const validated = validate(createEntrySchemaFor(titleField), {
@@ -670,6 +748,10 @@ export const entries: EntriesApi = {
         id: string | readonly string[];
         data: EntryUpdateData;
     }): Promise<Entry | Entry[]> => {
+        // Write-back guard: reject public-branded fields (defense-in-depth).
+        if (params.data.fields !== undefined && isPublicBranded(params.data.fields)) {
+            throw new PublicShapeWriteError();
+        }
         const user = getCurrentUser();
         const hooksActive = entryHooksActive('entry:beforeUpdate', 'entry:afterUpdate');
         const storage = getEntryStorage(params.type);

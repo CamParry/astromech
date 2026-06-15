@@ -20,8 +20,7 @@ import {
     PageTitle,
     PageContent,
     FormLayout,
-    FormLayoutMain,
-    FormLayoutSidebar,
+    Stack,
 } from '@/admin/components/ui/index.js';
 import { usePermissions, useCreateUser } from '@/admin/hooks/index.js';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -91,7 +90,7 @@ function UserCreatePage(): React.ReactElement {
             <PageContent>
             <FormLayout>
                 {/* Main column */}
-                <FormLayoutMain>
+                <Stack gap={8}>
                     <Panel title={t('users.profilePanel')}>
                         <div
                             style={{
@@ -197,10 +196,10 @@ function UserCreatePage(): React.ReactElement {
                             </form.Field>
                         </div>
                     </Panel>
-                </FormLayoutMain>
+                </Stack>
 
                 {/* Sidebar column */}
-                <FormLayoutSidebar>
+                <Stack gap={8}>
                     <Panel title={t('users.actionsPanel')}>
                         <Button
                             onClick={handleSave}
@@ -210,7 +209,7 @@ function UserCreatePage(): React.ReactElement {
                             {t('common.create')}
                         </Button>
                     </Panel>
-                </FormLayoutSidebar>
+                </Stack>
             </FormLayout>
             </PageContent>
         </Page>

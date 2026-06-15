@@ -9,6 +9,7 @@ import React from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { FileImage } from 'lucide-react';
+import { formatDatetime } from '@/support/dates.js';
 import {
     Button,
     Panel,
@@ -21,8 +22,7 @@ import {
     PageTitle,
     PageContent,
     FormLayout,
-    FormLayoutMain,
-    FormLayoutSidebar,
+    Stack,
 } from '@/admin/components/ui/index.js';
 import {
     usePermissions,
@@ -40,17 +40,6 @@ function formatBytes(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatDate(value: Date | string | null | undefined): string {
-    if (value == null) return '—';
-    return new Date(value).toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
 }
 
 // ============================================================================
@@ -114,7 +103,7 @@ function MediaEditPage(): React.ReactElement {
             <PageContent>
                 <FormLayout>
                     {/* Main column */}
-                    <FormLayoutMain>
+                    <Stack gap={8}>
                         <Panel title="Preview">
                             {item?.mimeType.startsWith('image/') ? (
                                 <img
@@ -158,10 +147,10 @@ function MediaEditPage(): React.ReactElement {
                                 )}
                             </form.Field>
                         </Panel>
-                    </FormLayoutMain>
+                    </Stack>
 
                     {/* Sidebar column */}
-                    <FormLayoutSidebar>
+                    <Stack gap={8}>
                         <Panel title="Actions">
                             <div
                                 style={{
@@ -233,18 +222,18 @@ function MediaEditPage(): React.ReactElement {
                                 <div>
                                     <dt className="am-meta-label">Uploaded</dt>
                                     <dd className="am-meta-value">
-                                        {formatDate(item?.createdAt)}
+                                        {formatDatetime(item?.createdAt)}
                                     </dd>
                                 </div>
                                 <div>
                                     <dt className="am-meta-label">Last updated</dt>
                                     <dd className="am-meta-value">
-                                        {formatDate(item?.updatedAt)}
+                                        {formatDatetime(item?.updatedAt)}
                                     </dd>
                                 </div>
                             </dl>
                         </Panel>
-                    </FormLayoutSidebar>
+                    </Stack>
                 </FormLayout>
             </PageContent>
         </Page>

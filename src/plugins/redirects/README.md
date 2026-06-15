@@ -1,7 +1,7 @@
 # @astromech/redirects
 
 Manage URL redirects, look them up from anywhere via the SDK, and (optionally)
-auto-create a redirect whenever an entry's slug changes.
+auto-create a redirect whenever an entry's front-end URL changes.
 
 Redirects are stored in the plugin's **own table** (`plugin_redirects_redirects`)
 via `tableStorage`, not in the shared `entries` table. They are still managed
@@ -27,16 +27,19 @@ astromech db:generate   # emits a migration covering plugin_redirects_redirects
 astromech db:migrate
 ```
 
-### Options
+## Options
 
 ```ts
 redirects({
-    // Auto-create a redirect when an entry's slug changes. Default: true.
+    // Auto-create a redirect when an entry's resolved URL changes. Default: true.
     generateOnSlugChange: true,
-    // Map an entry to the public path it is served at. Default: `/${slug}`.
-    pathForEntry: ({ type, slug }) => (slug ? `/${type}/${slug}` : null),
 });
 ```
+
+When `generateOnSlugChange` is on, the plugin derives the old and new paths from
+the updated entry type's `url` template (e.g. `url: '/blog/{slug}'`) — the same
+template that powers the admin **View** link. Entry types without a `url`
+template are skipped, so the plugin never guesses a path.
 
 This adds a **Redirects** entry type to the admin (managed like any other) with
 `from`, `to`, `status` (301/302), and `enabled` fields. The list lives at

@@ -13,8 +13,13 @@ export function GroupField({ name, value, field, onChange }: BaseFieldProps) {
         onChange(name, { ...groupValue, [fieldName]: fieldValue });
     }
 
+    const className =
+        field.container === false
+            ? 'am-group-field'
+            : 'am-group-field am-group-field--boxed';
+
     return (
-        <div className="am-group-field">
+        <div className={className}>
             {fields.map((subField) => (
                 <FormField
                     key={subField.name}

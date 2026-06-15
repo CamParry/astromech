@@ -2,30 +2,25 @@ import { useState, useCallback } from 'react';
 
 export type BlockWithId = {
     _id: string;
-    type: string;
-    disabled?: boolean;
+    _type: string;
+    _disabled?: boolean;
+    _title?: string;
     [fieldName: string]: unknown;
 };
 
 export type SerializedBlock = {
-    type: string;
-    disabled?: boolean;
+    _type: string;
+    _disabled?: boolean;
+    _title?: string;
+    _id?: string;
     [fieldName: string]: unknown;
 };
 
 function attachId(block: SerializedBlock): BlockWithId {
     return {
         ...block,
-        _id:
-            typeof (block as Record<string, unknown>)['_id'] === 'string'
-                ? ((block as Record<string, unknown>)['_id'] as string)
-                : crypto.randomUUID(),
+        _id: typeof block._id === 'string' ? block._id : crypto.randomUUID(),
     };
-}
-
-function stripId(block: BlockWithId): SerializedBlock {
-    const { _id: _ignored, ...rest } = block;
-    return rest as SerializedBlock;
 }
 
 type UseBlocksFieldOptions = {
@@ -39,17 +34,19 @@ export function useBlocksField({ name, value, onChange }: UseBlocksFieldOptions)
 
     const [blocks, setBlocks] = useState<BlockWithId[]>(() => rawArray.map(attachId));
 
+    // `_id` is a persisted UUID (stable item identity for diffs/versioning), so
+    // blocks commit as-is — no key stripping.
     const commit = useCallback(
         (next: BlockWithId[]) => {
             setBlocks(next);
-            onChange(name, next.map(stripId));
+            onChange(name, next);
         },
         [name, onChange]
     );
 
     const addBlock = useCallback(
         (type: string) => {
-            commit([...blocks, attachId({ type })]);
+            commit([...blocks, attachId({ _type: type })]);
         },
         [blocks, commit]
     );
@@ -74,12 +71,37 @@ export function useBlocksField({ name, value, onChange }: UseBlocksFieldOptions)
         [blocks, commit]
     );
 
+    // Re-enabling omits `_disabled` entirely (default-by-absence) rather than
+    // storing `_disabled: false`, keeping payloads clean.
     const toggleDisabled = useCallback(
         (id: string) => {
             commit(
-                blocks.map((b) =>
-                    b._id === id ? { ...b, disabled: !b.disabled } : b
-                )
+                blocks.map((b) => {
+                    if (b._id !== id) return b;
+                    if (b._disabled === true) {
+                        const { _disabled: _removed, ...rest } = b;
+                        return rest as BlockWithId;
+                    }
+                    return { ...b, _disabled: true };
+                })
+            );
+        },
+        [blocks, commit]
+    );
+
+    // Empty/blank title omits `_title` (default-by-absence) rather than storing
+    // an empty string, keeping payloads clean.
+    const renameBlock = useCallback(
+        (id: string, title: string | undefined) => {
+            commit(
+                blocks.map((b) => {
+                    if (b._id !== id) return b;
+                    if (title === undefined || title === '') {
+                        const { _title: _removed, ...rest } = b;
+                        return rest as BlockWithId;
+                    }
+                    return { ...b, _title: title };
+                })
             );
         },
         [blocks, commit]
@@ -109,5 +131,5 @@ export function useBlocksField({ name, value, onChange }: UseBlocksFieldOptions)
         [blocks, commit]
     );
 
-    return { blocks, addBlock, removeBlock, duplicateBlock, toggleDisabled, updateBlock, reorder };
+    return { blocks, addBlock, removeBlock, duplicateBlock, toggleDisabled, renameBlock, updateBlock, reorder };
 }

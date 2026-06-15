@@ -60,7 +60,9 @@ const config: ResolvedConfig = {
         },
     },
     pluginEntries: {},
+    adminPages: [],
     trash: { enabled: true, retentionDays: 30 },
+    publicSettingKeys: [],
     storage: {
         name: 'noop',
         upload: async () => '',

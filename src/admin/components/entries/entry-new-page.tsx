@@ -32,8 +32,7 @@ import {
     PageContent,
     ButtonGroup,
     FormLayout,
-    FormLayoutMain,
-    FormLayoutSidebar,
+    Stack,
 } from '@/admin/components/ui/index.js';
 import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer.js';
 import {
@@ -47,6 +46,7 @@ import {
     deriveFormDefinition,
     resolveConfigForDerive,
 } from '@/admin/definitions/derive.js';
+import { resolveContentLocale } from '@/support/locale.js';
 import type { EntriesSurface } from './surface.js';
 
 // ============================================================================
@@ -132,7 +132,7 @@ function CreateLocaleModal({
                 </>
             }
         >
-            <div className="am-field-list">
+            <Stack gap={5}>
                 <RadioOption
                     label={t('entries.createTranslate')}
                     description={t('entries.createTranslateDescription')}
@@ -169,7 +169,7 @@ function CreateLocaleModal({
                         />
                     </div>
                 )}
-            </div>
+            </Stack>
         </Modal>
     );
 }
@@ -230,8 +230,12 @@ export function EntryNewPage({
 
     const capabilities = entryTypeConfig?.capabilities;
     const hasI18n = capabilities?.translatable === true;
-    const requestedLocale = requestedLocaleProp ?? adminConfig.defaultLocale;
-    const isNonDefaultLocale = hasI18n && requestedLocale !== adminConfig.defaultLocale;
+    const defaultContentLocale =
+        resolveContentLocale(adminConfig.defaultLocale, adminConfig.locales) ??
+        adminConfig.locales[0] ??
+        adminConfig.defaultLocale;
+    const requestedLocale = requestedLocaleProp ?? defaultContentLocale;
+    const isNonDefaultLocale = hasI18n && requestedLocale !== defaultContentLocale;
 
     // For non-default-locale creates, hold a chosen localeGroup (when joining
     // an existing group via "blank in this locale"). null = fresh standalone group.
@@ -380,7 +384,7 @@ export function EntryNewPage({
                 <PageContent>
                     <FormLayout>
                         {/* Main column */}
-                        <FormLayoutMain>
+                        <Stack gap={8}>
                             {/* Title + optional slug */}
                             {(hasTitle || hasSlug) && (
                                 <Panel>
@@ -476,10 +480,10 @@ export function EntryNewPage({
                                     />
                                 )}
                             </form.Field>
-                        </FormLayoutMain>
+                        </Stack>
 
                         {/* Sidebar column */}
-                        <FormLayoutSidebar>
+                        <Stack gap={8}>
                             {hasStatuses && (
                                 <form.Field name="status">
                                     {(statusField) => (
@@ -515,7 +519,7 @@ export function EntryNewPage({
                                     />
                                 )}
                             </form.Field>
-                        </FormLayoutSidebar>
+                        </Stack>
                     </FormLayout>
                 </PageContent>
             </Page>

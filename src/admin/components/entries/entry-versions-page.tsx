@@ -14,6 +14,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link as RouterLink } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { formatDatetime } from '@/support/dates.js';
 import {
     Button,
     Panel,
@@ -40,18 +41,6 @@ const Link = RouterLink as unknown as (props: LinkProps) => React.ReactElement;
 // ============================================================================
 // Helpers
 // ============================================================================
-
-function formatVersionDate(date: Date | string): string {
-    const d = typeof date === 'string' ? new Date(date) : date;
-    return d.toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-    });
-}
 
 type DiffEntry = {
     field: string;
@@ -134,7 +123,7 @@ function VersionItem({
                 <span className="am-versions-item-number">#{version.versionNumber}</span>
             </div>
             <div className="am-versions-item-date">
-                {formatVersionDate(version.createdAt)}
+                {formatDatetime(version.createdAt)}
             </div>
             {version.createdBy != null && (
                 <div className="am-versions-item-author">{version.createdBy}</div>
@@ -169,7 +158,7 @@ function DiffView({
                         {t('versions.version', { number: selected.versionNumber })}
                     </span>
                     <span className="am-versions-diff-subtitle">
-                        {formatVersionDate(selected.createdAt)}
+                        {formatDatetime(selected.createdAt)}
                         {selected.createdBy != null && ` · ${selected.createdBy}`}
                     </span>
                 </div>

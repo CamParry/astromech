@@ -14,7 +14,7 @@
  */
 
 import { Menu } from '@base-ui/react/menu';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import {
     Check,
     Copy,
@@ -70,6 +70,7 @@ import type { SortDirection } from '@/admin/components/ui/table.js';
 import {
     useSelection,
     useViewMode,
+    useIsMobile,
     usePermissions,
     useEntriesQuery,
     useTrashEntry,
@@ -82,7 +83,8 @@ import {
     useBulkUnpublishEntries,
 } from '@/admin/hooks/index.js';
 import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal.js';
-import type { EntriesSurface } from './surface.js';
+import { resolveContentLocale } from '@/support/locale.js';
+import type { EntriesSurface, EntriesListSearch } from './surface.js';
 
 // ============================================================================
 // Types
@@ -442,6 +444,24 @@ function EntryCard({
 // Page
 // ============================================================================
 
+/** Partial URL-search update; an explicit `undefined` value clears that key. */
+type EntriesSearchPatch = {
+    [K in keyof EntriesListSearch]?: EntriesListSearch[K] | undefined;
+};
+
+/** Parse a `${key}:${dir}` URL sort param back into the table's sort shape. */
+function parseSortParam(
+    raw: string | undefined
+): { key: string; direction: 'asc' | 'desc' } | null {
+    if (!raw) return null;
+    const idx = raw.lastIndexOf(':');
+    if (idx === -1) return null;
+    const key = raw.slice(0, idx);
+    const direction = raw.slice(idx + 1);
+    if (!key || (direction !== 'asc' && direction !== 'desc')) return null;
+    return { key, direction };
+}
+
 export function EntriesListPage({
     surface,
 }: {
@@ -496,18 +516,46 @@ export function EntriesListPage({
     const showViewToggle =
         availableViews.includes('list') && availableViews.includes('grid');
 
-    const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-    const [page, setPage] = useState(1);
+    const urlSearch = useSearch({ strict: false }) as EntriesListSearch;
+
     const hasI18n = capabilities?.translatable === true;
     const configuredLocales = adminConfig.locales;
-    const [localeFilter, setLocaleFilter] = useState<string>(adminConfig.defaultLocale);
 
-    const [viewMode, setViewMode] = useViewMode(`entry:${type}`, defaultView);
+    // Filter/sort/page state lives in the URL so it survives refresh,
+    // back/forward, and link-sharing. `patchSearch` applies a partial change in
+    // a single navigation; omitting a key clears it, and clearing `page` resets
+    // to the first page.
+    const search = urlSearch.q ?? '';
+    const statusFilter = (urlSearch.status ?? 'all') as StatusFilter;
+    const page = urlSearch.page ?? 1;
+    const defaultContentLocale =
+        resolveContentLocale(adminConfig.defaultLocale, adminConfig.locales) ??
+        adminConfig.locales[0] ??
+        adminConfig.defaultLocale;
+    const localeFilter = urlSearch.locale ?? defaultContentLocale;
+    const sort = parseSortParam(urlSearch.sort);
 
-    const [sort, setSort] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(
-        null
+    const patchSearch = useCallback(
+        (patch: EntriesSearchPatch): void => {
+            void navigate({
+                search: (prev: Record<string, unknown>) => {
+                    const next: Record<string, unknown> = { ...prev, ...patch };
+                    for (const key of Object.keys(next)) {
+                        if (next[key] === undefined) delete next[key];
+                    }
+                    return next;
+                },
+            } as unknown as Parameters<typeof navigate>[0]);
+        },
+        [navigate]
     );
+
+    const isMobile = useIsMobile();
+    const mobileDefault: ViewMode = availableViews.includes('grid') ? 'grid' : defaultView;
+    const [viewMode, setViewMode] = useViewMode(`entry:${type}`, defaultView, {
+        storageKey: isMobile ? `entry:${type}:mobile` : `entry:${type}`,
+        defaultView: isMobile ? mobileDefault : defaultView,
+    });
     const [visibleColumns, setVisibleColumns] = useState<Set<string>>(() =>
         readStoredColumns(type, adminColumns, hasTitle)
     );
@@ -680,11 +728,10 @@ export function EntriesListPage({
     }
 
     function handleSort(key: string, direction: SortDirection) {
-        if (direction === null) {
-            setSort(null);
-        } else {
-            setSort({ key, direction });
-        }
+        patchSearch({
+            sort: direction === null ? undefined : `${key}:${direction}`,
+            page: undefined,
+        });
     }
 
     function toggleColumn(key: string) {
@@ -858,8 +905,10 @@ export function EntriesListPage({
                                     })}
                                     value={search}
                                     onChange={(e) => {
-                                        setSearch(e.target.value);
-                                        setPage(1);
+                                        patchSearch({
+                                            q: e.target.value || undefined,
+                                            page: undefined,
+                                        });
                                     }}
                                 />
                             )}
@@ -869,8 +918,10 @@ export function EntriesListPage({
                                 <Select
                                     value={statusFilter}
                                     onValueChange={(v) => {
-                                        setStatusFilter((v ?? 'all') as StatusFilter);
-                                        setPage(1);
+                                        patchSearch({
+                                            status: v && v !== 'all' ? v : undefined,
+                                            page: undefined,
+                                        });
                                         reset();
                                     }}
                                     options={STATUS_FILTER_OPTIONS}
@@ -883,8 +934,13 @@ export function EntriesListPage({
                                 <Select
                                     value={localeFilter}
                                     onValueChange={(v) => {
-                                        setLocaleFilter(v ?? adminConfig.defaultLocale);
-                                        setPage(1);
+                                        patchSearch({
+                                            locale:
+                                                v && v !== defaultContentLocale
+                                                    ? v
+                                                    : undefined,
+                                            page: undefined,
+                                        });
                                         reset();
                                     }}
                                     options={[
@@ -1128,7 +1184,7 @@ export function EntriesListPage({
                     <Pagination
                         currentPage={page}
                         totalPages={totalPages}
-                        onPage={setPage}
+                        onPage={(p) => patchSearch({ page: p > 1 ? p : undefined })}
                         totalItems={totalItems}
                     />
                 </PageContent>

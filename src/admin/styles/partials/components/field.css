@@ -20,6 +20,26 @@
     color: var(--am-color-text-muted);
 }
 
+/* Advisory character counter for text/textarea (field.count). */
+.am-field-count {
+    align-self: flex-end;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--am-color-text-muted);
+}
+
+.am-field-count--short {
+    color: var(--am-color-warning);
+}
+
+.am-field-count--good {
+    color: var(--am-color-success);
+}
+
+.am-field-count--long {
+    color: var(--am-color-danger);
+}
+
 /* ============================================================================
    am-input — Text input
    ============================================================================ */

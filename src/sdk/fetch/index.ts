@@ -156,7 +156,31 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
 // Entries API Implementation
 // ============================================================================
 
-export function createEntriesApi(basePath: string): EntriesApi {
+/**
+ * Create an EntriesApi backed by HTTP fetch.
+ *
+ * `defaultShape` controls what happens when the caller omits the `full` flag on
+ * read calls (`query` / `get`):
+ *  - `'public'` (default): no `full` param sent → server returns public shape.
+ *  - `'full'`: injects `full: true` into reads that don't specify `full`, so the
+ *    admin client gets full data without annotating every call.
+ *
+ * An explicit per-call `full` value always wins over the client default.
+ */
+export function createEntriesApi(
+    basePath: string,
+    defaultShape: 'public' | 'full' = 'public'
+): EntriesApi {
+    /**
+     * Resolve the effective `full` flag for a read call.
+     * If the param object has an explicit `full` key (even `false`), use it.
+     * Otherwise fall back to the client-level default.
+     */
+    function effectiveFull(params: { full?: boolean }): boolean | undefined {
+        if ('full' in params) return params.full;
+        return defaultShape === 'full' ? true : undefined;
+    }
+
     return {
         async query(
             params: EntryQueryParams & { type: string | readonly string[] }
@@ -167,7 +191,10 @@ export function createEntriesApi(basePath: string): EntriesApi {
             const path = isArray
                 ? `${basePath}/query`
                 : `${basePath}/${typeParam as string}/query`;
-            const body = isArray ? params : { ...params, type: undefined };
+            const full = effectiveFull(params);
+            const body = isArray
+                ? { ...params, ...(full !== undefined ? { full } : {}) }
+                : { ...params, type: undefined, ...(full !== undefined ? { full } : {}) };
             return apiFetch<QueryResult<Entry>>(path, {
                 method: 'POST',
                 body,
@@ -179,13 +206,16 @@ export function createEntriesApi(basePath: string): EntriesApi {
             id: string;
             locale?: string;
             populate?: string[];
+            full?: boolean;
         }): Promise<Entry | null> {
+            const full = effectiveFull(params);
             const res = await apiFetch<{ data: Entry } | null>(
                 `${basePath}/${params.type}/${params.id}`,
                 {
                     params: {
                         populate: params.populate?.join(','),
                         locale: params.locale,
+                        ...(full !== undefined ? { full } : {}),
                     },
                 }
             );
@@ -394,8 +424,8 @@ export function createEntriesApi(basePath: string): EntriesApi {
     };
 }
 
-/** Root entries API — byte-identical request paths to the pre-factory client. */
-const entriesApi: EntriesApi = createEntriesApi('/entries');
+/** Root entries API — admin fetch client defaults to full shape (authenticated admin). */
+const entriesApi: EntriesApi = createEntriesApi('/entries', 'full');
 
 // ============================================================================
 // Media API Implementation
@@ -481,14 +511,45 @@ const mediaApi: MediaApi = {
 // ============================================================================
 
 const settingsApi: SettingsApi = {
-    async all(): Promise<Setting[]> {
+    // `full` is accepted for type compatibility; the fetch SDK is only used by
+    // the authenticated admin SPA, so the HTTP endpoint always returns the full
+    // set (guarded by `requireAuth` + `settings:read`). The flag is ignored on
+    // the wire — the HTTP route does not yet expose a public endpoint.
+    async all(_opts?: { full?: boolean }): Promise<Setting[]> {
         const res = await apiFetch<{ data: Setting[] }>('/settings');
         return res.data;
     },
 
-    async get(key: string): Promise<JsonValue | null> {
-        const res = await apiFetch<{ data: Setting } | null>(`/settings/${key}`);
-        return res?.data.value ?? null;
+    async get(key: string, opts?: { locale?: string; full?: boolean }): Promise<JsonValue | null> {
+        // A missing setting is a normal state, not an error: swallow the 404 so
+        // react-query doesn't treat it as a failure (and retry with backoff —
+        // the cause of the slow settings-page spinner).
+        const getValue = async (k: string): Promise<JsonValue | null> => {
+            try {
+                const res = await apiFetch<{ data: Setting }>(`/settings/${k}`);
+                return res.data.value ?? null;
+            } catch (err) {
+                if (err instanceof AstromechApiError && err.status === 404) return null;
+                throw err;
+            }
+        };
+
+        if (opts?.locale) {
+            // Base (shared) and per-locale values are independent keys — fetch
+            // them concurrently rather than serially.
+            const [base, loc] = await Promise.all([
+                getValue(key),
+                getValue(`${key}:${opts.locale}`),
+            ]);
+            if (
+                base !== null && typeof base === 'object' && !Array.isArray(base) &&
+                loc !== null && typeof loc === 'object' && !Array.isArray(loc)
+            ) {
+                return { ...(base as Record<string, JsonValue>), ...(loc as Record<string, JsonValue>) };
+            }
+            return loc ?? base;
+        }
+        return getValue(key);
     },
 
     async set(key: string, value: JsonValue): Promise<Setting> {
@@ -573,7 +634,7 @@ const pluginEntriesCache = new Map<string, EntriesApi>();
 function pluginEntriesApi(name: string): EntriesApi {
     let api = pluginEntriesCache.get(name);
     if (!api) {
-        api = createEntriesApi(`/plugins/${name}/entries`);
+        api = createEntriesApi(`/plugins/${name}/entries`, 'full');
         pluginEntriesCache.set(name, api);
     }
     return api;

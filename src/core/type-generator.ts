@@ -53,14 +53,17 @@ function propertyKey(name: string): string {
  * containers (section/tabs/tab/accordion) transparently flattened in-place.
  * Data containers (group/repeater/blocks) and leaf fields are returned as-is —
  * they each become a single property on the containing object.
+ *
+ * When `shape === 'public'`, fields marked `private: true` are excluded.
  */
-function collectDataFields(fields: FieldDefinition[]): FieldDefinition[] {
+function collectDataFields(fields: FieldDefinition[], shape: 'full' | 'public' = 'full'): FieldDefinition[] {
     const result: FieldDefinition[] = [];
     for (const field of fields) {
         if (LAYOUT_TYPES.has(field.type)) {
             // Flatten layout container children at the same level.
-            result.push(...collectDataFields(field.fields ?? []));
+            result.push(...collectDataFields(field.fields ?? [], shape));
         } else {
+            if (shape === 'public' && field.private === true) continue;
             result.push(field);
         }
     }
@@ -71,16 +74,21 @@ function collectDataFields(fields: FieldDefinition[]): FieldDefinition[] {
  * Build the body lines of an object type from a FieldDefinition[].
  * Used for top-level collections and recursively for group/repeater children.
  * Each line is indented by `indent` spaces.
+ *
+ * `hoisted` — optional accumulator for top-level interface declarations that
+ * cannot be expressed inline (e.g. self-referential tree node types).
  */
 function buildObjectLines(
     fields: FieldDefinition[],
     pluginFieldTypes: Map<string, PluginFieldTypeRegistration>,
-    indent: string
+    indent: string,
+    hoisted?: string[],
+    shape: 'full' | 'public' = 'full'
 ): string[] {
-    const dataFields = collectDataFields(fields);
+    const dataFields = collectDataFields(fields, shape);
     const lines: string[] = [];
     for (const field of dataFields) {
-        const tsType = fieldToTsType(field, pluginFieldTypes);
+        const tsType = fieldToTsType(field, pluginFieldTypes, hoisted, shape);
         if (tsType === null) continue;
         const optional = field.required === true ? '' : '?';
         lines.push(`${indent}${propertyKey(field.name)}${optional}: ${tsType};`);
@@ -94,17 +102,28 @@ function buildObjectLines(
  * null for layout container types (they never appear as a field line —
  * collectDataFields flattens them away before this is called) and for
  * unrecognised types.
+ *
+ * `hoisted` — optional accumulator; tree fields push a named interface here so
+ * the self-referential node type terminates without infinite inlining.
+ *
+ * `shape` — 'full' emits all instance keys; 'public' omits `_disabled`/`_title`
+ * from block/repeater/tree element types and skips `private` child fields.
  */
 function fieldToTsType(
     field: FieldDefinition,
-    pluginFieldTypes: Map<string, PluginFieldTypeRegistration>
+    pluginFieldTypes: Map<string, PluginFieldTypeRegistration>,
+    hoisted?: string[],
+    shape: 'full' | 'public' = 'full'
 ): string | null {
     // Layout containers are flattened by collectDataFields before we reach here.
     if (LAYOUT_TYPES.has(field.type)) return null;
 
     const pluginType = pluginFieldTypes.get(field.type);
     if (pluginType) {
-        return pluginType.typeGen?.(field) ?? "import('astromech').JsonValue";
+        // No typeGen → JsonValue. A typeGen returning null opts out entirely
+        // (presentational field, no stored data) and is skipped by the caller.
+        if (pluginType.typeGen === undefined) return "import('astromech').JsonValue";
+        return pluginType.typeGen(field);
     }
 
     switch (field.type) {
@@ -153,25 +172,60 @@ function fieldToTsType(
             const childLines = buildObjectLines(
                 field.fields ?? [],
                 pluginFieldTypes,
-                '  '
+                '  ',
+                hoisted,
+                shape
             );
             if (childLines.length === 0) return '{}';
             return `{\n${childLines.join('\n')}\n}`;
         }
 
         case 'repeater': {
-            // Typed array of the child object shape.
+            // Typed array of the child object shape. `_id` is a persisted UUID
+            // (stable item identity for diffs/versioning).
             const childLines = buildObjectLines(
                 field.fields ?? [],
                 pluginFieldTypes,
-                '  '
+                '  ',
+                hoisted,
+                shape
             );
-            if (childLines.length === 0) return 'Array<Record<string, never>>';
-            return `Array<{\n${childLines.join('\n')}\n}>`;
+            const lines =
+                shape === 'public'
+                    ? ['  _id: string;', ...childLines]
+                    : ['  _id: string;', '  _disabled?: boolean;', '  _title?: string;', ...childLines];
+            return `Array<{\n${lines.join('\n')}\n}>`;
+        }
+
+        case 'tree': {
+            // Self-referential node type — must be a named interface so the
+            // recursion terminates. Push the interface to the hoisted accumulator
+            // and return a reference to it as an array.
+            const suffix = shape === 'public' ? 'PublicTreeNode' : 'TreeNode';
+            const nodeName = `${toPascalCase(field.name)}${suffix}`;
+            const childLines = buildObjectLines(
+                field.fields ?? [],
+                pluginFieldTypes,
+                '  ',
+                hoisted,
+                shape
+            );
+            const lines =
+                shape === 'public'
+                    ? ['  _id: string;', ...childLines, `  _children?: ${nodeName}[];`]
+                    : ['  _id: string;', '  _disabled?: boolean;', ...childLines, `  _children?: ${nodeName}[];`];
+            const iface = `export interface ${nodeName} {\n${lines.join('\n')}\n}`;
+            if (hoisted !== undefined) {
+                hoisted.push(iface);
+            }
+            return `${nodeName}[]`;
         }
 
         case 'blocks':
-            return "Array<{ type: string; disabled?: boolean; [key: string]: import('astromech').JsonValue | undefined }>";
+            if (shape === 'public') {
+                return "Array<{ _id: string; _type: string; [key: string]: import('astromech').JsonValue | undefined }>";
+            }
+            return "Array<{ _id: string; _type: string; _disabled?: boolean; _title?: string; [key: string]: import('astromech').JsonValue | undefined }>";
 
         case 'link':
             return '{ url: string; label: string; target?: string }';
@@ -190,11 +244,13 @@ function fieldToTsType(
  *
  * `knownCollections` — bare root collection keys.
  * `qualifiedTargetMap` — qualified target ids (`plugin/type`) → Fields interface name.
+ * `shape` — 'public' references `…FieldsPublic`; 'full' references `…Fields`.
  */
 function fieldToRelationType(
     field: FieldDefinition,
     knownCollections: Set<string>,
-    qualifiedTargetMap: Map<string, string> = new Map<string, string>()
+    qualifiedTargetMap: Map<string, string> = new Map<string, string>(),
+    shape: 'full' | 'public' = 'full'
 ): string | null {
     if (!RELATION_TYPES.has(field.type)) return null;
 
@@ -219,7 +275,8 @@ function fieldToRelationType(
         single = `import('astromech').TypedEntry<${fieldsName}>`;
     } else if (knownCollections.has(field.target)) {
         const pascal = toPascalCase(field.target);
-        single = `import('astromech').TypedEntry<${pascal}Fields>`;
+        const fieldsName = shape === 'public' ? `${pascal}FieldsPublic` : `${pascal}Fields`;
+        single = `import('astromech').TypedEntry<${fieldsName}>`;
     } else {
         single = "import('astromech').Entry";
     }
@@ -234,6 +291,7 @@ function fieldToRelationType(
 type CollectionTypeBlock = {
     collectionKey: string;
     fieldsInterface: string;
+    fieldsPublicInterface: string;
     relationsType: string;
 };
 
@@ -246,29 +304,63 @@ function generateCollectionTypes(
 ): CollectionTypeBlock {
     const pascal = toPascalCase(collectionKey);
     const fieldsName = `${pascal}Fields`;
+    const fieldsPublicName = `${pascal}FieldsPublic`;
     const relationsName = `${pascal}Relations`;
 
     // Collect all data-bearing fields from both columns, layout containers flattened.
     const allFields = collectDataFields([...fields.main, ...fields.sidebar]);
+    const allFieldsPublic = collectDataFields([...fields.main, ...fields.sidebar], 'public');
 
-    // Build Fields interface lines
+    // Accumulator for top-level declarations hoisted by nested field types (e.g. tree
+    // node interfaces that must be named to allow self-reference).
+    const hoisted: string[] = [];
+    const hoistedPublic: string[] = [];
+
+    // Build full Fields interface lines
     const fieldLines: string[] = [];
     for (const field of allFields) {
-        const tsType = fieldToTsType(field, pluginFieldTypes);
+        const tsType = fieldToTsType(field, pluginFieldTypes, hoisted, 'full');
         if (tsType === null) continue;
         const optional = field.required === true ? '' : '?';
         fieldLines.push(`  ${propertyKey(field.name)}${optional}: ${tsType};`);
     }
 
-    const fieldsInterface =
+    const mainInterface =
         fieldLines.length > 0
             ? `export interface ${fieldsName} {\n${fieldLines.join('\n')}\n}`
             : `export interface ${fieldsName} {}`;
 
+    // Hoist any extra declarations (tree node interfaces) before the Fields interface.
+    const fieldsInterface =
+        hoisted.length > 0
+            ? `${hoisted.join('\n\n')}\n\n${mainInterface}`
+            : mainInterface;
+
+    // Build public FieldsPublic interface lines
+    const fieldPublicLines: string[] = [];
+    for (const field of allFieldsPublic) {
+        const tsType = fieldToTsType(field, pluginFieldTypes, hoistedPublic, 'public');
+        if (tsType === null) continue;
+        const optional = field.required === true ? '' : '?';
+        fieldPublicLines.push(`  ${propertyKey(field.name)}${optional}: ${tsType};`);
+    }
+
+    // Always add the __shape brand marker for public types.
+    const publicBodyLines = [
+        '  readonly __shape?: \'public\';',
+        ...fieldPublicLines,
+    ];
+    const mainPublicInterface = `export interface ${fieldsPublicName} {\n${publicBodyLines.join('\n')}\n}`;
+
+    const fieldsPublicInterface =
+        hoistedPublic.length > 0
+            ? `${hoistedPublic.join('\n\n')}\n\n${mainPublicInterface}`
+            : mainPublicInterface;
+
     // Build Relations type (only populate-able fields from flat top-level data fields)
     const relationLines: string[] = [];
     for (const field of allFields) {
-        const relType = fieldToRelationType(field, knownCollections, qualifiedTargetMap);
+        const relType = fieldToRelationType(field, knownCollections, qualifiedTargetMap, 'full');
         if (relType === null) continue;
         relationLines.push(`  ${propertyKey(field.name)}: ${relType};`);
     }
@@ -278,7 +370,7 @@ function generateCollectionTypes(
             ? `export type ${relationsName} = {\n${relationLines.join('\n')}\n};`
             : `export type ${relationsName} = Record<string, never>;`;
 
-    return { collectionKey, fieldsInterface, relationsType };
+    return { collectionKey, fieldsInterface, fieldsPublicInterface, relationsType };
 }
 
 // ============================================================================
@@ -298,6 +390,7 @@ type PluginEntryBlock = {
     pluginName: string;
     typeName: string;
     fieldsInterface: string;
+    fieldsPublicInterface: string;
     relationsType: string;
 };
 
@@ -332,10 +425,13 @@ function generatePluginEntryBlocks(
                 pluginName,
                 typeName,
                 fieldsInterface: block.fieldsInterface,
+                fieldsPublicInterface: block.fieldsPublicInterface,
                 relationsType: block.relationsType,
             });
 
-            // Register qualified target so other fields can reference it
+            // Register qualified target so other fields can reference it.
+            // For full shape, map to the full Fields interface.
+            // For public shape, callers use the public variant directly.
             qualifiedTargetMap.set(`${pluginName}/${typeName}`, `${prefix}Fields`);
         }
     }
@@ -372,7 +468,7 @@ function generatePluginAugmentations(
             const prefix = pluginEntryPrefix(block.pluginName, block.typeName);
             const typeKey = propertyKey(block.typeName);
             entryAugLines.push(
-                `      ${typeKey}: { fields: ${prefix}Fields; relations: ${prefix}Relations };`
+                `      ${typeKey}: { fields: ${prefix}Fields; fieldsPublic: ${prefix}FieldsPublic; relations: ${prefix}Relations };`
             );
         }
         entryAugLines.push('    };');
@@ -396,6 +492,7 @@ function generatePluginAugmentations(
         '}',
     ];
 }
+
 
 export function generateSdkTypes(
     config: ResolvedConfig,
@@ -432,17 +529,19 @@ export function generateSdkTypes(
     const augmentationLines = blocks
         .map(({ collectionKey }) => {
             const pascal = toPascalCase(collectionKey);
-            return `    ${collectionKey}: { fields: ${pascal}Fields; relations: ${pascal}Relations };`;
+            return `    ${collectionKey}: { fields: ${pascal}Fields; fieldsPublic: ${pascal}FieldsPublic; relations: ${pascal}Relations };`;
         })
         .join('\n');
 
     const collectionTypeBlocks = blocks
-        .map(({ collectionKey, fieldsInterface, relationsType }) => {
+        .map(({ collectionKey, fieldsInterface, fieldsPublicInterface, relationsType }) => {
             const pascal = toPascalCase(collectionKey);
             return [
                 `// --- Collection: ${collectionKey} (${pascal}) ---`,
                 '',
                 fieldsInterface,
+                '',
+                fieldsPublicInterface,
                 '',
                 relationsType,
             ].join('\n');
@@ -464,6 +563,8 @@ export function generateSdkTypes(
                 `// --- Plugin entry: ${block.pluginName}/${block.typeName} (${prefix}) ---`,
                 '',
                 block.fieldsInterface,
+                '',
+                block.fieldsPublicInterface,
                 '',
                 block.relationsType,
             ].join('\n');

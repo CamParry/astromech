@@ -66,3 +66,52 @@ export function buildPluginEntriesSurface(
         permissionFor: (action) => `plugin:${ns}:entry:${type}:${action}`,
     };
 }
+
+// ============================================================================
+// List search params (URL-synced)
+// ============================================================================
+
+/**
+ * URL search-param shape for the entries list, shared by the root and plugin
+ * list routes so both persist the same filter/sort/page state to the URL. The
+ * shared `EntriesListPage` reads it via `useSearch({ strict: false })`, so the
+ * validator must live on every route that renders the page.
+ */
+export type EntriesListSearch = {
+    q?: string;
+    status?: string;
+    locale?: string;
+    /** `${columnKey}:${'asc' | 'desc'}` */
+    sort?: string;
+    page?: number;
+};
+
+/** Parse/validate raw URL search into the typed list-search shape. */
+export function validateEntriesListSearch(
+    search: Record<string, unknown>
+): EntriesListSearch {
+    const out: EntriesListSearch = {};
+    if (typeof search['q'] === 'string' && search['q']) out.q = search['q'];
+    if (
+        typeof search['status'] === 'string' &&
+        search['status'] &&
+        search['status'] !== 'all'
+    ) {
+        out.status = search['status'];
+    }
+    if (typeof search['locale'] === 'string' && search['locale']) {
+        out.locale = search['locale'];
+    }
+    if (typeof search['sort'] === 'string' && /^.+:(asc|desc)$/.test(search['sort'])) {
+        out.sort = search['sort'];
+    }
+    const pageRaw = search['page'];
+    const pageNum =
+        typeof pageRaw === 'number'
+            ? pageRaw
+            : typeof pageRaw === 'string'
+              ? Number(pageRaw)
+              : NaN;
+    if (Number.isFinite(pageNum) && pageNum > 1) out.page = pageNum;
+    return out;
+}

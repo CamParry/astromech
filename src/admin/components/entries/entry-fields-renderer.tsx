@@ -14,8 +14,9 @@
 
 import React from 'react';
 import type { FieldDefinition } from '@/types/index.js';
-import { Panel, Tabs, Collapsible } from '@/admin/components/ui/index.js';
+import { Panel, Tabs, Collapsible, Stack } from '@/admin/components/ui/index.js';
 import { FormField } from '@/admin/components/fields/form-field.js';
+import { FieldValuesProvider } from '@/admin/components/fields/field-context.js';
 import { useLabel } from '@/admin/i18n/entry-namespace.js';
 
 const LAYOUT_TYPES = new Set(['section', 'tabs', 'tab', 'accordion']);
@@ -32,7 +33,7 @@ function FieldList({
     ...props
 }: { nodes: FieldDefinition[] } & RenderProps): React.ReactElement {
     return (
-        <div className="am-field-list">
+        <Stack gap={5}>
             {nodes.map((node, i) => (
                 <FieldNode
                     key={`${node.type}-${node.name}-${i}`}
@@ -40,7 +41,7 @@ function FieldList({
                     {...props}
                 />
             ))}
-        </div>
+        </Stack>
     );
 }
 
@@ -131,42 +132,53 @@ function TabsContainer({
 
     if (tabNodes.length === 0) return null;
 
+    // Tabs render at the root with no wrapping surface — author wraps them in a
+    // `section` when a container is wanted. Their content (often sections) brings
+    // its own surfaces.
     return (
-        <Panel>
-            <Tabs
-                tabs={tabNodes.map((tabNode) => ({
-                    label: label(tabNode.label, tabNode.name),
-                    value: tabNode.name,
-                }))}
-                value={active}
-                onChange={setActive}
-                renderPanel={(value) => {
-                    const tabNode = tabNodes.find((tn) => tn.name === value);
-                    if (!tabNode) return null;
-                    return (
-                        <FieldList
+        <Tabs
+            tabs={tabNodes.map((tabNode) => ({
+                label: label(tabNode.label, tabNode.name),
+                value: tabNode.name,
+            }))}
+            value={active}
+            onChange={setActive}
+            renderPanel={(value) => {
+                const tabNode = tabNodes.find((tn) => tn.name === value);
+                if (!tabNode) return null;
+                // A tab's body is a top-level block column (like the root main
+                // column), not a list of fields inside one panel — render it
+                // through the same column renderer so sections get the root 2rem
+                // rhythm rather than the within-panel field gap.
+                return (
+                    <Stack gap={8}>
+                        <EntryFieldColumn
                             nodes={tabNode.fields ?? []}
                             values={values}
                             onChange={onChange}
                             disabled={disabled}
+                            surface={false}
                         />
-                    );
-                }}
-            />
-        </Panel>
+                    </Stack>
+                );
+            }}
+        />
     );
 }
 
 /**
- * Render a top-level column. Consecutive non-layout fields are grouped into an
- * implicit Panel; layout containers render standalone.
+ * Render a column of fields. Layout containers render standalone; a run of
+ * consecutive non-layout fields is grouped into an implicit Panel — unless
+ * `surface` is false (tab bodies), where loose fields render bare and the author
+ * nests a `section` when a surface is wanted.
  */
 export function EntryFieldColumn({
     nodes,
     values,
     onChange,
     disabled,
-}: { nodes: FieldDefinition[] } & RenderProps): React.ReactElement {
+    surface = true,
+}: { nodes: FieldDefinition[]; surface?: boolean } & RenderProps): React.ReactElement {
     const blocks: React.ReactNode[] = [];
     let buffer: FieldDefinition[] = [];
 
@@ -174,15 +186,20 @@ export function EntryFieldColumn({
         if (buffer.length === 0) return;
         const bufferedNodes = buffer;
         buffer = [];
+        const list = (
+            <FieldList
+                nodes={bufferedNodes}
+                values={values}
+                onChange={onChange}
+                disabled={disabled}
+            />
+        );
         blocks.push(
-            <Panel key={`panel-${key}`}>
-                <FieldList
-                    nodes={bufferedNodes}
-                    values={values}
-                    onChange={onChange}
-                    disabled={disabled}
-                />
-            </Panel>
+            surface ? (
+                <Panel key={`panel-${key}`}>{list}</Panel>
+            ) : (
+                <React.Fragment key={`bare-${key}`}>{list}</React.Fragment>
+            )
         );
     };
 
@@ -204,5 +221,8 @@ export function EntryFieldColumn({
     });
     flush('tail');
 
-    return <>{blocks}</>;
+    // Expose the root values to any descendant that reads sibling fields
+    // (e.g. a computed/preview field) via `useFieldValue`. The same root object
+    // flows to both columns and through layout containers (flat data model).
+    return <FieldValuesProvider values={values}>{blocks}</FieldValuesProvider>;
 }

@@ -123,16 +123,6 @@
 }
 
 /* ============================================================================
-   Field list
-   ============================================================================ */
-
-.am-field-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-}
-
-/* ============================================================================
    Form layout (two-column edit page)
    ============================================================================ */
 
@@ -158,6 +148,7 @@
 .am-form-layout-dirty-indicator {
     font-size: 0.8125rem;
     color: var(--am-color-text-muted);
+    white-space: nowrap;
 }
 
 .am-form-layout-content {
@@ -167,22 +158,31 @@
     align-items: start;
 }
 
-.am-form-layout-main {
+.am-stack {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
     min-width: 0;
 }
 
-.am-form-layout-sidebar {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+.am-stack-gap-5 {
+    gap: calc(var(--am-space) * 5);
+}
+
+.am-stack-gap-8 {
+    gap: calc(var(--am-space) * 8);
 }
 
 @media (max-width: 900px) {
     .am-form-layout-content {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 767px) {
+    .am-page-header {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        padding: 1.25rem 1.25rem 0;
     }
 }
 

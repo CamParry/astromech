@@ -13,6 +13,9 @@
 
 .am-dropdown-item {
     all: unset;
+    /* `all: unset` reverts box-sizing to content-box; restore border-box so
+       width:100% + horizontal padding stays within the popup (no right overflow). */
+    box-sizing: border-box;
     display: flex;
     gap: calc(var(--am-space) * 2);
     align-items: center;

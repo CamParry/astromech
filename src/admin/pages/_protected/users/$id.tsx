@@ -23,9 +23,9 @@ import {
     PageTitle,
     PageContent,
     FormLayout,
-    FormLayoutMain,
-    FormLayoutSidebar,
+    Stack,
 } from '@/admin/components/ui/index.js';
+import { formatDatetime } from '@/support/dates.js';
 import {
     usePermissions,
     useUser,
@@ -39,17 +39,6 @@ import adminConfig from 'virtual:astromech/admin-config';
 // ============================================================================
 // Helpers
 // ============================================================================
-
-function formatDate(value: Date | string | null | undefined): string {
-    if (value == null) return '—';
-    return new Date(value).toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
-}
 
 // ============================================================================
 // Types
@@ -132,7 +121,7 @@ function UserEditPage(): React.ReactElement {
             <PageContent>
                 <FormLayout>
                     {/* Main column */}
-                    <FormLayoutMain>
+                    <Stack gap={8}>
                         <Panel title={t('users.profilePanel')}>
                             <div
                                 style={{
@@ -223,10 +212,10 @@ function UserEditPage(): React.ReactElement {
                                 )}
                             </div>
                         </Panel>
-                    </FormLayoutMain>
+                    </Stack>
 
                     {/* Sidebar column */}
-                    <FormLayoutSidebar>
+                    <Stack gap={8}>
                         <Panel title={t('users.actionsPanel')}>
                             {canSave && (
                                 <Button
@@ -305,7 +294,7 @@ function UserEditPage(): React.ReactElement {
                                             {t('users.joinedLabel')}
                                         </dt>
                                         <dd className="am-meta-value">
-                                            {formatDate(user?.createdAt)}
+                                            {formatDatetime(user?.createdAt)}
                                         </dd>
                                     </div>
                                     <div>
@@ -313,13 +302,13 @@ function UserEditPage(): React.ReactElement {
                                             {t('users.lastUpdatedLabel')}
                                         </dt>
                                         <dd className="am-meta-value">
-                                            {formatDate(user?.updatedAt)}
+                                            {formatDatetime(user?.updatedAt)}
                                         </dd>
                                     </div>
                                 </dl>
                             </div>
                         </Panel>
-                    </FormLayoutSidebar>
+                    </Stack>
                 </FormLayout>
             </PageContent>
         </Page>

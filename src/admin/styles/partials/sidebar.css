@@ -264,10 +264,22 @@
     /* Show close button on mobile */
     .am-sidebar-close {
         display: flex;
+        width: 2.75rem;
+        height: 2.75rem;
     }
 
     /* Hide desktop collapse toggle on mobile */
     .am-sidebar-toggle {
         display: none;
+    }
+
+    /* Touch-target enlargement — mobile only */
+    .am-sidebar-nav-item-link {
+        height: 2.75rem;
+    }
+
+    .am-sidebar-nav-group-chevron {
+        width: 2.75rem;
+        height: 2.75rem;
     }
 }

@@ -1,0 +1,95 @@
+---
+import Site from '../../layouts/Site.astro';
+import { t, localizedPath } from '../../lib/site.ts';
+import type { Locale } from '../../lib/site.ts';
+import type { Entry } from 'astromech';
+
+interface Props {
+    locale: Locale;
+    slug: string;
+    post: Entry;
+}
+
+const { locale, slug, post } = Astro.props;
+
+const body = post.fields?.body as string | null | undefined;
+const excerpt = post.fields?.excerpt as string | null | undefined;
+const publishedDate = post.fields?.publishedDate as string | null | undefined;
+const featuredImage = post.fields?.featured_image as { url?: string } | null | undefined;
+const category = post.fields?.category as Entry | null | undefined;
+const tags = post.fields?.tags as Entry[] | null | undefined;
+const author = post.fields?.author as Entry | null | undefined;
+---
+
+<Site
+    locale={locale}
+    seoType="post"
+    seoSlug={slug}
+    seoTitle={post.title}
+    seoDescription={excerpt ?? undefined}
+>
+    <article class="max-w-3xl mx-auto px-4 py-16">
+        <!-- Back link -->
+        <a href={localizedPath('/blog', locale)} class="text-sm text-gray-400 hover:text-gray-700 transition-colors">
+            {t('backToBlog', locale)}
+        </a>
+
+        <!-- Header -->
+        <header class="mt-6 mb-10">
+            {featuredImage?.url && (
+                <img
+                    src={featuredImage.url}
+                    alt={post.title}
+                    class="w-full rounded-lg object-cover mb-8 max-h-96"
+                />
+            )}
+
+            {category && (
+                <a
+                    href={localizedPath(`/blog/category/${category.slug}`, locale)}
+                    class="inline-block text-xs font-medium uppercase tracking-wider text-gray-400 hover:text-gray-700 mb-3 transition-colors"
+                >
+                    {category.title}
+                </a>
+            )}
+
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900 leading-tight mb-4">
+                {post.title}
+            </h1>
+
+            <div class="flex items-center gap-4 text-sm text-gray-400 flex-wrap">
+                {author && (
+                    <span>{t('by', locale)} <span class="text-gray-600">{author.title}</span></span>
+                )}
+                {publishedDate && (
+                    <span>
+                        <span>{t('published', locale)}</span>{' '}
+                        <time datetime={publishedDate}>{new Date(publishedDate).toLocaleDateString(locale)}</time>
+                    </span>
+                )}
+            </div>
+        </header>
+
+        <!-- Body -->
+        {body && (
+            <div class="prose prose-gray max-w-none" set:html={body} />
+        )}
+
+        <!-- Tags -->
+        {tags && tags.length > 0 && (
+            <footer class="mt-12 pt-8 border-t border-gray-200">
+                <p class="text-xs text-gray-400 uppercase tracking-wider mb-3">{t('tags', locale)}</p>
+                <div class="flex flex-wrap gap-2">
+                    {tags.map((tag) => (
+                        <a
+                            href={localizedPath(`/blog/tag/${tag.slug}`, locale)}
+                            class="text-xs px-3 py-1 border border-gray-200 rounded-full text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors"
+                        >
+                            {tag.title}
+                        </a>
+                    ))}
+                </div>
+            </footer>
+        )}
+    </article>
+</Site>

@@ -1,0 +1,254 @@
+/* ============================================================================
+   am-tree — Tree field component
+   ============================================================================ */
+
+.am-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* ============================================================================
+   Node list (root level and children)
+   ============================================================================ */
+
+.am-tree-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* ============================================================================
+   Individual node
+   ============================================================================ */
+
+.am-tree-node {
+    overflow: visible;
+}
+
+.am-tree-node-inner {
+    overflow: hidden;
+    background: var(--am-color-bg-surface);
+    border: 1px solid var(--am-color-border-strong);
+    border-radius: var(--am-radius-md);
+    transition: box-shadow var(--am-duration-base) var(--am-easing);
+}
+
+.am-tree-node-dragging > .am-tree-node-inner {
+    z-index: 10;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    opacity: 0.95;
+}
+
+/* ============================================================================
+   Node header
+   ============================================================================ */
+
+.am-tree-node-header {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    min-height: 2.5rem;
+    padding: 0.25rem 0.25rem 0.25rem 0.5rem;
+    background: var(--am-color-bg-surface);
+    border-bottom: 1px solid var(--am-color-border-strong);
+}
+
+.am-tree-node-header-soft-disabled {
+    opacity: 0.55;
+}
+
+.am-tree-drag-handle {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 2rem;
+    padding: 0;
+    color: var(--am-color-text-muted);
+    cursor: grab;
+    background: none;
+    border: none;
+}
+
+.am-tree-drag-handle:active {
+    cursor: grabbing;
+}
+
+@media (hover: hover) {
+    .am-tree-drag-handle:hover {
+        color: var(--am-color-text-default);
+    }
+}
+
+.am-tree-node-meta {
+    display: flex;
+    flex: 1;
+    gap: 0.5rem;
+    align-items: center;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.am-tree-node-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.am-tree-node-disabled-badge {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--am-color-warning);
+    background: var(--am-color-warning-bg);
+    border: 1px solid var(--am-color-warning-border);
+    border-radius: var(--am-radius-full);
+}
+
+.am-tree-node-controls {
+    display: flex;
+    flex-shrink: 0;
+    gap: 0.25rem;
+    align-items: center;
+    margin-left: auto;
+}
+
+/* ============================================================================
+   Node panel (collapsible body)
+   ============================================================================ */
+
+.am-tree-node-panel {
+    height: var(--collapsible-panel-height);
+    overflow: hidden;
+    transition: height var(--am-duration-slow) var(--am-easing);
+}
+
+.am-tree-node-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.5rem;
+}
+
+/* ============================================================================
+   Children — indented + left rule per depth level
+   ============================================================================ */
+
+.am-tree-children {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-left: 1.5rem;
+    margin-top: 0.5rem;
+    border-left: 2px solid var(--am-color-border-strong);
+}
+
+/* ============================================================================
+   Add-child affordance (inside node panel)
+   ============================================================================ */
+
+.am-tree-node-footer {
+    display: flex;
+    align-items: flex-start;
+    padding: 0 1.5rem 1rem;
+}
+
+/* ============================================================================
+   Footer / add-root area
+   ============================================================================ */
+
+.am-tree-footer {
+    display: flex;
+    align-items: flex-start;
+}
+
+/* ============================================================================
+   Buttons
+   ============================================================================ */
+
+.am-tree-btn {
+    display: inline-flex;
+    gap: 0.375rem;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    font-family: inherit;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    background: var(--am-color-bg-base);
+    border: 1px solid var(--am-color-border-strong);
+    border-radius: var(--am-radius-md);
+    transition:
+        background-color var(--am-duration-base) var(--am-easing),
+        color var(--am-duration-base) var(--am-easing),
+        border-color var(--am-duration-base) var(--am-easing);
+}
+
+.am-tree-btn:hover:not(:disabled) {
+    background: var(--am-color-bg-subtle);
+}
+
+.am-tree-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* Icon-only controls (drag/trash/collapse) read as ghost buttons. */
+.am-tree-btn-icon {
+    flex-shrink: 0;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    color: var(--am-color-text-muted);
+    background: none;
+    border-color: transparent;
+}
+
+.am-tree-btn-icon:hover:not(:disabled) {
+    color: var(--am-color-text-default);
+    background: var(--am-color-bg-subtle);
+}
+
+.am-tree-btn-remove {
+    color: var(--am-color-danger);
+}
+
+.am-tree-btn-remove:hover:not(:disabled) {
+    color: var(--am-color-danger);
+    background: var(--am-color-danger-bg);
+    border-color: var(--am-color-danger-border);
+}
+
+.am-tree-btn-add {
+    height: 2.25rem;
+    padding: 0 0.875rem;
+    color: var(--am-color-neutral-0);
+    background: var(--am-color-primary);
+    border-color: var(--am-color-primary);
+}
+
+.am-tree-btn-add:hover:not(:disabled) {
+    background: var(--am-color-primary-emphasis);
+    border-color: var(--am-color-primary-emphasis);
+}
+
+.am-tree-btn-add-child {
+    height: 2rem;
+    padding: 0 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--am-color-text-default);
+    background: var(--am-color-bg-subtle);
+    border-color: var(--am-color-border-strong);
+}
+
+.am-tree-btn-add-child:hover:not(:disabled) {
+    background: var(--am-color-bg-surface);
+}

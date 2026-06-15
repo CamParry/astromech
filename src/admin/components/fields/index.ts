@@ -8,6 +8,8 @@
 export { FormField } from './form-field.js';
 export type { FormFieldProps } from './form-field.js';
 
+export { useFieldValue } from './field-context.js';
+
 export { TextField } from './text-field.js';
 export { TextareaField } from './textarea-field.js';
 export { RichtextField } from './richtext-field.js';
@@ -32,3 +34,4 @@ export { RadioGroupField } from './radio-group-field.js';
 export { LinkField } from './link-field.js';
 export { KeyValueField } from './key-value-field.js';
 export { BlocksField } from './blocks-field.js';
+export { TreeField } from './tree-field.js';

@@ -1,0 +1,31 @@
+---
+interface Props {
+    quote: string;
+    author?: string | null;
+    role?: string | null;
+    avatar?: { url?: string; alt?: string } | null;
+}
+
+const { quote, author, role, avatar } = Astro.props;
+---
+
+<section class="bg-gray-50">
+    <div class="max-w-3xl mx-auto px-4 py-16 text-center">
+        <blockquote class="text-xl md:text-2xl text-gray-700 italic leading-relaxed mb-8">
+            &ldquo;{quote}&rdquo;
+        </blockquote>
+        <div class="flex items-center justify-center gap-3">
+            {avatar?.url && (
+                <img
+                    src={avatar.url}
+                    alt={author ?? avatar.alt ?? ''}
+                    class="w-10 h-10 rounded-full object-cover"
+                />
+            )}
+            <div class="text-left">
+                {author && <p class="font-semibold text-gray-900 text-sm">{author}</p>}
+                {role && <p class="text-xs text-gray-400">{role}</p>}
+            </div>
+        </div>
+    </div>
+</section>

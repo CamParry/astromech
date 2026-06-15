@@ -1,4 +1,5 @@
 export { useHotkeys } from './use-hotkeys.js';
+export { useIsMobile } from './use-is-mobile.js';
 export { queryKeys } from './use-query-keys.js';
 export { useEntryForm } from './use-entry-form.js';
 export type {

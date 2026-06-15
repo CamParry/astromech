@@ -6,7 +6,7 @@
  * result instead of the wide `Entry`. See specs/typed-entries-api.md §3.2.
  */
 
-import type { Entry, EntryStatus, EntryVersion } from './domain.js';
+import type { Entry, EntryStatus, EntryVersion, JsonObject } from './domain.js';
 import type {
     EntriesApi,
     EntryDuplicateOverrides,
@@ -25,14 +25,17 @@ import type { PluginSdkMethod } from './plugins.js';
 // ============================================================================
 
 // Open interface — augmented by generated types (.astro/astromech.d.ts)
-// Each entry shape: { fields: EntryTypeFields, relations: EntryTypeRelations }
+// Each entry shape: { fields: EntryTypeFields, fieldsPublic: PublicFields, relations: EntryTypeRelations }
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
 export interface AstromechEntryTypes {}
 
-// Generic helpers — extract fields/relations from any entry-type map by key
+// Generic helpers — extract fields/relations/fieldsPublic from any entry-type map by key
 type FieldsForMap<Map, T extends keyof Map> = Map[T] extends { fields: infer F }
     ? F
     : never;
+type PublicFieldsForMap<Map, T extends keyof Map> = Map[T] extends { fieldsPublic: infer P }
+    ? P
+    : JsonObject & { readonly __shape?: 'public' };
 type RelationsForMap<Map, T extends keyof Map> = Map[T] extends { relations: infer R }
     ? R
     : never;
@@ -41,6 +44,22 @@ type RelationsForMap<Map, T extends keyof Map> = Map[T] extends { relations: inf
 export type TypedEntry<TFields> = Omit<Entry, 'fields'> & {
     fields: TFields;
 };
+
+/**
+ * Resolves to the full (admin) field type for entry type `T`.
+ * Bound to the global `AstromechEntryTypes` map.
+ */
+export type FieldsFor<T extends keyof AstromechEntryTypes> =
+    FieldsForMap<AstromechEntryTypes, T>;
+
+/**
+ * Resolves to the public field type for entry type `T` — full fields minus any
+ * `private: true` fields, with `_disabled`/`_title` stripped from instance types.
+ * Degrades to `JsonObject & { readonly __shape?: 'public' }` before the type
+ * generator (Step 2) emits the real per-collection public types.
+ */
+export type PublicFieldsFor<T extends keyof AstromechEntryTypes> =
+    PublicFieldsForMap<AstromechEntryTypes, T>;
 
 // ============================================================================
 // Typed Entries API
@@ -57,6 +76,24 @@ export type TypedEntry<TFields> = Omit<Entry, 'fields'> & {
  */
 export type TypedEntriesApiFor<EntryMap> = {
     // ── query ────────────────────────────────────────────────────────────────
+    // full: true — returns the full (admin) shape
+    query<T extends keyof EntryMap>(
+        params: { type: T; full: true } & Omit<EntryQueryParams, 'type' | 'full'>
+    ): Promise<QueryResult<TypedEntry<FieldsForMap<EntryMap, T>>>>;
+    // full: true + populate — returns full shape with populated relations
+    query<
+        T extends keyof EntryMap,
+        K extends keyof RelationsForMap<EntryMap, T> & string,
+    >(
+        params: { type: T; full: true; populate: K[] } & Omit<EntryQueryParams, 'type' | 'full' | 'populate'>
+    ): Promise<
+        QueryResult<
+            TypedEntry<
+                Omit<FieldsForMap<EntryMap, T>, K> & Pick<RelationsForMap<EntryMap, T>, K>
+            >
+        >
+    >;
+    // populate (no full) — returns public shape with populated relations
     query<
         T extends keyof EntryMap,
         K extends keyof RelationsForMap<EntryMap, T> & string,
@@ -65,25 +102,48 @@ export type TypedEntriesApiFor<EntryMap> = {
     ): Promise<
         QueryResult<
             TypedEntry<
-                Omit<FieldsForMap<EntryMap, T>, K> & Pick<RelationsForMap<EntryMap, T>, K>
+                Omit<PublicFieldsForMap<EntryMap, T>, K> & Pick<RelationsForMap<EntryMap, T>, K>
             >
         >
     >;
+    // default — returns public shape
     query<T extends keyof EntryMap>(
         params: { type: T } & Omit<EntryQueryParams, 'type'>
-    ): Promise<QueryResult<TypedEntry<FieldsForMap<EntryMap, T>>>>;
+    ): Promise<QueryResult<TypedEntry<PublicFieldsForMap<EntryMap, T>>>>;
     // Deliberately separate from the single-type overload: a union parameter
     // would degrade inference of T at call sites.
     /* eslint-disable @typescript-eslint/unified-signatures */
     query<T extends keyof EntryMap>(
         params: { type: readonly T[] } & Omit<EntryQueryParams, 'type'>
-    ): Promise<QueryResult<TypedEntry<FieldsForMap<EntryMap, T>>>>;
+    ): Promise<QueryResult<TypedEntry<PublicFieldsForMap<EntryMap, T>>>>;
     /* eslint-enable @typescript-eslint/unified-signatures */
     query(
         params: { type: string | readonly string[] } & Omit<EntryQueryParams, 'type'>
     ): Promise<QueryResult<Entry>>;
 
     // ── get ──────────────────────────────────────────────────────────────────
+    // full: true — returns the full (admin) shape
+    get<T extends keyof EntryMap>(params: {
+        type: T;
+        id: string;
+        full: true;
+        populate?: string[];
+        locale?: string;
+    }): Promise<TypedEntry<FieldsForMap<EntryMap, T>> | null>;
+    // full: true + populate — returns full shape with populated relations
+    get<
+        T extends keyof EntryMap,
+        K extends keyof RelationsForMap<EntryMap, T> & string,
+    >(params: {
+        type: T;
+        id: string;
+        full: true;
+        populate: K[];
+        locale?: string;
+    }): Promise<TypedEntry<
+        Omit<FieldsForMap<EntryMap, T>, K> & Pick<RelationsForMap<EntryMap, T>, K>
+    > | null>;
+    // populate (no full) — returns public shape with populated relations
     get<
         T extends keyof EntryMap,
         K extends keyof RelationsForMap<EntryMap, T> & string,
@@ -93,19 +153,21 @@ export type TypedEntriesApiFor<EntryMap> = {
         populate: K[];
         locale?: string;
     }): Promise<TypedEntry<
-        Omit<FieldsForMap<EntryMap, T>, K> & Pick<RelationsForMap<EntryMap, T>, K>
+        Omit<PublicFieldsForMap<EntryMap, T>, K> & Pick<RelationsForMap<EntryMap, T>, K>
     > | null>;
+    // default — returns public shape
     get<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
         populate?: string[];
         locale?: string;
-    }): Promise<TypedEntry<FieldsForMap<EntryMap, T>> | null>;
+    }): Promise<TypedEntry<PublicFieldsForMap<EntryMap, T>> | null>;
     get(params: {
         type: string;
         id: string;
         populate?: string[];
         locale?: string;
+        full?: boolean;
     }): Promise<Entry | null>;
 
     // ── create ───────────────────────────────────────────────────────────────
@@ -115,7 +177,7 @@ export type TypedEntriesApiFor<EntryMap> = {
         slug?: string;
         locale?: string;
         localeGroup?: string;
-        fields?: Partial<FieldsForMap<EntryMap, T>>;
+        fields?: Partial<FieldsForMap<EntryMap, T>> & { readonly __shape?: 'full' };
         status?: EntryStatus;
         publishAt?: Date | null;
     }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>>;
@@ -138,7 +200,7 @@ export type TypedEntriesApiFor<EntryMap> = {
         data: Partial<{
             title: string;
             slug: string;
-            fields: Partial<FieldsForMap<EntryMap, T>>;
+            fields: Partial<FieldsForMap<EntryMap, T>> & { readonly __shape?: 'full' };
             status: EntryStatus;
             publishAt: Date | null;
         }>;
@@ -149,7 +211,7 @@ export type TypedEntriesApiFor<EntryMap> = {
         data: Partial<{
             title: string;
             slug: string;
-            fields: Partial<FieldsForMap<EntryMap, T>>;
+            fields: Partial<FieldsForMap<EntryMap, T>> & { readonly __shape?: 'full' };
             status: EntryStatus;
             publishAt: Date | null;
         }>;

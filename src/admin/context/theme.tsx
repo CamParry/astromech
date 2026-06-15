@@ -1,22 +1,28 @@
 /**
  * Theme context for the Astromech admin SPA.
  *
- * Lives at the root of the app so both auth and protected pages
- * respect the user's saved theme preference.
+ * `data-theme` on <html> is the single source of truth for colour. It is set
+ * before first paint by the server (from the `am-theme` cookie) or, for
+ * first-time visitors, by an inline script in `shell.astro` that reads the
+ * system preference. This provider just mirrors that attribute into React so
+ * the toggle stays in sync, and writes the cookie when the user toggles.
  */
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type Theme = 'auto' | 'light' | 'dark';
+export type Theme = 'light' | 'dark';
 
 type ThemeContextValue = {
     theme: Theme;
     setTheme: (theme: Theme) => void;
 };
+
+const COOKIE_NAME = 'am-theme';
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
 // ============================================================================
 // Context
@@ -28,18 +34,23 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 // Helpers
 // ============================================================================
 
-function readStoredTheme(): Theme {
-    const stored = localStorage.getItem('am-theme');
-    if (stored === 'light' || stored === 'dark') return stored;
-    return 'auto';
+/**
+ * Resolve the active theme from the `data-theme` attribute already on <html>
+ * (set pre-paint by the server/inline script). Falls back to the system
+ * preference in the unexpected case it is missing.
+ */
+function resolveActiveTheme(): Theme {
+    const attr = document.documentElement.getAttribute('data-theme');
+    if (attr === 'light' || attr === 'dark') return attr;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-function applyTheme(theme: Theme) {
-    if (theme === 'light' || theme === 'dark') {
-        document.documentElement.setAttribute('data-theme', theme);
-    } else {
-        document.documentElement.removeAttribute('data-theme');
-    }
+function applyTheme(theme: Theme): void {
+    document.documentElement.setAttribute('data-theme', theme);
+}
+
+function persistTheme(theme: Theme): void {
+    document.cookie = `${COOKIE_NAME}=${theme}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`;
 }
 
 // ============================================================================
@@ -51,18 +62,14 @@ type ThemeProviderProps = {
 };
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-    const [theme, setThemeState] = useState<Theme>('auto');
+    // Resolve synchronously at first render so the toggle is correct the instant
+    // it appears (the SPA is client-only, so this runs before anything paints).
+    const [theme, setThemeState] = useState<Theme>(resolveActiveTheme);
 
-    useEffect(() => {
-        const stored = readStoredTheme();
-        setThemeState(stored);
-        applyTheme(stored);
-    }, []);
-
-    function setTheme(next: Theme) {
+    function setTheme(next: Theme): void {
         setThemeState(next);
-        localStorage.setItem('am-theme', next);
         applyTheme(next);
+        persistTheme(next);
     }
 
     return (

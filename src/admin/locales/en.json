@@ -48,7 +48,9 @@
         "expandSection": "Expand {{section}}",
         "primary": "Primary",
         "system": "System",
-        "plugins": "Plugins"
+        "plugins": "Plugins",
+        "globals": "Globals",
+        "pages": "Pages"
     },
     "auth": {
         "login": "Log in",
@@ -166,6 +168,7 @@
     },
     "users": {
         "title": "Users",
+        "searchPlaceholder": "Search users…",
         "empty": "No users found",
         "emptyDescription": "Invite your first user to get started.",
         "inviteUser": "Invite user",
@@ -209,9 +212,8 @@
         "searchPlaceholder": "Search…",
         "keyboardShortcutsLabel": "Keyboard shortcuts (?)",
         "notificationsLabel": "Notifications",
-        "themeLight": "Theme: light",
-        "themeDark": "Theme: dark",
-        "themeSystem": "Theme: system preference",
+        "themeLight": "Switch to light theme",
+        "themeDark": "Switch to dark theme",
         "createNewLabel": "Create new",
         "createNewHeading": "New…",
         "userMenuLabel": "User menu",
@@ -231,19 +233,28 @@
     "cmdpal": {
         "searchPlaceholder": "Search…",
         "noResults": "No results",
+        "searching": "Searching…",
         "groupNavigation": "Navigation",
         "groupEntries": "Content",
+        "groupPages": "Pages",
+        "groupRecords": "Entries",
+        "groupUsers": "Users",
+        "groupMedia": "Media",
         "ariaLabel": "Command palette",
         "resultsLabel": "Results"
     },
     "fields": {
         "repeaterItem": "Item {{number}}",
-        "repeaterMoveUp": "Move up",
-        "repeaterMoveDown": "Move down",
+        "repeaterDragHandle": "Drag to reorder",
         "repeaterRemove": "Remove",
+        "repeaterDuplicate": "Duplicate item",
+        "repeaterRename": "Rename item",
+        "repeaterDisable": "Disable item",
+        "repeaterEnable": "Enable item",
+        "repeaterDisabledBadge": "Disabled",
         "repeaterCollapse": "Collapse",
         "repeaterExpand": "Expand",
-        "repeaterAddItem": "+ Add Item",
+        "repeaterAddItem": "Add Item",
         "kvKey": "Key",
         "kvValue": "Value",
         "kvRemovePair": "Remove pair",
@@ -271,9 +282,24 @@
         "blocksExpand": "Expand block",
         "blocksRemove": "Remove block",
         "blocksDuplicate": "Duplicate block",
+        "blocksRename": "Rename block",
         "blocksDisable": "Disable block",
         "blocksEnable": "Enable block",
-        "blocksDisabledBadge": "Disabled"
+        "blocksDisabledBadge": "Disabled",
+        "treeNode": "Node {{number}}",
+        "treeDragHandle": "Drag to reorder",
+        "treeAddRoot": "Add Item",
+        "treeAddChild": "Add child",
+        "treeIndent": "Indent (increase nesting)",
+        "treeOutdent": "Outdent (decrease nesting)",
+        "treeCollapse": "Collapse",
+        "treeExpand": "Expand",
+        "treeDisable": "Disable node",
+        "treeEnable": "Enable node",
+        "treeDisabledBadge": "Disabled",
+        "treeDuplicate": "Duplicate node",
+        "treeRemove": "Remove node",
+        "treeMaxDepthReached": "Maximum depth reached"
     },
     "entry": {
         "new": "New {{name}}",
@@ -368,5 +394,15 @@
         "pageNotFound": "Plugin page not found",
         "accessDenied": "You don't have permission to view this page.",
         "settingsSaved": "Settings saved."
+    },
+    "globals": {
+        "saved": "{{label}} saved.",
+        "notFound": "Global not found",
+        "accessDenied": "You don't have permission to edit global settings."
+    },
+    "pages": {
+        "saved": "{{label}} saved.",
+        "notFound": "Page not found",
+        "accessDenied": "You don't have permission to view this page."
     }
 }

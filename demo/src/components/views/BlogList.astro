@@ -1,0 +1,51 @@
+---
+import Site from '../../layouts/Site.astro';
+import { getPosts } from '../../lib/data.ts';
+import { t, localizedPath } from '../../lib/site.ts';
+import type { Locale } from '../../lib/site.ts';
+
+interface Props {
+    locale: Locale;
+}
+
+const { locale } = Astro.props;
+const posts = await getPosts(locale);
+---
+
+<Site locale={locale} seoTitle={t('blog', locale)}>
+    <div class="max-w-6xl mx-auto px-4 py-16">
+        <h1 class="text-3xl font-bold text-gray-900 mb-10">{t('blog', locale)}</h1>
+        {posts.length === 0
+            ? <p class="text-gray-400">{t('noPostsFound', locale)}</p>
+            : (
+                <ul class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {posts.map((post) => {
+                        const img = post.fields?.featured_image as { url?: string } | null | undefined;
+                        const excerpt = post.fields?.excerpt as string | null | undefined;
+                        return (
+                            <li class="border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 transition-colors">
+                                {img?.url && (
+                                    <img src={img.url} alt={post.title} class="w-full h-44 object-cover" />
+                                )}
+                                <div class="p-5">
+                                    <h2 class="font-semibold text-gray-900 mb-2 leading-snug">
+                                        <a href={localizedPath(`/blog/${post.slug}`, locale)} class="hover:underline">
+                                            {post.title}
+                                        </a>
+                                    </h2>
+                                    {excerpt && <p class="text-sm text-gray-500 line-clamp-2">{excerpt}</p>}
+                                    <a
+                                        href={localizedPath(`/blog/${post.slug}`, locale)}
+                                        class="inline-block mt-4 text-sm font-medium text-gray-900 hover:underline"
+                                    >
+                                        {t('readMore', locale)} →
+                                    </a>
+                                </div>
+                            </li>
+                        );
+                    })}
+                </ul>
+            )
+        }
+    </div>
+</Site>

@@ -114,3 +114,12 @@
     justify-content: center;
     width: 100%;
 }
+
+/* Touch-target enlargement for icon-only buttons — mobile only */
+@media (max-width: 767px) {
+    .am-btn-icon.am-btn-sm,
+    .am-btn-icon.am-btn-md {
+        width: 2.75rem;
+        height: 2.75rem;
+    }
+}

@@ -118,18 +118,6 @@
     text-align: left;
 }
 
-.am-topbar-search-kbd {
-    flex-shrink: 0;
-    padding: 0.125rem 0.375rem;
-    font-family: inherit;
-    font-size: 0.75rem;
-    line-height: 1.4;
-    color: var(--am-color-text-muted);
-    background-color: var(--am-color-bg-subtle);
-    border: 1px solid var(--am-color-border-strong);
-    border-radius: var(--am-radius-sm);
-}
-
 /* ------------------------------------------------------------------ */
 /* Right actions cluster                                               */
 /* ------------------------------------------------------------------ */
@@ -295,6 +283,8 @@
 
     .am-topbar-menu-toggle {
         display: flex;
+        width: 2.75rem;
+        height: 2.75rem;
     }
 
     .am-topbar-brand {
@@ -302,15 +292,14 @@
     }
 
     /* Collapse search to icon-only on very small screens */
-    .am-topbar-search-placeholder,
-    .am-topbar-search-kbd {
+    .am-topbar-search-placeholder {
         display: none;
     }
 
     .am-topbar-search-btn {
         flex: 0 0 auto;
         justify-content: center;
-        width: 2.25rem;
+        width: 2.75rem;
         padding: 0;
     }
 
@@ -322,5 +311,16 @@
     .am-topbar-search {
         flex: 0;
         margin: 0;
+    }
+
+    /* Touch-target enlargement — mobile only */
+    .am-topbar-action-btn {
+        width: 2.75rem;
+        height: 2.75rem;
+    }
+
+    .am-topbar-user-btn {
+        width: 2.75rem;
+        height: 2.75rem;
     }
 }

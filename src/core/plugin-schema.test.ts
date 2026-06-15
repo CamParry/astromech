@@ -14,19 +14,18 @@ describe('collectPluginSchemas', () => {
             count: integer('count'),
         });
         const collected = collectPluginSchemas([
-            def({ package: '@astromech/analytics', schema: { events } }),
+            def({ package: '@astromech/analytics', schema: [events] }),
         ]);
         expect(collected).toHaveLength(1);
         expect(collected[0]).toMatchObject({
             alias: 'analytics',
-            exportName: 'events',
             tableName: 'plugin_analytics_events',
         });
     });
 
-    it('ignores non-table exports', () => {
+    it('ignores non-table entries', () => {
         const collected = collectPluginSchemas([
-            def({ package: '@astromech/x', schema: { notATable: { foo: 'bar' } } }),
+            def({ package: '@astromech/x', schema: [{ foo: 'bar' }] }),
         ]);
         expect(collected).toEqual([]);
     });
@@ -36,14 +35,14 @@ describe('assertPluginTablePrefixes', () => {
     it('passes when tables use the plugin_{alias}_ prefix', () => {
         const log = sqliteTable('plugin_audit_log', { id: text('id').primaryKey() });
         expect(() =>
-            assertPluginTablePrefixes([def({ package: '@astromech/audit', schema: { log } })])
+            assertPluginTablePrefixes([def({ package: '@astromech/audit', schema: [log] })])
         ).not.toThrow();
     });
 
     it('throws when a table is missing the prefix', () => {
         const log = sqliteTable('audit_log', { id: text('id').primaryKey() });
         expect(() =>
-            assertPluginTablePrefixes([def({ package: '@astromech/audit', schema: { log } })])
+            assertPluginTablePrefixes([def({ package: '@astromech/audit', schema: [log] })])
         ).toThrow(/plugin_audit_/);
     });
 
@@ -51,7 +50,7 @@ describe('assertPluginTablePrefixes', () => {
         const log = sqliteTable('plugin_myredirects_hits', { id: text('id').primaryKey() });
         expect(() =>
             assertPluginTablePrefixes([
-                def({ package: '@astromech/redirects', alias: 'myredirects', schema: { log } }),
+                def({ package: '@astromech/redirects', alias: 'myredirects', schema: [log] }),
             ])
         ).not.toThrow();
     });

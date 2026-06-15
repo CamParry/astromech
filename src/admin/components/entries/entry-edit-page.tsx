@@ -30,8 +30,7 @@ import {
     PageTitle,
     FormLayout,
     FormLayoutContent,
-    FormLayoutMain,
-    FormLayoutSidebar,
+    Stack,
     PageContent,
 } from '@/admin/components/ui/index.js';
 import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal.js';
@@ -51,10 +50,12 @@ import {
     useDuplicateEntry,
 } from '@/admin/hooks/index.js';
 import type { EntryStatus } from '@/types/index.js';
+import { resolveEntryUrl } from '@/core/entry-url.js';
 import {
     deriveFormDefinition,
     resolveConfigForDerive,
 } from '@/admin/definitions/derive.js';
+import { resolveContentLocale } from '@/support/locale.js';
 import type { EntriesSurface } from './surface.js';
 
 // Surface link bases are runtime strings; address `Link` by string `to`.
@@ -152,16 +153,6 @@ export function EntryEditPage({
         },
     });
 
-    function resolvePreviewUrl(
-        template: string,
-        ent: { slug: string | null; fields: Record<string, unknown> }
-    ): string {
-        return template.replace(/\{(\w+)\}/g, (_, key) => {
-            if (key === 'slug') return ent.slug ?? '';
-            return String(ent.fields[key] ?? '');
-        });
-    }
-
     if (isLoading) {
         return <PageLoading />;
     }
@@ -206,12 +197,9 @@ export function EntryEditPage({
                         {hasStatuses && entry != null && (
                             <StatusBadge status={entry.status} />
                         )}
-                        {entryTypeConfig?.previewUrl && entry?.status === 'published' && (
+                        {entryTypeConfig?.url && entry?.status === 'published' && (
                             <a
-                                href={resolvePreviewUrl(
-                                    entryTypeConfig.previewUrl,
-                                    entry
-                                )}
+                                href={resolveEntryUrl(entryTypeConfig.url, entry)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="am-btn am-btn-ghost am-btn-sm"
@@ -238,7 +226,12 @@ export function EntryEditPage({
                                 type={type}
                                 locales={entry.locales}
                                 allLocales={adminConfig.locales}
-                                defaultLocale={adminConfig.defaultLocale}
+                                defaultLocale={
+                                    resolveContentLocale(
+                                        adminConfig.defaultLocale,
+                                        adminConfig.locales
+                                    ) ?? adminConfig.defaultLocale
+                                }
                                 compact
                             />
                         )}
@@ -296,7 +289,7 @@ export function EntryEditPage({
                     )}
                     <FormLayout>
                         <FormLayoutContent>
-                            <FormLayoutMain>
+                            <Stack gap={8}>
                                 {hasTitle && (
                                     <Panel>
                                         <form.Field
@@ -358,9 +351,9 @@ export function EntryEditPage({
                                         />
                                     )}
                                 </form.Field>
-                            </FormLayoutMain>
+                            </Stack>
 
-                            <FormLayoutSidebar>
+                            <Stack gap={8}>
                                 {hasStatuses && (
                                     <form.Field name="status">
                                         {(statusField) => (
@@ -442,7 +435,7 @@ export function EntryEditPage({
                                         )}
                                     </Panel>
                                 )}
-                            </FormLayoutSidebar>
+                            </Stack>
                         </FormLayoutContent>
                     </FormLayout>
                 </PageContent>

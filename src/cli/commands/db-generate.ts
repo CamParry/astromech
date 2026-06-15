@@ -83,7 +83,7 @@ export default defineCommand({
         for (const plugin of rawConfig.plugins ?? []) {
             if (plugin.schemaModule) {
                 specifiers.push(plugin.schemaModule);
-            } else if (plugin.schema && Object.keys(plugin.schema).length > 0) {
+            } else if (plugin.schema && plugin.schema.length > 0) {
                 const name = plugin.alias ?? plugin.name ?? plugin.package;
                 console.warn(
                     `[astromech db:generate] Warning: plugin "${name}" has schema tables but no ` +

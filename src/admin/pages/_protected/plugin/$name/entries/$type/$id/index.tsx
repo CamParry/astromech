@@ -18,7 +18,7 @@ import { EmptyState, Page, PageContent } from '@/admin/components/ui/index.js';
 function PluginEntryEditPage(): React.ReactElement {
     const { name, type, id } = Route.useParams();
     const { t } = useTranslation();
-    const api = createEntriesApi(`/plugins/${name}/entries`);
+    const api = createEntriesApi(`/plugins/${name}/entries`, 'full');
     const surface = buildPluginEntriesSurface(adminConfig.plugins, name, type, api);
     if (!surface) {
         return (

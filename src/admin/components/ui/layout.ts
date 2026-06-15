@@ -12,8 +12,7 @@ export {
     FormLayout,
     FormLayoutActions,
     FormLayoutContent,
-    FormLayoutMain,
-    FormLayoutSidebar,
+    Stack,
     ButtonGroup,
 } from './page.js';
 export { Breadcrumb } from './breadcrumb.js';

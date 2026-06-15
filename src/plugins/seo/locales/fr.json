@@ -2,25 +2,17 @@
     "field": {
         "titleLabel": "Titre meta",
         "descriptionLabel": "Description meta",
-        "counter": "{{length}} / {{max}}",
-        "status": {
-            "empty": "Pas encore défini",
-            "short": "Un peu court — visez au moins {{min}} caractères",
-            "good": "Bonne longueur",
-            "long": "Trop long — les moteurs de recherche peuvent tronquer au-delà de {{max}} caractères"
-        },
         "previewCaption": "Aperçu de recherche",
         "previewTitlePlaceholder": "Aperçu du titre meta",
         "previewDescriptionPlaceholder": "La description meta apparaîtra ici telle qu'elle serait affichée dans les résultats de recherche."
     },
     "seo": {
-        "sectionTitle": "Apparence dans la recherche",
-        "fieldLabel": "Apparence dans la recherche"
+        "sectionTitle": "Apparence dans la recherche"
     },
     "overview": {
         "loadError": "Impossible de charger l'aperçu SEO.",
         "emptyTitle": "Rien à analyser",
-        "emptyDescription": "Aucun type d'entrée n'inclut encore le champ seo-meta. Ajoutez seoFields() aux fieldGroups d'un type d'entrée.",
+        "emptyDescription": "Aucun type d'entrée n'inclut encore le champ SEO. Ajoutez seoSection() aux champs d'un type d'entrée.",
         "totals": {
             "entries": "Entrées",
             "complete": "Complètes",

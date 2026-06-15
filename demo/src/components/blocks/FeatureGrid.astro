@@ -1,0 +1,45 @@
+---
+import { Icon } from 'astro-icon/components';
+import { lucideIconName } from '../../lib/icons';
+
+interface Feature {
+    title?: string | null;
+    description?: string | null;
+    icon?: string | null;
+}
+
+interface Props {
+    heading?: string | null;
+    features?: Feature[] | null;
+}
+
+const { heading, features } = Astro.props;
+const items = features ?? [];
+---
+
+<section class="max-w-6xl mx-auto px-4 py-16">
+    {heading && (
+        <h2 class="text-2xl md:text-3xl font-bold text-center mb-12 text-gray-900">
+            {heading}
+        </h2>
+    )}
+    {items.length > 0 && (
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {items.map((feature) => (
+                <div class="border border-gray-200 rounded-lg p-6 hover:border-gray-300 transition-colors">
+                    {feature.icon && (
+                        <div class="mb-3 text-gray-900">
+                            <Icon name={lucideIconName(feature.icon)} class="w-8 h-8" />
+                        </div>
+                    )}
+                    {feature.title && (
+                        <h3 class="font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                    )}
+                    {feature.description && (
+                        <p class="text-sm text-gray-500 leading-relaxed">{feature.description}</p>
+                    )}
+                </div>
+            ))}
+        </div>
+    )}
+</section>

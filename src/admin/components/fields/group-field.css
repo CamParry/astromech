@@ -1,9 +1,15 @@
+/* Group field — a labelled cluster of sub-fields sharing one nested data key.
+   Base is layout only (matches the field-list rhythm); `--boxed` adds the
+   surrounding surface. Authors drop the box with `group({ container: false })`. */
 .am-group-field {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    padding: 1rem;
-    background: var(--am-color-bg-subtle);
+    gap: calc(var(--am-space) * 5);
+}
+
+.am-group-field--boxed {
+    padding: calc(var(--am-space) * 4);
+    background: var(--am-color-bg-surface);
     border: 1px solid var(--am-color-border);
     border-radius: var(--am-radius-md);
 }

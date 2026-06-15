@@ -83,3 +83,17 @@
     border: 1px solid var(--am-color-border-strong);
     border-radius: var(--am-radius-md);
 }
+
+@media (max-width: 767px) {
+    .am-toolbar {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .am-search {
+        flex: 1 1 auto;
+        width: auto;
+        min-width: 0;
+        max-width: 100%;
+    }
+}

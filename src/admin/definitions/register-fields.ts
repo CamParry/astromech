@@ -31,6 +31,7 @@ import { RadioGroupField } from '@/admin/components/fields/radio-group-field';
 import { LinkField } from '@/admin/components/fields/link-field';
 import { KeyValueField } from '@/admin/components/fields/key-value-field';
 import { BlocksField } from '@/admin/components/fields/blocks-field';
+import { TreeField } from '@/admin/components/fields/tree-field';
 
 registerField('text', TextField);
 registerField('textarea', TextareaField);
@@ -56,3 +57,4 @@ registerField('radio-group', RadioGroupField);
 registerField('link', LinkField);
 registerField('key-value', KeyValueField);
 registerField('blocks', BlocksField);
+registerField('tree', TreeField);

@@ -28,8 +28,14 @@ type BaseOptions = {
     validation?: ValidationRule[];
     translatable?: boolean;
     searchable?: boolean;
+    /** When true, this field is omitted from `public`-shape reads. Default: false (public). */
+    private?: boolean;
 };
 
+type TextOptions = BaseOptions & {
+    count?: boolean | { min?: number; max?: number };
+    maxLength?: number;
+};
 type NumericOptions = BaseOptions & { min?: number; max?: number; step?: number };
 type ChoiceOptions = BaseOptions & { options?: SelectOption[] | string[] };
 type MediaOptions = BaseOptions & { multiple?: boolean; accept?: string };
@@ -41,30 +47,37 @@ type RelationshipOptions = BaseOptions & {
     onDelete?: 'cascade' | 'set-null' | 'restrict';
 };
 
-type GroupOptions = BaseOptions & { fields: FieldDefinition[] };
+type GroupOptions = BaseOptions & { container?: boolean; fields: FieldDefinition[] };
 type RepeaterOptions = BaseOptions & {
     min?: number;
     max?: number;
     fields: FieldDefinition[];
 };
+type TreeOptions = BaseOptions & {
+    min?: number;
+    max?: number;
+    maxDepth?: number;
+    fields: FieldDefinition[];
+};
 type BlocksOptions = BaseOptions & { blocks: BlockDefinition[] };
-type BlockOptions = { label?: Label; icon?: string; fields: FieldDefinition[] };
+type BlockOptions = { label?: Label; fields: FieldDefinition[] };
 
-type SectionOptions = { label?: Label; description?: Label; fields: FieldDefinition[] };
+type SectionOptions = { label?: Label; description?: Label; private?: boolean; fields: FieldDefinition[] };
 type AccordionOptions = {
     label?: Label;
     description?: Label;
     collapsed?: boolean;
+    private?: boolean;
     fields: FieldDefinition[];
 };
-type TabOptions = { label?: Label; description?: Label; fields: FieldDefinition[] };
-type TabsOptions = { fields: FieldDefinition[] };
+type TabOptions = { label?: Label; description?: Label; private?: boolean; fields: FieldDefinition[] };
+type TabsOptions = { private?: boolean; fields: FieldDefinition[] };
 
-export function text(name: string, options?: BaseOptions): FieldDefinition {
+export function text(name: string, options?: TextOptions): FieldDefinition {
     return { name, type: 'text', ...options };
 }
 
-export function textarea(name: string, options?: BaseOptions): FieldDefinition {
+export function textarea(name: string, options?: TextOptions): FieldDefinition {
     return { name, type: 'textarea', ...options };
 }
 
@@ -155,6 +168,11 @@ export function group(name: string, options: GroupOptions): FieldDefinition {
 export function repeater(name: string, options: RepeaterOptions): FieldDefinition {
     const { fields, ...rest } = options;
     return { name, type: 'repeater', ...rest, fields };
+}
+
+export function tree(name: string, options: TreeOptions): FieldDefinition {
+    const { fields, ...rest } = options;
+    return { name, type: 'tree', ...rest, fields };
 }
 
 export function blocks(name: string, options: BlocksOptions): FieldDefinition {

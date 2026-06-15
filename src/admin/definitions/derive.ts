@@ -128,7 +128,7 @@ export function resolveConfigForDerive(
             slug: null,
             adminColumns: [],
             fields: { main: [], sidebar: [] },
-            previewUrl: null,
+            url: null,
             capabilities: {
                 statuses: true,
                 slug: true,

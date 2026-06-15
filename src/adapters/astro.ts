@@ -36,7 +36,13 @@ import {
     derivePluginPages,
     resolvePluginLabel,
 } from '@/core/plugin-admin.js';
-import type { AdminEntryTypeConfig, ResolvedEntryTypeConfig } from '@/types/config.js';
+import type {
+    AdminEntryTypeConfig,
+    AdminPage,
+    ResolvedAdminPage,
+    ResolvedEntryTypeConfig,
+} from '@/types/config.js';
+import type { PluginFieldTypeRegistration } from '@/types/plugins.js';
 
 /**
  * Project a resolved entry type into the serializable admin shape. Shared by
@@ -51,9 +57,10 @@ function toAdminEntryType(entryType: ResolvedEntryTypeConfig): AdminEntryTypeCon
         slug: entryType.slug ? entryType.slug : null,
         adminColumns: entryType.adminColumns ?? [],
         fields: entryType.fields,
-        previewUrl: entryType.previewUrl ?? null,
+        url: entryType.url ?? null,
         capabilities: entryType.capabilities,
         titleField: entryType.titleField,
+        ...(entryType.icon !== undefined ? { icon: entryType.icon } : {}),
         ...(entryType.views !== undefined ? { views: entryType.views } : {}),
         ...(entryType.defaultView !== undefined
             ? { defaultView: entryType.defaultView }
@@ -212,7 +219,11 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                                                             ]
                                                         )
                                                     ),
-                                                    pages: derivePluginPages(identity, p),
+                                                    // derivePluginPages now returns ResolvedAdminPage[]
+                                                    pages: derivePluginPages(
+                                                        identity,
+                                                        p
+                                                    ) as ResolvedAdminPage[],
                                                 };
                                             }),
                                             adminRoute: resolvedConfig.adminRoute,
@@ -231,6 +242,7 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                                                     toAdminEntryType(entryType),
                                                 ])
                                             ),
+                                            pages: resolvedConfig.adminPages,
                                         };
                                         return `export default ${JSON.stringify(adminConfig)};`;
                                     }
@@ -255,7 +267,7 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                                         ).flatMap((def) => {
                                             const identity = resolvePluginIdentity(def);
                                             return (def.fields ?? []).map(
-                                                (reg) =>
+                                                (reg: PluginFieldTypeRegistration) =>
                                                     `\t${JSON.stringify(reg.type)}: { load: () => import(${JSON.stringify(reg.component)}), defaultValue: ${JSON.stringify(reg.defaultValue ?? null)}, plugin: ${JSON.stringify(identity.name)}, namespace: ${JSON.stringify(identity.permissionNamespace)} },`
                                             );
                                         });
@@ -269,10 +281,10 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                                                     resolvePluginIdentity(def);
                                                 return (def.admin?.pages ?? [])
                                                     .filter(
-                                                        (page) =>
+                                                        (page: AdminPage) =>
                                                             page.component !== undefined
                                                     )
-                                                    .map((page) => {
+                                                    .map((page: AdminPage) => {
                                                         const permission =
                                                             page.permission !== undefined
                                                                 ? resolvePluginPermission(
@@ -280,7 +292,13 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                                                                       page.permission
                                                                   )
                                                                 : null;
-                                                        return `\t${JSON.stringify(`${identity.name}${page.path}`)}: { load: () => import(${JSON.stringify(page.component)}), plugin: ${JSON.stringify(identity.name)}, permission: ${JSON.stringify(permission)}, label: ${JSON.stringify(page.label)} },`;
+                                                        // page.label is Label (string | {$t}); stringify directly —
+                                                        // the browser-side route resolves it via resolveLabel.
+                                                        const labelRaw: string =
+                                                            typeof page.label === 'string'
+                                                                ? page.label
+                                                                : page.label.$t;
+                                                        return `\t${JSON.stringify(`${identity.name}${page.path}`)}: { load: () => import(${JSON.stringify(page.component)}), plugin: ${JSON.stringify(identity.name)}, permission: ${JSON.stringify(permission)}, label: ${JSON.stringify(labelRaw)} },`;
                                                     });
                                             }
                                         );

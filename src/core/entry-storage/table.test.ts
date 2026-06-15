@@ -464,8 +464,9 @@ describe('orchestrator integration', () => {
     function makeLinksPlugin(): PluginDefinition {
         return {
             package: '@astromech/links',
-            entries: {
-                link: {
+            entries: [
+                {
+                    type: 'link',
                     single: 'Link',
                     plural: 'Links',
                     titleField: false,
@@ -480,7 +481,7 @@ describe('orchestrator integration', () => {
                         { name: 'status', type: 'text', label: 'Status' },
                     ],
                 },
-            },
+            ],
         };
     }
 
@@ -502,9 +503,11 @@ describe('orchestrator integration', () => {
         expect(created.fields['from']).toBe('/old');
         expect(created.fields['to']).toBe('/new');
 
+        // full: true — admin read; entry is a draft
         const fetched = await Astromech.entries.get({
             type: 'links/link',
             id: created.id,
+            full: true,
         });
         expect(fetched?.id).toBe(created.id);
         expect(fetched?.fields['to']).toBe('/new');
@@ -525,14 +528,17 @@ describe('orchestrator integration', () => {
         await Astromech.entries.create({
             type: 'links/link',
             fields: { from: '/hello', to: '/world' },
+            status: 'published',
         });
         await Astromech.entries.create({
             type: 'links/link',
             fields: { from: '/foo', to: '/bar' },
+            status: 'published',
         });
         await Astromech.entries.create({
             type: 'links/link',
             fields: { from: '/baz', to: '/hello-page' },
+            status: 'published',
         });
 
         const res = await Astromech.entries.query({

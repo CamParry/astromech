@@ -57,7 +57,7 @@ describe('resolveConfig pluginEntries', () => {
             baseConfig([
                 {
                     package: '@astromech/redirects',
-                    entries: { redirect: entryType('Redirect') },
+                    entries: [{ ...entryType('Redirect'), type: 'redirect' }],
                 },
             ])
         );
@@ -74,7 +74,7 @@ describe('resolveConfig pluginEntries', () => {
                 {
                     package: '@astromech/redirects',
                     alias: 'links',
-                    entries: { redirect: entryType('Redirect') },
+                    entries: [{ ...entryType('Redirect'), type: 'redirect' }],
                 },
             ])
         );
@@ -93,9 +93,7 @@ describe('resolveConfig pluginEntries', () => {
             baseConfig([
                 {
                     package: '@astromech/store',
-                    entries: {
-                        item: { ...entryType('Item'), storage: emptyStorage() },
-                    },
+                    entries: [{ ...entryType('Item'), type: 'item', storage: emptyStorage() }],
                 },
             ])
         );
@@ -111,13 +109,14 @@ describe('resolveConfig pluginEntries', () => {
                 baseConfig([
                     {
                         package: '@astromech/store',
-                        entries: {
-                            item: {
+                        entries: [
+                            {
                                 ...entryType('Item'),
+                                type: 'item',
                                 versioning: true,
                                 storage: emptyStorage(),
                             },
-                        },
+                        ],
                     },
                 ])
             )
@@ -278,10 +277,10 @@ describe('resolveConfig qualified relationship targets', () => {
                 baseConfig([
                     {
                         package: '@astromech/store',
-                        entries: {
-                            item: entryType('Item'),
-                            linker: withTarget('store/item'),
-                        },
+                        entries: [
+                            { ...entryType('Item'), type: 'item' },
+                            { ...withTarget('store/item'), type: 'linker' },
+                        ],
                     },
                 ])
             )
@@ -294,7 +293,7 @@ describe('resolveConfig qualified relationship targets', () => {
                 baseConfig([
                     {
                         package: '@astromech/store',
-                        entries: { linker: withTarget('store/missing') },
+                        entries: [{ ...withTarget('store/missing'), type: 'linker' }],
                     },
                 ])
             )

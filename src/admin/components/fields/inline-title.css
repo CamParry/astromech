@@ -1,0 +1,71 @@
+/* ============================================================================
+   am-inline-title — click-to-edit item title (blocks & repeater headers)
+   ============================================================================ */
+
+.am-inline-title {
+    display: inline-flex;
+    flex: 0 1 auto;
+    align-items: center;
+    min-width: 0;
+    max-width: 100%;
+    height: 1.5rem;
+    padding: 0 0.25rem;
+    overflow: hidden;
+    font-family: inherit;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: inherit;
+    text-align: left;
+    cursor: text;
+    background: none;
+    border: none;
+    border-radius: var(--am-radius-sm);
+    transition: background-color var(--am-duration-fast) var(--am-easing);
+}
+
+@media (hover: hover) {
+    .am-inline-title:hover {
+        background: var(--am-color-bg-subtle);
+    }
+}
+
+/* Inset so the ring isn't clipped by the header's overflow:hidden. */
+.am-inline-title:focus-visible {
+    outline: 2px solid var(--am-focus-color);
+    outline-offset: -2px;
+}
+
+.am-inline-title-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.am-inline-title-input {
+    min-width: 0;
+    max-width: 100%;
+    height: 1.5rem;
+    padding: 0 0.25rem;
+    font-family: inherit;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--am-color-text-default);
+    background: var(--am-color-bg-base);
+    border: none;
+    border-radius: var(--am-radius-sm);
+}
+
+/* Inset focus ring so it isn't clipped by the header's overflow:hidden, and
+   reads as a single indicator (no border + outline doubling). */
+.am-inline-title-input:focus-visible {
+    outline: 2px solid var(--am-focus-color);
+    outline-offset: -2px;
+}
+
+.am-inline-title-static {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    white-space: nowrap;
+}

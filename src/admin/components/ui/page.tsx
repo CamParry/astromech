@@ -31,12 +31,14 @@ export function FormLayoutContent({ children }: ChildrenProps): React.ReactEleme
     return <div className="am-form-layout-content">{children}</div>;
 }
 
-export function FormLayoutMain({ children }: ChildrenProps): React.ReactElement {
-    return <div className="am-form-layout-main">{children}</div>;
-}
-
-export function FormLayoutSidebar({ children }: ChildrenProps): React.ReactElement {
-    return <div className="am-form-layout-sidebar">{children}</div>;
+export function Stack({
+    gap,
+    children,
+}: {
+    gap: 5 | 8;
+    children: React.ReactNode;
+}): React.ReactElement {
+    return <div className={`am-stack am-stack-gap-${gap}`}>{children}</div>;
 }
 
 export function ButtonGroup({ children }: ChildrenProps): React.ReactElement {
