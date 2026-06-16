@@ -12,6 +12,7 @@ import type {
     BlockDefinition,
     FieldDefinition,
     Label,
+    RichTextAllow,
     SelectOption,
     ValidationRule,
 } from '@/types/fields.js';
@@ -62,7 +63,12 @@ type TreeOptions = BaseOptions & {
 type BlocksOptions = BaseOptions & { blocks: BlockDefinition[] };
 type BlockOptions = { label?: Label; fields: FieldDefinition[] };
 
-type SectionOptions = { label?: Label; description?: Label; private?: boolean; fields: FieldDefinition[] };
+type SectionOptions = {
+    label?: Label;
+    description?: Label;
+    private?: boolean;
+    fields: FieldDefinition[];
+};
 type AccordionOptions = {
     label?: Label;
     description?: Label;
@@ -70,7 +76,12 @@ type AccordionOptions = {
     private?: boolean;
     fields: FieldDefinition[];
 };
-type TabOptions = { label?: Label; description?: Label; private?: boolean; fields: FieldDefinition[] };
+type TabOptions = {
+    label?: Label;
+    description?: Label;
+    private?: boolean;
+    fields: FieldDefinition[];
+};
 type TabsOptions = { private?: boolean; fields: FieldDefinition[] };
 
 export function text(name: string, options?: TextOptions): FieldDefinition {
@@ -81,7 +92,12 @@ export function textarea(name: string, options?: TextOptions): FieldDefinition {
     return { name, type: 'textarea', ...options };
 }
 
-export function richtext(name: string, options?: BaseOptions): FieldDefinition {
+type RichTextOptions = BaseOptions & {
+    /** Subset of rich-text features to enable. All on by default. */
+    allow?: RichTextAllow;
+};
+
+export function richtext(name: string, options?: RichTextOptions): FieldDefinition {
     return { name, type: 'richtext', ...options };
 }
 

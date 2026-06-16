@@ -8,7 +8,15 @@
  * Applied at the end of `query()` and `get()`, after populate, before return.
  */
 
-import type { Entry, FieldDefinition, JsonObject, JsonValue } from '@/types/index.js';
+import type {
+    Entry,
+    FieldDefinition,
+    JsonObject,
+    JsonValue,
+    RichTextAllow,
+} from '@/types/index.js';
+import type { JSONContent } from '@tiptap/core';
+import { renderRichText } from '@/core/render-rich-text.js';
 
 // ============================================================================
 // Public types
@@ -84,9 +92,14 @@ export function isPublicBranded(value: unknown): boolean {
  * treat absent values the same as null (no restriction).
  */
 function passesPublicRowFilter(entry: Entry, now: Date): boolean {
-    const e = entry as { status?: string | null; publishedAt?: Date | null; deletedAt?: Date | null };
+    const e = entry as {
+        status?: string | null;
+        publishedAt?: Date | null;
+        deletedAt?: Date | null;
+    };
     // Entry types with `statuses: false` return undefined for status — always visible.
-    if (e.status !== undefined && e.status !== null && e.status !== 'published') return false;
+    if (e.status !== undefined && e.status !== null && e.status !== 'published')
+        return false;
     if (e.publishedAt != null && e.publishedAt > now) return false;
     if (e.deletedAt != null) return false;
     return true;
@@ -190,7 +203,8 @@ function stripPrivateFields(
                             related,
                             resolveRelatedFields(related)
                         );
-                        if (stripped !== null) filtered.push(stripped as unknown as JsonValue);
+                        if (stripped !== null)
+                            filtered.push(stripped as unknown as JsonValue);
                     } else {
                         filtered.push(item);
                     }
@@ -203,7 +217,8 @@ function stripPrivateFields(
                     related,
                     resolveRelatedFields(related)
                 );
-                result[key] = stripped !== null ? (stripped as unknown as JsonValue) : null;
+                result[key] =
+                    stripped !== null ? (stripped as unknown as JsonValue) : null;
             } else {
                 result[key] = value;
             }
@@ -212,7 +227,11 @@ function stripPrivateFields(
 
         // Recurse into group children
         if (def.type === 'group' && def.fields && def.fields.length > 0) {
-            if (rawValue !== null && typeof rawValue === 'object' && !Array.isArray(rawValue)) {
+            if (
+                rawValue !== null &&
+                typeof rawValue === 'object' &&
+                !Array.isArray(rawValue)
+            ) {
                 result[key] = stripPrivateFields(
                     rawValue as JsonObject,
                     def.fields,
@@ -226,12 +245,17 @@ function stripPrivateFields(
 
         // Recurse into repeater items (each item is an object with child fields)
         if (def.type === 'repeater' && def.fields && def.fields.length > 0) {
+            const repeaterFields = def.fields;
             if (Array.isArray(rawValue)) {
                 result[key] = (rawValue as JsonValue[]).map((item) => {
-                    if (item !== null && typeof item === 'object' && !Array.isArray(item)) {
+                    if (
+                        item !== null &&
+                        typeof item === 'object' &&
+                        !Array.isArray(item)
+                    ) {
                         return stripPrivateFields(
                             item as JsonObject,
-                            def.fields!,
+                            repeaterFields,
                             resolveRelatedFields
                         );
                     }
@@ -248,12 +272,22 @@ function stripPrivateFields(
             const blockDefsByType = new Map(def.blocks.map((b) => [b.type, b.fields]));
             if (Array.isArray(rawValue)) {
                 result[key] = (rawValue as JsonValue[]).map((item) => {
-                    if (item !== null && typeof item === 'object' && !Array.isArray(item)) {
+                    if (
+                        item !== null &&
+                        typeof item === 'object' &&
+                        !Array.isArray(item)
+                    ) {
                         const obj = item as JsonObject;
                         const blockType = obj['_type'] as string | undefined;
-                        const blockFields = blockType ? blockDefsByType.get(blockType) : undefined;
+                        const blockFields = blockType
+                            ? blockDefsByType.get(blockType)
+                            : undefined;
                         if (blockFields) {
-                            return stripPrivateFields(obj, blockFields, resolveRelatedFields);
+                            return stripPrivateFields(
+                                obj,
+                                blockFields,
+                                resolveRelatedFields
+                            );
                         }
                     }
                     return item;
@@ -266,7 +300,20 @@ function stripPrivateFields(
 
         // Recurse into tree items (recursive structure with `_children`)
         if (def.type === 'tree' && def.fields && def.fields.length > 0) {
-            result[key] = stripTreeItems(rawValue as JsonValue, def.fields, resolveRelatedFields);
+            result[key] = stripTreeItems(
+                rawValue as JsonValue,
+                def.fields,
+                resolveRelatedFields
+            );
+            continue;
+        }
+
+        // Richtext: render JSON → HTML string for public shape
+        if (def.type === 'richtext') {
+            result[key] = renderRichText(
+                rawValue as JSONContent | null | undefined,
+                def.allow as RichTextAllow | undefined
+            );
             continue;
         }
 
@@ -376,7 +423,11 @@ export function applyVisibility(entry: Entry, opts: VisibilityOptions): Entry | 
 
     // Strip private fields (step 1) — clone fields first, never mutate stored object
     const clonedFields = { ...entry.fields };
-    const projectedFields = stripPrivateFields(clonedFields, fields, resolveRelatedFields);
+    const projectedFields = stripPrivateFields(
+        clonedFields,
+        fields,
+        resolveRelatedFields
+    );
 
     // Structural strip (step 2) — removes _disabled items and _disabled/_title keys
     const cleanFields = structuralStrip(projectedFields as JsonValue) as JsonObject;
@@ -399,7 +450,11 @@ export function applyVisibilityWithRelations(
     if (!passesPublicRowFilter(entry, audience.now)) return null;
 
     const clonedFields = { ...entry.fields };
-    const projectedFields = stripPrivateFields(clonedFields, fields, resolveRelatedFields);
+    const projectedFields = stripPrivateFields(
+        clonedFields,
+        fields,
+        resolveRelatedFields
+    );
     const cleanFields = structuralStrip(projectedFields as JsonValue) as JsonObject;
 
     return { ...entry, fields: cleanFields };
