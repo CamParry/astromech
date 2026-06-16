@@ -297,7 +297,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
         if (!publicSettingKeys.includes(key)) publicSettingKeys.push(key);
     }
 
-    const { db: _db, plugins: _plugins, ...rest } = config;
+    const { db: _db, plugins: _plugins, scheduler: _scheduler, ...rest } = config;
     return {
         ...rest,
         adminRoute: config.adminRoute ?? '/admin',
@@ -311,5 +311,6 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
             retentionDays: config.trash?.retentionDays ?? 30,
         },
         publicSettingKeys,
+        timezone: config.timezone ?? 'UTC',
     };
 }

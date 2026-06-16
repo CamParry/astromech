@@ -74,6 +74,13 @@ export type EmailDriver = {
     send(message: EmailMessage): Promise<void>;
 };
 
+export type SchedulerDriver = {
+    readonly name: string;
+    /** Begin producing ticks; each tick invokes onTick(now). */
+    start(onTick: (now: Date) => Promise<void>): void | Promise<void>;
+    stop?(): void | Promise<void>;
+};
+
 // ============================================================================
 // Entry Types
 // ============================================================================
@@ -289,6 +296,13 @@ export type AstromechConfig = {
         driver: EmailDriver;
         from: string;
     };
+    /** Triggering driver for scheduled jobs. Default: nodeDriver. */
+    scheduler?: SchedulerDriver;
+    /**
+     * IANA timezone used to interpret cron expressions (e.g. '0 3 * * *' =
+     * 3am in this zone). Instants are still stored/compared as UTC. Default 'UTC'.
+     */
+    timezone?: string;
     locales?: string[];
     defaultLocale?: string;
     cors?: {
@@ -306,7 +320,7 @@ export type AstromechConfig = {
     };
 };
 
-export type ResolvedConfig = Omit<AstromechConfig, 'plugins' | 'db'> & {
+export type ResolvedConfig = Omit<AstromechConfig, 'plugins' | 'db' | 'scheduler'> & {
     adminRoute: string;
     apiRoute: string;
     mediaRoute: string;
@@ -326,6 +340,7 @@ export type ResolvedConfig = Omit<AstromechConfig, 'plugins' | 'db'> & {
      * Always present (empty array when nothing is public).
      */
     publicSettingKeys: string[];
+    timezone: string;
 };
 
 // ============================================================================

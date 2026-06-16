@@ -11,6 +11,7 @@ import type { CronJob } from '@/cron/registry.js';
 
 export const scheduledPublishJob: CronJob = {
     name: 'scheduled-publish',
+    schedule: '* * * * *',
     async handler({ db }) {
         const now = new Date();
 

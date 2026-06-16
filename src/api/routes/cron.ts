@@ -1,28 +1,42 @@
 /**
  * CRON trigger route
  *
- * POST /cron/run — manually trigger all scheduled CRON jobs.
- * Admin-only. Useful for non-Cloudflare runtimes or manual testing.
+ * POST /cron/run — run a due-evaluation tick (only jobs whose stored schedule
+ * is due fire). Auth: an admin session OR a shared-secret bearer token, so
+ * external pollers (system crontab / serverless / uptime pingers) can drive the
+ * scheduler on runtimes without an in-process timer. Mounts ahead of the
+ * app-wide requireAuth (it enforces its own auth), so a sessionless bearer poke
+ * is not pre-rejected.
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { forbidden, internalError } from '@/api/middleware/errors.js';
-import type { AuthVariables } from '@/api/middleware/auth.js';
-import { getCronJobs } from '@/cron/registry.js';
-import { runScheduledJobs } from '@/cron/runner.js';
+import { internalError, unauthorized } from '@/api/middleware/errors.js';
+import { resolveSessionUser } from '@/api/middleware/auth.js';
+import { onTick } from '@/cron/runner.js';
 
-type Env = { Variables: AuthVariables };
+const router = new OpenAPIHono();
 
-const router = new OpenAPIHono<Env>();
+/** Shared secret for non-session pokes. Undefined (off) until the env var is set. */
+function cronSecret(): string | undefined {
+    return typeof process !== 'undefined' ? process.env.ASTROMECH_CRON_SECRET : undefined;
+}
 
 router.post('/run', async (c) => {
-    const role = c.var.role;
-    if (role?.slug !== 'admin') return forbidden(c);
+    const secret = cronSecret();
+    const authHeader = c.req.header('authorization');
+    const bearerOk = secret !== undefined && authHeader === `Bearer ${secret}`;
+
+    let sessionOk = false;
+    if (!bearerOk) {
+        const resolved = await resolveSessionUser(c.req.raw.headers);
+        sessionOk = resolved?.role.slug === 'admin';
+    }
+
+    if (!bearerOk && !sessionOk) return unauthorized(c);
 
     try {
-        const jobs = getCronJobs();
-        await runScheduledJobs();
-        return c.json({ success: true, jobs: jobs.length });
+        await onTick(new Date());
+        return c.json({ success: true });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
     }

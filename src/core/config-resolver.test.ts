@@ -275,6 +275,21 @@ describe('resolveConfig structural validation', () => {
     });
 });
 
+describe('resolveConfig timezone', () => {
+    it('defaults timezone to "UTC" when not specified', () => {
+        const resolved = resolveConfig(baseConfig([]));
+        expect(resolved.timezone).toBe('UTC');
+    });
+
+    it('respects an explicit timezone', () => {
+        const resolved = resolveConfig({
+            ...baseConfig([]),
+            timezone: 'America/New_York',
+        });
+        expect(resolved.timezone).toBe('America/New_York');
+    });
+});
+
 describe('resolveConfig qualified relationship targets', () => {
     const withTarget = (target: string): EntryTypeConfig => ({
         single: 'Linker',

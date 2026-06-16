@@ -11,6 +11,7 @@ import type { CronJob } from '@/cron/registry.js';
 
 export const trashPurgeJob: CronJob = {
     name: 'trash-purge',
+    schedule: '0 3 * * *',
     async handler({ db, config }) {
         if (!config.trash.enabled || config.trash.retentionDays <= 0) return;
 

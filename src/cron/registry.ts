@@ -6,7 +6,7 @@
  */
 
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import type { ResolvedConfig } from '@/types/index.js';
+import type { ResolvedConfig, SchedulerDriver } from '@/types/index.js';
 
 export type CronContext = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -17,8 +17,9 @@ export type CronContext = {
 export type CronJob = {
     name: string;
     /**
-     * Declared cadence (plugin cron jobs). Currently metadata only — the
-     * runner executes every registered job on each scheduled tick.
+     * Seed/default cadence written to the `_astromech_cron` table on first
+     * boot. The table is the source of truth thereafter — this field is not
+     * re-read on subsequent starts. Keep the field; do not change its type.
      */
     schedule?: string;
     handler: (ctx: CronContext) => Promise<void>;
@@ -37,4 +38,16 @@ export function registerCronJob(job: CronJob): void {
 
 export function getCronJobs(): CronJob[] {
     return globalThis.__astromechCronJobs ?? [];
+}
+
+declare global {
+    var __astromechScheduler: SchedulerDriver | undefined;
+}
+
+export function setSchedulerDriver(driver: SchedulerDriver): void {
+    globalThis.__astromechScheduler = driver;
+}
+
+export function getSchedulerDriver(): SchedulerDriver | null {
+    return globalThis.__astromechScheduler ?? null;
 }

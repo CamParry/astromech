@@ -263,6 +263,31 @@ export const settingsTable = sqliteTable('settings', {
 });
 
 // ============================================================================
+// Cron
+// ============================================================================
+
+/**
+ * Scheduler state — the single source of truth for cron cadence and the
+ * multi-instance lock. Seeded from registered jobs' default `schedule` on first
+ * tick; the stored row is authoritative thereafter (runtime-editable).
+ *
+ * `lock` is a claim-EXPIRY timestamp that doubles as the claim token: a tick
+ * CAS-claims a job by writing an expiry; a crashed claim auto-expires so the
+ * next tick can retry.
+ */
+export const cronTable = sqliteTable('_astromech_cron', {
+    name: text('name').primaryKey(),
+    schedule: text('schedule').notNull(),
+    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+    lastRun: integer('last_run', { mode: 'timestamp' }),
+    nextRun: integer('next_run', { mode: 'timestamp' }),
+    lock: integer('lock', { mode: 'timestamp' }),
+});
+
+export type CronRow = typeof cronTable.$inferSelect;
+export type NewCronRow = typeof cronTable.$inferInsert;
+
+// ============================================================================
 // Type Exports
 // ============================================================================
 
