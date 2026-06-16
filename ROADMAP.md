@@ -102,7 +102,8 @@ Status: ✅ shipped · 🚧 planned
 
 ### Search ✅
 
-- [x] Command-palette live search across root entries + plugin entries + users + media — permission-gated, debounced, per-source resilient, top-5 per group; static nav / entry-type / plugin-page shortcuts. Title/name+email/filename `LIKE`, frontend-only (reuses existing `query()` methods, no dedicated endpoint)
+- [x] Command-palette live search across root entries + plugin entries + users + media — permission-gated, debounced, per-source resilient, top-5 per group; static nav / entry-type / plugin-page shortcuts. Title+slug / name+email / filename `LIKE`, frontend-only (reuses existing `query()` methods, no dedicated endpoint)
+- [x] Result polish — entry results split into one group per entry type (type-plural headings, mirroring the Users/Media split); single-page plugins shown flat (no `Plugin: Page` doubling); plugin entries resolve their type icon / title / edit link. Enabling fixes: `tableStorage`-backed entries now carry their `type` (the orchestrator stamps it on `query()`/`get()`), and locale-less reads bridge a display `defaultLocale` (e.g. `en-GB`) down to a content locale so search isn't silently empty
 
 ### Demo Marketing Site ✅
 
