@@ -564,6 +564,10 @@ export const entries: EntriesApi = {
         for (const entry of data) {
             // Resolve field definitions per row (supports cross-type queries).
             const rowType = entry.type ?? (singleType ?? firstType);
+            // tableStorage-backed rows have no `type` column, so they come back
+            // without a type. Stamp it from the query so every returned entry is
+            // complete (consumers build links / resolve icons from `entry.type`).
+            if (entry.type === undefined) entry.type = rowType;
             const rowTypeCfg = resolveEntryType(config, rowType);
             const rowFields = rowTypeCfg ? flattenEntryFields(rowTypeCfg.fields) : [];
 
@@ -613,6 +617,9 @@ export const entries: EntriesApi = {
         if (record.type !== undefined && record.type !== type) return null;
 
         let result = record as Entry;
+        // tableStorage-backed records carry no `type` column — stamp it so the
+        // returned entry is complete.
+        if (result.type === undefined) result.type = type;
 
         if (params.populate && params.populate.length > 0) {
             const entryTypeConfig = resolveEntryType(config, type);
