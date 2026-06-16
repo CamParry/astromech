@@ -34,3 +34,8 @@ coverage/
 
 # TanStack Router generated file
 src/admin/routeTree.gen.ts
+
+# Demo database — seeded at runtime
+demo/database.db
+demo/database.db-shm
+demo/database.db-wal
