@@ -23,6 +23,7 @@ import {
     isNull,
     like,
     ne,
+    or,
 } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { getDb } from '@/db/registry.js';
@@ -244,7 +245,10 @@ export class BuiltInEntryStorage implements EntryStorage<Entry> {
         const filterConditions = params.where ? buildFilterConditions(params.where) : [];
         const localeCondition = buildLocaleCondition(params.locale, this.defaultLocale);
         const searchCondition = params.search
-            ? like(entriesTable.title, `%${params.search}%`)
+            ? or(
+                  like(entriesTable.title, `%${params.search}%`),
+                  like(entriesTable.slug, `%${params.search}%`)
+              )
             : null;
 
         const [firstType] = types;
