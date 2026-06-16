@@ -41,6 +41,17 @@ function sanitize(html: string): string {
     // Strip event-handler attributes (on*=…).
     result = result.replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '');
 
+    // Style allow-list: keep only text-align and text-wrap declarations.
+    // Removes the entire style attribute if nothing safe remains.
+    result = result.replace(/\sstyle\s*=\s*"([^"]*)"/gi, (_match, declarations: string) => {
+        const safe = declarations
+            .split(';')
+            .map((d) => d.trim())
+            .filter((d) => /^text-(?:align|wrap)\s*:/i.test(d))
+            .join('; ');
+        return safe.length > 0 ? ` style="${safe}"` : '';
+    });
+
     return result;
 }
 

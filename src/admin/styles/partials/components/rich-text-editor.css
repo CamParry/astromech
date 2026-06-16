@@ -186,6 +186,16 @@
     }
 }
 
+.am-richtext-link-newtab {
+    display: inline-flex;
+    gap: 0.25rem;
+    align-items: center;
+    font-size: 0.8125rem;
+    color: var(--am-color-text-muted);
+    white-space: nowrap;
+    cursor: pointer;
+}
+
 .am-richtext-link-apply,
 .am-richtext-link-remove,
 .am-richtext-link-cancel {
@@ -229,6 +239,10 @@
     &:focus {
         outline: 2px solid var(--am-color-primary);
         outline-offset: -2px;
+    }
+
+    & > :first-child {
+        margin-top: 0;
     }
 }
 
@@ -341,7 +355,7 @@
     margin: 0.5em 0;
     font-style: italic;
     color: var(--am-color-text-muted);
-    border-left: 4px solid var(--am-color-primary);
+    border-left: 4px solid var(--am-color-border);
 }
 
 .am-richtext-content hr {
@@ -351,7 +365,7 @@
 }
 
 .am-richtext-content a {
-    color: var(--am-color-primary);
+    color: var(--am-richtext-link-color);
     text-decoration: underline;
 }
 

@@ -116,6 +116,8 @@
     /* Interactive chrome */
     --am-color-interactive-bg: var(--am-color-neutral-200);
     --am-color-interactive-bg-hover: var(--am-color-neutral-300);
+    /* Rich-text content link — neutral blue, decoupled from admin accent */
+    --am-richtext-link-color: #2563eb;
 
     /* ------------------------------------------------------------------ */
     /* Component tokens                                                     */
@@ -213,6 +215,8 @@
     --am-color-interactive-bg: var(--am-color-neutral-700);
     --am-color-interactive-bg-hover: var(--am-color-neutral-600);
     --am-shadow-color: rgb(0 0 0 / 0.5);
+    /* Rich-text content link — neutral blue for dark mode */
+    --am-richtext-link-color: #60a5fa;
 }
 
 /* ------------------------------------------------------------------ */
