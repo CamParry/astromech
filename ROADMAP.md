@@ -244,7 +244,7 @@ Generalised the disabled-item problem into one model — see [`specs/content-vis
 - [x] Recursive runtime filter (`src/core/visibility.ts`) — strips `_disabled` items + `_title`/`_disabled` keys, private fields, and draft/scheduled rows on public reads; composes through populate
 - [x] Two derived types from one schema (`${Pascal}Fields` / `${Pascal}FieldsPublic`) + read-back guard (public-shape value can't be written back)
 - [x] Settings private by default; `public` opt-in per admin page / `config.publicSettings`
-- [ ] Demo cleanup: drop the now-redundant manual `!b._disabled` filter in demo `<Blocks>` and browser-verify public vs admin renders (Step 7 — not yet done)
+- [x] Demo cleanup: dropped the redundant manual `!b._disabled` filter in demo `<Blocks>` (public read strips it upstream). Browser-verify of public-vs-admin renders still recommended.
 - [ ] Future: member audiences (frontend auth), per-field audience, `preview` shape — seams built, see spec §9
 
 ---
