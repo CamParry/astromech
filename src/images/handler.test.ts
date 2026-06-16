@@ -316,4 +316,26 @@ describe('handleMediaRequest', () => {
         expect(res.headers.get('Content-Type')).toBe('application/pdf');
         expect(fakeDriver.calls).toHaveLength(0);
     });
+
+    it('8. ignores the URL extension — storage key derives from the record (traversal guard)', async () => {
+        const jpegBytes = makeJpegBytes();
+        const media = await mediaApi.upload(
+            new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' })
+        );
+
+        // A malicious / mismatched URL ext must NOT influence the storage key:
+        // the original is keyed by `${id}.jpg` (from media.filename), so it still
+        // serves correctly and never builds a key from attacker-controlled input.
+        const res = await handleMediaRequest({
+            id: media.id,
+            ext: '../../../etc/passwd',
+            search: new URLSearchParams(),
+            origin: 'http://x',
+        });
+
+        expect(res.status).toBe(200);
+        expect(res.headers.get('Content-Type')).toBe('image/jpeg');
+        const body = await readBody(res);
+        expect(body).toEqual(jpegBytes);
+    });
 });

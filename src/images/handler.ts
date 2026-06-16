@@ -48,8 +48,14 @@ function contentTypeForFormat(format: ImageFormat): string {
     return format === 'avif' ? 'image/avif' : 'image/webp';
 }
 
+/** File extension (without the dot) from a stored filename, or '' when none. */
+function extOf(filename: string): string {
+    const dot = filename.lastIndexOf('.');
+    return dot >= 0 ? filename.slice(dot + 1) : '';
+}
+
 export async function handleMediaRequest(info: MediaRequestInfo): Promise<Response> {
-    const { id, ext, search, origin, ifNoneMatch } = info;
+    const { id, search, origin, ifNoneMatch } = info;
 
     const media = await mediaApi.get(id);
     if (!media) {
@@ -62,6 +68,9 @@ export async function handleMediaRequest(info: MediaRequestInfo): Promise<Respon
     }
 
     const params = parseImageParams(search);
+    // Derive the extension from the stored record, never the URL path — the URL
+    // ext is cosmetic and untrusted (path-traversal guard for the storage key).
+    const ext = extOf(media.filename);
     const key = ext ? `${id}.${ext}` : id;
 
     // No image params — serve original
