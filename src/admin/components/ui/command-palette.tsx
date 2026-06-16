@@ -85,6 +85,10 @@ type LiveCommandItem = {
     sublabel?: string;
     to: string;
     group: 'LiveEntries' | 'LiveUsers' | 'LiveMedia';
+    /** For entry results: the entry type id + its plural label, used to split
+     * live entries into one group per entry type. */
+    typeId?: string;
+    typeLabel?: string;
     Icon: () => React.ReactElement;
 };
 
@@ -405,6 +409,8 @@ export function CommandPalette(): React.ReactElement {
                 label,
                 to,
                 group: 'LiveEntries' as const,
+                typeId: typeof entry.type === 'string' ? entry.type : '',
+                ...(cfg?.plural !== undefined ? { typeLabel: cfg.plural } : {}),
                 Icon: () => <EntryTypeIcon name={iconName} size={15} />,
             };
         });
@@ -465,8 +471,23 @@ export function CommandPalette(): React.ReactElement {
 
         // Live groups only shown when query is non-empty
         if (debouncedQuery !== '') {
+            // Split entry results into one group per entry type, in first-seen
+            // order, so each result reads as e.g. "Pages" / "Posts" / "Redirects"
+            // rather than a single undifferentiated "Records" list.
             if (liveEntryItems.length > 0) {
-                result.push({ label: t('cmdpal.groupRecords'), items: liveEntryItems });
+                const byType = new Map<string, LiveCommandItem[]>();
+                for (const item of liveEntryItems) {
+                    const key = item.typeId ?? '';
+                    const bucket = byType.get(key);
+                    if (bucket) bucket.push(item);
+                    else byType.set(key, [item]);
+                }
+                for (const items of byType.values()) {
+                    result.push({
+                        label: items[0]?.typeLabel ?? t('cmdpal.groupRecords'),
+                        items,
+                    });
+                }
             }
             if (liveUserItems.length > 0) {
                 result.push({ label: t('cmdpal.groupUsers'), items: liveUserItems });
@@ -589,7 +610,7 @@ export function CommandPalette(): React.ReactElement {
                         )}
                         {!isSearching &&
                             groups.map((group, groupIdx) => (
-                                <div key={group.label} className="am-cmdpal-group">
+                                <div key={`${groupIdx}-${group.label}`} className="am-cmdpal-group">
                                     <div className="am-cmdpal-group-heading">
                                         {group.label}
                                     </div>
