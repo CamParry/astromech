@@ -21,14 +21,7 @@ import React, {
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui/react/dialog';
 import { useNavigate } from '@tanstack/react-router';
-import {
-    Image,
-    LayoutDashboard,
-    Settings,
-    Users,
-    Puzzle,
-    icons,
-} from 'lucide-react';
+import { Image, LayoutDashboard, Settings, Users, Puzzle, icons } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -54,7 +47,10 @@ function lucideIcon(name: string | undefined, Fallback: LucideIcon): LucideIcon 
  */
 function entryLabel(entry: Entry, cfg: AdminEntryTypeConfig | undefined): string {
     if (typeof entry.title === 'string' && entry.title.trim() !== '') return entry.title;
-    const keys = [...(cfg?.search ?? []), ...(cfg?.adminColumns ?? []).map((c) => c.field)];
+    const keys = [
+        ...(cfg?.search ?? []),
+        ...(cfg?.adminColumns ?? []).map((c) => c.field),
+    ];
     for (const key of keys) {
         const value = entry.fields?.[key];
         if (typeof value === 'string' && value.trim() !== '') return value;
@@ -121,7 +117,9 @@ type CommandPaletteProviderProps = {
     children: React.ReactNode;
 };
 
-export function CommandPaletteProvider({ children }: CommandPaletteProviderProps): React.ReactElement {
+export function CommandPaletteProvider({
+    children,
+}: CommandPaletteProviderProps): React.ReactElement {
     const [open, setOpen] = useState(false);
 
     useEffect(() => {
@@ -222,7 +220,7 @@ export function CommandPalette(): React.ReactElement {
                 Icon: () => <Settings size={15} />,
             },
         ],
-        [t],
+        [t]
     );
 
     const entryTypeItems: StaticCommandItem[] = useMemo(
@@ -235,40 +233,49 @@ export function CommandPalette(): React.ReactElement {
                 group: 'EntryTypes' as const,
                 Icon: () => <EntryTypeIcon name={entryType.icon} size={15} />,
             })),
-        [],
+        []
     );
 
-    // Flatten plugin nav pages (items with a `to`) recursively, permission-filtered
+    // Flatten plugin nav pages (items with a `to`) recursively, permission-filtered.
+    // A plugin's label only prefixes its pages when it contributes more than one
+    // (e.g. "SEO: Settings", "SEO: Sitemap"); a single-page plugin shows the page
+    // label alone, so a flat plugin like redirects reads "Redirects", not
+    // "Redirects: Redirects".
     const pluginPageItems: StaticCommandItem[] = useMemo(() => {
         const result: StaticCommandItem[] = [];
 
-        function flatten(items: typeof adminConfig.plugins[0]['nav'], pluginLabel: string) {
-            for (const item of items) {
-                if (
-                    item.permission !== undefined &&
-                    !hasPermission(item.permission)
-                ) {
-                    continue;
-                }
-                if (item.to !== undefined) {
-                    const IconRef = lucideIcon(item.icon, Puzzle);
-                    result.push({
-                        kind: 'static' as const,
-                        id: `plugin-page-${item.to}`,
-                        label: `${pluginLabel}: ${item.label}`,
-                        to: item.to,
-                        group: 'Pages' as const,
-                        Icon: () => <IconRef size={15} />,
-                    });
-                }
-                if (item.children !== undefined && item.children.length > 0) {
-                    flatten(item.children, pluginLabel);
-                }
-            }
-        }
+        type NavPage = (typeof adminConfig.plugins)[0]['nav'][number];
 
         for (const plugin of adminConfig.plugins) {
-            flatten(plugin.nav, plugin.label);
+            const pages: NavPage[] = [];
+            function collect(items: typeof plugin.nav) {
+                for (const item of items) {
+                    if (
+                        item.permission !== undefined &&
+                        !hasPermission(item.permission)
+                    ) {
+                        continue;
+                    }
+                    if (item.to !== undefined) pages.push(item);
+                    if (item.children !== undefined && item.children.length > 0) {
+                        collect(item.children);
+                    }
+                }
+            }
+            collect(plugin.nav);
+
+            const prefixed = pages.length > 1;
+            for (const item of pages) {
+                const IconRef = lucideIcon(item.icon, Puzzle);
+                result.push({
+                    kind: 'static' as const,
+                    id: `plugin-page-${item.to}`,
+                    label: prefixed ? `${plugin.label}: ${item.label}` : item.label,
+                    to: item.to as string,
+                    group: 'Pages' as const,
+                    Icon: () => <IconRef size={15} />,
+                });
+            }
         }
 
         return result;
@@ -276,7 +283,7 @@ export function CommandPalette(): React.ReactElement {
 
     const allStaticItems: StaticCommandItem[] = useMemo(
         () => [...navItems, ...entryTypeItems, ...pluginPageItems],
-        [navItems, entryTypeItems, pluginPageItems],
+        [navItems, entryTypeItems, pluginPageItems]
     );
 
     const q = query.toLowerCase();
@@ -291,9 +298,9 @@ export function CommandPalette(): React.ReactElement {
     const readableRootTypes = useMemo(
         () =>
             Object.keys(adminConfig.entries).filter((type) =>
-                hasPermission(`entry:${type}:read`),
+                hasPermission(`entry:${type}:read`)
             ),
-        [hasPermission],
+        [hasPermission]
     );
 
     // Determine which plugin entry types are readable per plugin
@@ -306,12 +313,12 @@ export function CommandPalette(): React.ReactElement {
                     entries: plugin.entries,
                     types: Object.keys(plugin.entries).filter((type) =>
                         hasPermission(
-                            `plugin:${plugin.permissionNamespace}:entry:${type}:read`,
-                        ),
+                            `plugin:${plugin.permissionNamespace}:entry:${type}:read`
+                        )
                     ),
                 }))
                 .filter((p) => p.types.length > 0),
-        [hasPermission],
+        [hasPermission]
     );
 
     const liveQuery = useQuery({
@@ -329,33 +336,36 @@ export function CommandPalette(): React.ReactElement {
                           .catch(() => [])
                     : Promise.resolve([]);
 
-            const pluginEntriesPromises: Promise<Entry[]>[] = readablePluginTypes.map((p) => {
-                const pluginNs = Astromech.plugins;
-                if (!pluginNs) return Promise.resolve([]);
-                const pluginApi = pluginNs[p.name] as
-                    | { entries: typeof Astromech.entries }
-                    | undefined;
-                if (!pluginApi) return Promise.resolve([]);
-                return pluginApi.entries
-                    .query({ type: p.types, search: q2, limit: 5 })
-                    .then((r) => r.data)
-                    .catch(() => []);
-            });
+            const pluginEntriesPromises: Promise<Entry[]>[] = readablePluginTypes.map(
+                (p) => {
+                    const pluginNs = Astromech.plugins;
+                    if (!pluginNs) return Promise.resolve([]);
+                    const pluginApi = pluginNs[p.name] as
+                        | { entries: typeof Astromech.entries }
+                        | undefined;
+                    if (!pluginApi) return Promise.resolve([]);
+                    return pluginApi.entries
+                        .query({ type: p.types, search: q2, limit: 5 })
+                        .then((r) => r.data)
+                        .catch(() => []);
+                }
+            );
 
             const usersPromise: Promise<User[]> = canReadUsers()
-                ? Astromech.users.query({ search: q2, limit: 5 }).then((r) => r.data).catch(() => [])
+                ? Astromech.users
+                      .query({ search: q2, limit: 5 })
+                      .then((r) => r.data)
+                      .catch(() => [])
                 : Promise.resolve([]);
 
             const mediaPromise: Promise<Media[]> = canReadMedia()
-                ? Astromech.media.query({ search: q2, limit: 5 }).then((r) => r.data).catch(() => [])
+                ? Astromech.media
+                      .query({ search: q2, limit: 5 })
+                      .then((r) => r.data)
+                      .catch(() => [])
                 : Promise.resolve([]);
 
-            const [
-                rootEntries,
-                pluginEntryChunks,
-                users,
-                media,
-            ] = await Promise.all([
+            const [rootEntries, pluginEntryChunks, users, media] = await Promise.all([
                 rootEntriesPromise,
                 Promise.all(pluginEntriesPromises),
                 usersPromise,
@@ -382,13 +392,17 @@ export function CommandPalette(): React.ReactElement {
             // with a qualified id (`{plugin}/{type}`) but `plugin.entries` is
             // keyed by the BARE type — so parse the id before looking it up.
             let cfg: AdminEntryTypeConfig | undefined =
-                typeof entry.type === 'string' ? adminConfig.entries[entry.type] : undefined;
+                typeof entry.type === 'string'
+                    ? adminConfig.entries[entry.type]
+                    : undefined;
             let pluginName: string | undefined;
             let bareType = entry.type;
             if (cfg === undefined && typeof entry.type === 'string') {
                 const parsed = parseEntryTypeId(entry.type);
                 if (parsed) {
-                    const plugin = adminConfig.plugins.find((p) => p.name === parsed.plugin);
+                    const plugin = adminConfig.plugins.find(
+                        (p) => p.name === parsed.plugin
+                    );
                     const pluginCfg = plugin?.entries[parsed.type];
                     if (plugin && pluginCfg) {
                         cfg = pluginCfg;
@@ -456,14 +470,19 @@ export function CommandPalette(): React.ReactElement {
     const groups: GroupDef[] = useMemo(() => {
         const result: GroupDef[] = [];
         const staticNavMatches = filteredStatic.filter((i) => i.group === 'Navigation');
-        const staticEntryTypeMatches = filteredStatic.filter((i) => i.group === 'EntryTypes');
+        const staticEntryTypeMatches = filteredStatic.filter(
+            (i) => i.group === 'EntryTypes'
+        );
         const staticPageMatches = filteredStatic.filter((i) => i.group === 'Pages');
 
         if (staticNavMatches.length > 0) {
             result.push({ label: t('cmdpal.groupNavigation'), items: staticNavMatches });
         }
         if (staticEntryTypeMatches.length > 0) {
-            result.push({ label: t('cmdpal.groupEntries'), items: staticEntryTypeMatches });
+            result.push({
+                label: t('cmdpal.groupEntries'),
+                items: staticEntryTypeMatches,
+            });
         }
         if (staticPageMatches.length > 0) {
             result.push({ label: t('cmdpal.groupPages'), items: staticPageMatches });
@@ -498,12 +517,19 @@ export function CommandPalette(): React.ReactElement {
         }
 
         return result;
-    }, [filteredStatic, liveEntryItems, liveUserItems, liveMediaItems, debouncedQuery, t]);
+    }, [
+        filteredStatic,
+        liveEntryItems,
+        liveUserItems,
+        liveMediaItems,
+        debouncedQuery,
+        t,
+    ]);
 
     // Flat list for keyboard navigation
     const flatItems: CommandItem[] = useMemo(
         () => groups.flatMap((g) => g.items),
-        [groups],
+        [groups]
     );
 
     // Reset state when palette opens
@@ -520,7 +546,7 @@ export function CommandPalette(): React.ReactElement {
     // Keep active index in bounds when results change
     useEffect(() => {
         setActiveIndex((prev) =>
-            flatItems.length === 0 ? 0 : Math.min(prev, flatItems.length - 1),
+            flatItems.length === 0 ? 0 : Math.min(prev, flatItems.length - 1)
         );
     }, [flatItems.length]);
 
@@ -535,7 +561,7 @@ export function CommandPalette(): React.ReactElement {
             setOpen(false);
             void navigate({ to: item.to });
         },
-        [navigate, setOpen],
+        [navigate, setOpen]
     );
 
     function handleKeyDown(e: React.KeyboardEvent) {
@@ -547,7 +573,7 @@ export function CommandPalette(): React.ReactElement {
             setActiveIndex(
                 (prev) =>
                     (prev - 1 + Math.max(flatItems.length, 1)) %
-                    Math.max(flatItems.length, 1),
+                    Math.max(flatItems.length, 1)
             );
         } else if (e.key === 'Enter') {
             e.preventDefault();
@@ -568,8 +594,7 @@ export function CommandPalette(): React.ReactElement {
     };
 
     const isSearching = query.trim() !== '' && liveQuery.isFetching;
-    const hasNoResults =
-        flatItems.length === 0 && !isSearching;
+    const hasNoResults = flatItems.length === 0 && !isSearching;
 
     return (
         <Dialog.Root
@@ -601,7 +626,11 @@ export function CommandPalette(): React.ReactElement {
                         />
                     </div>
 
-                    <div className="am-cmdpal-results" role="listbox" aria-label={t('cmdpal.resultsLabel')}>
+                    <div
+                        className="am-cmdpal-results"
+                        role="listbox"
+                        aria-label={t('cmdpal.resultsLabel')}
+                    >
                         {isSearching && (
                             <div className="am-cmdpal-empty">{t('cmdpal.searching')}</div>
                         )}
@@ -610,7 +639,10 @@ export function CommandPalette(): React.ReactElement {
                         )}
                         {!isSearching &&
                             groups.map((group, groupIdx) => (
-                                <div key={`${groupIdx}-${group.label}`} className="am-cmdpal-group">
+                                <div
+                                    key={`${groupIdx}-${group.label}`}
+                                    className="am-cmdpal-group"
+                                >
                                     <div className="am-cmdpal-group-heading">
                                         {group.label}
                                     </div>
