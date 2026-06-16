@@ -17,6 +17,44 @@ import { hashPassword } from 'better-auth/crypto';
 import * as schema from '../src/db/schema.js';
 import { redirectsTable } from '../src/plugins/redirects/schema/redirects.js';
 
+// ProseMirror JSON builders for richtext seed content (StarterKit schema)
+type PmNode = Record<string, unknown>;
+const text = (
+    t: string,
+    ...marks: Array<'bold' | 'italic' | 'code' | 'underline' | 'strike'>
+): PmNode =>
+    marks.length
+        ? { type: 'text', text: t, marks: marks.map((type) => ({ type })) }
+        : { type: 'text', text: t };
+const para = (...content: PmNode[]): PmNode => ({ type: 'paragraph', content });
+const heading = (level: number, ...content: PmNode[]): PmNode => ({
+    type: 'heading',
+    attrs: { level },
+    content,
+});
+const li = (...content: PmNode[]): PmNode => ({ type: 'listItem', content });
+const ul = (...items: PmNode[]): PmNode => ({ type: 'bulletList', content: items });
+const ol = (...items: PmNode[]): PmNode => ({
+    type: 'orderedList',
+    attrs: { start: 1 },
+    content: items,
+});
+const codeBlock = (code: string): PmNode => ({
+    type: 'codeBlock',
+    attrs: { language: null },
+    content: [{ type: 'text', text: code }],
+});
+const blockquote = (...content: PmNode[]): PmNode => ({ type: 'blockquote', content });
+const link = (t: string, href: string): PmNode => ({
+    type: 'text',
+    text: t,
+    marks: [{ type: 'link', attrs: { href } }],
+});
+const doc = (...content: PmNode[]): PmNode => ({ type: 'doc', content });
+void blockquote;
+void ol;
+void link; // suppress unused-var warnings for helpers not used in current seed
+
 const DB_PATH = new URL('./database.db', import.meta.url).pathname;
 
 const db = drizzle({
@@ -132,9 +170,7 @@ async function seed(): Promise<void> {
     // Delete old content entries (any type in the list + legacy types)
     await db
         .delete(schema.entriesTable)
-        .where(
-            inArray(schema.entriesTable.type, [...CONTENT_TYPES, 'showcase'])
-        );
+        .where(inArray(schema.entriesTable.type, [...CONTENT_TYPES, 'showcase']));
 
     // Clear settings and redirects
     await db.delete(schema.settingsTable).where(sql`1=1`);
@@ -168,7 +204,10 @@ async function seed(): Promise<void> {
             width: 1920,
             height: 1080,
             alt: 'Astromech CMS hero',
-            fields: { alt_text: 'Astromech CMS hero image', copyright: '© 2026 Astromech' },
+            fields: {
+                alt_text: 'Astromech CMS hero image',
+                copyright: '© 2026 Astromech',
+            },
             createdAt: now,
             updatedAt: now,
             createdBy: adminId,
@@ -182,7 +221,10 @@ async function seed(): Promise<void> {
             width: 1280,
             height: 800,
             alt: 'Astromech admin dashboard',
-            fields: { alt_text: 'Astromech admin dashboard screenshot', copyright: '© 2026 Astromech' },
+            fields: {
+                alt_text: 'Astromech admin dashboard screenshot',
+                copyright: '© 2026 Astromech',
+            },
             createdAt: now,
             updatedAt: now,
             createdBy: adminId,
@@ -224,7 +266,10 @@ async function seed(): Promise<void> {
             localeGroup: catEngineeringGroup,
             slug: 'engineering',
             title: 'Engineering',
-            fields: { description: 'Deep dives into how Astromech is built and how to extend it.' },
+            fields: {
+                description:
+                    'Deep dives into how Astromech is built and how to extend it.',
+            },
             status: 'published',
             publishedAt: PUBLISHED_AT,
             createdAt: now,
@@ -238,7 +283,9 @@ async function seed(): Promise<void> {
             localeGroup: catProductGroup,
             slug: 'product',
             title: 'Product',
-            fields: { description: 'News, updates, and behind-the-scenes product decisions.' },
+            fields: {
+                description: 'News, updates, and behind-the-scenes product decisions.',
+            },
             status: 'published',
             publishedAt: PUBLISHED_AT,
             createdAt: now,
@@ -266,7 +313,9 @@ async function seed(): Promise<void> {
             localeGroup: catTutorialsGroup,
             slug: 'tutorials',
             title: 'Tutorials',
-            fields: { description: 'Step-by-step guides to get the most out of Astromech.' },
+            fields: {
+                description: 'Step-by-step guides to get the most out of Astromech.',
+            },
             status: 'published',
             publishedAt: PUBLISHED_AT,
             createdAt: now,
@@ -378,7 +427,13 @@ async function seed(): Promise<void> {
             slug: 'alex-morgan',
             title: 'Alex Morgan',
             fields: {
-                bio: '<p>Alex is the founder of Astromech and a long-time contributor to the Astro ecosystem. Passionate about developer experience and edge computing.</p>',
+                bio: doc(
+                    para(
+                        text(
+                            'Alex is the founder of Astromech and a long-time contributor to the Astro ecosystem. Passionate about developer experience and edge computing.'
+                        )
+                    )
+                ),
                 role: 'Founder & CEO',
                 socials: [
                     { platform: 'twitter', url: 'https://twitter.com/astromechcms' },
@@ -399,7 +454,13 @@ async function seed(): Promise<void> {
             slug: 'priya-sharma',
             title: 'Priya Sharma',
             fields: {
-                bio: '<p>Priya leads product at Astromech. Former Contentful engineer with a deep interest in content modelling and workflow design.</p>',
+                bio: doc(
+                    para(
+                        text(
+                            'Priya leads product at Astromech. Former Contentful engineer with a deep interest in content modelling and workflow design.'
+                        )
+                    )
+                ),
                 role: 'Head of Product',
                 socials: [
                     { platform: 'linkedin', url: 'https://linkedin.com/in/priyasharma' },
@@ -420,7 +481,13 @@ async function seed(): Promise<void> {
             slug: 'tom-rivers',
             title: 'Tom Rivers',
             fields: {
-                bio: '<p>Tom is a senior engineer at Astromech, focused on the Cloudflare Workers runtime and D1 storage layer. Open source contributor and database enthusiast.</p>',
+                bio: doc(
+                    para(
+                        text(
+                            'Tom is a senior engineer at Astromech, focused on the Cloudflare Workers runtime and D1 storage layer. Open source contributor and database enthusiast.'
+                        )
+                    )
+                ),
                 role: 'Senior Engineer',
                 socials: [
                     { platform: 'github', url: 'https://github.com/tomrivers' },
@@ -468,12 +535,16 @@ async function seed(): Promise<void> {
                         heading: 'The CMS built for the modern web',
                         subheading:
                             'Astromech runs on Cloudflare Workers, stores content in D1, and ships a zero-JS admin panel — so you can focus on shipping your product.',
-                        cta: { href: '/features', label: 'See the features', target: '_self' },
+                        cta: {
+                            href: '/features',
+                            label: 'See the features',
+                            target: '_self',
+                        },
                     },
                     {
                         _id: bid(),
                         _type: 'featureGrid',
-                        heading: 'Everything you need. Nothing you don\'t.',
+                        heading: "Everything you need. Nothing you don't.",
                         features: [
                             {
                                 title: 'Edge-native',
@@ -522,8 +593,7 @@ async function seed(): Promise<void> {
                     {
                         _id: bid(),
                         _type: 'testimonial',
-                        quote:
-                            'Astromech replaced three separate tools for us. We\'re shipping content updates faster than ever, and our editors love the clean UI.',
+                        quote: "Astromech replaced three separate tools for us. We're shipping content updates faster than ever, and our editors love the clean UI.",
                         author: 'Sara Chen',
                         role: 'CTO, Lumenflow',
                     },
@@ -532,7 +602,11 @@ async function seed(): Promise<void> {
                         _type: 'cta',
                         heading: 'Ready to simplify your stack?',
                         text: 'Astromech is open source. Star us on GitHub or get started in under five minutes.',
-                        button: { href: '/pricing', label: 'Get started free', target: '_self' },
+                        button: {
+                            href: '/pricing',
+                            label: 'Get started free',
+                            target: '_self',
+                        },
                     },
                 ],
                 noindex: false,
@@ -591,8 +665,24 @@ async function seed(): Promise<void> {
                     {
                         _id: bid(),
                         _type: 'twoColumn',
-                        left: '<h3>Admin panel</h3><p>A fast, keyboard-navigable admin built with TanStack Router and React. Command palette, live search, and a plugin-aware sidebar — shipped as a single JavaScript bundle alongside your Worker.</p>',
-                        right: '<h3>Server SDK</h3><p>Import <code>astromech/local</code> in your Astro pages and query content directly — no HTTP round-trips. Every method is typed from your schema. No code generation step, no build-time magic.</p>',
+                        left: doc(
+                            heading(3, text('Admin panel')),
+                            para(
+                                text(
+                                    'A fast, keyboard-navigable admin built with TanStack Router and React. Command palette, live search, and a plugin-aware sidebar — shipped as a single JavaScript bundle alongside your Worker.'
+                                )
+                            )
+                        ),
+                        right: doc(
+                            heading(3, text('Server SDK')),
+                            para(
+                                text('Import '),
+                                text('astromech/local', 'code'),
+                                text(
+                                    ' in your Astro pages and query content directly — no HTTP round-trips. Every method is typed from your schema. No code generation step, no build-time magic.'
+                                )
+                            )
+                        ),
                     },
                     {
                         _id: bid(),
@@ -611,18 +701,15 @@ async function seed(): Promise<void> {
                         items: [
                             {
                                 question: 'Can I use Astromech without Cloudflare?',
-                                answer:
-                                    'Yes. The default driver is libSQL (Turso-compatible), which works anywhere Node.js or Bun runs. The Cloudflare D1 driver is opt-in.',
+                                answer: 'Yes. The default driver is libSQL (Turso-compatible), which works anywhere Node.js or Bun runs. The Cloudflare D1 driver is opt-in.',
                             },
                             {
                                 question: 'Does Astromech support custom field types?',
-                                answer:
-                                    'Via plugins. A plugin can define new field renderers, admin pages, and SDK methods — all typed end-to-end.',
+                                answer: 'Via plugins. A plugin can define new field renderers, admin pages, and SDK methods — all typed end-to-end.',
                             },
                             {
                                 question: 'How does media storage work?',
-                                answer:
-                                    'Files are written to R2 in production (or the filesystem locally). Media records in D1 store metadata and a public URL.',
+                                answer: 'Files are written to R2 in production (or the filesystem locally). Media records in D1 store metadata and a public URL.',
                             },
                         ],
                     },
@@ -652,19 +739,40 @@ async function seed(): Promise<void> {
                         heading: 'Simple, honest pricing',
                         subheading:
                             'Astromech is open source. Host it yourself for free, or let us run it for you on managed infrastructure.',
-                        cta: { href: 'https://github.com/astromech', label: 'View on GitHub', target: '_blank' },
+                        cta: {
+                            href: 'https://github.com/astromech',
+                            label: 'View on GitHub',
+                            target: '_blank',
+                        },
                     },
                     {
                         _id: bid(),
                         _type: 'richText',
-                        body: '<h2>Self-hosted (free)</h2><p>Clone the repo, configure your Cloudflare account, and deploy. You pay only Cloudflare\'s usage costs — typically a few dollars per month for a busy site.</p><h2>Managed (coming soon)</h2><p>We handle deployments, migrations, backups, and monitoring. Pricing will be usage-based with a generous free tier. Join the waitlist to be first to know.</p>',
+                        body: doc(
+                            heading(2, text('Self-hosted (free)')),
+                            para(
+                                text(
+                                    "Clone the repo, configure your Cloudflare account, and deploy. You pay only Cloudflare's usage costs — typically a few dollars per month for a busy site."
+                                )
+                            ),
+                            heading(2, text('Managed (coming soon)')),
+                            para(
+                                text(
+                                    'We handle deployments, migrations, backups, and monitoring. Pricing will be usage-based with a generous free tier. Join the waitlist to be first to know.'
+                                )
+                            )
+                        ),
                     },
                     {
                         _id: bid(),
                         _type: 'cta',
                         heading: 'Get started today',
                         text: 'Read the docs and have your first Astromech project running in under five minutes.',
-                        button: { href: 'https://docs.astromech.dev', label: 'Read the docs', target: '_blank' },
+                        button: {
+                            href: 'https://docs.astromech.dev',
+                            label: 'Read the docs',
+                            target: '_blank',
+                        },
                     },
                 ],
                 noindex: false,
@@ -696,14 +804,57 @@ async function seed(): Promise<void> {
                     {
                         _id: bid(),
                         _type: 'richText',
-                        body: '<h2>Our story</h2><p>Astromech started as an internal tool for a small web agency. We kept reaching for the same patterns — a headless CMS that understood TypeScript, deployed to the edge, and didn\'t charge per seat. Nothing fit. So we built it.</p><p>We open-sourced Astromech in 2025 and have been growing ever since. Today hundreds of projects use Astromech in production, from personal blogs to large editorial teams at media companies.</p><h2>Our values</h2><ul><li><strong>Developer experience first</strong> — every API decision is made by asking "what would a developer want this to feel like?"</li><li><strong>No lock-in</strong> — your content schema is code you own. Export it, migrate it, self-host it.</li><li><strong>Performance by default</strong> — the edge is not optional. Slow CMSes make slow sites.</li></ul>',
+                        body: doc(
+                            heading(2, text('Our story')),
+                            para(
+                                text(
+                                    "Astromech started as an internal tool for a small web agency. We kept reaching for the same patterns — a headless CMS that understood TypeScript, deployed to the edge, and didn't charge per seat. Nothing fit. So we built it."
+                                )
+                            ),
+                            para(
+                                text(
+                                    'We open-sourced Astromech in 2025 and have been growing ever since. Today hundreds of projects use Astromech in production, from personal blogs to large editorial teams at media companies.'
+                                )
+                            ),
+                            heading(2, text('Our values')),
+                            ul(
+                                li(
+                                    para(
+                                        text('Developer experience first', 'bold'),
+                                        text(
+                                            ' — every API decision is made by asking “what would a developer want this to feel like?”'
+                                        )
+                                    )
+                                ),
+                                li(
+                                    para(
+                                        text('No lock-in', 'bold'),
+                                        text(
+                                            ' — your content schema is code you own. Export it, migrate it, self-host it.'
+                                        )
+                                    )
+                                ),
+                                li(
+                                    para(
+                                        text('Performance by default', 'bold'),
+                                        text(
+                                            ' — the edge is not optional. Slow CMSes make slow sites.'
+                                        )
+                                    )
+                                )
+                            )
+                        ),
                     },
                     {
                         _id: bid(),
                         _type: 'cta',
                         heading: 'Come build with us',
                         text: 'Astromech is open source and we welcome contributions of all sizes.',
-                        button: { href: 'https://github.com/astromech/astromech', label: 'Star on GitHub', target: '_blank' },
+                        button: {
+                            href: 'https://github.com/astromech/astromech',
+                            label: 'Star on GitHub',
+                            target: '_blank',
+                        },
                     },
                 ],
                 noindex: false,
@@ -739,7 +890,31 @@ async function seed(): Promise<void> {
             slug: 'why-we-chose-cloudflare-workers',
             title: 'Why We Chose Cloudflare Workers for Astromech',
             fields: {
-                body: '<p>When we started designing Astromech\'s deployment model, we had three options: a traditional VPS, a serverless function platform like Lambda or Vercel, or Cloudflare Workers. We chose Cloudflare Workers — and it has shaped every architectural decision since.</p><h2>No cold starts</h2><p>Lambda and Vercel Functions boot a Node.js process on each request after a period of inactivity. For a CMS admin panel, this means the first page load after lunch can take two or three seconds. Workers run on V8 isolates: no process boot, no module resolution at startup. Every request hits a warm runtime.</p><h2>Global by default</h2><p>Workers deploy to 300+ cities simultaneously. Astromech queries D1 — Cloudflare\'s SQLite service — which replicates reads globally. The result is sub-millisecond query latency almost anywhere on earth.</p><h2>The cost model</h2><p>Workers pricing is request-based with a generous free tier (100,000 requests/day). For most Astromech installations, the monthly bill is below $5. Compare that to a $20/month VPS sitting idle 90% of the time.</p>',
+                body: doc(
+                    para(
+                        text(
+                            "When we started designing Astromech's deployment model, we had three options: a traditional VPS, a serverless function platform like Lambda or Vercel, or Cloudflare Workers. We chose Cloudflare Workers — and it has shaped every architectural decision since."
+                        )
+                    ),
+                    heading(2, text('No cold starts')),
+                    para(
+                        text(
+                            'Lambda and Vercel Functions boot a Node.js process on each request after a period of inactivity. For a CMS admin panel, this means the first page load after lunch can take two or three seconds. Workers run on V8 isolates: no process boot, no module resolution at startup. Every request hits a warm runtime.'
+                        )
+                    ),
+                    heading(2, text('Global by default')),
+                    para(
+                        text(
+                            "Workers deploy to 300+ cities simultaneously. Astromech queries D1 — Cloudflare's SQLite service — which replicates reads globally. The result is sub-millisecond query latency almost anywhere on earth."
+                        )
+                    ),
+                    heading(2, text('The cost model')),
+                    para(
+                        text(
+                            'Workers pricing is request-based with a generous free tier (100,000 requests/day). For most Astromech installations, the monthly bill is below $5. Compare that to a $20/month VPS sitting idle 90% of the time.'
+                        )
+                    )
+                ),
                 excerpt:
                     'The technical and economic reasons behind our decision to build Astromech on Cloudflare Workers and D1.',
                 publishedDate: '2025-11-10',
@@ -758,7 +933,40 @@ async function seed(): Promise<void> {
             slug: 'building-a-blocks-system-in-typescript',
             title: 'Building a Type-Safe Blocks System in TypeScript',
             fields: {
-                body: '<p>Page builders are notoriously hard to make type-safe. A block can be one of many shapes, the list of block types is user-defined, and both the admin UI and the front-end renderer need to agree on the shape of each block at compile time.</p><p>In Astromech, the blocks field is defined in your config:</p><pre><code>fields.blocks(\'content\', { blocks: blockCatalog })</code></pre><p>Each block in the catalog is a <code>block(type, { fields: [...] })</code> call. The type parameter is a string literal; the fields array determines the shape. At build time, Astromech generates a discriminated union from the catalog so your Astro components get fully typed props. Each stored block carries reserved, underscore-prefixed keys (<code>_type</code>, <code>_id</code>, optional <code>_disabled</code>) so they never collide with your own field names:</p><pre><code>type ContentBlock =\n  | { _type: \'hero\'; heading: string; subheading?: string; cta?: Link }\n  | { _type: \'richText\'; body: string }\n  | { _type: \'featureGrid\'; heading?: string; features: Feature[] }\n  // ...</code></pre><p>The Blocks dispatcher component switches on <code>block._type</code> and TypeScript narrows to the correct shape in each branch — no type assertions required.</p>',
+                body: doc(
+                    para(
+                        text(
+                            'Page builders are notoriously hard to make type-safe. A block can be one of many shapes, the list of block types is user-defined, and both the admin UI and the front-end renderer need to agree on the shape of each block at compile time.'
+                        )
+                    ),
+                    para(
+                        text('In Astromech, the blocks field is defined in your config:')
+                    ),
+                    codeBlock("fields.blocks('content', { blocks: blockCatalog })"),
+                    para(
+                        text('Each block in the catalog is a '),
+                        text('block(type, { fields: [...] })', 'code'),
+                        text(
+                            ' call. The type parameter is a string literal; the fields array determines the shape. At build time, Astromech generates a discriminated union from the catalog so your Astro components get fully typed props. Each stored block carries reserved, underscore-prefixed keys ('
+                        ),
+                        text('_type', 'code'),
+                        text(', '),
+                        text('_id', 'code'),
+                        text(', optional '),
+                        text('_disabled', 'code'),
+                        text(') so they never collide with your own field names:')
+                    ),
+                    codeBlock(
+                        "type ContentBlock =\n  | { _type: 'hero'; heading: string; subheading?: string; cta?: Link }\n  | { _type: 'richText'; body: string }\n  | { _type: 'featureGrid'; heading?: string; features: Feature[] }\n  // ..."
+                    ),
+                    para(
+                        text('The Blocks dispatcher component switches on '),
+                        text('block._type', 'code'),
+                        text(
+                            ' and TypeScript narrows to the correct shape in each branch — no type assertions required.'
+                        )
+                    )
+                ),
                 excerpt:
                     'How Astromech implements a fully type-safe blocks system from schema definition to front-end rendering.',
                 publishedDate: '2025-12-03',
@@ -777,7 +985,44 @@ async function seed(): Promise<void> {
             slug: 'symmetric-locale-model-explained',
             title: 'The Symmetric Locale Model: i18n Without the Complexity',
             fields: {
-                body: '<p>Most headless CMSes bolt i18n on after the fact. The result is an asymmetric model where one locale is "primary" and others are "translations of" that primary — a hierarchy that breaks down the moment you want to create a locale variant that diverges significantly from the source.</p><p>Astromech uses a symmetric locale model: every locale entry is a peer. They are linked by a <code>localeGroup</code> UUID that identifies the content they represent, but no locale is more canonical than another. You can create a French entry first and add the English one later. You can have Spanish without English.</p><h2>The API</h2><p>When you query entries, you pass a <code>locale</code> option and get back only entries for that locale. The <code>entry.locales</code> field lists all locales that have an entry in the same locale group — useful for rendering <code>&lt;hreflang&gt;</code> alternates.</p><p>Creating a translation is <code>entries.create({ type, locale: \'fr\', localeGroup: enEntry.localeGroup, ... })</code>. One line. No special "translate" method, no source/target semantics.</p>',
+                body: doc(
+                    para(
+                        text(
+                            'Most headless CMSes bolt i18n on after the fact. The result is an asymmetric model where one locale is "primary" and others are "translations of" that primary — a hierarchy that breaks down the moment you want to create a locale variant that diverges significantly from the source.'
+                        )
+                    ),
+                    para(
+                        text(
+                            'Astromech uses a symmetric locale model: every locale entry is a peer. They are linked by a '
+                        ),
+                        text('localeGroup', 'code'),
+                        text(
+                            ' UUID that identifies the content they represent, but no locale is more canonical than another. You can create a French entry first and add the English one later. You can have Spanish without English.'
+                        )
+                    ),
+                    heading(2, text('The API')),
+                    para(
+                        text('When you query entries, you pass a '),
+                        text('locale', 'code'),
+                        text(' option and get back only entries for that locale. The '),
+                        text('entry.locales', 'code'),
+                        text(
+                            ' field lists all locales that have an entry in the same locale group — useful for rendering '
+                        ),
+                        text('<hreflang>', 'code'),
+                        text(' alternates.')
+                    ),
+                    para(
+                        text('Creating a translation is '),
+                        text(
+                            "entries.create({ type, locale: 'fr', localeGroup: enEntry.localeGroup, ... })",
+                            'code'
+                        ),
+                        text(
+                            '. One line. No special "translate" method, no source/target semantics.'
+                        )
+                    )
+                ),
                 excerpt:
                     'How the symmetric locale model in Astromech lets you add i18n without giving up flexibility.',
                 publishedDate: '2026-01-15',
@@ -796,7 +1041,71 @@ async function seed(): Promise<void> {
             slug: 'plugin-architecture-deep-dive',
             title: 'Astromech Plugin Architecture: A Deep Dive',
             fields: {
-                body: '<p>Astromech ships two first-party plugins — SEO and Redirects — and the plugin API is entirely public. This post walks through how plugins work, what they can extend, and how to write one from scratch.</p><h2>What a plugin can do</h2><ul><li><strong>Schema</strong>: add Drizzle tables that migrate alongside core tables.</li><li><strong>Entry types</strong>: register custom entry types with their own storage (including custom SQLite tables).</li><li><strong>Admin pages</strong>: add sidebar entries and settings forms to the admin panel.</li><li><strong>Hooks</strong>: subscribe to <code>entry:beforeCreate</code>, <code>entry:afterUpdate</code>, and more.</li><li><strong>SDK methods</strong>: expose typed methods on the <code>Astromech.plugins.yourPlugin</code> namespace.</li></ul><h2>Plugin identity</h2><p>A plugin declares a <code>package</code> name (its npm package name). Astromech derives the permission namespace, table prefix, and schema module path from this single string — no manual configuration.</p><p>The result is a plugin system where first-party and third-party plugins are indistinguishable to the host application.</p>',
+                body: doc(
+                    para(
+                        text(
+                            'Astromech ships two first-party plugins — SEO and Redirects — and the plugin API is entirely public. This post walks through how plugins work, what they can extend, and how to write one from scratch.'
+                        )
+                    ),
+                    heading(2, text('What a plugin can do')),
+                    ul(
+                        li(
+                            para(
+                                text('Schema', 'bold'),
+                                text(
+                                    ': add Drizzle tables that migrate alongside core tables.'
+                                )
+                            )
+                        ),
+                        li(
+                            para(
+                                text('Entry types', 'bold'),
+                                text(
+                                    ': register custom entry types with their own storage (including custom SQLite tables).'
+                                )
+                            )
+                        ),
+                        li(
+                            para(
+                                text('Admin pages', 'bold'),
+                                text(
+                                    ': add sidebar entries and settings forms to the admin panel.'
+                                )
+                            )
+                        ),
+                        li(
+                            para(
+                                text('Hooks', 'bold'),
+                                text(': subscribe to '),
+                                text('entry:beforeCreate', 'code'),
+                                text(', '),
+                                text('entry:afterUpdate', 'code'),
+                                text(', and more.')
+                            )
+                        ),
+                        li(
+                            para(
+                                text('SDK methods', 'bold'),
+                                text(': expose typed methods on the '),
+                                text('Astromech.plugins.yourPlugin', 'code'),
+                                text(' namespace.')
+                            )
+                        )
+                    ),
+                    heading(2, text('Plugin identity')),
+                    para(
+                        text('A plugin declares a '),
+                        text('package', 'code'),
+                        text(
+                            ' name (its npm package name). Astromech derives the permission namespace, table prefix, and schema module path from this single string — no manual configuration.'
+                        )
+                    ),
+                    para(
+                        text(
+                            'The result is a plugin system where first-party and third-party plugins are indistinguishable to the host application.'
+                        )
+                    )
+                ),
                 excerpt:
                     'A complete walkthrough of the Astromech plugin system — what plugins can extend, and how to write one.',
                 publishedDate: '2026-02-20',
@@ -815,7 +1124,34 @@ async function seed(): Promise<void> {
             slug: 'getting-started-with-astromech',
             title: 'Getting Started with Astromech in 5 Minutes',
             fields: {
-                body: '<p>This tutorial walks you from zero to a working Astromech installation in under five minutes. You\'ll need Node.js 20+, an Astro project, and a Cloudflare account (or skip that for local-only development).</p><h2>Install</h2><pre><code>npm install astromech</code></pre><h2>Configure</h2><p>Create <code>astromech.config.ts</code> in your project root:</p><pre><code>import { defineConfig, libsqlDriver } from \'astromech\';\nimport * as fields from \'astromech/fields\';\n\nexport default defineConfig({\n  db: libsqlDriver({ url: \'file:./database.db\' }),\n  entries: {\n    post: {\n      single: \'Post\',\n      plural: \'Posts\',\n      fields: [\n        fields.richtext(\'body\', { required: true }),\n        fields.textarea(\'excerpt\'),\n      ],\n    },\n  },\n});\n</code></pre><h2>Initialise the DB</h2><pre><code>npx astromech db:init\nnpx astromech users:create --email you@example.com --password secret</code></pre><h2>Query content</h2><p>In your Astro page:</p><pre><code>import Astromech from \'astromech/local\';\nconst { data: posts } = await Astromech.entries.query({ type: \'post\', locale: \'en\' });\n</code></pre><p>That\'s it. Your CMS is running.</p>',
+                body: doc(
+                    para(
+                        text(
+                            "This tutorial walks you from zero to a working Astromech installation in under five minutes. You'll need Node.js 20+, an Astro project, and a Cloudflare account (or skip that for local-only development)."
+                        )
+                    ),
+                    heading(2, text('Install')),
+                    codeBlock('npm install astromech'),
+                    heading(2, text('Configure')),
+                    para(
+                        text('Create '),
+                        text('astromech.config.ts', 'code'),
+                        text(' in your project root:')
+                    ),
+                    codeBlock(
+                        "import { defineConfig, libsqlDriver } from 'astromech';\nimport * as fields from 'astromech/fields';\n\nexport default defineConfig({\n  db: libsqlDriver({ url: 'file:./database.db' }),\n  entries: {\n    post: {\n      single: 'Post',\n      plural: 'Posts',\n      fields: [\n        fields.richtext('body', { required: true }),\n        fields.textarea('excerpt'),\n      ],\n    },\n  },\n});\n"
+                    ),
+                    heading(2, text('Initialise the DB')),
+                    codeBlock(
+                        'npx astromech db:init\nnpx astromech users:create --email you@example.com --password secret'
+                    ),
+                    heading(2, text('Query content')),
+                    para(text('In your Astro page:')),
+                    codeBlock(
+                        "import Astromech from 'astromech/local';\nconst { data: posts } = await Astromech.entries.query({ type: 'post', locale: 'en' });\n"
+                    ),
+                    para(text("That's it. Your CMS is running."))
+                ),
                 excerpt:
                     'Install, configure, and query your first Astromech content in under five minutes.',
                 publishedDate: '2026-03-01',
@@ -834,7 +1170,40 @@ async function seed(): Promise<void> {
             slug: 'seo-plugin-walkthrough',
             title: 'The SEO Plugin: Meta Tags, Sitemaps, and hreflang',
             fields: {
-                body: '<p>Search engine optimisation in a headless CMS requires careful attention to meta tags, canonical URLs, and locale alternates. The Astromech SEO plugin handles all three — and is designed to compose cleanly with the blocks system and the symmetric locale model.</p><h2>The seoSection field group</h2><p>Add <code>seoSection()</code> to any entry type\'s fields to get a collapsible group with title, description, canonical URL override, and robots fields. All per-locale, all editable in the admin without code.</p><h2>Reading SEO data</h2><p>Call <code>Astromech.plugins.seo.meta({ entry, locale })</code> to get a resolved object with title, description, og:title, og:description, and canonical. Pass it to your <code>&lt;Seo&gt;</code> component.</p><h2>Sitemap</h2><p><code>Astromech.plugins.seo.sitemap()</code> returns all published entries with their URLs and locale alternates formatted for a <code>sitemap.xml</code> response. Add a single Astro route and you\'re done.</p>',
+                body: doc(
+                    para(
+                        text(
+                            'Search engine optimisation in a headless CMS requires careful attention to meta tags, canonical URLs, and locale alternates. The Astromech SEO plugin handles all three — and is designed to compose cleanly with the blocks system and the symmetric locale model.'
+                        )
+                    ),
+                    heading(2, text('The seoSection field group')),
+                    para(
+                        text('Add '),
+                        text('seoSection()', 'code'),
+                        text(
+                            " to any entry type's fields to get a collapsible group with title, description, canonical URL override, and robots fields. All per-locale, all editable in the admin without code."
+                        )
+                    ),
+                    heading(2, text('Reading SEO data')),
+                    para(
+                        text('Call '),
+                        text('Astromech.plugins.seo.meta({ entry, locale })', 'code'),
+                        text(
+                            ' to get a resolved object with title, description, og:title, og:description, and canonical. Pass it to your '
+                        ),
+                        text('<Seo>', 'code'),
+                        text(' component.')
+                    ),
+                    heading(2, text('Sitemap')),
+                    para(
+                        text('Astromech.plugins.seo.sitemap()', 'code'),
+                        text(
+                            ' returns all published entries with their URLs and locale alternates formatted for a '
+                        ),
+                        text('sitemap.xml', 'code'),
+                        text(" response. Add a single Astro route and you're done.")
+                    )
+                ),
                 excerpt:
                     'How the Astromech SEO plugin provides meta tags, sitemap generation, and hreflang support out of the box.',
                 publishedDate: '2026-03-15',
@@ -849,39 +1218,177 @@ async function seed(): Promise<void> {
 
     await insertRels([
         // post1 — Cloudflare Workers
-        { sourceId: post1Id, name: 'category', targetId: catEngineeringId, targetType: 'entry', position: 0 },
-        { sourceId: post1Id, name: 'tags', targetId: tagCloudflareId, targetType: 'entry', position: 0 },
-        { sourceId: post1Id, name: 'tags', targetId: tagEdgeId, targetType: 'entry', position: 1 },
-        { sourceId: post1Id, name: 'author', targetId: authorTomId, targetType: 'entry', position: 0 },
+        {
+            sourceId: post1Id,
+            name: 'category',
+            targetId: catEngineeringId,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: post1Id,
+            name: 'tags',
+            targetId: tagCloudflareId,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: post1Id,
+            name: 'tags',
+            targetId: tagEdgeId,
+            targetType: 'entry',
+            position: 1,
+        },
+        {
+            sourceId: post1Id,
+            name: 'author',
+            targetId: authorTomId,
+            targetType: 'entry',
+            position: 0,
+        },
 
         // post2 — blocks system
-        { sourceId: post2Id, name: 'category', targetId: catEngineeringId, targetType: 'entry', position: 0 },
-        { sourceId: post2Id, name: 'tags', targetId: tagTypescriptId, targetType: 'entry', position: 0 },
-        { sourceId: post2Id, name: 'tags', targetId: tagAstroId, targetType: 'entry', position: 1 },
-        { sourceId: post2Id, name: 'author', targetId: authorAlexId, targetType: 'entry', position: 0 },
+        {
+            sourceId: post2Id,
+            name: 'category',
+            targetId: catEngineeringId,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: post2Id,
+            name: 'tags',
+            targetId: tagTypescriptId,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: post2Id,
+            name: 'tags',
+            targetId: tagAstroId,
+            targetType: 'entry',
+            position: 1,
+        },
+        {
+            sourceId: post2Id,
+            name: 'author',
+            targetId: authorAlexId,
+            targetType: 'entry',
+            position: 0,
+        },
 
         // post3 — locale model
-        { sourceId: post3Id, name: 'category', targetId: catProductId, targetType: 'entry', position: 0 },
-        { sourceId: post3Id, name: 'tags', targetId: tagHeadlessCmsId, targetType: 'entry', position: 0 },
-        { sourceId: post3Id, name: 'author', targetId: authorPriyaId, targetType: 'entry', position: 0 },
+        {
+            sourceId: post3Id,
+            name: 'category',
+            targetId: catProductId,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: post3Id,
+            name: 'tags',
+            targetId: tagHeadlessCmsId,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: post3Id,
+            name: 'author',
+            targetId: authorPriyaId,
+            targetType: 'entry',
+            position: 0,
+        },
 
         // post4 — plugin architecture
-        { sourceId: post4Id, name: 'category', targetId: catEngineeringId, targetType: 'entry', position: 0 },
-        { sourceId: post4Id, name: 'tags', targetId: tagTypescriptId, targetType: 'entry', position: 0 },
-        { sourceId: post4Id, name: 'tags', targetId: tagHeadlessCmsId, targetType: 'entry', position: 1 },
-        { sourceId: post4Id, name: 'author', targetId: authorAlexId, targetType: 'entry', position: 0 },
+        {
+            sourceId: post4Id,
+            name: 'category',
+            targetId: catEngineeringId,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: post4Id,
+            name: 'tags',
+            targetId: tagTypescriptId,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: post4Id,
+            name: 'tags',
+            targetId: tagHeadlessCmsId,
+            targetType: 'entry',
+            position: 1,
+        },
+        {
+            sourceId: post4Id,
+            name: 'author',
+            targetId: authorAlexId,
+            targetType: 'entry',
+            position: 0,
+        },
 
         // post5 — getting started
-        { sourceId: post5Id, name: 'category', targetId: catTutorialsId, targetType: 'entry', position: 0 },
-        { sourceId: post5Id, name: 'tags', targetId: tagAstroId, targetType: 'entry', position: 0 },
-        { sourceId: post5Id, name: 'tags', targetId: tagCloudflareId, targetType: 'entry', position: 1 },
-        { sourceId: post5Id, name: 'author', targetId: authorTomId, targetType: 'entry', position: 0 },
+        {
+            sourceId: post5Id,
+            name: 'category',
+            targetId: catTutorialsId,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: post5Id,
+            name: 'tags',
+            targetId: tagAstroId,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: post5Id,
+            name: 'tags',
+            targetId: tagCloudflareId,
+            targetType: 'entry',
+            position: 1,
+        },
+        {
+            sourceId: post5Id,
+            name: 'author',
+            targetId: authorTomId,
+            targetType: 'entry',
+            position: 0,
+        },
 
         // post6 — SEO plugin
-        { sourceId: post6Id, name: 'category', targetId: catTutorialsId, targetType: 'entry', position: 0 },
-        { sourceId: post6Id, name: 'tags', targetId: tagHeadlessCmsId, targetType: 'entry', position: 0 },
-        { sourceId: post6Id, name: 'tags', targetId: tagAstroId, targetType: 'entry', position: 1 },
-        { sourceId: post6Id, name: 'author', targetId: authorPriyaId, targetType: 'entry', position: 0 },
+        {
+            sourceId: post6Id,
+            name: 'category',
+            targetId: catTutorialsId,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: post6Id,
+            name: 'tags',
+            targetId: tagHeadlessCmsId,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: post6Id,
+            name: 'tags',
+            targetId: tagAstroId,
+            targetType: 'entry',
+            position: 1,
+        },
+        {
+            sourceId: post6Id,
+            name: 'author',
+            targetId: authorPriyaId,
+            targetType: 'entry',
+            position: 0,
+        },
     ]);
     console.log('  Created 6 posts (en)\n');
 
@@ -909,7 +1416,18 @@ async function seed(): Promise<void> {
                     {
                         _id: bid(),
                         _type: 'richText',
-                        body: '<p>Lumenflow is a B2B SaaS company with editorial teams in four countries. Their previous setup — a WordPress multisite with custom plugins — required a dedicated DevOps engineer just to keep running. Translation workflows lived in spreadsheets. Publishing required a manual approval email chain.</p><p>After migrating to Astromech, the team ships content updates directly from the admin panel. The symmetric locale model means their French, German, and Japanese editors work in parallel without stepping on each other. Deployment takes seconds, not minutes.</p>',
+                        body: doc(
+                            para(
+                                text(
+                                    'Lumenflow is a B2B SaaS company with editorial teams in four countries. Their previous setup — a WordPress multisite with custom plugins — required a dedicated DevOps engineer just to keep running. Translation workflows lived in spreadsheets. Publishing required a manual approval email chain.'
+                                )
+                            ),
+                            para(
+                                text(
+                                    'After migrating to Astromech, the team ships content updates directly from the admin panel. The symmetric locale model means their French, German, and Japanese editors work in parallel without stepping on each other. Deployment takes seconds, not minutes.'
+                                )
+                            )
+                        ),
                     },
                     {
                         _id: bid(),
@@ -954,7 +1472,18 @@ async function seed(): Promise<void> {
                     {
                         _id: bid(),
                         _type: 'richText',
-                        body: '<p>Running a CMS at agency scale means one system must serve forty different clients, each with unique content models, brand guidelines, and editorial permissions. Pixel Agency evaluated six headless CMSes before choosing Astromech for its plugin architecture and the ability to deploy isolated instances per client on a single Cloudflare account.</p><p>They built three internal plugins — one for brand asset management, one for approval workflows, and one for a client-facing preview portal. Each plugin hooks into Astromech\'s admin panel and SDK without forking the core codebase.</p>',
+                        body: doc(
+                            para(
+                                text(
+                                    'Running a CMS at agency scale means one system must serve forty different clients, each with unique content models, brand guidelines, and editorial permissions. Pixel Agency evaluated six headless CMSes before choosing Astromech for its plugin architecture and the ability to deploy isolated instances per client on a single Cloudflare account.'
+                                )
+                            ),
+                            para(
+                                text(
+                                    "They built three internal plugins — one for brand asset management, one for approval workflows, and one for a client-facing preview portal. Each plugin hooks into Astromech's admin panel and SDK without forking the core codebase."
+                                )
+                            )
+                        ),
                     },
                     {
                         _id: bid(),
@@ -992,12 +1521,23 @@ async function seed(): Promise<void> {
                 customer: 'Nortide Media',
                 industry: 'media',
                 summary:
-                    'Nortide Media publishes 50+ articles per day across three languages. Astromech\'s bilingual content model and edge delivery cut their CDN costs in half.',
+                    "Nortide Media publishes 50+ articles per day across three languages. Astromech's bilingual content model and edge delivery cut their CDN costs in half.",
                 content: [
                     {
                         _id: bid(),
                         _type: 'richText',
-                        body: '<p>Nortide Media is a digital news publisher with bureaux in Oslo, London, and New York. At 50+ articles per day across Norwegian, English, and Spanish, their previous CMS — a custom Drupal installation — struggled with translation latency and editor conflicts.</p><p>Astromech\'s symmetric locale model gave every journalist their own locale-scoped workspace. Articles publish independently per locale. The SEO plugin auto-generates hreflang alternates and a unified sitemap, which Google now crawls without manual submission.</p>',
+                        body: doc(
+                            para(
+                                text(
+                                    'Nortide Media is a digital news publisher with bureaux in Oslo, London, and New York. At 50+ articles per day across Norwegian, English, and Spanish, their previous CMS — a custom Drupal installation — struggled with translation latency and editor conflicts.'
+                                )
+                            ),
+                            para(
+                                text(
+                                    "Astromech's symmetric locale model gave every journalist their own locale-scoped workspace. Articles publish independently per locale. The SEO plugin auto-generates hreflang alternates and a unified sitemap, which Google now crawls without manual submission."
+                                )
+                            )
+                        ),
                     },
                     {
                         _id: bid(),
@@ -1015,7 +1555,7 @@ async function seed(): Promise<void> {
                     { value: '3', label: 'Supported languages' },
                 ],
                 quote: {
-                    text: 'Our journalists stopped thinking about CMS mechanics and started thinking about stories. That\'s the best outcome we could have hoped for.',
+                    text: "Our journalists stopped thinking about CMS mechanics and started thinking about stories. That's the best outcome we could have hoped for.",
                     author: 'Ingrid Larsen',
                     role: 'Head of Digital, Nortide Media',
                 },
@@ -1030,11 +1570,35 @@ async function seed(): Promise<void> {
 
     await insertRels([
         // cs1 related posts
-        { sourceId: cs1Id, name: 'related_posts', targetId: post3Id, targetType: 'entry', position: 0 },
-        { sourceId: cs1Id, name: 'related_posts', targetId: post5Id, targetType: 'entry', position: 1 },
+        {
+            sourceId: cs1Id,
+            name: 'related_posts',
+            targetId: post3Id,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: cs1Id,
+            name: 'related_posts',
+            targetId: post5Id,
+            targetType: 'entry',
+            position: 1,
+        },
         // cs3 related posts
-        { sourceId: cs3Id, name: 'related_posts', targetId: post3Id, targetType: 'entry', position: 0 },
-        { sourceId: cs3Id, name: 'related_posts', targetId: post6Id, targetType: 'entry', position: 1 },
+        {
+            sourceId: cs3Id,
+            name: 'related_posts',
+            targetId: post3Id,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: cs3Id,
+            name: 'related_posts',
+            targetId: post6Id,
+            targetType: 'entry',
+            position: 1,
+        },
     ]);
     console.log('  Created 3 case studies\n');
 
@@ -1059,13 +1623,17 @@ async function seed(): Promise<void> {
                         _type: 'hero',
                         heading: 'Le CMS conçu pour le web moderne',
                         subheading:
-                            'Astromech tourne sur Cloudflare Workers, stocke le contenu dans D1, et livre un panneau d\'administration sans JavaScript — pour que vous puissiez vous concentrer sur votre produit.',
-                        cta: { href: '/features', label: 'Voir les fonctionnalités', target: '_self' },
+                            "Astromech tourne sur Cloudflare Workers, stocke le contenu dans D1, et livre un panneau d'administration sans JavaScript — pour que vous puissiez vous concentrer sur votre produit.",
+                        cta: {
+                            href: '/features',
+                            label: 'Voir les fonctionnalités',
+                            target: '_self',
+                        },
                     },
                     {
                         _id: bid(),
                         _type: 'featureGrid',
-                        heading: 'Tout ce qu\'il vous faut. Rien de superflu.',
+                        heading: "Tout ce qu'il vous faut. Rien de superflu.",
                         features: [
                             {
                                 title: 'Natif à la périphérie',
@@ -1090,8 +1658,7 @@ async function seed(): Promise<void> {
                     {
                         _id: bid(),
                         _type: 'testimonial',
-                        quote:
-                            'Astromech a remplacé trois outils distincts pour nous. On publie des mises à jour de contenu plus vite que jamais, et nos éditeurs adorent l\'interface épurée.',
+                        quote: "Astromech a remplacé trois outils distincts pour nous. On publie des mises à jour de contenu plus vite que jamais, et nos éditeurs adorent l'interface épurée.",
                         author: 'Sara Chen',
                         role: 'CTO, Lumenflow',
                     },
@@ -1100,7 +1667,11 @@ async function seed(): Promise<void> {
                         _type: 'cta',
                         heading: 'Prêt à simplifier votre stack ?',
                         text: 'Astromech est open source. Donnez-nous une étoile sur GitHub ou démarrez en moins de cinq minutes.',
-                        button: { href: '/pricing', label: 'Commencer gratuitement', target: '_self' },
+                        button: {
+                            href: '/pricing',
+                            label: 'Commencer gratuitement',
+                            target: '_self',
+                        },
                     },
                 ],
                 noindex: false,
@@ -1120,7 +1691,25 @@ async function seed(): Promise<void> {
             slug: 'pourquoi-nous-avons-choisi-cloudflare-workers',
             title: 'Pourquoi nous avons choisi Cloudflare Workers pour Astromech',
             fields: {
-                body: '<p>Lors de la conception du modèle de déploiement d\'Astromech, nous avions trois options : un VPS traditionnel, une plateforme de fonctions serverless comme Lambda ou Vercel, ou Cloudflare Workers. Nous avons choisi Cloudflare Workers — et ce choix a façonné chaque décision architecturale depuis.</p><h2>Aucun démarrage à froid</h2><p>Lambda et les fonctions Vercel démarrent un processus Node.js à chaque requête après une période d\'inactivité. Pour un panneau d\'administration CMS, cela signifie que le premier chargement de page après le déjeuner peut prendre deux ou trois secondes. Workers utilisent des isolates V8 : aucun démarrage de processus, aucune résolution de modules au démarrage. Chaque requête touche un runtime chaud.</p><h2>Global par défaut</h2><p>Workers se déploient dans 300+ villes simultanément. Astromech interroge D1 — le service SQLite de Cloudflare — qui réplique les lectures globalement. Le résultat est une latence de requête inférieure à la milliseconde presque partout sur terre.</p>',
+                body: doc(
+                    para(
+                        text(
+                            "Lors de la conception du modèle de déploiement d'Astromech, nous avions trois options : un VPS traditionnel, une plateforme de fonctions serverless comme Lambda ou Vercel, ou Cloudflare Workers. Nous avons choisi Cloudflare Workers — et ce choix a façonné chaque décision architecturale depuis."
+                        )
+                    ),
+                    heading(2, text('Aucun démarrage à froid')),
+                    para(
+                        text(
+                            "Lambda et les fonctions Vercel démarrent un processus Node.js à chaque requête après une période d'inactivité. Pour un panneau d'administration CMS, cela signifie que le premier chargement de page après le déjeuner peut prendre deux ou trois secondes. Workers utilisent des isolates V8 : aucun démarrage de processus, aucune résolution de modules au démarrage. Chaque requête touche un runtime chaud."
+                        )
+                    ),
+                    heading(2, text('Global par défaut')),
+                    para(
+                        text(
+                            'Workers se déploient dans 300+ villes simultanément. Astromech interroge D1 — le service SQLite de Cloudflare — qui réplique les lectures globalement. Le résultat est une latence de requête inférieure à la milliseconde presque partout sur terre.'
+                        )
+                    )
+                ),
                 excerpt:
                     'Les raisons techniques et économiques derrière notre décision de construire Astromech sur Cloudflare Workers et D1.',
                 publishedDate: '2025-11-10',
@@ -1135,10 +1724,34 @@ async function seed(): Promise<void> {
 
     await insertRels([
         // post1 FR — same taxonomy as EN (non-translatable fields mirrored)
-        { sourceId: post1FrId, name: 'category', targetId: catEngineeringId, targetType: 'entry', position: 0 },
-        { sourceId: post1FrId, name: 'tags', targetId: tagCloudflareId, targetType: 'entry', position: 0 },
-        { sourceId: post1FrId, name: 'tags', targetId: tagEdgeId, targetType: 'entry', position: 1 },
-        { sourceId: post1FrId, name: 'author', targetId: authorTomId, targetType: 'entry', position: 0 },
+        {
+            sourceId: post1FrId,
+            name: 'category',
+            targetId: catEngineeringId,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: post1FrId,
+            name: 'tags',
+            targetId: tagCloudflareId,
+            targetType: 'entry',
+            position: 0,
+        },
+        {
+            sourceId: post1FrId,
+            name: 'tags',
+            targetId: tagEdgeId,
+            targetType: 'entry',
+            position: 1,
+        },
+        {
+            sourceId: post1FrId,
+            name: 'author',
+            targetId: authorTomId,
+            targetType: 'entry',
+            position: 0,
+        },
     ]);
     console.log('  Created 2 French translations (home page + 1 post)\n');
 
@@ -1224,7 +1837,12 @@ async function seed(): Promise<void> {
             { _id: bid(), label: 'Blog', url: '/blog' },
             { _id: bid(), label: 'Customers', url: '/customers' },
             { _id: bid(), label: 'About', url: '/about' },
-            { _id: bid(), label: 'GitHub', url: 'https://github.com/astromech', newTab: true },
+            {
+                _id: bid(),
+                label: 'GitHub',
+                url: 'https://github.com/astromech',
+                newTab: true,
+            },
         ],
     };
 
@@ -1234,7 +1852,12 @@ async function seed(): Promise<void> {
             { _id: bid(), label: 'Blog', url: '/fr/blog' },
             { _id: bid(), label: 'Clients', url: '/fr/customers' },
             { _id: bid(), label: 'À propos', url: '/fr/about' },
-            { _id: bid(), label: 'GitHub', url: 'https://github.com/astromech', newTab: true },
+            {
+                _id: bid(),
+                label: 'GitHub',
+                url: 'https://github.com/astromech',
+                newTab: true,
+            },
         ],
     };
 
@@ -1288,13 +1911,19 @@ async function seed(): Promise<void> {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('  Media          3  (placeholder picsum URLs)');
     console.log('  Categories     4  (engineering, product, community, tutorials)');
-    console.log('  Tags           5  (astro, cloudflare, typescript, headless-cms, edge)');
+    console.log(
+        '  Tags           5  (astro, cloudflare, typescript, headless-cms, edge)'
+    );
     console.log('  Authors        3  (Alex Morgan, Priya Sharma, Tom Rivers)');
-    console.log('  Pages          4  (home, features, pricing, about) + 1 FR translation');
+    console.log(
+        '  Pages          4  (home, features, pricing, about) + 1 FR translation'
+    );
     console.log('  Posts          6  (all published, en) + 1 FR translation');
     console.log('  Case studies   3  (lumenflow, pixel-agency, nortide-media)');
     console.log('  Globals        3  settings keys (globals, globals:en, globals:fr)');
-    console.log('  Menus          6  settings keys (main + footer, shared + en + fr each)');
+    console.log(
+        '  Menus          6  settings keys (main + footer, shared + en + fr each)'
+    );
     console.log('  Redirects      3');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('  Admin login: admin@astromech.dev / password');
