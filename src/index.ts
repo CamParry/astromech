@@ -39,6 +39,13 @@ export { withDefaults } from '@/core/options.js';
 export { resolveEntryUrl, resolveEntryPath } from '@/core/entry-url.js';
 export type { UrlEntry } from '@/core/entry-url.js';
 export { defaultImageWidths } from '@/images/defaults.js';
+export { buildImageAttrs } from '@/images/build-image-attrs.js';
+export type {
+    ImageAttrs,
+    ImageAttrsContext,
+    ImageAttrsInput,
+    ImageAttrsOptions,
+} from '@/images/build-image-attrs.js';
 
 // Field factories now live in the `astromech/fields` subpath (see src/fields.ts).
 

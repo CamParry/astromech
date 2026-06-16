@@ -1,0 +1,74 @@
+---
+/**
+ * Astromech responsive image component.
+ *
+ * Renders a <picture> with avif/webp <source> elements when the media item is
+ * an optimisable raster image with a version; falls back to a bare <img> for
+ * SVG, video, PDF, GIF, or images without a version.
+ *
+ * <!-- TODO: blur-up from attrs.blurhash -->
+ */
+import config from 'virtual:astromech/config';
+import { getImageConfig } from '@/images/registry.js';
+import { buildImageAttrs } from '@/images/build-image-attrs.js';
+import type { Media } from '@/types/index.js';
+
+interface Props {
+    src: Media;
+    alt: string;
+    sizes?: string;
+    widths?: number[];
+    loading?: 'lazy' | 'eager';
+    class?: string;
+}
+
+const { src, alt, sizes, widths, loading = 'lazy', class: className } = Astro.props;
+
+const ic = getImageConfig();
+const ctx = ic
+    ? { mediaRoute: ic.mediaRoute, widths: ic.widths, avif: ic.avif }
+    : { mediaRoute: config.mediaRoute, widths: [], avif: false };
+
+const attrs = buildImageAttrs(
+    {
+        id: src.id,
+        filename: src.filename,
+        mimeType: src.mimeType,
+        width: src.width,
+        height: src.height,
+        version: src.metadata?.version,
+        blurhash: src.metadata?.blurhash,
+    },
+    { sizes, widths },
+    ctx
+);
+---
+
+{
+    attrs.sources.length > 0 ? (
+        <picture>
+            {attrs.sources.map((s) => (
+                <source type={s.type} srcset={s.srcset} sizes={s.sizes} />
+            ))}
+            <img
+                src={attrs.img.src}
+                width={attrs.img.width}
+                height={attrs.img.height}
+                alt={alt}
+                loading={loading}
+                decoding="async"
+                class={className}
+            />
+        </picture>
+    ) : (
+        <img
+            src={attrs.img.src}
+            width={attrs.img.width}
+            height={attrs.img.height}
+            alt={alt}
+            loading={loading}
+            decoding="async"
+            class={className}
+        />
+    )
+}

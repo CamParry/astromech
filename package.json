@@ -65,6 +65,7 @@
             "default": "./dist/images/drivers/cloudflare.js"
         },
         "./admin/shell.astro": "./src/admin/shell.astro",
+        "./Image": "./src/images/Image.astro",
         "./ui": {
             "types": "./dist/admin/components/ui/index.d.ts",
             "default": "./dist/admin/components/ui/index.js"
