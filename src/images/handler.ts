@@ -125,9 +125,15 @@ export async function handleMediaRequest(info: MediaRequestInfo): Promise<Respon
     const format = params.format;
     const vKey = variantStorageKey(id, version, params.width, format);
     const etag = `"${version}-${params.width}-${format}"`;
+    const variantCacheControl = 'public, max-age=31536000, immutable';
 
     if (ifNoneMatch === etag) {
-        return new Response(null, { status: 304 });
+        // Echo the cache directives on the 304 (RFC 7234 §4.3.4) so the client
+        // doesn't downgrade its cached entry's freshness.
+        return new Response(null, {
+            status: 304,
+            headers: { 'Cache-Control': variantCacheControl, ETag: etag },
+        });
     }
 
     const hit = await storage.get(vKey);
@@ -136,7 +142,7 @@ export async function handleMediaRequest(info: MediaRequestInfo): Promise<Respon
             status: 200,
             headers: {
                 'Content-Type': contentTypeForFormat(format),
-                'Cache-Control': 'public, max-age=31536000, immutable',
+                'Cache-Control': variantCacheControl,
                 ETag: etag,
             },
         });
@@ -164,7 +170,7 @@ export async function handleMediaRequest(info: MediaRequestInfo): Promise<Respon
         status: 200,
         headers: {
             'Content-Type': out.contentType,
-            'Cache-Control': 'public, max-age=31536000, immutable',
+            'Cache-Control': variantCacheControl,
             ETag: etag,
         },
     });
@@ -177,21 +183,27 @@ async function serveOriginal(
     storage: NonNullable<ReturnType<typeof getStorageDriver>>,
     ifNoneMatch?: string | null
 ): Promise<Response> {
+    const etag = version ? `"${version}"` : null;
+    const cacheControl = 'public, max-age=300, must-revalidate';
+
+    // Check the conditional request before touching storage — avoids opening a
+    // read stream we'd immediately discard on a 304.
+    if (etag && ifNoneMatch === etag) {
+        return new Response(null, {
+            status: 304,
+            headers: { 'Cache-Control': cacheControl, ETag: etag },
+        });
+    }
+
     const obj = await storage.get(key);
     if (!obj) {
         return new Response('Not found', { status: 404 });
     }
 
-    const etag = version ? `"${version}"` : null;
-
-    if (etag && ifNoneMatch === etag) {
-        return new Response(null, { status: 304 });
-    }
-
     const headers: Record<string, string> = {
         'Content-Type': mimeType,
         'Content-Length': String(obj.size),
-        'Cache-Control': 'public, max-age=300, must-revalidate',
+        'Cache-Control': cacheControl,
     };
     if (etag) {
         headers['ETag'] = etag;

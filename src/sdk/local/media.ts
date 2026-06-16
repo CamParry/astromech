@@ -13,6 +13,7 @@ import type {
     QueryResult,
     MediaQueryParams,
     MediaMetadata,
+    StorageDriver,
 } from '@/types/index.js';
 import { ValidationError } from '@/errors/validation.js';
 import { updateMediaSchema } from '@/schemas/media.js';
@@ -42,6 +43,36 @@ function toMedia(row: MediaRow): Media {
         ...row,
         url: buildMediaUrl(config.mediaRoute, row.id, extOf(row.filename)),
     } as Media;
+}
+
+/**
+ * Store an uploaded file under `key` and extract image metadata.
+ *
+ * Optimisable images are buffered once — their bytes are needed for dimension
+ * extraction, the blurhash placeholder, and the content-hash version. Every
+ * other type (video, PDF, …) is streamed straight to storage and never buffered
+ * (the "stream, never buffer" abuse guard, spec §8).
+ */
+async function storeFile(
+    driver: StorageDriver,
+    key: string,
+    file: File
+): Promise<{ width: number | null; height: number | null; metadata: MediaMetadata }> {
+    if (isOptimisableImage(file.type)) {
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        const dims = readImageDimensions(bytes);
+        const blurhash = (await getImageConfig()?.driver.placeholder?.(bytes)) ?? null;
+        const version = await contentVersion(bytes);
+        await driver.put(key, bytes, { contentType: file.type });
+        return {
+            width: dims?.width ?? null,
+            height: dims?.height ?? null,
+            metadata: { blurhash, version },
+        };
+    }
+
+    await driver.put(key, file.stream(), { contentType: file.type });
+    return { width: null, height: null, metadata: {} };
 }
 
 export const mediaApi = {
@@ -135,25 +166,7 @@ export const mediaApi = {
         const ext = extOf(file.name);
         const key = ext ? `${id}.${ext}` : id;
 
-        const bytes = new Uint8Array(await file.arrayBuffer());
-
-        let width: number | null = null;
-        let height: number | null = null;
-        let blurhash: string | null = null;
-
-        if (isOptimisableImage(file.type)) {
-            const dims = readImageDimensions(bytes);
-            if (dims) {
-                width = dims.width;
-                height = dims.height;
-            }
-            const imageConfig = getImageConfig();
-            blurhash = (await imageConfig?.driver.placeholder?.(bytes)) ?? null;
-        }
-
-        const version = await contentVersion(bytes);
-
-        await driver.put(key, bytes, { contentType: file.type });
+        const { width, height, metadata } = await storeFile(driver, key, file);
 
         const rows = await db
             .insert(mediaTable)
@@ -164,7 +177,7 @@ export const mediaApi = {
                 size: file.size,
                 width,
                 height,
-                metadata: { blurhash, version },
+                metadata,
             })
             .returning();
 
@@ -236,31 +249,20 @@ export const mediaApi = {
         if (!existing[0]) throw new Error(`Media '${id}' not found`);
 
         const row = existing[0];
-        const ext = extOf(file.name);
-        const key = ext ? `${id}.${ext}` : id;
+        const newExt = extOf(file.name);
+        const newKey = newExt ? `${id}.${newExt}` : id;
+        const oldExt = extOf(row.filename);
+        const oldKey = oldExt ? `${id}.${oldExt}` : id;
 
-        const bytes = new Uint8Array(await file.arrayBuffer());
+        const { width, height, metadata } = await storeFile(driver, newKey, file);
 
-        let width: number | null = null;
-        let height: number | null = null;
-        let blurhash: string | null = null;
-
-        if (isOptimisableImage(file.type)) {
-            const dims = readImageDimensions(bytes);
-            if (dims) {
-                width = dims.width;
-                height = dims.height;
-            }
-            const imageConfig = getImageConfig();
-            blurhash = (await imageConfig?.driver.placeholder?.(bytes)) ?? null;
+        // Drop the previous original when the extension (hence key) changed, so a
+        // cross-extension replace doesn't leave the old bytes orphaned.
+        if (oldKey !== newKey) {
+            await driver.delete(oldKey);
         }
-
-        const version = await contentVersion(bytes);
-
-        await driver.put(key, bytes, { contentType: file.type });
         await deletePrefix(driver, variantPrefix(id));
 
-        const existingMeta: MediaMetadata = row.metadata ?? {};
         const rows = await db
             .update(mediaTable)
             .set({
@@ -269,7 +271,7 @@ export const mediaApi = {
                 size: file.size,
                 width,
                 height,
-                metadata: { ...existingMeta, blurhash, version },
+                metadata,
                 updatedAt: new Date(),
             })
             .where(eq(mediaTable.id, id))
