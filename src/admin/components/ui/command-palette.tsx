@@ -377,10 +377,11 @@ export function CommandPalette(): React.ReactElement {
             // (keyed directly in `adminConfig.entries`). Plugin entries arrive
             // with a qualified id (`{plugin}/{type}`) but `plugin.entries` is
             // keyed by the BARE type — so parse the id before looking it up.
-            let cfg: AdminEntryTypeConfig | undefined = adminConfig.entries[entry.type];
+            let cfg: AdminEntryTypeConfig | undefined =
+                typeof entry.type === 'string' ? adminConfig.entries[entry.type] : undefined;
             let pluginName: string | undefined;
             let bareType = entry.type;
-            if (cfg === undefined) {
+            if (cfg === undefined && typeof entry.type === 'string') {
                 const parsed = parseEntryTypeId(entry.type);
                 if (parsed) {
                     const plugin = adminConfig.plugins.find((p) => p.name === parsed.plugin);
