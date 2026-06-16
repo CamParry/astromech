@@ -263,7 +263,9 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     // config: the driver instance and plugin definitions (which carry live
     // Drizzle table objects in `schema`) cannot be JSON.stringify'd into the
     // virtual config module — `ResolvedConfig` already omits both.
-    const adminPages: ResolvedAdminPage[] = (config.admin?.pages ?? []).map(resolveAdminPage);
+    const adminPages: ResolvedAdminPage[] = (config.admin?.pages ?? []).map(
+        resolveAdminPage
+    );
 
     // Derive the set of publicly-readable setting keys.
     // 1. Host admin pages with `public: true` expose their baseKey (exact) and
@@ -295,7 +297,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
         if (!publicSettingKeys.includes(key)) publicSettingKeys.push(key);
     }
 
-    const { db: _db, plugins: _plugins, ...rest } = config;
+    const { db: _db, plugins: _plugins, scheduler: _scheduler, ...rest } = config;
     return {
         ...rest,
         adminRoute: config.adminRoute ?? '/admin',
@@ -308,5 +310,6 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
             retentionDays: config.trash?.retentionDays ?? 30,
         },
         publicSettingKeys,
+        timezone: config.timezone ?? 'UTC',
     };
 }

@@ -13,6 +13,6 @@ export function registerBuiltInCronJobs(): void {
     registerCronJob(trashPurgeJob);
 }
 
-export { runScheduledJobs } from '@/cron/runner.js';
+export { onTick, runDue, runScheduledJobs } from '@/cron/runner.js';
 export { registerCronJob, getCronJobs } from '@/cron/registry.js';
 export type { CronJob, CronContext } from '@/cron/registry.js';

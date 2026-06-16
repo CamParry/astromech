@@ -5,6 +5,7 @@
  */
 
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import type { JsonValue } from '@/types/index.js';
 
 // ============================================================================
 // Roles
@@ -15,8 +16,12 @@ export const rolesTable = sqliteTable('roles', {
     name: text('name').notNull(),
     permissions: text('permissions', { mode: 'json' }).$type<string[]>().notNull(),
     isBuiltIn: integer('is_built_in', { mode: 'boolean' }).notNull().default(false),
-    createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+        .notNull()
+        .$defaultFn(() => new Date()),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+        .notNull()
+        .$defaultFn(() => new Date()),
 });
 
 // ============================================================================
@@ -29,7 +34,9 @@ export const usersTable = sqliteTable('users', {
         .$defaultFn(() => crypto.randomUUID()),
     email: text('email').notNull().unique(),
     name: text('name').notNull(),
-    emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
+    emailVerified: integer('email_verified', { mode: 'boolean' })
+        .notNull()
+        .default(false),
     image: text('image'),
     fields: text('fields', { mode: 'json' }),
     roleSlug: text('role_slug').notNull().default('admin'),
@@ -135,8 +142,15 @@ export const entriesTable = sqliteTable(
         index('idx_entries_locale').on(table.type, table.locale, table.status),
         index('idx_entries_deleted').on(table.deletedAt),
         index('idx_entries_locale_group').on(table.localeGroup),
-        uniqueIndex('entries_locale_group_locale_unique').on(table.localeGroup, table.locale),
-        uniqueIndex('entries_type_locale_slug_unique').on(table.type, table.locale, table.slug),
+        uniqueIndex('entries_locale_group_locale_unique').on(
+            table.localeGroup,
+            table.locale
+        ),
+        uniqueIndex('entries_type_locale_slug_unique').on(
+            table.type,
+            table.locale,
+            table.slug
+        ),
     ]
 );
 
@@ -157,16 +171,16 @@ export const entryVersionsTable = sqliteTable(
         title: text('title').notNull(),
         slug: text('slug'),
         fields: text('fields', { mode: 'json' }),
-        relations: text('relations', { mode: 'json' }).$type<Record<string, string | string[]>>(),
+        relations: text('relations', { mode: 'json' }).$type<
+            Record<string, string | string[]>
+        >(),
         status: text('status', { enum: ['draft', 'published', 'scheduled'] }),
         createdAt: integer('created_at', { mode: 'timestamp' })
             .notNull()
             .$defaultFn(() => new Date()),
         createdBy: text('created_by').references(() => usersTable.id),
     },
-    (table) => [
-        index('idx_versions_entry').on(table.entryId, table.versionNumber),
-    ]
+    (table) => [index('idx_versions_entry').on(table.entryId, table.versionNumber)]
 );
 
 // ============================================================================
@@ -174,29 +188,33 @@ export const entryVersionsTable = sqliteTable(
 // ============================================================================
 
 export const relationshipsTable = sqliteTable(
-	'relationships',
-	{
-		id: text('id')
-			.primaryKey()
-			.$defaultFn(() => crypto.randomUUID()),
-		sourceId: text('source_id').notNull(),
-		sourceType: text('source_type', {
-			enum: ['entry', 'user', 'media'],
-		}).notNull(),
-		name: text('name').notNull(),
-		targetId: text('target_id').notNull(),
-		targetType: text('target_type', {
-			enum: ['entry', 'user', 'media'],
-		}).notNull(),
-		position: integer('position').notNull().default(0),
-		createdAt: integer('created_at', { mode: 'timestamp' })
-			.notNull()
-			.$defaultFn(() => new Date()),
-	},
-	(table) => ({
-		sourceIdx: index('idx_rel_source').on(table.sourceId, table.sourceType, table.name),
-		targetIdx: index('idx_rel_target').on(table.targetId, table.targetType),
-	})
+    'relationships',
+    {
+        id: text('id')
+            .primaryKey()
+            .$defaultFn(() => crypto.randomUUID()),
+        sourceId: text('source_id').notNull(),
+        sourceType: text('source_type', {
+            enum: ['entry', 'user', 'media'],
+        }).notNull(),
+        name: text('name').notNull(),
+        targetId: text('target_id').notNull(),
+        targetType: text('target_type', {
+            enum: ['entry', 'user', 'media'],
+        }).notNull(),
+        position: integer('position').notNull().default(0),
+        createdAt: integer('created_at', { mode: 'timestamp' })
+            .notNull()
+            .$defaultFn(() => new Date()),
+    },
+    (table) => ({
+        sourceIdx: index('idx_rel_source').on(
+            table.sourceId,
+            table.sourceType,
+            table.name
+        ),
+        targetIdx: index('idx_rel_target').on(table.targetId, table.targetType),
+    })
 );
 
 // ============================================================================
@@ -237,12 +255,37 @@ export const mediaTable = sqliteTable(
 
 export const settingsTable = sqliteTable('settings', {
     key: text('key').primaryKey(),
-    value: text('value', { mode: 'json' }).$type<import('@/types/index.js').JsonValue>(),
+    value: text('value', { mode: 'json' }).$type<JsonValue>(),
     updatedAt: integer('updated_at', { mode: 'timestamp' })
         .notNull()
         .$defaultFn(() => new Date()),
     updatedBy: text('updated_by').references(() => usersTable.id),
 });
+
+// ============================================================================
+// Cron
+// ============================================================================
+
+/**
+ * Scheduler state — the single source of truth for cron cadence and the
+ * multi-instance lock. Seeded from registered jobs' default `schedule` on first
+ * tick; the stored row is authoritative thereafter (runtime-editable).
+ *
+ * `lock` is a claim-EXPIRY timestamp that doubles as the claim token: a tick
+ * CAS-claims a job by writing an expiry; a crashed claim auto-expires so the
+ * next tick can retry.
+ */
+export const cronTable = sqliteTable('_astromech_cron', {
+    name: text('name').primaryKey(),
+    schedule: text('schedule').notNull(),
+    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+    lastRun: integer('last_run', { mode: 'timestamp' }),
+    nextRun: integer('next_run', { mode: 'timestamp' }),
+    lock: integer('lock', { mode: 'timestamp' }),
+});
+
+export type CronRow = typeof cronTable.$inferSelect;
+export type NewCronRow = typeof cronTable.$inferInsert;
 
 // ============================================================================
 // Type Exports

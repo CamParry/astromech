@@ -63,6 +63,7 @@ const config: ResolvedConfig = {
     adminPages: [],
     trash: { enabled: true, retentionDays: 30 },
     publicSettingKeys: [],
+    timezone: 'UTC',
     storage: {
         name: 'noop',
         upload: async () => '',

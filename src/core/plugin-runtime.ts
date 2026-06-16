@@ -345,6 +345,7 @@ function emptyConfig(): ResolvedConfig {
         adminPages: [],
         trash: { enabled: true, retentionDays: 30 },
         publicSettingKeys: [],
+        timezone: 'UTC',
         storage: {
             name: 'noop',
             upload: () => Promise.resolve(''),

@@ -93,7 +93,9 @@ describe('resolveConfig pluginEntries', () => {
             baseConfig([
                 {
                     package: '@astromech/store',
-                    entries: [{ ...entryType('Item'), type: 'item', storage: emptyStorage() }],
+                    entries: [
+                        { ...entryType('Item'), type: 'item', storage: emptyStorage() },
+                    ],
                 },
             ])
         );
@@ -261,6 +263,21 @@ describe('resolveConfig structural validation', () => {
                 plugins: [],
             })
         ).toThrow(/post.*tabs.*may only contain.*tab.*children/);
+    });
+});
+
+describe('resolveConfig timezone', () => {
+    it('defaults timezone to "UTC" when not specified', () => {
+        const resolved = resolveConfig(baseConfig([]));
+        expect(resolved.timezone).toBe('UTC');
+    });
+
+    it('respects an explicit timezone', () => {
+        const resolved = resolveConfig({
+            ...baseConfig([]),
+            timezone: 'America/New_York',
+        });
+        expect(resolved.timezone).toBe('America/New_York');
     });
 });
 
