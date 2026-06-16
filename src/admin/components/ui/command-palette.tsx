@@ -33,9 +33,10 @@ import type { LucideIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import adminConfig from 'virtual:astromech/admin-config';
 import { Astromech } from '@/sdk/fetch/index.js';
+import { parseEntryTypeId } from '@/core/entry-types.js';
 import { usePermissions } from '../../hooks/index.js';
 import { EntryTypeIcon } from './entry-type-icon.js';
-import type { Entry, Media, User } from '@/types/index.js';
+import type { AdminEntryTypeConfig, Entry, Media, User } from '@/types/index.js';
 
 // ============================================================================
 // Lucide icon helper
@@ -44,6 +45,21 @@ import type { Entry, Media, User } from '@/types/index.js';
 function lucideIcon(name: string | undefined, Fallback: LucideIcon): LucideIcon {
     if (name === undefined) return Fallback;
     return (icons[name as keyof typeof icons] ?? Fallback) as LucideIcon;
+}
+
+/**
+ * Pick a human label for a live entry result. Entry types with
+ * `titleField: false` (e.g. redirects) carry no `title`, so fall back to the
+ * first non-empty searchable / column field value, then slug, then id.
+ */
+function entryLabel(entry: Entry, cfg: AdminEntryTypeConfig | undefined): string {
+    if (typeof entry.title === 'string' && entry.title.trim() !== '') return entry.title;
+    const keys = [...(cfg?.search ?? []), ...(cfg?.adminColumns ?? []).map((c) => c.field)];
+    for (const key of keys) {
+        const value = entry.fields?.[key];
+        if (typeof value === 'string' && value.trim() !== '') return value;
+    }
+    return entry.slug ?? entry.id;
 }
 
 // ============================================================================
@@ -357,28 +373,31 @@ export function CommandPalette(): React.ReactElement {
     const liveEntryItems: LiveCommandItem[] = useMemo(() => {
         if (!liveQuery.data) return [];
         return liveQuery.data.entries.map((entry) => {
-            // Determine if this is a root entry or plugin entry by looking up the type
-            const rootCfg = adminConfig.entries[entry.type];
+            // Resolve the entry's type config. Root entries use a bare type id
+            // (keyed directly in `adminConfig.entries`). Plugin entries arrive
+            // with a qualified id (`{plugin}/{type}`) but `plugin.entries` is
+            // keyed by the BARE type — so parse the id before looking it up.
+            let cfg: AdminEntryTypeConfig | undefined = adminConfig.entries[entry.type];
             let pluginName: string | undefined;
-            let icon: string | undefined;
-            if (rootCfg) {
-                icon = rootCfg.icon;
-            } else {
-                // Find in plugins
-                for (const plugin of adminConfig.plugins) {
-                    if (plugin.entries[entry.type] !== undefined) {
+            let bareType = entry.type;
+            if (cfg === undefined) {
+                const parsed = parseEntryTypeId(entry.type);
+                if (parsed) {
+                    const plugin = adminConfig.plugins.find((p) => p.name === parsed.plugin);
+                    const pluginCfg = plugin?.entries[parsed.type];
+                    if (plugin && pluginCfg) {
+                        cfg = pluginCfg;
                         pluginName = plugin.name;
-                        icon = plugin.entries[entry.type]?.icon;
-                        break;
+                        bareType = parsed.type;
                     }
                 }
             }
-            const label = entry.title !== '' ? entry.title : (entry.slug ?? entry.id);
+            const label = entryLabel(entry, cfg);
+            const iconName = cfg?.icon;
             const to =
                 pluginName !== undefined
-                    ? `/plugin/${pluginName}/entries/${entry.type}/${entry.id}`
-                    : `/entries/${entry.type}/${entry.id}`;
-            const iconName = icon;
+                    ? `/plugin/${pluginName}/entries/${bareType}/${entry.id}`
+                    : `/entries/${bareType}/${entry.id}`;
             return {
                 kind: 'live' as const,
                 id: `live-entry-${entry.id}-${entry.type}`,
