@@ -110,7 +110,7 @@
         "scheduled": "Scheduled",
         "trashed": "Trashed",
         "all": "All",
-        "editTitle": "Edit: {{title}}",
+        "editTitle": "{{title}}",
         "movedToTrash": "{{name}} moved to trash.",
         "permanentlyDeleted": "{{name}} permanently deleted.",
         "duplicated": "{{name}} duplicated.",

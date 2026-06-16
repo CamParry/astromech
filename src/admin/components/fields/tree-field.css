@@ -40,6 +40,13 @@
     opacity: 0.95;
 }
 
+/* Disabled (hidden from the front end, still editable here): a muted body so
+   the node visibly recedes without becoming unreadable. Scoped to the node's
+   own fields, not its children (they carry their own disabled state). */
+.am-tree-node-content-disabled {
+    opacity: 0.6;
+}
+
 /* ============================================================================
    Node header
    ============================================================================ */

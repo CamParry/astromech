@@ -103,7 +103,10 @@ function SortableRepeaterItem({
         <div
             ref={setNodeRef}
             style={style}
-            className={clsx('am-repeater-item', isDragging && 'am-repeater-item-dragging')}
+            className={clsx(
+                'am-repeater-item',
+                isDragging && 'am-repeater-item-dragging'
+            )}
         >
             <Collapsible.Root open={open} onOpenChange={setOpen}>
                 <div
@@ -160,9 +163,9 @@ function SortableRepeaterItem({
                                     }
                                 >
                                     {itemDisabled ? (
-                                        <Eye size={16} />
-                                    ) : (
                                         <EyeOff size={16} />
+                                    ) : (
+                                        <Eye size={16} />
                                     )}
                                 </button>
                                 <button
@@ -199,22 +202,25 @@ function SortableRepeaterItem({
                     </div>
                 </div>
 
-                {!itemDisabled && (
-                    <Collapsible.Panel className="am-repeater-item-panel">
-                        <div className="am-repeater-item-content">
-                            {fields.map((subField) => (
-                                <FormField
-                                    key={subField.name}
-                                    field={subField}
-                                    value={item[subField.name]}
-                                    name={`${name}[${index}].${subField.name}`}
-                                    onChange={onFieldChange}
-                                    {...(disabled !== undefined ? { disabled } : {})}
-                                />
-                            ))}
-                        </div>
-                    </Collapsible.Panel>
-                )}
+                <Collapsible.Panel className="am-repeater-item-panel">
+                    <div
+                        className={clsx(
+                            'am-repeater-item-content',
+                            itemDisabled && 'am-repeater-item-content-disabled'
+                        )}
+                    >
+                        {fields.map((subField) => (
+                            <FormField
+                                key={subField.name}
+                                field={subField}
+                                value={item[subField.name]}
+                                name={`${name}[${index}].${subField.name}`}
+                                onChange={onFieldChange}
+                                {...(disabled !== undefined ? { disabled } : {})}
+                            />
+                        ))}
+                    </div>
+                </Collapsible.Panel>
             </Collapsible.Root>
         </div>
     );

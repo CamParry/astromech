@@ -36,6 +36,12 @@
     opacity: 0.95;
 }
 
+/* Disabled (hidden from the front end, still editable here): a muted body so
+   the item visibly recedes without becoming unreadable. */
+.am-repeater-item-content-disabled {
+    opacity: 0.6;
+}
+
 /* ============================================================================
    Item header
    ============================================================================ */

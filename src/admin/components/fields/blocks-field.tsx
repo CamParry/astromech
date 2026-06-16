@@ -212,9 +212,9 @@ function SortableBlock({
                                     }
                                 >
                                     {block._disabled === true ? (
-                                        <Eye size={16} />
-                                    ) : (
                                         <EyeOff size={16} />
+                                    ) : (
+                                        <Eye size={16} />
                                     )}
                                 </button>
                                 <button
@@ -250,28 +250,27 @@ function SortableBlock({
                     </div>
                 </div>
 
-                {block._disabled !== true && (
-                    <Collapsible.Panel className="am-blocks-block-panel">
-                        <div className="am-blocks-block-content">
-                            {(blockDef?.fields ?? []).map((subField: FieldDefinition) => (
-                                <FormField
-                                    key={subField.name}
-                                    field={subField}
-                                    value={block[subField.name]}
-                                    name={`${name}[${index}].${subField.name}`}
-                                    onChange={(_fieldName, fieldValue) =>
-                                        onFieldChange(
-                                            block._id,
-                                            subField.name,
-                                            fieldValue
-                                        )
-                                    }
-                                    {...(disabled !== undefined ? { disabled } : {})}
-                                />
-                            ))}
-                        </div>
-                    </Collapsible.Panel>
-                )}
+                <Collapsible.Panel className="am-blocks-block-panel">
+                    <div
+                        className={clsx(
+                            'am-blocks-block-content',
+                            block._disabled === true && 'am-blocks-block-content-disabled'
+                        )}
+                    >
+                        {(blockDef?.fields ?? []).map((subField: FieldDefinition) => (
+                            <FormField
+                                key={subField.name}
+                                field={subField}
+                                value={block[subField.name]}
+                                name={`${name}[${index}].${subField.name}`}
+                                onChange={(_fieldName, fieldValue) =>
+                                    onFieldChange(block._id, subField.name, fieldValue)
+                                }
+                                {...(disabled !== undefined ? { disabled } : {})}
+                            />
+                        ))}
+                    </div>
+                </Collapsible.Panel>
             </Collapsible.Root>
         </div>
     );

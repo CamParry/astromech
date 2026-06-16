@@ -196,7 +196,11 @@ function SortableTreeNode({
     const canOutdent = parentId !== null;
 
     return (
-        <div ref={setNodeRef} style={style} className={clsx('am-tree-node', isDragging && 'am-tree-node-dragging')}>
+        <div
+            ref={setNodeRef}
+            style={style}
+            className={clsx('am-tree-node', isDragging && 'am-tree-node-dragging')}
+        >
             <div className="am-tree-node-inner">
                 <Collapsible.Root open={open} onOpenChange={setOpen}>
                     <div
@@ -266,7 +270,11 @@ function SortableTreeNode({
                                                 : t('fields.treeDisable')
                                         }
                                     >
-                                        {nodeDisabled ? <Eye size={16} /> : <EyeOff size={16} />}
+                                        {nodeDisabled ? (
+                                            <EyeOff size={16} />
+                                        ) : (
+                                            <Eye size={16} />
+                                        )}
                                     </button>
                                     <button
                                         type="button"
@@ -291,75 +299,89 @@ function SortableTreeNode({
                             <Collapsible.Trigger
                                 className="am-tree-btn am-tree-btn-icon"
                                 aria-label={
-                                    open ? t('fields.treeCollapse') : t('fields.treeExpand')
+                                    open
+                                        ? t('fields.treeCollapse')
+                                        : t('fields.treeExpand')
                                 }
                             >
-                                {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                {open ? (
+                                    <ChevronUp size={16} />
+                                ) : (
+                                    <ChevronDown size={16} />
+                                )}
                             </Collapsible.Trigger>
                         </div>
                     </div>
 
-                    {!nodeDisabled && (
-                        <Collapsible.Panel className="am-tree-node-panel">
-                            <div className="am-tree-node-content">
-                                {fields.map((subField) => (
-                                    <FormField
-                                        key={subField.name}
-                                        field={subField}
-                                        value={node[subField.name]}
-                                        name={`${fieldName}[${node._id}].${subField.name}`}
-                                        onChange={(_n, v) =>
-                                            onUpdateField(node._id, subField.name, v)
-                                        }
-                                        {...(disabled !== undefined ? { disabled } : {})}
-                                    />
-                                ))}
+                    <Collapsible.Panel className="am-tree-node-panel">
+                        <div
+                            className={clsx(
+                                'am-tree-node-content',
+                                nodeDisabled && 'am-tree-node-content-disabled'
+                            )}
+                        >
+                            {fields.map((subField) => (
+                                <FormField
+                                    key={subField.name}
+                                    field={subField}
+                                    value={node[subField.name]}
+                                    name={`${fieldName}[${node._id}].${subField.name}`}
+                                    onChange={(_n, v) =>
+                                        onUpdateField(node._id, subField.name, v)
+                                    }
+                                    {...(disabled !== undefined ? { disabled } : {})}
+                                />
+                            ))}
+                        </div>
+
+                        {/* Per-node children (recursive) */}
+                        {children.length > 0 && (
+                            <div className="am-tree-children">
+                                <SortableSiblingList
+                                    nodes={children}
+                                    parentId={node._id}
+                                    depth={depth + 1}
+                                    maxDepth={maxDepth}
+                                    fields={fields}
+                                    fieldName={fieldName}
+                                    disabled={disabled}
+                                    onReorder={onReorder}
+                                    onAddChild={onAddChild}
+                                    onRemove={onRemove}
+                                    onDuplicate={onDuplicate}
+                                    onToggleDisabled={onToggleDisabled}
+                                    onUpdateField={onUpdateField}
+                                    onIndent={onIndent}
+                                    onOutdent={onOutdent}
+                                />
                             </div>
+                        )}
 
-                            {/* Per-node children (recursive) */}
-                            {children.length > 0 && (
-                                <div className="am-tree-children">
-                                    <SortableSiblingList
-                                        nodes={children}
-                                        parentId={node._id}
-                                        depth={depth + 1}
-                                        maxDepth={maxDepth}
-                                        fields={fields}
-                                        fieldName={fieldName}
-                                        disabled={disabled}
-                                        onReorder={onReorder}
-                                        onAddChild={onAddChild}
-                                        onRemove={onRemove}
-                                        onDuplicate={onDuplicate}
-                                        onToggleDisabled={onToggleDisabled}
-                                        onUpdateField={onUpdateField}
-                                        onIndent={onIndent}
-                                        onOutdent={onOutdent}
-                                    />
-                                </div>
-                            )}
-
-                            {!disabled && canAddChild && (
-                                <div className="am-tree-node-footer">
-                                    <button
-                                        type="button"
-                                        onClick={() => onAddChild(node._id)}
-                                        className="am-tree-btn am-tree-btn-add-child"
-                                    >
-                                        <Plus size={14} aria-hidden="true" />
-                                        {t('fields.treeAddChild')}
-                                    </button>
-                                </div>
-                            )}
-                            {!disabled && !canAddChild && (
-                                <div className="am-tree-node-footer">
-                                    <span style={{ fontSize: '0.8125rem', color: 'var(--am-color-text-muted)' }}>
-                                        {t('fields.treeMaxDepthReached')}
-                                    </span>
-                                </div>
-                            )}
-                        </Collapsible.Panel>
-                    )}
+                        {!disabled && canAddChild && (
+                            <div className="am-tree-node-footer">
+                                <button
+                                    type="button"
+                                    onClick={() => onAddChild(node._id)}
+                                    className="am-tree-btn am-tree-btn-add-child"
+                                >
+                                    <Plus size={14} aria-hidden="true" />
+                                    {t('fields.treeAddChild')}
+                                </button>
+                            </div>
+                        )}
+                        {!disabled && !canAddChild && (
+                            <div className="am-tree-node-footer">
+                                <span
+                                    style={{
+                                        fontSize: '0.8125rem',
+                                        color: 'var(--am-color-text-muted)',
+                                    }}
+                                >
+                                    {t('fields.treeMaxDepthReached')}
+                                </span>
+                            </div>
+                        )}
+                    </Collapsible.Panel>
                 </Collapsible.Root>
             </div>
 

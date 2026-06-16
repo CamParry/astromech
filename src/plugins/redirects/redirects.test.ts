@@ -64,7 +64,19 @@ const lookup = (input: { from: string }): Promise<RedirectMatch | null> => {
 let db: LibSQLDatabase<any>;
 
 function configWithRedirects(): AstromechConfig {
-    return { ...makeTestConfig(), plugins: [redirects()] };
+    const base = makeTestConfig();
+    // The slug-change hook only records a redirect for types with a `url`
+    // template (core's single source of truth for an entry's front-end path).
+    // Give the test `post` one — scoped here, not in the shared harness, so
+    // other suites (e.g. menus) keep their existing entry-ref behaviour.
+    const basePost = base.entries['post'];
+    if (!basePost) throw new Error('test harness missing `post` entry type');
+    const post = { ...basePost, url: '/{slug}' };
+    return {
+        ...base,
+        entries: { ...base.entries, post },
+        plugins: [redirects()],
+    };
 }
 
 /** Raw row count in the plugin's own table. */

@@ -54,6 +54,12 @@
     opacity: 0.95;
 }
 
+/* Disabled (hidden from the front end, still editable here): a muted body so
+   the block visibly recedes without becoming unreadable. */
+.am-blocks-block-content-disabled {
+    opacity: 0.6;
+}
+
 /* ============================================================================
    Block header
    ============================================================================ */

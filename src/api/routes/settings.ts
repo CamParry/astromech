@@ -11,8 +11,14 @@
 
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { Astromech } from '@/sdk/local/index.js';
-import { forbidden, fromZodError, internalError, notFound } from '@/api/middleware/errors.js';
+import {
+    forbidden,
+    fromZodError,
+    internalError,
+    notFound,
+} from '@/api/middleware/errors.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
+import type { JsonValue } from '@/types/index.js';
 import { can } from '@/core/permissions.js';
 import { setSettingSchema } from '@/schemas/settings.js';
 
@@ -29,7 +35,9 @@ router.get('/', async (c) => {
     if (!can(role, 'settings:read')) return forbidden(c);
 
     try {
-        const settings = await Astromech.settings.all();
+        // Authenticated admin endpoint (guarded by settings:read): return the
+        // full set, not just public keys.
+        const settings = await Astromech.settings.all({ full: true });
         return c.json({ data: settings });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -46,7 +54,11 @@ router.get('/:key', async (c) => {
     if (!can(role, 'settings:read')) return forbidden(c);
 
     try {
-        const value = await Astromech.settings.get(key);
+        // Authenticated admin endpoint (guarded by settings:read): return the
+        // full shape so private settings (e.g. plugin pages) are editable. The
+        // fetch SDK requests base + per-locale keys separately, so no locale
+        // merge is needed here.
+        const value = await Astromech.settings.get(key, { full: true });
         if (value === null) return notFound(c, `Setting '${key}' not found`);
         return c.json({ data: { key, value } });
     } catch (err) {
@@ -68,7 +80,7 @@ router.put('/:key', async (c) => {
         const parsed = setSettingSchema.safeParse(raw);
         if (!parsed.success) return fromZodError(c, parsed.error);
 
-        const setting = await Astromech.settings.set(key, parsed.data.value as import('@/types/index.js').JsonValue);
+        const setting = await Astromech.settings.set(key, parsed.data.value as JsonValue);
         return c.json({ data: setting });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);

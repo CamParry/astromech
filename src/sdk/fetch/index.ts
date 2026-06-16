@@ -520,13 +520,21 @@ const settingsApi: SettingsApi = {
         return res.data;
     },
 
-    async get(key: string, opts?: { locale?: string; full?: boolean }): Promise<JsonValue | null> {
+    async get(
+        key: string,
+        opts?: { locale?: string; full?: boolean }
+    ): Promise<JsonValue | null> {
         // A missing setting is a normal state, not an error: swallow the 404 so
         // react-query doesn't treat it as a failure (and retry with backoff —
         // the cause of the slow settings-page spinner).
         const getValue = async (k: string): Promise<JsonValue | null> => {
             try {
-                const res = await apiFetch<{ data: Setting }>(`/settings/${k}`);
+                // Keys embed a path (`plugin:<ns>:/menus/main`) and a `:locale`
+                // suffix — encode so slashes/colons stay in one path segment and
+                // match the `/settings/:key` route (the server decodes it back).
+                const res = await apiFetch<{ data: Setting }>(
+                    `/settings/${encodeURIComponent(k)}`
+                );
                 return res.data.value ?? null;
             } catch (err) {
                 if (err instanceof AstromechApiError && err.status === 404) return null;
@@ -542,10 +550,17 @@ const settingsApi: SettingsApi = {
                 getValue(`${key}:${opts.locale}`),
             ]);
             if (
-                base !== null && typeof base === 'object' && !Array.isArray(base) &&
-                loc !== null && typeof loc === 'object' && !Array.isArray(loc)
+                base !== null &&
+                typeof base === 'object' &&
+                !Array.isArray(base) &&
+                loc !== null &&
+                typeof loc === 'object' &&
+                !Array.isArray(loc)
             ) {
-                return { ...(base as Record<string, JsonValue>), ...(loc as Record<string, JsonValue>) };
+                return {
+                    ...(base as Record<string, JsonValue>),
+                    ...(loc as Record<string, JsonValue>),
+                };
             }
             return loc ?? base;
         }
@@ -553,10 +568,13 @@ const settingsApi: SettingsApi = {
     },
 
     async set(key: string, value: JsonValue): Promise<Setting> {
-        const res = await apiFetch<{ data: Setting }>(`/settings/${key}`, {
-            method: 'PUT',
-            body: { value },
-        });
+        const res = await apiFetch<{ data: Setting }>(
+            `/settings/${encodeURIComponent(key)}`,
+            {
+                method: 'PUT',
+                body: { value },
+            }
+        );
         return res.data;
     },
 };
