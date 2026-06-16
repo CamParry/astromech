@@ -33,6 +33,7 @@ import { RelationshipsRepository } from '@/db/repositories/relationships.js';
 import { populateEntries } from '@/db/repositories/populate.js';
 import { getEntryStorage } from '@/core/entry-storage/registry.js';
 import { resolveEntryType } from '@/core/entry-types.js';
+import { resolveContentLocale } from '@/support/locale.js';
 import type { EntryRecord, EntryStorage, StorageDb } from '@/core/entry-storage/types.js';
 import type {
     Entry,
@@ -73,7 +74,14 @@ function validate<T>(schema: z.ZodType<T>, data: unknown): T {
 }
 
 function getDefaultLocale(): string {
-    return (config as { defaultLocale?: string }).defaultLocale ?? 'en';
+    // `defaultLocale` is a DISPLAY tag (e.g. `en-GB`) and may not be a content
+    // locale that entries are tagged with. The storage layer matches locale
+    // EXACTLY, so bridge the display tag down its RFC 4647 fallback chain to an
+    // available content locale; fall back to the first configured locale.
+    const cfg = config as { defaultLocale?: string; locales?: readonly string[] };
+    const locales = cfg.locales ?? [];
+    const requested = cfg.defaultLocale ?? 'en';
+    return resolveContentLocale(requested, locales) ?? locales[0] ?? requested;
 }
 
 /**
