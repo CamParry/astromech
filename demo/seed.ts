@@ -155,47 +155,81 @@ async function seed(): Promise<void> {
     console.log();
 
     // -------------------------------------------------------------------------
-    // Media — real JPEG bytes generated via sharp (no network), written to
-    // demo/public/uploads/<id>.jpg so /_media/<id>.jpg can serve them.
+    // Media — real placeholder photos downloaded from picsum.photos (deterministic
+    // per seed), written to demo/public/uploads/<id>.jpg so /_media/<id>.jpg serves
+    // them. Falls back to a flat sharp-generated colour if the download fails, so
+    // seeding never hard-fails offline.
     // -------------------------------------------------------------------------
 
     type Bg = { r: number; g: number; b: number };
 
-    async function seedMedia(
-        id: string,
-        filename: string,
+    type MediaSpec = {
+        id: string;
+        filename: string;
+        seed: string;
+        width: number;
+        height: number;
+        fallbackBg: Bg;
+        alt: string;
+        fields: Record<string, unknown>;
+    };
+
+    /** Download a deterministic placeholder photo; null if unreachable. */
+    async function fetchPlaceholder(
+        seed: string,
         width: number,
-        height: number,
-        bg: Bg,
-        alt: string,
-        fields: Record<string, unknown>
-    ): Promise<schema.NewMediaRow> {
-        const buf = await sharpLib({
-            create: { width, height, channels: 3, background: bg },
-        })
-            .jpeg({ quality: 80 })
-            .toBuffer();
+        height: number
+    ): Promise<Buffer | null> {
+        try {
+            const res = await fetch(
+                `https://picsum.photos/seed/${seed}/${width}/${height}`,
+                { redirect: 'follow', signal: AbortSignal.timeout(20000) }
+            );
+            if (!res.ok) return null;
+            return Buffer.from(await res.arrayBuffer());
+        } catch {
+            return null;
+        }
+    }
+
+    async function seedMedia(spec: MediaSpec): Promise<schema.NewMediaRow> {
+        let buf = await fetchPlaceholder(spec.seed, spec.width, spec.height);
+        let downloaded = buf !== null;
+        if (!buf) {
+            // Offline fallback — a flat colour so the row + file still exist.
+            buf = await sharpLib({
+                create: {
+                    width: spec.width,
+                    height: spec.height,
+                    channels: 3,
+                    background: spec.fallbackBg,
+                },
+            })
+                .jpeg({ quality: 80 })
+                .toBuffer();
+        }
+        if (!downloaded)
+            console.log(`    ! ${spec.filename}: download failed, used fallback`);
 
         const bytes = new Uint8Array(buf);
 
         const uploadsDir = new URL('./public/uploads/', import.meta.url);
         await mkdir(uploadsDir, { recursive: true });
-        await writeFile(new URL(`${id}.jpg`, uploadsDir), buf);
+        await writeFile(new URL(`${spec.id}.jpg`, uploadsDir), buf);
 
         const dims = readImageDimensions(bytes);
         const version = await contentVersion(bytes);
-        const driver = sharp();
-        const blurhash = await driver.placeholder(bytes);
+        const blurhash = await sharp().placeholder(bytes);
 
         return {
-            id,
-            filename,
+            id: spec.id,
+            filename: spec.filename,
             mimeType: 'image/jpeg',
             size: buf.length,
-            width: dims?.width ?? width,
-            height: dims?.height ?? height,
-            alt,
-            fields,
+            width: dims?.width ?? spec.width,
+            height: dims?.height ?? spec.height,
+            alt: spec.alt,
+            fields: spec.fields,
             metadata: { version, blurhash },
             createdAt: now,
             updatedAt: now,
@@ -203,45 +237,115 @@ async function seed(): Promise<void> {
         };
     }
 
+    // The three content-referenced images (used by entries below) keep stable vars.
     const mediaHeroId = crypto.randomUUID();
     const mediaDashboardId = crypto.randomUUID();
     const mediaTeamId = crypto.randomUUID();
 
-    const mediaRows = await Promise.all([
-        seedMedia(
-            mediaHeroId,
-            'astromech-hero.jpg',
-            1920,
-            1080,
-            { r: 109, g: 40, b: 217 },
-            'Astromech CMS hero',
-            { alt_text: 'Astromech CMS hero image', copyright: '© 2026 Astromech' }
-        ),
-        seedMedia(
-            mediaDashboardId,
-            'astromech-dashboard.jpg',
-            1280,
-            800,
-            { r: 37, g: 99, b: 235 },
-            'Astromech admin dashboard',
-            {
-                alt_text: 'Astromech admin dashboard screenshot',
-                copyright: '© 2026 Astromech',
-            }
-        ),
-        seedMedia(
-            mediaTeamId,
-            'astromech-team.jpg',
-            800,
-            600,
-            { r: 13, g: 148, b: 136 },
-            'Astromech team',
-            { alt_text: 'The Astromech team', copyright: '© 2026 Astromech' }
-        ),
-    ]);
+    const meta = (alt_text: string) => ({
+        photographer: 'Picsum Placeholder',
+        copyright: '© 2026 Astromech',
+        alt_text,
+    });
+
+    const mediaSpecs: MediaSpec[] = [
+        {
+            id: mediaHeroId,
+            filename: 'astromech-hero.jpg',
+            seed: 'astromech-hero',
+            width: 1920,
+            height: 1080,
+            fallbackBg: { r: 109, g: 40, b: 217 },
+            alt: 'Astromech CMS hero',
+            fields: meta('Astromech CMS hero image'),
+        },
+        {
+            id: mediaDashboardId,
+            filename: 'astromech-dashboard.jpg',
+            seed: 'astromech-dashboard',
+            width: 1280,
+            height: 800,
+            fallbackBg: { r: 37, g: 99, b: 235 },
+            alt: 'Astromech admin dashboard',
+            fields: meta('Astromech admin dashboard screenshot'),
+        },
+        {
+            id: mediaTeamId,
+            filename: 'astromech-team.jpg',
+            seed: 'astromech-team',
+            width: 800,
+            height: 600,
+            fallbackBg: { r: 13, g: 148, b: 136 },
+            alt: 'Astromech team',
+            fields: meta('The Astromech team'),
+        },
+        // Extra placeholder photos to populate the media library.
+        {
+            id: crypto.randomUUID(),
+            filename: 'mountain-vista.jpg',
+            seed: 'mountain-vista',
+            width: 1600,
+            height: 1000,
+            fallbackBg: { r: 71, g: 85, b: 105 },
+            alt: 'Mountain vista at dawn',
+            fields: meta('Mountain vista at dawn'),
+        },
+        {
+            id: crypto.randomUUID(),
+            filename: 'city-skyline.jpg',
+            seed: 'city-skyline',
+            width: 1600,
+            height: 900,
+            fallbackBg: { r: 30, g: 41, b: 59 },
+            alt: 'City skyline at night',
+            fields: meta('City skyline at night'),
+        },
+        {
+            id: crypto.randomUUID(),
+            filename: 'workspace-desk.jpg',
+            seed: 'workspace-desk',
+            width: 1200,
+            height: 1200,
+            fallbackBg: { r: 120, g: 113, b: 108 },
+            alt: 'Tidy workspace desk',
+            fields: meta('Tidy workspace desk'),
+        },
+        {
+            id: crypto.randomUUID(),
+            filename: 'coastal-cliffs.jpg',
+            seed: 'coastal-cliffs',
+            width: 1200,
+            height: 1500,
+            fallbackBg: { r: 14, g: 116, b: 144 },
+            alt: 'Coastal cliffs (portrait)',
+            fields: meta('Coastal cliffs portrait'),
+        },
+        {
+            id: crypto.randomUUID(),
+            filename: 'forest-path.jpg',
+            seed: 'forest-path',
+            width: 1600,
+            height: 1067,
+            fallbackBg: { r: 22, g: 101, b: 52 },
+            alt: 'Forest path in autumn',
+            fields: meta('Forest path in autumn'),
+        },
+        {
+            id: crypto.randomUUID(),
+            filename: 'abstract-texture.jpg',
+            seed: 'abstract-texture',
+            width: 1400,
+            height: 1400,
+            fallbackBg: { r: 168, g: 85, b: 247 },
+            alt: 'Abstract colour texture',
+            fields: meta('Abstract colour texture'),
+        },
+    ];
+
+    const mediaRows = await Promise.all(mediaSpecs.map(seedMedia));
 
     await db.insert(schema.mediaTable).values(mediaRows);
-    console.log('  Created 3 media items\n');
+    console.log(`  Created ${mediaRows.length} media items\n`);
 
     // -------------------------------------------------------------------------
     // Categories
@@ -1551,7 +1655,9 @@ async function seed(): Promise<void> {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('  Seed complete');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('  Media          3  (real JPEG bytes, written to demo/public/uploads/)');
+    console.log(
+        '  Media          9  (placeholder photos downloaded to demo/public/uploads/)'
+    );
     console.log('  Categories     4  (engineering, product, community, tutorials)');
     console.log(
         '  Tags           5  (astro, cloudflare, typescript, headless-cms, edge)'
