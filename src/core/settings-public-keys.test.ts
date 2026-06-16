@@ -22,9 +22,18 @@ const driver: DatabaseDriver = {
 
 const storageDriver: StorageDriver = {
     name: 'noop',
-    upload: async () => '',
-    delete: async () => undefined,
-    getUrl: () => '',
+    async put() {
+        return undefined;
+    },
+    async get() {
+        return null;
+    },
+    async delete() {
+        return undefined;
+    },
+    async list() {
+        return [];
+    },
 };
 
 function baseConfig(overrides: Partial<AstromechConfig> = {}): AstromechConfig {

@@ -26,14 +26,17 @@ function makeCapabilityTestConfig(): AstromechConfig {
         },
         storage: {
             name: 'test-noop',
-            async upload(_file: File, path: string): Promise<string> {
-                return `/${path}`;
+            async put() {
+                return undefined;
+            },
+            async get() {
+                return null;
             },
             async delete(): Promise<void> {
                 return undefined;
             },
-            getUrl(path: string): string {
-                return `/${path}`;
+            async list() {
+                return [];
             },
         },
         defaultLocale: 'en',

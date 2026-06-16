@@ -50,14 +50,20 @@ export async function createTestDb(): Promise<Db> {
 
 const noopStorage: StorageDriver = {
     name: 'test-noop',
-    async upload(_file: File, path: string): Promise<string> {
-        return `/${path}`;
+    async put(): Promise<void> {
+        return undefined;
+    },
+    async get(): Promise<null> {
+        return null;
     },
     async delete(): Promise<void> {
         return undefined;
     },
-    getUrl(path: string): string {
-        return `/${path}`;
+    async list(): Promise<string[]> {
+        return [];
+    },
+    getDirectUrl(key: string): string | null {
+        return `/${key}`;
     },
 };
 

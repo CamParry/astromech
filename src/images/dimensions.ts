@@ -8,7 +8,7 @@
 
 /** True only for raster bitmap types we can optimise (transform). Excludes svg, gif, video, pdf, etc. */
 export function isOptimisableImage(mimeType: string): boolean {
-    const normalised = mimeType.split(';')[0].trim().toLowerCase();
+    const normalised = (mimeType.split(';')[0] ?? '').trim().toLowerCase();
     return (
         normalised === 'image/jpeg' ||
         normalised === 'image/png' ||

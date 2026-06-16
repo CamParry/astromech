@@ -18,9 +18,18 @@ const driver: DatabaseDriver = {
 
 const storageDriver: StorageDriver = {
     name: 'noop',
-    upload: async () => '',
-    delete: async () => undefined,
-    getUrl: () => '',
+    async put() {
+        return undefined;
+    },
+    async get() {
+        return null;
+    },
+    async delete() {
+        return undefined;
+    },
+    async list() {
+        return [];
+    },
 };
 
 const entryType = (single: string): EntryTypeConfig => ({
@@ -93,7 +102,9 @@ describe('resolveConfig pluginEntries', () => {
             baseConfig([
                 {
                     package: '@astromech/store',
-                    entries: [{ ...entryType('Item'), type: 'item', storage: emptyStorage() }],
+                    entries: [
+                        { ...entryType('Item'), type: 'item', storage: emptyStorage() },
+                    ],
                 },
             ])
         );

@@ -22,6 +22,9 @@ import { resolveConfig } from '@/core/config-resolver.js';
 import { resolveRoles } from '@/core/permissions.js';
 import { registerRoutes } from '@/core/route-registration.js';
 import { setStorageDriver } from '@/storage/registry.js';
+import { setImageConfig } from '@/images/registry.js';
+import { normaliseWidths } from '@/images/url.js';
+import { defaultImageWidths } from '@/images/defaults.js';
 import { setEmailConfig } from '@/email/registry.js';
 import { setDb, getDb } from '@/db/registry.js';
 import { registerBuiltInCronJobs } from '@/cron/index.js';
@@ -107,6 +110,16 @@ export function astromech(config: AstromechConfig): AstroIntegration {
 
                 setDb(config.db.getInstance());
                 setStorageDriver(config.storage);
+                if (config.image) {
+                    setImageConfig({
+                        driver: config.image.driver,
+                        widths: normaliseWidths(
+                            config.image.widths ?? defaultImageWidths
+                        ),
+                        avif: config.image.avif ?? true,
+                        mediaRoute: resolvedConfig.mediaRoute,
+                    });
+                }
                 if (config.email) {
                     setEmailConfig(config.email);
                 }

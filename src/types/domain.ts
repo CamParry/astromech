@@ -72,6 +72,14 @@ export type Relationship = {
 // Media
 // ============================================================================
 
+export type MediaMetadata = {
+    blurhash?: string | null;
+    version?: string;
+    orientation?: number;
+    duration?: number;
+    pageCount?: number;
+};
+
 export type Media = {
     id: string;
     filename: string;
@@ -82,6 +90,7 @@ export type Media = {
     height?: number | null;
     alt?: string | null;
     fields: JsonObject | null;
+    metadata?: MediaMetadata | null;
     createdAt: Date;
     updatedAt: Date;
     createdBy: string | null;

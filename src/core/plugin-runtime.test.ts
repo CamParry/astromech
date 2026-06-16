@@ -65,10 +65,12 @@ const config: ResolvedConfig = {
     publicSettingKeys: [],
     storage: {
         name: 'noop',
-        upload: async () => '',
+        put: () => Promise.resolve(),
+        get: () => Promise.resolve(null),
         delete: () => Promise.resolve(),
-        getUrl: () => '',
+        list: () => Promise.resolve([]),
     },
+    mediaRoute: '/_media',
 };
 
 const def = (

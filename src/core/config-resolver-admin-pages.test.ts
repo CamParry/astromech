@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { resolveConfig } from '@/core/config-resolver.js';
 import { defineAdminPage } from '@/index.js';
-import type { AdminPage, AstromechConfig, DatabaseDriver, StorageDriver } from '@/types/index.js';
+import type {
+    AdminPage,
+    AstromechConfig,
+    DatabaseDriver,
+    StorageDriver,
+} from '@/types/index.js';
 
 const driver: DatabaseDriver = {
     type: 'test',
@@ -12,15 +17,30 @@ const driver: DatabaseDriver = {
 
 const storageDriver: StorageDriver = {
     name: 'noop',
-    upload: async () => '',
-    delete: async () => undefined,
-    getUrl: () => '',
+    async put() {
+        return undefined;
+    },
+    async get() {
+        return null;
+    },
+    async delete() {
+        return undefined;
+    },
+    async list() {
+        return [];
+    },
 };
 
 const baseConfig = (overrides: Partial<AstromechConfig> = {}): AstromechConfig => ({
     db: driver,
     storage: storageDriver,
-    entries: { post: { single: 'Post', plural: 'Posts', fields: [{ name: 'body', type: 'text' }] } },
+    entries: {
+        post: {
+            single: 'Post',
+            plural: 'Posts',
+            fields: [{ name: 'body', type: 'text' }],
+        },
+    },
     plugins: [],
     ...overrides,
 });
@@ -57,9 +77,7 @@ describe('resolveConfig adminPages — flat fields normalization', () => {
         const resolved = resolveConfig(
             baseConfig({
                 admin: {
-                    pages: [
-                        simplePage({ fields: [{ name: 'siteName', type: 'text' }] }),
-                    ],
+                    pages: [simplePage({ fields: [{ name: 'siteName', type: 'text' }] })],
                 },
             })
         );
@@ -96,7 +114,9 @@ describe('resolveConfig adminPages — flat fields normalization', () => {
             baseConfig({
                 admin: {
                     pages: [
-                        simplePage({ fields: { main: [{ name: 'title', type: 'text' }] } }),
+                        simplePage({
+                            fields: { main: [{ name: 'title', type: 'text' }] },
+                        }),
                     ],
                 },
             })
@@ -115,7 +135,11 @@ describe('resolveConfig adminPages — scalar fields preserved', () => {
             baseConfig({
                 admin: {
                     pages: [
-                        simplePage({ path: 'branding', label: 'Branding', icon: 'Palette' }),
+                        simplePage({
+                            path: 'branding',
+                            label: 'Branding',
+                            icon: 'Palette',
+                        }),
                     ],
                 },
             })
@@ -127,9 +151,7 @@ describe('resolveConfig adminPages — scalar fields preserved', () => {
     });
 
     it('should omit icon when not provided', () => {
-        const resolved = resolveConfig(
-            baseConfig({ admin: { pages: [simplePage()] } })
-        );
+        const resolved = resolveConfig(baseConfig({ admin: { pages: [simplePage()] } }));
         expect('icon' in (resolved.adminPages[0] ?? {})).toBe(false);
     });
 });
@@ -140,9 +162,7 @@ describe('resolveConfig adminPages — scalar fields preserved', () => {
 
 describe('resolveConfig adminPages — translatable flag', () => {
     it('should default translatable to false when not set', () => {
-        const resolved = resolveConfig(
-            baseConfig({ admin: { pages: [simplePage()] } })
-        );
+        const resolved = resolveConfig(baseConfig({ admin: { pages: [simplePage()] } }));
         expect(resolved.adminPages[0]?.translatable).toBe(false);
     });
 
@@ -287,7 +307,11 @@ describe('resolveConfig adminPages — multiple pages', () => {
             baseConfig({
                 admin: {
                     pages: [
-                        simplePage({ path: 'globals', translatable: true, icon: 'Globe' }),
+                        simplePage({
+                            path: 'globals',
+                            translatable: true,
+                            icon: 'Globe',
+                        }),
                         simplePage({ path: 'branding', translatable: false }),
                     ],
                 },
@@ -315,16 +339,12 @@ describe('resolveConfig adminPages — unified ResolvedAdminPage shape', () => {
     });
 
     it('host page has componentKey null (fields mode)', () => {
-        const resolved = resolveConfig(
-            baseConfig({ admin: { pages: [simplePage()] } })
-        );
+        const resolved = resolveConfig(baseConfig({ admin: { pages: [simplePage()] } }));
         expect(resolved.adminPages[0]?.componentKey).toBeNull();
     });
 
     it('host page defaults permission to settings:read', () => {
-        const resolved = resolveConfig(
-            baseConfig({ admin: { pages: [simplePage()] } })
-        );
+        const resolved = resolveConfig(baseConfig({ admin: { pages: [simplePage()] } }));
         expect(resolved.adminPages[0]?.permission).toBe('settings:read');
     });
 
@@ -338,9 +358,7 @@ describe('resolveConfig adminPages — unified ResolvedAdminPage shape', () => {
     });
 
     it('host page nav defaults to true', () => {
-        const resolved = resolveConfig(
-            baseConfig({ admin: { pages: [simplePage()] } })
-        );
+        const resolved = resolveConfig(baseConfig({ admin: { pages: [simplePage()] } }));
         expect(resolved.adminPages[0]?.nav).toBe(true);
     });
 
@@ -359,9 +377,9 @@ describe('resolveConfig adminPages — unified ResolvedAdminPage shape', () => {
 describe('resolveConfig adminPages — XOR validation', () => {
     it('throws when neither fields nor component is provided', () => {
         const page = { path: 'empty', label: 'Empty' } as AdminPage;
-        expect(() =>
-            resolveConfig(baseConfig({ admin: { pages: [page] } }))
-        ).toThrow(/empty.*exactly one of/);
+        expect(() => resolveConfig(baseConfig({ admin: { pages: [page] } }))).toThrow(
+            /empty.*exactly one of/
+        );
     });
 
     it('throws when both fields and component are provided', () => {
@@ -371,9 +389,9 @@ describe('resolveConfig adminPages — XOR validation', () => {
             fields: [{ name: 'x', type: 'text' }],
             component: './Both.tsx',
         };
-        expect(() =>
-            resolveConfig(baseConfig({ admin: { pages: [page] } }))
-        ).toThrow(/both.*exactly one of/);
+        expect(() => resolveConfig(baseConfig({ admin: { pages: [page] } }))).toThrow(
+            /both.*exactly one of/
+        );
     });
 
     it('throws for host component pages (not yet supported)', () => {
@@ -382,9 +400,9 @@ describe('resolveConfig adminPages — XOR validation', () => {
             label: 'Widget',
             component: './Widget.tsx',
         };
-        expect(() =>
-            resolveConfig(baseConfig({ admin: { pages: [page] } }))
-        ).toThrow(/not yet supported/);
+        expect(() => resolveConfig(baseConfig({ admin: { pages: [page] } }))).toThrow(
+            /not yet supported/
+        );
     });
 
     it('accepts a page with only fields', () => {

@@ -38,6 +38,7 @@ export type { BuiltInRoleSlug } from '@/core/permissions.js';
 export { withDefaults } from '@/core/options.js';
 export { resolveEntryUrl, resolveEntryPath } from '@/core/entry-url.js';
 export type { UrlEntry } from '@/core/entry-url.js';
+export { defaultImageWidths } from '@/images/defaults.js';
 
 // Field factories now live in the `astromech/fields` subpath (see src/fields.ts).
 

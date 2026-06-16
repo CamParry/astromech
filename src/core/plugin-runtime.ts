@@ -347,10 +347,12 @@ function emptyConfig(): ResolvedConfig {
         publicSettingKeys: [],
         storage: {
             name: 'noop',
-            upload: () => Promise.resolve(''),
+            put: () => Promise.resolve(),
+            get: () => Promise.resolve(null),
             delete: () => Promise.resolve(),
-            getUrl: () => '',
+            list: () => Promise.resolve([]),
         },
+        mediaRoute: '/_media',
     } as ResolvedConfig;
 }
 

@@ -13,6 +13,7 @@ import type {
 } from './fields.js';
 import type { PluginDefinition, PluginNavItem } from './plugins.js';
 import type { EntryStorage } from '@/core/entry-storage/types.js';
+import type { ImageFormat } from '@/images/url.js';
 
 // ============================================================================
 // Drivers
@@ -25,9 +26,39 @@ export type DatabaseDriver = {
 
 export type StorageDriver = {
     name: string;
-    upload: (file: File, path: string) => Promise<string>;
-    delete: (path: string) => Promise<void>;
-    getUrl: (path: string) => string;
+    put(
+        key: string,
+        body: ReadableStream | Uint8Array,
+        opts?: { contentType?: string }
+    ): Promise<void>;
+    get(
+        key: string
+    ): Promise<{ body: ReadableStream; size: number; contentType?: string } | null>;
+    delete(key: string): Promise<void>;
+    list(prefix: string): Promise<string[]>;
+    getDirectUrl?(key: string): string | null;
+};
+
+export type ImageSource = {
+    contentType: string;
+    getBytes(): Promise<Uint8Array>;
+    originUrl: string;
+};
+
+export type ImageDriver = {
+    name: string;
+    transform(
+        src: ImageSource,
+        opts: { width: number; format: ImageFormat }
+    ): Promise<{ body: ReadableStream | Uint8Array; contentType: string }>;
+    placeholder?(bytes: Uint8Array): Promise<string | null>;
+    cachesVariants?: boolean;
+};
+
+export type ImageConfig = {
+    driver: ImageDriver;
+    widths?: number[];
+    avif?: boolean;
 };
 
 export type EmailMessage = {
@@ -232,6 +263,8 @@ export type AstromechConfig = {
     storage: StorageDriver;
     adminRoute?: string;
     apiRoute?: string;
+    mediaRoute?: string;
+    image?: ImageConfig;
     entries: Record<string, EntryTypeConfig>;
     admin?: {
         pages?: AdminPage[];
@@ -276,6 +309,7 @@ export type AstromechConfig = {
 export type ResolvedConfig = Omit<AstromechConfig, 'plugins' | 'db'> & {
     adminRoute: string;
     apiRoute: string;
+    mediaRoute: string;
     entries: Record<string, ResolvedEntryTypeConfig>;
     /**
      * Plugin-contributed entry types, namespaced by plugin name → bare type →
