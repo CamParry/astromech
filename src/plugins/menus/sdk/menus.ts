@@ -100,16 +100,25 @@ export function buildMenusSdk(configs: MenuConfig[]): Record<string, AnyPluginSd
                 if (!key) return null;
                 if (!configuredKeys.has(key)) return null;
 
-                const locale = typeof input?.locale === 'string' ? input.locale : undefined;
+                const locale =
+                    typeof input?.locale === 'string' ? input.locale : undefined;
                 const blobKey = menuBlobKey(key);
 
-                const blob = await ctx.sdk.settings.get(blobKey, locale ? { locale } : undefined);
+                // Trusted internal read of the plugin's own menu blob: request the
+                // full shape (settings default to public-only) — the handler returns a
+                // sanitised menu tree, never the raw settings, so this never leaks.
+                const blob = await ctx.sdk.settings.get(blobKey, {
+                    full: true,
+                    ...(locale ? { locale } : {}),
+                });
                 if (blob === null || typeof blob !== 'object' || Array.isArray(blob)) {
                     return [];
                 }
 
                 const raw = blob as Record<string, unknown>;
-                const items = Array.isArray(raw['items']) ? (raw['items'] as RawNode[]) : [];
+                const items = Array.isArray(raw['items'])
+                    ? (raw['items'] as RawNode[])
+                    : [];
                 return walkNodes(items, ctx, locale);
             },
         }),

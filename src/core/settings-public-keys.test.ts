@@ -58,7 +58,7 @@ describe('publicSettingKeys — default', () => {
                                 {
                                     path: '/settings',
                                     label: 'Settings',
-                                    settings: { fields: [{ name: 'key', type: 'text' }] },
+                                    fields: [{ name: 'key', type: 'text' }],
                                     // public not set → defaults private
                                 },
                             ],
@@ -87,7 +87,7 @@ describe('publicSettingKeys — plugin page public: true', () => {
                                 {
                                     path: '/settings',
                                     label: 'Settings',
-                                    settings: { fields: [] },
+                                    fields: [],
                                     public: true,
                                 },
                             ],
@@ -114,13 +114,13 @@ describe('publicSettingKeys — plugin page public: true', () => {
                                 {
                                     path: '/settings',
                                     label: 'Settings',
-                                    settings: { fields: [] },
+                                    fields: [],
                                     // public: false (default)
                                 },
                                 {
                                     path: '/public-settings',
                                     label: 'Public Settings',
-                                    settings: { fields: [] },
+                                    fields: [],
                                     public: true,
                                 },
                             ],
@@ -130,7 +130,9 @@ describe('publicSettingKeys — plugin page public: true', () => {
             })
         );
         // Only the public page's key is included
-        expect(resolved.publicSettingKeys).toContain('plugin:test-plugin:/public-settings');
+        expect(resolved.publicSettingKeys).toContain(
+            'plugin:test-plugin:/public-settings'
+        );
         expect(resolved.publicSettingKeys).not.toContain('plugin:test-plugin:/settings');
     });
 });
@@ -149,9 +151,7 @@ describe('publicSettingKeys — config.publicSettings', () => {
     });
 
     it('does not add a prefix entry for raw publicSettings keys (user controls format)', () => {
-        const resolved = resolveConfig(
-            baseConfig({ publicSettings: ['my-key'] })
-        );
+        const resolved = resolveConfig(baseConfig({ publicSettings: ['my-key'] }));
         // Only 'my-key' itself — no auto-added 'my-key:'
         expect(resolved.publicSettingKeys).not.toContain('my-key:');
     });
@@ -173,7 +173,7 @@ describe('publicSettingKeys — no duplicates', () => {
                                 {
                                     path: '/settings',
                                     label: 'Settings',
-                                    settings: { fields: [] },
+                                    fields: [],
                                     public: true,
                                 },
                             ],
