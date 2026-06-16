@@ -1,0 +1,4 @@
+# Demo uploads are seeded at runtime — keep the directory, ignore its contents.
+*
+!.gitkeep
+!.gitignore
