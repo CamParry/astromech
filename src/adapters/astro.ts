@@ -25,6 +25,9 @@ import { setStorageDriver } from '@/storage/registry.js';
 import { setEmailConfig } from '@/email/registry.js';
 import { setDb, getDb } from '@/db/registry.js';
 import { registerBuiltInCronJobs } from '@/cron/index.js';
+import { setSchedulerDriver, getSchedulerDriver } from '@/cron/registry.js';
+import { nodeDriver } from '@/cron/drivers/index.js';
+import { onTick } from '@/cron/runner.js';
 import { bootPlugins, registerPlugins } from '@/core/plugin-runtime.js';
 import { collectPluginFieldTypes } from '@/core/plugin-fields.js';
 import {
@@ -111,6 +114,9 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                     setEmailConfig(config.email);
                 }
                 registerBuiltInCronJobs();
+                // Scheduler driver selection (triggering only; cadence lives in the cron
+                // table). Mirrors email-driver selection. Default = in-process node timer.
+                setSchedulerDriver(config.scheduler ?? nodeDriver);
                 registerPlugins(config.plugins ?? [], resolvedConfig);
                 // Boot crash-loud: requiredEnv validation, cron registration, setup().
                 await bootPlugins(config.plugins ?? []);
@@ -368,6 +374,11 @@ export function astromech(config: AstromechConfig): AstroIntegration {
             'astro:server:setup': async ({ logger }) => {
                 logger.info('Astromech dev server ready');
                 await runMigrations(logger);
+                // Start the scheduler tick (dev / long-running node). nodeDriver guards a
+                // single interval, so this is idempotent. NOTE: a built production Node
+                // server does not re-run integration hooks — that path relies on the http
+                // poke (POST /cron/run) or an external trigger instead.
+                await getSchedulerDriver()?.start(onTick);
             },
 
             'astro:build:done': async ({ logger }) => {

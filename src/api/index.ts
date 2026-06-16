@@ -41,7 +41,8 @@ app.use('*', (c, next) => {
     return secureHeaders({
         xContentTypeOptions: cfg.security?.headers?.xContentTypeOptions ?? 'nosniff',
         xFrameOptions: cfg.security?.headers?.xFrameOptions ?? 'DENY',
-        referrerPolicy: cfg.security?.headers?.referrerPolicy ?? 'strict-origin-when-cross-origin',
+        referrerPolicy:
+            cfg.security?.headers?.referrerPolicy ?? 'strict-origin-when-cross-origin',
     })(c, next);
 });
 
@@ -86,6 +87,10 @@ app.get('/setup/check', async (c) => {
 
 app.route('/plugins', pluginsRouter);
 
+// CRON poke — enforces its own auth (admin session OR bearer secret), so it
+// mounts before the app-wide requireAuth to allow sessionless external pokes.
+app.route('/cron', cronRouter);
+
 // ============================================================================
 // All routes require authentication
 // ============================================================================
@@ -106,7 +111,6 @@ app.route('/users', usersRouter);
 app.route('/media', mediaRouter);
 app.route('/settings', settingsRouter);
 app.route('/entry-types', entryTypesRouter);
-app.route('/cron', cronRouter);
 
 // ============================================================================
 // OpenAPI spec + Swagger UI
