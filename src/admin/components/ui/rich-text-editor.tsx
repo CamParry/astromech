@@ -19,6 +19,7 @@ import {
     Undo,
     Redo,
     ChevronDown,
+    WrapText,
 } from 'lucide-react';
 import { buildRichTextExtensions, type RichTextAllow } from './rich-text-extensions.js';
 
@@ -57,7 +58,7 @@ type BlockValue = (typeof BLOCK_TYPES)[number]['value'];
 // Link popover state
 // ============================================================================
 
-type LinkPopoverState = { open: false } | { open: true; href: string };
+type LinkPopoverState = { open: false } | { open: true; href: string; newTab: boolean };
 
 // ============================================================================
 // Toolbar button
@@ -192,7 +193,7 @@ function BlockDropdown({
 
 type LinkPopoverProps = {
     state: LinkPopoverState;
-    onApply: (href: string) => void;
+    onApply: (href: string, newTab: boolean) => void;
     onRemove: () => void;
     onClose: () => void;
 };
@@ -204,12 +205,13 @@ function LinkPopover({
     onClose,
 }: LinkPopoverProps): React.ReactElement | null {
     const [href, setHref] = useState(state.open ? state.href : '');
+    const [newTab, setNewTab] = useState(state.open ? state.newTab : false);
 
     if (!state.open) return null;
 
     const handleSubmit = (e: React.FormEvent): void => {
         e.preventDefault();
-        onApply(href);
+        onApply(href, newTab);
     };
 
     return (
@@ -226,6 +228,17 @@ function LinkPopover({
                     aria-label="Link URL"
                     autoFocus
                 />
+                <label className="am-richtext-link-newtab">
+                    <input
+                        type="checkbox"
+                        checked={newTab}
+                        onChange={(e) => {
+                            setNewTab(e.target.checked);
+                        }}
+                        aria-label="Open in new tab"
+                    />
+                    New tab
+                </label>
                 <button
                     type="submit"
                     className="am-richtext-link-apply"
@@ -307,10 +320,12 @@ export function RichTextEditor({
                     isAlignCenter: false,
                     isAlignRight: false,
                     isAlignJustify: false,
+                    isBalance: false,
                     canUndo: false,
                     canRedo: false,
                     currentBlock: 'paragraph' as BlockValue,
                     linkHref: '',
+                    linkTarget: '',
                 };
             }
             let currentBlock: BlockValue = 'paragraph';
@@ -320,6 +335,7 @@ export function RichTextEditor({
                     break;
                 }
             }
+            const blockType = ed.isActive('heading') ? 'heading' : 'paragraph';
             return {
                 isBold: ed.isActive('bold'),
                 isItalic: ed.isActive('italic'),
@@ -334,10 +350,13 @@ export function RichTextEditor({
                 isAlignCenter: ed.isActive({ textAlign: 'center' }),
                 isAlignRight: ed.isActive({ textAlign: 'right' }),
                 isAlignJustify: ed.isActive({ textAlign: 'justify' }),
+                isBalance: ed.getAttributes(blockType)['balance'] === true,
                 canUndo: ed.can().undo(),
                 canRedo: ed.can().redo(),
                 currentBlock,
                 linkHref: (ed.getAttributes('link')['href'] as string | undefined) ?? '',
+                linkTarget:
+                    (ed.getAttributes('link')['target'] as string | undefined) ?? '',
             };
         },
     });
@@ -360,14 +379,26 @@ export function RichTextEditor({
     };
 
     const handleLinkOpen = (): void => {
-        setLinkPopover({ open: true, href: editorState?.linkHref ?? '' });
+        setLinkPopover({
+            open: true,
+            href: editorState?.linkHref ?? '',
+            newTab: editorState?.linkTarget === '_blank',
+        });
     };
 
-    const handleLinkApply = (href: string): void => {
+    const handleLinkApply = (href: string, newTab: boolean): void => {
         if (href === '') {
             editor.chain().focus().unsetLink().run();
         } else {
-            editor.chain().focus().setLink({ href }).run();
+            editor
+                .chain()
+                .focus()
+                .setLink({
+                    href,
+                    target: newTab ? '_blank' : null,
+                    rel: newTab ? 'noopener noreferrer' : null,
+                })
+                .run();
         }
         setLinkPopover({ open: false });
     };
@@ -554,6 +585,18 @@ export function RichTextEditor({
                             </ToolbarButton>
                         </>
                     )}
+
+                    <div className="am-richtext-toolbar-sep" role="separator" />
+
+                    <ToolbarButton
+                        onClick={() => {
+                            editor.chain().focus().toggleTextBalance().run();
+                        }}
+                        active={editorState?.isBalance}
+                        ariaLabel="Balance text wrapping"
+                    >
+                        <WrapText size={16} aria-hidden="true" />
+                    </ToolbarButton>
 
                     <div className="am-richtext-toolbar-sep" role="separator" />
 

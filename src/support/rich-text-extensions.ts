@@ -15,8 +15,54 @@
 import StarterKit from '@tiptap/starter-kit';
 import TextAlign from '@tiptap/extension-text-align';
 import { Placeholder } from '@tiptap/extension-placeholder';
-import type { Extensions } from '@tiptap/core';
+import { Extension, type Extensions } from '@tiptap/core';
 import type { RichTextAllow } from '@/types/fields.js';
+
+// ============================================================================
+// TextBalance extension — inline style; always on
+// ============================================================================
+
+declare module '@tiptap/core' {
+    interface Commands<ReturnType> {
+        textBalance: { toggleTextBalance: () => ReturnType };
+    }
+}
+
+const TextBalance = Extension.create({
+    name: 'textBalance',
+    addOptions() {
+        return { types: ['paragraph', 'heading'] };
+    },
+    addGlobalAttributes() {
+        return [
+            {
+                types: this.options.types as string[],
+                attributes: {
+                    balance: {
+                        default: false,
+                        parseHTML: (el: Element) =>
+                            (el as HTMLElement).style?.getPropertyValue('text-wrap') ===
+                            'balance',
+                        renderHTML: (attrs: Record<string, unknown>) =>
+                            attrs['balance'] ? { style: 'text-wrap: balance' } : {},
+                    },
+                },
+            },
+        ];
+    },
+    addCommands() {
+        return {
+            toggleTextBalance:
+                () =>
+                ({ editor, commands }) => {
+                    const type = editor.isActive('heading') ? 'heading' : 'paragraph';
+                    return commands.updateAttributes(type, {
+                        balance: !editor.getAttributes(type)['balance'],
+                    });
+                },
+        };
+    },
+});
 
 /**
  * Return the extension array for rich-text editing/rendering.
@@ -44,7 +90,12 @@ export function buildRichTextExtensions(
             blockquote: on('blockquote') ? {} : false,
             horizontalRule: on('horizontalRule') ? {} : false,
             // StarterKit v3 bundles these — configure here, not as standalone.
-            link: on('link') ? { openOnClick: false } : false,
+            // Default target/_blank and rel from HTMLAttributes are nulled out so
+            // links without explicit target/rel emit neither attribute.
+            // New-tab links set target="_blank" rel="noopener noreferrer" per-link.
+            link: on('link')
+                ? { openOnClick: false, HTMLAttributes: { target: null, rel: null } }
+                : false,
             underline: on('underline') ? {} : false,
         }),
     ];
@@ -52,6 +103,9 @@ export function buildRichTextExtensions(
     if (on('textAlign')) {
         extensions.push(TextAlign.configure({ types: ['heading', 'paragraph'] }));
     }
+
+    // TextBalance — always on, not gated behind allow.
+    extensions.push(TextBalance);
 
     if (placeholderText !== undefined) {
         extensions.push(Placeholder.configure({ placeholder: placeholderText }));
