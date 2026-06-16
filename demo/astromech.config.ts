@@ -1,5 +1,12 @@
 import { fileURLToPath } from 'node:url';
-import { builtInRole, defineAdminPage, defineConfig, FilesystemStorage, libsqlDriver } from 'astromech';
+import {
+    builtInRole,
+    defineAdminPage,
+    defineConfig,
+    FilesystemStorage,
+    libsqlDriver,
+} from 'astromech';
+import { sharp } from 'astromech/images/sharp';
 import * as fields from 'astromech/fields';
 import { redirects, redirectsPermissions } from 'astromech/plugins/redirects';
 import { seo, seoSection, seoPermissions } from 'astromech/plugins/seo';
@@ -21,9 +28,7 @@ const blockCatalog = [
     }),
     fields.block('richText', {
         label: 'Rich Text',
-        fields: [
-            fields.richtext('body', { label: 'Body', required: true }),
-        ],
+        fields: [fields.richtext('body', { label: 'Body', required: true })],
     }),
     fields.block('featureGrid', {
         label: 'Feature Grid',
@@ -109,6 +114,7 @@ export default defineConfig({
         url: 'file:' + fileURLToPath(new URL('./database.db', import.meta.url)),
     }),
     storage: new FilesystemStorage({ dir: './public/uploads' }),
+    image: { driver: sharp() },
     locales: ['en', 'fr'],
     defaultLocale: 'en-GB',
     plugins: [
@@ -153,9 +159,17 @@ export default defineConfig({
                                     fields.section('og', {
                                         label: 'Open Graph',
                                         fields: [
-                                            fields.text('ogTitle', { label: 'Open Graph Title' }),
-                                            fields.media('ogImage', { label: 'Open Graph Image' }),
-                                            { name: 'contentQuality', type: 'rating', label: 'Content Quality' },
+                                            fields.text('ogTitle', {
+                                                label: 'Open Graph Title',
+                                            }),
+                                            fields.media('ogImage', {
+                                                label: 'Open Graph Image',
+                                            }),
+                                            {
+                                                name: 'contentQuality',
+                                                type: 'rating',
+                                                label: 'Content Quality',
+                                            },
                                         ],
                                     }),
                                 ],
@@ -167,9 +181,18 @@ export default defineConfig({
                     fields.section('settings', {
                         label: 'Settings',
                         fields: [
-                            fields.relationship('parent', { label: 'Parent Page', target: 'page' }),
-                            fields.boolean('noindex', { label: 'No Index', translatable: false }),
-                            fields.color('themeColor', { label: 'Theme Color', translatable: false }),
+                            fields.relationship('parent', {
+                                label: 'Parent Page',
+                                target: 'page',
+                            }),
+                            fields.boolean('noindex', {
+                                label: 'No Index',
+                                translatable: false,
+                            }),
+                            fields.color('themeColor', {
+                                label: 'Theme Color',
+                                translatable: false,
+                            }),
                         ],
                     }),
                 ],
@@ -197,10 +220,23 @@ export default defineConfig({
                     fields.section('taxonomy', {
                         label: 'Taxonomy',
                         fields: [
-                            fields.media('featured_image', { label: 'Featured Image', translatable: false }),
-                            fields.relationship('category', { target: 'category', inverse: 'post' }),
-                            fields.relationship('tags', { target: 'tag', multiple: true, inverse: 'post' }),
-                            fields.relationship('author', { target: 'author', inverse: 'post' }),
+                            fields.media('featured_image', {
+                                label: 'Featured Image',
+                                translatable: false,
+                            }),
+                            fields.relationship('category', {
+                                target: 'category',
+                                inverse: 'post',
+                            }),
+                            fields.relationship('tags', {
+                                target: 'tag',
+                                multiple: true,
+                                inverse: 'post',
+                            }),
+                            fields.relationship('author', {
+                                target: 'author',
+                                inverse: 'post',
+                            }),
                         ],
                     }),
                 ],
@@ -269,8 +305,16 @@ export default defineConfig({
                 ],
                 sidebar: [
                     fields.media('logo', { label: 'Logo', translatable: false }),
-                    fields.media('gallery', { label: 'Gallery', multiple: true, translatable: false }),
-                    fields.relationship('related_posts', { target: 'post', multiple: true, label: 'Related Posts' }),
+                    fields.media('gallery', {
+                        label: 'Gallery',
+                        multiple: true,
+                        translatable: false,
+                    }),
+                    fields.relationship('related_posts', {
+                        target: 'post',
+                        multiple: true,
+                        label: 'Related Posts',
+                    }),
                 ],
             },
         },
@@ -311,16 +355,26 @@ export default defineConfig({
                                     fields.section('brand', {
                                         label: 'Brand',
                                         fields: [
-                                            fields.text('siteName', { label: 'Site Name' }),
+                                            fields.text('siteName', {
+                                                label: 'Site Name',
+                                            }),
                                             fields.text('tagline', { label: 'Tagline' }),
-                                            fields.media('logo', { label: 'Logo', translatable: false }),
+                                            fields.media('logo', {
+                                                label: 'Logo',
+                                                translatable: false,
+                                            }),
                                         ],
                                     }),
                                     fields.section('footer', {
                                         label: 'Footer',
                                         fields: [
-                                            fields.textarea('footerText', { label: 'Footer Text' }),
-                                            fields.text('copyright', { label: 'Copyright', translatable: false }),
+                                            fields.textarea('footerText', {
+                                                label: 'Footer Text',
+                                            }),
+                                            fields.text('copyright', {
+                                                label: 'Copyright',
+                                                translatable: false,
+                                            }),
                                         ],
                                     }),
                                 ],
@@ -334,8 +388,13 @@ export default defineConfig({
                                             fields.repeater('socials', {
                                                 label: 'Social Links',
                                                 fields: [
-                                                    fields.text('platform', { label: 'Platform' }),
-                                                    fields.url('url', { label: 'URL', translatable: false }),
+                                                    fields.text('platform', {
+                                                        label: 'Platform',
+                                                    }),
+                                                    fields.url('url', {
+                                                        label: 'URL',
+                                                        translatable: false,
+                                                    }),
                                                 ],
                                             }),
                                         ],

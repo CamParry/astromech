@@ -159,19 +159,19 @@ shared `SettingsPageForm`.
 - [ ] `@astromech/comments`
 - [ ] `@astromech/import-export`
 
-### Image Optimisation 🚧
+### Image Optimisation ✅
 
-See [`specs/image-optimisation.md`](specs/image-optimisation.md) (Designed 2026-06-16). On-demand,
+See [`specs/image-optimisation.md`](specs/image-optimisation.md) (Implemented 2026-06-16). On-demand,
 allowlisted AVIF/WebP variants behind a canonical app-owned media URL (`/_media/<id>.<ext>?w&f&v`);
-storage driver demoted to a bytes-only backend; optimisation is a swappable `ImageDriver`. Ship Node
+storage driver demoted to a bytes-only backend; optimisation is a swappable `ImageDriver`. Shipped Node
 (Sharp) + Cloudflare (Images) together to lock the driver shape.
 
-- [ ] Core: `StorageDriver` rework (`put`/`get`/`delete`/`list`, stream bytes, `getDirectUrl?`); derive `media.url`; add `metadata` JSON; `media.upload` orchestration + dimension extraction (pure JS) + variant lifecycle cleanup
-- [ ] `mediaRoute` (`/_media`) config + top-level mount; request handler (allowlist + version 302 + serve-original + cache write-back)
-- [ ] `ImageDriver` + `image: { driver, widths, avif }`; `defaultImageWidths`; `sharp()` (Node) with blurhash placeholder
-- [ ] `cloudflareImages()` driver (`cf.image`, `cachesVariants`) + `src/storage/drivers/r2.ts`
-- [ ] Responsive `<Image>` — framework-agnostic `buildImageAttrs` core + thin Astro renderer (srcset/sizes/`<picture>`/intrinsic dims/blur-up)
-- [ ] Deferred: art-directed crops (`h`+`fit`), signed-URL escape hatch, transform concurrency caps, Next/Vercel renderer, S3 driver
+- [x] Core: `StorageDriver` rework (`put`/`get`/`delete`/`list`, stream bytes, `getDirectUrl?`); derive `media.url`; add `metadata` JSON; `media.upload` orchestration + dimension extraction (pure JS) + variant lifecycle cleanup
+- [x] `mediaRoute` (`/_media`) config + top-level mount; request handler (allowlist + version 302 + serve-original + cache write-back)
+- [x] `ImageDriver` + `image: { driver, widths, avif }`; `defaultImageWidths`; `sharp()` (Node) with blurhash placeholder
+- [x] `cloudflareImages()` driver (`cf.image`, `cachesVariants`) + `src/storage/drivers/r2.ts`
+- [x] Responsive `<Image>` — framework-agnostic `buildImageAttrs` core + thin Astro renderer (srcset/sizes/`<picture>`/intrinsic dims; blur-up deferred)
+- [ ] Deferred: art-directed crops (`h`+`fit`), signed-URL escape hatch, transform concurrency caps, visual blur-up render, Next/Vercel renderer, S3 driver
 
 ### Multi-Runtime & Framework Adapters 🚧
 
@@ -184,7 +184,7 @@ storage driver demoted to a bytes-only backend; optimisation is a swappable `Ima
 ### Storage Drivers 🚧
 
 - [ ] `src/storage/drivers/s3.ts` — S3-compatible driver (`@aws-sdk/client-s3`)
-- [ ] `src/storage/drivers/r2-binding.ts` — Cloudflare Workers native R2 binding driver
+- [x] `src/storage/drivers/r2.ts` — Cloudflare Workers native R2 binding driver (bytes-only `StorageDriver`; shipped with image optimisation)
 - [ ] Update `StorageDriver` type + `AstromechConfig` storage config for new driver options
 - [ ] Wire R2 binding from the Workers `env` object in the Cloudflare adapter
 
