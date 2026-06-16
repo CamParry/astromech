@@ -236,14 +236,16 @@ shared `SettingsPageForm`.
 - [ ] Stable `_id`-based paths for nested-field relationship keys (foundation now in place via persisted `_id`)
 - [ ] Migration strategy for pre-existing stored data (demo currently reseeds; no general migration framework yet)
 
-### Disabled-item filtering & public vs admin read path 🚧
+### Content visibility — public vs full reads, field privacy, audience filtering ✅
 
-Blocks and repeater items can be `_disabled` in the admin, but the flag is only honoured if the consumer filters it. Today filtering is manual per-consumer (e.g. demo `<Blocks>` does `!b._disabled`), so disabled items are still **sent** to the frontend and merely unrendered — a data-leak surface, not just a tidiness issue. There is currently no distinction between an admin read path (sees everything) and a public one (active items only).
+Generalised the disabled-item problem into one model — see [`specs/content-visibility.md`](specs/content-visibility.md). Two orthogonal axes, both derived from the current user + role: **shape** (`public` vs `full`, binary, role-gates `full`) and **audience** (row filter — status now, member audiences later). Field default is public; mutations always private; settings private by default with per-key public opt-in.
 
-- [ ] Define an admin-vs-public read distinction (e.g. a read context / SDK option) — admin sees disabled items to re-enable them; public reads never receive them
-- [ ] Auto-strip `_disabled` block/repeater items on the public read path (`astromech/local` populate) so no consumer has to filter manually
-- [ ] Once auto-filtering lands, drop the manual `!b._disabled` filter in demo `<Blocks>`
-- [ ] Decide whether the same public/admin split should gate other not-yet-public field data
+- [x] Public-vs-full read shapes — bare `astromech/local` defaults `public`; `ctx.entries`/admin default `full`; HTTP `full` capability-gated (`entry:read:full`)
+- [x] Recursive runtime filter (`src/core/visibility.ts`) — strips `_disabled` items + `_title`/`_disabled` keys, private fields, and draft/scheduled rows on public reads; composes through populate
+- [x] Two derived types from one schema (`${Pascal}Fields` / `${Pascal}FieldsPublic`) + read-back guard (public-shape value can't be written back)
+- [x] Settings private by default; `public` opt-in per admin page / `config.publicSettings`
+- [ ] Demo cleanup: drop the now-redundant manual `!b._disabled` filter in demo `<Blocks>` and browser-verify public vs admin renders (Step 7 — not yet done)
+- [ ] Future: member audiences (frontend auth), per-field audience, `preview` shape — seams built, see spec §9
 
 ---
 
