@@ -33,6 +33,7 @@ import { RelationshipsRepository } from '@/db/repositories/relationships.js';
 import { populateEntries } from '@/db/repositories/populate.js';
 import { getEntryStorage } from '@/core/entry-storage/registry.js';
 import { resolveEntryType } from '@/core/entry-types.js';
+import { resolveContentLocale } from '@/support/locale.js';
 import type { EntryRecord, EntryStorage, StorageDb } from '@/core/entry-storage/types.js';
 import type {
     Entry,
@@ -46,6 +47,7 @@ import type {
     QueryResult,
     JsonObject,
     User,
+    FieldDefinition,
 } from '@/types/index.js';
 import { getCurrentUser, setCurrentUser } from '@/sdk/local/context.js';
 import { hasHookHandlers, runAfterHooks, runBeforeHooks } from '@/core/plugin-runtime.js';
@@ -73,7 +75,14 @@ function validate<T>(schema: z.ZodType<T>, data: unknown): T {
 }
 
 function getDefaultLocale(): string {
-    return (config as { defaultLocale?: string }).defaultLocale ?? 'en';
+    // `defaultLocale` is a DISPLAY tag (e.g. `en-GB`) and may not be a content
+    // locale that entries are tagged with. The storage layer matches locale
+    // EXACTLY, so bridge the display tag down its RFC 4647 fallback chain to an
+    // available content locale; fall back to the first configured locale.
+    const cfg = config as { defaultLocale?: string; locales?: readonly string[] };
+    const locales = cfg.locales ?? [];
+    const requested = cfg.defaultLocale ?? 'en';
+    return resolveContentLocale(requested, locales) ?? locales[0] ?? requested;
 }
 
 /**
@@ -524,7 +533,9 @@ export const entries: EntriesApi = {
         // filtered in applyVisibility, slightly inflating total/pages when such rows exist.
         // Only push for types that have the statuses capability; tableStorage-backed
         // types (statuses: false) have no publication status column.
-        const hasStatuses = singleTypeCfg ? singleTypeCfg.capabilities.statuses !== false : true;
+        const hasStatuses = singleTypeCfg
+            ? singleTypeCfg.capabilities.statuses !== false
+            : true;
         const effectiveWhere =
             shape === 'public' && hasStatuses
                 ? { ...params.where, status: 'published' }
@@ -563,12 +574,16 @@ export const entries: EntriesApi = {
         const visibleData: Entry[] = [];
         for (const entry of data) {
             // Resolve field definitions per row (supports cross-type queries).
-            const rowType = entry.type ?? (singleType ?? firstType);
+            const rowType = entry.type ?? singleType ?? firstType;
+            // tableStorage-backed rows have no `type` column, so they come back
+            // without a type. Stamp it from the query so every returned entry is
+            // complete (consumers build links / resolve icons from `entry.type`).
+            if (entry.type === undefined) entry.type = rowType;
             const rowTypeCfg = resolveEntryType(config, rowType);
             const rowFields = rowTypeCfg ? flattenEntryFields(rowTypeCfg.fields) : [];
 
             // Resolver for populated related entries — look up the related type's fields.
-            const resolveRelatedFields = (related: Entry): import('@/types/index.js').FieldDefinition[] => {
+            const resolveRelatedFields = (related: Entry): FieldDefinition[] => {
                 const relTypeCfg = resolveEntryType(config, related.type);
                 return relTypeCfg ? flattenEntryFields(relTypeCfg.fields) : [];
             };
@@ -613,6 +628,9 @@ export const entries: EntriesApi = {
         if (record.type !== undefined && record.type !== type) return null;
 
         let result = record as Entry;
+        // tableStorage-backed records carry no `type` column — stamp it so the
+        // returned entry is complete.
+        if (result.type === undefined) result.type = type;
 
         if (params.populate && params.populate.length > 0) {
             const entryTypeConfig = resolveEntryType(config, type);
@@ -634,7 +652,7 @@ export const entries: EntriesApi = {
         const entryTypeCfg = resolveEntryType(config, type);
         const fields = entryTypeCfg ? flattenEntryFields(entryTypeCfg.fields) : [];
 
-        const resolveRelatedFields = (related: Entry): import('@/types/index.js').FieldDefinition[] => {
+        const resolveRelatedFields = (related: Entry): FieldDefinition[] => {
             const relTypeCfg = resolveEntryType(config, related.type);
             return relTypeCfg ? flattenEntryFields(relTypeCfg.fields) : [];
         };

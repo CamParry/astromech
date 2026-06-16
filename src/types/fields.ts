@@ -86,6 +86,27 @@ export type ValidationRule =
     | { url: true }
     | { custom: (value: unknown, entry: Entry) => string | null };
 
+/**
+ * Allow-list for rich-text field features.
+ * All features are enabled by default; set a key to `false` to disable.
+ * Disabling a feature removes it from the ProseMirror schema (not just the toolbar).
+ */
+export type RichTextAllow = {
+    heading?: boolean;
+    bold?: boolean;
+    italic?: boolean;
+    underline?: boolean;
+    strike?: boolean;
+    code?: boolean;
+    codeBlock?: boolean;
+    link?: boolean;
+    bulletList?: boolean;
+    orderedList?: boolean;
+    blockquote?: boolean;
+    horizontalRule?: boolean;
+    textAlign?: boolean;
+};
+
 export type FieldDefinition = {
     name: string;
     type: AnyFieldType;
@@ -140,6 +161,12 @@ export type FieldDefinition = {
 
     /** When true, this field is omitted from `public`-shape reads. Default: false (public). */
     private?: boolean;
+
+    /**
+     * `richtext` only. Subset of features to enable. All on by default.
+     * Disabling a feature removes it from the schema (not just the toolbar).
+     */
+    allow?: RichTextAllow;
 };
 
 /**

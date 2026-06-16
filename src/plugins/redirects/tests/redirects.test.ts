@@ -99,6 +99,27 @@ describe('redirects — own-table storage', () => {
         );
         expect(entryRows).toHaveLength(0);
     });
+
+    it('stamps the qualified type onto entries read back from the own table', async () => {
+        const created = await redirectEntriesApi().create({
+            type: 'redirect',
+            fields: { from: '/old', to: '/new', status: '301', enabled: true },
+            status: 'published',
+        });
+
+        // query() must return a complete entry — tableStorage rows have no
+        // `type` column, so the orchestrator stamps it. Without this, admin
+        // search builds a broken `/entries/undefined/<id>` link.
+        const listed = await redirectEntriesApi().query({ type: 'redirect', limit: 10 });
+        expect(listed.data).toHaveLength(1);
+        expect(listed.data[0]?.type).toBe('redirects/redirect');
+
+        const fetched = await redirectEntriesApi().get({
+            type: 'redirect',
+            id: created.id,
+        });
+        expect(fetched?.type).toBe('redirects/redirect');
+    });
 });
 
 describe('redirects — lookup', () => {

@@ -87,6 +87,15 @@ describe('list', () => {
         expect(sorted.data.map((e) => e.title)).toEqual(['Alpha', 'Bravo']);
     });
 
+    it('searches by slug as well as title', async () => {
+        // Title differs from the slug, so a slug match is the only way to find it.
+        await storage.create({ type: 'post', title: 'Welcome', slug: 'home' });
+        await storage.create({ type: 'post', title: 'Other', slug: 'other' });
+
+        const bySlug = await storage.list({ type: 'post', search: 'home' });
+        expect(bySlug.data.map((e) => e.title)).toEqual(['Welcome']);
+    });
+
     it('excludes trashed unless requested', async () => {
         const a = await storage.create({ type: 'post', title: 'A', slug: 'a' });
         await storage.create({ type: 'post', title: 'B', slug: 'b' });

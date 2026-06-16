@@ -56,7 +56,10 @@ function propertyKey(name: string): string {
  *
  * When `shape === 'public'`, fields marked `private: true` are excluded.
  */
-function collectDataFields(fields: FieldDefinition[], shape: 'full' | 'public' = 'full'): FieldDefinition[] {
+function collectDataFields(
+    fields: FieldDefinition[],
+    shape: 'full' | 'public' = 'full'
+): FieldDefinition[] {
     const result: FieldDefinition[] = [];
     for (const field of fields) {
         if (LAYOUT_TYPES.has(field.type)) {
@@ -129,12 +132,15 @@ function fieldToTsType(
     switch (field.type) {
         case 'text':
         case 'textarea':
-        case 'richtext':
         case 'email':
         case 'url':
         case 'slug':
         case 'color':
             return 'string';
+
+        // richtext: full shape stores ProseMirror JSON; public shape is rendered HTML string.
+        case 'richtext':
+            return shape === 'public' ? 'string' : "import('astromech').JsonValue";
 
         case 'number':
         case 'range':
@@ -193,7 +199,12 @@ function fieldToTsType(
             const lines =
                 shape === 'public'
                     ? ['  _id: string;', ...childLines]
-                    : ['  _id: string;', '  _disabled?: boolean;', '  _title?: string;', ...childLines];
+                    : [
+                          '  _id: string;',
+                          '  _disabled?: boolean;',
+                          '  _title?: string;',
+                          ...childLines,
+                      ];
             return `Array<{\n${lines.join('\n')}\n}>`;
         }
 
@@ -213,7 +224,12 @@ function fieldToTsType(
             const lines =
                 shape === 'public'
                     ? ['  _id: string;', ...childLines, `  _children?: ${nodeName}[];`]
-                    : ['  _id: string;', '  _disabled?: boolean;', ...childLines, `  _children?: ${nodeName}[];`];
+                    : [
+                          '  _id: string;',
+                          '  _disabled?: boolean;',
+                          ...childLines,
+                          `  _children?: ${nodeName}[];`,
+                      ];
             const iface = `export interface ${nodeName} {\n${lines.join('\n')}\n}`;
             if (hoisted !== undefined) {
                 hoisted.push(iface);
@@ -275,7 +291,8 @@ function fieldToRelationType(
         single = `import('astromech').TypedEntry<${fieldsName}>`;
     } else if (knownCollections.has(field.target)) {
         const pascal = toPascalCase(field.target);
-        const fieldsName = shape === 'public' ? `${pascal}FieldsPublic` : `${pascal}Fields`;
+        const fieldsName =
+            shape === 'public' ? `${pascal}FieldsPublic` : `${pascal}Fields`;
         single = `import('astromech').TypedEntry<${fieldsName}>`;
     } else {
         single = "import('astromech').Entry";
@@ -309,7 +326,10 @@ function generateCollectionTypes(
 
     // Collect all data-bearing fields from both columns, layout containers flattened.
     const allFields = collectDataFields([...fields.main, ...fields.sidebar]);
-    const allFieldsPublic = collectDataFields([...fields.main, ...fields.sidebar], 'public');
+    const allFieldsPublic = collectDataFields(
+        [...fields.main, ...fields.sidebar],
+        'public'
+    );
 
     // Accumulator for top-level declarations hoisted by nested field types (e.g. tree
     // node interfaces that must be named to allow self-reference).
@@ -346,10 +366,7 @@ function generateCollectionTypes(
     }
 
     // Always add the __shape brand marker for public types.
-    const publicBodyLines = [
-        '  readonly __shape?: \'public\';',
-        ...fieldPublicLines,
-    ];
+    const publicBodyLines = ["  readonly __shape?: 'public';", ...fieldPublicLines];
     const mainPublicInterface = `export interface ${fieldsPublicName} {\n${publicBodyLines.join('\n')}\n}`;
 
     const fieldsPublicInterface =
@@ -360,7 +377,12 @@ function generateCollectionTypes(
     // Build Relations type (only populate-able fields from flat top-level data fields)
     const relationLines: string[] = [];
     for (const field of allFields) {
-        const relType = fieldToRelationType(field, knownCollections, qualifiedTargetMap, 'full');
+        const relType = fieldToRelationType(
+            field,
+            knownCollections,
+            qualifiedTargetMap,
+            'full'
+        );
         if (relType === null) continue;
         relationLines.push(`  ${propertyKey(field.name)}: ${relType};`);
     }
@@ -493,7 +515,6 @@ function generatePluginAugmentations(
     ];
 }
 
-
 export function generateSdkTypes(
     config: ResolvedConfig,
     pluginFieldTypes = new Map<string, PluginFieldTypeRegistration>(),
@@ -534,18 +555,25 @@ export function generateSdkTypes(
         .join('\n');
 
     const collectionTypeBlocks = blocks
-        .map(({ collectionKey, fieldsInterface, fieldsPublicInterface, relationsType }) => {
-            const pascal = toPascalCase(collectionKey);
-            return [
-                `// --- Collection: ${collectionKey} (${pascal}) ---`,
-                '',
+        .map(
+            ({
+                collectionKey,
                 fieldsInterface,
-                '',
                 fieldsPublicInterface,
-                '',
                 relationsType,
-            ].join('\n');
-        })
+            }) => {
+                const pascal = toPascalCase(collectionKey);
+                return [
+                    `// --- Collection: ${collectionKey} (${pascal}) ---`,
+                    '',
+                    fieldsInterface,
+                    '',
+                    fieldsPublicInterface,
+                    '',
+                    relationsType,
+                ].join('\n');
+            }
+        )
         .join('\n\n');
 
     // Generate plugin entry type blocks
