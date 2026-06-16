@@ -1,7 +1,9 @@
 ---
 import Astromech from 'astromech/local';
+import type { Media } from 'astromech';
 import Site from '../layouts/Site.astro';
 import Blocks from '../components/blocks/Blocks.astro';
+import MediaGallery from '../components/MediaGallery.astro';
 import { DEFAULT_LOCALE } from '../lib/site.ts';
 
 const locale = DEFAULT_LOCALE;
@@ -20,6 +22,18 @@ try {
 }
 
 const blocks = (homePage?.fields?.content as unknown[] | null | undefined) ?? [];
+
+// Pull a few images from the media library to showcase the responsive <Image>.
+let galleryImages: Media[] = [];
+try {
+    const media = await Astromech.media.query({
+        where: { mimeType: 'images' },
+        limit: 9,
+    });
+    galleryImages = media.data;
+} catch {
+    // DB not ready yet
+}
 ---
 
 <Site
@@ -28,13 +42,24 @@ const blocks = (homePage?.fields?.content as unknown[] | null | undefined) ?? []
     seoSlug={homePage?.slug ?? undefined}
     seoTitle={homePage?.title ?? 'Home'}
 >
-    {blocks.length > 0
-        ? <Blocks blocks={blocks as { type: string; [key: string]: unknown }[]} />
-        : (
+    {
+        blocks.length > 0 ? (
+            <Blocks blocks={blocks as { type: string; [key: string]: unknown }[]} />
+        ) : (
             <div class="max-w-6xl mx-auto px-4 py-24 text-center">
-                <h1 class="text-4xl font-bold text-gray-900 mb-4">Welcome to Astromech</h1>
-                <p class="text-gray-500">The home page content will appear here once seeded.</p>
+                <h1 class="text-4xl font-bold text-gray-900 mb-4">
+                    Welcome to Astromech
+                </h1>
+                <p class="text-gray-500">
+                    The home page content will appear here once seeded.
+                </p>
             </div>
         )
     }
+
+    <MediaGallery
+        images={galleryImages}
+        heading="Built-in image optimisation"
+        subheading="Every image is served on demand as responsive AVIF/WebP from a single canonical URL."
+    />
 </Site>

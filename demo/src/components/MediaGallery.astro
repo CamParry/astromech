@@ -1,0 +1,40 @@
+---
+/**
+ * Media gallery — renders media-library images with the responsive Astromech
+ * `<Image>` component (emits an avif/webp `<picture>` srcset served on demand
+ * from `/_media/<id>.<ext>?w&f&v`).
+ */
+import Image from 'astromech/Image';
+import type { Media } from 'astromech';
+
+interface Props {
+    images: Media[];
+    heading?: string;
+    subheading?: string;
+}
+
+const { images, heading = 'From the media library', subheading } = Astro.props;
+---
+
+{
+    images.length > 0 && (
+        <section class="max-w-6xl mx-auto px-4 py-20">
+            <div class="mb-10">
+                <h2 class="text-3xl font-bold text-gray-900">{heading}</h2>
+                {subheading && <p class="mt-2 text-gray-500">{subheading}</p>}
+            </div>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {images.map((img) => (
+                    <figure class="aspect-[4/3] overflow-hidden rounded-lg bg-gray-100">
+                        <Image
+                            src={img}
+                            alt={img.alt ?? img.filename}
+                            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                            class="h-full w-full object-cover"
+                        />
+                    </figure>
+                ))}
+            </div>
+        </section>
+    )
+}
