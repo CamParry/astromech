@@ -55,6 +55,15 @@
         },
         "./routes/auth-handler.ts": "./src/routes/auth-handler.ts",
         "./routes/api.ts": "./src/routes/api.ts",
+        "./routes/media-handler.ts": "./src/routes/media-handler.ts",
+        "./images/sharp": {
+            "types": "./dist/images/drivers/sharp.d.ts",
+            "default": "./dist/images/drivers/sharp.js"
+        },
+        "./images/cloudflare": {
+            "types": "./dist/images/drivers/cloudflare.d.ts",
+            "default": "./dist/images/drivers/cloudflare.js"
+        },
         "./admin/shell.astro": "./src/admin/shell.astro",
         "./ui": {
             "types": "./dist/admin/components/ui/index.d.ts",
@@ -146,6 +155,7 @@
         "@tiptap/react": "^3.0.0",
         "@tiptap/starter-kit": "^3.0.0",
         "better-auth": "^1.5.5",
+        "blurhash": "^2.0.5",
         "citty": "^0.2.1",
         "clsx": "^2.1.1",
         "date-fns": "^4.1.0",
@@ -160,6 +170,7 @@
         "react-colorful": "^5.6.1",
         "react-dom": "^19.0.0",
         "react-i18next": "^16.6.0",
+        "sharp": "^0.35.1",
         "zod": "^4.3.6"
     },
     "peerDependencies": {

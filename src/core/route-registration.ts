@@ -16,29 +16,42 @@ import type { ResolvedConfig } from '@/types/index.js';
  * @param resolvedConfig - Resolved Astromech configuration
  */
 export function registerRoutes(
-	injectRoute: (route: { pattern: string; entrypoint: string; prerender: boolean }) => void,
-	resolvedConfig: ResolvedConfig
+    injectRoute: (route: {
+        pattern: string;
+        entrypoint: string;
+        prerender: boolean;
+    }) => void,
+    resolvedConfig: ResolvedConfig
 ): void {
-	const { apiRoute } = resolvedConfig;
+    const { apiRoute } = resolvedConfig;
 
-	// Auth API route (must be before the catch-all API route)
-	injectRoute({
-		pattern: `${apiRoute}/auth/[...all]`,
-		entrypoint: 'astromech/routes/auth-handler.ts',
-		prerender: false,
-	});
+    // Auth API route (must be before the catch-all API route)
+    injectRoute({
+        pattern: `${apiRoute}/auth/[...all]`,
+        entrypoint: 'astromech/routes/auth-handler.ts',
+        prerender: false,
+    });
 
-	// Admin SPA shell — catch-all that serves the React SPA for all /admin/* paths
-	injectRoute({
-		pattern: `${resolvedConfig.adminRoute}/[...path]`,
-		entrypoint: 'astromech/admin/shell.astro',
-		prerender: false,
-	});
+    // Media serving route — top-level, app-owned canonical media URL
+    // (`${mediaRoute}/<id>.<ext>[?w&f&v]`). Serves originals (stream) and
+    // on-demand, allowlisted image variants. Mounted like the auth route.
+    injectRoute({
+        pattern: `${resolvedConfig.mediaRoute}/[...path]`,
+        entrypoint: 'astromech/routes/media-handler.ts',
+        prerender: false,
+    });
 
-	// API routes (catch-all — must be after auth route)
-	injectRoute({
-		pattern: `${apiRoute}/[...path]`,
-		entrypoint: 'astromech/routes/api.ts',
-		prerender: false,
-	});
+    // Admin SPA shell — catch-all that serves the React SPA for all /admin/* paths
+    injectRoute({
+        pattern: `${resolvedConfig.adminRoute}/[...path]`,
+        entrypoint: 'astromech/admin/shell.astro',
+        prerender: false,
+    });
+
+    // API routes (catch-all — must be after auth route)
+    injectRoute({
+        pattern: `${apiRoute}/[...path]`,
+        entrypoint: 'astromech/routes/api.ts',
+        prerender: false,
+    });
 }
