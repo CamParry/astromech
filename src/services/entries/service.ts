@@ -12,9 +12,8 @@
  * the only Phase 2 implementation; Phase 3 mounts per-type storages via the
  * registry with zero service changes.
  *
- * Surface: see specs/typed-entries-api.md (options-object shape, type required
- * on every call, bulk-capable methods accept `id: string | string[]`).
- * Locale model: see specs/symmetric-locale-model.md.
+ * Surface: options-object shape, type required on every call; bulk-capable
+ * methods accept `id: string | string[]`.
  */
 
 import config from 'virtual:astromech/config';

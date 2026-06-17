@@ -4,7 +4,7 @@
 **Supersedes (in part):** ROADMAP Phase 16 ("CRON System") — Phase 16 shipped the registry + a run-everything runner; this design adds real cadence, adaptive triggering, and runtime-editable schedules.
 **Touches (scheduler):** `src/cron/{registry,runner,index}.ts`, new `src/cron/drivers/{node,cloudflare,http}.ts`, `src/types/config.ts` (`SchedulerDriver`), `src/db/schema.ts` (cron-state table), `src/adapters/astro.ts` (driver wiring), the runtime entry's `scheduled()` handler, `src/api/routes/cron.ts` (poke endpoint + auth).
 **Touches (backups):** `src/types/config.ts` (`StorageDriver.list` + `DatabaseDriver.dump`/`restore`), `src/db/drivers/*` (per-dialect dump), `src/storage/*` (`list` + private retrieval), new `src/plugins/backups/*`.
-**Related:** [[plugin-architecture.md]], [[unified-architecture.md]], ROADMAP Phase 16 (CRON), Phase 23 (DB drivers), Phase 19 (`@astromech/backups`).
+**Related:** ROADMAP Phase 16 (CRON), Phase 23 (DB drivers), Phase 19 (`@astromech/backups`).
 
 ---
 
@@ -103,7 +103,7 @@ Due-eval per tick: `enabled && next_run <= now` → CAS-claim (`lock` empty/expi
 
 ## 6. Runtime-Editable Schedules
 
-Because cadence is read from the table per tick (§3.3), changing a row's `schedule`/`enabled` takes effect on the **next tick** with no redeploy — the property the backups admin UI relies on. Editing is just a write to `_astromech_cron`; core jobs and plugin jobs share the mechanism. (Plugin-owned schedules may alternatively surface via the namespaced settings table per [[plugin-architecture.md]] §3.10; the cron table remains the due-eval source of truth either way.)
+Because cadence is read from the table per tick (§3.3), changing a row's `schedule`/`enabled` takes effect on the **next tick** with no redeploy — the property the backups admin UI relies on. Editing is just a write to `_astromech_cron`; core jobs and plugin jobs share the mechanism. (Plugin-owned schedules may alternatively surface via the namespaced settings table; the cron table remains the due-eval source of truth either way.)
 
 ---
 

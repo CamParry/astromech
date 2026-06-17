@@ -95,7 +95,7 @@ export function defineAdminPage(page: AdminPage): AdminPage {
  * layer). The Input/Output generics flow into the plugin's self-augmentation of
  * `AstromechPluginSdks` so callers see real signatures. The method may carry
  * descriptor metadata (`summary`, `input`, `mutates`, `destructive`, …) for the
- * method manifest — see specs/ai-integration.md §3.4.
+ * method manifest.
  */
 export function defineServiceMethod<Input = unknown, Output = unknown>(
     method: PluginSdkMethod<Input, Output>

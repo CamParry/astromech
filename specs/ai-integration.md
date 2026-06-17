@@ -2,7 +2,7 @@
 
 **Status:** Designed (discussion 2026-06-16); not yet implemented. Concepts locked; several decisions deferred to iteration (see §6). Spawns multiple workstreams (§7).
 **Touches:** `src/sdk/{local,fetch}`, `src/schemas/*`, `src/core/permissions.ts`, `src/core/plugin-runtime.ts`, `src/types/plugins.ts`, `src/index.ts` (`defineSdkMethod`), `src/adapters/astro.ts` (virtual modules / build hooks), `src/cli/*`, `src/api/routes/*`, `src/admin/*` (chat UI, context bus, chrome-injection slots), new `src/core/method-generator.ts`, new MCP server package.
-**Related:** [[services-architecture.md]] (canonical layer vocabulary — _this doc defers to it_), [[plugin-architecture.md]], [[unified-architecture.md]], [[content-visibility.md]]. Memories: `project_content_visibility.md`, `reserved_instance_keys.md`.
+**Related memories:** `project_content_visibility.md`, `reserved_instance_keys.md`.
 
 ---
 
@@ -30,11 +30,11 @@ The key realisation from design discussion: **almost all the substrate already e
 
 ## 2. Terminology (Ubiquitous Language)
 
-The canonical layer vocabulary (storage · services · policies · transport · Client · kernel) is defined in [[services-architecture.md]]. The terms below are the AI-specific additions, aligned to it.
+The canonical layer vocabulary (storage · services · policies · transport · Client · kernel) is the established layer model. The terms below are the AI-specific additions, aligned to it.
 
 | Term                    | Meaning                                                                                                                                                                                                            |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **service**             | The CMS's capability verbs (entries, media, users, settings). **Internal/private** (never in user docs); the glue that calls storage and has policies composed onto it. Defined in [[services-architecture.md]].   |
+| **service**             | The CMS's capability verbs (entries, media, users, settings). **Internal/private** (never in user docs); the glue that calls storage and has policies composed onto it.   |
 | **service method**      | One verb on a service, e.g. `entries.create`, `plugins.redirects.lookup`. The unit the manifest and the AI deal in.                                                                                                |
 | **policy**              | A composable wrapper _over_ services: permissions, visibility, confirmation. Not a tier — just a feature consumed by composition.                                                                                  |
 | **transport**           | A projection of service methods into a consumption shape. Public names: **Local API**, **HTTP API**, **CLI**, **MCP server**. Each composes which policies apply.                                                  |

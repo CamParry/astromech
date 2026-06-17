@@ -6,7 +6,7 @@
  * for consistent operations. Page-specific callbacks (e.g. navigation) are
  * accepted via optional onSuccess.
  *
- * SDK surface: see specs/typed-entries-api.md (options-object, type required).
+ * SDK surface: options-object, type required.
  */
 
 import {
@@ -585,7 +585,7 @@ export function useRestoreEntryVersion(
  *
  * Implementation: reads the source via Astromech.entries.get, then calls
  * Astromech.entries.duplicate({ type, id: sourceId, overrides: { locale, localeGroup } })
- * so the new row inherits the source's localeGroup. See specs/symmetric-locale-model.md §6.
+ * so the new row inherits the source's localeGroup.
  */
 export function useCreateTranslation(
     type: string,

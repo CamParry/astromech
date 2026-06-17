@@ -3,7 +3,7 @@
  *
  * A plugin is one npm package, framework-agnostic. Its definition is almost
  * entirely declarative data; `setup(ctx)` is an optional imperative escape
- * hatch. See `specs/plugin-architecture.md` for the full design.
+ * hatch.
  */
 
 import type { ComponentType, ReactElement } from 'react';

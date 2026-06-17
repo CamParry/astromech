@@ -148,7 +148,7 @@ function resolveAdminPage(page: AdminPage): ResolvedAdminPage {
             `Astromech admin page "${page.path}": host custom-component admin pages are not yet supported. ` +
                 `Use \`fields\` for a managed settings form, or define the page as a plugin page.`
             // TODO: extend the plugin-components codegen to scan host admin.pages and emit
-            // lazy imports for host component pages (see specs/unified-admin-pages.md §custom-component).
+            // lazy imports for host component pages.
         );
     }
 

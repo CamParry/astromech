@@ -5,8 +5,6 @@
  * Reads {@link Entry.locales} directly (no separate query). For missing locales,
  * fires the "create translation" mutation which dispatches Astromech.entries.duplicate
  * with the source's localeGroup, joining the new row to the existing group.
- *
- * See specs/symmetric-locale-model.md §9 (edit page).
  */
 
 import React, { useState } from 'react';

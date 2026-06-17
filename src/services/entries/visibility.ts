@@ -1,7 +1,7 @@
 /**
  * Content visibility — runtime filter and projection.
  *
- * Implements the two-axis model from specs/content-visibility.md §6:
+ * Implements the two-axis model:
  *   - Shape axis (`public` / `full`): which fields you see.
  *   - Audience axis (row filter): which entries you may see at all.
  *

@@ -24,9 +24,9 @@ Status: ✅ shipped · 🚧 planned
 - [x] Hono API (`src/transport/http/`): entries, users, media, settings, entry-types routes; auth + error middleware; Zod validation on all handlers; standardised `{ data }` response shape; configurable `apiRoute`/`adminRoute` (default `/api`)
 - [x] `astromech/local` (direct DB) and `astromech/fetch` (HTTP) SDKs covering entries, users, media, settings (renamed from `server`/`client`)
 - [x] Collection-specific TypeScript type generation from config; relations via `populate`
-- [x] Typed entries API ([`specs/typed-entries-api.md`](specs/typed-entries-api.md)): single options object, required `type`, polymorphic atomic bulk ops, DB-enforced `type`+`id` matching, cross-type `query`
+- [x] Typed entries API: single options object, required `type`, polymorphic atomic bulk ops, DB-enforced `type`+`id` matching, cross-type `query`
 - [x] Consolidated `query()` for entries/users/media — `search`/`where`/`trashed`/`sort`/`page`/`limit`/`populate`/`locale`; `QueryResult<T>` with nullable pagination; Drizzle-style sort with whitelist validation
-- [x] `EntryStorage` abstraction with boot-validated capabilities (`statuses`/`slug`/`translatable`/`versioning`/`trash`) and `titleField` ([`specs/unified-architecture.md`](specs/unified-architecture.md))
+- [x] `EntryStorage` abstraction with boot-validated capabilities (`statuses`/`slug`/`translatable`/`versioning`/`trash`) and `titleField`
 - [x] CORS (same-origin default, opt-in origins) + secure-headers middleware
 
 ### Admin Interface ✅
@@ -36,10 +36,10 @@ Status: ✅ shipped · 🚧 planned
 - [x] Layout: AppShell, Sidebar (brand, config-derived nav, plugin nav, collapsed/drawer states), Topbar (breadcrumb, user menu), `UIContext`
 - [x] UI component library (`src/admin/components/ui/`) — Button, Input, Textarea, Select, Checkbox/Toggle, Badge, Modal, Dropdown, Toast, Panel, Table, Toolbar, Tabs, Breadcrumb, Spinner/Skeleton, Empty State, Avatar, Tooltip; design tokens + dark-mode overrides; `astromech/ui` export
 - [x] Pages: dashboard; entry list (sortable columns, search, status filter, pagination, row + bulk actions, list/grid toggle); entry create/edit (field groups, `FieldInput` dispatcher, save/publish); users list/edit; media library
-- [x] App-defined settings pages ([`specs/userland-admin-pages.md`](specs/userland-admin-pages.md)): `admin.pages` + `defineSettingsPage()`, field-tree form at `/page/{path}`, stored in `settings` table (locale-aware `{path}:{locale}`), sidebar "Pages" group gated `settings:read`/`settings:update`
+- [x] App-defined settings pages: `admin.pages` + `defineSettingsPage()`, field-tree form at `/page/{path}`, stored in `settings` table (locale-aware `{path}:{locale}`), sidebar "Pages" group gated `settings:read`/`settings:update`
 - [x] React Query hooks layer (`useEntries`/`useMedia`/`useUsers` + mutations, query-key factories); replaced all inline `useQuery`/`useMutation`
 - [x] File-based routing migration (`src/admin/pages/`, generated route tree); co-located search params, loaders, and guards
-- [x] Definition-driven admin ([`specs/unified-architecture.md`](specs/unified-architecture.md)): `deriveTableDefinition`/`deriveFormDefinition` + cell-kind / field-type registries replace hand-written column loops and the field `switch`
+- [x] Definition-driven admin: `deriveTableDefinition`/`deriveFormDefinition` + cell-kind / field-type registries replace hand-written column loops and the field `switch`
 - [x] Polish: locale-aware date formatting, URL-synced list search params, binary light/dark toggle (cookie-driven, zero-flash), raised-surface tokens + ghost icon buttons, full mobile responsiveness (off-canvas sidebar, responsive forms/tables, 44px touch targets)
 
 ### Content — Entries, Fields & Blocks ✅
@@ -49,7 +49,7 @@ Status: ✅ shipped · 🚧 planned
 - [x] Repeater ↔ blocks UI parity — repeater gains a drag handle + `@dnd-kit` drag-reorder and collapsible/delete controls matching blocks (single-type vs multi-type the only difference)
 - [x] Underscore-namespaced reserved instance keys — stored block/repeater items use `_type`/`_disabled` (collision-safe against user field names; `_disabled` is default-by-absence) and a **persisted** `_id` UUID for stable item identity (better diffs/versioning). Author-facing `BlockDefinition.type` unchanged
 - [x] Entries terminology: `defineEntryType`, `AstromechConfig.entries`, singular slugs, `Entry.type`, `/entries/:type` routes, `/admin/entries/:type` URLs
-- [x] Entry-schema authoring redesign ([`specs/entry-schema-authoring.md`](specs/entry-schema-authoring.md)): POJO field-settings factories (`text('from', { required: true })`), single recursive `fields` tree with layout containers, `astromech/fields` subpath; flat `fields` shortcut; `defineHook` (event-inferred payloads) + `defineSdkMethod` with plugin self-augmentation
+- [x] Entry-schema authoring redesign: POJO field-settings factories (`text('from', { required: true })`), single recursive `fields` tree with layout containers, `astromech/fields` subpath; flat `fields` shortcut; `defineHook` (event-inferred payloads) + `defineSdkMethod` with plugin self-augmentation
 - [x] Abstract entry capabilities + `titleField` with boot validation; titleless / statuses-off types supported
 
 ### Media ✅
@@ -62,7 +62,7 @@ Status: ✅ shipped · 🚧 planned
 
 - [x] `roles` table; roles defined in code via `AstromechConfig.roles` + built-in `admin`/`editor` defaults
 - [x] Permission-checking utility (`src/policies/permissions/permissions.ts`); enforced across all API handlers; role assignment in user create/edit; permission-gated UI; read-only form mode
-- [x] Permissions grammar overhaul ([`specs/unified-architecture.md`](specs/unified-architecture.md)): `resource:identifier:action`, segment-wise wildcards, `definePermissionBundles` + `builtInRole()`, secure-by-default plugin data
+- [x] Permissions grammar overhaul: `resource:identifier:action`, segment-wise wildcards, `definePermissionBundles` + `builtInRole()`, secure-by-default plugin data
 
 ### Versioning, Publishing & Scheduling ✅
 
@@ -72,7 +72,7 @@ Status: ✅ shipped · 🚧 planned
 
 ### Internationalisation ✅
 
-- [x] Symmetric locale model ([`specs/symmetric-locale-model.md`](specs/symmetric-locale-model.md)): `locale_group` UUID (no primary translation), `UNIQUE(locale_group, locale)` + `UNIQUE(type, locale, slug)`, per-locale delete/trash with opt-in `cascadeLocales`
+- [x] Symmetric locale model: `locale_group` UUID (no primary translation), `UNIQUE(locale_group, locale)` + `UNIQUE(type, locale, slug)`, per-locale delete/trash with opt-in `cascadeLocales`
 - [x] `AstromechConfig.locales`/`defaultLocale`, per-collection `i18n`; `entry.locales` map on all responses; `query()` `locale` option; translations via `duplicate(id, { locale, localeGroup })`
 - [x] Admin: locale filter on lists, three-way create modal at non-default locale, `LocaleSwitcher`, delete confirmation with cascade checkbox + incoming-relations preview
 
@@ -92,11 +92,11 @@ Status: ✅ shipped · 🚧 planned
 
 ### Plugin System ✅
 
-- [x] Plugin runtime ([`specs/plugin-architecture.md`](specs/plugin-architecture.md)): `definePlugin` factory + identity derivation, declarative `PluginDefinition`, unified `PluginContext`, open hook registry + `ctx.emit`
+- [x] Plugin runtime: `definePlugin` factory + identity derivation, declarative `PluginDefinition`, unified `PluginContext`, open hook registry + `ctx.emit`
 - [x] SDK namespace `Astromech.plugins.X` (runtime registry + Proxy), auto-mounted RPC API `/api/plugins/{name}/{method}` with access enforcement + raw escape hatch, plugin Drizzle schema collection + prefix guard
 - [x] Failure isolation (crash-loud boot, before-aborts/after-swallows, per-request `onError`, per-job try/catch), `dependsOn` semver + ordering checks
 - [x] Plugin admin UI: field-group `placement: 'tab'`, `registerFieldType`, permission-gated plugin nav tree, `/admin/plugin/{name}/*` catch-all, per-plugin error boundaries, auto-rendered settings page, public browser exports (`astromech/ui/fields`, `astromech/ui/layout`, `astromech/db`, `useAstromechPlugin()`), component + i18n code-gen + `astromech.d.ts` augmentation
-- [x] Namespaced plugin entries ([`specs/unified-architecture.md`](specs/unified-architecture.md)): qualified `{plugin}/{type}` identity, per-namespace entries API + typed SDK, `ctx.entries` scoping, `tableStorage()`, app-owned `db:generate` orchestration
+- [x] Namespaced plugin entries: qualified `{plugin}/{type}` identity, per-namespace entries API + typed SDK, `ctx.entries` scoping, `tableStorage()`, app-owned `db:generate` orchestration
 - [x] Shipped **`@astromech/redirects`** — own table, slug-change `entry:afterUpdate` hook, typed `lookup` SDK
 - [x] Shipped **`@astromech/seo`** — composed `seoSection()` (core text/textarea with `count` length hints + custom `seo-preview` field, namespaced under the `seo` key), dashboard, settings, sitemap/OG via SDK, non-AI length recommendations
 
@@ -107,7 +107,7 @@ Status: ✅ shipped · 🚧 planned
 
 ### Demo Marketing Site ✅
 
-Dogfoods the public APIs end-to-end — Astromech marketing Astromech. See [`specs/userland-admin-pages.md`](specs/userland-admin-pages.md).
+Dogfoods the public APIs end-to-end — Astromech marketing Astromech.
 
 - [x] App-defined **Globals** settings page (translatable): site name, tagline, logo, socials, footer, copyright; menus shipped as 2-level nested repeaters (`mainMenu`/`footerMenu`), read via `settings.get('globals', { locale })`
 - [x] Config refactor: `author` + `caseStudy` entry types, blocks-based `page`, archive URLs, custom `rating` field plugin; all 24 field + 4 layout types exercised
@@ -115,7 +115,7 @@ Dogfoods the public APIs end-to-end — Astromech marketing Astromech. See [`spe
 - [x] Locale-aware routes (`/[...path]`, `/blog`, `/blog/[slug]`, `/blog/category|tag/[slug]`, `/customers`, `/customers/[slug]`); `/sitemap.xml`; redirects middleware (`demo/src/middleware.ts`); SSR via `astromech/local` + `.populate()`
 - [x] Realistic seed content (`demo/seed.ts`): pages, ~7 posts, 3 case studies, authors, taxonomy, menus, globals, redirects, FR translations
 
-> The Globals-repeater menus are a stop-gap; the dedicated `@astromech/menus` plugin (settings-page + `tree` field) replaces them — see Planned → Menus, `tree` field & clean settings translation, and [`specs/menus-and-tree-field.md`](specs/menus-and-tree-field.md).
+> The Globals-repeater menus are a stop-gap; the dedicated `@astromech/menus` plugin (settings-page + `tree` field) replaces them — see Planned → Menus, `tree` field & clean settings translation.
 
 ---
 
@@ -123,7 +123,7 @@ Dogfoods the public APIs end-to-end — Astromech marketing Astromech. See [`spe
 
 ### Services / transport architecture ✅
 
-Reshaped `src/sdk` + dissolved `src/core` into the locked layer model — `storage → services → policies → transport → Client`, assembled at the `kernel` ([`specs/services-architecture.md`](specs/services-architecture.md), as-built in [`specs/services-refactor-plan.md`](specs/services-refactor-plan.md)). Merged 2026-06-17 (`acf0804`); behaviour-preserving, public surface (`astromech/local`, `/fetch`, `/astro`, `bin`) unchanged.
+Reshaped `src/sdk` + dissolved `src/core` into the locked layer model — `storage → services → policies → transport → Client`, assembled at the `kernel`. Merged 2026-06-17 (`acf0804`); behaviour-preserving, public surface (`astromech/local`, `/fetch`, `/astro`, `bin`) unchanged.
 
 - [x] Stages 0–7: dependency-direction lint guardrail (`.dependency-cruiser.cjs`); dissolved `core/`; extracted `services/{entries,media,users,settings}`; relocated transports (`api/`→`transport/http`, `cli/`→`transport/cli`); `sdk/fetch`→`client/`; scaffolding barrels torn down (no cross-layer re-exports survive)
 - [x] `withPermissions(principal)` composable policy + `defineServiceMethod` descriptors (Stages 4–5; the seam the AI work builds on)
@@ -131,7 +131,7 @@ Reshaped `src/sdk` + dissolved `src/core` into the locked layer model — `stora
 
 ### AI integration 🚧
 
-- [ ] Method manifest, MCP server, programmatic confirm gate, context-aware authoring agent, admin UI-slot injection ([`specs/ai-integration.md`](specs/ai-integration.md)) — builds on the services/transport seam above
+- [ ] Method manifest, MCP server, programmatic confirm gate, context-aware authoring agent, admin UI-slot injection — builds on the services/transport seam above
 
 ### Forms Plugin (`@astromech/forms`) 🚧
 
@@ -143,8 +143,7 @@ Reshaped `src/sdk` + dissolved `src/core` into the locked layer model — `stora
 
 ### Menus, `tree` field & clean settings translation 🚧
 
-See [`specs/menus-and-tree-field.md`](specs/menus-and-tree-field.md). Three
-independently-shippable deliverables, in order.
+Three independently-shippable deliverables, in order.
 
 - [ ] **Settings translation cleanup** (prerequisite) — unify app-page + plugin-page settings on one object-blob-per-page shape (`<base>` + `<base>:<locale>`); extract a shared `saveSettingsPage` (partition + write) both renderers call; bring `PluginSettingsPage` to parity (blob load, locale switcher, `PluginPage.translatable`); migrate per-field plugin-settings consumers (seo, demo rating) off `plugin:<ns>:<field>` reads. Top-level-field granularity
 - [ ] **`tree` core field type** — generic recursive nested builder (`repeater` + `_children` axis), drag-to-nest (dnd-kit depth-projection; indent/outdent fallback), `maxDepth`, reserved `_id`/`_disabled`/`_children`, terminating recursive type-gen. No menu/URL semantics
@@ -152,8 +151,7 @@ independently-shippable deliverables, in order.
 
 ### Unified admin pages 🚧
 
-See [`specs/unified-admin-pages.md`](specs/unified-admin-pages.md). Collapse
-`defineSettingsPage` (app) and `defineAdminPage` (plugin) into **one page primitive,
+Collapse `defineSettingsPage` (app) and `defineAdminPage` (plugin) into **one page primitive,
 form optional** — host + plugins author with the same `defineAdminPage`, rendered by one
 shared `SettingsPageForm`.
 
@@ -174,7 +172,7 @@ shared `SettingsPageForm`.
 
 ### Image Optimisation ✅
 
-See [`specs/image-optimisation.md`](specs/image-optimisation.md) (Implemented 2026-06-16). On-demand,
+Implemented 2026-06-16. On-demand,
 allowlisted AVIF/WebP variants behind a canonical app-owned media URL (`/_media/<id>.<ext>?w&f&v`);
 storage driver demoted to a bytes-only backend; optimisation is a swappable `ImageDriver`. Shipped Node
 (Sharp) + Cloudflare (Images) together to lock the driver shape.
@@ -258,7 +256,7 @@ storage driver demoted to a bytes-only backend; optimisation is a swappable `Ima
 
 ### Content visibility — public vs full reads, field privacy, audience filtering ✅
 
-Generalised the disabled-item problem into one model — see [`specs/content-visibility.md`](specs/content-visibility.md). Two orthogonal axes, both derived from the current user + role: **shape** (`public` vs `full`, binary, role-gates `full`) and **audience** (row filter — status now, member audiences later). Field default is public; mutations always private; settings private by default with per-key public opt-in.
+Generalised the disabled-item problem into one model. Two orthogonal axes, both derived from the current user + role: **shape** (`public` vs `full`, binary, role-gates `full`) and **audience** (row filter — status now, member audiences later). Field default is public; mutations always private; settings private by default with per-key public opt-in.
 
 - [x] Public-vs-full read shapes — bare `astromech/local` defaults `public`; `ctx.entries`/admin default `full`; HTTP `full` capability-gated (`entry:read:full`)
 - [x] Recursive runtime filter (`src/services/entries/visibility.ts`) — strips `_disabled` items + `_title`/`_disabled` keys, private fields, and draft/scheduled rows on public reads; composes through populate

@@ -11,7 +11,7 @@
  * title, optional slug, and a status panel. Non-default-locale creation
  * surfaces a modal asking whether to translate an existing entry, start blank
  * in the new locale (joining an existing group), or create a fresh standalone
- * entry. See specs/symmetric-locale-model.md §9.
+ * entry.
  */
 
 import React, { useState } from 'react';

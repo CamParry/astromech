@@ -1,6 +1,6 @@
 /**
  * Thrown when an entry mutation is called with a `type` that doesn't match the
- * stored `type` of the row identified by `id`. See specs/typed-entries-api.md §3.4.
+ * stored `type` of the row identified by `id`.
  */
 export class EntryTypeMismatchError extends Error {
     public readonly entryId: string;

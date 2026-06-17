@@ -2,7 +2,7 @@
  * Thrown when a bulk entry operation fails on a specific id. The DB transaction
  * rolls back the entire batch — `succeededBefore` reports which ids the
  * operation completed against *before* the failure (purely informational; those
- * writes have already been rolled back). See specs/typed-entries-api.md §3.5.
+ * writes have already been rolled back).
  */
 export class BulkOperationError extends Error {
     public readonly failedId: string;

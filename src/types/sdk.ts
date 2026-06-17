@@ -3,7 +3,7 @@
  *
  * Runtime is `EntriesApi` (api.ts). This file layers literal-type overloads on
  * top so that callers passing string-literal types get a narrowed `TypedEntry`
- * result instead of the wide `Entry`. See specs/typed-entries-api.md §3.2.
+ * result instead of the wide `Entry`.
  */
 
 import type { Entry, EntryStatus, EntryVersion, JsonObject } from './domain.js';

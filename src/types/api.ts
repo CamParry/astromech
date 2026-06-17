@@ -1,7 +1,7 @@
 /**
  * API client contract types — entries API, media, settings, users.
  *
- * Entry surface design: see specs/typed-entries-api.md.
+ * Entry surface design:
  *  - Every entry method takes a single options object.
  *  - `type` is required on every method.
  *  - Bulk-capable methods accept `id: string | string[]`; single id → single

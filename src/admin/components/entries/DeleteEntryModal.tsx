@@ -3,8 +3,6 @@
  * an entry. Surfaces:
  *  - cascade-locales toggle (only when the entry has sibling locales)
  *  - incoming-relations list (only when other entries reference this one)
- *
- * See specs/symmetric-locale-model.md §9 (delete confirmation modal).
  */
 
 import React, { useState } from 'react';

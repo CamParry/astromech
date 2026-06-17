@@ -1,7 +1,7 @@
 /**
  * Service-method descriptors — the self-description a service method carries so
  * the manifest, MCP projection, CLI and authoring AI can all deal in one unit.
- * Identical shape for core and plugin methods (see specs/ai-integration.md §2–§6).
+ * Identical shape for core and plugin methods.
  */
 
 import type { z } from '@hono/zod-openapi';
