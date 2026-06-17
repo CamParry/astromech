@@ -28,7 +28,7 @@ import {
     Pagination,
 } from '@/admin/components/ui/index.js';
 import { usePermissions, useUsersQuery, useDeleteUser } from '@/admin/hooks/index.js';
-import { formatDate } from '@/support/dates.js';
+import { formatDate } from '@/utilities/dates.js';
 
 const PER_PAGE = 20;
 

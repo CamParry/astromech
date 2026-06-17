@@ -83,7 +83,7 @@ import {
     useBulkUnpublishEntries,
 } from '@/admin/hooks/index.js';
 import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal.js';
-import { resolveContentLocale } from '@/support/locale.js';
+import { resolveContentLocale } from '@/utilities/locale.js';
 import type { EntriesMount, EntriesListSearch } from './mount.js';
 
 // ============================================================================

@@ -12,7 +12,7 @@
  * own `translatable` flag governs.
  */
 
-import { flattenEntryFields } from '@/support/entry-fields.js';
+import { flattenEntryFields } from '@/utilities/entry-fields.js';
 import type { ResolvedEntryFields } from '@/types/fields.js';
 import type { JsonObject, JsonValue } from '@/types/index.js';
 

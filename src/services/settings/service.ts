@@ -12,7 +12,7 @@ import config from 'virtual:astromech/config';
 import { getDb } from '@/db/registry.js';
 import { settingsTable } from '@/db/schema.js';
 import type { JsonValue, Setting, SettingsApi } from '@/types/index.js';
-import { mergeLocaleSetting } from '@/support/settings-page-values.js';
+import { mergeLocaleSetting } from '@/utilities/settings-page-values.js';
 import { isPublicSettingKey } from '@/services/settings/visibility.js';
 
 export const settingsApi: SettingsApi = {

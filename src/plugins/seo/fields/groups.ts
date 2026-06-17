@@ -9,7 +9,7 @@ import { group, section, text, textarea } from '@/builders/fields.js';
 import type { FieldDefinition, Label } from '@/types/index.js';
 import { tKey } from '../manifest.js';
 import { SEO_FIELD_NAME } from '../types.js';
-import { SEO_DESCRIPTION_RANGE, SEO_TITLE_RANGE } from '../support/length.js';
+import { SEO_DESCRIPTION_RANGE, SEO_TITLE_RANGE } from '../utilities/length.js';
 
 export type SeoSectionOptions = { label?: Label };
 

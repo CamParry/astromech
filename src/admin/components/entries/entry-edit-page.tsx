@@ -50,12 +50,12 @@ import {
     useDuplicateEntry,
 } from '@/admin/hooks/index.js';
 import type { EntryStatus } from '@/types/index.js';
-import { resolveEntryUrl } from '@/support/entry-url.js';
+import { resolveEntryUrl } from '@/utilities/entry-url.js';
 import {
     deriveFormDefinition,
     resolveConfigForDerive,
 } from '@/admin/definitions/derive.js';
-import { resolveContentLocale } from '@/support/locale.js';
+import { resolveContentLocale } from '@/utilities/locale.js';
 import type { EntriesMount } from './mount.js';
 
 // Surface link bases are runtime strings; address `Link` by string `to`.

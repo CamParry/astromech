@@ -47,7 +47,7 @@ import {
     deriveFormDefinition,
     resolveConfigForDerive,
 } from '@/admin/definitions/derive.js';
-import { resolveContentLocale } from '@/support/locale.js';
+import { resolveContentLocale } from '@/utilities/locale.js';
 import type { EntriesMount } from './mount.js';
 
 // ============================================================================

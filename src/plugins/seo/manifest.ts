@@ -5,7 +5,7 @@
  */
 
 import { derivePluginName, pluginAssetRoot, sanitisePackage } from '@/plugins/runtime/plugin-identity.js';
-import { t as labelKey } from '@/support/labels.js';
+import { t as labelKey } from '@/utilities/labels.js';
 import type { MessageDescriptor } from '@/types/index.js';
 
 export const PACKAGE = '@astromech/seo';

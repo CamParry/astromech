@@ -9,7 +9,7 @@ import React from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { FileImage } from 'lucide-react';
-import { formatDatetime } from '@/support/dates.js';
+import { formatDatetime } from '@/utilities/dates.js';
 import {
     Button,
     Panel,

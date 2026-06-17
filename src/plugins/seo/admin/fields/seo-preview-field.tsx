@@ -7,7 +7,7 @@
 import React from 'react';
 import type { BaseFieldProps } from 'astromech';
 import { useAstromechPlugin, useFieldValue } from 'astromech/ui';
-import { SEO_DESCRIPTION_RANGE, SEO_TITLE_RANGE } from '../../support/length.js';
+import { SEO_DESCRIPTION_RANGE, SEO_TITLE_RANGE } from '../../utilities/length.js';
 import './seo-preview-field.css';
 
 function truncate(text: string, max: number): string {

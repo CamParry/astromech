@@ -31,10 +31,10 @@ import { getEmailConfig } from '@/email/registry.js';
 import { renderEmail } from '@/email/render.js';
 import { pluginEntryTypes, resolvePluginIdentity } from '@/plugins/runtime/plugin-identity.js';
 import { registerCronJob } from '@/cron/registry.js';
-import { qualifyEntryType } from '@/support/entry-types.js';
-import { flattenEntryFields } from '@/support/entry-fields.js';
+import { qualifyEntryType } from '@/utilities/entry-types.js';
+import { flattenEntryFields } from '@/utilities/entry-fields.js';
 import { createScopedEntries } from '@/services/_shared/scoped-entries.js';
-import { withDefaultShape } from '@/support/with-default-shape.js';
+import { withDefaultShape } from '@/utilities/with-default-shape.js';
 import {
     resetEntryStorageOverrides,
     setEntryStorage,

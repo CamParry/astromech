@@ -6,7 +6,7 @@
 
 import type { Entry, PluginContext } from '@/types/index.js';
 import { defineServiceMethod } from '@/index.js';
-import { resolveEntryPath } from '@/support/entry-url.js';
+import { resolveEntryPath } from '@/utilities/entry-url.js';
 import { PERMISSION_NAMESPACE } from '../manifest.js';
 import { SEO_FIELD_NAME } from '../types.js';
 import type {
@@ -16,8 +16,8 @@ import type {
     SeoSitemap,
     SeoSitemapUrl,
 } from '../types.js';
-import { lengthStatus, SEO_DESCRIPTION_RANGE, SEO_TITLE_RANGE } from '../support/length.js';
-import { parseSeoMetaValue } from '../support/meta-value.js';
+import { lengthStatus, SEO_DESCRIPTION_RANGE, SEO_TITLE_RANGE } from '../utilities/length.js';
+import { parseSeoMetaValue } from '../utilities/meta-value.js';
 
 /**
  * Settings page blob key for the SEO plugin. The settings page has

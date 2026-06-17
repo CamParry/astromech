@@ -10,9 +10,9 @@ import { useForm } from '@tanstack/react-form';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Modal, Spinner, useConfirm } from '../ui/index.js';
 import { useMediaItem, useUpdateMedia, useDeleteMedia } from '../../hooks/media.js';
-import { formatBytes } from '@/support/bytes.js';
-import { formatDatetime } from '@/support/dates.js';
-import { FileTypeIcon } from '@/admin/utils/media.js';
+import { formatBytes } from '@/utilities/bytes.js';
+import { formatDatetime } from '@/utilities/dates.js';
+import { FileTypeIcon } from '@/admin/utilities/media.js';
 
 export type MediaDetailModalProps = {
     mediaId: string | null;

@@ -25,7 +25,7 @@ import {
     FormLayout,
     Stack,
 } from '@/admin/components/ui/index.js';
-import { formatDatetime } from '@/support/dates.js';
+import { formatDatetime } from '@/utilities/dates.js';
 import {
     usePermissions,
     useUser,

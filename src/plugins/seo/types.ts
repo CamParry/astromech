@@ -4,7 +4,7 @@
  * pull in core server code.
  */
 
-import type { LengthStatus } from './support/length.js';
+import type { LengthStatus } from './utilities/length.js';
 
 /**
  * The field name `seoSection()` attaches — also the footprint anchor:

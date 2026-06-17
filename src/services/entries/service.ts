@@ -32,8 +32,8 @@ import { getDb } from '@/db/registry.js';
 import { RelationshipsRepository } from '@/db/repositories/relationships.js';
 import { populateEntries } from '@/db/repositories/populate.js';
 import { getEntryStorage } from '@/storage/entries/registry.js';
-import { resolveEntryType } from '@/support/entry-types.js';
-import { resolveContentLocale } from '@/support/locale.js';
+import { resolveEntryType } from '@/utilities/entry-types.js';
+import { resolveContentLocale } from '@/utilities/locale.js';
 import type { EntryRecord, EntryStorage, StorageDb } from '@/storage/entries/types.js';
 import type {
     Entry,
@@ -51,8 +51,8 @@ import type {
 } from '@/types/index.js';
 import { getCurrentUser, setCurrentUser } from '@/services/_shared/context.js';
 import { hasHookHandlers, runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime.js';
-import { slugify } from '@/support/strings.js';
-import { flattenEntryFields } from '@/support/entry-fields.js';
+import { slugify } from '@/utilities/strings.js';
+import { flattenEntryFields } from '@/utilities/entry-fields.js';
 import {
     applyVisibilityWithRelations,
     isPublicBranded,

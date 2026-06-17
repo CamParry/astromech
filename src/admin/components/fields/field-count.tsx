@@ -1,6 +1,6 @@
 import { clsx } from 'clsx';
 import type { FieldDefinition } from '@/types/index.js';
-import { lengthStatus } from '@/utils/field-count.js';
+import { lengthStatus } from '@/utilities/field-count.js';
 
 type CountSetting = NonNullable<FieldDefinition['count']>;
 

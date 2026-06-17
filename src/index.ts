@@ -35,9 +35,9 @@ export {
     BUILT_IN_ROLES,
 } from '@/policies/permissions/permissions.js';
 export type { BuiltInRoleSlug } from '@/policies/permissions/permissions.js';
-export { withDefaults } from '@/support/options.js';
-export { resolveEntryUrl, resolveEntryPath } from '@/support/entry-url.js';
-export type { UrlEntry } from '@/support/entry-url.js';
+export { withDefaults } from '@/utilities/options.js';
+export { resolveEntryUrl, resolveEntryPath } from '@/utilities/entry-url.js';
+export type { UrlEntry } from '@/utilities/entry-url.js';
 export { defaultImageWidths } from '@/images/defaults.js';
 export { buildImageAttrs } from '@/images/build-image-attrs.js';
 export type {

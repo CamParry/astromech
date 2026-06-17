@@ -16,7 +16,7 @@ import type {
     SelectOption,
     ValidationRule,
 } from '@/types/fields.js';
-import { t } from '@/support/labels.js';
+import { t } from '@/utilities/labels.js';
 
 // Re-exported so `astromech/fields` surfaces the `t` label descriptor.
 export { t };

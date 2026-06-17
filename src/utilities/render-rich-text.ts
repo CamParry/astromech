@@ -11,7 +11,7 @@
 import { renderToHTMLString } from '@tiptap/static-renderer';
 import type { JSONContent } from '@tiptap/core';
 import type { RichTextAllow } from '@/types/fields.js';
-import { buildRichTextExtensions } from '@/support/rich-text-extensions.js';
+import { buildRichTextExtensions } from '@/utilities/rich-text-extensions.js';
 
 // ============================================================================
 // Sanitization

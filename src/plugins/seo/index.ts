@@ -38,10 +38,10 @@ export {
     SEO_DESCRIPTION_RANGE,
     SEO_TITLE_RANGE,
     lengthStatus,
-} from './support/length.js';
-export type { LengthRange, LengthStatus } from './support/length.js';
-export { parseSeoMetaValue } from './support/meta-value.js';
-export type { SeoMetaValue } from './support/meta-value.js';
+} from './utilities/length.js';
+export type { LengthRange, LengthStatus } from './utilities/length.js';
+export { parseSeoMetaValue } from './utilities/meta-value.js';
+export type { SeoMetaValue } from './utilities/meta-value.js';
 
 export { seoPermissions } from './permissions/seo.js';
 

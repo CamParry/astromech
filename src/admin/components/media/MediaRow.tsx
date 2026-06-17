@@ -1,8 +1,8 @@
 import React from 'react';
 import { Checkbox, Table } from '../ui/index.js';
-import { FileTypeIcon } from '../../utils/media.js';
-import { formatBytes } from '@/support/bytes.js';
-import { formatDatetime } from '@/support/dates.js';
+import { FileTypeIcon } from '../../utilities/media.js';
+import { formatBytes } from '@/utilities/bytes.js';
+import { formatDatetime } from '@/utilities/dates.js';
 import type { Media } from '../../../types/index.js';
 
 export type MediaRowProps = {

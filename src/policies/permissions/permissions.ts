@@ -8,9 +8,9 @@
 import type { AstromechConfig, ResolvedConfig } from '@/types/config.js';
 import type { Permission, Role } from '@/types/domain.js';
 
-import { hasPermission as hasPermissionImpl } from '@/support/permission-match.js';
+import { hasPermission as hasPermissionImpl } from '@/utilities/permission-match.js';
 import { sanitisePackage } from '@/plugins/runtime/plugin-identity.js';
-export { hasPermission, matchesPermission } from '@/support/permission-match.js';
+export { hasPermission, matchesPermission } from '@/utilities/permission-match.js';
 
 type ConfigWithRoles = Pick<AstromechConfig, 'roles'> | Pick<ResolvedConfig, 'roles'>;
 

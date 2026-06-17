@@ -26,7 +26,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import adminConfig from 'virtual:astromech/admin-config';
 import { Astromech } from '@/client/index.js';
-import { parseEntryTypeId } from '@/support/entry-types.js';
+import { parseEntryTypeId } from '@/utilities/entry-types.js';
 import { usePermissions } from '../../hooks/index.js';
 import { EntryTypeIcon } from './entry-type-icon.js';
 import type { AdminEntryTypeConfig, Entry, Media, User } from '@/types/index.js';

@@ -28,7 +28,7 @@ import {
     useToast,
 } from '@/admin/components/ui/index.js';
 import { resolveLabel } from '@/admin/i18n/labels.js';
-import { resolveContentLocale } from '@/support/locale.js';
+import { resolveContentLocale } from '@/utilities/locale.js';
 
 // ============================================================================
 // Query key

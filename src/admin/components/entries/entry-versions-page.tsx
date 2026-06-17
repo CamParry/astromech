@@ -14,7 +14,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link as RouterLink } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import { formatDatetime } from '@/support/dates.js';
+import { formatDatetime } from '@/utilities/dates.js';
 import {
     Button,
     Panel,

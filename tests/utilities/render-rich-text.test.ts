@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { JSONContent } from '@tiptap/core';
-import { renderRichText } from '@/support/render-rich-text.js';
+import { renderRichText } from '@/utilities/render-rich-text.js';
 
 // ============================================================================
 // Helpers

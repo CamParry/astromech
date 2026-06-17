@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fieldNameToLabel, getFieldLabel } from '@/utils/field-helpers';
+import { fieldNameToLabel, getFieldLabel } from '@/utilities/field-helpers';
 
 describe('fieldNameToLabel', () => {
   it('converts snake_case to Title Case', () => {

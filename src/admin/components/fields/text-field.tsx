@@ -1,5 +1,5 @@
 import type { BaseFieldProps } from '@/types/index.js';
-import { formatValueForInput } from '@/utils/field-formatters';
+import { formatValueForInput } from '@/utilities/field-formatters';
 import { Input } from '@/admin/components/ui/input';
 import { FieldCount } from './field-count';
 

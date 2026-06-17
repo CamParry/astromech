@@ -17,7 +17,7 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
 import { createEntriesRouter } from '@/transport/http/routes/entries.js';
 import { getPluginEntryMounts } from '@/plugins/runtime/plugin-runtime.js';
-import { qualifyEntryType } from '@/support/entry-types.js';
+import { qualifyEntryType } from '@/utilities/entry-types.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import type { AstromechConfig, PluginDefinition, Role, User } from '@/types/index.js';
 

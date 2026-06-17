@@ -21,7 +21,7 @@ import {
 } from '@/admin/components/ui/index.js';
 import { Astromech } from '@/client/index.js';
 import type { Entry } from '@/types/index.js';
-import { formatDate } from '@/support/dates.js';
+import { formatDate } from '@/utilities/dates.js';
 
 // ============================================================================
 // Helpers
