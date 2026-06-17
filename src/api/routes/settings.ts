@@ -10,7 +10,7 @@
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { Astromech } from '@/sdk/local/index.js';
+import { Astromech } from '@/transport/local/index.js';
 import {
     forbidden,
     fromZodError,

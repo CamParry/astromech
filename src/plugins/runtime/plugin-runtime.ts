@@ -33,8 +33,8 @@ import { pluginEntryTypes, resolvePluginIdentity } from '@/plugins/runtime/plugi
 import { registerCronJob } from '@/cron/registry.js';
 import { qualifyEntryType } from '@/support/entry-types.js';
 import { flattenEntryFields } from '@/support/entry-fields.js';
-import { createScopedEntries } from '@/sdk/local/scoped-entries.js';
-import { withDefaultShape } from '@/sdk/local/with-default-shape.js';
+import { createScopedEntries } from '@/services/_shared/scoped-entries.js';
+import { withDefaultShape } from '@/support/with-default-shape.js';
 import {
     resetEntryStorageOverrides,
     setEntryStorage,

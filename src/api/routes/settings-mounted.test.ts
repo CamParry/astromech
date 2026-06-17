@@ -16,7 +16,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@/test/harness.js';
-import { Astromech } from '@/sdk/local/index.js';
+import { Astromech } from '@/transport/local/index.js';
 import { settingsRouter } from '@/api/routes/settings.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
 import type { Role, User } from '@/types/index.js';

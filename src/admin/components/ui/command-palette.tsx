@@ -25,7 +25,7 @@ import { Image, LayoutDashboard, Settings, Users, Puzzle, icons } from 'lucide-r
 import type { LucideIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import adminConfig from 'virtual:astromech/admin-config';
-import { Astromech } from '@/sdk/fetch/index.js';
+import { Astromech } from '@/client/index.js';
 import { parseEntryTypeId } from '@/support/entry-types.js';
 import { usePermissions } from '../../hooks/index.js';
 import { EntryTypeIcon } from './entry-type-icon.js';

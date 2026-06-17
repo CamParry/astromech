@@ -10,7 +10,7 @@
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { Astromech } from '@/sdk/local/index.js';
+import { Astromech } from '@/transport/local/index.js';
 import { internalError, notFound } from '@/api/middleware/errors.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
 

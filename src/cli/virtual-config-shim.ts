@@ -1,7 +1,7 @@
 /**
  * Shim for virtual:astromech/config
  *
- * The SDK modules (`sdk/local/entries.ts`, `sdk/local/index.ts`) import from
+ * The SDK modules (`services/entries/service.ts`, `transport/local/index.ts`) import from
  * `virtual:astromech/config` which is normally injected by the Astro integration
  * at build time. In the CLI context this virtual module does not exist, so we
  * shim it with a live getter that reads from the global registry populated by

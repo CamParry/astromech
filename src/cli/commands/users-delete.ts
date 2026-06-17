@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config.js';
-import { usersApi } from '@/sdk/local/users.js';
+import { usersApi } from '@/services/users/service.js';
 
 export default defineCommand({
     meta: { name: 'users:delete', description: 'Delete a user' },

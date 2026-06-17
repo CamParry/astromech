@@ -7,7 +7,7 @@
 
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@/test/harness.js';
-import { entries } from '@/sdk/local/entries.js';
+import { entries } from '@/services/entries/service.js';
 import type { AstromechConfig, PluginDefinition } from '@/types/index.js';
 
 const redirectsPlugin: PluginDefinition = {

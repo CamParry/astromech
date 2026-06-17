@@ -19,7 +19,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ValidationError } from '@/errors/validation.js';
 import { createTestDb, setupTestConfig } from '@/test/harness.js';
-import { Astromech } from '@/sdk/local/index.js';
+import { Astromech } from '@/transport/local/index.js';
 
 const api = Astromech.entries;
 

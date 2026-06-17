@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, setupTestConfig, makeTestConfig } from '@/test/harness.js';
 import { setStorageDriver } from '@/storage/registry.js';
-import { mediaApi } from '@/sdk/local/media.js';
+import { mediaApi } from '@/services/media/service.js';
 import type { StorageDriver } from '@/types/index.js';
 
 // Minimal 1x1 JPEG (SOI + APP0 + SOF0 + EOI) — an optimisable raster image.

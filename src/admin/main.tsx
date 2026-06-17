@@ -7,7 +7,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import adminConfig from 'virtual:astromech/admin-config';
-import { Astromech } from '../sdk/fetch/index.js';
+import { Astromech } from '@/client/index.js';
 import { setDateLocale } from '../support/dates.js';
 import { resolveContentLocale } from '../support/locale.js';
 import { createAppRouter } from './router.js';

@@ -2,7 +2,7 @@
  * Internal EntryStorage contract.
  *
  * This is NOT exported from the package root — it is the seam between the
- * entry orchestrator (`src/sdk/local/entries.ts`: validation, hooks,
+ * entry orchestrator (`src/services/entries/service.ts`: validation, hooks,
  * relationships, versioning policy, bulk) and a persistence backend. The
  * built-in storage (`built-in.ts`) is the only Phase 2 implementation; Phase 3
  * mounts a single-table storage that declares no capabilities and so only needs

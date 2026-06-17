@@ -4,7 +4,7 @@
  * These exercise the persistence contract directly (not through the
  * orchestrator): base CRUD, list machinery, slug uniquification, and the
  * trash/versions/translatable sub-surfaces. The orchestrator's policy is
- * covered by the characterization suite in src/sdk/local/entries.test.ts.
+ * covered by the characterization suite in src/services/entries/service.test.ts.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';

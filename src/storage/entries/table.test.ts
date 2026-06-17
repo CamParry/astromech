@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@/test/harness.js';
-import { Astromech } from '@/sdk/local/index.js';
+import { Astromech } from '@/transport/local/index.js';
 import type { AstromechConfig, PluginDefinition } from '@/types/index.js';
 import { tableStorage } from './table.js';
 

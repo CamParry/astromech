@@ -49,7 +49,7 @@ import type {
     User,
     FieldDefinition,
 } from '@/types/index.js';
-import { getCurrentUser, setCurrentUser } from '@/sdk/local/context.js';
+import { getCurrentUser, setCurrentUser } from '@/services/_shared/context.js';
 import { hasHookHandlers, runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime.js';
 import { slugify } from '@/support/strings.js';
 import { flattenEntryFields } from '@/support/entry-fields.js';
@@ -100,7 +100,7 @@ function asEntry(record: EntryRecord): Entry {
 // ============================================================================
 
 /**
- * @deprecated Use setCurrentUser from @/sdk/local/context.js instead.
+ * @deprecated Use setCurrentUser from @/services/_shared/context.js instead.
  */
 export function initServerContext(ctx: {
     db: unknown;

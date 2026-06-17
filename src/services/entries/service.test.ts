@@ -14,7 +14,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { defineHook } from '@/index.js';
 import { eq } from 'drizzle-orm';
 import { createTestDb, registerTestPlugins, setupTestConfig } from '@/test/harness.js';
-import { Astromech } from '@/sdk/local/index.js';
+import { Astromech } from '@/transport/local/index.js';
 import { getDb } from '@/db/registry.js';
 import { entriesTable, relationshipsTable } from '@/db/schema.js';
 import type { Entry, PluginDefinition } from '@/types/index.js';

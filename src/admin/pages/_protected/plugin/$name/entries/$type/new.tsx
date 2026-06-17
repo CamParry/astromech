@@ -8,7 +8,7 @@
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { createEntriesApi } from '@/sdk/fetch/index.js';
+import { createEntriesApi } from '@/client/index.js';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntryNewPage } from '@/admin/components/entries/entry-new-page.js';
 import { buildPluginEntriesSurface } from '@/admin/components/entries/surface.js';

@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { createScopedEntries } from '@/sdk/local/scoped-entries.js';
+import { createScopedEntries } from '@/services/_shared/scoped-entries.js';
 import type { EntriesApi } from '@/types/index.js';
 
 /** A stub that records the `type` each method was called with. */

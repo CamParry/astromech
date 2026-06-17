@@ -13,7 +13,7 @@
 
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { eq, count } from 'drizzle-orm';
-import { Astromech } from '@/sdk/local/index.js';
+import { Astromech } from '@/transport/local/index.js';
 import { badRequest, forbidden, fromZodError, internalError, notFound } from '@/api/middleware/errors.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
 import { can } from '@/policies/permissions/permissions.js';

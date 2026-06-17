@@ -21,9 +21,9 @@ import {
     registerTestPlugins,
     setupTestConfig,
 } from '@/test/harness.js';
-import '@/sdk/local/index.js'; // registers the plugin SDK client (setPluginSdkClient)
-import { localPlugins } from '@/sdk/local/plugins.js';
-import { entries as localEntries } from '@/sdk/local/entries.js';
+import '@/transport/local/index.js'; // registers the plugin SDK client (setPluginSdkClient)
+import { localPlugins } from '@/transport/local/plugins.js';
+import { entries as localEntries } from '@/services/entries/service.js';
 import { redirects } from '@/plugins/redirects/index.js';
 import type { RedirectMatch } from '@/plugins/redirects/index.js';
 import type {

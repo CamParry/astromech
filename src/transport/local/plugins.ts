@@ -11,9 +11,9 @@
  */
 
 import type { EntriesApi, PluginContext, PluginSdkNamespace } from '@/types/index.js';
-import { getCurrentUser } from '@/sdk/local/context.js';
-import { entries as localEntries } from '@/sdk/local/entries.js';
-import { createScopedEntries } from '@/sdk/local/scoped-entries.js';
+import { getCurrentUser } from '@/services/_shared/context.js';
+import { entries as localEntries } from '@/services/entries/service.js';
+import { createScopedEntries } from '@/services/_shared/scoped-entries.js';
 import {
     createPluginContext,
     getPluginIdentity,
