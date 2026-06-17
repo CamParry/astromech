@@ -59,7 +59,7 @@ import {
     markPublic,
     PublicShapeWriteError,
     type VisibilityShape,
-} from '@/policies/visibility/visibility.js';
+} from '@/services/entries/visibility.js';
 
 // ============================================================================
 // Validation Helper

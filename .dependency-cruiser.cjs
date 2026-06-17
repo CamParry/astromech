@@ -35,8 +35,8 @@ module.exports = {
     {
       name: 'services-no-import-policies',
       comment:
-        'Policies are COMPOSED ONTO services by the kernel/transport — services should not import them. Set to "warn" during the spine refactor because visibility/permission calls are still embedded in services until the Stage 6 cleanup splits land; tighten to "error" then.',
-      severity: 'warn',
+        'Policies (permissions, confirmation) are COMPOSED ONTO services by the kernel/transport — services must not import them. Visibility is NOT a policy: it is per-feature, data-model-specific read-shaping that lives beside its service (services/<feature>/visibility.ts), so it does not appear here.',
+      severity: 'error',
       from: { path: '^src/services/' },
       to: { path: '^src/policies/' },
     },

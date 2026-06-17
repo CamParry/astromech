@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { isPublicSettingKey } from './settings-visibility.js';
+import { isPublicSettingKey } from './visibility.js';
 
 describe('isPublicSettingKey', () => {
     // -----------------------------------------------------------------------

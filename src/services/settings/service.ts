@@ -3,8 +3,9 @@
  *
  * A bare service: it talks to storage (the settings table) and applies the
  * public/private key visibility rule. Unaware of delivery shape — the Local API,
- * HTTP API, etc. project it. (Public-key filtering is the visibility policy
- * embedded here for now; it lifts out in the Stage 6 cleanup split.)
+ * HTTP API, etc. project it. Visibility is per-feature, data-model-specific
+ * read-shaping, so it lives beside the service it serves (./visibility.js),
+ * not as a cross-cutting policy.
  */
 
 import config from 'virtual:astromech/config';
@@ -12,7 +13,7 @@ import { getDb } from '@/db/registry.js';
 import { settingsTable } from '@/db/schema.js';
 import type { JsonValue, Setting, SettingsApi } from '@/types/index.js';
 import { mergeLocaleSetting } from '@/support/settings-page-values.js';
-import { isPublicSettingKey } from '@/policies/visibility/settings-visibility.js';
+import { isPublicSettingKey } from '@/services/settings/visibility.js';
 
 export const settingsApi: SettingsApi = {
     async all(opts?: { full?: boolean }): Promise<Setting[]> {
