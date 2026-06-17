@@ -16,12 +16,12 @@ Status: ✅ shipped · 🚧 planned
 - [x] `DatabaseDriver` factory pattern with `libsql` and `d1` drivers
 - [x] Removed module-level mutable globals (`serverContext`); `globalThis` singleton pattern for cross-chunk registries
 - [x] `src/support/` utilities (`strings`, `bytes`, `dates`); `src/types.ts` split into domain/config/api/hooks/plugins/sdk modules
-- [x] Framework-agnostic `src/index.ts` (`defineConfig`/`defineEntryType`/`definePlugin` + types); Astro integration extracted to `src/adapters/astro.ts` (`astromech/astro`)
+- [x] Framework-agnostic `src/index.ts` (`defineConfig`/`defineEntryType`/`definePlugin` + types); Astro integration at `src/kernel/astro.ts` (`astromech/astro`; thin shell over `kernel/boot` + `kernel/admin-config`)
 - [x] Hardening pass: removed `any` types, fixed `useEffect` dependency bugs, populate/`updatePositions` repository bugs, type-generator nested-field bug
 
 ### API & SDK ✅
 
-- [x] Hono API (`src/api/`): entries, users, media, settings, entry-types routes; auth + error middleware; Zod validation on all handlers; standardised `{ data }` response shape; configurable `apiRoute`/`adminRoute` (default `/api`)
+- [x] Hono API (`src/transport/http/`): entries, users, media, settings, entry-types routes; auth + error middleware; Zod validation on all handlers; standardised `{ data }` response shape; configurable `apiRoute`/`adminRoute` (default `/api`)
 - [x] `astromech/local` (direct DB) and `astromech/fetch` (HTTP) SDKs covering entries, users, media, settings (renamed from `server`/`client`)
 - [x] Collection-specific TypeScript type generation from config; relations via `populate`
 - [x] Typed entries API ([`specs/typed-entries-api.md`](specs/typed-entries-api.md)): single options object, required `type`, polymorphic atomic bulk ops, DB-enforced `type`+`id` matching, cross-type `query`
@@ -61,7 +61,7 @@ Status: ✅ shipped · 🚧 planned
 ### Roles & Permissions ✅
 
 - [x] `roles` table; roles defined in code via `AstromechConfig.roles` + built-in `admin`/`editor` defaults
-- [x] Permission-checking utility (`src/core/permissions.ts`); enforced across all API handlers; role assignment in user create/edit; permission-gated UI; read-only form mode
+- [x] Permission-checking utility (`src/policies/permissions/permissions.ts`); enforced across all API handlers; role assignment in user create/edit; permission-gated UI; read-only form mode
 - [x] Permissions grammar overhaul ([`specs/unified-architecture.md`](specs/unified-architecture.md)): `resource:identifier:action`, segment-wise wildcards, `definePermissionBundles` + `builtInRole()`, secure-by-default plugin data
 
 ### Versioning, Publishing & Scheduling ✅
@@ -103,7 +103,7 @@ Status: ✅ shipped · 🚧 planned
 ### Search ✅
 
 - [x] Command-palette live search across root entries + plugin entries + users + media — permission-gated, debounced, per-source resilient, top-5 per group; static nav / entry-type / plugin-page shortcuts. Title+slug / name+email / filename `LIKE`, frontend-only (reuses existing `query()` methods, no dedicated endpoint)
-- [x] Result polish — entry results split into one group per entry type (type-plural headings, mirroring the Users/Media split); single-page plugins shown flat (no `Plugin: Page` doubling); plugin entries resolve their type icon / title / edit link. Enabling fixes: `tableStorage`-backed entries now carry their `type` (the orchestrator stamps it on `query()`/`get()`), and locale-less reads bridge a display `defaultLocale` (e.g. `en-GB`) down to a content locale so search isn't silently empty
+- [x] Result polish — entry results split into one group per entry type (type-plural headings, mirroring the Users/Media split); single-page plugins shown flat (no `Plugin: Page` doubling); plugin entries resolve their type icon / title / edit link. Enabling fixes: `tableStorage`-backed entries now carry their `type` (the entries service stamps it on `query()`/`get()`), and locale-less reads bridge a display `defaultLocale` (e.g. `en-GB`) down to a content locale so search isn't silently empty
 
 ### Demo Marketing Site ✅
 
@@ -121,11 +121,17 @@ Dogfoods the public APIs end-to-end — Astromech marketing Astromech. See [`spe
 
 ## Planned
 
-### Services / transport architecture & AI integration 🚧
+### Services / transport architecture ✅
 
-- [ ] Upstream refactor: reshape `src/sdk` + dissolve `src/core` into the locked layer model — `storage → services → policies → transport → Client`, assembled at the `kernel` ([`specs/services-architecture.md`](specs/services-architecture.md), staged in [`specs/services-refactor-plan.md`](specs/services-refactor-plan.md))
-- [ ] `withPermissions(principal)` composable policy + `defineServiceMethod` descriptors (Stages 4–5; the seam the AI work builds on)
-- [ ] AI integration: method manifest, MCP server, programmatic confirm gate, context-aware authoring agent, admin UI-slot injection ([`specs/ai-integration.md`](specs/ai-integration.md))
+Reshaped `src/sdk` + dissolved `src/core` into the locked layer model — `storage → services → policies → transport → Client`, assembled at the `kernel` ([`specs/services-architecture.md`](specs/services-architecture.md), as-built in [`specs/services-refactor-plan.md`](specs/services-refactor-plan.md)). Merged 2026-06-17 (`acf0804`); behaviour-preserving, public surface (`astromech/local`, `/fetch`, `/astro`, `bin`) unchanged.
+
+- [x] Stages 0–7: dependency-direction lint guardrail (`.dependency-cruiser.cjs`); dissolved `core/`; extracted `services/{entries,media,users,settings}`; relocated transports (`api/`→`transport/http`, `cli/`→`transport/cli`); `sdk/fetch`→`client/`; scaffolding barrels torn down (no cross-layer re-exports survive)
+- [x] `withPermissions(principal)` composable policy + `defineServiceMethod` descriptors (Stages 4–5; the seam the AI work builds on)
+- [x] Stage 6 cleanup: visibility co-located per-feature (`services/<feature>/visibility.ts`) — not a policy (arch Decision 8), `services-no-import-policies` lint now `error`; retired vocabulary purged; astro boot/compose extracted to `kernel/` (`boot`, `admin-config`, plugin-client-manifest codegen)
+
+### AI integration 🚧
+
+- [ ] Method manifest, MCP server, programmatic confirm gate, context-aware authoring agent, admin UI-slot injection ([`specs/ai-integration.md`](specs/ai-integration.md)) — builds on the services/transport seam above
 
 ### Forms Plugin (`@astromech/forms`) 🚧
 
@@ -183,7 +189,7 @@ storage driver demoted to a bytes-only backend; optimisation is a swappable `Ima
 ### Multi-Runtime & Framework Adapters 🚧
 
 - [ ] Document the adapter contract (`RuntimeAdapter`, `FrameworkAdapter` types) in `src/types/`
-- [ ] Runtime auto-detection utility (`src/core/runtime.ts`) — Cloudflare Workers, Node, Bun, Deno
+- [ ] Runtime auto-detection utility (`src/support/runtime.ts`) — Cloudflare Workers, Node, Bun, Deno
 - [ ] `astromech/node` — standalone Node/Bun HTTP adapter
 - [ ] `astromech/sveltekit` — SvelteKit framework adapter
 - [ ] `astromech/nextjs` — Next.js framework adapter
@@ -255,7 +261,7 @@ storage driver demoted to a bytes-only backend; optimisation is a swappable `Ima
 Generalised the disabled-item problem into one model — see [`specs/content-visibility.md`](specs/content-visibility.md). Two orthogonal axes, both derived from the current user + role: **shape** (`public` vs `full`, binary, role-gates `full`) and **audience** (row filter — status now, member audiences later). Field default is public; mutations always private; settings private by default with per-key public opt-in.
 
 - [x] Public-vs-full read shapes — bare `astromech/local` defaults `public`; `ctx.entries`/admin default `full`; HTTP `full` capability-gated (`entry:read:full`)
-- [x] Recursive runtime filter (`src/core/visibility.ts`) — strips `_disabled` items + `_title`/`_disabled` keys, private fields, and draft/scheduled rows on public reads; composes through populate
+- [x] Recursive runtime filter (`src/services/entries/visibility.ts`) — strips `_disabled` items + `_title`/`_disabled` keys, private fields, and draft/scheduled rows on public reads; composes through populate
 - [x] Two derived types from one schema (`${Pascal}Fields` / `${Pascal}FieldsPublic`) + read-back guard (public-shape value can't be written back)
 - [x] Settings private by default; `public` opt-in per admin page / `config.publicSettings`
 - [x] Demo cleanup: dropped the redundant manual `!b._disabled` filter in demo `<Blocks>` (public read strips it upstream). Browser-verify of public-vs-admin renders still recommended.

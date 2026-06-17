@@ -2,7 +2,7 @@
 
 **Status:** Designed (2026-05-29); 18a/18b implemented. **Partially superseded (2026-06-10)** by [[unified-architecture.md]] — plugin entry types are now namespaced (never merged into root `config.entries`), the entries API mounts per plugin namespace, permission grammar moves to `resource:identifier:action` with owner-first plugin trees, `suggestedRoleGrants` is replaced by permission bundles, hooks become an array of `defineHook` results, and "specified SDK methods only" is superseded by auto-exposed namespaced entries. Sections here remain authoritative where not contradicted; see unified-architecture.md §6 for the precise list.
 **Supersedes:** [[plugins.md]] (early design sketch — `targets` injection, `collections`, `hooks.on()`, the translations plugin, and positional SDK calls are all obsolete).
-**Touches:** `src/types/plugins.ts`, `src/types/hooks.ts`, `src/core/plugin-resolver.ts`, `src/core/config-resolver.ts`, `src/index.ts` (`definePlugin`), `src/adapters/astro.ts` (Vite plugins / virtual modules), `src/core/type-generator.ts`, `src/sdk/{local,fetch}`, `src/core/permissions.ts`, `src/cron/registry.ts`, `src/db/schema.ts`, new `src/api/plugins/*`.
+**Touches:** `src/types/plugins.ts`, `src/types/hooks.ts`, `src/plugins/runtime/plugin-resolver.ts`, `src/kernel/config-resolver.ts`, `src/index.ts` (`definePlugin`), `src/kernel/astro.ts` (Vite plugins / virtual modules), `src/codegen/type-generator.ts`, `src/transport/local` + `src/client`, `src/policies/permissions/permissions.ts`, `src/cron/registry.ts`, `src/db/schema.ts`, new `src/transport/http/routes/plugins.ts`.
 
 ---
 
@@ -10,7 +10,7 @@
 
 The current plugin surface (`src/types/plugins.ts`) is an object literal with `fieldGroups` (target-based injection), `entries`, `setup(hooks, ctx)`, `routes`, and `middleware`. Two structural problems block it from shipping real plugins:
 
-1. **`routes`/`middleware` are typed against raw `Request`/`Response` but never mounted.** The resolver (`src/core/plugin-resolver.ts`) only merges field groups and entry types and collects email overrides — `routes` and `middleware` go nowhere. This is the central gap.
+1. **`routes`/`middleware` are typed against raw `Request`/`Response` but never mounted.** The resolver (`src/plugins/runtime/plugin-resolver.ts`) only merges field groups and entry types and collects email overrides — `routes` and `middleware` go nowhere. This is the central gap.
 
 2. **`virtual:astromech/config` is built by `JSON.stringify(resolvedConfig)`.** Plugins carry **functions** — SDK handlers, hooks, React components, cron handlers — which do not survive JSON serialization. Therefore any plugin-bearing virtual module must be **code-generating** (emit real `import` statements), not data-serializing. This constraint drives the entire build-pipeline design (§14).
 
@@ -267,7 +267,7 @@ React / TanStack Router / TanStack Query / i18next are **peer deps** — wrap CM
 
 - Strings: `plugin:<sanitised-package>:<action>`.
 - Plugins declare `permissions: [{ key, label, description }]`; the role editor renders an **auto-grouped per-plugin section**.
-- Wildcards: `*` (all), `plugin:<pkg>:*` (one plugin), and **new `plugin:*`** (all plugins) — requires a 2-part-prefix extension to `hasPermission()` in `src/core/permissions.ts`.
+- Wildcards: `*` (all), `plugin:<pkg>:*` (one plugin), and **new `plugin:*`** (all plugins) — requires a 2-part-prefix extension to `hasPermission()` in `src/policies/permissions/permissions.ts`.
 - `admin` role (`*`) covers everything. `suggestedRoleGrants` are **advisory** — surfaced as a one-click admin notice, applied manually, never automatically.
 
 ---
@@ -294,7 +294,7 @@ Virtual modules by audience:
 | `virtual:astromech/plugins/i18n`                     | browser  | **code-gen** lazy locale imports (18b)                                             |
 | ~~`virtual:astromech/plugins/{local,fetch,server}`~~ | —        | **superseded** by the `globalThis` runtime registry + Proxy shims (see note above) |
 
-- Extend the existing `injectTypes('astromech.d.ts')` step (`astro:config:done` → `generateSdkTypes`, `src/core/type-generator.ts`) to emit `declare module` augmentation mapping **access keys → inferred plugin SDK types**, plus declared plugin hook-event types.
+- Extend the existing `injectTypes('astromech.d.ts')` step (`astro:config:done` → `generateSdkTypes`, `src/codegen/type-generator.ts`) to emit `declare module` augmentation mapping **access keys → inferred plugin SDK types**, plus declared plugin hook-event types.
 
 ---
 
@@ -308,11 +308,11 @@ Build the spine:
 
 - [ ] `definePlugin` factory; identity derivation (`package`/`name`/`alias`/`permissionNamespace`); collision → build error.
 - [ ] Declarative `PluginDefinition` type; replace the old `AstromechPlugin` (`src/types/plugins.ts`).
-- [ ] Rewrite `src/core/plugin-resolver.ts` — **remove** `resolveTargets` / `mergePluginFieldGroups` target injection; keep entry-type merge; add SDK / hook / cron / schema / API collection. Update `src/core/config-resolver.ts` callers.
+- [ ] Rewrite `src/plugins/runtime/plugin-resolver.ts` — **remove** `resolveTargets` / `mergePluginFieldGroups` target injection; keep entry-type merge; add SDK / hook / cron / schema / API collection. Update `src/kernel/config-resolver.ts` callers.
 - [ ] Unified `PluginContext` (`{ db, config, user, sdk, sendEmail, logger, env, emit }`).
 - [ ] **Open hook registry** (`src/types/hooks.ts` → open `KnownCoreEvent | string`) + `hooks: {}` declaration + `ctx.emit`.
 - [ ] SDK namespace `Astromech.plugins.X` (local + fetch) via code-gen virtual modules.
-- [ ] Auto-mounted RPC API at `/api/plugins/{name}/{method}` + `access` enforcement + raw escape hatch wrapper (`src/api/plugins/*`).
+- [ ] Auto-mounted RPC API at `/api/plugins/{name}/{method}` + `access` enforcement + raw escape hatch wrapper (`src/transport/http/routes/plugins.ts`).
 - [ ] DB schema merge + `db:generate` / `db:migrate` wrappers + `plugin_{alias}_` prefix.
 - [ ] Failure isolation (boot crash-loud; before/after hook semantics; per-request/per-job containment).
 - [ ] `dependsOn` existence + semver checks; ordering by `plugins: []`.

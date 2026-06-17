@@ -1,6 +1,6 @@
 # Services Architecture — layers, vocabulary, and the public/internal boundary
 
-**Status:** Designed (discussion 2026-06-17); not yet implemented. Defines the **target shape** for the upstream SDK/core refactor. The staged execution plan lives in [[services-refactor-plan.md]] (TBD).
+**Status:** Implemented & merged to `main` (2026-06-17, merge commit `acf0804`). Defines the shape realised by the SDK/core refactor; the as-built record + stage log lives in [[services-refactor-plan.md]].
 **Supersedes:** the ad-hoc `local SDK` / `fetch SDK` / `core` naming and layering.
 **Touches:** cross-cutting reorganisation — `src/sdk`, `src/core`, `src/api`, `src/cli`, `src/schemas`, `src/support`, `src/index.ts`, and the eventual MCP package.
 **Related:** [[ai-integration.md]] (consumes this vocabulary), [[plugin-architecture.md]], [[content-visibility.md]], [[unified-architecture.md]].

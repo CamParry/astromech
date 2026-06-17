@@ -1,6 +1,6 @@
 # Services Refactor Plan — staged reorganisation of SDK & core into the layer model
 
-**Status:** Planned (2026-06-17); not started. Executes the target shape in [[services-architecture.md]]. Heavy-hitting but staged so each step ships green.
+**Status:** Completed & merged to `main` (2026-06-17, merge commit `acf0804`; 13 stage commits, Stages 0–7 + 6(i–iv)). Executed the target shape in [[services-architecture.md]], staged so each step shipped green (typecheck + tests + build + `lint:deps`). Notable as-built deviations: §4.3/§4.4/§4.7 were already satisfied by the spine (no work needed); §4.5 (plugin-runtime split) deliberately skipped (its "context → kernel" suggestion would create a cycle); visibility reclassified as per-feature read-shaping, not a policy (arch Decision 8).
 **Supersedes:** the `src/sdk` + `src/core` layout.
 **Touches:** effectively all of `src/` (see §3 mapping). ~450 source files, 59 test files.
 **Related:** [[services-architecture.md]] (the _why_ + vocabulary), [[ai-integration.md]] (builds on Stage 5; **not** part of this plan).

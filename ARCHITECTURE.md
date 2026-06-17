@@ -43,37 +43,41 @@ This provides edge deployment, excellent performance, and a cohesive ecosystem. 
 
 ## Package Structure
 
+The source is organised around the **layer model** — `storage → services → policies → transport → Client`, assembled at the `kernel`. The dependency direction is one-way (no upward edges) and enforced by `.dependency-cruiser.cjs` (`npm run lint:deps`). See [`specs/services-architecture.md`](specs/services-architecture.md) for the full model + lexicon.
+
 ```
 astromech/
 ├── src/
-│   ├── integration/        # Astro integration entry point
-│   ├── core/               # Core service layer
-│   │   ├── hooks.ts        # Hook registry and dispatcher
-│   │   ├── permissions.ts  # Permission checking utilities
-│   │   ├── collections.ts
-│   │   ├── entries.ts
-│   │   ├── users.ts
-│   │   ├── roles.ts
-│   │   ├── media.ts
-│   │   ├── settings.ts
-│   │   └── fields.ts
-│   ├── adapters/
-│   │   ├── database/
-│   │   │   ├── interface.ts
-│   │   │   └── d1/         # Cloudflare D1 adapter
-│   │   └── storage/
-│   │       ├── interface.ts
-│   │       └── r2/         # Cloudflare R2 adapter
-│   ├── api/                # HTTP API routes (external API)
-│   ├── client/             # Type-safe client (internal API)
-│   ├── admin/              # React admin SPA
+│   ├── index.ts            # framework-agnostic entry (defineConfig / defineEntryType / definePlugin)
+│   ├── kernel/             # composition root — boots & assembles the layers
+│   │   ├── astro.ts        #   Astro integration (thin shell; astromech/astro)
+│   │   ├── boot.ts         #   initRuntime / runMigrations / startScheduler
+│   │   ├── admin-config.ts #   builds the serializable admin config
+│   │   ├── config-resolver.ts
+│   │   └── route-registration.ts
+│   ├── storage/            # persistence — db schema/drivers/registry, file drivers, entry storage
+│   ├── services/           # capability verbs (feature-split); bare functions, unaware of delivery shape
+│   │   ├── entries/        #   service.ts · schema.ts · descriptors.ts · visibility.ts
+│   │   └── media/ users/ settings/ _shared/
+│   ├── policies/           # composable wrappers OVER services
+│   │   └── permissions/    #   withPermissions, roles  (visibility is NOT here — it co-locates per-feature)
+│   ├── transport/          # projections of the services for each consumer
+│   │   ├── local/          #   the Local API (astromech/local)
+│   │   ├── http/           #   the HTTP API — Hono routes + middleware (astromech/middleware)
+│   │   └── cli/            #   the CLI (bin: astromech)
+│   ├── client/             # the fetch Client (astromech/fetch) — consumes the HTTP API over the wire
+│   ├── codegen/            # type generator + plugin-client manifest
+│   ├── plugins/            # plugin runtime + first-party plugins (redirects, seo, menus)
+│   ├── admin/              # React admin SPA (holds the Client; astromech/ui*)
 │   ├── auth/               # Better Auth integration
-│   ├── locales/            # i18n locale files
-│   │   └── en/
-│   └── plugins/            # Plugin system
+│   ├── images/ email/ cron/  # infrastructure modules (used by services + kernel)
+│   ├── support/            # pure helpers (strings, dates, entry-fields, rich-text, permission-match, …)
+│   └── types/              # shared TS types
 ├── package.json
 └── tsconfig.json
 ```
+
+> Note: `core/`, `sdk/`, `api/` no longer exist — they were dissolved into the layer model by the services/transport refactor (merged 2026-06-17). The published subpaths are unchanged: `astromech/local`, `astromech/fetch`, `astromech/astro`, and the `astromech` bin.
 
 ---
 

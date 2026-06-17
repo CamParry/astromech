@@ -135,7 +135,7 @@ existing app-page implementation, lifted verbatim and parameterized by `baseKey`
 
 Host pages gain the custom-component escape hatch that plugins already have — that's the
 point of "one interface for settings *or* widgets." The code-gen that scans plugin
-`component` specifiers (`virtual:astromech/plugins/components` in `src/adapters/astro.ts`)
+`component` specifiers (`virtual:astromech/plugins/components` in `src/kernel/astro.ts`)
 also scans host `admin.pages` with a `component`, emitting lazy imports under the same
 registry. The host route renders the lazy component in the standard `<Page>` shell +
 `PluginErrorBoundary` (host pages get the same boundary; no plugin context provider for
@@ -160,8 +160,8 @@ host pages — or a neutral one).
 
 1. **Types** — introduce `AdminPage` / `ResolvedAdminPage`; remove `AppAdminPage`,
    `ResolvedAppAdminPage`, `PluginPage`, `PluginSettingsSchema`. Update
-   `src/types/config.ts`, `src/types/plugins.ts`, `src/core/plugin-admin.ts`,
-   `src/adapters/astro.ts` (admin-config + plugin-components codegen).
+   `src/types/config.ts`, `src/types/plugins.ts`, `src/plugins/runtime/plugin-admin.ts`,
+   `src/kernel/astro.ts` (wires admin-config via `src/kernel/admin-config.ts` + plugin-components codegen via `src/codegen/plugin-client-manifest.ts`).
 2. **Builders** — `defineAdminPage` is the single export; delete `defineSettingsPage`
    from `src/index.ts`.
 3. **Renderer** — add `SettingsPageForm`; rewrite `page/$.tsx` to use it; rewrite the

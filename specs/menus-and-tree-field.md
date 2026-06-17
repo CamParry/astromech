@@ -114,7 +114,7 @@ update every site (grep `plugin:` settings reads + `settings.all()` prefix filte
   path. Update any other seo settings reads.
 - **demo `rating` plugin** — `demo/src/plugins/rating/pages/settings.ts` +
   wherever those settings are read.
-- Anything in the plugin runtime (`src/core/plugin-runtime.ts` `makeConfigView`) that
+- Anything in the plugin runtime (`src/plugins/runtime/plugin-runtime.ts` `makeConfigView`) that
   surfaces plugin settings.
 
 This is a **breaking change to plugin-settings storage**. Pre-release, so no data
@@ -212,14 +212,14 @@ New `src/admin/components/fields/tree-field.tsx` + `tree-field.css`, modelled on
 - `src/admin/components/fields/index.ts` — export `TreeField` (public `astromech/ui/fields`).
 - `src/admin/definitions/register-fields.ts` — import `TreeField`,
   `registerField('tree', TreeField)`.
-- `src/core/type-generator.ts` — add a `case 'tree':` after `repeater`. Emit a **named,
+- `src/codegen/type-generator.ts` — add a `case 'tree':` after `repeater`. Emit a **named,
   self-referential** node type so the recursion terminates (do not infinitely inline):
   e.g. generate `interface <Field>Node { _id: string; _disabled?: boolean; …childFields;
   _children?: <Field>Node[] }` and type the field as `<Field>Node[]`.
 - `src/admin/locales/en.json` — add `tree*` strings (node label, add-root, add-child,
   drag, collapse/expand, disable/enable, duplicate, remove, max-depth-reached), mirroring
   the `repeater*` keys.
-- Validation (`src/core/plugin-fields.ts`) needs nothing — `tree` being in
+- Validation (`src/plugins/runtime/plugin-fields.ts`) needs nothing — `tree` being in
   `CORE_FIELD_TYPES` already protects it from plugin shadowing.
 
 ### Tests
@@ -287,7 +287,7 @@ const main = await Astromech.plugins.menus.get('main', { locale });
 - reads the blob `settings.get('plugin:<menusNs>:menus/<key>', { locale })`,
 - walks the tree, drops `_disabled` nodes, maps `_children` → `children`,
 - resolves each node's URL: `entry` → look up the entry (locale-aware via the entries
-  system) and apply its type's `url` template through `resolveEntryUrl` (`src/core/entry-url.ts`);
+  system) and apply its type's `url` template through `resolveEntryUrl` (`src/support/entry-url.ts`);
   else use `url`; else omit.
 - Define it with `defineSdkMethod` so the plugin owns its SDK typing.
 
