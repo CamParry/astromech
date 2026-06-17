@@ -16,7 +16,7 @@ import { Astromech } from '@/transport/local/index.js';
 import { badRequest, forbidden, fromZodError, internalError, notFound } from '@/transport/http/middleware/errors.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import { withPermissions } from '@/policies/permissions/with-permissions.js';
-import { updateMediaSchema } from '@/schemas/media.js';
+import { updateMediaSchema } from '@/services/media/schema.js';
 import type { MediaQueryParams } from '@/types/index.js';
 
 type Env = { Variables: AuthVariables };

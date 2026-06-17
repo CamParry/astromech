@@ -16,7 +16,7 @@ import type {
     StorageDriver,
 } from '@/types/index.js';
 import { ValidationError } from '@/errors/validation.js';
-import { updateMediaSchema } from '@/schemas/media.js';
+import { updateMediaSchema } from '@/services/media/schema.js';
 import { buildMediaUrl, variantPrefix } from '@/images/url.js';
 import { isOptimisableImage, readImageDimensions } from '@/images/dimensions.js';
 import { contentVersion } from '@/images/version.js';

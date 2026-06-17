@@ -6,7 +6,7 @@ import { getDb } from '@/db/registry.js';
 import { RelationshipsRepository } from '@/db/repositories/relationships.js';
 import type { JsonObject, User, QueryResult, UserQueryParams, SortOption } from '@/types/index.js';
 import { ValidationError } from '@/errors/validation.js';
-import { createUserSchema, updateUserSchema } from '@/schemas/users.js';
+import { createUserSchema, updateUserSchema } from '@/services/users/schema.js';
 
 function validate<T>(schema: z.ZodType<T>, data: unknown): T {
     try {

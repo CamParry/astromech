@@ -29,7 +29,7 @@ import {
     createEntrySchemaFor,
     updateEntrySchemaFor,
     scheduleEntrySchema,
-} from '@/schemas/entries.js';
+} from '@/services/entries/schema.js';
 
 type Env = { Variables: AuthVariables };
 

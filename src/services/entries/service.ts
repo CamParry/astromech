@@ -27,7 +27,7 @@ import {
     createEntrySchemaFor,
     updateEntrySchemaFor,
     scheduleEntrySchema,
-} from '@/schemas/entries.js';
+} from '@/services/entries/schema.js';
 import { getDb } from '@/db/registry.js';
 import { RelationshipsRepository } from '@/db/repositories/relationships.js';
 import { populateEntries } from '@/db/repositories/populate.js';

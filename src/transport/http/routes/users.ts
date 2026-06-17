@@ -19,7 +19,7 @@ import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import { withPermissions } from '@/policies/permissions/with-permissions.js';
 import { getDb } from '@/db/registry.js';
 import { usersTable } from '@/db/schema.js';
-import { createUserSchema, updateUserSchema } from '@/schemas/users.js';
+import { createUserSchema, updateUserSchema } from '@/services/users/schema.js';
 import type { UserQueryParams } from '@/types/index.js';
 
 type Env = { Variables: AuthVariables };
