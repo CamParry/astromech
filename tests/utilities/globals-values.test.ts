@@ -1,12 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { partitionGlobalValues, mergeGlobalValues, mergeLocaleSetting } from '@/utilities/settings-page-values.js';
+import {
+    partitionGlobalValues,
+    mergeGlobalValues,
+    mergeLocaleSetting,
+} from '@/settings/index.js';
 import type { ResolvedEntryFields } from '@/types/fields.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function fields(main: ResolvedEntryFields['main'], sidebar: ResolvedEntryFields['sidebar'] = []): ResolvedEntryFields {
+function fields(
+    main: ResolvedEntryFields['main'],
+    sidebar: ResolvedEntryFields['sidebar'] = []
+): ResolvedEntryFields {
     return { main, sidebar };
 }
 
@@ -17,9 +24,7 @@ function fields(main: ResolvedEntryFields['main'], sidebar: ResolvedEntryFields[
 describe('partitionGlobalValues', () => {
     describe('non-translatable top-level fields', () => {
         it('routes translatable:false to shared', () => {
-            const schema = fields([
-                { name: 'logo', type: 'media', translatable: false },
-            ]);
+            const schema = fields([{ name: 'logo', type: 'media', translatable: false }]);
             const result = partitionGlobalValues(schema, { logo: 'img.png' });
             expect(result.shared).toEqual({ logo: 'img.png' });
             expect(result.perLocale).toEqual({});
@@ -30,7 +35,10 @@ describe('partitionGlobalValues', () => {
                 { name: 'logo', type: 'media', translatable: false },
                 { name: 'theme', type: 'select', translatable: false },
             ]);
-            const result = partitionGlobalValues(schema, { logo: 'img.png', theme: 'dark' });
+            const result = partitionGlobalValues(schema, {
+                logo: 'img.png',
+                theme: 'dark',
+            });
             expect(result.shared).toEqual({ logo: 'img.png', theme: 'dark' });
             expect(result.perLocale).toEqual({});
         });
@@ -47,18 +55,14 @@ describe('partitionGlobalValues', () => {
         });
 
         it('routes fields with no translatable flag to perLocale (default)', () => {
-            const schema = fields([
-                { name: 'title', type: 'text' },
-            ]);
+            const schema = fields([{ name: 'title', type: 'text' }]);
             const result = partitionGlobalValues(schema, { title: 'My Site' });
             expect(result.shared).toEqual({});
             expect(result.perLocale).toEqual({ title: 'My Site' });
         });
 
         it('routes unknown keys (not in schema) to perLocale (safe default)', () => {
-            const schema = fields([
-                { name: 'title', type: 'text' },
-            ]);
+            const schema = fields([{ name: 'title', type: 'text' }]);
             const result = partitionGlobalValues(schema, { title: 'X', unknown: 'Y' });
             expect(result.shared).toEqual({});
             expect(result.perLocale).toEqual({ title: 'X', unknown: 'Y' });
@@ -106,8 +110,12 @@ describe('partitionGlobalValues', () => {
                 },
             ]);
             // Only the top-level key "address" is submitted as a unit
-            const result = partitionGlobalValues(schema, { address: { street: '1 Main St', city: 'Springfield' } });
-            expect(result.shared).toEqual({ address: { street: '1 Main St', city: 'Springfield' } });
+            const result = partitionGlobalValues(schema, {
+                address: { street: '1 Main St', city: 'Springfield' },
+            });
+            expect(result.shared).toEqual({
+                address: { street: '1 Main St', city: 'Springfield' },
+            });
             expect(result.perLocale).toEqual({});
         });
 
@@ -119,24 +127,31 @@ describe('partitionGlobalValues', () => {
                     fields: [{ name: 'street', type: 'text' }],
                 },
             ]);
-            const result = partitionGlobalValues(schema, { address: { street: '1 Main St' } });
+            const result = partitionGlobalValues(schema, {
+                address: { street: '1 Main St' },
+            });
             expect(result.shared).toEqual({});
             expect(result.perLocale).toEqual({ address: { street: '1 Main St' } });
         });
 
         it('repeater treated as single key partitioned by container flag', () => {
             const schema = fields([
-                { name: 'links', type: 'repeater', translatable: false, fields: [{ name: 'url', type: 'url' }] },
+                {
+                    name: 'links',
+                    type: 'repeater',
+                    translatable: false,
+                    fields: [{ name: 'url', type: 'url' }],
+                },
             ]);
-            const result = partitionGlobalValues(schema, { links: [{ url: 'https://example.com' }] });
+            const result = partitionGlobalValues(schema, {
+                links: [{ url: 'https://example.com' }],
+            });
             expect(result.shared).toEqual({ links: [{ url: 'https://example.com' }] });
             expect(result.perLocale).toEqual({});
         });
 
         it('blocks treated as single key partitioned by container flag', () => {
-            const schema = fields([
-                { name: 'content', type: 'blocks', blocks: [] },
-            ]);
+            const schema = fields([{ name: 'content', type: 'blocks', blocks: [] }]);
             const result = partitionGlobalValues(schema, { content: [] });
             expect(result.shared).toEqual({});
             expect(result.perLocale).toEqual({ content: [] });
@@ -155,7 +170,10 @@ describe('partitionGlobalValues', () => {
                     ],
                 },
             ]);
-            const result = partitionGlobalValues(schema, { logo: 'l.png', tagline: 'Hi' });
+            const result = partitionGlobalValues(schema, {
+                logo: 'l.png',
+                tagline: 'Hi',
+            });
             expect(result.shared).toEqual({ logo: 'l.png' });
             expect(result.perLocale).toEqual({ tagline: 'Hi' });
         });
@@ -193,7 +211,10 @@ describe('partitionGlobalValues', () => {
                     ],
                 },
             ]);
-            const result = partitionGlobalValues(schema, { logo: 'l.png', bio: 'About us' });
+            const result = partitionGlobalValues(schema, {
+                logo: 'l.png',
+                bio: 'About us',
+            });
             expect(result.shared).toEqual({ logo: 'l.png' });
             expect(result.perLocale).toEqual({ bio: 'About us' });
         });

@@ -14,7 +14,7 @@ import type { AstromechClient, TypedEntriesApi } from '@/types/index.js';
 import { usersApi } from '@/services/users/service.js';
 import { entries, initServerContext } from '@/services/entries/service.js';
 import { mediaApi } from '@/services/media/service.js';
-import { settingsApi } from '@/services/settings/service.js';
+import { settingsApi } from '@/settings/index.js';
 import { setCurrentUser } from '@/services/_shared/context.js';
 import { setPluginSdkClient } from '@/plugins/runtime/plugin-runtime.js';
 import { localPlugins } from '@/transport/local/plugins.js';

@@ -5,7 +5,7 @@
  */
 
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
-import type { JsonValue, MediaMetadata } from '@/types/index.js';
+import type { MediaMetadata } from '@/types/index.js';
 
 // ============================================================================
 // Roles
@@ -250,17 +250,10 @@ export const mediaTable = sqliteTable(
 );
 
 // ============================================================================
-// Settings
+// Settings (table moved to @/settings/schema.ts — re-exported for aggregate surface)
 // ============================================================================
 
-export const settingsTable = sqliteTable('settings', {
-    key: text('key').primaryKey(),
-    value: text('value', { mode: 'json' }).$type<JsonValue>(),
-    updatedAt: integer('updated_at', { mode: 'timestamp' })
-        .notNull()
-        .$defaultFn(() => new Date()),
-    updatedBy: text('updated_by').references(() => usersTable.id),
-});
+export { settingsTable, type SettingRow, type NewSettingRow } from '@/settings/schema.js';
 
 // ============================================================================
 // Cron
@@ -317,6 +310,3 @@ export type NewRelationshipRow = typeof relationshipsTable.$inferInsert;
 
 export type MediaRow = typeof mediaTable.$inferSelect;
 export type NewMediaRow = typeof mediaTable.$inferInsert;
-
-export type SettingRow = typeof settingsTable.$inferSelect;
-export type NewSettingRow = typeof settingsTable.$inferInsert;

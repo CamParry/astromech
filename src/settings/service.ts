@@ -10,17 +10,18 @@
 
 import config from 'virtual:astromech/config';
 import { getDb } from '@/db/registry.js';
-import { settingsTable } from '@/db/schema.js';
+import { settingsTable } from './schema.js';
 import type { JsonValue, Setting, SettingsApi } from '@/types/index.js';
-import { mergeLocaleSetting } from '@/utilities/settings-page-values.js';
-import { isPublicSettingKey } from '@/services/settings/visibility.js';
+import { mergeLocaleSetting } from './page-values.js';
+import { isPublicSettingKey } from './visibility.js';
 
 export const settingsApi: SettingsApi = {
     async all(opts?: { full?: boolean }): Promise<Setting[]> {
         const db = getDb();
         const rows = await db.select().from(settingsTable);
         const full = opts?.full ?? false;
-        const publicKeys = (config as { publicSettingKeys?: string[] }).publicSettingKeys ?? [];
+        const publicKeys =
+            (config as { publicSettingKeys?: string[] }).publicSettingKeys ?? [];
         return rows
             .filter((row) => full || isPublicSettingKey(row.key, publicKeys))
             .map((row) => ({
@@ -31,11 +32,15 @@ export const settingsApi: SettingsApi = {
             }));
     },
 
-    async get(key: string, opts?: { locale?: string; full?: boolean }): Promise<JsonValue | null> {
+    async get(
+        key: string,
+        opts?: { locale?: string; full?: boolean }
+    ): Promise<JsonValue | null> {
         const db = getDb();
         const locale = opts?.locale ?? config.defaultLocale;
         const full = opts?.full ?? false;
-        const publicKeys = (config as { publicSettingKeys?: string[] }).publicSettingKeys ?? [];
+        const publicKeys =
+            (config as { publicSettingKeys?: string[] }).publicSettingKeys ?? [];
 
         // On a public read, reject private keys immediately without a DB round-trip.
         if (!full && !isPublicSettingKey(key, publicKeys)) {

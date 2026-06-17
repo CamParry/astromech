@@ -10,7 +10,10 @@
 import type { JsonValue } from '@/types/index.js';
 import type { ResolvedEntryFields } from '@/types/fields.js';
 import { Astromech } from '@/client/index.js';
-import { partitionGlobalValues } from '@/utilities/settings-page-values.js';
+// Deep-import the pure helper, NOT the @/settings barrel: the barrel re-exports
+// the settings service (getDb / virtual:astromech/config), which must never enter
+// the admin browser bundle.
+import { partitionGlobalValues } from '@/settings/page-values.js';
 
 export async function saveSettingsPage(opts: {
     baseKey: string;
@@ -25,5 +28,8 @@ export async function saveSettingsPage(opts: {
     }
     const { shared, perLocale } = partitionGlobalValues(opts.fields, opts.values);
     await Astromech.settings.set(opts.baseKey, shared as JsonValue);
-    await Astromech.settings.set(`${opts.baseKey}:${opts.locale}`, perLocale as JsonValue);
+    await Astromech.settings.set(
+        `${opts.baseKey}:${opts.locale}`,
+        perLocale as JsonValue
+    );
 }
