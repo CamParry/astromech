@@ -115,11 +115,7 @@ Dogfoods the public APIs end-to-end — Astromech marketing Astromech.
 - [x] Locale-aware routes (`/[...path]`, `/blog`, `/blog/[slug]`, `/blog/category|tag/[slug]`, `/customers`, `/customers/[slug]`); `/sitemap.xml`; redirects middleware (`demo/src/middleware.ts`); SSR via `astromech/local` + `.populate()`
 - [x] Realistic seed content (`demo/seed.ts`): pages, ~7 posts, 3 case studies, authors, taxonomy, menus, globals, redirects, FR translations
 
-> The Globals-repeater menus are a stop-gap; the dedicated `@astromech/menus` plugin (settings-page + `tree` field) replaces them — see Planned → Menus, `tree` field & clean settings translation.
-
----
-
-## Planned
+> The demo's Globals-repeater menus were a stop-gap; the dedicated `@astromech/menus` plugin (settings-page + `tree` field) replaces them — see Menus, `tree` field & clean settings translation below.
 
 ### Services / transport architecture ✅
 
@@ -128,6 +124,43 @@ Reshaped `src/sdk` + dissolved `src/core` into the locked layer model — `stora
 - [x] Stages 0–7: dependency-direction lint guardrail (`.dependency-cruiser.cjs`); dissolved `core/`; extracted `services/{entries,media,users,settings}`; relocated transports (`api/`→`transport/http`, `cli/`→`transport/cli`); `sdk/fetch`→`client/`; scaffolding barrels torn down (no cross-layer re-exports survive)
 - [x] `withPermissions(principal)` composable policy + `defineServiceMethod` descriptors (Stages 4–5; the seam the AI work builds on)
 - [x] Stage 6 cleanup: visibility co-located per-feature (`services/<feature>/visibility.ts`) — not a policy (arch Decision 8), `services-no-import-policies` lint now `error`; retired vocabulary purged; astro boot/compose extracted to `kernel/` (`boot`, `admin-config`, plugin-client-manifest codegen)
+
+### Menus, `tree` field & clean settings translation ✅
+
+Three independently-shippable deliverables, in order.
+
+- [x] **Settings translation cleanup** (prerequisite) — unify app-page + plugin-page settings on one object-blob-per-page shape (`<base>` + `<base>:<locale>`); extract a shared `saveSettingsPage` (partition + write) both renderers call; bring `PluginSettingsPage` to parity (blob load, locale switcher, `PluginPage.translatable`); migrate per-field plugin-settings consumers (seo, demo rating) off `plugin:<ns>:<field>` reads. Top-level-field granularity
+- [x] **`tree` core field type** — generic recursive nested builder (`repeater` + `_children` axis), drag-to-nest (dnd-kit depth-projection; indent/outdent fallback), `maxDepth`, reserved `_id`/`_disabled`/`_children`, terminating recursive type-gen. No menu/URL semantics
+- [x] **`@astromech/menus` plugin** — developer-declared menu set via `menus({ menus: [{ key, label }] })`; one generated `defineAdminPage` settings page (single `tree` field) + nav child per menu; data in settings (not entries/own-table); `menus.get(key, { locale })` resolves entry refs → URLs via `resolveEntryUrl`, custom-URL/label fallback; replaces the demo Globals-repeater menus
+
+### Image Optimisation ✅
+
+Implemented 2026-06-16. On-demand,
+allowlisted AVIF/WebP variants behind a canonical app-owned media URL (`/_media/<id>.<ext>?w&f&v`);
+storage driver demoted to a bytes-only backend; optimisation is a swappable `ImageDriver`. Shipped Node
+(Sharp) + Cloudflare (Images) together to lock the driver shape.
+
+- [x] Core: `StorageDriver` rework (`put`/`get`/`delete`/`list`, stream bytes, `getDirectUrl?`); derive `media.url`; add `metadata` JSON; `media.upload` orchestration + dimension extraction (pure JS) + variant lifecycle cleanup
+- [x] `mediaRoute` (`/_media`) config + top-level mount; request handler (allowlist + version 302 + serve-original + cache write-back)
+- [x] `ImageDriver` + `image: { driver, widths, avif }`; `defaultImageWidths`; `sharp()` (Node) with blurhash placeholder
+- [x] `cloudflareImages()` driver (`cf.image`, `cachesVariants`) + `src/storage/drivers/r2.ts`
+- [x] Responsive `<Image>` — framework-agnostic `buildImageAttrs` core + thin Astro renderer (srcset/sizes/`<picture>`/intrinsic dims; blur-up deferred)
+- [ ] Deferred: art-directed crops (`h`+`fit`), signed-URL escape hatch, transform concurrency caps, visual blur-up render, Next/Vercel renderer, S3 driver
+
+### Content visibility — public vs full reads, field privacy, audience filtering ✅
+
+Generalised the disabled-item problem into one model. Two orthogonal axes, both derived from the current user + role: **shape** (`public` vs `full`, binary, role-gates `full`) and **audience** (row filter — status now, member audiences later). Field default is public; mutations always private; settings private by default with per-key public opt-in.
+
+- [x] Public-vs-full read shapes — bare `astromech/local` defaults `public`; `ctx.entries`/admin default `full`; HTTP `full` capability-gated (`entry:read:full`)
+- [x] Recursive runtime filter (`src/services/entries/visibility.ts`) — strips `_disabled` items + `_title`/`_disabled` keys, private fields, and draft/scheduled rows on public reads; composes through populate
+- [x] Two derived types from one schema (`${Pascal}Fields` / `${Pascal}FieldsPublic`) + read-back guard (public-shape value can't be written back)
+- [x] Settings private by default; `public` opt-in per admin page / `config.publicSettings`
+- [x] Demo cleanup: dropped the redundant manual `!b._disabled` filter in demo `<Blocks>` (public read strips it upstream). Browser-verify of public-vs-admin renders still recommended.
+- [ ] Future: member audiences (frontend auth), per-field audience, `preview` shape — seams built
+
+---
+
+## Planned
 
 ### AI integration 🚧
 
@@ -140,14 +173,6 @@ Reshaped `src/sdk` + dissolved `src/core` into the locked layer model — `stora
 - [ ] `forms:beforeSubmit` / `forms:afterSubmit` hook events
 - [ ] Built-in reCAPTCHA / Turnstile / Mailchimp via those hooks (dogfooding principle)
 - [ ] Ship the plugin: `form` + `submission` entry types, form-builder field, public submission API, frontend form helper/component
-
-### Menus, `tree` field & clean settings translation ✅
-
-Three independently-shippable deliverables, in order.
-
-- [x] **Settings translation cleanup** (prerequisite) — unify app-page + plugin-page settings on one object-blob-per-page shape (`<base>` + `<base>:<locale>`); extract a shared `saveSettingsPage` (partition + write) both renderers call; bring `PluginSettingsPage` to parity (blob load, locale switcher, `PluginPage.translatable`); migrate per-field plugin-settings consumers (seo, demo rating) off `plugin:<ns>:<field>` reads. Top-level-field granularity
-- [x] **`tree` core field type** — generic recursive nested builder (`repeater` + `_children` axis), drag-to-nest (dnd-kit depth-projection; indent/outdent fallback), `maxDepth`, reserved `_id`/`_disabled`/`_children`, terminating recursive type-gen. No menu/URL semantics
-- [x] **`@astromech/menus` plugin** — developer-declared menu set via `menus({ menus: [{ key, label }] })`; one generated `defineAdminPage` settings page (single `tree` field) + nav child per menu; data in settings (not entries/own-table); `menus.get(key, { locale })` resolves entry refs → URLs via `resolveEntryUrl`, custom-URL/label fallback; replaces the demo Globals-repeater menus
 
 ### Unified admin pages 🚧
 
@@ -169,20 +194,6 @@ shared `SettingsPageForm`.
 - [ ] `@astromech/backups`
 - [ ] `@astromech/comments`
 - [ ] `@astromech/import-export`
-
-### Image Optimisation ✅
-
-Implemented 2026-06-16. On-demand,
-allowlisted AVIF/WebP variants behind a canonical app-owned media URL (`/_media/<id>.<ext>?w&f&v`);
-storage driver demoted to a bytes-only backend; optimisation is a swappable `ImageDriver`. Shipped Node
-(Sharp) + Cloudflare (Images) together to lock the driver shape.
-
-- [x] Core: `StorageDriver` rework (`put`/`get`/`delete`/`list`, stream bytes, `getDirectUrl?`); derive `media.url`; add `metadata` JSON; `media.upload` orchestration + dimension extraction (pure JS) + variant lifecycle cleanup
-- [x] `mediaRoute` (`/_media`) config + top-level mount; request handler (allowlist + version 302 + serve-original + cache write-back)
-- [x] `ImageDriver` + `image: { driver, widths, avif }`; `defaultImageWidths`; `sharp()` (Node) with blurhash placeholder
-- [x] `cloudflareImages()` driver (`cf.image`, `cachesVariants`) + `src/storage/drivers/r2.ts`
-- [x] Responsive `<Image>` — framework-agnostic `buildImageAttrs` core + thin Astro renderer (srcset/sizes/`<picture>`/intrinsic dims; blur-up deferred)
-- [ ] Deferred: art-directed crops (`h`+`fit`), signed-URL escape hatch, transform concurrency caps, visual blur-up render, Next/Vercel renderer, S3 driver
 
 ### Multi-Runtime & Framework Adapters 🚧
 
@@ -253,17 +264,6 @@ storage driver demoted to a bytes-only backend; optimisation is a swappable `Ima
 - [x] Drag-reorder preserves item identity — reorder keeps the persisted `_id` (no key regeneration); ordering is array position, not a separate `_order` field
 - [ ] Stable `_id`-based paths for nested-field relationship keys (foundation now in place via persisted `_id`)
 - [ ] Migration strategy for pre-existing stored data (demo currently reseeds; no general migration framework yet)
-
-### Content visibility — public vs full reads, field privacy, audience filtering ✅
-
-Generalised the disabled-item problem into one model. Two orthogonal axes, both derived from the current user + role: **shape** (`public` vs `full`, binary, role-gates `full`) and **audience** (row filter — status now, member audiences later). Field default is public; mutations always private; settings private by default with per-key public opt-in.
-
-- [x] Public-vs-full read shapes — bare `astromech/local` defaults `public`; `ctx.entries`/admin default `full`; HTTP `full` capability-gated (`entry:read:full`)
-- [x] Recursive runtime filter (`src/services/entries/visibility.ts`) — strips `_disabled` items + `_title`/`_disabled` keys, private fields, and draft/scheduled rows on public reads; composes through populate
-- [x] Two derived types from one schema (`${Pascal}Fields` / `${Pascal}FieldsPublic`) + read-back guard (public-shape value can't be written back)
-- [x] Settings private by default; `public` opt-in per admin page / `config.publicSettings`
-- [x] Demo cleanup: dropped the redundant manual `!b._disabled` filter in demo `<Blocks>` (public read strips it upstream). Browser-verify of public-vs-admin renders still recommended.
-- [ ] Future: member audiences (frontend auth), per-field audience, `preview` shape — seams built, see spec §9
 
 ---
 
