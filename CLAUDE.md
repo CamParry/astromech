@@ -11,7 +11,7 @@ Use sub-agents wherever the task is clear enough to delegate. Always include a f
 ## Workflow
 
 - **Clarify before acting:** If a task is ambiguous or the right approach depends on an unclear requirement, ask first — don't assume and proceed.
-- **Reflect on focus shifts:** When the focus of work changes significantly, pause to consider: are there lessons learned that belong in a skill? Anything worth saving to memory? Does ROADMAP.md need updating?
+- **Reflect on focus shifts:** When the focus of work changes significantly, pause to consider: are there lessons learned that belong in a skill? Anything worth saving to memory? Does the `roadmap/` directory need updating (a feature's status changed → move its file between `planned/`, `in-progress/`, `completed/`; or add a new feature file)?
 
 ## CSS Conventions
 
