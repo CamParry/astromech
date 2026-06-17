@@ -14,14 +14,19 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { eq, count } from 'drizzle-orm';
 import { Astromech } from '@/transport/local/index.js';
-import { badRequest, forbidden, fromZodError, internalError, notFound } from '@/transport/http/middleware/errors.js';
+import {
+    badRequest,
+    forbidden,
+    fromZodError,
+    internalError,
+    notFound,
+} from '@/transport/http/middleware/errors.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import { withPermissions } from '@/policies/permissions/with-permissions.js';
 import { getDb } from '@/db/registry.js';
 import { usersTable } from '@/db/schema.js';
-import { createUserSchema, updateUserSchema } from '@/services/users/schema.js';
-import { usersDescriptors } from '@/services/users/descriptors.js';
-import type { UserQueryParams } from '@/types/index.js';
+import { createUserSchema, updateUserSchema, usersDescriptors } from '@/users/index.js';
+import type { JsonObject, UserQueryParams } from '@/types/index.js';
 
 type Env = { Variables: AuthVariables };
 
@@ -44,9 +49,10 @@ router.get('/', async (c) => {
         if (q['page']) params.page = Number(q['page']);
         if (q['limit'] === 'all') params.limit = 'all';
         else if (q['limit']) params.limit = Number(q['limit']);
-        if (q['sort'] && SORTABLE_FIELDS.has(q['sort']!)) {
+        const sortField = q['sort'];
+        if (sortField && SORTABLE_FIELDS.has(sortField)) {
             const dir = q['dir'] === 'asc' ? 'asc' : 'desc';
-            params.sort = { [q['sort']!]: dir };
+            params.sort = { [sortField]: dir };
         }
         return c.json(await Astromech.users.query(params));
     } catch (err) {
@@ -62,7 +68,8 @@ router.get('/:id', async (c) => {
     const { id } = c.req.param();
     const permissions = withPermissions(c.var.role);
     const currentUser = c.var.user;
-    if (!permissions.allowsMethod(usersDescriptors.get) && currentUser.id !== id) return forbidden(c);
+    if (!permissions.allowsMethod(usersDescriptors.get) && currentUser.id !== id)
+        return forbidden(c);
 
     try {
         const user = await Astromech.users.get(id);
@@ -90,7 +97,7 @@ router.post('/', async (c) => {
         const user = await Astromech.users.create({
             email,
             name,
-            ...(fields !== undefined && { fields: fields as import('@/types/index.js').JsonObject }),
+            ...(fields !== undefined && { fields: fields as JsonObject }),
             ...(roleSlug !== undefined && { roleSlug }),
         });
         return c.json({ data: user }, 201);
@@ -127,7 +134,11 @@ router.put('/:id', async (c) => {
             const targetUser = await Astromech.users.get(id);
             if (targetUser && targetUser.roleSlug === 'admin' && roleSlug !== 'admin') {
                 const db = getDb();
-                const result = await db.select({ count: count() }).from(usersTable).where(eq(usersTable.roleSlug, 'admin')).get();
+                const result = await db
+                    .select({ count: count() })
+                    .from(usersTable)
+                    .where(eq(usersTable.roleSlug, 'admin'))
+                    .get();
                 const adminCount = result?.count ?? 0;
                 if (adminCount <= 1) {
                     return badRequest(c, 'Cannot remove the last administrator');
@@ -138,7 +149,7 @@ router.put('/:id', async (c) => {
         const user = await Astromech.users.update(id, {
             ...(email !== undefined && { email }),
             ...(name !== undefined && { name }),
-            ...(fields !== undefined && { fields: fields as import('@/types/index.js').JsonObject }),
+            ...(fields !== undefined && { fields: fields as JsonObject }),
             ...(roleSlug !== undefined && { roleSlug }),
         });
         return c.json({ data: user });
@@ -161,7 +172,11 @@ router.delete('/:id', async (c) => {
         const targetUser = await Astromech.users.get(id);
         if (targetUser && targetUser.roleSlug === 'admin') {
             const db = getDb();
-            const result = await db.select({ count: count() }).from(usersTable).where(eq(usersTable.roleSlug, 'admin')).get();
+            const result = await db
+                .select({ count: count() })
+                .from(usersTable)
+                .where(eq(usersTable.roleSlug, 'admin'))
+                .get();
             const adminCount = result?.count ?? 0;
             if (adminCount <= 1) {
                 return badRequest(c, 'Cannot delete the last administrator');

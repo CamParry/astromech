@@ -7,7 +7,7 @@
 
 import { createMiddleware } from 'hono/factory';
 import { eq } from 'drizzle-orm';
-import { auth } from '@/auth/index.js';
+import { auth } from '@/users/index.js';
 import { getDb } from '@/db/registry.js';
 import { usersTable } from '@/db/schema.js';
 import { Astromech } from '@/transport/local/index.js';
@@ -60,15 +60,17 @@ export async function resolveSessionUser(
  * Attaches `user` and `role` to context variables.
  * Returns 401 if no valid session is found.
  */
-export const requireAuth = createMiddleware<{ Variables: AuthVariables }>(async (c, next) => {
-    const resolved = await resolveSessionUser(c.req.raw.headers);
-    if (!resolved) {
-        return unauthorized(c);
+export const requireAuth = createMiddleware<{ Variables: AuthVariables }>(
+    async (c, next) => {
+        const resolved = await resolveSessionUser(c.req.raw.headers);
+        if (!resolved) {
+            return unauthorized(c);
+        }
+        c.set('user', resolved.user);
+        c.set('role', resolved.role);
+        return next();
     }
-    c.set('user', resolved.user);
-    c.set('role', resolved.role);
-    return next();
-});
+);
 
 /**
  * Resolve the session if present but never reject. Attaches `user`/`role` only

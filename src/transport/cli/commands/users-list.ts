@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config.js';
-import { usersApi } from '@/services/users/service.js';
+import { usersApi } from '@/users/index.js';
 
 export default defineCommand({
     meta: { name: 'users:list', description: 'List all users' },

@@ -11,7 +11,7 @@
 
 import config from 'virtual:astromech/config';
 import type { AstromechClient, TypedEntriesApi } from '@/types/index.js';
-import { usersApi } from '@/services/users/service.js';
+import { usersApi } from '@/users/index.js';
 import { entries, initServerContext } from '@/services/entries/service.js';
 import { mediaApi } from '@/services/media/service.js';
 import { settingsApi } from '@/settings/index.js';

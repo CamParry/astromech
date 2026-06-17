@@ -6,99 +6,29 @@
 
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import type { MediaMetadata } from '@/types/index.js';
+import { usersTable } from '@/users/schema.js';
 
 // ============================================================================
-// Roles
+// Users domain tables (moved to @/users/schema.ts — re-exported for aggregate surface)
 // ============================================================================
 
-export const rolesTable = sqliteTable('roles', {
-    slug: text('slug').primaryKey(),
-    name: text('name').notNull(),
-    permissions: text('permissions', { mode: 'json' }).$type<string[]>().notNull(),
-    isBuiltIn: integer('is_built_in', { mode: 'boolean' }).notNull().default(false),
-    createdAt: integer('created_at', { mode: 'timestamp' })
-        .notNull()
-        .$defaultFn(() => new Date()),
-    updatedAt: integer('updated_at', { mode: 'timestamp' })
-        .notNull()
-        .$defaultFn(() => new Date()),
-});
-
-// ============================================================================
-// usersTable
-// ============================================================================
-
-export const usersTable = sqliteTable('users', {
-    id: text('id')
-        .primaryKey()
-        .$defaultFn(() => crypto.randomUUID()),
-    email: text('email').notNull().unique(),
-    name: text('name').notNull(),
-    emailVerified: integer('email_verified', { mode: 'boolean' })
-        .notNull()
-        .default(false),
-    image: text('image'),
-    fields: text('fields', { mode: 'json' }),
-    roleSlug: text('role_slug').notNull().default('admin'),
-    createdAt: integer('created_at', { mode: 'timestamp' })
-        .notNull()
-        .$defaultFn(() => new Date()),
-    updatedAt: integer('updated_at', { mode: 'timestamp' })
-        .notNull()
-        .$defaultFn(() => new Date()),
-});
-
-// ============================================================================
-// sessionsTable (Better Auth)
-// ============================================================================
-
-export const sessionsTable = sqliteTable('sessions', {
-    id: text('id').primaryKey(),
-    expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
-    token: text('token').notNull().unique(),
-    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-    ipAddress: text('ip_address'),
-    userAgent: text('user_agent'),
-    userId: text('user_id')
-        .notNull()
-        .references(() => usersTable.id, { onDelete: 'cascade' }),
-});
-
-// ============================================================================
-// accountsTable (Better Auth - OAuth providers)
-// ============================================================================
-
-export const accountsTable = sqliteTable('accounts', {
-    id: text('id').primaryKey(),
-    accountId: text('account_id').notNull(),
-    providerId: text('provider_id').notNull(),
-    userId: text('user_id')
-        .notNull()
-        .references(() => usersTable.id, { onDelete: 'cascade' }),
-    accessToken: text('access_token'),
-    refreshToken: text('refresh_token'),
-    idToken: text('id_token'),
-    accessTokenExpiresAt: integer('access_token_expires_at', { mode: 'timestamp' }),
-    refreshTokenExpiresAt: integer('refresh_token_expires_at', { mode: 'timestamp' }),
-    scope: text('scope'),
-    password: text('password'),
-    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
-
-// ============================================================================
-// verificationsTable (Better Auth - email verification, password reset)
-// ============================================================================
-
-export const verificationsTable = sqliteTable('verifications', {
-    id: text('id').primaryKey(),
-    identifier: text('identifier').notNull(),
-    value: text('value').notNull(),
-    expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
-    createdAt: integer('created_at', { mode: 'timestamp' }),
-    updatedAt: integer('updated_at', { mode: 'timestamp' }),
-});
+export {
+    rolesTable,
+    usersTable,
+    sessionsTable,
+    accountsTable,
+    verificationsTable,
+    type RoleRow,
+    type NewRoleRow,
+    type UserRow,
+    type NewUserRow,
+    type SessionRow,
+    type NewSessionRow,
+    type AccountRow,
+    type NewAccountRow,
+    type VerificationRow,
+    type NewVerificationRow,
+} from '@/users/schema.js';
 
 // ============================================================================
 // Entries
@@ -283,21 +213,6 @@ export type NewCronRow = typeof cronTable.$inferInsert;
 // ============================================================================
 // Type Exports
 // ============================================================================
-
-export type RoleRow = typeof rolesTable.$inferSelect;
-export type NewRoleRow = typeof rolesTable.$inferInsert;
-
-export type UserRow = typeof usersTable.$inferSelect;
-export type NewUserRow = typeof usersTable.$inferInsert;
-
-export type SessionRow = typeof sessionsTable.$inferSelect;
-export type NewSessionRow = typeof sessionsTable.$inferInsert;
-
-export type AccountRow = typeof accountsTable.$inferSelect;
-export type NewAccountRow = typeof accountsTable.$inferInsert;
-
-export type VerificationRow = typeof verificationsTable.$inferSelect;
-export type NewVerificationRow = typeof verificationsTable.$inferInsert;
 
 export type EntryRow = typeof entriesTable.$inferSelect;
 export type NewEntryRow = typeof entriesTable.$inferInsert;

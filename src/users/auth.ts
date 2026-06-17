@@ -2,7 +2,7 @@ import { betterAuth } from 'better-auth';
 import type { Auth, BetterAuthOptions } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { getDb } from '@/db/registry.js';
-import * as schema from '@/db/schema.js';
+import * as schema from './schema.js';
 
 const apiRoute = process.env.ASTROMECH_API_ROUTE ?? '/api';
 
@@ -35,8 +35,10 @@ function getAuth(): Auth<BetterAuthOptions> {
                 }) => {
                     const { getEmailConfig } = await import('@/email/registry.js');
                     const { renderEmail } = await import('@/email/render.js');
-                    const { PasswordResetEmail } = await import('@/email/components/password-reset.js');
-                    const { getEmailOverride } = await import('@/email/email-overrides.js');
+                    const { PasswordResetEmail } =
+                        await import('@/email/components/password-reset.js');
+                    const { getEmailOverride } =
+                        await import('@/email/email-overrides.js');
                     const emailConfig = getEmailConfig();
                     if (!emailConfig) {
                         console.log(

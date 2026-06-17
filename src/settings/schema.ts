@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import { z } from 'zod';
-import { usersTable } from '@/db/schema.js';
+import { usersTable } from '@/users/schema.js';
 import type { JsonValue } from '@/types/index.js';
 
 // ============================================================================

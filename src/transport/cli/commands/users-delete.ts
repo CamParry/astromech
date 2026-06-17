@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config.js';
-import { usersApi } from '@/services/users/service.js';
+import { usersApi } from '@/users/index.js';
 
 export default defineCommand({
     meta: { name: 'users:delete', description: 'Delete a user' },
@@ -13,7 +13,10 @@ export default defineCommand({
         await loadConfig(args.config);
         if (!args.force) {
             const readline = await import('node:readline/promises');
-            const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+            const rl = readline.createInterface({
+                input: process.stdin,
+                output: process.stdout,
+            });
             const answer = await rl.question(`Delete user ${args.id}? (y/N) `);
             rl.close();
             if (answer.toLowerCase() !== 'y') {
