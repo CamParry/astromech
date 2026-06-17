@@ -69,7 +69,7 @@
             "default": "./dist/storage/drivers/r2.js"
         },
         "./admin/shell.astro": "./src/admin/shell.astro",
-        "./Image": "./src/images/Image.astro",
+        "./Image": "./src/media/serving/image/Image.astro",
         "./ui": {
             "types": "./dist/admin/components/ui/index.d.ts",
             "default": "./dist/admin/components/ui/index.js"

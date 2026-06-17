@@ -4,6 +4,9 @@
  * seeding. Server-only.
  */
 
-export * from '@/images/drivers/sharp.js';
-export { isOptimisableImage, readImageDimensions } from '@/images/dimensions.js';
-export { contentVersion } from '@/images/version.js';
+export * from '@/media/serving/image/drivers/sharp.js';
+export {
+    isOptimisableImage,
+    readImageDimensions,
+} from '@/media/serving/image/dimensions.js';
+export { contentVersion } from '@/media/serving/image/version.js';

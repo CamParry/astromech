@@ -13,12 +13,18 @@
 
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { Astromech } from '@/transport/local/index.js';
-import { badRequest, forbidden, fromZodError, internalError, notFound } from '@/transport/http/middleware/errors.js';
+import {
+    badRequest,
+    forbidden,
+    fromZodError,
+    internalError,
+    notFound,
+} from '@/transport/http/middleware/errors.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import { withPermissions } from '@/policies/permissions/with-permissions.js';
-import { updateMediaSchema } from '@/services/media/schema.js';
-import { mediaDescriptors } from '@/services/media/descriptors.js';
-import type { MediaQueryParams } from '@/types/index.js';
+import { updateMediaSchema } from '@/media/schema.js';
+import { mediaDescriptors } from '@/media/descriptors.js';
+import type { MediaQueryParams, JsonObject } from '@/types/index.js';
 
 type Env = { Variables: AuthVariables };
 
@@ -40,7 +46,12 @@ router.get('/', async (c) => {
         if (q['limit'] === 'all') params.limit = 'all';
         else if (q['limit']) params.limit = Number(q['limit']);
         const mimeType = q['mimeType'];
-        if (mimeType === 'images' || mimeType === 'videos' || mimeType === 'documents' || mimeType === 'other') {
+        if (
+            mimeType === 'images' ||
+            mimeType === 'videos' ||
+            mimeType === 'documents' ||
+            mimeType === 'other'
+        ) {
             params.where = { mimeType };
         }
         return c.json(await Astromech.media.query(params));
@@ -108,7 +119,7 @@ router.put('/:id', async (c) => {
         const media = await Astromech.media.update(id, {
             ...(alt !== undefined && { alt }),
             ...(title !== undefined && { title }),
-            ...(fields !== undefined && { fields: fields as import('@/types/index.js').JsonObject }),
+            ...(fields !== undefined && { fields: fields as JsonObject }),
         });
         return c.json({ data: media });
     } catch (err) {

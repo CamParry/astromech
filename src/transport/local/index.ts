@@ -13,7 +13,7 @@ import config from 'virtual:astromech/config';
 import type { AstromechClient, TypedEntriesApi } from '@/types/index.js';
 import { usersApi } from '@/users/index.js';
 import { entries, initServerContext } from '@/services/entries/service.js';
-import { mediaApi } from '@/services/media/service.js';
+import { mediaApi } from '@/media/index.js';
 import { settingsApi } from '@/settings/index.js';
 import { setCurrentUser } from '@/services/_shared/context.js';
 import { setPluginSdkClient } from '@/plugins/runtime/plugin-runtime.js';

@@ -13,7 +13,7 @@ import type {
 } from './fields.js';
 import type { PluginDefinition, PluginNavItem } from './plugins.js';
 import type { EntryStorage } from '@/storage/entries/types.js';
-import type { ImageFormat } from '@/images/url.js';
+import type { ImageFormat } from '@/media/serving/image/url.js';
 
 // ============================================================================
 // Drivers

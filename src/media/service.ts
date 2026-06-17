@@ -1,8 +1,8 @@
 import { eq, desc, like, and, not, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { z } from 'zod';
-import { mediaTable } from '@/db/schema.js';
-import type { MediaRow } from '@/db/schema.js';
+import { mediaTable } from './schema.js';
+import type { MediaRow } from './schema.js';
 import { getDb } from '@/db/registry.js';
 import { getStorageDriver } from '@/storage/registry.js';
 import { deletePrefix } from '@/storage/prefix.js';
@@ -16,11 +16,11 @@ import type {
     StorageDriver,
 } from '@/types/index.js';
 import { ValidationError } from '@/errors/validation.js';
-import { updateMediaSchema } from '@/services/media/schema.js';
-import { buildMediaUrl, variantPrefix } from '@/images/url.js';
-import { isOptimisableImage, readImageDimensions } from '@/images/dimensions.js';
-import { contentVersion } from '@/images/version.js';
-import { getImageConfig } from '@/images/registry.js';
+import { updateMediaSchema } from './schema.js';
+import { buildMediaUrl, variantPrefix } from './serving/image/url.js';
+import { isOptimisableImage, readImageDimensions } from './serving/image/dimensions.js';
+import { contentVersion } from './serving/image/version.js';
+import { getImageConfig } from './serving/image/registry.js';
 import config from 'virtual:astromech/config';
 
 function validate<T>(schema: z.ZodType<T>, data: unknown): T {

@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, setupTestConfig, makeTestConfig } from '@tests/harness.js';
 import { setStorageDriver } from '@/storage/registry.js';
-import { setImageConfig } from '@/images/registry.js';
-import { mediaApi } from '@/services/media/service.js';
-import { handleMediaRequest } from '@/images/handler.js';
+import { setImageConfig } from '@/media/serving/image/registry.js';
+import { mediaApi } from '@/media/service.js';
+import { handleMediaRequest } from '@/media/serving/handler.js';
 import type { StorageDriver, ImageDriver, ImageSource } from '@/types/index.js';
-import type { ImageFormat } from '@/images/url.js';
+import type { ImageFormat } from '@/media/serving/image/url.js';
 
 // ---------------------------------------------------------------------------
 // Minimal JPEG header bytes (SOF0 marker with 1x1 dimensions)

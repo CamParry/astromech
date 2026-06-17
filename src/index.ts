@@ -38,14 +38,14 @@ export type { BuiltInRoleSlug } from '@/policies/permissions/permissions.js';
 export { withDefaults } from '@/utilities/options.js';
 export { resolveEntryUrl, resolveEntryPath } from '@/utilities/entry-url.js';
 export type { UrlEntry } from '@/utilities/entry-url.js';
-export { defaultImageWidths } from '@/images/defaults.js';
-export { buildImageAttrs } from '@/images/build-image-attrs.js';
+export { defaultImageWidths } from '@/media/serving/image/defaults.js';
+export { buildImageAttrs } from '@/media/serving/image/build-image-attrs.js';
 export type {
     ImageAttrs,
     ImageAttrsContext,
     ImageAttrsInput,
     ImageAttrsOptions,
-} from '@/images/build-image-attrs.js';
+} from '@/media/serving/image/build-image-attrs.js';
 
 // Field factories now live in the `astromech/fields` subpath (see src/fields.ts).
 

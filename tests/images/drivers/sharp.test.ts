@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import sharpLib from 'sharp';
-import { sharp } from '@/images/drivers/sharp.js';
+import { sharp } from '@/media/serving/image/drivers/sharp.js';
 import type { ImageSource } from '@/types/index.js';
 
 // ---------------------------------------------------------------------------

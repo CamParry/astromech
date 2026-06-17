@@ -1,15 +1,15 @@
-import { mediaApi } from '@/services/media/service.js';
+import { mediaApi } from '@/media/service.js';
 import { getStorageDriver } from '@/storage/registry.js';
-import { getImageConfig } from '@/images/registry.js';
+import { getImageConfig } from './image/registry.js';
 import {
     parseImageParams,
     isAllowedWidth,
     buildMediaUrl,
     buildVariantUrl,
     variantStorageKey,
-} from '@/images/url.js';
-import type { ImageFormat } from '@/images/url.js';
-import { isOptimisableImage } from '@/images/dimensions.js';
+} from './image/url.js';
+import type { ImageFormat } from './image/url.js';
+import { isOptimisableImage } from './image/dimensions.js';
 import type { ImageSource } from '@/types/index.js';
 
 export type MediaRequestInfo = {
