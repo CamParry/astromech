@@ -95,10 +95,10 @@ Rules that make the boundary real:
 
 - **`package.json` `exports` + `tsup.config.ts` entries point ONLY at `src/exports/`** (and the
   public `.astro` files). Node refuses any other subpath for published consumers.
-- **`demo/**`and`scripts/**` import the package surface (`astromech/…`or`dist/`), never
-`../src/...`.** Repoint `demo/seed.ts`, `scripts/seed.ts`, `demo/drizzle.config.ts`,
+- **`demo/` and `scripts/` import the package surface** (`astromech/…` or `dist/`), never
+  `../src/...`. Repoint `demo/seed.ts`, `scripts/seed.ts`, `demo/drizzle.config.ts`,
   `drizzle.config.ts`.
-- **A dependency-cruiser rule forbids `demo/**`&`scripts/**`from reaching`src/` internals** —
+- **A dependency-cruiser rule forbids `demo/` & `scripts/` from reaching `src/` internals** —
   catches the in-repo drilling Node's exports map can't.
 - Driver entries stay separate barrels (no bundling `sharp` when you import `r2`).
 
