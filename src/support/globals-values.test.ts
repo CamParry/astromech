@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { partitionGlobalValues, mergeGlobalValues, mergeLocaleSetting } from '@/core/settings-page-values.js';
+import { partitionGlobalValues, mergeGlobalValues, mergeLocaleSetting } from '@/support/settings-page-values.js';
 import type { ResolvedEntryFields } from '@/types/fields.js';
 
 // ---------------------------------------------------------------------------

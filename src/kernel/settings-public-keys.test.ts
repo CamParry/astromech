@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { resolveConfig } from '@/core/config-resolver.js';
+import { resolveConfig } from '@/kernel/config-resolver.js';
 import type { AstromechConfig, DatabaseDriver, StorageDriver } from '@/types/index.js';
 
 const driver: DatabaseDriver = {

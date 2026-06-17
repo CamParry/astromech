@@ -31,10 +31,10 @@ import {
 import { getDb } from '@/db/registry.js';
 import { RelationshipsRepository } from '@/db/repositories/relationships.js';
 import { populateEntries } from '@/db/repositories/populate.js';
-import { getEntryStorage } from '@/core/entry-storage/registry.js';
-import { resolveEntryType } from '@/core/entry-types.js';
+import { getEntryStorage } from '@/storage/entries/registry.js';
+import { resolveEntryType } from '@/support/entry-types.js';
 import { resolveContentLocale } from '@/support/locale.js';
-import type { EntryRecord, EntryStorage, StorageDb } from '@/core/entry-storage/types.js';
+import type { EntryRecord, EntryStorage, StorageDb } from '@/storage/entries/types.js';
 import type {
     Entry,
     EntryStatus,
@@ -50,16 +50,16 @@ import type {
     FieldDefinition,
 } from '@/types/index.js';
 import { getCurrentUser, setCurrentUser } from '@/sdk/local/context.js';
-import { hasHookHandlers, runAfterHooks, runBeforeHooks } from '@/core/plugin-runtime.js';
+import { hasHookHandlers, runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime.js';
 import { slugify } from '@/support/strings.js';
-import { flattenEntryFields } from '@/core/entry-fields.js';
+import { flattenEntryFields } from '@/support/entry-fields.js';
 import {
     applyVisibilityWithRelations,
     isPublicBranded,
     markPublic,
     PublicShapeWriteError,
     type VisibilityShape,
-} from '@/core/visibility.js';
+} from '@/policies/visibility/visibility.js';
 
 // ============================================================================
 // Validation Helper

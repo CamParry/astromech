@@ -50,7 +50,7 @@ import {
     useDuplicateEntry,
 } from '@/admin/hooks/index.js';
 import type { EntryStatus } from '@/types/index.js';
-import { resolveEntryUrl } from '@/core/entry-url.js';
+import { resolveEntryUrl } from '@/support/entry-url.js';
 import {
     deriveFormDefinition,
     resolveConfigForDerive,

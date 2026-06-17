@@ -21,16 +21,16 @@ import {
     checkPluginDependencies,
     pluginEntryTypes,
     resolvePluginIdentity,
-} from '@/core/plugin-identity.js';
-import { assertPluginTablePrefixes } from '@/core/plugin-schema.js';
-import { assertNoFieldTypeCollisions } from '@/core/plugin-fields.js';
+} from '@/plugins/runtime/plugin-identity.js';
+import { assertPluginTablePrefixes } from '@/plugins/runtime/plugin-schema.js';
+import { assertNoFieldTypeCollisions } from '@/plugins/runtime/plugin-fields.js';
 import {
     BUILT_IN_SUPPORTS,
     resolveEntryCapabilities,
     assertEntryTypeValid,
     type Capability,
-} from '@/core/entry-storage/capabilities.js';
-import { parseEntryTypeId, resolveEntryType } from '@/core/entry-types.js';
+} from '@/storage/entries/capabilities.js';
+import { parseEntryTypeId, resolveEntryType } from '@/support/entry-types.js';
 
 /** Layout containers — flat data, pure chrome. Their children stay top-level. */
 const LAYOUT_TYPES = new Set(['section', 'tabs', 'tab', 'accordion']);

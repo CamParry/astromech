@@ -33,11 +33,11 @@ export {
     builtInRole,
     definePermissionBundles,
     BUILT_IN_ROLES,
-} from '@/core/permissions.js';
-export type { BuiltInRoleSlug } from '@/core/permissions.js';
-export { withDefaults } from '@/core/options.js';
-export { resolveEntryUrl, resolveEntryPath } from '@/core/entry-url.js';
-export type { UrlEntry } from '@/core/entry-url.js';
+} from '@/policies/permissions/permissions.js';
+export type { BuiltInRoleSlug } from '@/policies/permissions/permissions.js';
+export { withDefaults } from '@/support/options.js';
+export { resolveEntryUrl, resolveEntryPath } from '@/support/entry-url.js';
+export type { UrlEntry } from '@/support/entry-url.js';
 export { defaultImageWidths } from '@/images/defaults.js';
 export { buildImageAttrs } from '@/images/build-image-attrs.js';
 export type {

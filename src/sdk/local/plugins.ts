@@ -18,7 +18,7 @@ import {
     createPluginContext,
     getPluginIdentity,
     getPluginSdkMethods,
-} from '@/core/plugin-runtime.js';
+} from '@/plugins/runtime/plugin-runtime.js';
 
 type MethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
 

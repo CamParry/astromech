@@ -18,9 +18,9 @@ import { fileURLToPath } from 'node:url';
 import type { AstroIntegration } from 'astro';
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 import type { AstromechConfig } from '@/types/index.js';
-import { resolveConfig } from '@/core/config-resolver.js';
-import { resolveRoles } from '@/core/permissions.js';
-import { registerRoutes } from '@/core/route-registration.js';
+import { resolveConfig } from '@/kernel/config-resolver.js';
+import { resolveRoles } from '@/policies/permissions/permissions.js';
+import { registerRoutes } from '@/kernel/route-registration.js';
 import { setStorageDriver } from '@/storage/registry.js';
 import { setImageConfig } from '@/images/registry.js';
 import { normaliseWidths } from '@/images/url.js';
@@ -31,17 +31,17 @@ import { registerBuiltInCronJobs } from '@/cron/index.js';
 import { setSchedulerDriver, getSchedulerDriver } from '@/cron/registry.js';
 import { nodeDriver } from '@/cron/drivers/index.js';
 import { onTick } from '@/cron/runner.js';
-import { bootPlugins, registerPlugins } from '@/core/plugin-runtime.js';
-import { collectPluginFieldTypes } from '@/core/plugin-fields.js';
+import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime.js';
+import { collectPluginFieldTypes } from '@/plugins/runtime/plugin-fields.js';
 import {
     resolvePluginIdentity,
     resolvePluginPermission,
-} from '@/core/plugin-identity.js';
+} from '@/plugins/runtime/plugin-identity.js';
 import {
     derivePluginNav,
     derivePluginPages,
     resolvePluginLabel,
-} from '@/core/plugin-admin.js';
+} from '@/plugins/runtime/plugin-admin.js';
 import type {
     AdminEntryTypeConfig,
     AdminPage,
@@ -372,7 +372,7 @@ export function astromech(config: AstromechConfig): AstroIntegration {
             },
 
             'astro:config:done': async ({ injectTypes, logger }) => {
-                const { generateSdkTypes } = await import('@/core/type-generator.js');
+                const { generateSdkTypes } = await import('@/codegen/type-generator.js');
                 injectTypes({
                     filename: 'astromech.d.ts',
                     content: generateSdkTypes(

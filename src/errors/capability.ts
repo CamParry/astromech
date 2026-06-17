@@ -1,4 +1,4 @@
-import type { Capability } from '@/core/entry-storage/capabilities.js';
+import type { Capability } from '@/storage/entries/capabilities.js';
 
 /**
  * Thrown when a route or orchestrator operation is attempted on an entry type

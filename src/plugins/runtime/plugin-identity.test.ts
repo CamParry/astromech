@@ -7,7 +7,7 @@ import {
     resolvePluginIdentity,
     sanitisePackage,
     satisfiesRange,
-} from '@/core/plugin-identity.js';
+} from '@/plugins/runtime/plugin-identity.js';
 
 const def = (
     partial: Partial<PluginDefinition> & { package: string }

@@ -16,8 +16,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@/test/harness.js';
 import { createEntriesRouter } from '@/api/routes/entries.js';
-import { getPluginEntryMounts } from '@/core/plugin-runtime.js';
-import { qualifyEntryType } from '@/core/entry-types.js';
+import { getPluginEntryMounts } from '@/plugins/runtime/plugin-runtime.js';
+import { qualifyEntryType } from '@/support/entry-types.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
 import type { AstromechConfig, PluginDefinition, Role, User } from '@/types/index.js';
 

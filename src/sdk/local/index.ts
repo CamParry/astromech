@@ -19,10 +19,10 @@ import { usersApi } from '@/sdk/local/users.js';
 import { entries, initServerContext } from '@/sdk/local/entries.js';
 import { mediaApi } from '@/sdk/local/media.js';
 import { setCurrentUser } from '@/sdk/local/context.js';
-import { setPluginSdkClient } from '@/core/plugin-runtime.js';
+import { setPluginSdkClient } from '@/plugins/runtime/plugin-runtime.js';
 import { localPlugins } from '@/sdk/local/plugins.js';
-import { mergeLocaleSetting } from '@/core/settings-page-values.js';
-import { isPublicSettingKey } from '@/core/settings-visibility.js';
+import { mergeLocaleSetting } from '@/support/settings-page-values.js';
+import { isPublicSettingKey } from '@/policies/visibility/settings-visibility.js';
 
 export { initServerContext, setCurrentUser };
 

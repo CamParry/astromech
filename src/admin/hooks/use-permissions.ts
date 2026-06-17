@@ -3,7 +3,7 @@
  * server (src/core/permission-match.ts).
  */
 
-import { hasPermission } from '@/core/permission-match.js';
+import { hasPermission } from '@/support/permission-match.js';
 import { useAuth } from '../context/auth.js';
 
 export { hasPermission };

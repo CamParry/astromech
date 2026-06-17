@@ -3,8 +3,8 @@ import type { PluginDefinition } from '@/types/index.js';
 import {
     assertNoFieldTypeCollisions,
     collectPluginFieldTypes,
-} from '@/core/plugin-fields.js';
-import { generateSdkTypes } from '@/core/type-generator.js';
+} from '@/plugins/runtime/plugin-fields.js';
+import { generateSdkTypes } from '@/codegen/type-generator.js';
 import type { ResolvedConfig } from '@/types/index.js';
 
 const def = (

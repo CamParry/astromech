@@ -8,7 +8,7 @@
 import { createJiti } from 'jiti';
 import { resolve } from 'node:path';
 import { setDb } from '@/db/registry.js';
-import { resolveConfig } from '@/core/config-resolver.js';
+import { resolveConfig } from '@/kernel/config-resolver.js';
 import { setCliConfig } from './virtual-config-shim.js';
 import type { AstromechConfig, ResolvedConfig } from '@/types/index.js';
 

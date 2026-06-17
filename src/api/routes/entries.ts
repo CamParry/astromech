@@ -14,7 +14,7 @@ import {
     notFound,
 } from '@/api/middleware/errors.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
-import { can, PERMISSION_ENTRY_READ_FULL } from '@/core/permissions.js';
+import { can, PERMISSION_ENTRY_READ_FULL } from '@/policies/permissions/permissions.js';
 import type {
     EntryDuplicateOverrides,
     EntryQueryParams,

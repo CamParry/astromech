@@ -6,7 +6,7 @@
 
 import type { AnyPluginSdkMethod, Entry, PluginContext } from '@/types/index.js';
 import { defineSdkMethod } from '@/index.js';
-import { resolveEntryUrl } from '@/core/entry-url.js';
+import { resolveEntryUrl } from '@/support/entry-url.js';
 import { menuBlobKey } from '../manifest.js';
 import type { MenuConfig, MenuItem } from '../types.js';
 

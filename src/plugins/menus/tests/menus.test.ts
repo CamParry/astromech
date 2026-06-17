@@ -19,8 +19,8 @@ import { localPlugins } from '@/sdk/local/plugins.js';
 import { menus } from '@/plugins/menus/index.js';
 import type { MenuItem } from '@/plugins/menus/types.js';
 import type { AstromechConfig } from '@/types/index.js';
-import { derivePluginPages, derivePluginNav } from '@/core/plugin-admin.js';
-import { resolvePluginIdentity } from '@/core/plugin-identity.js';
+import { derivePluginPages, derivePluginNav } from '@/plugins/runtime/plugin-admin.js';
+import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity.js';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 

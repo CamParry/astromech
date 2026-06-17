@@ -14,9 +14,9 @@ import {
     registerPlugins,
     runAfterHooks,
     runBeforeHooks,
-} from '@/core/plugin-runtime.js';
+} from '@/plugins/runtime/plugin-runtime.js';
 import { defineHook } from '@/index.js';
-import { resolvePluginIdentity } from '@/core/plugin-identity.js';
+import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity.js';
 import { getCronJobs } from '@/cron/registry.js';
 
 const config: ResolvedConfig = {

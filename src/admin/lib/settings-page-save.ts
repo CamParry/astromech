@@ -10,7 +10,7 @@
 import type { JsonValue } from '@/types/index.js';
 import type { ResolvedEntryFields } from '@/types/fields.js';
 import { Astromech } from '@/sdk/fetch/index.js';
-import { partitionGlobalValues } from '@/core/settings-page-values.js';
+import { partitionGlobalValues } from '@/support/settings-page-values.js';
 
 export async function saveSettingsPage(opts: {
     baseKey: string;

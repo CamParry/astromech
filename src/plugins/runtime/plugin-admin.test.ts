@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { EntryTypeConfig, PluginDefinition, PluginNavItem } from '@/types/index.js';
-import { resolvePluginIdentity } from '@/core/plugin-identity.js';
-import { derivePluginNav, derivePluginPages } from '@/core/plugin-admin.js';
+import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity.js';
+import { derivePluginNav, derivePluginPages } from '@/plugins/runtime/plugin-admin.js';
 
 const entryType = (type: string, single: string, plural: string): EntryTypeConfig => ({
     type,

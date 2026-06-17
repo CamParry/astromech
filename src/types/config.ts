@@ -12,7 +12,7 @@ import type {
     ResolvedEntryFields,
 } from './fields.js';
 import type { PluginDefinition, PluginNavItem } from './plugins.js';
-import type { EntryStorage } from '@/core/entry-storage/types.js';
+import type { EntryStorage } from '@/storage/entries/types.js';
 import type { ImageFormat } from '@/images/url.js';
 
 // ============================================================================

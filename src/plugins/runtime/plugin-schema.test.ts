@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import type { PluginDefinition } from '@/types/index.js';
-import { assertPluginTablePrefixes, collectPluginSchemas } from '@/core/plugin-schema.js';
+import { assertPluginTablePrefixes, collectPluginSchemas } from '@/plugins/runtime/plugin-schema.js';
 
 const def = (partial: Partial<PluginDefinition> & { package: string }): PluginDefinition => ({
     ...partial,

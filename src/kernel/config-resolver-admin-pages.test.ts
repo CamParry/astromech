@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveConfig } from '@/core/config-resolver.js';
+import { resolveConfig } from '@/kernel/config-resolver.js';
 import { defineAdminPage } from '@/index.js';
 import type {
     AdminPage,

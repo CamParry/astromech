@@ -6,7 +6,7 @@
 
 import type { Entry, PluginContext } from '@/types/index.js';
 import { defineSdkMethod } from '@/index.js';
-import { resolveEntryPath } from '@/core/entry-url.js';
+import { resolveEntryPath } from '@/support/entry-url.js';
 import { PERMISSION_NAMESPACE } from '../manifest.js';
 import { SEO_FIELD_NAME } from '../types.js';
 import type {

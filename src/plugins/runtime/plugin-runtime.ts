@@ -29,16 +29,16 @@ import type {
 import { getDb } from '@/db/registry.js';
 import { getEmailConfig } from '@/email/registry.js';
 import { renderEmail } from '@/email/render.js';
-import { pluginEntryTypes, resolvePluginIdentity } from '@/core/plugin-identity.js';
+import { pluginEntryTypes, resolvePluginIdentity } from '@/plugins/runtime/plugin-identity.js';
 import { registerCronJob } from '@/cron/registry.js';
-import { qualifyEntryType } from '@/core/entry-types.js';
-import { flattenEntryFields } from '@/core/entry-fields.js';
+import { qualifyEntryType } from '@/support/entry-types.js';
+import { flattenEntryFields } from '@/support/entry-fields.js';
 import { createScopedEntries } from '@/sdk/local/scoped-entries.js';
 import { withDefaultShape } from '@/sdk/local/with-default-shape.js';
 import {
     resetEntryStorageOverrides,
     setEntryStorage,
-} from '@/core/entry-storage/registry.js';
+} from '@/storage/entries/registry.js';
 
 // ============================================================================
 // Registry (globalThis — visible from config:setup through request time)

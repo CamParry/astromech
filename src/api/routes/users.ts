@@ -16,7 +16,7 @@ import { eq, count } from 'drizzle-orm';
 import { Astromech } from '@/sdk/local/index.js';
 import { badRequest, forbidden, fromZodError, internalError, notFound } from '@/api/middleware/errors.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
-import { can } from '@/core/permissions.js';
+import { can } from '@/policies/permissions/permissions.js';
 import { getDb } from '@/db/registry.js';
 import { usersTable } from '@/db/schema.js';
 import { createUserSchema, updateUserSchema } from '@/schemas/users.js';

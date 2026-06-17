@@ -15,7 +15,7 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { Astromech } from '@/sdk/local/index.js';
 import { badRequest, forbidden, fromZodError, internalError, notFound } from '@/api/middleware/errors.js';
 import type { AuthVariables } from '@/api/middleware/auth.js';
-import { can } from '@/core/permissions.js';
+import { can } from '@/policies/permissions/permissions.js';
 import { updateMediaSchema } from '@/schemas/media.js';
 import type { MediaQueryParams } from '@/types/index.js';
 

@@ -21,10 +21,10 @@ import {
     getPluginIdentity,
     getPluginRawRoutes,
     getPluginSdkMethods,
-} from '@/core/plugin-runtime.js';
-import { can } from '@/core/permissions.js';
-import { resolvePluginPermission } from '@/core/plugin-identity.js';
-import { qualifyEntryType } from '@/core/entry-types.js';
+} from '@/plugins/runtime/plugin-runtime.js';
+import { can } from '@/policies/permissions/permissions.js';
+import { resolvePluginPermission } from '@/plugins/runtime/plugin-identity.js';
+import { qualifyEntryType } from '@/support/entry-types.js';
 import { createEntriesRouter } from '@/api/routes/entries.js';
 import type { Context } from 'hono';
 import type { Permission, PluginAccess, PluginContext } from '@/types/index.js';

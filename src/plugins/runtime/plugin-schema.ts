@@ -15,7 +15,7 @@
 
 import { getTableName, is, Table } from 'drizzle-orm';
 import type { PluginDefinition } from '@/types/index.js';
-import { pluginTablePrefix, resolvePluginIdentity } from '@/core/plugin-identity.js';
+import { pluginTablePrefix, resolvePluginIdentity } from '@/plugins/runtime/plugin-identity.js';
 
 export type CollectedPluginTable = {
     alias: string;
