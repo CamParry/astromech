@@ -10,7 +10,7 @@
  * The `db:generate` CLI command (`astromech db:generate`, implemented in
  * `src/transport/cli/commands/db-generate.ts`) reads each plugin's `schemaModule`
  * specifier, generates a combined `.astromech/drizzle.schema.ts`, and spawns
- * drizzle-kit to produce the app's migration log. See ROADMAP Phase 18a.
+ * drizzle-kit to produce the app's migration log.
  */
 
 import { getTableName, is, Table } from 'drizzle-orm';

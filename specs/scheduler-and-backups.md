@@ -1,10 +1,10 @@
 # Scheduler & Backups
 
 **Status:** **Slice A (cadence-aware scheduler) implemented 2026-06-16** — tests-only validation, no dogfood plugin (see §8 Slice A). **Slice B (`@astromech/backups`) unimplemented.** Two deliverables in order: **(1) a cadence-aware, runtime-adaptive scheduler** (core; proven by tests), then **(2) `@astromech/backups`** built on top.
-**Supersedes (in part):** ROADMAP Phase 16 ("CRON System") — Phase 16 shipped the registry + a run-everything runner; this design adds real cadence, adaptive triggering, and runtime-editable schedules.
+**Supersedes (in part):** the earlier CRON system (registry + run-everything runner) — this design adds real cadence, adaptive triggering, and runtime-editable schedules.
 **Touches (scheduler):** `src/cron/{registry,runner,index}.ts`, new `src/cron/drivers/{node,cloudflare,http}.ts`, `src/types/config.ts` (`SchedulerDriver`), `src/db/schema.ts` (cron-state table), `src/adapters/astro.ts` (driver wiring), the runtime entry's `scheduled()` handler, `src/api/routes/cron.ts` (poke endpoint + auth).
 **Touches (backups):** `src/types/config.ts` (`StorageDriver.list` + `DatabaseDriver.dump`/`restore`), `src/db/drivers/*` (per-dialect dump), `src/storage/*` (`list` + private retrieval), new `src/plugins/backups/*`.
-**Related:** ROADMAP Phase 16 (CRON), Phase 23 (DB drivers), Phase 19 (`@astromech/backups`).
+**Related:** the CRON system, additional DB drivers, and the `@astromech/backups` plugin.
 
 ---
 
