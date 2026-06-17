@@ -121,6 +121,12 @@ Dogfoods the public APIs end-to-end — Astromech marketing Astromech. See [`spe
 
 ## Planned
 
+### Services / transport architecture & AI integration 🚧
+
+- [ ] Upstream refactor: reshape `src/sdk` + dissolve `src/core` into the locked layer model — `storage → services → policies → transport → Client`, assembled at the `kernel` ([`specs/services-architecture.md`](specs/services-architecture.md), staged in [`specs/services-refactor-plan.md`](specs/services-refactor-plan.md))
+- [ ] `withPermissions(principal)` composable policy + `defineServiceMethod` descriptors (Stages 4–5; the seam the AI work builds on)
+- [ ] AI integration: method manifest, MCP server, programmatic confirm gate, context-aware authoring agent, admin UI-slot injection ([`specs/ai-integration.md`](specs/ai-integration.md))
+
 ### Forms Plugin (`@astromech/forms`) 🚧
 
 - [ ] Form-builder custom field type
