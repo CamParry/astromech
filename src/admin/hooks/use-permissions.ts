@@ -1,6 +1,6 @@
 /**
  * Client-side permission hook. Uses the same segment-wise matcher as the
- * server (src/core/permission-match.ts).
+ * server (src/support/permission-match.ts).
  */
 
 import { hasPermission } from '@/support/permission-match.js';

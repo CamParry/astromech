@@ -12,9 +12,9 @@
  */
 
 import { Hono } from 'hono';
-import type { AuthVariables } from '@/api/middleware/auth.js';
-import { optionalAuth, requireAuth } from '@/api/middleware/auth.js';
-import { forbidden, notFound, unauthorized } from '@/api/middleware/errors.js';
+import type { AuthVariables } from '@/transport/http/middleware/auth.js';
+import { optionalAuth, requireAuth } from '@/transport/http/middleware/auth.js';
+import { forbidden, notFound, unauthorized } from '@/transport/http/middleware/errors.js';
 import {
     createPluginContext,
     getPluginEntryMounts,
@@ -25,7 +25,7 @@ import {
 import { can } from '@/policies/permissions/permissions.js';
 import { resolvePluginPermission } from '@/plugins/runtime/plugin-identity.js';
 import { qualifyEntryType } from '@/support/entry-types.js';
-import { createEntriesRouter } from '@/api/routes/entries.js';
+import { createEntriesRouter } from '@/transport/http/routes/entries.js';
 import type { Context } from 'hono';
 import type { Permission, PluginAccess, PluginContext } from '@/types/index.js';
 

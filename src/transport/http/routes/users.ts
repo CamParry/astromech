@@ -14,8 +14,8 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { eq, count } from 'drizzle-orm';
 import { Astromech } from '@/transport/local/index.js';
-import { badRequest, forbidden, fromZodError, internalError, notFound } from '@/api/middleware/errors.js';
-import type { AuthVariables } from '@/api/middleware/auth.js';
+import { badRequest, forbidden, fromZodError, internalError, notFound } from '@/transport/http/middleware/errors.js';
+import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import { can } from '@/policies/permissions/permissions.js';
 import { getDb } from '@/db/registry.js';
 import { usersTable } from '@/db/schema.js';

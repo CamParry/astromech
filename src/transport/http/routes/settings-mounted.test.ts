@@ -17,8 +17,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@/test/harness.js';
 import { Astromech } from '@/transport/local/index.js';
-import { settingsRouter } from '@/api/routes/settings.js';
-import type { AuthVariables } from '@/api/middleware/auth.js';
+import { settingsRouter } from '@/transport/http/routes/settings.js';
+import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import type { Role, User } from '@/types/index.js';
 
 const fakeUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;

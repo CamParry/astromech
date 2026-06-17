@@ -10,15 +10,15 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@/test/harness.js';
 import { registerCronJob } from '@/cron/registry.js';
-import { cronRouter } from '@/api/routes/cron.js';
+import { cronRouter } from '@/transport/http/routes/cron.js';
 
 // Mock resolveSessionUser so tests control the session branch without a real
 // Better Auth stack.
-vi.mock('@/api/middleware/auth.js', () => ({
+vi.mock('@/transport/http/middleware/auth.js', () => ({
     resolveSessionUser: vi.fn(),
 }));
 
-import { resolveSessionUser } from '@/api/middleware/auth.js';
+import { resolveSessionUser } from '@/transport/http/middleware/auth.js';
 
 const mockResolveSessionUser = vi.mocked(resolveSessionUser);
 

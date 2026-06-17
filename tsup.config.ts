@@ -47,7 +47,8 @@ export default defineConfig([
     // CLI build — virtual:astromech/config is shimmed with the live-config proxy
     {
         entry: {
-            'cli/index': 'src/cli/index.ts',
+            // `bin: astromech` -> dist/cli/index.js stays stable; source moved.
+            'cli/index': 'src/transport/cli/index.ts',
         },
         format: ['esm'],
         dts: false,
@@ -63,7 +64,7 @@ export default defineConfig([
         banner: { js: '#!/usr/bin/env node' },
         esbuildOptions(options) {
             options.alias = {
-                'virtual:astromech/config': './src/cli/virtual-config-shim.ts',
+                'virtual:astromech/config': './src/transport/cli/virtual-config-shim.ts',
             };
         },
     },

@@ -15,10 +15,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@/test/harness.js';
-import { createEntriesRouter } from '@/api/routes/entries.js';
+import { createEntriesRouter } from '@/transport/http/routes/entries.js';
 import { getPluginEntryMounts } from '@/plugins/runtime/plugin-runtime.js';
 import { qualifyEntryType } from '@/support/entry-types.js';
-import type { AuthVariables } from '@/api/middleware/auth.js';
+import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import type { AstromechConfig, PluginDefinition, Role, User } from '@/types/index.js';
 
 const widgetsPlugin: PluginDefinition = {
@@ -244,7 +244,7 @@ describe('composed pluginsRouter — routing precedence + auth', () => {
         // Re-evaluate the module so its import-time mounts read the freshly
         // registered plugin set.
         vi.resetModules();
-        const mod = await import('@/api/routes/plugins.js');
+        const mod = await import('@/transport/http/routes/plugins.js');
         return mod.pluginsRouter;
     }
 

@@ -8,7 +8,7 @@
  * config-resolution time (crash loud).
  *
  * The `db:generate` CLI command (`astromech db:generate`, implemented in
- * `src/cli/commands/db-generate.ts`) reads each plugin's `schemaModule`
+ * `src/transport/cli/commands/db-generate.ts`) reads each plugin's `schemaModule`
  * specifier, generates a combined `.astromech/drizzle.schema.ts`, and spawns
  * drizzle-kit to produce the app's migration log. See ROADMAP Phase 18a.
  */

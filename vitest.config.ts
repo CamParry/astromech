@@ -9,7 +9,7 @@ export default defineConfig({
             // alias it to the CLI shim — a live Proxy over the globalThis config
             // populated by `setCliConfig` (see src/test/harness.ts).
             'virtual:astromech/config': fileURLToPath(
-                new URL('./src/cli/virtual-config-shim.ts', import.meta.url)
+                new URL('./src/transport/cli/virtual-config-shim.ts', import.meta.url)
             ),
             // Admin virtual modules, normally injected by the Astro integration.
             'virtual:astromech/admin-config': fileURLToPath(

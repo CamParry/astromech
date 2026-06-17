@@ -20,7 +20,7 @@ import { setDb } from '@/db/registry.js';
 import { usersTable } from '@/db/schema.js';
 import type { UserRow } from '@/db/schema.js';
 import { resolveConfig } from '@/kernel/config-resolver.js';
-import { setCliConfig } from '@/cli/virtual-config-shim.js';
+import { setCliConfig } from '@/transport/cli/virtual-config-shim.js';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime.js';
 import { setCurrentUser } from '@/services/_shared/context.js';
 import type {

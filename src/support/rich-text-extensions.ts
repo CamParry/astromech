@@ -3,7 +3,7 @@
  *
  * Imported by:
  *   - src/admin/components/ui/rich-text-extensions.ts (browser editor)
- *   - src/core/render-rich-text.ts (server/worker static renderer)
+ *   - src/support/render-rich-text.ts (server/worker static renderer)
  *
  * StarterKit v3 bundles Link and Underline; configure them via StarterKit
  * options rather than standalone imports to avoid duplicate schemas.

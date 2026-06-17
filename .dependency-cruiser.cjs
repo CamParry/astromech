@@ -49,12 +49,20 @@ module.exports = {
       to: { path: '^src/(transport|client|kernel|admin)/' },
     },
     {
-      name: 'transport-no-upward',
+      name: 'transport-no-reach-client-or-admin',
       comment:
-        'Transports compose services + policies. They must not import the client, the kernel, or admin.',
+        'Transports compose services + policies. No transport may import the client or admin (those are downstream consumers).',
       severity: 'error',
       from: { path: '^src/transport/' },
-      to: { path: '^src/(client|kernel|admin)/' },
+      to: { path: '^src/(client|admin)/' },
+    },
+    {
+      name: 'transport-no-reach-kernel',
+      comment:
+        'The HTTP/Local/MCP transports are projected BY the kernel and must not import it. The CLI is exempt: it is a standalone entrypoint (the outermost "delivery mechanism" ring) that performs its own config resolution + boot, so transport/cli may reach the kernel.',
+      severity: 'error',
+      from: { path: '^src/transport/(http|local|mcp)/' },
+      to: { path: '^src/kernel/' },
     },
     {
       name: 'client-is-over-the-wire',

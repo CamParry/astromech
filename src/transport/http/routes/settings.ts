@@ -16,8 +16,8 @@ import {
     fromZodError,
     internalError,
     notFound,
-} from '@/api/middleware/errors.js';
-import type { AuthVariables } from '@/api/middleware/auth.js';
+} from '@/transport/http/middleware/errors.js';
+import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import type { JsonValue } from '@/types/index.js';
 import { can } from '@/policies/permissions/permissions.js';
 import { setSettingSchema } from '@/schemas/settings.js';

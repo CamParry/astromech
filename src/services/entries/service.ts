@@ -8,7 +8,7 @@
  * plugin hooks, relationship persistence + populate + incomingRelations,
  * versioning decisions, base-slug computation, locale-propagation decisions,
  * bulk dispatch) and dispatches all row persistence through the internal
- * `EntryStorage` contract (`src/core/entry-storage`). The built-in storage is
+ * `EntryStorage` contract (`src/storage/entries`). The built-in storage is
  * the only Phase 2 implementation; Phase 3 mounts per-type storages via the
  * registry with zero orchestrator changes.
  *
