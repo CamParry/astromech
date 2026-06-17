@@ -57,7 +57,7 @@ router.get('/:key', async (c) => {
     try {
         // Authenticated admin endpoint (guarded by settings:read): return the
         // full shape so private settings (e.g. plugin pages) are editable. The
-        // fetch SDK requests base + per-locale keys separately, so no locale
+        // the Client requests base + per-locale keys separately, so no locale
         // merge is needed here.
         const value = await Astromech.settings.get(key, { full: true });
         if (value === null) return notFound(c, `Setting '${key}' not found`);

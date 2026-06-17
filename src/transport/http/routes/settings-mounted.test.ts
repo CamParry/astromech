@@ -1,12 +1,12 @@
 /**
  * The settings router (`GET/PUT /settings/:key`) over the real composed Hono
- * app + local SDK + DB.
+ * app + Local API + DB.
  *
  * Regression coverage for two bugs that left plugin settings pages (e.g. the
  * menus editor) empty in the admin:
  *  1. Keys embed a path with slashes (`plugin:<ns>:/menus/main`), so an
  *     unencoded key splits into multiple path segments and misses the
- *     single-segment `/:key` route. The fetch SDK must percent-encode the key;
+ *     single-segment `/:key` route. The Client must percent-encode the key;
  *     here we assert the route matches the encoded form and 404s the raw one.
  *  2. The route must read with `full: true` — settings are private by default,
  *     and an authenticated admin (guarded by `settings:read`) needs the full

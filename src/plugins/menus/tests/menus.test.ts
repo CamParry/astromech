@@ -40,7 +40,7 @@ async function get(key: string, locale?: string): Promise<MenuItem[] | null> {
 }
 
 async function writeSetting(key: string, value: unknown): Promise<void> {
-    // Use the local SDK to write settings directly
+    // Use the Local API to write settings directly
     const { default: Astromech } = await import('@/transport/local/index.js');
     await (Astromech as { settings: { set(k: string, v: unknown): Promise<unknown> } }).settings.set(key, value as import('@/types/index.js').JsonValue);
 }

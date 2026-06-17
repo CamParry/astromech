@@ -1,5 +1,5 @@
 /**
- * Storage-level tests for tableStorage plus orchestrator integration.
+ * Storage-level tests for tableStorage plus entries-service integration.
  *
  * Uses a scratch table created via raw DDL — no migration dependency.
  * The scratch table has columns matching the test scenarios: id, from, to,
@@ -460,7 +460,7 @@ describe('transaction', () => {
 // Orchestrator integration
 // ============================================================================
 
-describe('orchestrator integration', () => {
+describe('entries-service integration', () => {
     function makeLinksPlugin(): PluginDefinition {
         return {
             package: '@astromech/links',

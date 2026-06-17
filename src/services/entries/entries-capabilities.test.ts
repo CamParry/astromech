@@ -1,5 +1,5 @@
 /**
- * Capability-gating tests for the entry orchestrator.
+ * Capability-gating tests for the entries service.
  *
  * Uses a custom config with a `statuses-off` type and a `trash-off` type
  * to exercise CapabilityError throws in publish/unpublish/schedule/trash/

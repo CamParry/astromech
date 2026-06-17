@@ -1,7 +1,7 @@
 /**
  * Slice 5 validator: the redirects plugin runs on its OWN table
  * (`plugin_redirects_redirects`) via `tableStorage`, exercised end-to-end
- * through the orchestrator, the plugin SDK, and the slug-change hook.
+ * through the entries service, the plugin SDK, and the slug-change hook.
  *
  * Covers:
  * - ctx-scoped create lands a row in plugin_redirects_redirects, NOT entries.

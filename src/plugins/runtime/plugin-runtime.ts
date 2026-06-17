@@ -223,7 +223,7 @@ export function getPluginEntryMounts(): PluginEntryMount[] {
     return mounts;
 }
 
-/** Set by the local SDK at module load to break the import cycle. */
+/** Set by the Local API at module load to break the import cycle. */
 export function setPluginSdkClient(client: AstromechClient): void {
     state().sdkClient = client;
 }

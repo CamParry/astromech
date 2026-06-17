@@ -2,7 +2,7 @@
  * Entry Routes
  *
  * Full CRUD operations for collection entries. See specs/typed-entries-api.md
- * for the surface contract (type-scoped routes, bulk-* sub-routes).
+ * for the route contract (type-scoped routes, bulk-* sub-routes).
  */
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';

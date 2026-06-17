@@ -511,7 +511,7 @@ const mediaApi: MediaApi = {
 // ============================================================================
 
 const settingsApi: SettingsApi = {
-    // `full` is accepted for type compatibility; the fetch SDK is only used by
+    // `full` is accepted for type compatibility; the Client is only used by
     // the authenticated admin SPA, so the HTTP endpoint always returns the full
     // set (guarded by `requireAuth` + `settings:read`). The flag is ignored on
     // the wire — the HTTP route does not yet expose a public endpoint.

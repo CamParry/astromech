@@ -1,7 +1,7 @@
 /**
  * Regression: `defaultLocale` may be a DISPLAY tag (e.g. `en-GB`) that is not a
  * content locale entries are tagged with. Queries that omit an explicit locale
- * rely on the orchestrator's default; it must bridge the display tag to an
+ * rely on the entries service's default; it must bridge the display tag to an
  * available content locale (RFC 4647 lookup), otherwise the locale filter
  * matches nothing and reads come back empty (broke the admin command-palette
  * search, which never passes a locale).
@@ -26,7 +26,7 @@ describe('default locale resolution for locale-less reads', () => {
 
         await api.create({ type: 'post', title: 'Home', locale: 'en' });
 
-        // No locale passed → orchestrator default must resolve en-GB → en.
+        // No locale passed → entries service default must resolve en-GB → en.
         const res = await api.query({ type: ['post'], full: true, limit: 10 });
         expect(res.data.map((e) => e.title)).toContain('Home');
 

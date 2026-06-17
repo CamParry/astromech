@@ -105,7 +105,7 @@ describe('plugin entries mount — permission matrix + CRUD', () => {
             data: { id: string; type: string };
         };
         const id = createdBody.data.id;
-        // The orchestrator stores and returns the qualified id verbatim.
+        // The entries service stores and returns the qualified id verbatim.
         expect(createdBody.data.type).toBe('widgets/widget');
 
         const got = await app.request(`/plugins/widgets/entries/widget/${id}`);

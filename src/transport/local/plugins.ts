@@ -3,7 +3,7 @@
  *
  * Methods resolve against the runtime registry (populated at boot from the live
  * plugin definitions) and call the plugin's handler directly against the DB,
- * with a freshly-built PluginContext. The local SDK bypasses `access` checks by
+ * with a freshly-built PluginContext. The Local API bypasses `access` checks by
  * design — the HTTP API is the enforcement boundary.
  *
  * A Proxy resolves names/methods lazily so the registry need not be populated

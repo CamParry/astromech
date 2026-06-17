@@ -1,5 +1,5 @@
 /**
- * Integration: the entry orchestrator resolves QUALIFIED plugin type ids
+ * Integration: the entries service resolves QUALIFIED plugin type ids
  * (`{plugin}/{type}`) against `ResolvedConfig.pluginEntries` and round-trips
  * CRUD through the built-in storage, storing the qualified id in the `type`
  * column. Root types are unaffected.
@@ -26,7 +26,7 @@ function configWithPlugin(): AstromechConfig {
     return { ...makeTestConfig(), plugins: [redirectsPlugin] };
 }
 
-describe('namespaced plugin entries via the orchestrator', () => {
+describe('namespaced plugin entries via the entries service', () => {
     beforeAll(async () => {
         await createTestDb();
         setupTestConfig(configWithPlugin());
