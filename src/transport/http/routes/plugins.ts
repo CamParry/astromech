@@ -61,7 +61,7 @@ function enforceAccess(
 //    static `/{name}/entries` segments win over `/:name/:method`) ────────────
 //
 // Each mount is its own entries router, namespaced to the plugin: bare wire
-// types resolve against `pluginEntries[name]`, the orchestrator sees the
+// types resolve against `pluginEntries[name]`, the entries service sees the
 // qualified id, and permissions root at `plugin:{ns}:entry:{type}:{action}`.
 // The plugins router runs `optionalAuth` (public RPC), so the entries subtree
 // gets an explicit `requireAuth` — these routes are never public.

@@ -2,17 +2,17 @@
  * Internal EntryStorage contract.
  *
  * This is NOT exported from the package root — it is the seam between the
- * entry orchestrator (`src/services/entries/service.ts`: validation, hooks,
+ * entries service (`src/services/entries/service.ts`: validation, hooks,
  * relationships, versioning policy, bulk) and a persistence backend. The
  * built-in storage (`built-in.ts`) is the only Phase 2 implementation; Phase 3
  * mounts a single-table storage that declares no capabilities and so only needs
  * the five base methods.
  *
  * Shape: five base methods (list/get/create/update/delete), an optional
- * `transaction`, and three optional capability sub-surfaces (trash/versions/
+ * `transaction`, and three optional capability groups (trash/versions/
  * translatable) required iff the corresponding capability is declared in
  * `supports`. `statuses`/`slug` carry no methods — they gate which EntryWrite
- * keys / ListParams the orchestrator passes.
+ * keys / ListParams the entries service passes.
  */
 
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
@@ -34,7 +34,7 @@ export type { Capability } from './capabilities.js';
  * Universal entry shape a storage returns. The built-in storage returns full
  * `Entry` rows (which structurally satisfy this). Capability extras are present
  * only when the storage supports them; `type` is present on multi-type storages
- * (the orchestrator asserts on it). The `locales` map is populated by storages
+ * (the entries service asserts on it). The `locales` map is populated by storages
  * supporting `translatable`.
  */
 export type EntryRecord = {
@@ -89,7 +89,7 @@ export type ListParams = {
 };
 
 /**
- * Snapshot the orchestrator hands to the versions sub-surface. Derived from
+ * Snapshot the entries service hands to the versions capability group. Derived from
  * `EntryVersion` minus storage-managed columns (id/createdAt/versionNumber are
  * the storage's concern via `latestNumber`).
  */
@@ -104,10 +104,10 @@ export type NewEntryVersionSnapshot = {
 };
 
 /**
- * Capability gate: the orchestrator asserts a record's `type` matches the
+ * Capability gate: the entries service asserts a record's `type` matches the
  * expected type. Stored here as a shared shape so storages can throw the
  * canonical mismatch error if they prefer (the built-in defers to the
- * orchestrator).
+ * entries service).
  */
 export type EntryStorage<R extends EntryRecord = EntryRecord> = {
     readonly supports: readonly Capability[];
@@ -121,7 +121,7 @@ export type EntryStorage<R extends EntryRecord = EntryRecord> = {
 
     /**
      * Run `fn` inside a single transaction. The storage handed to `fn` is bound
-     * to the tx; the raw tx db handle is also provided so the orchestrator can
+     * to the tx; the raw tx db handle is also provided so the entries service can
      * keep core relationship persistence (which lives outside the storage
      * contract) atomic with the storage writes.
      */
@@ -132,7 +132,7 @@ export type EntryStorage<R extends EntryRecord = EntryRecord> = {
     /**
      * Compute the unique slug for a base slug under (type, locale), excluding an
      * id. Lives on the storage because uniqueness is a persistence concern; the
-     * orchestrator computes the *base* slug (title-derived or explicit).
+     * entries service computes the *base* slug (title-derived or explicit).
      */
     uniqueSlug(
         type: string,

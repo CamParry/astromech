@@ -3,9 +3,9 @@
  *
  * Owns row CRUD on `entriesTable`, list filters/search/sort/pagination, slug
  * uniquification, status/publishedAt column writes, the trash/versions/
- * translatable sub-surfaces, locale-map enrichment, and drizzle transactions.
+ * translatable capability groups, locale-map enrichment, and drizzle transactions.
  * Policy (validation, hooks, relationships, versioning *decisions*, bulk
- * dispatch) stays in the orchestrator.
+ * dispatch) stays in the entries service.
  *
  * No `virtual:astromech/config` import — this stays directly testable. Calls
  * `getDb()` per-op like the original data layer; `transaction` rebinds a fresh

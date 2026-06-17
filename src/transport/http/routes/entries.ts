@@ -48,7 +48,7 @@ export type EntryAction = 'read' | 'create' | 'update' | 'delete' | 'publish';
 export type EntriesRouterOptions = {
     /** Resolve a bare type to its config; `undefined` ⇒ the existing 404 path. */
     lookup: (type: string) => ResolvedEntryTypeConfig | undefined;
-    /** Wire a bare wire-type to the orchestrator's type id (root: identity; plugin: qualified). */
+    /** Wire a bare wire-type to the entries service's type id (root: identity; plugin: qualified). */
     qualify: (type: string) => string;
     /** Build the permission string a given action checks against. */
     permissionFor: (type: string, action: EntryAction) => string;
@@ -59,9 +59,9 @@ export type EntriesRouterOptions = {
  * plugin mount wires `lookup`/`qualify`/`permissionFor` to its own namespace.
  *
  * Response envelopes are passed through verbatim: entries returned by the
- * orchestrator carry whatever `type` it assigns (the qualified id for built-in
+ * entries service carry whatever `type` it assigns (the qualified id for built-in
  * storage, or `undefined` for `tableStorage`). The wire format is not rewritten
- * — a plugin sees the orchestrator's `type` value as-is.
+ * — a plugin sees the entries service's `type` value as-is.
  */
 export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<Env> {
     const router = new OpenAPIHono<Env>();

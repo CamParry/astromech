@@ -1,7 +1,7 @@
 /**
  * Shared entry edit page body.
  *
- * Parameterized by an `EntriesSurface`; serves root and plugin-namespaced
+ * Parameterized by an `EntriesMount`; serves root and plugin-namespaced
  * entry types. Field layout comes from the definition layer:
  * `deriveFormDefinition(config)` splits field groups into main/sidebar/tab and
  * resolves the title/slug/status capability flags; each field input is
@@ -56,7 +56,7 @@ import {
     resolveConfigForDerive,
 } from '@/admin/definitions/derive.js';
 import { resolveContentLocale } from '@/support/locale.js';
-import type { EntriesSurface } from './surface.js';
+import type { EntriesMount } from './mount.js';
 
 // Surface link bases are runtime strings; address `Link` by string `to`.
 type LinkProps = Omit<React.ComponentProps<typeof RouterLink>, 'to'> & { to: string };
@@ -90,13 +90,13 @@ function StatusBadge({ status }: StatusBadgeProps): React.ReactElement {
 // ============================================================================
 
 export function EntryEditPage({
-    surface,
+    mount,
     id,
 }: {
-    surface: EntriesSurface;
+    mount: EntriesMount;
     id: string;
 }): React.ReactElement {
-    const { type, api, cacheScope, config: entryTypeConfig, basePath } = surface;
+    const { type, api, cacheScope, config: entryTypeConfig, basePath } = mount;
     const scope = { api, cacheScope };
     const { toast } = useToast();
     const { t } = useTranslation();
@@ -110,7 +110,7 @@ export function EntryEditPage({
     const formDef = deriveFormDefinition(resolveConfigForDerive(entryTypeConfig, type));
     const { hasTitle, hasSlug, hasStatuses, main, sidebar } = formDef;
 
-    const isReadOnly = !hasPermission(surface.permissionFor('update'));
+    const isReadOnly = !hasPermission(mount.permissionFor('update'));
 
     const { data: entry, isLoading } = useEntry(type, id, scope);
 

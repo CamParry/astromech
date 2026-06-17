@@ -437,7 +437,7 @@ export function applyVisibility(entry: Entry, opts: VisibilityOptions): Entry | 
 
 /**
  * Variant of applyVisibility that accepts a resolver for related entry field definitions.
- * Used by the entries orchestrator to thread config knowledge into relation projection.
+ * Used by the entries service to thread config knowledge into relation projection.
  */
 export function applyVisibilityWithRelations(
     entry: Entry,

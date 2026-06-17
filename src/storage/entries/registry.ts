@@ -3,13 +3,13 @@
  *
  * Phase 2: every type resolves to the shared built-in singleton. Phase 3 mounts
  * per-type storages (e.g. tableStorage) via `setEntryStorage`. The singleton is
- * config-free; the orchestrator resolves locale defaults before dispatching, so
+ * config-free; the entries service resolves locale defaults before dispatching, so
  * the built-in storage's own `defaultLocale` fallback ('en') is never relied on.
  *
  * State lives on globalThis (mirrors the db/storage-driver registries): the
  * package has multiple bundle entry points (core, adapters, plugin subpaths),
  * so module-level state can be duplicated per chunk — `registerPlugins` would
- * write overrides into one copy while the orchestrator reads another.
+ * write overrides into one copy while the entries service reads another.
  */
 
 import { BuiltInEntryStorage } from './built-in.js';

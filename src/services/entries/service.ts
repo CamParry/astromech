@@ -4,13 +4,13 @@
  * Unified entries object for direct database access in Astro server-side code.
  * Import from 'astromech/local'.
  *
- * This module is the entry *orchestrator*: it owns policy (zod validation,
+ * This module is the entries *service*: it owns policy (zod validation,
  * plugin hooks, relationship persistence + populate + incomingRelations,
  * versioning decisions, base-slug computation, locale-propagation decisions,
  * bulk dispatch) and dispatches all row persistence through the internal
  * `EntryStorage` contract (`src/storage/entries`). The built-in storage is
  * the only Phase 2 implementation; Phase 3 mounts per-type storages via the
- * registry with zero orchestrator changes.
+ * registry with zero service changes.
  *
  * Surface: see specs/typed-entries-api.md (options-object shape, type required
  * on every call, bulk-capable methods accept `id: string | string[]`).
@@ -128,7 +128,7 @@ export async function generateUniqueSlug(
 }
 
 // ============================================================================
-// Relationship + version helpers (policy — stay in the orchestrator)
+// Relationship + version helpers (policy — stay in the entries service)
 // ============================================================================
 
 async function saveRelationships(

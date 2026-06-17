@@ -16,7 +16,7 @@ const publishAtField = z
  * Per-type create schema factory. For titled types (`titleField: 'title'`) the
  * returned schema is byte-identical in behavior to the legacy `createEntrySchema`
  * (same "Title is required" message, same 422s). For titleless types the title
- * is optional — the orchestrator normalizes a missing title to `''` downstream.
+ * is optional — the entries service normalizes a missing title to `''` downstream.
  */
 export function createEntrySchemaFor(titleField: 'title' | false) {
     const title =

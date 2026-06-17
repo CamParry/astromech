@@ -7,7 +7,7 @@
  * flat-merge into root `entries` — they resolve into the namespaced
  * `ResolvedConfig.pluginEntries` (see `config-resolver.ts`). What remains here
  * is collecting email overrides. Identity validation and dependency checks live
- * in `plugin-identity.ts` and are orchestrated from `config-resolver.ts`.
+ * in `plugin-identity.ts` and are assembled from `config-resolver.ts`.
  */
 
 import type { AstromechConfig } from '@/types/index.js';

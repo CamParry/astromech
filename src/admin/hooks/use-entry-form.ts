@@ -101,7 +101,7 @@ export function useEntryForm({
             title: values.title,
             fields: values.fields as JsonObject,
             // Omit status entirely for statuses-off types (the API 409s on a
-            // status write there); the orchestrator defaults to 'draft'.
+            // status write there); the entries service defaults to 'draft'.
             ...(hasStatuses ? { status } : {}),
         };
         if (hasSlug && values.slug.trim()) {
