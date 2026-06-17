@@ -7,7 +7,7 @@ export default defineConfig([
             index: 'src/index.ts',
             fields: 'src/fields.ts',
             columns: 'src/columns.ts',
-            'adapters/astro': 'src/adapters/astro.ts',
+            'kernel/astro': 'src/kernel/astro.ts',
             // Public subpaths `astromech/local` (Local API) and `astromech/fetch`
             // (Client) stay stable; only their source moved under the layer model.
             'sdk/local/index': 'src/transport/local/index.ts',

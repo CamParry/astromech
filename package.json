@@ -30,8 +30,8 @@
             "default": "./dist/columns.js"
         },
         "./astro": {
-            "types": "./dist/adapters/astro.d.ts",
-            "default": "./dist/adapters/astro.js"
+            "types": "./dist/kernel/astro.d.ts",
+            "default": "./dist/kernel/astro.js"
         },
         "./local": {
             "types": "./dist/sdk/local/index.d.ts",
