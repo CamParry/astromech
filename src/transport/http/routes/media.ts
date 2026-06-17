@@ -15,7 +15,7 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { Astromech } from '@/transport/local/index.js';
 import { badRequest, forbidden, fromZodError, internalError, notFound } from '@/transport/http/middleware/errors.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
-import { can } from '@/policies/permissions/permissions.js';
+import { withPermissions } from '@/policies/permissions/with-permissions.js';
 import { updateMediaSchema } from '@/schemas/media.js';
 import type { MediaQueryParams } from '@/types/index.js';
 
@@ -28,8 +28,8 @@ const router = new OpenAPIHono<Env>();
 // ============================================================================
 
 router.get('/', async (c) => {
-    const role = c.var.role;
-    if (!can(role, 'media:read')) return forbidden(c);
+    const permissions = withPermissions(c.var.role);
+    if (!permissions.allows('media:read')) return forbidden(c);
 
     try {
         const q = c.req.query();
@@ -54,8 +54,8 @@ router.get('/', async (c) => {
 
 router.get('/:id', async (c) => {
     const { id } = c.req.param();
-    const role = c.var.role;
-    if (!can(role, 'media:read')) return forbidden(c);
+    const permissions = withPermissions(c.var.role);
+    if (!permissions.allows('media:read')) return forbidden(c);
 
     try {
         const item = await Astromech.media.get(id);
@@ -71,8 +71,8 @@ router.get('/:id', async (c) => {
 // ============================================================================
 
 router.post('/upload', async (c) => {
-    const role = c.var.role;
-    if (!can(role, 'media:upload')) return forbidden(c);
+    const permissions = withPermissions(c.var.role);
+    if (!permissions.allows('media:upload')) return forbidden(c);
 
     try {
         const formData = await c.req.formData();
@@ -95,8 +95,8 @@ router.post('/upload', async (c) => {
 
 router.put('/:id', async (c) => {
     const { id } = c.req.param();
-    const role = c.var.role;
-    if (!can(role, 'media:upload')) return forbidden(c);
+    const permissions = withPermissions(c.var.role);
+    if (!permissions.allows('media:upload')) return forbidden(c);
 
     try {
         const raw = await c.req.json();
@@ -121,8 +121,8 @@ router.put('/:id', async (c) => {
 
 router.delete('/:id', async (c) => {
     const { id } = c.req.param();
-    const role = c.var.role;
-    if (!can(role, 'media:delete')) return forbidden(c);
+    const permissions = withPermissions(c.var.role);
+    if (!permissions.allows('media:delete')) return forbidden(c);
 
     try {
         await Astromech.media.delete(id);

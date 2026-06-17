@@ -19,7 +19,7 @@ import {
 } from '@/transport/http/middleware/errors.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import type { JsonValue } from '@/types/index.js';
-import { can } from '@/policies/permissions/permissions.js';
+import { withPermissions } from '@/policies/permissions/with-permissions.js';
 import { setSettingSchema } from '@/schemas/settings.js';
 
 type Env = { Variables: AuthVariables };
@@ -31,8 +31,8 @@ const router = new OpenAPIHono<Env>();
 // ============================================================================
 
 router.get('/', async (c) => {
-    const role = c.var.role;
-    if (!can(role, 'settings:read')) return forbidden(c);
+    const permissions = withPermissions(c.var.role);
+    if (!permissions.allows('settings:read')) return forbidden(c);
 
     try {
         // Authenticated admin endpoint (guarded by settings:read): return the
@@ -50,8 +50,8 @@ router.get('/', async (c) => {
 
 router.get('/:key', async (c) => {
     const { key } = c.req.param();
-    const role = c.var.role;
-    if (!can(role, 'settings:read')) return forbidden(c);
+    const permissions = withPermissions(c.var.role);
+    if (!permissions.allows('settings:read')) return forbidden(c);
 
     try {
         // Authenticated admin endpoint (guarded by settings:read): return the
@@ -72,8 +72,8 @@ router.get('/:key', async (c) => {
 
 router.put('/:key', async (c) => {
     const { key } = c.req.param();
-    const role = c.var.role;
-    if (!can(role, 'settings:update')) return forbidden(c);
+    const permissions = withPermissions(c.var.role);
+    if (!permissions.allows('settings:update')) return forbidden(c);
 
     try {
         const raw = await c.req.json();

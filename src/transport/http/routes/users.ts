@@ -16,7 +16,7 @@ import { eq, count } from 'drizzle-orm';
 import { Astromech } from '@/transport/local/index.js';
 import { badRequest, forbidden, fromZodError, internalError, notFound } from '@/transport/http/middleware/errors.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
-import { can } from '@/policies/permissions/permissions.js';
+import { withPermissions } from '@/policies/permissions/with-permissions.js';
 import { getDb } from '@/db/registry.js';
 import { usersTable } from '@/db/schema.js';
 import { createUserSchema, updateUserSchema } from '@/schemas/users.js';
@@ -33,8 +33,8 @@ const router = new OpenAPIHono<Env>();
 const SORTABLE_FIELDS = new Set(['name', 'email', 'createdAt', 'updatedAt', 'roleSlug']);
 
 router.get('/', async (c) => {
-    const role = c.var.role;
-    if (!can(role, 'users:read')) return forbidden(c);
+    const permissions = withPermissions(c.var.role);
+    if (!permissions.allows('users:read')) return forbidden(c);
 
     try {
         const q = c.req.query();
@@ -59,9 +59,9 @@ router.get('/', async (c) => {
 
 router.get('/:id', async (c) => {
     const { id } = c.req.param();
-    const role = c.var.role;
+    const permissions = withPermissions(c.var.role);
     const currentUser = c.var.user;
-    if (!can(role, 'users:read') && currentUser.id !== id) return forbidden(c);
+    if (!permissions.allows('users:read') && currentUser.id !== id) return forbidden(c);
 
     try {
         const user = await Astromech.users.get(id);
@@ -77,8 +77,8 @@ router.get('/:id', async (c) => {
 // ============================================================================
 
 router.post('/', async (c) => {
-    const role = c.var.role;
-    if (!can(role, 'users:create')) return forbidden(c);
+    const permissions = withPermissions(c.var.role);
+    if (!permissions.allows('users:create')) return forbidden(c);
 
     try {
         const raw = await c.req.json();
@@ -104,9 +104,9 @@ router.post('/', async (c) => {
 
 router.put('/:id', async (c) => {
     const { id } = c.req.param();
-    const role = c.var.role;
+    const permissions = withPermissions(c.var.role);
     const currentUser = c.var.user;
-    const canUpdateUsers = can(role, 'users:update');
+    const canUpdateUsers = permissions.allows('users:update');
     const isSelf = currentUser.id === id;
 
     if (!canUpdateUsers && !isSelf) return forbidden(c);
@@ -152,8 +152,8 @@ router.put('/:id', async (c) => {
 
 router.delete('/:id', async (c) => {
     const { id } = c.req.param();
-    const role = c.var.role;
-    if (!can(role, 'users:delete')) return forbidden(c);
+    const permissions = withPermissions(c.var.role);
+    if (!permissions.allows('users:delete')) return forbidden(c);
 
     try {
         // Last-admin check
