@@ -141,13 +141,13 @@ Reshaped `src/sdk` + dissolved `src/core` into the locked layer model — `stora
 - [ ] Built-in reCAPTCHA / Turnstile / Mailchimp via those hooks (dogfooding principle)
 - [ ] Ship the plugin: `form` + `submission` entry types, form-builder field, public submission API, frontend form helper/component
 
-### Menus, `tree` field & clean settings translation 🚧
+### Menus, `tree` field & clean settings translation ✅
 
 Three independently-shippable deliverables, in order.
 
-- [ ] **Settings translation cleanup** (prerequisite) — unify app-page + plugin-page settings on one object-blob-per-page shape (`<base>` + `<base>:<locale>`); extract a shared `saveSettingsPage` (partition + write) both renderers call; bring `PluginSettingsPage` to parity (blob load, locale switcher, `PluginPage.translatable`); migrate per-field plugin-settings consumers (seo, demo rating) off `plugin:<ns>:<field>` reads. Top-level-field granularity
-- [ ] **`tree` core field type** — generic recursive nested builder (`repeater` + `_children` axis), drag-to-nest (dnd-kit depth-projection; indent/outdent fallback), `maxDepth`, reserved `_id`/`_disabled`/`_children`, terminating recursive type-gen. No menu/URL semantics
-- [ ] **`@astromech/menus` plugin** — developer-declared menu set via `menus({ menus: [{ key, label }] })`; one generated `defineAdminPage` settings page (single `tree` field) + nav child per menu; data in settings (not entries/own-table); `menus.get(key, { locale })` resolves entry refs → URLs via `resolveEntryUrl`, custom-URL/label fallback; replaces the demo Globals-repeater menus
+- [x] **Settings translation cleanup** (prerequisite) — unify app-page + plugin-page settings on one object-blob-per-page shape (`<base>` + `<base>:<locale>`); extract a shared `saveSettingsPage` (partition + write) both renderers call; bring `PluginSettingsPage` to parity (blob load, locale switcher, `PluginPage.translatable`); migrate per-field plugin-settings consumers (seo, demo rating) off `plugin:<ns>:<field>` reads. Top-level-field granularity
+- [x] **`tree` core field type** — generic recursive nested builder (`repeater` + `_children` axis), drag-to-nest (dnd-kit depth-projection; indent/outdent fallback), `maxDepth`, reserved `_id`/`_disabled`/`_children`, terminating recursive type-gen. No menu/URL semantics
+- [x] **`@astromech/menus` plugin** — developer-declared menu set via `menus({ menus: [{ key, label }] })`; one generated `defineAdminPage` settings page (single `tree` field) + nav child per menu; data in settings (not entries/own-table); `menus.get(key, { locale })` resolves entry refs → URLs via `resolveEntryUrl`, custom-URL/label fallback; replaces the demo Globals-repeater menus
 
 ### Unified admin pages 🚧
 
@@ -155,11 +155,11 @@ Collapse `defineSettingsPage` (app) and `defineAdminPage` (plugin) into **one pa
 form optional** — host + plugins author with the same `defineAdminPage`, rendered by one
 shared `SettingsPageForm`.
 
-- [ ] Unify the type — `AdminPage`/`ResolvedAdminPage` replacing `AppAdminPage` + `PluginPage` + `PluginSettingsSchema`; precompute `baseKey` (bare vs `plugin:<ns>:`) + permission so the renderer is origin-agnostic; XOR-validate `fields`/`component` at resolution
-- [ ] Promote `page/$.tsx`'s inner form to a shared `SettingsPageForm` (header save + unsaved indicator + locale switcher); both routes render it; delete `PluginSettingsPage`'s bespoke layout
-- [ ] Plugin settings forms move from the flat `PluginSettingsSchema` to the full `EntryFields` tree (gain sections/tabs/sidebar)
+- [x] Unify the type — `AdminPage`/`ResolvedAdminPage` replacing `AppAdminPage` + `PluginPage` + `PluginSettingsSchema`; precompute `baseKey` (bare vs `plugin:<ns>:`) + permission so the renderer is origin-agnostic; XOR-validate `fields`/`component` at resolution
+- [x] Promote `page/$.tsx`'s inner form to a shared `SettingsPageForm` (header save + unsaved indicator + locale switcher); both routes render it; delete `PluginSettingsPage`'s bespoke layout
+- [x] Plugin settings forms move from the flat `PluginSettingsSchema` to the full `EntryFields` tree (gain sections/tabs/sidebar)
 - [ ] Host pages gain the custom-`component` escape hatch (extend the plugin-components codegen to scan host `admin.pages`)
-- [ ] Remove `defineSettingsPage`; migrate demo Globals page + all plugin pages (`settings:` → `fields:`)
+- [x] Remove `defineSettingsPage`; migrate demo Globals page + all plugin pages (`settings:` → `fields:`)
 - [ ] **Investigate composition** (future) — one page rendering **both** a managed form and custom widgets (Sanity-style view tabs, or a custom component mounting managed form regions via a `useSettingsForm` hook). XOR ships first; keep the `AdminPage` type open so this is additive
 
 ### Additional First-Party Plugins 🚧
