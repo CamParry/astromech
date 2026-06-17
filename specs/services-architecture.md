@@ -27,7 +27,7 @@ This document fixes the **vocabulary and layering** so the refactor has a target
 | **service method**   | One verb on a service, e.g. `entries.create`. The unit the manifest and the AI deal in. Declared via `defineServiceMethod`, carrying its descriptor.                                                  |
 | **descriptor**       | A service method's self-description: `name`, `summary`, `input`/`output` (Zod), `mutates`, `destructive`/`idempotent` (MCP-aligned hints), `permission`. Identical shape for core and plugin methods. |
 | **services (layer)** | The glue that binds the core: service methods call storage via its interface and have policies composed onto them. Bare functions — _unaware of delivery shape_.                                      |
-| **policy**           | A composable wrapper _over_ service methods: permissions, visibility, confirmation. Rules live inside the policy; nothing is a separate "domain" layer.                                               |
+| **policy**           | A composable wrapper _over_ service methods: permissions, confirmation. Rules live inside the policy; nothing is a separate "domain" layer. (Visibility is **not** a policy — see Decision 8.)                |
 | **transport**        | _(internal word)_ A projection of service methods into a consumption shape for a given environment/consumer. Local, HTTP, CLI, MCP are transports — mirrors of one set of methods.                    |
 | **Client**           | A _consumer_ of a transport. The HTTP API's **Client** mirrors the Local API 1:1; same call-site code, selected by import path. Never called "SDK."                                                   |
 | **kernel**           | The composition root: boots and assembles services + policies + transports into the published package. It _composes_; it does not _conduct_ (not an "orchestrator").                                  |
@@ -45,7 +45,7 @@ storage
   ↑
 services        (service methods; the glue — call storage, compose policies)
   ↑
-policies        (permissions · visibility · confirmation — composable wrappers)
+policies        (permissions · confirmation — composable wrappers)
   ↑
 transport       (local · HTTP · CLI · MCP — projections of the same methods)
   ↑
@@ -64,12 +64,13 @@ Client          (consumer of a transport; the HTTP Client mirrors the Local API)
 ## 4. Decisions (Locked)
 
 1. **Vocabulary:** _service_ (one grouping) / _services_ (the layer) / _service method_ (one verb). Reached through discussion 2026-06-17.
-2. **No "domain" layer.** "Domain" implies a DDD vertical/horizontal slice and over-claims. Rules dissolve into their **policy** (visibility computation → visibility policy; permission matching → permissions policy) or into **support** helpers (field flattening, url/slug).
+2. **No "domain" layer.** "Domain" implies a DDD vertical/horizontal slice and over-claims. Rules dissolve into their **policy** (permission matching → permissions policy), into the **feature** that owns them (visibility → `services/<feature>/visibility.ts`, see Decision 8), or into **support** helpers (field flattening, url/slug).
 3. **Permissions = a composable wrapper, not a bypass flag.** Each service method _declares_ its required `permission` on its descriptor (one place, DRY). Enforcement is a single `withPermissions(principal)` wrapper that reads that declaration. **Trusted transports (Local for SSR/hooks, CLI, MCP) don't compose it; the HTTP API and the authoring agent do.** Rejected: a `bypass: boolean` on the service — an opt-out default is an auth footgun (a forgotten/leaked `true` silently disables auth, invisible to audit). The rule is _"you can't do what you weren't handed,"_ not _"everything unless you remember to say don't."_
 4. **Local is a transport.** A service method is just a loose function; it doesn't know about `Astromech.entries.create` paths or delivery shape. The **Local API** is the transport that projects the bare methods into the ergonomic nested importable object — exactly as the **HTTP API** projects them over the wire and the **MCP server** projects them as tools. The three are mirrors for different environments/consumers.
 5. **"transport" is the internal umbrella; public names are per-transport.** "API" is the public name for the _code-callable_ transports only (Local API, HTTP API). The **CLI** and **MCP server** are not "APIs" — naming them honestly beats forcing symmetry. This keeps "transport" out of user docs (and sidesteps its slight network flavour).
 6. **`kernel`** for the boot/compose root (Symfony/Laravel precedent); the literal file stays `index.ts`/`main`.
 7. **`SDK` retired** as an architectural term: it only ever covered Local + HTTP, never CLI/MCP, and is not used for the Client. The published artefact is just the **Astromech** package.
+8. **Visibility is per-feature read-shaping, not a policy.** _(Amended 2026-06-17, Stage 6.)_ The original model listed visibility as a policy (a wrapper transports compose). The code proved otherwise: visibility is pure computation with a single consumer per feature (entries' public/full shape + audience filter; settings' public-key rule), it is **always** applied by reads (unlike permissions, which trusted transports skip), and its filter is interleaved with the query (e.g. entries pushes `status:'published'` into the storage where-clause for pagination correctness — unliftable into an output wrapper). So each feature owns its visibility rules in `services/<feature>/visibility.ts`. `policies/` holds only genuine wrappers (permissions, future confirmation). When a second feature needs the shared `VisibilityShape` (`'public' | 'full'`) vocabulary, promote that type to `types/`; until then it lives with entries. See [[content-visibility.md]].
 
 ---
 

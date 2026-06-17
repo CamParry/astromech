@@ -16,7 +16,7 @@ import {
     queryOptions,
 } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Astromech } from '@/sdk/fetch/index.js';
+import { Astromech } from '@/client/index.js';
 import { queryKeys, scopedEntryKeys } from './use-query-keys.js';
 import { useToast } from '../components/ui/index.js';
 import type {
@@ -29,11 +29,11 @@ import type {
 } from '@/types/index.js';
 
 // ============================================================================
-// Surface scoping
+// Mount scoping
 // ============================================================================
 
 /**
- * Optional surface binding. Root callers omit both (defaults reproduce today's
+ * Optional mount binding. Root callers omit both (defaults reproduce today's
  * behaviour exactly: the root `Astromech.entries` client and unprefixed keys).
  * Plugin callers pass the bound entries client and the plugin name as scope.
  */

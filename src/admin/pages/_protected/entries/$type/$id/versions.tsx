@@ -7,16 +7,16 @@
 
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Astromech } from '@/sdk/fetch/index.js';
+import { Astromech } from '@/client/index.js';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntryVersionsPage } from '@/admin/components/entries/entry-versions-page.js';
 import { entryQueryOptions, entryVersionsQueryOptions } from '@/admin/hooks/entries.js';
 import type { EntriesApi } from '@/types/index.js';
-import type { EntriesSurface } from '@/admin/components/entries/surface.js';
+import type { EntriesMount } from '@/admin/components/entries/mount.js';
 
 function EntryVersionsRoutePage(): React.ReactElement {
     const { type, id } = Route.useParams();
-    const surface: EntriesSurface = {
+    const mount: EntriesMount = {
         api: Astromech.entries as unknown as EntriesApi,
         type,
         cacheScope: '',
@@ -24,7 +24,7 @@ function EntryVersionsRoutePage(): React.ReactElement {
         basePath: `/entries/${type}`,
         permissionFor: (action) => `entry:${type}:${action}`,
     };
-    return <EntryVersionsPage surface={surface} id={id} />;
+    return <EntryVersionsPage mount={mount} id={id} />;
 }
 
 export const Route = createFileRoute('/_protected/entries/$type/$id/versions')({

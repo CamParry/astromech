@@ -4,15 +4,17 @@
  */
 
 import type { Entry } from '@/types/index.js';
-import { defineSdkMethod } from '@/index.js';
+import { defineServiceMethod } from '@/index.js';
 import { REDIRECT_TYPE } from '../types.js';
 import type { RedirectFields, RedirectMatch, RedirectStatus } from '../types.js';
 
 export const redirectsSdk = {
     // Resolve a request path to its redirect target. Public so a frontend
     // middleware can call it without a session.
-    lookup: defineSdkMethod<{ from: string }, RedirectMatch | null>({
+    lookup: defineServiceMethod<{ from: string }, RedirectMatch | null>({
         access: 'public',
+        summary: 'Look up the redirect target for an incoming path.',
+        mutates: false,
         handler: async (input, ctx): Promise<RedirectMatch | null> => {
             const from = typeof input?.from === 'string' ? input.from : null;
             if (!from) return null;

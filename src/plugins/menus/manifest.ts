@@ -3,7 +3,7 @@
  * `PACKAGE` via core helpers, keeping namespace strings consistent.
  */
 
-import { derivePluginName, sanitisePackage } from '@/core/plugin-identity.js';
+import { derivePluginName, sanitisePackage } from '@/plugins/runtime/plugin-identity.js';
 
 export const PACKAGE = '@astromech/menus';
 export const VERSION = '0.1.0';

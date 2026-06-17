@@ -1,7 +1,7 @@
 /**
  * Shared entry create page body.
  *
- * Parameterized by an `EntriesSurface`; serves root and plugin-namespaced
+ * Parameterized by an `EntriesMount`; serves root and plugin-namespaced
  * entry types. Field layout comes from the definition layer:
  * `deriveFormDefinition(config)` splits field groups into main/sidebar/tab and
  * resolves the title/slug/status capability flags; each field input is
@@ -48,7 +48,7 @@ import {
     resolveConfigForDerive,
 } from '@/admin/definitions/derive.js';
 import { resolveContentLocale } from '@/support/locale.js';
-import type { EntriesSurface } from './surface.js';
+import type { EntriesMount } from './mount.js';
 
 // ============================================================================
 // Types
@@ -62,7 +62,7 @@ type CreateMode = 'translate' | 'blank-in-group' | 'standalone';
 
 type CreateLocaleModalProps = {
     open: boolean;
-    surface: EntriesSurface;
+    mount: EntriesMount;
     locale: string;
     defaultLocale: string;
     onCancel: () => void;
@@ -73,7 +73,7 @@ type CreateLocaleModalProps = {
 
 function CreateLocaleModal({
     open,
-    surface,
+    mount,
     locale,
     defaultLocale,
     onCancel,
@@ -88,11 +88,11 @@ function CreateLocaleModal({
     // Source entries are existing rows in the default locale (the dominant case).
     const { data: sourceList } = useEntriesQuery(
         {
-            type: surface.type,
+            type: mount.type,
             locale: defaultLocale,
             limit: 'all',
         },
-        { api: surface.api, cacheScope: surface.cacheScope }
+        { api: mount.api, cacheScope: mount.cacheScope }
     );
 
     const sourceEntries = sourceList?.data ?? [];
@@ -215,19 +215,19 @@ function RadioOption({
 // ============================================================================
 
 export function EntryNewPage({
-    surface,
+    mount,
     requestedLocale: requestedLocaleProp,
 }: {
-    surface: EntriesSurface;
+    mount: EntriesMount;
     /** Requested locale from the route search params; defaults to default locale. */
     requestedLocale: string | undefined;
 }): React.ReactElement {
-    const { type, api, cacheScope, config: entryTypeConfig, basePath } = surface;
+    const { type, api, cacheScope, config: entryTypeConfig, basePath } = mount;
     const navigate = useNavigate();
     const { toast } = useToast();
     const { t } = useTranslation();
     const { hasPermission } = usePermissions();
-    const canCreate = hasPermission(surface.permissionFor('create'));
+    const canCreate = hasPermission(mount.permissionFor('create'));
 
     const capabilities = entryTypeConfig?.capabilities;
     const hasI18n = capabilities?.translatable === true;
@@ -332,7 +332,7 @@ export function EntryNewPage({
                 {isNonDefaultLocale && (
                     <CreateLocaleModal
                         open={modalOpen}
-                        surface={surface}
+                        mount={mount}
                         locale={requestedLocale}
                         defaultLocale={adminConfig.defaultLocale}
                         onCancel={handleModalCancel}

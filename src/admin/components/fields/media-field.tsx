@@ -12,7 +12,7 @@ import {
     X,
 } from 'lucide-react';
 import type { BaseFieldProps } from '@/types/index.js';
-import { Astromech } from '../../../sdk/fetch/index.js';
+import { Astromech } from '@/client/index.js';
 import { queryKeys } from '../../hooks/use-query-keys.js';
 import { Modal } from '@/admin/components/ui/modal';
 import { Spinner } from '@/admin/components/ui/spinner';

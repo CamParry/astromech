@@ -7,9 +7,11 @@ export default defineConfig([
             index: 'src/index.ts',
             fields: 'src/fields.ts',
             columns: 'src/columns.ts',
-            'adapters/astro': 'src/adapters/astro.ts',
-            'sdk/local/index': 'src/sdk/local/index.ts',
-            'sdk/fetch/index': 'src/sdk/fetch/index.ts',
+            'kernel/astro': 'src/kernel/astro.ts',
+            // Public subpaths `astromech/local` (Local API) and `astromech/fetch`
+            // (Client) stay stable; only their source moved under the layer model.
+            'sdk/local/index': 'src/transport/local/index.ts',
+            'sdk/fetch/index': 'src/client/index.ts',
             middleware: 'src/middleware.ts',
             'db/schema': 'src/db/schema.ts',
             'admin/components/ui/index': 'src/admin/components/ui/index.ts',
@@ -45,7 +47,8 @@ export default defineConfig([
     // CLI build — virtual:astromech/config is shimmed with the live-config proxy
     {
         entry: {
-            'cli/index': 'src/cli/index.ts',
+            // `bin: astromech` -> dist/cli/index.js stays stable; source moved.
+            'cli/index': 'src/transport/cli/index.ts',
         },
         format: ['esm'],
         dts: false,
@@ -61,7 +64,7 @@ export default defineConfig([
         banner: { js: '#!/usr/bin/env node' },
         esbuildOptions(options) {
             options.alias = {
-                'virtual:astromech/config': './src/cli/virtual-config-shim.ts',
+                'virtual:astromech/config': './src/transport/cli/virtual-config-shim.ts',
             };
         },
     },

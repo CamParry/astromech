@@ -7,6 +7,7 @@ export * from './fields.js';
 export * from './config.js';
 export * from './hooks.js';
 export * from './plugins.js';
+export * from './services.js';
 export * from './api.js';
 export * from './sdk.js';
 export * from './definitions.js';

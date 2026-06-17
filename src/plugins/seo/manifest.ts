@@ -4,7 +4,7 @@
  * hand-written, so there are no scattered namespace or path strings.
  */
 
-import { derivePluginName, pluginAssetRoot, sanitisePackage } from '@/core/plugin-identity.js';
+import { derivePluginName, pluginAssetRoot, sanitisePackage } from '@/plugins/runtime/plugin-identity.js';
 import { t as labelKey } from '@/support/labels.js';
 import type { MessageDescriptor } from '@/types/index.js';
 

@@ -5,8 +5,8 @@
  */
 
 import type { Entry, PluginContext } from '@/types/index.js';
-import { defineSdkMethod } from '@/index.js';
-import { resolveEntryPath } from '@/core/entry-url.js';
+import { defineServiceMethod } from '@/index.js';
+import { resolveEntryPath } from '@/support/entry-url.js';
 import { PERMISSION_NAMESPACE } from '../manifest.js';
 import { SEO_FIELD_NAME } from '../types.js';
 import type {
@@ -59,8 +59,10 @@ export const seoSdk = {
     // Public so the app's /sitemap.xml endpoint can call it.
     // `void` input: takes no argument, so callers invoke `.sitemap()` bare.
     // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-    sitemap: defineSdkMethod<void, SeoSitemap>({
+    sitemap: defineServiceMethod<void, SeoSitemap>({
         access: 'public',
+        summary: 'List sitemap URLs for all SEO-tracked entries.',
+        mutates: false,
         handler: async (_input, ctx): Promise<SeoSitemap> => {
             const urls: SeoSitemapUrl[] = [];
             for (const { type, entry } of await footprintEntries(ctx)) {
@@ -78,8 +80,10 @@ export const seoSdk = {
 
     // Resolved meta for one published entry: the `seo` field with fallbacks to
     // the entry title and the default OG image setting.
-    meta: defineSdkMethod<{ type: string; slug: string }, SeoResolvedMeta | null>({
+    meta: defineServiceMethod<{ type: string; slug: string }, SeoResolvedMeta | null>({
         access: 'public',
+        summary: 'Resolve the SEO meta tags for one entry by type + slug.',
+        mutates: false,
         handler: async (input, ctx): Promise<SeoResolvedMeta | null> => {
             const type = typeof input?.type === 'string' ? input.type : null;
             const slug = typeof input?.slug === 'string' ? input.slug : null;
@@ -108,8 +112,10 @@ export const seoSdk = {
     // SEO health across every entry in the footprint — drives the overview
     // dashboard page.
     // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-    overview: defineSdkMethod<void, SeoOverview>({
+    overview: defineServiceMethod<void, SeoOverview>({
         access: { permission: 'view' },
+        summary: 'Report SEO coverage across all tracked entries.',
+        mutates: false,
         handler: async (_input, ctx): Promise<SeoOverview> => {
             const items: SeoOverviewItem[] = [];
             for (const { type, entry } of await footprintEntries(ctx)) {

@@ -28,7 +28,8 @@ src/
     entries/  media/  users/  settings/      # each: service.ts (+ schema.ts after Stage 5)
   policies/             # composable wrappers
     permissions/        # match, roles, withPermissions
-    visibility/         # shape + audience, settings-visibility
+    # (visibility was here in the original plan; Stage 6 moved it into the
+    #  feature folders — services/<feature>/visibility.ts — see §4.3 + arch Decision 8)
     confirmation/       # (placeholder — confirm gate lands via ai-integration)
   transport/
     local/              # the Local API — assembles services into the Astromech object
@@ -66,7 +67,7 @@ Notes / judgement calls to ratify (§7):
 | `api/` (routes, middleware, index)                                                            | `transport/http/`                                               | move                             |
 | `cli/`                                                                                        | `transport/cli/`                                                | move                             |
 | `core/permissions.ts`, `permission-match.ts`                                                  | `policies/permissions/`                                         | move                             |
-| `core/visibility.ts`, `settings-visibility.ts`                                                | `policies/visibility/`                                          | move                             |
+| `core/visibility.ts`, `settings-visibility.ts`                                                | `services/{entries,settings}/visibility.ts`                     | move (Stage 6 — see §4.3)        |
 | `core/plugin-*.ts` (6)                                                                        | `plugins/runtime/`                                              | move                             |
 | `core/type-generator.ts`                                                                      | `codegen/`                                                      | move                             |
 | `core/config-resolver.ts`, `route-registration.ts`                                            | `kernel/`                                                       | move                             |
@@ -88,7 +89,7 @@ From the map, 16 files mix layers. Most "conflations" are _legitimate orchestrat
 
 1. **`sdk/local/index.ts`** — assembly _and_ service composition. → assembly becomes `transport/local/` (the Local API); it imports services from `services/`. (Stage 2)
 2. **`api/routes/{entries,users,media,settings,plugins}.ts`** — HTTP routing _and_ permission checks _and_ (entries/settings) visibility. → routing stays in `transport/http/`; `can()` checks lift into the `withPermissions` policy; visibility stays a service/policy concern, not a route concern. Routes thin dramatically. (Stages 3–4)
-3. **`db/repositories/populate.ts`** — storage populate _and_ visibility filtering. → visibility filtering moves out to the visibility policy / service composition; populate returns raw related rows. (Stage 6)
+3. **Visibility (was: a policy; was also: `populate.ts` filtering).** — _Resolved in Stage 6, 2026-06-17._ Two findings overturned the original "visibility = policy" design: (a) `populate.ts` already returns raw related rows — the entries service applies visibility *after* populate, so there was nothing to extract; (b) visibility is pure, single-consumer-per-feature computation that reads always apply and whose filter is interleaved with the query (the `status:'published'` storage push for pagination correctness can't move into an output wrapper). So visibility is **not** a policy: each feature owns it in `services/<feature>/visibility.ts` (`visibility.ts` → entries, `settings-visibility.ts` → settings/visibility.ts). This let `services-no-import-policies` tighten `warn`→`error`. See arch Decision 8.
 4. **`core/entry-storage/built-in.ts`** — storage _and_ capability enforcement _and_ hook dispatch. → capability + hooks belong to the entries **service**; storage just persists. (Stage 6)
 5. **`core/plugin-runtime.ts`** — registry _and_ hook execution _and_ SDK-context assembly. → registry/hooks to `plugins/runtime/`; context assembly is `kernel`-adjacent. (Stage 6, low priority)
 6. **`adapters/astro.ts`** — boot/compose _and_ Astro-specific glue _and_ virtual modules. → boot/compose to `kernel/`; a thin Astro adapter remains. (Stage 6)
@@ -114,7 +115,7 @@ Each stage is independently shippable: **`npm run build` + full test suite green
 
 **Stage 5 — `defineServiceMethod` + descriptors.** Introduce the shared `defineServiceMethod`; give each service method a descriptor (`input` Zod from the moved `schemas/`, `permission`, `mutates`, `destructive`/`idempotent`). Rename `defineSdkMethod` → `defineServiceMethod` for plugins. `withPermissions` now reads the declared permission from the descriptor instead of route-inline strings. **This is the seam [[ai-integration.md]] builds on** (manifest, MCP, gate) — but those are out of scope here.
 
-**Stage 6 — Cleanup splits (deferrable).** The remaining genuine splits from §4 (populate visibility, entry-storage capability/hooks, astro boot vs glue, image/media handlers). Lower risk-reward; can land opportunistically after the spine is clean.
+**Stage 6 — Cleanup splits (deferrable).** The remaining genuine splits from §4. **Visibility (§4.3) landed 2026-06-17** — co-located into the feature folders, `services-no-import-policies` now `error`. Still open: entry-storage capability/hooks → entries service (§4.4), astro boot vs glue (§4.6), image/media handlers (§4.7), plugin-runtime split (§4.5, low priority). Lower risk-reward; can land opportunistically after the spine is clean.
 
 **Stage 7 — Tear down the scaffolding (mandatory closer).** Remove **every** temporary re-export barrel / old-path shim introduced in Stages 1–2: migrate all remaining consumers to the new paths, then delete the barrels. The refactor is **not complete** while any re-export pointing at an old (`core/`, `sdk/`) path survives — these are transitional only and otherwise rot into a second `core`-style indirection layer. Acceptance: a repo-wide search finds no barrels re-exporting across layer boundaries, and the Stage 0 dependency lint passes with zero exceptions.
 

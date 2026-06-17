@@ -1,4 +1,4 @@
-import { mediaApi } from '@/sdk/local/media.js';
+import { mediaApi } from '@/services/media/service.js';
 import { getStorageDriver } from '@/storage/registry.js';
 import { getImageConfig } from '@/images/registry.js';
 import {

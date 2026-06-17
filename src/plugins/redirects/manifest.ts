@@ -8,7 +8,7 @@ import {
     derivePluginName,
     pluginSchemaModule,
     pluginTablePrefix,
-} from '@/core/plugin-identity.js';
+} from '@/plugins/runtime/plugin-identity.js';
 
 export const PACKAGE = '@astromech/redirects';
 export const VERSION = '0.1.0';

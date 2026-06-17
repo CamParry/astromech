@@ -10,7 +10,7 @@
 import React from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { Astromech } from '@/sdk/fetch/index.js';
+import { Astromech } from '@/client/index.js';
 import { useToast } from '@/admin/components/ui/index.js';
 import { useConfirm } from '@/admin/components/ui/confirm.js';
 import { useAuth } from '@/admin/context/auth.js';

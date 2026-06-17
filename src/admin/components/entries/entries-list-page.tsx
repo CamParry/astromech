@@ -1,7 +1,7 @@
 /**
  * Shared entry-type list page body.
  *
- * Parameterized by a single `EntriesSurface` so it serves both root entry
+ * Parameterized by a single `EntriesMount` so it serves both root entry
  * types and plugin-namespaced entry types. Columns render through the
  * definition layer: `deriveTableDefinition(config)` builds the ordered column
  * set and each cell is resolved from the cell registry by kind (Phase 4). The
@@ -84,7 +84,7 @@ import {
 } from '@/admin/hooks/index.js';
 import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal.js';
 import { resolveContentLocale } from '@/support/locale.js';
-import type { EntriesSurface, EntriesListSearch } from './surface.js';
+import type { EntriesMount, EntriesListSearch } from './mount.js';
 
 // ============================================================================
 // Types
@@ -463,11 +463,11 @@ function parseSortParam(
 }
 
 export function EntriesListPage({
-    surface,
+    mount,
 }: {
-    surface: EntriesSurface;
+    mount: EntriesMount;
 }): React.ReactElement {
-    const { type, api, cacheScope, config: entryTypeConfig, basePath } = surface;
+    const { type, api, cacheScope, config: entryTypeConfig, basePath } = mount;
     const scope = { api, cacheScope };
     const navigate = useNavigate();
     const { toast } = useToast();
@@ -482,8 +482,8 @@ export function EntriesListPage({
         [t, ns]
     );
     const { hasPermission } = usePermissions();
-    const canCreate = hasPermission(surface.permissionFor('create'));
-    const canDelete = hasPermission(surface.permissionFor('delete'));
+    const canCreate = hasPermission(mount.permissionFor('create'));
+    const canDelete = hasPermission(mount.permissionFor('delete'));
 
     const single = entryTypeConfig?.single ?? type;
     const plural = entryTypeConfig?.plural ?? type;
@@ -498,7 +498,7 @@ export function EntriesListPage({
         entryTypeConfig?.titleField !== false ||
         (entryTypeConfig?.search?.length ?? 0) > 0;
 
-    // `deriveTableDefinition` needs a full AdminEntryTypeConfig. When the surface
+    // `deriveTableDefinition` needs a full AdminEntryTypeConfig. When the mount
     // config is undefined (unknown root type), resolveConfigForDerive synthesizes
     // a default reproducing the historical undefined-config behaviour.
     const resolvedConfigForDerive = React.useMemo(

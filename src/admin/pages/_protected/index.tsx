@@ -19,7 +19,7 @@ import {
     PageHeader,
     PageContent,
 } from '@/admin/components/ui/index.js';
-import { Astromech } from '@/sdk/fetch/index.js';
+import { Astromech } from '@/client/index.js';
 import type { Entry } from '@/types/index.js';
 import { formatDate } from '@/support/dates.js';
 

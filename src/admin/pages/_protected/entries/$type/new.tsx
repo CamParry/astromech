@@ -7,11 +7,11 @@
 
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Astromech } from '@/sdk/fetch/index.js';
+import { Astromech } from '@/client/index.js';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntryNewPage } from '@/admin/components/entries/entry-new-page.js';
 import type { EntriesApi } from '@/types/index.js';
-import type { EntriesSurface } from '@/admin/components/entries/surface.js';
+import type { EntriesMount } from '@/admin/components/entries/mount.js';
 
 type SearchParams = {
     locale?: string;
@@ -20,7 +20,7 @@ type SearchParams = {
 function EntryCreatePage(): React.ReactElement {
     const { type } = Route.useParams();
     const search = Route.useSearch();
-    const surface: EntriesSurface = {
+    const mount: EntriesMount = {
         api: Astromech.entries as unknown as EntriesApi,
         type,
         cacheScope: '',
@@ -28,7 +28,7 @@ function EntryCreatePage(): React.ReactElement {
         basePath: `/entries/${type}`,
         permissionFor: (action) => `entry:${type}:${action}`,
     };
-    return <EntryNewPage surface={surface} requestedLocale={search.locale} />;
+    return <EntryNewPage mount={mount} requestedLocale={search.locale} />;
 }
 
 export const Route = createFileRoute('/_protected/entries/$type/new')({

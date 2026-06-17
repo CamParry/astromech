@@ -1,7 +1,7 @@
 /**
  * Slice 5 validator: the redirects plugin runs on its OWN table
  * (`plugin_redirects_redirects`) via `tableStorage`, exercised end-to-end
- * through the orchestrator, the plugin SDK, and the slug-change hook.
+ * through the entries service, the plugin SDK, and the slug-change hook.
  *
  * Covers:
  * - ctx-scoped create lands a row in plugin_redirects_redirects, NOT entries.
@@ -21,9 +21,9 @@ import {
     registerTestPlugins,
     setupTestConfig,
 } from '@/test/harness.js';
-import '@/sdk/local/index.js'; // registers the plugin SDK client (setPluginSdkClient)
-import { localPlugins } from '@/sdk/local/plugins.js';
-import { entries as localEntries } from '@/sdk/local/entries.js';
+import '@/transport/local/index.js'; // registers the plugin SDK client (setPluginSdkClient)
+import { localPlugins } from '@/transport/local/plugins.js';
+import { entries as localEntries } from '@/services/entries/service.js';
 import { redirects } from '@/plugins/redirects/index.js';
 import type { RedirectMatch } from '@/plugins/redirects/index.js';
 import type {
@@ -108,7 +108,7 @@ describe('redirects — own-table storage', () => {
         });
 
         // query() must return a complete entry — tableStorage rows have no
-        // `type` column, so the orchestrator stamps it. Without this, admin
+        // `type` column, so the entries service stamps it. Without this, admin
         // search builds a broken `/entries/undefined/<id>` link.
         const listed = await redirectEntriesApi().query({ type: 'redirect', limit: 10 });
         expect(listed.data).toHaveLength(1);

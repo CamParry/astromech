@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, setupTestConfig, makeTestConfig } from '@/test/harness.js';
 import { setStorageDriver } from '@/storage/registry.js';
 import { setImageConfig } from '@/images/registry.js';
-import { mediaApi } from '@/sdk/local/media.js';
+import { mediaApi } from '@/services/media/service.js';
 import { handleMediaRequest } from '@/images/handler.js';
 import type { StorageDriver, ImageDriver, ImageSource } from '@/types/index.js';
 import type { ImageFormat } from '@/images/url.js';

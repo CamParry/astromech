@@ -1,7 +1,7 @@
-import type { Capability } from '@/core/entry-storage/capabilities.js';
+import type { Capability } from '@/storage/entries/capabilities.js';
 
 /**
- * Thrown when a route or orchestrator operation is attempted on an entry type
+ * Thrown when a route or entries-service operation is attempted on an entry type
  * that does not support the required capability. See Phase 2 spec §API gating.
  */
 export class CapabilityError extends Error {

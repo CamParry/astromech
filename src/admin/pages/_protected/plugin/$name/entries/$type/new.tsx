@@ -1,17 +1,17 @@
 /**
  * Plugin entry-type create route.
  *
- * Builds a plugin `EntriesSurface` and renders the shared `EntryNewPage`.
+ * Builds a plugin `EntriesMount` and renders the shared `EntryNewPage`.
  * Carries the `locale` search param through.
  */
 
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { createEntriesApi } from '@/sdk/fetch/index.js';
+import { createEntriesApi } from '@/client/index.js';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntryNewPage } from '@/admin/components/entries/entry-new-page.js';
-import { buildPluginEntriesSurface } from '@/admin/components/entries/surface.js';
+import { buildPluginEntriesMount } from '@/admin/components/entries/mount.js';
 import { EmptyState, Page, PageContent } from '@/admin/components/ui/index.js';
 
 type SearchParams = {
@@ -23,8 +23,8 @@ function PluginEntryNewPage(): React.ReactElement {
     const search = Route.useSearch();
     const { t } = useTranslation();
     const api = createEntriesApi(`/plugins/${name}/entries`, 'full');
-    const surface = buildPluginEntriesSurface(adminConfig.plugins, name, type, api);
-    if (!surface) {
+    const mount = buildPluginEntriesMount(adminConfig.plugins, name, type, api);
+    if (!mount) {
         return (
             <Page>
                 <PageContent>
@@ -36,7 +36,7 @@ function PluginEntryNewPage(): React.ReactElement {
             </Page>
         );
     }
-    return <EntryNewPage surface={surface} requestedLocale={search.locale} />;
+    return <EntryNewPage mount={mount} requestedLocale={search.locale} />;
 }
 
 export const Route = createFileRoute('/_protected/plugin/$name/entries/$type/new')({

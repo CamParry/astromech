@@ -14,13 +14,13 @@ import {
     makeTestConfig,
     setupTestConfig,
 } from '@/test/harness.js';
-import '@/sdk/local/index.js';
-import { localPlugins } from '@/sdk/local/plugins.js';
+import '@/transport/local/index.js';
+import { localPlugins } from '@/transport/local/plugins.js';
 import { menus } from '@/plugins/menus/index.js';
 import type { MenuItem } from '@/plugins/menus/types.js';
 import type { AstromechConfig } from '@/types/index.js';
-import { derivePluginPages, derivePluginNav } from '@/core/plugin-admin.js';
-import { resolvePluginIdentity } from '@/core/plugin-identity.js';
+import { derivePluginPages, derivePluginNav } from '@/plugins/runtime/plugin-admin.js';
+import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity.js';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -40,8 +40,8 @@ async function get(key: string, locale?: string): Promise<MenuItem[] | null> {
 }
 
 async function writeSetting(key: string, value: unknown): Promise<void> {
-    // Use the local SDK to write settings directly
-    const { default: Astromech } = await import('@/sdk/local/index.js');
+    // Use the Local API to write settings directly
+    const { default: Astromech } = await import('@/transport/local/index.js');
     await (Astromech as { settings: { set(k: string, v: unknown): Promise<unknown> } }).settings.set(key, value as import('@/types/index.js').JsonValue);
 }
 
@@ -268,7 +268,7 @@ describe('menus.get — locale', () => {
 describe('menus.get — entry ref resolution', () => {
     it('resolves an entry ref to its front-end URL', async () => {
         // Create a published post entry so it passes the public visibility filter
-        const { default: Astromech } = await import('@/sdk/local/index.js');
+        const { default: Astromech } = await import('@/transport/local/index.js');
         const astromech = Astromech as { entries: { create(p: Record<string, unknown>): Promise<{ id: string }> } };
         const post = await astromech.entries.create({
             type: 'post',
@@ -288,7 +288,7 @@ describe('menus.get — entry ref resolution', () => {
     });
 
     it('prefers entry url over url field when both are set', async () => {
-        const { default: Astromech } = await import('@/sdk/local/index.js');
+        const { default: Astromech } = await import('@/transport/local/index.js');
         const astromech = Astromech as { entries: { create(p: Record<string, unknown>): Promise<{ id: string }> } };
         const post = await astromech.entries.create({
             type: 'post',

@@ -14,6 +14,7 @@ import type { User } from './domain.js';
 import type { PluginHooks } from './hooks.js';
 import type { AstromechClient } from './sdk.js';
 import type { EntriesApi } from './api.js';
+import type { ServiceMethodEffect } from './services.js';
 
 // ============================================================================
 // Email overrides (carried over from the prior plugin surface)
@@ -78,7 +79,9 @@ export type PluginAccess = 'public' | 'authenticated' | { permission: string };
 export type PluginSdkMethod<Input = unknown, Output = unknown> = {
     access: PluginAccess;
     handler: (input: Input, ctx: PluginContext) => Promise<Output> | Output;
-};
+    /** One-line summary for the method manifest (discovery / MCP / AI tool-loop). */
+    summary?: string;
+} & Partial<ServiceMethodEffect>;
 
 /** Collection element for a plugin's sdk record: variance-safe over any concrete method. */
 export type AnyPluginSdkMethod = PluginSdkMethod<never, unknown>;

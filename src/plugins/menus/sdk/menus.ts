@@ -5,8 +5,8 @@
  */
 
 import type { AnyPluginSdkMethod, Entry, PluginContext } from '@/types/index.js';
-import { defineSdkMethod } from '@/index.js';
-import { resolveEntryUrl } from '@/core/entry-url.js';
+import { defineServiceMethod } from '@/index.js';
+import { resolveEntryUrl } from '@/support/entry-url.js';
 import { menuBlobKey } from '../manifest.js';
 import type { MenuConfig, MenuItem } from '../types.js';
 
@@ -93,7 +93,7 @@ export function buildMenusSdk(configs: MenuConfig[]): Record<string, AnyPluginSd
     const configuredKeys = new Set(configs.map((c) => c.key));
 
     return {
-        get: defineSdkMethod<{ key: string; locale?: string }, MenuItem[] | null>({
+        get: defineServiceMethod<{ key: string; locale?: string }, MenuItem[] | null>({
             access: 'public',
             handler: async (input, ctx): Promise<MenuItem[] | null> => {
                 const key = typeof input?.key === 'string' ? input.key : null;

@@ -6,7 +6,7 @@
 
 import { useQuery, useMutation, useQueryClient, queryOptions } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Astromech } from '@/sdk/fetch/index.js';
+import { Astromech } from '@/client/index.js';
 import { queryKeys } from './use-query-keys.js';
 import { useToast } from '../components/ui/index.js';
 import type { Media, MediaQueryParams } from '@/types/index.js';

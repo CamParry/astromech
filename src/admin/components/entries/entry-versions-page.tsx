@@ -3,8 +3,8 @@
  *
  * Extracted (Phase 3 Slice 6) verbatim from
  * `pages/_protected/entries/$type/$id/versions.tsx`, parameterized by an
- * `EntriesSurface`. Behaviour and markup are unchanged from the original page;
- * the differences are the surface-bound api/cacheScope and the `basePath`-built
+ * `EntriesMount`. Behaviour and markup are unchanged from the original page;
+ * the differences are the mount-bound api/cacheScope and the `basePath`-built
  * links.
  *
  * Two-column layout: version list sidebar left, diff view right.
@@ -32,9 +32,9 @@ import {
     useRestoreEntryVersion,
 } from '@/admin/hooks/index.js';
 import type { EntryVersion } from '@/types/index.js';
-import type { EntriesSurface } from './surface.js';
+import type { EntriesMount } from './mount.js';
 
-// Surface link bases are runtime strings; address `Link` by string `to`.
+// Mount link bases are runtime strings; address `Link` by string `to`.
 type LinkProps = Omit<React.ComponentProps<typeof RouterLink>, 'to'> & { to: string };
 const Link = RouterLink as unknown as (props: LinkProps) => React.ReactElement;
 
@@ -214,13 +214,13 @@ function DiffView({
 // ============================================================================
 
 export function EntryVersionsPage({
-    surface,
+    mount,
     id,
 }: {
-    surface: EntriesSurface;
+    mount: EntriesMount;
     id: string;
 }): React.ReactElement {
-    const { type, api, cacheScope, config: entryTypeConfig, basePath } = surface;
+    const { type, api, cacheScope, config: entryTypeConfig, basePath } = mount;
     const scope = { api, cacheScope };
     const confirm = useConfirm();
     const { t } = useTranslation();

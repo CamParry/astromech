@@ -11,7 +11,7 @@
  *   // → [{ label, url?, newTab?, children: [...] }]
  */
 
-import { defineAdminPage, definePlugin, defineSdkMethod } from '@/index.js';
+import { defineAdminPage, definePlugin, defineServiceMethod } from '@/index.js';
 import type { PluginDefinition, SdkInterface } from '@/types/index.js';
 import * as fields from '@/builders/fields.js';
 import { PACKAGE, VERSION, LABEL, ICON } from './manifest.js';
@@ -28,7 +28,7 @@ const menuItemFields = [
 
 /** Typed SDK shape — used only for the module augmentation. */
 const _menusSdkTyped = {
-    get: defineSdkMethod<{ key: string; locale?: string }, MenuItem[] | null>({
+    get: defineServiceMethod<{ key: string; locale?: string }, MenuItem[] | null>({
         access: 'public',
         handler: async () => null,
     }),

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import type { BaseFieldProps } from '@/types/index.js';
-import { Astromech } from '@/sdk/fetch/index.js';
+import { Astromech } from '@/client/index.js';
 import { MultiSelect } from '@/admin/components/ui/multi-select.js';
 
 type EntryOption = {

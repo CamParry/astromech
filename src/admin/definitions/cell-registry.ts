@@ -3,7 +3,7 @@
  *
  * Module-level Map (no globalThis): the admin SPA is a single Vite bundle with
  * one module graph, so there is no tsup multi-entry chunk duplication to guard
- * against (contrast src/core/entry-storage/registry.ts, which must use globalThis).
+ * against (contrast src/storage/entries/registry.ts, which must use globalThis).
  */
 import type { CellKind, CellRenderer } from '@/types/index.js';
 
