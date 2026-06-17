@@ -81,6 +81,14 @@ module.exports = {
       to: { path: '^src/(storage|services|policies|transport|kernel)/' },
     },
     {
+      name: 'demo-scripts-no-src-internals',
+      comment:
+        'demo/ and scripts/ are package consumers: they import the published `astromech` surface (or the curated src/exports/ layer for drizzle schema paths), never raw src internals. Scoped to `local` deps so it catches relative `../src/...` drilling — the in-repo reach Node\'s exports map cannot — while the bare `astromech` self-reference (which the resolver maps into the source tree) stays allowed.',
+      severity: 'error',
+      from: { path: '^(demo|scripts)/' },
+      to: { path: '^src/(?!exports/)' },
+    },
+    {
       name: 'no-circular',
       comment:
         'Cyclic dependencies make the layer graph non-acyclic and break tree-shaking. Scoped to the new layer dirs so legacy core/sdk cycles do not block the spine refactor.',

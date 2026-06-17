@@ -16,11 +16,9 @@ import { eq, inArray, sql } from 'drizzle-orm';
 import { hashPassword } from 'better-auth/crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import sharpLib from 'sharp';
-import * as schema from '../src/db/schema.js';
-import { redirectsTable } from '../src/plugins/redirects/schema/redirects.js';
-import { readImageDimensions } from '../src/images/dimensions.js';
-import { contentVersion } from '../src/images/version.js';
-import { sharp } from '../src/images/drivers/sharp.js';
+import * as schema from 'astromech/db/schema';
+import { redirectsTable } from 'astromech/plugins/redirects/schema';
+import { readImageDimensions, contentVersion, sharp } from 'astromech/images/sharp';
 
 // ProseMirror JSON builders for richtext seed content (StarterKit schema)
 type PmNode = Record<string, unknown>;

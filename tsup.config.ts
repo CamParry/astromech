@@ -3,29 +3,30 @@ import { defineConfig } from 'tsup';
 export default defineConfig([
     // Library build — virtual:astromech/config is injected by the Astro integration at runtime
     {
+        // Sources point ONLY at the curated `src/exports/` layer; output keys
+        // (and therefore dist paths + package.json subpaths) are unchanged, so
+        // the public contract is frozen while internals are free to move.
         entry: {
-            index: 'src/index.ts',
-            fields: 'src/fields.ts',
-            columns: 'src/columns.ts',
-            'kernel/astro': 'src/kernel/astro.ts',
-            // Public subpaths `astromech/local` (Local API) and `astromech/fetch`
-            // (Client) stay stable; only their source moved under the layer model.
-            'sdk/local/index': 'src/transport/local/index.ts',
-            'sdk/fetch/index': 'src/client/index.ts',
-            middleware: 'src/middleware.ts',
-            'db/schema': 'src/db/schema.ts',
-            'admin/components/ui/index': 'src/admin/components/ui/index.ts',
-            'admin/components/ui/layout': 'src/admin/components/ui/layout.ts',
-            'admin/components/fields/index': 'src/admin/components/fields/index.ts',
-            'db/plugin-helpers': 'src/db/plugin-helpers.ts',
-            'email/index': 'src/email/index.ts',
-            'plugins/redirects/index': 'src/plugins/redirects/index.ts',
-            'plugins/redirects/schema': 'src/plugins/redirects/schema/redirects.ts',
-            'plugins/seo/index': 'src/plugins/seo/index.ts',
-            'plugins/menus/index': 'src/plugins/menus/index.ts',
-            'images/drivers/sharp': 'src/images/drivers/sharp.ts',
-            'images/drivers/cloudflare': 'src/images/drivers/cloudflare.ts',
-            'storage/drivers/r2': 'src/storage/drivers/r2.ts',
+            index: 'src/exports/index.ts',
+            fields: 'src/exports/fields.ts',
+            columns: 'src/exports/columns.ts',
+            'kernel/astro': 'src/exports/astro.ts',
+            'sdk/local/index': 'src/exports/local.ts',
+            'sdk/fetch/index': 'src/exports/fetch.ts',
+            middleware: 'src/exports/middleware.ts',
+            'db/schema': 'src/exports/schema.ts',
+            'admin/components/ui/index': 'src/exports/admin/ui.ts',
+            'admin/components/ui/layout': 'src/exports/admin/ui-layout.ts',
+            'admin/components/fields/index': 'src/exports/admin/ui-fields.ts',
+            'db/plugin-helpers': 'src/exports/plugin-helpers.ts',
+            'email/index': 'src/exports/email.ts',
+            'plugins/redirects/index': 'src/exports/plugins/redirects.ts',
+            'plugins/redirects/schema': 'src/exports/plugins/redirects-schema.ts',
+            'plugins/seo/index': 'src/exports/plugins/seo.ts',
+            'plugins/menus/index': 'src/exports/plugins/menus.ts',
+            'images/drivers/sharp': 'src/exports/image-sharp.ts',
+            'images/drivers/cloudflare': 'src/exports/image-cloudflare.ts',
+            'storage/drivers/r2': 'src/exports/storage-r2.ts',
         },
         format: ['esm'],
         dts: true,

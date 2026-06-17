@@ -13,7 +13,7 @@
 import { drizzle } from 'drizzle-orm/libsql';
 import { eq, sql } from 'drizzle-orm';
 import { hashPassword } from 'better-auth/crypto';
-import * as schema from '../src/db/schema.js';
+import * as schema from 'astromech/db/schema';
 
 const db = drizzle({
     connection: { url: process.env.DATABASE_URL ?? 'file:./demo/database.db' },
