@@ -123,7 +123,7 @@
     "scripts": {
         "dev": "tsup --watch",
         "build": "tsup",
-        "typecheck": "tsc --noEmit",
+        "typecheck": "tsc -p tsconfig.test.json",
         "lint": "eslint src",
         "lint:deps": "depcruise src --config .dependency-cruiser.cjs",
         "format": "prettier --write src",

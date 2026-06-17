@@ -28,6 +28,7 @@
         "types": ["node"],
         "paths": {
             "@/*": ["./src/*"],
+            "@tests/*": ["./tests/_support/*"],
             "astromech": ["./src/index.ts"]
         }
     },
