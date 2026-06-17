@@ -39,3 +39,6 @@ src/admin/routeTree.gen.ts
 demo/database.db
 demo/database.db-shm
 demo/database.db-wal
+
+# Personal scratch / pre-thinking doc — not part of the repo
+NEXT.md
