@@ -91,15 +91,23 @@ export function defineAdminPage(page: AdminPage): AdminPage {
 }
 
 /**
- * Define a typed plugin SDK method. The Input/Output generics flow into the
- * plugin's self-augmentation of `AstromechPluginSdks` so callers see real
- * signatures.
+ * Define a typed service method (a plugin's contribution to the unified services
+ * layer). The Input/Output generics flow into the plugin's self-augmentation of
+ * `AstromechPluginSdks` so callers see real signatures. The method may carry
+ * descriptor metadata (`summary`, `input`, `mutates`, `destructive`, …) for the
+ * method manifest — see specs/ai-integration.md §3.4.
  */
-export function defineSdkMethod<Input = unknown, Output = unknown>(
+export function defineServiceMethod<Input = unknown, Output = unknown>(
     method: PluginSdkMethod<Input, Output>
 ): PluginSdkMethod<Input, Output> {
     return method;
 }
+
+/**
+ * @deprecated Renamed to {@link defineServiceMethod}. Kept as an alias so existing
+ * plugins keep working; will be removed in a future major.
+ */
+export const defineSdkMethod = defineServiceMethod;
 
 /**
  * Define a single plugin hook; payload type is inferred from the event key.
