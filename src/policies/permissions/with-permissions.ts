@@ -12,12 +12,18 @@
  * this guard reads that declaration instead of taking it inline.
  */
 
-import type { Permission, Role } from '@/types/index.js';
+import type { Permission, Role, ServiceMethodDescriptor } from '@/types/index.js';
 import { can } from './permissions.js';
 
 export type Permissions = {
     /** True if the principal holds `permission`. A null principal holds nothing. */
     allows(permission: Permission): boolean;
+    /**
+     * True if the principal may call `method` with `input`. Reads the method's
+     * declared `permission` (resolving an input-dependent rule); a method that
+     * declares no permission is public and always allowed.
+     */
+    allowsMethod<Input>(method: ServiceMethodDescriptor<Input>, input?: Input): boolean;
 };
 
 /**
@@ -25,7 +31,15 @@ export type Permissions = {
  * unauthenticated request on an optional-auth route) is allowed nothing.
  */
 export function withPermissions(principal: Role | undefined): Permissions {
+    const allows = (permission: Permission): boolean =>
+        principal ? can(principal, permission) : false;
+
     return {
-        allows: (permission) => (principal ? can(principal, permission) : false),
+        allows,
+        allowsMethod(method, input) {
+            const rule = method.permission;
+            if (rule === undefined) return true; // public method — no permission gate
+            return allows(typeof rule === 'function' ? rule(input as never) : rule);
+        },
     };
 }

@@ -20,6 +20,7 @@ import { withPermissions } from '@/policies/permissions/with-permissions.js';
 import { getDb } from '@/db/registry.js';
 import { usersTable } from '@/db/schema.js';
 import { createUserSchema, updateUserSchema } from '@/services/users/schema.js';
+import { usersDescriptors } from '@/services/users/descriptors.js';
 import type { UserQueryParams } from '@/types/index.js';
 
 type Env = { Variables: AuthVariables };
@@ -34,7 +35,7 @@ const SORTABLE_FIELDS = new Set(['name', 'email', 'createdAt', 'updatedAt', 'rol
 
 router.get('/', async (c) => {
     const permissions = withPermissions(c.var.role);
-    if (!permissions.allows('users:read')) return forbidden(c);
+    if (!permissions.allowsMethod(usersDescriptors.query)) return forbidden(c);
 
     try {
         const q = c.req.query();
@@ -61,7 +62,7 @@ router.get('/:id', async (c) => {
     const { id } = c.req.param();
     const permissions = withPermissions(c.var.role);
     const currentUser = c.var.user;
-    if (!permissions.allows('users:read') && currentUser.id !== id) return forbidden(c);
+    if (!permissions.allowsMethod(usersDescriptors.get) && currentUser.id !== id) return forbidden(c);
 
     try {
         const user = await Astromech.users.get(id);
@@ -78,7 +79,7 @@ router.get('/:id', async (c) => {
 
 router.post('/', async (c) => {
     const permissions = withPermissions(c.var.role);
-    if (!permissions.allows('users:create')) return forbidden(c);
+    if (!permissions.allowsMethod(usersDescriptors.create)) return forbidden(c);
 
     try {
         const raw = await c.req.json();
@@ -106,7 +107,7 @@ router.put('/:id', async (c) => {
     const { id } = c.req.param();
     const permissions = withPermissions(c.var.role);
     const currentUser = c.var.user;
-    const canUpdateUsers = permissions.allows('users:update');
+    const canUpdateUsers = permissions.allowsMethod(usersDescriptors.update);
     const isSelf = currentUser.id === id;
 
     if (!canUpdateUsers && !isSelf) return forbidden(c);
@@ -153,7 +154,7 @@ router.put('/:id', async (c) => {
 router.delete('/:id', async (c) => {
     const { id } = c.req.param();
     const permissions = withPermissions(c.var.role);
-    if (!permissions.allows('users:delete')) return forbidden(c);
+    if (!permissions.allowsMethod(usersDescriptors.delete)) return forbidden(c);
 
     try {
         // Last-admin check

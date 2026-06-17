@@ -21,6 +21,7 @@ import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import type { JsonValue } from '@/types/index.js';
 import { withPermissions } from '@/policies/permissions/with-permissions.js';
 import { setSettingSchema } from '@/services/settings/schema.js';
+import { settingsDescriptors } from '@/services/settings/descriptors.js';
 
 type Env = { Variables: AuthVariables };
 
@@ -32,7 +33,7 @@ const router = new OpenAPIHono<Env>();
 
 router.get('/', async (c) => {
     const permissions = withPermissions(c.var.role);
-    if (!permissions.allows('settings:read')) return forbidden(c);
+    if (!permissions.allowsMethod(settingsDescriptors.all)) return forbidden(c);
 
     try {
         // Authenticated admin endpoint (guarded by settings:read): return the
@@ -51,7 +52,7 @@ router.get('/', async (c) => {
 router.get('/:key', async (c) => {
     const { key } = c.req.param();
     const permissions = withPermissions(c.var.role);
-    if (!permissions.allows('settings:read')) return forbidden(c);
+    if (!permissions.allowsMethod(settingsDescriptors.get)) return forbidden(c);
 
     try {
         // Authenticated admin endpoint (guarded by settings:read): return the
@@ -73,7 +74,7 @@ router.get('/:key', async (c) => {
 router.put('/:key', async (c) => {
     const { key } = c.req.param();
     const permissions = withPermissions(c.var.role);
-    if (!permissions.allows('settings:update')) return forbidden(c);
+    if (!permissions.allowsMethod(settingsDescriptors.set)) return forbidden(c);
 
     try {
         const raw = await c.req.json();
