@@ -26,11 +26,12 @@
  * the only remaining leaf→domain edges (config.ts's two contract types) are
  * type-only and carved out explicitly.
  *
- * KNOWN DEFERRED ENTANGLEMENT — a pre-existing edge that needs a code MOVE, not a
- * rule, so it is intentionally NOT enforced yet (tracked as a grab-bag drain):
- *   - plugins/runtime ↔ entries   (the plugin SDK wires the entries domain)
- * A strict "plugins-runtime-is-a-capability" rule is withheld until that move
- * lands, rather than encoding a carve-out that would ossify the smell.
+ * The former `plugins/runtime ↔ entries` entanglement is GONE: the runtime is a
+ * pure capability again. It declares the slice of entries it needs as a port
+ * (`plugins/runtime/entry-access.ts`, typed only from leaves) and the entries
+ * domain injects the implementation at boot (`entries/plugin-access.ts`). This
+ * is now enforced by `plugins-runtime-is-a-capability`, and plugins/runtime is
+ * back inside the acyclic `no-circular` scope.
  *
  */
 module.exports = {
@@ -59,6 +60,16 @@ module.exports = {
         'Capabilities (storage, email, cron, context, fields) sit below the domains: they expose primitives, they do not orchestrate. They must not import a domain, an upper layer, or a first-party plugin.',
       severity: 'error',
       from: { path: '^src/(storage|email|cron|context|fields|permissions)/' },
+      to: {
+        path: '^src/(entries|media|users|settings|routes|admin|transport|policies|kernel|codegen)/',
+      },
+    },
+    {
+      name: 'plugins-runtime-is-a-capability',
+      comment:
+        'The plugin runtime (hook engine + plugin context/registry) is a capability, not a domain consumer. It may use sibling capabilities (database/email/cron/fields/…) and pure leaves, but must NOT import a domain or an upper layer. The entries behaviour it needs (scoping, type qualification, per-type storage) comes through the entry-access PORT (plugins/runtime/entry-access.ts), injected by the entries domain at boot — never via a direct entries import.',
+      severity: 'error',
+      from: { path: '^src/plugins/runtime/' },
       to: {
         path: '^src/(entries|media|users|settings|routes|admin|transport|policies|kernel|codegen)/',
       },
@@ -147,10 +158,10 @@ module.exports = {
     {
       name: 'no-circular',
       comment:
-        'Cyclic dependencies break the acyclic layer graph and tree-shaking. Scoped to the clean capability/delivery spine; domains and plugins/runtime are excluded until the known plugins/runtime↔entries entanglement is untangled.',
+        'Cyclic dependencies break the acyclic layer graph and tree-shaking. Scoped to the clean capability/delivery spine, now including plugins/runtime (its entries entanglement was untangled via the entry-access port). The four domains stay out of scope for now (their own internal cycles are a separate cleanup).',
       severity: 'warn',
       from: {
-        path: '^src/(storage|email|cron|context|fields|permissions|database|policies|transport|kernel)/',
+        path: '^src/(storage|email|cron|context|fields|permissions|database|policies|transport|kernel|plugins/runtime)/',
       },
       to: { circular: true },
     },

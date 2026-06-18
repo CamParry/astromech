@@ -22,6 +22,7 @@ import type { UserRow } from '@/database/schema.js';
 import { resolveConfig } from '@/kernel/config-resolver.js';
 import { setCliConfig } from '@/transport/cli/virtual-config-shim.js';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime.js';
+import { wireEntryAccess } from '@/entries/plugin-access.js';
 import { setCurrentUser } from '@/context/index.js';
 import type {
     AstromechConfig,
@@ -30,6 +31,10 @@ import type {
     ResolvedConfig,
     StorageDriver,
 } from '@/types/index.js';
+
+// Wire the entry-access port (entries → runtime dependency inversion) once for
+// every harness-based test, before any registerPlugins call below.
+wireEntryAccess();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = LibSQLDatabase<any>;

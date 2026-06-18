@@ -19,6 +19,10 @@ import { setEmailConfig } from '@/email/registry.js';
 // import would be pulled into the Astro integration and crash config load
 // (the integration is loaded in plain Node, where `virtual:` doesn't resolve).
 import { registerBuiltInEntryJobs } from '@/entries/jobs/index.js';
+// Wire the entries-domain implementation into the plugin runtime's entry-access
+// port BEFORE registerPlugins runs. Like the jobs sub-barrel above, this module
+// is service-free, so the integration's plain-Node config load stays safe.
+import { wireEntryAccess } from '@/entries/plugin-access.js';
 import { setSchedulerDriver, getSchedulerDriver } from '@/cron/registry.js';
 import { nodeDriver } from '@/cron/drivers/index.js';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime.js';
@@ -43,6 +47,7 @@ export async function initRuntime(
     }
     registerBuiltInEntryJobs();
     setSchedulerDriver(config.scheduler ?? nodeDriver);
+    wireEntryAccess();
     registerPlugins(config.plugins ?? [], resolvedConfig);
     await bootPlugins(config.plugins ?? []);
 

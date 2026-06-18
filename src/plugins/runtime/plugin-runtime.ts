@@ -33,15 +33,10 @@ import {
     pluginEntryTypes,
     resolvePluginIdentity,
 } from '@/plugins/runtime/plugin-identity.js';
+import { entryAccess } from '@/plugins/runtime/entry-access.js';
 import { registerCronJob } from '@/cron/registry.js';
-import { qualifyEntryType } from '@/entries/type-registry.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
-import { createScopedEntries } from '@/entries/scoped-entries.js';
 import { withDefaultShape } from '@/utilities/with-default-shape.js';
-import {
-    resetEntryStorageOverrides,
-    setEntryStorage,
-} from '@/entries/storage/registry.js';
 
 // ============================================================================
 // Registry (globalThis — visible from config:setup through request time)
@@ -92,7 +87,7 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
     s.sdk = new Map();
     s.rawRoutes = [];
     // Drop stale plugin storages before re-registering (test setups re-run this).
-    resetEntryStorageOverrides();
+    entryAccess().resetEntryStorageOverrides();
 
     for (const def of defs) {
         const identity = resolvePluginIdentity(def);
@@ -128,9 +123,13 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
         }
 
         // Register per-type custom storages under the qualified id.
+        const access = entryAccess();
         for (const [type, cfg] of pluginEntryTypes(def)) {
             if (cfg.storage) {
-                setEntryStorage(qualifyEntryType(identity.name, type), cfg.storage);
+                access.setEntryStorage(
+                    access.qualifyEntryType(identity.name, type),
+                    cfg.storage
+                );
             }
         }
     }
@@ -324,7 +323,7 @@ export function createPluginContext(
             // Auto-scoped to this plugin's own entry types: bare keys in, qualified
             // ids out. Default shape is `full` (privileged server RMW context, per
             // spec §7.1 decision 7). An explicit per-call `full` still wins.
-            return createScopedEntries(
+            return entryAccess().createScopedEntries(
                 identity.name,
                 withDefaultShape(
                     requireSdkClient().entries as unknown as EntriesApi,

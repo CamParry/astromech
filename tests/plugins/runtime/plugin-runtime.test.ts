@@ -16,7 +16,12 @@ import {
     runBeforeHooks,
 } from '@/plugins/runtime/plugin-runtime.js';
 import { defineHook } from '@/index.js';
+// This test drives registerPlugins directly (no harness), so wire the
+// entry-access port that registerPlugins now depends on.
+import { wireEntryAccess } from '@/entries/plugin-access.js';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity.js';
+
+wireEntryAccess();
 import { getCronJobs } from '@/cron/registry.js';
 
 const config: ResolvedConfig = {
