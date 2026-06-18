@@ -25,6 +25,6 @@
         "astromech": "*"
     },
     "devDependencies": {
-        "astromech": "file:../../.."
+        "astromech": "*"
     }
 }

@@ -16,6 +16,10 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['dist/', 'node_modules/', 'demo/', '*.config.js', '*.config.mjs'],
+    files: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
+  },
+  {
+    ignores: ['dist/', 'node_modules/', 'demo/', '*.config.js', '*.config.mjs', '**/dist/'],
   }
 );

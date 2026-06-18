@@ -16,7 +16,7 @@
         "@astromech/seo": "*",
         "@tailwindcss/vite": "^4.3.1",
         "astro": "^6.0.8",
-        "astromech": "file:.."
+        "astromech": "*"
     },
     "devDependencies": {
         "@iconify-json/lucide": "^1.2.112",

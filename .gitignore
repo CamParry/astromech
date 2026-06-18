@@ -33,7 +33,7 @@ coverage/
 .wrangler/
 
 # TanStack Router generated file
-src/admin/routeTree.gen.ts
+packages/astromech/src/admin/routeTree.gen.ts
 
 # Demo database — seeded at runtime
 demo/database.db

@@ -31,6 +31,6 @@
         "drizzle-orm": "*"
     },
     "devDependencies": {
-        "astromech": "file:../../.."
+        "astromech": "*"
     }
 }

@@ -1,0 +1,76 @@
+{
+    "version": "7",
+    "dialect": "sqlite",
+    "entries": [
+        {
+            "idx": 0,
+            "version": "6",
+            "when": 1774393111099,
+            "tag": "0000_keen_doorman",
+            "breakpoints": true
+        },
+        {
+            "idx": 1,
+            "version": "6",
+            "when": 1774393200000,
+            "tag": "0001_add_role_slug",
+            "breakpoints": true
+        },
+        {
+            "idx": 2,
+            "version": "6",
+            "when": 1742860800000,
+            "tag": "0002_entry_locale_backfill",
+            "breakpoints": true
+        },
+        {
+            "idx": 3,
+            "version": "7",
+            "when": 1743034800000,
+            "tag": "0003_rename_collection_to_type",
+            "breakpoints": true
+        },
+        {
+            "idx": 4,
+            "version": "6",
+            "when": 1774655045729,
+            "tag": "0004_faithful_moon_knight",
+            "breakpoints": true
+        },
+        {
+            "idx": 5,
+            "version": "7",
+            "when": 1779984000000,
+            "tag": "0005_locale_group",
+            "breakpoints": true
+        },
+        {
+            "idx": 6,
+            "version": "6",
+            "when": 1781175531295,
+            "tag": "0006_redundant_the_hand",
+            "breakpoints": true
+        },
+        {
+            "idx": 7,
+            "version": "6",
+            "when": 1781621939163,
+            "tag": "0007_open_maestro",
+            "breakpoints": true
+        },
+        {
+            "idx": 8,
+            "version": "6",
+            "when": 1781621954431,
+            "tag": "0008_illegal_psylocke",
+            "breakpoints": true
+        },
+        {
+            "idx": 9,
+            "version": "6",
+            "when": 1781650664139,
+            "tag": "0009_outgoing_mastermind",
+            "breakpoints": true
+        }
+    ]
+}
