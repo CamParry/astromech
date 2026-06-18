@@ -19,9 +19,23 @@ import type { ImageFormat } from '@/media/serving/image/url.js';
 // Drivers
 // ============================================================================
 
+export type DbDump = {
+    /** Raw bytes of a consistent SQLite snapshot. */
+    stream: ReadableStream<Uint8Array>;
+    /** Release temp resources (e.g. delete the temp dump file). Always call when done. */
+    cleanup: () => Promise<void>;
+};
+
 export type DatabaseDriver = {
     type: string;
     getInstance(): LibSQLDatabase;
+    /** Produce a consistent full-DB snapshot. Optional — absent on drivers that can't dump in-process (e.g. D1). */
+    dump?(): Promise<DbDump>;
+    /** Restore a full-DB snapshot from raw SQLite bytes. `preserve` = table names to leave untouched. Optional. */
+    restore?(
+        source: ReadableStream<Uint8Array>,
+        opts: { preserve: string[] }
+    ): Promise<void>;
 };
 
 export type StorageDriver = {

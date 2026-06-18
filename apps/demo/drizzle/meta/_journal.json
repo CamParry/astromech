@@ -71,6 +71,13 @@
             "when": 1781650664139,
             "tag": "0009_outgoing_mastermind",
             "breakpoints": true
+        },
+        {
+            "idx": 10,
+            "version": "6",
+            "when": 1781816753717,
+            "tag": "0010_slimy_hobgoblin",
+            "breakpoints": true
         }
     ]
 }

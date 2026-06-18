@@ -37,7 +37,10 @@
             "@astromech/redirects": ["../plugins/redirects/src/index.ts"],
             "@astromech/redirects/schema": [
                 "../plugins/redirects/src/schema/redirects.ts"
-            ]
+            ],
+            "@astromech/backups": ["../plugins/backups/src/index.ts"],
+            "@astromech/backups/schema": ["../plugins/backups/src/schema/runs.ts"],
+            "@astromech/backups/internals": ["../plugins/backups/src/backup.ts"]
         }
     },
     "include": ["src/**/*"],

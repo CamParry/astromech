@@ -131,6 +131,36 @@ apps/
 └── docs/            # documentation markdown (was docs/ at root) — will become an Astro site
 ```
 
+## Plugin capability ports
+
+Plugins access platform resources through two sanctioned, plugin-scoped handles on `PluginContext`:
+
+- **`ctx.storage`** — a plugin-scoped view of the storage registry. Keys are auto-prefixed `plugin/<alias>/` on `put`/`get`/`delete` and de-prefixed on `list()`. Plugins never see or construct raw storage keys.
+- **`ctx.database`** — `{ dialect, dump?, restore? }`. `dump` and `restore` are optional and feature-detected from the driver. Code against their presence, not the dialect. Backed by the **driver registry** (`src/database/driver-registry.ts`), which retains the full `DatabaseDriver` object alongside the Drizzle instance.
+
+**`DatabaseDriver` capability seam:** `dump?()` and `restore?()` are optional fields on `DatabaseDriver` (`src/types/config.ts`). Implemented for libsql (local `file:` connections only — `VACUUM INTO` requires a local path); unimplemented on D1/Postgres drivers (feature-detects off). A driver may implement `dump` without `restore`.
+
+## App-owned migration model
+
+Migrations are an **app artifact**, not a core artifact. Core ships schema definitions and types; it does not ship migration files.
+
+- `astromech db:generate` — collects core schema + each installed plugin's `schemaModule`, codegens an ephemeral `drizzle.config.ts`, and runs drizzle-kit generate. Output lands in the **app's** `drizzle/` folder (e.g. `apps/demo/drizzle/`).
+- `astromech db:init` / `runMigrations` — resolve migrations from the **app cwd's** `./drizzle`, not the core package folder.
+- The `drizzle/` folder in `packages/astromech/` was removed. Static per-package `drizzle.config.ts` files were removed.
+
+The app owns its migration history. Adding a plugin, running `db:generate`, and committing the new migration files is the full workflow.
+
+## Scheduler (cron)
+
+Cadence lives in the **database**, not in deploy config, because schedules are runtime-editable from the admin. Platform-native cron (Cloudflare Cron Triggers, a system crontab) demotes to a dumb frequent tick; core does the due-evaluation against the live schedule. Every trigger converges on the same contract: _frequent poke → core due-eval_.
+
+- **`SchedulerDriver`** (`src/cron/drivers/{node,cloudflare,http}.ts`) abstracts _triggering only_ — it knows nothing about which jobs exist or are due.
+- **`_astromech_cron`** is the single source of truth for due-evaluation and doubles as the multi-instance **CAS lock** — the double-fire guard when N instances or overlapping ticks fire at once.
+- **Registry holds handlers; the table holds cadence.** A job's manifest `schedule` is a seed/default written on first boot; the stored row wins thereafter, so an admin edit takes effect on the next tick with no redeploy.
+- Due-eval parses cron expressions via `croner`; per-job try/catch isolates failures so one job's throw never aborts the tick.
+
+`@astromech/backups` is the first real consumer (a cron job → dump → storage). Its manual run-now path uses an in-process guard rather than the cron lock (single-instance assumption in v1).
+
 ## Public entry points
 
 Consumers import from subpaths, never deep into `src/`. The published surface is

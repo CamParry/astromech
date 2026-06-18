@@ -91,3 +91,25 @@ These are different concepts that share a name. When speaking about the SPA exte
 **Relationship** — the database record in the `relationships` table that backs a relation field. Stores source, target, field name, and position.
 
 A single relation field definition can produce many relationship records.
+
+---
+
+## Backup run vs Backup artifact
+
+**Backup run** — a row in `plugin_backups_runs`. Always present; records the outcome (`success`/`failed`/`running`) and trigger (`scheduled`/`manual`/`pre-restore`). Rows are never hard-deleted (manual delete marks `artifactDeletedAt` only).
+
+**Backup artifact** — the stored `.sqlite.gz` file in plugin-scoped storage. A run only has an artifact if it succeeded; the artifact may be pruned by retention while the run row persists.
+
+---
+
+## Restore (backups)
+
+A full-DB rollback performed by `@astromech/backups`: replaces all user tables from a backup artifact using `ATTACH` + a transactional per-table copy. **Preserves** the two operational tables (`plugin_backups_runs` and `_astromech_cron`) so the scheduler and run history survive the restore. Requires the backup's schema to match the live schema (fails loudly otherwise). Always preceded by an automatic `pre-restore` safety snapshot.
+
+Not to be confused with **Restore** (entries) — clearing `deletedAt` on a trashed entry.
+
+---
+
+## Rotation / retention (backups)
+
+After each successful backup, the plugin prunes the oldest artifacts so that at most N are retained (default 7, configurable). Pruned artifacts are deleted from storage and their run rows are marked with `artifactDeletedAt` — the row itself is kept so run history remains intact. `pre-restore` snapshots are currently counted toward the keep-N limit (excluded count is a backlog item).
