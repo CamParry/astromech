@@ -80,7 +80,7 @@ packages/
 │   │   ├── kernel/         # composition root — boots & wires all layers; Astro integration (astromech/astro)
 │   │   ├── routes/         # 3 Astro APIRoute entrypoints injected by the integration (api / auth / media)
 │   │   ├── admin/          # React admin SPA (TanStack Router; deep-imports a few pure domain leaves)
-│   │   ├── codegen/        # type generator + plugin-client manifest
+│   │   ├── codegen/        # type generator + plugin-client manifest + method manifest (.astro/astromech.methods.json)
 │   │   │
 │   │   │   ── over-the-wire client ─────────────────────────────────────────
 │   │   ├── client/         # fetch Client (astromech/fetch) — talks HTTP, no server imports

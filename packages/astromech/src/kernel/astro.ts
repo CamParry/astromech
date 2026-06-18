@@ -164,7 +164,7 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                 );
             },
 
-            'astro:config:done': async ({ injectTypes, logger }) => {
+            'astro:config:done': async ({ injectTypes, logger, config: astroConfig }) => {
                 const { generateSdkTypes } = await import('@/codegen/type-generator.js');
                 injectTypes({
                     filename: 'astromech.d.ts',
@@ -174,6 +174,29 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                         config.plugins ?? []
                     ),
                 });
+
+                const { generateMethodManifest, METHOD_MANIFEST_FILENAME } =
+                    await import('@/codegen/method-manifest.js');
+                const manifestJson = generateMethodManifest(
+                    resolvedConfig,
+                    config.plugins ?? []
+                );
+                const { writeFile, mkdir } = await import('node:fs/promises');
+                const { fileURLToPath } = await import('node:url');
+                const dotAstroDir = fileURLToPath(new URL('.astro/', astroConfig.root));
+                try {
+                    await mkdir(dotAstroDir, { recursive: true });
+                    await writeFile(
+                        `${dotAstroDir}${METHOD_MANIFEST_FILENAME}`,
+                        manifestJson,
+                        'utf-8'
+                    );
+                } catch (err) {
+                    logger.warn(
+                        `Failed to write method manifest: ${err instanceof Error ? err.message : String(err)}`
+                    );
+                }
+
                 logger.info('Astromech configuration complete');
             },
 

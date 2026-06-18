@@ -11,6 +11,11 @@ import type { Permission, Role } from '@/types/domain.js';
 import { hasPermission as hasPermissionImpl } from '@/utilities/permission-match.js';
 import { sanitisePackage } from '@/plugins/runtime/plugin-identity.js';
 export { hasPermission, matchesPermission } from '@/utilities/permission-match.js';
+export {
+    type EntryAction,
+    rootEntryPermission,
+    pluginEntryPermission,
+} from '@/permissions/entry-permission.js';
 
 type ConfigWithRoles = Pick<AstromechConfig, 'roles'> | Pick<ResolvedConfig, 'roles'>;
 

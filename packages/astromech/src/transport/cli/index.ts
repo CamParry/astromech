@@ -15,6 +15,8 @@ const main = defineCommand({
             import('./commands/entries-delete.js').then((m) => m.default),
         'generate:types': () =>
             import('./commands/generate-types.js').then((m) => m.default),
+        'generate:manifest': () =>
+            import('./commands/generate-manifest.js').then((m) => m.default),
         'db:generate': () => import('./commands/db-generate.js').then((m) => m.default),
     },
 });
