@@ -402,15 +402,7 @@
     /* focus: global :focus-visible rule in base.css */
 }
 
-.am-notif-row--unread {
-    background-color: var(--am-color-primary-subtle);
-}
-
-@media (hover: hover) {
-    .am-notif-row--unread:hover {
-        background-color: var(--am-color-primary-subtle-hover);
-    }
-}
+/* Unread is indicated by the accent dot alone — no row background tint. */
 
 .am-notif-row-dot {
     flex-shrink: 0;

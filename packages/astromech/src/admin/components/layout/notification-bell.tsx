@@ -20,6 +20,27 @@ import {
     useDismissAll,
 } from '../../hooks/notifications.js';
 
+declare const __ASTROMECH_ADMIN_ROUTE__: string;
+
+// ============================================================================
+// Href normalisation
+// ============================================================================
+
+/**
+ * `href` is stored admin-relative (e.g. `/entries/123`). The router's `navigate`
+ * is already scoped to the admin basepath, so a stored href that includes the
+ * admin base (e.g. `/admin/entries`) would double up to `/admin/admin/entries`.
+ * Strip a leading admin-base segment defensively so both forms navigate correctly.
+ */
+function toAdminRelative(href: string): string {
+    const base = __ASTROMECH_ADMIN_ROUTE__;
+    if (base && base !== '/') {
+        if (href === base) return '/';
+        if (href.startsWith(base + '/')) return href.slice(base.length);
+    }
+    return href;
+}
+
 // ============================================================================
 // Relative time formatter
 // ============================================================================
@@ -115,7 +136,7 @@ export function NotificationBell() {
             markRead.mutate(notification.id);
         }
         if (notification.href !== null) {
-            void navigate({ to: notification.href });
+            void navigate({ to: toAdminRelative(notification.href) });
         }
     }
 

@@ -169,6 +169,7 @@ export type NotifyInput = {
     type: string;
     title: string;
     message: string;
+    /** Admin-relative click-through path (e.g. `/entries/123`), without the admin base prefix. */
     href?: string;
 };
 
