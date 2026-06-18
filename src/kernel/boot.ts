@@ -14,7 +14,11 @@ import { setImageConfig } from '@/media/serving/image/registry.js';
 import { normaliseWidths } from '@/media/serving/image/url.js';
 import { defaultImageWidths } from '@/media/serving/image/defaults.js';
 import { setEmailConfig } from '@/email/registry.js';
-import { registerBuiltInEntryJobs } from '@/entries/index.js';
+// Import from the jobs sub-barrel, NOT @/entries/index.js: the main barrel
+// re-exports the entries service, whose top-level `virtual:astromech/config`
+// import would be pulled into the Astro integration and crash config load
+// (the integration is loaded in plain Node, where `virtual:` doesn't resolve).
+import { registerBuiltInEntryJobs } from '@/entries/jobs/index.js';
 import { setSchedulerDriver, getSchedulerDriver } from '@/cron/registry.js';
 import { nodeDriver } from '@/cron/drivers/index.js';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime.js';
