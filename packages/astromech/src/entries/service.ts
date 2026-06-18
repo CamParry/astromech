@@ -54,6 +54,8 @@ import {
 } from '@/plugins/runtime/plugin-runtime.js';
 import { slugify } from '@/utilities/strings.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
+import { processFields } from '@/fields/pipeline.js';
+import { createEntryScopedReads } from './reads.js';
 import {
     applyVisibilityWithRelations,
     isPublicBranded,
@@ -333,6 +335,25 @@ async function _updateOne(
 ): Promise<Entry> {
     const validatedData = validate(updateEntrySchemaFor(getTitleField(type)), data);
     const currentEntry = await loadAndAssertType(storage, type, id);
+
+    if (validatedData.fields !== undefined) {
+        const entryTypeConfig = resolveEntryType(config, type);
+        const fieldDefs = entryTypeConfig ? flattenEntryFields(entryTypeConfig.fields) : [];
+        const processed = await processFields(
+            validatedData.fields as Record<string, unknown>,
+            fieldDefs,
+            {
+                operation: 'update',
+                host: { kind: 'entry', record: currentEntry },
+                user: getCurrentUser(),
+                reads: createEntryScopedReads(storage, { type, locale: currentEntry.locale, excludeId: id }),
+            }
+        );
+        if (Object.keys(processed.errors).length > 0) {
+            throw ValidationError.fromFieldErrors(processed.errors);
+        }
+        validatedData.fields = processed.values as JsonObject;
+    }
 
     if (isVersioningEnabled(type) && storage.versions) {
         const currentRelations = await buildRelationsSnapshot(db, id);
@@ -706,6 +727,24 @@ export const entries: EntriesApi = {
         const locale = params.locale ?? getDefaultLocale();
         const localeGroup = params.localeGroup ?? crypto.randomUUID();
 
+        const user = getCurrentUser();
+        const entryTypeConfig = resolveEntryType(config, type);
+        const fieldDefs = entryTypeConfig ? flattenEntryFields(entryTypeConfig.fields) : [];
+        const processed = await processFields(
+            (validated.fields ?? {}) as Record<string, unknown>,
+            fieldDefs,
+            {
+                operation: 'create',
+                host: { kind: 'entry', record: null },
+                user,
+                reads: createEntryScopedReads(storage, { type, locale }),
+            }
+        );
+        if (Object.keys(processed.errors).length > 0) {
+            throw ValidationError.fromFieldErrors(processed.errors);
+        }
+        const processedFields = processed.values as JsonObject;
+
         let slug: string | null;
         if (validated.slug) {
             slug = await storage.uniqueSlug(type, locale, validated.slug);
@@ -717,12 +756,11 @@ export const entries: EntriesApi = {
             slug = await storage.uniqueSlug(type, locale, slugify(title));
         }
 
-        const user = getCurrentUser();
         const createData = {
             title,
             slug,
             locale,
-            fields: (validated.fields ?? {}) as JsonObject,
+            fields: processedFields,
             status,
             publishAt: publishedAt,
         };
@@ -739,17 +777,17 @@ export const entries: EntriesApi = {
                 slug,
                 locale,
                 localeGroup,
-                fields: (validated.fields ?? {}) as JsonObject,
+                fields: processedFields,
                 status,
                 publishedAt,
             })
         );
 
-        if (validated.fields) {
+        if (Object.keys(processedFields).length > 0) {
             await saveRelationships(
                 getDb(),
                 created.id,
-                validated.fields as JsonObject,
+                processedFields,
                 type
             );
         }
