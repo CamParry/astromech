@@ -11,6 +11,16 @@
 
 import type { FieldTypeDescriptor } from '@/types/fields.js';
 import {
+    coerceEmail,
+    validateEmail,
+    coerceUrl,
+    validateUrl,
+    coerceSlug,
+    validateJson,
+    coerceKeyValue,
+    validateKeyValue,
+} from './built-in-rules.js';
+import {
     boolean,
     checkboxGroup,
     color,
@@ -115,6 +125,7 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         build: json,
         component: '@/admin/components/fields/json-field',
         tsType: () => "import('astromech').JsonValue",
+        validate: validateJson,
     },
     {
         type: 'group',
@@ -155,12 +166,16 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         build: email,
         component: '@/admin/components/fields/email-field',
         tsType: () => 'string',
+        coerce: coerceEmail,
+        validate: validateEmail,
     },
     {
         type: 'url',
         build: url,
         component: '@/admin/components/fields/url-field',
         tsType: () => 'string',
+        coerce: coerceUrl,
+        validate: validateUrl,
     },
     {
         type: 'color',
@@ -173,6 +188,7 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         build: slug,
         component: '@/admin/components/fields/slug-field',
         tsType: () => 'string',
+        coerce: coerceSlug,
     },
     {
         type: 'range',
@@ -204,5 +220,7 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         build: keyValue,
         component: '@/admin/components/fields/key-value-field',
         tsType: () => 'Record<string, string>',
+        coerce: coerceKeyValue,
+        validate: validateKeyValue,
     },
 ];
