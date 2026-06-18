@@ -14,7 +14,11 @@ import {
     notFound,
 } from '@/transport/http/middleware/errors.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
-import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/index.js';
+import {
+    PERMISSION_ENTRY_READ_FULL,
+    type EntryAction,
+    rootEntryPermission,
+} from '@/permissions/index.js';
 import { withPermissions } from '@/policies/with-permissions.js';
 import type {
     EntryDuplicateOverrides,
@@ -38,12 +42,6 @@ type Env = { Variables: AuthVariables };
 // ============================================================================
 // Router factory
 // ============================================================================
-
-/**
- * Actions a permission string is built for. Exactly the set the handlers below
- * reference (`entry:{type}:{action}`): read / create / update / delete / publish.
- */
-export type EntryAction = 'read' | 'create' | 'update' | 'delete' | 'publish';
 
 export type EntriesRouterOptions = {
     /** Resolve a bare type to its config; `undefined` ⇒ the existing 404 path. */
@@ -1092,5 +1090,5 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
 export const entriesRouter = createEntriesRouter({
     lookup: (t) => Astromech.config.entries[t],
     qualify: (t) => t,
-    permissionFor: (t, a) => `entry:${t}:${a}`,
+    permissionFor: (t, a) => rootEntryPermission(t, a),
 });

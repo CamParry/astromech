@@ -24,6 +24,7 @@ import {
 } from '@/plugins/runtime/plugin-runtime.js';
 import { withPermissions } from '@/policies/with-permissions.js';
 import { resolvePluginPermission } from '@/plugins/runtime/plugin-identity.js';
+import { pluginEntryPermission } from '@/permissions/index.js';
 import { qualifyEntryType } from '@/entries/type-registry.js';
 import { createEntriesRouter } from '@/transport/http/routes/entries.js';
 import type { Context } from 'hono';
@@ -75,7 +76,7 @@ for (const { identity, entryTypes } of getPluginEntryMounts()) {
             lookup: (t) => entryTypes[t],
             qualify: (t) => qualifyEntryType(identity.name, t),
             permissionFor: (t, a) =>
-                `plugin:${identity.permissionNamespace}:entry:${t}:${a}`,
+                pluginEntryPermission(identity.permissionNamespace, t, a),
         }) as unknown as Hono<PluginEnv>
     );
 }
