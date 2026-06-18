@@ -8,11 +8,13 @@
 
 import type {
     FieldDefinition,
+    FieldTypeDescriptor,
     PluginDefinition,
     PluginFieldTypeRegistration,
     ResolvedConfig,
     ResolvedEntryFields,
 } from '@/types/index.js';
+import { getFieldTypeDescriptor } from '@/fields/descriptors.js';
 
 // ============================================================================
 // Naming Helpers
@@ -42,6 +44,34 @@ const LAYOUT_TYPES = new Set(['section', 'tabs', 'tab', 'accordion']);
  * Field types that produce a relation (populate-able) value.
  */
 const RELATION_TYPES = new Set(['relationship', 'media']);
+
+/**
+ * TS emission for reserved instance keys. `_id`/`_type` are identity keys (present
+ * in both shapes); `_disabled`/`_title` are editorial metadata (full shape only).
+ * Which keys a container owns comes from its descriptor's `reservedKeys`; this map
+ * owns only how each is typed.
+ */
+const RESERVED_KEY_TS: Record<string, { line: string; inPublic: boolean }> = {
+    _id: { line: '_id: string;', inPublic: true },
+    _type: { line: '_type: string;', inPublic: true },
+    _disabled: { line: '_disabled?: boolean;', inPublic: false },
+    _title: { line: '_title?: string;', inPublic: false },
+};
+
+/** Reserved-key type lines a container emits for the given shape, in declared order. */
+function reservedKeyLines(
+    descriptor: FieldTypeDescriptor,
+    shape: 'full' | 'public'
+): string[] {
+    const lines: string[] = [];
+    for (const key of descriptor.reservedKeys ?? []) {
+        const emit = RESERVED_KEY_TS[key];
+        if (emit === undefined) continue;
+        if (shape === 'public' && !emit.inPublic) continue;
+        lines.push(emit.line);
+    }
+    return lines;
+}
 
 /** Quote property names that aren't valid TS identifiers (e.g. `seo-meta`). */
 function propertyKey(name: string): string {
@@ -129,129 +159,76 @@ function fieldToTsType(
         return pluginType.typeGen(field);
     }
 
-    switch (field.type) {
-        case 'text':
-        case 'textarea':
-        case 'email':
-        case 'url':
-        case 'slug':
-        case 'color':
-            return 'string';
+    const descriptor = getFieldTypeDescriptor(field.type);
+    if (descriptor === undefined) return null;
 
-        // richtext: full shape stores ProseMirror JSON; public shape is rendered HTML string.
-        case 'richtext':
-            return shape === 'public' ? 'string' : "import('astromech').JsonValue";
-
-        case 'number':
-        case 'range':
-            return 'number';
-
-        case 'boolean':
-            return 'boolean';
-
-        case 'date':
-        case 'datetime':
-            return 'string';
-
-        case 'select':
-        case 'radio-group':
-            return 'string';
-
-        case 'multiselect':
-        case 'checkbox-group':
-            return 'string[]';
-
-        case 'media':
-            // Unpopulated: stores ID string(s)
-            return field.multiple === true ? 'string[]' : 'string';
-
-        case 'relationship':
-            // Unpopulated: stores ID string(s)
-            return field.multiple === true ? 'string[]' : 'string';
-
-        case 'json':
-            return "import('astromech').JsonValue";
-
-        case 'group': {
-            // Nested object: children are recursively typed.
-            // Layout containers within the children are flattened.
-            const childLines = buildObjectLines(
-                field.fields ?? [],
-                pluginFieldTypes,
-                '  ',
-                hoisted,
-                shape
-            );
-            if (childLines.length === 0) return '{}';
-            return `{\n${childLines.join('\n')}\n}`;
-        }
-
-        case 'repeater': {
-            // Typed array of the child object shape. `_id` is a persisted UUID
-            // (stable item identity for diffs/versioning).
-            const childLines = buildObjectLines(
-                field.fields ?? [],
-                pluginFieldTypes,
-                '  ',
-                hoisted,
-                shape
-            );
-            const lines =
-                shape === 'public'
-                    ? ['  _id: string;', ...childLines]
-                    : [
-                          '  _id: string;',
-                          '  _disabled?: boolean;',
-                          '  _title?: string;',
-                          ...childLines,
-                      ];
-            return `Array<{\n${lines.join('\n')}\n}>`;
-        }
-
-        case 'tree': {
-            // Self-referential node type — must be a named interface so the
-            // recursion terminates. Push the interface to the hoisted accumulator
-            // and return a reference to it as an array.
-            const suffix = shape === 'public' ? 'PublicTreeNode' : 'TreeNode';
-            const nodeName = `${toPascalCase(field.name)}${suffix}`;
-            const childLines = buildObjectLines(
-                field.fields ?? [],
-                pluginFieldTypes,
-                '  ',
-                hoisted,
-                shape
-            );
-            const lines =
-                shape === 'public'
-                    ? ['  _id: string;', ...childLines, `  _children?: ${nodeName}[];`]
-                    : [
-                          '  _id: string;',
-                          '  _disabled?: boolean;',
-                          ...childLines,
-                          `  _children?: ${nodeName}[];`,
-                      ];
-            const iface = `export interface ${nodeName} {\n${lines.join('\n')}\n}`;
-            if (hoisted !== undefined) {
-                hoisted.push(iface);
+    // Container types need the recursion + hoisting context that the descriptor's
+    // pure `tsType(field, shape)` signature can't carry, so they're emitted here.
+    // Their reserved instance keys come from `descriptor.reservedKeys` (the single
+    // source); this code owns only the recursion/hoisting structure.
+    if (descriptor.isContainer === true) {
+        switch (field.type) {
+            case 'group': {
+                // Nested object: children are recursively typed.
+                // Layout containers within the children are flattened.
+                const childLines = buildObjectLines(
+                    field.fields ?? [],
+                    pluginFieldTypes,
+                    '  ',
+                    hoisted,
+                    shape
+                );
+                if (childLines.length === 0) return '{}';
+                return `{\n${childLines.join('\n')}\n}`;
             }
-            return `${nodeName}[]`;
-        }
 
-        case 'blocks':
-            if (shape === 'public') {
-                return "Array<{ _id: string; _type: string; [key: string]: import('astromech').JsonValue | undefined }>";
+            case 'repeater': {
+                // Typed array of the child object shape, prefixed by the reserved
+                // instance keys (`_id` is a persisted UUID for stable item identity).
+                const childLines = buildObjectLines(
+                    field.fields ?? [],
+                    pluginFieldTypes,
+                    '  ',
+                    hoisted,
+                    shape
+                );
+                const reserved = reservedKeyLines(descriptor, shape).map((l) => `  ${l}`);
+                const lines = [...reserved, ...childLines];
+                return `Array<{\n${lines.join('\n')}\n}>`;
             }
-            return "Array<{ _id: string; _type: string; _disabled?: boolean; _title?: string; [key: string]: import('astromech').JsonValue | undefined }>";
 
-        case 'link':
-            return '{ url: string; label: string; target?: string }';
+            case 'tree': {
+                // Self-referential node type — must be a named interface so the
+                // recursion terminates. Push the interface to the hoisted accumulator
+                // and return a reference to it as an array.
+                const suffix = shape === 'public' ? 'PublicTreeNode' : 'TreeNode';
+                const nodeName = `${toPascalCase(field.name)}${suffix}`;
+                const childLines = buildObjectLines(
+                    field.fields ?? [],
+                    pluginFieldTypes,
+                    '  ',
+                    hoisted,
+                    shape
+                );
+                const reserved = reservedKeyLines(descriptor, shape).map((l) => `  ${l}`);
+                const lines = [...reserved, ...childLines, `  _children?: ${nodeName}[];`];
+                const iface = `export interface ${nodeName} {\n${lines.join('\n')}\n}`;
+                if (hoisted !== undefined) {
+                    hoisted.push(iface);
+                }
+                return `${nodeName}[]`;
+            }
 
-        case 'key-value':
-            return 'Record<string, string>';
-
-        default:
-            return null;
+            case 'blocks': {
+                // Heterogeneous array; `_type` discriminates the block variant and
+                // the index signature carries arbitrary block data.
+                const reserved = reservedKeyLines(descriptor, shape);
+                return `Array<{ ${reserved.join(' ')} [key: string]: import('astromech').JsonValue | undefined }>`;
+            }
+        }
     }
+
+    return descriptor.tsType(field, shape);
 }
 
 /**
