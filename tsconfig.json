@@ -33,10 +33,10 @@
             "astromech/fields": ["./src/exports/fields.ts"],
             "astromech/columns": ["./src/exports/columns.ts"],
             "astromech/plugin-kit": ["./src/exports/plugin-kit.ts"],
-            "@astromech/menus": ["./packages/menus/src/index.ts"],
-            "@astromech/redirects": ["./packages/redirects/src/index.ts"],
+            "@astromech/menus": ["./packages/plugins/menus/src/index.ts"],
+            "@astromech/redirects": ["./packages/plugins/redirects/src/index.ts"],
             "@astromech/redirects/schema": [
-                "./packages/redirects/src/schema/redirects.ts"
+                "./packages/plugins/redirects/src/schema/redirects.ts"
             ]
         }
     },

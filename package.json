@@ -14,7 +14,7 @@
         "content-management"
     ],
     "workspaces": [
-        "packages/*",
+        "packages/plugins/*",
         "demo"
     ],
     "exports": {

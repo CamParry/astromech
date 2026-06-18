@@ -1,36 +1,30 @@
 {
-    "name": "@astromech/redirects",
+    "name": "@astromech/menus",
     "version": "0.1.0",
     "type": "module",
-    "description": "URL redirects as a first-class entry type for Astromech.",
+    "description": "Developer-declared navigation menus for Astromech.",
     "license": "MIT",
     "sideEffects": false,
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
             "default": "./dist/index.js"
-        },
-        "./schema": {
-            "types": "./dist/schema.d.ts",
-            "default": "./dist/schema.js"
         }
     },
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "files": [
         "dist",
-        "src",
-        "README.md"
+        "src"
     ],
     "scripts": {
         "build": "tsup",
         "typecheck": "tsc -p tsconfig.json"
     },
     "peerDependencies": {
-        "astromech": "*",
-        "drizzle-orm": "*"
+        "astromech": "*"
     },
     "devDependencies": {
-        "astromech": "file:../.."
+        "astromech": "file:../../.."
     }
 }

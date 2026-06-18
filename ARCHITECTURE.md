@@ -107,11 +107,15 @@ src/
 │   ── public surface ─────────────────────────────────────────────────────
 └── exports/        # thin re-export barrels; tsup builds from here — internals are private
 
-packages/            # first-party plugins as separate published packages (npm workspaces)
-├── menus/           # @astromech/menus
-├── redirects/       # @astromech/redirects  (ships a ./schema subpath for drizzle)
-└── seo/             # @astromech/seo        (admin React components ship as source via ./admin/*)
+packages/            # workspace packages (the repo root itself is still the `astromech` core package)
+└── plugins/         # first-party plugins as separate published packages
+    ├── menus/       # @astromech/menus
+    ├── redirects/   # @astromech/redirects  (ships a ./schema subpath for drizzle)
+    └── seo/         # @astromech/seo        (admin React components ship as source via ./admin/*)
 ```
+
+`packages/` is the home for everything that becomes its own package: `plugins/*`
+today, with `core` and `docs` intended to move in alongside them.
 
 ## Public entry points
 

@@ -14,8 +14,8 @@
  *     cron · context · fields · permissions
  *   types · utilities · errors                     pure leaves
  *
- * Sitting OUTSIDE this `src/` graph: packages/* — the first-party plugin packages
- * (`@astromech/{menus,…}`). They are downstream consumers of the published
+ * Sitting OUTSIDE this `src/` graph: packages/plugins/* — the first-party plugin
+ * packages (`@astromech/{menus,…}`). They are downstream consumers of the published
  * `astromech` surface; `packages-only-public-surface` forbids them reaching any
  * `src/` internal beyond the public root + `src/exports/`.
  *
@@ -159,7 +159,7 @@ module.exports = {
     tsConfig: { fileName: 'tsconfig.json' },
     tsPreCompilationDeps: true,
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '(\\.test\\.ts$|/test/|^packages/[^/]+/dist/)' },
+    exclude: { path: '(\\.test\\.ts$|/test/|^packages/.+/dist/)' },
     enhancedResolveOptions: {
       // Imports are written with `.js` extensions but resolve to `.ts` sources;
       // dependency-cruiser maps these via the tsConfig + the extension list below.
