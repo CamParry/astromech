@@ -5,6 +5,8 @@ import { getFieldComponent } from '@/admin/definitions/field-registry.js';
 import { useLabel } from '@/admin/i18n/entry-namespace.js';
 import { hasPluginFieldType, PluginField } from './plugin-field';
 import { FieldPathProvider } from './field-context';
+import { FieldWrapper } from './field-wrapper';
+import { useFieldError } from './field-errors-context';
 
 export type FormFieldProps = {
     field: FieldDefinition;
@@ -48,6 +50,8 @@ export function FormField({
         />
     );
 
+    const error = useFieldError(field.name);
+
     // A container-less group is invisible chrome — pure data nesting. It renders
     // its sub-fields inline with no label or box; pair it with a `section` for a
     // heading/surface.
@@ -56,15 +60,17 @@ export function FormField({
     }
 
     return (
-        <div className="am-field">
-            <label className="am-field-label">
-                {label(field.label, field.name)}
-                {required && <span className="am-field-required">*</span>}
-            </label>
-            {field.description !== undefined && (
-                <p className="am-field-hint">{label(field.description, field.name)}</p>
-            )}
+        <FieldWrapper
+            label={label(field.label, field.name)}
+            description={
+                field.description !== undefined
+                    ? label(field.description, field.name)
+                    : undefined
+            }
+            required={required}
+            error={error}
+        >
             <FieldPathProvider path={commonProps.name}>{control}</FieldPathProvider>
-        </div>
+        </FieldWrapper>
     );
 }

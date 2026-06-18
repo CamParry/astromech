@@ -36,6 +36,7 @@ import {
     Stack,
 } from '@/admin/components/ui/index.js';
 import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer.js';
+import { FieldErrorsProvider } from '@/admin/components/fields/field-errors-context.js';
 import {
     EntryNamespaceProvider,
     namespaceForScope,
@@ -256,7 +257,7 @@ export function EntryNewPage({
     const formDef = deriveFormDefinition(resolveConfigForDerive(entryTypeConfig, type));
     const { hasTitle, hasSlug, hasStatuses, main, sidebar } = formDef;
 
-    const { form, saveMutation, handleSave, handlePublish } = useEntryForm({
+    const { form, saveMutation, handleSave, handlePublish, fieldErrors } = useEntryForm({
         hasSlug,
         hasStatuses,
         saveFn: (payload) =>
@@ -384,6 +385,7 @@ export function EntryNewPage({
                 </PageHeader>
 
                 <PageContent>
+                    <FieldErrorsProvider value={fieldErrors}>
                     <FormLayout>
                         <FormLayoutContent>
                             {/* Main column */}
@@ -530,6 +532,7 @@ export function EntryNewPage({
                             </Stack>
                         </FormLayoutContent>
                     </FormLayout>
+                    </FieldErrorsProvider>
                 </PageContent>
             </Page>
         </EntryNamespaceProvider>

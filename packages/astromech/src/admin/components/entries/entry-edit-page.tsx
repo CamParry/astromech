@@ -35,6 +35,7 @@ import {
 } from '@/admin/components/ui/index.js';
 import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal.js';
 import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer.js';
+import { FieldErrorsProvider } from '@/admin/components/fields/field-errors-context.js';
 import {
     EntryNamespaceProvider,
     namespaceForScope,
@@ -129,7 +130,7 @@ export function EntryEditPage({
         onSuccess: (newEntry) => void navigate({ to: `${basePath}/${newEntry.id}` }),
     });
 
-    const { form, saveMutation, handleSave } = useEntryForm({
+    const { form, saveMutation, handleSave, fieldErrors } = useEntryForm({
         defaultValues: {
             title: entry?.title ?? '',
             slug: entry?.slug ?? '',
@@ -287,6 +288,7 @@ export function EntryEditPage({
                             {t('permissions.readOnly')}
                         </div>
                     )}
+                    <FieldErrorsProvider value={fieldErrors}>
                     <FormLayout>
                         <FormLayoutContent>
                             <Stack gap={8}>
@@ -438,6 +440,7 @@ export function EntryEditPage({
                             </Stack>
                         </FormLayoutContent>
                     </FormLayout>
+                    </FieldErrorsProvider>
                 </PageContent>
             </Page>
         </EntryNamespaceProvider>
