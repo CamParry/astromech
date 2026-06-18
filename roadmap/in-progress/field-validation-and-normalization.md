@@ -29,11 +29,12 @@ Server-side field validation as the headline, framed as a field-system normaliza
 - [x] Retrofit the five stub fields as first consumers: `email`, `url`, `slug`, `json`, `key-value` (type-intrinsic coerce/validate in `fields/built-in-rules.ts`)
 - [x] `isUnique` handle (`entries/reads.ts`) for `{ unique: true }` fields — in-memory scan over the JSON column. Envelope `slug` keeps its ad-hoc auto-suffix `storage.uniqueSlug` (different semantics: mutate-to-unique vs reject); `isUnique` is the separate field-level primitive. JSON-indexed uniqueness is a later optimisation
 
-**P4 — Wire media / users / settings**
+**P4 — Wire media / users / settings** ✅
 
-- [ ] `media/service.ts` validates against `config.media.fields` (currently dead code)
-- [ ] `users/service.ts` validates against `config.users.fields` (currently dead code)
-- [ ] `settings/service.ts` validates against the admin page's `fields`
+- [x] `media/service.ts` validates `media.update` against `config.media.fields` (create is upload-only, no fields)
+- [x] `users/service.ts` validates `create`+`update` against `config.users.fields` (create previously dropped the fields blob — now persisted)
+- [x] `settings/service.ts` validates `set(key, value)` against the admin page's `fields` (resolved by `baseKey`; present-only to respect the global/per-locale key split)
+- [x] Shared `fields/scoped-reads.ts` (`scopedReadsFromRecords`); entries/media/users/settings reads built on it
 
 **P5 — Admin error surfacing**
 
