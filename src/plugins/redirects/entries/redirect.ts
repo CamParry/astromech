@@ -9,8 +9,8 @@ import type { EntryTypeConfig } from '@/types/index.js';
 import { tableStorage } from '@/entries/storage/table.js';
 import { redirectsTable } from '../schema/redirects.js';
 import { REDIRECT_TYPE } from '../types.js';
-import * as fields from '@/builders/fields.js';
-import * as columns from '@/builders/columns.js';
+import * as fields from '@/fields/index.js';
+import * as columns from '@/fields/columns.js';
 
 export const redirectEntryType: EntryTypeConfig = {
     type: REDIRECT_TYPE,

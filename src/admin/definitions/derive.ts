@@ -4,7 +4,7 @@ import type {
     TableColumn,
     TableDefinition,
 } from '@/types/index.js';
-import { flattenEntryFields } from '@/utilities/entry-fields.js';
+import { flattenEntryFields } from '@/fields/helpers.js';
 import { defaultCellKind } from './cell-kind-map.js';
 
 /** Resolve a field's declared type by scanning the config's field tree. */

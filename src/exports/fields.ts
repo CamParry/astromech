@@ -1,3 +1,3 @@
 /** `astromech/fields` — field & layout factories. */
 
-export * from '@/fields.js';
+export * from '@/fields/index.js';

@@ -16,7 +16,7 @@ import type {
     RichTextAllow,
 } from '@/types/index.js';
 import type { JSONContent } from '@tiptap/core';
-import { renderRichText } from '@/utilities/render-rich-text.js';
+import { renderRichText } from '@/fields/rich-text/index.js';
 
 // ============================================================================
 // Public types

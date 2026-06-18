@@ -35,7 +35,7 @@ import {
 } from '@/plugins/runtime/plugin-identity.js';
 import { registerCronJob } from '@/cron/registry.js';
 import { qualifyEntryType } from '@/entries/type-registry.js';
-import { flattenEntryFields } from '@/utilities/entry-fields.js';
+import { flattenEntryFields } from '@/fields/helpers.js';
 import { createScopedEntries } from '@/entries/scoped-entries.js';
 import { withDefaultShape } from '@/utilities/with-default-shape.js';
 import {

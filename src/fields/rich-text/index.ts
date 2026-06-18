@@ -11,7 +11,7 @@
 import { renderToHTMLString } from '@tiptap/static-renderer';
 import type { JSONContent } from '@tiptap/core';
 import type { RichTextAllow } from '@/types/fields.js';
-import { buildRichTextExtensions } from '@/utilities/rich-text-extensions.js';
+import { buildRichTextExtensions } from './extensions.js';
 
 // ============================================================================
 // Sanitization
@@ -43,14 +43,17 @@ function sanitize(html: string): string {
 
     // Style allow-list: keep only text-align and text-wrap declarations.
     // Removes the entire style attribute if nothing safe remains.
-    result = result.replace(/\sstyle\s*=\s*"([^"]*)"/gi, (_match, declarations: string) => {
-        const safe = declarations
-            .split(';')
-            .map((d) => d.trim())
-            .filter((d) => /^text-(?:align|wrap)\s*:/i.test(d))
-            .join('; ');
-        return safe.length > 0 ? ` style="${safe}"` : '';
-    });
+    result = result.replace(
+        /\sstyle\s*=\s*"([^"]*)"/gi,
+        (_match, declarations: string) => {
+            const safe = declarations
+                .split(';')
+                .map((d) => d.trim())
+                .filter((d) => /^text-(?:align|wrap)\s*:/i.test(d))
+                .join('; ');
+            return safe.length > 0 ? ` style="${safe}"` : '';
+        }
+    );
 
     return result;
 }

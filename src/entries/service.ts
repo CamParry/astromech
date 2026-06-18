@@ -54,7 +54,7 @@ import {
     runBeforeHooks,
 } from '@/plugins/runtime/plugin-runtime.js';
 import { slugify } from '@/utilities/strings.js';
-import { flattenEntryFields } from '@/utilities/entry-fields.js';
+import { flattenEntryFields } from '@/fields/helpers.js';
 import {
     applyVisibilityWithRelations,
     isPublicBranded,

@@ -1,6 +1,6 @@
 import { clsx } from 'clsx';
 import type { FieldDefinition } from '@/types/index.js';
-import { lengthStatus } from '@/utilities/field-count.js';
+import { lengthStatus } from '@/fields/helpers.js';
 
 type CountSetting = NonNullable<FieldDefinition['count']>;
 
@@ -9,13 +9,7 @@ type CountSetting = NonNullable<FieldDefinition['count']>;
  * `field.count` is set. With a range it colours under/good/over; otherwise it
  * shows the raw length.
  */
-export function FieldCount({
-    value,
-    count,
-}: {
-    value: string;
-    count: CountSetting;
-}) {
+export function FieldCount({ value, count }: { value: string; count: CountSetting }) {
     const length = value.length;
     const range = typeof count === 'object' ? count : undefined;
     const status = range ? lengthStatus(length, range) : undefined;

@@ -8,7 +8,7 @@
  */
 
 import { defineAdminPage } from '@/index.js';
-import * as fields from '@/builders/fields.js';
+import * as fields from '@/fields/index.js';
 
 export const settingsPage = defineAdminPage({
     path: '/settings',

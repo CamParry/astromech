@@ -5,7 +5,7 @@
  * built from core `text`/`textarea` fields plus a presentational preview.
  */
 
-import { group, section, text, textarea } from '@/builders/fields.js';
+import { group, section, text, textarea } from '@/fields/index.js';
 import type { FieldDefinition, Label } from '@/types/index.js';
 import { tKey } from '../manifest.js';
 import { SEO_FIELD_NAME } from '../types.js';

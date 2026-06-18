@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { JSONContent } from '@tiptap/core';
-import { renderRichText } from '@/utilities/render-rich-text.js';
+import { renderRichText } from '@/fields/rich-text/index.js';
 
 // ============================================================================
 // Helpers
@@ -208,9 +208,7 @@ describe('renderRichText — new-tab link', () => {
     it('does not add target/rel for a normal link', () => {
         const json = doc(
             paragraph(
-                text('visit', [
-                    { type: 'link', attrs: { href: 'https://example.com' } },
-                ])
+                text('visit', [{ type: 'link', attrs: { href: 'https://example.com' } }])
             )
         );
         const html = renderRichText(json);

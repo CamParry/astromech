@@ -23,6 +23,7 @@ import type { RichTextAllow } from '@/types/fields.js';
 // ============================================================================
 
 declare module '@tiptap/core' {
+    // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
     interface Commands<ReturnType> {
         textBalance: { toggleTextBalance: () => ReturnType };
     }
