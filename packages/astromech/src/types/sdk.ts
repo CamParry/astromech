@@ -13,6 +13,7 @@ import type {
     EntryQueryParams,
     EntryUpdateData,
     MediaApi,
+    NotificationsApi,
     QueryResult,
     SettingsApi,
     UsersApi,
@@ -382,6 +383,7 @@ export type AstromechClient = {
     media: MediaApi;
     settings: SettingsApi;
     users: UsersApi;
+    notifications: NotificationsApi;
     config: ResolvedConfig;
     /** Plugin RPC methods — `Astromech.plugins.<name>.<method>(input)`. */
     plugins?: PluginSdkNamespace;

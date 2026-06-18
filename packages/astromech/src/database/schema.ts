@@ -88,6 +88,16 @@ export { mediaTable, type MediaRow, type NewMediaRow } from '@/media/schema.js';
 export { settingsTable, type SettingRow, type NewSettingRow } from '@/settings/schema.js';
 
 // ============================================================================
+// Notifications (table moved to @/notifications/schema.ts — re-exported for aggregate surface)
+// ============================================================================
+
+export {
+    notificationsTable,
+    type NotificationRow,
+    type NewNotificationRow,
+} from '@/notifications/schema.js';
+
+// ============================================================================
 // Cron
 // ============================================================================
 

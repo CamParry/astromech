@@ -19,6 +19,7 @@ import { settingsRouter } from './routes/settings.js';
 import { entryTypesRouter } from './routes/entry-types.js';
 import { cronRouter } from './routes/cron.js';
 import { pluginsRouter } from './routes/plugins.js';
+import { notificationsRouter } from './routes/notifications.js';
 import { Astromech } from '@/transport/local/index.js';
 
 type AppEnv = { Variables: AuthVariables };
@@ -111,6 +112,7 @@ app.route('/users', usersRouter);
 app.route('/media', mediaRouter);
 app.route('/settings', settingsRouter);
 app.route('/entry-types', entryTypesRouter);
+app.route('/notifications', notificationsRouter);
 
 // ============================================================================
 // OpenAPI spec + Swagger UI

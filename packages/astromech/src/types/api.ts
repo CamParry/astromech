@@ -15,6 +15,7 @@ import type {
     JsonObject,
     JsonValue,
     Media,
+    Notification,
     Setting,
     User,
 } from './domain.js';
@@ -258,4 +259,17 @@ export type UsersApi = {
         data: Partial<{ email: string; name: string; fields?: JsonObject }>
     ): Promise<User>;
     delete(id: string): Promise<void>;
+};
+
+// ============================================================================
+// Notifications API (session-scoped)
+// ============================================================================
+
+export type NotificationsApi = {
+    list(params?: { unread?: boolean }): Promise<Notification[]>;
+    unreadCount(): Promise<number>;
+    markRead(id: string): Promise<void>;
+    markAllRead(): Promise<void>;
+    dismiss(id: string): Promise<void>;
+    dismissAll(): Promise<void>;
 };

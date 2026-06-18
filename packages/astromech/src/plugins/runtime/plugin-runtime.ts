@@ -29,6 +29,8 @@ import type {
 import { getDb } from '@/database/registry.js';
 import { getEmailConfig } from '@/email/registry.js';
 import { renderEmail } from '@/email/render.js';
+import { notify } from '@/notifications/index.js';
+import type { NotifyInput } from '@/types/index.js';
 import {
     pluginEntryTypes,
     resolvePluginIdentity,
@@ -332,6 +334,8 @@ export function createPluginContext(
             );
         },
         sendEmail,
+        notify: (input: NotifyInput) =>
+            notify({ ...input, type: `plugin:${identity.name}.${input.type}` }),
         logger: makeLogger(identity.name),
         env: resolveEnv(),
         emit: (event, payload) => emitEvent(event, payload, user),

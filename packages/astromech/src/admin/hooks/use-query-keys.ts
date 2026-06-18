@@ -43,6 +43,14 @@ export const queryKeys = {
         all: () => ['entry-types-meta'] as const,
         detail: (name: string) => ['entry-types-meta', 'detail', name] as const,
     },
+
+    // Notifications
+    notifications: {
+        all: () => ['notifications'] as const,
+        list: (params?: Record<string, unknown>) =>
+            ['notifications', 'list', params] as const,
+        unreadCount: () => ['notifications', 'unread-count'] as const,
+    },
 } as const;
 
 /**

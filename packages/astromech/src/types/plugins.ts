@@ -10,7 +10,7 @@ import type { ComponentType, ReactElement } from 'react';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { AdminPage, EntryTypeConfig, ResolvedConfig } from './config.js';
 import type { FieldDefinition } from './fields.js';
-import type { User } from './domain.js';
+import type { User, NotifyInput } from './domain.js';
 import type { PluginHooks } from './hooks.js';
 import type { AstromechClient } from './sdk.js';
 import type { EntriesApi } from './api.js';
@@ -59,6 +59,7 @@ export type PluginContext = {
      */
     entries: EntriesApi;
     sendEmail: (to: string, subject: string, element: ReactElement) => Promise<void>;
+    notify: (input: NotifyInput) => Promise<void>;
     logger: PluginLogger;
     /** Env vars (resolved via import.meta.env in Vite/Astro SSR). Never the browser. */
     env: Record<string, string | undefined>;
