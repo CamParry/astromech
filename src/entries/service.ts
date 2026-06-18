@@ -19,8 +19,7 @@
 import config from 'virtual:astromech/config';
 import { z } from 'zod';
 import { ValidationError } from '@/errors/validation.js';
-import { EntryTypeMismatchError, BulkOperationError } from './errors.js';
-import { CapabilityError } from '@/errors/capability.js';
+import { EntryTypeMismatchError, BulkOperationError, CapabilityError } from './errors.js';
 import {
     createEntrySchemaFor,
     updateEntrySchemaFor,

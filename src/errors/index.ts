@@ -1,3 +1,4 @@
+// Generic, cross-cutting errors only. Entry-specific errors
+// (EntryTypeMismatchError, BulkOperationError, CapabilityError) live in their
+// owning domain — import them from @/entries/errors.js.
 export { ValidationError } from './validation.js';
-export { EntryTypeMismatchError, BulkOperationError } from '@/entries/errors.js';
-export { CapabilityError } from './capability.js';

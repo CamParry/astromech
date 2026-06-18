@@ -1,3 +1,5 @@
+import type { Capability } from './storage/capabilities.js';
+
 /**
  * Thrown when an entry mutation is called with a `type` that doesn't match the
  * stored `type` of the row identified by `id`.
@@ -45,5 +47,21 @@ export class BulkOperationError extends Error {
         this.reason = args.reason;
         this.succeededBefore = args.succeededBefore;
         if (args.cause !== undefined) this.cause = args.cause;
+    }
+}
+
+/**
+ * Thrown when a route or entries-service operation is attempted on an entry type
+ * that does not support the required capability.
+ */
+export class CapabilityError extends Error {
+    public readonly capability: Capability;
+    public readonly entryType: string;
+
+    constructor(entryType: string, capability: Capability) {
+        super(`Entry type "${entryType}" does not support capability: ${capability}`);
+        this.name = 'CapabilityError';
+        this.capability = capability;
+        this.entryType = entryType;
     }
 }

@@ -9,7 +9,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createTestDb, setupTestConfig } from '@tests/harness.js';
 import { entries } from '@/entries/service.js';
-import { CapabilityError } from '@/errors/capability.js';
+import { CapabilityError } from '@/entries/errors.js';
 import type { AstromechConfig } from '@/types/index.js';
 
 // ---------------------------------------------------------------------------

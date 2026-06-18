@@ -16,14 +16,16 @@
  *
  * The kernel is the composition root and may import from any layer below it.
  *
- * KNOWN DEFERRED ENTANGLEMENTS — pre-existing edges that need code MOVES, not
- * rules, so they are intentionally NOT enforced yet (tracked as grab-bag drains):
+ * The leaves (types/utilities/errors) are now pure and enforced by
+ * `leaves-are-pure` — errors' entry-specific subclasses moved into entries/, and
+ * the only remaining leaf→domain edges (config.ts's two contract types) are
+ * type-only and carved out explicitly.
+ *
+ * KNOWN DEFERRED ENTANGLEMENT — a pre-existing edge that needs a code MOVE, not a
+ * rule, so it is intentionally NOT enforced yet (tracked as a grab-bag drain):
  *   - plugins/runtime ↔ entries   (the plugin SDK wires the entries domain)
- *   - types/ → entries, media     (a few back-referenced domain types)
- *   - utilities/ → admin          (an i18n label helper)
- *   - errors/ → entries           (entry error subclasses + storage capabilities)
- * A strict "leaves-are-pure" / "plugins-runtime-is-a-capability" rule is withheld
- * until those moves land, rather than encoding carve-outs that would ossify the smell.
+ * A strict "plugins-runtime-is-a-capability" rule is withheld until that move
+ * lands, rather than encoding a carve-out that would ossify the smell.
  *
  * PLANNED MOVE: client/ → transport/http/client/. When it lands, repoint the
  * `^src/client/` references in the admin + client rules accordingly.
@@ -67,6 +69,14 @@ module.exports = {
       to: {
         path: '^src/(entries|media|users|settings|routes|admin|client|transport|policies|kernel|codegen)/|^src/plugins/(seo|redirects|menus)/',
       },
+    },
+    {
+      name: 'leaves-are-pure',
+      comment:
+        'The pure leaves (types, utilities, errors) sit at the very bottom of the DAG: they define contracts and helpers and may import ONLY other leaves (or third-party packages) — never a domain, a capability, or an upper layer. EXEMPT: types/config.ts, the public AstromechConfig contract, which composes a couple of domain contract types (EntryStorage, ImageFormat) at the TYPE level only — no runtime coupling.',
+      severity: 'error',
+      from: { path: '^src/(types|utilities|errors)/', pathNot: '^src/types/config\\.ts$' },
+      to: { path: '^src/(?!(types|utilities|errors)/)' },
     },
     {
       name: 'admin-only-client-and-pure-leaves',
