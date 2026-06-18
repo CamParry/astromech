@@ -10,7 +10,7 @@
  */
 
 import config from 'virtual:astromech/config';
-import type { AstromechClient, TypedEntriesApi } from '@/types/index.js';
+import type { AstromechClient, NotificationsApi, TypedEntriesApi } from '@/types/index.js';
 import { usersApi } from '@/users/index.js';
 import { entries, initServerContext } from '@/entries/index.js';
 import { mediaApi } from '@/media/index.js';
@@ -25,11 +25,27 @@ export { initServerContext, setCurrentUser };
 // Assemble the Local API
 // ============================================================================
 
+const notImplemented = (): never => {
+    throw new Error(
+        '[Astromech] notifications are session-scoped and not available in the in-process SDK; use ctx.notify to emit, or the HTTP API to read.'
+    );
+};
+
+const localNotificationsApi: NotificationsApi = {
+    list: notImplemented,
+    unreadCount: notImplemented,
+    markRead: notImplemented,
+    markAllRead: notImplemented,
+    dismiss: notImplemented,
+    dismissAll: notImplemented,
+};
+
 export const Astromech: AstromechClient = {
     entries: entries as unknown as TypedEntriesApi,
     media: mediaApi,
     settings: settingsApi,
     users: usersApi,
+    notifications: localNotificationsApi,
     config,
     plugins: localPlugins,
     configure(_options: { baseUrl: string }): void {

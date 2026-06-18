@@ -148,6 +148,31 @@ export type User = {
 };
 
 // ============================================================================
+// Notifications
+// ============================================================================
+
+export type Notification = {
+    id: string;
+    userId: string;
+    type: string;
+    title: string;
+    message: string;
+    href: string | null;
+    readAt: string | null;
+    createdAt: string;
+};
+
+export type NotifyTarget = { user: string } | { role: string } | { all: true };
+
+export type NotifyInput = {
+    target: NotifyTarget;
+    type: string;
+    title: string;
+    message: string;
+    href?: string;
+};
+
+// ============================================================================
 // Settings
 // ============================================================================
 

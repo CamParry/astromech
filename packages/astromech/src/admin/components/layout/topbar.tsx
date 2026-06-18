@@ -8,7 +8,6 @@ import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui/react/menu';
 import {
-    Bell,
     CircleHelp,
     LogOut,
     Menu as MenuIcon,
@@ -24,6 +23,7 @@ import { useUI } from '../../context/ui.js';
 import { useTheme } from '../../context/theme.js';
 import { useCommandPalette } from '../ui/command-palette.js';
 import { EntryTypeIcon } from '../ui/entry-type-icon.js';
+import { NotificationBell } from './notification-bell.js';
 
 export function Topbar() {
     const { user, logout } = useAuth();
@@ -86,13 +86,7 @@ export function Topbar() {
                 </button>
 
                 {/* Notification bell */}
-                <button
-                    type="button"
-                    className="am-topbar-action-btn"
-                    aria-label={t('topbar.notificationsLabel')}
-                >
-                    <Bell size={17} />
-                </button>
+                <NotificationBell />
 
                 {/* Theme toggle */}
                 <button

@@ -21,6 +21,8 @@ import type {
     Media,
     MediaApi,
     MediaQueryParams,
+    Notification,
+    NotificationsApi,
     PluginSdkNamespace,
     ResolvedConfig,
     Setting,
@@ -638,6 +640,42 @@ const usersApi: UsersApi = {
 };
 
 // ============================================================================
+// Notifications API Implementation
+// ============================================================================
+
+const notificationsApi: NotificationsApi = {
+    async list(params?: { unread?: boolean }): Promise<Notification[]> {
+        const res = await apiFetch<{ data: Notification[] }>('/notifications', {
+            params: { unread: params?.unread },
+        });
+        return res.data;
+    },
+
+    async unreadCount(): Promise<number> {
+        const res = await apiFetch<{ data: { count: number } }>(
+            '/notifications/unread-count'
+        );
+        return res.data.count;
+    },
+
+    async markRead(id: string): Promise<void> {
+        await apiFetch<unknown>(`/notifications/${id}/read`, { method: 'POST' });
+    },
+
+    async markAllRead(): Promise<void> {
+        await apiFetch<unknown>('/notifications/read-all', { method: 'POST' });
+    },
+
+    async dismiss(id: string): Promise<void> {
+        await apiFetch<unknown>(`/notifications/${id}`, { method: 'DELETE' });
+    },
+
+    async dismissAll(): Promise<void> {
+        await apiFetch<unknown>('/notifications', { method: 'DELETE' });
+    },
+};
+
+// ============================================================================
 // Plugins API — HTTP shims to /api/plugins/{name}/{method} (RPC: POST JSON)
 //
 // Synthesised lazily by a Proxy: no name list, no codegen. The server enforces
@@ -689,6 +727,7 @@ export const Astromech: AstromechClient = {
     media: mediaApi,
     settings: settingsApi,
     users: usersApi,
+    notifications: notificationsApi,
     config: null as unknown as ResolvedConfig, // Placeholder, will be set in middleware
     plugins: pluginsApi,
     configure({ baseUrl }: { baseUrl: string }): void {
