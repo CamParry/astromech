@@ -7,8 +7,7 @@
     "workspaces": [
         "packages/astromech",
         "packages/plugins/*",
-        "apps/*",
-        "demo"
+        "apps/*"
     ],
     "scripts": {
         "dev": "npm run dev -w astromech",
@@ -25,7 +24,7 @@
         "db:migrate": "npm run db:migrate -w astromech",
         "db:push": "npm run db:push -w astromech",
         "db:seed": "npm run db:seed -w astromech",
-        "db:seed:demo": "tsx demo/seed.ts",
+        "db:seed:demo": "tsx apps/demo/seed.ts",
         "changeset": "changeset",
         "version": "changeset version",
         "release": "npm run build && changeset publish",

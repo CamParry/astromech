@@ -16,7 +16,7 @@ import { hashPassword } from 'better-auth/crypto';
 import * as schema from 'astromech/db/schema';
 
 const db = drizzle({
-    connection: { url: process.env.DATABASE_URL ?? 'file:./demo/database.db' },
+    connection: { url: process.env.DATABASE_URL ?? 'file:./apps/demo/database.db' },
 });
 
 const PASSWORD = 'password';

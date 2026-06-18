@@ -1,0 +1,143 @@
+---
+/**
+ * Single catch-all dispatcher — handles all routes for all locales.
+ *
+ * Priority:  index.astro (/) > sitemap.xml.ts > this file ([...path])
+ *
+ * Dispatch table:
+ *   []                          → HomeView
+ *   ['blog']                    → BlogList
+ *   ['blog', slug]              → PostDetail   (404 if post not found)
+ *   ['blog', 'category', slug]  → CategoryArchive (404 if not found)
+ *   ['blog', 'tag', slug]       → TagArchive   (404 if not found)
+ *   ['customers']               → CustomersList
+ *   ['customers', slug]         → CaseStudyDetail (404 if not found)
+ *   [slug]                      → PageView     (404 if page not found)
+ *   anything else               → 404
+ */
+import HomeView from '../components/views/HomeView.astro';
+import PageView from '../components/views/PageView.astro';
+import BlogList from '../components/views/BlogList.astro';
+import PostDetail from '../components/views/PostDetail.astro';
+import CategoryArchive from '../components/views/CategoryArchive.astro';
+import TagArchive from '../components/views/TagArchive.astro';
+import CustomersList from '../components/views/CustomersList.astro';
+import CaseStudyDetail from '../components/views/CaseStudyDetail.astro';
+import { LOCALES, DEFAULT_LOCALE } from '../lib/site.ts';
+import {
+    getPageBySlug,
+    getPostBySlug,
+    getCategoryBySlug,
+    getPostsByCategory,
+    getTagBySlug,
+    getPostsByTag,
+    getCaseStudyBySlug,
+} from '../lib/data.ts';
+import type { Locale } from '../lib/site.ts';
+import type { Entry } from 'astromech';
+
+const rawPath = Astro.params.path ?? '';
+const segments = rawPath.split('/').filter(Boolean);
+
+// Detect and strip a non-default locale prefix
+let locale: Locale = DEFAULT_LOCALE;
+if (
+    segments.length > 0 &&
+    (LOCALES as readonly string[]).includes(segments[0]) &&
+    segments[0] !== DEFAULT_LOCALE
+) {
+    locale = segments.shift() as Locale;
+}
+
+// ── Dispatch ────────────────────────────────────────────────────────────────
+
+type RouteResult =
+    | { view: 'home' }
+    | { view: 'blogList' }
+    | { view: 'postDetail'; slug: string; post: Entry }
+    | { view: 'categoryArchive'; category: Entry; posts: Entry[] }
+    | { view: 'tagArchive'; tag: Entry; posts: Entry[] }
+    | { view: 'customersList' }
+    | { view: 'caseStudyDetail'; slug: string; cs: Entry }
+    | { view: 'page'; page: Entry }
+    | { view: '404' };
+
+async function dispatch(segs: string[], loc: Locale): Promise<RouteResult> {
+    // home
+    if (segs.length === 0) return { view: 'home' };
+
+    // blog subtree
+    if (segs[0] === 'blog') {
+        if (segs.length === 1) return { view: 'blogList' };
+        if (segs.length === 2) {
+            const post = await getPostBySlug(segs[1], loc);
+            if (!post) return { view: '404' };
+            return { view: 'postDetail', slug: segs[1], post };
+        }
+        if (segs.length === 3 && segs[1] === 'category') {
+            const category = await getCategoryBySlug(segs[2], loc);
+            if (!category) return { view: '404' };
+            const posts = await getPostsByCategory(category.id, loc);
+            return { view: 'categoryArchive', category, posts };
+        }
+        if (segs.length === 3 && segs[1] === 'tag') {
+            const tag = await getTagBySlug(segs[2], loc);
+            if (!tag) return { view: '404' };
+            const posts = await getPostsByTag(tag.id, loc);
+            return { view: 'tagArchive', tag, posts };
+        }
+        return { view: '404' };
+    }
+
+    // customers subtree
+    if (segs[0] === 'customers') {
+        if (segs.length === 1) return { view: 'customersList' };
+        if (segs.length === 2) {
+            const cs = await getCaseStudyBySlug(segs[1], loc);
+            if (!cs) return { view: '404' };
+            return { view: 'caseStudyDetail', slug: segs[1], cs };
+        }
+        return { view: '404' };
+    }
+
+    // single-segment page
+    if (segs.length === 1) {
+        const page = await getPageBySlug(segs[0], loc);
+        if (!page) return { view: '404' };
+        return { view: 'page', page };
+    }
+
+    return { view: '404' };
+}
+
+const route = await dispatch(segments, locale);
+
+if (route.view === '404') {
+    return new Response(null, { status: 404 });
+}
+---
+
+{route.view === 'home' && <HomeView locale={locale} />}
+{route.view === 'blogList' && <BlogList locale={locale} />}
+{
+    route.view === 'postDetail' && (
+        <PostDetail locale={locale} slug={route.slug} post={route.post} />
+    )
+}
+{
+    route.view === 'categoryArchive' && (
+        <CategoryArchive locale={locale} category={route.category} posts={route.posts} />
+    )
+}
+{
+    route.view === 'tagArchive' && (
+        <TagArchive locale={locale} tag={route.tag} posts={route.posts} />
+    )
+}
+{route.view === 'customersList' && <CustomersList locale={locale} />}
+{
+    route.view === 'caseStudyDetail' && (
+        <CaseStudyDetail locale={locale} slug={route.slug} cs={route.cs} />
+    )
+}
+{route.view === 'page' && <PageView locale={locale} page={route.page} />}

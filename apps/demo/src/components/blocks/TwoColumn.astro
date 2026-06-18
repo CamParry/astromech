@@ -1,0 +1,19 @@
+---
+interface Props {
+    left?: string | null;
+    right?: string | null;
+}
+
+const { left, right } = Astro.props;
+---
+
+{
+    (left || right) && (
+        <section class="max-w-6xl mx-auto px-4 py-12">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+                {left && <div class="prose prose-gray max-w-none" set:html={left} />}
+                {right && <div class="prose prose-gray max-w-none" set:html={right} />}
+            </div>
+        </section>
+    )
+}
