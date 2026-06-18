@@ -8,7 +8,7 @@
 
 import type { ComponentType, ReactElement } from 'react';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import type { AdminPage, EntryTypeConfig, ResolvedConfig } from './config.js';
+import type { AdminPage, DbDump, EntryTypeConfig, ResolvedConfig } from './config.js';
 import type { FieldDefinition } from './fields.js';
 import type { User, NotifyInput } from './domain.js';
 import type { PluginHooks } from './hooks.js';
@@ -28,6 +28,30 @@ export type EmailTemplateOverride = {
 // ============================================================================
 // Plugin Context — unified across hooks / sdk / cron / api
 // ============================================================================
+
+/** Storage scoped to a plugin — keys are transparently namespaced under `plugin/<alias>/`. */
+export type PluginStorage = {
+    put(
+        key: string,
+        body: ReadableStream | Uint8Array,
+        opts?: { contentType?: string }
+    ): Promise<void>;
+    get(
+        key: string
+    ): Promise<{ body: ReadableStream; size: number; contentType?: string } | null>;
+    list(prefix?: string): Promise<string[]>;
+    delete(key: string): Promise<void>;
+};
+
+/** Database maintenance capabilities, feature-detected per driver. Distinct from `db` (the query instance). */
+export type PluginDatabase = {
+    dialect: string;
+    dump?(): Promise<DbDump>;
+    restore?(
+        source: ReadableStream<Uint8Array>,
+        opts: { preserve: string[] }
+    ): Promise<void>;
+};
 
 /** Logger that attributes lines to the originating plugin. */
 export type PluginLogger = {
@@ -65,6 +89,10 @@ export type PluginContext = {
     env: Record<string, string | undefined>;
     /** Fire a (typically plugin-declared) hook event. */
     emit: (event: string, payload: unknown) => Promise<void>;
+    /** Storage scoped to this plugin — keys are namespaced under `plugin/<alias>/` transparently. */
+    storage: PluginStorage;
+    /** Database maintenance capabilities (feature-detected per driver). Distinct from `db` (the query instance). */
+    database: PluginDatabase;
 };
 
 // ============================================================================

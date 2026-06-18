@@ -6,9 +6,10 @@
  * tests) without pulling in Astro types.
  */
 
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import type { AstromechConfig, ResolvedConfig } from '@/types/index.js';
 import { setDb, getDb } from '@/database/registry.js';
+import { setDatabaseDriver } from '@/database/driver-registry.js';
 import { setStorageDriver } from '@/storage/registry.js';
 import { setImageConfig } from '@/media/serving/image/registry.js';
 import { normaliseWidths } from '@/media/serving/image/url.js';
@@ -37,6 +38,7 @@ export async function initRuntime(
     resolvedConfig: ResolvedConfig
 ): Promise<void> {
     setDb(config.db.getInstance());
+    setDatabaseDriver(config.db);
     setStorageDriver(config.storage);
     if (config.image) {
         setImageConfig({
@@ -68,8 +70,8 @@ export async function runMigrations(logger: {
 }): Promise<void> {
     try {
         const { migrate } = await import('drizzle-orm/libsql/migrator');
-        // dist/kernel/boot.js — go up two levels to reach package root drizzle/
-        const migrationsFolder = fileURLToPath(new URL('../../drizzle', import.meta.url));
+        // Resolve from the app's CWD (where `astro dev` / `astro build` runs).
+        const migrationsFolder = resolve(process.cwd(), 'drizzle');
         await migrate(getDb(), { migrationsFolder });
         logger.info('Astromech database migrations applied');
     } catch (err) {

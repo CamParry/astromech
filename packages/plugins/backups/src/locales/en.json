@@ -1,0 +1,47 @@
+{
+    "backups": {
+        "pageTitle": "Backups",
+        "runNow": "Run now",
+        "alreadyRunning": "A backup is already running.",
+        "runFailed": "Backup failed to start.",
+        "loadError": "Could not load backup history.",
+        "empty": "No backups yet. Run one to get started.",
+        "noDriverBanner": "This database driver doesn't support in-app backups.",
+        "columns": {
+            "startedAt": "Started",
+            "status": "Status",
+            "trigger": "Trigger",
+            "size": "Size"
+        },
+        "status": {
+            "running": "Running",
+            "success": "Success",
+            "failed": "Failed"
+        },
+        "trigger": {
+            "scheduled": "Scheduled",
+            "manual": "Manual",
+            "pre-restore": "Pre-restore"
+        },
+        "actions": {
+            "download": "Download",
+            "restore": "Restore",
+            "delete": "Delete"
+        },
+        "sizeExpired": "—",
+        "restore": {
+            "dialogTitle": "Restore this backup?",
+            "dialogBody": "This will replace all content, settings, and users with the backup from {{date}}. A safety backup is taken automatically first so this can be undone — backup history and schedule are preserved. Any unsaved edits will be lost and you may need to refresh or sign in again.",
+            "confirmLabel": "Restore",
+            "success": "Restore complete. A page refresh is recommended.",
+            "failed": "Restore failed."
+        },
+        "delete": {
+            "dialogTitle": "Delete this backup?",
+            "dialogBody": "The backup artifact will be permanently deleted. This cannot be undone.",
+            "confirmLabel": "Delete",
+            "success": "Backup deleted.",
+            "failed": "Delete failed."
+        }
+    }
+}

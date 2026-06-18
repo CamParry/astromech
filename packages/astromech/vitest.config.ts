@@ -42,6 +42,16 @@ export default defineConfig({
             '@astromech/redirects': fileURLToPath(
                 new URL('../plugins/redirects/src/index.ts', import.meta.url)
             ),
+            // Backups plugin — subpath aliases before the bare package alias.
+            '@astromech/backups/schema': fileURLToPath(
+                new URL('../plugins/backups/src/schema/runs.ts', import.meta.url)
+            ),
+            '@astromech/backups/internals': fileURLToPath(
+                new URL('../plugins/backups/src/backup.ts', import.meta.url)
+            ),
+            '@astromech/backups': fileURLToPath(
+                new URL('../plugins/backups/src/index.ts', import.meta.url)
+            ),
             astromech: fileURLToPath(new URL('./src/exports/index.ts', import.meta.url)),
         },
     },

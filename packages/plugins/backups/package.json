@@ -1,0 +1,41 @@
+{
+    "name": "@astromech/backups",
+    "version": "0.1.0",
+    "type": "module",
+    "description": "Scheduled and on-demand database backups for Astromech.",
+    "license": "MIT",
+    "sideEffects": [
+        "**/*.css"
+    ],
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        },
+        "./schema": {
+            "types": "./dist/schema.d.ts",
+            "default": "./dist/schema.js"
+        },
+        "./admin/*": "./src/admin/*",
+        "./locales/*": "./src/locales/*"
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "files": [
+        "dist",
+        "src",
+        "README.md"
+    ],
+    "scripts": {
+        "build": "tsup",
+        "typecheck": "tsc -p tsconfig.json"
+    },
+    "peerDependencies": {
+        "astromech": "*",
+        "drizzle-orm": "*",
+        "react": "^19.0.0"
+    },
+    "devDependencies": {
+        "astromech": "*"
+    }
+}

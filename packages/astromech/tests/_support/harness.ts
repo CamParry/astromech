@@ -40,8 +40,11 @@ wireEntryAccess();
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = LibSQLDatabase<any>;
 
-// Repo-root `/drizzle` — this file lives at tests/_support/harness.ts, so two levels up.
-const MIGRATIONS_FOLDER = fileURLToPath(new URL('../../drizzle', import.meta.url));
+// Migrations now live in apps/demo/drizzle. From packages/astromech/tests/_support/
+// go up four levels to the repo root, then into apps/demo/drizzle.
+const MIGRATIONS_FOLDER = fileURLToPath(
+    new URL('../../../../apps/demo/drizzle', import.meta.url)
+);
 
 /**
  * Create a fresh in-memory database, migrate it, and register it globally.

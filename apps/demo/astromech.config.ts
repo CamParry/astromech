@@ -11,6 +11,7 @@ import * as fields from 'astromech/fields';
 import { redirects, redirectsPermissions } from '@astromech/redirects';
 import { seo, seoSection, seoPermissions } from '@astromech/seo';
 import { menus } from '@astromech/menus';
+import { backups, backupsPermissions } from '@astromech/backups';
 import { rating } from './src/plugins/rating/index.js';
 
 // ---------------------------------------------------------------------------
@@ -120,6 +121,7 @@ export default defineConfig({
     plugins: [
         redirects(),
         seo(),
+        backups(),
         menus({
             menus: [
                 { key: 'main', label: 'Main Navigation' },
@@ -135,6 +137,7 @@ export default defineConfig({
                 ...builtInRole('editor'),
                 ...seoPermissions('view'),
                 ...redirectsPermissions('manage'),
+                ...backupsPermissions('manage'),
             ],
         },
     },
