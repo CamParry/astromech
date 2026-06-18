@@ -1,6 +1,6 @@
 ---
 name: css
-description: CSS authoring rules for Astromech admin styles. Use when writing or editing any CSS file in src/admin/styles/.
+description: CSS authoring rules for Astromech admin styles. Use when writing or editing the Astromech admin CSS.
 user-invocable: false
 ---
 

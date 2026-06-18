@@ -38,13 +38,13 @@ Per CLAUDE.md, clarify before acting; for structural decisions, discuss the dire
 
 - `npm run typecheck` and `npm run lint` clean; the test suite green (same results as the phase-3 baseline).
 - `npm run build` (bump `NODE_OPTIONS` heap if the DTS worker OOMs). The demo loads the library from `dist/` — rebuild + restart the dev server before checking.
-- Admin UI: browser-verify against the demo on **port 4323** (`admin@astromech.dev` / `password`); broken SPA side-effect imports pass tsc + build and only show up in the browser. Discard test writes to `demo/database.db`.
+- Admin UI: browser-verify against the demo on **port 4323** (`admin@astromech.dev` / `password`); broken SPA side-effect imports pass tsc + build and only show up in the browser. Discard test writes to the demo database.
 - Run `/review` and `/verify`. The bar for a refactor is: same behaviour, better structure.
 
 ## 7. Close out — keep docs and terminology current
 
 - **Terminology:** update `TERMINOLOGY.md` for any term you renamed, added, or clarified.
-- **Architecture/docs:** update `ARCHITECTURE.md` if the structure or layer boundaries shifted; refresh `docs/` and `src/types/` as needed.
+- **Architecture/docs:** update `ARCHITECTURE.md` if the structure or layer boundaries shifted; refresh the docs and type definitions as needed.
 - **Roadmap:** update or tick the relevant `roadmap/` file; add `backlog.md` follow-ups.
 - **Reflect:** capture any non-obvious lesson as a memory file or skill update.
 - Commit with conventional-commit messages (`refactor:`). **Confirm with me before committing or pushing to `main`.** Check that sub-agents didn't commit with `--no-verify`.

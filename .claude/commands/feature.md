@@ -34,7 +34,7 @@ Follow this process. Don't skip phases. Stop and ask before acting whenever a re
 - Tests: use the `tester` agent (Vitest; real fixtures, never mock the DB). Add coverage for new logic and API/DB behaviour.
 - `npm run build` (bump `NODE_OPTIONS` heap if the DTS worker OOMs).
 - **The demo loads the library from `dist/`** — adapter/core changes need a rebuild + dev-server restart before they show up.
-- Admin UI changes: browser-verify against the demo on **port 4323** (`admin@astromech.dev` / `password`). tsc + library build pass even with broken SPA side-effect imports — only the browser catches those. Discard test writes to `demo/database.db` afterward.
+- Admin UI changes: browser-verify against the demo on **port 4323** (`admin@astromech.dev` / `password`). tsc + library build pass even with broken SPA side-effect imports — only the browser catches those. Discard test writes to the demo database afterward.
 - Then run `/review` (standards + spec) and `/verify` (real-app behaviour) before considering it done.
 
 ## 5. Close out — keep roadmap, docs, and specs from drifting
@@ -43,6 +43,6 @@ This is part of the feature, not optional cleanup:
 
 - **Roadmap:** tick `- [x]` sub-items; move the file to `completed/` if the feature is fully shipped, or leave in `in-progress/` with remaining boxes unchecked. Add `backlog.md` items for any follow-ups.
 - **Specs:** delete the spec if the feature shipped, and de-link every reference to it (keep the prose, drop the link/citation). Stale specs breed drift.
-- **Durable docs:** put lasting knowledge where it belongs — `src/types/`, `ARCHITECTURE.md`, `docs/`. Not in specs.
+- **Durable docs:** put lasting knowledge where it belongs — type definitions, `ARCHITECTURE.md`, the docs. Not in specs.
 - **Reflect:** anything non-obvious worth a memory file or a skill update? A focus shift is the moment to capture lessons.
 - Commit with conventional-commit messages (`feat:`/`fix:`/`refactor:`). **Confirm with me before committing or pushing to `main`.** Watch for sub-agents committing with `--no-verify` against instructions — check and fix.
