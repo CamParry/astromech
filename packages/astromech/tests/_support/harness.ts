@@ -21,6 +21,7 @@ import { usersTable } from '@/database/schema.js';
 import type { UserRow } from '@/database/schema.js';
 import { resolveConfig } from '@/kernel/config-resolver.js';
 import { setCliConfig } from '@/transport/cli/virtual-config-shim.js';
+import { setRuntimeConfig } from '@/cron/registry.js';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime.js';
 import { wireEntryAccess } from '@/entries/plugin-access.js';
 import { setCurrentUser } from '@/context/index.js';
@@ -169,6 +170,9 @@ export function setupTestConfig(
 ): ResolvedConfig {
     const resolved = resolveConfig(config);
     setCliConfig(resolved);
+    // Mirror initRuntime: the cron runner reads config from this registry, not
+    // from `virtual:astromech/config`.
+    setRuntimeConfig(resolved);
     registerPlugins(config.plugins ?? [], resolved);
     setCurrentUser(null);
     return resolved;

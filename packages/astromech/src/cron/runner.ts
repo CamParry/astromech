@@ -15,8 +15,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { Cron } from 'croner';
 import { getDb } from '@/database/registry.js';
 import { cronTable } from '@/database/schema.js';
-import { getCronJobs } from '@/cron/registry.js';
-import type { ResolvedConfig } from '@/types/index.js';
+import { getCronJobs, getRuntimeConfig } from '@/cron/registry.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = LibSQLDatabase<any>;
@@ -33,11 +32,6 @@ declare global {
 /** Next run strictly after `from`, interpreting `schedule` in `timezone`. */
 function nextRunFrom(schedule: string, from: Date, timezone: string): Date | null {
     return new Cron(schedule, { timezone }).nextRun(from) ?? null;
-}
-
-async function loadConfig(): Promise<ResolvedConfig> {
-    const { default: config } = await import('virtual:astromech/config');
-    return config as ResolvedConfig;
 }
 
 /**
@@ -75,7 +69,7 @@ async function seed(db: Db, now: Date, timezone: string): Promise<void> {
  */
 export async function runDue(now: Date): Promise<void> {
     const db = getDb();
-    const config = await loadConfig();
+    const config = getRuntimeConfig();
     const timezone = config.timezone ?? 'UTC';
 
     await seed(db, now, timezone);

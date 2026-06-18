@@ -313,6 +313,56 @@ describe('onTick / runDue', () => {
         consoleError.mockRestore();
     });
 
+    // Regression: the runner used to read config via
+    // `await import('virtual:astromech/config')`, which crashes in the plain-Node
+    // scheduler tick (ERR_UNSUPPORTED_ESM_URL_SCHEME — protocol 'virtual:'). It
+    // now reads the resolved config from the cron registry, populated at boot.
+    describe('runtime config source (no virtual: import)', () => {
+        it('10. throws a clear error when the runtime config registry is unset', async () => {
+            // Clear the registry that setupTestConfig populated in beforeEach.
+            globalThis.__astromechRuntimeConfig = undefined;
+
+            registerCronJob({
+                name: 'test-job',
+                schedule: '* * * * *',
+                handler: async () => undefined,
+            });
+
+            await expect(runDue(new Date('2024-06-01T00:00:00.000Z'))).rejects.toThrow(
+                /Runtime config not set/
+            );
+        });
+
+        it('11. honours the timezone from the runtime config registry', async () => {
+            // Daily-midnight schedule: midnight in a non-UTC zone resolves to a
+            // different absolute instant than midnight UTC, so the seeded nextRun
+            // proves the runner read `timezone` from the registry config.
+            setupTestConfig({ ...makeTestConfig(), timezone: 'America/New_York' });
+
+            const now = new Date('2024-06-01T12:00:00.000Z');
+            registerCronJob({
+                name: 'test-job',
+                schedule: '0 0 * * *',
+                handler: async () => undefined,
+            });
+
+            await onTick(now);
+
+            const db = (await import('@/database/registry.js')).getDb();
+            const row = singleRow(await db.select().from(cronTable));
+
+            const expectedNext = new Cron('0 0 * * *', {
+                timezone: 'America/New_York',
+            }).nextRun(now);
+            const utcNext = new Cron('0 0 * * *', { timezone: 'UTC' }).nextRun(now);
+
+            expect(expectedNext).not.toBeNull();
+            expect(toSecond(row.nextRun as Date)).toBe(toSecond(expectedNext as Date));
+            // Sanity: the two zones genuinely differ, so this asserts something.
+            expect(toSecond(expectedNext as Date)).not.toBe(toSecond(utcNext as Date));
+        });
+    });
+
     it('9. missed run fires once, no backfill; second tick skips', async () => {
         const now = new Date('2024-06-01T12:00:00.000Z');
         let callCount = 0;

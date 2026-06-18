@@ -23,7 +23,11 @@ import { registerBuiltInEntryJobs } from '@/entries/jobs/index.js';
 // port BEFORE registerPlugins runs. Like the jobs sub-barrel above, this module
 // is service-free, so the integration's plain-Node config load stays safe.
 import { wireEntryAccess } from '@/entries/plugin-access.js';
-import { setSchedulerDriver, getSchedulerDriver } from '@/cron/registry.js';
+import {
+    setSchedulerDriver,
+    getSchedulerDriver,
+    setRuntimeConfig,
+} from '@/cron/registry.js';
 import { nodeDriver } from '@/cron/drivers/index.js';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime.js';
 import { onTick } from '@/cron/runner.js';
@@ -47,6 +51,10 @@ export async function initRuntime(
     }
     registerBuiltInEntryJobs();
     setSchedulerDriver(config.scheduler ?? nodeDriver);
+    // Stash the resolved config so the cron runner reads it from the registry
+    // instead of importing `virtual:astromech/config` (which the plain-Node
+    // scheduler tick cannot resolve).
+    setRuntimeConfig(resolvedConfig);
     wireEntryAccess();
     registerPlugins(config.plugins ?? [], resolvedConfig);
     await bootPlugins(config.plugins ?? []);

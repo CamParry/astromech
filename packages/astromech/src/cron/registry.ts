@@ -51,3 +51,28 @@ export function setSchedulerDriver(driver: SchedulerDriver): void {
 export function getSchedulerDriver(): SchedulerDriver | null {
     return globalThis.__astromechScheduler ?? null;
 }
+
+declare global {
+    var __astromechRuntimeConfig: ResolvedConfig | undefined;
+}
+
+/**
+ * Stash the resolved config at boot so the cron runner can read it WITHOUT
+ * importing `virtual:astromech/config`. The node scheduler driver ticks in
+ * plain Node (detached from any Vite request context), where `virtual:` does
+ * not resolve — see the cron runner. globalThis-backed so the value set during
+ * the integration's plain-Node boot is visible to the SSR module graph and the
+ * detached timer alike.
+ */
+export function setRuntimeConfig(config: ResolvedConfig): void {
+    globalThis.__astromechRuntimeConfig = config;
+}
+
+export function getRuntimeConfig(): ResolvedConfig {
+    if (!globalThis.__astromechRuntimeConfig) {
+        throw new Error(
+            '[astromech/cron] Runtime config not set. initRuntime() must run before the scheduler ticks.'
+        );
+    }
+    return globalThis.__astromechRuntimeConfig;
+}
