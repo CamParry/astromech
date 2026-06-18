@@ -9,7 +9,7 @@ import {
 import { sharp } from 'astromech/images/sharp';
 import * as fields from 'astromech/fields';
 import { redirects, redirectsPermissions } from '@astromech/redirects';
-import { seo, seoSection, seoPermissions } from 'astromech/plugins/seo';
+import { seo, seoSection, seoPermissions } from '@astromech/seo';
 import { menus } from '@astromech/menus';
 import { rating } from './src/plugins/rating/index.js';
 

@@ -5,8 +5,8 @@
  * built from core `text`/`textarea` fields plus a presentational preview.
  */
 
-import { group, section, text, textarea } from '@/fields/index.js';
-import type { FieldDefinition, Label } from '@/types/index.js';
+import { group, section, text, textarea } from 'astromech/fields';
+import type { FieldDefinition, Label } from 'astromech';
 import { tKey } from '../manifest.js';
 import { SEO_FIELD_NAME } from '../types.js';
 import { SEO_DESCRIPTION_RANGE, SEO_TITLE_RANGE } from '../utilities/length.js';

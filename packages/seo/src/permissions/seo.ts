@@ -6,8 +6,8 @@
  *   roles: { editor: { permissions: [...seoPermissions('view')] } }
  */
 
-import { definePermissionBundles } from '@/index.js';
-import type { PluginPermission } from '@/types/index.js';
+import { definePermissionBundles } from 'astromech';
+import type { PluginPermission } from 'astromech';
 import { PACKAGE } from '../manifest.js';
 
 export const seoPermissions = definePermissionBundles(PACKAGE, {

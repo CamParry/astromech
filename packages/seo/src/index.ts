@@ -7,8 +7,8 @@
  * app renders `/sitemap.xml` and meta tags itself — see the README recipes.
  */
 
-import { definePlugin } from '@/index.js';
-import type { PluginDefinition, SdkInterface } from '@/types/index.js';
+import { definePlugin } from 'astromech';
+import type { PluginDefinition, SdkInterface } from 'astromech';
 import { PACKAGE, VERSION, LABEL, ICON, locales } from './manifest.js';
 import { seoPermissionDefs } from './permissions/seo.js';
 import { seoPreviewField } from './fields/seo-preview.js';

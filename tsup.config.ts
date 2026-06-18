@@ -21,7 +21,6 @@ export default defineConfig([
             'admin/components/fields/index': 'src/exports/admin/ui-fields.ts',
             'db/plugin-helpers': 'src/exports/plugin-helpers.ts',
             'email/index': 'src/exports/email.ts',
-            'plugins/seo/index': 'src/exports/plugins/seo.ts',
             'images/drivers/sharp': 'src/exports/image-sharp.ts',
             'images/drivers/cloudflare': 'src/exports/image-cloudflare.ts',
             'storage/drivers/r2': 'src/exports/storage-r2.ts',

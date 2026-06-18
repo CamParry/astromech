@@ -4,9 +4,8 @@
  * hand-written, so there are no scattered namespace or path strings.
  */
 
-import { derivePluginName, pluginAssetRoot, sanitisePackage } from '@/plugins/runtime/plugin-identity.js';
-import { t as labelKey } from '@/utilities/labels.js';
-import type { MessageDescriptor } from '@/types/index.js';
+import { derivePluginName, sanitisePackage, t as labelKey } from 'astromech/plugin-kit';
+import type { MessageDescriptor } from 'astromech';
 
 export const PACKAGE = '@astromech/seo';
 export const VERSION = '0.1.0';
@@ -18,7 +17,12 @@ export const ALIAS = derivePluginName(PACKAGE);
 /** `astromech-seo` */
 export const PERMISSION_NAMESPACE = sanitisePackage(PACKAGE);
 
-const ASSET_ROOT = pluginAssetRoot(ALIAS);
+/**
+ * Asset-specifier root. A graduated package serves its admin assets from its
+ * own published subpaths, so this is the package name itself (`@astromech/seo`)
+ * rather than the in-tree `@/plugins/seo` root.
+ */
+const ASSET_ROOT = PACKAGE;
 
 /** Module specifier for a bundled admin asset, e.g. `asset('admin/pages/overview-page.tsx')`. */
 export function asset(path: string): string {

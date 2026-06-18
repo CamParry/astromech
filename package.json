@@ -87,10 +87,6 @@
             "types": "./dist/email/index.d.ts",
             "default": "./dist/email/index.js"
         },
-        "./plugins/seo": {
-            "types": "./dist/plugins/seo/index.d.ts",
-            "default": "./dist/plugins/seo/index.js"
-        },
         "./ui/fields": {
             "types": "./dist/admin/components/fields/index.d.ts",
             "default": "./dist/admin/components/fields/index.js"
@@ -115,7 +111,7 @@
     ],
     "scripts": {
         "dev": "tsup --watch",
-        "build": "tsup && npm run build -w @astromech/menus -w @astromech/redirects",
+        "build": "tsup && npm run build -w @astromech/menus -w @astromech/redirects -w @astromech/seo",
         "typecheck": "tsc -p tsconfig.test.json",
         "lint": "eslint src",
         "lint:deps": "depcruise src scripts demo/seed.ts packages --config .dependency-cruiser.cjs",

@@ -4,7 +4,7 @@
  * `admin/pages/overview-page.tsx`; this is its admin-page registration.
  */
 
-import { defineAdminPage } from '@/index.js';
+import { defineAdminPage } from 'astromech';
 import { asset } from '../manifest.js';
 
 export const overviewPage = defineAdminPage({

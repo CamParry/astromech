@@ -1,0 +1,36 @@
+{
+    "name": "@astromech/seo",
+    "version": "0.1.0",
+    "type": "module",
+    "description": "Search metadata, sitemap and SEO health dashboard for Astromech.",
+    "license": "MIT",
+    "sideEffects": [
+        "**/*.css"
+    ],
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        },
+        "./admin/*": "./src/admin/*",
+        "./locales/*": "./src/locales/*"
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "files": [
+        "dist",
+        "src",
+        "README.md"
+    ],
+    "scripts": {
+        "build": "tsup && tsc -p tsconfig.json",
+        "typecheck": "tsc -p tsconfig.json"
+    },
+    "peerDependencies": {
+        "astromech": "*",
+        "react": "^19.0.0"
+    },
+    "devDependencies": {
+        "astromech": "file:../.."
+    }
+}

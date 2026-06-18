@@ -4,9 +4,9 @@
  * without a `url` are skipped, so the plugin never guesses a path.
  */
 
-import type { Entry, PluginContext } from '@/types/index.js';
-import { defineServiceMethod } from '@/index.js';
-import { resolveEntryPath } from '@/entries/url.js';
+import type { Entry, PluginContext } from 'astromech';
+import { defineServiceMethod } from 'astromech';
+import { resolveEntryPath } from 'astromech/plugin-kit';
 import { PERMISSION_NAMESPACE } from '../manifest.js';
 import { SEO_FIELD_NAME } from '../types.js';
 import type {

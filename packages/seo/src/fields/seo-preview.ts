@@ -4,7 +4,7 @@
  * `null` to omit it from generated entry `Fields` types.
  */
 
-import type { PluginFieldTypeRegistration } from '@/types/index.js';
+import type { PluginFieldTypeRegistration } from 'astromech';
 import { asset } from '../manifest.js';
 
 export const seoPreviewField: PluginFieldTypeRegistration = {

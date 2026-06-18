@@ -7,8 +7,8 @@
  * in the core settings table.
  */
 
-import { defineAdminPage } from '@/index.js';
-import * as fields from '@/fields/index.js';
+import { defineAdminPage } from 'astromech';
+import * as fields from 'astromech/fields';
 
 export const settingsPage = defineAdminPage({
     path: '/settings',

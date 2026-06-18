@@ -26,11 +26,17 @@ export default function SeoPreviewField(_props: BaseFieldProps): React.ReactElem
     return (
         <div className="am-seo-preview" aria-hidden="true">
             <p
-                className={['am-seo-preview-title', title ? '' : 'am-seo-preview--placeholder']
+                className={[
+                    'am-seo-preview-title',
+                    title ? '' : 'am-seo-preview--placeholder',
+                ]
                     .filter(Boolean)
                     .join(' ')}
             >
-                {truncate(title || t('field.previewTitlePlaceholder'), SEO_TITLE_RANGE.max)}
+                {truncate(
+                    title || t('field.previewTitlePlaceholder'),
+                    SEO_TITLE_RANGE.max
+                )}
             </p>
             <p
                 className={[
