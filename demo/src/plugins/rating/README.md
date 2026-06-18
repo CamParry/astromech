@@ -6,7 +6,7 @@ component overview page, an auto-rendered settings form, localized strings, and
 a permission bundle.
 
 It is structured exactly like a first-party plugin — see
-[`docs/plugins/authoring.md`](../../../../docs/plugins/authoring.md) for the
+[`apps/docs/plugins/authoring.md`](../../../../apps/docs/plugins/authoring.md) for the
 canonical convention — with one difference: it lives in the demo app rather than
 the published package, so it imports from `astromech` and resolves assets via
 `fileURLToPath` instead of published module specifiers.

@@ -1,0 +1,7 @@
+{
+    "name": "@astromech/docs",
+    "version": "0.0.1",
+    "type": "module",
+    "private": true,
+    "description": "Astromech documentation site (markdown for now; Astro site later)"
+}

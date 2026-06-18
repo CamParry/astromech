@@ -6,7 +6,7 @@ the code, the types (`src/types/`), and the design docs (`specs/`). When this
 file and the code disagree, the code wins — fix this file.
 
 > User-facing guides (configuring a project, modelling content, writing plugins)
-> belong in `docs/`, not here.
+> belong in `apps/docs/`, not here.
 
 ## What it is
 
@@ -145,7 +145,7 @@ schema changes" (migration-neutrality).
 
 ## Further reading
 
-- **`docs/`** — user-facing guides (currently plugin authoring); grows over time.
+- **`apps/docs/`** — user-facing guides (currently plugin authoring); grows over time.
 - **`src/types/`** — the data model, config shape, field/permission/hook types.
   If you want the precise contract, read these rather than prose.
 - **`.claude/skills/code`** — coding conventions (naming, TS rules, imports).

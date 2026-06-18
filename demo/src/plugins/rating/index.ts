@@ -7,7 +7,7 @@
  * permissions / fields / pages / a thin `index`), but authored as an *external*
  * plugin: it imports from the published `astromech` package and resolves assets
  * via `fileURLToPath` (see `manifest.ts`) rather than published module
- * specifiers. See `docs/plugins/authoring.md` for the full convention.
+ * specifiers. See `apps/docs/plugins/authoring.md` for the full convention.
  */
 
 import { definePlugin } from 'astromech';

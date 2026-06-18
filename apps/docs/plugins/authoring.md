@@ -19,10 +19,10 @@ import type { PluginDefinition } from 'astromech';
 
 export const myPlugin = definePlugin(() => {
     const definition: PluginDefinition = {
-        package: 'my-plugin',   // canonical name — survives renames
+        package: 'my-plugin', // canonical name — survives renames
         version: '1.0.0',
-        label: 'My Plugin',     // admin sidebar group + page-title prefix
-        icon: 'Puzzle',         // Lucide icon name
+        label: 'My Plugin', // admin sidebar group + page-title prefix
+        icon: 'Puzzle', // Lucide icon name
         // ...surfaces...
     };
     return definition;
@@ -98,10 +98,10 @@ import type { PluginFieldTypeRegistration } from 'astromech';
 import { asset } from '../manifest.js';
 
 export const ratingField: PluginFieldTypeRegistration = {
-    type: 'rating',                       // build error if it collides
+    type: 'rating', // build error if it collides
     component: asset('fields/rating-field.tsx'),
     defaultValue: 0,
-    typeGen: () => 'number',              // TS type in generated Fields interfaces
+    typeGen: () => 'number', // TS type in generated Fields interfaces
 };
 ```
 
@@ -134,7 +134,7 @@ export const overviewPage = defineAdminPage({
     label: 'Overview',
     icon: 'ChartBar',
     component: asset('pages/overview-page.tsx'),
-    permission: 'view',          // a bare key → plugin:<namespace>:view
+    permission: 'view', // a bare key → plugin:<namespace>:view
 });
 ```
 
