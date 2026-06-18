@@ -26,7 +26,7 @@ import type {
     ResolvedPluginIdentity,
     User,
 } from '@/types/index.js';
-import { getDb } from '@/db/registry.js';
+import { getDb } from '@/database/registry.js';
 import { getEmailConfig } from '@/email/registry.js';
 import { renderEmail } from '@/email/render.js';
 import {

@@ -10,7 +10,7 @@ import {
     setSchedulerDriver,
     getSchedulerDriver,
 } from '@/cron/registry.js';
-import { cronTable } from '@/db/schema.js';
+import { cronTable } from '@/database/schema.js';
 import { handleScheduled } from '@/cron/index.js';
 import { nodeDriver } from '@/cron/drivers/index.js';
 import { runDue } from '@/cron/runner.js';
@@ -55,7 +55,7 @@ describe('handleScheduled', () => {
         await runDue(seedTime);
 
         // Manually set nextRun to a past date so the job is due.
-        const db = (await import('@/db/registry.js')).getDb();
+        const db = (await import('@/database/registry.js')).getDb();
         const past = new Date(seedTime.getTime() - 60_000);
         await db
             .update(cronTable)

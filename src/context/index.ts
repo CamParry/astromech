@@ -7,7 +7,7 @@
  */
 
 import config from 'virtual:astromech/config';
-import { getDb } from '@/db/registry.js';
+import { getDb } from '@/database/registry.js';
 import type { User } from '@/types/index.js';
 
 let currentUser: User | null = null;

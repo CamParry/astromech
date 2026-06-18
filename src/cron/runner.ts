@@ -13,8 +13,8 @@
 import { and, eq, isNull, lte, or } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { Cron } from 'croner';
-import { getDb } from '@/db/registry.js';
-import { cronTable } from '@/db/schema.js';
+import { getDb } from '@/database/registry.js';
+import { cronTable } from '@/database/schema.js';
 import { getCronJobs } from '@/cron/registry.js';
 import type { ResolvedConfig } from '@/types/index.js';
 

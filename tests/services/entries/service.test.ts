@@ -15,8 +15,8 @@ import { defineHook } from '@/index.js';
 import { eq } from 'drizzle-orm';
 import { createTestDb, registerTestPlugins, setupTestConfig } from '@tests/harness.js';
 import { Astromech } from '@/transport/local/index.js';
-import { getDb } from '@/db/registry.js';
-import { entriesTable, relationshipsTable } from '@/db/schema.js';
+import { getDb } from '@/database/registry.js';
+import { entriesTable, relationshipsTable } from '@/database/schema.js';
 import type { Entry, PluginDefinition } from '@/types/index.js';
 
 const api = Astromech.entries;
@@ -102,7 +102,9 @@ describe('get', () => {
     });
 
     it('returns null for a missing id', async () => {
-        expect(await api.get({ type: 'post', id: 'does-not-exist', full: true })).toBeNull();
+        expect(
+            await api.get({ type: 'post', id: 'does-not-exist', full: true })
+        ).toBeNull();
     });
 
     it('returns null when the id exists but the type mismatches', async () => {
@@ -149,8 +151,18 @@ describe('query', () => {
     });
 
     it('search matches title (LIKE) and not field content', async () => {
-        await api.create({ type: 'post', title: 'Findme', status: 'published', fields: { body: 'hidden' } });
-        await api.create({ type: 'post', title: 'Other', status: 'published', fields: { body: 'findme' } });
+        await api.create({
+            type: 'post',
+            title: 'Findme',
+            status: 'published',
+            fields: { body: 'hidden' },
+        });
+        await api.create({
+            type: 'post',
+            title: 'Other',
+            status: 'published',
+            fields: { body: 'findme' },
+        });
 
         const byTitle = await api.query({ type: 'post', search: 'Findme' });
         expect(byTitle.data).toHaveLength(1);
@@ -174,7 +186,11 @@ describe('query', () => {
         await api.create({ type: 'post', title: 'Draft' });
         await api.create({ type: 'post', title: 'Pub', status: 'published' });
         // In full shape, we can see all statuses; where narrows further
-        const res = await api.query({ type: 'post', full: true, where: { status: 'published' } });
+        const res = await api.query({
+            type: 'post',
+            full: true,
+            where: { status: 'published' },
+        });
         expect(res.data.map((e) => e.title)).toEqual(['Pub']);
     });
 
@@ -191,7 +207,12 @@ describe('query', () => {
     });
 
     it('filters by locale and returns all locales with the all sentinel', async () => {
-        const en = await api.create({ type: 'post', title: 'EN', locale: 'en', status: 'published' });
+        const en = await api.create({
+            type: 'post',
+            title: 'EN',
+            locale: 'en',
+            status: 'published',
+        });
         await api.create({
             type: 'post',
             title: 'DE',
@@ -579,7 +600,11 @@ describe('relationships', () => {
     });
 
     it('populate hydrates relationship targets into fields', async () => {
-        const target = await api.create({ type: 'post', title: 'Target', status: 'published' });
+        const target = await api.create({
+            type: 'post',
+            title: 'Target',
+            status: 'published',
+        });
         const src = await api.create({
             type: 'post',
             title: 'Source',

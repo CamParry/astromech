@@ -8,7 +8,7 @@
 
 import { fileURLToPath } from 'node:url';
 import type { AstromechConfig, ResolvedConfig } from '@/types/index.js';
-import { setDb, getDb } from '@/db/registry.js';
+import { setDb, getDb } from '@/database/registry.js';
 import { setStorageDriver } from '@/storage/registry.js';
 import { setImageConfig } from '@/media/serving/image/registry.js';
 import { normaliseWidths } from '@/media/serving/image/url.js';

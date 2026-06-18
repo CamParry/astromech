@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config.js';
-import { getDb } from '@/db/registry.js';
+import { getDb } from '@/database/registry.js';
 import { sql } from 'drizzle-orm';
 
 export default defineCommand({
@@ -12,9 +12,11 @@ export default defineCommand({
         await loadConfig(args.config);
         const db = getDb();
         try {
-            const rows = await db.run(sql`SELECT * FROM __drizzle_migrations ORDER BY created_at`);
+            const rows = await db.run(
+                sql`SELECT * FROM __drizzle_migrations ORDER BY created_at`
+            );
             console.log('Applied migrations:');
-            for (const row of (rows.rows ?? [])) {
+            for (const row of rows.rows ?? []) {
                 console.log(`  ${(row as Record<string, unknown>)['hash']}`);
             }
         } catch {

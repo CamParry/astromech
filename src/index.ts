@@ -26,8 +26,8 @@ export { ResendDriver } from '@/email/drivers/resend.js';
 export type { ResendDriverOptions } from '@/email/drivers/resend.js';
 export { SmtpDriver } from '@/email/drivers/smtp.js';
 export type { SmtpDriverOptions } from '@/email/drivers/smtp.js';
-export { libsqlDriver } from '@/db/drivers/libsql.js';
-export { d1Driver } from '@/db/drivers/d1.js';
+export { libsqlDriver } from '@/database/drivers/libsql.js';
+export { d1Driver } from '@/database/drivers/d1.js';
 export { runScheduledJobs } from '@/cron/index.js';
 export {
     builtInRole,

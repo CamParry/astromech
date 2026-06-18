@@ -2,8 +2,8 @@ import { eq, and, asc, desc, like, or, count } from 'drizzle-orm';
 import type { AnyColumn } from 'drizzle-orm';
 import { z } from 'zod';
 import { usersTable } from './schema.js';
-import { getDb } from '@/db/registry.js';
-import { RelationshipsRepository } from '@/db/repositories/relationships.js';
+import { getDb } from '@/database/registry.js';
+import { RelationshipsRepository } from '@/database/repositories/relationships.js';
 import type {
     JsonObject,
     User,

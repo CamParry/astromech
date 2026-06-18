@@ -1,7 +1,7 @@
 import { betterAuth } from 'better-auth';
 import type { Auth, BetterAuthOptions } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { getDb } from '@/db/registry.js';
+import { getDb } from '@/database/registry.js';
 import * as schema from './schema.js';
 
 const apiRoute = process.env.ASTROMECH_API_ROUTE ?? '/api';

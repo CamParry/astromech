@@ -25,7 +25,8 @@ export function libsqlDriver(options?: LibSQLDriverOptions) {
         type: 'libsql' as const,
         getInstance(): LibSQLDatabase {
             if (!instance) {
-                const url = options?.url ?? process.env.DATABASE_URL ?? 'file:./database.db';
+                const url =
+                    options?.url ?? process.env.DATABASE_URL ?? 'file:./database.db';
                 const authToken = options?.authToken ?? process.env.DATABASE_AUTH_TOKEN;
 
                 instance = drizzle({

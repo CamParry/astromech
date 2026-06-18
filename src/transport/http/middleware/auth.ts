@@ -8,8 +8,8 @@
 import { createMiddleware } from 'hono/factory';
 import { eq } from 'drizzle-orm';
 import { auth } from '@/users/index.js';
-import { getDb } from '@/db/registry.js';
-import { usersTable } from '@/db/schema.js';
+import { getDb } from '@/database/registry.js';
+import { usersTable } from '@/database/schema.js';
 import { Astromech } from '@/transport/local/index.js';
 import { resolveRole } from '@/policies/permissions/permissions.js';
 import { unauthorized } from './errors.js';

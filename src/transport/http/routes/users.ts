@@ -23,8 +23,8 @@ import {
 } from '@/transport/http/middleware/errors.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import { withPermissions } from '@/policies/permissions/with-permissions.js';
-import { getDb } from '@/db/registry.js';
-import { usersTable } from '@/db/schema.js';
+import { getDb } from '@/database/registry.js';
+import { usersTable } from '@/database/schema.js';
 import { createUserSchema, updateUserSchema, usersDescriptors } from '@/users/index.js';
 import type { JsonObject, UserQueryParams } from '@/types/index.js';
 

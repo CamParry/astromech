@@ -9,7 +9,7 @@ import {
     relationshipsTable,
     type RelationshipRow,
     type NewRelationshipRow,
-} from '@/db/schema';
+} from '@/database/schema';
 import type { ResourceType } from '@/types/index.js';
 
 export class RelationshipsRepository {
@@ -39,7 +39,11 @@ export class RelationshipsRepository {
             .insert(relationshipsTable)
             .values(relationship)
             .returning();
-        return result[0]!;
+        const created = result[0];
+        if (!created) {
+            throw new Error('Failed to create relationship: insert returned no row');
+        }
+        return created;
     }
 
     /**
@@ -95,7 +99,8 @@ export class RelationshipsRepository {
         orderedTargetIds: string[]
     ): Promise<void> {
         for (let i = 0; i < orderedTargetIds.length; i++) {
-            const targetId = orderedTargetIds[i]!;
+            const targetId = orderedTargetIds[i];
+            if (targetId === undefined) continue;
             await this.db
                 .update(relationshipsTable)
                 .set({ position: i })
@@ -209,11 +214,13 @@ export class RelationshipsRepository {
 
         // Create new relationships
         for (let i = 0; i < targetIds.length; i++) {
+            const targetId = targetIds[i];
+            if (targetId === undefined) continue;
             await this.create({
                 sourceId,
                 sourceType,
                 name,
-                targetId: targetIds[i]!,
+                targetId,
                 targetType,
                 position: i,
             });

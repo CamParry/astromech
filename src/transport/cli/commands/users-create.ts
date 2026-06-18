@@ -1,7 +1,7 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config.js';
-import { getDb } from '@/db/registry.js';
-import { usersTable, accountsTable } from '@/db/schema.js';
+import { getDb } from '@/database/registry.js';
+import { usersTable, accountsTable } from '@/database/schema.js';
 
 export default defineCommand({
     meta: { name: 'users:create', description: 'Create a new user' },
@@ -20,10 +20,13 @@ export default defineCommand({
 
         if (!name || !email || !password) {
             const readline = await import('node:readline/promises');
-            const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-            name = name || await rl.question('Name: ');
-            email = email || await rl.question('Email: ');
-            password = password || await rl.question('Password: ');
+            const rl = readline.createInterface({
+                input: process.stdin,
+                output: process.stdout,
+            });
+            name = name || (await rl.question('Name: '));
+            email = email || (await rl.question('Email: '));
+            password = password || (await rl.question('Password: '));
             rl.close();
         }
 

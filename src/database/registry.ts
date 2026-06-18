@@ -11,7 +11,6 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 type AnyDb = LibSQLDatabase<any>;
 
 declare global {
-    // eslint-disable-next-line no-var
     var __astromechDb: AnyDb | undefined;
 }
 

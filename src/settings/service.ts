@@ -9,7 +9,7 @@
  */
 
 import config from 'virtual:astromech/config';
-import { getDb } from '@/db/registry.js';
+import { getDb } from '@/database/registry.js';
 import { settingsTable } from './schema.js';
 import type { JsonValue, Setting, SettingsApi } from '@/types/index.js';
 import { mergeLocaleSetting } from './page-values.js';

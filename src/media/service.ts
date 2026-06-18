@@ -3,10 +3,10 @@ import type { SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { mediaTable } from './schema.js';
 import type { MediaRow } from './schema.js';
-import { getDb } from '@/db/registry.js';
+import { getDb } from '@/database/registry.js';
 import { getStorageDriver } from '@/storage/registry.js';
 import { deletePrefix } from '@/storage/prefix.js';
-import { RelationshipsRepository } from '@/db/repositories/relationships.js';
+import { RelationshipsRepository } from '@/database/repositories/relationships.js';
 import type {
     Media,
     JsonObject,

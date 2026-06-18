@@ -28,7 +28,7 @@ import { and, asc, count, desc, eq, inArray, like, or, sql } from 'drizzle-orm';
 import { getTableColumns } from 'drizzle-orm';
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { getDb } from '@/db/registry.js';
+import { getDb } from '@/database/registry.js';
 import type { JsonObject } from '@/types/index.js';
 import type {
     EntryRecord,

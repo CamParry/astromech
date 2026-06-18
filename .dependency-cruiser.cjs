@@ -10,7 +10,7 @@
  *   policies                                       permission / confirmation wrappers
  *   plugins/{seo,redirects,menus}                  first-party plugins
  *   entries · media · users · settings             domains — siblings, never import each other
- *   plugins/runtime · db · storage · email ·       capabilities
+ *   plugins/runtime · database · storage · email ·  capabilities
  *     cron · context · fields
  *   types · utilities · errors                     pure leaves
  *
@@ -33,7 +33,7 @@ module.exports = {
     {
       name: 'domain-no-peer-imports',
       comment:
-        'Domains are siblings in a DAG: entries/media/users/settings must never import one another. The ONLY exception is a schema.ts FK cross-reference (e.g. a createdBy column referencing usersTable) — schema files are excluded as sources. Everything else routes through the @/db/schema aggregate or a shared capability.',
+        'Domains are siblings in a DAG: entries/media/users/settings must never import one another. The ONLY exception is a schema.ts FK cross-reference (e.g. a createdBy column referencing usersTable) — schema files are excluded as sources. Everything else routes through the @/database/schema aggregate or a shared capability.',
       severity: 'error',
       from: { path: '^src/(entries|media|users|settings)/', pathNot: '/schema\\.ts$' },
       to: { path: '^src/(entries|media|users|settings)/', pathNot: '^src/$1/' },
@@ -59,11 +59,11 @@ module.exports = {
       },
     },
     {
-      name: 'db-no-upward-except-aggregate',
+      name: 'database-no-upward-except-aggregate',
       comment:
-        'The db capability must not import domains or upper layers — EXCEPT db/schema.ts, the table aggregator that re-exports each domain schema to keep the `astromech/db/schema` public surface intact. Every other db/ file stays below the domains.',
+        'The database capability must not import domains or upper layers — EXCEPT database/schema.ts, the table aggregator that re-exports each domain schema to keep the `astromech/db/schema` public surface intact (the public subpath stays `db/`; only the source dir is `database/`). Every other database/ file stays below the domains.',
       severity: 'error',
-      from: { path: '^src/db/', pathNot: '^src/db/schema\\.ts$' },
+      from: { path: '^src/database/', pathNot: '^src/database/schema\\.ts$' },
       to: {
         path: '^src/(entries|media|users|settings|routes|admin|client|transport|policies|kernel|codegen)/|^src/plugins/(seo|redirects|menus)/',
       },
@@ -75,7 +75,7 @@ module.exports = {
       severity: 'error',
       from: { path: '^src/admin/' },
       to: {
-        path: '^src/(entries|media|users|settings)/|^src/(storage|email|cron|context|db|policies|transport|kernel)/|^src/plugins/runtime/',
+        path: '^src/(entries|media|users|settings)/|^src/(storage|email|cron|context|database|policies|transport|kernel)/|^src/plugins/runtime/',
         pathNot:
           '^src/entries/(url|type-registry)\\.(ts|js)$|^src/settings/page-values\\.(ts|js)$',
       },
@@ -87,7 +87,7 @@ module.exports = {
       severity: 'error',
       from: { path: '^src/client/' },
       to: {
-        path: '^src/(entries|media|users|settings|storage|email|cron|context|db|policies|transport|kernel|admin)/',
+        path: '^src/(entries|media|users|settings|storage|email|cron|context|database|policies|transport|kernel|admin)/',
       },
     },
     {
@@ -128,7 +128,7 @@ module.exports = {
         'Cyclic dependencies break the acyclic layer graph and tree-shaking. Scoped to the clean capability/delivery spine; domains and plugins/runtime are excluded until the known plugins/runtime↔entries entanglement is untangled.',
       severity: 'warn',
       from: {
-        path: '^src/(storage|email|cron|context|fields|db|policies|transport|client|kernel)/',
+        path: '^src/(storage|email|cron|context|fields|database|policies|transport|client|kernel)/',
       },
       to: { circular: true },
     },

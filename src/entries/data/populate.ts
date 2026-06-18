@@ -5,12 +5,12 @@
 
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Entry, FieldDefinition, JsonValue } from '@/types/index.js';
-import { RelationshipsRepository } from '@/db/repositories/relationships.js';
+import { RelationshipsRepository } from '@/database/repositories/relationships.js';
 import { inArray } from 'drizzle-orm';
 import { entriesTable } from '../schema.js';
-// usersTable via the @/db/schema aggregate (not @/users/schema) to avoid an
+// usersTable via the @/database/schema aggregate (not @/users/schema) to avoid an
 // entries→users domain peer import; the aggregator re-exports every domain's tables.
-import { usersTable } from '@/db/schema.js';
+import { usersTable } from '@/database/schema.js';
 
 type PopulatedEntry = Entry & {
     _populated: Record<string, unknown | unknown[]>;

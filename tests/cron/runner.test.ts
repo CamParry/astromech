@@ -12,9 +12,9 @@ import { eq } from 'drizzle-orm';
 import { Cron } from 'croner';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
 import { registerCronJob } from '@/cron/registry.js';
-import { cronTable } from '@/db/schema.js';
+import { cronTable } from '@/database/schema.js';
 import { onTick, runDue } from '@/cron/runner.js';
-import type { CronRow } from '@/db/schema.js';
+import type { CronRow } from '@/database/schema.js';
 
 // Truncate to second resolution to match DB storage.
 function toSecond(d: Date): number {
@@ -57,7 +57,7 @@ describe('onTick / runDue', () => {
 
         await onTick(now);
 
-        const db = (await import('@/db/registry.js')).getDb();
+        const db = (await import('@/database/registry.js')).getDb();
         const row = singleRow(await db.select().from(cronTable));
         expect(row.name).toBe('test-job');
         expect(row.enabled).toBe(true);
@@ -95,7 +95,7 @@ describe('onTick / runDue', () => {
         await onTick(new Date('2024-06-01T11:00:00.000Z'));
         callCount = 0; // reset after seed tick (it may have run)
 
-        const db = (await import('@/db/registry.js')).getDb();
+        const db = (await import('@/database/registry.js')).getDb();
 
         // Set nextRun in the past → should run.
         const past = new Date(now.getTime() - 60_000);
@@ -134,7 +134,7 @@ describe('onTick / runDue', () => {
         // Seed the row.
         await onTick(new Date('2024-06-01T11:00:00.000Z'));
 
-        const db = (await import('@/db/registry.js')).getDb();
+        const db = (await import('@/database/registry.js')).getDb();
 
         // Make it due but disabled.
         const past = new Date(now.getTime() - 60_000);
@@ -160,7 +160,7 @@ describe('onTick / runDue', () => {
         // First tick: seed + run (nextRun is computed from '* * * * *').
         await onTick(now);
 
-        const db = (await import('@/db/registry.js')).getDb();
+        const db = (await import('@/database/registry.js')).getDb();
 
         // Admin changes schedule to daily midnight, and forces it due.
         const past = new Date(now.getTime() - 60_000);
@@ -195,7 +195,7 @@ describe('onTick / runDue', () => {
         await runDue(new Date('2024-06-01T11:00:00.000Z'));
         callCount = 0;
 
-        const db = (await import('@/db/registry.js')).getDb();
+        const db = (await import('@/database/registry.js')).getDb();
         const past = new Date(now.getTime() - 60_000);
         await db
             .update(cronTable)
@@ -247,7 +247,7 @@ describe('onTick / runDue', () => {
         await runDue(new Date('2024-06-01T11:00:00.000Z'));
         callCount = 0;
 
-        const db = (await import('@/db/registry.js')).getDb();
+        const db = (await import('@/database/registry.js')).getDb();
         const past = new Date(now.getTime() - 60_000);
 
         // Set lock to FUTURE expiry (claim active) → should NOT run.
@@ -288,7 +288,7 @@ describe('onTick / runDue', () => {
 
         // Seed + make due.
         await runDue(new Date('2024-06-01T11:00:00.000Z'));
-        const db = (await import('@/db/registry.js')).getDb();
+        const db = (await import('@/database/registry.js')).getDb();
         const past = new Date(now.getTime() - 60_000);
         await db
             .update(cronTable)
@@ -329,7 +329,7 @@ describe('onTick / runDue', () => {
         await runDue(new Date('2024-06-01T11:00:00.000Z'));
         callCount = 0;
 
-        const db = (await import('@/db/registry.js')).getDb();
+        const db = (await import('@/database/registry.js')).getDb();
         const veryPast = new Date('2024-01-01T00:00:00.000Z');
         await db
             .update(cronTable)

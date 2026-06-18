@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { createTestDb } from '@tests/harness.js';
-import { cronTable } from '@/db/schema.js';
+import { cronTable } from '@/database/schema.js';
 
 describe('_astromech_cron table', () => {
     it('is created by the package migrations', async () => {

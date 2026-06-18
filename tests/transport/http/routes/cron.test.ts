@@ -89,8 +89,8 @@ async function seedDueJob(): Promise<{ ran: boolean }> {
         },
     });
 
-    const { getDb } = await import('@/db/registry.js');
-    const { cronTable } = await import('@/db/schema.js');
+    const { getDb } = await import('@/database/registry.js');
+    const { cronTable } = await import('@/database/schema.js');
     const { eq } = await import('drizzle-orm');
     const { onTick } = await import('@/cron/runner.js');
 

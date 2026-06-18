@@ -26,8 +26,8 @@ import {
     updateEntrySchemaFor,
     scheduleEntrySchema,
 } from './schema.js';
-import { getDb } from '@/db/registry.js';
-import { RelationshipsRepository } from '@/db/repositories/relationships.js';
+import { getDb } from '@/database/registry.js';
+import { RelationshipsRepository } from '@/database/repositories/relationships.js';
 import { populateEntries } from './data/populate.js';
 import { getEntryStorage } from './storage/registry.js';
 import { resolveEntryType } from './type-registry.js';

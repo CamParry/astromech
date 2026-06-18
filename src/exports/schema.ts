@@ -5,4 +5,4 @@
  * so consumers (and drizzle-kit) never reach into raw `src/db` internals.
  */
 
-export * from '@/db/schema.js';
+export * from '@/database/schema.js';

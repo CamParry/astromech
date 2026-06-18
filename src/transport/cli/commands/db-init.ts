@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config.js';
-import { getDb } from '@/db/registry.js';
+import { getDb } from '@/database/registry.js';
 import { fileURLToPath } from 'node:url';
 
 export default defineCommand({
@@ -12,7 +12,9 @@ export default defineCommand({
         await loadConfig(args.config);
         const db = getDb();
         const { migrate } = await import('drizzle-orm/libsql/migrator');
-        const migrationsFolder = fileURLToPath(new URL('../../../drizzle', import.meta.url));
+        const migrationsFolder = fileURLToPath(
+            new URL('../../../drizzle', import.meta.url)
+        );
         console.log('Running migrations...');
         await migrate(db, { migrationsFolder });
         console.log('Database migrations applied');
