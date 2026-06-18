@@ -47,7 +47,7 @@ import type {
     User,
     FieldDefinition,
 } from '@/types/index.js';
-import { getCurrentUser, setCurrentUser } from '@/services/_shared/context.js';
+import { getCurrentUser, setCurrentUser } from '@/context/index.js';
 import {
     hasHookHandlers,
     runAfterHooks,
@@ -102,7 +102,7 @@ function asEntry(record: EntryRecord): Entry {
 // ============================================================================
 
 /**
- * @deprecated Use setCurrentUser from @/services/_shared/context.js instead.
+ * @deprecated Use setCurrentUser from @/context/index.js instead.
  */
 export function initServerContext(ctx: {
     db: unknown;

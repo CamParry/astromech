@@ -22,7 +22,7 @@ import type { UserRow } from '@/db/schema.js';
 import { resolveConfig } from '@/kernel/config-resolver.js';
 import { setCliConfig } from '@/transport/cli/virtual-config-shim.js';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime.js';
-import { setCurrentUser } from '@/services/_shared/context.js';
+import { setCurrentUser } from '@/context/index.js';
 import type {
     AstromechConfig,
     DatabaseDriver,

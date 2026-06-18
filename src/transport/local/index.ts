@@ -15,7 +15,7 @@ import { usersApi } from '@/users/index.js';
 import { entries, initServerContext } from '@/entries/index.js';
 import { mediaApi } from '@/media/index.js';
 import { settingsApi } from '@/settings/index.js';
-import { setCurrentUser } from '@/services/_shared/context.js';
+import { setCurrentUser } from '@/context/index.js';
 import { setPluginSdkClient } from '@/plugins/runtime/plugin-runtime.js';
 import { localPlugins } from '@/transport/local/plugins.js';
 
