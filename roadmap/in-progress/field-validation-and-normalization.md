@@ -9,12 +9,12 @@ Server-side field validation as the headline, framed as a field-system normaliza
 - [x] Revise `ValidationRule`: drop `{ required: true }`; add `{ enum }`, `{ unique: true }`; widen `custom` to async `FieldValidator`
 - [x] Add `error?: string[]` to `BaseFieldProps`
 
-**P1 — Descriptor registry (source of truth)**
+**P1 — Descriptor registry (source of truth)** ✅
 
-- [ ] Author per-core-type descriptors (build + component + tsType + default + coerce + validate + reservedKeys)
-- [ ] Migrate `codegen/type-generator.ts` switch → descriptor `tsType`/`tsRelationType` lookups
-- [ ] Move defaults + reserved keys (`_id`/`_disabled`/`_title`) into descriptors (single source)
-- [ ] Unify plugin field-type registration onto the descriptor; add `serverValidate`
+- [x] Author per-core-type descriptors (build + component + tsType + default + reservedKeys + flags). `coerce`/`validate` slots intentionally left unpopulated until the pipeline consumes them (P2/P3)
+- [x] Migrate `codegen/type-generator.ts` switch → descriptor `tsType` + `reservedKeys` lookups. Container recursion + `tsRelationType` stay generator-owned (the locked `tsType(field, shape)` signature can't carry cross-collection/recursion context); proven byte-identical by a frozen golden snapshot
+- [x] Move defaults + reserved keys (`_id`/`_disabled`/`_title`/`_type`) into descriptors (single source for codegen). Runtime consumers (`entries/visibility.ts`, `admin/hooks/use-blocks-field.ts`) still hardcode them — deferred consolidation
+- [x] Add `serverValidate` to plugin field-type registration (dormant until pipeline dispatch in P2/P3). Plugin types stay per-config, not folded into the global core-descriptor singleton
 
 **P2 — Pipeline**
 
