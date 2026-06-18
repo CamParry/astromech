@@ -1,7 +1,8 @@
 # Authoring a plugin
 
 A plugin is **one package** that extends Astromech — with custom field types,
-admin pages, permissions, SDK methods, hooks, entry types, or database tables.
+admin pages, admin slots, permissions, SDK methods, hooks, entry types, or
+database tables.
 A plugin is mostly **declarative data**: you describe what it adds, and
 Astromech wires it in.
 
@@ -155,6 +156,39 @@ export const settingsPage = defineAdminPage({
 
 Page components call `useAstromechPlugin()` (from `astromech/ui`) for context —
 `plugin`, `currentUser`, `toast`, and the `t()` translator.
+
+### Admin slots
+
+Slots mount **persistent chrome** into the admin shell — UI that lives outside
+any single page. Three named slots are available:
+
+- `toolbar` — actions in the top bar, beside notifications and the theme toggle
+- `right-drawer` — a docked panel beside the page content
+- `global-overlay` — a free-floating layer over the whole shell (the component
+  owns its own positioning/portal)
+
+Declare contributions under `admin.slots`. Each names a slot and a lazily
+loaded `component`. `order` sorts within a slot (ascending, default 0) and a
+bare `permission` key gates visibility (`plugin:<namespace>:<key>`).
+
+```ts
+// in the plugin definition
+admin: {
+    slots: [
+        { slot: 'toolbar', component: asset('slots/assistant-button.tsx') },
+        {
+            slot: 'global-overlay',
+            component: asset('slots/assistant-panel.tsx'),
+            permission: 'use',
+        },
+    ],
+},
+```
+
+Slot components call `useAstromechPlugin()` for context, exactly like page
+components. An empty slot renders nothing. Cross-slot coordination (e.g. a
+toolbar button toggling an overlay) is the plugin's own concern — share state
+through a module both contributions import.
 
 ### Permissions
 

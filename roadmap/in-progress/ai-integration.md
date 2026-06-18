@@ -1,0 +1,20 @@
+# AI integration
+
+Builds on the services/transport seam. Method manifest (the discovery linchpin)
+shipped first — see `completed/method-manifest.md`; CLI/MCP/confirm-gate/authoring
+all read it.
+
+Workstreams (spec §7), in order:
+
+- [x] **UI-slot injection** — named admin-shell slots (`global-overlay`,
+      `right-drawer`, `toolbar`) that plugins contribute components into. Prerequisite
+      for the chat drawer; generalises to all plugins.
+- [ ] **CLI rebuild** — entry create/update/publish + JSON output, driven by the
+      manifest.
+- [ ] **MCP server** — dev-only; projects the manifest as MCP tools.
+- [ ] **Confirm gate** — deterministic propose→preview→approve→execute, keyed off
+      `mutates`/`destructive`.
+- [ ] **Context bus** — ambient-context contributors; routes publish a typed
+      reference for deixis ("this page").
+- [ ] **Authoring plugin** — Claude adapter + tool-loop over the manifest + chat
+      drawer (needs UI-slot injection, confirm gate, context bus).

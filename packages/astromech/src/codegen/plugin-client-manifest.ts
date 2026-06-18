@@ -6,7 +6,7 @@
  * definitions (spec §11).
  */
 
-import type { AdminPage } from '@/types/config.js';
+import type { AdminPage, AdminSlotContribution, AdminSlotName } from '@/types/config.js';
 import type { PluginDefinition, PluginFieldTypeRegistration } from '@/types/plugins.js';
 import {
     resolvePluginIdentity,
@@ -45,6 +45,41 @@ export function generatePluginClientManifest(plugins: PluginDefinition[]): strin
             });
     });
 
+    const SLOT_NAMES: AdminSlotName[] = ['global-overlay', 'right-drawer', 'toolbar'];
+    const slotRows: Record<AdminSlotName, { order: number; line: string }[]> = {
+        'global-overlay': [],
+        'right-drawer': [],
+        toolbar: [],
+    };
+    plugins.forEach((def) => {
+        const identity = resolvePluginIdentity(def);
+        (def.admin?.slots ?? []).forEach((slot: AdminSlotContribution, index: number) => {
+            if (!(slot.slot in slotRows)) {
+                throw new Error(
+                    `[Astromech] Plugin "${identity.name}" declares an unknown admin slot "${slot.slot}". Valid slots: ${SLOT_NAMES.join(', ')}.`
+                );
+            }
+            const permission =
+                slot.permission !== undefined
+                    ? resolvePluginPermission(
+                          identity.permissionNamespace,
+                          slot.permission
+                      )
+                    : null;
+            const id = slot.id ?? `${identity.name}:${slot.slot}:${index}`;
+            const order = slot.order ?? 0;
+            const line = `\t\t{ id: ${JSON.stringify(id)}, load: () => import(${JSON.stringify(slot.component)}), plugin: ${JSON.stringify(identity.name)}, namespace: ${JSON.stringify(identity.permissionNamespace)}, permission: ${JSON.stringify(permission)}, order: ${JSON.stringify(order)} },`;
+            slotRows[slot.slot].push({ order, line });
+        });
+    });
+    const slotBlocks = SLOT_NAMES.map((name) => {
+        const sorted = slotRows[name]
+            .map((row, i) => ({ row, i }))
+            .sort((a, b) => a.row.order - b.row.order || a.i - b.i)
+            .map((x) => x.row.line);
+        return `\t${JSON.stringify(name)}: [\n${sorted.join('\n')}\n\t],`;
+    });
+
     // Locale bundles keyed by i18n namespace (= permissionNamespace), then locale code.
     const i18nLines = plugins.flatMap((def) => {
         const locales = Object.entries(def.i18n ?? {});
@@ -62,6 +97,7 @@ export function generatePluginClientManifest(plugins: PluginDefinition[]): strin
     return [
         `export const fieldTypes = {\n${fieldTypeLines.join('\n')}\n};`,
         `export const pages = {\n${pageLines.join('\n')}\n};`,
+        `export const slots = {\n${slotBlocks.join('\n')}\n};`,
         `export const i18n = {\n${i18nLines.join('\n')}\n};`,
         '',
     ].join('\n');

@@ -8,7 +8,12 @@
 
 import type { ComponentType, ReactElement } from 'react';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import type { AdminPage, EntryTypeConfig, ResolvedConfig } from './config.js';
+import type {
+    AdminPage,
+    AdminSlotContribution,
+    EntryTypeConfig,
+    ResolvedConfig,
+} from './config.js';
 import type { FieldDefinition } from './fields.js';
 import type { User, NotifyInput } from './domain.js';
 import type { PluginHooks } from './hooks.js';
@@ -147,6 +152,7 @@ export type PluginNavItem = {
  */
 export type PluginAdmin = {
     pages?: AdminPage[];
+    slots?: AdminSlotContribution[];
 };
 
 /**

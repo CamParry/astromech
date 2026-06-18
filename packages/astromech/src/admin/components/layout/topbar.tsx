@@ -24,6 +24,7 @@ import { useTheme } from '../../context/theme.js';
 import { useCommandPalette } from '../ui/command-palette.js';
 import { EntryTypeIcon } from '../ui/entry-type-icon.js';
 import { NotificationBell } from './notification-bell.js';
+import { PluginSlot } from '../plugins/PluginSlot.js';
 
 export function Topbar() {
     const { user, logout } = useAuth();
@@ -87,6 +88,9 @@ export function Topbar() {
 
                 {/* Notification bell */}
                 <NotificationBell />
+
+                {/* Plugin toolbar contributions */}
+                <PluginSlot name="toolbar" />
 
                 {/* Theme toggle */}
                 <button

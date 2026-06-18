@@ -7,6 +7,7 @@ declare module 'virtual:astromech/admin-config' {
 declare module 'virtual:astromech/plugins/components' {
     import type { ComponentType } from 'react';
     import type { BaseFieldProps, FieldDefinition } from '../../../types/index.js';
+    import type { AdminSlotName } from '../../../types/index.js';
 
     type PluginFieldModule = {
         default: ComponentType<BaseFieldProps>;
@@ -39,6 +40,19 @@ declare module 'virtual:astromech/plugins/components' {
             permission: string | null;
             label: string | null;
         }
+    >;
+
+    /** Plugin contributions to named admin-shell slots, grouped by slot, order-sorted. */
+    export const slots: Record<
+        AdminSlotName,
+        {
+            id: string;
+            load: () => Promise<PluginPageModule>;
+            plugin: string;
+            namespace: string;
+            permission: string | null;
+            order: number;
+        }[]
     >;
 
     /** Lazy locale bundles, keyed by i18n namespace then locale code. */

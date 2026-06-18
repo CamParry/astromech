@@ -82,6 +82,8 @@ The table always exists in the schema regardless of whether any collection enabl
 
 These are different concepts that share a name. When speaking about the SPA extension mechanism, prefer "admin pages" to avoid confusion.
 
+An **admin slot** is distinct from an admin page: a named mount point in the admin shell (`toolbar`, `right-drawer`, `global-overlay`) for **persistent chrome** that lives outside any single page. Plugins contribute components via `admin.slots`. A page is a routed destination; a slot is always-present UI.
+
 ---
 
 ## Relation vs Relationship
