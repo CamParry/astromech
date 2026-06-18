@@ -6,7 +6,7 @@
  *   roles: { editor: { permissions: [...redirectsPermissions('manage')] } }
  */
 
-import { definePermissionBundles } from '@/index.js';
+import { definePermissionBundles } from 'astromech';
 import { PACKAGE } from '../manifest.js';
 import { REDIRECT_TYPE } from '../types.js';
 

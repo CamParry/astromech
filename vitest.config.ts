@@ -36,6 +36,12 @@ export default defineConfig({
             '@astromech/menus': fileURLToPath(
                 new URL('./packages/menus/src/index.ts', import.meta.url)
             ),
+            '@astromech/redirects/schema': fileURLToPath(
+                new URL('./packages/redirects/src/schema/redirects.ts', import.meta.url)
+            ),
+            '@astromech/redirects': fileURLToPath(
+                new URL('./packages/redirects/src/index.ts', import.meta.url)
+            ),
             astromech: fileURLToPath(new URL('./src/exports/index.ts', import.meta.url)),
         },
     },

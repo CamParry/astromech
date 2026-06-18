@@ -3,8 +3,8 @@
  * per-instance builder.
  */
 
-import type { Entry } from '@/types/index.js';
-import { defineServiceMethod } from '@/index.js';
+import type { Entry } from 'astromech';
+import { defineServiceMethod } from 'astromech';
 import { REDIRECT_TYPE } from '../types.js';
 import type { RedirectFields, RedirectMatch, RedirectStatus } from '../types.js';
 

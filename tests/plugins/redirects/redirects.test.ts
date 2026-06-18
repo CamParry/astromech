@@ -24,8 +24,8 @@ import {
 import '@/transport/local/index.js'; // registers the plugin SDK client (setPluginSdkClient)
 import { localPlugins } from '@/transport/local/plugins.js';
 import { entries as localEntries } from '@/entries/service.js';
-import { redirects } from '@/plugins/redirects/index.js';
-import type { RedirectMatch } from '@/plugins/redirects/index.js';
+import { redirects } from '@astromech/redirects';
+import type { RedirectMatch } from '@astromech/redirects';
 import type {
     AstromechClient,
     AstromechConfig,

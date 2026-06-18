@@ -17,7 +17,7 @@ import { hashPassword } from 'better-auth/crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import sharpLib from 'sharp';
 import * as schema from 'astromech/db/schema';
-import { redirectsTable } from 'astromech/plugins/redirects/schema';
+import { redirectsTable } from '@astromech/redirects/schema';
 import { readImageDimensions, contentVersion, sharp } from 'astromech/images/sharp';
 
 // ProseMirror JSON builders for richtext seed content (StarterKit schema)

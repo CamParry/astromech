@@ -6,9 +6,9 @@
  * (which also makes the redirect type itself a no-op, avoiding recursion).
  */
 
-import type { DefinedHook, JsonObject } from '@/types/index.js';
-import { defineHook } from '@/index.js';
-import { resolveEntryPath } from '@/entries/url.js';
+import type { DefinedHook, JsonObject } from 'astromech';
+import { defineHook } from 'astromech';
+import { resolveEntryPath } from 'astromech/plugin-kit';
 import { REDIRECT_TYPE } from '../types.js';
 
 export const slugChangeHook: DefinedHook = defineHook(

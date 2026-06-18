@@ -21,8 +21,6 @@ export default defineConfig([
             'admin/components/fields/index': 'src/exports/admin/ui-fields.ts',
             'db/plugin-helpers': 'src/exports/plugin-helpers.ts',
             'email/index': 'src/exports/email.ts',
-            'plugins/redirects/index': 'src/exports/plugins/redirects.ts',
-            'plugins/redirects/schema': 'src/exports/plugins/redirects-schema.ts',
             'plugins/seo/index': 'src/exports/plugins/seo.ts',
             'images/drivers/sharp': 'src/exports/image-sharp.ts',
             'images/drivers/cloudflare': 'src/exports/image-cloudflare.ts',

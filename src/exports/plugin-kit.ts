@@ -8,5 +8,10 @@
  * deliberately narrow — extend it only when a first-party package needs more.
  */
 
-export { derivePluginName, sanitisePackage } from '@/plugins/runtime/plugin-identity.js';
-export { resolveEntryUrl } from '@/entries/url.js';
+export {
+    derivePluginName,
+    sanitisePackage,
+    pluginTablePrefix,
+} from '@/plugins/runtime/plugin-identity.js';
+export { resolveEntryUrl, resolveEntryPath } from '@/entries/url.js';
+export { tableStorage } from '@/entries/storage/table.js';

@@ -9,7 +9,7 @@
  *     · http/client = the fetch Client (consumes the HTTP API over the wire;
  *       client half of the transport, nested but kept a distinct DAG node)
  *   policies                                       permission / confirmation wrappers
- *   plugins/{seo,redirects}                        first-party plugins (in-tree)
+ *   plugins/{seo}                                  first-party plugins (in-tree)
  *   entries · media · users · settings             domains — siblings, never import each other
  *   plugins/runtime · database · storage · email ·  capabilities
  *     cron · context · fields · permissions
@@ -51,7 +51,7 @@ module.exports = {
       severity: 'error',
       from: { path: '^src/(entries|media|users|settings)/' },
       to: {
-        path: '^src/(routes|admin|transport|policies|kernel|codegen)/|^src/plugins/(seo|redirects)/',
+        path: '^src/(routes|admin|transport|policies|kernel|codegen)/|^src/plugins/seo/',
       },
     },
     {
@@ -61,7 +61,7 @@ module.exports = {
       severity: 'error',
       from: { path: '^src/(storage|email|cron|context|fields|permissions)/' },
       to: {
-        path: '^src/(entries|media|users|settings|routes|admin|transport|policies|kernel|codegen)/|^src/plugins/(seo|redirects)/',
+        path: '^src/(entries|media|users|settings|routes|admin|transport|policies|kernel|codegen)/|^src/plugins/seo/',
       },
     },
     {
@@ -71,7 +71,7 @@ module.exports = {
       severity: 'error',
       from: { path: '^src/database/', pathNot: '^src/database/schema\\.ts$' },
       to: {
-        path: '^src/(entries|media|users|settings|routes|admin|transport|policies|kernel|codegen)/|^src/plugins/(seo|redirects)/',
+        path: '^src/(entries|media|users|settings|routes|admin|transport|policies|kernel|codegen)/|^src/plugins/seo/',
       },
     },
     {

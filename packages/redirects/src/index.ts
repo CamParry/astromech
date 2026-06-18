@@ -5,8 +5,8 @@
  * plugin exposes data, the app owns the route.
  */
 
-import { definePlugin, withDefaults } from '@/index.js';
-import type { PluginDefinition, SdkInterface } from '@/types/index.js';
+import { definePlugin, withDefaults } from 'astromech';
+import type { PluginDefinition, SdkInterface } from 'astromech';
 import { PACKAGE, VERSION, LABEL, ICON, SCHEMA_MODULE } from './manifest.js';
 import type { RedirectsOptions } from './types.js';
 import { redirectEntryType } from './entries/redirect.js';

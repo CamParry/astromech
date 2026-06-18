@@ -5,12 +5,12 @@
  * `search` is derived from `searchable` fields.
  */
 
-import type { EntryTypeConfig } from '@/types/index.js';
-import { tableStorage } from '@/entries/storage/table.js';
+import type { EntryTypeConfig } from 'astromech';
+import { tableStorage } from 'astromech/plugin-kit';
 import { redirectsTable } from '../schema/redirects.js';
 import { REDIRECT_TYPE } from '../types.js';
-import * as fields from '@/fields/index.js';
-import * as columns from '@/fields/columns.js';
+import * as fields from 'astromech/fields';
+import * as columns from 'astromech/columns';
 
 export const redirectEntryType: EntryTypeConfig = {
     type: REDIRECT_TYPE,

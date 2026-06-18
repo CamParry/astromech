@@ -4,11 +4,7 @@
  * helpers, so there are no hand-written namespace strings scattered elsewhere.
  */
 
-import {
-    derivePluginName,
-    pluginSchemaModule,
-    pluginTablePrefix,
-} from '@/plugins/runtime/plugin-identity.js';
+import { derivePluginName, pluginTablePrefix } from 'astromech/plugin-kit';
 
 export const PACKAGE = '@astromech/redirects';
 export const VERSION = '0.1.0';
@@ -17,7 +13,11 @@ export const ICON = 'Signpost';
 
 /** `redirects` */
 export const ALIAS = derivePluginName(PACKAGE);
-/** `astromech/plugins/redirects/schema` */
-export const SCHEMA_MODULE = pluginSchemaModule(ALIAS);
+/**
+ * `@astromech/redirects/schema` — the package's own schema subpath. A
+ * graduated package owns its migrations via `{package}/schema`, so the
+ * generated drizzle aggregator points straight at the published export.
+ */
+export const SCHEMA_MODULE = `${PACKAGE}/schema`;
 /** `plugin_redirects_` */
 export const TABLE_PREFIX = pluginTablePrefix(ALIAS);
