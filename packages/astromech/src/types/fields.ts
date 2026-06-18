@@ -154,7 +154,9 @@ export type FieldValidator = (ctx: FieldValidationContext) => Promise<true | str
 export type FieldTypeDescriptor = {
     type: string;
     /** The builder factory — `type(name, options?)` returning a `FieldDefinition`. */
-    build: (name: string, options?: unknown) => FieldDefinition;
+    // `any` — heterogeneous factory option types; a registry can't hold a single precise signature.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    build: (name: string, options?: any) => FieldDefinition;
     /** Import specifier for the admin (browser) component. */
     component: string;
     /** TS type emitted by codegen for this field, or `null` to omit. */
