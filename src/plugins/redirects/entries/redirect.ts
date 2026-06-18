@@ -6,7 +6,7 @@
  */
 
 import type { EntryTypeConfig } from '@/types/index.js';
-import { tableStorage } from '@/storage/entries/table.js';
+import { tableStorage } from '@/entries/storage/table.js';
 import { redirectsTable } from '../schema/redirects.js';
 import { REDIRECT_TYPE } from '../types.js';
 import * as fields from '@/builders/fields.js';

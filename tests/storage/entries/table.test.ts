@@ -12,7 +12,7 @@ import { sql } from 'drizzle-orm';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
 import { Astromech } from '@/transport/local/index.js';
 import type { AstromechConfig, PluginDefinition } from '@/types/index.js';
-import { tableStorage } from '@/storage/entries/table.js';
+import { tableStorage } from '@/entries/storage/table.js';
 
 // ============================================================================
 // Scratch table definition

@@ -29,8 +29,8 @@ import {
     resolveEntryCapabilities,
     assertEntryTypeValid,
     type Capability,
-} from '@/storage/entries/capabilities.js';
-import { parseEntryTypeId, resolveEntryType } from '@/utilities/entry-types.js';
+} from '@/entries/storage/capabilities.js';
+import { parseEntryTypeId, resolveEntryType } from '@/entries/type-registry.js';
 
 /** Layout containers — flat data, pure chrome. Their children stay top-level. */
 const LAYOUT_TYPES = new Set(['section', 'tabs', 'tab', 'accordion']);

@@ -7,7 +7,7 @@ import type {
     PluginDefinition,
     StorageDriver,
 } from '@/types/index.js';
-import type { EntryStorage } from '@/storage/entries/types.js';
+import type { EntryStorage } from '@/entries/storage/types.js';
 
 const driver: DatabaseDriver = {
     type: 'test',

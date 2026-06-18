@@ -1,4 +1,3 @@
 export { ValidationError } from './validation.js';
-export { EntryTypeMismatchError } from './entry-type-mismatch.js';
-export { BulkOperationError } from './bulk-operation.js';
+export { EntryTypeMismatchError, BulkOperationError } from '@/entries/errors.js';
 export { CapabilityError } from './capability.js';

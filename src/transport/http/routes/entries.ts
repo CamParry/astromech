@@ -31,7 +31,7 @@ import {
     createEntrySchemaFor,
     updateEntrySchemaFor,
     scheduleEntrySchema,
-} from '@/services/entries/schema.js';
+} from '@/entries/schema.js';
 
 type Env = { Variables: AuthVariables };
 
@@ -263,7 +263,8 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
             }
 
             const wantsFull = parseFullFromBody(body);
-            if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL)) return forbidden(c);
+            if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL))
+                return forbidden(c);
 
             const validatedSort = validateSort(body.sort);
             const params: EntryQueryParams & { type: string | readonly string[] } = {
@@ -312,7 +313,8 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
         try {
             const query = c.req.query();
             const wantsFull = parseFullFromQuery(query);
-            if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL)) return forbidden(c);
+            if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL))
+                return forbidden(c);
 
             const params = {
                 ...parseQueryParams(query),
@@ -358,7 +360,8 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
         try {
             const query = c.req.query();
             const wantsFull = parseFullFromQuery(query);
-            if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL)) return forbidden(c);
+            if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL))
+                return forbidden(c);
 
             const qp = parseQueryParams(query);
             const entry = await Astromech.entries.get({
@@ -459,9 +462,12 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
         try {
-            const body = await c.req.json<Omit<EntryQueryParams, 'type'> & Record<string, unknown>>();
+            const body = await c.req.json<
+                Omit<EntryQueryParams, 'type'> & Record<string, unknown>
+            >();
             const wantsFull = parseFullFromBody(body);
-            if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL)) return forbidden(c);
+            if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL))
+                return forbidden(c);
 
             const validatedSort = validateSort(body.sort);
             const params: EntryQueryParams & { type: string } = {

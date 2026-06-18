@@ -29,7 +29,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { getDb } from '@/db/registry.js';
 import { entriesTable } from '@/db/schema.js';
 import type { EntryRow } from '@/db/schema.js';
-import { VersionsRepository } from '@/db/repositories/versions.js';
+import { VersionsRepository } from '../data/versions.js';
 import type {
     Entry,
     EntryStatus,

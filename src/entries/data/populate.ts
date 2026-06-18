@@ -5,9 +5,9 @@
 
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Entry, FieldDefinition, JsonValue } from '@/types/index.js';
-import { RelationshipsRepository } from '@/db/repositories/relationships';
+import { RelationshipsRepository } from '@/db/repositories/relationships.js';
 import { inArray } from 'drizzle-orm';
-import { entriesTable, usersTable } from '@/db/schema';
+import { entriesTable, usersTable } from '@/db/schema.js';
 
 type PopulatedEntry = Entry & {
     _populated: Record<string, unknown | unknown[]>;

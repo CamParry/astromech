@@ -7,7 +7,7 @@
 
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
-import { entries } from '@/services/entries/service.js';
+import { entries } from '@/entries/service.js';
 import type { AstromechConfig, PluginDefinition } from '@/types/index.js';
 
 const redirectsPlugin: PluginDefinition = {
@@ -41,7 +41,11 @@ describe('namespaced plugin entries via the entries service', () => {
         expect(created.type).toBe('redirects/redirect');
 
         // full: true — admin read; entry is a draft
-        const fetched = await entries.get({ type: 'redirects/redirect', id: created.id, full: true });
+        const fetched = await entries.get({
+            type: 'redirects/redirect',
+            id: created.id,
+            full: true,
+        });
         expect(fetched?.id).toBe(created.id);
         expect(fetched?.type).toBe('redirects/redirect');
 

@@ -8,7 +8,7 @@
 
 import type { DefinedHook, JsonObject } from '@/types/index.js';
 import { defineHook } from '@/index.js';
-import { resolveEntryPath } from '@/utilities/entry-url.js';
+import { resolveEntryPath } from '@/entries/url.js';
 import { REDIRECT_TYPE } from '../types.js';
 
 export const slugChangeHook: DefinedHook = defineHook(

@@ -1,18 +1,11 @@
 /**
- * Built-in CRON jobs registration.
+ * CRON scheduling and handler.
  *
- * Import this once during integration setup to register built-in jobs.
+ * Import once during integration setup. Built-in job registration is handled
+ * by the entries domain — see `@/entries/index.js`.
  */
 
-import { registerCronJob } from '@/cron/registry.js';
-import { scheduledPublishJob } from '@/cron/jobs/scheduled-publish.js';
-import { trashPurgeJob } from '@/cron/jobs/trash-purge.js';
 import { onTick } from '@/cron/runner.js';
-
-export function registerBuiltInCronJobs(): void {
-    registerCronJob(scheduledPublishJob);
-    registerCronJob(trashPurgeJob);
-}
 
 /**
  * Cloudflare Worker entry calls this from its `scheduled()` handler:

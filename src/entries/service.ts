@@ -19,21 +19,20 @@
 import config from 'virtual:astromech/config';
 import { z } from 'zod';
 import { ValidationError } from '@/errors/validation.js';
-import { EntryTypeMismatchError } from '@/errors/entry-type-mismatch.js';
-import { BulkOperationError } from '@/errors/bulk-operation.js';
+import { EntryTypeMismatchError, BulkOperationError } from './errors.js';
 import { CapabilityError } from '@/errors/capability.js';
 import {
     createEntrySchemaFor,
     updateEntrySchemaFor,
     scheduleEntrySchema,
-} from '@/services/entries/schema.js';
+} from './schema.js';
 import { getDb } from '@/db/registry.js';
 import { RelationshipsRepository } from '@/db/repositories/relationships.js';
-import { populateEntries } from '@/db/repositories/populate.js';
-import { getEntryStorage } from '@/storage/entries/registry.js';
-import { resolveEntryType } from '@/utilities/entry-types.js';
+import { populateEntries } from './data/populate.js';
+import { getEntryStorage } from './storage/registry.js';
+import { resolveEntryType } from './type-registry.js';
 import { resolveContentLocale } from '@/utilities/locale.js';
-import type { EntryRecord, EntryStorage, StorageDb } from '@/storage/entries/types.js';
+import type { EntryRecord, EntryStorage, StorageDb } from './storage/types.js';
 import type {
     Entry,
     EntryStatus,
@@ -49,7 +48,11 @@ import type {
     FieldDefinition,
 } from '@/types/index.js';
 import { getCurrentUser, setCurrentUser } from '@/services/_shared/context.js';
-import { hasHookHandlers, runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime.js';
+import {
+    hasHookHandlers,
+    runAfterHooks,
+    runBeforeHooks,
+} from '@/plugins/runtime/plugin-runtime.js';
 import { slugify } from '@/utilities/strings.js';
 import { flattenEntryFields } from '@/utilities/entry-fields.js';
 import {
@@ -58,7 +61,7 @@ import {
     markPublic,
     PublicShapeWriteError,
     type VisibilityShape,
-} from '@/services/entries/visibility.js';
+} from './visibility.js';
 
 // ============================================================================
 // Validation Helper

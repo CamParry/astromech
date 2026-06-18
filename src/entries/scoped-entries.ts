@@ -9,7 +9,7 @@
  */
 
 import type { EntriesApi } from '@/types/index.js';
-import { qualifyEntryType } from '@/utilities/entry-types.js';
+import { qualifyEntryType } from './type-registry.js';
 
 type WithType = { type: string };
 

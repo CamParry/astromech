@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config.js';
-import { entries } from '@/services/entries/service.js';
+import { entries } from '@/entries/service.js';
 
 export default defineCommand({
     meta: { name: 'entries:delete', description: 'Permanently delete an entry' },
@@ -14,8 +14,13 @@ export default defineCommand({
         await loadConfig(args.config);
         if (!args.force) {
             const readline = await import('node:readline/promises');
-            const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-            const answer = await rl.question(`Permanently delete entry ${args.id}? (y/N) `);
+            const rl = readline.createInterface({
+                input: process.stdin,
+                output: process.stdout,
+            });
+            const answer = await rl.question(
+                `Permanently delete entry ${args.id}? (y/N) `
+            );
             rl.close();
             if (answer.toLowerCase() !== 'y') {
                 console.log('Cancelled.');

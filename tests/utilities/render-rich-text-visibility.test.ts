@@ -11,7 +11,7 @@ import {
     applyVisibility,
     type AudienceContext,
     type VisibilityOptions,
-} from '@/services/entries/visibility.js';
+} from '@/entries/visibility.js';
 
 const NOW = new Date('2026-06-15T12:00:00Z');
 

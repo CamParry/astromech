@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { Entry, FieldDefinition } from '@/types/index.js';
+import type { Entry, FieldDefinition, JsonValue } from '@/types/index.js';
 import {
     applyVisibility,
     applyVisibilityWithRelations,
@@ -15,7 +15,7 @@ import {
     PublicShapeWriteError,
     type AudienceContext,
     type VisibilityOptions,
-} from '@/services/entries/visibility.js';
+} from '@/entries/visibility.js';
 
 // ============================================================================
 // Helpers
@@ -76,14 +76,16 @@ describe('private field projection', () => {
     it('strips private field in public shape', () => {
         const result = applyVisibility(entry, publicOpts(fields));
         expect(result).not.toBeNull();
-        expect(result!.fields).not.toHaveProperty('secret');
-        expect(result!.fields).toHaveProperty('public_body', 'visible text');
+        if (!result) return;
+        expect(result.fields).not.toHaveProperty('secret');
+        expect(result.fields).toHaveProperty('public_body', 'visible text');
     });
 
     it('keeps private field in full shape', () => {
         const result = applyVisibility(entry, fullOpts(fields));
         expect(result).not.toBeNull();
-        expect(result!.fields).toHaveProperty('secret', 'hidden value');
+        if (!result) return;
+        expect(result.fields).toHaveProperty('secret', 'hidden value');
     });
 
     it('does not mutate the original entry fields', () => {
@@ -111,8 +113,20 @@ describe('structural strip (_disabled items)', () => {
     const entry = publishedEntry({
         fields: {
             blocks: [
-                { _type: 'text', _id: 'b1', _disabled: false, _title: 'Block 1', content: 'hello' },
-                { _type: 'image', _id: 'b2', _disabled: true, _title: 'Hidden Block', url: '/img.png' },
+                {
+                    _type: 'text',
+                    _id: 'b1',
+                    _disabled: false,
+                    _title: 'Block 1',
+                    content: 'hello',
+                },
+                {
+                    _type: 'image',
+                    _id: 'b2',
+                    _disabled: true,
+                    _title: 'Hidden Block',
+                    url: '/img.png',
+                },
                 { _type: 'text', _id: 'b3', _title: 'Block 3', content: 'world' },
             ],
         },
@@ -121,14 +135,16 @@ describe('structural strip (_disabled items)', () => {
     it('removes _disabled items from arrays', () => {
         const result = applyVisibility(entry, publicOpts(fields));
         expect(result).not.toBeNull();
-        const blocks = result!.fields['blocks'] as Array<Record<string, unknown>>;
+        if (!result) return;
+        const blocks = result.fields['blocks'] as Record<string, unknown>[];
         expect(blocks).toHaveLength(2);
         expect(blocks.map((b) => b['_id'])).toEqual(['b1', 'b3']);
     });
 
     it('deletes _disabled and _title from surviving objects', () => {
         const result = applyVisibility(entry, publicOpts(fields));
-        const blocks = result!.fields['blocks'] as Array<Record<string, unknown>>;
+        if (!result) return;
+        const blocks = result.fields['blocks'] as Record<string, unknown>[];
         for (const block of blocks) {
             expect(block).not.toHaveProperty('_disabled');
             expect(block).not.toHaveProperty('_title');
@@ -137,7 +153,8 @@ describe('structural strip (_disabled items)', () => {
 
     it('keeps _type and _id on surviving objects', () => {
         const result = applyVisibility(entry, publicOpts(fields));
-        const blocks = result!.fields['blocks'] as Array<Record<string, unknown>>;
+        if (!result) return;
+        const blocks = result.fields['blocks'] as Record<string, unknown>[];
         expect(blocks[0]).toHaveProperty('_type', 'text');
         expect(blocks[0]).toHaveProperty('_id', 'b1');
         expect(blocks[1]).toHaveProperty('_type', 'text');
@@ -146,7 +163,8 @@ describe('structural strip (_disabled items)', () => {
 
     it('does not strip _disabled in full shape', () => {
         const result = applyVisibility(entry, fullOpts(fields));
-        const blocks = result!.fields['blocks'] as Array<Record<string, unknown>>;
+        if (!result) return;
+        const blocks = result.fields['blocks'] as Record<string, unknown>[];
         expect(blocks).toHaveLength(3);
     });
 });
@@ -230,8 +248,20 @@ describe('nested blocks-in-repeater strip', () => {
                     heading: 'Section 1',
                     secret_note: 'do not expose',
                     content: [
-                        { _type: 'paragraph', _id: 'p1', _disabled: false, _title: 'P1', text: 'Hello' },
-                        { _type: 'paragraph', _id: 'p2', _disabled: true, _title: 'Hidden', text: 'Secret' },
+                        {
+                            _type: 'paragraph',
+                            _id: 'p1',
+                            _disabled: false,
+                            _title: 'P1',
+                            text: 'Hello',
+                        },
+                        {
+                            _type: 'paragraph',
+                            _id: 'p2',
+                            _disabled: true,
+                            _title: 'Hidden',
+                            text: 'Secret',
+                        },
                     ],
                 },
             ],
@@ -241,19 +271,25 @@ describe('nested blocks-in-repeater strip', () => {
     it('strips private fields inside repeater items', () => {
         const result = applyVisibility(entry, publicOpts(fields));
         expect(result).not.toBeNull();
-        const sections = result!.fields['sections'] as Array<Record<string, unknown>>;
+        if (!result) return;
+        const sections = result.fields['sections'] as Record<string, unknown>[];
         expect(sections[0]).not.toHaveProperty('secret_note');
         expect(sections[0]).toHaveProperty('heading', 'Section 1');
     });
 
     it('removes _disabled blocks inside repeater items', () => {
         const result = applyVisibility(entry, publicOpts(fields));
-        const sections = result!.fields['sections'] as Array<Record<string, unknown>>;
-        const content = sections[0]!['content'] as Array<Record<string, unknown>>;
+        if (!result) return;
+        const sections = result.fields['sections'] as Record<string, unknown>[];
+        const section0 = sections[0];
+        if (!section0) return;
+        const content = section0['content'] as Record<string, unknown>[];
         expect(content).toHaveLength(1);
-        expect(content[0]!['_id']).toBe('p1');
-        expect(content[0]).not.toHaveProperty('_disabled');
-        expect(content[0]).not.toHaveProperty('_title');
+        const item0 = content[0];
+        if (!item0) return;
+        expect(item0['_id']).toBe('p1');
+        expect(item0).not.toHaveProperty('_disabled');
+        expect(item0).not.toHaveProperty('_title');
     });
 });
 
@@ -286,7 +322,7 @@ describe('populated relation filtering', () => {
 
     it('drops a related entry that is draft (not published)', () => {
         const entry = publishedEntry({
-            fields: { author: draftRelated as unknown as import('@/types/index.js').JsonValue },
+            fields: { author: draftRelated as unknown as JsonValue },
         });
         const result = applyVisibilityWithRelations(
             entry,
@@ -294,12 +330,13 @@ describe('populated relation filtering', () => {
             (_related) => relatedFields
         );
         expect(result).not.toBeNull();
-        expect(result!.fields['author']).toBeNull();
+        if (!result) return;
+        expect(result.fields['author']).toBeNull();
     });
 
     it('strips private fields from a published related entry', () => {
         const entry = publishedEntry({
-            fields: { author: publishedRelated as unknown as import('@/types/index.js').JsonValue },
+            fields: { author: publishedRelated as unknown as JsonValue },
         });
         const result = applyVisibilityWithRelations(
             entry,
@@ -307,8 +344,9 @@ describe('populated relation filtering', () => {
             (_related) => relatedFields
         );
         expect(result).not.toBeNull();
+        if (!result) return;
         // The related entry is a full Entry object; its data is under .fields
-        const author = result!.fields['author'] as Record<string, unknown>;
+        const author = result.fields['author'] as Record<string, unknown>;
         const authorFields = author['fields'] as Record<string, unknown>;
         expect(authorFields).toHaveProperty('bio', 'Author bio');
         expect(authorFields).not.toHaveProperty('internal_notes');
@@ -316,7 +354,7 @@ describe('populated relation filtering', () => {
 
     it('keeps all fields on populated related entry in full shape', () => {
         const entry = publishedEntry({
-            fields: { author: publishedRelated as unknown as import('@/types/index.js').JsonValue },
+            fields: { author: publishedRelated as unknown as JsonValue },
         });
         const result = applyVisibilityWithRelations(
             entry,
@@ -324,8 +362,9 @@ describe('populated relation filtering', () => {
             (_related) => relatedFields
         );
         expect(result).not.toBeNull();
+        if (!result) return;
         // full shape: no field stripping — related entry passed through unchanged
-        const author = result!.fields['author'] as Record<string, unknown>;
+        const author = result.fields['author'] as Record<string, unknown>;
         const authorFields = author['fields'] as Record<string, unknown>;
         expect(authorFields).toHaveProperty('internal_notes', 'secret');
     });
@@ -365,7 +404,7 @@ describe('PublicShapeWriteError', () => {
         const err = new PublicShapeWriteError();
         expect(err).toBeInstanceOf(Error);
         expect(err.name).toBe('PublicShapeWriteError');
-        expect(err.message).toContain("public");
+        expect(err.message).toContain('public');
     });
 });
 

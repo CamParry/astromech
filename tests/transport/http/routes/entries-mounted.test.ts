@@ -17,7 +17,7 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
 import { createEntriesRouter } from '@/transport/http/routes/entries.js';
 import { getPluginEntryMounts } from '@/plugins/runtime/plugin-runtime.js';
-import { qualifyEntryType } from '@/utilities/entry-types.js';
+import { qualifyEntryType } from '@/entries/type-registry.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import type { AstromechConfig, PluginDefinition, Role, User } from '@/types/index.js';
 
@@ -98,7 +98,11 @@ describe('plugin entries mount — permission matrix + CRUD', () => {
         const created = await app.request('/plugins/widgets/entries/widget', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: 'W1', fields: { label: 'hi' }, status: 'published' }),
+            body: JSON.stringify({
+                title: 'W1',
+                fields: { label: 'hi' },
+                status: 'published',
+            }),
         });
         expect(created.status).toBe(201);
         const createdBody = (await created.json()) as {

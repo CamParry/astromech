@@ -9,8 +9,8 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, setupTestConfig } from '@tests/harness.js';
-import { BuiltInEntryStorage } from '@/storage/entries/built-in.js';
-import { BUILT_IN_SUPPORTS } from '@/storage/entries/capabilities.js';
+import { BuiltInEntryStorage } from '@/entries/storage/built-in.js';
+import { BUILT_IN_SUPPORTS } from '@/entries/storage/capabilities.js';
 
 let storage: BuiltInEntryStorage;
 

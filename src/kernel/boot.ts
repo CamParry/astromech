@@ -14,7 +14,7 @@ import { setImageConfig } from '@/media/serving/image/registry.js';
 import { normaliseWidths } from '@/media/serving/image/url.js';
 import { defaultImageWidths } from '@/media/serving/image/defaults.js';
 import { setEmailConfig } from '@/email/registry.js';
-import { registerBuiltInCronJobs } from '@/cron/index.js';
+import { registerBuiltInEntryJobs } from '@/entries/index.js';
 import { setSchedulerDriver, getSchedulerDriver } from '@/cron/registry.js';
 import { nodeDriver } from '@/cron/drivers/index.js';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime.js';
@@ -37,7 +37,7 @@ export async function initRuntime(
     if (config.email) {
         setEmailConfig(config.email);
     }
-    registerBuiltInCronJobs();
+    registerBuiltInEntryJobs();
     setSchedulerDriver(config.scheduler ?? nodeDriver);
     registerPlugins(config.plugins ?? [], resolvedConfig);
     await bootPlugins(config.plugins ?? []);

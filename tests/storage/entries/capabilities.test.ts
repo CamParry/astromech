@@ -4,7 +4,7 @@ import {
     BUILT_IN_SUPPORTS,
     resolveEntryCapabilities,
     assertEntryTypeValid,
-} from '@/storage/entries/capabilities.js';
+} from '@/entries/storage/capabilities.js';
 
 // ============================================================================
 // resolveEntryCapabilities — defaults

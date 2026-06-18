@@ -6,7 +6,7 @@
 
 import type { Entry, PluginContext } from '@/types/index.js';
 import { defineServiceMethod } from '@/index.js';
-import { resolveEntryPath } from '@/utilities/entry-url.js';
+import { resolveEntryPath } from '@/entries/url.js';
 import { PERMISSION_NAMESPACE } from '../manifest.js';
 import { SEO_FIELD_NAME } from '../types.js';
 import type {
@@ -16,7 +16,11 @@ import type {
     SeoSitemap,
     SeoSitemapUrl,
 } from '../types.js';
-import { lengthStatus, SEO_DESCRIPTION_RANGE, SEO_TITLE_RANGE } from '../utilities/length.js';
+import {
+    lengthStatus,
+    SEO_DESCRIPTION_RANGE,
+    SEO_TITLE_RANGE,
+} from '../utilities/length.js';
 import { parseSeoMetaValue } from '../utilities/meta-value.js';
 
 /**
@@ -94,8 +98,7 @@ export const seoSdk = {
 
             const { data } = await ctx.sdk.entries.query({ type, limit: 'all' });
             const entry = (data as Entry[]).find(
-                (candidate) =>
-                    candidate.slug === slug && candidate.status === 'published'
+                (candidate) => candidate.slug === slug && candidate.status === 'published'
             );
             if (!entry) return null;
 

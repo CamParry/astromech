@@ -24,7 +24,7 @@ import {
 } from '@/plugins/runtime/plugin-runtime.js';
 import { withPermissions } from '@/policies/permissions/with-permissions.js';
 import { resolvePluginPermission } from '@/plugins/runtime/plugin-identity.js';
-import { qualifyEntryType } from '@/utilities/entry-types.js';
+import { qualifyEntryType } from '@/entries/type-registry.js';
 import { createEntriesRouter } from '@/transport/http/routes/entries.js';
 import type { Context } from 'hono';
 import type { Permission, PluginAccess, PluginContext } from '@/types/index.js';

@@ -4,11 +4,20 @@ export const entryStatusEnum = z.enum(['draft', 'published', 'scheduled']);
 
 const slugField = z
     .string()
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must be lowercase alphanumeric with hyphens')
+    .regex(
+        /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+        'Slug must be lowercase alphanumeric with hyphens'
+    )
     .optional();
 
 const publishAtField = z
-    .union([z.date(), z.string().datetime({ offset: true }).transform(v => new Date(v))])
+    .union([
+        z.date(),
+        z
+            .string()
+            .datetime({ offset: true })
+            .transform((v) => new Date(v)),
+    ])
     .nullable()
     .optional();
 
@@ -69,6 +78,9 @@ export const updateEntrySchema = updateEntrySchemaFor('title');
 export const scheduleEntrySchema = z.object({
     publishAt: z.union([
         z.date(),
-        z.string().datetime({ offset: true }).transform(v => new Date(v)),
+        z
+            .string()
+            .datetime({ offset: true })
+            .transform((v) => new Date(v)),
     ]),
 });

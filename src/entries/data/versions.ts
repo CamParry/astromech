@@ -5,7 +5,11 @@
 
 import { eq, desc, sql } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { entryVersionsTable, type EntryVersionRow, type NewEntryVersionRow } from '@/db/schema';
+import {
+    entryVersionsTable,
+    type EntryVersionRow,
+    type NewEntryVersionRow,
+} from '@/db/schema.js';
 
 export class VersionsRepository {
     constructor(private db: LibSQLDatabase) {}
@@ -15,7 +19,9 @@ export class VersionsRepository {
      */
     async create(data: NewEntryVersionRow): Promise<EntryVersionRow> {
         const result = await this.db.insert(entryVersionsTable).values(data).returning();
-        return result[0]!;
+        const row = result[0];
+        if (!row) throw new Error('Insert returned no rows');
+        return row;
     }
 
     /**

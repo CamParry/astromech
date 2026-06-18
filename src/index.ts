@@ -36,8 +36,8 @@ export {
 } from '@/policies/permissions/permissions.js';
 export type { BuiltInRoleSlug } from '@/policies/permissions/permissions.js';
 export { withDefaults } from '@/utilities/options.js';
-export { resolveEntryUrl, resolveEntryPath } from '@/utilities/entry-url.js';
-export type { UrlEntry } from '@/utilities/entry-url.js';
+export { resolveEntryUrl, resolveEntryPath } from '@/entries/url.js';
+export type { UrlEntry } from '@/entries/url.js';
 export { defaultImageWidths } from '@/media/serving/image/defaults.js';
 export { buildImageAttrs } from '@/media/serving/image/build-image-attrs.js';
 export type {
