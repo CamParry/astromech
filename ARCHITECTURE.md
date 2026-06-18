@@ -29,12 +29,18 @@ routes · admin · kernel · codegen · cli        entrypoints & composition roo
 client                                         consumes the HTTP API over the wire
 transport (http · local · mcp · cli)           delivery
 policies                                       permission/confirmation wrappers (withPermissions)
-plugins/{seo,redirects,menus}                  first-party plugins
 entries · media · users · settings             domains — siblings, never import each other
 plugins/runtime · database · storage ·         capabilities
   email · cron · context · fields · permissions
 types · utilities · errors                     pure leaves
 ```
+
+The three first-party plugins (`@astromech/{seo,redirects,menus}`) live OUTSIDE
+this `src/` graph, in top-level `packages/` — each a separately published npm
+package that consumes core only through the public `astromech` surface (incl.
+`astromech/plugin-kit`, the plugin-authoring API). They prove the public surface
+can build a real plugin; `packages-only-public-surface` in dep-cruiser keeps them
+honest. The plugin **runtime** (hook engine) stays a core capability.
 
 Key invariants:
 
@@ -75,8 +81,8 @@ src/
 │   ── policies ──────────────────────────────────────────────────────────────
 ├── policies/       # withPermissions wrapper only — no domain logic here
 │
-│   ── first-party plugins ───────────────────────────────────────────────────
-├── plugins/        # plugins/runtime (hook engine) + seo/ redirects/ menus/
+│   ── plugin runtime (capability) ─────────────────────────────────────────────
+├── plugins/        # plugins/runtime (hook engine) only — first-party plugins live in packages/
 │
 │   ── domains ───────────────────────────────────────────────────────────────
 ├── entries/        # entries domain: service · schema · descriptors · visibility · url · type-registry
@@ -100,6 +106,11 @@ src/
 │
 │   ── public surface ─────────────────────────────────────────────────────
 └── exports/        # thin re-export barrels; tsup builds from here — internals are private
+
+packages/            # first-party plugins as separate published packages (npm workspaces)
+├── menus/           # @astromech/menus
+├── redirects/       # @astromech/redirects  (ships a ./schema subpath for drizzle)
+└── seo/             # @astromech/seo        (admin React components ship as source via ./admin/*)
 ```
 
 ## Public entry points
@@ -108,8 +119,9 @@ Consumers import from subpaths, never deep into `src/`. The published surface is
 defined by `exports` in `package.json` — that's canonical. The ones to know:
 `astromech` (core helpers + types), `astromech/astro` (integration),
 `astromech/local` & `astromech/fetch` (the two API consumers), `astromech/middleware`,
-`astromech/fields`, `astromech/db/schema`, the `astromech` CLI bin, and the
-first-party plugins under `astromech/plugins/*`.
+`astromech/fields`, `astromech/db/schema`, `astromech/plugin-kit` (the
+plugin-authoring API), and the `astromech` CLI bin. The first-party plugins are
+their own packages — `@astromech/{seo,redirects,menus}` (see `packages/`).
 
 ## The development gate
 
