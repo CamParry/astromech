@@ -1,7 +1,7 @@
 import type { BaseFieldProps } from '@/types/index.js';
 import { Input } from '@/admin/components/ui/input';
 
-export function NumberField({ name, value, field, required, onChange }: BaseFieldProps) {
+export function NumberField({ name, value, field, required, onChange, disabled }: BaseFieldProps) {
     return (
         <Input
             type="number"
@@ -17,6 +17,7 @@ export function NumberField({ name, value, field, required, onChange }: BaseFiel
             min={field.min}
             max={field.max}
             step={field.step || 1}
+            disabled={disabled}
             onChange={(e) =>
                 onChange(name, e.target.value === '' ? null : Number(e.target.value))
             }

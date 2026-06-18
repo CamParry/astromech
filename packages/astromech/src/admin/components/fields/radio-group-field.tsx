@@ -2,7 +2,7 @@ import type { BaseFieldProps } from '@/types/index.js';
 import { RadioGroup } from '@/admin/components/ui/radio-group.js';
 import { useLabel } from '@/admin/i18n/entry-namespace.js';
 
-export function RadioGroupField({ name, value, field, onChange }: BaseFieldProps) {
+export function RadioGroupField({ name, value, field, onChange, disabled }: BaseFieldProps) {
     const label = useLabel();
 
     const options: { value: string; label: string }[] = (field.options ?? []).map(
@@ -20,6 +20,7 @@ export function RadioGroupField({ name, value, field, onChange }: BaseFieldProps
             value={selected}
             onChange={(v) => onChange(name, v)}
             name={name}
+            {...(disabled !== undefined ? { disabled } : {})}
         />
     );
 }

@@ -8,6 +8,7 @@ export function TextareaField({
     field,
     required,
     onChange,
+    disabled,
 }: BaseFieldProps) {
     const stringValue = typeof value === 'string' ? value : '';
 
@@ -19,6 +20,7 @@ export function TextareaField({
                 required={required}
                 rows={5}
                 maxLength={field.maxLength}
+                disabled={disabled}
                 onChange={(e) => onChange(name, e.target.value)}
             />
             {field.count && <FieldCount value={stringValue} count={field.count} />}

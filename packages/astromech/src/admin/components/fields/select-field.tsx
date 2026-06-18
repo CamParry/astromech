@@ -2,7 +2,7 @@ import type { BaseFieldProps } from '@/types/index.js';
 import { Select } from '@/admin/components/ui/select';
 import { useLabel } from '@/admin/i18n/entry-namespace.js';
 
-export function SelectField({ name, value, field, required, onChange }: BaseFieldProps) {
+export function SelectField({ name, value, field, required, onChange, disabled }: BaseFieldProps) {
     const label = useLabel();
 
     const options: { value: string; label: string }[] =
@@ -21,6 +21,7 @@ export function SelectField({ name, value, field, required, onChange }: BaseFiel
             options={options}
             placeholder="Select an option..."
             required={!!required}
+            {...(disabled !== undefined ? { disabled } : {})}
         />
     );
 }

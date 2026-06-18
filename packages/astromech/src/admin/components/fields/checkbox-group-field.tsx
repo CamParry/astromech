@@ -2,7 +2,7 @@ import type { BaseFieldProps } from '@/types/index.js';
 import { CheckboxGroup } from '@/admin/components/ui/checkbox-group.js';
 import { useLabel } from '@/admin/i18n/entry-namespace.js';
 
-export function CheckboxGroupField({ name, value, field, onChange }: BaseFieldProps) {
+export function CheckboxGroupField({ name, value, field, onChange, disabled }: BaseFieldProps) {
     const label = useLabel();
 
     const options: { value: string; label: string }[] = (field.options ?? []).map(
@@ -20,6 +20,7 @@ export function CheckboxGroupField({ name, value, field, onChange }: BaseFieldPr
             value={checked}
             name={name}
             onChange={(v) => onChange(name, v)}
+            {...(disabled !== undefined ? { disabled } : {})}
         />
     );
 }

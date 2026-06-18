@@ -1,6 +1,7 @@
 import { Combobox } from '@base-ui/react/combobox';
 import React, { useRef, useId } from 'react';
 import { CheckIcon, XIcon } from 'lucide-react';
+import { useFieldControl } from '@/admin/components/fields/field-control-context';
 
 export type MultiSelectOption = { label: string; value: string };
 
@@ -29,6 +30,7 @@ export function MultiSelect<T = MultiSelectOption>({
     placeholder = 'Select...',
     multiple = true,
 }: MultiSelectProps<T>): React.ReactElement {
+    const { ariaProps } = useFieldControl();
     const containerRef = useRef<HTMLDivElement | null>(null);
     const id = useId();
 
@@ -81,6 +83,7 @@ export function MultiSelect<T = MultiSelectOption>({
                                     id={id}
                                     placeholder={val.length > 0 ? '' : placeholder}
                                     className="am-multiselect-input"
+                                    {...ariaProps}
                                 />
                             </React.Fragment>
                         )}

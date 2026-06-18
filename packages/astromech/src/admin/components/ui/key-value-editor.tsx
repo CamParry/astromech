@@ -8,6 +8,7 @@ export type KeyValueEditorProps = {
     addLabel?: string;
     keyPlaceholder?: string;
     valuePlaceholder?: string;
+    disabled?: boolean;
 };
 
 type PairWithId = { _id: string; key: string; value: string };
@@ -35,6 +36,7 @@ export function KeyValueEditor({
     addLabel = 'Add pair',
     keyPlaceholder = 'Key',
     valuePlaceholder = 'Value',
+    disabled,
 }: KeyValueEditorProps): React.ReactElement {
     const [pairs, setPairs] = useState<PairWithId[]>(() => recordToPairs(value));
 
@@ -66,6 +68,7 @@ export function KeyValueEditor({
                                 type="text"
                                 value={pair.key}
                                 placeholder={keyPlaceholder}
+                                disabled={disabled}
                                 onChange={(e) =>
                                     handleChange(pair._id, 'key', e.target.value)
                                 }
@@ -75,6 +78,7 @@ export function KeyValueEditor({
                                 type="text"
                                 value={pair.value}
                                 placeholder={valuePlaceholder}
+                                disabled={disabled}
                                 onChange={(e) =>
                                     handleChange(pair._id, 'value', e.target.value)
                                 }
@@ -83,6 +87,7 @@ export function KeyValueEditor({
                             <button
                                 type="button"
                                 className="am-kv-editor-remove"
+                                disabled={disabled}
                                 onClick={() => handleRemove(pair._id)}
                                 aria-label="Remove pair"
                             >
@@ -94,6 +99,7 @@ export function KeyValueEditor({
             )}
             <button
                 type="button"
+                disabled={disabled}
                 onClick={handleAdd}
                 className="am-repeater-btn am-repeater-btn-add"
             >

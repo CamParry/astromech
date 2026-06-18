@@ -2,6 +2,7 @@ import React from 'react';
 import { Select as BaseSelect } from '@base-ui/react/select';
 import { Check, ChevronDown } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useFieldControl } from '@/admin/components/fields/field-control-context';
 
 export type SelectOption = {
     value: string;
@@ -35,6 +36,7 @@ export function Select({
     style,
     triggerPrefix,
 }: SelectProps): React.ReactElement {
+    const { ariaProps } = useFieldControl();
     return (
         <BaseSelect.Root
             value={value}
@@ -48,6 +50,7 @@ export function Select({
                 id={id}
                 className={clsx('am-select-trigger', className)}
                 style={style}
+                {...ariaProps}
             >
                 {triggerPrefix && (
                     <span className="am-select-trigger-prefix">{triggerPrefix}</span>

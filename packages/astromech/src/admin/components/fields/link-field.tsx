@@ -20,7 +20,7 @@ function toLinkValue(v: unknown): LinkValue {
     return { href: '', label: '', target: '_self' };
 }
 
-export function LinkField({ name, value, onChange }: BaseFieldProps) {
+export function LinkField({ name, value, onChange, disabled }: BaseFieldProps) {
     const link = toLinkValue(value);
 
     function handleChange(key: keyof LinkValue, val: string) {
@@ -39,6 +39,7 @@ export function LinkField({ name, value, onChange }: BaseFieldProps) {
                     name={`${name}[href]`}
                     value={link.href}
                     placeholder="https://"
+                    disabled={disabled}
                     onChange={(e) => handleChange('href', e.target.value)}
                 />
             </div>
@@ -52,6 +53,7 @@ export function LinkField({ name, value, onChange }: BaseFieldProps) {
                     name={`${name}[label]`}
                     value={link.label}
                     placeholder="Link text"
+                    disabled={disabled}
                     onChange={(e) => handleChange('label', e.target.value)}
                 />
             </div>
@@ -63,6 +65,7 @@ export function LinkField({ name, value, onChange }: BaseFieldProps) {
                     id={`${name}--target`}
                     name={`${name}[target]`}
                     value={link.target}
+                    disabled={disabled}
                     onChange={(e) => handleChange('target', e.target.value)}
                     className="am-input am-link-field-select"
                 >

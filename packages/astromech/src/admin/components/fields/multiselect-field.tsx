@@ -8,6 +8,7 @@ export function MultiselectField({
     field,
     required,
     onChange,
+    disabled,
 }: BaseFieldProps) {
     const label = useLabel();
     const selectedValues = Array.isArray(value) ? value.map(String) : [];
@@ -32,6 +33,7 @@ export function MultiselectField({
             }
             name={name}
             required={!!required}
+            {...(disabled !== undefined ? { disabled } : {})}
         />
     );
 }

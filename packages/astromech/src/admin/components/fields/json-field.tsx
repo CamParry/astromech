@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import type { BaseFieldProps } from '@/types/index.js';
+import { useFieldControl } from '@/admin/components/fields/field-control-context';
 import './json-field.css';
 
-export function JsonField({ name, value, required, onChange }: BaseFieldProps) {
+export function JsonField({ name, value, required, onChange, disabled }: BaseFieldProps) {
+    const { hasError } = useFieldControl();
     const initialJson =
         value !== undefined && value !== null ? JSON.stringify(value, null, 2) : '';
 
@@ -24,6 +26,8 @@ export function JsonField({ name, value, required, onChange }: BaseFieldProps) {
         }
     };
 
+    const showLocalError = !hasError && error !== null;
+
     return (
         <div className="am-json-field">
             <textarea
@@ -36,8 +40,10 @@ export function JsonField({ name, value, required, onChange }: BaseFieldProps) {
                 rows={8}
                 spellCheck={false}
                 autoComplete="off"
+                disabled={disabled}
+                aria-invalid={hasError || error !== null || undefined}
             />
-            {error !== null && <span className="am-json-field-error">{error}</span>}
+            {showLocalError && <p className="am-field-error">{error}</p>}
         </div>
     );
 }

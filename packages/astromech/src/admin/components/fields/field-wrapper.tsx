@@ -1,4 +1,5 @@
 import React from 'react';
+import { FieldControlProvider } from './field-control-context';
 
 export type FieldWrapperProps = {
     label: React.ReactNode;
@@ -16,6 +17,7 @@ export function FieldWrapper({
     children,
 }: FieldWrapperProps): React.ReactElement {
     const hasError = error !== undefined && error.length > 0;
+    const errorId = React.useId();
     return (
         <div className="am-field" {...(hasError ? { 'data-invalid': '' } : {})}>
             <label className="am-field-label">
@@ -25,9 +27,13 @@ export function FieldWrapper({
             {description !== undefined && (
                 <p className="am-field-hint">{description}</p>
             )}
-            {children}
+            <FieldControlProvider
+                value={{ hasError, errorId: hasError ? errorId : undefined }}
+            >
+                {children}
+            </FieldControlProvider>
             {hasError && (
-                <p className="am-field-error" role="alert">
+                <p className="am-field-error" id={errorId} role="alert">
                     {error.join(', ')}
                 </p>
             )}

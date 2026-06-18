@@ -1,13 +1,16 @@
 import React from 'react';
 import { Popover } from '@base-ui/react/popover';
 import { HexColorPicker } from 'react-colorful';
+import { useFieldControl } from '@/admin/components/fields/field-control-context';
 
 export type ColorPickerProps = {
     value?: string;
     onChange?: (value: string) => void;
+    disabled?: boolean;
 };
 
-export function ColorPicker({ value, onChange }: ColorPickerProps): React.ReactElement {
+export function ColorPicker({ value, onChange, disabled }: ColorPickerProps): React.ReactElement {
+    const { ariaProps } = useFieldControl();
     const hex = typeof value === 'string' && value ? value : '#000000';
 
     return (
@@ -15,6 +18,8 @@ export function ColorPicker({ value, onChange }: ColorPickerProps): React.ReactE
             <Popover.Trigger
                 className="am-color-picker-trigger"
                 aria-label={`Color: ${hex}`}
+                disabled={disabled}
+                {...ariaProps}
             >
                 <span
                     className="am-color-picker-swatch"
