@@ -12,5 +12,5 @@ In-flight design contract: `specs/modular-architecture.md` (delete once Stage 4 
 - [x] Drain — permission model hoisted to `permissions/` capability; `policies/` keeps only the `withPermissions` enforcer
 - [ ] Stage 4 — hoist first-party plugins `plugins/{seo,redirects,menus}` → top-level `packages/` (settle packaging approach: separate npm packages vs internal workspace)
 - [ ] Untangle the `plugins/runtime` ↔ `entries` cycle (dependency inversion: entries registers entry-access factories into plugin-runtime at boot), then add the withheld `plugins-runtime-is-a-capability` rule
-- [ ] Move `client/` → `transport/http/client/` and repoint the admin/client dep-cruiser rules
+- [x] Move `client/` → `transport/http/client/` (client half of the http transport; admin/client dep-cruiser rules repointed)
 - [ ] Close-out — finish ARCHITECTURE.md/TERMINOLOGY.md, delete `specs/modular-architecture.md`, merge to `main`
