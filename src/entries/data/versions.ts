@@ -9,7 +9,7 @@ import {
     entryVersionsTable,
     type EntryVersionRow,
     type NewEntryVersionRow,
-} from '@/db/schema.js';
+} from '../schema.js';
 
 export class VersionsRepository {
     constructor(private db: LibSQLDatabase) {}

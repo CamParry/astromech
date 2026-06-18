@@ -4,8 +4,7 @@
  * Compatible with Cloudflare D1 (SQLite)
  */
 
-import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
-import { usersTable } from '@/users/schema.js';
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 
 // ============================================================================
 // Users domain tables (moved to @/users/schema.ts — re-exported for aggregate surface)
@@ -30,87 +29,17 @@ export {
 } from '@/users/schema.js';
 
 // ============================================================================
-// Entries
+// Entries (tables moved to @/entries/schema.ts — re-exported for aggregate surface)
 // ============================================================================
 
-export const entriesTable = sqliteTable(
-    'entries',
-    {
-        id: text('id')
-            .primaryKey()
-            .$defaultFn(() => crypto.randomUUID()),
-        type: text('type').notNull(),
-        locale: text('locale').notNull(),
-        // Synthetic group identifier shared by all rows that represent the same
-        // content across locales. Generated via crypto.randomUUID() on create.
-        localeGroup: text('locale_group')
-            .notNull()
-            .$defaultFn(() => crypto.randomUUID()),
-
-        slug: text('slug'),
-        title: text('title').notNull(),
-        fields: text('fields', { mode: 'json' }),
-        status: text('status', { enum: ['draft', 'published', 'scheduled'] })
-            .notNull()
-            .default('draft'),
-        publishedAt: integer('published_at', { mode: 'timestamp' }),
-        deletedAt: integer('deleted_at', { mode: 'timestamp' }),
-
-        createdAt: integer('created_at', { mode: 'timestamp' })
-            .notNull()
-            .$defaultFn(() => new Date()),
-        updatedAt: integer('updated_at', { mode: 'timestamp' })
-            .notNull()
-            .$defaultFn(() => new Date()),
-        createdBy: text('created_by').references(() => usersTable.id),
-        updatedBy: text('updated_by').references(() => usersTable.id),
-    },
-    (table) => [
-        index('idx_entries_type').on(table.type),
-        index('idx_entries_status').on(table.type, table.status),
-        index('idx_entries_locale').on(table.type, table.locale, table.status),
-        index('idx_entries_deleted').on(table.deletedAt),
-        index('idx_entries_locale_group').on(table.localeGroup),
-        uniqueIndex('entries_locale_group_locale_unique').on(
-            table.localeGroup,
-            table.locale
-        ),
-        uniqueIndex('entries_type_locale_slug_unique').on(
-            table.type,
-            table.locale,
-            table.slug
-        ),
-    ]
-);
-
-// ============================================================================
-// Entry Versions
-// ============================================================================
-
-export const entryVersionsTable = sqliteTable(
-    'entry_versions',
-    {
-        id: text('id')
-            .primaryKey()
-            .$defaultFn(() => crypto.randomUUID()),
-        entryId: text('entry_id')
-            .notNull()
-            .references(() => entriesTable.id, { onDelete: 'cascade' }),
-        versionNumber: integer('version_number').notNull(),
-        title: text('title').notNull(),
-        slug: text('slug'),
-        fields: text('fields', { mode: 'json' }),
-        relations: text('relations', { mode: 'json' }).$type<
-            Record<string, string | string[]>
-        >(),
-        status: text('status', { enum: ['draft', 'published', 'scheduled'] }),
-        createdAt: integer('created_at', { mode: 'timestamp' })
-            .notNull()
-            .$defaultFn(() => new Date()),
-        createdBy: text('created_by').references(() => usersTable.id),
-    },
-    (table) => [index('idx_versions_entry').on(table.entryId, table.versionNumber)]
-);
+export {
+    entriesTable,
+    entryVersionsTable,
+    type EntryRow,
+    type NewEntryRow,
+    type EntryVersionRow,
+    type NewEntryVersionRow,
+} from '@/entries/schema.js';
 
 // ============================================================================
 // Relationships
@@ -186,12 +115,6 @@ export type NewCronRow = typeof cronTable.$inferInsert;
 // ============================================================================
 // Type Exports
 // ============================================================================
-
-export type EntryRow = typeof entriesTable.$inferSelect;
-export type NewEntryRow = typeof entriesTable.$inferInsert;
-
-export type EntryVersionRow = typeof entryVersionsTable.$inferSelect;
-export type NewEntryVersionRow = typeof entryVersionsTable.$inferInsert;
 
 export type RelationshipRow = typeof relationshipsTable.$inferSelect;
 export type NewRelationshipRow = typeof relationshipsTable.$inferInsert;

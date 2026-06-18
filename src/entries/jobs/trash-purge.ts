@@ -6,7 +6,7 @@
  */
 
 import { and, isNotNull, lte } from 'drizzle-orm';
-import { entriesTable } from '@/db/schema.js';
+import { entriesTable } from '../schema.js';
 import type { CronJob } from '@/cron/registry.js';
 
 export const trashPurgeJob: CronJob = {
