@@ -9,11 +9,16 @@
  *     · http/client = the fetch Client (consumes the HTTP API over the wire;
  *       client half of the transport, nested but kept a distinct DAG node)
  *   policies                                       permission / confirmation wrappers
- *   plugins/{seo,redirects,menus}                  first-party plugins
+ *   plugins/{seo,redirects}                        first-party plugins (in-tree)
  *   entries · media · users · settings             domains — siblings, never import each other
  *   plugins/runtime · database · storage · email ·  capabilities
  *     cron · context · fields · permissions
  *   types · utilities · errors                     pure leaves
+ *
+ * Sitting OUTSIDE this `src/` graph: packages/* — the first-party plugin packages
+ * (`@astromech/{menus,…}`). They are downstream consumers of the published
+ * `astromech` surface; `packages-only-public-surface` forbids them reaching any
+ * `src/` internal beyond the public root + `src/exports/`.
  *
  * The kernel is the composition root and may import from any layer below it.
  *
@@ -46,7 +51,7 @@ module.exports = {
       severity: 'error',
       from: { path: '^src/(entries|media|users|settings)/' },
       to: {
-        path: '^src/(routes|admin|transport|policies|kernel|codegen)/|^src/plugins/(seo|redirects|menus)/',
+        path: '^src/(routes|admin|transport|policies|kernel|codegen)/|^src/plugins/(seo|redirects)/',
       },
     },
     {
@@ -56,7 +61,7 @@ module.exports = {
       severity: 'error',
       from: { path: '^src/(storage|email|cron|context|fields|permissions)/' },
       to: {
-        path: '^src/(entries|media|users|settings|routes|admin|transport|policies|kernel|codegen)/|^src/plugins/(seo|redirects|menus)/',
+        path: '^src/(entries|media|users|settings|routes|admin|transport|policies|kernel|codegen)/|^src/plugins/(seo|redirects)/',
       },
     },
     {
@@ -66,7 +71,7 @@ module.exports = {
       severity: 'error',
       from: { path: '^src/database/', pathNot: '^src/database/schema\\.ts$' },
       to: {
-        path: '^src/(entries|media|users|settings|routes|admin|transport|policies|kernel|codegen)/|^src/plugins/(seo|redirects|menus)/',
+        path: '^src/(entries|media|users|settings|routes|admin|transport|policies|kernel|codegen)/|^src/plugins/(seo|redirects)/',
       },
     },
     {
@@ -133,6 +138,14 @@ module.exports = {
       to: { path: '^src/(?!exports/)' },
     },
     {
+      name: 'packages-only-public-surface',
+      comment:
+        'The first-party plugin packages (packages/*) are downstream consumers of the published `astromech` surface — exactly like a third-party plugin. They import the bare `astromech` root (resolved to src/index.ts) and its public subpaths (resolved into src/exports/), plus third-party deps — and must NEVER reach a src/ internal (`@/…`) or another package`s source. Keeps the public API honest: if a package needs an internal, it gets promoted to the public surface (e.g. astromech/plugin-kit) first.',
+      severity: 'error',
+      from: { path: '^packages/' },
+      to: { path: '^src/', pathNot: '^src/(index\\.ts$|exports/)' },
+    },
+    {
       name: 'no-circular',
       comment:
         'Cyclic dependencies break the acyclic layer graph and tree-shaking. Scoped to the clean capability/delivery spine; domains and plugins/runtime are excluded until the known plugins/runtime↔entries entanglement is untangled.',
@@ -147,7 +160,7 @@ module.exports = {
     tsConfig: { fileName: 'tsconfig.json' },
     tsPreCompilationDeps: true,
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '(\\.test\\.ts$|/test/)' },
+    exclude: { path: '(\\.test\\.ts$|/test/|^packages/[^/]+/dist/)' },
     enhancedResolveOptions: {
       // Imports are written with `.js` extensions but resolve to `.ts` sources;
       // dependency-cruiser maps these via the tsConfig + the extension list below.

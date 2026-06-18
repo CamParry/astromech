@@ -20,6 +20,23 @@ export default defineConfig({
             ),
             '@': fileURLToPath(new URL('./src', import.meta.url)),
             '@tests': fileURLToPath(new URL('./tests/_support', import.meta.url)),
+            // First-party plugin packages and the public subpaths they consume
+            // resolve to source under vitest (no build step before tests). The
+            // subpath aliases MUST precede the bare `astromech` alias so the
+            // longest match wins.
+            'astromech/fields': fileURLToPath(
+                new URL('./src/exports/fields.ts', import.meta.url)
+            ),
+            'astromech/columns': fileURLToPath(
+                new URL('./src/exports/columns.ts', import.meta.url)
+            ),
+            'astromech/plugin-kit': fileURLToPath(
+                new URL('./src/exports/plugin-kit.ts', import.meta.url)
+            ),
+            '@astromech/menus': fileURLToPath(
+                new URL('./packages/menus/src/index.ts', import.meta.url)
+            ),
+            astromech: fileURLToPath(new URL('./src/exports/index.ts', import.meta.url)),
         },
     },
     test: {

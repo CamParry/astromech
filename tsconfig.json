@@ -29,7 +29,11 @@
         "paths": {
             "@/*": ["./src/*"],
             "@tests/*": ["./tests/_support/*"],
-            "astromech": ["./src/index.ts"]
+            "astromech": ["./src/index.ts"],
+            "astromech/fields": ["./src/exports/fields.ts"],
+            "astromech/columns": ["./src/exports/columns.ts"],
+            "astromech/plugin-kit": ["./src/exports/plugin-kit.ts"],
+            "@astromech/menus": ["./packages/menus/src/index.ts"]
         }
     },
     "include": ["src/**/*"],

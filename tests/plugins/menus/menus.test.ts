@@ -9,16 +9,12 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import {
-    createTestDb,
-    makeTestConfig,
-    setupTestConfig,
-} from '@tests/harness.js';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
 import '@/transport/local/index.js';
 import { localPlugins } from '@/transport/local/plugins.js';
-import { menus } from '@/plugins/menus/index.js';
-import type { MenuItem } from '@/plugins/menus/types.js';
-import type { AstromechConfig } from '@/types/index.js';
+import { menus } from '@astromech/menus';
+import type { MenuItem } from '@astromech/menus';
+import type { AstromechConfig, JsonValue } from '@/types/index.js';
 import { derivePluginPages, derivePluginNav } from '@/plugins/runtime/plugin-admin.js';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity.js';
 
@@ -42,10 +38,14 @@ async function get(key: string, locale?: string): Promise<MenuItem[] | null> {
 async function writeSetting(key: string, value: unknown): Promise<void> {
     // Use the Local API to write settings directly
     const { default: Astromech } = await import('@/transport/local/index.js');
-    await (Astromech as { settings: { set(k: string, v: unknown): Promise<unknown> } }).settings.set(key, value as import('@/types/index.js').JsonValue);
+    await (
+        Astromech as { settings: { set(k: string, v: unknown): Promise<unknown> } }
+    ).settings.set(key, value as JsonValue);
 }
 
-function makeMenusConfig(menuList = [{ key: 'main', label: 'Main Navigation' }]): AstromechConfig {
+function makeMenusConfig(
+    menuList = [{ key: 'main', label: 'Main Navigation' }]
+): AstromechConfig {
     const base = makeTestConfig();
     // Add a url template to the post type so entry refs can resolve
     const post = base.entries['post'];
@@ -67,7 +67,12 @@ beforeEach(async () => {
 
 describe('menus — plugin structure', () => {
     it('generates one settings page per configured menu', () => {
-        const plugin = menus({ menus: [{ key: 'main', label: 'Main Nav' }, { key: 'footer', label: 'Footer' }] });
+        const plugin = menus({
+            menus: [
+                { key: 'main', label: 'Main Nav' },
+                { key: 'footer', label: 'Footer' },
+            ],
+        });
         const identity = resolvePluginIdentity(plugin);
         const pages = derivePluginPages(identity, plugin);
         expect(pages).toHaveLength(2);
@@ -78,7 +83,12 @@ describe('menus — plugin structure', () => {
     });
 
     it('nav groups under a single Menus parent', () => {
-        const plugin = menus({ menus: [{ key: 'main', label: 'Main Nav' }, { key: 'footer', label: 'Footer' }] });
+        const plugin = menus({
+            menus: [
+                { key: 'main', label: 'Main Nav' },
+                { key: 'footer', label: 'Footer' },
+            ],
+        });
         const identity = resolvePluginIdentity(plugin);
         const nav = derivePluginNav(identity, plugin);
         expect(nav).toHaveLength(1);
@@ -194,7 +204,12 @@ describe('menus.get — nesting', () => {
                     url: '/products',
                     _children: [
                         { _id: 'c2', label: 'Shoes', url: '/products/shoes' },
-                        { _id: 'c3', label: 'Hidden', url: '/products/hidden', _disabled: true },
+                        {
+                            _id: 'c3',
+                            label: 'Hidden',
+                            url: '/products/hidden',
+                            _disabled: true,
+                        },
                     ],
                 },
             ],
@@ -269,7 +284,9 @@ describe('menus.get — entry ref resolution', () => {
     it('resolves an entry ref to its front-end URL', async () => {
         // Create a published post entry so it passes the public visibility filter
         const { default: Astromech } = await import('@/transport/local/index.js');
-        const astromech = Astromech as { entries: { create(p: Record<string, unknown>): Promise<{ id: string }> } };
+        const astromech = Astromech as {
+            entries: { create(p: Record<string, unknown>): Promise<{ id: string }> };
+        };
         const post = await astromech.entries.create({
             type: 'post',
             title: 'Hello World',
@@ -289,7 +306,9 @@ describe('menus.get — entry ref resolution', () => {
 
     it('prefers entry url over url field when both are set', async () => {
         const { default: Astromech } = await import('@/transport/local/index.js');
-        const astromech = Astromech as { entries: { create(p: Record<string, unknown>): Promise<{ id: string }> } };
+        const astromech = Astromech as {
+            entries: { create(p: Record<string, unknown>): Promise<{ id: string }> };
+        };
         const post = await astromech.entries.create({
             type: 'post',
             title: 'Override Test',

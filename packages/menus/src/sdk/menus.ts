@@ -4,9 +4,9 @@
  * `url` template, and returns a clean tree.
  */
 
-import type { AnyPluginSdkMethod, Entry, PluginContext } from '@/types/index.js';
-import { defineServiceMethod } from '@/index.js';
-import { resolveEntryUrl } from '@/entries/url.js';
+import type { AnyPluginSdkMethod, Entry, PluginContext } from 'astromech';
+import { defineServiceMethod } from 'astromech';
+import { resolveEntryUrl } from 'astromech/plugin-kit';
 import { menuBlobKey } from '../manifest.js';
 import type { MenuConfig, MenuItem } from '../types.js';
 

@@ -11,9 +11,9 @@
  *   // → [{ label, url?, newTab?, children: [...] }]
  */
 
-import { defineAdminPage, definePlugin, defineServiceMethod } from '@/index.js';
-import type { PluginDefinition, SdkInterface } from '@/types/index.js';
-import * as fields from '@/fields/index.js';
+import { defineAdminPage, definePlugin, defineServiceMethod } from 'astromech';
+import type { PluginDefinition, SdkInterface } from 'astromech';
+import * as fields from 'astromech/fields';
 import { PACKAGE, VERSION, LABEL, ICON } from './manifest.js';
 import { buildMenusSdk } from './sdk/menus.js';
 import type { MenusOptions, MenuItem } from './types.js';
