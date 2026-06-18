@@ -1,5 +1,6 @@
 import type { EntryStorage } from './storage/types.js';
-import type { FieldDefinition, ScopedReads } from '@/types/fields.js';
+import { scopedReadsFromRecords } from '@/fields/scoped-reads.js';
+import type { ScopedReads } from '@/types/fields.js';
 
 /**
  * Scoped reads for entry field validation. `isUnique` checks no OTHER entry of
@@ -12,29 +13,18 @@ export function createEntryScopedReads(
     storage: EntryStorage,
     scope: { type: string; locale: string; excludeId?: string },
 ): ScopedReads {
-    return {
-        async isUnique(field: FieldDefinition, value: unknown): Promise<boolean> {
+    return scopedReadsFromRecords({
+        load: async () => {
             const { data } = await storage.list({
                 type: scope.type,
                 locale: scope.locale,
                 trashed: false,
                 limit: 'all',
             });
-            for (const record of data) {
-                if (scope.excludeId !== undefined && record.id === scope.excludeId) continue;
-                const fields = (record.fields ?? {}) as Record<string, unknown>;
-                if (valuesEqual(fields[field.name], value)) return false;
-            }
-            return true;
+            return data;
         },
-    };
-}
-
-// Structural equality good enough for field uniqueness (scalars are the common
-// case; objects fall back to JSON compare — key-order sensitive, acceptable here).
-function valuesEqual(a: unknown, b: unknown): boolean {
-    if (Object.is(a, b)) return true;
-    if (a === null || b === null) return false;
-    if (typeof a !== 'object' || typeof b !== 'object') return false;
-    return JSON.stringify(a) === JSON.stringify(b);
+        getId: (record) => record.id,
+        getFields: (record) => (record.fields ?? {}) as Record<string, unknown>,
+        excludeId: scope.excludeId,
+    });
 }

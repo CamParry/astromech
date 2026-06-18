@@ -17,6 +17,10 @@ import type {
 } from '@/types/index.js';
 import { ValidationError } from '@/errors/validation.js';
 import { updateMediaSchema } from './schema.js';
+import { processFields } from '@/fields/pipeline.js';
+import { flattenFieldNodes } from '@/fields/helpers.js';
+import { scopedReadsFromRecords } from '@/fields/scoped-reads.js';
+import { getCurrentUser } from '@/context/index.js';
 import { buildMediaUrl, variantPrefix } from './serving/image/url.js';
 import { isOptimisableImage, readImageDimensions } from './serving/image/dimensions.js';
 import { contentVersion } from './serving/image/version.js';
@@ -193,6 +197,31 @@ export const mediaApi = {
         data: Partial<{ alt: string; title: string; fields: JsonObject }>
     ): Promise<Media> {
         const validatedData = validate(updateMediaSchema, data);
+
+        if (validatedData.fields !== undefined) {
+            const current = await mediaApi.get(id);
+            const fieldDefs = flattenFieldNodes(config.media?.fields ?? []);
+            const processed = await processFields(
+                validatedData.fields as Record<string, unknown>,
+                fieldDefs,
+                {
+                    operation: 'update',
+                    host: { kind: 'media', record: current },
+                    user: getCurrentUser(),
+                    reads: scopedReadsFromRecords({
+                        load: async () => (await mediaApi.query({ limit: 'all' })).data,
+                        getId: (r) => r.id,
+                        getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
+                        excludeId: id,
+                    }),
+                }
+            );
+            if (Object.keys(processed.errors).length > 0) {
+                throw ValidationError.fromFieldErrors(processed.errors);
+            }
+            validatedData.fields = processed.values as JsonObject;
+        }
+
         const db = getDb();
         const rows = await db
             .update(mediaTable)
