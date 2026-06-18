@@ -14,8 +14,8 @@ import {
     notFound,
 } from '@/transport/http/middleware/errors.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
-import { PERMISSION_ENTRY_READ_FULL } from '@/policies/permissions/permissions.js';
-import { withPermissions } from '@/policies/permissions/with-permissions.js';
+import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/index.js';
+import { withPermissions } from '@/policies/with-permissions.js';
 import type {
     EntryDuplicateOverrides,
     EntryQueryParams,

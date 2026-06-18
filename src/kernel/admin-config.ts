@@ -10,7 +10,7 @@ import type {
     ResolvedAdminPage,
     ResolvedEntryTypeConfig,
 } from '@/types/config.js';
-import { resolveRoles } from '@/policies/permissions/permissions.js';
+import { resolveRoles } from '@/permissions/index.js';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity.js';
 import {
     derivePluginNav,
@@ -22,7 +22,9 @@ import {
  * Project a resolved entry type into the serializable admin shape. Shared by
  * root entries and plugin-namespaced entries so the two never drift.
  */
-export function toAdminEntryType(entryType: ResolvedEntryTypeConfig): AdminEntryTypeConfig {
+export function toAdminEntryType(
+    entryType: ResolvedEntryTypeConfig
+): AdminEntryTypeConfig {
     return {
         single: entryType.single,
         plural: entryType.plural,
@@ -83,4 +85,3 @@ export function buildAdminConfig(
         pages: resolvedConfig.adminPages,
     };
 }
-

@@ -19,7 +19,7 @@ import {
 } from '@/transport/http/middleware/errors.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import type { JsonValue } from '@/types/index.js';
-import { withPermissions } from '@/policies/permissions/with-permissions.js';
+import { withPermissions } from '@/policies/with-permissions.js';
 import { setSettingSchema, settingsDescriptors } from '@/settings/index.js';
 
 type Env = { Variables: AuthVariables };

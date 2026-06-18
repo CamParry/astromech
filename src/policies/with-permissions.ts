@@ -13,7 +13,7 @@
  */
 
 import type { Permission, Role, ServiceMethodDescriptor } from '@/types/index.js';
-import { can } from './permissions.js';
+import { can } from '@/permissions/index.js';
 
 export type Permissions = {
     /** True if the principal holds `permission`. A null principal holds nothing. */

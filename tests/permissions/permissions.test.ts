@@ -7,7 +7,7 @@ import {
     definePermissionBundles,
     BUILT_IN_ROLES,
     resolveRoles,
-} from '@/policies/permissions/permissions.js';
+} from '@/permissions/index.js';
 
 // ============================================================================
 // hasPermission — new grammar (resource[:identifier]:action, action last)

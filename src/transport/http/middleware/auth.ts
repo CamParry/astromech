@@ -11,7 +11,7 @@ import { auth } from '@/users/index.js';
 import { getDb } from '@/database/registry.js';
 import { usersTable } from '@/database/schema.js';
 import { Astromech } from '@/transport/local/index.js';
-import { resolveRole } from '@/policies/permissions/permissions.js';
+import { resolveRole } from '@/permissions/index.js';
 import { unauthorized } from './errors.js';
 import type { User, Role } from '@/types/index.js';
 

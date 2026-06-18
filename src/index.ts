@@ -33,8 +33,8 @@ export {
     builtInRole,
     definePermissionBundles,
     BUILT_IN_ROLES,
-} from '@/policies/permissions/permissions.js';
-export type { BuiltInRoleSlug } from '@/policies/permissions/permissions.js';
+} from '@/permissions/index.js';
+export type { BuiltInRoleSlug } from '@/permissions/index.js';
 export { withDefaults } from '@/utilities/options.js';
 export { resolveEntryUrl, resolveEntryPath } from '@/entries/url.js';
 export type { UrlEntry } from '@/entries/url.js';

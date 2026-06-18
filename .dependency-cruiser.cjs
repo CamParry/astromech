@@ -11,7 +11,7 @@
  *   plugins/{seo,redirects,menus}                  first-party plugins
  *   entries · media · users · settings             domains — siblings, never import each other
  *   plugins/runtime · database · storage · email ·  capabilities
- *     cron · context · fields
+ *     cron · context · fields · permissions
  *   types · utilities · errors                     pure leaves
  *
  * The kernel is the composition root and may import from any layer below it.
@@ -55,7 +55,7 @@ module.exports = {
       comment:
         'Capabilities (storage, email, cron, context, fields) sit below the domains: they expose primitives, they do not orchestrate. They must not import a domain, an upper layer, or a first-party plugin.',
       severity: 'error',
-      from: { path: '^src/(storage|email|cron|context|fields)/' },
+      from: { path: '^src/(storage|email|cron|context|fields|permissions)/' },
       to: {
         path: '^src/(entries|media|users|settings|routes|admin|client|transport|policies|kernel|codegen)/|^src/plugins/(seo|redirects|menus)/',
       },
@@ -85,7 +85,7 @@ module.exports = {
       severity: 'error',
       from: { path: '^src/admin/' },
       to: {
-        path: '^src/(entries|media|users|settings)/|^src/(storage|email|cron|context|database|policies|transport|kernel)/|^src/plugins/runtime/',
+        path: '^src/(entries|media|users|settings)/|^src/(storage|email|cron|context|database|permissions|policies|transport|kernel)/|^src/plugins/runtime/',
         pathNot:
           '^src/entries/(url|type-registry)\\.(ts|js)$|^src/settings/page-values\\.(ts|js)$',
       },
@@ -97,7 +97,7 @@ module.exports = {
       severity: 'error',
       from: { path: '^src/client/' },
       to: {
-        path: '^src/(entries|media|users|settings|storage|email|cron|context|database|policies|transport|kernel|admin)/',
+        path: '^src/(entries|media|users|settings|storage|email|cron|context|database|permissions|policies|transport|kernel|admin)/',
       },
     },
     {
@@ -138,7 +138,7 @@ module.exports = {
         'Cyclic dependencies break the acyclic layer graph and tree-shaking. Scoped to the clean capability/delivery spine; domains and plugins/runtime are excluded until the known plugins/runtime↔entries entanglement is untangled.',
       severity: 'warn',
       from: {
-        path: '^src/(storage|email|cron|context|fields|database|policies|transport|client|kernel)/',
+        path: '^src/(storage|email|cron|context|fields|permissions|database|policies|transport|client|kernel)/',
       },
       to: { circular: true },
     },

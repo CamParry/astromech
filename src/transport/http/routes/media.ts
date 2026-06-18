@@ -21,7 +21,7 @@ import {
     notFound,
 } from '@/transport/http/middleware/errors.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
-import { withPermissions } from '@/policies/permissions/with-permissions.js';
+import { withPermissions } from '@/policies/with-permissions.js';
 import { updateMediaSchema } from '@/media/schema.js';
 import { mediaDescriptors } from '@/media/descriptors.js';
 import type { MediaQueryParams, JsonObject } from '@/types/index.js';
