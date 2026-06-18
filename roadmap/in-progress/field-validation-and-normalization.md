@@ -38,11 +38,11 @@ Server-side field validation as the headline, framed as a field-system normaliza
 
 **P5 — Admin error surfacing**
 
-- [ ] Shared `FieldWrapper` (label + description + error + aria); remove the double wrapper in `FormField`
-- [ ] Thread `error` through `FormField` to all field components
-- [ ] `use-entry-form.ts`: map `422 details.fields` onto fields (stop toasting them away)
-- [ ] Normalize the 26 components onto the wrapper; fix `disabled` inconsistencies
-- [ ] Fold `json`/`media` local error state into the channel (server errors take precedence)
+- [x] Shared `FieldWrapper` (label + description + error + aria); `FormField` uses it. No double wrapper to remove — Input/Textarea build their own chrome only when `label`/`error`/`hint` are passed (standalone pages), which the FormField path never does
+- [x] Thread `error` through `FormField` to all field components (P5a)
+- [x] `use-entry-form.ts`: map `422 details.fields` onto fields (stop toasting them away) (P5a)
+- [x] Normalize the components on `disabled`; `aria-invalid`/`aria-describedby` self-applied by primitives via `FieldControlContext` (FieldWrapper provides a stable error id) — no per-component aria edits (P5b)
+- [x] Fold `json`/`media`/`plugin` local error state into the `.am-field-error` channel (server errors take precedence) (P5b)
 
 **Deferred**
 
