@@ -4,9 +4,14 @@
  * Upload is handled separately by useUploadMedia.
  */
 
-import { useQuery, useMutation, useQueryClient, queryOptions } from '@tanstack/react-query';
+import {
+    useQuery,
+    useMutation,
+    useQueryClient,
+    queryOptions,
+} from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Astromech } from '@/client/index.js';
+import { Astromech } from '@/transport/http/client/index.js';
 import { queryKeys } from './use-query-keys.js';
 import { useToast } from '../components/ui/index.js';
 import type { Media, MediaQueryParams } from '@/types/index.js';
@@ -70,7 +75,8 @@ export function useDeleteMedia(options?: { id?: string; onSuccess?: () => void }
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: (id?: string) => Astromech.media.delete(options?.id ?? id!),
+        mutationFn: (id?: string) =>
+            Astromech.media.delete((options?.id ?? id) as string),
         onSuccess: () => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.media.all() });
             toast({ message: t('media.deleted'), variant: 'success' });

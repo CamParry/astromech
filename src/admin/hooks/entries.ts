@@ -16,7 +16,7 @@ import {
     queryOptions,
 } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Astromech } from '@/client/index.js';
+import { Astromech } from '@/transport/http/client/index.js';
 import { queryKeys, scopedEntryKeys } from './use-query-keys.js';
 import { useToast } from '../components/ui/index.js';
 import type {

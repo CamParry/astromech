@@ -12,7 +12,7 @@ import {
     X,
 } from 'lucide-react';
 import type { BaseFieldProps } from '@/types/index.js';
-import { Astromech } from '@/client/index.js';
+import { Astromech } from '@/transport/http/client/index.js';
 import { queryKeys } from '../../hooks/use-query-keys.js';
 import { Modal } from '@/admin/components/ui/modal';
 import { Spinner } from '@/admin/components/ui/spinner';
@@ -56,7 +56,14 @@ function MediaThumb({ item, className = '' }: { item: MediaItem; className?: str
     );
 }
 
-export function MediaField({ name, value, required, field, onChange, disabled }: BaseFieldProps) {
+export function MediaField({
+    name,
+    value,
+    required,
+    field,
+    onChange,
+    disabled,
+}: BaseFieldProps) {
     const { t } = useTranslation();
     const multiple = field.multiple === true;
     const accept = typeof field.accept === 'string' ? field.accept : undefined;
@@ -150,12 +157,21 @@ export function MediaField({ name, value, required, field, onChange, disabled }:
         if (index <= 0) return;
         const newIds = [...selectedIds];
         const newItems = [...selectedItems];
-        const tempId = newIds[index - 1]!;
-        const tempItem = newItems[index - 1]!;
-        newIds[index - 1] = newIds[index]!;
-        newIds[index] = tempId;
-        newItems[index - 1] = newItems[index]!;
-        newItems[index] = tempItem;
+        const prevId = newIds[index - 1];
+        const prevItem = newItems[index - 1];
+        const curId = newIds[index];
+        const curItem = newItems[index];
+        if (
+            prevId === undefined ||
+            prevItem === undefined ||
+            curId === undefined ||
+            curItem === undefined
+        )
+            return;
+        newIds[index - 1] = curId;
+        newIds[index] = prevId;
+        newItems[index - 1] = curItem;
+        newItems[index] = prevItem;
         setSelectedIds(newIds);
         setSelectedItems(newItems);
         onChange(name, newIds);
@@ -166,12 +182,21 @@ export function MediaField({ name, value, required, field, onChange, disabled }:
         if (index < 0 || index >= selectedIds.length - 1) return;
         const newIds = [...selectedIds];
         const newItems = [...selectedItems];
-        const tempId = newIds[index + 1]!;
-        const tempItem = newItems[index + 1]!;
-        newIds[index + 1] = newIds[index]!;
-        newIds[index] = tempId;
-        newItems[index + 1] = newItems[index]!;
-        newItems[index] = tempItem;
+        const nextId = newIds[index + 1];
+        const nextItem = newItems[index + 1];
+        const curId = newIds[index];
+        const curItem = newItems[index];
+        if (
+            nextId === undefined ||
+            nextItem === undefined ||
+            curId === undefined ||
+            curItem === undefined
+        )
+            return;
+        newIds[index + 1] = curId;
+        newIds[index] = nextId;
+        newItems[index + 1] = curItem;
+        newItems[index] = nextItem;
         setSelectedIds(newIds);
         setSelectedItems(newItems);
         onChange(name, newIds);
@@ -185,7 +210,7 @@ export function MediaField({ name, value, required, field, onChange, disabled }:
                 await Astromech.media.upload(file);
                 queryClient.invalidateQueries({ queryKey: queryKeys.media.list({}) });
                 toast({ message: `${file.name} uploaded.`, variant: 'success' });
-            } catch (err) {
+            } catch {
                 toast({ message: `Failed to upload ${file.name}`, variant: 'error' });
             }
         }
@@ -255,7 +280,7 @@ export function MediaField({ name, value, required, field, onChange, disabled }:
                     </div>
                 ) : (
                     <div className="am-media-picker-preview">
-                        <MediaThumb item={selectedItems[0]!} />
+                        <MediaThumb item={selectedItems[0] as MediaItem} />
                         {!disabled && (
                             <div className="am-media-picker-overlay">
                                 <button
@@ -269,7 +294,7 @@ export function MediaField({ name, value, required, field, onChange, disabled }:
                                 <button
                                     type="button"
                                     className="am-media-picker-overlay-btn am-media-picker-overlay-btn-danger"
-                                    onClick={() => handleRemove(selectedIds[0]!)}
+                                    onClick={() => handleRemove(selectedIds[0] as string)}
                                     aria-label={t('fields.mediaRemoveLabel')}
                                 >
                                     <X size={13} />

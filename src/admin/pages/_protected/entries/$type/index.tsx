@@ -8,7 +8,7 @@
 
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Astromech } from '@/client/index.js';
+import { Astromech } from '@/transport/http/client/index.js';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntriesListPage } from '@/admin/components/entries/entries-list-page.js';
 import type { EntriesApi } from '@/types/index.js';

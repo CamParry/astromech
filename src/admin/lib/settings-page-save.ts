@@ -9,7 +9,7 @@
 
 import type { JsonValue } from '@/types/index.js';
 import type { ResolvedEntryFields } from '@/types/fields.js';
-import { Astromech } from '@/client/index.js';
+import { Astromech } from '@/transport/http/client/index.js';
 // Deep-import the pure helper, NOT the @/settings barrel: the barrel re-exports
 // the settings service (getDb / virtual:astromech/config), which must never enter
 // the admin browser bundle.

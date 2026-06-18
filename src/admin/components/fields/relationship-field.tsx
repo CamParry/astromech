@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import type { BaseFieldProps } from '@/types/index.js';
-import { Astromech } from '@/client/index.js';
+import { Astromech } from '@/transport/http/client/index.js';
 import { MultiSelect } from '@/admin/components/ui/multi-select.js';
 
 type EntryOption = {
@@ -11,7 +11,14 @@ type EntryOption = {
     slug: string | null;
 };
 
-export function RelationshipField({ name, value, field, required, onChange, disabled }: BaseFieldProps) {
+export function RelationshipField({
+    name,
+    value,
+    field,
+    required,
+    onChange,
+    disabled,
+}: BaseFieldProps) {
     const { t } = useTranslation();
     const target = field.target || '';
     const multiple = field.multiple || false;
@@ -22,18 +29,21 @@ export function RelationshipField({ name, value, field, required, onChange, disa
 
     useEffect(() => {
         if (!target) return;
-        Astromech.entries.query({ type: target, limit: 'all' })
+        Astromech.entries
+            .query({ type: target, limit: 'all' })
             .then((result) => {
-                setOptions(result.data.map((e) => ({ id: e.id, title: e.title, slug: e.slug })));
+                setOptions(
+                    result.data.map((e) => ({ id: e.id, title: e.title, slug: e.slug }))
+                );
             })
-            .catch(() => {});
+            .catch(() => undefined);
     }, [target]);
 
     const selectedIds = Array.isArray(value)
         ? value.map(String)
         : value != null
-        ? [String(value)]
-        : [];
+          ? [String(value)]
+          : [];
     const currentValue = options.filter((o) => selectedIds.includes(o.id));
 
     return (
@@ -51,7 +61,10 @@ export function RelationshipField({ name, value, field, required, onChange, disa
                 if (!multiple) {
                     onChange(name, val[0]?.id ?? null);
                 } else {
-                    onChange(name, val.map((v) => v.id));
+                    onChange(
+                        name,
+                        val.map((v) => v.id)
+                    );
                 }
             }}
         />

@@ -9,7 +9,7 @@
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { createEntriesApi } from '@/client/index.js';
+import { createEntriesApi } from '@/transport/http/client/index.js';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntryEditPage } from '@/admin/components/entries/entry-edit-page.js';
 import { buildPluginEntriesMount } from '@/admin/components/entries/mount.js';

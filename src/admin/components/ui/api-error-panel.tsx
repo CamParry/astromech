@@ -8,7 +8,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { AstromechApiError } from '@/client/index.js';
+import type { AstromechApiError } from '@/transport/http/client/index.js';
 import { Badge } from './badge.js';
 import { Button } from './button.js';
 import { Modal } from './modal.js';
@@ -46,23 +46,20 @@ export function ApiErrorPanel(): React.ReactElement {
     const { t } = useTranslation();
     const [serverError, setServerError] = useState<ApiErrorDetail | null>(null);
 
-    const handleEvent = useCallback(
-        (e: Event) => {
-            const detail = (e as CustomEvent<ApiErrorEventDetail>).detail;
+    const handleEvent = useCallback((e: Event) => {
+        const detail = (e as CustomEvent<ApiErrorEventDetail>).detail;
 
-            if (detail.type === 'api' && detail.error.status >= 500) {
-                const err = detail.error;
-                setServerError({
-                    id: err.id,
-                    code: err.code,
-                    message: err.message,
-                    status: err.status,
-                });
-            }
-            // 4xx and unknown errors are handled by individual mutation onError handlers
-        },
-        [],
-    );
+        if (detail.type === 'api' && detail.error.status >= 500) {
+            const err = detail.error;
+            setServerError({
+                id: err.id,
+                code: err.code,
+                message: err.message,
+                status: err.status,
+            });
+        }
+        // 4xx and unknown errors are handled by individual mutation onError handlers
+    }, []);
 
     useEffect(() => {
         window.addEventListener(EVENT_NAME, handleEvent);
@@ -87,7 +84,9 @@ export function ApiErrorPanel(): React.ReactElement {
                         <Badge variant="danger">{serverError.code}</Badge>
                     </div>
                     <p className="am-api-error-message">{serverError.message}</p>
-                    <p className="am-api-error-ref">{t('apiError.ref', { id: serverError.id })}</p>
+                    <p className="am-api-error-ref">
+                        {t('apiError.ref', { id: serverError.id })}
+                    </p>
                 </div>
             )}
         </Modal>

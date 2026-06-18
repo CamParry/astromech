@@ -7,7 +7,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import adminConfig from 'virtual:astromech/admin-config';
-import { Astromech } from '@/client/index.js';
+import { Astromech } from '@/transport/http/client/index.js';
 import { setDateLocale } from '../utilities/dates.js';
 import { resolveContentLocale } from '../utilities/locale.js';
 import { createAppRouter } from './router.js';
@@ -23,7 +23,10 @@ Astromech.configure({ baseUrl: __ASTROMECH_API_ROUTE__ });
 // Dates render in the install's configured locale (e.g. en-GB → `14 Jun 2026`).
 setDateLocale(adminConfig.defaultLocale);
 
-if (import.meta.env.DEV && resolveContentLocale(adminConfig.defaultLocale, adminConfig.locales) === undefined) {
+if (
+    import.meta.env.DEV &&
+    resolveContentLocale(adminConfig.defaultLocale, adminConfig.locales) === undefined
+) {
     console.warn(
         `[astromech] defaultLocale "${adminConfig.defaultLocale}" has no content-locale match in [${adminConfig.locales.join(', ')}]; content falls back to "${adminConfig.locales[0] ?? 'en'}".`
     );

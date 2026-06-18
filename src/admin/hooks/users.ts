@@ -2,9 +2,14 @@
  * Query and mutation hooks for users.
  */
 
-import { useQuery, useMutation, useQueryClient, queryOptions } from '@tanstack/react-query';
+import {
+    useQuery,
+    useMutation,
+    useQueryClient,
+    queryOptions,
+} from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Astromech } from '@/client/index.js';
+import { Astromech } from '@/transport/http/client/index.js';
 import { queryKeys } from './use-query-keys.js';
 import { useToast } from '../components/ui/index.js';
 import type { User, UserQueryParams } from '@/types/index.js';
@@ -93,7 +98,8 @@ export function useDeleteUser(options?: { id?: string; onSuccess?: () => void })
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: (id?: string) => Astromech.users.delete(options?.id ?? id!),
+        mutationFn: (id?: string) =>
+            Astromech.users.delete((options?.id ?? id) as string),
         onSuccess: () => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.users.all() });
             toast({ message: t('users.deleted'), variant: 'success' });
