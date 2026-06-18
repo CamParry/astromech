@@ -20,51 +20,86 @@ is the shape decisions are made for. **SSR only** for now.
 
 ## The layer model
 
-The source is organised as a one-way dependency stack, assembled at the kernel:
+The source is a modular screaming-architecture DAG. Imports may only point
+**down** this list; upward edges are forbidden, and peer domains may never import
+one another:
 
 ```
-storage → services → policies → transport → Client      (composed at the kernel)
+routes · admin · kernel · codegen · cli        entrypoints & composition root
+client                                         consumes the HTTP API over the wire
+transport (http · local · mcp · cli)           delivery
+policies                                       permission/confirmation wrappers (withPermissions)
+plugins/{seo,redirects,menus}                  first-party plugins
+entries · media · users · settings             domains — siblings, never import each other
+plugins/runtime · database · storage ·         capabilities
+  email · cron · context · fields · permissions
+types · utilities · errors                     pure leaves
 ```
 
-- **storage** — persistence; knows data, not rules.
-- **services** — capability verbs (`entries.create`, …), feature-split; bare
-  functions unaware of how they're delivered.
-- **policies** — composable wrappers *over* services (permissions). Visibility is
-  **not** here — it's per-feature read-shaping in `services/<feature>/visibility.ts`.
-- **transport** — projections of the service methods per consumer (local, HTTP,
-  CLI; MCP later). Internal word; public names are Local API / HTTP API / CLI.
-- **Client** — the over-the-wire consumer; the fetch Client mirrors the Local API 1:1.
+Key invariants:
 
-**The invariant to hold sacred:** dependencies only ever point *up* this stack —
-no upward edges, graph stays acyclic. Enforced by `.dependency-cruiser.cjs`
-(`npm run lint:deps`). (`core/`, `sdk/`, `api/` no longer exist; they were
-dissolved into this model in the 2026-06 refactor. Published subpaths were
-unchanged.)
+- **Domains are deep modules named for the business, not the tech.** Each owns its
+  `service.ts`, `schema.ts` (Drizzle table + Zod validation), `descriptors.ts`,
+  and `visibility.ts`. Cross-domain data goes through `@/database/schema` (the
+  table aggregator) or a shared capability — never via a direct peer import. The
+  only permitted exception is a `schema.ts` foreign-key cross-reference.
+- **Capabilities sit below domains.** They expose primitives (`storage`, `database`,
+  `fields`, `permissions`, `context`, `email`, `cron`) and may not orchestrate
+  domain logic.
+- **Leaves are pure.** `types/`, `utilities/`, and `errors/` import only other
+  leaves or third-party packages.
+- **Enforced** by `.dependency-cruiser.cjs` (`npm run lint:deps`).
+
+(`core/`, `sdk/`, `api/` no longer exist; they were dissolved in the 2026-06
+refactor. Published subpaths were unchanged.)
 
 ## Directory map
 
 ```
 src/
-├── index.ts        # framework-agnostic entry: defineConfig / defineEntryType /
-│                   #   definePlugin / defineAdminPage / defineServiceMethod / defineHook
-├── fields.ts       # field factories          (astromech/fields)
-├── columns.ts      # column factories         (astromech/columns)
+├── index.ts        # public framework-agnostic entry (re-exported via exports/)
 ├── middleware.ts   # HTTP middleware entry     (astromech/middleware)
-├── kernel/         # composition root — boots & assembles the layers; Astro integration (astromech/astro)
-├── storage/        # db schema/drivers/registry, file drivers, entry storage
-├── services/       # entries · media · users · settings · _shared  (capability verbs)
-├── policies/       # permissions/ — composable wrappers over services
-├── transport/      # local/ (astromech/local) · http/ (Hono routes+middleware) · cli/ (bin: astromech)
-├── client/         # the fetch Client (astromech/fetch)
+│
+│   ── entrypoints & composition root ──────────────────────────────────────────
+├── kernel/         # composition root — boots & wires all layers; Astro integration (astromech/astro)
+├── routes/         # 3 Astro APIRoute entrypoints injected by the integration (api / auth / media)
+├── admin/          # React admin SPA (TanStack Router; deep-imports a few pure domain leaves)
 ├── codegen/        # type generator + plugin-client manifest
-├── plugins/        # plugin runtime + first-party plugins (redirects, seo, menus)
-├── admin/          # React admin SPA (TanStack Router; holds the Client)
-├── auth/           # Better Auth integration
-├── builders/       # field/column builder internals
-├── routes/         # route-handler entrypoints (auth / api / media)
-├── images/ email/ cron/   # infrastructure modules (used by services + kernel)
-├── utilities/      # pure helpers (strings, dates, entry-fields, rich-text, permission-match, …)
-└── types/          # shared TS types — the source of truth for the data model & config shape
+│
+│   ── over-the-wire client ──────────────────────────────────────────────────
+├── client/         # fetch Client (astromech/fetch) — talks HTTP, no server imports
+│
+│   ── delivery ─────────────────────────────────────────────────────────────
+├── transport/      # local/ (astromech/local) · http/ (Hono routes+middleware) · cli/ · mcp/
+│
+│   ── policies ──────────────────────────────────────────────────────────────
+├── policies/       # withPermissions wrapper only — no domain logic here
+│
+│   ── first-party plugins ───────────────────────────────────────────────────
+├── plugins/        # plugins/runtime (hook engine) + seo/ redirects/ menus/
+│
+│   ── domains ───────────────────────────────────────────────────────────────
+├── entries/        # entries domain: service · schema · descriptors · visibility · url · type-registry
+├── media/          # media domain: service · schema · serving/image/
+├── users/          # users domain: service · schema · auth (Better Auth integration)
+├── settings/       # settings domain: service · schema · page-values
+│
+│   ── capabilities ──────────────────────────────────────────────────────────
+├── database/       # Drizzle client/drivers + schema.ts aggregator (was db/; public subpath unchanged)
+├── storage/        # file-storage drivers (R2, filesystem)
+├── permissions/    # permission model: roles, grammar, BUILT_IN_ROLES, can()
+├── fields/         # field/column builder, formatters, rich-text, helpers
+├── context/        # shared server request-context (was services/_shared/)
+├── email/          # email drivers
+├── cron/           # scheduled-job infrastructure
+│
+│   ── pure leaves ─────────────────────────────────────────────────────────
+├── types/          # shared TS types — data model, config shape, field/hook contracts
+├── utilities/      # pure helpers (strings, dates, entry-fields, rich-text, …)
+├── errors/         # base error classes
+│
+│   ── public surface ─────────────────────────────────────────────────────
+└── exports/        # thin re-export barrels; tsup builds from here — internals are private
 ```
 
 ## Public entry points
@@ -78,15 +113,19 @@ first-party plugins under `astromech/plugins/*`.
 
 ## The development gate
 
-Before a change lands, all of these pass (commits to this repo use `--no-verify`
-because of pre-existing eslint/prettier debt — the gate below is the real bar):
+Before a change lands, all of these pass. The husky pre-commit hook runs
+lint-staged (eslint --fix + prettier) on touched files; `--no-verify` is not
+used.
 
-| Command | Checks |
-| --- | --- |
-| `npm run typecheck` | `tsc -p tsconfig.test.json` (src + tests) |
-| `npm run test:run`  | vitest; tests live in `tests/` mirroring `src/` |
-| `npm run build`     | tsup (explicit entries, dts). DTS worker can OOM — bump `NODE_OPTIONS=--max-old-space-size`. |
-| `npm run lint:deps` | dependency-cruiser — enforces the layer invariant above |
+| Command             | Checks                                                                                                          |
+| ------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck` | `tsc -p tsconfig.test.json` (src + tests)                                                                       |
+| `npm run test:run`  | vitest; tests live in `tests/` mirroring `src/`                                                                 |
+| `npm run build`     | tsup (explicit entries, dts). DTS worker can OOM — bump `NODE_OPTIONS=--max-old-space-size`.                    |
+| `npm run lint:deps` | dependency-cruiser — enforces the modular DAG invariants (no upward edges, no peer-domain imports, pure leaves) |
+
+For refactors that move tables, `npm run db:generate` must also report "No
+schema changes" (migration-neutrality).
 
 ## Further reading
 
