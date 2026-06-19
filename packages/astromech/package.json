@@ -164,10 +164,17 @@
         "zod": "^4.3.6"
     },
     "peerDependencies": {
-        "astro": "^6.0.8"
+        "astro": "^6.0.8",
+        "@modelcontextprotocol/sdk": "*"
+    },
+    "peerDependenciesMeta": {
+        "@modelcontextprotocol/sdk": {
+            "optional": true
+        }
     },
     "devDependencies": {
         "@cloudflare/workers-types": "^4.20260214.0",
+        "@modelcontextprotocol/sdk": "^1.29.0",
         "@types/lodash-es": "^4.17.12",
         "@types/node": "^25.5.0",
         "@types/react": "^19.0.0",

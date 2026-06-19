@@ -47,6 +47,8 @@ export default defineConfig([
         entry: {
             // `bin: astromech` -> dist/cli/index.js stays stable; source moved.
             'cli/index': 'src/transport/cli/index.ts',
+            // MCP server — dynamically imported by the `astromech mcp` subcommand.
+            'transport/mcp/index': 'src/transport/mcp/index.ts',
         },
         format: ['esm'],
         dts: false,
@@ -57,6 +59,10 @@ export default defineConfig([
             'drizzle-orm',
             'better-auth',
             'virtual:astromech/admin-config',
+            '@modelcontextprotocol/sdk',
+            '@modelcontextprotocol/sdk/server/index.js',
+            '@modelcontextprotocol/sdk/server/stdio.js',
+            '@modelcontextprotocol/sdk/types.js',
         ],
         treeshake: true,
         banner: { js: '#!/usr/bin/env node' },

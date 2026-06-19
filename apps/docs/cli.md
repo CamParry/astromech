@@ -70,3 +70,51 @@ astromech methods --json              # full manifest entries (input/output sche
 | `db:init` / `db:status` / `db:generate`                      | Initialise, inspect, and generate migrations |
 | `generate:types`                                             | Emit `.d.ts` type definitions                |
 | `generate:manifest`                                          | Write `.astro/astromech.methods.json`        |
+
+## MCP server (dev-only)
+
+`astromech mcp` projects the build-time method manifest as MCP tools over
+stdio. It is a **trusted, dev-only transport** — it loads your config and calls
+services directly, with no permission enforcement (same as the CLI).
+
+```sh
+astromech mcp [--config path/to/astromech.config.ts]
+```
+
+To point an MCP client at it, use `stdio` transport:
+
+```json
+{
+    "command": "node",
+    "args": [
+        "node_modules/astromech/dist/cli/index.js",
+        "mcp",
+        "--config",
+        "apps/demo/astromech.config.ts"
+    ]
+}
+```
+
+Or, after a package build, point directly at the built CLI:
+
+```json
+{
+    "command": "node",
+    "args": [
+        "packages/astromech/dist/cli/index.js",
+        "mcp",
+        "--config",
+        "apps/demo/astromech.config.ts"
+    ]
+}
+```
+
+**Requires** `@modelcontextprotocol/sdk` to be installed in the project. If it
+is missing, the command prints an install hint and exits with code 1.
+
+**v1 coverage:** core domain methods (users, settings, media query/get/delete)
+and the standard entry CRUD+publish actions (query, get, create, update,
+publish, unpublish, delete). Not yet projected: plugin SDK methods, media
+upload/replace (binary data cannot cross JSON-RPC), and entries long-tail
+actions (duplicate, trash, restore, emptyTrash, versions, restoreVersion,
+schedule).

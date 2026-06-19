@@ -27,6 +27,7 @@ const main = defineCommand({
             import('./commands/generate-manifest.js').then((m) => m.default),
         'db:generate': () => import('./commands/db-generate.js').then((m) => m.default),
         methods: () => import('./commands/methods.js').then((m) => m.default),
+        mcp: () => import('./commands/mcp.js').then((m) => m.default),
     },
 });
 
