@@ -36,7 +36,7 @@ describe('base CRUD', () => {
         });
         expect(created.id).toMatch(/[0-9a-f-]{36}/);
         expect(created.title).toBe('Hello');
-        expect(created.status).toBe('draft');
+        expect(created.status).toBe('unpublished');
         expect(created.fields).toEqual({ body: 'hi' });
         expect(created.locales).toEqual({ en: created.id });
 

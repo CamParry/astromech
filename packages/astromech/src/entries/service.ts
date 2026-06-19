@@ -699,7 +699,7 @@ export const entries: EntriesApi = {
         const title = validated.title ?? '';
 
         const storage = getEntryStorage(type);
-        const status = validated.status || 'draft';
+        const status = validated.status || 'unpublished';
         const publishedAt =
             status === 'published' ? new Date() : (validated.publishAt ?? null);
 
@@ -836,7 +836,7 @@ export const entries: EntriesApi = {
 
         const locale = overrides?.locale ?? source.locale;
         const localeGroup = overrides?.localeGroup ?? crypto.randomUUID();
-        const status = overrides?.status ?? 'draft';
+        const status = overrides?.status ?? 'unpublished';
         const title = overrides?.title ?? source.title;
         const mergedFields: JsonObject = {
             ...(source.fields ?? {}),
@@ -1083,7 +1083,7 @@ export const entries: EntriesApi = {
         return entries.update({
             type: params.type,
             id: params.id,
-            data: { status: 'draft', publishAt: null },
+            data: { status: 'unpublished', publishAt: null },
         } as Parameters<EntriesApi['update']>[0]);
     }) as EntriesApi['unpublish'],
 

@@ -37,7 +37,7 @@
     background-color: var(--am-color-danger-bg);
 }
 
-.am-badge-draft {
+.am-badge-unpublished {
     color: var(--am-color-text-secondary);
     background-color: var(--am-color-bg-subtle);
 }

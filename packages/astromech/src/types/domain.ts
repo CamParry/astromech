@@ -14,7 +14,7 @@ export type JsonArray = JsonValue[];
 // Entries
 // ============================================================================
 
-export type EntryStatus = 'draft' | 'published' | 'scheduled';
+export type EntryStatus = 'unpublished' | 'published' | 'scheduled';
 
 export type Entry = {
     id: string;

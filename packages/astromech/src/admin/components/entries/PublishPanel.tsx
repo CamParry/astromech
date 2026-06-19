@@ -39,7 +39,7 @@ export function PublishPanel({
     const { t } = useTranslation();
 
     const statusOptions = [
-        { value: 'draft' as EntryStatus, label: t('entries.draft') },
+        { value: 'unpublished' as EntryStatus, label: t('entries.unpublished') },
         { value: 'published' as EntryStatus, label: t('entries.published') },
         { value: 'scheduled' as EntryStatus, label: t('entries.scheduled') },
     ];
@@ -54,7 +54,7 @@ export function PublishPanel({
                     <Select
                         value={status}
                         onValueChange={(v) =>
-                            onStatusChange((v ?? 'draft') as EntryStatus)
+                            onStatusChange((v ?? 'unpublished') as EntryStatus)
                         }
                         options={statusOptions}
                         disabled={readOnly}

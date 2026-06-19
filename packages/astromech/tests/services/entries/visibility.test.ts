@@ -174,8 +174,8 @@ describe('structural strip (_disabled items)', () => {
 // ============================================================================
 
 describe('row filter (audience)', () => {
-    it('returns null for draft entries in public', () => {
-        const entry = publishedEntry({ status: 'draft' });
+    it('returns null for unpublished entries in public', () => {
+        const entry = publishedEntry({ status: 'unpublished' });
         expect(applyVisibility(entry, publicOpts())).toBeNull();
     });
 
@@ -207,8 +207,8 @@ describe('row filter (audience)', () => {
         expect(applyVisibility(entry, publicOpts())).not.toBeNull();
     });
 
-    it('passes draft entries in full shape', () => {
-        const entry = publishedEntry({ status: 'draft' });
+    it('passes unpublished entries in full shape', () => {
+        const entry = publishedEntry({ status: 'unpublished' });
         expect(applyVisibility(entry, fullOpts())).not.toBeNull();
     });
 
@@ -294,7 +294,7 @@ describe('nested blocks-in-repeater strip', () => {
 });
 
 // ============================================================================
-// (e) Populated relation to a draft is dropped
+// (e) Populated relation to an unpublished entry is dropped
 // ============================================================================
 
 describe('populated relation filtering', () => {
@@ -309,10 +309,10 @@ describe('populated relation filtering', () => {
         fields: { bio: 'Author bio', internal_notes: 'secret' },
     });
 
-    const draftRelated: Entry = publishedEntry({
+    const unpublishedRelated: Entry = publishedEntry({
         id: 'author-2',
         type: 'authors',
-        status: 'draft',
+        status: 'unpublished',
         fields: { bio: 'Draft author' },
     });
 
@@ -320,9 +320,9 @@ describe('populated relation filtering', () => {
         { name: 'author', type: 'relationship', target: 'authors' },
     ];
 
-    it('drops a related entry that is draft (not published)', () => {
+    it('drops a related entry that is unpublished (not published)', () => {
         const entry = publishedEntry({
-            fields: { author: draftRelated as unknown as JsonValue },
+            fields: { author: unpublishedRelated as unknown as JsonValue },
         });
         const result = applyVisibilityWithRelations(
             entry,

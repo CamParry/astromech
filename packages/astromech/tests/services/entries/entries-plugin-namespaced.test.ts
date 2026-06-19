@@ -40,7 +40,7 @@ describe('namespaced plugin entries via the entries service', () => {
         });
         expect(created.type).toBe('redirects/redirect');
 
-        // full: true — admin read; entry is a draft
+        // full: true — admin read; entry is unpublished
         const fetched = await entries.get({
             type: 'redirects/redirect',
             id: created.id,

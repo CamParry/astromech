@@ -732,7 +732,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
             locale: z.string().min(1).optional(),
             localeGroup: z.string().min(1).optional(),
             fields: z.record(z.string(), z.unknown()).optional(),
-            status: z.enum(['draft', 'published', 'scheduled']).optional(),
+            status: z.enum(['unpublished', 'published', 'scheduled']).optional(),
         })
         .partial();
 

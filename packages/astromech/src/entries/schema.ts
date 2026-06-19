@@ -23,9 +23,9 @@ export const entriesTable = sqliteTable(
         slug: text('slug'),
         title: text('title').notNull(),
         fields: text('fields', { mode: 'json' }),
-        status: text('status', { enum: ['draft', 'published', 'scheduled'] })
+        status: text('status', { enum: ['unpublished', 'published', 'scheduled'] })
             .notNull()
-            .default('draft'),
+            .default('unpublished'),
         publishedAt: integer('published_at', { mode: 'timestamp' }),
         deletedAt: integer('deleted_at', { mode: 'timestamp' }),
 
@@ -76,7 +76,7 @@ export const entryVersionsTable = sqliteTable(
         relations: text('relations', { mode: 'json' }).$type<
             Record<string, string | string[]>
         >(),
-        status: text('status', { enum: ['draft', 'published', 'scheduled'] }),
+        status: text('status', { enum: ['unpublished', 'published', 'scheduled'] }),
         createdAt: integer('created_at', { mode: 'timestamp' })
             .notNull()
             .$defaultFn(() => new Date()),
@@ -95,7 +95,7 @@ export type NewEntryVersionRow = typeof entryVersionsTable.$inferInsert;
 // Zod schemas
 // ============================================================================
 
-export const entryStatusEnum = z.enum(['draft', 'published', 'scheduled']);
+export const entryStatusEnum = z.enum(['unpublished', 'published', 'scheduled']);
 
 const slugField = z
     .string()

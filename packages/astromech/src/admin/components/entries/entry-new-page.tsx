@@ -359,7 +359,7 @@ export function EntryNewPage({
                                     onClick={handleSave}
                                     disabled={saveMutation.isPending}
                                 >
-                                    {t('entries.saveAsDraft')}
+                                    {t('entries.saveAsUnpublished')}
                                 </Button>
                                 <Button
                                     variant="primary"

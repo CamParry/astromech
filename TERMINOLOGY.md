@@ -54,11 +54,11 @@ Not to be confused with database-level joins — populate is resolved at the app
 
 ---
 
-## Publish / Schedule / Draft
+## Publish / Schedule / Unpublished
 
 The three values of `EntryStatus`:
 
-- `draft` — not publicly visible
+- `unpublished` — not publicly visible (was `draft`)
 - `published` — live
 - `scheduled` — will transition to published at `publishAt` time (scheduling system not yet implemented — Phase 14)
 

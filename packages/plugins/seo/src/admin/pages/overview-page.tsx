@@ -114,7 +114,7 @@ export default function SeoOverviewPage(): React.ReactElement {
                                     variant={
                                         item.entryStatus === 'published'
                                             ? 'published'
-                                            : 'draft'
+                                            : 'unpublished'
                                     }
                                 >
                                     {item.entryStatus}

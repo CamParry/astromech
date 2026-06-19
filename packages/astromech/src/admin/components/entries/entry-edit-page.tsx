@@ -81,7 +81,7 @@ function StatusBadge({ status }: StatusBadgeProps): React.ReactElement {
             ? t('entries.published')
             : status === 'scheduled'
               ? t('entries.scheduled')
-              : t('entries.draft');
+              : t('entries.unpublished');
     return <Badge variant={variant}>{label}</Badge>;
 }
 
@@ -133,7 +133,7 @@ export function EntryEditPage({
         defaultValues: {
             title: entry?.title ?? '',
             slug: entry?.slug ?? '',
-            status: entry?.status ?? ('draft' as EntryStatus),
+            status: entry?.status ?? ('unpublished' as EntryStatus),
             publishAt:
                 entry?.publishedAt != null
                     ? new Date(entry.publishedAt).toISOString().slice(0, 16)

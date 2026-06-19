@@ -90,7 +90,7 @@ import type { EntriesMount, EntriesListSearch } from './mount.js';
 // Types
 // ============================================================================
 
-type StatusFilter = 'all' | 'draft' | 'published' | 'scheduled' | 'trashed';
+type StatusFilter = 'all' | 'unpublished' | 'published' | 'scheduled' | 'trashed';
 
 type BulkAction = 'publish' | 'unpublish' | 'trash' | 'delete' | 'restore';
 
@@ -561,7 +561,7 @@ export function EntriesListPage({ mount }: { mount: EntriesMount }): React.React
 
     const STATUS_LABELS: Record<StatusFilter, string> = {
         all: t('entries.all'),
-        draft: t('entries.draft'),
+        unpublished: t('entries.unpublished'),
         published: t('entries.published'),
         scheduled: t('entries.scheduled'),
         trashed: t('entries.trashed'),
@@ -569,7 +569,10 @@ export function EntriesListPage({ mount }: { mount: EntriesMount }): React.React
 
     const STATUS_FILTER_OPTIONS = (Object.keys(STATUS_LABELS) as StatusFilter[])
         .filter((s) => {
-            if (!hasStatuses && (s === 'draft' || s === 'published' || s === 'scheduled'))
+            if (
+                !hasStatuses &&
+                (s === 'unpublished' || s === 'published' || s === 'scheduled')
+            )
                 return false;
             if (!hasTrash && s === 'trashed') return false;
             return true;

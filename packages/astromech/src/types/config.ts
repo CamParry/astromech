@@ -137,7 +137,7 @@ export type EntryTypeConfig = {
      */
     slug?: SlugConfig | false;
     /**
-     * Whether entries have status (draft/published/scheduled).
+     * Whether entries have status (unpublished/published/scheduled).
      * Defaults are storage-dependent; built-in storage defaults statuses ON.
      */
     statuses?: boolean;

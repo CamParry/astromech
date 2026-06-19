@@ -503,7 +503,7 @@ describe('entries-service integration', () => {
         expect(created.fields['from']).toBe('/old');
         expect(created.fields['to']).toBe('/new');
 
-        // full: true — admin read; entry is a draft
+        // full: true — admin read; entry is unpublished
         const fetched = await Astromech.entries.get({
             type: 'links/link',
             id: created.id,

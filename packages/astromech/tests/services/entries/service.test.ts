@@ -31,7 +31,7 @@ beforeEach(async () => {
 // ============================================================================
 
 describe('create', () => {
-    it('returns a draft entry with generated id/slug and persisted fields', async () => {
+    it('returns an unpublished entry with generated id/slug and persisted fields', async () => {
         const e = await api.create({
             type: 'post',
             title: 'Hello World',
@@ -42,7 +42,7 @@ describe('create', () => {
         expect(e.type).toBe('post');
         expect(e.locale).toBe('en'); // defaultLocale
         expect(e.localeGroup).toMatch(/[0-9a-f-]{36}/);
-        expect(e.status).toBe('draft');
+        expect(e.status).toBe('unpublished');
         expect(e.title).toBe('Hello World');
         expect(e.slug).toBe('hello-world'); // slugify
         expect(e.fields).toEqual({ body: 'hi' });
@@ -95,7 +95,7 @@ describe('get', () => {
             localeGroup: en.localeGroup,
         });
 
-        // full: true — admin read; drafts and all fields visible
+        // full: true — admin read; unpublished entries and all fields visible
         const got = await api.get({ type: 'post', id: en.id, full: true });
         expect(got?.id).toBe(en.id);
         expect(got?.locales).toEqual({ en: en.id, de: de.id });
@@ -120,7 +120,7 @@ describe('get', () => {
         expect(await api.get({ type: 'post', id: e.id, full: true })).toBeNull();
     });
 
-    it('returns null for a draft entry in public shape (default)', async () => {
+    it('returns null for an unpublished entry in public shape (default)', async () => {
         const e = await api.create({ type: 'post', title: 'Draft' });
         expect(await api.get({ type: 'post', id: e.id })).toBeNull();
     });
@@ -228,7 +228,7 @@ describe('query', () => {
         expect(all.data.map((e) => e.locale).sort()).toEqual(['de', 'en']);
     });
 
-    it('draft entries visible in full shape, hidden in public (default)', async () => {
+    it('unpublished entries visible in full shape, hidden in public (default)', async () => {
         await api.create({ type: 'post', title: 'Draft' });
         await api.create({ type: 'post', title: 'Published', status: 'published' });
 
@@ -408,7 +408,7 @@ describe('translatable', () => {
 
     it('reflects both locales in the locales map', async () => {
         const { en, de } = await makePair();
-        // full: true — admin read; entries are drafts
+        // full: true — admin read; entries are unpublished
         const got = await api.get({ type: 'post', id: en.id, full: true });
         expect(got?.locales).toEqual({ en: en.id, de: de.id });
     });
@@ -452,10 +452,10 @@ describe('publish / unpublish / schedule', () => {
     });
 
     // CHARACTERIZED: unpublish passes publishAt: null through update, clearing publishedAt.
-    it('unpublish sets status draft and clears publishedAt', async () => {
+    it('unpublish sets status to unpublished and clears publishedAt', async () => {
         const e = await api.create({ type: 'post', title: 'P', status: 'published' });
         const un = await api.unpublish({ type: 'post', id: e.id });
-        expect(un.status).toBe('draft');
+        expect(un.status).toBe('unpublished');
         expect(un.publishedAt).toBeNull();
     });
 
@@ -547,7 +547,7 @@ describe('duplicate', () => {
         expect(dup.title).toBe('Copy');
         // overrides.fields shallow-merges over the source fields.
         expect(dup.fields).toEqual({ body: 'b', category: 'x' });
-        expect(dup.status).toBe('draft');
+        expect(dup.status).toBe('unpublished');
         expect(dup.localeGroup).not.toBe(src.localeGroup);
     });
 

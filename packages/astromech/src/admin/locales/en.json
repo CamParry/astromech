@@ -97,7 +97,7 @@
         "emptySearch": "Try adjusting your search.",
         "emptyTrash": "The trash is empty.",
         "emptyCreate": "Create your first {{name}} to get started.",
-        "saveAsDraft": "Save as Draft",
+        "saveAsUnpublished": "Save as Unpublished",
         "titleField": "Title",
         "titleRequired": "Title is required",
         "slugField": "Slug",
@@ -105,7 +105,7 @@
         "statusPanel": "Status",
         "statusField": "Status",
         "publishAtField": "Publish at",
-        "draft": "Draft",
+        "unpublished": "Unpublished",
         "published": "Published",
         "scheduled": "Scheduled",
         "trashed": "Trashed",
@@ -317,7 +317,7 @@
         "deleted": "{{name}} moved to trash",
         "restored": "{{name}} restored",
         "status": {
-            "draft": "Draft",
+            "unpublished": "Unpublished",
             "published": "Published",
             "scheduled": "Scheduled"
         },

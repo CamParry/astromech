@@ -7,7 +7,7 @@ type BadgeVariant =
     | 'success'
     | 'warning'
     | 'danger'
-    | 'draft'
+    | 'unpublished'
     | 'published'
     | 'scheduled'
     | 'trashed';

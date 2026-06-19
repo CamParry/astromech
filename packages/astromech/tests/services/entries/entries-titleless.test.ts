@@ -69,9 +69,9 @@ describe('titleless create', () => {
         expect(e.title).toBe('Kept');
     });
 
-    it('defaults status to draft (statuses capability off still stores a status)', async () => {
+    it('defaults status to unpublished (statuses capability off still stores a status)', async () => {
         const e = await api.create({ type: 'snippet' });
-        expect(e.status).toBe('draft');
+        expect(e.status).toBe('unpublished');
     });
 });
 

@@ -27,8 +27,10 @@ import { formatDate } from '@/utilities/dates.js';
 // Helpers
 // ============================================================================
 
-function statusVariant(status: string): 'draft' | 'published' | 'scheduled' | 'default' {
-    if (status === 'draft') return 'draft';
+function statusVariant(
+    status: string
+): 'unpublished' | 'published' | 'scheduled' | 'default' {
+    if (status === 'unpublished') return 'unpublished';
     if (status === 'published') return 'published';
     if (status === 'scheduled') return 'scheduled';
     return 'default';

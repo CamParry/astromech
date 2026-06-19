@@ -324,7 +324,7 @@ export class BuiltInEntryStorage implements EntryStorage<Entry> {
                 locale: data.locale ?? this.defaultLocale,
                 localeGroup: data.localeGroup ?? crypto.randomUUID(),
                 fields: data.fields ?? {},
-                status: data.status ?? 'draft',
+                status: data.status ?? 'unpublished',
                 publishedAt: data.publishedAt ?? null,
                 createdBy: data.createdBy ?? null,
                 updatedBy: data.updatedBy ?? null,

@@ -46,10 +46,10 @@ type UseEntryFormOptions = {
      * Defaults to true (titled/standard types are unaffected).
      */
     hasStatuses?: boolean;
-    /** Initial form values; defaults to empty/draft. */
+    /** Initial form values; defaults to empty/unpublished. */
     defaultValues?: Partial<EntryFormValues>;
     /**
-     * The mutation function for the "save" action (save as draft / update).
+     * The mutation function for the "save" action (save as unpublished / update).
      * Receives the built payload; must return a Promise<Entry>.
      */
     saveFn: (payload: EntryPayload) => Promise<Entry>;
@@ -83,7 +83,7 @@ export function useEntryForm({
         defaultValues: {
             title: defaultValues?.title ?? '',
             slug: defaultValues?.slug ?? '',
-            status: defaultValues?.status ?? ('draft' as EntryStatus),
+            status: defaultValues?.status ?? ('unpublished' as EntryStatus),
             publishAt: defaultValues?.publishAt ?? '',
             fields: defaultValues?.fields ?? ({} as Record<string, unknown>),
         },
@@ -101,7 +101,7 @@ export function useEntryForm({
             title: values.title,
             fields: values.fields as JsonObject,
             // Omit status entirely for statuses-off types (the API 409s on a
-            // status write there); the entries service defaults to 'draft'.
+            // status write there); the entries service defaults to 'unpublished'.
             ...(hasStatuses ? { status } : {}),
         };
         if (hasSlug && values.slug.trim()) {
