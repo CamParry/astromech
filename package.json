@@ -11,7 +11,7 @@
     ],
     "scripts": {
         "dev": "npm run dev -w astromech",
-        "build": "npm run build -w astromech && npm run build -w @astromech/menus -w @astromech/redirects -w @astromech/seo",
+        "build": "npm run build -w astromech && npm run build -w @astromech/menus -w @astromech/redirects -w @astromech/seo -w @astromech/backups",
         "typecheck": "npm run typecheck -w astromech",
         "lint": "npm run lint -w astromech",
         "lint:deps": "npm run lint:deps -w astromech",

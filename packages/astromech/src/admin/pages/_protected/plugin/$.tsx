@@ -147,7 +147,7 @@ function PluginPage(): React.ReactElement {
             {registration.label !== null && (
                 <PageHeader>
                     <PageTitle>
-                        {owner !== undefined
+                        {owner !== undefined && owner.label !== registration.label
                             ? `${owner.label} ${registration.label}`
                             : registration.label}
                     </PageTitle>
