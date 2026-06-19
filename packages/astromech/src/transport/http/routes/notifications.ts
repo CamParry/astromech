@@ -5,12 +5,10 @@
  * No permission descriptors; ownership enforced via userId in every query.
  *
  * Routes:
- *   GET    /notifications              → list (supports ?unread=true)
- *   GET    /notifications/unread-count → unread count
- *   POST   /notifications/:id/read    → mark one read
- *   POST   /notifications/read-all    → mark all read
- *   DELETE /notifications/:id         → dismiss one
- *   DELETE /notifications             → dismiss all
+ *   GET    /notifications        → list
+ *   GET    /notifications/count  → total count
+ *   DELETE /notifications        → dismiss all
+ *   DELETE /notifications/:id    → dismiss one
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
@@ -28,9 +26,8 @@ const router = new OpenAPIHono<Env>();
 
 router.get('/', async (c) => {
     const userId = c.var.user.id;
-    const unread = c.req.query('unread') === 'true';
     try {
-        const rows = await notificationsRepo.list(userId, { unread });
+        const rows = await notificationsRepo.list(userId);
         return c.json({ data: rows.map(toNotification) });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
@@ -38,43 +35,14 @@ router.get('/', async (c) => {
 });
 
 // ============================================================================
-// GET /notifications/unread-count
+// GET /notifications/count
 // ============================================================================
 
-router.get('/unread-count', async (c) => {
+router.get('/count', async (c) => {
     const userId = c.var.user.id;
     try {
-        const count = await notificationsRepo.unreadCount(userId);
+        const count = await notificationsRepo.count(userId);
         return c.json({ data: { count } });
-    } catch (err) {
-        return internalError(c, err instanceof Error ? err.message : undefined);
-    }
-});
-
-// ============================================================================
-// POST /notifications/read-all
-// ============================================================================
-
-router.post('/read-all', async (c) => {
-    const userId = c.var.user.id;
-    try {
-        await notificationsRepo.markAllRead(userId);
-        return new Response(null, { status: 204 });
-    } catch (err) {
-        return internalError(c, err instanceof Error ? err.message : undefined);
-    }
-});
-
-// ============================================================================
-// POST /notifications/:id/read
-// ============================================================================
-
-router.post('/:id/read', async (c) => {
-    const userId = c.var.user.id;
-    const { id } = c.req.param();
-    try {
-        await notificationsRepo.markRead(userId, id);
-        return new Response(null, { status: 204 });
     } catch (err) {
         return internalError(c, err instanceof Error ? err.message : undefined);
     }

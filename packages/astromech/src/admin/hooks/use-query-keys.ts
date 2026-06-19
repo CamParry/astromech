@@ -49,7 +49,7 @@ export const queryKeys = {
         all: () => ['notifications'] as const,
         list: (params?: Record<string, unknown>) =>
             ['notifications', 'list', params] as const,
-        unreadCount: () => ['notifications', 'unread-count'] as const,
+        count: () => ['notifications', 'count'] as const,
     },
 } as const;
 

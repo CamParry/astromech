@@ -158,7 +158,6 @@ export type Notification = {
     title: string;
     message: string;
     href: string | null;
-    readAt: string | null;
     createdAt: string;
 };
 

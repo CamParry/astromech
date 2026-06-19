@@ -18,7 +18,6 @@ export const notificationsTable = sqliteTable(
         title: text('title').notNull(),
         message: text('message').notNull(),
         href: text('href'),
-        readAt: integer('read_at', { mode: 'timestamp' }),
         createdAt: integer('created_at', { mode: 'timestamp' })
             .notNull()
             .$defaultFn(() => new Date()),

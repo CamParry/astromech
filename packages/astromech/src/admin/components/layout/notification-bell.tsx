@@ -1,7 +1,7 @@
 /**
- * Notification bell with unread badge and dropdown panel.
+ * Notification bell with badge and dropdown panel.
  *
- * The unread count polls every 30s always. The notification list is fetched
+ * The count polls every 30s always. The notification list is fetched
  * lazily — only when the dropdown is open.
  */
 
@@ -12,10 +12,8 @@ import { Menu } from '@base-ui/react/menu';
 import { Bell, X } from 'lucide-react';
 import type { Notification } from '@/types/index.js';
 import {
-    useUnreadCount,
+    useNotificationCount,
     useNotifications,
-    useMarkRead,
-    useMarkAllRead,
     useDismiss,
     useDismissAll,
 } from '../../hooks/notifications.js';
@@ -72,7 +70,7 @@ type NotificationRowProps = {
 
 function NotificationRow({ notification, onDismiss, onClick }: NotificationRowProps) {
     const { t } = useTranslation();
-    const isUnread = notification.readAt === null;
+    const hasHref = notification.href !== null;
 
     function handleDismiss(e: React.MouseEvent) {
         e.stopPropagation();
@@ -81,17 +79,20 @@ function NotificationRow({ notification, onDismiss, onClick }: NotificationRowPr
 
     return (
         <div
-            className={['am-notif-row', isUnread ? 'am-notif-row--unread' : '']
+            className={['am-notif-row', hasHref ? 'am-notif-row--link' : '']
                 .filter(Boolean)
                 .join(' ')}
-            role="button"
-            tabIndex={0}
-            onClick={() => onClick(notification)}
-            onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') onClick(notification);
-            }}
+            {...(hasHref
+                ? {
+                      role: 'button',
+                      tabIndex: 0,
+                      onClick: () => onClick(notification),
+                      onKeyDown: (e: React.KeyboardEvent) => {
+                          if (e.key === 'Enter' || e.key === ' ') onClick(notification);
+                      },
+                  }
+                : {})}
         >
-            {isUnread && <span className="am-notif-row-dot" aria-hidden="true" />}
             <div className="am-notif-row-body">
                 <span className="am-notif-row-title">{notification.title}</span>
                 <span className="am-notif-row-message">{notification.message}</span>
@@ -120,32 +121,23 @@ export function NotificationBell() {
     const navigate = useNavigate();
     const [open, setOpen] = useState(false);
 
-    const { data: unreadCount = 0 } = useUnreadCount();
+    const { data: count = 0 } = useNotificationCount();
     const { data: items = [], isPending: isLoading } = useNotifications(undefined, open);
 
-    const markRead = useMarkRead();
-    const markAllRead = useMarkAllRead();
     const dismiss = useDismiss();
     const dismissAll = useDismissAll();
 
-    const badgeCount =
-        unreadCount > 9 ? '9+' : unreadCount > 0 ? String(unreadCount) : null;
+    const badgeCount = count > 9 ? '9+' : count > 0 ? String(count) : null;
 
     function handleRowClick(notification: Notification) {
-        if (notification.readAt === null) {
-            markRead.mutate(notification.id);
-        }
         if (notification.href !== null) {
             void navigate({ to: toAdminRelative(notification.href) });
+            dismiss.mutate(notification.id);
         }
     }
 
     function handleDismiss(id: string) {
         dismiss.mutate(id);
-    }
-
-    function handleMarkAllRead() {
-        markAllRead.mutate();
     }
 
     function handleDismissAll() {
@@ -183,14 +175,6 @@ export function NotificationBell() {
                                 {t('notifications.panelTitle')}
                             </span>
                             <div className="am-notif-panel-actions">
-                                <button
-                                    type="button"
-                                    className="am-notif-panel-action"
-                                    onClick={handleMarkAllRead}
-                                    disabled={isEmpty || markAllRead.isPending}
-                                >
-                                    {t('notifications.markAllRead')}
-                                </button>
                                 <button
                                     type="button"
                                     className="am-notif-panel-action"

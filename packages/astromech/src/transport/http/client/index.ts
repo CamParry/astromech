@@ -644,26 +644,14 @@ const usersApi: UsersApi = {
 // ============================================================================
 
 const notificationsApi: NotificationsApi = {
-    async list(params?: { unread?: boolean }): Promise<Notification[]> {
-        const res = await apiFetch<{ data: Notification[] }>('/notifications', {
-            params: { unread: params?.unread },
-        });
+    async list(): Promise<Notification[]> {
+        const res = await apiFetch<{ data: Notification[] }>('/notifications');
         return res.data;
     },
 
-    async unreadCount(): Promise<number> {
-        const res = await apiFetch<{ data: { count: number } }>(
-            '/notifications/unread-count'
-        );
+    async count(): Promise<number> {
+        const res = await apiFetch<{ data: { count: number } }>('/notifications/count');
         return res.data.count;
-    },
-
-    async markRead(id: string): Promise<void> {
-        await apiFetch<unknown>(`/notifications/${id}/read`, { method: 'POST' });
-    },
-
-    async markAllRead(): Promise<void> {
-        await apiFetch<unknown>('/notifications/read-all', { method: 'POST' });
     },
 
     async dismiss(id: string): Promise<void> {
