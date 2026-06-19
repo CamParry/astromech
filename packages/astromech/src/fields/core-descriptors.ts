@@ -10,6 +10,7 @@
  */
 
 import type { FieldTypeDescriptor } from '@/types/fields.js';
+import { RESERVED_KEY } from './reserved-keys.js';
 import {
     coerceEmail,
     validateEmail,
@@ -140,7 +141,7 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         component: '@/admin/components/fields/repeater-field',
         tsType: () => null,
         defaultValue: [],
-        reservedKeys: ['_id', '_disabled', '_title'],
+        reservedKeys: [RESERVED_KEY.id, RESERVED_KEY.disabled, RESERVED_KEY.title],
         isContainer: true,
     },
     {
@@ -149,7 +150,12 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         component: '@/admin/components/fields/blocks-field',
         tsType: () => null,
         defaultValue: [],
-        reservedKeys: ['_id', '_type', '_disabled', '_title'],
+        reservedKeys: [
+            RESERVED_KEY.id,
+            RESERVED_KEY.type,
+            RESERVED_KEY.disabled,
+            RESERVED_KEY.title,
+        ],
         isContainer: true,
     },
     {
@@ -158,7 +164,7 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         component: '@/admin/components/fields/tree-field',
         tsType: () => null,
         defaultValue: [],
-        reservedKeys: ['_id', '_disabled'],
+        reservedKeys: [RESERVED_KEY.id, RESERVED_KEY.disabled],
         isContainer: true,
     },
     {

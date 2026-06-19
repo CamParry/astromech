@@ -17,6 +17,7 @@ import type {
 } from '@/types/index.js';
 import type { JSONContent } from '@tiptap/core';
 import { renderRichText } from '@/fields/rich-text/index.js';
+import { PUBLIC_STRIPPED_KEYS, RESERVED_KEY } from '@/fields/reserved-keys.js';
 
 // ============================================================================
 // Public types
@@ -123,7 +124,7 @@ function structuralStrip(value: JsonValue): JsonValue {
                     item !== null &&
                     typeof item === 'object' &&
                     !Array.isArray(item) &&
-                    (item as JsonObject)['_disabled'] === true
+                    (item as JsonObject)[RESERVED_KEY.disabled] === true
                 )
         );
         return filtered.map((item) => structuralStrip(item));
@@ -133,7 +134,7 @@ function structuralStrip(value: JsonValue): JsonValue {
         const obj = value as JsonObject;
         const result: JsonObject = {};
         for (const [k, v] of Object.entries(obj)) {
-            if (k === '_disabled' || k === '_title') continue;
+            if (PUBLIC_STRIPPED_KEYS.has(k)) continue;
             result[k] = structuralStrip(v as JsonValue);
         }
         return result;

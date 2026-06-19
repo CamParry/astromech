@@ -15,6 +15,7 @@ import type {
     ResolvedEntryFields,
 } from '@/types/index.js';
 import { getFieldTypeDescriptor } from '@/fields/descriptors.js';
+import { RESERVED_KEY_META } from '@/fields/reserved-keys.js';
 
 // ============================================================================
 // Naming Helpers
@@ -46,17 +47,12 @@ const LAYOUT_TYPES = new Set(['section', 'tabs', 'tab', 'accordion']);
 const RELATION_TYPES = new Set(['relationship', 'media']);
 
 /**
- * TS emission for reserved instance keys. `_id`/`_type` are identity keys (present
- * in both shapes); `_disabled`/`_title` are editorial metadata (full shape only).
- * Which keys a container owns comes from its descriptor's `reservedKeys`; this map
- * owns only how each is typed.
+ * TS emission + public visibility for reserved instance keys lives in
+ * `RESERVED_KEY_META` (`fields/reserved-keys.ts`) — the single source shared with
+ * the runtime public-read strip. `_id`/`_type` are identity keys (present in both
+ * shapes); `_disabled`/`_title` are editorial metadata (full shape only). Which
+ * keys a container owns comes from its descriptor's `reservedKeys`.
  */
-const RESERVED_KEY_TS: Record<string, { line: string; inPublic: boolean }> = {
-    _id: { line: '_id: string;', inPublic: true },
-    _type: { line: '_type: string;', inPublic: true },
-    _disabled: { line: '_disabled?: boolean;', inPublic: false },
-    _title: { line: '_title?: string;', inPublic: false },
-};
 
 /** Reserved-key type lines a container emits for the given shape, in declared order. */
 function reservedKeyLines(
@@ -65,10 +61,10 @@ function reservedKeyLines(
 ): string[] {
     const lines: string[] = [];
     for (const key of descriptor.reservedKeys ?? []) {
-        const emit = RESERVED_KEY_TS[key];
+        const emit = RESERVED_KEY_META[key];
         if (emit === undefined) continue;
         if (shape === 'public' && !emit.inPublic) continue;
-        lines.push(emit.line);
+        lines.push(emit.tsLine);
     }
     return lines;
 }
