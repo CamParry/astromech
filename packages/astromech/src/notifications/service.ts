@@ -1,4 +1,4 @@
-import { eq, desc, and, isNull, sql } from 'drizzle-orm';
+import { eq, desc, and, sql } from 'drizzle-orm';
 import { notificationsTable } from './schema.js';
 import type { NotificationRow } from './schema.js';
 import { usersTable } from '@/users/schema.js';
@@ -17,7 +17,6 @@ export function toNotification(row: NotificationRow): Notification {
         title: row.title,
         message: row.message,
         href: row.href ?? null,
-        readAt: row.readAt ? row.readAt.toISOString() : null,
         createdAt: row.createdAt.toISOString(),
     };
 }
@@ -62,57 +61,22 @@ export async function notify(input: NotifyInput): Promise<void> {
 // ============================================================================
 
 export const notificationsRepo = {
-    async list(
-        userId: string,
-        opts?: { unread?: boolean }
-    ): Promise<NotificationRow[]> {
+    async list(userId: string): Promise<NotificationRow[]> {
         const db = getDb();
-        const conditions = [eq(notificationsTable.userId, userId)];
-        if (opts?.unread) {
-            conditions.push(isNull(notificationsTable.readAt));
-        }
         return db
             .select()
             .from(notificationsTable)
-            .where(and(...conditions))
+            .where(eq(notificationsTable.userId, userId))
             .orderBy(desc(notificationsTable.createdAt));
     },
 
-    async unreadCount(userId: string): Promise<number> {
+    async count(userId: string): Promise<number> {
         const db = getDb();
         const rows = await db
             .select({ count: sql<number>`count(*)` })
             .from(notificationsTable)
-            .where(
-                and(
-                    eq(notificationsTable.userId, userId),
-                    isNull(notificationsTable.readAt)
-                )
-            );
+            .where(eq(notificationsTable.userId, userId));
         return rows[0]?.count ?? 0;
-    },
-
-    async markRead(userId: string, id: string): Promise<void> {
-        const db = getDb();
-        await db
-            .update(notificationsTable)
-            .set({ readAt: new Date() })
-            .where(
-                and(eq(notificationsTable.id, id), eq(notificationsTable.userId, userId))
-            );
-    },
-
-    async markAllRead(userId: string): Promise<void> {
-        const db = getDb();
-        await db
-            .update(notificationsTable)
-            .set({ readAt: new Date() })
-            .where(
-                and(
-                    eq(notificationsTable.userId, userId),
-                    isNull(notificationsTable.readAt)
-                )
-            );
     },
 
     async dismiss(userId: string, id: string): Promise<void> {

@@ -221,13 +221,11 @@
     },
     "notifications": {
         "panelTitle": "Notifications",
-        "markAllRead": "Mark all read",
         "dismissAll": "Dismiss all",
         "empty": "No notifications",
         "dismissedAll": "All notifications dismissed.",
         "dismissFailed": "Dismiss failed",
-        "dismissLabel": "Dismiss",
-        "unreadBadge": "{{count}} unread"
+        "dismissLabel": "Dismiss"
     },
     "shortcuts": {
         "title": "Keyboard Shortcuts",

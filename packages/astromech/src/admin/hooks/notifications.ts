@@ -12,18 +12,18 @@ import { useToast } from '../components/ui/index.js';
 // Query hooks
 // ============================================================================
 
-export function useNotifications(params?: { unread?: boolean }, enabled = true) {
+export function useNotifications(params?: Record<string, unknown>, enabled = true) {
     return useQuery({
-        queryKey: queryKeys.notifications.list(params as Record<string, unknown>),
-        queryFn: () => Astromech.notifications.list(params),
+        queryKey: queryKeys.notifications.list(params),
+        queryFn: () => Astromech.notifications.list(),
         enabled,
     });
 }
 
-export function useUnreadCount() {
+export function useNotificationCount() {
     return useQuery({
-        queryKey: queryKeys.notifications.unreadCount(),
-        queryFn: () => Astromech.notifications.unreadCount(),
+        queryKey: queryKeys.notifications.count(),
+        queryFn: () => Astromech.notifications.count(),
         refetchInterval: 30_000,
         refetchOnWindowFocus: true,
     });
@@ -32,38 +32,6 @@ export function useUnreadCount() {
 // ============================================================================
 // Mutation hooks
 // ============================================================================
-
-export function useMarkRead() {
-    const queryClient = useQueryClient();
-
-    return useMutation({
-        mutationFn: (id: string) => Astromech.notifications.markRead(id),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.notifications.all(),
-            });
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.notifications.unreadCount(),
-            });
-        },
-    });
-}
-
-export function useMarkAllRead() {
-    const queryClient = useQueryClient();
-
-    return useMutation({
-        mutationFn: () => Astromech.notifications.markAllRead(),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.notifications.all(),
-            });
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.notifications.unreadCount(),
-            });
-        },
-    });
-}
 
 export function useDismiss() {
     const queryClient = useQueryClient();
@@ -75,7 +43,7 @@ export function useDismiss() {
                 queryKey: queryKeys.notifications.all(),
             });
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.notifications.unreadCount(),
+                queryKey: queryKeys.notifications.count(),
             });
         },
     });
@@ -93,7 +61,7 @@ export function useDismissAll() {
                 queryKey: queryKeys.notifications.all(),
             });
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.notifications.unreadCount(),
+                queryKey: queryKeys.notifications.count(),
             });
             toast({ message: t('notifications.dismissedAll'), variant: 'success' });
         },

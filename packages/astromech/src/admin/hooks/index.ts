@@ -52,9 +52,7 @@ export {
 } from './users.js';
 export {
     useNotifications,
-    useUnreadCount,
-    useMarkRead,
-    useMarkAllRead,
+    useNotificationCount,
     useDismiss,
     useDismissAll,
 } from './notifications.js';

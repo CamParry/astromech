@@ -85,6 +85,13 @@
             "when": 1781821028854,
             "tag": "0011_dark_wiccan",
             "breakpoints": true
+        },
+        {
+            "idx": 12,
+            "version": "6",
+            "when": 1781859816818,
+            "tag": "0012_naive_molly_hayes",
+            "breakpoints": true
         }
     ]
 }

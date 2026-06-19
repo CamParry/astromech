@@ -33,9 +33,7 @@ const notImplemented = (): never => {
 
 const localNotificationsApi: NotificationsApi = {
     list: notImplemented,
-    unreadCount: notImplemented,
-    markRead: notImplemented,
-    markAllRead: notImplemented,
+    count: notImplemented,
     dismiss: notImplemented,
     dismissAll: notImplemented,
 };

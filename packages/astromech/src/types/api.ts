@@ -266,10 +266,8 @@ export type UsersApi = {
 // ============================================================================
 
 export type NotificationsApi = {
-    list(params?: { unread?: boolean }): Promise<Notification[]>;
-    unreadCount(): Promise<number>;
-    markRead(id: string): Promise<void>;
-    markAllRead(): Promise<void>;
+    list(): Promise<Notification[]>;
+    count(): Promise<number>;
     dismiss(id: string): Promise<void>;
     dismissAll(): Promise<void>;
 };
