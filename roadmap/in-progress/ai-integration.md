@@ -9,8 +9,8 @@ Workstreams (spec §7), in order:
 - [x] **UI-slot injection** — named admin-shell slots (`global-overlay`,
       `right-drawer`, `toolbar`) that plugins contribute components into. Prerequisite
       for the chat drawer; generalises to all plugins.
-- [ ] **CLI rebuild** — entry create/update/publish + JSON output, driven by the
-      manifest.
+- [x] **CLI rebuild** — entry create/update/publish/unpublish + JSON output, plus
+      a `methods` command that reflects the manifest. Trusted transport (no eval).
 - [ ] **MCP server** — dev-only; projects the manifest as MCP tools.
 - [ ] **Confirm gate** — deterministic propose→preview→approve→execute, keyed off
       `mutates`/`destructive`.

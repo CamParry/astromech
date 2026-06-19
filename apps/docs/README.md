@@ -8,8 +8,10 @@ This is a living reference; it grows as the project does.
 ## Contents
 
 - [plugins/authoring.md](plugins/authoring.md) — write a plugin: the file-layout
-  convention, identity, and every surface (custom fields, admin pages,
-  permissions, SDK methods, hooks, entry types, database tables, and i18n).
+  convention, identity, and every surface (custom fields, admin pages, admin
+  slots, permissions, SDK methods, hooks, entry types, database tables, and i18n).
+- [cli.md](cli.md) — the `astromech` CLI: entry CRUD + publish, JSON output, and
+  method-manifest discovery.
 
 ## Learning from the bundled plugins
 
