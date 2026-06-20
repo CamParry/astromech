@@ -57,6 +57,15 @@ export type EntryQueryParams = {
     locale?: string | AllLocales;
     /** Request the full (admin) shape instead of the default public shape. */
     full?: boolean;
+    /**
+     * Preview token (forward versioning). When valid for the matched canonical
+     * entry, the publish/schedule gate is bypassed for it (public shape only),
+     * so an unpublished/scheduled entry — or its staged change — is returned.
+     * Invalid/absent → normal public behaviour (non-published → nothing).
+     */
+    previewToken?: string;
+    /** With a valid `previewToken`, preview the staged change instead of the current entry. */
+    staged?: boolean;
 };
 
 export type QueryResult<T = Entry> = {
@@ -126,6 +135,10 @@ export type EntriesApi = {
         populate?: string[];
         /** Request the full (admin) shape instead of the default public shape. */
         full?: boolean;
+        /** Preview token — see EntryQueryParams.previewToken (public shape only). */
+        previewToken?: string;
+        /** With a valid `previewToken`, preview the staged change instead. */
+        staged?: boolean;
     }): Promise<Entry | null>;
 
     create(params: {
@@ -215,6 +228,17 @@ export type EntriesStagingApi = {
     mergeStaged(params: { type: string; id: string }): Promise<Entry>;
     /** Discard the canonical's staged change (hard delete). */
     deleteStaged(params: { type: string; id: string }): Promise<void>;
+    /**
+     * Issue a preview token for a canonical entry (replaces any existing one).
+     * The plaintext token is returned once; only its hash is stored.
+     */
+    issuePreviewToken(params: {
+        type: string;
+        id: string;
+        expiresAt?: Date | null;
+    }): Promise<{ token: string }>;
+    /** Revoke the canonical entry's preview token(s). */
+    revokePreviewToken(params: { type: string; id: string }): Promise<void>;
 };
 
 // ============================================================================

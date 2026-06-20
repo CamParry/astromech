@@ -42,6 +42,13 @@ export type VisibilityOptions = {
      */
     fields: FieldDefinition[];
     audience: AudienceContext;
+    /**
+     * Preview mode (forward versioning): the caller has already authorized this
+     * row via a preview token, so bypass the publish/schedule gate — but keep the
+     * trashed check and apply the full public projection. Only meaningful with
+     * `shape: 'public'`.
+     */
+    preview?: boolean;
 };
 
 // ============================================================================
@@ -103,6 +110,15 @@ function passesPublicRowFilter(entry: Entry, now: Date): boolean {
     if (e.publishedAt != null && e.publishedAt > now) return false;
     if (e.deletedAt != null) return false;
     return true;
+}
+
+/**
+ * Preview row filter: the publish/schedule gate is bypassed (the caller verified
+ * a preview token), but a trashed row never previews.
+ */
+function passesPreviewRowFilter(entry: Entry): boolean {
+    const e = entry as { deletedAt?: Date | null };
+    return e.deletedAt == null;
 }
 
 // ============================================================================
@@ -447,7 +463,10 @@ export function applyVisibilityWithRelations(
     const { shape, fields, audience } = opts;
 
     if (shape === 'full') return entry;
-    if (!passesPublicRowFilter(entry, audience.now)) return null;
+    const rowOk = opts.preview
+        ? passesPreviewRowFilter(entry)
+        : passesPublicRowFilter(entry, audience.now);
+    if (!rowOk) return null;
 
     const clonedFields = { ...entry.fields };
     const projectedFields = stripPrivateFields(

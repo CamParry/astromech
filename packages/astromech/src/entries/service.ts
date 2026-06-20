@@ -32,6 +32,10 @@ import {
 } from './schema.js';
 import { getDb } from '@/database/registry.js';
 import { RelationshipsRepository } from '@/database/repositories/relationships.js';
+import {
+    PreviewTokensRepository,
+    hashPreviewToken,
+} from '@/database/repositories/preview-tokens.js';
 import { populateEntries } from './data/populate.js';
 import { getEntryStorage } from './storage/registry.js';
 import { resolveEntryType } from './type-registry.js';
@@ -66,6 +70,7 @@ import {
     markPublic,
     PublicShapeWriteError,
     type VisibilityShape,
+    type AudienceContext,
 } from './visibility.js';
 
 // ============================================================================
@@ -211,6 +216,157 @@ function getStagingStorage(typeName: string): {
         );
     }
     return { storage, staging };
+}
+
+// ============================================================================
+// Preview (forward versioning) helpers
+// ============================================================================
+
+/** Generate a high-entropy preview token secret (32 random bytes, hex). */
+function generatePreviewSecret(): string {
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    return Array.from(bytes)
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+}
+
+/** True if `token` is a current preview token for the canonical `entryId`. */
+async function verifyPreviewToken(entryId: string, token: string): Promise<boolean> {
+    const hash = await hashPreviewToken(token);
+    return new PreviewTokensRepository(getDb()).isValid(entryId, hash, new Date());
+}
+
+const previewAudience = (): AudienceContext => ({ roleSlug: null, now: new Date() });
+
+function resolveRelatedFieldsFor(related: Entry): FieldDefinition[] {
+    const relTypeCfg = resolveEntryType(config, related.type);
+    return relTypeCfg ? flattenEntryFields(relTypeCfg.fields) : [];
+}
+
+/** Apply the preview projection (public shape, publish-gate bypassed). */
+function projectPreview(entry: Entry, fields: FieldDefinition[]): Entry | null {
+    const filtered = applyVisibilityWithRelations(
+        entry,
+        { shape: 'public', preview: true, fields, audience: previewAudience() },
+        resolveRelatedFieldsFor
+    );
+    return filtered ? markPublic(filtered) : null;
+}
+
+/**
+ * Preview list read. Resolves canonicals matching the filters WITHOUT the
+ * publish gate, verifies the token against each, optionally swaps to the staged
+ * change, and returns the preview (public) shape. Unauthorized/absent token →
+ * empty result (the front-end renders a 404).
+ */
+async function runPreviewQuery(
+    params: EntryQueryParams & { type: string | readonly string[] }
+): Promise<QueryResult<Entry>> {
+    const perPage = typeof params.limit === 'number' ? params.limit : 20;
+    const empty: QueryResult<Entry> = {
+        data: [],
+        pagination:
+            params.limit === 'all'
+                ? null
+                : { page: params.page ?? 1, limit: perPage, total: 0, pages: 0 },
+    };
+
+    const token = params.previewToken;
+    const typeParam = params.type;
+    const type = Array.isArray(typeParam) ? typeParam[0] : (typeParam as string);
+    if (!token || !type) return empty;
+
+    const storage = getEntryStorage(type);
+    const entryTypeCfg = resolveEntryType(config, type);
+    const fields = entryTypeCfg ? flattenEntryFields(entryTypeCfg.fields) : [];
+
+    const { data: rows } = await storage.list({
+        type,
+        locale: params.locale ?? getDefaultLocale(),
+        where: params.where,
+        sort: params.sort,
+        limit: params.limit ?? 1,
+        page: params.page ?? 1,
+    });
+
+    const out: Entry[] = [];
+    for (const row of rows) {
+        const canonical = asEntry(row);
+        if (!(await verifyPreviewToken(canonical.id, token))) continue;
+
+        let target: Entry = canonical;
+        if (params.staged) {
+            const staged = await storage.staging?.getByCanonical(canonical.id);
+            if (!staged) continue;
+            target = asEntry(staged);
+        }
+
+        let result = target;
+        if (params.populate && params.populate.length > 0 && entryTypeCfg) {
+            const populated = await populateEntries(
+                getDb(),
+                [result],
+                fields,
+                params.populate
+            );
+            result = populated[0] ?? result;
+        }
+
+        const projected = projectPreview(result, fields);
+        if (projected !== null) out.push(projected);
+    }
+
+    if (params.limit === 'all') return { data: out, pagination: null };
+    return {
+        data: out,
+        pagination: {
+            page: params.page ?? 1,
+            limit: perPage,
+            total: out.length,
+            pages: out.length > 0 ? 1 : 0,
+        },
+    };
+}
+
+/** Preview single read by canonical id (see runPreviewQuery). */
+async function runPreviewGet(
+    type: string,
+    id: string,
+    params: { populate?: string[]; previewToken?: string; staged?: boolean }
+): Promise<Entry | null> {
+    const token = params.previewToken;
+    if (!token) return null;
+
+    const storage = getEntryStorage(type);
+    const record = await storage.get(id); // excludes trashed
+    if (!record) return null;
+    if (record.type !== undefined && record.type !== type) return null;
+
+    const canonical = asEntry(record);
+    if (!(await verifyPreviewToken(canonical.id, token))) return null;
+
+    let target: Entry = canonical;
+    if (params.staged) {
+        const staged = await storage.staging?.getByCanonical(canonical.id);
+        if (!staged) return null;
+        target = asEntry(staged);
+    }
+
+    const entryTypeCfg = resolveEntryType(config, type);
+    const fields = entryTypeCfg ? flattenEntryFields(entryTypeCfg.fields) : [];
+
+    let result = target;
+    if (params.populate && params.populate.length > 0 && entryTypeCfg) {
+        const populated = await populateEntries(
+            getDb(),
+            [result],
+            fields,
+            params.populate
+        );
+        result = populated[0] ?? result;
+    }
+
+    return projectPreview(result, fields);
 }
 
 async function buildRelationsSnapshot(
@@ -534,6 +690,10 @@ export const entries: EntriesApi & EntriesStagingApi = {
     async query(
         params: EntryQueryParams & { type: string | readonly string[] }
     ): Promise<QueryResult<Entry>> {
+        // Preview (forward versioning): token-authorized read that bypasses the
+        // publish gate. Public shape only; diverges enough to take its own path.
+        if (params.previewToken) return runPreviewQuery(params);
+
         const typeParam = params.type;
         const types = Array.isArray(typeParam)
             ? Array.from(typeParam)
@@ -646,8 +806,14 @@ export const entries: EntriesApi & EntriesStagingApi = {
         locale?: string;
         populate?: string[];
         full?: boolean;
+        previewToken?: string;
+        staged?: boolean;
     }): Promise<Entry | null> {
         const { type, id } = params;
+
+        // Preview (forward versioning): token-authorized, publish-gate-bypassed.
+        if (params.previewToken) return runPreviewGet(type, id, params);
+
         const storage = getEntryStorage(type);
         const record = await storage.get(id);
 
@@ -1255,5 +1421,39 @@ export const entries: EntriesApi & EntriesStagingApi = {
         const relRepo = new RelationshipsRepository(getDb());
         await relRepo.deleteByEntry(staged.id);
         await storage.delete(staged.id);
+    },
+
+    async issuePreviewToken(params: {
+        type: string;
+        id: string;
+        expiresAt?: Date | null;
+    }): Promise<{ token: string }> {
+        const { type, id } = params;
+        assertCapability(type, 'staging');
+        const storage = getEntryStorage(type);
+        const canonical = await loadAndAssertType(storage, type, id);
+        if (canonical.stagedFor != null) {
+            throw new Error(
+                `Entry '${id}' is a staged change; issue the preview token on its canonical entry.`
+            );
+        }
+        const token = generatePreviewSecret();
+        const hash = await hashPreviewToken(token);
+        const user = getCurrentUser();
+        await new PreviewTokensRepository(getDb()).issue(
+            id,
+            hash,
+            params.expiresAt ?? null,
+            user?.id ?? null
+        );
+        return { token };
+    },
+
+    async revokePreviewToken(params: { type: string; id: string }): Promise<void> {
+        const { type, id } = params;
+        assertCapability(type, 'staging');
+        const storage = getEntryStorage(type);
+        await loadAndAssertType(storage, type, id);
+        await new PreviewTokensRepository(getDb()).revoke(id);
     },
 };

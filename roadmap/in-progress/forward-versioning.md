@@ -5,7 +5,7 @@
 - [x] **WS2** — Staging service: `createStaged`/`getStaged`/`mergeStaged`/`deleteStaged` on the entries service (+ `EntriesStagingApi` type, `StagedEntryExistsError`, storage `staging.getByCanonical` sub-surface). Staged entry = separate linked row; createStaged copies content + relations (fresh localeGroup); merge = backup(if versioning)→update(id/slug preserved, publishes)→hard-delete staged, in a transaction
 - [x] **WS0** — Status enum `draft`→`unpublished` (drop the draft/working-copy overload), incl. data migration + UI/i18n + `TERMINOLOGY.md`. Shipped alone.
 - [ ] Merge = backup→update→cleanup with canonical id stable
-- [ ] Preview via existing published slug route — token authorizes + `?staged=1`/`?version=` selector (no preview route, no id-in-URL)
+- [x] **WS3** — Preview: `issuePreviewToken`/`revokePreviewToken` (hashed, optional TTL, one per entry) + `previewToken`/`staged` params on `get`/`query`; token-authorized reads bypass the publish/schedule gate (visibility `preview` mode — public shape, trashed still excluded); invalid/absent token → empty → 404. Front-end URL wiring (`?preview=`/`?staged=`) is WS4
 - [ ] Service + transport + SDK: `createStaged`/`getStaged`/`mergeStaged`/`deleteStaged` + preview-token issue/verify
 - [ ] Admin: own-URL staged editor, Current|Staged toggle = navigation, rename UI "revisions"→"versions"
 - Design-locked spec + WS0-6 plan: `specs/forward-versioning.md` (terminology → `TERMINOLOGY.md` at ship). `staging` capability independent of versioning, built-in storage only. Entries-only v1; scheduled merge + table-backed + settings/menus staging deferred
