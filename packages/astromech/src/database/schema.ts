@@ -35,10 +35,13 @@ export {
 export {
     entriesTable,
     entryVersionsTable,
+    entryPreviewTokensTable,
     type EntryRow,
     type NewEntryRow,
     type EntryVersionRow,
     type NewEntryVersionRow,
+    type EntryPreviewTokenRow,
+    type NewEntryPreviewTokenRow,
 } from '@/entries/schema.js';
 
 // ============================================================================

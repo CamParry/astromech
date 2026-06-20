@@ -40,6 +40,11 @@ describe('resolveEntryCapabilities — defaults', () => {
         const caps = resolveEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
         expect(caps.translatable).toBe(false);
     });
+
+    it('staging defaults OFF', () => {
+        const caps = resolveEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
+        expect(caps.staging).toBe(false);
+    });
 });
 
 // ============================================================================
@@ -105,6 +110,61 @@ describe('resolveEntryCapabilities — versioning', () => {
             versioning: { maxVersions: 10 },
         };
         expect(resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS).versioning).toBe(true);
+    });
+});
+
+// ============================================================================
+// resolveEntryCapabilities — staging (independent of versioning)
+// ============================================================================
+
+describe('resolveEntryCapabilities — staging', () => {
+    it('staging:true resolves on with built-in storage', () => {
+        const cfg: EntryTypeConfig = {
+            single: 'Item',
+            plural: 'Items',
+            staging: true,
+        };
+        expect(resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS).staging).toBe(true);
+    });
+
+    it('staging:false resolves off', () => {
+        const cfg: EntryTypeConfig = {
+            single: 'Item',
+            plural: 'Items',
+            staging: false,
+        };
+        expect(resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS).staging).toBe(false);
+    });
+
+    it('staging is independent of versioning (on without versioning)', () => {
+        const cfg: EntryTypeConfig = {
+            single: 'Item',
+            plural: 'Items',
+            staging: true,
+            versioning: false,
+        };
+        const caps = resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS);
+        expect(caps.staging).toBe(true);
+        expect(caps.versioning).toBe(false);
+    });
+
+    it('staging resolves off when storage does not support it', () => {
+        const cfg: EntryTypeConfig = {
+            single: 'Item',
+            plural: 'Items',
+            staging: true,
+        };
+        expect(resolveEntryCapabilities(cfg, ['statuses']).staging).toBe(false);
+    });
+
+    it('assertEntryTypeValid throws when staging is requested but unsupported', () => {
+        const cfg: EntryTypeConfig = {
+            single: 'Item',
+            plural: 'Items',
+            staging: true,
+        };
+        const caps = resolveEntryCapabilities(cfg, []);
+        expect(() => assertEntryTypeValid('widget', cfg, caps, [])).toThrow(/staging/);
     });
 });
 

@@ -4,7 +4,13 @@
 
 import type { EntryTypeConfig, ResolvedEntryCapabilities } from '@/types/index.js';
 
-export type Capability = 'statuses' | 'slug' | 'translatable' | 'versioning' | 'trash';
+export type Capability =
+    | 'statuses'
+    | 'slug'
+    | 'translatable'
+    | 'versioning'
+    | 'trash'
+    | 'staging';
 
 /** All capabilities supported by built-in storage. */
 export const BUILT_IN_SUPPORTS: readonly Capability[] = [
@@ -13,6 +19,7 @@ export const BUILT_IN_SUPPORTS: readonly Capability[] = [
     'translatable',
     'versioning',
     'trash',
+    'staging',
 ];
 
 /**
@@ -33,6 +40,7 @@ export function resolveEntryCapabilities(
         slug: supports('slug') ? cfg.slug !== false : false,
         trash: supports('trash') ? (cfg.trash ?? true) : false,
         versioning: supports('versioning') ? Boolean(cfg.versioning) : false,
+        staging: supports('staging') ? Boolean(cfg.staging) : false,
         translatable: supports('translatable') ? (cfg.translatable ?? false) : false,
     };
 }
@@ -57,6 +65,7 @@ export function assertEntryTypeValid(
     if (cfg.slug !== undefined && cfg.slug !== false) requested.push('slug');
     if (cfg.trash === true) requested.push('trash');
     if (cfg.versioning) requested.push('versioning');
+    if (cfg.staging) requested.push('staging');
     if (cfg.translatable === true) requested.push('translatable');
 
     const unsupported = requested.filter((cap) => !storageSupports.includes(cap));

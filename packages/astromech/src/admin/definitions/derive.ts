@@ -134,6 +134,7 @@ export function resolveConfigForDerive(
                 slug: true,
                 translatable: false,
                 versioning: false,
+                staging: false,
                 trash: true,
             },
             titleField: 'title',

@@ -130,6 +130,12 @@ export type EntryTypeConfig = {
      */
     fields?: EntryFields;
     versioning?: boolean | VersioningConfig;
+    /**
+     * Whether this entry type supports forward versioning (preparing, previewing
+     * and merging a future "staged" version of a live entry). Default off, and
+     * independent of `versioning`. Requires built-in storage.
+     */
+    staging?: boolean;
     translatable?: boolean;
     /**
      * Disable slug generation for this entry type by setting `false`.
@@ -184,6 +190,7 @@ export type ResolvedEntryCapabilities = {
     slug: boolean;
     translatable: boolean;
     versioning: boolean;
+    staging: boolean;
     trash: boolean;
 };
 

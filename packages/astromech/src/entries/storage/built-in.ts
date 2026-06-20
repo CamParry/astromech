@@ -216,6 +216,9 @@ export class BuiltInEntryStorage implements EntryStorage<Entry> {
                 eq(entriesTable.locale, locale),
                 eq(entriesTable.slug, candidate),
                 isNull(entriesTable.deletedAt),
+                // Staged rows legitimately share their canonical's slug; they are
+                // outside the (partial) slug unique index, so ignore them here.
+                isNull(entriesTable.stagedFor),
                 ...(excludeId ? [ne(entriesTable.id, excludeId)] : []),
             ];
 
@@ -259,6 +262,10 @@ export class BuiltInEntryStorage implements EntryStorage<Entry> {
 
         const conditions = [
             typeCondition,
+            // Staged rows (forward versioning) are never canonical content; they
+            // share their canonical's slug and have their own locale group, so
+            // they must never surface in entry lists/queries.
+            isNull(entriesTable.stagedFor),
             trashed ? isNotNull(entriesTable.deletedAt) : isNull(entriesTable.deletedAt),
             ...(localeCondition ? [localeCondition] : []),
             ...(searchCondition ? [searchCondition] : []),

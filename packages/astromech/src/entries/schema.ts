@@ -1,4 +1,12 @@
-import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import {
+    sqliteTable,
+    text,
+    integer,
+    index,
+    uniqueIndex,
+    type AnySQLiteColumn,
+} from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
 import { usersTable } from '@/users/schema.js';
 import { z } from '@hono/zod-openapi';
 
@@ -26,6 +34,12 @@ export const entriesTable = sqliteTable(
         status: text('status', { enum: ['unpublished', 'published', 'scheduled'] })
             .notNull()
             .default('unpublished'),
+        // When non-null, this row is a staged change of the referenced canonical
+        // entry (forward versioning). Null = a normal, canonical entry. Cascades
+        // on canonical hard-delete; staged rows are never soft-deleted.
+        stagedFor: text('staged_for').references((): AnySQLiteColumn => entriesTable.id, {
+            onDelete: 'cascade',
+        }),
         publishedAt: integer('published_at', { mode: 'timestamp' }),
         deletedAt: integer('deleted_at', { mode: 'timestamp' }),
 
@@ -44,15 +58,16 @@ export const entriesTable = sqliteTable(
         index('idx_entries_locale').on(table.type, table.locale, table.status),
         index('idx_entries_deleted').on(table.deletedAt),
         index('idx_entries_locale_group').on(table.localeGroup),
+        index('idx_entries_staged_for').on(table.stagedFor),
         uniqueIndex('entries_locale_group_locale_unique').on(
             table.localeGroup,
             table.locale
         ),
-        uniqueIndex('entries_type_locale_slug_unique').on(
-            table.type,
-            table.locale,
-            table.slug
-        ),
+        // Partial: staged rows share their canonical's slug, so slug uniqueness
+        // applies only to canonical rows (staged_for IS NULL).
+        uniqueIndex('entries_type_locale_slug_unique')
+            .on(table.type, table.locale, table.slug)
+            .where(sql`${table.stagedFor} is null`),
     ]
 );
 
@@ -85,11 +100,38 @@ export const entryVersionsTable = sqliteTable(
     (table) => [index('idx_versions_entry').on(table.entryId, table.versionNumber)]
 );
 
+// ============================================================================
+// Entry Preview Tokens
+// ============================================================================
+
+/**
+ * Per-canonical-entry secret that authorizes front-end preview of non-published
+ * content (current draft, staged change, or a historical version). One token
+ * per canonical entry; only the hash is stored, never the plaintext.
+ */
+export const entryPreviewTokensTable = sqliteTable('entry_preview_tokens', {
+    id: text('id')
+        .primaryKey()
+        .$defaultFn(() => crypto.randomUUID()),
+    entryId: text('entry_id')
+        .notNull()
+        .references(() => entriesTable.id, { onDelete: 'cascade' }),
+    token: text('token').notNull().unique(),
+    expiresAt: integer('expires_at', { mode: 'timestamp' }),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+        .notNull()
+        .$defaultFn(() => new Date()),
+    createdBy: text('created_by').references(() => usersTable.id),
+});
+
 export type EntryRow = typeof entriesTable.$inferSelect;
 export type NewEntryRow = typeof entriesTable.$inferInsert;
 
 export type EntryVersionRow = typeof entryVersionsTable.$inferSelect;
 export type NewEntryVersionRow = typeof entryVersionsTable.$inferInsert;
+
+export type EntryPreviewTokenRow = typeof entryPreviewTokensTable.$inferSelect;
+export type NewEntryPreviewTokenRow = typeof entryPreviewTokensTable.$inferInsert;
 
 // ============================================================================
 // Zod schemas

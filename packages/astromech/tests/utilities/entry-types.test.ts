@@ -15,6 +15,7 @@ const entryType = (single: string): ResolvedEntryTypeConfig => ({
         slug: true,
         translatable: false,
         versioning: false,
+        staging: false,
         trash: true,
     },
     titleField: 'title',

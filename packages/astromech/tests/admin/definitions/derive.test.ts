@@ -13,6 +13,7 @@ function caps(
         slug: true,
         translatable: true,
         versioning: true,
+        staging: true,
         trash: true,
         ...overrides,
     };

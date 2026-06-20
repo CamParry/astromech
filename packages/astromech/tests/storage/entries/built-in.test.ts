@@ -11,11 +11,13 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, setupTestConfig } from '@tests/harness.js';
 import { BuiltInEntryStorage } from '@/entries/storage/built-in.js';
 import { BUILT_IN_SUPPORTS } from '@/entries/storage/capabilities.js';
+import { entriesTable } from '@/entries/schema.js';
 
 let storage: BuiltInEntryStorage;
+let db: Awaited<ReturnType<typeof createTestDb>>;
 
 beforeEach(async () => {
-    await createTestDb();
+    db = await createTestDb();
     setupTestConfig();
     storage = new BuiltInEntryStorage();
 });
@@ -106,6 +108,43 @@ describe('list', () => {
 
         const trashed = await storage.list({ type: 'post', trashed: true, limit: 'all' });
         expect(trashed.data.map((e) => e.title)).toEqual(['A']);
+    });
+});
+
+describe('staging (forward versioning) schema', () => {
+    it('a staged row may share the canonical slug and is excluded from list + uniqueSlug', async () => {
+        const canonical = await storage.create({
+            type: 'post',
+            title: 'Live',
+            slug: 'live',
+        });
+
+        // A staged row sharing the canonical's slug: the partial unique index
+        // (WHERE staged_for IS NULL) must allow this insert to succeed.
+        await db.insert(entriesTable).values({
+            type: 'post',
+            locale: 'en',
+            slug: 'live',
+            title: 'Staged change',
+            stagedFor: canonical.id,
+        });
+
+        // Staged rows never surface in lists.
+        const list = await storage.list({ type: 'post', limit: 'all' });
+        expect(list.data.map((e) => e.title)).toEqual(['Live']);
+
+        // A slug used ONLY by a staged row is still considered free.
+        await db.insert(entriesTable).values({
+            type: 'post',
+            locale: 'en',
+            slug: 'ghost',
+            title: 'Staged ghost',
+            stagedFor: canonical.id,
+        });
+        expect(await storage.uniqueSlug('post', 'en', 'ghost')).toBe('ghost');
+
+        // The canonical still occupies its own slug.
+        expect(await storage.uniqueSlug('post', 'en', 'live')).toBe('live-2');
     });
 });
 
