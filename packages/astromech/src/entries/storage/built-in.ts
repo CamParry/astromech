@@ -332,6 +332,7 @@ export class BuiltInEntryStorage implements EntryStorage<Entry> {
                 localeGroup: data.localeGroup ?? crypto.randomUUID(),
                 fields: data.fields ?? {},
                 status: data.status ?? 'unpublished',
+                stagedFor: data.stagedFor ?? null,
                 publishedAt: data.publishedAt ?? null,
                 createdBy: data.createdBy ?? null,
                 updatedBy: data.updatedBy ?? null,
@@ -474,6 +475,24 @@ export class BuiltInEntryStorage implements EntryStorage<Entry> {
         latestNumber: async (entryId: string): Promise<number> => {
             const repo = new VersionsRepository(this.db);
             return repo.getLatestNumber(entryId);
+        },
+    };
+
+    staging = {
+        getByCanonical: async (canonicalId: string): Promise<Entry | null> => {
+            const db = this.db;
+            const rows = await db
+                .select()
+                .from(entriesTable)
+                .where(
+                    and(
+                        eq(entriesTable.stagedFor, canonicalId),
+                        isNull(entriesTable.deletedAt)
+                    )
+                )
+                .limit(1);
+            if (!rows[0]) return null;
+            return populateLocaleSingle(db, rows[0] as EntryRow);
         },
     };
 

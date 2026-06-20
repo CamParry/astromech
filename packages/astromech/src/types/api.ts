@@ -198,6 +198,25 @@ export type EntriesApi = {
     incomingRelations(params: { type: string; id: string }): Promise<IncomingRelation[]>;
 };
 
+/**
+ * Forward-versioning (staged entries) operations. Kept separate from `EntriesApi`
+ * until the transport/manifest/client wiring lands (WS4); the in-process service
+ * object is typed as `EntriesApi & EntriesStagingApi`. All methods take the
+ * *canonical* entry id.
+ */
+export type EntriesStagingApi = {
+    /** Stage a change: copy the canonical's content + relations into a new linked
+     * row. Throws `StagedEntryExistsError` if one already exists. */
+    createStaged(params: { type: string; id: string }): Promise<Entry>;
+    /** The canonical entry's staged change, or null. */
+    getStaged(params: { type: string; id: string }): Promise<Entry | null>;
+    /** Merge the staged change into the canonical (backup → update → cleanup) and
+     * publish it; returns the updated canonical. */
+    mergeStaged(params: { type: string; id: string }): Promise<Entry>;
+    /** Discard the canonical's staged change (hard delete). */
+    deleteStaged(params: { type: string; id: string }): Promise<void>;
+};
+
 // ============================================================================
 // Media, Settings, Users APIs
 // ============================================================================

@@ -30,6 +30,11 @@ export type Entry = {
     title: string;
     fields: JsonObject;
     status: EntryStatus;
+    /**
+     * When non-null, this entry is a *staged change* of the referenced canonical
+     * entry (forward versioning). Null/absent = a normal canonical entry.
+     */
+    stagedFor?: string | null;
     publishedAt: Date | null;
     deletedAt: Date | null;
     createdAt: Date;

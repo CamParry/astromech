@@ -51,6 +51,25 @@ export class BulkOperationError extends Error {
 }
 
 /**
+ * Thrown by `createStaged` when the canonical entry already has a staged change.
+ * Carries the existing staged entry's id so the admin can redirect to it instead
+ * of creating a second one (the service stays dumb; the UI owns the redirect).
+ */
+export class StagedEntryExistsError extends Error {
+    public readonly canonicalId: string;
+    public readonly stagedId: string;
+
+    constructor(args: { canonicalId: string; stagedId: string }) {
+        super(
+            `Entry '${args.canonicalId}' already has a staged change ('${args.stagedId}')`
+        );
+        this.name = 'StagedEntryExistsError';
+        this.canonicalId = args.canonicalId;
+        this.stagedId = args.stagedId;
+    }
+}
+
+/**
  * Thrown when a route or entries-service operation is attempted on an entry type
  * that does not support the required capability.
  */

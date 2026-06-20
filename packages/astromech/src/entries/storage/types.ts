@@ -48,6 +48,7 @@ export type EntryRecord = {
     title?: string;
     slug?: string | null;
     status?: EntryStatus;
+    stagedFor?: string | null;
     publishedAt?: Date | null;
     deletedAt?: Date | null;
     locale?: string;
@@ -65,6 +66,8 @@ export type EntryWrite = {
     title?: string | undefined;
     slug?: string | null | undefined;
     status?: EntryStatus | undefined;
+    /** Non-null marks the row as a staged change of the referenced canonical. */
+    stagedFor?: string | null | undefined;
     publishedAt?: Date | null | undefined;
     locale?: string | undefined;
     localeGroup?: string | undefined;
@@ -154,6 +157,12 @@ export type EntryStorage<R extends EntryRecord = EntryRecord> = {
         get(versionId: string): Promise<EntryVersion | null>;
         create(snapshot: NewEntryVersionSnapshot): Promise<void>;
         latestNumber(entryId: string): Promise<number>;
+    };
+
+    /** Present iff `supports` includes 'staging'. */
+    staging?: {
+        /** The staged change for a canonical entry, or null (live rows only). */
+        getByCanonical(canonicalId: string): Promise<R | null>;
     };
 
     /** Present iff `supports` includes 'translatable'. */

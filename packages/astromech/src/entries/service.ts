@@ -19,7 +19,12 @@
 import config from 'virtual:astromech/config';
 import { z } from 'zod';
 import { ValidationError } from '@/errors/validation.js';
-import { EntryTypeMismatchError, BulkOperationError, CapabilityError } from './errors.js';
+import {
+    EntryTypeMismatchError,
+    BulkOperationError,
+    CapabilityError,
+    StagedEntryExistsError,
+} from './errors.js';
 import {
     createEntrySchemaFor,
     updateEntrySchemaFor,
@@ -37,6 +42,7 @@ import type {
     EntryStatus,
     EntryVersion,
     EntriesApi,
+    EntriesStagingApi,
     EntryQueryParams,
     EntryUpdateData,
     EntryDuplicateOverrides,
@@ -179,12 +185,32 @@ function isVersioningEnabled(typeName: string): boolean {
 
 function assertCapability(
     typeName: string,
-    capability: 'statuses' | 'slug' | 'trash' | 'versioning' | 'translatable'
+    capability: 'statuses' | 'slug' | 'trash' | 'versioning' | 'translatable' | 'staging'
 ): void {
     const caps = resolveEntryType(config, typeName)?.capabilities;
     if (caps && !caps[capability]) {
         throw new CapabilityError(typeName, capability);
     }
+}
+
+/**
+ * Assert the type supports staging (capability + built-in storage, the only
+ * backend that carries `stagedFor` in v1) and return both the storage and its
+ * (now-narrowed) staging sub-surface.
+ */
+function getStagingStorage(typeName: string): {
+    storage: EntryStorage;
+    staging: NonNullable<EntryStorage['staging']>;
+} {
+    assertCapability(typeName, 'staging');
+    const storage = getEntryStorage(typeName);
+    const staging = storage.staging;
+    if (!staging) {
+        throw new Error(
+            `Entry type "${typeName}" does not support staging (built-in storage required).`
+        );
+    }
+    return { storage, staging };
 }
 
 async function buildRelationsSnapshot(
@@ -504,7 +530,7 @@ async function runDeleteWithHooks(
 // Entries API
 // ============================================================================
 
-export const entries: EntriesApi = {
+export const entries: EntriesApi & EntriesStagingApi = {
     async query(
         params: EntryQueryParams & { type: string | readonly string[] }
     ): Promise<QueryResult<Entry>> {
@@ -1100,4 +1126,134 @@ export const entries: EntriesApi = {
             data: { status: 'scheduled', publishAt: validated.publishAt },
         } as Parameters<EntriesApi['update']>[0]);
     }) as EntriesApi['schedule'],
+
+    // ========================================================================
+    // Forward versioning (staged entries)
+    // ========================================================================
+
+    async createStaged(params: { type: string; id: string }): Promise<Entry> {
+        const { type, id } = params;
+        const { storage, staging } = getStagingStorage(type);
+        const canonical = await loadAndAssertType(storage, type, id);
+        if (canonical.stagedFor != null) {
+            throw new Error(
+                `Entry '${id}' is itself a staged change and cannot be staged.`
+            );
+        }
+
+        const existing = await staging.getByCanonical(id);
+        if (existing) {
+            throw new StagedEntryExistsError({ canonicalId: id, stagedId: existing.id });
+        }
+
+        // A staged row copies the canonical's content but gets a FRESH localeGroup
+        // (it does not join the canonical's translation group) and is always
+        // unpublished. The slug is shared with the canonical (kept as-is).
+        const created = await storage.create({
+            type,
+            title: canonical.title,
+            slug: canonical.slug,
+            locale: canonical.locale,
+            localeGroup: crypto.randomUUID(),
+            fields: canonical.fields,
+            status: 'unpublished',
+            stagedFor: id,
+            publishedAt: null,
+        });
+
+        const relRepo = new RelationshipsRepository(getDb());
+        const canonicalRels = await relRepo.getBySource(id, 'entry');
+        for (const rel of canonicalRels) {
+            await relRepo.create({
+                sourceId: created.id,
+                sourceType: 'entry',
+                name: rel.name,
+                targetId: rel.targetId,
+                targetType: rel.targetType,
+                position: rel.position,
+            });
+        }
+
+        return asEntry(created);
+    },
+
+    async getStaged(params: { type: string; id: string }): Promise<Entry | null> {
+        const { type, id } = params;
+        const { storage, staging } = getStagingStorage(type);
+        await loadAndAssertType(storage, type, id);
+        const staged = await staging.getByCanonical(id);
+        return staged ? asEntry(staged) : null;
+    },
+
+    async mergeStaged(params: { type: string; id: string }): Promise<Entry> {
+        const { type, id } = params;
+        const { storage, staging } = getStagingStorage(type);
+        const canonical = await loadAndAssertType(storage, type, id);
+        const staged = await staging.getByCanonical(id);
+        if (!staged) throw new Error(`No staged change for entry '${id}'`);
+
+        const versioningOn = isVersioningEnabled(type);
+
+        const run = async (txStorage: EntryStorage, txDb: StorageDb): Promise<Entry> => {
+            // 1. Backup (conditional on versioning): snapshot the canonical first so
+            //    a partial failure leaves a recoverable version.
+            if (versioningOn && txStorage.versions) {
+                const currentRelations = await buildRelationsSnapshot(txDb, id);
+                const latestNumber = await txStorage.versions.latestNumber(id);
+                await txStorage.versions.create({
+                    entryId: id,
+                    versionNumber: latestNumber + 1,
+                    title: canonical.title,
+                    slug: canonical.slug,
+                    fields: canonical.fields,
+                    relations: currentRelations,
+                    createdBy: null,
+                });
+            }
+
+            // 2. Update the canonical row in place (id + slug preserved → external
+            //    refs stable) with the staged content. Status is intentionally
+            //    left untouched: merging is content-only — publishing (or not) is
+            //    a separate action, so an unpublished canonical stays unpublished.
+            const updated = await txStorage.update(id, {
+                title: staged.title,
+                fields: staged.fields,
+            });
+
+            // Replace the canonical's relations wholesale with the staged ones.
+            const relRepo = new RelationshipsRepository(txDb);
+            await relRepo.deleteByEntry(id);
+            const stagedRels = await relRepo.getBySource(staged.id, 'entry');
+            for (const rel of stagedRels) {
+                await relRepo.create({
+                    sourceId: id,
+                    sourceType: 'entry',
+                    name: rel.name,
+                    targetId: rel.targetId,
+                    targetType: rel.targetType,
+                    position: rel.position,
+                });
+            }
+
+            // 3. Cleanup: hard-delete the staged entry (its versions cascade; its
+            //    relationship rows are not FK-bound, so drop them explicitly).
+            await relRepo.deleteByEntry(staged.id);
+            await txStorage.delete(staged.id);
+
+            return asEntry(updated);
+        };
+
+        return storage.transaction ? storage.transaction(run) : run(storage, getDb());
+    },
+
+    async deleteStaged(params: { type: string; id: string }): Promise<void> {
+        const { type, id } = params;
+        const { storage, staging } = getStagingStorage(type);
+        await loadAndAssertType(storage, type, id);
+        const staged = await staging.getByCanonical(id);
+        if (!staged) throw new Error(`No staged change for entry '${id}'`);
+        const relRepo = new RelationshipsRepository(getDb());
+        await relRepo.deleteByEntry(staged.id);
+        await storage.delete(staged.id);
+    },
 };
