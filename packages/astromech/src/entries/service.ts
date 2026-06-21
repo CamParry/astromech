@@ -46,7 +46,6 @@ import type {
     EntryStatus,
     EntryVersion,
     EntriesApi,
-    EntriesStagingApi,
     EntryQueryParams,
     EntryUpdateData,
     EntryDuplicateOverrides,
@@ -686,7 +685,7 @@ async function runDeleteWithHooks(
 // Entries API
 // ============================================================================
 
-export const entries: EntriesApi & EntriesStagingApi = {
+export const entries: EntriesApi = {
     async query(
         params: EntryQueryParams & { type: string | readonly string[] }
     ): Promise<QueryResult<Entry>> {

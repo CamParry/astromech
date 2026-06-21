@@ -119,9 +119,18 @@ function toJSONSchema(schema: z.ZodType): unknown {
 }
 
 /**
- * Entry method/action pairs. Order matches the logical CRUD+publish sequence.
+ * Entry method/action pairs. Order matches the logical CRUD+publish sequence,
+ * then the forward-versioning (staged entries) methods. `requires` gates a
+ * method on a capability: `publish` needs `versioning`; the staging/preview
+ * methods need `staging` (the action they enforce against is separate — e.g.
+ * `mergeStaged` enforces `publish` but is gated on `staging`).
  */
-const ENTRY_METHODS: { method: string; action: EntryAction; idempotent?: boolean }[] = [
+const ENTRY_METHODS: {
+    method: string;
+    action: EntryAction;
+    idempotent?: boolean;
+    requires?: 'versioning' | 'staging';
+}[] = [
     { method: 'query', action: 'read' },
     { method: 'get', action: 'read' },
     { method: 'create', action: 'create' },
@@ -129,7 +138,13 @@ const ENTRY_METHODS: { method: string; action: EntryAction; idempotent?: boolean
     // `users.update`/`settings.set` idempotent hint (ai-integration §3.6).
     { method: 'update', action: 'update', idempotent: true },
     { method: 'delete', action: 'delete' },
-    { method: 'publish', action: 'publish' },
+    { method: 'publish', action: 'publish', requires: 'versioning' },
+    { method: 'createStaged', action: 'update', requires: 'staging' },
+    { method: 'getStaged', action: 'read', requires: 'staging' },
+    { method: 'mergeStaged', action: 'publish', requires: 'staging' },
+    { method: 'deleteStaged', action: 'update', requires: 'staging' },
+    { method: 'issuePreviewToken', action: 'update', requires: 'staging' },
+    { method: 'revokePreviewToken', action: 'update', requires: 'staging' },
 ];
 
 /**
@@ -137,9 +152,34 @@ const ENTRY_METHODS: { method: string; action: EntryAction; idempotent?: boolean
  * e.g. method='query', type='posts' → 'List "posts" entries.'
  */
 function entryMethodSummary(method: string, action: EntryAction, type: string): string {
-    if (method === 'query') return `List "${type}" entries.`;
+    switch (method) {
+        case 'query':
+            return `List "${type}" entries.`;
+        case 'createStaged':
+            return `Stage a change to a "${type}" entry.`;
+        case 'getStaged':
+            return `Get the staged change of a "${type}" entry.`;
+        case 'mergeStaged':
+            return `Merge the staged change into a "${type}" entry.`;
+        case 'deleteStaged':
+            return `Discard the staged change of a "${type}" entry.`;
+        case 'issuePreviewToken':
+            return `Issue a preview token for a "${type}" entry.`;
+        case 'revokePreviewToken':
+            return `Revoke the preview token of a "${type}" entry.`;
+    }
     const verb = action.charAt(0).toUpperCase() + action.slice(1);
     return `${verb} a "${type}" entry.`;
+}
+
+/** Whether a method's capability requirement is met for an entry type's caps. */
+function methodCapabilityMet(
+    requires: 'versioning' | 'staging' | undefined,
+    capabilities: { versioning: boolean; staging: boolean }
+): boolean {
+    if (requires === 'versioning') return capabilities.versioning;
+    if (requires === 'staging') return capabilities.staging;
+    return true;
 }
 
 // ============================================================================
@@ -203,11 +243,10 @@ function buildEntriesMethods(
 
     // Root entry types
     for (const [type, cfg] of Object.entries(config.entries)) {
-        for (const { method, action, idempotent } of ENTRY_METHODS) {
-            // Gate publish: only emit when the entry type's versioning capability is
-            // enabled. `ResolvedEntryCapabilities.versioning` is the publishing flag
-            // (versioning and publish status are coupled in the built-in storage).
-            if (action === 'publish' && !cfg.capabilities.versioning) {
+        for (const { method, action, idempotent, requires } of ENTRY_METHODS) {
+            // Gate capability-bound methods: `publish` needs versioning; the
+            // staged-entry/preview methods need the `staging` capability.
+            if (!methodCapabilityMet(requires, cfg.capabilities)) {
                 continue;
             }
 
@@ -230,9 +269,9 @@ function buildEntriesMethods(
     for (const [pluginName, types] of Object.entries(config.pluginEntries)) {
         const permissionNamespace = pluginNsMap.get(pluginName) ?? pluginName;
         for (const [type, cfg] of Object.entries(types)) {
-            for (const { method, action, idempotent } of ENTRY_METHODS) {
-                // Same publish gating as root entry types.
-                if (action === 'publish' && !cfg.capabilities.versioning) {
+            for (const { method, action, idempotent, requires } of ENTRY_METHODS) {
+                // Same capability gating as root entry types.
+                if (!methodCapabilityMet(requires, cfg.capabilities)) {
                     continue;
                 }
 

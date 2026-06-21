@@ -36,6 +36,7 @@ import {
     updateEntrySchemaFor,
     scheduleEntrySchema,
 } from '@/entries/schema.js';
+import { StagedEntryExistsError } from '@/entries/errors.js';
 
 type Env = { Variables: AuthVariables };
 
@@ -139,6 +140,12 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
                 params.sort = { [sortField]: dir };
             }
         }
+
+        // Forward versioning: a preview token bypasses the publish gate for the
+        // matched canonical (or its staged change with `staged`). Public shape only.
+        const previewToken = query['previewToken'];
+        if (previewToken) params.previewToken = previewToken;
+        if (query['staged'] === 'true' || query['staged'] === '1') params.staged = true;
 
         return params;
     }
@@ -340,6 +347,8 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
             query: z.object({
                 populate: z.string().optional(),
                 locale: z.string().optional(),
+                previewToken: z.string().optional(),
+                staged: z.string().optional(),
             }),
         },
         responses: {
@@ -368,6 +377,8 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
                 full: wantsFull,
                 ...(qp.populate ? { populate: qp.populate } : {}),
                 ...(qp.locale ? { locale: qp.locale } : {}),
+                ...(qp.previewToken ? { previewToken: qp.previewToken } : {}),
+                ...(qp.staged ? { staged: true } : {}),
             });
             if (!entry) return notFound(c, `Entry '${id}' not found`);
             return c.json({ data: entry });
@@ -1075,6 +1086,159 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
                 id,
             });
             return c.json({ data: relations });
+        } catch (err) {
+            return internalError(c, err instanceof Error ? err.message : undefined);
+        }
+    });
+
+    // ========================================================================
+    // Forward versioning (staged entries)
+    //
+    // Permissions: createStaged / deleteStaged / token issue+revoke = `update`;
+    // getStaged = `read`; mergeStaged = `publish`. All require the `staging`
+    // capability (built-in storage); the route checks it up-front so a misconfig
+    // returns 409 rather than the service's 500.
+    // ========================================================================
+
+    const previewTokenSchema = z.object({
+        expiresAt: z.union([z.string().datetime({ offset: true }), z.null()]).optional(),
+    });
+
+    /** Guard a staging route: type exists + permission + `staging` capability. */
+    function requireStaging(
+        c: Parameters<typeof forbidden>[0],
+        type: string,
+        action: EntryAction
+    ): Response | null {
+        const permissions = withPermissions(c.var.role);
+        if (!permissions.allowsMethod(entryGate(type, action))) return forbidden(c);
+        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
+        const caps = getTypeCapabilities(type);
+        if (!caps?.staging) return capabilityDenied(c, type, 'staging');
+        return null;
+    }
+
+    // ── POST /:type/:id/staged  (create) ────────────────────────────────────
+    router.post('/:type/:id/staged', async (c) => {
+        const { type, id } = c.req.param();
+        const denied = requireStaging(c, type, 'update');
+        if (denied) return denied;
+
+        try {
+            const entry = await Astromech.entries.createStaged({
+                type: options.qualify(type),
+                id,
+            });
+            return c.json({ data: entry }, 201);
+        } catch (err) {
+            if (err instanceof StagedEntryExistsError) {
+                // 409 carries the existing staged id so the admin can redirect.
+                return c.json(
+                    {
+                        error: {
+                            code: 'staged_entry_exists',
+                            message: err.message,
+                            status: 409,
+                            details: { stagedId: err.stagedId },
+                        },
+                    },
+                    409
+                );
+            }
+            return internalError(c, err instanceof Error ? err.message : undefined);
+        }
+    });
+
+    // ── GET /:type/:id/staged  (read) ───────────────────────────────────────
+    router.get('/:type/:id/staged', async (c) => {
+        const { type, id } = c.req.param();
+        const denied = requireStaging(c, type, 'read');
+        if (denied) return denied;
+
+        try {
+            const entry = await Astromech.entries.getStaged({
+                type: options.qualify(type),
+                id,
+            });
+            return c.json({ data: entry });
+        } catch (err) {
+            return internalError(c, err instanceof Error ? err.message : undefined);
+        }
+    });
+
+    // ── POST /:type/:id/staged/merge  (publish) ─────────────────────────────
+    router.post('/:type/:id/staged/merge', async (c) => {
+        const { type, id } = c.req.param();
+        const denied = requireStaging(c, type, 'publish');
+        if (denied) return denied;
+
+        try {
+            const entry = await Astromech.entries.mergeStaged({
+                type: options.qualify(type),
+                id,
+            });
+            return c.json({ data: entry });
+        } catch (err) {
+            return internalError(c, err instanceof Error ? err.message : undefined);
+        }
+    });
+
+    // ── DELETE /:type/:id/staged  (discard) ─────────────────────────────────
+    router.delete('/:type/:id/staged', async (c) => {
+        const { type, id } = c.req.param();
+        const denied = requireStaging(c, type, 'update');
+        if (denied) return denied;
+
+        try {
+            await Astromech.entries.deleteStaged({
+                type: options.qualify(type),
+                id,
+            });
+            return c.json({ success: true });
+        } catch (err) {
+            return internalError(c, err instanceof Error ? err.message : undefined);
+        }
+    });
+
+    // ── POST /:type/:id/preview-token  (issue) ──────────────────────────────
+    router.post('/:type/:id/preview-token', async (c) => {
+        const { type, id } = c.req.param();
+        const denied = requireStaging(c, type, 'update');
+        if (denied) return denied;
+
+        try {
+            let expiresAt: Date | null = null;
+            try {
+                const raw = await c.req.json();
+                const parsed = previewTokenSchema.safeParse(raw);
+                if (!parsed.success) return fromZodError(c, parsed.error);
+                if (parsed.data.expiresAt) expiresAt = new Date(parsed.data.expiresAt);
+            } catch {
+                // No body / empty body — no TTL.
+            }
+            const result = await Astromech.entries.issuePreviewToken({
+                type: options.qualify(type),
+                id,
+                expiresAt,
+            });
+            return c.json({ data: result }, 201);
+        } catch (err) {
+            return internalError(c, err instanceof Error ? err.message : undefined);
+        }
+    });
+
+    // ── DELETE /:type/:id/preview-token  (revoke) ───────────────────────────
+    router.delete('/:type/:id/preview-token', async (c) => {
+        const { type, id } = c.req.param();
+        const denied = requireStaging(c, type, 'update');
+        if (denied) return denied;
+
+        try {
+            await Astromech.entries.revokePreviewToken({
+                type: options.qualify(type),
+                id,
+            });
+            return c.json({ success: true });
         } catch (err) {
             return internalError(c, err instanceof Error ? err.message : undefined);
         }

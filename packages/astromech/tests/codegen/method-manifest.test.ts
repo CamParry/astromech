@@ -87,6 +87,13 @@ const rawConfig: AstromechConfig = {
             // versioning defaults to false
             fields: [{ name: 'title', type: 'text' }],
         },
+        articles: {
+            single: 'Article',
+            plural: 'Articles',
+            versioning: true,
+            staging: true,
+            fields: [{ name: 'title', type: 'text' }],
+        },
     },
     plugins: [testPlugin],
 };
@@ -262,6 +269,44 @@ describe('generateMethodManifest — root entries', () => {
         const { methods } = parseManifest([]);
         const m = findMethod(methods, 'entries.query', 'posts');
         expect(m?.['contentSchema']).toBeNull();
+    });
+});
+
+// ============================================================================
+// Forward versioning (staged entries) methods
+// ============================================================================
+
+describe('generateMethodManifest — staged-entry methods', () => {
+    const STAGING_ACTIONS: Record<string, string> = {
+        createStaged: 'update',
+        getStaged: 'read',
+        mergeStaged: 'publish',
+        deleteStaged: 'update',
+        issuePreviewToken: 'update',
+        revokePreviewToken: 'update',
+    };
+
+    it('emits each staged-entry method for a staging type with the right permission action', () => {
+        const { methods } = parseManifest([]);
+        for (const [method, action] of Object.entries(STAGING_ACTIONS)) {
+            const m = findMethod(methods, `entries.${method}`, 'articles');
+            expect(m, method).toBeDefined();
+            expect(m?.['permission']).toBe(`entry:articles:${action}`);
+            expect(m?.['mutates']).toBe(method !== 'getStaged');
+        }
+    });
+
+    it('does NOT emit staged-entry methods for a type without the staging capability', () => {
+        const { methods } = parseManifest([]);
+        for (const method of Object.keys(STAGING_ACTIONS)) {
+            expect(findMethod(methods, `entries.${method}`, 'posts')).toBeUndefined();
+            expect(findMethod(methods, `entries.${method}`, 'pages')).toBeUndefined();
+        }
+    });
+
+    it('still emits publish (versioning) for the staging type', () => {
+        const { methods } = parseManifest([]);
+        expect(findMethod(methods, 'entries.publish', 'articles')).toBeDefined();
     });
 });
 

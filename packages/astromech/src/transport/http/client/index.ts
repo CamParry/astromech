@@ -209,6 +209,8 @@ export function createEntriesApi(
             locale?: string;
             populate?: string[];
             full?: boolean;
+            previewToken?: string;
+            staged?: boolean;
         }): Promise<Entry | null> {
             const full = effectiveFull(params);
             const res = await apiFetch<{ data: Entry } | null>(
@@ -218,6 +220,10 @@ export function createEntriesApi(
                         populate: params.populate?.join(','),
                         locale: params.locale,
                         ...(full !== undefined ? { full } : {}),
+                        ...(params.previewToken !== undefined
+                            ? { previewToken: params.previewToken }
+                            : {}),
+                        ...(params.staged ? { staged: true } : {}),
                     },
                 }
             );
@@ -423,6 +429,63 @@ export function createEntriesApi(
             );
             return res.data;
         }) as EntriesApi['schedule'],
+
+        // ── Forward versioning (staged entries) ────────────────────────────
+        async createStaged(params: { type: string; id: string }): Promise<Entry> {
+            const res = await apiFetch<{ data: Entry }>(
+                `${basePath}/${params.type}/${params.id}/staged`,
+                { method: 'POST' }
+            );
+            return res.data;
+        },
+
+        async getStaged(params: { type: string; id: string }): Promise<Entry | null> {
+            const res = await apiFetch<{ data: Entry } | null>(
+                `${basePath}/${params.type}/${params.id}/staged`
+            );
+            return res?.data ?? null;
+        },
+
+        async mergeStaged(params: { type: string; id: string }): Promise<Entry> {
+            const res = await apiFetch<{ data: Entry }>(
+                `${basePath}/${params.type}/${params.id}/staged/merge`,
+                { method: 'POST' }
+            );
+            return res.data;
+        },
+
+        async deleteStaged(params: { type: string; id: string }): Promise<void> {
+            await apiFetch<unknown>(`${basePath}/${params.type}/${params.id}/staged`, {
+                method: 'DELETE',
+            });
+        },
+
+        async issuePreviewToken(params: {
+            type: string;
+            id: string;
+            expiresAt?: Date | null;
+        }): Promise<{ token: string }> {
+            const res = await apiFetch<{ data: { token: string } }>(
+                `${basePath}/${params.type}/${params.id}/preview-token`,
+                {
+                    method: 'POST',
+                    body: {
+                        expiresAt:
+                            params.expiresAt instanceof Date
+                                ? params.expiresAt.toISOString()
+                                : (params.expiresAt ?? null),
+                    },
+                }
+            );
+            return res.data;
+        },
+
+        async revokePreviewToken(params: { type: string; id: string }): Promise<void> {
+            await apiFetch<unknown>(
+                `${basePath}/${params.type}/${params.id}/preview-token`,
+                { method: 'DELETE' }
+            );
+        },
     };
 }
 

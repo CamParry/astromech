@@ -55,5 +55,11 @@ export function withDefaultShape(
         schedule: ((params: Parameters<EntriesApi['schedule']>[0]) =>
             entries.schedule(params)) as EntriesApi['schedule'],
         incomingRelations: (params) => entries.incomingRelations(params),
+        createStaged: (params) => entries.createStaged(params),
+        getStaged: (params) => entries.getStaged(params),
+        mergeStaged: (params) => entries.mergeStaged(params),
+        deleteStaged: (params) => entries.deleteStaged(params),
+        issuePreviewToken: (params) => entries.issuePreviewToken(params),
+        revokePreviewToken: (params) => entries.revokePreviewToken(params),
     };
 }

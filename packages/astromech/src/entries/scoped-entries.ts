@@ -49,5 +49,11 @@ export function createScopedEntries(pluginName: string, entries: EntriesApi): En
         schedule: ((params: Parameters<EntriesApi['schedule']>[0]) =>
             entries.schedule(mapType(params))) as EntriesApi['schedule'],
         incomingRelations: (params) => entries.incomingRelations(mapType(params)),
+        createStaged: (params) => entries.createStaged(mapType(params)),
+        getStaged: (params) => entries.getStaged(mapType(params)),
+        mergeStaged: (params) => entries.mergeStaged(mapType(params)),
+        deleteStaged: (params) => entries.deleteStaged(mapType(params)),
+        issuePreviewToken: (params) => entries.issuePreviewToken(mapType(params)),
+        revokePreviewToken: (params) => entries.revokePreviewToken(mapType(params)),
     };
 }
