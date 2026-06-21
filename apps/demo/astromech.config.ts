@@ -149,6 +149,7 @@ export default defineConfig({
             icon: 'FileText',
             translatable: true,
             versioning: true,
+            staging: true,
             url: '/{slug}',
             fields: {
                 main: [
@@ -208,6 +209,7 @@ export default defineConfig({
             icon: 'Newspaper',
             translatable: true,
             versioning: true,
+            staging: true,
             url: '/blog/{slug}',
             views: ['list', 'grid'],
             defaultView: 'list',

@@ -15,7 +15,16 @@ import React from 'react';
 import { useNavigate, Link as RouterLink } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui/react/menu';
-import { Copy, ExternalLink, MoreHorizontal, Trash2 } from 'lucide-react';
+import {
+    ArrowLeft,
+    Copy,
+    ExternalLink,
+    Eye,
+    GitMerge,
+    Layers,
+    MoreHorizontal,
+    Trash2,
+} from 'lucide-react';
 import adminConfig from 'virtual:astromech/admin-config';
 import {
     Button,
@@ -32,6 +41,7 @@ import {
     FormLayoutContent,
     Stack,
     PageContent,
+    useConfirm,
 } from '@/admin/components/ui/index.js';
 import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal.js';
 import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer.js';
@@ -48,6 +58,12 @@ import {
     useEntryVersions,
     useTrashEntry,
     useDuplicateEntry,
+    useGetStaged,
+    useCreateStaged,
+    useMergeStaged,
+    useDeleteStaged,
+    useIssuePreviewToken,
+    useRevokePreviewToken,
 } from '@/admin/hooks/index.js';
 import type { EntryStatus } from '@/types/index.js';
 import { resolveEntryUrl } from '@/entries/url.js';
@@ -114,9 +130,17 @@ export function EntryEditPage({
 
     const { data: entry, isLoading } = useEntry(type, id, scope);
 
-    // Versioning
+    // Versioning. Staged rows don't surface version history (their action set is
+    // Save/Merge/Discard/Preview) — skip the fetch so a post-merge stale refetch
+    // can't hit the just-deleted staged row.
     const hasVersioning = capabilities?.versioning === true;
-    const { data: versions } = useEntryVersions(type, id, hasVersioning, scope);
+    const entryIsStaged = entry?.stagedFor != null;
+    const { data: versions } = useEntryVersions(
+        type,
+        id,
+        hasVersioning && !entryIsStaged,
+        scope
+    );
     const versionCount = versions?.length ?? 0;
 
     const trashEntry = useTrashEntry(type, {
@@ -152,6 +176,88 @@ export function EntryEditPage({
             });
         },
     });
+
+    // ── Forward versioning (staged entries) ─────────────────────────────────
+    const confirm = useConfirm();
+    const hasStaging = capabilities?.staging === true;
+    const canPublish = hasPermission(mount.permissionFor('publish'));
+    // A staged entry links to its canonical via `stagedFor`; a canonical's is null.
+    const isStaged = entry?.stagedFor != null;
+    const canonicalId = entry?.stagedFor ?? null;
+    // Merge/discard/preview-token all key off the CANONICAL id.
+    const stagingTargetId = canonicalId ?? id;
+
+    // Canonical-only: does a staged change already exist? Drives Stage vs View.
+    const { data: stagedChange } = useGetStaged(
+        type,
+        id,
+        hasStaging && !isStaged && entry != null,
+        scope
+    );
+    // Staged-editor: load the canonical for the banner title + clobber check.
+    // (When not staged this resolves to the already-cached self.)
+    const { data: canonicalEntry } = useEntry(type, stagingTargetId, scope);
+
+    const createStaged = useCreateStaged(type, {
+        ...scope,
+        onSuccess: (st) => void navigate({ to: `${basePath}/${st.id}` }),
+        onConflict: (stagedId) => void navigate({ to: `${basePath}/${stagedId}` }),
+    });
+    const mergeStaged = useMergeStaged(type, stagingTargetId, {
+        ...scope,
+        onSuccess: () => void navigate({ to: `${basePath}/${stagingTargetId}` }),
+    });
+    const deleteStaged = useDeleteStaged(type, stagingTargetId, {
+        ...scope,
+        onSuccess: () => void navigate({ to: `${basePath}/${stagingTargetId}` }),
+    });
+    const issueToken = useIssuePreviewToken(type, stagingTargetId, scope);
+    const revokeToken = useRevokePreviewToken(type, stagingTargetId, scope);
+
+    const previewUrl =
+        entryTypeConfig?.url && entry != null
+            ? resolveEntryUrl(entryTypeConfig.url, entry)
+            : null;
+
+    function handlePreview(staged: boolean): void {
+        if (!previewUrl) return;
+        issueToken.mutate(undefined, {
+            onSuccess: ({ token }) => {
+                const url = `${previewUrl}?preview=${encodeURIComponent(token)}${
+                    staged ? '&staged=1' : ''
+                }`;
+                window.open(url, '_blank', 'noopener');
+            },
+        });
+    }
+
+    function handleMerge(): void {
+        // Clobber warning: the canonical was edited after this staged change began.
+        const diverged =
+            canonicalEntry != null &&
+            entry != null &&
+            new Date(canonicalEntry.updatedAt).getTime() >
+                new Date(entry.createdAt).getTime();
+        confirm({
+            title: t('staging.confirmMergeTitle'),
+            description: diverged
+                ? t('staging.confirmMergeDivergedMessage')
+                : t('staging.confirmMergeMessage'),
+            variant: 'primary',
+            confirmLabel: t('staging.merge'),
+            onConfirm: () => mergeStaged.mutate(),
+        });
+    }
+
+    function handleDiscard(): void {
+        confirm({
+            title: t('staging.confirmDiscardTitle'),
+            description: t('staging.confirmDiscardMessage'),
+            variant: 'danger',
+            confirmLabel: t('staging.discard'),
+            onConfirm: () => deleteStaged.mutate(),
+        });
+    }
 
     if (isLoading) {
         return <PageLoading />;
@@ -194,33 +300,87 @@ export function EntryEditPage({
                                 {t('common.unsavedChanges')}
                             </span>
                         )}
-                        {hasStatuses && entry != null && (
+                        {hasStatuses && !isStaged && entry != null && (
                             <StatusBadge status={entry.status} />
                         )}
-                        {entryTypeConfig?.url && entry?.status === 'published' && (
-                            <a
-                                href={resolveEntryUrl(entryTypeConfig.url, entry)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="am-btn am-btn-ghost am-btn-sm"
+                        {!isStaged &&
+                            entryTypeConfig?.url &&
+                            entry?.status === 'published' && (
+                                <a
+                                    href={resolveEntryUrl(entryTypeConfig.url, entry)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="am-btn am-btn-ghost am-btn-sm"
+                                >
+                                    <ExternalLink
+                                        size={14}
+                                        style={{ marginRight: '0.25rem' }}
+                                    />
+                                    {t('common.view')}
+                                </a>
+                            )}
+                        {/* Preview (forward versioning): issue a token, open the front-end URL. */}
+                        {hasStaging && previewUrl != null && (
+                            <Button
+                                variant="ghost"
+                                onClick={() => handlePreview(isStaged)}
+                                loading={issueToken.isPending}
                             >
-                                <ExternalLink
-                                    size={14}
-                                    style={{ marginRight: '0.25rem' }}
-                                />
-                                {t('common.view')}
-                            </a>
+                                <Eye size={14} style={{ marginRight: '0.25rem' }} />
+                                {isStaged
+                                    ? t('staging.previewStaged')
+                                    : t('staging.preview')}
+                            </Button>
                         )}
+                        {/* Canonical: stage a change, or jump to the existing one. */}
+                        {hasStaging &&
+                            !isStaged &&
+                            !isReadOnly &&
+                            (stagedChange != null ? (
+                                <Link
+                                    to={`${basePath}/${stagedChange.id}`}
+                                    className="am-btn am-btn-secondary am-btn-md"
+                                >
+                                    <Layers
+                                        size={14}
+                                        style={{ marginRight: '0.25rem' }}
+                                    />
+                                    {t('staging.viewStaged')}
+                                </Link>
+                            ) : (
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => createStaged.mutate(id)}
+                                    loading={createStaged.isPending}
+                                >
+                                    <Layers
+                                        size={14}
+                                        style={{ marginRight: '0.25rem' }}
+                                    />
+                                    {t('staging.stageChange')}
+                                </Button>
+                            ))}
                         {!isReadOnly && (
                             <Button
-                                variant="primary"
+                                variant={isStaged ? 'secondary' : 'primary'}
                                 onClick={handleSave}
                                 loading={saveMutation.isPending}
                             >
                                 {t('common.update')}
                             </Button>
                         )}
-                        {capabilities?.translatable && entry != null && (
+                        {/* Staged: merge is the primary commit action (needs publish). */}
+                        {isStaged && canPublish && (
+                            <Button
+                                variant="primary"
+                                onClick={handleMerge}
+                                loading={mergeStaged.isPending}
+                            >
+                                <GitMerge size={14} style={{ marginRight: '0.25rem' }} />
+                                {t('staging.merge')}
+                            </Button>
+                        )}
+                        {!isStaged && capabilities?.translatable && entry != null && (
                             <LocaleSwitcher
                                 currentEntryId={id}
                                 type={type}
@@ -250,26 +410,63 @@ export function EntryEditPage({
                                         align="end"
                                     >
                                         <Menu.Popup className="am-topbar-menu-popup">
-                                            <Menu.Item
-                                                className="am-topbar-menu-item"
-                                                onClick={() => duplicateEntry.mutate(id)}
-                                                disabled={duplicateEntry.isPending}
-                                            >
-                                                <span className="am-topbar-menu-item-icon">
-                                                    <Copy size={14} />
-                                                </span>
-                                                {t('common.duplicate')}
-                                            </Menu.Item>
-                                            <Menu.Separator className="am-topbar-menu-separator" />
-                                            <Menu.Item
-                                                className="am-topbar-menu-item am-topbar-menu-item-danger"
-                                                onClick={() => setDeleteOpen(true)}
-                                            >
-                                                <span className="am-topbar-menu-item-icon">
-                                                    <Trash2 size={14} />
-                                                </span>
-                                                {t('common.delete')}
-                                            </Menu.Item>
+                                            {isStaged ? (
+                                                <Menu.Item
+                                                    className="am-topbar-menu-item am-topbar-menu-item-danger"
+                                                    onClick={handleDiscard}
+                                                    disabled={deleteStaged.isPending}
+                                                >
+                                                    <span className="am-topbar-menu-item-icon">
+                                                        <Trash2 size={14} />
+                                                    </span>
+                                                    {t('staging.discard')}
+                                                </Menu.Item>
+                                            ) : (
+                                                <>
+                                                    <Menu.Item
+                                                        className="am-topbar-menu-item"
+                                                        onClick={() =>
+                                                            duplicateEntry.mutate(id)
+                                                        }
+                                                        disabled={
+                                                            duplicateEntry.isPending
+                                                        }
+                                                    >
+                                                        <span className="am-topbar-menu-item-icon">
+                                                            <Copy size={14} />
+                                                        </span>
+                                                        {t('common.duplicate')}
+                                                    </Menu.Item>
+                                                    {hasStaging && (
+                                                        <Menu.Item
+                                                            className="am-topbar-menu-item"
+                                                            onClick={() =>
+                                                                revokeToken.mutate()
+                                                            }
+                                                            disabled={
+                                                                revokeToken.isPending
+                                                            }
+                                                        >
+                                                            <span className="am-topbar-menu-item-icon">
+                                                                <Eye size={14} />
+                                                            </span>
+                                                            {t('staging.revokePreview')}
+                                                        </Menu.Item>
+                                                    )}
+                                                    <Menu.Separator className="am-topbar-menu-separator" />
+                                                    <Menu.Item
+                                                        className="am-topbar-menu-item am-topbar-menu-item-danger"
+                                                        onClick={() =>
+                                                            setDeleteOpen(true)
+                                                        }
+                                                    >
+                                                        <span className="am-topbar-menu-item-icon">
+                                                            <Trash2 size={14} />
+                                                        </span>
+                                                        {t('common.delete')}
+                                                    </Menu.Item>
+                                                </>
+                                            )}
                                         </Menu.Popup>
                                     </Menu.Positioner>
                                 </Menu.Portal>
@@ -279,6 +476,35 @@ export function EntryEditPage({
                 </PageHeader>
 
                 <PageContent>
+                    {isStaged && (
+                        <div
+                            className="am-banner am-banner-info"
+                            style={{
+                                marginBottom: '1rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.75rem',
+                            }}
+                        >
+                            <span>
+                                {t('staging.banner', {
+                                    title: canonicalEntry?.title ?? single,
+                                })}
+                            </span>
+                            {canonicalId != null && (
+                                <Link
+                                    to={`${basePath}/${canonicalId}`}
+                                    className="am-link am-text-sm"
+                                >
+                                    <ArrowLeft
+                                        size={14}
+                                        style={{ marginRight: '0.25rem' }}
+                                    />
+                                    {t('staging.backToCurrent')}
+                                </Link>
+                            )}
+                        </div>
+                    )}
                     {isReadOnly && (
                         <div
                             className="am-banner am-banner-info"
@@ -354,7 +580,7 @@ export function EntryEditPage({
                             </Stack>
 
                             <Stack gap={8}>
-                                {hasStatuses && (
+                                {hasStatuses && !isStaged && (
                                     <form.Field name="status">
                                         {(statusField) => (
                                             <form.Field name="publishAt">
@@ -417,7 +643,7 @@ export function EntryEditPage({
                                         />
                                     )}
                                 </form.Field>
-                                {hasVersioning && (
+                                {hasVersioning && !isStaged && (
                                     <Panel>
                                         {versionCount > 0 ? (
                                             <Link

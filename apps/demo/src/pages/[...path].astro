@@ -62,7 +62,11 @@ type RouteResult =
     | { view: 'page'; page: Entry }
     | { view: '404' };
 
-async function dispatch(segs: string[], loc: Locale): Promise<RouteResult> {
+async function dispatch(
+    segs: string[],
+    loc: Locale,
+    preview?: { previewToken?: string; staged?: boolean }
+): Promise<RouteResult> {
     // home
     if (segs.length === 0) return { view: 'home' };
 
@@ -70,7 +74,7 @@ async function dispatch(segs: string[], loc: Locale): Promise<RouteResult> {
     if (segs[0] === 'blog') {
         if (segs.length === 1) return { view: 'blogList' };
         if (segs.length === 2) {
-            const post = await getPostBySlug(segs[1], loc);
+            const post = await getPostBySlug(segs[1], loc, preview);
             if (!post) return { view: '404' };
             return { view: 'postDetail', slug: segs[1], post };
         }
@@ -102,7 +106,7 @@ async function dispatch(segs: string[], loc: Locale): Promise<RouteResult> {
 
     // single-segment page
     if (segs.length === 1) {
-        const page = await getPageBySlug(segs[0], loc);
+        const page = await getPageBySlug(segs[0], loc, preview);
         if (!page) return { view: '404' };
         return { view: 'page', page };
     }
@@ -110,7 +114,15 @@ async function dispatch(segs: string[], loc: Locale): Promise<RouteResult> {
     return { view: '404' };
 }
 
-const route = await dispatch(segments, locale);
+// Forward-versioning preview: `?preview=<token>` (+ `&staged=1`) on the public
+// slug route. The token authorizes a publish-gate bypass; staged selects the
+// staged change. Absent/invalid token → normal public behaviour → 404.
+const previewToken = Astro.url.searchParams.get('preview') ?? undefined;
+const preview = previewToken
+    ? { previewToken, staged: Astro.url.searchParams.get('staged') === '1' }
+    : undefined;
+
+const route = await dispatch(segments, locale, preview);
 
 if (route.view === '404') {
     return new Response(null, { status: 404 });

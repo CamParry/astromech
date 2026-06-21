@@ -166,6 +166,29 @@
         "cascadeLocalesLabel": "Also delete all {{count}} locale siblings",
         "incomingRelationsHeader": "{{count}} other entries reference this one and will lose those references:"
     },
+    "staging": {
+        "stageChange": "Stage a change",
+        "viewStaged": "View staged change",
+        "banner": "Staged change of {{title}}",
+        "backToCurrent": "Back to current",
+        "merge": "Merge into current",
+        "discard": "Discard staged change",
+        "preview": "Preview",
+        "previewStaged": "Preview staged",
+        "revokePreview": "Revoke preview links",
+        "merged": "Staged change merged into the current entry.",
+        "discarded": "Staged change discarded.",
+        "previewRevoked": "Preview links revoked.",
+        "stageFailed": "Could not stage a change",
+        "mergeFailed": "Merge failed",
+        "discardFailed": "Discard failed",
+        "previewFailed": "Could not create a preview link",
+        "confirmMergeTitle": "Merge staged change?",
+        "confirmMergeMessage": "The current entry's content will be replaced with the staged change. This cannot be undone.",
+        "confirmMergeDivergedMessage": "Heads up: the current entry has been edited since this staged change was created. Merging will overwrite those edits. This cannot be undone.",
+        "confirmDiscardTitle": "Discard staged change?",
+        "confirmDiscardMessage": "The staged change will be permanently deleted. The current entry is left untouched."
+    },
     "users": {
         "title": "Users",
         "searchPlaceholder": "Search users…",
@@ -367,9 +390,9 @@
         "filterOther": "Other"
     },
     "versions": {
-        "revisionsLink_one": "{{count}} revision",
-        "revisionsLink_other": "{{count}} revisions",
-        "noRevisionsYet": "No revisions yet",
+        "revisionsLink_one": "{{count}} version",
+        "revisionsLink_other": "{{count}} versions",
+        "noRevisionsYet": "No versions yet",
         "pageTitle": "Version History",
         "backToEdit": "Back to edit",
         "version": "Version #{{number}}",
@@ -382,7 +405,7 @@
         "restored": "Version restored.",
         "restoreFailed": "Restore failed.",
         "confirmRestoreTitle": "Restore version #{{number}}?",
-        "confirmRestoreMessage": "The current state will be saved as a new revision before restoring.",
+        "confirmRestoreMessage": "The current state will be saved as a new version before restoring.",
         "confirmRestoreLabel": "Restore"
     },
     "translations": {

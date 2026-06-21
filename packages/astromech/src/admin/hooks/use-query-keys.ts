@@ -16,6 +16,9 @@ export const queryKeys = {
             ['entries', collection, 'versions', id] as const,
         translations: (collection: string, id: string) =>
             ['entries', collection, 'translations', id] as const,
+        /** The staged change of a canonical entry (forward versioning). */
+        staged: (collection: string, id: string) =>
+            ['entries', collection, 'staged', id] as const,
     },
 
     // Media
@@ -77,5 +80,7 @@ export function scopedEntryKeys(cacheScope: string) {
             [...prefix, 'entries', collection, 'versions', id] as const,
         translations: (collection: string, id: string) =>
             [...prefix, 'entries', collection, 'translations', id] as const,
+        staged: (collection: string, id: string) =>
+            [...prefix, 'entries', collection, 'staged', id] as const,
     };
 }

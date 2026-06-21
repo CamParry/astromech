@@ -6,13 +6,29 @@ import Astromech from 'astromech/local';
 import type { Entry } from 'astromech';
 import type { Locale } from './site.ts';
 
-export async function getPageBySlug(slug: string, locale: Locale): Promise<Entry | null> {
+/**
+ * Forward-versioning preview: a valid `previewToken` bypasses the publish gate
+ * for the matched entry (public shape), and `staged: true` previews the staged
+ * change instead of the current entry. Both ride the normal slug query.
+ */
+export type PreviewOptions = {
+    previewToken?: string | undefined;
+    staged?: boolean | undefined;
+};
+
+export async function getPageBySlug(
+    slug: string,
+    locale: Locale,
+    preview?: PreviewOptions
+): Promise<Entry | null> {
     try {
         const { data } = await Astromech.entries.query({
             type: 'page',
             where: { slug },
             locale,
             limit: 1,
+            ...(preview?.previewToken ? { previewToken: preview.previewToken } : {}),
+            ...(preview?.staged ? { staged: true } : {}),
         });
         return data[0] ?? null;
     } catch {
@@ -20,7 +36,11 @@ export async function getPageBySlug(slug: string, locale: Locale): Promise<Entry
     }
 }
 
-export async function getPostBySlug(slug: string, locale: Locale): Promise<Entry | null> {
+export async function getPostBySlug(
+    slug: string,
+    locale: Locale,
+    preview?: PreviewOptions
+): Promise<Entry | null> {
     try {
         const { data } = await Astromech.entries.query({
             type: 'post',
@@ -28,6 +48,8 @@ export async function getPostBySlug(slug: string, locale: Locale): Promise<Entry
             locale,
             limit: 1,
             populate: ['category', 'tags', 'author', 'featured_image'],
+            ...(preview?.previewToken ? { previewToken: preview.previewToken } : {}),
+            ...(preview?.staged ? { staged: true } : {}),
         });
         return data[0] ?? null;
     } catch {

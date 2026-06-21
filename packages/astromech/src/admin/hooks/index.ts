@@ -34,6 +34,12 @@ export {
     useBulkUnpublishEntries,
     useRestoreEntryVersion,
     useCreateTranslation,
+    useGetStaged,
+    useCreateStaged,
+    useMergeStaged,
+    useDeleteStaged,
+    useIssuePreviewToken,
+    useRevokePreviewToken,
 } from './entries.js';
 export type { EntryHookScope } from './entries.js';
 export {

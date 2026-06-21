@@ -16,7 +16,7 @@ import {
     queryOptions,
 } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Astromech } from '@/transport/http/client/index.js';
+import { Astromech, AstromechApiError } from '@/transport/http/client/index.js';
 import { queryKeys, scopedEntryKeys } from './use-query-keys.js';
 import { useToast } from '../components/ui/index.js';
 import type {
@@ -620,6 +620,170 @@ export function useCreateTranslation(
                 variant: 'error',
             });
             options?.onError?.(err);
+        },
+    });
+}
+
+// ============================================================================
+// Forward versioning (staged entries) hooks
+// ============================================================================
+
+/** The canonical entry's staged change, or null. */
+export function useGetStaged(
+    type: string,
+    id: string,
+    enabled = true,
+    scope?: EntryHookScope
+) {
+    const api = resolveApi(scope);
+    const keys = resolveKeys(scope);
+    return useQuery({
+        queryKey: keys.staged(type, id),
+        queryFn: () => api.getStaged({ type, id }),
+        enabled,
+    });
+}
+
+/**
+ * Stage a change on a canonical entry. On success the new staged entry is
+ * returned; if one already exists the API replies 409 and `onConflict` is called
+ * with the existing staged id so the page can redirect to it (the service stays
+ * dumb — the UI owns the redirect).
+ */
+export function useCreateStaged(
+    type: string,
+    options?: {
+        onSuccess?: (entry: Entry) => void;
+        onConflict?: (stagedId: string) => void;
+    } & EntryHookScope
+) {
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+    const { t } = useTranslation();
+    const api = resolveApi(options);
+    const keys = resolveKeys(options);
+
+    return useMutation({
+        mutationFn: (id: string) => api.createStaged({ type, id }),
+        onSuccess: (entry, id) => {
+            void queryClient.invalidateQueries({ queryKey: keys.staged(type, id) });
+            void queryClient.invalidateQueries({ queryKey: keys.all(type) });
+            options?.onSuccess?.(entry);
+        },
+        onError: (err) => {
+            if (
+                err instanceof AstromechApiError &&
+                err.code === 'staged_entry_exists' &&
+                typeof err.details?.['stagedId'] === 'string'
+            ) {
+                options?.onConflict?.(err.details['stagedId']);
+                return;
+            }
+            toast({
+                message: err instanceof Error ? err.message : t('staging.stageFailed'),
+                variant: 'error',
+            });
+        },
+    });
+}
+
+/** Merge the canonical's staged change into it (content-only, backup→update→cleanup). */
+export function useMergeStaged(
+    type: string,
+    id: string,
+    options?: { onSuccess?: (entry: Entry) => void } & EntryHookScope
+) {
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+    const { t } = useTranslation();
+    const api = resolveApi(options);
+    const keys = resolveKeys(options);
+
+    return useMutation({
+        mutationFn: () => api.mergeStaged({ type, id }),
+        onSuccess: (entry) => {
+            void queryClient.invalidateQueries({ queryKey: keys.get(type, id) });
+            void queryClient.invalidateQueries({ queryKey: keys.staged(type, id) });
+            void queryClient.invalidateQueries({ queryKey: keys.all(type) });
+            toast({ message: t('staging.merged'), variant: 'success' });
+            options?.onSuccess?.(entry);
+        },
+        onError: (err) => {
+            toast({
+                message: err instanceof Error ? err.message : t('staging.mergeFailed'),
+                variant: 'error',
+            });
+        },
+    });
+}
+
+/** Discard the canonical's staged change (hard delete). */
+export function useDeleteStaged(
+    type: string,
+    id: string,
+    options?: { onSuccess?: () => void } & EntryHookScope
+) {
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+    const { t } = useTranslation();
+    const api = resolveApi(options);
+    const keys = resolveKeys(options);
+
+    return useMutation({
+        mutationFn: () => api.deleteStaged({ type, id }),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({ queryKey: keys.staged(type, id) });
+            void queryClient.invalidateQueries({ queryKey: keys.all(type) });
+            toast({ message: t('staging.discarded'), variant: 'success' });
+            options?.onSuccess?.();
+        },
+        onError: (err) => {
+            toast({
+                message: err instanceof Error ? err.message : t('staging.discardFailed'),
+                variant: 'error',
+            });
+        },
+    });
+}
+
+/** Issue a preview token for a canonical entry (plaintext token returned once). */
+export function useIssuePreviewToken(type: string, id: string, scope?: EntryHookScope) {
+    const { toast } = useToast();
+    const { t } = useTranslation();
+    const api = resolveApi(scope);
+
+    return useMutation({
+        mutationFn: () => api.issuePreviewToken({ type, id }),
+        onError: (err) => {
+            toast({
+                message: err instanceof Error ? err.message : t('staging.previewFailed'),
+                variant: 'error',
+            });
+        },
+    });
+}
+
+/** Revoke a canonical entry's preview token(s). */
+export function useRevokePreviewToken(
+    type: string,
+    id: string,
+    options?: { onSuccess?: () => void } & EntryHookScope
+) {
+    const { toast } = useToast();
+    const { t } = useTranslation();
+    const api = resolveApi(options);
+
+    return useMutation({
+        mutationFn: () => api.revokePreviewToken({ type, id }),
+        onSuccess: () => {
+            toast({ message: t('staging.previewRevoked'), variant: 'success' });
+            options?.onSuccess?.();
+        },
+        onError: (err) => {
+            toast({
+                message: err instanceof Error ? err.message : t('staging.previewFailed'),
+                variant: 'error',
+            });
         },
     });
 }
