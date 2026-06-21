@@ -72,6 +72,30 @@ Per-collection opt-in via `CollectionConfig.versioning: true`. When enabled, a s
 
 The table always exists in the schema regardless of whether any collection enables versioning.
 
+This is **backward versioning** — an immutable, append-only record of the past. Contrast it with a **staged entry** (below), which is a mutable, prepared _future_ change. The two are distinct and do not unify: a **version** is a past snapshot for record-keeping; a **staged entry** is a forthcoming change you prepare, preview, and merge on purpose.
+
+---
+
+## Staged entry (forward versioning)
+
+A **staged entry** is a separate, fully-editable `entries` row that holds the next version of an already-live entry without touching the live one — you prepare it, preview it, then merge it deliberately (rather than Astromech's default of editing live in place).
+
+- It links to its **canonical** entry via the nullable `stagedFor` FK (`stagedFor IS NULL` ⇒ canonical; non-null ⇒ staged). It reuses all entry machinery (fields, validation, its own preview) and gets a **fresh `localeGroup`** — `stagedFor` is the only link.
+- It shares the canonical's slug (staged rows are excluded from the slug unique index and from entry lists) and is always `unpublished`.
+- Enabled per-type by the **`staging`** capability — default off, **independent of `versioning`**, built-in storage only.
+- Service ops (all keyed off the **canonical** id): `createStaged` (throws `StagedEntryExistsError` carrying the existing staged id — one staged change per canonical), `getStaged`, `mergeStaged`, `deleteStaged`.
+- **Merge** = backup (only if `versioning`) → update the canonical in place (id + slug preserved) with the staged content → hard-delete the staged row. Merge is **content-only**: it does not change the canonical's status (publishing stays a separate action). Staged entries are never trashed — discard and merge-cleanup both hard-delete.
+
+---
+
+## Preview token
+
+A secret that authorizes reading an entry through the **publish/schedule gate** on its normal public slug route — used to review unpublished or staged content before it goes live.
+
+- One token per canonical entry; the plaintext is returned **once** on issue and only its **hash** is stored (`entry_preview_tokens`); revocable; optional TTL.
+- The token only **authorizes** (bypasses the publish/schedule gate, returning the **public** shape — never `full`); URL selectors pick the layer: `?preview=<token>` previews the current entry, `&staged=1` previews its staged change.
+- An invalid or absent token falls back to normal public behaviour → non-published content returns nothing → 404 (no existence hints).
+
 ---
 
 ## adminRoute (config) vs Admin Routes (SPA pages)
