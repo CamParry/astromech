@@ -13,6 +13,6 @@ export {
     sanitisePackage,
     pluginTablePrefix,
 } from '@/plugins/runtime/plugin-identity.js';
-export { resolveEntryUrl, resolveEntryPath } from '@/entries/url.js';
+export { resolveEntryUrl, resolveEntryPath } from '@/entries/utils/url.js';
 export { tableStorage } from '@/entries/storage/table.js';
 export { t } from '@/utilities/labels.js';

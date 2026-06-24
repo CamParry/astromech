@@ -1,5 +1,5 @@
 /**
- * Storage-level tests for BuiltInEntryStorage.
+ * Storage-level tests for the built-in entry storage.
  *
  * These exercise the persistence contract directly (not through the
  * entries service): base CRUD, list machinery, slug uniquification, and the
@@ -9,17 +9,17 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, setupTestConfig } from '@tests/harness.js';
-import { BuiltInEntryStorage } from '@/entries/storage/built-in.js';
+import { createBuiltInEntryStorage } from '@/entries/storage/built-in.js';
 import { BUILT_IN_SUPPORTS } from '@/entries/storage/capabilities.js';
 import { entriesTable } from '@/entries/schema.js';
 
-let storage: BuiltInEntryStorage;
+let storage: ReturnType<typeof createBuiltInEntryStorage>;
 let db: Awaited<ReturnType<typeof createTestDb>>;
 
 beforeEach(async () => {
     db = await createTestDb();
     setupTestConfig();
-    storage = new BuiltInEntryStorage();
+    storage = createBuiltInEntryStorage();
 });
 
 describe('supports', () => {

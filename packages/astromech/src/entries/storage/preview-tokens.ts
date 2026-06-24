@@ -1,5 +1,5 @@
 /**
- * Preview Tokens Repository
+ * Preview-token storage.
  *
  * Persists per-canonical-entry preview secrets for forward versioning. Only the
  * SHA-256 hash of a token is ever stored; the plaintext is shown once at issue.
@@ -8,7 +8,13 @@
 
 import { eq, and, isNull, gt, or } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import { getDb } from '@/database/registry.js';
 import { entryPreviewTokensTable } from '@/database/schema';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Db = LibSQLDatabase<any>;
+
+export type PreviewTokenStorage = ReturnType<typeof createPreviewTokenStorage>;
 
 /** SHA-256 hex of a token (crypto.subtle — Workers-safe). */
 export async function hashPreviewToken(plaintext: string): Promise<string> {
@@ -19,20 +25,18 @@ export async function hashPreviewToken(plaintext: string): Promise<string> {
         .join('');
 }
 
-export class PreviewTokensRepository {
-    constructor(private db: LibSQLDatabase) {}
-
+export function createPreviewTokenStorage(db: Db = getDb()) {
     /** Replace any existing token for `entryId` with a freshly-hashed one. */
-    async issue(
+    async function issue(
         entryId: string,
         tokenHash: string,
         expiresAt: Date | null,
         createdBy: string | null
     ): Promise<void> {
-        await this.db
+        await db
             .delete(entryPreviewTokensTable)
             .where(eq(entryPreviewTokensTable.entryId, entryId));
-        await this.db.insert(entryPreviewTokensTable).values({
+        await db.insert(entryPreviewTokensTable).values({
             entryId,
             token: tokenHash,
             expiresAt,
@@ -41,15 +45,19 @@ export class PreviewTokensRepository {
     }
 
     /** Remove all preview tokens for `entryId`. */
-    async revoke(entryId: string): Promise<void> {
-        await this.db
+    async function revoke(entryId: string): Promise<void> {
+        await db
             .delete(entryPreviewTokensTable)
             .where(eq(entryPreviewTokensTable.entryId, entryId));
     }
 
     /** True if `tokenHash` is a current (non-expired) token for `entryId`. */
-    async isValid(entryId: string, tokenHash: string, now: Date): Promise<boolean> {
-        const rows = await this.db
+    async function isValid(
+        entryId: string,
+        tokenHash: string,
+        now: Date
+    ): Promise<boolean> {
+        const rows = await db
             .select({ id: entryPreviewTokensTable.id })
             .from(entryPreviewTokensTable)
             .where(
@@ -65,4 +73,6 @@ export class PreviewTokensRepository {
             .limit(1);
         return rows.length > 0;
     }
+
+    return { issue, revoke, isValid };
 }

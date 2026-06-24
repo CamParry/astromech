@@ -5,8 +5,7 @@
  * config.trash.retentionDays. Cascade deletes handle relationships/versions.
  */
 
-import { and, isNotNull, lte } from 'drizzle-orm';
-import { entriesTable } from '../schema.js';
+import { createEntryMaintenanceStorage } from '../storage/maintenance.js';
 import type { CronJob } from '@/cron/registry.js';
 
 export const trashPurgeJob: CronJob = {
@@ -18,13 +17,6 @@ export const trashPurgeJob: CronJob = {
         const cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - config.trash.retentionDays);
 
-        await db
-            .delete(entriesTable)
-            .where(
-                and(
-                    isNotNull(entriesTable.deletedAt),
-                    lte(entriesTable.deletedAt, cutoff)
-                )
-            );
+        await createEntryMaintenanceStorage(db).purgeTrashedBefore(cutoff);
     },
 };

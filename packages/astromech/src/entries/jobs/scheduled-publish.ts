@@ -5,34 +5,13 @@
  * then updates them to status = 'published'.
  */
 
-import { and, eq, isNull, lte } from 'drizzle-orm';
-import { entriesTable } from '../schema.js';
+import { createEntryMaintenanceStorage } from '../storage/maintenance.js';
 import type { CronJob } from '@/cron/registry.js';
 
 export const scheduledPublishJob: CronJob = {
     name: 'scheduled-publish',
     schedule: '* * * * *',
     async handler({ db }) {
-        const now = new Date();
-
-        const due = await db
-            .select({ id: entriesTable.id })
-            .from(entriesTable)
-            .where(
-                and(
-                    eq(entriesTable.status, 'scheduled'),
-                    lte(entriesTable.publishedAt, now),
-                    isNull(entriesTable.deletedAt)
-                )
-            );
-
-        if (due.length === 0) return;
-
-        for (const { id } of due) {
-            await db
-                .update(entriesTable)
-                .set({ status: 'published', updatedAt: new Date() })
-                .where(eq(entriesTable.id, id));
-        }
+        await createEntryMaintenanceStorage(db).publishDueScheduled(new Date());
     },
 };

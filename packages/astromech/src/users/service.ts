@@ -3,7 +3,7 @@ import type { AnyColumn } from 'drizzle-orm';
 import { z } from 'zod';
 import { usersTable } from './schema.js';
 import { getDb } from '@/database/registry.js';
-import { RelationshipsRepository } from '@/database/repositories/relationships.js';
+import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import type {
     JsonObject,
     User,
@@ -177,7 +177,7 @@ export const usersApi = {
 
     async delete(id: string): Promise<void> {
         const db = getDb();
-        await new RelationshipsRepository(db).deleteByUser(id);
+        await createRelationshipStorage(db).deleteByUser(id);
         await db.delete(usersTable).where(eq(usersTable.id, id));
     },
 };

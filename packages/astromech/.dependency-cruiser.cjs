@@ -93,13 +93,13 @@ module.exports = {
     {
       name: 'admin-only-client-and-pure-leaves',
       comment:
-        'The admin SPA holds the Client and may use shared pure leaves (fields, types, utilities, errors). It must not reach into domains, capabilities, transports, policies, or the kernel — EXCEPT (a) the fetch Client at transport/http/client/, which the admin is built around, and (b) a short allowlist of pure domain leaves it renders with: entries/url, entries/type-registry, settings/page-values. Those deep-imports avoid pulling a domain service (and its virtual:config) into the browser bundle.',
+        'The admin SPA holds the Client and may use shared pure leaves (fields, types, utilities, errors). It must not reach into domains, capabilities, transports, policies, or the kernel — EXCEPT (a) the fetch Client at transport/http/client/, which the admin is built around, and (b) a short allowlist of pure domain leaves it renders with: entries/utils/url, entries/type-registry, settings/page-values. Those deep-imports avoid pulling a domain service (and its virtual:config) into the browser bundle.',
       severity: 'error',
       from: { path: '^src/admin/' },
       to: {
         path: '^src/(entries|media|users|settings)/|^src/(storage|email|cron|context|database|permissions|policies|transport|kernel)/|^src/plugins/runtime/',
         pathNot:
-          '^src/entries/(url|type-registry)\\.(ts|js)$|^src/settings/page-values\\.(ts|js)$|^src/transport/http/client/',
+          '^src/entries/(utils/url|type-registry)\\.(ts|js)$|^src/settings/page-values\\.(ts|js)$|^src/transport/http/client/',
       },
     },
     {

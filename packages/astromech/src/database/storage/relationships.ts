@@ -1,10 +1,12 @@
 /**
- * Relationships Repository
- * Handles CRUD operations for entry/user/media relationships
+ * Relationship storage — shared cross-domain data access for entry/user/media
+ * relationships. Composed by the services that own those resources (entries,
+ * users, media). The only place drizzle touches the relationships table.
  */
 
 import { eq, and } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import { getDb } from '@/database/registry.js';
 import {
     relationshipsTable,
     type RelationshipRow,
@@ -12,13 +14,15 @@ import {
 } from '@/database/schema';
 import type { ResourceType } from '@/types/index.js';
 
-export class RelationshipsRepository {
-    constructor(private db: LibSQLDatabase) {}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Db = LibSQLDatabase<any>;
 
-    /**
-     * Create a new relationship
-     */
-    async create(data: {
+export type RelationshipStorage = ReturnType<typeof createRelationshipStorage>;
+
+/** Defaults to the registered db; pass a tx handle to scope it to a transaction. */
+export function createRelationshipStorage(db: Db = getDb()) {
+    /** Create a new relationship. */
+    async function create(data: {
         sourceId: string;
         sourceType: ResourceType;
         name: string;
@@ -35,7 +39,7 @@ export class RelationshipsRepository {
             position: data.position ?? 0,
         };
 
-        const result = await this.db
+        const result = await db
             .insert(relationshipsTable)
             .values(relationship)
             .returning();
@@ -46,10 +50,8 @@ export class RelationshipsRepository {
         return created;
     }
 
-    /**
-     * Get all relationships for a source resource
-     */
-    async getBySource(
+    /** Get all relationships for a source resource. */
+    async function getBySource(
         sourceId: string,
         sourceType: ResourceType,
         name?: string
@@ -63,21 +65,19 @@ export class RelationshipsRepository {
             conditions.push(eq(relationshipsTable.name, name));
         }
 
-        return this.db
+        return db
             .select()
             .from(relationshipsTable)
             .where(and(...conditions))
             .orderBy(relationshipsTable.position);
     }
 
-    /**
-     * Get all relationships pointing to a target resource
-     */
-    async getByTarget(
+    /** Get all relationships pointing to a target resource. */
+    async function getByTarget(
         targetId: string,
         targetType: ResourceType
     ): Promise<RelationshipRow[]> {
-        return this.db
+        return db
             .select()
             .from(relationshipsTable)
             .where(
@@ -89,10 +89,8 @@ export class RelationshipsRepository {
             .orderBy(relationshipsTable.position);
     }
 
-    /**
-     * Update relationship positions (for ordered relations)
-     */
-    async updatePositions(
+    /** Update relationship positions (for ordered relations). */
+    async function updatePositions(
         sourceId: string,
         sourceType: ResourceType,
         name: string,
@@ -101,7 +99,7 @@ export class RelationshipsRepository {
         for (let i = 0; i < orderedTargetIds.length; i++) {
             const targetId = orderedTargetIds[i];
             if (targetId === undefined) continue;
-            await this.db
+            await db
                 .update(relationshipsTable)
                 .set({ position: i })
                 .where(
@@ -115,16 +113,14 @@ export class RelationshipsRepository {
         }
     }
 
-    /**
-     * Delete a specific relationship
-     */
-    async delete(
+    /** Delete a specific relationship. */
+    async function remove(
         sourceId: string,
         sourceType: ResourceType,
         name: string,
         targetId: string
     ): Promise<void> {
-        await this.db
+        await db
             .delete(relationshipsTable)
             .where(
                 and(
@@ -136,10 +132,8 @@ export class RelationshipsRepository {
             );
     }
 
-    /**
-     * Delete all relationships for a source
-     */
-    async deleteBySource(
+    /** Delete all relationships for a source. */
+    async function deleteBySource(
         sourceId: string,
         sourceType: ResourceType,
         name?: string
@@ -153,15 +147,18 @@ export class RelationshipsRepository {
             conditions.push(eq(relationshipsTable.name, name));
         }
 
-        await this.db.delete(relationshipsTable).where(and(...conditions));
+        await db.delete(relationshipsTable).where(and(...conditions));
     }
 
     /**
-     * Delete all relationships pointing to a target
-     * Used for cascade delete or cleaning up when a resource is deleted
+     * Delete all relationships pointing to a target. Used for cascade delete or
+     * cleaning up when a resource is deleted.
      */
-    async deleteByTarget(targetId: string, targetType: ResourceType): Promise<void> {
-        await this.db
+    async function deleteByTarget(
+        targetId: string,
+        targetType: ResourceType
+    ): Promise<void> {
+        await db
             .delete(relationshipsTable)
             .where(
                 and(
@@ -175,48 +172,46 @@ export class RelationshipsRepository {
      * Remove every relationship row (incoming and outgoing) involving an entry.
      * Used when an entry is permanently deleted.
      */
-    async deleteByEntry(id: string): Promise<void> {
-        await this.deleteBySource(id, 'entry');
-        await this.deleteByTarget(id, 'entry');
+    async function deleteByEntry(id: string): Promise<void> {
+        await deleteBySource(id, 'entry');
+        await deleteByTarget(id, 'entry');
     }
 
     /**
      * Remove every relationship row (incoming and outgoing) involving a user.
      * Used when a user is permanently deleted.
      */
-    async deleteByUser(id: string): Promise<void> {
-        await this.deleteBySource(id, 'user');
-        await this.deleteByTarget(id, 'user');
+    async function deleteByUser(id: string): Promise<void> {
+        await deleteBySource(id, 'user');
+        await deleteByTarget(id, 'user');
     }
 
     /**
      * Remove every relationship row (incoming and outgoing) involving a media item.
      * Used when a media item is permanently deleted.
      */
-    async deleteByMedia(id: string): Promise<void> {
-        await this.deleteBySource(id, 'media');
-        await this.deleteByTarget(id, 'media');
+    async function deleteByMedia(id: string): Promise<void> {
+        await deleteBySource(id, 'media');
+        await deleteByTarget(id, 'media');
     }
 
     /**
-     * Replace all relationships for a source/name combination
-     * Useful for form submissions where all relations are set at once
+     * Replace all relationships for a source/name combination. Useful for form
+     * submissions where all relations are set at once.
      */
-    async replaceAll(
+    async function replaceAll(
         sourceId: string,
         sourceType: ResourceType,
         name: string,
         targetIds: string[],
         targetType: ResourceType
     ): Promise<void> {
-        // Delete existing relationships
-        await this.deleteBySource(sourceId, sourceType, name);
+        await deleteBySource(sourceId, sourceType, name);
 
-        // Create new relationships
         for (let i = 0; i < targetIds.length; i++) {
             const targetId = targetIds[i];
             if (targetId === undefined) continue;
-            await this.create({
+            await create({
                 sourceId,
                 sourceType,
                 name,
@@ -226,4 +221,18 @@ export class RelationshipsRepository {
             });
         }
     }
+
+    return {
+        create,
+        getBySource,
+        getByTarget,
+        updatePositions,
+        delete: remove,
+        deleteBySource,
+        deleteByTarget,
+        deleteByEntry,
+        deleteByUser,
+        deleteByMedia,
+        replaceAll,
+    };
 }

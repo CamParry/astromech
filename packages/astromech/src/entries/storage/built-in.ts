@@ -29,7 +29,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { getDb } from '@/database/registry.js';
 import { entriesTable } from '../schema.js';
 import type { EntryRow } from '../schema.js';
-import { VersionsRepository } from '../data/versions.js';
+import { createVersionStorage } from './versions.js';
 import type {
     Entry,
     EntryStatus,
@@ -172,41 +172,31 @@ async function populateLocaleSingle(db: Db, row: EntryRow): Promise<Entry> {
 // BuiltInEntryStorage
 // ============================================================================
 
-export class BuiltInEntryStorage implements EntryStorage<Entry> {
-    public readonly supports: readonly Capability[] = BUILT_IN_SUPPORTS;
+export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: string }) {
+    const dbOverride = opts?.db;
+    const defaultLocale = opts?.defaultLocale ?? 'en';
 
-    private readonly dbOverride: Db | undefined;
-    private readonly defaultLocale: string;
+    const handle = (): Db => dbOverride ?? getDb();
 
-    constructor(opts?: { db?: Db; defaultLocale?: string }) {
-        this.dbOverride = opts?.db;
-        this.defaultLocale = opts?.defaultLocale ?? 'en';
-    }
+    const supports: readonly Capability[] = BUILT_IN_SUPPORTS;
 
-    private get db(): Db {
-        return this.dbOverride ?? getDb();
-    }
-
-    async transaction<T>(
+    async function transaction<T>(
         fn: (storage: EntryStorage<Entry>, db: Db) => Promise<T>
     ): Promise<T> {
-        return this.db.transaction(async (tx) => {
+        return handle().transaction(async (tx) => {
             const txDb = tx as unknown as Db;
-            const txStorage = new BuiltInEntryStorage({
-                db: txDb,
-                defaultLocale: this.defaultLocale,
-            });
+            const txStorage = createBuiltInEntryStorage({ db: txDb, defaultLocale });
             return fn(txStorage, txDb);
         });
     }
 
-    async uniqueSlug(
+    async function uniqueSlug(
         type: string,
         locale: string,
         baseSlug: string,
         excludeId?: string
     ): Promise<string> {
-        const db = this.db;
+        const db = handle();
         let candidate = baseSlug;
         let counter = 1;
 
@@ -235,8 +225,8 @@ export class BuiltInEntryStorage implements EntryStorage<Entry> {
         }
     }
 
-    async list(params: ListParams): Promise<{ data: Entry[]; total: number }> {
-        const db = this.db;
+    async function list(params: ListParams): Promise<{ data: Entry[]; total: number }> {
+        const db = handle();
         const typeParam = params.type;
         const types = Array.isArray(typeParam)
             ? Array.from(typeParam)
@@ -246,7 +236,7 @@ export class BuiltInEntryStorage implements EntryStorage<Entry> {
         const page = params.page ?? 1;
 
         const filterConditions = params.where ? buildFilterConditions(params.where) : [];
-        const localeCondition = buildLocaleCondition(params.locale, this.defaultLocale);
+        const localeCondition = buildLocaleCondition(params.locale, defaultLocale);
         const searchCondition = params.search
             ? or(
                   like(entriesTable.title, `%${params.search}%`),
@@ -305,8 +295,11 @@ export class BuiltInEntryStorage implements EntryStorage<Entry> {
         return { data, total };
     }
 
-    async get(id: string, opts?: { includeTrashed?: boolean }): Promise<Entry | null> {
-        const db = this.db;
+    async function get(
+        id: string,
+        opts?: { includeTrashed?: boolean }
+    ): Promise<Entry | null> {
+        const db = handle();
         const conditions = [eq(entriesTable.id, id)];
         if (!opts?.includeTrashed) conditions.push(isNull(entriesTable.deletedAt));
 
@@ -320,15 +313,15 @@ export class BuiltInEntryStorage implements EntryStorage<Entry> {
         return populateLocaleSingle(db, row[0] as EntryRow);
     }
 
-    async create(data: EntryWrite & { type: string }): Promise<Entry> {
-        const db = this.db;
+    async function create(data: EntryWrite & { type: string }): Promise<Entry> {
+        const db = handle();
         const row = await db
             .insert(entriesTable)
             .values({
                 type: data.type,
                 title: data.title ?? '',
                 slug: data.slug ?? null,
-                locale: data.locale ?? this.defaultLocale,
+                locale: data.locale ?? defaultLocale,
                 localeGroup: data.localeGroup ?? crypto.randomUUID(),
                 fields: data.fields ?? {},
                 status: data.status ?? 'unpublished',
@@ -344,8 +337,8 @@ export class BuiltInEntryStorage implements EntryStorage<Entry> {
         return populateLocaleSingle(db, created);
     }
 
-    async update(id: string, data: EntryWrite): Promise<Entry> {
-        const db = this.db;
+    async function update(id: string, data: EntryWrite): Promise<Entry> {
+        const db = handle();
         const row = await db
             .update(entriesTable)
             .set({
@@ -367,8 +360,8 @@ export class BuiltInEntryStorage implements EntryStorage<Entry> {
         return populateLocaleSingle(db, updated);
     }
 
-    async delete(id: string, opts?: { cascadeLocales?: boolean }): Promise<void> {
-        const db = this.db;
+    async function del(id: string, opts?: { cascadeLocales?: boolean }): Promise<void> {
+        const db = handle();
         if (opts?.cascadeLocales) {
             const existing = await db
                 .select({ localeGroup: entriesTable.localeGroup })
@@ -386,9 +379,9 @@ export class BuiltInEntryStorage implements EntryStorage<Entry> {
         await db.delete(entriesTable).where(eq(entriesTable.id, id));
     }
 
-    trash = {
+    const trash = {
         trash: async (id: string, opts?: { cascadeLocales?: boolean }): Promise<void> => {
-            const db = this.db;
+            const db = handle();
             const rows = await db
                 .select({
                     localeGroup: entriesTable.localeGroup,
@@ -424,7 +417,7 @@ export class BuiltInEntryStorage implements EntryStorage<Entry> {
         },
 
         restore: async (id: string): Promise<Entry> => {
-            const db = this.db;
+            const db = handle();
             const row = await db
                 .update(entriesTable)
                 .set({ deletedAt: null, updatedAt: new Date() })
@@ -437,7 +430,7 @@ export class BuiltInEntryStorage implements EntryStorage<Entry> {
         },
 
         emptyTrash: async (type: string): Promise<void> => {
-            const db = this.db;
+            const db = handle();
             await db
                 .delete(entriesTable)
                 .where(
@@ -446,22 +439,19 @@ export class BuiltInEntryStorage implements EntryStorage<Entry> {
         },
     };
 
-    versions = {
+    const versions = {
         list: async (entryId: string): Promise<EntryVersion[]> => {
-            const repo = new VersionsRepository(this.db);
-            const rows = await repo.list(entryId);
+            const rows = await createVersionStorage(handle()).list(entryId);
             return rows as unknown as EntryVersion[];
         },
 
         get: async (versionId: string): Promise<EntryVersion | null> => {
-            const repo = new VersionsRepository(this.db);
-            const row = await repo.get(versionId);
+            const row = await createVersionStorage(handle()).get(versionId);
             return (row as unknown as EntryVersion) ?? null;
         },
 
         create: async (snapshot: NewEntryVersionSnapshot): Promise<void> => {
-            const repo = new VersionsRepository(this.db);
-            await repo.create({
+            await createVersionStorage(handle()).create({
                 entryId: snapshot.entryId,
                 versionNumber: snapshot.versionNumber,
                 title: snapshot.title,
@@ -473,14 +463,13 @@ export class BuiltInEntryStorage implements EntryStorage<Entry> {
         },
 
         latestNumber: async (entryId: string): Promise<number> => {
-            const repo = new VersionsRepository(this.db);
-            return repo.getLatestNumber(entryId);
+            return createVersionStorage(handle()).getLatestNumber(entryId);
         },
     };
 
-    staging = {
+    const staging = {
         getByCanonical: async (canonicalId: string): Promise<Entry | null> => {
-            const db = this.db;
+            const db = handle();
             const rows = await db
                 .select()
                 .from(entriesTable)
@@ -496,9 +485,9 @@ export class BuiltInEntryStorage implements EntryStorage<Entry> {
         },
     };
 
-    translatable = {
+    const translatable = {
         siblings: async (localeGroup: string, excludeId?: string): Promise<Entry[]> => {
-            const db = this.db;
+            const db = handle();
             const conditions = [
                 eq(entriesTable.localeGroup, localeGroup),
                 isNull(entriesTable.deletedAt),
@@ -516,7 +505,7 @@ export class BuiltInEntryStorage implements EntryStorage<Entry> {
             excludeId: string,
             values: JsonObject
         ): Promise<void> => {
-            const db = this.db;
+            const db = handle();
             const siblings = await db
                 .select({ id: entriesTable.id, fields: entriesTable.fields })
                 .from(entriesTable)
@@ -540,4 +529,19 @@ export class BuiltInEntryStorage implements EntryStorage<Entry> {
             }
         },
     };
+
+    return {
+        supports,
+        transaction,
+        uniqueSlug,
+        list,
+        get,
+        create,
+        update,
+        delete: del,
+        trash,
+        versions,
+        staging,
+        translatable,
+    } satisfies EntryStorage<Entry>;
 }

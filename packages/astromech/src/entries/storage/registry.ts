@@ -12,7 +12,7 @@
  * write overrides into one copy while the entries service reads another.
  */
 
-import { BuiltInEntryStorage } from './built-in.js';
+import { createBuiltInEntryStorage } from './built-in.js';
 import type { EntryStorage } from './types.js';
 
 type EntryStorageRegistry = {
@@ -37,7 +37,7 @@ function registry(): EntryStorageRegistry {
 function getBuiltIn(): EntryStorage {
     const state = registry();
     if (!state.builtIn) {
-        state.builtIn = new BuiltInEntryStorage();
+        state.builtIn = createBuiltInEntryStorage();
     }
     return state.builtIn;
 }

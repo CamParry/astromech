@@ -23,7 +23,7 @@ import { migrate } from 'drizzle-orm/libsql/migrator';
 import { setupTestConfig, makeTestConfig } from '@tests/harness.js';
 import { getDb, setDb } from '@/database/registry.js';
 import { entries as api } from '@/entries/service.js';
-import { RelationshipsRepository } from '@/database/repositories/relationships.js';
+import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import { StagedEntryExistsError, CapabilityError } from '@/entries/errors.js';
 
 const MIGRATIONS_FOLDER = fileURLToPath(
@@ -61,7 +61,7 @@ afterEach(() => {
 });
 
 function relationTargets(entryId: string): Promise<string[]> {
-    return new RelationshipsRepository(getDb())
+    return createRelationshipStorage(getDb())
         .getBySource(entryId, 'entry')
         .then((rels) => rels.map((r) => r.targetId).sort());
 }

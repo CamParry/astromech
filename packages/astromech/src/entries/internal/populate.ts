@@ -1,26 +1,22 @@
 /**
- * Entry Population Utility
- * Handles loading related entries/users/media for relation fields
+ * Entry population — loads related entries/users for relation fields and merges
+ * them into each entry's fields. Pure orchestration: relationship lookups go
+ * through the shared relationship storage and target rows through the entries
+ * related-record storage; no raw DB access lives here.
  */
 
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Entry, FieldDefinition, JsonValue } from '@/types/index.js';
-import { RelationshipsRepository } from '@/database/repositories/relationships.js';
-import { inArray } from 'drizzle-orm';
-import { entriesTable } from '../schema.js';
-// usersTable via the @/database/schema aggregate (not @/users/schema) to avoid an
-// entries→users domain peer import; the aggregator re-exports every domain's tables.
-import { usersTable } from '@/database/schema.js';
+import { createRelationshipStorage } from '@/database/storage/relationships.js';
+import { createRelatedRecordStorage } from '../storage/related-records.js';
 
 type PopulatedEntry = Entry & {
     _populated: Record<string, unknown | unknown[]>;
 };
 
 /**
- * Populate relation fields in entries
+ * Populate relation fields in entries.
  */
 export async function populateEntries(
-    db: LibSQLDatabase,
     entries: Entry[],
     fields: FieldDefinition[],
     populate: string[]
@@ -29,7 +25,8 @@ export async function populateEntries(
         return entries;
     }
 
-    const relationshipsRepo = new RelationshipsRepository(db);
+    const relationshipsRepo = createRelationshipStorage();
+    const records = createRelatedRecordStorage();
 
     // Build a map of field names to their definitions
     const relationFields = new Map<string, FieldDefinition>();
@@ -67,31 +64,11 @@ export async function populateEntries(
                 .filter((r) => r.targetType === 'user')
                 .map((r) => r.targetId);
 
-            const loadedEntries: Record<string, unknown> = {};
-
-            // Batch load entries
-            if (entryTargets.length > 0) {
-                const loaded = await db
-                    .select()
-                    .from(entriesTable)
-                    .where(inArray(entriesTable.id, entryTargets));
-
-                for (const e of loaded) {
-                    loadedEntries[e.id] = e;
-                }
-            }
-
-            // Batch load users
-            if (userTargets.length > 0) {
-                const loaded = await db
-                    .select()
-                    .from(usersTable)
-                    .where(inArray(usersTable.id, userTargets));
-
-                for (const u of loaded) {
-                    loadedEntries[u.id] = u;
-                }
-            }
+            // Batch load entries and users
+            const loadedEntries: Record<string, unknown> = {
+                ...(await records.entriesByIds(entryTargets)),
+                ...(await records.usersByIds(userTargets)),
+            };
 
             // TODO: Load media when media table is enabled
 

@@ -66,7 +66,7 @@ import {
     useRevokePreviewToken,
 } from '@/admin/hooks/index.js';
 import type { EntryStatus } from '@/types/index.js';
-import { resolveEntryUrl } from '@/entries/url.js';
+import { resolveEntryUrl } from '@/entries/utils/url.js';
 import {
     deriveFormDefinition,
     resolveConfigForDerive,

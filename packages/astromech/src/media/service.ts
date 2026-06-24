@@ -6,7 +6,7 @@ import type { MediaRow } from './schema.js';
 import { getDb } from '@/database/registry.js';
 import { getStorageDriver } from '@/storage/registry.js';
 import { deletePrefix } from '@/storage/prefix.js';
-import { RelationshipsRepository } from '@/database/repositories/relationships.js';
+import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import type {
     Media,
     JsonObject,
@@ -232,7 +232,7 @@ export const mediaApi = {
             }
         }
 
-        await new RelationshipsRepository(getDb()).deleteByMedia(id);
+        await createRelationshipStorage(getDb()).deleteByMedia(id);
         await db.delete(mediaTable).where(eq(mediaTable.id, id));
     },
 
