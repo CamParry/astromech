@@ -44,9 +44,19 @@ Server-side field validation as the headline, framed as a field-system normaliza
 - [x] Normalize the components on `disabled`; `aria-invalid`/`aria-describedby` self-applied by primitives via `FieldControlContext` (FieldWrapper provides a stable error id) — no per-component aria edits (P5b)
 - [x] Fold `json`/`media`/`plugin` local error state into the `.am-field-error` channel (server errors take precedence) (P5b)
 
-**Deferred**
+**Post-merge housekeeping** ✅
 
-- [ ] Error/warning severity (Sanity-style)
-- [ ] Client-side declarative-rule mirror
-- [ ] Document-level `validate` hook
-- [ ] (Separate bugs) create+relationships transaction boundary; create translatable-field propagation
+- [x] Consolidate runtime reserved-key usage — `fields/reserved-keys.ts` is the single source (`RESERVED_KEY`/`RESERVED_KEY_META`/`PUBLIC_STRIPPED_KEYS`); codegen + `entries/visibility.ts` derive public-read visibility from it (can't drift). Typed instance shapes (`use-blocks-field`/`use-tree-field`, generated `.d.ts`) keep literal property names by design
+
+**P6 — Remaining design work** (full design state: `specs/field-validation-next-phase.md`)
+
+- [ ] **Nested / container validation** (foundational; coupled to `populate-and-complex-field-data-model`). DECISION LOCKED: nested-error addressing is `_id`-based (`blocks._abc123.heading`), not index-based — reorder-stable, shared with the populate feature's path scheme. Pipeline recursion + exact path grammar still to design
+- [ ] Error/warning severity (Sanity-style) — design open
+- [ ] Document-level `validate` hook — design open
+- [ ] Client-side declarative-rule mirror (declarative rules only; async/custom/unique stay server-side)
+- [ ] JSON-indexed uniqueness (optimise the in-memory `isUnique` scan) — lowest priority
+
+**Entry-create bugs** (folded into this branch by user request)
+
+- [~] **Atomic create + relationships** — DONE but UNCOMMITTED in the worktree. `entries.create` now wraps entry-create + `saveRelationships` in `storage.transaction` (was two separate ops → orphaned entry on relationship failure). Changes: `entries/service.ts`, new `tests/services/entries/create-atomicity.test.ts`, `tests/_support/harness.ts` (test DB `:memory:`→temp file; libsql nulls the in-memory handle after a transaction). Re-run the gate before committing
+- [ ] **Translatable propagation on create** — DECISION OPEN. Non-translatable (group-shared) fields aren't synced when creating a translation that joins an existing group. Options: (1) inherit from siblings [recommended, non-destructive], (2) push like update [wipes on the blank-in-group flow], (3) smart merge. See spec §7.2
