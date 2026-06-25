@@ -22,8 +22,8 @@ async function up(db: Kysely<unknown>): Promise<void> {
             \`name\` text NOT NULL,
             \`permissions\` text NOT NULL,
             \`is_built_in\` integer DEFAULT 0 NOT NULL,
-            \`created_at\` integer NOT NULL,
-            \`updated_at\` integer NOT NULL
+            \`created_at\` text NOT NULL,
+            \`updated_at\` text NOT NULL
         )
     `.execute(db);
 
@@ -106,10 +106,10 @@ async function up(db: Kysely<unknown>): Promise<void> {
             \`title\` text NOT NULL,
             \`fields\` text,
             \`status\` text DEFAULT 'unpublished' NOT NULL,
-            \`published_at\` integer,
-            \`deleted_at\` integer,
-            \`created_at\` integer NOT NULL,
-            \`updated_at\` integer NOT NULL,
+            \`published_at\` text,
+            \`deleted_at\` text,
+            \`created_at\` text NOT NULL,
+            \`updated_at\` text NOT NULL,
             \`created_by\` text,
             \`updated_by\` text,
             \`staged_for\` text REFERENCES entries(id),
@@ -151,7 +151,7 @@ async function up(db: Kysely<unknown>): Promise<void> {
             \`fields\` text,
             \`relations\` text,
             \`status\` text,
-            \`created_at\` integer NOT NULL,
+            \`created_at\` text NOT NULL,
             \`created_by\` text,
             FOREIGN KEY (\`entry_id\`) REFERENCES \`entries\`(\`id\`) ON UPDATE no action ON DELETE cascade,
             FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
@@ -167,8 +167,8 @@ async function up(db: Kysely<unknown>): Promise<void> {
             \`id\` text PRIMARY KEY NOT NULL,
             \`entry_id\` text NOT NULL,
             \`token\` text NOT NULL,
-            \`expires_at\` integer,
-            \`created_at\` integer NOT NULL,
+            \`expires_at\` text,
+            \`created_at\` text NOT NULL,
             \`created_by\` text,
             FOREIGN KEY (\`entry_id\`) REFERENCES \`entries\`(\`id\`) ON UPDATE no action ON DELETE cascade,
             FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
@@ -190,8 +190,8 @@ async function up(db: Kysely<unknown>): Promise<void> {
             \`alt\` text,
             \`fields\` text,
             \`metadata\` text,
-            \`created_at\` integer NOT NULL,
-            \`updated_at\` integer NOT NULL,
+            \`created_at\` text NOT NULL,
+            \`updated_at\` text NOT NULL,
             \`created_by\` text,
             FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
         )
@@ -206,7 +206,7 @@ async function up(db: Kysely<unknown>): Promise<void> {
         CREATE TABLE \`settings\` (
             \`key\` text PRIMARY KEY NOT NULL,
             \`value\` text,
-            \`updated_at\` integer NOT NULL,
+            \`updated_at\` text NOT NULL,
             \`updated_by\` text,
             FOREIGN KEY (\`updated_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
         )
@@ -221,7 +221,7 @@ async function up(db: Kysely<unknown>): Promise<void> {
             \`title\` text NOT NULL,
             \`message\` text NOT NULL,
             \`href\` text,
-            \`created_at\` integer NOT NULL,
+            \`created_at\` text NOT NULL,
             FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE cascade
         )
     `.execute(db);
@@ -239,7 +239,7 @@ async function up(db: Kysely<unknown>): Promise<void> {
             \`target_id\` text NOT NULL,
             \`target_type\` text NOT NULL,
             \`position\` integer DEFAULT 0 NOT NULL,
-            \`created_at\` integer NOT NULL
+            \`created_at\` text NOT NULL
         )
     `.execute(db);
     await sql`CREATE INDEX \`idx_rel_source\` ON \`relationships\` (\`source_id\`,\`source_type\`,\`name\`)`.execute(
@@ -255,9 +255,9 @@ async function up(db: Kysely<unknown>): Promise<void> {
             \`name\` text PRIMARY KEY NOT NULL,
             \`schedule\` text NOT NULL,
             \`enabled\` integer DEFAULT 1 NOT NULL,
-            \`last_run\` integer,
-            \`next_run\` integer,
-            \`lock\` integer
+            \`last_run\` text,
+            \`next_run\` text,
+            \`lock\` text
         )
     `.execute(db);
 

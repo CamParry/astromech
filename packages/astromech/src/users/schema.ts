@@ -1,22 +1,16 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import { z } from '@hono/zod-openapi';
+import {
+    defineTable,
+    type TableSelect,
+    type TableInsert,
+} from '@/database/define-table.js';
 
 // ============================================================================
-// Drizzle tables — roles, users, sessions, accounts, verifications
+// Drizzle tables — users, sessions, accounts, verifications (better-auth).
+// These 4 stay on Drizzle/seconds-INTEGER (better-auth's adapter + harness use
+// them). `roles` is ours → defineTable descriptor below.
 // ============================================================================
-
-export const rolesTable = sqliteTable('roles', {
-    slug: text('slug').primaryKey(),
-    name: text('name').notNull(),
-    permissions: text('permissions', { mode: 'json' }).$type<string[]>().notNull(),
-    isBuiltIn: integer('is_built_in', { mode: 'boolean' }).notNull().default(false),
-    createdAt: integer('created_at', { mode: 'timestamp' })
-        .notNull()
-        .$defaultFn(() => new Date()),
-    updatedAt: integer('updated_at', { mode: 'timestamp' })
-        .notNull()
-        .$defaultFn(() => new Date()),
-});
 
 export const usersTable = sqliteTable('users', {
     id: text('id')
@@ -78,8 +72,21 @@ export const verificationsTable = sqliteTable('verifications', {
     updatedAt: integer('updated_at', { mode: 'timestamp' }),
 });
 
-export type RoleRow = typeof rolesTable.$inferSelect;
-export type NewRoleRow = typeof rolesTable.$inferInsert;
+// ============================================================================
+// roles descriptor (defineTable) — RBAC is ours, not a better-auth model
+// ============================================================================
+
+export const roles = defineTable('roles', ({ col }) => ({
+    slug: col.text({ primaryKey: true }),
+    name: col.text({ notNull: true }),
+    permissions: col.json<string[]>({ notNull: true }),
+    isBuiltIn: col.boolean({ notNull: true, default: false }),
+    createdAt: col.timestamp({ notNull: true, defaultNow: true }),
+    updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
+}));
+
+export type RoleRow = TableSelect<typeof roles>;
+export type NewRoleRow = TableInsert<typeof roles>;
 
 export type UserRow = typeof usersTable.$inferSelect;
 export type NewUserRow = typeof usersTable.$inferInsert;

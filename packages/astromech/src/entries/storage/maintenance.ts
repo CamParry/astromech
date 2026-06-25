@@ -15,14 +15,15 @@ export type EntryMaintenanceStorage = ReturnType<typeof createEntryMaintenanceSt
 export function createEntryMaintenanceStorage(db: Db = getDb()) {
     /** Transition every scheduled entry whose publish time has passed to published. */
     async function publishDueScheduled(now: Date): Promise<void> {
-        const nowSeconds = Math.floor(now.getTime() / 1000);
+        // Tier-1 timestamps are ISO-TEXT; ISO strings compare correctly with <=.
+        const nowIso = now.toISOString();
         const due = await db
             .selectFrom('entries')
             .select('id')
             .where((eb) =>
                 eb.and([
                     eb('status', '=', 'scheduled'),
-                    eb('publishedAt', '<=', nowSeconds),
+                    eb('publishedAt', '<=', nowIso),
                     eb('deletedAt', 'is', null),
                 ])
             )
@@ -46,13 +47,13 @@ export function createEntryMaintenanceStorage(db: Db = getDb()) {
 
     /** Hard-delete every trashed entry deleted on or before `cutoff`. */
     async function purgeTrashedBefore(cutoff: Date): Promise<void> {
-        const cutoffSeconds = Math.floor(cutoff.getTime() / 1000);
+        const cutoffIso = cutoff.toISOString();
         await db
             .deleteFrom('entries')
             .where((eb) =>
                 eb.and([
                     eb('deletedAt', 'is not', null),
-                    eb('deletedAt', '<=', cutoffSeconds),
+                    eb('deletedAt', '<=', cutoffIso),
                 ])
             )
             .execute();

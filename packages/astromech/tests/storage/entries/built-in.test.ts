@@ -38,7 +38,7 @@ describe('base CRUD', () => {
             slug: 'hello',
             fields: { body: 'hi' },
         });
-        expect(created.id).toMatch(/[0-9a-f-]{36}/);
+        expect(created.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/); // ULID
         expect(created.title).toBe('Hello');
         expect(created.status).toBe('unpublished');
         expect(created.fields).toEqual({ body: 'hi' });

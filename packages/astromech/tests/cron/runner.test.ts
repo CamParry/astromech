@@ -1,10 +1,9 @@
 /**
  * Tests for the cron due-evaluator: onTick / runDue.
  *
- * Timestamp granularity note: cronTable columns use `{ mode: 'timestamp' }` which
- * stores as Unix seconds (integer). Croner returns whole-minute boundaries so
- * this is lossless for minute-resolution schedules. For nextRun comparisons we
- * compare at second resolution (truncate ms) to be safe.
+ * Timestamp note: `_astromech_cron` timestamps are ISO-TEXT (decoded to `Date`).
+ * Croner returns whole-minute boundaries, so for nextRun comparisons we compare
+ * at second resolution (truncate ms) to be safe.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

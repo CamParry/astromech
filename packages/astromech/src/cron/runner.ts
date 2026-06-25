@@ -87,7 +87,8 @@ export async function runDue(now: Date): Promise<void> {
             eb.and([
                 eb('enabled', '=', 1),
                 eb.or([
-                    eb('nextRun', '<=', Math.floor(now.getTime() / 1000)),
+                    // Tier-1 `_astromech_cron` timestamps are ISO-TEXT.
+                    eb('nextRun', '<=', now.toISOString()),
                     eb('nextRun', 'is', null),
                 ]),
             ])
@@ -112,10 +113,7 @@ export async function runDue(now: Date): Promise<void> {
             .where((eb) =>
                 eb.and([
                     eb('name', '=', row.name),
-                    eb.or([
-                        eb('lock', 'is', null),
-                        eb('lock', '<=', Math.floor(now.getTime() / 1000)),
-                    ]),
+                    eb.or([eb('lock', 'is', null), eb('lock', '<=', now.toISOString())]),
                 ])
             )
             .executeTakeFirst();
@@ -142,10 +140,7 @@ export async function runDue(now: Date): Promise<void> {
                 }) as unknown as Updateable<DB['_astromech_cron']>
             )
             .where((eb) =>
-                eb.and([
-                    eb('name', '=', row.name),
-                    eb('lock', '=', Math.floor(expiry.getTime() / 1000)),
-                ])
+                eb.and([eb('name', '=', row.name), eb('lock', '=', expiry.toISOString())])
             )
             .execute();
     }

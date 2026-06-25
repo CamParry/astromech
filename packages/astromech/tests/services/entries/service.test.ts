@@ -37,7 +37,7 @@ describe('create', () => {
             fields: { body: 'hi' },
         });
 
-        expect(e.id).toMatch(/[0-9a-f-]{36}/);
+        expect(e.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/); // ULID
         expect(e.type).toBe('post');
         expect(e.locale).toBe('en'); // defaultLocale
         expect(e.localeGroup).toMatch(/[0-9a-f-]{36}/);
@@ -463,10 +463,8 @@ describe('publish / unpublish / schedule', () => {
         const future = new Date(Date.now() + 86_400_000);
         const sch = await api.schedule({ type: 'post', id: e.id, publishAt: future });
         expect(sch.status).toBe('scheduled');
-        // timestamps persist at second precision in SQLite
-        expect(sch.publishedAt?.getTime()).toBe(
-            Math.floor(future.getTime() / 1000) * 1000
-        );
+        // Tier-1 timestamps persist as ISO-TEXT (millisecond precision).
+        expect(sch.publishedAt?.getTime()).toBe(future.getTime());
     });
 });
 

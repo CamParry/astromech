@@ -1,41 +1,53 @@
 /**
- * Throwaway row codec for the 1:1 Drizzle → Kysely port. Reproduces the three
- * runtime conversions Drizzle did silently but `@libsql/client` does not, plus
- * Drizzle's app-side `$defaultFn` columns. Replaced by the descriptor-driven
- * codec in step 2.
+ * Row codec — bridges domain values (Date, parsed object, boolean) and storage
+ * values for the Kysely query layer, reproducing the conversions Drizzle did
+ * silently but `@libsql/client` does not.
  *
- * Storage formats (must match Drizzle's on-disk encoding exactly):
- *   - `ts`   timestamp column → unix **SECONDS** INTEGER. Drizzle's
- *            `{ mode: 'timestamp' }` writes `Math.floor(getTime()/1000)` and
- *            reads `new Date(value * 1000)`. NOT milliseconds.
- *   - `json` → TEXT (JSON string).
- *   - `bool` → INTEGER 0/1 (read back as `Number(value) === 1`).
+ * Two tiers:
+ *   - **Descriptor-driven (the 9 tables we own):** each table's `defineTable`
+ *     descriptor carries per-column `serialize`/`parse`/`default` fns. Our
+ *     timestamps are ISO-8601 **TEXT**, ids/localeGroup ULID, json TEXT, bool
+ *     INTEGER 0/1. This is the step-2 deliverable replacing the hand-written map.
+ *   - **Legacy (4 better-auth tables + `plugin_backups_runs`):** still
+ *     seconds-INTEGER timestamps / json TEXT / bool INTEGER, kept verbatim from
+ *     the step-1 throwaway codec. better-auth's adapter and the backups plugin
+ *     own these formats; flipping them is out of scope (auth) / a later step.
  *
- * Keys are camelCase to match the active `CamelCasePlugin` (queries take
- * camelCase column refs; result rows come back camelCase).
- *
- * Do NOT use `ParseJSONResultsPlugin` — it would corrupt TEXT columns holding
- * JSON-ish values (e.g. a setting `value` of `"123"`).
+ * Keys are camelCase to match the active `CamelCasePlugin`. Do NOT use
+ * `ParseJSONResultsPlugin` — it would corrupt TEXT columns holding JSON-ish
+ * values (e.g. a setting `value` of `"123"`).
  */
 
-type Kind = 'ts' | 'json' | 'bool';
-type AppDefault = 'uuid' | 'now';
+import type { TableDescriptor } from '@/database/define-table.js';
+import { roles } from '@/users/schema.js';
+import { entries, entryVersions, entryPreviewTokens } from '@/entries/schema.js';
+import { media } from '@/media/schema.js';
+import { settings } from '@/settings/schema.js';
+import { notifications } from '@/notifications/schema.js';
+import { relationships, cron } from '@/database/schema.js';
 
-type TableCodec = {
-    kinds: Record<string, Kind>;
+// ── Descriptor-driven tables (ours) ─────────────────────────────────────────
+const DESCRIPTORS: Record<string, TableDescriptor> = {
+    roles,
+    entries,
+    entryVersions,
+    entryPreviewTokens,
+    media,
+    settings,
+    notifications,
+    relationships,
+    _astromech_cron: cron,
+};
+
+// ── Legacy seconds-INTEGER tables (better-auth + backups plugin) ─────────────
+type LegacyKind = 'ts' | 'json' | 'bool';
+type AppDefault = 'uuid' | 'now';
+type LegacyCodec = {
+    kinds: Record<string, LegacyKind>;
     appDefaults: Record<string, AppDefault>;
 };
 
-const CODECS: Record<string, TableCodec> = {
-    roles: {
-        kinds: {
-            permissions: 'json',
-            isBuiltIn: 'bool',
-            createdAt: 'ts',
-            updatedAt: 'ts',
-        },
-        appDefaults: { createdAt: 'now', updatedAt: 'now' },
-    },
+const LEGACY_CODECS: Record<string, LegacyCodec> = {
     users: {
         kinds: {
             emailVerified: 'bool',
@@ -62,49 +74,6 @@ const CODECS: Record<string, TableCodec> = {
         kinds: { expiresAt: 'ts', createdAt: 'ts', updatedAt: 'ts' },
         appDefaults: {},
     },
-    entries: {
-        kinds: {
-            fields: 'json',
-            publishedAt: 'ts',
-            deletedAt: 'ts',
-            createdAt: 'ts',
-            updatedAt: 'ts',
-        },
-        appDefaults: {
-            id: 'uuid',
-            localeGroup: 'uuid',
-            createdAt: 'now',
-            updatedAt: 'now',
-        },
-    },
-    entryVersions: {
-        kinds: { fields: 'json', relations: 'json', createdAt: 'ts' },
-        appDefaults: { id: 'uuid', createdAt: 'now' },
-    },
-    entryPreviewTokens: {
-        kinds: { expiresAt: 'ts', createdAt: 'ts' },
-        appDefaults: { id: 'uuid', createdAt: 'now' },
-    },
-    media: {
-        kinds: { fields: 'json', metadata: 'json', createdAt: 'ts', updatedAt: 'ts' },
-        appDefaults: { id: 'uuid', createdAt: 'now', updatedAt: 'now' },
-    },
-    settings: {
-        kinds: { value: 'json', updatedAt: 'ts' },
-        appDefaults: { updatedAt: 'now' },
-    },
-    notifications: {
-        kinds: { createdAt: 'ts' },
-        appDefaults: { id: 'uuid', createdAt: 'now' },
-    },
-    relationships: {
-        kinds: { createdAt: 'ts' },
-        appDefaults: { id: 'uuid', createdAt: 'now' },
-    },
-    _astromech_cron: {
-        kinds: { enabled: 'bool', lastRun: 'ts', nextRun: 'ts', lock: 'ts' },
-        appDefaults: {},
-    },
     // Plugin table queried via Kysely (backups). Redirects goes through
     // tableStorage, which carries its own row mapping.
     plugin_backups_runs: {
@@ -113,12 +82,27 @@ const CODECS: Record<string, TableCodec> = {
     },
 };
 
+// ============================================================================
+// Public API — signatures identical to the step-1 throwaway codec.
+// ============================================================================
+
 /** Storage → JS. Call on every row a query returns (selects AND `returningAll`). */
 export function decode<T extends Record<string, unknown>>(table: string, row: T): T {
-    const c = CODECS[table];
-    if (!c || !row) return row;
+    if (!row) return row;
+    const desc = DESCRIPTORS[table];
+    if (desc) {
+        const out: Record<string, unknown> = { ...row };
+        for (const [key, col] of Object.entries(desc.columns)) {
+            const v = out[key];
+            if (v === null || v === undefined) continue;
+            out[key] = col.parse(v);
+        }
+        return out as T;
+    }
+    const legacy = LEGACY_CODECS[table];
+    if (!legacy) return row;
     const out: Record<string, unknown> = { ...row };
-    for (const [col, kind] of Object.entries(c.kinds)) {
+    for (const [col, kind] of Object.entries(legacy.kinds)) {
         const v = out[col];
         if (v === null || v === undefined) continue;
         if (kind === 'ts') out[col] = new Date((v as number) * 1000);
@@ -128,9 +112,70 @@ export function decode<T extends Record<string, unknown>>(table: string, row: T)
     return out as T;
 }
 
-/** Serialize provided values; drops `undefined` keys (so Kysely omits them). */
-function serialize(
-    c: TableCodec,
+/**
+ * JS → storage for INSERTs. Injects app-side defaults (id/now) for omitted
+ * columns, then serializes. Mirrors Drizzle's `$defaultFn` semantics.
+ */
+export function encode(
+    table: string,
+    values: Record<string, unknown>
+): Record<string, unknown> {
+    const desc = DESCRIPTORS[table];
+    if (desc) {
+        const out: Record<string, unknown> = { ...values };
+        for (const [key, col] of Object.entries(desc.columns)) {
+            if (col.appDefault && out[key] === undefined && col.default) {
+                out[key] = col.default();
+            }
+        }
+        return serializeDescriptor(desc, out);
+    }
+    const legacy = LEGACY_CODECS[table];
+    if (!legacy) return stripUndefined(values);
+    const out: Record<string, unknown> = { ...values };
+    for (const [col, kind] of Object.entries(legacy.appDefaults)) {
+        if (out[col] === undefined) {
+            out[col] = kind === 'uuid' ? crypto.randomUUID() : new Date();
+        }
+    }
+    return serializeLegacy(legacy, out);
+}
+
+/**
+ * JS → storage for UPDATEs. Serializes provided columns and drops `undefined`
+ * keys (Drizzle `.set()` skips them). Never injects app defaults — `updatedAt`
+ * is stamped explicitly by callers, exactly as before.
+ */
+export function encodePatch(
+    table: string,
+    values: Record<string, unknown>
+): Record<string, unknown> {
+    const desc = DESCRIPTORS[table];
+    if (desc) return serializeDescriptor(desc, values);
+    const legacy = LEGACY_CODECS[table];
+    if (!legacy) return stripUndefined(values);
+    return serializeLegacy(legacy, values);
+}
+
+// ============================================================================
+// Internals
+// ============================================================================
+
+function serializeDescriptor(
+    desc: TableDescriptor,
+    values: Record<string, unknown>
+): Record<string, unknown> {
+    const out: Record<string, unknown> = { ...values };
+    for (const [key, col] of Object.entries(desc.columns)) {
+        const v = out[key];
+        if (v === null || v === undefined) continue;
+        out[key] = col.serialize(v);
+    }
+    return stripUndefined(out);
+}
+
+function serializeLegacy(
+    c: LegacyCodec,
     values: Record<string, unknown>
 ): Record<string, unknown> {
     const out: Record<string, unknown> = { ...values };
@@ -144,38 +189,6 @@ function serialize(
         else if (kind === 'bool') out[col] = v ? 1 : 0;
     }
     return stripUndefined(out);
-}
-
-/**
- * JS → storage for INSERTs. Injects app-side defaults (id/now) for omitted
- * columns, then serializes. Mirrors Drizzle's `$defaultFn` semantics.
- */
-export function encode(
-    table: string,
-    values: Record<string, unknown>
-): Record<string, unknown> {
-    const c = CODECS[table];
-    if (!c) return stripUndefined(values);
-    const out: Record<string, unknown> = { ...values };
-    for (const [col, kind] of Object.entries(c.appDefaults)) {
-        if (out[col] === undefined)
-            out[col] = kind === 'uuid' ? crypto.randomUUID() : new Date();
-    }
-    return serialize(c, out);
-}
-
-/**
- * JS → storage for UPDATEs. Serializes provided columns and drops `undefined`
- * keys (Drizzle `.set()` skips them). Never injects app defaults — `updatedAt`
- * is stamped explicitly by callers, exactly as before.
- */
-export function encodePatch(
-    table: string,
-    values: Record<string, unknown>
-): Record<string, unknown> {
-    const c = CODECS[table];
-    if (!c) return stripUndefined(values);
-    return serialize(c, values);
 }
 
 function stripUndefined(values: Record<string, unknown>): Record<string, unknown> {

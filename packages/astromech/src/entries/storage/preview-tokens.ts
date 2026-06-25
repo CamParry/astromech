@@ -61,7 +61,8 @@ export function createPreviewTokenStorage(db: Db = getDb()) {
         tokenHash: string,
         now: Date
     ): Promise<boolean> {
-        const nowSeconds = Math.floor(now.getTime() / 1000);
+        // Tier-1 timestamps are ISO-TEXT; ISO strings compare correctly with >.
+        const nowIso = now.toISOString();
         const rows = await db
             .selectFrom('entryPreviewTokens')
             .select('id')
@@ -69,10 +70,7 @@ export function createPreviewTokenStorage(db: Db = getDb()) {
                 eb.and([
                     eb('entryId', '=', entryId),
                     eb('token', '=', tokenHash),
-                    eb.or([
-                        eb('expiresAt', 'is', null),
-                        eb('expiresAt', '>', nowSeconds),
-                    ]),
+                    eb.or([eb('expiresAt', 'is', null), eb('expiresAt', '>', nowIso)]),
                 ])
             )
             .limit(1)
