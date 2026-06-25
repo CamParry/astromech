@@ -26,9 +26,10 @@
 
 import { and, asc, count, desc, eq, inArray, like, or, sql } from 'drizzle-orm';
 import { getTableColumns } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/libsql';
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { getDb } from '@/database/registry.js';
+import { getDbClient } from '@/database/registry.js';
 import type { JsonObject } from '@/types/index.js';
 import type {
     EntryRecord,
@@ -80,7 +81,12 @@ class TableStorage implements EntryStorage<EntryRecord> {
     }
 
     private get db(): Db {
-        return this.dbOverride ?? getDb();
+        // Generic tableStorage keeps drizzle's column-name mapping and per-column
+        // mode decoding (timestamp→Date, boolean→bool) for arbitrary plugin
+        // tables — Kysely + CamelCasePlugin can't reproduce either for columns
+        // whose names aren't snake_case. Build a drizzle handle over the SAME
+        // shared libsql client so it hits the identical connection (incl. tx).
+        return this.dbOverride ?? drizzle({ client: getDbClient() });
     }
 
     private getColumns(): Record<string, AnyColumn> {
@@ -176,7 +182,7 @@ class TableStorage implements EntryStorage<EntryRecord> {
                 { idColumn: this.idCol, timestamps },
                 txDb
             );
-            return fn(txStorage, txDb);
+            return fn(txStorage, txDb as unknown as StorageDb);
         });
     }
 

@@ -6,13 +6,10 @@
  * One active token per entry: issuing replaces any existing token.
  */
 
-import { eq, and, isNull, gt, or } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { Insertable } from 'kysely';
 import { getDb } from '@/database/registry.js';
-import { entryPreviewTokensTable } from '@/database/schema';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Db = LibSQLDatabase<any>;
+import { encode } from '@/database/codec.js';
+import type { DB, Db } from '@/database/types.js';
 
 export type PreviewTokenStorage = ReturnType<typeof createPreviewTokenStorage>;
 
@@ -34,21 +31,28 @@ export function createPreviewTokenStorage(db: Db = getDb()) {
         createdBy: string | null
     ): Promise<void> {
         await db
-            .delete(entryPreviewTokensTable)
-            .where(eq(entryPreviewTokensTable.entryId, entryId));
-        await db.insert(entryPreviewTokensTable).values({
-            entryId,
-            token: tokenHash,
-            expiresAt,
-            createdBy,
-        });
+            .deleteFrom('entryPreviewTokens')
+            .where('entryId', '=', entryId)
+            .execute();
+        await db
+            .insertInto('entryPreviewTokens')
+            .values(
+                encode('entryPreviewTokens', {
+                    entryId,
+                    token: tokenHash,
+                    expiresAt,
+                    createdBy,
+                }) as unknown as Insertable<DB['entryPreviewTokens']>
+            )
+            .execute();
     }
 
     /** Remove all preview tokens for `entryId`. */
     async function revoke(entryId: string): Promise<void> {
         await db
-            .delete(entryPreviewTokensTable)
-            .where(eq(entryPreviewTokensTable.entryId, entryId));
+            .deleteFrom('entryPreviewTokens')
+            .where('entryId', '=', entryId)
+            .execute();
     }
 
     /** True if `tokenHash` is a current (non-expired) token for `entryId`. */
@@ -57,20 +61,22 @@ export function createPreviewTokenStorage(db: Db = getDb()) {
         tokenHash: string,
         now: Date
     ): Promise<boolean> {
+        const nowSeconds = Math.floor(now.getTime() / 1000);
         const rows = await db
-            .select({ id: entryPreviewTokensTable.id })
-            .from(entryPreviewTokensTable)
-            .where(
-                and(
-                    eq(entryPreviewTokensTable.entryId, entryId),
-                    eq(entryPreviewTokensTable.token, tokenHash),
-                    or(
-                        isNull(entryPreviewTokensTable.expiresAt),
-                        gt(entryPreviewTokensTable.expiresAt, now)
-                    )
-                )
+            .selectFrom('entryPreviewTokens')
+            .select('id')
+            .where((eb) =>
+                eb.and([
+                    eb('entryId', '=', entryId),
+                    eb('token', '=', tokenHash),
+                    eb.or([
+                        eb('expiresAt', 'is', null),
+                        eb('expiresAt', '>', nowSeconds),
+                    ]),
+                ])
             )
-            .limit(1);
+            .limit(1)
+            .execute();
         return rows.length > 0;
     }
 

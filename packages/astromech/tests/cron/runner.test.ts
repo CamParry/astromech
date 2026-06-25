@@ -8,12 +8,14 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { eq } from 'drizzle-orm';
+import type { Updateable } from 'kysely';
 import { Cron } from 'croner';
+import type { Kysely } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
 import { registerCronJob } from '@/cron/registry.js';
-import { cronTable } from '@/database/schema.js';
 import { onTick, runDue } from '@/cron/runner.js';
+import { encodePatch, decode } from '@/database/codec.js';
+import type { DB } from '@/database/types.js';
 import type { CronRow } from '@/database/schema.js';
 
 // Truncate to second resolution to match DB storage.
@@ -21,7 +23,7 @@ function toSecond(d: Date): number {
     return Math.floor(d.getTime() / 1000);
 }
 
-/** Assert rows has exactly one element and return it. */
+/** Assert rows has exactly one element and return it (decoded). */
 function singleRow(rows: CronRow[]): CronRow {
     expect(rows).toHaveLength(1);
     const row = rows[0];
@@ -57,8 +59,11 @@ describe('onTick / runDue', () => {
 
         await onTick(now);
 
-        const db = (await import('@/database/registry.js')).getDb();
-        const row = singleRow(await db.select().from(cronTable));
+        const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
+        const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
+        const row = singleRow(
+            rawRows.map((r) => decode('_astromech_cron', r)) as unknown as CronRow[]
+        );
         expect(row.name).toBe('test-job');
         expect(row.enabled).toBe(true);
         expect(row.schedule).toBe('* * * * *');
@@ -67,14 +72,22 @@ describe('onTick / runDue', () => {
 
         // Admin edits the schedule between ticks.
         await db
-            .update(cronTable)
-            .set({ schedule: '0 12 * * *' })
-            .where(eq(cronTable.name, 'test-job'));
+            .updateTable('_astromech_cron')
+            .set(
+                encodePatch('_astromech_cron', {
+                    schedule: '0 12 * * *',
+                }) as unknown as Updateable<DB['_astromech_cron']>
+            )
+            .where('name', '=', 'test-job')
+            .execute();
 
         const now2 = new Date('2024-06-01T00:02:00.000Z');
         await onTick(now2);
 
-        const row2 = singleRow(await db.select().from(cronTable));
+        const rawRows2 = await db.selectFrom('_astromech_cron').selectAll().execute();
+        const row2 = singleRow(
+            rawRows2.map((r) => decode('_astromech_cron', r)) as unknown as CronRow[]
+        );
         // Admin-edited schedule must survive.
         expect(row2.schedule).toBe('0 12 * * *');
     });
@@ -95,14 +108,20 @@ describe('onTick / runDue', () => {
         await onTick(new Date('2024-06-01T11:00:00.000Z'));
         callCount = 0; // reset after seed tick (it may have run)
 
-        const db = (await import('@/database/registry.js')).getDb();
+        const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
 
         // Set nextRun in the past → should run.
         const past = new Date(now.getTime() - 60_000);
         await db
-            .update(cronTable)
-            .set({ nextRun: past, lock: null })
-            .where(eq(cronTable.name, 'test-job'));
+            .updateTable('_astromech_cron')
+            .set(
+                encodePatch('_astromech_cron', {
+                    nextRun: past,
+                    lock: null,
+                }) as unknown as Updateable<DB['_astromech_cron']>
+            )
+            .where('name', '=', 'test-job')
+            .execute();
 
         await onTick(now);
         expect(callCount).toBe(1);
@@ -111,9 +130,15 @@ describe('onTick / runDue', () => {
         callCount = 0;
         const future = new Date(now.getTime() + 60_000);
         await db
-            .update(cronTable)
-            .set({ nextRun: future, lock: null })
-            .where(eq(cronTable.name, 'test-job'));
+            .updateTable('_astromech_cron')
+            .set(
+                encodePatch('_astromech_cron', {
+                    nextRun: future,
+                    lock: null,
+                }) as unknown as Updateable<DB['_astromech_cron']>
+            )
+            .where('name', '=', 'test-job')
+            .execute();
 
         await onTick(now);
         expect(callCount).toBe(0);
@@ -134,14 +159,21 @@ describe('onTick / runDue', () => {
         // Seed the row.
         await onTick(new Date('2024-06-01T11:00:00.000Z'));
 
-        const db = (await import('@/database/registry.js')).getDb();
+        const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
 
         // Make it due but disabled.
         const past = new Date(now.getTime() - 60_000);
         await db
-            .update(cronTable)
-            .set({ nextRun: past, enabled: false, lock: null })
-            .where(eq(cronTable.name, 'test-job'));
+            .updateTable('_astromech_cron')
+            .set(
+                encodePatch('_astromech_cron', {
+                    nextRun: past,
+                    enabled: false,
+                    lock: null,
+                }) as unknown as Updateable<DB['_astromech_cron']>
+            )
+            .where('name', '=', 'test-job')
+            .execute();
 
         callCount = 0;
         await onTick(now);
@@ -160,18 +192,28 @@ describe('onTick / runDue', () => {
         // First tick: seed + run (nextRun is computed from '* * * * *').
         await onTick(now);
 
-        const db = (await import('@/database/registry.js')).getDb();
+        const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
 
         // Admin changes schedule to daily midnight, and forces it due.
         const past = new Date(now.getTime() - 60_000);
         await db
-            .update(cronTable)
-            .set({ schedule: '0 0 * * *', nextRun: past, lock: null })
-            .where(eq(cronTable.name, 'test-job'));
+            .updateTable('_astromech_cron')
+            .set(
+                encodePatch('_astromech_cron', {
+                    schedule: '0 0 * * *',
+                    nextRun: past,
+                    lock: null,
+                }) as unknown as Updateable<DB['_astromech_cron']>
+            )
+            .where('name', '=', 'test-job')
+            .execute();
 
         await onTick(now);
 
-        const row = singleRow(await db.select().from(cronTable));
+        const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
+        const row = singleRow(
+            rawRows.map((r) => decode('_astromech_cron', r)) as unknown as CronRow[]
+        );
 
         // nextRun must have been recomputed using the new '0 0 * * *' schedule.
         const expectedNext = new Cron('0 0 * * *', { timezone: 'UTC' }).nextRun(now);
@@ -195,12 +237,18 @@ describe('onTick / runDue', () => {
         await runDue(new Date('2024-06-01T11:00:00.000Z'));
         callCount = 0;
 
-        const db = (await import('@/database/registry.js')).getDb();
+        const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
         const past = new Date(now.getTime() - 60_000);
         await db
-            .update(cronTable)
-            .set({ nextRun: past, lock: null })
-            .where(eq(cronTable.name, 'test-job'));
+            .updateTable('_astromech_cron')
+            .set(
+                encodePatch('_astromech_cron', {
+                    nextRun: past,
+                    lock: null,
+                }) as unknown as Updateable<DB['_astromech_cron']>
+            )
+            .where('name', '=', 'test-job')
+            .execute();
 
         // Two concurrent passes — only one should win the CAS claim.
         await Promise.all([runDue(now), runDue(now)]);
@@ -247,15 +295,21 @@ describe('onTick / runDue', () => {
         await runDue(new Date('2024-06-01T11:00:00.000Z'));
         callCount = 0;
 
-        const db = (await import('@/database/registry.js')).getDb();
+        const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
         const past = new Date(now.getTime() - 60_000);
 
         // Set lock to FUTURE expiry (claim active) → should NOT run.
         const futureLock = new Date(now.getTime() + 60_000);
         await db
-            .update(cronTable)
-            .set({ nextRun: past, lock: futureLock })
-            .where(eq(cronTable.name, 'test-job'));
+            .updateTable('_astromech_cron')
+            .set(
+                encodePatch('_astromech_cron', {
+                    nextRun: past,
+                    lock: futureLock,
+                }) as unknown as Updateable<DB['_astromech_cron']>
+            )
+            .where('name', '=', 'test-job')
+            .execute();
 
         await onTick(now);
         expect(callCount).toBe(0);
@@ -263,9 +317,15 @@ describe('onTick / runDue', () => {
         // Set lock to PAST expiry (stale claim) → should reclaim and run.
         const pastLock = new Date(now.getTime() - 60_000);
         await db
-            .update(cronTable)
-            .set({ nextRun: past, lock: pastLock })
-            .where(eq(cronTable.name, 'test-job'));
+            .updateTable('_astromech_cron')
+            .set(
+                encodePatch('_astromech_cron', {
+                    nextRun: past,
+                    lock: pastLock,
+                }) as unknown as Updateable<DB['_astromech_cron']>
+            )
+            .where('name', '=', 'test-job')
+            .execute();
 
         await onTick(now);
         expect(callCount).toBe(1);
@@ -288,12 +348,18 @@ describe('onTick / runDue', () => {
 
         // Seed + make due.
         await runDue(new Date('2024-06-01T11:00:00.000Z'));
-        const db = (await import('@/database/registry.js')).getDb();
+        const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
         const past = new Date(now.getTime() - 60_000);
         await db
-            .update(cronTable)
-            .set({ nextRun: past, lock: null })
-            .where(eq(cronTable.name, 'test-job'));
+            .updateTable('_astromech_cron')
+            .set(
+                encodePatch('_astromech_cron', {
+                    nextRun: past,
+                    lock: null,
+                }) as unknown as Updateable<DB['_astromech_cron']>
+            )
+            .where('name', '=', 'test-job')
+            .execute();
 
         // Must not throw.
         await expect(onTick(now)).resolves.toBeUndefined();
@@ -305,7 +371,10 @@ describe('onTick / runDue', () => {
         );
 
         // Row: lock cleared, nextRun advanced.
-        const row = singleRow(await db.select().from(cronTable));
+        const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
+        const row = singleRow(
+            rawRows.map((r) => decode('_astromech_cron', r)) as unknown as CronRow[]
+        );
         expect(row.lock).toBeNull();
         expect(row.nextRun).toBeInstanceOf(Date);
         expect(row.nextRun?.getTime()).toBeGreaterThan(now.getTime());
@@ -348,8 +417,11 @@ describe('onTick / runDue', () => {
 
             await onTick(now);
 
-            const db = (await import('@/database/registry.js')).getDb();
-            const row = singleRow(await db.select().from(cronTable));
+            const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
+            const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
+            const row = singleRow(
+                rawRows.map((r) => decode('_astromech_cron', r)) as unknown as CronRow[]
+            );
 
             const expectedNext = new Cron('0 0 * * *', {
                 timezone: 'America/New_York',
@@ -379,18 +451,27 @@ describe('onTick / runDue', () => {
         await runDue(new Date('2024-06-01T11:00:00.000Z'));
         callCount = 0;
 
-        const db = (await import('@/database/registry.js')).getDb();
+        const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
         const veryPast = new Date('2024-01-01T00:00:00.000Z');
         await db
-            .update(cronTable)
-            .set({ nextRun: veryPast, lock: null })
-            .where(eq(cronTable.name, 'test-job'));
+            .updateTable('_astromech_cron')
+            .set(
+                encodePatch('_astromech_cron', {
+                    nextRun: veryPast,
+                    lock: null,
+                }) as unknown as Updateable<DB['_astromech_cron']>
+            )
+            .where('name', '=', 'test-job')
+            .execute();
 
         await onTick(now);
         expect(callCount).toBe(1);
 
         // nextRun should have advanced to a future time.
-        const row = singleRow(await db.select().from(cronTable));
+        const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
+        const row = singleRow(
+            rawRows.map((r) => decode('_astromech_cron', r)) as unknown as CronRow[]
+        );
         expect(row.nextRun?.getTime()).toBeGreaterThan(now.getTime());
 
         // Second immediate tick — should NOT run again.

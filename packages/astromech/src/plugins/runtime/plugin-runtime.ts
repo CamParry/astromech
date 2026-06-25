@@ -10,7 +10,8 @@
  * `virtual:astromech/config`, so this module stays unit-testable.
  */
 
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { Kysely } from 'kysely';
+import type { DB } from '@/database/types.js';
 import type { ReactElement } from 'react';
 import type {
     AnyPluginSdkMethod,
@@ -325,7 +326,7 @@ export function createPluginContext(
     const PREFIX = `plugin/${identity.name}/`;
 
     return {
-        get db(): LibSQLDatabase {
+        get db(): Kysely<DB> {
             return getDb();
         },
         config: configView,

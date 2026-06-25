@@ -1,33 +1,21 @@
 /**
  * Built-in entry storage — the default persistence backend.
  *
- * Owns row CRUD on `entriesTable`, list filters/search/sort/pagination, slug
+ * Owns row CRUD on `entries`, list filters/search/sort/pagination, slug
  * uniquification, status/publishedAt column writes, the trash/versions/
- * translatable capability groups, locale-map enrichment, and drizzle transactions.
+ * translatable capability groups, locale-map enrichment, and Kysely transactions.
  * Policy (validation, hooks, relationships, versioning *decisions*, bulk
  * dispatch) stays in the entries service.
  *
  * No `virtual:astromech/config` import — this stays directly testable. Calls
  * `getDb()` per-op like the original data layer; `transaction` rebinds a fresh
- * instance to the drizzle tx handle.
+ * instance to the Kysely tx handle.
  */
 
-import {
-    and,
-    asc,
-    count,
-    desc,
-    eq,
-    inArray,
-    isNotNull,
-    isNull,
-    like,
-    ne,
-    or,
-} from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { ExpressionBuilder, Insertable, Updateable } from 'kysely';
 import { getDb } from '@/database/registry.js';
-import { entriesTable } from '../schema.js';
+import { encode, encodePatch, decode } from '@/database/codec.js';
+import type { DB, Db } from '@/database/types.js';
 import type { EntryRow } from '../schema.js';
 import { createVersionStorage } from './versions.js';
 import type {
@@ -36,7 +24,6 @@ import type {
     EntryVersion,
     JsonObject,
     SortOption,
-    WhereFilters,
 } from '@/types/index.js';
 import { BUILT_IN_SUPPORTS } from './capabilities.js';
 import type {
@@ -47,81 +34,101 @@ import type {
     NewEntryVersionSnapshot,
 } from './types.js';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Db = LibSQLDatabase<any>;
-
 // ============================================================================
-// Query helpers (moved verbatim from the data layer)
+// Query helpers
 // ============================================================================
 
-type DrizzleColumn =
-    | typeof entriesTable.title
-    | typeof entriesTable.status
-    | typeof entriesTable.createdAt
-    | typeof entriesTable.updatedAt
-    | typeof entriesTable.publishedAt
-    | typeof entriesTable.slug;
+const SORTABLE_FIELDS = new Set([
+    'title',
+    'status',
+    'createdAt',
+    'updatedAt',
+    'publishedAt',
+    'slug',
+]);
 
-const SORTABLE_FIELDS: Record<string, DrizzleColumn> = {
-    title: entriesTable.title,
-    status: entriesTable.status,
-    createdAt: entriesTable.createdAt,
-    updatedAt: entriesTable.updatedAt,
-    publishedAt: entriesTable.publishedAt,
-    slug: entriesTable.slug,
-};
+type OrderPair = [col: keyof DB['entries'] & string, dir: 'asc' | 'desc'];
 
-function buildOrderBy(sort?: SortOption | SortOption[]) {
-    if (!sort) return [desc(entriesTable.createdAt)];
+function buildOrderBy(sort?: SortOption | SortOption[]): OrderPair[] {
+    if (!sort) return [['createdAt', 'desc']];
 
     const sorts = Array.isArray(sort) ? sort : [sort];
-    const clauses = sorts.flatMap((s) =>
+    const clauses: OrderPair[] = sorts.flatMap((s) =>
         Object.entries(s).flatMap(([field, dir]) => {
-            const column = SORTABLE_FIELDS[field];
-            if (!column) return [];
-            return [dir === 'asc' ? asc(column) : desc(column)];
+            if (!SORTABLE_FIELDS.has(field)) return [];
+            return [[field, dir === 'asc' ? 'asc' : 'desc']] as OrderPair[];
         })
     );
 
-    return clauses.length > 0 ? clauses : [desc(entriesTable.createdAt)];
+    return clauses.length > 0 ? clauses : [['createdAt', 'desc']];
 }
 
-function buildFilterConditions(filters: WhereFilters) {
-    const conditions = [];
+function buildListWhere(params: ListParams, defaultLocale: string, types: string[]) {
+    return (eb: ExpressionBuilder<DB, 'entries'>) => {
+        const conditions = [];
 
-    for (const [key, value] of Object.entries(filters)) {
-        if (value === undefined || value === null) continue;
+        // type condition
+        const [firstType] = types;
+        if (types.length === 1 && firstType !== undefined) {
+            conditions.push(eb('type', '=', firstType));
+        } else {
+            conditions.push(eb('type', 'in', types));
+        }
 
-        if (key === '_search') {
-            conditions.push(like(entriesTable.title, `%${value as string}%`));
-        } else if (key === 'status') {
-            if (Array.isArray(value)) {
-                conditions.push(inArray(entriesTable.status, value as EntryStatus[]));
-            } else {
-                conditions.push(eq(entriesTable.status, value as EntryStatus));
-            }
-        } else if (key === 'slug') {
-            conditions.push(eq(entriesTable.slug, value as string));
-        } else if (key === 'title') {
-            conditions.push(eq(entriesTable.title, value as string));
-        } else if (key === 'locale') {
-            // Handled by buildLocaleCondition at the top level — ignore here.
-        } else if (key === 'id') {
-            const inClause = (value as { in?: unknown }).in;
-            if (Array.isArray(inClause)) {
-                conditions.push(inArray(entriesTable.id, inClause as string[]));
-            } else {
-                conditions.push(eq(entriesTable.id, value as string));
+        // Staged rows (forward versioning) are never canonical content
+        conditions.push(eb('stagedFor', 'is', null));
+
+        // trash filter
+        const trashed = params.trashed ?? false;
+        if (trashed) {
+            conditions.push(eb('deletedAt', 'is not', null));
+        } else {
+            conditions.push(eb('deletedAt', 'is', null));
+        }
+
+        // locale condition
+        const localeVal = params.locale;
+        if (localeVal !== 'all') {
+            conditions.push(eb('locale', '=', localeVal ?? defaultLocale));
+        }
+
+        // search
+        if (params.search) {
+            const term = `%${params.search}%`;
+            conditions.push(eb.or([eb('title', 'like', term), eb('slug', 'like', term)]));
+        }
+
+        // where filters
+        if (params.where) {
+            for (const [key, value] of Object.entries(params.where)) {
+                if (value === undefined || value === null) continue;
+                if (key === 'locale') continue; // handled above
+
+                if (key === '_search') {
+                    conditions.push(eb('title', 'like', `%${value as string}%`));
+                } else if (key === 'status') {
+                    if (Array.isArray(value)) {
+                        conditions.push(eb('status', 'in', value as EntryStatus[]));
+                    } else {
+                        conditions.push(eb('status', '=', value as EntryStatus));
+                    }
+                } else if (key === 'slug') {
+                    conditions.push(eb('slug', '=', value as string));
+                } else if (key === 'title') {
+                    conditions.push(eb('title', '=', value as string));
+                } else if (key === 'id') {
+                    const inClause = (value as { in?: unknown }).in;
+                    if (Array.isArray(inClause)) {
+                        conditions.push(eb('id', 'in', inClause as string[]));
+                    } else {
+                        conditions.push(eb('id', '=', value as string));
+                    }
+                }
             }
         }
-    }
 
-    return conditions;
-}
-
-function buildLocaleCondition(locale: string | 'all' | undefined, defaultLocale: string) {
-    if (locale === 'all') return null;
-    return eq(entriesTable.locale, locale ?? defaultLocale);
+        return eb.and(conditions);
+    };
 }
 
 // ============================================================================
@@ -133,18 +140,12 @@ async function populateLocales(db: Db, rows: EntryRow[]): Promise<Entry[]> {
 
     const groupIds = Array.from(new Set(rows.map((r) => r.localeGroup)));
     const siblings = await db
-        .select({
-            id: entriesTable.id,
-            locale: entriesTable.locale,
-            localeGroup: entriesTable.localeGroup,
-        })
-        .from(entriesTable)
-        .where(
-            and(
-                inArray(entriesTable.localeGroup, groupIds),
-                isNull(entriesTable.deletedAt)
-            )
-        );
+        .selectFrom('entries')
+        .select(['id', 'locale', 'localeGroup'])
+        .where((eb) =>
+            eb.and([eb('localeGroup', 'in', groupIds), eb('deletedAt', 'is', null)])
+        )
+        .execute();
 
     const byGroup = new Map<string, Record<string, string>>();
     for (const sib of siblings) {
@@ -183,11 +184,12 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
     async function transaction<T>(
         fn: (storage: EntryStorage<Entry>, db: Db) => Promise<T>
     ): Promise<T> {
-        return handle().transaction(async (tx) => {
-            const txDb = tx as unknown as Db;
-            const txStorage = createBuiltInEntryStorage({ db: txDb, defaultLocale });
-            return fn(txStorage, txDb);
-        });
+        return getDb()
+            .transaction()
+            .execute(async (trx) => {
+                const txStorage = createBuiltInEntryStorage({ db: trx, defaultLocale });
+                return fn(txStorage, trx);
+            });
     }
 
     async function uniqueSlug(
@@ -201,22 +203,24 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
         let counter = 1;
 
         while (true) {
-            const conditions = [
-                eq(entriesTable.type, type),
-                eq(entriesTable.locale, locale),
-                eq(entriesTable.slug, candidate),
-                isNull(entriesTable.deletedAt),
-                // Staged rows legitimately share their canonical's slug; they are
-                // outside the (partial) slug unique index, so ignore them here.
-                isNull(entriesTable.stagedFor),
-                ...(excludeId ? [ne(entriesTable.id, excludeId)] : []),
-            ];
-
             const existing = await db
-                .select({ id: entriesTable.id })
-                .from(entriesTable)
-                .where(and(...conditions))
-                .limit(1);
+                .selectFrom('entries')
+                .select('id')
+                .where((eb) => {
+                    const conditions = [
+                        eb('type', '=', type),
+                        eb('locale', '=', locale),
+                        eb('slug', '=', candidate),
+                        eb('deletedAt', 'is', null),
+                        // Staged rows legitimately share their canonical's slug; they are
+                        // outside the (partial) slug unique index, so ignore them here.
+                        eb('stagedFor', 'is', null),
+                        ...(excludeId ? [eb('id', '!=', excludeId)] : []),
+                    ];
+                    return eb.and(conditions);
+                })
+                .limit(1)
+                .execute();
 
             if (!existing[0]) return candidate;
 
@@ -231,67 +235,49 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
         const types = Array.isArray(typeParam)
             ? Array.from(typeParam)
             : [typeParam as string];
-        const trashed = params.trashed ?? false;
         const limit = params.limit;
         const page = params.page ?? 1;
 
-        const filterConditions = params.where ? buildFilterConditions(params.where) : [];
-        const localeCondition = buildLocaleCondition(params.locale, defaultLocale);
-        const searchCondition = params.search
-            ? or(
-                  like(entriesTable.title, `%${params.search}%`),
-                  like(entriesTable.slug, `%${params.search}%`)
-              )
-            : null;
-
-        const [firstType] = types;
-        const typeCondition =
-            types.length === 1 && firstType !== undefined
-                ? eq(entriesTable.type, firstType)
-                : inArray(entriesTable.type, types);
-
-        const conditions = [
-            typeCondition,
-            // Staged rows (forward versioning) are never canonical content; they
-            // share their canonical's slug and have their own locale group, so
-            // they must never surface in entry lists/queries.
-            isNull(entriesTable.stagedFor),
-            trashed ? isNotNull(entriesTable.deletedAt) : isNull(entriesTable.deletedAt),
-            ...(localeCondition ? [localeCondition] : []),
-            ...(searchCondition ? [searchCondition] : []),
-            ...filterConditions,
-        ];
-
-        const whereClause = and(...conditions);
-        const orderClauses = buildOrderBy(params.sort);
+        const orderPairs = buildOrderBy(params.sort);
+        const whereFn = buildListWhere(params, defaultLocale, types);
 
         if (limit === 'all') {
-            const rows = await db
-                .select()
-                .from(entriesTable)
-                .where(whereClause)
-                .orderBy(...orderClauses);
-            const data = await populateLocales(db, rows as EntryRow[]);
+            let q = db.selectFrom('entries').selectAll().where(whereFn);
+            for (const [col, dir] of orderPairs) {
+                q = q.orderBy(col, dir);
+            }
+            const rawRows = await q.execute();
+            const decodedRows = rawRows.map((r) =>
+                decode('entries', r)
+            ) as unknown as EntryRow[];
+            const data = await populateLocales(db, decodedRows);
             return { data, total: data.length };
         }
 
         const perPage = typeof limit === 'number' ? limit : 20;
         const offset = (page - 1) * perPage;
 
-        const [countResult] = await db
-            .select({ count: count() })
-            .from(entriesTable)
-            .where(whereClause);
-        const total = countResult?.count ?? 0;
+        const cr = await db
+            .selectFrom('entries')
+            .select((eb) => eb.fn.countAll<number>().as('c'))
+            .where(whereFn)
+            .executeTakeFirst();
+        const total = Number(cr?.c ?? 0);
 
-        const rows = await db
-            .select()
-            .from(entriesTable)
-            .where(whereClause)
-            .orderBy(...orderClauses)
+        let rowsQ = db
+            .selectFrom('entries')
+            .selectAll()
+            .where(whereFn)
             .limit(perPage)
             .offset(offset);
-        const data = await populateLocales(db, rows as EntryRow[]);
+        for (const [col, dir] of orderPairs) {
+            rowsQ = rowsQ.orderBy(col, dir);
+        }
+        const rawRows = await rowsQ.execute();
+        const decodedRows = rawRows.map((r) =>
+            decode('entries', r)
+        ) as unknown as EntryRow[];
+        const data = await populateLocales(db, decodedRows);
         return { data, total };
     }
 
@@ -300,142 +286,160 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
         opts?: { includeTrashed?: boolean }
     ): Promise<Entry | null> {
         const db = handle();
-        const conditions = [eq(entriesTable.id, id)];
-        if (!opts?.includeTrashed) conditions.push(isNull(entriesTable.deletedAt));
-
-        const row = await db
-            .select()
-            .from(entriesTable)
-            .where(and(...conditions))
-            .limit(1);
-
-        if (!row[0]) return null;
-        return populateLocaleSingle(db, row[0] as EntryRow);
+        let q = db.selectFrom('entries').selectAll().where('id', '=', id);
+        if (!opts?.includeTrashed) {
+            q = q.where('deletedAt', 'is', null);
+        }
+        const row = await q.limit(1).executeTakeFirst();
+        if (!row) return null;
+        return populateLocaleSingle(db, decode('entries', row) as unknown as EntryRow);
     }
 
     async function create(data: EntryWrite & { type: string }): Promise<Entry> {
         const db = handle();
-        const row = await db
-            .insert(entriesTable)
-            .values({
-                type: data.type,
-                title: data.title ?? '',
-                slug: data.slug ?? null,
-                locale: data.locale ?? defaultLocale,
-                localeGroup: data.localeGroup ?? crypto.randomUUID(),
-                fields: data.fields ?? {},
-                status: data.status ?? 'unpublished',
-                stagedFor: data.stagedFor ?? null,
-                publishedAt: data.publishedAt ?? null,
-                createdBy: data.createdBy ?? null,
-                updatedBy: data.updatedBy ?? null,
-            })
-            .returning();
-
-        const [created] = row as EntryRow[];
-        if (!created) throw new Error('Failed to create entry');
-        return populateLocaleSingle(db, created);
+        const values = {
+            type: data.type,
+            title: data.title ?? '',
+            slug: data.slug ?? null,
+            locale: data.locale ?? defaultLocale,
+            localeGroup: data.localeGroup ?? crypto.randomUUID(),
+            fields: data.fields ?? {},
+            status: data.status ?? 'unpublished',
+            stagedFor: data.stagedFor ?? null,
+            publishedAt: data.publishedAt ?? null,
+            createdBy: data.createdBy ?? null,
+            updatedBy: data.updatedBy ?? null,
+        };
+        const created = await db
+            .insertInto('entries')
+            .values(encode('entries', values) as unknown as Insertable<DB['entries']>)
+            .returningAll()
+            .executeTakeFirstOrThrow();
+        return populateLocaleSingle(
+            db,
+            decode('entries', created) as unknown as EntryRow
+        );
     }
 
     async function update(id: string, data: EntryWrite): Promise<Entry> {
         const db = handle();
-        const row = await db
-            .update(entriesTable)
-            .set({
-                title: data.title,
-                slug: data.slug,
-                fields: data.fields,
-                status: data.status,
-                publishedAt: data.publishedAt,
-                locale: data.locale,
-                localeGroup: data.localeGroup,
-                updatedBy: data.updatedBy,
-                updatedAt: new Date(),
-            })
-            .where(eq(entriesTable.id, id))
-            .returning();
-
-        const [updated] = row as EntryRow[];
-        if (!updated) throw new Error('Failed to update entry');
-        return populateLocaleSingle(db, updated);
+        const patch = {
+            title: data.title,
+            slug: data.slug,
+            fields: data.fields,
+            status: data.status,
+            publishedAt: data.publishedAt,
+            locale: data.locale,
+            localeGroup: data.localeGroup,
+            updatedBy: data.updatedBy,
+            updatedAt: new Date(),
+        };
+        const updated = await db
+            .updateTable('entries')
+            .set(encodePatch('entries', patch) as unknown as Updateable<DB['entries']>)
+            .where('id', '=', id)
+            .returningAll()
+            .executeTakeFirstOrThrow();
+        return populateLocaleSingle(
+            db,
+            decode('entries', updated) as unknown as EntryRow
+        );
     }
 
     async function del(id: string, opts?: { cascadeLocales?: boolean }): Promise<void> {
         const db = handle();
         if (opts?.cascadeLocales) {
             const existing = await db
-                .select({ localeGroup: entriesTable.localeGroup })
-                .from(entriesTable)
-                .where(eq(entriesTable.id, id))
-                .limit(1);
-            const localeGroup = existing[0]?.localeGroup;
+                .selectFrom('entries')
+                .select('localeGroup')
+                .where('id', '=', id)
+                .limit(1)
+                .executeTakeFirst();
+            const localeGroup = existing?.localeGroup;
             if (localeGroup) {
                 await db
-                    .delete(entriesTable)
-                    .where(eq(entriesTable.localeGroup, localeGroup));
+                    .deleteFrom('entries')
+                    .where('localeGroup', '=', localeGroup)
+                    .execute();
                 return;
             }
         }
-        await db.delete(entriesTable).where(eq(entriesTable.id, id));
+        await db.deleteFrom('entries').where('id', '=', id).execute();
     }
 
     const trash = {
         trash: async (id: string, opts?: { cascadeLocales?: boolean }): Promise<void> => {
             const db = handle();
-            const rows = await db
-                .select({
-                    localeGroup: entriesTable.localeGroup,
-                    deletedAt: entriesTable.deletedAt,
-                })
-                .from(entriesTable)
-                .where(eq(entriesTable.id, id))
-                .limit(1);
-            const row = rows[0];
+            const row = await db
+                .selectFrom('entries')
+                .select(['localeGroup', 'deletedAt'])
+                .where('id', '=', id)
+                .limit(1)
+                .executeTakeFirst();
             if (!row) throw new Error(`Entry '${id}' not found`);
             const now = new Date();
 
             // Idempotent: re-trashing an already-trashed entry is a no-op.
             if (row.deletedAt == null) {
                 await db
-                    .update(entriesTable)
-                    .set({ deletedAt: now })
-                    .where(eq(entriesTable.id, id));
+                    .updateTable('entries')
+                    .set(
+                        encodePatch('entries', {
+                            deletedAt: now,
+                        }) as unknown as Updateable<DB['entries']>
+                    )
+                    .where('id', '=', id)
+                    .execute();
             }
 
             if (opts?.cascadeLocales) {
                 await db
-                    .update(entriesTable)
-                    .set({ deletedAt: now })
-                    .where(
-                        and(
-                            eq(entriesTable.localeGroup, row.localeGroup),
-                            ne(entriesTable.id, id),
-                            isNull(entriesTable.deletedAt)
-                        )
-                    );
+                    .updateTable('entries')
+                    .set(
+                        encodePatch('entries', {
+                            deletedAt: now,
+                        }) as unknown as Updateable<DB['entries']>
+                    )
+                    .where((eb) =>
+                        eb.and([
+                            eb('localeGroup', '=', row.localeGroup),
+                            eb('id', '!=', id),
+                            eb('deletedAt', 'is', null),
+                        ])
+                    )
+                    .execute();
             }
         },
 
         restore: async (id: string): Promise<Entry> => {
             const db = handle();
-            const row = await db
-                .update(entriesTable)
-                .set({ deletedAt: null, updatedAt: new Date() })
-                .where(and(eq(entriesTable.id, id), isNotNull(entriesTable.deletedAt)))
-                .returning();
-
-            const [restored] = row as EntryRow[];
-            if (!restored) throw new Error('Entry not found in trash');
-            return populateLocaleSingle(db, restored);
+            const restored = await db
+                .updateTable('entries')
+                .set(
+                    encodePatch('entries', {
+                        deletedAt: null,
+                        updatedAt: new Date(),
+                    }) as unknown as Updateable<DB['entries']>
+                )
+                .where((eb) =>
+                    eb.and([eb('id', '=', id), eb('deletedAt', 'is not', null)])
+                )
+                .returningAll()
+                .executeTakeFirstOrThrow();
+            return populateLocaleSingle(
+                db,
+                decode('entries', restored) as unknown as EntryRow
+            );
         },
 
         emptyTrash: async (type: string): Promise<void> => {
             const db = handle();
             await db
-                .delete(entriesTable)
-                .where(
-                    and(eq(entriesTable.type, type), isNotNull(entriesTable.deletedAt))
-                );
+                .deleteFrom('entries')
+                .where((eb) =>
+                    eb.and([eb('type', '=', type), eb('deletedAt', 'is not', null)])
+                )
+                .execute();
         },
     };
 
@@ -470,34 +474,44 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
     const staging = {
         getByCanonical: async (canonicalId: string): Promise<Entry | null> => {
             const db = handle();
-            const rows = await db
-                .select()
-                .from(entriesTable)
-                .where(
-                    and(
-                        eq(entriesTable.stagedFor, canonicalId),
-                        isNull(entriesTable.deletedAt)
-                    )
+            const row = await db
+                .selectFrom('entries')
+                .selectAll()
+                .where((eb) =>
+                    eb.and([
+                        eb('stagedFor', '=', canonicalId),
+                        eb('deletedAt', 'is', null),
+                    ])
                 )
-                .limit(1);
-            if (!rows[0]) return null;
-            return populateLocaleSingle(db, rows[0] as EntryRow);
+                .limit(1)
+                .executeTakeFirst();
+            if (!row) return null;
+            return populateLocaleSingle(
+                db,
+                decode('entries', row) as unknown as EntryRow
+            );
         },
     };
 
     const translatable = {
         siblings: async (localeGroup: string, excludeId?: string): Promise<Entry[]> => {
             const db = handle();
-            const conditions = [
-                eq(entriesTable.localeGroup, localeGroup),
-                isNull(entriesTable.deletedAt),
-                ...(excludeId ? [ne(entriesTable.id, excludeId)] : []),
-            ];
-            const rows = await db
-                .select()
-                .from(entriesTable)
-                .where(and(...conditions));
-            return populateLocales(db, rows as EntryRow[]);
+            const rawRows = await db
+                .selectFrom('entries')
+                .selectAll()
+                .where((eb) => {
+                    const conditions = [
+                        eb('localeGroup', '=', localeGroup),
+                        eb('deletedAt', 'is', null),
+                        ...(excludeId ? [eb('id', '!=', excludeId)] : []),
+                    ];
+                    return eb.and(conditions);
+                })
+                .execute();
+            const decodedRows = rawRows.map((r) =>
+                decode('entries', r)
+            ) as unknown as EntryRow[];
+            return populateLocales(db, decodedRows);
         },
 
         propagateFields: async (
@@ -507,25 +521,33 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
         ): Promise<void> => {
             const db = handle();
             const siblings = await db
-                .select({ id: entriesTable.id, fields: entriesTable.fields })
-                .from(entriesTable)
-                .where(
-                    and(
-                        eq(entriesTable.localeGroup, localeGroup),
-                        ne(entriesTable.id, excludeId),
-                        isNull(entriesTable.deletedAt)
-                    )
-                );
+                .selectFrom('entries')
+                .select(['id', 'fields'])
+                .where((eb) =>
+                    eb.and([
+                        eb('localeGroup', '=', localeGroup),
+                        eb('id', '!=', excludeId),
+                        eb('deletedAt', 'is', null),
+                    ])
+                )
+                .execute();
 
             for (const sibling of siblings) {
-                const mergedFields = {
-                    ...((sibling.fields as JsonObject) ?? {}),
-                    ...values,
-                };
+                const existingFields: JsonObject =
+                    typeof sibling.fields === 'string'
+                        ? (JSON.parse(sibling.fields) as JsonObject)
+                        : {};
+                const mergedFields = { ...existingFields, ...values };
                 await db
-                    .update(entriesTable)
-                    .set({ fields: mergedFields, updatedAt: new Date() })
-                    .where(eq(entriesTable.id, sibling.id));
+                    .updateTable('entries')
+                    .set(
+                        encodePatch('entries', {
+                            fields: mergedFields,
+                            updatedAt: new Date(),
+                        }) as unknown as Updateable<DB['entries']>
+                    )
+                    .where('id', '=', sibling.id)
+                    .execute();
             }
         },
     };

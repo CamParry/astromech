@@ -1,8 +1,8 @@
-import { eq, desc, and, sql } from 'drizzle-orm';
-import { notificationsTable } from './schema.js';
+import type { Insertable } from 'kysely';
 import type { NotificationRow } from './schema.js';
-import { usersTable } from '@/users/schema.js';
 import { getDb } from '@/database/registry.js';
+import type { DB } from '@/database/types.js';
+import { encode, decode } from '@/database/codec.js';
 import type { Notification, NotifyInput } from '@/types/index.js';
 
 // ============================================================================
@@ -34,26 +34,33 @@ export async function notify(input: NotifyInput): Promise<void> {
         userIds = [input.target.user];
     } else if ('role' in input.target) {
         const rows = await db
-            .select({ id: usersTable.id })
-            .from(usersTable)
-            .where(eq(usersTable.roleSlug, input.target.role));
+            .selectFrom('users')
+            .select('id')
+            .where('roleSlug', '=', input.target.role)
+            .execute();
         userIds = rows.map((r) => r.id);
     } else {
-        const rows = await db.select({ id: usersTable.id }).from(usersTable);
+        const rows = await db.selectFrom('users').select('id').execute();
         userIds = rows.map((r) => r.id);
     }
 
     if (userIds.length === 0) return;
 
-    await db.insert(notificationsTable).values(
-        userIds.map((userId) => ({
-            userId,
-            type: input.type,
-            title: input.title,
-            message: input.message,
-            href: input.href ?? null,
-        }))
-    );
+    await db
+        .insertInto('notifications')
+        .values(
+            userIds.map(
+                (userId) =>
+                    encode('notifications', {
+                        userId,
+                        type: input.type,
+                        title: input.title,
+                        message: input.message,
+                        href: input.href ?? null,
+                    }) as unknown as Insertable<DB['notifications']>
+            )
+        )
+        .execute();
 }
 
 // ============================================================================
@@ -63,35 +70,36 @@ export async function notify(input: NotifyInput): Promise<void> {
 export const notificationsRepo = {
     async list(userId: string): Promise<NotificationRow[]> {
         const db = getDb();
-        return db
-            .select()
-            .from(notificationsTable)
-            .where(eq(notificationsTable.userId, userId))
-            .orderBy(desc(notificationsTable.createdAt));
+        const rows = await db
+            .selectFrom('notifications')
+            .selectAll()
+            .where('userId', '=', userId)
+            .orderBy('createdAt', 'desc')
+            .execute();
+        return rows.map((r) => decode('notifications', r) as unknown as NotificationRow);
     },
 
     async count(userId: string): Promise<number> {
         const db = getDb();
-        const rows = await db
-            .select({ count: sql<number>`count(*)` })
-            .from(notificationsTable)
-            .where(eq(notificationsTable.userId, userId));
-        return rows[0]?.count ?? 0;
+        const row = await db
+            .selectFrom('notifications')
+            .select((eb) => eb.fn.countAll<number>().as('c'))
+            .where('userId', '=', userId)
+            .executeTakeFirst();
+        return Number(row?.c ?? 0);
     },
 
     async dismiss(userId: string, id: string): Promise<void> {
         const db = getDb();
         await db
-            .delete(notificationsTable)
-            .where(
-                and(eq(notificationsTable.id, id), eq(notificationsTable.userId, userId))
-            );
+            .deleteFrom('notifications')
+            .where('id', '=', id)
+            .where('userId', '=', userId)
+            .execute();
     },
 
     async dismissAll(userId: string): Promise<void> {
         const db = getDb();
-        await db
-            .delete(notificationsTable)
-            .where(eq(notificationsTable.userId, userId));
+        await db.deleteFrom('notifications').where('userId', '=', userId).execute();
     },
 };

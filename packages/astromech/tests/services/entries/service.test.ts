@@ -12,11 +12,10 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { defineHook } from '@/index.js';
-import { eq } from 'drizzle-orm';
 import { createTestDb, registerTestPlugins, setupTestConfig } from '@tests/harness.js';
 import { Astromech } from '@/transport/local/index.js';
 import { getDb } from '@/database/registry.js';
-import { entriesTable, relationshipsTable } from '@/database/schema.js';
+import { decode } from '@/database/codec.js';
 import type { Entry, PluginDefinition } from '@/types/index.js';
 
 const api = Astromech.entries;
@@ -481,10 +480,12 @@ describe('trash / restore / delete / emptyTrash', () => {
         await api.trash({ type: 'post', id: e.id });
 
         const trashedRows = await getDb()
-            .select()
-            .from(entriesTable)
-            .where(eq(entriesTable.id, e.id));
-        expect(trashedRows[0]?.deletedAt).toBeInstanceOf(Date);
+            .selectFrom('entries')
+            .selectAll()
+            .where('id', '=', e.id)
+            .execute();
+        const decoded = trashedRows.map((r) => decode('entries', r));
+        expect(decoded[0]?.deletedAt).toBeInstanceOf(Date);
 
         const restored = await api.restore({ type: 'post', id: e.id });
         expect(restored.deletedAt).toBeNull();
@@ -503,15 +504,17 @@ describe('trash / restore / delete / emptyTrash', () => {
         await api.delete({ type: 'post', id: src.id });
 
         const rows = await getDb()
-            .select()
-            .from(entriesTable)
-            .where(eq(entriesTable.id, src.id));
+            .selectFrom('entries')
+            .selectAll()
+            .where('id', '=', src.id)
+            .execute();
         expect(rows).toHaveLength(0);
 
         const rels = await getDb()
-            .select()
-            .from(relationshipsTable)
-            .where(eq(relationshipsTable.sourceId, src.id));
+            .selectFrom('relationships')
+            .selectAll()
+            .where('sourceId', '=', src.id)
+            .execute();
         expect(rels).toHaveLength(0);
     });
 
@@ -521,7 +524,7 @@ describe('trash / restore / delete / emptyTrash', () => {
         await api.trash({ type: 'post', id: a.id });
         await api.emptyTrash({ type: 'post' });
 
-        const all = await getDb().select().from(entriesTable);
+        const all = await getDb().selectFrom('entries').selectAll().execute();
         expect(all.map((r) => r.id)).toEqual([b.id]);
     });
 });
@@ -567,9 +570,10 @@ describe('duplicate', () => {
         });
         const dup = await api.duplicate({ type: 'post', id: src.id });
         const rels = await getDb()
-            .select()
-            .from(relationshipsTable)
-            .where(eq(relationshipsTable.sourceId, dup.id));
+            .selectFrom('relationships')
+            .selectAll()
+            .where('sourceId', '=', dup.id)
+            .execute();
         expect(rels.map((r) => r.targetId)).toEqual([target.id]);
     });
 });
@@ -590,9 +594,10 @@ describe('relationships', () => {
             fields: { related: [target.id] },
         });
         const rels = await getDb()
-            .select()
-            .from(relationshipsTable)
-            .where(eq(relationshipsTable.sourceId, src.id));
+            .selectFrom('relationships')
+            .selectAll()
+            .where('sourceId', '=', src.id)
+            .execute();
         expect(rels).toHaveLength(1);
         expect(rels[0]?.name).toBe('related');
         expect(rels[0]?.targetId).toBe(target.id);
@@ -730,7 +735,7 @@ describe('hooks', () => {
         await expect(api.create({ type: 'post', title: 'Nope' })).rejects.toThrow(
             'blocked'
         );
-        const rows = await getDb().select().from(entriesTable);
+        const rows = await getDb().selectFrom('entries').selectAll().execute();
         expect(rows).toHaveLength(0);
     });
 });

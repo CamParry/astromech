@@ -5,12 +5,12 @@
  * are visible to the runner at request/scheduled event time.
  */
 
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { Kysely } from 'kysely';
+import type { DB } from '@/database/types.js';
 import type { ResolvedConfig, SchedulerDriver } from '@/types/index.js';
 
 export type CronContext = {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    db: LibSQLDatabase<any>;
+    db: Kysely<DB>;
     config: ResolvedConfig;
 };
 

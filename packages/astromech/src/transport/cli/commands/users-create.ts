@@ -1,7 +1,9 @@
 import { defineCommand } from 'citty';
+import type { Insertable } from 'kysely';
 import { loadConfig } from '../config.js';
 import { getDb } from '@/database/registry.js';
-import { usersTable, accountsTable } from '@/database/schema.js';
+import { encode } from '@/database/codec.js';
+import type { DB } from '@/database/types.js';
 
 export default defineCommand({
     meta: { name: 'users:create', description: 'Create a new user' },
@@ -37,25 +39,35 @@ export default defineCommand({
         const accountId = crypto.randomUUID();
         const hashedPassword = await hashPassword(password);
 
-        await db.insert(usersTable).values({
-            id: userId,
-            email,
-            name,
-            emailVerified: true,
-            roleSlug,
-            createdAt: now,
-            updatedAt: now,
-        });
+        await db
+            .insertInto('users')
+            .values(
+                encode('users', {
+                    id: userId,
+                    email,
+                    name,
+                    emailVerified: true,
+                    roleSlug,
+                    createdAt: now,
+                    updatedAt: now,
+                }) as unknown as Insertable<DB['users']>
+            )
+            .execute();
 
-        await db.insert(accountsTable).values({
-            id: accountId,
-            accountId: userId,
-            providerId: 'credential',
-            userId,
-            password: hashedPassword,
-            createdAt: now,
-            updatedAt: now,
-        });
+        await db
+            .insertInto('accounts')
+            .values(
+                encode('accounts', {
+                    id: accountId,
+                    accountId: userId,
+                    providerId: 'credential',
+                    userId,
+                    password: hashedPassword,
+                    createdAt: now,
+                    updatedAt: now,
+                }) as unknown as Insertable<DB['accounts']>
+            )
+            .execute();
 
         console.log(`User created: ${email} (${userId})`);
     },

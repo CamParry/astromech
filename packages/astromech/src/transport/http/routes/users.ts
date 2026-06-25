@@ -12,7 +12,6 @@
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { eq, count } from 'drizzle-orm';
 import { Astromech } from '@/transport/local/index.js';
 import {
     badRequest,
@@ -24,7 +23,6 @@ import {
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import { withPermissions } from '@/policies/with-permissions.js';
 import { getDb } from '@/database/registry.js';
-import { usersTable } from '@/database/schema.js';
 import { createUserSchema, updateUserSchema, usersDescriptors } from '@/users/index.js';
 import type { JsonObject, UserQueryParams } from '@/types/index.js';
 
@@ -135,11 +133,11 @@ router.put('/:id', async (c) => {
             if (targetUser && targetUser.roleSlug === 'admin' && roleSlug !== 'admin') {
                 const db = getDb();
                 const result = await db
-                    .select({ count: count() })
-                    .from(usersTable)
-                    .where(eq(usersTable.roleSlug, 'admin'))
-                    .get();
-                const adminCount = result?.count ?? 0;
+                    .selectFrom('users')
+                    .select((eb) => eb.fn.countAll<number>().as('c'))
+                    .where('roleSlug', '=', 'admin')
+                    .executeTakeFirst();
+                const adminCount = Number(result?.c ?? 0);
                 if (adminCount <= 1) {
                     return badRequest(c, 'Cannot remove the last administrator');
                 }
@@ -173,11 +171,11 @@ router.delete('/:id', async (c) => {
         if (targetUser && targetUser.roleSlug === 'admin') {
             const db = getDb();
             const result = await db
-                .select({ count: count() })
-                .from(usersTable)
-                .where(eq(usersTable.roleSlug, 'admin'))
-                .get();
-            const adminCount = result?.count ?? 0;
+                .selectFrom('users')
+                .select((eb) => eb.fn.countAll<number>().as('c'))
+                .where('roleSlug', '=', 'admin')
+                .executeTakeFirst();
+            const adminCount = Number(result?.c ?? 0);
             if (adminCount <= 1) {
                 return badRequest(c, 'Cannot delete the last administrator');
             }

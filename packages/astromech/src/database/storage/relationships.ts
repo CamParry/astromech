@@ -1,21 +1,15 @@
 /**
  * Relationship storage — shared cross-domain data access for entry/user/media
  * relationships. Composed by the services that own those resources (entries,
- * users, media). The only place drizzle touches the relationships table.
+ * users, media). The only place Kysely touches the relationships table.
  */
 
-import { eq, and } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { Insertable } from 'kysely';
 import { getDb } from '@/database/registry.js';
-import {
-    relationshipsTable,
-    type RelationshipRow,
-    type NewRelationshipRow,
-} from '@/database/schema';
+import type { DB, Db } from '@/database/types.js';
+import { encode, decode } from '@/database/codec.js';
+import type { RelationshipRow, NewRelationshipRow } from '@/database/schema';
 import type { ResourceType } from '@/types/index.js';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Db = LibSQLDatabase<any>;
 
 export type RelationshipStorage = ReturnType<typeof createRelationshipStorage>;
 
@@ -39,15 +33,19 @@ export function createRelationshipStorage(db: Db = getDb()) {
             position: data.position ?? 0,
         };
 
-        const result = await db
-            .insert(relationshipsTable)
-            .values(relationship)
-            .returning();
-        const created = result[0];
-        if (!created) {
-            throw new Error('Failed to create relationship: insert returned no row');
-        }
-        return created;
+        const created = await db
+            .insertInto('relationships')
+            .values(
+                encode(
+                    'relationships',
+                    relationship as unknown as Record<string, unknown>
+                ) as unknown as Insertable<DB['relationships']>
+            )
+            .returningAll()
+            .executeTakeFirstOrThrow(
+                () => new Error('Failed to create relationship: insert returned no row')
+            );
+        return decode('relationships', created) as unknown as RelationshipRow;
     }
 
     /** Get all relationships for a source resource. */
@@ -56,20 +54,18 @@ export function createRelationshipStorage(db: Db = getDb()) {
         sourceType: ResourceType,
         name?: string
     ): Promise<RelationshipRow[]> {
-        const conditions = [
-            eq(relationshipsTable.sourceId, sourceId),
-            eq(relationshipsTable.sourceType, sourceType),
-        ];
+        let query = db
+            .selectFrom('relationships')
+            .selectAll()
+            .where('sourceId', '=', sourceId)
+            .where('sourceType', '=', sourceType);
 
         if (name) {
-            conditions.push(eq(relationshipsTable.name, name));
+            query = query.where('name', '=', name);
         }
 
-        return db
-            .select()
-            .from(relationshipsTable)
-            .where(and(...conditions))
-            .orderBy(relationshipsTable.position);
+        const rows = await query.orderBy('position', 'asc').execute();
+        return rows.map((r) => decode('relationships', r) as unknown as RelationshipRow);
     }
 
     /** Get all relationships pointing to a target resource. */
@@ -77,16 +73,14 @@ export function createRelationshipStorage(db: Db = getDb()) {
         targetId: string,
         targetType: ResourceType
     ): Promise<RelationshipRow[]> {
-        return db
-            .select()
-            .from(relationshipsTable)
-            .where(
-                and(
-                    eq(relationshipsTable.targetId, targetId),
-                    eq(relationshipsTable.targetType, targetType)
-                )
-            )
-            .orderBy(relationshipsTable.position);
+        const rows = await db
+            .selectFrom('relationships')
+            .selectAll()
+            .where('targetId', '=', targetId)
+            .where('targetType', '=', targetType)
+            .orderBy('position', 'asc')
+            .execute();
+        return rows.map((r) => decode('relationships', r) as unknown as RelationshipRow);
     }
 
     /** Update relationship positions (for ordered relations). */
@@ -100,16 +94,13 @@ export function createRelationshipStorage(db: Db = getDb()) {
             const targetId = orderedTargetIds[i];
             if (targetId === undefined) continue;
             await db
-                .update(relationshipsTable)
+                .updateTable('relationships')
                 .set({ position: i })
-                .where(
-                    and(
-                        eq(relationshipsTable.sourceId, sourceId),
-                        eq(relationshipsTable.sourceType, sourceType),
-                        eq(relationshipsTable.name, name),
-                        eq(relationshipsTable.targetId, targetId)
-                    )
-                );
+                .where('sourceId', '=', sourceId)
+                .where('sourceType', '=', sourceType)
+                .where('name', '=', name)
+                .where('targetId', '=', targetId)
+                .execute();
         }
     }
 
@@ -121,15 +112,12 @@ export function createRelationshipStorage(db: Db = getDb()) {
         targetId: string
     ): Promise<void> {
         await db
-            .delete(relationshipsTable)
-            .where(
-                and(
-                    eq(relationshipsTable.sourceId, sourceId),
-                    eq(relationshipsTable.sourceType, sourceType),
-                    eq(relationshipsTable.name, name),
-                    eq(relationshipsTable.targetId, targetId)
-                )
-            );
+            .deleteFrom('relationships')
+            .where('sourceId', '=', sourceId)
+            .where('sourceType', '=', sourceType)
+            .where('name', '=', name)
+            .where('targetId', '=', targetId)
+            .execute();
     }
 
     /** Delete all relationships for a source. */
@@ -138,16 +126,16 @@ export function createRelationshipStorage(db: Db = getDb()) {
         sourceType: ResourceType,
         name?: string
     ): Promise<void> {
-        const conditions = [
-            eq(relationshipsTable.sourceId, sourceId),
-            eq(relationshipsTable.sourceType, sourceType),
-        ];
+        let query = db
+            .deleteFrom('relationships')
+            .where('sourceId', '=', sourceId)
+            .where('sourceType', '=', sourceType);
 
         if (name) {
-            conditions.push(eq(relationshipsTable.name, name));
+            query = query.where('name', '=', name);
         }
 
-        await db.delete(relationshipsTable).where(and(...conditions));
+        await query.execute();
     }
 
     /**
@@ -159,13 +147,10 @@ export function createRelationshipStorage(db: Db = getDb()) {
         targetType: ResourceType
     ): Promise<void> {
         await db
-            .delete(relationshipsTable)
-            .where(
-                and(
-                    eq(relationshipsTable.targetId, targetId),
-                    eq(relationshipsTable.targetType, targetType)
-                )
-            );
+            .deleteFrom('relationships')
+            .where('targetId', '=', targetId)
+            .where('targetType', '=', targetType)
+            .execute();
     }
 
     /**

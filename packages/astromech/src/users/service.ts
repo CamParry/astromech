@@ -1,8 +1,9 @@
-import { eq, and, asc, desc, like, or, count } from 'drizzle-orm';
-import type { AnyColumn } from 'drizzle-orm';
+import type { Insertable, Updateable, ExpressionBuilder } from 'kysely';
 import { z } from 'zod';
-import { usersTable } from './schema.js';
+import type { usersTable } from './schema.js';
 import { getDb } from '@/database/registry.js';
+import type { DB } from '@/database/types.js';
+import { encode, encodePatch, decode } from '@/database/codec.js';
 import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import type {
     JsonObject,
@@ -31,25 +32,30 @@ function toUser(row: typeof usersTable.$inferSelect): User {
     };
 }
 
-const SORTABLE_FIELDS: Record<string, AnyColumn> = {
-    name: usersTable.name,
-    email: usersTable.email,
-    createdAt: usersTable.createdAt,
-    updatedAt: usersTable.updatedAt,
-    roleSlug: usersTable.roleSlug,
-};
+const SORTABLE_COLS = ['name', 'email', 'createdAt', 'updatedAt', 'roleSlug'] as const;
+type SortableCol = (typeof SORTABLE_COLS)[number];
 
-function buildOrderBy(sort?: SortOption | SortOption[]) {
-    if (!sort) return [asc(usersTable.name)];
+function isSortableCol(s: string): s is SortableCol {
+    return (SORTABLE_COLS as readonly string[]).includes(s);
+}
+
+function buildOrderBy(
+    sort?: SortOption | SortOption[]
+): { col: SortableCol; dir: 'asc' | 'desc' }[] {
+    if (!sort) return [{ col: 'name', dir: 'asc' }];
     const sorts = Array.isArray(sort) ? sort : [sort];
     const clauses = sorts.flatMap((s) =>
         Object.entries(s).flatMap(([field, dir]) => {
-            const col = SORTABLE_FIELDS[field];
-            if (!col) return [];
-            return [dir === 'asc' ? asc(col) : desc(col)];
+            if (!isSortableCol(field)) return [];
+            return [{ col: field, dir: dir as 'asc' | 'desc' }];
         })
     );
-    return clauses.length > 0 ? clauses : [asc(usersTable.name)];
+    return clauses.length > 0 ? clauses : [{ col: 'name', dir: 'asc' }];
+}
+
+function buildUsersWhere(eb: ExpressionBuilder<DB, 'users'>, search?: string) {
+    if (!search) return undefined;
+    return eb.or([eb('name', 'like', `%${search}%`), eb('email', 'like', `%${search}%`)]);
 }
 
 export const usersApi = {
@@ -57,46 +63,54 @@ export const usersApi = {
         const db = getDb();
         const page = params?.page ?? 1;
         const limit = params?.limit;
-
-        const conditions = [];
-        if (params?.search) {
-            conditions.push(
-                or(
-                    like(usersTable.name, `%${params.search}%`),
-                    like(usersTable.email, `%${params.search}%`)
-                )
-            );
-        }
-
-        const where = conditions.length > 0 ? and(...conditions) : undefined;
         const orderClauses = buildOrderBy(params?.sort);
 
+        function applyOrder<Q extends { orderBy(col: string, dir: string): Q }>(q: Q): Q {
+            return orderClauses.reduce((acc, { col, dir }) => acc.orderBy(col, dir), q);
+        }
+
         if (limit === 'all') {
-            const rows = await db
-                .select()
-                .from(usersTable)
-                .where(where)
-                .orderBy(...orderClauses);
-            return { data: rows.map(toUser), pagination: null };
+            const rows = await applyOrder(
+                db
+                    .selectFrom('users')
+                    .selectAll()
+                    .where((eb) => buildUsersWhere(eb, params?.search) ?? eb.lit(true))
+            ).execute();
+            return {
+                data: rows.map((r) =>
+                    toUser(
+                        decode('users', r) as unknown as typeof usersTable.$inferSelect
+                    )
+                ),
+                pagination: null,
+            };
         }
 
         const perPage = typeof limit === 'number' ? limit : 20;
         const offset = (page - 1) * perPage;
 
-        const [rows, countRows] = await Promise.all([
-            db
-                .select()
-                .from(usersTable)
-                .where(where)
-                .orderBy(...orderClauses)
+        const [rows, countRow] = await Promise.all([
+            applyOrder(
+                db
+                    .selectFrom('users')
+                    .selectAll()
+                    .where((eb) => buildUsersWhere(eb, params?.search) ?? eb.lit(true))
+            )
                 .limit(perPage)
-                .offset(offset),
-            db.select({ count: count() }).from(usersTable).where(where),
+                .offset(offset)
+                .execute(),
+            db
+                .selectFrom('users')
+                .select((eb) => [eb.fn.countAll<number>().as('c')])
+                .where((eb) => buildUsersWhere(eb, params?.search) ?? eb.lit(true))
+                .executeTakeFirst(),
         ]);
 
-        const total = countRows[0]?.count ?? 0;
+        const total = Number(countRow?.c ?? 0);
         return {
-            data: rows.map(toUser),
+            data: rows.map((r) =>
+                toUser(decode('users', r) as unknown as typeof usersTable.$inferSelect)
+            ),
             pagination: {
                 page,
                 limit: perPage,
@@ -108,13 +122,15 @@ export const usersApi = {
 
     async get(id: string): Promise<User | null> {
         const db = getDb();
-        const user = await db
-            .select()
-            .from(usersTable)
-            .where(eq(usersTable.id, id))
-            .limit(1);
-        const row = user[0];
-        return row ? toUser(row) : null;
+        const row = await db
+            .selectFrom('users')
+            .selectAll()
+            .where('id', '=', id)
+            .limit(1)
+            .executeTakeFirst();
+        return row
+            ? toUser(decode('users', row) as unknown as typeof usersTable.$inferSelect)
+            : null;
     },
 
     async create(data: {
@@ -125,17 +141,24 @@ export const usersApi = {
     }): Promise<User> {
         const validated = validate(createUserSchema, data);
         const db = getDb();
-        const user = await db
-            .insert(usersTable)
-            .values({
-                email: validated.email,
-                name: validated.name,
-                ...(validated.roleSlug !== undefined && { roleSlug: validated.roleSlug }),
-            })
-            .returning();
+        const created = await db
+            .insertInto('users')
+            .values(
+                encode('users', {
+                    email: validated.email,
+                    name: validated.name,
+                    ...(validated.roleSlug !== undefined && {
+                        roleSlug: validated.roleSlug,
+                    }),
+                }) as unknown as Insertable<DB['users']>
+            )
+            .returningAll()
+            .executeTakeFirst();
 
-        if (user.length > 0 && user[0]) {
-            return toUser(user[0]);
+        if (created) {
+            return toUser(
+                decode('users', created) as unknown as typeof usersTable.$inferSelect
+            );
         }
 
         throw new Error('Failed to create user');
@@ -152,24 +175,31 @@ export const usersApi = {
     ): Promise<User> {
         const validatedData = validate(updateUserSchema, data);
         const db = getDb();
-        const user = await db
-            .update(usersTable)
-            .set({
-                ...(validatedData.name !== undefined && { name: validatedData.name }),
-                ...(validatedData.email !== undefined && { email: validatedData.email }),
-                ...(validatedData.fields !== undefined && {
-                    fields: validatedData.fields as JsonObject,
-                }),
-                ...(validatedData.roleSlug !== undefined && {
-                    roleSlug: validatedData.roleSlug,
-                }),
-                updatedAt: new Date(),
-            })
-            .where(eq(usersTable.id, id))
-            .returning();
+        const updated = await db
+            .updateTable('users')
+            .set(
+                encodePatch('users', {
+                    ...(validatedData.name !== undefined && { name: validatedData.name }),
+                    ...(validatedData.email !== undefined && {
+                        email: validatedData.email,
+                    }),
+                    ...(validatedData.fields !== undefined && {
+                        fields: validatedData.fields as JsonObject,
+                    }),
+                    ...(validatedData.roleSlug !== undefined && {
+                        roleSlug: validatedData.roleSlug,
+                    }),
+                    updatedAt: new Date(),
+                }) as unknown as Updateable<DB['users']>
+            )
+            .where('id', '=', id)
+            .returningAll()
+            .executeTakeFirst();
 
-        if (user.length > 0 && user[0]) {
-            return toUser(user[0]);
+        if (updated) {
+            return toUser(
+                decode('users', updated) as unknown as typeof usersTable.$inferSelect
+            );
         }
 
         throw new Error('Failed to update user');
@@ -178,6 +208,6 @@ export const usersApi = {
     async delete(id: string): Promise<void> {
         const db = getDb();
         await createRelationshipStorage(db).deleteByUser(id);
-        await db.delete(usersTable).where(eq(usersTable.id, id));
+        await db.deleteFrom('users').where('id', '=', id).execute();
     },
 };

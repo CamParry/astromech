@@ -14,7 +14,8 @@
 
 /// <reference types="@cloudflare/workers-types" />
 
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { Kysely } from 'kysely';
+import type { DB } from '@/database/types.js';
 
 type D1DriverOptions = {
     bindingName?: string;
@@ -23,7 +24,7 @@ type D1DriverOptions = {
 export function d1Driver(_options?: D1DriverOptions) {
     return {
         type: 'd1' as const,
-        getInstance(): LibSQLDatabase {
+        getInstance(): Kysely<DB> {
             // D1 requires per-request initialization from Cloudflare bindings.
             // Full D1 support will be wired up when the Cloudflare Workers
             // deployment target is implemented.

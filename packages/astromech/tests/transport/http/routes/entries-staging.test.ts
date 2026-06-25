@@ -16,23 +16,15 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { rmSync } from 'node:fs';
-import { drizzle } from 'drizzle-orm/libsql';
-import { migrate } from 'drizzle-orm/libsql/migrator';
-import { setupTestConfig, makeTestConfig } from '@tests/harness.js';
-import { setDb } from '@/database/registry.js';
+import { setupTestConfig, makeTestConfig, createFileTestDb } from '@tests/harness.js';
 import { entries as api } from '@/entries/service.js';
 import { createEntriesRouter } from '@/transport/http/routes/entries.js';
 import { rootEntryPermission } from '@/permissions/index.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import type { ResolvedConfig, Role, User } from '@/types/index.js';
-
-const MIGRATIONS_FOLDER = fileURLToPath(
-    new URL('../../../../../../apps/demo/drizzle', import.meta.url)
-);
 
 const fakeUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;
 
@@ -52,9 +44,7 @@ let resolved: ResolvedConfig;
 beforeEach(async () => {
     dbCounter += 1;
     dbPath = join(tmpdir(), `astromech-staging-http-${process.pid}-${dbCounter}.db`);
-    const db = drizzle({ connection: { url: `file:${dbPath}` } });
-    await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
-    setDb(db);
+    await createFileTestDb(`file:${dbPath}`);
 
     const cfg = makeTestConfig();
     if (cfg.entries.post) cfg.entries.post.staging = true; // versioning on + staging on

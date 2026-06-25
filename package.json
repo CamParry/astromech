@@ -22,7 +22,6 @@
         "test:run": "npm run test:run -w astromech",
         "db:generate": "npm run db:generate -w astromech-demo",
         "db:init": "npm run db:init -w astromech-demo",
-        "db:push": "npm run db:push -w astromech",
         "db:seed": "npm run db:seed -w astromech",
         "db:seed:demo": "tsx apps/demo/seed.ts",
         "changeset": "changeset",

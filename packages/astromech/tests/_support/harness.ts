@@ -12,12 +12,14 @@
  * required for the entry flows — `createTestUser` is provided for completeness.
  */
 
-import { fileURLToPath } from 'node:url';
-import { drizzle } from 'drizzle-orm/libsql';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { migrate } from 'drizzle-orm/libsql/migrator';
-import { setDb } from '@/database/registry.js';
-import { usersTable } from '@/database/schema.js';
+import { createClient } from '@libsql/client';
+import { Kysely, CamelCasePlugin } from 'kysely';
+import type { Insertable } from 'kysely';
+import { LibsqlDialect } from '@libsql/kysely-libsql';
+import { setDb, setDbClient } from '@/database/registry.js';
+import { migrateToLatest } from '@/database/migrator.js';
+import { encode, decode } from '@/database/codec.js';
+import type { DB } from '@/database/types.js';
 import type { UserRow } from '@/database/schema.js';
 import { resolveConfig } from '@/kernel/config-resolver.js';
 import { setCliConfig } from '@/transport/cli/virtual-config-shim.js';
@@ -37,24 +39,47 @@ import type {
 // every harness-based test, before any registerPlugins call below.
 wireEntryAccess();
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Db = LibSQLDatabase<any>;
+type Db = Kysely<DB>;
 
-// Migrations now live in apps/demo/drizzle. From packages/astromech/tests/_support/
-// go up four levels to the repo root, then into apps/demo/drizzle.
-const MIGRATIONS_FOLDER = fileURLToPath(
-    new URL('../../../../apps/demo/drizzle', import.meta.url)
-);
+/**
+ * Build a Kysely instance over a libsql `url`, register it (+ its raw client)
+ * globally, and apply the baseline migration. The app-owned baseline provider
+ * lives outside this package's rootDir, so it is imported dynamically by URL
+ * (vitest resolves the .ts) to avoid pulling apps/demo into the tsconfig project.
+ */
+async function buildTestDb(url: string): Promise<Db> {
+    const client = createClient({ url });
+    const db = new Kysely<DB>({
+        // `@libsql/kysely-libsql` pins an older `@libsql/core` Client type; the
+        // runtime client is compatible (see the libsql driver).
+        dialect: new LibsqlDialect({ client: client as never }),
+        plugins: [new CamelCasePlugin()],
+    });
+    setDb(db);
+    setDbClient(client);
+    const { baselineProvider } = await import(
+        new URL('../../../../apps/demo/drizzle/baseline.ts', import.meta.url).href
+    );
+    await migrateToLatest(db, baselineProvider);
+    return db;
+}
 
 /**
  * Create a fresh in-memory database, migrate it, and register it globally.
- * Returns the drizzle handle (already the active `getDb()` instance).
+ * Returns the Kysely handle (already the active `getDb()` instance).
  */
 export async function createTestDb(): Promise<Db> {
-    const db = drizzle({ connection: { url: ':memory:' } });
-    await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
-    setDb(db);
-    return db;
+    return buildTestDb(':memory:');
+}
+
+/**
+ * Like {@link createTestDb} but against a temp FILE db (e.g. `file:/tmp/x.db`).
+ * Tests that read results committed inside a storage transaction must use this:
+ * on a `:memory:` db a committed transaction poisons the base connection
+ * (post-commit reads throw "no such table").
+ */
+export async function createFileTestDb(url: string): Promise<Db> {
+    return buildTestDb(url);
 }
 
 const noopStorage: StorageDriver = {
@@ -78,7 +103,7 @@ const noopStorage: StorageDriver = {
 
 const noopDriver: DatabaseDriver = {
     type: 'test',
-    getInstance(): Db {
+    getInstance(): Kysely<DB> {
         throw new Error('test driver getInstance should not be called');
     },
 };
@@ -197,15 +222,17 @@ export async function createTestUser(
     db: Db,
     overrides: Partial<UserRow> = {}
 ): Promise<UserRow> {
-    const rows = await db
-        .insert(usersTable)
-        .values({
-            email: overrides.email ?? `user-${crypto.randomUUID()}@test.dev`,
-            name: overrides.name ?? 'Test User',
-            ...overrides,
-        })
-        .returning();
-    const user = rows[0];
-    if (!user) throw new Error('failed to insert test user');
-    return user;
+    const row = await db
+        .insertInto('users')
+        .values(
+            encode('users', {
+                email: overrides.email ?? `user-${crypto.randomUUID()}@test.dev`,
+                name: overrides.name ?? 'Test User',
+                ...overrides,
+            }) as unknown as Insertable<DB['users']>
+        )
+        .returningAll()
+        .executeTakeFirst();
+    if (!row) throw new Error('failed to insert test user');
+    return decode('users', row) as unknown as UserRow;
 }

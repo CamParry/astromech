@@ -8,9 +8,13 @@
 
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
+import type { Updateable } from 'kysely';
+import type { Kysely } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
 import { registerCronJob } from '@/cron/registry.js';
 import { cronRouter } from '@/transport/http/routes/cron.js';
+import { encodePatch } from '@/database/codec.js';
+import type { DB } from '@/database/types.js';
 
 // Mock resolveSessionUser so tests control the session branch without a real
 // Better Auth stack.
@@ -90,18 +94,23 @@ async function seedDueJob(): Promise<{ ran: boolean }> {
     });
 
     const { getDb } = await import('@/database/registry.js');
-    const { cronTable } = await import('@/database/schema.js');
-    const { eq } = await import('drizzle-orm');
     const { onTick } = await import('@/cron/runner.js');
 
     // Seed the row (initial nextRun will be future).
     await onTick(new Date('2024-01-01T00:00:00.000Z'));
 
     // Force nextRun into the past so the poke tick fires the handler.
-    await getDb()
-        .update(cronTable)
-        .set({ nextRun: new Date('2023-01-01T00:00:00.000Z'), lock: null })
-        .where(eq(cronTable.name, 'probe'));
+    const db = getDb() as Kysely<DB>;
+    await db
+        .updateTable('_astromech_cron')
+        .set(
+            encodePatch('_astromech_cron', {
+                nextRun: new Date('2023-01-01T00:00:00.000Z'),
+                lock: null,
+            }) as unknown as Updateable<DB['_astromech_cron']>
+        )
+        .where('name', '=', 'probe')
+        .execute();
 
     return ref;
 }
