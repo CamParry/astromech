@@ -31,7 +31,9 @@ export const entries = defineTable(
         }),
         // Self-reference (forward versioning). Annotated thunk breaks the
         // circular inference, mirroring drizzle's AnySQLiteColumn pattern.
-        stagedFor: col.reference((): TableDescriptor => entries, { onDelete: 'cascade' }),
+        stagedFor: col.reference((): TableDescriptor => entries, {
+            onDelete: 'no action',
+        }),
         publishedAt: col.timestamp(),
         deletedAt: col.timestamp(),
         createdAt: col.timestamp({ notNull: true, defaultNow: true }),
@@ -73,20 +75,14 @@ export const entryVersions = defineTable(
     ({ index }) => [index('idx_versions_entry', ['entryId', 'versionNumber'])]
 );
 
-export const entryPreviewTokens = defineTable(
-    'entry_preview_tokens',
-    ({ col }) => ({
-        id: col.id(),
-        entryId: col.reference(() => entries, { notNull: true, onDelete: 'cascade' }),
-        token: col.text({ notNull: true, unique: true }),
-        expiresAt: col.timestamp(),
-        createdAt: col.timestamp({ notNull: true, defaultNow: true }),
-        createdBy: col.reference('users'),
-    }),
-    ({ index }) => [
-        index('entry_preview_tokens_token_unique', ['token'], { unique: true }),
-    ]
-);
+export const entryPreviewTokens = defineTable('entry_preview_tokens', ({ col }) => ({
+    id: col.id(),
+    entryId: col.reference(() => entries, { notNull: true, onDelete: 'cascade' }),
+    token: col.text({ notNull: true, unique: true }),
+    expiresAt: col.timestamp(),
+    createdAt: col.timestamp({ notNull: true, defaultNow: true }),
+    createdBy: col.reference('users'),
+}));
 
 export type EntryRow = TableSelect<typeof entries>;
 export type NewEntryRow = TableInsert<typeof entries>;

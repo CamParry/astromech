@@ -1,11 +1,18 @@
 /**
  * Hand-authored Kysely baseline migration.
  *
- * Squashes the 15 historical drizzle-kit migrations into ONE baseline that
- * reproduces today's schema exactly: snake_case DDL, INTEGER unix-seconds
- * timestamps, TEXT json, INTEGER 0/1 booleans, identical SQL DEFAULTs, indexes
- * and foreign keys. Derived by replaying every `drizzle/*.sql` migration into a
- * fresh SQLite db and dumping `sqlite_master`.
+ * The 9 descriptor-backed tables (`roles`, `entries`, `entry_versions`,
+ * `entry_preview_tokens`, `media`, `settings`, `notifications`,
+ * `relationships`, `_astromech_cron`) are **emitter-generated** (step 3):
+ * their statements are `emitTableStatements()` output for each table's
+ * `defineTable` descriptor (`packages/astromech/src/database/ddl.ts`), pasted
+ * verbatim — a parity test asserts the two never drift. The 4 better-auth
+ * tables (`users`, `sessions`, `accounts`, `verifications`) and the 2 plugin
+ * tables (`plugin_redirects_redirects`, `plugin_backups_runs`) are NOT
+ * descriptor-backed and remain hand-authored: snake_case DDL, INTEGER
+ * unix-seconds timestamps, TEXT json, INTEGER 0/1 booleans, identical SQL
+ * DEFAULTs, indexes and foreign keys, derived by replaying every historical
+ * `drizzle/*.sql` migration into a fresh SQLite db and dumping `sqlite_master`.
  *
  * Raw `sql` is used for every statement so the active `CamelCasePlugin` never
  * rewrites identifiers. Static provider object (not `FileMigrationProvider`) so
@@ -105,14 +112,15 @@ async function up(db: Kysely<unknown>): Promise<void> {
             \`slug\` text,
             \`title\` text NOT NULL,
             \`fields\` text,
-            \`status\` text DEFAULT 'unpublished' NOT NULL,
+            \`status\` text DEFAULT 'unpublished' NOT NULL CHECK (\`status\` IN ('unpublished', 'published', 'scheduled')),
+            \`staged_for\` text,
             \`published_at\` text,
             \`deleted_at\` text,
             \`created_at\` text NOT NULL,
             \`updated_at\` text NOT NULL,
             \`created_by\` text,
             \`updated_by\` text,
-            \`staged_for\` text REFERENCES entries(id),
+            FOREIGN KEY (\`staged_for\`) REFERENCES \`entries\`(\`id\`) ON UPDATE no action ON DELETE no action,
             FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action,
             FOREIGN KEY (\`updated_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
         )
@@ -136,7 +144,7 @@ async function up(db: Kysely<unknown>): Promise<void> {
     await sql`CREATE UNIQUE INDEX \`entries_locale_group_locale_unique\` ON \`entries\` (\`locale_group\`,\`locale\`)`.execute(
         db
     );
-    await sql`CREATE UNIQUE INDEX \`entries_type_locale_slug_unique\` ON \`entries\` (\`type\`,\`locale\`,\`slug\`) WHERE "entries"."staged_for" is null`.execute(
+    await sql`CREATE UNIQUE INDEX \`entries_type_locale_slug_unique\` ON \`entries\` (\`type\`,\`locale\`,\`slug\`) WHERE staged_for IS NULL`.execute(
         db
     );
 
@@ -150,7 +158,7 @@ async function up(db: Kysely<unknown>): Promise<void> {
             \`slug\` text,
             \`fields\` text,
             \`relations\` text,
-            \`status\` text,
+            \`status\` text CHECK (\`status\` IN ('unpublished', 'published', 'scheduled')),
             \`created_at\` text NOT NULL,
             \`created_by\` text,
             FOREIGN KEY (\`entry_id\`) REFERENCES \`entries\`(\`id\`) ON UPDATE no action ON DELETE cascade,
@@ -234,10 +242,10 @@ async function up(db: Kysely<unknown>): Promise<void> {
         CREATE TABLE \`relationships\` (
             \`id\` text PRIMARY KEY NOT NULL,
             \`source_id\` text NOT NULL,
-            \`source_type\` text NOT NULL,
+            \`source_type\` text NOT NULL CHECK (\`source_type\` IN ('entry', 'user', 'media')),
             \`name\` text NOT NULL,
             \`target_id\` text NOT NULL,
-            \`target_type\` text NOT NULL,
+            \`target_type\` text NOT NULL CHECK (\`target_type\` IN ('entry', 'user', 'media')),
             \`position\` integer DEFAULT 0 NOT NULL,
             \`created_at\` text NOT NULL
         )
