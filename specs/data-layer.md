@@ -71,6 +71,30 @@ Full build plan in `/tmp/astromech-step2-definetable-handoff.md`. The non-obviou
 - **Where-clause date literals flip to `toISOString()`** for tier-1 tables (ISO is fixed-width → lexicographic compare works). Audit `entries/storage/maintenance.ts`, `preview-tokens.ts`, `cron/runner.ts` (cron is tier-1).
 - **Delete core Drizzle `*Table` objects for the 9** (keep auth + plugin objects); repoint seed scripts to Kysely+codec; `$inferSelect` row types become `TableSelect<typeof x>` keeping the same export names.
 
+### Step 4 — locked implementation decisions (resolved 2026-07-11)
+
+Locks open specifics #4, #5, #6, #8, #11.
+
+**#4 Journal/snapshot format** — app-owned `apps/demo/migrations/` (rename the misleading `drizzle/` dir; delete the dead drizzle-kit `*.sql` + `meta/`):
+
+- `journal.json` — `{ version, dialect, entries: [{ idx, tag, when }] }`. Ordering is by `idx` ALONE (`when` informational — drizzle-kit's silent non-ascending-`when` skip bug must not be reproducible).
+- `snapshot.json` — ONE latest snapshot (what the next generate diffs against). No per-migration snapshot history (that existed for drizzle's rename-resolver, which we deleted). No `id`/`prevId` hash chain — divergent parallel generates surface as a `snapshot.json` merge conflict + the CI no-new-migration gate.
+- Migrations are **TS, not .sql**: `NNNN_<tag>.ts` exporting `up(db)` with raw `` sql`…` `` statements (baseline's existing style) — one file shape for generated schema migrations AND hand-authored data migrations. Generated `index.ts` statically imports all and exports the `MigrationProvider` (Workers-safe, spec #9). **No `down()`** — forward-only.
+- **Baseline is not 100% descriptor-generated:** the 4 better-auth + 2 plugin tables have no descriptors; `0000_baseline.ts` keeps a hand-authored "foreign tables" section the generator passes through untouched (descriptors own only the 9; DDL-only auth descriptors rejected — second source of truth better-auth doesn't honour).
+
+**#5 SQLite rebuild details:**
+
+- **Fast-path** (native SQLite DDL) ONLY for: `CREATE TABLE` (new), `DROP TABLE`, `ALTER TABLE ADD COLUMN` (nullable or NOT NULL+literal-default), `CREATE INDEX`/`DROP INDEX`. **Everything else rebuilds** (column drop/retype/nullability/default/enum-CHECK change, FK change, PK change). SQLite 3.35 `DROP COLUMN` deliberately unused — fails on indexed/CHECKed columns.
+- **No self-managed tx**: Kysely `Migrator` already wraps each migration in a transaction. Rebuild = `PRAGMA defer_foreign_keys = true` (tx-scoped, auto-resets) → `CREATE __new_<table>` → `INSERT INTO __new_<table> (…) SELECT … FROM <table>` → `DROP TABLE` → `RENAME TO` → recreate ALL of the table's indexes from the new snapshot.
+- **Column mapping**: intersection of old/new matched by snake_case name; dropped omitted; added rely on `DEFAULT`. nullable→NOT NULL with literal default copies as `COALESCE(col, <default>)` (backfills NULLs).
+- **Triggers/views unmanaged**, documented as such.
+
+**#6 Validation rules** — hard ERRORS (guaranteed fail/nonsense): add NOT NULL column w/o SQL-literal default to an EXISTING table (new tables exempt); flip existing column to NOT NULL w/o literal default; index naming an unknown column; duplicate index name across schema. (No FK-target-exists check: descriptor targets exist by construction; string targets are trusted foreign tables, e.g. `users`.) Loud WARNINGS (data-dependent, generate proceeds): drop table/column; enum narrowed (CHECK may reject rows); new/changed unique index on existing table; column type change (SQLite copies as-is).
+
+**#8 CLI repoint** — `db:generate`: load config → build snapshot from core descriptors → diff vs `migrations/snapshot.json` → write `NNNN_<tag>.ts` (`--name` arg, default `migration`) + regenerate `index.ts` + update snapshot/journal; no-op prints "no changes". `db:init`: import `<cwd>/migrations/index.ts` provider → Kysely `Migrator` (replaces hard-coded `drizzle/baseline.ts`).
+
+**#11 Drift gate** — (a) parity test generalised: DB built via full migration chain vs DB built from `emitTableStatements()` per descriptor → identical `sqlite_master` for the 9; (b) "generate produces no new migration" as a vitest test (diff of current descriptors vs committed snapshot = zero ops) so CI gets it for free.
+
 ---
 
 ## 3. Authoring API — LOCKED (Q1–Q4)
@@ -255,7 +279,7 @@ upsert(data, { target?, set? }): Promise<T>    // default conflict target = PK
 
 ## 9. OPEN specifics still to refine (before/while implementing Feature 1 steps 2–4)
 
-Grilled & locked so far: #1 (column-builder API), #2 (write API — Feature 2), #3 (where DSL — Feature 2). Remaining: 4. Exact `snapshot.json` schema + journal format (trim drizzle-kit's). 5. SQLite rebuild generator details (`defer_foreign_keys`, `__new_` naming, index/trigger recreation, `INSERT…SELECT` col mapping). 6. Full generate-time validation rule set (NOT NULL→literal-default; what else). 7. Dialect seam: `driver.sqlDialect` tag + `createKyselyDialect()`; config selects driver: `sqlite({url})` / `turso({url,authToken})` / `d1({binding})` / `postgres({url})` / `neon({url})`. 8. Migration CLI repoint: `db:generate` (drizzle-kit → homegrown), `db:init` (→ Kysely Migrator). Files: `transport/cli/commands/`. 9. Descriptor registration/discovery — static imports (Workers bundler can't do dynamic discovery; EmDash `StaticMigrationProvider` pattern). 10. Scoped plugin factory: `definePlugin({ alias, schema: ({table,col}) => … })`; plugin-owned journal gen/apply; `purge`; installed-plugin tracking. 11. Drift gate: build-two-ways (run-all-migrations vs descriptor-CREATE-DDL) assert identical; + CI "generate produces no new migration" assertion.
+Grilled & locked so far: #1 (column-builder API), #2 (write API — Feature 2), #3 (where DSL — Feature 2), **#4 #5 #6 #8 #11 (step 4 — see "Step 4 — locked implementation decisions")**. Remaining: 7. Dialect seam: `driver.sqlDialect` tag + `createKyselyDialect()`; config selects driver: `sqlite({url})` / `turso({url,authToken})` / `d1({binding})` / `postgres({url})` / `neon({url})`. 9. Descriptor registration/discovery — static imports (Workers bundler can't do dynamic discovery; EmDash `StaticMigrationProvider` pattern); step 4 uses a static core-descriptor list, full story with plugins at step 5. 10. Scoped plugin factory: `definePlugin({ alias, schema: ({table,col}) => … })`; plugin-owned journal gen/apply; `purge`; installed-plugin tracking.
 
 ---
 

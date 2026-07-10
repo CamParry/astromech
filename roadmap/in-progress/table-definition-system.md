@@ -10,16 +10,16 @@ Feature 2 (the ergonomic `findOne`/`findMany`/`populate` storage wrapper) is spl
 
 ### Step 1 — One-for-one Drizzle → Kysely _(DONE — committed `e2a0cbc` on `feat/data-layer-step1-kysely`; all bullets below shipped)_
 
-- [ ] Hand-write the Kysely `DB` interface mirroring the 13 core tables (+ plugin tables) — _done: `database/types.ts`_
-- [ ] Construct a Kysely instance (`CamelCasePlugin`) in the libsql driver; keep `getDb()/setDb()` + add shared-`client` registry; keep `DatabaseDriver` shape
-- [ ] Rewrite all storage queries to Kysely behind unchanged `createXStorage(db = getDb())` signatures
-- [ ] Replicate Drizzle column behaviours 1:1: **unix-SECONDS** INTEGER timestamps → `Date`, JSON parse/stringify, boolean 0/1 — _done: `database/codec.ts`_ (format change deferred to step 2)
-- [ ] Port transactions to `db.transaction().execute(async (trx) => …)`
-- [ ] better-auth → its built-in Kysely adapter over the shared client (plural/snake_case mapping)
-- [ ] Port the **backups** plugin's direct queries to Kysely (redirects = pure tableStorage; seo/menus/rating untouched)
-- [ ] Drop `drizzle-kit` + `apps/demo/drizzle` journal; hand-author one Kysely baseline migration (raw `CREATE TABLE`s); `db:init` → Kysely `Migrator`
-- [ ] Update test harness DB setup (`tests/_support/harness.ts`) to Kysely
-- [ ] Drop `drizzle-kit`; **keep `drizzle-orm` installed** AND its `*Table` schema objects (seed + tableStorage introspection + plugin authoring need them until step 5)
+- [x] Hand-write the Kysely `DB` interface mirroring the 13 core tables (+ plugin tables) — _done: `database/types.ts`_
+- [x] Construct a Kysely instance (`CamelCasePlugin`) in the libsql driver; keep `getDb()/setDb()` + add shared-`client` registry; keep `DatabaseDriver` shape
+- [x] Rewrite all storage queries to Kysely behind unchanged `createXStorage(db = getDb())` signatures
+- [x] Replicate Drizzle column behaviours 1:1: **unix-SECONDS** INTEGER timestamps → `Date`, JSON parse/stringify, boolean 0/1 — _done: `database/codec.ts`_ (format change deferred to step 2)
+- [x] Port transactions to `db.transaction().execute(async (trx) => …)`
+- [x] better-auth → its built-in Kysely adapter over the shared client (plural/snake_case mapping)
+- [x] Port the **backups** plugin's direct queries to Kysely (redirects = pure tableStorage; seo/menus/rating untouched)
+- [x] Drop `drizzle-kit` + `apps/demo/drizzle` journal; hand-author one Kysely baseline migration (raw `CREATE TABLE`s); `db:init` → Kysely `Migrator`
+- [x] Update test harness DB setup (`tests/_support/harness.ts`) to Kysely
+- [x] Drop `drizzle-kit`; **keep `drizzle-orm` installed** AND its `*Table` schema objects (seed + tableStorage introspection + plugin authoring need them until step 5)
 - **→ current implementation handoff: `/tmp/astromech-step1-impl-handoff.md`** (supersedes the original `astromech-step1-drizzle-to-kysely-handoff.md` with the corrected/locked decisions)
 
 ### Step 2 — Table definitions _(DONE — committed `aeefe75` on `feat/data-layer-step2-definetable`)_
