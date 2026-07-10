@@ -1,12 +1,13 @@
 /**
- * Baseline ↔ descriptor DDL parity — the pre-step-4 drift gate.
+ * Migration-chain ↔ descriptor DDL parity — the drift gate.
  *
- * Builds two SQLite databases: one via the app's hand-authored baseline
- * migration (`apps/demo/drizzle/baseline.ts`), one by executing
- * `emitTableStatements()` for the same 9 `defineTable` descriptors directly.
- * Asserts their `sqlite_master` rows (CREATE TABLE / CREATE INDEX SQL,
- * whitespace-normalized) are identical for those 9 tables, so the two never
- * silently drift apart.
+ * Builds two SQLite databases: one via `apps/demo/migrations`' full
+ * `migrationProvider` chain (`migrateToLatest`, run by `createTestDb`), one by
+ * executing `emitTableStatements()` for the same 9 `defineTable` descriptors
+ * (`CORE_TABLES`) directly. Asserts their `sqlite_master` rows (CREATE TABLE /
+ * CREATE INDEX SQL, whitespace-normalized) are identical for those 9 tables,
+ * so the committed migration chain and the descriptors it was generated from
+ * never silently drift apart.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -15,25 +16,9 @@ import { Kysely, sql } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { createTestDb } from '@tests/harness.js';
 import { emitTableStatements } from '@/database/ddl.js';
-import { roles } from '@/users/schema.js';
-import { entries, entryVersions, entryPreviewTokens } from '@/entries/schema.js';
-import { media } from '@/media/schema.js';
-import { settings } from '@/settings/schema.js';
-import { notifications } from '@/notifications/schema.js';
-import { relationships, cron } from '@/database/schema.js';
+import { CORE_TABLES } from '@/database/schema.js';
 
-const DESCRIPTOR_TABLES = [
-    roles,
-    entries,
-    entryVersions,
-    entryPreviewTokens,
-    media,
-    settings,
-    notifications,
-    relationships,
-    cron,
-];
-const TABLE_NAMES = DESCRIPTOR_TABLES.map((table) => table.name);
+const TABLE_NAMES = CORE_TABLES.map((table) => table.name);
 
 type MasterRow = { name: string; tblName: string; sql: string | null };
 
@@ -46,7 +31,7 @@ async function buildEmitterDb(): Promise<Kysely<unknown>> {
     const db = new Kysely<unknown>({
         dialect: new LibsqlDialect({ client: client as never }),
     });
-    for (const table of DESCRIPTOR_TABLES) {
+    for (const table of CORE_TABLES) {
         for (const statement of emitTableStatements(table, 'sqlite')) {
             await sql.raw(statement).execute(db);
         }
@@ -68,24 +53,24 @@ async function masterRows<DB>(
     return rows;
 }
 
-describe('baseline ↔ descriptor DDL parity', () => {
+describe('migration chain ↔ descriptor DDL parity', () => {
     it('produces identical CREATE TABLE statements for the 9 descriptor-backed tables', async () => {
-        const baselineDb = await createTestDb();
+        const migratedDb = await createTestDb();
         const emitterDb = await buildEmitterDb();
 
-        const baselineTables = await masterRows(baselineDb, 'table');
+        const migratedTables = await masterRows(migratedDb, 'table');
         const emitterTables = await masterRows(emitterDb, 'table');
 
         expect(
-            baselineTables.map((r) => ({ name: r.name, sql: normalize(r.sql) }))
+            migratedTables.map((r) => ({ name: r.name, sql: normalize(r.sql) }))
         ).toEqual(emitterTables.map((r) => ({ name: r.name, sql: normalize(r.sql) })));
     });
 
     it('produces identical index sets for the 9 descriptor-backed tables', async () => {
-        const baselineDb = await createTestDb();
+        const migratedDb = await createTestDb();
         const emitterDb = await buildEmitterDb();
 
-        const baselineIndexes = await masterRows(baselineDb, 'index');
+        const migratedIndexes = await masterRows(migratedDb, 'index');
         const emitterIndexes = await masterRows(emitterDb, 'index');
 
         const shape = (rows: MasterRow[]) =>
@@ -95,6 +80,6 @@ describe('baseline ↔ descriptor DDL parity', () => {
                 sql: normalize(r.sql),
             }));
 
-        expect(shape(baselineIndexes)).toEqual(shape(emitterIndexes));
+        expect(shape(migratedIndexes)).toEqual(shape(emitterIndexes));
     });
 });

@@ -75,14 +75,14 @@ export async function runMigrations(logger: {
     error: (msg: string) => void;
 }): Promise<void> {
     try {
-        // Resolve the app-owned baseline provider from the app's CWD (where
+        // Resolve the app-owned migration provider from the app's CWD (where
         // `astro dev` / `astro build` runs). db:init is the primary migration
         // path; this is belt-and-suspenders, so a failed import is swallowed.
-        const baselineUrl = pathToFileURL(
-            resolve(process.cwd(), 'drizzle/baseline.ts')
+        const migrationsUrl = pathToFileURL(
+            resolve(process.cwd(), 'migrations/index.ts')
         ).href;
-        const { baselineProvider } = await import(baselineUrl);
-        await migrateToLatest(getDb(), baselineProvider);
+        const { migrationProvider } = await import(migrationsUrl);
+        await migrateToLatest(getDb(), migrationProvider);
         logger.info('Astromech database migrations applied');
     } catch (err) {
         logger.error(

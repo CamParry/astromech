@@ -39,13 +39,13 @@ Scope = **our 9 tables only** (`roles, entries, entry_versions, entry_preview_to
 - [x] Admin metadata emit — `database/admin-meta.ts` (projects to existing `CellKind`/`FieldType` vocab; consumer is step 5's tableStorage replacement)
 - [x] Baseline's 9 descriptor-backed sections replaced with emitter output + `sqlite_master` parity test (pre-step-4 drift gate); `stagedFor` FK aligned to NO ACTION; seed fixed (stale `media.url` key, `draft` → `unpublished`) — old db had masked both
 
-### Step 4 — Migration diffing
+### Step 4 — Migration diffing _(DONE — on `feat/data-layer-step4-migrations`)_
 
-- [ ] snapshot + diff → DDL (additive first, then SQLite full-rebuild)
-- [ ] Generate-time validation errors (NOT NULL → literal default, etc.)
-- [ ] CLI repoint: `db:generate` → homegrown generator
-- [ ] Drift gate (build-two-ways parity + "generate produces no new migration" CI assertion)
-- [ ] Regenerate baseline from descriptors; delete the hand-written step-1 baseline
+- [x] snapshot + diff → DDL (additive fast-path first, then SQLite full-rebuild) — `database/diff.ts`, rendering reuses `database/ddl.ts`'s `renderCreateTable`/`renderCreateIndex` via `database/migration-render.ts`
+- [x] Generate-time validation errors (NOT NULL → literal default, unknown-column index, duplicate index name) + loud warnings (drop table/column, enum narrowed, new/changed unique index, column type change)
+- [x] CLI repoint: `db:generate` → homegrown generator (`database/generator.ts`); `db:init` reads `<app>/migrations/index.ts`'s `migrationProvider`
+- [x] Drift gate: migration-chain ↔ descriptor `sqlite_master` parity test (`tests/db/baseline-ddl-parity.test.ts`) + "generate produces no new migration" vitest (`tests/db/drift.test.ts`)
+- [x] Regenerated app-owned `apps/demo/migrations/` (renamed from `drizzle/`; `0000_baseline.ts` is the one hand-authored entry — the 9 descriptor sections stay emitter-output, the 4 auth + 2 plugin tables stay hand-authored "foreign tables"); deleted the old drizzle-kit `*.sql` + `meta/`
 
 ### Step 5 — Scoped plugin factory
 

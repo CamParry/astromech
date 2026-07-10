@@ -1,27 +1,32 @@
 /**
  * Hand-authored Kysely baseline migration.
  *
+ * File layout is now generator-owned (`astromech db:generate` — see
+ * `database/generator.ts`): `NNNN_<tag>.ts` exporting `up(db)`, listed in
+ * `journal.json`, imported statically by `index.ts`. This file is `0000`, the
+ * one entry the generator did not write.
+ *
  * The 9 descriptor-backed tables (`roles`, `entries`, `entry_versions`,
  * `entry_preview_tokens`, `media`, `settings`, `notifications`,
- * `relationships`, `_astromech_cron`) are **emitter-generated** (step 3):
- * their statements are `emitTableStatements()` output for each table's
+ * `relationships`, `_astromech_cron`) are **emitter-generated**: their
+ * statements are `emitTableStatements()` output for each table's
  * `defineTable` descriptor (`packages/astromech/src/database/ddl.ts`), pasted
  * verbatim — a parity test asserts the two never drift. The 4 better-auth
  * tables (`users`, `sessions`, `accounts`, `verifications`) and the 2 plugin
- * tables (`plugin_redirects_redirects`, `plugin_backups_runs`) are NOT
- * descriptor-backed and remain hand-authored: snake_case DDL, INTEGER
- * unix-seconds timestamps, TEXT json, INTEGER 0/1 booleans, identical SQL
- * DEFAULTs, indexes and foreign keys, derived by replaying every historical
- * `drizzle/*.sql` migration into a fresh SQLite db and dumping `sqlite_master`.
+ * tables (`plugin_redirects_redirects`, `plugin_backups_runs`) have no
+ * descriptor and are the hand-authored "foreign tables" section the generator
+ * passes through untouched: snake_case DDL, INTEGER unix-seconds timestamps,
+ * TEXT json, INTEGER 0/1 booleans, identical SQL DEFAULTs, indexes and foreign
+ * keys, derived by replaying every historical `drizzle/*.sql` migration into a
+ * fresh SQLite db and dumping `sqlite_master`.
  *
  * Raw `sql` is used for every statement so the active `CamelCasePlugin` never
- * rewrites identifiers. Static provider object (not `FileMigrationProvider`) so
- * it is Workers-safe. Step 4 replaces this with the homegrown generator.
+ * rewrites identifiers.
  */
 
-import { sql, type Kysely, type MigrationProvider } from 'kysely';
+import { sql, type Kysely } from 'kysely';
 
-async function up(db: Kysely<unknown>): Promise<void> {
+export async function up(db: Kysely<unknown>): Promise<void> {
     // ── roles ──────────────────────────────────────────────────────────────
     await sql`
         CREATE TABLE \`roles\` (
@@ -297,9 +302,3 @@ async function up(db: Kysely<unknown>): Promise<void> {
         )
     `.execute(db);
 }
-
-export const baselineProvider: MigrationProvider = {
-    async getMigrations() {
-        return { '0000_baseline': { up } };
-    },
-};

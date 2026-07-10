@@ -1,11 +1,14 @@
 /**
  * In-memory test harness for the entry data layer.
  *
- * `createTestDb` spins up a libsql `:memory:` database, applies the package
- * migrations from `/drizzle`, and registers it via `setDb` so SDK modules
- * (which call `getDb()` per-op) hit it. `setupTestConfig` resolves a small but
- * representative config and pushes it onto the CLI config shim, which the
- * vitest alias maps `virtual:astromech/config` onto.
+ * `createTestDb` spins up a libsql `:memory:` database, applies
+ * `apps/demo/migrations`' full migration chain, and registers it via `setDb`
+ * so SDK modules (which call `getDb()` per-op) hit it. Running the real
+ * migration chain (rather than a throwaway test-only schema) means every
+ * harness-based test also exercises the generated `migrationProvider`.
+ * `setupTestConfig` resolves a small but representative config and pushes it
+ * onto the CLI config shim, which the vitest alias maps
+ * `virtual:astromech/config` onto.
  *
  * FK enforcement: libsql enables `PRAGMA foreign_keys` by default. Entry
  * inserts never set `createdBy`/`updatedBy` (both nullable), so no user row is
@@ -43,9 +46,10 @@ type Db = Kysely<DB>;
 
 /**
  * Build a Kysely instance over a libsql `url`, register it (+ its raw client)
- * globally, and apply the baseline migration. The app-owned baseline provider
- * lives outside this package's rootDir, so it is imported dynamically by URL
- * (vitest resolves the .ts) to avoid pulling apps/demo into the tsconfig project.
+ * globally, and apply the full migration chain. The app-owned migration
+ * provider lives outside this package's rootDir, so it is imported
+ * dynamically by URL (vitest resolves the .ts) to avoid pulling apps/demo
+ * into the tsconfig project.
  */
 async function buildTestDb(url: string): Promise<Db> {
     const client = createClient({ url });
@@ -57,10 +61,10 @@ async function buildTestDb(url: string): Promise<Db> {
     });
     setDb(db);
     setDbClient(client);
-    const { baselineProvider } = await import(
-        new URL('../../../../apps/demo/drizzle/baseline.ts', import.meta.url).href
+    const { migrationProvider } = await import(
+        new URL('../../../../apps/demo/migrations/index.ts', import.meta.url).href
     );
-    await migrateToLatest(db, baselineProvider);
+    await migrateToLatest(db, migrationProvider);
     return db;
 }
 

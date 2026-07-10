@@ -3,9 +3,9 @@
  *
  * Thin wrapper over Kysely's `Migrator` that runs a `MigrationProvider` to the
  * latest migration and throws (surfacing the underlying error) if any step
- * fails. The app supplies the provider — a single hand-authored baseline today
- * (`apps/demo/drizzle/baseline.ts`); step 4's homegrown generator will produce
- * providers going forward.
+ * fails. The app supplies the provider — `<app>/migrations/index.ts`'s
+ * generated `migrationProvider` (`database/generator.ts` writes it; the
+ * hand-authored `0000_baseline` is its one non-generated entry).
  */
 
 import { Migrator, type Kysely, type MigrationProvider } from 'kysely';

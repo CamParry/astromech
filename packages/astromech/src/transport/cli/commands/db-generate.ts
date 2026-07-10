@@ -1,10 +1,17 @@
 /**
  * `astromech db:generate`
  *
- * Schema generation lands in step 4 (homegrown generator).
+ * Diffs the core descriptors (`CORE_TABLES`) against the app's
+ * `migrations/snapshot.json` and writes a new migration if anything changed
+ * (see `database/generator.ts`). Plugin-owned tables are step 5's problem —
+ * this generates for core only.
  */
 
 import { defineCommand } from 'citty';
+import { resolve } from 'node:path';
+import { loadConfig } from '../config.js';
+import { generateMigrations } from '@/database/generator.js';
+import { CORE_TABLES } from '@/database/schema.js';
 
 export default defineCommand({
     meta: {
@@ -13,10 +20,20 @@ export default defineCommand({
     },
     args: {
         config: { type: 'string', description: 'Path to astromech.config.ts' },
+        name: { type: 'string', description: 'migration name (kebab-case)' },
     },
-    async run() {
-        console.log(
-            '[astromech db:generate] schema generation lands in step 4 (homegrown generator)'
-        );
+    async run({ args }) {
+        await loadConfig(args.config);
+        const result = await generateMigrations({
+            dir: resolve(process.cwd(), 'migrations'),
+            tables: CORE_TABLES,
+            dialect: 'sqlite',
+            name: args.name ?? 'migration',
+        });
+        if (result.status === 'no-changes') {
+            console.log('[astromech db:generate] no changes');
+        } else {
+            console.log(`[astromech db:generate] generated migrations/${result.file}`);
+        }
     },
 });

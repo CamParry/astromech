@@ -10,9 +10,23 @@
 
 import {
     defineTable,
+    type TableDescriptor,
     type TableSelect,
     type TableInsert,
 } from '@/database/define-table.js';
+// `export { x } from '...'` (below) re-exports without binding `x` locally —
+// these value imports are ONLY so `CORE_TABLES` (bottom of file) can
+// reference the descriptors; the `export {...} from` blocks stay the public
+// re-export surface.
+import { roles as rolesTable } from '@/users/schema.js';
+import {
+    entries as entriesTable,
+    entryVersions as entryVersionsTable,
+    entryPreviewTokens as entryPreviewTokensTable,
+} from '@/entries/schema.js';
+import { media as mediaTable } from '@/media/schema.js';
+import { settings as settingsTable } from '@/settings/schema.js';
+import { notifications as notificationsTable } from '@/notifications/schema.js';
 
 // ============================================================================
 // Users / RBAC — roles descriptor (ours) + the 4 better-auth Drizzle tables
@@ -113,3 +127,26 @@ export const cron = defineTable('_astromech_cron', ({ col }) => ({
 
 export type CronRow = TableSelect<typeof cron>;
 export type NewCronRow = TableInsert<typeof cron>;
+
+// ============================================================================
+// Core descriptor list — every `defineTable`-backed table we own
+// ============================================================================
+
+/**
+ * The 9 descriptor-backed tables, in one place. Consumed by the DDL-parity
+ * test, the migration generator (`generator.ts`), and `db:generate`'s CLI
+ * repoint — anywhere that needs "every table `defineTable` owns" without
+ * re-listing the 9 imports by hand. Does NOT include the 4 better-auth tables
+ * or the 2 plugin tables (they have no descriptor — see `codec.ts`).
+ */
+export const CORE_TABLES: TableDescriptor[] = [
+    rolesTable,
+    entriesTable,
+    entryVersionsTable,
+    entryPreviewTokensTable,
+    mediaTable,
+    settingsTable,
+    notificationsTable,
+    relationships,
+    cron,
+];

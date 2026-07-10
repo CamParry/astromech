@@ -12,11 +12,11 @@ export default defineCommand({
     },
     async run({ args }) {
         await loadConfig(args.config);
-        const { baselineProvider } = await import(
-            pathToFileURL(resolve(process.cwd(), 'drizzle/baseline.ts')).href
+        const { migrationProvider } = await import(
+            pathToFileURL(resolve(process.cwd(), 'migrations/index.ts')).href
         );
         console.log('Running migrations...');
-        await migrateToLatest(getDb(), baselineProvider);
+        await migrateToLatest(getDb(), migrationProvider);
         console.log('Database migrations applied');
     },
 });

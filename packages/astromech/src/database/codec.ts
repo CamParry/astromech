@@ -27,6 +27,14 @@ import { notifications } from '@/notifications/schema.js';
 import { relationships, cron } from '@/database/schema.js';
 
 // ── Descriptor-driven tables (ours) ─────────────────────────────────────────
+// Keyed by the *Kysely* `DB` property name (camelCase, e.g. `entryVersions`),
+// NOT `descriptor.name` (the snake_case SQL table name, e.g. `entry_versions`)
+// — `decode`/`encode`/`encodePatch` are called with the former throughout
+// storage code. `database/schema.ts`'s `CORE_TABLES` is the same 9 as a plain
+// array (no key mapping needed there); deriving this map's keys from it would
+// need a snake→camel inverse of `CamelCasePlugin`'s exact behaviour (which
+// special-cases the leading-underscore `_astromech_cron` — see `types.ts`), so
+// this map stays hand-listed rather than derived.
 const DESCRIPTORS: Record<string, TableDescriptor> = {
     roles,
     entries,
