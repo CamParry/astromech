@@ -8,10 +8,9 @@
 
 import { Readable } from 'node:stream';
 import { createGzip } from 'node:zlib';
-import { eq, isNull, desc, and } from 'drizzle-orm';
+import type { Kysely } from 'kysely';
 import type { PluginContext } from 'astromech';
 import { PERMISSION_NAMESPACE } from './manifest.js';
-import { backupRunsTable } from './schema/runs.js';
 import type { BackupRunRow } from './schema/runs.js';
 
 // ============================================================================
@@ -27,6 +26,47 @@ export function isBackupRunning(): boolean {
 }
 
 // ============================================================================
+// Inline row helpers (no codec import from core — timestamps only)
+// ============================================================================
+
+/** CamelCase storage shape as seen through CamelCasePlugin. */
+type RawRunRowCamel = {
+    id: string;
+    key: string | null;
+    status: 'running' | 'success' | 'failed';
+    trigger: 'scheduled' | 'manual' | 'pre-restore';
+    sizeBytes: number | null;
+    error: string | null;
+    startedAt: number;
+    finishedAt: number | null;
+    artifactDeletedAt: number | null;
+};
+
+function decodeRow(raw: RawRunRowCamel): BackupRunRow {
+    return {
+        id: raw.id,
+        key: raw.key,
+        status: raw.status,
+        trigger: raw.trigger,
+        sizeBytes: raw.sizeBytes,
+        error: raw.error,
+        startedAt: new Date(raw.startedAt * 1000),
+        finishedAt: raw.finishedAt !== null ? new Date(raw.finishedAt * 1000) : null,
+        artifactDeletedAt:
+            raw.artifactDeletedAt !== null
+                ? new Date(raw.artifactDeletedAt * 1000)
+                : null,
+    };
+}
+
+/** Access the Kysely instance that ctx.db holds at runtime. */
+function db(ctx: PluginContext): Kysely<Record<string, RawRunRowCamel>> {
+    return ctx.db as unknown as Kysely<Record<string, RawRunRowCamel>>;
+}
+
+const TABLE = 'plugin_backups_runs' as const;
+
+// ============================================================================
 // Core
 // ============================================================================
 
@@ -37,41 +77,52 @@ export async function performBackup(
 ): Promise<BackupRunRow> {
     if (isBackupRunning()) {
         ctx.logger.warn('[backups] A backup is already in progress — skipping.');
-        const existing = await ctx.db
-            .select()
-            .from(backupRunsTable)
-            .where(eq(backupRunsTable.status, 'running'))
-            .orderBy(desc(backupRunsTable.startedAt))
-            .limit(1);
-        if (existing[0] !== undefined) return existing[0];
+        const existing = await db(ctx)
+            .selectFrom(TABLE)
+            .selectAll()
+            .where('status', '=', 'running')
+            .orderBy('startedAt', 'desc')
+            .limit(1)
+            .execute();
+        const first = existing[0];
+        if (first !== undefined) return decodeRow(first);
     }
 
     // Insert the running row.
-    const [row] = await ctx.db
-        .insert(backupRunsTable)
-        .values({ status: 'running', trigger })
-        .returning();
+    const id = crypto.randomUUID();
+    const startedAt = Math.floor(Date.now() / 1000);
+    const inserted = await db(ctx)
+        .insertInto(TABLE)
+        .values({
+            id,
+            status: 'running',
+            trigger,
+            startedAt,
+        } as unknown as RawRunRowCamel)
+        .returningAll()
+        .executeTakeFirst();
 
-    if (row === undefined) {
+    if (inserted === undefined) {
         throw new Error('[backups] Failed to insert backup run row.');
     }
 
-    const id = row.id;
+    const row = decodeRow(inserted);
 
     globalThis.__astromechBackupRunning = true;
     try {
         // Feature-check: does this driver support dump?
         if (!ctx.database.dump) {
-            const [failed] = await ctx.db
-                .update(backupRunsTable)
+            const failed = await db(ctx)
+                .updateTable(TABLE)
                 .set({
                     status: 'failed',
                     error: 'dump not supported by this database driver',
-                    finishedAt: new Date(),
-                })
-                .where(eq(backupRunsTable.id, id))
-                .returning();
-            return failed ?? row;
+                    finishedAt: Math.floor(Date.now() / 1000),
+                } as unknown as RawRunRowCamel)
+                .where('id', '=', id)
+                .returningAll()
+                .executeTakeFirst();
+            return failed !== undefined ? decodeRow(failed) : row;
         }
 
         const dump = await ctx.database.dump();
@@ -97,13 +148,19 @@ export async function performBackup(
             const obj = await ctx.storage.get(key);
             const sizeBytes = obj?.size ?? null;
 
-            const [success] = await ctx.db
-                .update(backupRunsTable)
-                .set({ status: 'success', key, sizeBytes, finishedAt: new Date() })
-                .where(eq(backupRunsTable.id, id))
-                .returning();
+            const success = await db(ctx)
+                .updateTable(TABLE)
+                .set({
+                    status: 'success',
+                    key,
+                    sizeBytes,
+                    finishedAt: Math.floor(Date.now() / 1000),
+                } as unknown as RawRunRowCamel)
+                .where('id', '=', id)
+                .returningAll()
+                .executeTakeFirst();
 
-            const successRow = success ?? row;
+            const successRow = success !== undefined ? decodeRow(success) : row;
 
             // Rotate old artifacts after a successful run.
             await rotate(ctx, opts.keep);
@@ -114,16 +171,17 @@ export async function performBackup(
         }
     } catch (err) {
         ctx.logger.error('[backups] Backup failed', err);
-        const [failed] = await ctx.db
-            .update(backupRunsTable)
+        const failed = await db(ctx)
+            .updateTable(TABLE)
             .set({
                 status: 'failed',
                 error: String(err),
-                finishedAt: new Date(),
-            })
-            .where(eq(backupRunsTable.id, id))
-            .returning();
-        return failed ?? row;
+                finishedAt: Math.floor(Date.now() / 1000),
+            } as unknown as RawRunRowCamel)
+            .where('id', '=', id)
+            .returningAll()
+            .executeTakeFirst();
+        return failed !== undefined ? decodeRow(failed) : row;
     } finally {
         globalThis.__astromechBackupRunning = false;
     }
@@ -157,25 +215,26 @@ export async function resolveKeep(ctx: PluginContext, fallback: number): Promise
  * we only touch artifacts that haven't already been deleted (`artifactDeletedAt IS NULL`).
  */
 export async function rotate(ctx: PluginContext, keep: number): Promise<void> {
-    const rows = await ctx.db
-        .select()
-        .from(backupRunsTable)
-        .where(
-            and(
-                eq(backupRunsTable.status, 'success'),
-                isNull(backupRunsTable.artifactDeletedAt)
-            )
-        )
-        .orderBy(desc(backupRunsTable.startedAt));
+    const rows = await db(ctx)
+        .selectFrom(TABLE)
+        .selectAll()
+        .where('status', '=', 'success')
+        .where('artifactDeletedAt', 'is', null)
+        .orderBy('startedAt', 'desc')
+        .execute();
 
-    const toDelete = rows.slice(keep);
+    const decoded = rows.map(decodeRow);
+    const toDelete = decoded.slice(keep);
     for (const row of toDelete) {
         if (row.key !== null && row.key !== undefined) {
             await ctx.storage.delete(row.key);
         }
-        await ctx.db
-            .update(backupRunsTable)
-            .set({ artifactDeletedAt: new Date() })
-            .where(eq(backupRunsTable.id, row.id));
+        await db(ctx)
+            .updateTable(TABLE)
+            .set({
+                artifactDeletedAt: Math.floor(Date.now() / 1000),
+            } as unknown as RawRunRowCamel)
+            .where('id', '=', row.id)
+            .execute();
     }
 }

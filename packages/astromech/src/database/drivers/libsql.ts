@@ -17,9 +17,10 @@ import { createReadStream, createWriteStream } from 'node:fs';
 import { unlink } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { drizzle } from 'drizzle-orm/libsql';
-import { sql } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import { createClient, type Client, type Row } from '@libsql/client';
+import { Kysely, CamelCasePlugin } from 'kysely';
+import { LibsqlDialect } from '@libsql/kysely-libsql';
+import type { DB } from '@/database/types.js';
 import type { DbDump } from '@/types/config.js';
 
 type LibSQLDriverOptions = {
@@ -27,19 +28,32 @@ type LibSQLDriverOptions = {
     authToken?: string;
 };
 
-export function libsqlDriver(options?: LibSQLDriverOptions) {
-    let instance: LibSQLDatabase | null = null;
+/** First scalar value of a libsql result row (rows are array- and name-indexed). */
+function firstValue(row: Row): unknown {
+    return (row as unknown as unknown[])[0] ?? Object.values(row)[0];
+}
 
-    function getInstance(): LibSQLDatabase {
-        if (!instance) {
+export function libsqlDriver(options?: LibSQLDriverOptions) {
+    let client: Client | null = null;
+    let instance: Kysely<DB> | null = null;
+
+    function getClient(): Client {
+        if (!client) {
             const url = options?.url ?? process.env.DATABASE_URL ?? 'file:./database.db';
             const authToken = options?.authToken ?? process.env.DATABASE_AUTH_TOKEN;
+            client = createClient({ url, ...(authToken && { authToken }) });
+        }
+        return client;
+    }
 
-            instance = drizzle({
-                connection: {
-                    url,
-                    ...(authToken && { authToken }),
-                },
+    function getInstance(): Kysely<DB> {
+        if (!instance) {
+            instance = new Kysely<DB>({
+                // `@libsql/kysely-libsql` pins an older `@libsql/core` whose
+                // `Client` type differs from `@libsql/client`'s by an unrelated
+                // `sync()` return type; the runtime client is fully compatible.
+                dialect: new LibsqlDialect({ client: getClient() as never }),
+                plugins: [new CamelCasePlugin()],
             });
         }
         return instance;
@@ -61,12 +75,13 @@ export function libsqlDriver(options?: LibSQLDriverOptions) {
     return {
         type: 'libsql' as const,
         getInstance,
+        getClient,
 
         async dump(): Promise<DbDump> {
             assertFileUrl();
-            const db = getInstance();
+            const c = getClient();
             const tmp = join(tmpdir(), `astromech-dump-${randomUUID()}.sqlite`);
-            await db.run(sql.raw(`VACUUM INTO '${tmp.replace(/'/g, "''")}'`));
+            await c.execute(`VACUUM INTO '${tmp.replace(/'/g, "''")}'`);
             const stream = Readable.toWeb(
                 createReadStream(tmp)
             ) as ReadableStream<Uint8Array>;
@@ -83,7 +98,7 @@ export function libsqlDriver(options?: LibSQLDriverOptions) {
             { preserve }: { preserve: string[] }
         ): Promise<void> {
             assertFileUrl();
-            const db = getInstance();
+            const c = getClient();
             const tmp = join(tmpdir(), `astromech-restore-${randomUUID()}.sqlite`);
             await pipeline(
                 Readable.fromWeb(
@@ -93,62 +108,49 @@ export function libsqlDriver(options?: LibSQLDriverOptions) {
             );
             const esc = tmp.replace(/'/g, "''");
             try {
-                await db.run(sql.raw(`ATTACH '${esc}' AS restore_src`));
+                await c.execute(`ATTACH '${esc}' AS restore_src`);
                 try {
-                    const checkResult = await db.run(
-                        sql.raw(`PRAGMA restore_src.quick_check`)
-                    );
+                    const checkResult = await c.execute(`PRAGMA restore_src.quick_check`);
                     const checkRows = checkResult.rows ?? [];
                     const firstRow = checkRows[0];
-                    const firstValue =
+                    const firstStr =
                         firstRow !== undefined
-                            ? String(
-                                  Array.isArray(firstRow)
-                                      ? (firstRow as unknown[])[0]
-                                      : Object.values(
-                                            firstRow as Record<string, unknown>
-                                        )[0]
-                              ).toLowerCase()
+                            ? String(firstValue(firstRow)).toLowerCase()
                             : '';
-                    const ok = checkRows.length === 1 && firstValue === 'ok';
+                    const ok = checkRows.length === 1 && firstStr === 'ok';
                     if (!ok)
                         throw new Error(
                             '[astromech] restore: backup failed integrity check'
                         );
-                    const tablesResult = await db.run(
-                        sql.raw(
-                            `SELECT name FROM restore_src.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`
-                        )
+                    const tablesResult = await c.execute(
+                        `SELECT name FROM restore_src.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`
                     );
-                    const tables = (tablesResult.rows ?? []).map((row) => {
-                        // Row is array-indexed; columns[0] = 'name'
-                        const r = row as unknown as Record<string, unknown>;
-                        return {
-                            name: String(r['name'] ?? (row as unknown as unknown[])[0]),
-                        };
-                    });
-                    await db.run(sql.raw('PRAGMA foreign_keys=OFF'));
-                    await db.run(sql.raw('BEGIN'));
+                    const tables = (tablesResult.rows ?? []).map((row) => ({
+                        name: String(
+                            (row as unknown as Record<string, unknown>)['name'] ??
+                                firstValue(row)
+                        ),
+                    }));
+                    await c.execute('PRAGMA foreign_keys=OFF');
+                    await c.execute('BEGIN');
                     try {
                         for (const { name } of tables) {
                             if (preserve.includes(name)) continue;
                             const q = name.replace(/"/g, '""');
-                            await db.run(sql.raw(`DELETE FROM main."${q}"`));
-                            await db.run(
-                                sql.raw(
-                                    `INSERT INTO main."${q}" SELECT * FROM restore_src."${q}"`
-                                )
+                            await c.execute(`DELETE FROM main."${q}"`);
+                            await c.execute(
+                                `INSERT INTO main."${q}" SELECT * FROM restore_src."${q}"`
                             );
                         }
-                        await db.run(sql.raw('COMMIT'));
+                        await c.execute('COMMIT');
                     } catch (e) {
-                        await db.run(sql.raw('ROLLBACK'));
+                        await c.execute('ROLLBACK');
                         throw e;
                     } finally {
-                        await db.run(sql.raw('PRAGMA foreign_keys=ON'));
+                        await c.execute('PRAGMA foreign_keys=ON');
                     }
                 } finally {
-                    await db.run(sql.raw('DETACH restore_src'));
+                    await c.execute('DETACH restore_src');
                 }
             } finally {
                 await unlink(tmp).catch(() => undefined);

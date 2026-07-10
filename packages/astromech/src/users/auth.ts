@@ -1,8 +1,7 @@
 import { betterAuth } from 'better-auth';
 import type { Auth, BetterAuthOptions } from 'better-auth';
-import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { getDb } from '@/database/registry.js';
-import * as schema from './schema.js';
+import { LibsqlDialect } from '@libsql/kysely-libsql';
+import { getDbClient } from '@/database/registry.js';
 
 const apiRoute = process.env.ASTROMECH_API_ROUTE ?? '/api';
 
@@ -13,15 +12,54 @@ function getAuth(): Auth<BetterAuthOptions> {
         _auth = betterAuth({
             baseURL: import.meta.env.BETTER_AUTH_URL,
             basePath: `${apiRoute}/auth`,
-            database: drizzleAdapter(getDb(), {
-                provider: 'sqlite',
-                schema: {
-                    user: schema.usersTable,
-                    session: schema.sessionsTable,
-                    account: schema.accountsTable,
-                    verification: schema.verificationsTable,
+            database: {
+                // See libsql driver: `@libsql/kysely-libsql` pins an older
+                // `@libsql/core` Client type; the runtime client is compatible.
+                dialect: new LibsqlDialect({ client: getDbClient() as never }),
+                type: 'sqlite',
+            },
+            user: {
+                modelName: 'users',
+                fields: {
+                    emailVerified: 'email_verified',
+                    createdAt: 'created_at',
+                    updatedAt: 'updated_at',
                 },
-            }),
+            },
+            session: {
+                modelName: 'sessions',
+                fields: {
+                    userId: 'user_id',
+                    expiresAt: 'expires_at',
+                    createdAt: 'created_at',
+                    updatedAt: 'updated_at',
+                    ipAddress: 'ip_address',
+                    userAgent: 'user_agent',
+                },
+            },
+            account: {
+                modelName: 'accounts',
+                fields: {
+                    accountId: 'account_id',
+                    providerId: 'provider_id',
+                    userId: 'user_id',
+                    accessToken: 'access_token',
+                    refreshToken: 'refresh_token',
+                    idToken: 'id_token',
+                    accessTokenExpiresAt: 'access_token_expires_at',
+                    refreshTokenExpiresAt: 'refresh_token_expires_at',
+                    createdAt: 'created_at',
+                    updatedAt: 'updated_at',
+                },
+            },
+            verification: {
+                modelName: 'verifications',
+                fields: {
+                    expiresAt: 'expires_at',
+                    createdAt: 'created_at',
+                    updatedAt: 'updated_at',
+                },
+            },
             emailAndPassword: {
                 enabled: true,
                 sendResetPassword: async ({

@@ -9,13 +9,52 @@
 
 import { Readable } from 'node:stream';
 import { createGunzip } from 'node:zlib';
-import { eq, desc } from 'drizzle-orm';
+import type { Kysely } from 'kysely';
 import type { PluginContext, PluginRawRoute } from 'astromech';
-import { backupRunsTable } from '../schema/runs.js';
 import type { BackupRunRow } from '../schema/runs.js';
 import { isBackupRunning, performBackup, resolveKeep } from '../backup.js';
 
 const MAX_RUNS = 100;
+const TABLE = 'plugin_backups_runs' as const;
+
+// ============================================================================
+// Inline row helpers (no codec import from core — timestamps only)
+// ============================================================================
+
+/** CamelCase storage shape as seen through CamelCasePlugin. */
+type RawRunRowCamel = {
+    id: string;
+    key: string | null;
+    status: 'running' | 'success' | 'failed';
+    trigger: 'scheduled' | 'manual' | 'pre-restore';
+    sizeBytes: number | null;
+    error: string | null;
+    startedAt: number;
+    finishedAt: number | null;
+    artifactDeletedAt: number | null;
+};
+
+function decodeRow(raw: RawRunRowCamel): BackupRunRow {
+    return {
+        id: raw.id,
+        key: raw.key,
+        status: raw.status,
+        trigger: raw.trigger,
+        sizeBytes: raw.sizeBytes,
+        error: raw.error,
+        startedAt: new Date(raw.startedAt * 1000),
+        finishedAt: raw.finishedAt !== null ? new Date(raw.finishedAt * 1000) : null,
+        artifactDeletedAt:
+            raw.artifactDeletedAt !== null
+                ? new Date(raw.artifactDeletedAt * 1000)
+                : null,
+    };
+}
+
+/** Access the Kysely instance that ctx.db holds at runtime. */
+function db(ctx: PluginContext): Kysely<Record<string, RawRunRowCamel>> {
+    return ctx.db as unknown as Kysely<Record<string, RawRunRowCamel>>;
+}
 
 // ============================================================================
 // Shared helpers
@@ -31,12 +70,13 @@ function isArtifactAvailable(row: BackupRunRow): boolean {
 }
 
 async function findRun(ctx: PluginContext, id: string): Promise<BackupRunRow | null> {
-    const rows = await ctx.db
-        .select()
-        .from(backupRunsTable)
-        .where(eq(backupRunsTable.id, id))
-        .limit(1);
-    return rows[0] ?? null;
+    const row = await db(ctx)
+        .selectFrom(TABLE)
+        .selectAll()
+        .where('id', '=', id)
+        .limit(1)
+        .executeTakeFirst();
+    return row !== undefined ? decodeRow(row) : null;
 }
 
 /** Parse the last path segment from a URL pathname, e.g. `/backups/runs/abc-123/download` → `abc-123`. */
@@ -51,16 +91,17 @@ function parseSegment(pathname: string, offset: number): string {
 // ============================================================================
 
 async function listRuns(_request: Request, ctx: PluginContext): Promise<Response> {
-    const rows = await ctx.db
-        .select()
-        .from(backupRunsTable)
-        .orderBy(desc(backupRunsTable.startedAt))
-        .limit(MAX_RUNS);
+    const rows = await db(ctx)
+        .selectFrom(TABLE)
+        .selectAll()
+        .orderBy('startedAt', 'desc')
+        .limit(MAX_RUNS)
+        .execute();
     const capabilities = {
         canDump: ctx.database.dump !== undefined,
         canRestore: ctx.database.restore !== undefined,
     };
-    return Response.json({ data: rows, capabilities });
+    return Response.json({ data: rows.map(decodeRow), capabilities });
 }
 
 async function triggerRun(
@@ -89,7 +130,7 @@ async function downloadArtifact(request: Request, ctx: PluginContext): Promise<R
         return Response.json({ error: 'Artifact no longer available' }, { status: 410 });
     }
 
-    const obj = await ctx.storage.get(row.key);
+    const obj = await ctx.storage.get(row.key as string);
     if (obj === null) {
         return Response.json({ error: 'Artifact no longer available' }, { status: 410 });
     }
@@ -135,7 +176,7 @@ async function restoreFromBackup(
         const resolvedKeep = await resolveKeep(ctx, keep);
         await performBackup(ctx, 'pre-restore', { keep: resolvedKeep });
 
-        const obj = await ctx.storage.get(row.key);
+        const obj = await ctx.storage.get(row.key as string);
         if (obj === null) {
             return Response.json(
                 { error: 'Artifact no longer available' },
@@ -183,7 +224,7 @@ async function deleteRun(request: Request, ctx: PluginContext): Promise<Response
         await ctx.storage.delete(row.key);
     }
 
-    await ctx.db.delete(backupRunsTable).where(eq(backupRunsTable.id, id));
+    await db(ctx).deleteFrom(TABLE).where('id', '=', id).execute();
 
     return Response.json({ data: { deleted: id } });
 }

@@ -10,15 +10,12 @@
  * the registry only supplies handlers + seed schedules.
  */
 
-import { and, eq, isNull, lte, or } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { Insertable, Updateable } from 'kysely';
 import { Cron } from 'croner';
 import { getDb } from '@/database/registry.js';
-import { cronTable } from '@/database/schema.js';
+import { encode, encodePatch, decode } from '@/database/codec.js';
+import type { DB } from '@/database/types.js';
 import { getCronJobs, getRuntimeConfig } from '@/cron/registry.js';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Db = LibSQLDatabase<any>;
 
 /** Claim lease: generous so a normal job never self-expires mid-run. A crashed
  *  claim auto-expires after this and the next tick retries. */
@@ -39,7 +36,11 @@ function nextRunFrom(schedule: string, from: Date, timezone: string): Date | nul
  * overwrites a stored (possibly admin-edited) row. Jobs with no seed schedule
  * and no existing row are not scheduled — warn once.
  */
-async function seed(db: Db, now: Date, timezone: string): Promise<void> {
+async function seed(
+    db: ReturnType<typeof getDb>,
+    now: Date,
+    timezone: string
+): Promise<void> {
     const warned = (globalThis.__astromechCronUnscheduledWarned ??= new Set());
     for (const job of getCronJobs()) {
         if (!job.schedule) {
@@ -52,14 +53,17 @@ async function seed(db: Db, now: Date, timezone: string): Promise<void> {
             continue;
         }
         await db
-            .insert(cronTable)
-            .values({
-                name: job.name,
-                schedule: job.schedule,
-                enabled: true,
-                nextRun: nextRunFrom(job.schedule, now, timezone),
-            })
-            .onConflictDoNothing();
+            .insertInto('_astromech_cron')
+            .values(
+                encode('_astromech_cron', {
+                    name: job.name,
+                    schedule: job.schedule,
+                    enabled: true,
+                    nextRun: nextRunFrom(job.schedule, now, timezone),
+                }) as unknown as Insertable<DB['_astromech_cron']>
+            )
+            .onConflict((oc) => oc.doNothing())
+            .execute();
     }
 }
 
@@ -76,15 +80,22 @@ export async function runDue(now: Date): Promise<void> {
 
     const handlers = new Map(getCronJobs().map((j) => [j.name, j]));
 
-    const due = await db
-        .select()
-        .from(cronTable)
-        .where(
-            and(
-                eq(cronTable.enabled, true),
-                or(lte(cronTable.nextRun, now), isNull(cronTable.nextRun))
-            )
-        );
+    const rawDue = await db
+        .selectFrom('_astromech_cron')
+        .selectAll()
+        .where((eb) =>
+            eb.and([
+                eb('enabled', '=', 1),
+                eb.or([
+                    // Tier-1 `_astromech_cron` timestamps are ISO-TEXT.
+                    eb('nextRun', '<=', now.toISOString()),
+                    eb('nextRun', 'is', null),
+                ]),
+            ])
+        )
+        .execute();
+
+    const due = rawDue.map((row) => decode('_astromech_cron', row));
 
     for (const row of due) {
         const job = handlers.get(row.name);
@@ -93,15 +104,20 @@ export async function runDue(now: Date): Promise<void> {
         // CAS-claim: succeeds only if unlocked or the prior claim expired.
         const expiry = new Date(now.getTime() + LOCK_TTL_MS);
         const claim = await db
-            .update(cronTable)
-            .set({ lock: expiry })
-            .where(
-                and(
-                    eq(cronTable.name, row.name),
-                    or(isNull(cronTable.lock), lte(cronTable.lock, now))
-                )
-            );
-        if (claim.rowsAffected !== 1) continue; // another tick/instance owns it
+            .updateTable('_astromech_cron')
+            .set(
+                encodePatch('_astromech_cron', { lock: expiry }) as unknown as Updateable<
+                    DB['_astromech_cron']
+                >
+            )
+            .where((eb) =>
+                eb.and([
+                    eb('name', '=', row.name),
+                    eb.or([eb('lock', 'is', null), eb('lock', '<=', now.toISOString())]),
+                ])
+            )
+            .executeTakeFirst();
+        if (claim.numUpdatedRows !== 1n) continue; // another tick/instance owns it
 
         try {
             await job.handler({ db, config });
@@ -115,13 +131,18 @@ export async function runDue(now: Date): Promise<void> {
         // `now` (missed runs fire once, no backfill) using the row's CURRENT
         // (possibly admin-edited) schedule.
         await db
-            .update(cronTable)
-            .set({
-                lastRun: now,
-                nextRun: nextRunFrom(row.schedule, now, timezone),
-                lock: null,
-            })
-            .where(and(eq(cronTable.name, row.name), eq(cronTable.lock, expiry)));
+            .updateTable('_astromech_cron')
+            .set(
+                encodePatch('_astromech_cron', {
+                    lastRun: now,
+                    nextRun: nextRunFrom(row.schedule, now, timezone),
+                    lock: null,
+                }) as unknown as Updateable<DB['_astromech_cron']>
+            )
+            .where((eb) =>
+                eb.and([eb('name', '=', row.name), eb('lock', '=', expiry.toISOString())])
+            )
+            .execute();
     }
 }
 

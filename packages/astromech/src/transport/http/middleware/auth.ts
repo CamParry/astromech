@@ -6,10 +6,9 @@
  */
 
 import { createMiddleware } from 'hono/factory';
-import { eq } from 'drizzle-orm';
 import { auth } from '@/users/index.js';
 import { getDb } from '@/database/registry.js';
-import { usersTable } from '@/database/schema.js';
+import { decode } from '@/database/codec.js';
 import { Astromech } from '@/transport/local/index.js';
 import { resolveRole } from '@/permissions/index.js';
 import { unauthorized } from './errors.js';
@@ -32,24 +31,26 @@ export async function resolveSessionUser(
 
     // Load the full user row (Better Auth session may not include custom fields)
     const db = getDb();
-    const userRow = await db
-        .select()
-        .from(usersTable)
-        .where(eq(usersTable.id, session.user.id))
-        .get();
+    const rawRow = await db
+        .selectFrom('users')
+        .selectAll()
+        .where('id', '=', session.user.id)
+        .limit(1)
+        .executeTakeFirst();
 
-    if (!userRow) return null;
+    if (!rawRow) return null;
+    const userRow = decode('users', rawRow);
 
     const user: User = {
         id: userRow.id,
         email: userRow.email,
         name: userRow.name,
-        emailVerified: userRow.emailVerified,
+        emailVerified: userRow.emailVerified as unknown as boolean,
         image: userRow.image ?? null,
         fields: (userRow.fields as User['fields']) ?? null,
         roleSlug: userRow.roleSlug,
-        createdAt: userRow.createdAt,
-        updatedAt: userRow.updatedAt,
+        createdAt: userRow.createdAt as unknown as Date,
+        updatedAt: userRow.updatedAt as unknown as Date,
     };
 
     return { user, role: resolveRole(Astromech.config, userRow.roleSlug) };

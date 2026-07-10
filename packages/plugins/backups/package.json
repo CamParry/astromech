@@ -33,6 +33,7 @@
     "peerDependencies": {
         "astromech": "*",
         "drizzle-orm": "*",
+        "kysely": "^0.28.0",
         "react": "^19.0.0"
     },
     "devDependencies": {

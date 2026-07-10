@@ -4,12 +4,12 @@
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
-import { sql } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import { sql } from 'kysely';
+import type { Kysely } from 'kysely';
 import { createTestDb } from '@tests/harness.js';
+import type { DB } from '@/database/types.js';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let db: LibSQLDatabase<any>;
+let db: Kysely<DB>;
 
 beforeAll(async () => {
     db = await createTestDb();
@@ -17,9 +17,10 @@ beforeAll(async () => {
 
 describe('migration 0006 — plugin_redirects_redirects', () => {
     it('creates the plugin_redirects_redirects table', async () => {
-        const rows = await db.all(
-            sql`SELECT name FROM sqlite_master WHERE type='table' AND name='plugin_redirects_redirects'`
-        );
+        const { rows } =
+            await sql`SELECT name FROM sqlite_master WHERE type='table' AND name='plugin_redirects_redirects'`.execute(
+                db
+            );
         expect(rows).toHaveLength(1);
         expect((rows[0] as Record<string, unknown>)['name']).toBe(
             'plugin_redirects_redirects'
@@ -27,9 +28,10 @@ describe('migration 0006 — plugin_redirects_redirects', () => {
     });
 
     it('entries table still exists after cleanup DELETE', async () => {
-        const rows = await db.all(
-            sql`SELECT name FROM sqlite_master WHERE type='table' AND name='entries'`
-        );
+        const { rows } =
+            await sql`SELECT name FROM sqlite_master WHERE type='table' AND name='entries'`.execute(
+                db
+            );
         expect(rows).toHaveLength(1);
     });
 });

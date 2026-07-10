@@ -8,10 +8,12 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
+import type { Insertable } from 'kysely';
 import { createTestDb, setupTestConfig } from '@tests/harness.js';
 import { createBuiltInEntryStorage } from '@/entries/storage/built-in.js';
 import { BUILT_IN_SUPPORTS } from '@/entries/storage/capabilities.js';
-import { entriesTable } from '@/entries/schema.js';
+import { encode } from '@/database/codec.js';
+import type { DB } from '@/database/types.js';
 
 let storage: ReturnType<typeof createBuiltInEntryStorage>;
 let db: Awaited<ReturnType<typeof createTestDb>>;
@@ -36,7 +38,7 @@ describe('base CRUD', () => {
             slug: 'hello',
             fields: { body: 'hi' },
         });
-        expect(created.id).toMatch(/[0-9a-f-]{36}/);
+        expect(created.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/); // ULID
         expect(created.title).toBe('Hello');
         expect(created.status).toBe('unpublished');
         expect(created.fields).toEqual({ body: 'hi' });
@@ -121,26 +123,36 @@ describe('staging (forward versioning) schema', () => {
 
         // A staged row sharing the canonical's slug: the partial unique index
         // (WHERE staged_for IS NULL) must allow this insert to succeed.
-        await db.insert(entriesTable).values({
-            type: 'post',
-            locale: 'en',
-            slug: 'live',
-            title: 'Staged change',
-            stagedFor: canonical.id,
-        });
+        await db
+            .insertInto('entries')
+            .values(
+                encode('entries', {
+                    type: 'post',
+                    locale: 'en',
+                    slug: 'live',
+                    title: 'Staged change',
+                    stagedFor: canonical.id,
+                }) as unknown as Insertable<DB['entries']>
+            )
+            .execute();
 
         // Staged rows never surface in lists.
         const list = await storage.list({ type: 'post', limit: 'all' });
         expect(list.data.map((e) => e.title)).toEqual(['Live']);
 
         // A slug used ONLY by a staged row is still considered free.
-        await db.insert(entriesTable).values({
-            type: 'post',
-            locale: 'en',
-            slug: 'ghost',
-            title: 'Staged ghost',
-            stagedFor: canonical.id,
-        });
+        await db
+            .insertInto('entries')
+            .values(
+                encode('entries', {
+                    type: 'post',
+                    locale: 'en',
+                    slug: 'ghost',
+                    title: 'Staged ghost',
+                    stagedFor: canonical.id,
+                }) as unknown as Insertable<DB['entries']>
+            )
+            .execute();
         expect(await storage.uniqueSlug('post', 'en', 'ghost')).toBe('ghost');
 
         // The canonical still occupies its own slug.

@@ -14,21 +14,15 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { rmSync } from 'node:fs';
-import { drizzle } from 'drizzle-orm/libsql';
-import { migrate } from 'drizzle-orm/libsql/migrator';
-import { setupTestConfig, makeTestConfig } from '@tests/harness.js';
-import { getDb, setDb } from '@/database/registry.js';
+import { setupTestConfig, makeTestConfig, createFileTestDb } from '@tests/harness.js';
+import { getDb } from '@/database/registry.js';
 import { entries as api } from '@/entries/service.js';
 import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import { StagedEntryExistsError, CapabilityError } from '@/entries/errors.js';
 
-const MIGRATIONS_FOLDER = fileURLToPath(
-    new URL('../../../../../apps/demo/drizzle', import.meta.url)
-);
 let dbCounter = 0;
 let dbPath = '';
 
@@ -39,9 +33,7 @@ beforeEach(async () => {
     // commit to disk and the base connection can read the result back.
     dbCounter += 1;
     dbPath = join(tmpdir(), `astromech-staging-${process.pid}-${dbCounter}.db`);
-    const db = drizzle({ connection: { url: `file:${dbPath}` } });
-    await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
-    setDb(db);
+    await createFileTestDb(`file:${dbPath}`);
 
     const cfg = makeTestConfig();
     // post: versioning on + relationship field; note: versioning off.

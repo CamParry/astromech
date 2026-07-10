@@ -3,17 +3,19 @@
  */
 
 import { beforeEach, afterEach, describe, expect, it } from 'vitest';
-import { eq } from 'drizzle-orm';
+import type { Updateable } from 'kysely';
+import type { Kysely } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
 import {
     registerCronJob,
     setSchedulerDriver,
     getSchedulerDriver,
 } from '@/cron/registry.js';
-import { cronTable } from '@/database/schema.js';
 import { handleScheduled } from '@/cron/index.js';
 import { nodeDriver } from '@/cron/drivers/index.js';
 import { runDue } from '@/cron/runner.js';
+import { encodePatch } from '@/database/codec.js';
+import type { DB } from '@/database/types.js';
 
 beforeEach(async () => {
     globalThis.__astromechCronJobs = [];
@@ -55,12 +57,18 @@ describe('handleScheduled', () => {
         await runDue(seedTime);
 
         // Manually set nextRun to a past date so the job is due.
-        const db = (await import('@/database/registry.js')).getDb();
+        const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
         const past = new Date(seedTime.getTime() - 60_000);
         await db
-            .update(cronTable)
-            .set({ nextRun: past, lock: null })
-            .where(eq(cronTable.name, 'cf-test-job'));
+            .updateTable('_astromech_cron')
+            .set(
+                encodePatch('_astromech_cron', {
+                    nextRun: past,
+                    lock: null,
+                }) as unknown as Updateable<DB['_astromech_cron']>
+            )
+            .where('name', '=', 'cf-test-job')
+            .execute();
 
         // Simulate the Cloudflare Worker `scheduled` event.
         const scheduledTime = seedTime.getTime();

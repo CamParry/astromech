@@ -8,9 +8,11 @@
  * not as a cross-cutting policy.
  */
 
+import type { Insertable, Updateable } from 'kysely';
 import config from 'virtual:astromech/config';
 import { getDb } from '@/database/registry.js';
-import { settingsTable } from './schema.js';
+import type { DB } from '@/database/types.js';
+import { encode, encodePatch, decode } from '@/database/codec.js';
 import type { JsonValue, Setting, SettingsApi } from '@/types/index.js';
 import { mergeLocaleSetting } from './page-values.js';
 import { isPublicSettingKey } from './visibility.js';
@@ -18,7 +20,8 @@ import { isPublicSettingKey } from './visibility.js';
 export const settingsApi: SettingsApi = {
     async all(opts?: { full?: boolean }): Promise<Setting[]> {
         const db = getDb();
-        const rows = await db.select().from(settingsTable);
+        const rawRows = await db.selectFrom('settings').selectAll().execute();
+        const rows = rawRows.map((r) => decode('settings', r));
         const full = opts?.full ?? false;
         const publicKeys =
             (config as { publicSettingKeys?: string[] }).publicSettingKeys ?? [];
@@ -26,9 +29,9 @@ export const settingsApi: SettingsApi = {
             .filter((row) => full || isPublicSettingKey(row.key, publicKeys))
             .map((row) => ({
                 key: row.key,
-                value: row.value ?? null,
-                updatedAt: row.updatedAt,
-                updatedBy: row.updatedBy ?? null,
+                value: (row.value as JsonValue) ?? null,
+                updatedAt: row.updatedAt as unknown as Date,
+                updatedBy: (row.updatedBy as string | null) ?? null,
             }));
     },
 
@@ -47,10 +50,11 @@ export const settingsApi: SettingsApi = {
             return null;
         }
 
-        const rows = await db.select().from(settingsTable);
+        const rawRows = await db.selectFrom('settings').selectAll().execute();
+        const rows = rawRows.map((r) => decode('settings', r));
         const byKey: Record<string, JsonValue | null> = {};
         for (const row of rows) {
-            byKey[row.key] = row.value ?? null;
+            byKey[row.key] = (row.value as JsonValue) ?? null;
         }
         const base = byKey[key] ?? null;
         if (locale) {
@@ -69,24 +73,38 @@ export const settingsApi: SettingsApi = {
     async set(key: string, value: JsonValue): Promise<Setting> {
         const db = getDb();
         const now = new Date();
-        const rows = await db
-            .insert(settingsTable)
-            .values({ key, value, updatedAt: now })
-            .onConflictDoUpdate({
-                target: settingsTable.key,
-                set: { value, updatedAt: now },
-            })
-            .returning();
+        const row = await db
+            .insertInto('settings')
+            .values(
+                encode('settings', {
+                    key,
+                    value,
+                    updatedAt: now,
+                }) as unknown as Insertable<DB['settings']>
+            )
+            .onConflict((oc) =>
+                oc
+                    .column('key')
+                    .doUpdateSet(
+                        encodePatch('settings', {
+                            value,
+                            updatedAt: now,
+                        }) as unknown as Updateable<DB['settings']>
+                    )
+            )
+            .returningAll()
+            .executeTakeFirst();
 
-        if (!rows[0]) {
+        if (!row) {
             throw new Error('Failed to upsert setting');
         }
 
+        const decoded = decode('settings', row);
         return {
-            key: rows[0].key,
-            value: rows[0].value ?? null,
-            updatedAt: rows[0].updatedAt,
-            updatedBy: rows[0].updatedBy ?? null,
+            key: decoded.key,
+            value: (decoded.value as JsonValue) ?? null,
+            updatedAt: decoded.updatedAt as unknown as Date,
+            updatedBy: (decoded.updatedBy as string | null) ?? null,
         };
     },
 };

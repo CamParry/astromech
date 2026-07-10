@@ -1,9 +1,10 @@
-import { eq, desc, like, and, not, sql } from 'drizzle-orm';
-import type { SQL } from 'drizzle-orm';
+import type { Insertable, Updateable, ExpressionBuilder } from 'kysely';
+import { sql } from 'kysely';
 import { z } from 'zod';
-import { mediaTable } from './schema.js';
 import type { MediaRow } from './schema.js';
 import { getDb } from '@/database/registry.js';
+import type { DB } from '@/database/types.js';
+import { encode, encodePatch, decode } from '@/database/codec.js';
 import { getStorageDriver } from '@/storage/registry.js';
 import { deletePrefix } from '@/storage/prefix.js';
 import { createRelationshipStorage } from '@/database/storage/relationships.js';
@@ -75,68 +76,79 @@ async function storeFile(
     return { width: null, height: null, metadata: {} };
 }
 
+function buildMediaWhere(eb: ExpressionBuilder<DB, 'media'>, params?: MediaQueryParams) {
+    const conditions = [];
+
+    if (params?.search) {
+        conditions.push(eb('filename', 'like', `%${params.search}%`));
+    }
+
+    const mimeType = params?.where?.mimeType;
+    if (mimeType) {
+        if (mimeType === 'images') {
+            conditions.push(eb('mimeType', 'like', 'image/%'));
+        } else if (mimeType === 'videos') {
+            conditions.push(eb('mimeType', 'like', 'video/%'));
+        } else if (mimeType === 'documents') {
+            conditions.push(
+                eb.or([
+                    eb('mimeType', 'like', 'application/%'),
+                    eb('mimeType', 'like', 'text/%'),
+                ])
+            );
+        } else if (mimeType === 'other') {
+            // NOT (image/* OR video/* OR application/* OR text/*)
+            // Raw sql uses snake_case col — CamelCasePlugin does not transform raw fragments.
+            conditions.push(
+                sql<boolean>`mime_type NOT LIKE 'image/%' AND mime_type NOT LIKE 'video/%' AND mime_type NOT LIKE 'application/%' AND mime_type NOT LIKE 'text/%'`
+            );
+        }
+    }
+
+    return conditions.length > 0 ? eb.and(conditions) : undefined;
+}
+
 export const mediaApi = {
     async query(params?: MediaQueryParams): Promise<QueryResult<Media>> {
         const db = getDb();
         const page = params?.page ?? 1;
         const limit = params?.limit;
 
-        const conditions: SQL[] = [];
-
-        if (params?.search) {
-            conditions.push(like(mediaTable.filename, `%${params.search}%`));
-        }
-
-        const mimeType = params?.where?.mimeType;
-        if (mimeType) {
-            if (mimeType === 'images') {
-                conditions.push(like(mediaTable.mimeType, 'image/%'));
-            } else if (mimeType === 'videos') {
-                conditions.push(like(mediaTable.mimeType, 'video/%'));
-            } else if (mimeType === 'documents') {
-                conditions.push(
-                    sql`(${mediaTable.mimeType} LIKE 'application/%' OR ${mediaTable.mimeType} LIKE 'text/%')`
-                );
-            } else if (mimeType === 'other') {
-                conditions.push(
-                    not(
-                        sql`(${mediaTable.mimeType} LIKE 'image/%' OR ${mediaTable.mimeType} LIKE 'video/%' OR ${mediaTable.mimeType} LIKE 'application/%' OR ${mediaTable.mimeType} LIKE 'text/%')`
-                    )
-                );
-            }
-        }
-
-        const where = conditions.length > 0 ? and(...conditions) : undefined;
-
         if (limit === 'all') {
             const rows = await db
-                .select()
-                .from(mediaTable)
-                .where(where)
-                .orderBy(desc(mediaTable.createdAt));
-            return { data: rows.map(toMedia), pagination: null };
+                .selectFrom('media')
+                .selectAll()
+                .where((eb) => buildMediaWhere(eb, params) ?? eb.lit(true))
+                .orderBy('createdAt', 'desc')
+                .execute();
+            return {
+                data: rows.map((r) => toMedia(decode('media', r) as unknown as MediaRow)),
+                pagination: null,
+            };
         }
 
         const perPage = typeof limit === 'number' ? limit : 20;
         const offset = (page - 1) * perPage;
 
-        const [rows, countRows] = await Promise.all([
+        const [rows, countRow] = await Promise.all([
             db
-                .select()
-                .from(mediaTable)
-                .where(where)
-                .orderBy(desc(mediaTable.createdAt))
+                .selectFrom('media')
+                .selectAll()
+                .where((eb) => buildMediaWhere(eb, params) ?? eb.lit(true))
+                .orderBy('createdAt', 'desc')
                 .limit(perPage)
-                .offset(offset),
+                .offset(offset)
+                .execute(),
             db
-                .select({ count: sql<number>`count(*)` })
-                .from(mediaTable)
-                .where(where),
+                .selectFrom('media')
+                .select((eb) => [eb.fn.countAll<number>().as('c')])
+                .where((eb) => buildMediaWhere(eb, params) ?? eb.lit(true))
+                .executeTakeFirst(),
         ]);
 
-        const total = countRows[0]?.count ?? 0;
+        const total = Number(countRow?.c ?? 0);
         return {
-            data: rows.map(toMedia),
+            data: rows.map((r) => toMedia(decode('media', r) as unknown as MediaRow)),
             pagination: {
                 page,
                 limit: perPage,
@@ -148,13 +160,13 @@ export const mediaApi = {
 
     async get(id: string): Promise<Media | null> {
         const db = getDb();
-        const rows = await db
-            .select()
-            .from(mediaTable)
-            .where(eq(mediaTable.id, id))
-            .limit(1);
-        const row = rows[0];
-        return row ? toMedia(row) : null;
+        const row = await db
+            .selectFrom('media')
+            .selectAll()
+            .where('id', '=', id)
+            .limit(1)
+            .executeTakeFirst();
+        return row ? toMedia(decode('media', row) as unknown as MediaRow) : null;
     },
 
     async upload(file: File): Promise<Media> {
@@ -168,21 +180,24 @@ export const mediaApi = {
 
         const { width, height, metadata } = await storeFile(driver, key, file);
 
-        const rows = await db
-            .insert(mediaTable)
-            .values({
-                id,
-                filename: file.name,
-                mimeType: file.type,
-                size: file.size,
-                width,
-                height,
-                metadata,
-            })
-            .returning();
+        const created = await db
+            .insertInto('media')
+            .values(
+                encode('media', {
+                    id,
+                    filename: file.name,
+                    mimeType: file.type,
+                    size: file.size,
+                    width,
+                    height,
+                    metadata,
+                }) as unknown as Insertable<DB['media']>
+            )
+            .returningAll()
+            .executeTakeFirst();
 
-        if (rows.length > 0 && rows[0]) {
-            return toMedia(rows[0]);
+        if (created) {
+            return toMedia(decode('media', created) as unknown as MediaRow);
         }
 
         throw new Error('Failed to upload media');
@@ -194,20 +209,23 @@ export const mediaApi = {
     ): Promise<Media> {
         const validatedData = validate(updateMediaSchema, data);
         const db = getDb();
-        const rows = await db
-            .update(mediaTable)
-            .set({
-                ...(validatedData.alt !== undefined && { alt: validatedData.alt }),
-                ...(validatedData.fields !== undefined && {
-                    fields: validatedData.fields as JsonObject,
-                }),
-                updatedAt: new Date(),
-            })
-            .where(eq(mediaTable.id, id))
-            .returning();
+        const updated = await db
+            .updateTable('media')
+            .set(
+                encodePatch('media', {
+                    ...(validatedData.alt !== undefined && { alt: validatedData.alt }),
+                    ...(validatedData.fields !== undefined && {
+                        fields: validatedData.fields as JsonObject,
+                    }),
+                    updatedAt: new Date(),
+                }) as unknown as Updateable<DB['media']>
+            )
+            .where('id', '=', id)
+            .returningAll()
+            .executeTakeFirst();
 
-        if (rows.length > 0 && rows[0]) {
-            return toMedia(rows[0]);
+        if (updated) {
+            return toMedia(decode('media', updated) as unknown as MediaRow);
         }
 
         throw new Error('Failed to update media');
@@ -218,22 +236,23 @@ export const mediaApi = {
         const driver = getStorageDriver();
 
         if (driver) {
-            const rows = await db
-                .select()
-                .from(mediaTable)
-                .where(eq(mediaTable.id, id))
-                .limit(1);
-            if (rows[0]) {
-                const row = rows[0];
-                const ext = extOf(row.filename);
-                const key = ext ? `${row.id}.${ext}` : row.id;
+            const row = await db
+                .selectFrom('media')
+                .selectAll()
+                .where('id', '=', id)
+                .limit(1)
+                .executeTakeFirst();
+            if (row) {
+                const decoded = decode('media', row) as unknown as MediaRow;
+                const ext = extOf(decoded.filename);
+                const key = ext ? `${decoded.id}.${ext}` : decoded.id;
                 await driver.delete(key);
                 await deletePrefix(driver, variantPrefix(id));
             }
         }
 
         await createRelationshipStorage(getDb()).deleteByMedia(id);
-        await db.delete(mediaTable).where(eq(mediaTable.id, id));
+        await db.deleteFrom('media').where('id', '=', id).execute();
     },
 
     async replace(id: string, file: File): Promise<Media> {
@@ -241,14 +260,15 @@ export const mediaApi = {
         const driver = getStorageDriver();
         if (!driver) throw new Error('Storage driver not configured');
 
-        const existing = await db
-            .select()
-            .from(mediaTable)
-            .where(eq(mediaTable.id, id))
-            .limit(1);
-        if (!existing[0]) throw new Error(`Media '${id}' not found`);
+        const existingRaw = await db
+            .selectFrom('media')
+            .selectAll()
+            .where('id', '=', id)
+            .limit(1)
+            .executeTakeFirst();
+        if (!existingRaw) throw new Error(`Media '${id}' not found`);
 
-        const row = existing[0];
+        const row = decode('media', existingRaw) as unknown as MediaRow;
         const newExt = extOf(file.name);
         const newKey = newExt ? `${id}.${newExt}` : id;
         const oldExt = extOf(row.filename);
@@ -263,22 +283,25 @@ export const mediaApi = {
         }
         await deletePrefix(driver, variantPrefix(id));
 
-        const rows = await db
-            .update(mediaTable)
-            .set({
-                filename: file.name,
-                mimeType: file.type,
-                size: file.size,
-                width,
-                height,
-                metadata,
-                updatedAt: new Date(),
-            })
-            .where(eq(mediaTable.id, id))
-            .returning();
+        const updated = await db
+            .updateTable('media')
+            .set(
+                encodePatch('media', {
+                    filename: file.name,
+                    mimeType: file.type,
+                    size: file.size,
+                    width,
+                    height,
+                    metadata,
+                    updatedAt: new Date(),
+                }) as unknown as Updateable<DB['media']>
+            )
+            .where('id', '=', id)
+            .returningAll()
+            .executeTakeFirst();
 
-        if (rows.length > 0 && rows[0]) {
-            return toMedia(rows[0]);
+        if (updated) {
+            return toMedia(decode('media', updated) as unknown as MediaRow);
         }
 
         throw new Error('Failed to replace media');

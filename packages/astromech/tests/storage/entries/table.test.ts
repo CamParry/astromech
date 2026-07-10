@@ -8,7 +8,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
+import { sql } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
 import { Astromech } from '@/transport/local/index.js';
 import type { AstromechConfig, PluginDefinition } from '@/types/index.js';
@@ -38,8 +38,7 @@ beforeEach(async () => {
     const db = await createTestDb();
     setupTestConfig();
 
-    await db.run(
-        sql`CREATE TABLE test_links (
+    await sql`CREATE TABLE test_links (
             id text PRIMARY KEY,
             "from" text NOT NULL,
             "to" text NOT NULL,
@@ -47,8 +46,7 @@ beforeEach(async () => {
             enabled integer NOT NULL DEFAULT 1,
             "createdAt" integer NOT NULL,
             "updatedAt" integer NOT NULL
-        )`
-    );
+        )`.execute(db);
 });
 
 // ============================================================================

@@ -1,7 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config.js';
 import { getDb } from '@/database/registry.js';
-import { sql } from 'drizzle-orm';
 
 export default defineCommand({
     meta: { name: 'db:status', description: 'Show migration status' },
@@ -12,12 +11,14 @@ export default defineCommand({
         await loadConfig(args.config);
         const db = getDb();
         try {
-            const rows = await db.run(
-                sql`SELECT * FROM __drizzle_migrations ORDER BY created_at`
-            );
+            const rows = await db
+                .selectFrom('kysely_migration' as never)
+                .select(['name', 'timestamp'] as never)
+                .orderBy('timestamp' as never)
+                .execute();
             console.log('Applied migrations:');
-            for (const row of rows.rows ?? []) {
-                console.log(`  ${(row as Record<string, unknown>)['hash']}`);
+            for (const row of rows) {
+                console.log(`  ${(row as Record<string, unknown>)['name']}`);
             }
         } catch {
             console.log('No migrations table found. Run db:init first.');

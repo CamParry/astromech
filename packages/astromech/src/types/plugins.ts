@@ -7,7 +7,8 @@
  */
 
 import type { ComponentType, ReactElement } from 'react';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { Kysely } from 'kysely';
+import type { DB } from '@/database/types.js';
 import type { AdminPage, DbDump, EntryTypeConfig, ResolvedConfig } from './config.js';
 import type { FieldDefinition } from './fields.js';
 import type { User, NotifyInput } from './domain.js';
@@ -71,7 +72,7 @@ export type PluginConfigView = ResolvedConfig & {
 };
 
 export type PluginContext = {
-    db: LibSQLDatabase;
+    db: Kysely<DB>;
     config: PluginConfigView;
     /** The acting user, or null for unauthenticated / system contexts. */
     user: User | null;

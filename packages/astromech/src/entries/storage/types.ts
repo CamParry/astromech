@@ -15,7 +15,7 @@
  * keys / ListParams the entries service passes.
  */
 
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { Db } from '@/database/types.js';
 import type { Capability } from './capabilities.js';
 import type {
     EntryStatus,
@@ -25,8 +25,7 @@ import type {
     WhereFilters,
 } from '@/types/index.js';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type StorageDb = LibSQLDatabase<any>;
+export type StorageDb = Db;
 
 export type { Capability } from './capabilities.js';
 

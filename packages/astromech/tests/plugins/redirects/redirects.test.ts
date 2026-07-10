@@ -13,8 +13,8 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { defineHook } from '@/index.js';
-import { sql } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import { sql } from 'kysely';
+import type { Kysely } from 'kysely';
 import {
     createTestDb,
     makeTestConfig,
@@ -26,6 +26,7 @@ import { localPlugins } from '@/transport/local/plugins.js';
 import { entries as localEntries } from '@/entries/service.js';
 import { redirects } from '@astromech/redirects';
 import type { RedirectMatch } from '@astromech/redirects';
+import type { DB } from '@/database/types.js';
 import type {
     AstromechClient,
     AstromechConfig,
@@ -60,8 +61,7 @@ const lookup = (input: { from: string }): Promise<RedirectMatch | null> => {
     return fn(input) as Promise<RedirectMatch | null>;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let db: LibSQLDatabase<any>;
+let db: Kysely<DB>;
 
 function configWithRedirects(): AstromechConfig {
     const base = makeTestConfig();
@@ -81,7 +81,7 @@ function configWithRedirects(): AstromechConfig {
 
 /** Raw row count in the plugin's own table. */
 async function redirectRows(): Promise<Record<string, unknown>[]> {
-    const rows = await db.all(sql`SELECT * FROM plugin_redirects_redirects`);
+    const { rows } = await sql`SELECT * FROM plugin_redirects_redirects`.execute(db);
     return rows as Record<string, unknown>[];
 }
 
@@ -102,9 +102,10 @@ describe('redirects — own-table storage', () => {
         expect(rows[0]?.['from']).toBe('/old');
         expect(rows[0]?.['to']).toBe('/new');
 
-        const entryRows = await db.all(
-            sql`SELECT * FROM entries WHERE type = 'redirects/redirect'`
-        );
+        const { rows: entryRows } =
+            await sql`SELECT * FROM entries WHERE type = 'redirects/redirect'`.execute(
+                db
+            );
         expect(entryRows).toHaveLength(0);
     });
 

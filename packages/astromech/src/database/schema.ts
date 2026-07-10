@@ -1,17 +1,39 @@
 /**
- * Drizzle ORM Schema for Astromech CMS
+ * Aggregate schema surface for Astromech.
  *
- * Compatible with Cloudflare D1 (SQLite)
+ * Re-exports every table's `defineTable` descriptor and row types from its domain
+ * module, plus the 4 better-auth Drizzle tables (still seconds-INTEGER, owned by
+ * better-auth's adapter). `relationships` and `cron` are defined here as they
+ * have no dedicated domain module. Consumed by `database/types.ts` (assembles
+ * the Kysely `DB`), `database/codec.ts` (the row codec), and `astromech/db/schema`.
  */
 
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import {
+    defineTable,
+    type TableDescriptor,
+    type TableSelect,
+    type TableInsert,
+} from '@/database/define-table.js';
+// `export { x } from '...'` (below) re-exports without binding `x` locally —
+// these value imports are ONLY so `CORE_TABLES` (bottom of file) can
+// reference the descriptors; the `export {...} from` blocks stay the public
+// re-export surface.
+import { roles as rolesTable } from '@/users/schema.js';
+import {
+    entries as entriesTable,
+    entryVersions as entryVersionsTable,
+    entryPreviewTokens as entryPreviewTokensTable,
+} from '@/entries/schema.js';
+import { media as mediaTable } from '@/media/schema.js';
+import { settings as settingsTable } from '@/settings/schema.js';
+import { notifications as notificationsTable } from '@/notifications/schema.js';
 
 // ============================================================================
-// Users domain tables (moved to @/users/schema.ts — re-exported for aggregate surface)
+// Users / RBAC — roles descriptor (ours) + the 4 better-auth Drizzle tables
 // ============================================================================
 
 export {
-    rolesTable,
+    roles,
     usersTable,
     sessionsTable,
     accountsTable,
@@ -29,13 +51,13 @@ export {
 } from '@/users/schema.js';
 
 // ============================================================================
-// Entries (tables moved to @/entries/schema.ts — re-exported for aggregate surface)
+// Entries
 // ============================================================================
 
 export {
-    entriesTable,
-    entryVersionsTable,
-    entryPreviewTokensTable,
+    entries,
+    entryVersions,
+    entryPreviewTokens,
     type EntryRow,
     type NewEntryRow,
     type EntryVersionRow,
@@ -45,60 +67,41 @@ export {
 } from '@/entries/schema.js';
 
 // ============================================================================
-// Relationships
+// Media / Settings / Notifications
 // ============================================================================
 
-export const relationshipsTable = sqliteTable(
-    'relationships',
-    {
-        id: text('id')
-            .primaryKey()
-            .$defaultFn(() => crypto.randomUUID()),
-        sourceId: text('source_id').notNull(),
-        sourceType: text('source_type', {
-            enum: ['entry', 'user', 'media'],
-        }).notNull(),
-        name: text('name').notNull(),
-        targetId: text('target_id').notNull(),
-        targetType: text('target_type', {
-            enum: ['entry', 'user', 'media'],
-        }).notNull(),
-        position: integer('position').notNull().default(0),
-        createdAt: integer('created_at', { mode: 'timestamp' })
-            .notNull()
-            .$defaultFn(() => new Date()),
-    },
-    (table) => ({
-        sourceIdx: index('idx_rel_source').on(
-            table.sourceId,
-            table.sourceType,
-            table.name
-        ),
-        targetIdx: index('idx_rel_target').on(table.targetId, table.targetType),
-    })
-);
-
-// ============================================================================
-// Media (table moved to @/media/schema.ts — re-exported for aggregate surface)
-// ============================================================================
-
-export { mediaTable, type MediaRow, type NewMediaRow } from '@/media/schema.js';
-
-// ============================================================================
-// Settings (table moved to @/settings/schema.ts — re-exported for aggregate surface)
-// ============================================================================
-
-export { settingsTable, type SettingRow, type NewSettingRow } from '@/settings/schema.js';
-
-// ============================================================================
-// Notifications (table moved to @/notifications/schema.ts — re-exported for aggregate surface)
-// ============================================================================
-
+export { media, type MediaRow, type NewMediaRow } from '@/media/schema.js';
+export { settings, type SettingRow, type NewSettingRow } from '@/settings/schema.js';
 export {
-    notificationsTable,
+    notifications,
     type NotificationRow,
     type NewNotificationRow,
 } from '@/notifications/schema.js';
+
+// ============================================================================
+// Relationships
+// ============================================================================
+
+export const relationships = defineTable(
+    'relationships',
+    ({ col }) => ({
+        id: col.id(),
+        sourceId: col.text({ notNull: true }),
+        sourceType: col.enum(['entry', 'user', 'media'], { notNull: true }),
+        name: col.text({ notNull: true }),
+        targetId: col.text({ notNull: true }),
+        targetType: col.enum(['entry', 'user', 'media'], { notNull: true }),
+        position: col.integer({ notNull: true, default: 0 }),
+        createdAt: col.timestamp({ notNull: true, defaultNow: true }),
+    }),
+    ({ index }) => [
+        index('idx_rel_source', ['sourceId', 'sourceType', 'name']),
+        index('idx_rel_target', ['targetId', 'targetType']),
+    ]
+);
+
+export type RelationshipRow = TableSelect<typeof relationships>;
+export type NewRelationshipRow = TableInsert<typeof relationships>;
 
 // ============================================================================
 // Cron
@@ -113,21 +116,37 @@ export {
  * CAS-claims a job by writing an expiry; a crashed claim auto-expires so the
  * next tick can retry.
  */
-export const cronTable = sqliteTable('_astromech_cron', {
-    name: text('name').primaryKey(),
-    schedule: text('schedule').notNull(),
-    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-    lastRun: integer('last_run', { mode: 'timestamp' }),
-    nextRun: integer('next_run', { mode: 'timestamp' }),
-    lock: integer('lock', { mode: 'timestamp' }),
-});
+export const cron = defineTable('_astromech_cron', ({ col }) => ({
+    name: col.text({ primaryKey: true }),
+    schedule: col.text({ notNull: true }),
+    enabled: col.boolean({ notNull: true, default: true }),
+    lastRun: col.timestamp(),
+    nextRun: col.timestamp(),
+    lock: col.timestamp(),
+}));
 
-export type CronRow = typeof cronTable.$inferSelect;
-export type NewCronRow = typeof cronTable.$inferInsert;
+export type CronRow = TableSelect<typeof cron>;
+export type NewCronRow = TableInsert<typeof cron>;
 
 // ============================================================================
-// Type Exports
+// Core descriptor list — every `defineTable`-backed table we own
 // ============================================================================
 
-export type RelationshipRow = typeof relationshipsTable.$inferSelect;
-export type NewRelationshipRow = typeof relationshipsTable.$inferInsert;
+/**
+ * The 9 descriptor-backed tables, in one place. Consumed by the DDL-parity
+ * test, the migration generator (`generator.ts`), and `db:generate`'s CLI
+ * repoint — anywhere that needs "every table `defineTable` owns" without
+ * re-listing the 9 imports by hand. Does NOT include the 4 better-auth tables
+ * or the 2 plugin tables (they have no descriptor — see `codec.ts`).
+ */
+export const CORE_TABLES: TableDescriptor[] = [
+    rolesTable,
+    entriesTable,
+    entryVersionsTable,
+    entryPreviewTokensTable,
+    mediaTable,
+    settingsTable,
+    notificationsTable,
+    relationships,
+    cron,
+];

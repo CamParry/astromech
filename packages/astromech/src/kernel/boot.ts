@@ -7,8 +7,10 @@
  */
 
 import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import type { AstromechConfig, ResolvedConfig } from '@/types/index.js';
-import { setDb, getDb } from '@/database/registry.js';
+import { setDb, getDb, setDbClient } from '@/database/registry.js';
+import { migrateToLatest } from '@/database/migrator.js';
 import { setDatabaseDriver } from '@/database/driver-registry.js';
 import { setStorageDriver } from '@/storage/registry.js';
 import { setImageConfig } from '@/media/serving/image/registry.js';
@@ -38,6 +40,10 @@ export async function initRuntime(
     resolvedConfig: ResolvedConfig
 ): Promise<void> {
     setDb(config.db.getInstance());
+    // Stash the shared libsql client (better-auth's Kysely adapter + dump/restore
+    // run against it). Absent on drivers without an in-process client (e.g. D1).
+    const client = config.db.getClient?.();
+    if (client) setDbClient(client);
     setDatabaseDriver(config.db);
     setStorageDriver(config.storage);
     if (config.image) {
@@ -69,10 +75,14 @@ export async function runMigrations(logger: {
     error: (msg: string) => void;
 }): Promise<void> {
     try {
-        const { migrate } = await import('drizzle-orm/libsql/migrator');
-        // Resolve from the app's CWD (where `astro dev` / `astro build` runs).
-        const migrationsFolder = resolve(process.cwd(), 'drizzle');
-        await migrate(getDb(), { migrationsFolder });
+        // Resolve the app-owned migration provider from the app's CWD (where
+        // `astro dev` / `astro build` runs). db:init is the primary migration
+        // path; this is belt-and-suspenders, so a failed import is swallowed.
+        const migrationsUrl = pathToFileURL(
+            resolve(process.cwd(), 'migrations/index.ts')
+        ).href;
+        const { migrationProvider } = await import(migrationsUrl);
+        await migrateToLatest(getDb(), migrationProvider);
         logger.info('Astromech database migrations applied');
     } catch (err) {
         logger.error(

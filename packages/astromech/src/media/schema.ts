@@ -1,42 +1,35 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 import type { MediaMetadata } from '@/types/index.js';
-import { usersTable } from '@/users/schema.js';
 import { z } from '@hono/zod-openapi';
+import {
+    defineTable,
+    type TableSelect,
+    type TableInsert,
+} from '@/database/define-table.js';
 
-// ============================================================================
-// Media Table
-// ============================================================================
-
-export const mediaTable = sqliteTable(
+export const media = defineTable(
     'media',
-    {
-        id: text('id')
-            .primaryKey()
-            .$defaultFn(() => crypto.randomUUID()),
-        filename: text('filename').notNull(),
-        mimeType: text('mime_type').notNull(),
-        size: integer('size').notNull(),
-        width: integer('width'),
-        height: integer('height'),
-        alt: text('alt'),
-        fields: text('fields', { mode: 'json' }),
-        metadata: text('metadata', { mode: 'json' }).$type<MediaMetadata>(),
-        createdAt: integer('created_at', { mode: 'timestamp' })
-            .notNull()
-            .$defaultFn(() => new Date()),
-        updatedAt: integer('updated_at', { mode: 'timestamp' })
-            .notNull()
-            .$defaultFn(() => new Date()),
-        createdBy: text('created_by').references(() => usersTable.id),
-    },
-    (table) => ({
-        mimeTypeIdx: index('idx_media_mime').on(table.mimeType),
-        createdAtIdx: index('idx_media_created').on(table.createdAt),
-    })
+    ({ col }) => ({
+        id: col.id(),
+        filename: col.text({ notNull: true }),
+        mimeType: col.text({ notNull: true }),
+        size: col.integer({ notNull: true }),
+        width: col.integer(),
+        height: col.integer(),
+        alt: col.text(),
+        fields: col.json(),
+        metadata: col.json<MediaMetadata>(),
+        createdAt: col.timestamp({ notNull: true, defaultNow: true }),
+        updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
+        createdBy: col.reference('users'),
+    }),
+    ({ index }) => [
+        index('idx_media_mime', ['mimeType']),
+        index('idx_media_created', ['createdAt']),
+    ]
 );
 
-export type MediaRow = typeof mediaTable.$inferSelect;
-export type NewMediaRow = typeof mediaTable.$inferInsert;
+export type MediaRow = TableSelect<typeof media>;
+export type NewMediaRow = TableInsert<typeof media>;
 
 // ============================================================================
 // Zod Schemas

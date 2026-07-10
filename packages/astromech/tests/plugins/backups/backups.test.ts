@@ -20,11 +20,12 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { sql } from 'drizzle-orm';
+import { sql } from 'kysely';
+import type { Kysely } from 'kysely';
 import { libsqlDriver } from '@/database/drivers/libsql.js';
 import { FilesystemStorage } from '@/storage/filesystem.js';
-import { backupRunsTable } from '@astromech/backups/schema';
+import { decode } from '@/database/codec.js';
+import type { DB } from '@/database/types.js';
 import { performBackup, rotate, isBackupRunning } from '@astromech/backups/internals';
 import type { PluginContext, PluginDatabase, PluginStorage } from '@/types/index.js';
 
@@ -43,19 +44,20 @@ function makeTmpDir(): string {
 
 /**
  * Create a real file-based libsql DB with the plugin_backups_runs table.
- * Returns both the drizzle handle AND the driver (which has dump/restore).
+ * Returns both the Kysely handle AND the driver (which has dump/restore).
  */
 async function makeFileDb(dbPath: string): Promise<{
-    db: LibSQLDatabase;
+    db: Kysely<DB>;
     driver: ReturnType<typeof libsqlDriver>;
 }> {
     const url = `file:${dbPath}`;
     const driver = libsqlDriver({ url });
-    const db = driver.getInstance();
+    const db = driver.getInstance() as Kysely<DB>;
 
     // Create the backups table directly — no full migrations needed for these tests.
-    await db.run(
-        sql.raw(`
+    await sql
+        .raw(
+            `
             CREATE TABLE IF NOT EXISTS plugin_backups_runs (
                 id TEXT PRIMARY KEY,
                 key TEXT,
@@ -67,20 +69,23 @@ async function makeFileDb(dbPath: string): Promise<{
                 finished_at INTEGER,
                 artifact_deleted_at INTEGER
             )
-        `)
-    );
+        `
+        )
+        .execute(db);
 
     return { db, driver };
 }
 
 /** Build a minimal PluginContext for the backups plugin. */
 function makeCtx(
-    db: LibSQLDatabase,
+    db: Kysely<DB>,
     storage: PluginStorage,
     database: PluginDatabase
 ): PluginContext {
     return {
-        db,
+        // Cast through unknown: the plugin source is being ported to Kysely in a
+        // sibling agent; the type will be Kysely<DB> once that lands.
+        db: db as unknown as PluginContext['db'],
         config: null as unknown as PluginContext['config'],
         user: null,
         sdk: null as unknown as PluginContext['sdk'],
@@ -137,21 +142,21 @@ describe('libsqlDriver.dump / restore', () => {
         const { db, driver } = await makeFileDb(dbPath);
 
         // Create a simple test table and seed it.
-        await db.run(sql.raw(`CREATE TABLE items (id TEXT PRIMARY KEY, name TEXT)`));
-        await db.run(sql.raw(`INSERT INTO items VALUES ('1','alpha'), ('2','beta')`));
+        await sql.raw(`CREATE TABLE items (id TEXT PRIMARY KEY, name TEXT)`).execute(db);
+        await sql.raw(`INSERT INTO items VALUES ('1','alpha'), ('2','beta')`).execute(db);
 
         const dump = await driver.dump();
         // Mutate after dump.
-        await db.run(sql.raw(`DELETE FROM items`));
-        await db.run(sql.raw(`INSERT INTO items VALUES ('3','gamma')`));
+        await sql.raw(`DELETE FROM items`).execute(db);
+        await sql.raw(`INSERT INTO items VALUES ('3','gamma')`).execute(db);
 
-        const rowsBefore = await db.all(sql.raw(`SELECT * FROM items`));
+        const { rows: rowsBefore } = await sql.raw(`SELECT * FROM items`).execute(db);
         expect(rowsBefore).toHaveLength(1);
 
         await driver.restore(dump.stream, { preserve: [] });
         await dump.cleanup();
 
-        const rowsAfter = await db.all(sql.raw(`SELECT * FROM items`));
+        const { rows: rowsAfter } = await sql.raw(`SELECT * FROM items`).execute(db);
         expect(rowsAfter).toHaveLength(2);
         expect(
             (rowsAfter as Record<string, unknown>[]).map((r) => r['name']).sort()
@@ -185,45 +190,42 @@ describe('libsqlDriver.restore — preserve', () => {
         const { db, driver } = await makeFileDb(dbPath);
 
         // `makeFileDb` already creates plugin_backups_runs. Add a second table.
-        await db.run(sql.raw(`CREATE TABLE things (id TEXT PRIMARY KEY, val TEXT)`));
+        await sql.raw(`CREATE TABLE things (id TEXT PRIMARY KEY, val TEXT)`).execute(db);
 
-        await db.run(sql.raw(`INSERT INTO things VALUES ('t1','original-thing')`));
-        await db.run(
-            sql.raw(
+        await sql.raw(`INSERT INTO things VALUES ('t1','original-thing')`).execute(db);
+        await sql
+            .raw(
                 `INSERT INTO plugin_backups_runs VALUES ('r1',NULL,'success','manual',NULL,NULL,1,NULL,NULL)`
             )
-        );
+            .execute(db);
 
         const dump = await driver.dump();
 
         // Mutate both tables after the dump.
-        await db.run(sql.raw(`DELETE FROM things`));
-        await db.run(sql.raw(`INSERT INTO things VALUES ('t2','post-dump-thing')`));
-        await db.run(sql.raw(`DELETE FROM plugin_backups_runs`));
-        await db.run(
-            sql.raw(
+        await sql.raw(`DELETE FROM things`).execute(db);
+        await sql.raw(`INSERT INTO things VALUES ('t2','post-dump-thing')`).execute(db);
+        await sql.raw(`DELETE FROM plugin_backups_runs`).execute(db);
+        await sql
+            .raw(
                 `INSERT INTO plugin_backups_runs VALUES ('r2',NULL,'failed','scheduled',NULL,'boom',2,NULL,NULL)`
             )
-        );
+            .execute(db);
 
         // Restore, preserving plugin_backups_runs.
         await driver.restore(dump.stream, { preserve: ['plugin_backups_runs'] });
         await dump.cleanup();
 
         // `things` should be reverted to the original state.
-        const things = (await db.all(sql.raw(`SELECT * FROM things`))) as Record<
-            string,
-            unknown
-        >[];
+        const { rows: things } = await sql.raw(`SELECT * FROM things`).execute(db);
         expect(things).toHaveLength(1);
-        expect(things[0]?.['val']).toBe('original-thing');
+        expect((things as Record<string, unknown>[])[0]?.['val']).toBe('original-thing');
 
         // `plugin_backups_runs` should keep the post-dump state.
-        const runs = (await db.all(
-            sql.raw(`SELECT * FROM plugin_backups_runs`)
-        )) as Record<string, unknown>[];
+        const { rows: runs } = await sql
+            .raw(`SELECT * FROM plugin_backups_runs`)
+            .execute(db);
         expect(runs).toHaveLength(1);
-        expect(runs[0]?.['id']).toBe('r2');
+        expect((runs as Record<string, unknown>[])[0]?.['id']).toBe('r2');
     });
 });
 
@@ -309,12 +311,12 @@ describe('rotate', () => {
             const key = `${baseTs + i}-${id.slice(0, 8)}.sqlite.gz`;
             await storage.put(key, new Uint8Array([0, 1, 2]));
             // Insert a success row with a known, distinct startedAt.
-            await db.run(
-                sql.raw(
+            await sql
+                .raw(
                     `INSERT INTO plugin_backups_runs (id, key, status, trigger, started_at)
                      VALUES ('${id}', '${key}', 'success', 'manual', ${baseTs + i})`
                 )
-            );
+                .execute(db);
         }
 
         // Verify 5 artifacts exist before rotation.
@@ -325,20 +327,27 @@ describe('rotate', () => {
         await rotate(ctx, 3);
 
         // Check DB rows.
-        const allRows = await db.select().from(backupRunsTable);
-        const deleted = allRows.filter((r) => r.artifactDeletedAt !== null);
-        const kept = allRows.filter((r) => r.artifactDeletedAt === null);
+        const { rows: rawRows } = await sql
+            .raw(`SELECT * FROM plugin_backups_runs`)
+            .execute(db);
+        const allRows = (rawRows as Record<string, unknown>[]).map((r) =>
+            decode('plugin_backups_runs', r)
+        );
+        const deleted = allRows.filter((r) => r['artifactDeletedAt'] !== null);
+        const kept = allRows.filter((r) => r['artifactDeletedAt'] === null);
 
         expect(deleted).toHaveLength(2);
         expect(kept).toHaveLength(3);
 
         // The oldest 2 rows (lowest startedAt) must be marked deleted.
         const sortedByStart = [...allRows].sort(
-            (a, b) => (a.startedAt?.getTime() ?? 0) - (b.startedAt?.getTime() ?? 0)
+            (a, b) =>
+                ((a['startedAt'] as Date | null)?.getTime() ?? 0) -
+                ((b['startedAt'] as Date | null)?.getTime() ?? 0)
         );
-        expect(sortedByStart[0]?.artifactDeletedAt).toBeInstanceOf(Date);
-        expect(sortedByStart[1]?.artifactDeletedAt).toBeInstanceOf(Date);
-        expect(sortedByStart[2]?.artifactDeletedAt).toBeNull();
+        expect(sortedByStart[0]?.['artifactDeletedAt']).toBeInstanceOf(Date);
+        expect(sortedByStart[1]?.['artifactDeletedAt']).toBeInstanceOf(Date);
+        expect(sortedByStart[2]?.['artifactDeletedAt']).toBeNull();
 
         // Verify storage only has 3 artifacts remaining.
         const afterKeys = await storage.list('');
@@ -359,8 +368,13 @@ describe('rotate', () => {
 
         await rotate(ctx, 5);
 
-        const allRows = await db.select().from(backupRunsTable);
-        expect(allRows.every((r) => r.artifactDeletedAt === null)).toBe(true);
+        const { rows: rawRows } = await sql
+            .raw(`SELECT * FROM plugin_backups_runs`)
+            .execute(db);
+        const allRows = (rawRows as Record<string, unknown>[]).map((r) =>
+            decode('plugin_backups_runs', r)
+        );
+        expect(allRows.every((r) => r['artifactDeletedAt'] === null)).toBe(true);
 
         const afterKeys = await storage.list('');
         expect(afterKeys).toHaveLength(2);

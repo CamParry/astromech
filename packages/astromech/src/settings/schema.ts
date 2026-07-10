@@ -1,23 +1,20 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import { z } from 'zod';
-import { usersTable } from '@/users/schema.js';
 import type { JsonValue } from '@/types/index.js';
+import {
+    defineTable,
+    type TableSelect,
+    type TableInsert,
+} from '@/database/define-table.js';
 
-// ============================================================================
-// Settings table
-// ============================================================================
+export const settings = defineTable('settings', ({ col }) => ({
+    key: col.text({ primaryKey: true }),
+    value: col.json<JsonValue>(),
+    updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
+    updatedBy: col.reference('users'),
+}));
 
-export const settingsTable = sqliteTable('settings', {
-    key: text('key').primaryKey(),
-    value: text('value', { mode: 'json' }).$type<JsonValue>(),
-    updatedAt: integer('updated_at', { mode: 'timestamp' })
-        .notNull()
-        .$defaultFn(() => new Date()),
-    updatedBy: text('updated_by').references(() => usersTable.id),
-});
-
-export type SettingRow = typeof settingsTable.$inferSelect;
-export type NewSettingRow = typeof settingsTable.$inferInsert;
+export type SettingRow = TableSelect<typeof settings>;
+export type NewSettingRow = TableInsert<typeof settings>;
 
 // ============================================================================
 // Zod schemas
