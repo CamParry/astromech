@@ -1,29 +1,23 @@
 /**
  * Migration generator — reads/writes an app's `migrations/` directory
  * (`snapshot.json`, `journal.json`, the generated `.ts` migration files, and
- * `index.ts`), wiring `snapshot.ts` (descriptor → snapshot) → `diff.ts`
- * (snapshot diff) → `migration-render.ts` (diff → SQL/TS) into one call.
+ * `index.ts`), wiring `diff.ts` (snapshot diff) → `render.ts` (diff → SQL/TS)
+ * into one call.
  *
- * Node-only (uses `node:fs/promises` + `node:path`) — generation is a
- * dev/CI-time step, never a runtime one (`specs/data-layer.md` §7: "Generation
- * = dev/CI only. Application = Kysely Migrator, pure SQL, edge/D1-safe").
- * Do NOT re-export this module from a barrel a browser bundle or a Worker
- * runtime path might pull in (`database/index.ts` / `exports/schema.ts` stay
- * fs-free) — the CLI (`transport/cli/commands/db-generate.ts`) is the only
- * caller.
+ * Node-only (uses `node:fs/promises` + `node:path`) — generation is a dev/CI
+ * step, never a runtime one. It is deliberately NOT part of the package's main
+ * entry: `.` stays pure and edge-safe, this module is the `./generate` subpath.
  *
- * No `id`/`prevId` snapshot-chain (unlike drizzle-kit) — journal ordering is
- * by `idx` alone, and a divergent parallel `db:generate` surfaces as a
- * `snapshot.json` merge conflict rather than a silent hash mismatch.
+ * Journal ordering is by `idx` alone and there is no `id`/`prevId` snapshot
+ * chain, so a divergent parallel generation run surfaces as a `snapshot.json`
+ * merge conflict rather than a silent hash mismatch.
  */
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { diffSnapshots } from '@/database/diff.js';
-import { renderMigrationFile } from '@/database/migration-render.js';
-import { createSnapshot, serializeSnapshot, type Snapshot } from '@/database/snapshot.js';
-import type { SqlDialect } from '@/database/ddl.js';
-import type { TableDescriptor } from '@/database/define-table.js';
+import { diffSnapshots } from './diff.js';
+import { renderMigrationFile } from './render.js';
+import { serializeSnapshot, type Snapshot, type SqlDialect } from './model.js';
 
 export type GenerateResult =
     | { status: 'no-changes' }
@@ -57,7 +51,7 @@ function migrationVarName(idx: number): string {
 
 /** Regenerate `index.ts` — the static `MigrationProvider` — from every
  *  journal entry, ordered by `idx`. Static imports only (no dynamic
- *  discovery): the Workers bundler can't do runtime `fs` scanning. */
+ *  discovery): an edge bundler can't do runtime `fs` scanning. */
 function renderIndexFile(entries: JournalEntry[]): string {
     const sorted = [...entries].sort((a, b) => a.idx - b.idx);
     const imports = sorted
@@ -83,15 +77,15 @@ function renderIndexFile(entries: JournalEntry[]): string {
 }
 
 /**
- * Diff the given descriptors against `<dir>/snapshot.json` and, if anything
+ * Diff the given snapshot against `<dir>/snapshot.json` and, if anything
  * changed, write a new `NNNN_<name>.ts` migration + regenerate `index.ts` +
  * update `journal.json`/`snapshot.json`. Throws (writing nothing) if the diff
- * has any validation errors. Prints warnings loudly via `console.warn` before
- * writing.
+ * has any validation errors. Warnings are returned, not printed — surfacing
+ * them is the caller's job.
  */
 export async function generateMigrations(opts: {
     dir: string;
-    tables: TableDescriptor[];
+    snapshot: Snapshot;
     dialect: SqlDialect;
     name: string;
 }): Promise<GenerateResult> {
@@ -106,22 +100,18 @@ export async function generateMigrations(opts: {
         entries: [],
     };
 
-    const next = createSnapshot(opts.tables, { dialect: opts.dialect });
+    const next = opts.snapshot;
     const diff = diffSnapshots(prev, next);
 
     if (diff.errors.length > 0) {
         throw new Error(
-            `[Astromech] migration generation failed:\n` +
+            `migration generation failed:\n` +
                 diff.errors.map((e) => `  - ${e}`).join('\n')
         );
     }
 
     if (diff.ops.length === 0) {
         return { status: 'no-changes' };
-    }
-
-    for (const warning of diff.warnings) {
-        console.warn(`[astromech db:generate] WARNING: ${warning}`);
     }
 
     const idx =

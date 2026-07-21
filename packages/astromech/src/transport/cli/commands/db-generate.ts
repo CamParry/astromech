@@ -3,14 +3,14 @@
  *
  * Diffs the core descriptors (`CORE_TABLES`) against the app's
  * `migrations/snapshot.json` and writes a new migration if anything changed
- * (see `database/generator.ts`). Plugin-owned tables are step 5's problem —
+ * (see `database/generate.ts`). Plugin-owned tables are step 5's problem —
  * this generates for core only.
  */
 
 import { defineCommand } from 'citty';
 import { resolve } from 'node:path';
 import { loadConfig } from '../config.js';
-import { generateMigrations } from '@/database/generator.js';
+import { generateMigrations } from '@/database/generate.js';
 import { CORE_TABLES } from '@/database/schema.js';
 
 export default defineCommand({

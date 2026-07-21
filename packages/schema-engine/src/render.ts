@@ -2,15 +2,15 @@
  * Migration statement/file renderer — `TableOp[]` (from `diff.ts`) → SQL
  * statements → a complete generated migration module's TS source.
  *
- * Pure, browser-safe (no fs imports) — `generator.ts` is the Node-only
+ * Pure, browser-safe (no fs imports) — `generate.ts` is the Node-only
  * orchestrator that writes the rendered source to disk. Statement rendering
  * for `createTable`/`dropTable`/`addColumn`/`dropIndex`/`createIndex` reuses
  * `ddl.ts`'s `renderCreateTable`/`renderCreateIndex`/`renderColumnClause` so
- * the generator and the descriptor-emit path never diverge in SQL shape.
+ * the generator and the direct emit path never diverge in SQL shape.
  *
  * `rebuildTable` is the one op with no native SQLite equivalent — SQLite has
  * no `ALTER COLUMN`/`DROP COLUMN` that survives CHECK/index constraints, so a
- * changed table is rebuilt wholesale (`specs/data-layer.md` §"Step 4"):
+ * changed table is rebuilt wholesale:
  * `PRAGMA defer_foreign_keys = true` → `CREATE __new_x` → `INSERT…SELECT`
  * (COALESCE-backfilling any nullable→NOT NULL column) → `DROP x` →
  * `RENAME __new_x TO x` → recreate every index. No self-managed
@@ -26,9 +26,9 @@ import {
     renderCreateIndex,
     renderCreateTable,
     renderLiteral,
-    type SqlDialect,
-} from '@/database/ddl.js';
-import type { TableOp } from '@/database/diff.js';
+} from './ddl.js';
+import type { SqlDialect } from './model.js';
+import type { TableOp } from './diff.js';
 
 /** Render one op's SQL statement(s), in apply order. */
 export function renderOpStatements(op: TableOp, dialect: SqlDialect): string[] {

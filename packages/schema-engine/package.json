@@ -1,0 +1,48 @@
+{
+    "name": "@astromech/schema-engine",
+    "version": "0.1.0",
+    "type": "module",
+    "description": "Schema-as-state migration engine for SQLite: snapshot in — DDL, diffs, and forward-only Kysely migration files out.",
+    "author": "Cam",
+    "license": "MIT",
+    "sideEffects": false,
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        },
+        "./generate": {
+            "types": "./dist/generate.d.ts",
+            "default": "./dist/generate.js"
+        }
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "files": [
+        "dist",
+        "src",
+        "README.md"
+    ],
+    "scripts": {
+        "build": "tsup",
+        "typecheck": "tsc -p tsconfig.test.json",
+        "lint": "eslint src",
+        "test": "vitest",
+        "test:run": "vitest run"
+    },
+    "peerDependencies": {
+        "kysely": "*"
+    },
+    "devDependencies": {
+        "@libsql/client": "^0.17.2",
+        "@libsql/kysely-libsql": "^0.4.1",
+        "@types/node": "^25.5.0",
+        "kysely": "^0.28.14",
+        "tsup": "^8.0.0",
+        "typescript": "^5.9.3",
+        "vitest": "^4.1.0"
+    },
+    "engines": {
+        "node": ">=20.0.0"
+    }
+}

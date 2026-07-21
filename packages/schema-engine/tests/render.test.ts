@@ -1,6 +1,5 @@
 /**
- * Unit tests for the migration statement/file renderer
- * (`database/migration-render.ts`).
+ * Unit tests for the migration statement/file renderer (`src/render.ts`).
  *
  * Exercises the exact rebuild statement sequence (PRAGMA → CREATE __new_ →
  * INSERT…SELECT with COALESCE → DROP → RENAME → indexes), the empty-copy
@@ -9,9 +8,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { renderMigrationFile, renderOpStatements } from '@/database/migration-render.js';
-import type { TableOp } from '@/database/diff.js';
-import type { SnapshotTable } from '@/database/snapshot.js';
+import { renderMigrationFile, renderOpStatements } from '../src/render.js';
+import type { TableOp } from '../src/diff.js';
+import type { SnapshotTable } from '../src/model.js';
 
 const widgets: SnapshotTable = {
     name: 'widgets',

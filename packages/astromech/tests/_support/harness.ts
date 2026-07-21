@@ -20,7 +20,7 @@ import { Kysely, CamelCasePlugin } from 'kysely';
 import type { Insertable } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { setDb, setDbClient } from '@/database/registry.js';
-import { migrateToLatest } from '@/database/migrator.js';
+import { migrateToLatest } from '@astromech/schema-engine';
 import { encode, decode } from '@/database/codec.js';
 import type { DB } from '@/database/types.js';
 import type { UserRow } from '@/database/schema.js';
