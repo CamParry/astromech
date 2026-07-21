@@ -95,6 +95,31 @@ Locks open specifics #4, #5, #6, #8, #11.
 
 **#11 Drift gate** — (a) parity test generalised: DB built via full migration chain vs DB built from `emitTableStatements()` per descriptor → identical `sqlite_master` for the 9; (b) "generate produces no new migration" as a vitest test (diff of current descriptors vs committed snapshot = zero ops) so CI gets it for free.
 
+### Step 5 — locked implementation decisions (resolved 2026-07-12)
+
+Locks open specifics #9 (descriptor discovery) and #10 (scoped plugin factory). Exit criterion: **`drizzle-orm` uninstalled** — which forces the descriptor-driven `tableStorage` replacement into scope (it is the last Drizzle consumer).
+
+**#10 `definePlugin` factory** — `definePlugin({ alias, schema: ({ table, col }) => ({ ...tables }) })`:
+
+- Alias-bound `table` = `defineTable` auto-prefixing `plugin_<alias>_<name>`; `col` identical to core's. Manual `TABLE_PREFIX` plumbing dies.
+- Plugin manifest `schema` becomes `TableDescriptor[]`; `schemaModule` (the drizzle-kit aggregator hook) is deleted.
+- Type story same as core (§7): one descriptor → plugin Row types + plugin-scoped Kysely cells; core tables type-unaddressable from the plugin's `db`.
+
+**Migration composition — ONE shared migration table** (not per-plugin migrator state):
+
+- Single Kysely `Migrator` run over a MERGED provider: app chain (`<cwd>/migrations/index.ts`) + each configured plugin's provider (exposed on its manifest as a static import of the plugin package's own `migrations/index.ts`).
+- Plugin migration NAMES are prefixed `plugin_<alias>_` in the merged provider (e.g. `plugin_redirects_0000_baseline`); core names stay bare `NNNN_<tag>`. File names inside each package stay `NNNN_<tag>.ts`.
+- `allowUnorderedMigrations: true` — a plugin/core update legitimately appends names sorting before already-applied ones; within-prefix order stays strict (journal `idx`), cross-prefix order is irrelevant (namespaced tables).
+- **No back-compat shim**: the app baseline's hand-authored 2 plugin-table sections move into each plugin's own `0000_baseline`; no sites exist, demo DB reseeds. (The 4 better-auth tables REMAIN hand-authored in the app baseline — unchanged from #4.)
+
+**#9 Discovery — static imports everywhere** (Workers bundler; no fs scanning at runtime): plugin package ships `migrations/` (+ `snapshot.json` + `journal.json`) at package root; its generated `index.ts` provider is statically imported by the plugin's entry and exposed via manifest. Site config → manifests → merged provider at boot/`db:init`. Generation stays dev/CI-only Node.
+
+**`plugin:generate` CLI** — run inside the plugin package (an app config must not be needed): loads the plugin's schema module — default `./src/schema/index.ts`, `--schema` override — exporting the `definePlugin` result (or `TableDescriptor[]`), diffs against the package's own `migrations/snapshot.json`, writes into `./migrations`. Reuses `database/generator.ts` verbatim; prefixing happens in the provider, not in tags/filenames.
+
+**Installed-plugin tracking + `plugin:purge`** — new core table `_astromech_plugins` (alias TEXT PK, version, installedAt) upserted lazily at boot. Its descriptor is the 10th core table → lands as the core chain's first REAL generated migration (exercises the step-4 generator end-to-end). Boot warns when a tracked alias is absent from config (leave-on-remove). `plugin:purge <alias>`: drop all `plugin_<alias>_*` tables, delete its rows from the shared migration table (`name LIKE 'plugin_<alias>_%'`), delete the tracking row.
+
+**tableStorage replacement** — `entries/storage/table.ts` re-implemented over a `TableDescriptor` + the shared Kysely instance (options/API surface unchanged). The descriptor's explicit key→name mapping + per-column codec fixes both step-1 regressions that forced the Drizzle revert (CamelCasePlugin name mangling, lost per-column mode decode). Legacy seconds codec map for `plugin_backups_runs` dies — plugin descriptors make it ISO-TEXT like all descriptor tables (data reseeds).
+
 ---
 
 ## 3. Authoring API — LOCKED (Q1–Q4)
@@ -279,7 +304,7 @@ upsert(data, { target?, set? }): Promise<T>    // default conflict target = PK
 
 ## 9. OPEN specifics still to refine (before/while implementing Feature 1 steps 2–4)
 
-Grilled & locked so far: #1 (column-builder API), #2 (write API — Feature 2), #3 (where DSL — Feature 2), **#4 #5 #6 #8 #11 (step 4 — see "Step 4 — locked implementation decisions")**. Remaining: 7. Dialect seam: `driver.sqlDialect` tag + `createKyselyDialect()`; config selects driver: `sqlite({url})` / `turso({url,authToken})` / `d1({binding})` / `postgres({url})` / `neon({url})`. 9. Descriptor registration/discovery — static imports (Workers bundler can't do dynamic discovery; EmDash `StaticMigrationProvider` pattern); step 4 uses a static core-descriptor list, full story with plugins at step 5. 10. Scoped plugin factory: `definePlugin({ alias, schema: ({table,col}) => … })`; plugin-owned journal gen/apply; `purge`; installed-plugin tracking.
+Grilled & locked so far: #1 (column-builder API), #2 (write API — Feature 2), #3 (where DSL — Feature 2), **#4 #5 #6 #8 #11 (step 4)**, **#9 #10 (step 5)** — see the per-step "locked implementation decisions" sections. Remaining: 7. Dialect seam: `driver.sqlDialect` tag + `createKyselyDialect()`; config selects driver: `sqlite({url})` / `turso({url,authToken})` / `d1({binding})` / `postgres({url})` / `neon({url})`.
 
 ---
 
