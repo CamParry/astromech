@@ -2,9 +2,8 @@
  * Snapshot differ — two `Snapshot`s → the ordered `TableOp`s that carry one to
  * the other, plus generate-time validation.
  *
- * Pure, browser-safe (no fs/db imports) — `generator.ts` is the Node-only
- * orchestrator that reads/writes snapshots on disk and calls this. Rules are
- * the locked step-4 decisions (`specs/data-layer.md` §"Step 4"):
+ * Pure, browser-safe (no fs/db imports) — `generate.ts` is the Node-only
+ * orchestrator that reads/writes snapshots on disk and calls this. The rules:
  *
  *   - `prev === null` → every table is a `createTable` (no warnings).
  *   - A table present in `prev` but not `next` → `dropTable` + warning
@@ -21,7 +20,7 @@
  *   - Impossible states (a rebuild's `INSERT…SELECT` can't backfill a NOT
  *     NULL column with no SQL literal, an index naming an unknown column, a
  *     duplicate index name) are collected as hard errors — the caller
- *     (`generator.ts`) refuses to write anything when any exist.
+ *     (`generate.ts`) refuses to write anything when any exist.
  *
  * Op ordering in the result: `dropIndex`, `dropTable`, `createTable`,
  * `addColumn`, `rebuildTable`, `createIndex` — drops before creates, and
@@ -35,7 +34,7 @@ import type {
     SnapshotForeignKey,
     SnapshotIndex,
     SnapshotTable,
-} from '@/database/snapshot.js';
+} from './model.js';
 
 export type TableOp =
     | { kind: 'createTable'; table: SnapshotTable }
@@ -122,7 +121,7 @@ function diffTable(
             // Added column.
             if (nextCol.notNull && nextCol.default === undefined) {
                 acc.errors.push(
-                    `[Astromech] column "${colName}" on table "${nextTable.name}" is NOT NULL with no ` +
+                    `column "${colName}" on table "${nextTable.name}" is NOT NULL with no ` +
                         `SQL-literal default — a rebuild's INSERT…SELECT can't backfill it; add a ` +
                         `literal default or hand-author a data migration`
                 );
@@ -139,7 +138,7 @@ function diffTable(
             rebuild = true;
             if (!prevCol.notNull && nextCol.notNull && nextCol.default === undefined) {
                 acc.errors.push(
-                    `[Astromech] column "${colName}" on table "${nextTable.name}" flips to NOT NULL ` +
+                    `column "${colName}" on table "${nextTable.name}" flips to NOT NULL ` +
                         `with no SQL-literal default — a rebuild's INSERT…SELECT can't backfill existing ` +
                         `NULLs; add a literal default or hand-author a data migration`
                 );
@@ -259,7 +258,7 @@ export function diffSnapshots(prev: Snapshot | null, next: Snapshot): DiffResult
     }
     for (const [name, count] of indexNameCounts) {
         if (count > 1) {
-            errors.push(`[Astromech] duplicate index name "${name}" across the schema`);
+            errors.push(`duplicate index name "${name}" across the schema`);
         }
     }
 
@@ -278,7 +277,7 @@ export function diffSnapshots(prev: Snapshot | null, next: Snapshot): DiffResult
             for (const col of idx.columns) {
                 if (!colNames.has(col)) {
                     errors.push(
-                        `[Astromech] index "${idx.name}" on table "${name}" references unknown column "${col}"`
+                        `index "${idx.name}" on table "${name}" references unknown column "${col}"`
                     );
                 }
             }

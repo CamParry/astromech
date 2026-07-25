@@ -2,17 +2,16 @@
  * Kysely migration runner.
  *
  * Thin wrapper over Kysely's `Migrator` that runs a `MigrationProvider` to the
- * latest migration and throws (surfacing the underlying error) if any step
- * fails. The app supplies the provider — `<app>/migrations/index.ts`'s
- * generated `migrationProvider` (`database/generator.ts` writes it; the
- * hand-authored `0000_baseline` is its one non-generated entry).
+ * latest migration and throws (surfacing the underlying error, named by the
+ * migration that failed) if any step fails. The caller supplies the provider —
+ * typically the generated `migrationProvider` that `generate.ts` writes into an
+ * app's `migrations/index.ts`.
  */
 
 import { Migrator, type Kysely, type MigrationProvider } from 'kysely';
-import type { DB } from '@/database/types.js';
 
-export async function migrateToLatest(
-    db: Kysely<DB>,
+export async function migrateToLatest<T>(
+    db: Kysely<T>,
     provider: MigrationProvider
 ): Promise<void> {
     const migrator = new Migrator({ db, provider });
@@ -21,7 +20,7 @@ export async function migrateToLatest(
     for (const result of results ?? []) {
         if (result.status === 'Error') {
             throw new Error(
-                `[Astromech] migration "${result.migrationName}" failed` +
+                `migration "${result.migrationName}" failed` +
                     (error instanceof Error ? `: ${error.message}` : '')
             );
         }

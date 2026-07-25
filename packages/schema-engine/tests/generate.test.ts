@@ -1,12 +1,11 @@
 /**
- * Tests for the migration generator (`database/generator.ts`) — the Node fs
- * orchestration wiring `snapshot.ts` → `diff.ts` → `migration-render.ts`
- * against a real `migrations/` directory on disk.
+ * Tests for the migration generator (`src/generate.ts`) — the Node fs
+ * orchestration wiring `diff.ts` → `render.ts` against a real `migrations/`
+ * directory on disk.
  *
- * Each test gets its own `mkdtemp` scratch directory. The end-to-end apply
- * test additionally runs the generated migrations against a real libsql db
- * (plain DDL/DML, so `:memory:` is fine — no storage transaction is involved,
- * so the `:memory:`-poisons-after-tx harness gotcha doesn't apply here).
+ * Each test gets its own `mkdtemp` scratch directory. The end-to-end apply test
+ * additionally runs the generated migrations against a real libsql db (plain
+ * DDL/DML, so `:memory:` is fine).
  */
 
 import { describe, expect, it } from 'vitest';
@@ -17,11 +16,11 @@ import { pathToFileURL } from 'node:url';
 import { createClient } from '@libsql/client';
 import { Kysely, sql } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
-import { defineTable, type TableDescriptor } from '@/database/define-table.js';
-import { generateMigrations } from '@/database/generator.js';
+import { generateMigrations } from '../src/generate.js';
+import { col, index, snap, table } from './_support/tables.js';
 
 async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
-    const dir = await mkdtemp(join(tmpdir(), 'astromech-gen-'));
+    const dir = await mkdtemp(join(tmpdir(), 'schema-engine-gen-'));
     try {
         await fn(dir);
     } finally {
@@ -29,27 +28,18 @@ async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
     }
 }
 
-const v1: TableDescriptor[] = [
-    defineTable('widgets', ({ col }) => ({
-        id: col.id(),
-        name: col.text({ notNull: true }),
-    })),
-];
+const v1 = snap(table('widgets', [col.id(), col.text('name', { notNull: true })]));
 
-const v2WithColumn: TableDescriptor[] = [
-    defineTable('widgets', ({ col }) => ({
-        id: col.id(),
-        name: col.text({ notNull: true }),
-        note: col.text(),
-    })),
-];
+const v2WithColumn = snap(
+    table('widgets', [col.id(), col.text('name', { notNull: true }), col.text('note')])
+);
 
 describe('generateMigrations', () => {
     it('first run against an empty dir generates 0000', async () => {
         await withTempDir(async (dir) => {
             const result = await generateMigrations({
                 dir,
-                tables: v1,
+                snapshot: v1,
                 dialect: 'sqlite',
                 name: 'init',
             });
@@ -67,7 +57,7 @@ describe('generateMigrations', () => {
 
             const journal = JSON.parse(
                 await readFile(resolve(dir, 'journal.json'), 'utf-8')
-            );
+            ) as { entries: { idx: number; tag: string; when: number }[] };
             expect(journal.entries).toEqual([
                 { idx: 0, tag: '0000_init', when: expect.any(Number) },
             ]);
@@ -78,11 +68,11 @@ describe('generateMigrations', () => {
         });
     });
 
-    it('rerunning against the same descriptors → no-changes, writes nothing new', async () => {
+    it('rerunning against the same snapshot → no-changes, writes nothing new', async () => {
         await withTempDir(async (dir) => {
             await generateMigrations({
                 dir,
-                tables: v1,
+                snapshot: v1,
                 dialect: 'sqlite',
                 name: 'init',
             });
@@ -90,7 +80,7 @@ describe('generateMigrations', () => {
 
             const result = await generateMigrations({
                 dir,
-                tables: v1,
+                snapshot: v1,
                 dialect: 'sqlite',
                 name: 'init-again',
             });
@@ -101,17 +91,17 @@ describe('generateMigrations', () => {
         });
     });
 
-    it('a descriptor change generates 0001, journal grows to 2 entries, index.ts lists both', async () => {
+    it('a snapshot change generates 0001, journal grows to 2 entries, index.ts lists both', async () => {
         await withTempDir(async (dir) => {
             await generateMigrations({
                 dir,
-                tables: v1,
+                snapshot: v1,
                 dialect: 'sqlite',
                 name: 'init',
             });
             const result = await generateMigrations({
                 dir,
-                tables: v2WithColumn,
+                snapshot: v2WithColumn,
                 dialect: 'sqlite',
                 name: 'add note',
             });
@@ -121,9 +111,9 @@ describe('generateMigrations', () => {
 
             const journal = JSON.parse(
                 await readFile(resolve(dir, 'journal.json'), 'utf-8')
-            );
+            ) as { entries: { tag: string }[] };
             expect(journal.entries).toHaveLength(2);
-            expect(journal.entries.map((e: { tag: string }) => e.tag)).toEqual([
+            expect(journal.entries.map((e) => e.tag)).toEqual([
                 '0000_init',
                 '0001_add-note',
             ]);
@@ -136,23 +126,21 @@ describe('generateMigrations', () => {
         });
     });
 
-    it('an invalid descriptor set throws and writes nothing', async () => {
+    it('an invalid snapshot throws and writes nothing', async () => {
         await withTempDir(async (dir) => {
-            const invalid: TableDescriptor[] = [
-                defineTable(
-                    'widgets',
-                    ({ col }) => ({ id: col.id() }),
-                    ({ index }) => [index('idx_widgets_bogus', ['bogus'])]
-                ),
-            ];
+            const invalid = snap(
+                table('widgets', [col.id()], {
+                    indexes: [index('idx_widgets_bogus', ['bogus'])],
+                })
+            );
             await expect(
                 generateMigrations({
                     dir,
-                    tables: invalid,
+                    snapshot: invalid,
                     dialect: 'sqlite',
                     name: 'init',
                 })
-            ).rejects.toThrow(/\[Astromech\]/);
+            ).rejects.toThrow(/migration generation failed/);
 
             const files = await readdir(dir).catch(() => []);
             expect(files).toEqual([]);
@@ -161,16 +149,16 @@ describe('generateMigrations', () => {
 
     it('applies a generated rebuild migration to a seeded db, preserving data and COALESCE-backfilling the new NOT NULL column', async () => {
         await withTempDir(async (dir) => {
-            const nullable: TableDescriptor[] = [
-                defineTable('widgets', ({ col }) => ({
-                    id: col.id(),
-                    name: col.text({ notNull: true }),
-                    count: col.integer(),
-                })),
-            ];
+            const nullable = snap(
+                table('widgets', [
+                    col.id(),
+                    col.text('name', { notNull: true }),
+                    col.integer('count'),
+                ])
+            );
             const first = await generateMigrations({
                 dir,
-                tables: nullable,
+                snapshot: nullable,
                 dialect: 'sqlite',
                 name: 'init',
             });
@@ -191,16 +179,16 @@ describe('generateMigrations', () => {
                 db
             );
 
-            const notNullWithDefault: TableDescriptor[] = [
-                defineTable('widgets', ({ col }) => ({
-                    id: col.id(),
-                    name: col.text({ notNull: true }),
-                    count: col.integer({ notNull: true, default: 42 }),
-                })),
-            ];
+            const notNullWithDefault = snap(
+                table('widgets', [
+                    col.id(),
+                    col.text('name', { notNull: true }),
+                    col.integer('count', { notNull: true, default: 42 }),
+                ])
+            );
             const second = await generateMigrations({
                 dir,
-                tables: notNullWithDefault,
+                snapshot: notNullWithDefault,
                 dialect: 'sqlite',
                 name: 'require-count',
             });

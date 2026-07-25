@@ -10,7 +10,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { AstromechConfig, ResolvedConfig } from '@/types/index.js';
 import { setDb, getDb, setDbClient } from '@/database/registry.js';
-import { migrateToLatest } from '@/database/migrator.js';
+import { migrateToLatest } from '@astromech/schema-engine';
 import { setDatabaseDriver } from '@/database/driver-registry.js';
 import { setStorageDriver } from '@/storage/registry.js';
 import { setImageConfig } from '@/media/serving/image/registry.js';

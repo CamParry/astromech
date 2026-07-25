@@ -11,8 +11,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
-import { diffSnapshots } from '@/database/diff.js';
-import { createSnapshot, type Snapshot } from '@/database/snapshot.js';
+import { diffSnapshots } from '@astromech/schema-engine';
+import { createSnapshot, type Snapshot } from '@/database/descriptor-snapshot.js';
 import { CORE_TABLES } from '@/database/schema.js';
 
 describe('migrations/snapshot.json drift gate', () => {

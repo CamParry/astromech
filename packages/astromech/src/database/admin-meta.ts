@@ -7,7 +7,7 @@
  * form renderers without hand-maintaining a parallel column list per table.
  */
 
-import { resolveReferenceTarget } from '@/database/ddl.js';
+import { resolveReferenceTarget } from '@/database/descriptor-snapshot.js';
 import type { ColumnKind, TableDescriptor } from '@/database/define-table.js';
 import type { CellKind } from '@/types/definitions.js';
 import type { FieldType } from '@/types/fields.js';
