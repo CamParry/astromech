@@ -770,27 +770,30 @@ export const entries: EntriesApi = {
             user
         );
 
-        const created = asEntry(
-            await storage.create({
-                type,
-                title,
-                slug,
-                locale,
-                localeGroup,
-                fields: processedFields,
-                status,
-                publishedAt,
-            })
-        );
-
-        if (Object.keys(processedFields).length > 0) {
-            await saveRelationships(
-                getDb(),
-                created.id,
-                processedFields,
-                type
+        const persist = async (
+            txStorage: EntryStorage,
+            txDb: StorageDb
+        ): Promise<Entry> => {
+            const row = asEntry(
+                await txStorage.create({
+                    type,
+                    title,
+                    slug,
+                    locale,
+                    localeGroup,
+                    fields: processedFields,
+                    status,
+                    publishedAt,
+                })
             );
-        }
+            if (Object.keys(processedFields).length > 0) {
+                await saveRelationships(txDb, row.id, processedFields, type);
+            }
+            return row;
+        };
+        const created = storage.transaction
+            ? await storage.transaction(persist)
+            : await persist(storage, getDb());
 
         await runAfterHooks(
             'entry:afterCreate',

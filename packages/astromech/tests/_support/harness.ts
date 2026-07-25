@@ -1,11 +1,23 @@
 /**
- * In-memory test harness for the entry data layer.
+ * Test harness for the entry data layer.
  *
- * `createTestDb` spins up a libsql `:memory:` database, applies the package
- * migrations from `/drizzle`, and registers it via `setDb` so SDK modules
- * (which call `getDb()` per-op) hit it. `setupTestConfig` resolves a small but
- * representative config and pushes it onto the CLI config shim, which the
- * vitest alias maps `virtual:astromech/config` onto.
+ * `createTestDb` spins up a file-based libsql database in the OS temp dir,
+ * applies the package migrations from `/drizzle`, and registers it via `setDb`
+ * so SDK modules (which call `getDb()` per-op) hit it. `setupTestConfig`
+ * resolves a small but representative config and pushes it onto the CLI config
+ * shim, which the vitest alias maps `virtual:astromech/config` onto.
+ *
+ * Why file-based rather than `:memory:`?
+ * libsql's `client.transaction()` hands the underlying SQLite connection to the
+ * transaction and nulls out the client's stored reference (`this.#db = null`).
+ * The client lazily creates a NEW connection on next use. For `:memory:` that
+ * new connection is a completely blank database; for a file path it reopens the
+ * same file and sees all committed data. Using file-based temp DBs keeps
+ * transaction semantics correct while remaining effectively as fast as `:memory:`
+ * for the small migration set here.
+ *
+ * Each `createTestDb()` call uses a unique file name so `beforeEach` calls
+ * stay fully isolated even when tests run in a single worker.
  *
  * FK enforcement: libsql enables `PRAGMA foreign_keys` by default. Entry
  * inserts never set `createdBy`/`updatedBy` (both nullable), so no user row is
@@ -13,6 +25,9 @@
  */
 
 import { fileURLToPath } from 'node:url';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { drizzle } from 'drizzle-orm/libsql';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { migrate } from 'drizzle-orm/libsql/migrator';
@@ -43,12 +58,21 @@ type Db = LibSQLDatabase<any>;
 // Repo-root `/drizzle` — this file lives at tests/_support/harness.ts, so two levels up.
 const MIGRATIONS_FOLDER = fileURLToPath(new URL('../../drizzle', import.meta.url));
 
+// Temp dir for test databases — created once per worker process and cleaned up
+// by the process exit handler below. Using the worker's PID in the dir name
+// avoids collisions when multiple workers run in parallel.
+const TEST_DB_DIR = fs.mkdtempSync(
+    path.join(os.tmpdir(), `astromech-test-${process.pid}-`)
+);
+process.on('exit', () => fs.rmSync(TEST_DB_DIR, { recursive: true, force: true }));
+
 /**
- * Create a fresh in-memory database, migrate it, and register it globally.
+ * Create a fresh file-based database, migrate it, and register it globally.
  * Returns the drizzle handle (already the active `getDb()` instance).
  */
 export async function createTestDb(): Promise<Db> {
-    const db = drizzle({ connection: { url: ':memory:' } });
+    const dbPath = path.join(TEST_DB_DIR, `${crypto.randomUUID()}.sqlite`);
+    const db = drizzle({ connection: { url: `file:${dbPath}` } });
     await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
     setDb(db);
     return db;
