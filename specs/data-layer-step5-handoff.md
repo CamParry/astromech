@@ -2,7 +2,7 @@
 
 Implementation handoff for the coding agent. Design authority: `specs/data-layer.md` §"Step 5 — locked implementation decisions". This document is the execution plan — file paths, exact changes, gates. Work through sections in order (A→J); each builds on the last.
 
-**Branch:** `feat/data-layer-step5-plugin-factory` (already created; spec + this doc are committed on it). Verify with `git rev-parse --abbrev-ref HEAD` before every commit. Hooks stay ON — never `--no-verify`.
+**Branch:** create a fresh `feat/data-layer-step5-plugin-factory` **from current `main`** — the old branch of that name held only this spec and was merged and deleted on 2026-07-25, and `main` now contains the `@astromech/schema-engine` extraction this step builds on. Verify with `git rev-parse --abbrev-ref HEAD` before every commit. Hooks stay ON — never `--no-verify`.
 
 **Exit criterion:** `drizzle-orm` uninstalled from every package. It has exactly three remaining consumer groups: `entries/storage/table.ts` (tableStorage), the two plugin schemas (redirects, backups), and the better-auth Drizzle tables in `users/schema.ts` + `database/plugin-helpers.ts`. All die in this step.
 
@@ -11,10 +11,11 @@ Implementation handoff for the coding agent. Design authority: `specs/data-layer
 - Paths below are relative to `packages/astromech/src/` unless prefixed otherwise.
 - `defineTable(name, ({col}) => ({...}), ({index}) => [...])` returns `TableDescriptor` (`database/define-table.ts`). Style template: `cron` / `relationships` descriptors in `database/schema.ts:85-126`.
 - `CamelCasePlugin` translates **table identifiers too**: Kysely key for `plugin_backups_runs` is `pluginBackupsRuns`; leading-underscore names (`_astromech_*`) pass through untouched. Codec registry keys must match the Kysely key, not the SQL name.
-- `generateMigrations({dir, tables, dialect, name})` (`database/generator.ts:92`) is dialect-pure and app-agnostic — reuse it **verbatim** for plugin generation. Never hand-write a generated migration; if output is wrong, fix the generator.
+- `generateMigrations({dir, tables, dialect, name})` now lives at **`database/generate.ts`** (same signature) — a thin Node-only wrapper that converts descriptors via `createSnapshot` and delegates to `@astromech/schema-engine/generate`. Reuse it **verbatim** for plugin generation. Never hand-write a generated migration; if output is wrong, fix the engine.
+- **The migration engine is now the `@astromech/schema-engine` workspace package** (`packages/schema-engine`) — snapshot model, DDL renderers, differ, migration rendering, generation, apply, and the `dumpSchema` parity oracle. Step 5 must consume **only its public API**: `.` (pure, edge/D1-safe) and `./generate` (Node-only fs). Do not reach into its `src/`. The old CMS modules `database/{ddl,snapshot,diff,migration-render,generator,migrator}.ts` **no longer exist**; the CMS keeps `database/descriptor-snapshot.ts` (descriptor→snapshot conversion) and `database/generate.ts` (the wrapper above).
 - Migration name prefixing happens **only** in the merged provider at apply time. Plugin migration files/journal entries keep bare `NNNN_<tag>` names.
 - Empty-default type inference gotcha: `Record<never, never>` not `Record<string, never>`; self-referencing FK thunks need an explicit annotation (see existing descriptors for the pattern).
-- Tests: `:memory:` dbs are poisoned after a storage transaction — use a per-test temp **file** db. `npm run test:run` skips tsc, so always run `npm run typecheck` too. Baseline test count: 864 passing.
+- Tests: `:memory:` dbs are poisoned after a storage transaction — use a per-test temp **file** db. `npm run test:run` skips tsc, so always run `npm run typecheck` too. Baseline test count: **883 passing** (50 in `@astromech/schema-engine` + 833 in `astromech`); root `test:run`/`typecheck`/`lint`/`build` all cover both workspaces now.
 - `lint:deps` baseline: 9 errors + 5 circular warnings. Zero NEW ones allowed.
 - Root build DTS can OOM — `NODE_OPTIONS=--max-old-space-size=8192 npm run build`.
 - Demo app loads the integration from dist/: core/plugin changes need root build + dev-server restart before browser/HTTP verification.
@@ -62,9 +63,11 @@ definePlugin<const T extends Record<string, TableDescriptor>>(opts: {
 
 ## D) Merged migration provider + allowUnorderedMigrations
 
-`database/migrator.ts`:
+**`database/migrator.ts` no longer exists** — apply lives in the engine package (`packages/schema-engine/src/apply.ts`, exported as `migrateToLatest` from `@astromech/schema-engine`). Both features below are **generic engine concerns**, so implement them in the PACKAGE's `apply.ts` and re-export them to the CMS; do not reintroduce a CMS-side migrator module. Add package tests for both alongside the existing `packages/schema-engine/tests/apply.test.ts`.
 
-- `new Migrator({ db, provider, allowUnorderedMigrations: true })` — plugin migrations interleave with app history, single shared `kysely_migration` table.
+In `packages/schema-engine/src/apply.ts`:
+
+- `new Migrator({ db, provider, allowUnorderedMigrations: true })` — plugin migrations interleave with app history, single shared `kysely_migration` table. Expose it as an opt-in option on `migrateToLatest` rather than hard-coding it.
 - NEW export:
 
 ```ts
@@ -81,7 +84,7 @@ Wire BOTH apply paths (they must not drift):
 - `transport/cli/commands/db-init.ts` — after `loadConfig`, collect `{alias, provider}` from `config.plugins` (resolve alias via `resolvePluginIdentity`; skip plugins without `migrations`), merge with the app's imported `migrationProvider`, pass to `migrateToLatest`.
 - `kernel/boot.ts` `runMigrations(logger)` — change signature to `runMigrations(logger, plugins: PluginDefinition[])`; same merge. Update both call sites in `kernel/astro.ts:205,211` to pass `config.plugins ?? []`.
 
-Extract the collect-and-merge into one shared helper (suggest `collectPluginMigrations(defs)` in `migrator.ts` or a sibling) so the two paths share code. Careful with import boundaries: `kernel/boot.ts` must stay service-free (no `virtual:astromech/config` transitively) — `migrator.ts` + `plugin-identity.ts` are safe.
+`mergeMigrationProviders` is engine-generic and goes in the package. The **collect** half is CMS-specific (it reads `PluginDefinition`s), so put `collectPluginMigrations(defs)` on the CMS side — a small module under `database/` that both apply paths import — and have it feed the package's `mergeMigrationProviders`. Careful with import boundaries: `kernel/boot.ts` must stay service-free (no `virtual:astromech/config` transitively) — the package import and `plugin-identity.ts` are both safe.
 
 ## E) `_astromech_plugins` tracking table — first REAL generated core migration
 
@@ -110,7 +113,7 @@ NEW `transport/cli/commands/plugin-generate.ts`:
 - Args: `--schema` (default `./src/schema/index.ts`), `--name` (default `'migration'`), `--dir` (default `./migrations`).
 - Load the schema module with `jiti` (same loader `transport/cli/config.ts` uses — reuse its jiti setup), take all top-level `TableDescriptor` exports (same shape check as §C).
 - Validate: ≥1 descriptor; all share one `plugin_<alias>_` prefix (parse alias from the first, error listing offenders otherwise).
-- Call `generateMigrations({dir: resolve(cwd, args.dir), tables, dialect: 'sqlite', name})`; print same messages as `db:generate`.
+- Call the CMS wrapper `generateMigrations({dir: resolve(cwd, args.dir), tables, dialect: 'sqlite', name})` from `@/database/generate.js` (it takes descriptors and handles the snapshot conversion + warning printing); print same messages as `db:generate`. Do NOT call `@astromech/schema-engine/generate` directly — it takes a `Snapshot`, not descriptors.
 
 NEW `transport/cli/commands/plugin-purge.ts`:
 
@@ -157,16 +160,17 @@ Rewrite `entries/storage/table.ts` preserving the EXACT `EntryStorage` semantics
 
 - `packages/astromech/tests/storage/entries/table.test.ts`: convert the scratch table to a `defineTable` descriptor; behaviour assertions unchanged. Use a temp FILE db (not `:memory:`) — transaction tests poison memory dbs.
 - NEW `tests/db/define-plugin.test.ts`: prefixing of table + index names, double-prefix throw, bad-alias throw, descriptor passthrough (columns intact).
-- NEW `tests/db/merged-provider.test.ts`: merged `getMigrations()` key prefixing, duplicate-key throw, end-to-end `migrateToLatest` on a temp db with an app provider + a fake plugin provider + `allowUnorderedMigrations` (plugin migration sorts before the app's latest — must still apply).
+- NEW `packages/schema-engine/tests/apply.test.ts` additions (engine-side, since §D puts the code there): merged `getMigrations()` key prefixing, duplicate-key throw, end-to-end `migrateToLatest` on a temp db with an app provider + a fake plugin provider + `allowUnorderedMigrations` (plugin migration sorts before the app's latest — must still apply). Package tests must not import from `astromech`.
+- NEW `tests/db/merged-provider.test.ts` (CMS-side): `collectPluginMigrations` over `PluginDefinition`s — alias resolution, skipping plugins without `migrations`.
 - NEW tracking/purge coverage: `bootPlugins` upserts a row; purge drops tables + migration rows + tracking row (drive the purge command's core logic — extract it to a function so it's testable without citty).
 - `tests/db/drift.test.ts` + `baseline-ddl-parity.test.ts`: now expect 10 core tables; the chain applied in tests must be the MERGED provider (app + both first-party plugins) so sqlite_master parity covers plugin tables from their own baselines.
 - Any harness that runs migrations must switch to the merged provider.
 
 ## J) Gates — run ALL, in this order, yourself
 
-1. `npm run typecheck` (root)
-2. `npm run lint` (root)
-3. `npm run test:run` — 864 baseline + new tests, zero failures
+1. `npm run typecheck` (root — covers both workspaces)
+2. `npm run lint` (root — covers both workspaces)
+3. `npm run test:run` (root — both suites) — **883 baseline** + new tests, zero failures
 4. `npm run lint:deps` — zero NEW vs baseline (9 errors + 5 circular warnings)
 5. `NODE_OPTIONS=--max-old-space-size=8192 npm run build` (root)
 6. Fresh db: delete the demo db file, `npm run db:init -w astromech-demo` (or root equiv), seed, then `npm run db:generate` → must print no-changes; `plugin:generate` in both plugin dirs → no-changes; sqlite check: all 10 core + 4 auth + 2 plugin tables present, `kysely_migration` holds app names + `plugin_redirects_0000_baseline` + `plugin_backups_0000_baseline`, `_astromech_plugins` has both aliases.

@@ -13,7 +13,7 @@ Reorganise `entries/` as the **template** for all domains: one storage seam, no 
 - [x] Move `entries/url.ts` → `entries/utils/url.ts` (dep-cruiser allowlist updated)
 - [x] Jobs (`scheduled-publish`, `trash-purge`) call storage (new `storage/maintenance.ts`) — raw drizzle removed
 - [x] Verify: `grep -rn "getDb\|drizzle\|entriesTable" entries/` hits only `entries/storage/**` + `entries/schema.ts`; full suite (816) + lint + typecheck + dep-cruiser green
-- [ ] **Awaiting user review before commit** (uncommitted on `main`)
+- [x] Reviewed, committed (`fa87a57`) and merged to `main`
 
 **Layer 2 — Split** (connects to `unified-admin-pages.md`)
 
