@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import type { PluginDefinition } from '@/types/index.js';
+import { defineTable, type TableDescriptor } from '@/database/define-table.js';
 import {
     assertPluginTablePrefixes,
     collectPluginSchemas,
@@ -12,14 +12,19 @@ const def = (
     ...partial,
 });
 
+const table = (name: string): TableDescriptor =>
+    defineTable(name, ({ col }) => ({
+        id: col.id(),
+        count: col.integer(),
+    }));
+
 describe('collectPluginSchemas', () => {
     it('flattens tables and tags them with the plugin alias', () => {
-        const events = sqliteTable('plugin_analytics_events', {
-            id: text('id').primaryKey(),
-            count: integer('count'),
-        });
         const collected = collectPluginSchemas([
-            def({ package: '@astromech/analytics', schema: [events] }),
+            def({
+                package: '@astromech/analytics',
+                schema: [table('plugin_analytics_events')],
+            }),
         ]);
         expect(collected).toHaveLength(1);
         expect(collected[0]).toMatchObject({
@@ -28,9 +33,12 @@ describe('collectPluginSchemas', () => {
         });
     });
 
-    it('ignores non-table entries', () => {
+    it('ignores non-descriptor entries', () => {
         const collected = collectPluginSchemas([
-            def({ package: '@astromech/x', schema: [{ foo: 'bar' }] }),
+            def({
+                package: '@astromech/x',
+                schema: [{ foo: 'bar' } as unknown as TableDescriptor],
+            }),
         ]);
         expect(collected).toEqual([]);
     });
@@ -38,33 +46,28 @@ describe('collectPluginSchemas', () => {
 
 describe('assertPluginTablePrefixes', () => {
     it('passes when tables use the plugin_{alias}_ prefix', () => {
-        const log = sqliteTable('plugin_audit_log', { id: text('id').primaryKey() });
         expect(() =>
             assertPluginTablePrefixes([
-                def({ package: '@astromech/audit', schema: [log] }),
+                def({ package: '@astromech/audit', schema: [table('plugin_audit_log')] }),
             ])
         ).not.toThrow();
     });
 
     it('throws when a table is missing the prefix', () => {
-        const log = sqliteTable('audit_log', { id: text('id').primaryKey() });
         expect(() =>
             assertPluginTablePrefixes([
-                def({ package: '@astromech/audit', schema: [log] }),
+                def({ package: '@astromech/audit', schema: [table('audit_log')] }),
             ])
         ).toThrow(/plugin_audit_/);
     });
 
     it('uses the alias, not the package, for the prefix', () => {
-        const log = sqliteTable('plugin_myredirects_hits', {
-            id: text('id').primaryKey(),
-        });
         expect(() =>
             assertPluginTablePrefixes([
                 def({
                     package: '@astromech/redirects',
                     alias: 'myredirects',
-                    schema: [log],
+                    schema: [table('plugin_myredirects_hits')],
                 }),
             ])
         ).not.toThrow();

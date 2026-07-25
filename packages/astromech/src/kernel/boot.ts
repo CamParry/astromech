@@ -8,9 +8,10 @@
 
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type { AstromechConfig, ResolvedConfig } from '@/types/index.js';
+import type { AstromechConfig, PluginDefinition, ResolvedConfig } from '@/types/index.js';
 import { setDb, getDb, setDbClient } from '@/database/registry.js';
-import { migrateToLatest } from '@astromech/schema-engine';
+import { migrateToLatest, mergeMigrationProviders } from '@astromech/schema-engine';
+import { collectPluginMigrations } from '@/database/plugin-migrations.js';
 import { setDatabaseDriver } from '@/database/driver-registry.js';
 import { setStorageDriver } from '@/storage/registry.js';
 import { setImageConfig } from '@/media/serving/image/registry.js';
@@ -70,10 +71,13 @@ export async function initRuntime(
     process.env.ASTROMECH_API_ROUTE = resolvedConfig.apiRoute;
 }
 
-export async function runMigrations(logger: {
-    info: (msg: string) => void;
-    error: (msg: string) => void;
-}): Promise<void> {
+export async function runMigrations(
+    logger: {
+        info: (msg: string) => void;
+        error: (msg: string) => void;
+    },
+    plugins: PluginDefinition[]
+): Promise<void> {
     try {
         // Resolve the app-owned migration provider from the app's CWD (where
         // `astro dev` / `astro build` runs). db:init is the primary migration
@@ -82,7 +86,14 @@ export async function runMigrations(logger: {
             resolve(process.cwd(), 'migrations/index.ts')
         ).href;
         const { migrationProvider } = await import(migrationsUrl);
-        await migrateToLatest(getDb(), migrationProvider);
+        // Plugin migrations merge into the app chain at apply time, so a newly
+        // installed plugin can introduce a migration that sorts before ones
+        // already applied — hence `allowUnorderedMigrations`.
+        const merged = mergeMigrationProviders(
+            migrationProvider,
+            collectPluginMigrations(plugins)
+        );
+        await migrateToLatest(getDb(), merged, { allowUnorderedMigrations: true });
         logger.info('Astromech database migrations applied');
     } catch (err) {
         logger.error(

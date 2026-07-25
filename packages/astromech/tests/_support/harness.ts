@@ -17,10 +17,10 @@
 
 import { createClient } from '@libsql/client';
 import { Kysely, CamelCasePlugin } from 'kysely';
-import type { Insertable } from 'kysely';
+import type { Insertable, MigrationProvider } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { setDb, setDbClient } from '@/database/registry.js';
-import { migrateToLatest } from '@astromech/schema-engine';
+import { mergeMigrationProviders, migrateToLatest } from '@astromech/schema-engine';
 import { encode, decode } from '@/database/codec.js';
 import type { DB } from '@/database/types.js';
 import type { UserRow } from '@/database/schema.js';
@@ -44,6 +44,9 @@ wireEntryAccess();
 
 type Db = Kysely<DB>;
 
+/** Plugins whose generated baselines the harness chain includes. */
+const FIRST_PARTY_PLUGIN_MIGRATIONS = ['redirects', 'backups'] as const;
+
 /**
  * Build a Kysely instance over a libsql `url`, register it (+ its raw client)
  * globally, and apply the full migration chain. The app-owned migration
@@ -64,7 +67,22 @@ async function buildTestDb(url: string): Promise<Db> {
     const { migrationProvider } = await import(
         new URL('../../../../apps/demo/migrations/index.ts', import.meta.url).href
     );
-    await migrateToLatest(db, migrationProvider);
+    // The first-party plugins own their tables now, so the app chain alone no
+    // longer creates them. Apply exactly what a real boot applies: the merged
+    // provider. `allowUnorderedMigrations` mirrors `kernel/boot.ts` — plugin
+    // migrations interleave with the app's in one `kysely_migration` table.
+    const plugins = await Promise.all(
+        FIRST_PARTY_PLUGIN_MIGRATIONS.map(async (alias) => {
+            const mod = await import(
+                new URL(`../../../plugins/${alias}/migrations/index.ts`, import.meta.url)
+                    .href
+            );
+            return { alias, provider: mod.migrationProvider as MigrationProvider };
+        })
+    );
+    await migrateToLatest(db, mergeMigrationProviders(migrationProvider, plugins), {
+        allowUnorderedMigrations: true,
+    });
     return db;
 }
 

@@ -6,8 +6,9 @@
 
 import { definePlugin, withDefaults } from 'astromech';
 import type { PluginContext, PluginDefinition } from 'astromech';
-import { PACKAGE, VERSION, LABEL, ICON, SCHEMA_MODULE, locales } from './manifest.js';
+import { PACKAGE, VERSION, LABEL, ICON, locales } from './manifest.js';
 import type { BackupsOptions } from './types.js';
+import { migrationProvider } from '../migrations/index.js';
 import { backupRunsTable } from './schema/runs.js';
 import { backupsPermissionDefs } from './permissions/backups.js';
 import { performBackup, resolveKeep } from './backup.js';
@@ -30,8 +31,8 @@ export const backups = definePlugin<BackupsOptions>((options) => {
         version: VERSION,
         label: LABEL,
         icon: ICON,
-        schemaModule: SCHEMA_MODULE,
         schema: [backupRunsTable],
+        migrations: migrationProvider,
         permissions: backupsPermissionDefs,
         i18n: locales(['en']),
         admin: {

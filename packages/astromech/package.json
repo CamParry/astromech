@@ -90,10 +90,6 @@
         "./ui/layout": {
             "types": "./dist/admin/components/ui/layout.d.ts",
             "default": "./dist/admin/components/ui/layout.js"
-        },
-        "./db": {
-            "types": "./dist/db/plugin-helpers.d.ts",
-            "default": "./dist/db/plugin-helpers.js"
         }
     },
     "main": "./dist/index.js",
@@ -149,7 +145,6 @@
         "croner": "^10.0.1",
         "date-fns": "^4.1.0",
         "dotenv": "^17.3.1",
-        "drizzle-orm": "^0.45.1",
         "hono": "^4.12.8",
         "i18next": "^25.10.3",
         "jiti": "^2.6.1",

@@ -105,7 +105,7 @@ export type Column<C extends ColConfig = ColConfig> = ColumnRuntime & {
     readonly __config?: C;
 };
 
-type AnyCols = Record<string, Column>;
+export type AnyCols = Record<string, Column>;
 
 // ============================================================================
 // Type-level helpers
@@ -438,21 +438,30 @@ function index(
     };
 }
 
+/** The `index` helper handed to a `defineTable` indexes callback. */
+export type IndexFactory = typeof index;
+
 // ============================================================================
 // `defineTable`
 // ============================================================================
 
-export type TableDescriptor<C extends AnyCols = AnyCols> = {
-    name: string;
+/**
+ * `N` carries the SQL table name as a literal so downstream types can derive
+ * the Kysely (CamelCasePlugin) key from it — see `PluginDB` in
+ * `define-plugin.ts`. It defaults to `string`, so `TableDescriptor` and
+ * `TableDescriptor<Cols>` keep working unchanged as loose annotations.
+ */
+export type TableDescriptor<C extends AnyCols = AnyCols, N extends string = string> = {
+    name: N;
     columns: C;
     indexes: IndexSpec[];
 };
 
-export function defineTable<const C extends AnyCols>(
-    name: string,
+export function defineTable<const C extends AnyCols, const N extends string>(
+    name: N,
     cols: (helpers: { col: ColFactory }) => C,
-    indexes?: (helpers: { index: typeof index }) => IndexSpec[]
-): TableDescriptor<C> {
+    indexes?: (helpers: { index: IndexFactory }) => IndexSpec[]
+): TableDescriptor<C, N> {
     return {
         name,
         columns: cols({ col }),
@@ -488,7 +497,7 @@ type KyselyCell<T> =
         ? Generated<StorageCellBase<T>>
         : StorageCellBase<T>;
 
-type ColsOf<D> = D extends TableDescriptor<infer C> ? C : never;
+type ColsOf<D> = D extends TableDescriptor<infer C, string> ? C : never;
 
 /** Domain row as selected — `Date`/parsed-object/`boolean` shapes. */
 export type TableSelect<D> = Prettify<{

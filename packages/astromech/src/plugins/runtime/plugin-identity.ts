@@ -25,25 +25,16 @@ export function derivePluginName(pkg: string): string {
     return segments[segments.length - 1] ?? pkg;
 }
 
-/** Drizzle table-name prefix for a plugin's own tables: `plugin_{alias}_`. */
+/** Table-name prefix for a plugin's own tables: `plugin_{alias}_`. */
 export function pluginTablePrefix(alias: string): string {
     return `plugin_${alias}_`;
 }
 
 /**
- * Default `schemaModule` specifier for a first-party plugin: the published
- * subpath `astromech/plugins/{alias}/schema`. When a plugin graduates to its
- * own npm package this becomes `{package}/schema` — derive from identity then.
- */
-export function pluginSchemaModule(alias: string): string {
-    return `astromech/plugins/${alias}/schema`;
-}
-
-/**
  * In-tree module-specifier root for a plugin's admin assets (page/field
- * components, locale bundles) — `@/plugins/{alias}`. Mirrors
- * `pluginSchemaModule`: when a plugin graduates to its own package this becomes
- * `{package}`, swapped here in one place rather than at every asset site.
+ * components, locale bundles) — `@/plugins/{alias}`. When a plugin graduates to
+ * its own package this becomes `{package}`, swapped here in one place rather
+ * than at every asset site.
  */
 export function pluginAssetRoot(alias: string): string {
     return `@/plugins/${alias}`;

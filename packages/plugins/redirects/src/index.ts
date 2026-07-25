@@ -7,8 +7,9 @@
 
 import { definePlugin, withDefaults } from 'astromech';
 import type { PluginDefinition, SdkInterface } from 'astromech';
-import { PACKAGE, VERSION, LABEL, ICON, SCHEMA_MODULE } from './manifest.js';
+import { PACKAGE, VERSION, LABEL, ICON } from './manifest.js';
 import type { RedirectsOptions } from './types.js';
+import { migrationProvider } from '../migrations/index.js';
 import { redirectEntryType } from './entries/redirect.js';
 import { redirectsTable } from './schema/redirects.js';
 import { redirectsSdk } from './sdk/redirects.js';
@@ -36,8 +37,8 @@ export const redirects = definePlugin<RedirectsOptions>((options) => {
         version: VERSION,
         label: LABEL,
         icon: ICON,
-        schemaModule: SCHEMA_MODULE,
         schema: [redirectsTable],
+        migrations: migrationProvider,
         entries: [redirectEntryType],
         sdk: redirectsSdk,
     };

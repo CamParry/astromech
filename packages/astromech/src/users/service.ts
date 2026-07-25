@@ -1,6 +1,6 @@
 import type { Insertable, Updateable, ExpressionBuilder } from 'kysely';
 import { z } from 'zod';
-import type { usersTable } from './schema.js';
+import type { UserRow } from './schema.js';
 import { getDb } from '@/database/registry.js';
 import type { DB } from '@/database/types.js';
 import { encode, encodePatch, decode } from '@/database/codec.js';
@@ -24,7 +24,7 @@ function validate<T>(schema: z.ZodType<T>, data: unknown): T {
     }
 }
 
-function toUser(row: typeof usersTable.$inferSelect): User {
+function toUser(row: UserRow): User {
     return {
         ...row,
         fields: (row.fields as JsonObject | null) ?? null,
@@ -77,11 +77,7 @@ export const usersApi = {
                     .where((eb) => buildUsersWhere(eb, params?.search) ?? eb.lit(true))
             ).execute();
             return {
-                data: rows.map((r) =>
-                    toUser(
-                        decode('users', r) as unknown as typeof usersTable.$inferSelect
-                    )
-                ),
+                data: rows.map((r) => toUser(decode('users', r) as unknown as UserRow)),
                 pagination: null,
             };
         }
@@ -108,9 +104,7 @@ export const usersApi = {
 
         const total = Number(countRow?.c ?? 0);
         return {
-            data: rows.map((r) =>
-                toUser(decode('users', r) as unknown as typeof usersTable.$inferSelect)
-            ),
+            data: rows.map((r) => toUser(decode('users', r) as unknown as UserRow)),
             pagination: {
                 page,
                 limit: perPage,
@@ -128,9 +122,7 @@ export const usersApi = {
             .where('id', '=', id)
             .limit(1)
             .executeTakeFirst();
-        return row
-            ? toUser(decode('users', row) as unknown as typeof usersTable.$inferSelect)
-            : null;
+        return row ? toUser(decode('users', row) as unknown as UserRow) : null;
     },
 
     async create(data: {
@@ -156,9 +148,7 @@ export const usersApi = {
             .executeTakeFirst();
 
         if (created) {
-            return toUser(
-                decode('users', created) as unknown as typeof usersTable.$inferSelect
-            );
+            return toUser(decode('users', created) as unknown as UserRow);
         }
 
         throw new Error('Failed to create user');
@@ -197,9 +187,7 @@ export const usersApi = {
             .executeTakeFirst();
 
         if (updated) {
-            return toUser(
-                decode('users', updated) as unknown as typeof usersTable.$inferSelect
-            );
+            return toUser(decode('users', updated) as unknown as UserRow);
         }
 
         throw new Error('Failed to update user');

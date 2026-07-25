@@ -45,14 +45,14 @@ export default defineConfig({
                 new URL('../plugins/menus/src/index.ts', import.meta.url)
             ),
             '@astromech/redirects/schema': fileURLToPath(
-                new URL('../plugins/redirects/src/schema/redirects.ts', import.meta.url)
+                new URL('../plugins/redirects/src/schema/index.ts', import.meta.url)
             ),
             '@astromech/redirects': fileURLToPath(
                 new URL('../plugins/redirects/src/index.ts', import.meta.url)
             ),
             // Backups plugin — subpath aliases before the bare package alias.
             '@astromech/backups/schema': fileURLToPath(
-                new URL('../plugins/backups/src/schema/runs.ts', import.meta.url)
+                new URL('../plugins/backups/src/schema/index.ts', import.meta.url)
             ),
             '@astromech/backups/internals': fileURLToPath(
                 new URL('../plugins/backups/src/backup.ts', import.meta.url)

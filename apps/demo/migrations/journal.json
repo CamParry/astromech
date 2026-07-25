@@ -1,5 +1,16 @@
 {
     "version": 1,
     "dialect": "sqlite",
-    "entries": [{ "idx": 0, "tag": "0000_baseline", "when": 1783723008619 }]
+    "entries": [
+        {
+            "idx": 0,
+            "tag": "0000_baseline",
+            "when": 1783723008619
+        },
+        {
+            "idx": 1,
+            "tag": "0001_plugins-tracking",
+            "when": 1785001218394
+        }
+    ]
 }

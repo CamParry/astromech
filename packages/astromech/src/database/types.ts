@@ -1,7 +1,7 @@
 /**
  * The Kysely `DB` interface — the storage-shaped type surface for the query layer.
  *
- * The 9 tables we own are derived from their `defineTable` descriptors via
+ * The 10 tables we own are derived from their `defineTable` descriptors via
  * `KyselyOf<>`: timestamps are ISO-8601 **TEXT** (`string`), JSON columns are
  * `string`, booleans are `number` (0/1), and `Generated<>` marks any column an
  * app/SQL default fills. These are the *storage* shapes Kysely sees before the
@@ -27,10 +27,10 @@ import type { entries, entryVersions, entryPreviewTokens } from '@/entries/schem
 import type { media } from '@/media/schema.js';
 import type { settings } from '@/settings/schema.js';
 import type { notifications } from '@/notifications/schema.js';
-import type { relationships, cron } from '@/database/schema.js';
+import type { relationships, cron, plugins } from '@/database/schema.js';
 
 export type DB = {
-    // ── 9 ours — derived from defineTable descriptors (ISO-TEXT timestamps) ──
+    // ── 10 ours — derived from defineTable descriptors (ISO-TEXT timestamps) ─
     roles: KyselyOf<typeof roles>;
     entries: KyselyOf<typeof entries>;
     entryVersions: KyselyOf<typeof entryVersions>;
@@ -42,6 +42,7 @@ export type DB = {
     // Leading-underscore table name has no camelCase humps, so CamelCasePlugin
     // leaves it intact; keep the key identical to the SQL table name.
     _astromech_cron: KyselyOf<typeof cron>;
+    _astromech_plugins: KyselyOf<typeof plugins>;
 
     // ── 4 better-auth — hand-typed, seconds-INTEGER (UNTOUCHED by the flip) ──
     users: UsersTable;

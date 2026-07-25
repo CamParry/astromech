@@ -2,9 +2,9 @@ import { defineConfig } from 'tsup';
 
 export default defineConfig({
     // Two entries: the plugin itself, and a `./schema` subpath that ships only
-    // the drizzle table (pure drizzle-orm, no astromech import) so a consuming
-    // app's drizzle config / seed can load it standalone for migrations.
-    entry: { index: 'src/index.ts', schema: 'src/schema/redirects.ts' },
+    // the table descriptors, so a consuming app (or `plugin:generate`) can load
+    // the schema standalone without pulling in the plugin definition.
+    entry: { index: 'src/index.ts', schema: 'src/schema/index.ts' },
     format: ['esm'],
     dts: true,
     sourcemap: true,
@@ -14,8 +14,6 @@ export default defineConfig({
         'astromech/fields',
         'astromech/columns',
         'astromech/plugin-kit',
-        'drizzle-orm',
-        'drizzle-orm/sqlite-core',
     ],
     treeshake: true,
 });

@@ -26,6 +26,6 @@ export {
 export { diffSnapshots } from './diff.js';
 export type { DiffResult, TableOp } from './diff.js';
 export { renderMigrationFile, renderOpStatements } from './render.js';
-export { migrateToLatest } from './apply.js';
+export { migrateToLatest, mergeMigrationProviders } from './apply.js';
 export { dumpSchema } from './oracle.js';
 export type { SchemaRow } from './oracle.js';

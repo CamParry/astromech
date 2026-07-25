@@ -2,23 +2,22 @@
  * Hand-authored Kysely baseline migration.
  *
  * File layout is now generator-owned (`astromech db:generate` — see
- * `database/generator.ts`): `NNNN_<tag>.ts` exporting `up(db)`, listed in
- * `journal.json`, imported statically by `index.ts`. This file is `0000`, the
- * one entry the generator did not write.
+ * `packages/schema-engine/src/generate.ts`): `NNNN_<tag>.ts` exporting `up(db)`,
+ * listed in `journal.json`, imported statically by `index.ts`. This file is
+ * `0000`, the one entry the generator did not write.
  *
  * The 9 descriptor-backed tables (`roles`, `entries`, `entry_versions`,
  * `entry_preview_tokens`, `media`, `settings`, `notifications`,
  * `relationships`, `_astromech_cron`) are **emitter-generated**: their
- * statements are `emitTableStatements()` output for each table's
- * `defineTable` descriptor (`packages/astromech/src/database/ddl.ts`), pasted
- * verbatim — a parity test asserts the two never drift. The 4 better-auth
- * tables (`users`, `sessions`, `accounts`, `verifications`) and the 2 plugin
- * tables (`plugin_redirects_redirects`, `plugin_backups_runs`) have no
- * descriptor and are the hand-authored "foreign tables" section the generator
- * passes through untouched: snake_case DDL, INTEGER unix-seconds timestamps,
- * TEXT json, INTEGER 0/1 booleans, identical SQL DEFAULTs, indexes and foreign
- * keys, derived by replaying every historical `drizzle/*.sql` migration into a
- * fresh SQLite db and dumping `sqlite_master`.
+ * statements are `emitTableStatements()` output for each table's `defineTable`
+ * descriptor — the renderers live in `packages/schema-engine/src/ddl.ts`,
+ * driven from descriptors via
+ * `packages/astromech/src/database/descriptor-snapshot.ts` — pasted verbatim; a
+ * parity test asserts the two never drift. The 4 better-auth tables (`users`,
+ * `sessions`, `accounts`, `verifications`) have no descriptor and are the
+ * hand-authored "foreign tables" section the generator passes through
+ * untouched: snake_case DDL, INTEGER unix-seconds timestamps, TEXT json,
+ * INTEGER 0/1 booleans, identical SQL DEFAULTs, indexes and foreign keys.
  *
  * Raw `sql` is used for every statement so the active `CamelCasePlugin` never
  * rewrites identifiers.
@@ -271,34 +270,6 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`last_run\` text,
             \`next_run\` text,
             \`lock\` text
-        )
-    `.execute(db);
-
-    // ── plugin_redirects_redirects ─────────────────────────────────────────
-    await sql`
-        CREATE TABLE \`plugin_redirects_redirects\` (
-            \`id\` text PRIMARY KEY NOT NULL,
-            \`from\` text NOT NULL,
-            \`to\` text NOT NULL,
-            \`status\` text DEFAULT '301' NOT NULL,
-            \`enabled\` integer DEFAULT 1 NOT NULL,
-            \`created_at\` integer NOT NULL,
-            \`updated_at\` integer NOT NULL
-        )
-    `.execute(db);
-
-    // ── plugin_backups_runs ────────────────────────────────────────────────
-    await sql`
-        CREATE TABLE \`plugin_backups_runs\` (
-            \`id\` text PRIMARY KEY NOT NULL,
-            \`key\` text,
-            \`status\` text NOT NULL,
-            \`trigger\` text NOT NULL,
-            \`size_bytes\` integer,
-            \`error\` text,
-            \`started_at\` integer NOT NULL,
-            \`finished_at\` integer,
-            \`artifact_deleted_at\` integer
         )
     `.execute(db);
 }

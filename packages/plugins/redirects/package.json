@@ -20,6 +20,7 @@
     "files": [
         "dist",
         "src",
+        "migrations",
         "README.md"
     ],
     "scripts": {
@@ -27,8 +28,7 @@
         "typecheck": "tsc -p tsconfig.json"
     },
     "peerDependencies": {
-        "astromech": "*",
-        "drizzle-orm": "*"
+        "astromech": "*"
     },
     "devDependencies": {
         "astromech": "*"

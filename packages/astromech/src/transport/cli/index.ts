@@ -18,6 +18,9 @@ const main = defineCommand({
         'generate:manifest': () =>
             import('./commands/generate-manifest.js').then((m) => m.default),
         'db:generate': () => import('./commands/db-generate.js').then((m) => m.default),
+        'plugin:generate': () =>
+            import('./commands/plugin-generate.js').then((m) => m.default),
+        'plugin:purge': () => import('./commands/plugin-purge.js').then((m) => m.default),
     },
 });
 

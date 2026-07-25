@@ -1,0 +1,87 @@
+{
+    "version": 1,
+    "dialect": "sqlite",
+    "tables": {
+        "plugin_backups_runs": {
+            "name": "plugin_backups_runs",
+            "columns": [
+                {
+                    "key": "id",
+                    "name": "id",
+                    "kind": "id",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": true
+                },
+                {
+                    "key": "key",
+                    "name": "key",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "status",
+                    "name": "status",
+                    "kind": "enum",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false,
+                    "enumValues": ["running", "success", "failed"]
+                },
+                {
+                    "key": "trigger",
+                    "name": "trigger",
+                    "kind": "enum",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false,
+                    "enumValues": ["scheduled", "manual", "pre-restore"]
+                },
+                {
+                    "key": "sizeBytes",
+                    "name": "size_bytes",
+                    "kind": "integer",
+                    "type": "integer",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "error",
+                    "name": "error",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "startedAt",
+                    "name": "started_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "finishedAt",
+                    "name": "finished_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "artifactDeletedAt",
+                    "name": "artifact_deleted_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                }
+            ],
+            "fks": [],
+            "indexes": []
+        }
+    }
+}

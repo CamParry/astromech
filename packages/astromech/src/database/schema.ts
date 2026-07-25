@@ -2,9 +2,11 @@
  * Aggregate schema surface for Astromech.
  *
  * Re-exports every table's `defineTable` descriptor and row types from its domain
- * module, plus the 4 better-auth Drizzle tables (still seconds-INTEGER, owned by
- * better-auth's adapter). `relationships` and `cron` are defined here as they
- * have no dedicated domain module. Consumed by `database/types.ts` (assembles
+ * module. The 4 better-auth tables (`users`, `sessions`, `accounts`,
+ * `verifications`) have no descriptor — they stay seconds-INTEGER and are owned
+ * by better-auth's adapter — so only their domain-side row types appear here.
+ * `relationships` and `cron` are defined here as they have no dedicated domain
+ * module. Consumed by `database/types.ts` (assembles
  * the Kysely `DB`), `database/codec.ts` (the row codec), and `astromech/db/schema`.
  */
 
@@ -29,26 +31,10 @@ import { settings as settingsTable } from '@/settings/schema.js';
 import { notifications as notificationsTable } from '@/notifications/schema.js';
 
 // ============================================================================
-// Users / RBAC — roles descriptor (ours) + the 4 better-auth Drizzle tables
+// Users / RBAC — roles descriptor (ours) + the better-auth `users` row type
 // ============================================================================
 
-export {
-    roles,
-    usersTable,
-    sessionsTable,
-    accountsTable,
-    verificationsTable,
-    type RoleRow,
-    type NewRoleRow,
-    type UserRow,
-    type NewUserRow,
-    type SessionRow,
-    type NewSessionRow,
-    type AccountRow,
-    type NewAccountRow,
-    type VerificationRow,
-    type NewVerificationRow,
-} from '@/users/schema.js';
+export { roles, type RoleRow, type NewRoleRow, type UserRow } from '@/users/schema.js';
 
 // ============================================================================
 // Entries
@@ -129,15 +115,35 @@ export type CronRow = TableSelect<typeof cron>;
 export type NewCronRow = TableInsert<typeof cron>;
 
 // ============================================================================
+// Installed-plugin tracking
+// ============================================================================
+
+/**
+ * One row per plugin present in `config.plugins`, upserted at boot. Its job is
+ * to make *removed* plugins visible: a plugin dropped from the config leaves
+ * its tables and migration rows behind, and this table is the only record that
+ * they were ever ours to clean up (`astromech plugin:purge <alias>`).
+ */
+export const plugins = defineTable('_astromech_plugins', ({ col }) => ({
+    alias: col.text({ primaryKey: true }),
+    version: col.text({ notNull: true }),
+    installedAt: col.timestamp({ notNull: true, defaultNow: true }),
+}));
+
+export type PluginTrackingRow = TableSelect<typeof plugins>;
+export type NewPluginTrackingRow = TableInsert<typeof plugins>;
+
+// ============================================================================
 // Core descriptor list — every `defineTable`-backed table we own
 // ============================================================================
 
 /**
- * The 9 descriptor-backed tables, in one place. Consumed by the DDL-parity
- * test, the migration generator (`generator.ts`), and `db:generate`'s CLI
- * repoint — anywhere that needs "every table `defineTable` owns" without
- * re-listing the 9 imports by hand. Does NOT include the 4 better-auth tables
- * or the 2 plugin tables (they have no descriptor — see `codec.ts`).
+ * The 10 descriptor-backed tables the CMS itself owns, in one place. Consumed
+ * by the DDL-parity test, the migration generator and `db:generate` — anywhere
+ * that needs "every core table `defineTable` owns" without re-listing the
+ * imports by hand. Does NOT include the 4 better-auth tables (hand-authored in
+ * the app baseline — see `codec.ts`) nor any plugin's tables: plugins own their
+ * own descriptors and generate their own migrations via `plugin:generate`.
  */
 export const CORE_TABLES: TableDescriptor[] = [
     rolesTable,
@@ -149,4 +155,5 @@ export const CORE_TABLES: TableDescriptor[] = [
     notificationsTable,
     relationships,
     cron,
+    plugins,
 ];

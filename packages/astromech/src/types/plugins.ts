@@ -7,8 +7,9 @@
  */
 
 import type { ComponentType, ReactElement } from 'react';
-import type { Kysely } from 'kysely';
+import type { Kysely, MigrationProvider } from 'kysely';
 import type { DB } from '@/database/types.js';
+import type { TableDescriptor } from '@/database/define-table.js';
 import type { AdminPage, DbDump, EntryTypeConfig, ResolvedConfig } from './config.js';
 import type { FieldDefinition } from './fields.js';
 import type { User, NotifyInput } from './domain.js';
@@ -227,8 +228,18 @@ export type PluginDefinition = {
     /** Entry types contributed by the plugin. Each self-declares its `type`. */
     entries?: EntryTypeConfig[];
     fields?: PluginFieldTypeRegistration[];
-    /** Drizzle tables shipped by the plugin (each prefixed `plugin_{alias}_`). */
-    schema?: unknown[];
+    /**
+     * `defineTable` descriptors shipped by the plugin (create via
+     * `definePlugin`; names are `plugin_<alias>_` prefixed).
+     */
+    schema?: TableDescriptor[];
+    /**
+     * The plugin's own migration provider — the `migrations/index.ts` generated
+     * by `astromech plugin:generate`. Merged into the app's migration chain at
+     * apply time under `plugin_<alias>_`-prefixed names, so the plugin's own
+     * files keep their bare `NNNN_<tag>` names.
+     */
+    migrations?: MigrationProvider;
     sdk?: Record<string, AnyPluginSdkMethod>;
     rawRoutes?: PluginRawRoute[];
     hooks?: PluginHooks;
@@ -247,18 +258,6 @@ export type PluginDefinition = {
     /** Package name → semver range. Existence + basic range check only. */
     dependsOn?: Record<string, string>;
     emails?: EmailTemplateOverride[];
-
-    /**
-     * Import specifier of a module whose top-level exports are the plugin's
-     * Drizzle tables. Consumed by `astromech db:generate` to feed drizzle-kit
-     * (which only reads top-level exports from the schema file).
-     *
-     * Example: `'my-plugin/schema'` or `'astromech/plugins/redirects/schema'`
-     *
-     * Plugins that ship `schema` tables without a `schemaModule` will be warned
-     * at `db:generate` time — their tables cannot be included in the migration.
-     */
-    schemaModule?: string;
 
     // ── Imperative escape hatch ─────────────────────────────────────────
     /** Runs once per runtime boot. Optional. */

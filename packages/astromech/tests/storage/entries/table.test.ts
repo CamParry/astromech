@@ -1,32 +1,38 @@
 /**
  * Storage-level tests for tableStorage plus entries-service integration.
  *
- * Uses a scratch table created via raw DDL — no migration dependency.
- * The scratch table has columns matching the test scenarios: id, from, to,
- * status, enabled (boolean integer), createdAt/updatedAt (timestamp integers).
+ * Uses a scratch table created via raw DDL — no migration dependency. The
+ * scratch table's columns mirror the descriptor below: id (ULID text), from,
+ * to, status, enabled (boolean integer), created_at/updated_at (ISO-8601 text).
+ * The DDL uses snake_case identifiers because the shared handle runs
+ * `CamelCasePlugin`, which snake_cases every identifier it emits; selects still
+ * come back camelCased, so the descriptor's keys line up.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { sql } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
 import { Astromech } from '@/transport/local/index.js';
 import type { AstromechConfig, PluginDefinition } from '@/types/index.js';
 import { tableStorage } from '@/entries/storage/table.js';
+import { defineTable } from '@/database/define-table.js';
 
 // ============================================================================
 // Scratch table definition
 // ============================================================================
 
-const testLinksTable = sqliteTable('test_links', {
-    id: text('id').primaryKey(),
-    from: text('from').notNull(),
-    to: text('to').notNull(),
-    status: text('status').notNull().default('301'),
-    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-    createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
-    updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull(),
-});
+/** Crockford base32, the ULID alphabet — ids are 26 uppercase chars. */
+const ULID = /^[0-9A-HJKMNP-TV-Z]{26}$/;
+
+const testLinksTable = defineTable('test_links', ({ col }) => ({
+    id: col.id(),
+    from: col.text({ notNull: true }),
+    to: col.text({ notNull: true }),
+    status: col.text({ notNull: true, default: '301' }),
+    enabled: col.boolean({ notNull: true, default: true }),
+    createdAt: col.timestamp({ notNull: true, defaultNow: true }),
+    updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
+}));
 
 const storage = tableStorage(testLinksTable);
 
@@ -44,8 +50,8 @@ beforeEach(async () => {
             "to" text NOT NULL,
             status text NOT NULL DEFAULT '301',
             enabled integer NOT NULL DEFAULT 1,
-            "createdAt" integer NOT NULL,
-            "updatedAt" integer NOT NULL
+            created_at text NOT NULL,
+            updated_at text NOT NULL
         )`.execute(db);
 });
 
@@ -66,15 +72,14 @@ describe('supports', () => {
 
 describe('create', () => {
     it('generates an id, sets timestamps, writes field columns', async () => {
-        // SQLite stores timestamps as integer seconds — truncate before to avoid
-        // sub-second false negatives.
-        const before = new Date(Math.floor(Date.now() / 1000) * 1000);
+        // Timestamps are ISO-8601 TEXT, so millisecond precision round-trips.
+        const before = new Date();
         const record = await storage.create({
             type: 'link',
             fields: { from: '/old', to: '/new', status: '302', enabled: true },
         });
 
-        expect(record.id).toMatch(/[0-9a-f-]{36}/);
+        expect(record.id).toMatch(ULID);
         expect(record.createdAt).toBeInstanceOf(Date);
         expect(record.updatedAt).toBeInstanceOf(Date);
         expect(record.createdAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
@@ -149,8 +154,9 @@ describe('update', () => {
             fields: { from: '/a', to: '/b', status: '301' },
         });
 
-        // Wait >1s to ensure updatedAt changes (SQLite stores integer seconds).
-        await new Promise((r) => setTimeout(r, 1100));
+        // ISO-8601 TEXT keeps milliseconds, so a few ms is enough for updatedAt
+        // to move.
+        await new Promise((r) => setTimeout(r, 5));
 
         const updated = await storage.update(created.id, {
             fields: { from: '/a', to: '/new', status: '302' },
@@ -497,7 +503,7 @@ describe('entries-service integration', () => {
             fields: { from: '/old', to: '/new', status: '301' },
         });
 
-        expect(created.id).toMatch(/[0-9a-f-]{36}/);
+        expect(created.id).toMatch(ULID);
         expect(created.fields['from']).toBe('/old');
         expect(created.fields['to']).toBe('/new');
 

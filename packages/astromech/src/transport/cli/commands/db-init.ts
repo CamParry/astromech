@@ -1,9 +1,10 @@
 import { defineCommand } from 'citty';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
-import { loadConfig } from '../config.js';
+import { loadConfig, loadRawConfig } from '../config.js';
 import { getDb } from '@/database/registry.js';
-import { migrateToLatest } from '@astromech/schema-engine';
+import { migrateToLatest, mergeMigrationProviders } from '@astromech/schema-engine';
+import { collectPluginMigrations } from '@/database/plugin-migrations.js';
 
 export default defineCommand({
     meta: { name: 'db:init', description: 'Run database migrations' },
@@ -12,11 +13,21 @@ export default defineCommand({
     },
     async run({ args }) {
         await loadConfig(args.config);
+        // `resolveConfig` strips `plugins`, so read the raw config for the
+        // plugin definitions (same pattern as generate-types / generate-manifest).
+        const rawConfig = await loadRawConfig(args.config);
         const { migrationProvider } = await import(
             pathToFileURL(resolve(process.cwd(), 'migrations/index.ts')).href
         );
+        // Plugin migrations merge into the app chain at apply time, so a newly
+        // installed plugin can introduce a migration that sorts before ones
+        // already applied — hence `allowUnorderedMigrations`.
+        const merged = mergeMigrationProviders(
+            migrationProvider,
+            collectPluginMigrations(rawConfig.plugins ?? [])
+        );
         console.log('Running migrations...');
-        await migrateToLatest(getDb(), migrationProvider);
+        await migrateToLatest(getDb(), merged, { allowUnorderedMigrations: true });
         console.log('Database migrations applied');
     },
 });

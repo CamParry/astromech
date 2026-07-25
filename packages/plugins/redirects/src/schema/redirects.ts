@@ -1,26 +1,28 @@
 /**
- * Drizzle table for the redirects plugin. The `plugin_{alias}_` prefix
- * (`TABLE_PREFIX`) namespaces it to satisfy `assertPluginTablePrefixes`.
+ * Table descriptor for the redirects plugin. `definePlugin` owns the
+ * `plugin_<alias>_` prefix, so the table is declared with its bare name and
+ * comes out as `plugin_redirects_redirects`.
  */
 
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
-import { TABLE_PREFIX } from '../manifest.js';
+import { definePlugin } from 'astromech/plugin-kit';
+import type { TableInsert, TableSelect } from 'astromech/plugin-kit';
 
-export const redirectsTable = sqliteTable(`${TABLE_PREFIX}redirects`, {
-    id: text('id')
-        .primaryKey()
-        .$defaultFn(() => crypto.randomUUID()),
-    from: text('from').notNull(),
-    to: text('to').notNull(),
-    status: text('status').notNull().default('301'),
-    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-    createdAt: integer('created_at', { mode: 'timestamp' })
-        .notNull()
-        .$defaultFn(() => new Date()),
-    updatedAt: integer('updated_at', { mode: 'timestamp' })
-        .notNull()
-        .$defaultFn(() => new Date()),
+export const tables = definePlugin({
+    alias: 'redirects',
+    schema: ({ table }) => ({
+        redirects: table('redirects', ({ col }) => ({
+            id: col.id(),
+            from: col.text({ notNull: true }),
+            to: col.text({ notNull: true }),
+            status: col.text({ notNull: true, default: '301' }),
+            enabled: col.boolean({ notNull: true, default: true }),
+            createdAt: col.timestamp({ notNull: true, defaultNow: true }),
+            updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
+        })),
+    }),
 });
 
-export type RedirectRow = typeof redirectsTable.$inferSelect;
-export type NewRedirectRow = typeof redirectsTable.$inferInsert;
+export const redirectsTable = tables.redirects;
+
+export type RedirectRow = TableSelect<typeof redirectsTable>;
+export type NewRedirectRow = TableInsert<typeof redirectsTable>;

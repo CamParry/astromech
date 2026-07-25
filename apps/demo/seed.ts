@@ -15,6 +15,8 @@ import { hashPassword } from 'better-auth/crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import sharpLib from 'sharp';
 import * as schema from 'astromech/db/schema';
+import { encodeWith } from 'astromech/plugin-kit';
+import { redirectsTable } from '@astromech/redirects/schema';
 import { readImageDimensions, contentVersion, sharp } from 'astromech/images/sharp';
 
 // ProseMirror JSON builders for richtext seed content (StarterKit schema)
@@ -2128,38 +2130,29 @@ async function seed(): Promise<void> {
     // -------------------------------------------------------------------------
     // Redirects
     // -------------------------------------------------------------------------
-    const nowSec = Math.floor(now.getTime() / 1000);
+    // The redirects table is the plugin's own, so its rows go through the
+    // plugin's descriptor codec rather than being hand-built: `encodeWith` mints
+    // the ULID id and the ISO-TEXT createdAt/updatedAt from the descriptor's
+    // defaults, exactly as `tableStorage` does at runtime.
     await db
         .insertInto('plugin_redirects_redirects')
-        .values([
-            {
-                id: crypto.randomUUID(),
-                from: '/old-home',
-                to: '/',
-                status: '301',
-                enabled: 1,
-                createdAt: nowSec,
-                updatedAt: nowSec,
-            },
-            {
-                id: crypto.randomUUID(),
-                from: '/blog/old-post',
-                to: '/blog/getting-started-with-astromech',
-                status: '301',
-                enabled: 1,
-                createdAt: nowSec,
-                updatedAt: nowSec,
-            },
-            {
-                id: crypto.randomUUID(),
-                from: '/customers/index',
-                to: '/customers',
-                status: '302',
-                enabled: 1,
-                createdAt: nowSec,
-                updatedAt: nowSec,
-            },
-        ] as never)
+        .values(
+            [
+                { from: '/old-home', to: '/', status: '301', enabled: true },
+                {
+                    from: '/blog/old-post',
+                    to: '/blog/getting-started-with-astromech',
+                    status: '301',
+                    enabled: true,
+                },
+                {
+                    from: '/customers/index',
+                    to: '/customers',
+                    status: '302',
+                    enabled: true,
+                },
+            ].map((row) => encodeWith(redirectsTable, row)) as never
+        )
         .execute();
     console.log('  Created 3 redirects\n');
 

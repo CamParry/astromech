@@ -1,0 +1,133 @@
+/**
+ * `_astromech_plugins` tracking — the row `bootPlugins` upserts per installed
+ * plugin.
+ *
+ * The point of the table is to make *removed* plugins visible, so the tests
+ * cover both directions: booting records/refreshes a row without ever losing the
+ * original `installedAt`, and booting without a previously-tracked plugin warns
+ * (pointing at `plugin:purge`) rather than cleaning up behind the user's back.
+ */
+
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createTestDb } from '@tests/harness.js';
+import { bootPlugins } from '@/plugins/runtime/plugin-runtime.js';
+import { type PluginTrackingRow } from '@/database/schema.js';
+import { decode } from '@/database/codec.js';
+import type { DB } from '@/database/types.js';
+import type { Kysely } from 'kysely';
+
+type Db = Kysely<DB>;
+
+/** Tracking rows as domain values (`installedAt` decoded to a `Date`). */
+async function trackedRows(db: Db): Promise<PluginTrackingRow[]> {
+    const rows = await db
+        .selectFrom('_astromech_plugins')
+        .selectAll()
+        .orderBy('alias')
+        .execute();
+    return rows.map(
+        (row) => decode('_astromech_plugins', row) as unknown as PluginTrackingRow
+    );
+}
+
+let db: Db;
+
+beforeEach(async () => {
+    db = await createTestDb();
+});
+
+describe('bootPlugins – plugin tracking', () => {
+    it('records one row per plugin with its alias and version', async () => {
+        await bootPlugins([
+            { package: '@astromech/redirects', version: '1.2.3' },
+            { package: '@astromech/backups', version: '0.4.0' },
+        ]);
+
+        const rows = await trackedRows(db);
+        expect(rows.map((row) => [row.alias, row.version])).toEqual([
+            ['backups', '0.4.0'],
+            ['redirects', '1.2.3'],
+        ]);
+        expect(rows[0]?.installedAt).toBeInstanceOf(Date);
+    });
+
+    it('records the alias override, not the package-derived name', async () => {
+        await bootPlugins([
+            { package: '@acme/redirects', alias: 'acme-redirects', version: '1.0.0' },
+        ]);
+
+        const rows = await trackedRows(db);
+        expect(rows.map((row) => row.alias)).toEqual(['acme-redirects']);
+    });
+
+    it('defaults the version to 0.0.0 when the plugin declares none', async () => {
+        await bootPlugins([{ package: '@astromech/menus' }]);
+
+        const rows = await trackedRows(db);
+        expect(rows.map((row) => [row.alias, row.version])).toEqual([['menus', '0.0.0']]);
+    });
+
+    it('does not duplicate rows when the same plugin boots twice', async () => {
+        const defs = [{ package: '@astromech/backups', version: '1.0.0' }];
+        await bootPlugins(defs);
+        await bootPlugins(defs);
+
+        const rows = await trackedRows(db);
+        expect(rows).toHaveLength(1);
+        expect(rows[0]?.version).toBe('1.0.0');
+    });
+
+    // Pins `trackPlugin`'s documented contract: "a conflict only refreshes
+    // `version`, so the original install time survives".
+    it('updates version on a bump while keeping the original installedAt', async () => {
+        await bootPlugins([{ package: '@astromech/backups', version: '1.0.0' }]);
+        const [first] = await trackedRows(db);
+        expect(first).toBeDefined();
+
+        await new Promise((r) => setTimeout(r, 5));
+        await bootPlugins([{ package: '@astromech/backups', version: '2.0.0' }]);
+
+        const rows = await trackedRows(db);
+        expect(rows).toHaveLength(1);
+        expect(rows[0]?.version).toBe('2.0.0');
+        expect(rows[0]?.installedAt.getTime()).toBe(first?.installedAt.getTime());
+    });
+});
+
+describe('bootPlugins – removed-plugin warning', () => {
+    it('warns about a tracked plugin missing from the passed defs', async () => {
+        await bootPlugins([
+            { package: '@astromech/redirects', version: '1.0.0' },
+            { package: '@astromech/backups', version: '1.0.0' },
+        ]);
+
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+        let messages: string[];
+        try {
+            await bootPlugins([{ package: '@astromech/redirects', version: '1.0.0' }]);
+            // Read the calls before restoring — `mockRestore` clears mock state.
+            messages = warn.mock.calls.map((call) => String(call[0]));
+        } finally {
+            warn.mockRestore();
+        }
+
+        expect(messages).toHaveLength(1);
+        expect(messages[0]).toContain('backups');
+        expect(messages[0]).toContain('plugin:purge backups');
+    });
+
+    it('does not warn while every tracked plugin is still configured', async () => {
+        await bootPlugins([{ package: '@astromech/backups', version: '1.0.0' }]);
+
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+        let calls: number;
+        try {
+            await bootPlugins([{ package: '@astromech/backups', version: '1.0.0' }]);
+            calls = warn.mock.calls.length;
+        } finally {
+            warn.mockRestore();
+        }
+
+        expect(calls).toBe(0);
+    });
+});

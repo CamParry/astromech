@@ -1,19 +1,18 @@
 /**
- * Plugin Drizzle schema collection + convention enforcement.
+ * Plugin table-descriptor collection + convention enforcement.
  *
- * Plugins may ship Drizzle tables (an escape valve for data that doesn't fit
- * entries). Tables must be prefixed `plugin_{alias}_` to namespace them and
- * prevent collisions; there are no cross-plugin foreign keys (soft string refs
- * only). This module collects plugin table objects and enforces the prefix at
+ * Plugins may ship their own tables (an escape valve for data that doesn't fit
+ * entries), declared as `defineTable` descriptors via `definePlugin`. Table
+ * names must be prefixed `plugin_{alias}_` to namespace them and prevent
+ * collisions; there are no cross-plugin foreign keys (soft string refs only).
+ * This module collects the descriptors and enforces the prefix at
  * config-resolution time (crash loud).
  *
- * The `db:generate` CLI command (`astromech db:generate`, implemented in
- * `src/transport/cli/commands/db-generate.ts`) reads each plugin's `schemaModule`
- * specifier, generates a combined `.astromech/drizzle.schema.ts`, and spawns
- * drizzle-kit to produce the app's migration log.
+ * Plugins generate their own migrations with `astromech plugin:generate`, which
+ * reads their descriptors directly; core `db:generate` covers core tables only.
  */
 
-import { getTableName, is, Table } from 'drizzle-orm';
+import type { TableDescriptor } from '@/database/define-table.js';
 import type { PluginDefinition } from '@/types/index.js';
 import {
     pluginTablePrefix,
@@ -23,21 +22,35 @@ import {
 export type CollectedPluginTable = {
     alias: string;
     tableName: string;
-    table: Table;
+    table: TableDescriptor;
 };
 
-/** Flatten every Drizzle table declared across the plugin set. */
+/** Flatten every table descriptor declared across the plugin set. */
 export function collectPluginSchemas(defs: PluginDefinition[]): CollectedPluginTable[] {
     const collected: CollectedPluginTable[] = [];
     for (const def of defs) {
         if (!def.schema) continue;
         const { alias } = resolvePluginIdentity(def);
-        for (const table of def.schema) {
-            if (!is(table, Table)) continue;
-            collected.push({ alias, tableName: getTableName(table), table });
+        for (const desc of def.schema) {
+            if (!isTableDescriptor(desc)) continue;
+            collected.push({ alias, tableName: desc.name, table: desc });
         }
     }
     return collected;
+}
+
+/**
+ * Shape check for an entry in a plugin's `schema` array. `schema` is typed, but
+ * a plugin is third-party JS — a stale build can still hand us a Drizzle table
+ * or a plain object, and that must be skipped rather than crash a read.
+ */
+export function isTableDescriptor(value: unknown): value is TableDescriptor {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        'name' in value &&
+        'columns' in value
+    );
 }
 
 /**

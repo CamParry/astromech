@@ -10,7 +10,7 @@
  * `virtual:astromech/config`, so this module stays unit-testable.
  */
 
-import type { Kysely } from 'kysely';
+import type { Insertable, Kysely, Updateable } from 'kysely';
 import type { DB } from '@/database/types.js';
 import type { ReactElement } from 'react';
 import type {
@@ -29,6 +29,12 @@ import type {
     User,
 } from '@/types/index.js';
 import { getDb } from '@/database/registry.js';
+import {
+    encode,
+    encodePatch,
+    kyselyTableKey,
+    registerDescriptorCodec,
+} from '@/database/codec.js';
 import { getDatabaseDriver } from '@/database/driver-registry.js';
 import { getStorageDriver } from '@/storage/registry.js';
 import { getEmailConfig } from '@/email/registry.js';
@@ -40,6 +46,7 @@ import {
     resolvePluginIdentity,
 } from '@/plugins/runtime/plugin-identity.js';
 import { entryAccess } from '@/plugins/runtime/entry-access.js';
+import { isTableDescriptor } from '@/plugins/runtime/plugin-schema.js';
 import { registerCronJob } from '@/cron/registry.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
 import { withDefaultShape } from '@/utilities/with-default-shape.js';
@@ -99,6 +106,14 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
         const identity = resolvePluginIdentity(def);
         s.identities.push(identity);
 
+        // Teach the row codec about the plugin's own tables so its rows encode /
+        // decode like ours. Malformed entries are skipped here —
+        // `assertPluginTablePrefixes` at config-resolution time is the loud gate.
+        for (const desc of def.schema ?? []) {
+            if (!isTableDescriptor(desc)) continue;
+            registerDescriptorCodec(kyselyTableKey(desc.name), desc);
+        }
+
         for (const { event, handler } of def.hooks ?? []) {
             if (!handler) continue;
             const list = s.hooks.get(event) ?? [];
@@ -143,9 +158,10 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
 
 /**
  * Boot all plugins, in `plugins: []` order: validate `requiredEnv`, register
- * cron jobs (names auto-namespaced as `plugin:{name}:{job}`), and run
- * `setup()`. Called once at boot, after `registerPlugins`. Failures crash
- * loud, naming the plugin.
+ * cron jobs (names auto-namespaced as `plugin:{name}:{job}`), record the plugin
+ * in `_astromech_plugins`, and run `setup()`. Called once at boot, after
+ * `registerPlugins`. Failures crash loud, naming the plugin — except the
+ * tracking writes, which are best-effort (see `trackPlugin`).
  */
 export async function bootPlugins(defs: PluginDefinition[]): Promise<void> {
     const env = resolveEnv();
@@ -160,6 +176,8 @@ export async function bootPlugins(defs: PluginDefinition[]): Promise<void> {
                     `${missing.join(', ')}. Set them in your environment or .env file.`
             );
         }
+
+        await trackPlugin(identity.name, def.version ?? '0.0.0');
 
         for (const job of def.cron ?? []) {
             registerCronJob({
@@ -182,6 +200,68 @@ export async function bootPlugins(defs: PluginDefinition[]): Promise<void> {
                 );
             }
         }
+    }
+
+    await warnOnUntrackedRemovals(defs.map((def) => resolvePluginIdentity(def).name));
+}
+
+/**
+ * Upsert one row in `_astromech_plugins`. `installedAt` is written once — a
+ * conflict only refreshes `version`, so the original install time survives.
+ *
+ * Best-effort: the table may not exist yet in odd dev states (a database
+ * predating the tracking migration), and boot must not die over bookkeeping.
+ */
+async function trackPlugin(alias: string, version: string): Promise<void> {
+    try {
+        await getDb()
+            .insertInto('_astromech_plugins')
+            .values(
+                encode('_astromech_plugins', {
+                    alias,
+                    version,
+                    installedAt: new Date(),
+                }) as unknown as Insertable<DB['_astromech_plugins']>
+            )
+            .onConflict((oc) =>
+                // `encodePatch`, not `encode`: the insert codec injects app
+                // defaults, which would re-stamp `installedAt` on every boot.
+                oc.column('alias').doUpdateSet(
+                    encodePatch('_astromech_plugins', {
+                        version,
+                    }) as unknown as Updateable<DB['_astromech_plugins']>
+                )
+            )
+            .execute();
+    } catch (error) {
+        console.warn(
+            `[astromech] Could not record plugin "${alias}" in _astromech_plugins: ` +
+                `${error instanceof Error ? error.message : String(error)}`
+        );
+    }
+}
+
+/**
+ * Warn about plugins still tracked in `_astromech_plugins` but no longer in
+ * `config.plugins`: their tables and migration rows are still in the database.
+ * Best-effort for the same reason as `trackPlugin`.
+ */
+async function warnOnUntrackedRemovals(configured: string[]): Promise<void> {
+    try {
+        const tracked = await getDb()
+            .selectFrom('_astromech_plugins')
+            .select('alias')
+            .execute();
+        for (const { alias } of tracked) {
+            if (configured.includes(alias)) continue;
+            console.warn(
+                `[astromech] Plugin "${alias}" is still tracked in the database but is no ` +
+                    `longer in \`config.plugins\`. Its tables and migrations remain — run ` +
+                    `\`astromech plugin:purge ${alias}\` to remove them.`
+            );
+        }
+    } catch {
+        // Same best-effort reasoning as trackPlugin.
     }
 }
 

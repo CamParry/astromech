@@ -202,13 +202,13 @@ export function astromech(config: AstromechConfig): AstroIntegration {
 
             'astro:server:setup': async ({ logger }) => {
                 logger.info('Astromech dev server ready');
-                await runMigrations(logger);
+                await runMigrations(logger, config.plugins ?? []);
                 await startScheduler();
             },
 
             'astro:build:done': async ({ logger }) => {
                 logger.info('Astromech build complete');
-                await runMigrations(logger);
+                await runMigrations(logger, config.plugins ?? []);
             },
         },
     };

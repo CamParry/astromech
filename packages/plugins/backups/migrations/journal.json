@@ -1,0 +1,11 @@
+{
+    "version": 1,
+    "dialect": "sqlite",
+    "entries": [
+        {
+            "idx": 0,
+            "tag": "0000_baseline",
+            "when": 1785001135193
+        }
+    ]
+}

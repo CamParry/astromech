@@ -52,6 +52,8 @@ plugin's identity once (in `manifest.ts`) and import it everywhere else.
 my-plugin/
   manifest.ts            identity + asset path helpers
   index.ts               definePlugin() composing the surfaces below
+  schema/index.ts        database tables (definePlugin)
+  migrations/            generated — never hand-edited
   fields/                custom field-type registrations + renderers
   pages/                 admin page registrations + renderers
   permissions.ts         permission bundles + declarations
@@ -183,12 +185,78 @@ roles: {
 }
 ```
 
+### Database tables
+
+A plugin that needs its own storage declares tables with `definePlugin` from
+`astromech/plugin-kit`. It is `defineTable` scoped to your alias: you pass bare
+names, and it prefixes both the table and any index names with
+`plugin_<alias>_` so two plugins can never collide.
+
+```ts
+// schema/index.ts
+import { definePlugin, type TableSelect } from 'astromech/plugin-kit';
+
+export const tables = definePlugin({
+    alias: 'my-plugin',
+    schema: ({ table }) => ({
+        widgets: table(
+            'widgets',
+            ({ col }) => ({
+                id: col.id(),
+                label: col.text({ notNull: true }),
+                status: col.enum(['draft', 'live'], { notNull: true }),
+                createdAt: col.timestamp({ notNull: true, defaultNow: true }),
+            }),
+            ({ index }) => [index('idx_status', ['status'])]
+        ),
+    }),
+});
+
+export const widgetsTable = tables.widgets;
+export type WidgetRow = TableSelect<typeof widgetsTable>;
+```
+
+`id` columns are ULIDs and timestamps are ISO-8601 TEXT, both filled from the
+descriptor — you never mint them yourself.
+
+Your plugin owns its migrations. Generate them into the package, commit them,
+and list the provider on the definition:
+
+```sh
+npx astromech plugin:generate --name baseline   # → migrations/0000_baseline.ts
+```
+
+```ts
+import { migrationProvider } from '../migrations/index.js';
+import { widgetsTable } from './schema/index.js';
+
+const definition: PluginDefinition = {
+    // ...
+    schema: [widgetsTable],
+    migrations: migrationProvider,
+};
+```
+
+Migrations are generated, never hand-written: if the output is wrong, fix the
+descriptor and regenerate. The app merges every installed plugin's chain into
+its own at apply time (under `plugin_<alias>_`-prefixed names, in one shared
+`kysely_migration` table), so `db:init` is all a consumer runs.
+
+Installed plugins are tracked in `_astromech_plugins`. Removing a plugin from
+`astromech.config.ts` leaves its tables behind on purpose — the app warns about
+the orphan, and `npx astromech plugin:purge <alias>` drops its tables, migration
+rows and tracking row once you are sure.
+
+For reads and writes that bypass a storage layer, decode and encode rows with
+the descriptor: `decodeWith(widgetsTable, row)`, `encodeWith(widgetsTable, values)`,
+`encodePatchWith(widgetsTable, patch)` — all from `astromech/plugin-kit`.
+
 ### More surfaces
 
 Plugins can also contribute **SDK methods** (`defineSdkMethod`, callable off
 `Astromech.plugins.<name>`), **hooks** (`defineHook`, e.g. `entry:afterUpdate`),
-**entry types**, **database tables** (Drizzle, via `astromech/db`), and
-**i18n** locale bundles. See the bundled `redirects` and `seo` plugins for each.
+**entry types**, and **i18n** locale bundles. See the bundled `redirects` and
+`seo` plugins for each.
 
 > Plugins can't register routes outside `/api`. To integrate with the front end,
 > expose data through an SDK method and document a small middleware recipe — the

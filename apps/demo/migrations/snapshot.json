@@ -58,6 +58,37 @@
             "fks": [],
             "indexes": []
         },
+        "_astromech_plugins": {
+            "name": "_astromech_plugins",
+            "columns": [
+                {
+                    "key": "alias",
+                    "name": "alias",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": true
+                },
+                {
+                    "key": "version",
+                    "name": "version",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "installedAt",
+                    "name": "installed_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                }
+            ],
+            "fks": [],
+            "indexes": []
+        },
         "entries": {
             "name": "entries",
             "columns": [

@@ -24,7 +24,8 @@ import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import { libsqlDriver } from '@/database/drivers/libsql.js';
 import { FilesystemStorage } from '@/storage/filesystem.js';
-import { decode } from '@/database/codec.js';
+import { decodeWith } from '@/database/codec.js';
+import { backupRunsTable } from '@astromech/backups/schema';
 import type { DB } from '@/database/types.js';
 import { performBackup, rotate, isBackupRunning } from '@astromech/backups/internals';
 import type { PluginContext, PluginDatabase, PluginStorage } from '@/types/index.js';
@@ -54,7 +55,9 @@ async function makeFileDb(dbPath: string): Promise<{
     const driver = libsqlDriver({ url });
     const db = driver.getInstance() as Kysely<DB>;
 
-    // Create the backups table directly — no full migrations needed for these tests.
+    // Create the backups table directly — no full migrations needed for these
+    // tests. Timestamps are TEXT: the table is a `definePlugin` descriptor now,
+    // so its columns are ISO-8601 strings, not unix seconds.
     await sql
         .raw(
             `
@@ -65,9 +68,9 @@ async function makeFileDb(dbPath: string): Promise<{
                 trigger TEXT NOT NULL,
                 size_bytes INTEGER,
                 error TEXT,
-                started_at INTEGER NOT NULL,
-                finished_at INTEGER,
-                artifact_deleted_at INTEGER
+                started_at TEXT NOT NULL,
+                finished_at TEXT,
+                artifact_deleted_at TEXT
             )
         `
         )
@@ -331,7 +334,7 @@ describe('rotate', () => {
             .raw(`SELECT * FROM plugin_backups_runs`)
             .execute(db);
         const allRows = (rawRows as Record<string, unknown>[]).map((r) =>
-            decode('plugin_backups_runs', r)
+            decodeWith(backupRunsTable, r)
         );
         const deleted = allRows.filter((r) => r['artifactDeletedAt'] !== null);
         const kept = allRows.filter((r) => r['artifactDeletedAt'] === null);
@@ -372,7 +375,7 @@ describe('rotate', () => {
             .raw(`SELECT * FROM plugin_backups_runs`)
             .execute(db);
         const allRows = (rawRows as Record<string, unknown>[]).map((r) =>
-            decode('plugin_backups_runs', r)
+            decodeWith(backupRunsTable, r)
         );
         expect(allRows.every((r) => r['artifactDeletedAt'] === null)).toBe(true);
 

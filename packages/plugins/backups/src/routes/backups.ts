@@ -11,49 +11,24 @@ import { Readable } from 'node:stream';
 import { createGunzip } from 'node:zlib';
 import type { Kysely } from 'kysely';
 import type { PluginContext, PluginRawRoute } from 'astromech';
-import type { BackupRunRow } from '../schema/runs.js';
+import { decodeWith } from 'astromech/plugin-kit';
+import { backupRunsTable, type BackupRunRow } from '../schema/runs.js';
 import { isBackupRunning, performBackup, resolveKeep } from '../backup.js';
 
 const MAX_RUNS = 100;
 const TABLE = 'plugin_backups_runs' as const;
 
 // ============================================================================
-// Inline row helpers (no codec import from core — timestamps only)
+// Row access
 // ============================================================================
 
-/** CamelCase storage shape as seen through CamelCasePlugin. */
-type RawRunRowCamel = {
-    id: string;
-    key: string | null;
-    status: 'running' | 'success' | 'failed';
-    trigger: 'scheduled' | 'manual' | 'pre-restore';
-    sizeBytes: number | null;
-    error: string | null;
-    startedAt: number;
-    finishedAt: number | null;
-    artifactDeletedAt: number | null;
-};
-
-function decodeRow(raw: RawRunRowCamel): BackupRunRow {
-    return {
-        id: raw.id,
-        key: raw.key,
-        status: raw.status,
-        trigger: raw.trigger,
-        sizeBytes: raw.sizeBytes,
-        error: raw.error,
-        startedAt: new Date(raw.startedAt * 1000),
-        finishedAt: raw.finishedAt !== null ? new Date(raw.finishedAt * 1000) : null,
-        artifactDeletedAt:
-            raw.artifactDeletedAt !== null
-                ? new Date(raw.artifactDeletedAt * 1000)
-                : null,
-    };
-}
-
-/** Access the Kysely instance that ctx.db holds at runtime. */
-function db(ctx: PluginContext): Kysely<Record<string, RawRunRowCamel>> {
-    return ctx.db as unknown as Kysely<Record<string, RawRunRowCamel>>;
+/**
+ * Access the Kysely instance that ctx.db holds at runtime, typed against the
+ * descriptor's domain row. These are raw queries — the shared handle applies no
+ * codec — so every read is passed through `decodeWith`.
+ */
+function db(ctx: PluginContext): Kysely<Record<string, BackupRunRow>> {
+    return ctx.db as unknown as Kysely<Record<string, BackupRunRow>>;
 }
 
 // ============================================================================
@@ -76,7 +51,7 @@ async function findRun(ctx: PluginContext, id: string): Promise<BackupRunRow | n
         .where('id', '=', id)
         .limit(1)
         .executeTakeFirst();
-    return row !== undefined ? decodeRow(row) : null;
+    return row !== undefined ? decodeWith(backupRunsTable, row) : null;
 }
 
 /** Parse the last path segment from a URL pathname, e.g. `/backups/runs/abc-123/download` → `abc-123`. */
@@ -101,7 +76,10 @@ async function listRuns(_request: Request, ctx: PluginContext): Promise<Response
         canDump: ctx.database.dump !== undefined,
         canRestore: ctx.database.restore !== undefined,
     };
-    return Response.json({ data: rows.map(decodeRow), capabilities });
+    return Response.json({
+        data: rows.map((raw) => decodeWith(backupRunsTable, raw)),
+        capabilities,
+    });
 }
 
 async function triggerRun(

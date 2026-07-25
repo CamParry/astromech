@@ -10,8 +10,9 @@ import { Readable } from 'node:stream';
 import { createGzip } from 'node:zlib';
 import type { Kysely } from 'kysely';
 import type { PluginContext } from 'astromech';
+import { decodeWith, encodeWith, encodePatchWith } from 'astromech/plugin-kit';
 import { PERMISSION_NAMESPACE } from './manifest.js';
-import type { BackupRunRow } from './schema/runs.js';
+import { backupRunsTable, type BackupRunRow } from './schema/runs.js';
 
 // ============================================================================
 // In-process overlap guard
@@ -26,42 +27,17 @@ export function isBackupRunning(): boolean {
 }
 
 // ============================================================================
-// Inline row helpers (no codec import from core — timestamps only)
+// Row access
 // ============================================================================
 
-/** CamelCase storage shape as seen through CamelCasePlugin. */
-type RawRunRowCamel = {
-    id: string;
-    key: string | null;
-    status: 'running' | 'success' | 'failed';
-    trigger: 'scheduled' | 'manual' | 'pre-restore';
-    sizeBytes: number | null;
-    error: string | null;
-    startedAt: number;
-    finishedAt: number | null;
-    artifactDeletedAt: number | null;
-};
-
-function decodeRow(raw: RawRunRowCamel): BackupRunRow {
-    return {
-        id: raw.id,
-        key: raw.key,
-        status: raw.status,
-        trigger: raw.trigger,
-        sizeBytes: raw.sizeBytes,
-        error: raw.error,
-        startedAt: new Date(raw.startedAt * 1000),
-        finishedAt: raw.finishedAt !== null ? new Date(raw.finishedAt * 1000) : null,
-        artifactDeletedAt:
-            raw.artifactDeletedAt !== null
-                ? new Date(raw.artifactDeletedAt * 1000)
-                : null,
-    };
-}
-
-/** Access the Kysely instance that ctx.db holds at runtime. */
-function db(ctx: PluginContext): Kysely<Record<string, RawRunRowCamel>> {
-    return ctx.db as unknown as Kysely<Record<string, RawRunRowCamel>>;
+/**
+ * Access the Kysely instance that ctx.db holds at runtime, typed against the
+ * descriptor's domain row. These are raw queries — the shared handle applies no
+ * codec — so every read is passed through `decodeWith` and every write is built
+ * with `encodeWith`/`encodePatchWith` before it reaches the query builder.
+ */
+function db(ctx: PluginContext): Kysely<Record<string, BackupRunRow>> {
+    return ctx.db as unknown as Kysely<Record<string, BackupRunRow>>;
 }
 
 const TABLE = 'plugin_backups_runs' as const;
@@ -85,20 +61,19 @@ export async function performBackup(
             .limit(1)
             .execute();
         const first = existing[0];
-        if (first !== undefined) return decodeRow(first);
+        if (first !== undefined) return decodeWith(backupRunsTable, first);
     }
 
-    // Insert the running row.
-    const id = crypto.randomUUID();
-    const startedAt = Math.floor(Date.now() / 1000);
+    // Insert the running row — `encodeWith` fills the descriptor's app defaults
+    // (`id` as a ULID, `startedAt` as now), so the id comes back off the row.
     const inserted = await db(ctx)
         .insertInto(TABLE)
-        .values({
-            id,
-            status: 'running',
-            trigger,
-            startedAt,
-        } as unknown as RawRunRowCamel)
+        .values(
+            encodeWith(backupRunsTable, {
+                status: 'running',
+                trigger,
+            }) as unknown as BackupRunRow
+        )
         .returningAll()
         .executeTakeFirst();
 
@@ -106,7 +81,8 @@ export async function performBackup(
         throw new Error('[backups] Failed to insert backup run row.');
     }
 
-    const row = decodeRow(inserted);
+    const row = decodeWith(backupRunsTable, inserted);
+    const id = row.id;
 
     globalThis.__astromechBackupRunning = true;
     try {
@@ -114,15 +90,17 @@ export async function performBackup(
         if (!ctx.database.dump) {
             const failed = await db(ctx)
                 .updateTable(TABLE)
-                .set({
-                    status: 'failed',
-                    error: 'dump not supported by this database driver',
-                    finishedAt: Math.floor(Date.now() / 1000),
-                } as unknown as RawRunRowCamel)
+                .set(
+                    encodePatchWith(backupRunsTable, {
+                        status: 'failed',
+                        error: 'dump not supported by this database driver',
+                        finishedAt: new Date(),
+                    }) as unknown as BackupRunRow
+                )
                 .where('id', '=', id)
                 .returningAll()
                 .executeTakeFirst();
-            return failed !== undefined ? decodeRow(failed) : row;
+            return failed !== undefined ? decodeWith(backupRunsTable, failed) : row;
         }
 
         const dump = await ctx.database.dump();
@@ -131,7 +109,9 @@ export async function performBackup(
                 .toISOString()
                 .replace(/[-:]/g, '')
                 .replace(/\.\d+Z$/, 'Z');
-            const shortId = id.slice(0, 8);
+            // Tail, not head: a ULID leads with its timestamp, which the key
+            // already carries — the entropy is at the end.
+            const shortId = id.slice(-8);
             const key = `${timestamp}-${shortId}.sqlite.gz`;
 
             // Compress: web stream → Node Readable → gzip pipe → web ReadableStream.
@@ -150,17 +130,20 @@ export async function performBackup(
 
             const success = await db(ctx)
                 .updateTable(TABLE)
-                .set({
-                    status: 'success',
-                    key,
-                    sizeBytes,
-                    finishedAt: Math.floor(Date.now() / 1000),
-                } as unknown as RawRunRowCamel)
+                .set(
+                    encodePatchWith(backupRunsTable, {
+                        status: 'success',
+                        key,
+                        sizeBytes,
+                        finishedAt: new Date(),
+                    }) as unknown as BackupRunRow
+                )
                 .where('id', '=', id)
                 .returningAll()
                 .executeTakeFirst();
 
-            const successRow = success !== undefined ? decodeRow(success) : row;
+            const successRow =
+                success !== undefined ? decodeWith(backupRunsTable, success) : row;
 
             // Rotate old artifacts after a successful run.
             await rotate(ctx, opts.keep);
@@ -173,15 +156,17 @@ export async function performBackup(
         ctx.logger.error('[backups] Backup failed', err);
         const failed = await db(ctx)
             .updateTable(TABLE)
-            .set({
-                status: 'failed',
-                error: String(err),
-                finishedAt: Math.floor(Date.now() / 1000),
-            } as unknown as RawRunRowCamel)
+            .set(
+                encodePatchWith(backupRunsTable, {
+                    status: 'failed',
+                    error: String(err),
+                    finishedAt: new Date(),
+                }) as unknown as BackupRunRow
+            )
             .where('id', '=', id)
             .returningAll()
             .executeTakeFirst();
-        return failed !== undefined ? decodeRow(failed) : row;
+        return failed !== undefined ? decodeWith(backupRunsTable, failed) : row;
     } finally {
         globalThis.__astromechBackupRunning = false;
     }
@@ -223,7 +208,7 @@ export async function rotate(ctx: PluginContext, keep: number): Promise<void> {
         .orderBy('startedAt', 'desc')
         .execute();
 
-    const decoded = rows.map(decodeRow);
+    const decoded = rows.map((raw) => decodeWith(backupRunsTable, raw));
     const toDelete = decoded.slice(keep);
     for (const row of toDelete) {
         if (row.key !== null && row.key !== undefined) {
@@ -231,9 +216,11 @@ export async function rotate(ctx: PluginContext, keep: number): Promise<void> {
         }
         await db(ctx)
             .updateTable(TABLE)
-            .set({
-                artifactDeletedAt: Math.floor(Date.now() / 1000),
-            } as unknown as RawRunRowCamel)
+            .set(
+                encodePatchWith(backupRunsTable, {
+                    artifactDeletedAt: new Date(),
+                }) as unknown as BackupRunRow
+            )
             .where('id', '=', row.id)
             .execute();
     }

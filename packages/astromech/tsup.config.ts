@@ -19,7 +19,6 @@ export default defineConfig([
             'admin/components/ui/index': 'src/exports/admin/ui.ts',
             'admin/components/ui/layout': 'src/exports/admin/ui-layout.ts',
             'admin/components/fields/index': 'src/exports/admin/ui-fields.ts',
-            'db/plugin-helpers': 'src/exports/plugin-helpers.ts',
             'email/index': 'src/exports/email.ts',
             'images/drivers/sharp': 'src/exports/image-sharp.ts',
             'images/drivers/cloudflare': 'src/exports/image-cloudflare.ts',
@@ -31,7 +30,6 @@ export default defineConfig([
         clean: true,
         external: [
             'astro',
-            'drizzle-orm',
             'better-auth',
             'react',
             'sharp',
@@ -52,12 +50,7 @@ export default defineConfig([
         dts: false,
         sourcemap: true,
         clean: false,
-        external: [
-            'astro',
-            'drizzle-orm',
-            'better-auth',
-            'virtual:astromech/admin-config',
-        ],
+        external: ['astro', 'better-auth', 'virtual:astromech/admin-config'],
         treeshake: true,
         banner: { js: '#!/usr/bin/env node' },
         esbuildOptions(options) {
