@@ -3,7 +3,7 @@
 **Status:** Design locked for the authoring surface (column/table API, references, reads/writes); migration-generator internals still being refined. Implementation not started.
 **Supersedes:** the data-layer parts of `project_data_layer_architecture` memory + `/tmp/astromech-data-layer-handoff.md` + `/tmp/astromech-definetable-handoff.md` (this is the consolidated, current source of truth).
 **Touches:** `packages/astromech/src/database/**`, every `*/storage/*.ts`, `media/service.ts`, `cron/runner.ts`, `transport/cli/commands/db-*.ts`, `apps/demo/drizzle/**`, plugin schema files under `packages/plugins/*`.
-**Related roadmap:** `planned/table-definition-system.md` (Feature 1 — active), `planned/data-layer-storage-api.md` (Feature 2 — shelved), `planned/additional-database-drivers.md` (Postgres adapter slots in), `in-progress/populate-and-complex-field-data-model.md` (populate consumes `reference`), `in-progress/entries-module-reshape.md` (storage pattern this builds on).
+**Related roadmap:** `planned/table-definition-system.md` (Feature 1 — active), `planned/data-layer-storage-api.md` (Feature 2 — shelved), `planned/additional-database-drivers.md` (Postgres adapter slots in), `planned/relationships-model.md` (content relationships — separate mechanism from `col.reference`), `in-progress/entries-module-reshape.md` (storage pattern this builds on).
 **Related memories:** `project_data_layer_architecture`, `project_modular_architecture`, `project_entries_reshape`, `app-owned migrations`, `drizzle migration ordering`, `test tx :memory: poison`, `domain barrel browser boundary`.
 
 > Specs are ephemeral (in-flight designs only). Delete this once the work ships; don't link to it from durable docs/code.
@@ -297,7 +297,9 @@ upsert(data, { target?, set? }): Promise<T>    // default conflict target = PK
 
 ## 8. Out of scope / deferred
 
-- **Relationships / field model** (handoff §7–8 of the prior doc): three-way storage split, polymorphic relationships table, nested-in-block relationships (`instanceId`-keyed), type-aware `where`, batched populate of content relationships, versioning relations-snapshot, pushing visibility predicates into SQL. The content-relationships **table** is separate from `col.reference` — don't conflate. A near-final relationships-table shape exists (`sourceId, sourceType, name, instanceId, targetId, targetType, position`) but the user wants to revisit → treat as undecided.
+- **Relationships / field model** → moved out to `roadmap/planned/relationships-model.md` (direction agreed 2026-07-27, not locked). The content-relationships **table** is separate from `col.reference` — don't conflate; that still holds.
+
+  **The sketch previously recorded here is superseded, not merely deferred.** It proposed an authoritative polymorphic relationships table with an `instanceId`-keyed shape (`sourceId, sourceType, name, instanceId, targetId, targetType, position`). The agreed direction inverts that: **field data is the source of truth and the table becomes a derived, rebuildable index** keyed on field *path*, read only for reverse lookup, filter-by-relation and delete-time integrity. Order lives in field data alone. Do not implement the old shape.
 - **Postgres driver** (step 8 of the original sequence; `additional-database-drivers.md`).
 
 ---

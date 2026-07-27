@@ -23,4 +23,6 @@
 
 ## Deferred (separate workstream)
 
-- Relationships / content-field data model — polymorphic relationships table, nested-in-block (`instanceId`-keyed), type-aware `where`, content-relationship populate. See `populate-and-complex-field-data-model.md` + spec §8.
+- Relationships / content-field data model → `relationships-model.md`. **Note the direction changed:** the old sketch here (authoritative polymorphic relationships table, nested-in-block `instanceId`-keyed rows) is superseded — field data is the source of truth and the `relationships` table becomes a derived, rebuildable index keyed on field *path*.
+
+  This does not change `populate(['createdBy'])` above, which resolves `col.reference` **columns** and is a different mechanism from content relationships.
