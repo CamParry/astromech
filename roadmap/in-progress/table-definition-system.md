@@ -47,12 +47,22 @@ Scope = **our 9 tables only** (`roles, entries, entry_versions, entry_preview_to
 - [x] Drift gate: migration-chain ↔ descriptor `sqlite_master` parity test (`tests/db/baseline-ddl-parity.test.ts`) + "generate produces no new migration" vitest (`tests/db/drift.test.ts`)
 - [x] Regenerated app-owned `apps/demo/migrations/` (renamed from `drizzle/`; `0000_baseline.ts` is the one hand-authored entry — the 9 descriptor sections stay emitter-output, the 4 auth + 2 plugin tables stay hand-authored "foreign tables"); deleted the old drizzle-kit `*.sql` + `meta/`
 
-### Step 5 — Scoped plugin factory
+### Step 5 — Scoped plugin factory _(DONE — committed `ce8db24` on `feat/data-layer-step5-plugin-factory`)_
 
-- [ ] `definePlugin({ alias, schema })` alias-bound `{table,col}` factory (auto-prefix `plugin_<alias>_*`)
-- [ ] Plugin-owned journals (author generates, site applies only)
-- [ ] `purge` command + installed-plugin tracking
-- [ ] Port `@astromech/redirects` + `@astromech/backups` tables
+- [x] `definePlugin({ alias, schema })` alias-bound `{table,col}` factory (auto-prefix `plugin_<alias>_*`, table **and** index names)
+- [x] Plugin-owned journals (author generates, site applies only) — `mergeMigrationProviders` + `plugin:generate`
+- [x] `purge` command + installed-plugin tracking (`_astromech_plugins`, CORE_TABLES 10)
+- [x] Port `@astromech/redirects` + `@astromech/backups` tables; **`drizzle-orm` fully removed**
+
+### Step 6 — Plugin identity rework _(DESIGN LOCKED 2026-07-27, UNBUILT)_
+
+Supersedes step 5's identity model. **Design spec:** `specs/plugin-identity.md`.
+
+- [ ] `package` becomes the single canonical identifier — derive namespace + SDK key; delete `alias`/`name` and the site-level override
+- [ ] Rename the schema factory `definePlugin` → `definePluginTable` (singular, takes the identity object) — resolves the two-exports-one-name collision
+- [ ] `manifest.ts` → one `plugin` identity object across all four plugin packages
+- [ ] Engine: index-name cap-and-hash above 63 bytes, explicit FK constraint names, generate-time table-name length error
+- [ ] Tracking keyed on `package` with UNIQUE on `namespace`; `plugin:purge` takes the package
 
 ## Open specifics (see spec §9)
 
