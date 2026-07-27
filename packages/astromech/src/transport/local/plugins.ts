@@ -1,7 +1,7 @@
 /**
- * Local plugin SDK namespace — `Astromech.plugins.<key>.<method>(input)`, where
- * `<key>` is the plugin's SDK key (`acmeSeo`) or, equivalently, its namespace
- * (`acme_seo`) — `getPluginIdentity` resolves either.
+ * Local plugin SDK namespace — `Astromech.plugins.<sdkKey>.<method>(input)`.
+ * The key is the plugin's SDK key (`acmeSeo`), matching the HTTP transport's
+ * route segment exactly, so the two transports address plugins identically.
  *
  * Methods resolve against the runtime registry (populated at boot from the live
  * plugin definitions) and call the plugin's handler directly against the DB,
@@ -29,7 +29,7 @@ export const localPlugins: PluginSdkNamespace = new Proxy({} as PluginSdkNamespa
         if (typeof keyProp !== 'string' || keyProp === 'then') return undefined;
         // Unknown plugin → undefined; a known plugin with no SDK methods still
         // exposes its `entries` sub-API. The registry is keyed by namespace, so
-        // resolve the identity first — the caller may have used the SDK key.
+        // resolve the identity from the SDK key first.
         const resolved = getPluginIdentity(keyProp);
         if (!resolved) return undefined;
         const name = resolved.namespace;

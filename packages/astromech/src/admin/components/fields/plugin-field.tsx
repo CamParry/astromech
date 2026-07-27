@@ -66,6 +66,7 @@ export function PluginField(props: BaseFieldProps): React.ReactElement {
     const entry = fieldTypes[props.field.type];
     const identity = {
         namespace: entry?.plugin ?? props.field.type,
+        sdkKey: entry?.sdkKey ?? props.field.type,
         permissionNamespace: entry?.namespace ?? props.field.type,
     };
     return (

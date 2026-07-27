@@ -48,6 +48,15 @@ describe('pluginSdkKey', () => {
     ])('%s → %s', (namespace, key) => {
         expect(pluginSdkKey(namespace)).toBe(key);
     });
+
+    // A separator before a character with no uppercase form collapses, so the
+    // mapping has no inverse. Nothing may reconstruct a namespace from an SDK
+    // key — the collision check below is what makes the key safe to use as the
+    // one lookup identifier on the API surface.
+    it('is lossy when a separator precedes a digit', () => {
+        expect(pluginSdkKey('acme_2fa')).toBe('acme2fa');
+        expect(pluginSdkKey('acme2fa')).toBe('acme2fa');
+    });
 });
 
 describe('resolvePluginIdentity', () => {
@@ -105,6 +114,26 @@ describe('assertNoPluginCollisions', () => {
                 def({ package: 'acme-seo' }),
             ])
         ).toThrow(/cannot be overridden/);
+    });
+
+    // `acme_2fa` and `acme2fa` are distinct namespaces that derive one SDK key.
+    // Left unchecked they would silently share an `Astromech.plugins.acme2fa`
+    // property and one HTTP route segment, so the second plugin installed would
+    // shadow the first.
+    it('throws when two distinct namespaces derive the same SDK key', () => {
+        const identities = [
+            resolvePluginIdentity(def({ package: '@acme/2fa' })),
+            resolvePluginIdentity(def({ package: 'acme2fa' })),
+        ];
+        expect(identities[0]?.namespace).not.toBe(identities[1]?.namespace);
+        expect(identities[0]?.sdkKey).toBe(identities[1]?.sdkKey);
+
+        expect(() =>
+            assertNoPluginCollisions([
+                def({ package: '@acme/2fa' }),
+                def({ package: 'acme2fa' }),
+            ])
+        ).toThrow(/SDK key collision.*acme2fa/s);
     });
 });
 

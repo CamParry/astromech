@@ -16,7 +16,7 @@ import { pathToFileURL } from 'node:url';
 import { createClient } from '@libsql/client';
 import { Kysely, sql } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
-import { generateMigrations } from '../src/generate.js';
+import { generateMigrationFromOps, generateMigrations } from '../src/generate.js';
 import { col, index, snap, table } from './_support/tables.js';
 
 async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
@@ -204,6 +204,195 @@ describe('generateMigrations', () => {
                 SELECT id, name, count FROM widgets WHERE id = 'w1'
             `.execute(db);
             expect(rows).toEqual([{ id: 'w1', name: 'kept-row', count: 42 }]);
+        });
+    });
+});
+
+describe('generateMigrationFromOps', () => {
+    // The transition the differ refuses, in miniature: a NOT NULL column with no
+    // SQL-literal default, which the rebuild path cannot backfill.
+    const withRequiredColumn = snap(
+        table('widgets', [
+            col.id(),
+            col.text('name', { notNull: true }),
+            col.text('owner', { notNull: true }),
+        ])
+    );
+
+    it('writes ops the differ refuses, and still writes the descriptor snapshot', async () => {
+        await withTempDir(async (dir) => {
+            await generateMigrations({
+                dir,
+                snapshot: v1,
+                dialect: 'sqlite',
+                name: 'init',
+            });
+
+            // Confirm the premise: the differ genuinely cannot do this one.
+            await expect(
+                generateMigrations({
+                    dir,
+                    snapshot: withRequiredColumn,
+                    dialect: 'sqlite',
+                    name: 'add-owner',
+                })
+            ).rejects.toThrow(/migration generation failed/);
+
+            const result = await generateMigrationFromOps({
+                dir,
+                snapshot: withRequiredColumn,
+                dialect: 'sqlite',
+                name: 'add owner',
+                author: ({ next }) => [
+                    { kind: 'dropTable', name: 'widgets' },
+                    { kind: 'createTable', table: next.tables.widgets! },
+                ],
+            });
+
+            expect(result.status).toBe('generated');
+            if (result.status !== 'generated') return;
+            expect(result.tag).toBe('0001_add-owner');
+
+            // The snapshot is written from the caller's descriptors, never from
+            // the ops — so the destination stays the machine's to decide.
+            const written = JSON.parse(
+                await readFile(resolve(dir, 'snapshot.json'), 'utf-8')
+            ) as typeof withRequiredColumn;
+            expect(written).toEqual(withRequiredColumn);
+
+            // Which is exactly what makes the following diff come back clean.
+            const after = await generateMigrations({
+                dir,
+                snapshot: withRequiredColumn,
+                dialect: 'sqlite',
+                name: 'should-be-empty',
+            });
+            expect(after).toEqual({ status: 'no-changes' });
+        });
+    });
+
+    it('warns when the differ could have generated the transition itself', async () => {
+        await withTempDir(async (dir) => {
+            await generateMigrations({
+                dir,
+                snapshot: v1,
+                dialect: 'sqlite',
+                name: 'init',
+            });
+
+            const result = await generateMigrationFromOps({
+                dir,
+                snapshot: v2WithColumn,
+                dialect: 'sqlite',
+                name: 'add note by hand',
+                author: ({ next }) => [
+                    { kind: 'dropTable', name: 'widgets' },
+                    { kind: 'createTable', table: next.tables.widgets! },
+                ],
+            });
+
+            expect(result.status).toBe('generated');
+            if (result.status !== 'generated') return;
+            expect(result.warnings).toHaveLength(1);
+            expect(result.warnings[0]).toMatch(/differ could generate this transition/);
+        });
+    });
+
+    it('warns loudly when the chain is already at the descriptor state', async () => {
+        await withTempDir(async (dir) => {
+            await generateMigrations({
+                dir,
+                snapshot: v1,
+                dialect: 'sqlite',
+                name: 'init',
+            });
+
+            // Same snapshot the chain already arrives at — the ops change
+            // nothing the schema needs, which is a different (and worse) mistake
+            // than authoring ops the differ could have derived.
+            const result = await generateMigrationFromOps({
+                dir,
+                snapshot: v1,
+                dialect: 'sqlite',
+                name: 'pointless',
+                author: () => [{ kind: 'dropIndex', table: 'widgets', name: 'nope' }],
+            });
+
+            expect(result.status).toBe('generated');
+            if (result.status !== 'generated') return;
+            expect(result.warnings[0]).toMatch(/ALREADY at the descriptor state/);
+        });
+    });
+
+    it('refuses an author that returns no ops', async () => {
+        await withTempDir(async (dir) => {
+            await generateMigrations({
+                dir,
+                snapshot: v1,
+                dialect: 'sqlite',
+                name: 'init',
+            });
+
+            await expect(
+                generateMigrationFromOps({
+                    dir,
+                    snapshot: v2WithColumn,
+                    dialect: 'sqlite',
+                    name: 'empty',
+                    author: () => [],
+                })
+            ).rejects.toThrow(/no ops/);
+
+            const journal = JSON.parse(
+                await readFile(resolve(dir, 'journal.json'), 'utf-8')
+            ) as { entries: unknown[] };
+            expect(journal.entries).toHaveLength(1);
+        });
+    });
+
+    it('applies its hand-authored ops to a real db', async () => {
+        await withTempDir(async (dir) => {
+            const first = await generateMigrations({
+                dir,
+                snapshot: v1,
+                dialect: 'sqlite',
+                name: 'init',
+            });
+            if (first.status !== 'generated') throw new Error('setup failed');
+
+            const client = createClient({ url: ':memory:' });
+            const db = new Kysely<unknown>({
+                dialect: new LibsqlDialect({ client: client as never }),
+            });
+            const initMod = (await import(
+                pathToFileURL(resolve(dir, `${first.tag}.ts`)).href
+            )) as { up: (db: Kysely<unknown>) => Promise<void> };
+            await initMod.up(db);
+
+            const second = await generateMigrationFromOps({
+                dir,
+                snapshot: withRequiredColumn,
+                dialect: 'sqlite',
+                name: 'add owner',
+                author: ({ next }) => [
+                    { kind: 'dropTable', name: 'widgets' },
+                    { kind: 'createTable', table: next.tables.widgets! },
+                ],
+            });
+            if (second.status !== 'generated') throw new Error('generation failed');
+
+            const opsMod = (await import(
+                pathToFileURL(resolve(dir, `${second.tag}.ts`)).href
+            )) as { up: (db: Kysely<unknown>) => Promise<void> };
+            await opsMod.up(db);
+
+            await sql`INSERT INTO \`widgets\` (\`id\`, \`name\`, \`owner\`) VALUES ('w1', 'n', 'o')`.execute(
+                db
+            );
+            const { rows } = await sql<{ owner: string }>`
+                SELECT owner FROM widgets WHERE id = 'w1'
+            `.execute(db);
+            expect(rows).toEqual([{ owner: 'o' }]);
         });
     });
 });

@@ -19,8 +19,10 @@ declare module 'virtual:astromech/plugins/components' {
         {
             load: () => Promise<PluginFieldModule>;
             defaultValue: unknown;
-            /** Owning plugin's access key. */
+            /** Owning plugin's namespace. */
             plugin: string;
+            /** Owning plugin's SDK key — its `Astromech.plugins.*` property. */
+            sdkKey: string;
             /** Owning plugin's permissionNamespace (i18n namespace). */
             namespace: string;
         }

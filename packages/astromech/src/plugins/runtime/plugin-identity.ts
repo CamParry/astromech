@@ -8,9 +8,14 @@
  * are baked into its shipped migration SQL, so nothing an override could move
  * at boot actually moves.
  *
- * npm is the uniqueness authority. The one lossy edge case (`@acme/seo` and
- * unscoped `acme-seo` both deriving `acme_seo`) is caught by
- * {@link assertNoPluginCollisions}.
+ * Derivation runs ONE direction — `package` → `namespace` → `sdkKey` — and no
+ * consumer inverts it. Both steps are lossy, so an inverse would be a guess;
+ * code that needs another form of an identifier resolves the identity once and
+ * reads the field it wants. Anything that re-derives a string backwards from a
+ * route segment or a property key is a bug.
+ *
+ * npm is the uniqueness authority for `package`; the lossy steps below it are
+ * policed by {@link assertNoPluginCollisions}.
  */
 
 import {
@@ -100,29 +105,51 @@ export function resolvePluginPermission(namespace: string, permission: string): 
 }
 
 /**
- * Throw a build error if two plugins derive the same namespace — the one lossy
- * case in the derivation (`@acme/seo` and unscoped `acme-seo`). There is no
- * override: the two plugins would share a table prefix and a permission
- * namespace, so this is the plugin authors' problem to resolve by renaming a
+ * Throw a build error if two plugins collide on either derived identifier.
+ *
+ * Both derivation steps are lossy, and each has its own collision:
+ *   - `package` → `namespace` — `@acme/seo` and unscoped `acme-seo` both give
+ *     `acme_seo`, which would share a table prefix and a permission namespace.
+ *   - `namespace` → `sdkKey` — `acme_2fa` and `acme2fa` both give `acme2fa`,
+ *     which would share an `Astromech.plugins.*` key and an HTTP route segment.
+ *
+ * The second check is what makes `sdkKey` safe to treat as a unique lookup key
+ * everywhere else, so nothing has to invert the derivation to find a plugin.
+ *
+ * There is no override for either: the identifiers derive from the package
+ * name, so this is the plugin authors' problem to resolve by renaming a
  * package, not the site's.
  */
 export function assertNoPluginCollisions(
     defs: PluginDefinition[]
 ): ResolvedPluginIdentity[] {
     const identities = defs.map(resolvePluginIdentity);
-    const seen = new Map<string, string>();
+    const byNamespace = new Map<string, string>();
+    const bySdkKey = new Map<string, string>();
 
     for (const id of identities) {
-        const existing = seen.get(id.namespace);
-        if (existing !== undefined) {
+        const sameNamespace = byNamespace.get(id.namespace);
+        if (sameNamespace !== undefined) {
             throw new Error(
-                `Astromech plugin namespace collision: "${existing}" and "${id.package}" both ` +
+                `Astromech plugin namespace collision: "${sameNamespace}" and "${id.package}" both ` +
                     `derive the namespace "${id.namespace}", so they would share a table prefix ` +
                     `and a permission namespace. A namespace is derived from the package name and ` +
                     `cannot be overridden — one of the two packages has to be renamed by its author.`
             );
         }
-        seen.set(id.namespace, id.package);
+        byNamespace.set(id.namespace, id.package);
+
+        const sameSdkKey = bySdkKey.get(id.sdkKey);
+        if (sameSdkKey !== undefined) {
+            throw new Error(
+                `Astromech plugin SDK key collision: "${sameSdkKey}" and "${id.package}" both ` +
+                    `derive the SDK key "${id.sdkKey}", so they would share an ` +
+                    `\`Astromech.plugins.${id.sdkKey}\` property and an HTTP route segment. ` +
+                    `An SDK key is derived from the package name and cannot be overridden — ` +
+                    `one of the two packages has to be renamed by its author.`
+            );
+        }
+        bySdkKey.set(id.sdkKey, id.package);
     }
 
     return identities;

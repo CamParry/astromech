@@ -12,12 +12,27 @@
  * (`transport/cli/commands/db-generate.ts`) is the only caller.
  */
 
-import { generateMigrations as engineGenerate } from '@astromech/schema-engine/generate';
+import {
+    generateMigrations as engineGenerate,
+    generateMigrationFromOps as engineGenerateFromOps,
+} from '@astromech/schema-engine/generate';
 import { createSnapshot, type SqlDialect } from '@/database/descriptor-snapshot.js';
 import type { TableDescriptor } from '@/database/define-table.js';
-import type { GenerateResult } from '@astromech/schema-engine/generate';
+import type {
+    GenerateResult,
+    MigrationOpsAuthor,
+} from '@astromech/schema-engine/generate';
 
-export type { GenerateResult };
+export type { GenerateResult, MigrationOpsAuthor };
+
+function reportWarnings(result: GenerateResult): GenerateResult {
+    if (result.status === 'generated') {
+        for (const warning of result.warnings) {
+            console.warn(`[astromech db:generate] WARNING: ${warning}`);
+        }
+    }
+    return result;
+}
 
 export async function generateMigrations(opts: {
     dir: string;
@@ -26,11 +41,22 @@ export async function generateMigrations(opts: {
     name: string;
 }): Promise<GenerateResult> {
     const snapshot = createSnapshot(opts.tables, { dialect: opts.dialect });
-    const result = await engineGenerate({ ...opts, snapshot });
-    if (result.status === 'generated') {
-        for (const warning of result.warnings) {
-            console.warn(`[astromech db:generate] WARNING: ${warning}`);
-        }
-    }
-    return result;
+    return reportWarnings(await engineGenerate({ ...opts, snapshot }));
+}
+
+/**
+ * Write a migration whose ops the author supplied, for the transitions the
+ * differ refuses (see the engine's `generateMigrationFromOps`). The snapshot
+ * still comes from the live descriptors, so the destination is not negotiable —
+ * only the route is.
+ */
+export async function generateMigrationsFromOps(opts: {
+    dir: string;
+    tables: TableDescriptor[];
+    dialect: SqlDialect;
+    name: string;
+    author: MigrationOpsAuthor;
+}): Promise<GenerateResult> {
+    const snapshot = createSnapshot(opts.tables, { dialect: opts.dialect });
+    return reportWarnings(await engineGenerateFromOps({ ...opts, snapshot }));
 }

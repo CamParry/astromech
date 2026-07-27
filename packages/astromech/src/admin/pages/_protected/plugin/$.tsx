@@ -93,6 +93,7 @@ function PluginPage(): React.ReactElement {
             <PluginUiProvider
                 identity={{
                     namespace: settingsPlugin.namespace,
+                    sdkKey: settingsPlugin.sdkKey,
                     permissionNamespace: settingsPlugin.permissionNamespace,
                 }}
             >
@@ -157,6 +158,7 @@ function PluginPage(): React.ReactElement {
                 <PluginUiProvider
                     identity={{
                         namespace: registration.plugin,
+                        sdkKey: owner?.sdkKey ?? registration.plugin,
                         permissionNamespace:
                             owner?.permissionNamespace ?? registration.plugin,
                     }}

@@ -1,7 +1,7 @@
 /**
  * demo-rating — a teaching plugin that exercises the external-plugin surface:
  * a custom `rating` field type, a component admin page, an auto-rendered
- * settings form, localized strings, and a permission bundle.
+ * settings form, an SDK method, localized strings, and a permission bundle.
  *
  * It is structured exactly like a first-party plugin (plugin / types /
  * permissions / fields / pages / a thin `index`), but authored as an *external*
@@ -16,6 +16,7 @@ import { ratingPermissionDefs } from './permissions/rating.js';
 import { ratingField } from './fields/rating.js';
 import { overviewPage } from './pages/overview.js';
 import { settingsPage } from './pages/settings.js';
+import { ratingSdk } from './sdk/describe.js';
 
 export { ratingPermissions } from './permissions/rating.js';
 export { RATING_FIELD_TYPE } from './types.js';
@@ -24,6 +25,7 @@ export const rating = definePlugin(plugin, () => ({
     permissions: ratingPermissionDefs,
     i18n: locales(['en']),
     fields: [ratingField],
+    sdk: ratingSdk,
     admin: {
         pages: [overviewPage, settingsPage],
     },

@@ -747,21 +747,15 @@ function pluginEntriesApi(name: string): EntriesApi {
     return api;
 }
 
-/**
- * Property key → route segment. Plugin routes mount under the plugin's
- * namespace (`acme_seo`); the JS property form is its camelCase twin
- * (`acmeSeo`), so `Astromech.plugins.acmeSeo` and `Astromech.plugins.acme_seo`
- * both resolve. Same snake-case mapping Kysely's `CamelCasePlugin` applies to
- * identifiers, and it carries the same digit caveat.
- */
-function routeSegment(key: string): string {
-    return key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
-}
-
 const pluginsApi: PluginSdkNamespace = new Proxy({} as PluginSdkNamespace, {
     get(_target, nameProp): FetchMethodMap | EntriesApi | undefined {
         if (typeof nameProp !== 'string' || nameProp === 'then') return undefined;
-        const name = routeSegment(nameProp);
+        // The property key IS the route segment: plugin routes mount under the
+        // plugin's SDK key (`acmeSeo`), so there is nothing to transform here.
+        // Routes deliberately do not mount under the namespace (`acme_seo`) —
+        // deriving one from the other on this side would mean inverting a lossy
+        // mapping (`acme_2fa` → `acme2fa` → ?).
+        const name = nameProp;
         return new Proxy({} as FetchMethodMap, {
             get(_t, methodProp) {
                 if (typeof methodProp !== 'string' || methodProp === 'then')

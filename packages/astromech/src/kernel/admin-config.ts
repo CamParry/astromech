@@ -59,6 +59,7 @@ export function buildAdminConfig(
             const pluginEntries = resolvedConfig.pluginEntries[identity.namespace] ?? {};
             return {
                 namespace: identity.namespace,
+                sdkKey: identity.sdkKey,
                 label: resolvePluginLabel(p, identity),
                 permissionNamespace: identity.permissionNamespace,
                 nav: derivePluginNav(identity, p),

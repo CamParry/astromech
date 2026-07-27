@@ -282,17 +282,16 @@ export function hasHookHandlers(event: string): boolean {
 }
 
 /**
- * Resolved identity for a plugin, by namespace (`acme_seo` — the URL/route
- * segment) or by SDK key (`acmeSeo` — the JS property form). Both are accepted
- * because both are how callers name a plugin: routes and permissions use the
- * namespace, `Astromech.plugins.<key>` uses the SDK key.
+ * Resolved identity for a plugin, by SDK key (`acmeSeo`) — the single
+ * identifier the API surface addresses a plugin by, in both transports and on
+ * the wire. Deliberately NOT tolerant of the namespace form: `sdkKey` is
+ * derived from `namespace` lossily (`acme_2fa` → `acme2fa`), so accepting both
+ * would mean guessing an inverse that does not exist. The namespace stays
+ * authoritative for tables, permissions and storage prefixes; look those up
+ * through the returned identity, never by re-deriving a string.
  */
-export function getPluginIdentity(key: string): ResolvedPluginIdentity | undefined {
-    const identities = state().identities;
-    return (
-        identities.find((identity) => identity.namespace === key) ??
-        identities.find((identity) => identity.sdkKey === key)
-    );
+export function getPluginIdentity(sdkKey: string): ResolvedPluginIdentity | undefined {
+    return state().identities.find((identity) => identity.sdkKey === sdkKey);
 }
 
 export function getPluginSdkMethods(): Map<string, Record<string, AnyPluginSdkMethod>> {

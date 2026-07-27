@@ -15,13 +15,28 @@
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { diffSnapshots } from './diff.js';
+import { diffSnapshots, type TableOp } from './diff.js';
 import { renderMigrationFile } from './render.js';
 import { serializeSnapshot, type Snapshot, type SqlDialect } from './model.js';
 
 export type GenerateResult =
     | { status: 'no-changes' }
     | { status: 'generated'; file: string; tag: string; warnings: string[] };
+
+/**
+ * What a hand-authored migration sees: the state the chain is currently at, and
+ * the state the descriptors say it should reach. Authors build ops out of
+ * `next`'s tables rather than re-deriving them, so the SQL that lands is the
+ * same SQL the generator would have rendered.
+ */
+export type MigrationOpsContext = {
+    prev: Snapshot | null;
+    next: Snapshot;
+    dialect: SqlDialect;
+};
+
+/** Signature of an ops file passed to {@link generateMigrationFromOps}. */
+export type MigrationOpsAuthor = (ctx: MigrationOpsContext) => TableOp[];
 
 type JournalEntry = { idx: number; tag: string; when: number };
 type Journal = { version: 1; dialect: SqlDialect; entries: JournalEntry[] };
@@ -76,12 +91,73 @@ function renderIndexFile(entries: JournalEntry[]): string {
     ].join('\n');
 }
 
+/** Read the three files that make up a migrations directory's current state. */
+async function readState(
+    dir: string,
+    dialect: SqlDialect
+): Promise<{ prev: Snapshot | null; journal: Journal }> {
+    const prev = await readJsonIfExists<Snapshot>(resolve(dir, 'snapshot.json'));
+    const journal: Journal = (await readJsonIfExists<Journal>(
+        resolve(dir, 'journal.json')
+    )) ?? { version: 1, dialect, entries: [] };
+    return { prev, journal };
+}
+
+/**
+ * Render `ops` into a new `NNNN_<name>.ts` and advance the directory's state:
+ * append to `journal.json`, rewrite `snapshot.json` to `next`, regenerate
+ * `index.ts`.
+ *
+ * The ONLY writer of migration artefacts. Both the diffed path and the
+ * hand-authored path go through it, which is what keeps `snapshot.json` a
+ * machine-written file in every case — a hand-edited snapshot would turn the
+ * drift gate into a lie, since the gate's whole job is to compare that file
+ * against the descriptors.
+ */
+async function writeMigration(opts: {
+    dir: string;
+    next: Snapshot;
+    journal: Journal;
+    ops: TableOp[];
+    dialect: SqlDialect;
+    name: string;
+    warnings: string[];
+}): Promise<GenerateResult> {
+    const { dir, next, journal, ops } = opts;
+    const idx =
+        journal.entries.length > 0
+            ? Math.max(...journal.entries.map((e) => e.idx)) + 1
+            : 0;
+    const tag = `${String(idx).padStart(4, '0')}_${kebabCase(opts.name)}`;
+
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+        resolve(dir, `${tag}.ts`),
+        renderMigrationFile(ops, opts.dialect),
+        'utf-8'
+    );
+
+    journal.entries.push({ idx, tag, when: Date.now() });
+    await writeFile(
+        resolve(dir, 'journal.json'),
+        `${JSON.stringify(journal, null, 2)}\n`,
+        'utf-8'
+    );
+    await writeFile(
+        resolve(dir, 'snapshot.json'),
+        `${serializeSnapshot(next)}\n`,
+        'utf-8'
+    );
+    await writeFile(resolve(dir, 'index.ts'), renderIndexFile(journal.entries), 'utf-8');
+
+    return { status: 'generated', file: `${tag}.ts`, tag, warnings: opts.warnings };
+}
+
 /**
  * Diff the given snapshot against `<dir>/snapshot.json` and, if anything
- * changed, write a new `NNNN_<name>.ts` migration + regenerate `index.ts` +
- * update `journal.json`/`snapshot.json`. Throws (writing nothing) if the diff
- * has any validation errors. Warnings are returned, not printed — surfacing
- * them is the caller's job.
+ * changed, write a new migration. Throws (writing nothing) if the diff has any
+ * validation errors. Warnings are returned, not printed — surfacing them is the
+ * caller's job.
  */
 export async function generateMigrations(opts: {
     dir: string;
@@ -89,24 +165,17 @@ export async function generateMigrations(opts: {
     dialect: SqlDialect;
     name: string;
 }): Promise<GenerateResult> {
-    const snapshotPath = resolve(opts.dir, 'snapshot.json');
-    const journalPath = resolve(opts.dir, 'journal.json');
-    const indexPath = resolve(opts.dir, 'index.ts');
-
-    const prev = await readJsonIfExists<Snapshot>(snapshotPath);
-    const journal: Journal = (await readJsonIfExists<Journal>(journalPath)) ?? {
-        version: 1,
-        dialect: opts.dialect,
-        entries: [],
-    };
-
+    const { prev, journal } = await readState(opts.dir, opts.dialect);
     const next = opts.snapshot;
     const diff = diffSnapshots(prev, next);
 
     if (diff.errors.length > 0) {
         throw new Error(
             `migration generation failed:\n` +
-                diff.errors.map((e) => `  - ${e}`).join('\n')
+                diff.errors.map((e) => `  - ${e}`).join('\n') +
+                `\n\nIf this transition genuinely cannot be diffed, author the ops by hand:\n` +
+                `  astromech db:generate --ops <file> --name <name>\n` +
+                `See apps/docs/data/migrations.md — "Hand-authored migrations".`
         );
     }
 
@@ -114,23 +183,75 @@ export async function generateMigrations(opts: {
         return { status: 'no-changes' };
     }
 
-    const idx =
-        journal.entries.length > 0
-            ? Math.max(...journal.entries.map((e) => e.idx)) + 1
-            : 0;
-    const tag = `${String(idx).padStart(4, '0')}_${kebabCase(opts.name)}`;
+    return writeMigration({
+        dir: opts.dir,
+        next,
+        journal,
+        ops: diff.ops,
+        dialect: opts.dialect,
+        name: opts.name,
+        warnings: diff.warnings,
+    });
+}
 
-    await mkdir(opts.dir, { recursive: true });
-    await writeFile(
-        resolve(opts.dir, `${tag}.ts`),
-        renderMigrationFile(diff.ops, opts.dialect),
-        'utf-8'
-    );
+/**
+ * The escape hatch for transitions the differ refuses.
+ *
+ * The generator has no rename op and its rebuild path copies same-named columns
+ * only, so a few genuine reshapes (swapping a primary key, adding a NOT NULL
+ * column with no SQL-literal default) have no derivable plan. Rather than
+ * hand-writing a migration and its artefacts — which is how `snapshot.json`
+ * ends up disagreeing with the chain — the author supplies only the OPS, and
+ * every artefact is still rendered by {@link writeMigration}.
+ *
+ * The division of labour: the generator owns the destination, the author owns
+ * the route. `snapshot.json` is still written from the descriptors, so a
+ * following `db:generate` must report no changes, and the migration-chain ↔
+ * descriptor parity test still executes the real SQL and compares the result.
+ * Those two together are what verify a hand-authored route actually arrives.
+ */
+export async function generateMigrationFromOps(opts: {
+    dir: string;
+    snapshot: Snapshot;
+    dialect: SqlDialect;
+    name: string;
+    author: MigrationOpsAuthor;
+}): Promise<GenerateResult> {
+    const { prev, journal } = await readState(opts.dir, opts.dialect);
+    const next = opts.snapshot;
 
-    journal.entries.push({ idx, tag, when: Date.now() });
-    await writeFile(journalPath, `${JSON.stringify(journal, null, 2)}\n`, 'utf-8');
-    await writeFile(snapshotPath, `${serializeSnapshot(next)}\n`, 'utf-8');
-    await writeFile(indexPath, renderIndexFile(journal.entries), 'utf-8');
+    const ops = opts.author({ prev, next, dialect: opts.dialect });
+    if (ops.length === 0) {
+        throw new Error(
+            'hand-authored migration returned no ops — nothing to write. ' +
+                'Return at least one op, or drop the --ops flag and let the differ generate.'
+        );
+    }
 
-    return { status: 'generated', file: `${tag}.ts`, tag, warnings: diff.warnings };
+    // Routing around a differ that would have coped is how a chain acquires
+    // migrations nobody can regenerate. Not an error (an author may be
+    // deliberately replacing a destructive-but-valid plan), but never silent.
+    const diff = diffSnapshots(prev, next);
+    const warnings: string[] = [];
+    if (diff.errors.length === 0 && diff.ops.length === 0) {
+        warnings.push(
+            'the chain is ALREADY at the descriptor state — this migration changes nothing ' +
+                'the schema needs, and `snapshot.json` is unchanged by it. Almost certainly a mistake'
+        );
+    } else if (diff.errors.length === 0) {
+        warnings.push(
+            'the differ could generate this transition on its own — a hand-authored ' +
+                'migration is not needed here unless you are deliberately replacing its plan'
+        );
+    }
+
+    return writeMigration({
+        dir: opts.dir,
+        next,
+        journal,
+        ops,
+        dialect: opts.dialect,
+        name: opts.name,
+        warnings,
+    });
 }

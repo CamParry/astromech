@@ -387,8 +387,14 @@ export type AdminConfig = {
     pages: ResolvedAdminPage[];
     /** Static plugin metadata for the admin shell (serializable only). */
     plugins: {
-        /** The plugin's derived namespace — URL segment and page-key prefix. */
+        /** The plugin's derived namespace — admin URL segment and page-key prefix. */
         namespace: string;
+        /**
+         * The plugin's derived SDK key — the `Astromech.plugins.<key>` property
+         * and the API route segment. Carried explicitly rather than derived from
+         * `namespace` in the browser: that derivation is lossy in reverse.
+         */
+        sdkKey: string;
         /** Display name — sidebar group and page-title prefix. */
         label: string;
         /** Anchors permission strings and settings keys. */

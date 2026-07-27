@@ -64,6 +64,15 @@ Supersedes step 5's identity model. **Design spec:** `specs/plugin-identity.md`.
 - [x] Engine: index-name cap-and-hash above 63 bytes, explicit FK constraint names, generate-time table-name length error
 - [x] Tracking keyed on `package` with UNIQUE on `namespace`; `plugin:purge` takes the package
 
+### Step 7 — Derivation hygiene + the ops escape hatch _(BUILT 2026-07-27)_
+
+Follow-ups from step 6's judgment calls.
+
+- [x] Plugin API surface keys on `sdkKey` alone (HTTP route segment + `Astromech.plugins.*`); no code inverts `namespace` → `sdkKey`, and `assertNoPluginCollisions` now rejects SDK-key collisions (`@acme/2fa` vs `acme2fa`)
+- [x] `db:generate --ops <file>` — hand-authored ops for transitions the differ refuses, with every artefact (SQL, journal, snapshot, index) still machine-written; warns when the differ could have coped
+- [x] `apps/docs/data/migrations.md` documents generation, the refusals, and the escape hatch
+- [ ] Baseline regeneration → `roadmap/planned/migration-baseline-regeneration.md` (deferred; renderer changes still need a hand-edit until then)
+
 ## Open specifics (see spec §9)
 
 #4 snapshot/journal format · #5 SQLite rebuild details · #6 validation rule set · #7 dialect seam · #8 CLI repoint · #9 descriptor discovery · #10 plugin factory · #11 drift gate. (#1 column API, #2 write API, #3 where DSL grilled & locked.)

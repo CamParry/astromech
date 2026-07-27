@@ -18,7 +18,7 @@ export function generatePluginClientManifest(plugins: PluginDefinition[]): strin
         const identity = resolvePluginIdentity(def);
         return (def.fields ?? []).map(
             (reg: PluginFieldTypeRegistration) =>
-                `\t${JSON.stringify(reg.type)}: { load: () => import(${JSON.stringify(reg.component)}), defaultValue: ${JSON.stringify(reg.defaultValue ?? null)}, plugin: ${JSON.stringify(identity.namespace)}, namespace: ${JSON.stringify(identity.permissionNamespace)} },`
+                `\t${JSON.stringify(reg.type)}: { load: () => import(${JSON.stringify(reg.component)}), defaultValue: ${JSON.stringify(reg.defaultValue ?? null)}, plugin: ${JSON.stringify(identity.namespace)}, sdkKey: ${JSON.stringify(identity.sdkKey)}, namespace: ${JSON.stringify(identity.permissionNamespace)} },`
         );
     });
 

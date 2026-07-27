@@ -107,15 +107,25 @@ become `_`.
 | `acme-seo` (unscoped)     | `acme_seo`               | `acmeSeo`             |
 | `@acme-digital/seo-tools` | `acme_digital_seo_tools` | `acmeDigitalSeoTools` |
 
-The namespace is the string form and shows up everywhere a namespace is a
-string: `plugin_acme_seo_settings`, `plugin:acme_seo:view`,
-`/api/plugins/acme_seo/*`. The SDK key is its camelCase twin, used only where a
-JS property key is required (`Astromech.plugins.acmeSeo`).
+The two forms split cleanly by audience:
 
-Two packages deriving the same namespace is a hard install error — npm already
-guarantees package names are unique, so the only way to hit it is the one lossy
-pair above (`@acme/seo` vs unscoped `acme-seo`). There is no way to resolve it
-site-side; one of the packages has to be renamed by its author.
+- **namespace** — everything that lives in your database or your permission
+  strings: `plugin_acme_seo_settings`, `plugin:acme_seo:view`, the i18n bundle
+  key, and the admin URL `/admin/plugin/acme_seo/*`.
+- **SDK key** — everything an API caller says: `Astromech.plugins.acmeSeo` and
+  the matching route, `POST /api/plugins/acmeSeo/*`. Both transports use it, so
+  the property you write is the segment that goes on the wire.
+
+Derivation runs one way only — `package` → namespace → SDK key. Nothing inverts
+it, and neither should your code: if you have one form and need another, read
+both off the identity rather than transforming the string. Both steps are lossy,
+so a reverse transform is a guess.
+
+Which is why a collision on either form is a hard install error. npm already
+guarantees package names are unique, so you can only hit it via one of the lossy
+steps: `@acme/seo` vs unscoped `acme-seo` (same namespace), or `@acme/2fa` vs
+`acme2fa` (same SDK key). There is no way to resolve it site-side; one of the
+packages has to be renamed by its author.
 
 **Identifier length.** Emitted index and constraint names are capped at 63 bytes
 (Postgres' limit) with a deterministic hash suffix. Table names are never

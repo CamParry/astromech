@@ -1,10 +1,17 @@
 /**
  * Plugin RPC + raw routes — mounted at `/api/plugins/*`.
  *
- * RPC: `POST /plugins/{name}/{method}` calls a plugin's declared SDK method
+ * RPC: `POST /plugins/{sdkKey}/{method}` calls a plugin's declared SDK method
  * (JSON in/out). Raw routes (binary/multipart/streaming escape hatch) mount at
- * `/plugins/{name}{route.path}` and receive a Web-standard Request via a thin
+ * `/plugins/{sdkKey}{route.path}` and receive a Web-standard Request via a thin
  * wrapper (the plugin never touches Hono).
+ *
+ * The route segment is the plugin's SDK key (`acmeSeo`), not its namespace
+ * (`acme_seo`), so that the HTTP client can put its property key straight into
+ * the URL: `sdkKey` is derived from `namespace` lossily, and mounting on the
+ * namespace would force the client to invert that derivation. Everything below
+ * the routing layer — permissions, entry-type qualification, table prefixes —
+ * still keys on the namespace, reached through the resolved identity.
  *
  * Every method/route declares `access`; this router enforces it against the
  * resolved session. It mounts BEFORE the app-wide `requireAuth`, so `public`
@@ -28,7 +35,12 @@ import { pluginEntryPermission } from '@/permissions/index.js';
 import { qualifyEntryType } from '@/entries/type-registry.js';
 import { createEntriesRouter } from '@/transport/http/routes/entries.js';
 import type { Context } from 'hono';
-import type { Permission, PluginAccess, PluginContext } from '@/types/index.js';
+import type {
+    Permission,
+    PluginAccess,
+    PluginContext,
+    ResolvedPluginIdentity,
+} from '@/types/index.js';
 
 type PluginEnv = { Variables: Partial<AuthVariables> };
 
@@ -40,7 +52,7 @@ pluginsRouter.use('*', optionalAuth);
 function enforceAccess(
     c: Context<PluginEnv>,
     access: PluginAccess,
-    name: string
+    identity: ResolvedPluginIdentity
 ): Response | null {
     if (access === 'public') return null;
 
@@ -49,9 +61,8 @@ function enforceAccess(
     if (access === 'authenticated') return null;
 
     const permissions = withPermissions(c.var.role);
-    const namespace = getPluginIdentity(name)?.permissionNamespace ?? name;
     const permission = resolvePluginPermission(
-        namespace,
+        identity.permissionNamespace,
         access.permission
     ) as Permission;
     if (!permissions.allows(permission)) return forbidden(c);
@@ -67,11 +78,11 @@ function enforceAccess(
 // The plugins router runs `optionalAuth` (public RPC), so the entries subtree
 // gets an explicit `requireAuth` — these routes are never public.
 for (const { identity, entryTypes } of getPluginEntryMounts()) {
-    pluginsRouter.use(`/${identity.namespace}/entries/*`, requireAuth);
+    pluginsRouter.use(`/${identity.sdkKey}/entries/*`, requireAuth);
     // The entries router needs full `AuthVariables` (requireAuth guarantees them
     // upstream); `.route` onto the partial-typed plugins router needs the cast.
     pluginsRouter.route(
-        `/${identity.namespace}/entries`,
+        `/${identity.sdkKey}/entries`,
         createEntriesRouter({
             lookup: (t) => entryTypes[t],
             qualify: (t) => qualifyEntryType(identity.namespace, t),
@@ -84,9 +95,9 @@ for (const { identity, entryTypes } of getPluginEntryMounts()) {
 // ── Raw escape-hatch routes (registered before the RPC catch-all) ──────────
 for (const { identity, route } of getPluginRawRoutes()) {
     const method = (route.method ?? 'GET').toUpperCase();
-    const path = `/${identity.namespace}${route.path}`;
+    const path = `/${identity.sdkKey}${route.path}`;
     pluginsRouter.on(method, path, (c) => {
-        const denied = enforceAccess(c, route.access, identity.namespace);
+        const denied = enforceAccess(c, route.access, identity);
         if (denied) return denied;
         return route.handler(
             c.req.raw,
@@ -95,21 +106,23 @@ for (const { identity, route } of getPluginRawRoutes()) {
     });
 }
 
-// ── RPC: POST /plugins/{name}/{method} ─────────────────────────────────────
+// ── RPC: POST /plugins/{sdkKey}/{method} ───────────────────────────────────
 pluginsRouter.post('/:name/:method', async (c) => {
     const name = c.req.param('name');
     const method = c.req.param('method');
 
-    const sdkMethod = getPluginSdkMethods().get(name)?.[method];
+    // Resolve the identity first, then reach the registry through it — the SDK
+    // registry keys on the namespace, and the segment is the SDK key.
+    const identity = getPluginIdentity(name);
+    if (!identity) return notFound(c, `Plugin "${name}" not found`);
+
+    const sdkMethod = getPluginSdkMethods().get(identity.namespace)?.[method];
     if (!sdkMethod) {
         return notFound(c, `Plugin method "${name}.${method}" not found`);
     }
 
-    const denied = enforceAccess(c, sdkMethod.access, name);
+    const denied = enforceAccess(c, sdkMethod.access, identity);
     if (denied) return denied;
-
-    const identity = getPluginIdentity(name);
-    if (!identity) return notFound(c, `Plugin "${name}" not found`);
 
     const input = await c.req.json().catch(() => undefined);
     const result = await (sdkMethod.handler as (i: unknown, c: PluginContext) => unknown)(

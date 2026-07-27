@@ -16,8 +16,16 @@ import { useConfirm } from '@/admin/components/ui/confirm.js';
 import { useAuth } from '@/admin/context/auth.js';
 
 export type PluginUiIdentity = {
-    /** The plugin's derived namespace, e.g. `seo` — also its route segment. */
+    /** The plugin's derived namespace, e.g. `seo` — also its admin route segment. */
     namespace: string;
+    /**
+     * The plugin's derived SDK key, e.g. `acmeSeo` — the `Astromech.plugins.*`
+     * property. Supplied by whoever renders the surface rather than computed
+     * from `namespace` here: the namespace → SDK key derivation is lossy, so it
+     * cannot be run backwards, and running it forwards in the browser would be
+     * a second implementation of a rule the server already resolved.
+     */
+    sdkKey: string;
     /** i18n namespace + permission anchor. Same string as `namespace`. */
     permissionNamespace: string;
 };
@@ -53,7 +61,7 @@ export function useAstromechPlugin() {
 
     return {
         plugin: identity.namespace,
-        sdk: (Astromech.plugins as Record<string, unknown>)[identity.namespace],
+        sdk: (Astromech.plugins as Record<string, unknown>)[identity.sdkKey],
         toast,
         modal: confirm,
         currentUser: user,

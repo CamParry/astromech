@@ -7,6 +7,9 @@ This is a living reference; it grows as the project does.
 
 ## Contents
 
+- [data/migrations.md](data/migrations.md) — how migrations are generated from
+  your table descriptors, what the generator refuses and why, and the
+  hand-authored-ops escape hatch for reshapes it can't derive.
 - [plugins/authoring.md](plugins/authoring.md) — write a plugin: the file-layout
   convention, identity, and every surface (custom fields, admin pages,
   permissions, SDK methods, hooks, entry types, database tables, and i18n).

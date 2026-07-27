@@ -9,6 +9,7 @@ import {
     bootPlugins,
     createPluginContext,
     emitEvent,
+    getPluginIdentity,
     getPluginRawRoutes,
     getPluginSdkMethods,
     registerPlugins,
@@ -128,6 +129,22 @@ describe('registerPlugins indexing', () => {
         expect(getPluginSdkMethods().get('redirects')).toHaveProperty('lookup');
         expect(getPluginRawRoutes()).toHaveLength(1);
         expect(getPluginRawRoutes()[0]?.identity.namespace).toBe('redirects');
+    });
+});
+
+describe('getPluginIdentity', () => {
+    // The API surface (HTTP route segment and `Astromech.plugins.<key>`) keys on
+    // the SDK key alone. Resolving a namespace here as well would let a caller
+    // reach a plugin by a string the client can never produce, and would hide
+    // the fact that the namespace → SDK key derivation has no inverse.
+    it('resolves by SDK key and NOT by namespace', () => {
+        registerPlugins([def({ package: '@acme/seo-tools' })], config);
+
+        const identity = getPluginIdentity('acmeSeoTools');
+        expect(identity?.package).toBe('@acme/seo-tools');
+        expect(identity?.namespace).toBe('acme_seo_tools');
+
+        expect(getPluginIdentity('acme_seo_tools')).toBeUndefined();
     });
 });
 
