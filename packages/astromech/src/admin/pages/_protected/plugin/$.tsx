@@ -92,11 +92,11 @@ function PluginPage(): React.ReactElement {
         return (
             <PluginUiProvider
                 identity={{
-                    name: settingsPlugin.name,
+                    namespace: settingsPlugin.namespace,
                     permissionNamespace: settingsPlugin.permissionNamespace,
                 }}
             >
-                <PluginErrorBoundary plugin={settingsPlugin.name}>
+                <PluginErrorBoundary plugin={settingsPlugin.namespace}>
                     <SettingsPageForm
                         baseKey={settingsPage.baseKey}
                         fields={settingsPage.fields}
@@ -139,7 +139,7 @@ function PluginPage(): React.ReactElement {
 
     const LazyComponent = lazyPageFor(splat);
     const owner = adminConfig.plugins.find(
-        (plugin) => plugin.name === registration.plugin
+        (plugin) => plugin.namespace === registration.plugin
     );
 
     return (
@@ -156,7 +156,7 @@ function PluginPage(): React.ReactElement {
             <PageContent>
                 <PluginUiProvider
                     identity={{
-                        name: registration.plugin,
+                        namespace: registration.plugin,
                         permissionNamespace:
                             owner?.permissionNamespace ?? registration.plugin,
                     }}

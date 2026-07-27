@@ -188,9 +188,9 @@ describe('buildAdminConfig', () => {
 
         expect(adminConfig.plugins).toHaveLength(1);
         const plugin = adminConfig.plugins[0];
-        expect(plugin?.name).toBe('seo');
+        expect(plugin?.namespace).toBe('seo');
         expect(plugin?.label).toBe('Seo');
-        expect(plugin?.permissionNamespace).toBe('astromech-seo');
+        expect(plugin?.permissionNamespace).toBe('seo');
         expect(Array.isArray(plugin?.nav)).toBe(true);
         expect(plugin?.entries['redirect']).toBeDefined();
         expect(plugin?.pages).toHaveLength(1);

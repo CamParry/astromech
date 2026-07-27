@@ -65,12 +65,12 @@ export function PluginField(props: BaseFieldProps): React.ReactElement {
     const Lazy = lazyFieldFor(props.field.type);
     const entry = fieldTypes[props.field.type];
     const identity = {
-        name: entry?.plugin ?? props.field.type,
+        namespace: entry?.plugin ?? props.field.type,
         permissionNamespace: entry?.namespace ?? props.field.type,
     };
     return (
         <PluginUiProvider identity={identity}>
-            <PluginErrorBoundary plugin={identity.name}>
+            <PluginErrorBoundary plugin={identity.namespace}>
                 <React.Suspense fallback={<Spinner size="sm" />}>
                     <Lazy {...props} />
                 </React.Suspense>

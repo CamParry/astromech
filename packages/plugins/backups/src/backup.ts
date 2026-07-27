@@ -11,7 +11,7 @@ import { createGzip } from 'node:zlib';
 import type { Kysely } from 'kysely';
 import type { PluginContext } from 'astromech';
 import { decodeWith, encodeWith, encodePatchWith } from 'astromech/plugin-kit';
-import { PERMISSION_NAMESPACE } from './manifest.js';
+import { NAMESPACE } from './plugin.js';
 import { backupRunsTable, type BackupRunRow } from './schema/runs.js';
 
 // ============================================================================
@@ -182,7 +182,7 @@ export async function performBackup(
  * Falls back to `fallback` if the setting is absent or not a valid positive number.
  */
 export async function resolveKeep(ctx: PluginContext, fallback: number): Promise<number> {
-    const key = `plugin:${PERMISSION_NAMESPACE}:retention`;
+    const key = `plugin:${NAMESPACE}:retention`;
     try {
         const value = await ctx.sdk.settings.get(key, { full: true });
         if (typeof value === 'number' && Number.isFinite(value) && value > 0) {

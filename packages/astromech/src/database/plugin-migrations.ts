@@ -27,7 +27,7 @@ export function collectPluginMigrations(
     for (const def of defs) {
         if (!def.migrations) continue;
         collected.push({
-            alias: resolvePluginIdentity(def).name,
+            alias: resolvePluginIdentity(def).namespace,
             provider: def.migrations,
         });
     }

@@ -45,7 +45,7 @@ function mountedApp(role: Role): OpenAPIHono<{ Variables: AuthVariables }> {
 }
 
 // A private, slashed, per-locale key exactly like a plugin settings page.
-const KEY = 'plugin:astromech-menus:/menus/main:en';
+const KEY = 'plugin:menus:/menus/main:en';
 const VALUE = { items: [{ _id: 'a', label: 'Home', url: '/' }] };
 
 describe('settings router — private slashed keys (plugin settings pages)', () => {

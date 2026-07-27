@@ -26,8 +26,8 @@ describe('rootEntryPermission', () => {
 
 describe('pluginEntryPermission', () => {
     it('should return plugin:<ns>:entry:<type>:<action>', () => {
-        expect(pluginEntryPermission('astromech-redirects', 'redirect', 'read')).toBe(
-            'plugin:astromech-redirects:entry:redirect:read'
+        expect(pluginEntryPermission('redirects', 'redirect', 'read')).toBe(
+            'plugin:redirects:entry:redirect:read'
         );
     });
 

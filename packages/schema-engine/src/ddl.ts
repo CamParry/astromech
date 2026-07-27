@@ -13,6 +13,7 @@
  * silently drift apart.
  */
 
+import { capIdentifier } from './identifiers.js';
 import type {
     SnapshotColumn,
     SnapshotForeignKey,
@@ -46,18 +47,40 @@ export function renderColumnClause(col: SnapshotColumn): string {
     return parts.join(' ');
 }
 
-function renderForeignKeyClause(fk: SnapshotForeignKey): string {
+/**
+ * The name a foreign-key constraint is emitted under. Postgres auto-names an
+ * unnamed FK `<table>_<column>_fkey` and truncates that silently at 63 bytes,
+ * so we emit the name ourselves — capped, which takes PG's auto-naming out of
+ * the identifier budget entirely.
+ */
+export function foreignKeyName(tableName: string, column: string): string {
+    return capIdentifier(`${tableName}_${column}_fkey`);
+}
+
+function renderForeignKeyClause(tableName: string, fk: SnapshotForeignKey): string {
     return (
+        `CONSTRAINT \`${foreignKeyName(tableName, fk.column)}\` ` +
         `FOREIGN KEY (\`${fk.column}\`) REFERENCES \`${fk.targetTable}\`(\`${fk.targetColumn}\`) ` +
         `ON UPDATE no action ON DELETE ${fk.onDelete}`
     );
 }
 
-/** Render a table's `CREATE TABLE` statement — columns then table-level FKs,
- *  in column declaration order. */
-export function renderCreateTable(table: SnapshotTable): string {
+/**
+ * Render a table's `CREATE TABLE` statement — columns then table-level FKs, in
+ * column declaration order.
+ *
+ * `constraintsFor` names the table the FK constraint names should be derived
+ * from, when that differs from the table being created. Only the rebuild path
+ * needs it: it creates `__new_x` and renames it to `x`, and constraint names
+ * survive the rename — so they must read `x_<col>_fkey` from the start or a
+ * rebuilt table's DDL diverges permanently from a freshly emitted one.
+ */
+export function renderCreateTable(
+    table: SnapshotTable,
+    constraintsFor: string = table.name
+): string {
     const columnLines = table.columns.map(renderColumnClause);
-    const fkLines = table.fks.map(renderForeignKeyClause);
+    const fkLines = table.fks.map((fk) => renderForeignKeyClause(constraintsFor, fk));
     const lines = [...columnLines, ...fkLines].map((line) => `    ${line}`);
     return `CREATE TABLE \`${table.name}\` (\n${lines.join(',\n')}\n)`;
 }

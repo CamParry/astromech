@@ -12,9 +12,9 @@
  */
 
 import { defineAdminPage, definePlugin, defineServiceMethod } from 'astromech';
-import type { PluginDefinition, SdkInterface } from 'astromech';
+import type { SdkInterface } from 'astromech';
 import * as fields from 'astromech/fields';
-import { PACKAGE, VERSION, LABEL, ICON } from './manifest.js';
+import { plugin } from './plugin.js';
 import { buildMenusSdk } from './sdk/menus.js';
 import type { MenusOptions, MenuItem } from './types.js';
 
@@ -43,7 +43,7 @@ declare module 'astromech' {
 
 export type { MenuItem, MenuConfig, MenusOptions } from './types.js';
 
-export const menus = definePlugin<MenusOptions>((options) => {
+export const menus = definePlugin<MenusOptions>(plugin, (options) => {
     const menuConfigs = options?.menus ?? [];
 
     const pages = menuConfigs.map(({ key, label }) =>
@@ -63,18 +63,12 @@ export const menus = definePlugin<MenusOptions>((options) => {
 
     const sdk = buildMenusSdk(menuConfigs);
 
-    const definition: PluginDefinition = {
-        package: PACKAGE,
-        version: VERSION,
-        label: LABEL,
-        icon: ICON,
+    return {
         admin: {
             pages,
         },
         sdk,
     };
-
-    return definition;
 });
 
 export default menus;

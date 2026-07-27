@@ -67,7 +67,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`ip_address\` text,
             \`user_agent\` text,
             \`user_id\` text NOT NULL,
-            FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE cascade
+            CONSTRAINT \`sessions_user_id_fkey\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE cascade
         )
     `.execute(db);
     await sql`CREATE UNIQUE INDEX \`sessions_token_unique\` ON \`sessions\` (\`token\`)`.execute(
@@ -90,7 +90,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`password\` text,
             \`created_at\` integer NOT NULL,
             \`updated_at\` integer NOT NULL,
-            FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE cascade
+            CONSTRAINT \`accounts_user_id_fkey\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE cascade
         )
     `.execute(db);
 
@@ -124,9 +124,9 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`updated_at\` text NOT NULL,
             \`created_by\` text,
             \`updated_by\` text,
-            FOREIGN KEY (\`staged_for\`) REFERENCES \`entries\`(\`id\`) ON UPDATE no action ON DELETE no action,
-            FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action,
-            FOREIGN KEY (\`updated_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
+            CONSTRAINT \`entries_staged_for_fkey\` FOREIGN KEY (\`staged_for\`) REFERENCES \`entries\`(\`id\`) ON UPDATE no action ON DELETE no action,
+            CONSTRAINT \`entries_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action,
+            CONSTRAINT \`entries_updated_by_fkey\` FOREIGN KEY (\`updated_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
         )
     `.execute(db);
     await sql`CREATE INDEX \`idx_entries_type\` ON \`entries\` (\`type\`)`.execute(db);
@@ -165,8 +165,8 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`status\` text CHECK (\`status\` IN ('unpublished', 'published', 'scheduled')),
             \`created_at\` text NOT NULL,
             \`created_by\` text,
-            FOREIGN KEY (\`entry_id\`) REFERENCES \`entries\`(\`id\`) ON UPDATE no action ON DELETE cascade,
-            FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
+            CONSTRAINT \`entry_versions_entry_id_fkey\` FOREIGN KEY (\`entry_id\`) REFERENCES \`entries\`(\`id\`) ON UPDATE no action ON DELETE cascade,
+            CONSTRAINT \`entry_versions_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
         )
     `.execute(db);
     await sql`CREATE INDEX \`idx_versions_entry\` ON \`entry_versions\` (\`entry_id\`,\`version_number\`)`.execute(
@@ -182,8 +182,8 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`expires_at\` text,
             \`created_at\` text NOT NULL,
             \`created_by\` text,
-            FOREIGN KEY (\`entry_id\`) REFERENCES \`entries\`(\`id\`) ON UPDATE no action ON DELETE cascade,
-            FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
+            CONSTRAINT \`entry_preview_tokens_entry_id_fkey\` FOREIGN KEY (\`entry_id\`) REFERENCES \`entries\`(\`id\`) ON UPDATE no action ON DELETE cascade,
+            CONSTRAINT \`entry_preview_tokens_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
         )
     `.execute(db);
     await sql`CREATE UNIQUE INDEX \`entry_preview_tokens_token_unique\` ON \`entry_preview_tokens\` (\`token\`)`.execute(
@@ -205,7 +205,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`created_at\` text NOT NULL,
             \`updated_at\` text NOT NULL,
             \`created_by\` text,
-            FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
+            CONSTRAINT \`media_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
         )
     `.execute(db);
     await sql`CREATE INDEX \`idx_media_mime\` ON \`media\` (\`mime_type\`)`.execute(db);
@@ -220,7 +220,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`value\` text,
             \`updated_at\` text NOT NULL,
             \`updated_by\` text,
-            FOREIGN KEY (\`updated_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
+            CONSTRAINT \`settings_updated_by_fkey\` FOREIGN KEY (\`updated_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
         )
     `.execute(db);
 
@@ -234,7 +234,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`message\` text NOT NULL,
             \`href\` text,
             \`created_at\` text NOT NULL,
-            FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE cascade
+            CONSTRAINT \`notifications_user_id_fkey\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE cascade
         )
     `.execute(db);
     await sql`CREATE INDEX \`notifications_user_created_idx\` ON \`notifications\` (\`user_id\`,\`created_at\`)`.execute(

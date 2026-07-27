@@ -1,15 +1,15 @@
 /**
  * Permission bundles for composing into config roles. Bundle keys resolve to
- * `plugin:astromech-backups:{key}`.
+ * `plugin:backups:{key}`.
  *
  *   roles: { admin: { permissions: [...backupsPermissions('manage')] } }
  */
 
 import { definePermissionBundles } from 'astromech';
 import type { PluginPermission } from 'astromech';
-import { PACKAGE } from '../manifest.js';
+import { plugin } from '../plugin.js';
 
-export const backupsPermissions = definePermissionBundles(PACKAGE, {
+export const backupsPermissions = definePermissionBundles(plugin.package, {
     manage: ['read', 'run', 'restore', 'delete'],
     view: ['read'],
 });

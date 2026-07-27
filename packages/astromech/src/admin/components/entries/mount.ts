@@ -52,7 +52,7 @@ export function buildPluginEntriesMount(
     type: string,
     api: EntriesApi
 ): EntriesMount | null {
-    const plugin = plugins.find((p) => p.name === name);
+    const plugin = plugins.find((p) => p.namespace === name);
     if (!plugin) return null;
     const config = plugin.entries[type];
     if (!config) return null;

@@ -16,7 +16,9 @@ export type {
     SqlDialect,
 } from './model.js';
 export { serializeSnapshot } from './model.js';
+export { capIdentifier, hash8, isAscii, MAX_IDENTIFIER_BYTES } from './identifiers.js';
 export {
+    foreignKeyName,
     renderColumnClause,
     renderCreateIndex,
     renderCreateTable,

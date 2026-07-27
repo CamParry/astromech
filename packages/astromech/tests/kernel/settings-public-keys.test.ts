@@ -105,11 +105,11 @@ describe('publicSettingKeys — plugin page public: true', () => {
                 ],
             })
         );
-        // Plugin identity: name=test-plugin, permissionNamespace=test-plugin
-        // Key: plugin:test-plugin:/settings
-        expect(resolved.publicSettingKeys).toContain('plugin:test-plugin:/settings');
-        // Prefix for locale variants: plugin:test-plugin:/settings:
-        expect(resolved.publicSettingKeys).toContain('plugin:test-plugin:/settings:');
+        // Plugin identity: package=test-plugin, namespace=test_plugin
+        // Key: plugin:test_plugin:/settings
+        expect(resolved.publicSettingKeys).toContain('plugin:test_plugin:/settings');
+        // Prefix for locale variants: plugin:test_plugin:/settings:
+        expect(resolved.publicSettingKeys).toContain('plugin:test_plugin:/settings:');
     });
 
     it('a non-public setting read returns null (key absent from public list)', () => {
@@ -140,9 +140,9 @@ describe('publicSettingKeys — plugin page public: true', () => {
         );
         // Only the public page's key is included
         expect(resolved.publicSettingKeys).toContain(
-            'plugin:test-plugin:/public-settings'
+            'plugin:test_plugin:/public-settings'
         );
-        expect(resolved.publicSettingKeys).not.toContain('plugin:test-plugin:/settings');
+        expect(resolved.publicSettingKeys).not.toContain('plugin:test_plugin:/settings');
     });
 });
 
@@ -190,11 +190,11 @@ describe('publicSettingKeys — no duplicates', () => {
                     },
                 ],
                 // Also list the same key explicitly
-                publicSettings: ['plugin:test-plugin:/settings'],
+                publicSettings: ['plugin:test_plugin:/settings'],
             })
         );
         const exact = resolved.publicSettingKeys.filter(
-            (k) => k === 'plugin:test-plugin:/settings'
+            (k) => k === 'plugin:test_plugin:/settings'
         );
         expect(exact).toHaveLength(1);
     });

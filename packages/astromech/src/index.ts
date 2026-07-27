@@ -12,6 +12,7 @@ import type {
     HookHandlerFor,
     PluginDefinition,
     PluginFactory,
+    PluginIdentity,
     PluginSdkMethod,
 } from '@/types/index.js';
 
@@ -62,21 +63,27 @@ export function defineEntryType(config: EntryTypeConfig): EntryTypeConfig {
 }
 
 /**
- * Define a plugin as a factory. First-party plugins export the returned
- * function and are callable with zero args (`redirects()`); options are always
- * optional, and the factory is responsible for validating them and applying
- * defaults internally.
+ * Define a plugin as a factory. Identity comes from argument one — the same
+ * `plugin.ts` object the plugin's tables are declared against — and behaviour
+ * from the factory, so a plugin states its package, version, label and icon
+ * exactly once.
+ *
+ * First-party plugins export the returned function and are callable with zero
+ * args (`redirects()`); options are always optional, and the factory is
+ * responsible for validating them and applying defaults internally.
  *
  * @example
- * export const redirects = definePlugin<RedirectsOptions>((options) => ({
- *     package: '@astromech/redirects',
+ * export const redirects = definePlugin(plugin, (options: RedirectsOptions = {}) => ({
+ *     schema: [redirectsTable],
+ *     entries: [redirectEntryType],
  *     // ...declarative definition...
  * }));
  */
 export function definePlugin<Options = void>(
-    factory: (options?: Options) => PluginDefinition
+    identity: PluginIdentity,
+    factory: (options?: Options) => Omit<PluginDefinition, keyof PluginIdentity>
 ): PluginFactory<Options> {
-    return (options?: Options) => factory(options);
+    return (options?: Options) => ({ ...identity, ...factory(options) });
 }
 
 /**

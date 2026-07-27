@@ -50,36 +50,29 @@ describe('hasPermission', () => {
 
         it('entry:* does not leak into plugin tree', () => {
             expect(
-                hasPermission(
-                    ['entry:*'],
-                    'plugin:astromech-redirects:entry:redirect:read'
-                )
+                hasPermission(['entry:*'], 'plugin:redirects:entry:redirect:read')
             ).toBe(false);
         });
     });
 
     describe('plugin tree', () => {
         it('per-plugin wildcard grants own keys, including deep paths', () => {
-            const granted = ['plugin:astromech-redirects:*'] as Permission[];
-            expect(hasPermission(granted, 'plugin:astromech-redirects:lookup')).toBe(
+            const granted = ['plugin:redirects:*'] as Permission[];
+            expect(hasPermission(granted, 'plugin:redirects:lookup')).toBe(true);
+            expect(hasPermission(granted, 'plugin:redirects:entry:redirect:read')).toBe(
                 true
             );
-            expect(
-                hasPermission(granted, 'plugin:astromech-redirects:entry:redirect:read')
-            ).toBe(true);
         });
 
         it('per-plugin wildcard does not grant sibling plugin', () => {
-            const granted = ['plugin:astromech-redirects:*'] as Permission[];
-            expect(hasPermission(granted, 'plugin:astromech-seo:write')).toBe(false);
+            const granted = ['plugin:redirects:*'] as Permission[];
+            expect(hasPermission(granted, 'plugin:seo:write')).toBe(false);
         });
 
         it('plugin:* grants all plugin permissions', () => {
             const granted = ['plugin:*'] as Permission[];
-            expect(hasPermission(granted, 'plugin:astromech-redirects:lookup')).toBe(
-                true
-            );
-            expect(hasPermission(granted, 'plugin:astromech-seo:write')).toBe(true);
+            expect(hasPermission(granted, 'plugin:redirects:lookup')).toBe(true);
+            expect(hasPermission(granted, 'plugin:seo:write')).toBe(true);
         });
 
         it('plugin:* does not grant non-plugin permissions', () => {
@@ -93,7 +86,7 @@ describe('hasPermission', () => {
         it('* grants everything', () => {
             expect(hasPermission(['*'], 'entry:posts:publish')).toBe(true);
             expect(hasPermission(['*'], 'users:delete')).toBe(true);
-            expect(hasPermission(['*'], 'plugin:astromech-seo:view')).toBe(true);
+            expect(hasPermission(['*'], 'plugin:seo:view')).toBe(true);
         });
     });
 });
@@ -125,9 +118,7 @@ describe('can — built-in roles', () => {
         });
 
         it('cannot access plugin permissions', () => {
-            expect(can(editorRole, 'plugin:astromech-seo:view' as Permission)).toBe(
-                false
-            );
+            expect(can(editorRole, 'plugin:seo:view' as Permission)).toBe(false);
         });
     });
 
@@ -136,7 +127,7 @@ describe('can — built-in roles', () => {
             expect(can(adminRole, 'entry:posts:publish')).toBe(true);
             expect(can(adminRole, 'users:delete')).toBe(true);
             expect(can(adminRole, 'settings:update')).toBe(true);
-            expect(can(adminRole, 'plugin:astromech-seo:view' as Permission)).toBe(true);
+            expect(can(adminRole, 'plugin:seo:view' as Permission)).toBe(true);
         });
     });
 });
@@ -193,8 +184,8 @@ describe('definePermissionBundles', () => {
 
     it('prefixes every key with plugin:{ns}: — including nested keys', () => {
         expect(bundle('manage')).toEqual([
-            'plugin:astromech-redirects:entry:redirect:*',
-            'plugin:astromech-redirects:lookup',
+            'plugin:redirects:entry:redirect:*',
+            'plugin:redirects:lookup',
         ]);
     });
 
@@ -206,13 +197,11 @@ describe('definePermissionBundles', () => {
     it('composes with builtInRole into a working role', () => {
         const permissions = [...builtInRole('editor'), ...bundle('manage')];
         expect(hasPermission(permissions, 'entry:posts:publish')).toBe(true);
-        expect(
-            hasPermission(permissions, 'plugin:astromech-redirects:entry:redirect:read')
-        ).toBe(true);
-        expect(hasPermission(permissions, 'plugin:astromech-redirects:lookup')).toBe(
+        expect(hasPermission(permissions, 'plugin:redirects:entry:redirect:read')).toBe(
             true
         );
+        expect(hasPermission(permissions, 'plugin:redirects:lookup')).toBe(true);
         expect(hasPermission(permissions, 'users:read')).toBe(false);
-        expect(hasPermission(permissions, 'plugin:astromech-seo:view')).toBe(false);
+        expect(hasPermission(permissions, 'plugin:seo:view')).toBe(false);
     });
 });

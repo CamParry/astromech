@@ -205,24 +205,42 @@ export type PluginFieldTypeRegistration = {
 // Plugin Definition
 // ============================================================================
 
-export type PluginDefinition = {
-    // ── Identity ────────────────────────────────────────────────────────
+/**
+ * What a plugin declares about itself, and nothing more. `package` is the one
+ * canonical identifier — the namespace behind every table prefix, permission
+ * string, i18n bundle and SDK key is derived from it mechanically, and cannot
+ * be declared or overridden.
+ *
+ * A plugin package exports one of these (`plugin.ts`) and passes it to both
+ * `definePlugin` and `definePluginTable`:
+ *
+ * ```ts
+ * export const plugin = {
+ *     package: '@astromech/redirects',
+ *     version: '0.1.0',
+ *     label: 'Redirects',
+ *     icon: 'Signpost',
+ * } as const satisfies PluginIdentity;
+ * ```
+ *
+ * `as const` is what gives `package` a literal type, which is what lets
+ * `definePluginTable` derive a literal table name for `PluginDB`.
+ */
+export type PluginIdentity = {
     /** Canonical package name, e.g. `@astromech/redirects`. */
     package: string;
     /** Own version (e.g. from package.json) — enables `dependsOn` semver checks. */
     version?: string;
-    /** Access key on `Astromech.plugins.X`. Defaults to the last path segment. */
-    name?: string;
-    /** User override for access-key collisions. */
-    alias?: string;
     /**
      * Display name in the admin — sidebar group and page-title prefix.
-     * Defaults to the access key.
+     * Defaults to a title-cased namespace.
      */
     label?: string;
     /** Lucide icon name for the sidebar group. Defaults to a puzzle piece. */
     icon?: string;
+};
 
+export type PluginDefinition = PluginIdentity & {
     // ── Declarative surfaces ────────────────────────────────────────────
     permissions?: PluginPermission[];
     /** Entry types contributed by the plugin. Each self-declares its `type`. */
@@ -230,13 +248,13 @@ export type PluginDefinition = {
     fields?: PluginFieldTypeRegistration[];
     /**
      * `defineTable` descriptors shipped by the plugin (create via
-     * `definePlugin`; names are `plugin_<alias>_` prefixed).
+     * `definePluginTable`; names are `plugin_<namespace>_` prefixed).
      */
     schema?: TableDescriptor[];
     /**
      * The plugin's own migration provider — the `migrations/index.ts` generated
      * by `astromech plugin:generate`. Merged into the app's migration chain at
-     * apply time under `plugin_<alias>_`-prefixed names, so the plugin's own
+     * apply time under `plugin_<namespace>_`-prefixed names, so the plugin's own
      * files keep their bare `NNNN_<tag>` names.
      */
     migrations?: MigrationProvider;
@@ -251,7 +269,7 @@ export type PluginDefinition = {
      * Admin-UI locale resources, keyed by locale code. Values are import
      * specifiers (STRINGS, e.g. `'./locales/en.json'` resolved by the
      * plugin) so the code-gen virtual module can emit lazy `import()` calls
-     * (spec §11). Namespace = the sanitised package.
+     * (spec §11). Namespace = the derived plugin namespace.
      */
     i18n?: Record<string, string>;
     requiredEnv?: string[];
@@ -269,11 +287,18 @@ export type PluginFactory<Options = void> = (options?: Options) => PluginDefinit
 
 /**
  * Fully-derived plugin identity, computed once during config resolution.
+ *
+ * `namespace` is the string form and the only namespace there is — table
+ * prefix, i18n bundle, HTTP route segment and permission strings all use it.
+ * `permissionNamespace` is the same string, kept as its own field because
+ * permission call sites read better naming what they anchor to.
+ * `sdkKey` is the camelCase form, used only where a JS property key is
+ * required (`sdk.acmeSeo`, `Astromech.plugins.acmeSeo`).
  */
 export type ResolvedPluginIdentity = {
     package: string;
-    name: string;
-    alias: string;
+    namespace: string;
+    sdkKey: string;
     permissionNamespace: string;
     version?: string;
 };

@@ -1,7 +1,7 @@
 /**
  * `astromech plugin:generate`
  *
- * Run from inside a plugin package: diffs the plugin's own `definePlugin`
+ * Run from inside a plugin package: diffs the plugin's own `definePluginTable`
  * descriptors against its `migrations/snapshot.json` and writes a migration into
  * the plugin package's own `migrations/` directory. There is no app and no
  * database here — the schema module is loaded with jiti and nothing else is
@@ -10,11 +10,11 @@
 
 import { defineCommand } from 'citty';
 import { createJiti } from 'jiti';
+import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { generateMigrations } from '@/database/generate.js';
+import { pluginNamespace, pluginTablePrefix } from '@/plugins/runtime/plugin-identity.js';
 import type { TableDescriptor } from '@/database/define-table.js';
-
-const ALIAS_PREFIX = /^plugin_([a-z0-9-]+)_/;
 
 /** Structural check — a `defineTable` descriptor, without importing runtime code. */
 function isDescriptor(value: unknown): value is TableDescriptor {
@@ -28,8 +28,8 @@ function isDescriptor(value: unknown): value is TableDescriptor {
 
 /**
  * Every descriptor a schema module exposes: top-level descriptor exports plus
- * the values of any exported record (what `definePlugin` returns). Module export
- * order first, then record key order; duplicates collapse by identity.
+ * the values of any exported record. Module export order first, then record key
+ * order; duplicates collapse by identity.
  */
 function collectDescriptors(mod: Record<string, unknown>): TableDescriptor[] {
     const seen = new Set<TableDescriptor>();
@@ -77,8 +77,15 @@ export default defineCommand({
             default: 'migration',
         },
         dir: { type: 'string', description: 'Output directory', default: './migrations' },
+        package: {
+            type: 'string',
+            description:
+                "Plugin package name (defaults to the cwd package.json's `name`)",
+        },
     },
     async run({ args }) {
+        const pkg = args.package ?? (await readPackageName());
+        const prefix = pluginTablePrefix(pluginNamespace(pkg));
         const schemaPath = resolve(process.cwd(), args.schema);
         const jiti = createJiti(import.meta.url);
         const mod = (await jiti.import(schemaPath)) as Record<string, unknown>;
@@ -87,32 +94,24 @@ export default defineCommand({
         if (tables.length === 0) {
             console.error(
                 `[astromech plugin:generate] no defineTable descriptors exported from ${schemaPath}. ` +
-                    'Export the record returned by `definePlugin` (or the individual tables) ' +
-                    'from that module, or point --schema at the module that does.'
+                    'Export each table declared with `definePluginTable` from that module, ' +
+                    'or point --schema at the module that does.'
             );
             process.exit(1);
         }
 
-        const firstName = tables[0]?.name ?? '';
-        const match = ALIAS_PREFIX.exec(firstName);
-        if (!match) {
-            console.error(
-                `[astromech plugin:generate] table "${firstName}" is not namespaced. ` +
-                    'Plugin tables must be declared via `definePlugin({ alias, schema })`, ' +
-                    'which names them `plugin_<alias>_<table>`.'
-            );
-            process.exit(1);
-        }
-
-        const prefix = `plugin_${match[1] ?? ''}_`;
+        // The prefix comes from the PACKAGE, not from whatever the first table
+        // happens to be called — a namespace contains underscores, so a table
+        // name cannot be parsed back into one unambiguously.
         const offenders = tables
             .filter((table) => !table.name.startsWith(prefix))
             .map((table) => table.name);
         if (offenders.length > 0) {
             console.error(
-                `[astromech plugin:generate] every table in ${schemaPath} must share the ` +
-                    `"${prefix}" prefix (taken from "${firstName}"), but these do not: ` +
-                    `${offenders.join(', ')}. One schema module declares one plugin's tables.`
+                `[astromech plugin:generate] every table must be prefixed "${prefix}" ` +
+                    `(derived from package "${pkg}"), but these are not: ` +
+                    `${offenders.join(', ')}. Declare them with \`definePluginTable(plugin, …)\`, ` +
+                    'and keep one schema module to one plugin.'
             );
             process.exit(1);
         }
@@ -133,3 +132,19 @@ export default defineCommand({
         }
     },
 });
+
+/** The `name` field of the cwd's `package.json` — a plugin's canonical identifier. */
+async function readPackageName(): Promise<string> {
+    const path = resolve(process.cwd(), 'package.json');
+    try {
+        const parsed = JSON.parse(await readFile(path, 'utf-8')) as { name?: string };
+        if (parsed.name) return parsed.name;
+    } catch {
+        // Fall through to the shared error below.
+    }
+    console.error(
+        `[astromech plugin:generate] could not read a package name from ${path}. ` +
+            'Run this from the plugin package root, or pass --package @scope/name.'
+    );
+    process.exit(1);
+}

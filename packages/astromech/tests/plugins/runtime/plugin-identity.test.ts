@@ -3,9 +3,9 @@ import type { PluginDefinition } from '@/types/index.js';
 import {
     assertNoPluginCollisions,
     checkPluginDependencies,
-    derivePluginName,
+    pluginNamespace,
+    pluginSdkKey,
     resolvePluginIdentity,
-    sanitisePackage,
     satisfiesRange,
 } from '@/plugins/runtime/plugin-identity.js';
 
@@ -15,51 +15,63 @@ const def = (
     ...partial,
 });
 
-describe('sanitisePackage', () => {
-    it('strips @, lowercases, and replaces / with -', () => {
-        expect(sanitisePackage('@astromech/redirects')).toBe('astromech-redirects');
-        expect(sanitisePackage('@Scope/Foo-Bar')).toBe('scope-foo-bar');
-        expect(sanitisePackage('redirects')).toBe('redirects');
+describe('pluginNamespace', () => {
+    // The derivation table from specs/plugin-identity.md §2 — the contract a
+    // plugin author reads to know what namespace their package will get.
+    it.each([
+        ['@astromech/redirects', 'redirects'],
+        ['@astromech/backups', 'backups'],
+        ['@acme/seo', 'acme_seo'],
+        ['acme-seo', 'acme_seo'],
+        ['@acme-digital/seo-tools', 'acme_digital_seo_tools'],
+        ['redirects', 'redirects'],
+        ['@Scope/Foo-Bar', 'scope_foo_bar'],
+        ['@astromech/My-Plugin', 'my_plugin'],
+    ])('%s → %s', (pkg, namespace) => {
+        expect(pluginNamespace(pkg)).toBe(namespace);
+    });
+
+    it('is lossy for exactly one pair — @acme/seo and unscoped acme-seo', () => {
+        expect(pluginNamespace('@acme/seo')).toBe(pluginNamespace('acme-seo'));
+    });
+
+    it('never yields a hyphen — hyphens do not survive snake-case mapping', () => {
+        expect(pluginNamespace('@acme-digital/seo-tools')).not.toContain('-');
     });
 });
 
-describe('derivePluginName', () => {
-    it('takes the last path segment', () => {
-        expect(derivePluginName('@astromech/redirects')).toBe('redirects');
-        expect(derivePluginName('redirects')).toBe('redirects');
-        expect(derivePluginName('@scope/foo-bar')).toBe('foo-bar');
+describe('pluginSdkKey', () => {
+    it.each([
+        ['redirects', 'redirects'],
+        ['acme_seo', 'acmeSeo'],
+        ['acme_digital_seo_tools', 'acmeDigitalSeoTools'],
+    ])('%s → %s', (namespace, key) => {
+        expect(pluginSdkKey(namespace)).toBe(key);
     });
 });
 
 describe('resolvePluginIdentity', () => {
-    it('defaults name to the last segment and namespace to the sanitised package', () => {
+    it('derives every form from the package alone', () => {
         const id = resolvePluginIdentity(def({ package: '@astromech/redirects' }));
-        expect(id).toMatchObject({
+        expect(id).toEqual({
             package: '@astromech/redirects',
-            name: 'redirects',
-            alias: 'redirects',
-            permissionNamespace: 'astromech-redirects',
+            namespace: 'redirects',
+            sdkKey: 'redirects',
+            permissionNamespace: 'redirects',
         });
     });
 
-    it('prefers alias over name over derived name', () => {
-        const id = resolvePluginIdentity(
-            def({ package: '@astromech/redirects', name: 'redir', alias: 'my-redirects' })
-        );
-        expect(id.name).toBe('my-redirects');
-    });
-
-    it('always derives namespace from the package and carries version', () => {
-        const id = resolvePluginIdentity(
-            def({ package: '@x/y', alias: 'why', version: '1.2.3' })
-        );
-        expect(id.permissionNamespace).toBe('x-y');
+    it('keeps the scope for a third-party package and carries version', () => {
+        const id = resolvePluginIdentity(def({ package: '@x/y-z', version: '1.2.3' }));
+        expect(id.namespace).toBe('x_y_z');
+        expect(id.sdkKey).toBe('xYZ');
+        expect(id.permissionNamespace).toBe('x_y_z');
         expect(id.version).toBe('1.2.3');
     });
 });
 
 describe('assertNoPluginCollisions', () => {
-    it('passes when access keys are unique', () => {
+    it('passes when derived namespaces are unique', () => {
         expect(() =>
             assertNoPluginCollisions([
                 def({ package: '@a/seo' }),
@@ -68,22 +80,31 @@ describe('assertNoPluginCollisions', () => {
         ).not.toThrow();
     });
 
-    it('throws when two packages resolve to the same access key', () => {
+    it('passes for two packages whose last segments match but whose scopes differ', () => {
         expect(() =>
             assertNoPluginCollisions([
                 def({ package: '@a/seo' }),
                 def({ package: '@b/seo' }),
             ])
-        ).toThrow(/collision/i);
+        ).not.toThrow();
     });
 
-    it('lets an alias resolve a collision', () => {
+    it('throws on the one lossy case, naming both packages', () => {
         expect(() =>
             assertNoPluginCollisions([
-                def({ package: '@a/seo' }),
-                def({ package: '@b/seo', alias: 'seo-b' }),
+                def({ package: '@acme/seo' }),
+                def({ package: 'acme-seo' }),
             ])
-        ).not.toThrow();
+        ).toThrow(/@acme\/seo.*acme-seo|acme-seo.*@acme\/seo/s);
+    });
+
+    it('says the collision is the package authors\u2019 to resolve, not the site\u2019s', () => {
+        expect(() =>
+            assertNoPluginCollisions([
+                def({ package: '@acme/seo' }),
+                def({ package: 'acme-seo' }),
+            ])
+        ).toThrow(/cannot be overridden/);
     });
 });
 

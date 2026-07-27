@@ -3,29 +3,26 @@
  *
  * Surfaces the small set of core internals a plugin package needs that aren't
  * part of the general public surface: identity derivation (so a package can
- * compute its own permission namespace from its `package` name), schema
- * authoring (`definePlugin` and the row types its descriptors yield), the row
- * codec helpers those descriptors drive, and entry-URL resolution (so a plugin
- * can turn an entry ref into a front-end URL). Kept deliberately narrow —
- * extend it only when a first-party package needs more.
+ * compute its own namespace from its `package` name), schema authoring
+ * (`definePluginTable` and the row types its descriptors yield), the row codec
+ * helpers those descriptors drive, and entry-URL resolution (so a plugin can
+ * turn an entry ref into a front-end URL). Kept deliberately narrow — extend it
+ * only when a first-party package needs more.
  */
 
 export {
-    derivePluginName,
-    sanitisePackage,
+    pluginNamespace,
+    pluginSdkKey,
     pluginTablePrefix,
 } from '@/plugins/runtime/plugin-identity.js';
-export { definePlugin } from '@/database/define-plugin.js';
-export type {
-    DefinePluginOptions,
-    PluginDB,
-    PrefixedDefineTable,
-} from '@/database/define-plugin.js';
+export type { PluginNamespace } from '@/plugins/runtime/plugin-identity.js';
+export { definePluginTable } from '@/database/define-plugin-table.js';
+export type { KyselyTableKey, PluginDB } from '@/database/define-plugin-table.js';
 // The whole descriptor type vocabulary, not just the headline types: a plugin's
-// emitted `.d.ts` has to be able to *name* the type `definePlugin` infers, and
-// that mentions `Column`/`IndexSpec` structurally. Without them on this public
-// surface, a plugin build fails with TS2742 ("inferred type cannot be named
-// without a reference to <hashed dts chunk>").
+// emitted `.d.ts` has to be able to *name* the type `definePluginTable` infers,
+// and that mentions `Column`/`IndexSpec` structurally. Without them on this
+// public surface, a plugin build fails with TS2742 ("inferred type cannot be
+// named without a reference to <hashed dts chunk>").
 export type {
     AnyCols,
     ColFactory,

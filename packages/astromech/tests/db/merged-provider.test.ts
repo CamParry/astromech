@@ -2,8 +2,8 @@
  * `collectPluginMigrations` — the CMS half of the plugin migration story.
  *
  * It turns `PluginDefinition[]` into the `{ alias, provider }[]` the engine's
- * `mergeMigrationProviders` consumes: alias comes from `resolvePluginIdentity`
- * (package-derived by default, overridable via `alias`/`name`), and plugins
+ * `mergeMigrationProviders` consumes: alias is the namespace `resolvePluginIdentity`
+ * derives from the package (there is no override), and plugins
  * shipping no `migrations` provider drop out. The merge itself is engine-generic
  * and covered in `packages/schema-engine/tests/apply.test.ts`.
  */
@@ -31,28 +31,15 @@ describe('collectPluginMigrations', () => {
         expect(collected).toEqual([{ alias: 'backups', provider: backups }]);
     });
 
-    it('honours an explicit `alias` override', () => {
+    it('keeps a third-party scope in the derived alias', () => {
         const collected = collectPluginMigrations([
             {
                 package: '@acme/redirects',
-                alias: 'acme-redirects',
                 migrations: provider('0000_init'),
             },
         ]);
 
-        expect(collected.map((entry) => entry.alias)).toEqual(['acme-redirects']);
-    });
-
-    it('honours a `name` override when no `alias` is set', () => {
-        const collected = collectPluginMigrations([
-            {
-                package: '@acme/redirects',
-                name: 'legacy-redirects',
-                migrations: provider('0000_init'),
-            },
-        ]);
-
-        expect(collected.map((entry) => entry.alias)).toEqual(['legacy-redirects']);
+        expect(collected.map((entry) => entry.alias)).toEqual(['acme_redirects']);
     });
 
     it('skips plugins without a migrations provider', () => {

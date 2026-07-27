@@ -11,6 +11,11 @@
             "idx": 1,
             "tag": "0001_plugins-tracking",
             "when": 1785001218394
+        },
+        {
+            "idx": 2,
+            "tag": "0002_plugins-tracking-package",
+            "when": 1785182648340
         }
     ]
 }

@@ -134,7 +134,7 @@ describe('menus.get — empty menu', () => {
 
 describe('menus.get — basic items', () => {
     beforeEach(async () => {
-        await writeSetting('plugin:astromech-menus:/menus/main', {
+        await writeSetting('plugin:menus:/menus/main', {
             items: [
                 { _id: 'a1', label: 'Home', url: '/' },
                 { _id: 'a2', label: 'Blog', url: '/blog' },
@@ -153,7 +153,7 @@ describe('menus.get — basic items', () => {
 
 describe('menus.get — disabled nodes', () => {
     beforeEach(async () => {
-        await writeSetting('plugin:astromech-menus:/menus/main', {
+        await writeSetting('plugin:menus:/menus/main', {
             items: [
                 { _id: 'b1', label: 'Active', url: '/active' },
                 { _id: 'b2', label: 'Hidden', url: '/hidden', _disabled: true },
@@ -171,7 +171,7 @@ describe('menus.get — disabled nodes', () => {
 
 describe('menus.get — nesting', () => {
     beforeEach(async () => {
-        await writeSetting('plugin:astromech-menus:/menus/main', {
+        await writeSetting('plugin:menus:/menus/main', {
             items: [
                 {
                     _id: 'c1',
@@ -196,7 +196,7 @@ describe('menus.get — nesting', () => {
     });
 
     it('drops disabled children but keeps enabled siblings', async () => {
-        await writeSetting('plugin:astromech-menus:/menus/main', {
+        await writeSetting('plugin:menus:/menus/main', {
             items: [
                 {
                     _id: 'c1',
@@ -222,7 +222,7 @@ describe('menus.get — nesting', () => {
 
 describe('menus.get — label-only node (no url, no entry)', () => {
     beforeEach(async () => {
-        await writeSetting('plugin:astromech-menus:/menus/main', {
+        await writeSetting('plugin:menus:/menus/main', {
             items: [{ _id: 'd1', label: 'Section Header' }],
         });
     });
@@ -237,7 +237,7 @@ describe('menus.get — label-only node (no url, no entry)', () => {
 
 describe('menus.get — newTab flag', () => {
     beforeEach(async () => {
-        await writeSetting('plugin:astromech-menus:/menus/main', {
+        await writeSetting('plugin:menus:/menus/main', {
             items: [
                 { _id: 'e1', label: 'GitHub', url: 'https://github.com', newTab: true },
                 { _id: 'e2', label: 'Home', url: '/' },
@@ -259,15 +259,15 @@ describe('menus.get — newTab flag', () => {
 describe('menus.get — locale', () => {
     beforeEach(async () => {
         // Shared (non-translatable) base
-        await writeSetting('plugin:astromech-menus:/menus/main', {
+        await writeSetting('plugin:menus:/menus/main', {
             items: [{ _id: 'f1', label: 'Home', url: '/' }],
         });
         // Per-locale EN override
-        await writeSetting('plugin:astromech-menus:/menus/main:en', {
+        await writeSetting('plugin:menus:/menus/main:en', {
             items: [{ _id: 'f1', label: 'Home', url: '/' }],
         });
         // Per-locale FR
-        await writeSetting('plugin:astromech-menus:/menus/main:fr', {
+        await writeSetting('plugin:menus:/menus/main:fr', {
             items: [{ _id: 'f1', label: 'Accueil', url: '/fr' }],
         });
     });
@@ -294,7 +294,7 @@ describe('menus.get — entry ref resolution', () => {
             status: 'published',
         });
 
-        await writeSetting('plugin:astromech-menus:/menus/main', {
+        await writeSetting('plugin:menus:/menus/main', {
             items: [{ _id: 'g1', label: 'A Post', entry: post.id }],
         });
 
@@ -316,7 +316,7 @@ describe('menus.get — entry ref resolution', () => {
             status: 'published',
         });
 
-        await writeSetting('plugin:astromech-menus:/menus/main', {
+        await writeSetting('plugin:menus:/menus/main', {
             items: [{ _id: 'h1', label: 'Post', entry: post.id, url: '/manual-url' }],
         });
 

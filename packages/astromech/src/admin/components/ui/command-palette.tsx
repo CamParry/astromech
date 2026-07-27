@@ -308,7 +308,7 @@ export function CommandPalette(): React.ReactElement {
         () =>
             adminConfig.plugins
                 .map((plugin) => ({
-                    name: plugin.name,
+                    namespace: plugin.namespace,
                     permissionNamespace: plugin.permissionNamespace,
                     entries: plugin.entries,
                     types: Object.keys(plugin.entries).filter((type) =>
@@ -340,7 +340,7 @@ export function CommandPalette(): React.ReactElement {
                 (p) => {
                     const pluginNs = Astromech.plugins;
                     if (!pluginNs) return Promise.resolve([]);
-                    const pluginApi = pluginNs[p.name] as
+                    const pluginApi = pluginNs[p.namespace] as
                         | { entries: typeof Astromech.entries }
                         | undefined;
                     if (!pluginApi) return Promise.resolve([]);
@@ -401,12 +401,12 @@ export function CommandPalette(): React.ReactElement {
                 const parsed = parseEntryTypeId(entry.type);
                 if (parsed) {
                     const plugin = adminConfig.plugins.find(
-                        (p) => p.name === parsed.plugin
+                        (p) => p.namespace === parsed.plugin
                     );
                     const pluginCfg = plugin?.entries[parsed.type];
                     if (plugin && pluginCfg) {
                         cfg = pluginCfg;
-                        pluginName = plugin.name;
+                        pluginName = plugin.namespace;
                         bareType = parsed.type;
                     }
                 }

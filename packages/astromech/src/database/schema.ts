@@ -122,10 +122,15 @@ export type NewCronRow = TableInsert<typeof cron>;
  * One row per plugin present in `config.plugins`, upserted at boot. Its job is
  * to make *removed* plugins visible: a plugin dropped from the config leaves
  * its tables and migration rows behind, and this table is the only record that
- * they were ever ours to clean up (`astromech plugin:purge <alias>`).
+ * they were ever ours to clean up (`astromech plugin:purge <package>`).
+ *
+ * Keyed on `package` — the canonical identifier — with a UNIQUE `namespace`, so
+ * two plugins deriving the same namespace collide as a database constraint at
+ * migrate time rather than only in the config-resolution check.
  */
 export const plugins = defineTable('_astromech_plugins', ({ col }) => ({
-    alias: col.text({ primaryKey: true }),
+    package: col.text({ primaryKey: true }),
+    namespace: col.text({ notNull: true, unique: true }),
     version: col.text({ notNull: true }),
     installedAt: col.timestamp({ notNull: true, defaultNow: true }),
 }));

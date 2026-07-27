@@ -25,7 +25,7 @@ import type { EntryFields, ResolvedEntryFields } from '@/types/fields.js';
 import {
     pluginEntryTypes,
     resolvePluginPermission,
-    titleCaseAlias,
+    titleCaseNamespace,
 } from './plugin-identity.js';
 
 // ---------------------------------------------------------------------------
@@ -39,15 +39,15 @@ function toResolvedFields(fields: EntryFields | undefined): ResolvedEntryFields 
 }
 
 /**
- * Admin display name: plugin `label` if set, otherwise the access key
+ * Admin display name: plugin `label` if set, otherwise the namespace
  * title-cased (`redirects` → `Redirects`) so a label-less plugin never
- * renders a bare lowercase alias in the sidebar.
+ * renders a bare lowercase namespace in the sidebar.
  */
 export function resolvePluginLabel(
     def: PluginDefinition,
     identity: ResolvedPluginIdentity
 ): string {
-    return def.label ?? titleCaseAlias(identity.name);
+    return def.label ?? titleCaseNamespace(identity.namespace);
 }
 
 function resolvePagePermission(namespace: string, page: AdminPage): string | null {
@@ -80,7 +80,7 @@ export function derivePluginPages(
         }
 
         const baseKey = `plugin:${identity.permissionNamespace}:${page.path}`;
-        const key = `${identity.name}${page.path}`;
+        const key = `${identity.namespace}${page.path}`;
 
         return {
             key,
@@ -118,7 +118,7 @@ export function derivePluginNav(
             // bare keys and would pass this `:`-containing string through).
             const item: PluginNavItem = {
                 label: entryType.plural,
-                to: `/plugin/${identity.name}/entries/${type}`,
+                to: `/plugin/${identity.namespace}/entries/${type}`,
                 permission: `plugin:${identity.permissionNamespace}:entry:${type}:read`,
             };
             return item;
@@ -140,7 +140,7 @@ export function derivePluginNav(
 
             const item: PluginNavItem = {
                 label: labelStr,
-                to: `/plugin/${identity.name}${page.path}`,
+                to: `/plugin/${identity.namespace}${page.path}`,
             };
             if (page.icon !== undefined) item.icon = page.icon;
             const permission = resolvePagePermission(identity.permissionNamespace, page);

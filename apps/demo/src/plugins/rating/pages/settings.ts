@@ -1,7 +1,7 @@
 /**
  * Ratings settings — an auto-rendered settings form at
  * `/admin/plugin/rating/settings`. Values are stored as one object blob at
- * `plugin:demo-rating:/settings` in the core settings table.
+ * `plugin:demo_rating:/settings` in the core settings table.
  */
 
 import { defineAdminPage } from 'astromech';

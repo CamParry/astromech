@@ -25,6 +25,7 @@
  */
 
 import {
+    capIdentifier,
     renderCreateIndex,
     renderCreateTable,
     renderTableStatements,
@@ -108,10 +109,19 @@ function synthesizedIndexes(table: TableDescriptor): IndexSpec[] {
         }));
 }
 
-/** Every index a table renders — explicit descriptor indexes first, then the
- *  ones synthesized from column-level `unique: true`. */
+/**
+ * Every index a table renders — explicit descriptor indexes first, then the
+ * ones synthesized from column-level `unique: true`.
+ *
+ * Names are capped here, where they enter the *snapshot*, never at render time:
+ * the differ compares snapshots, so a capped render against an uncapped
+ * snapshot would diff on every run and churn a migration each time.
+ */
 export function allIndexes(table: TableDescriptor): IndexSpec[] {
-    return [...table.indexes, ...synthesizedIndexes(table)];
+    return [...table.indexes, ...synthesizedIndexes(table)].map((spec) => ({
+        ...spec,
+        name: capIdentifier(spec.name),
+    }));
 }
 
 /**

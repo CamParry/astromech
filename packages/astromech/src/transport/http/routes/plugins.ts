@@ -67,14 +67,14 @@ function enforceAccess(
 // The plugins router runs `optionalAuth` (public RPC), so the entries subtree
 // gets an explicit `requireAuth` — these routes are never public.
 for (const { identity, entryTypes } of getPluginEntryMounts()) {
-    pluginsRouter.use(`/${identity.name}/entries/*`, requireAuth);
+    pluginsRouter.use(`/${identity.namespace}/entries/*`, requireAuth);
     // The entries router needs full `AuthVariables` (requireAuth guarantees them
     // upstream); `.route` onto the partial-typed plugins router needs the cast.
     pluginsRouter.route(
-        `/${identity.name}/entries`,
+        `/${identity.namespace}/entries`,
         createEntriesRouter({
             lookup: (t) => entryTypes[t],
-            qualify: (t) => qualifyEntryType(identity.name, t),
+            qualify: (t) => qualifyEntryType(identity.namespace, t),
             permissionFor: (t, a) =>
                 pluginEntryPermission(identity.permissionNamespace, t, a),
         }) as unknown as Hono<PluginEnv>
@@ -84,9 +84,9 @@ for (const { identity, entryTypes } of getPluginEntryMounts()) {
 // ── Raw escape-hatch routes (registered before the RPC catch-all) ──────────
 for (const { identity, route } of getPluginRawRoutes()) {
     const method = (route.method ?? 'GET').toUpperCase();
-    const path = `/${identity.name}${route.path}`;
+    const path = `/${identity.namespace}${route.path}`;
     pluginsRouter.on(method, path, (c) => {
-        const denied = enforceAccess(c, route.access, identity.name);
+        const denied = enforceAccess(c, route.access, identity.namespace);
         if (denied) return denied;
         return route.handler(
             c.req.raw,

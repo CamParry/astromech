@@ -56,9 +56,9 @@ export function buildAdminConfig(
     return {
         plugins: (config.plugins ?? []).map((p) => {
             const identity = resolvePluginIdentity(p);
-            const pluginEntries = resolvedConfig.pluginEntries[identity.name] ?? {};
+            const pluginEntries = resolvedConfig.pluginEntries[identity.namespace] ?? {};
             return {
-                name: identity.name,
+                namespace: identity.namespace,
                 label: resolvePluginLabel(p, identity),
                 permissionNamespace: identity.permissionNamespace,
                 nav: derivePluginNav(identity, p),

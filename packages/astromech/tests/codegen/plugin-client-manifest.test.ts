@@ -47,7 +47,7 @@ describe('generatePluginClientManifest', () => {
         expect(result).toContain('import("@astromech/seo/fields/SeoPreview")');
         // generated source uses unquoted property names
         expect(result).toContain('plugin: "seo"');
-        expect(result).toContain('namespace: "astromech-seo"');
+        expect(result).toContain('namespace: "seo"');
     });
 
     it('includes defaultValue in field type entry', () => {
@@ -74,8 +74,8 @@ describe('generatePluginClientManifest', () => {
 
     it('resolves permission with plugin namespace for bare permission key', () => {
         const result = generatePluginClientManifest([seoPlugin]);
-        // bare `view` → `plugin:astromech-seo:view`
-        expect(result).toContain('permission: "plugin:astromech-seo:view"');
+        // bare `view` → `plugin:seo:view`
+        expect(result).toContain('permission: "plugin:seo:view"');
     });
 
     it('excludes settings-only (no component) page from pages export', () => {
@@ -87,7 +87,7 @@ describe('generatePluginClientManifest', () => {
     it('contains i18n export keyed by permissionNamespace', () => {
         const result = generatePluginClientManifest([seoPlugin]);
         expect(result).toContain('export const i18n = {');
-        expect(result).toContain('"astromech-seo"');
+        expect(result).toContain('"seo"');
         expect(result).toContain('import("@astromech/seo/locales/en.json")');
         expect(result).toContain('import("@astromech/seo/locales/fr.json")');
     });

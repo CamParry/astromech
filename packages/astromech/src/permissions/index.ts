@@ -9,7 +9,7 @@ import type { AstromechConfig, ResolvedConfig } from '@/types/config.js';
 import type { Permission, Role } from '@/types/domain.js';
 
 import { hasPermission as hasPermissionImpl } from '@/utilities/permission-match.js';
-import { sanitisePackage } from '@/plugins/runtime/plugin-identity.js';
+import { pluginNamespace } from '@/utilities/plugin-namespace.js';
 export { hasPermission, matchesPermission } from '@/utilities/permission-match.js';
 export {
     type EntryAction,
@@ -61,7 +61,7 @@ export function builtInRole(slug: BuiltInRoleSlug): Permission[] {
 
 /**
  * Define named permission bundles for a plugin. Every bundle entry is
- * prefixed `plugin:{ns}:` (ns = sanitised package) — including keys that
+ * prefixed `plugin:{ns}:` (ns = the plugin's derived namespace) — including keys that
  * already contain `:`, so nested keys like `entry:redirect:read` become
  * `plugin:{ns}:entry:redirect:read`. Bundles never grant core permissions;
  * users compose those via builtInRole() or literals.
@@ -69,7 +69,7 @@ export function builtInRole(slug: BuiltInRoleSlug): Permission[] {
 export function definePermissionBundles<
     const B extends Record<string, readonly string[]>,
 >(pkg: string, bundles: B): (bundle: keyof B & string) => Permission[] {
-    const namespace = sanitisePackage(pkg);
+    const namespace = pluginNamespace(pkg);
     return (bundle) => {
         const keys = bundles[bundle];
         if (!keys) {

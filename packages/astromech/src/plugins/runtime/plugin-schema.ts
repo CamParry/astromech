@@ -2,9 +2,9 @@
  * Plugin table-descriptor collection + convention enforcement.
  *
  * Plugins may ship their own tables (an escape valve for data that doesn't fit
- * entries), declared as `defineTable` descriptors via `definePlugin`. Table
- * names must be prefixed `plugin_{alias}_` to namespace them and prevent
- * collisions; there are no cross-plugin foreign keys (soft string refs only).
+ * entries), declared as `defineTable` descriptors via `definePluginTable`.
+ * Table names must be prefixed `plugin_{namespace}_` to namespace them and
+ * prevent collisions; there are no cross-plugin foreign keys (soft string refs only).
  * This module collects the descriptors and enforces the prefix at
  * config-resolution time (crash loud).
  *
@@ -20,7 +20,7 @@ import {
 } from '@/plugins/runtime/plugin-identity.js';
 
 export type CollectedPluginTable = {
-    alias: string;
+    namespace: string;
     tableName: string;
     table: TableDescriptor;
 };
@@ -30,10 +30,10 @@ export function collectPluginSchemas(defs: PluginDefinition[]): CollectedPluginT
     const collected: CollectedPluginTable[] = [];
     for (const def of defs) {
         if (!def.schema) continue;
-        const { alias } = resolvePluginIdentity(def);
+        const { namespace } = resolvePluginIdentity(def);
         for (const desc of def.schema) {
             if (!isTableDescriptor(desc)) continue;
-            collected.push({ alias, tableName: desc.name, table: desc });
+            collected.push({ namespace, tableName: desc.name, table: desc });
         }
     }
     return collected;
@@ -54,16 +54,16 @@ export function isTableDescriptor(value: unknown): value is TableDescriptor {
 }
 
 /**
- * Enforce the `plugin_{alias}_` table-name prefix on every plugin-shipped
+ * Enforce the `plugin_{namespace}_` table-name prefix on every plugin-shipped
  * table. Throws a build error on the first violation.
  */
 export function assertPluginTablePrefixes(defs: PluginDefinition[]): void {
-    for (const { alias, tableName } of collectPluginSchemas(defs)) {
-        const prefix = pluginTablePrefix(alias);
+    for (const { namespace, tableName } of collectPluginSchemas(defs)) {
+        const prefix = pluginTablePrefix(namespace);
         if (!tableName.startsWith(prefix)) {
             throw new Error(
                 `Astromech plugin table "${tableName}" must be prefixed "${prefix}". ` +
-                    `Plugin tables are namespaced by alias to prevent collisions.`
+                    `Plugin tables are namespaced by the plugin's namespace to prevent collisions.`
             );
         }
     }

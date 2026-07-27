@@ -36,7 +36,7 @@ describe('derivePluginNav — entry types', () => {
             {
                 label: 'Redirects',
                 to: '/plugin/redirects/entries/redirect',
-                permission: 'plugin:astromech-redirects:entry:redirect:read',
+                permission: 'plugin:redirects:entry:redirect:read',
             },
         ]);
     });
@@ -104,7 +104,7 @@ describe('derivePluginPages — unified ResolvedAdminPage', () => {
         };
         const identity = resolvePluginIdentity(plugin);
         const pages = derivePluginPages(identity, plugin);
-        expect(pages[0]?.baseKey).toBe('plugin:astromech-seo:/settings');
+        expect(pages[0]?.baseKey).toBe('plugin:seo:/settings');
     });
 
     it('produces key as name+path', () => {

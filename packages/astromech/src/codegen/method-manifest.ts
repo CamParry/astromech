@@ -238,7 +238,7 @@ function buildEntriesMethods(
     const pluginNsMap = new Map<string, string>();
     for (const def of plugins) {
         const identity = resolvePluginIdentity(def);
-        pluginNsMap.set(identity.name, identity.permissionNamespace);
+        pluginNsMap.set(identity.namespace, identity.permissionNamespace);
     }
 
     // Root entry types
@@ -314,10 +314,10 @@ function buildPluginSdkMethods(plugins: PluginDefinition[]): ManifestMethod[] {
         for (const [key, m] of Object.entries(def.sdk ?? {})) {
             const sdkMethod = m as AnyPluginSdkMethod;
             const method: ManifestMethod = {
-                name: `plugins.${identity.name}.${key}`,
+                name: `plugins.${identity.sdkKey}.${key}`,
                 summary: sdkMethod.summary,
                 source: 'plugin',
-                plugin: identity.name,
+                plugin: identity.namespace,
                 access: normaliseAccess(sdkMethod.access),
                 // Mirror the route's enforcement: bare keys are plugin-scoped
                 // (`view` → `plugin:<ns>:view`); keys with a `:` pass through.

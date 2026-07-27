@@ -129,7 +129,7 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
                         `The "entries" key is reserved for plugin entry types — rename your method.`
                 );
             }
-            s.sdk.set(identity.name, def.sdk);
+            s.sdk.set(identity.namespace, def.sdk);
         }
 
         for (const route of def.rawRoutes ?? []) {
@@ -148,7 +148,7 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
         for (const [type, cfg] of pluginEntryTypes(def)) {
             if (cfg.storage) {
                 access.setEntryStorage(
-                    access.qualifyEntryType(identity.name, type),
+                    access.qualifyEntryType(identity.namespace, type),
                     cfg.storage
                 );
             }
@@ -177,11 +177,11 @@ export async function bootPlugins(defs: PluginDefinition[]): Promise<void> {
             );
         }
 
-        await trackPlugin(identity.name, def.version ?? '0.0.0');
+        await trackPlugin(def.package, identity.namespace, def.version ?? '0.0.0');
 
         for (const job of def.cron ?? []) {
             registerCronJob({
-                name: `plugin:${identity.name}:${job.name}`,
+                name: `plugin:${identity.namespace}:${job.name}`,
                 schedule: job.schedule,
                 handler: async () => {
                     await job.handler(createPluginContext(identity, null));
@@ -202,7 +202,7 @@ export async function bootPlugins(defs: PluginDefinition[]): Promise<void> {
         }
     }
 
-    await warnOnUntrackedRemovals(defs.map((def) => resolvePluginIdentity(def).name));
+    await warnOnUntrackedRemovals(defs.map((def) => def.package));
 }
 
 /**
@@ -212,13 +212,18 @@ export async function bootPlugins(defs: PluginDefinition[]): Promise<void> {
  * Best-effort: the table may not exist yet in odd dev states (a database
  * predating the tracking migration), and boot must not die over bookkeeping.
  */
-async function trackPlugin(alias: string, version: string): Promise<void> {
+async function trackPlugin(
+    pkg: string,
+    namespace: string,
+    version: string
+): Promise<void> {
     try {
         await getDb()
             .insertInto('_astromech_plugins')
             .values(
                 encode('_astromech_plugins', {
-                    alias,
+                    package: pkg,
+                    namespace,
                     version,
                     installedAt: new Date(),
                 }) as unknown as Insertable<DB['_astromech_plugins']>
@@ -226,8 +231,9 @@ async function trackPlugin(alias: string, version: string): Promise<void> {
             .onConflict((oc) =>
                 // `encodePatch`, not `encode`: the insert codec injects app
                 // defaults, which would re-stamp `installedAt` on every boot.
-                oc.column('alias').doUpdateSet(
+                oc.column('package').doUpdateSet(
                     encodePatch('_astromech_plugins', {
+                        namespace,
                         version,
                     }) as unknown as Updateable<DB['_astromech_plugins']>
                 )
@@ -235,7 +241,7 @@ async function trackPlugin(alias: string, version: string): Promise<void> {
             .execute();
     } catch (error) {
         console.warn(
-            `[astromech] Could not record plugin "${alias}" in _astromech_plugins: ` +
+            `[astromech] Could not record plugin "${pkg}" in _astromech_plugins: ` +
                 `${error instanceof Error ? error.message : String(error)}`
         );
     }
@@ -250,14 +256,15 @@ async function warnOnUntrackedRemovals(configured: string[]): Promise<void> {
     try {
         const tracked = await getDb()
             .selectFrom('_astromech_plugins')
-            .select('alias')
+            .select('package')
             .execute();
-        for (const { alias } of tracked) {
-            if (configured.includes(alias)) continue;
+        for (const row of tracked) {
+            const pkg = row.package;
+            if (configured.includes(pkg)) continue;
             console.warn(
-                `[astromech] Plugin "${alias}" is still tracked in the database but is no ` +
+                `[astromech] Plugin "${pkg}" is still tracked in the database but is no ` +
                     `longer in \`config.plugins\`. Its tables and migrations remain — run ` +
-                    `\`astromech plugin:purge ${alias}\` to remove them.`
+                    `\`astromech plugin:purge ${pkg}\` to remove them.`
             );
         }
     } catch {
@@ -274,9 +281,18 @@ export function hasHookHandlers(event: string): boolean {
     return (state().hooks.get(event)?.length ?? 0) > 0;
 }
 
-/** Resolved identity for a plugin by its access key. */
-export function getPluginIdentity(name: string): ResolvedPluginIdentity | undefined {
-    return state().identities.find((identity) => identity.name === name);
+/**
+ * Resolved identity for a plugin, by namespace (`acme_seo` — the URL/route
+ * segment) or by SDK key (`acmeSeo` — the JS property form). Both are accepted
+ * because both are how callers name a plugin: routes and permissions use the
+ * namespace, `Astromech.plugins.<key>` uses the SDK key.
+ */
+export function getPluginIdentity(key: string): ResolvedPluginIdentity | undefined {
+    const identities = state().identities;
+    return (
+        identities.find((identity) => identity.namespace === key) ??
+        identities.find((identity) => identity.sdkKey === key)
+    );
 }
 
 export function getPluginSdkMethods(): Map<string, Record<string, AnyPluginSdkMethod>> {
@@ -303,7 +319,7 @@ export function getPluginEntryMounts(): PluginEntryMount[] {
     if (!s.config) return [];
     const mounts: PluginEntryMount[] = [];
     for (const identity of s.identities) {
-        const entryTypes = s.config.pluginEntries[identity.name];
+        const entryTypes = s.config.pluginEntries[identity.namespace];
         if (entryTypes && Object.keys(entryTypes).length > 0) {
             mounts.push({ identity, entryTypes });
         }
@@ -403,7 +419,7 @@ export function createPluginContext(
 ): PluginContext {
     const config = state().config;
     const configView = config ? makeConfigView(config) : makeConfigView(emptyConfig());
-    const PREFIX = `plugin/${identity.name}/`;
+    const PREFIX = `plugin/${identity.namespace}/`;
 
     return {
         get db(): Kysely<DB> {
@@ -419,7 +435,7 @@ export function createPluginContext(
             // ids out. Default shape is `full` (privileged server RMW context, per
             // spec §7.1 decision 7). An explicit per-call `full` still wins.
             return entryAccess().createScopedEntries(
-                identity.name,
+                identity.namespace,
                 withDefaultShape(
                     requireSdkClient().entries as unknown as EntriesApi,
                     'full'
@@ -428,8 +444,8 @@ export function createPluginContext(
         },
         sendEmail,
         notify: (input: NotifyInput) =>
-            notify({ ...input, type: `plugin:${identity.name}.${input.type}` }),
-        logger: makeLogger(identity.name),
+            notify({ ...input, type: `plugin:${identity.namespace}.${input.type}` }),
+        logger: makeLogger(identity.namespace),
         env: resolveEnv(),
         emit: (event, payload) => emitEvent(event, payload, user),
         storage: {

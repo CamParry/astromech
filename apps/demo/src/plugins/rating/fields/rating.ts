@@ -5,7 +5,7 @@
  */
 
 import type { PluginFieldTypeRegistration } from 'astromech';
-import { asset } from '../manifest.js';
+import { asset } from '../plugin.js';
 import { RATING_FIELD_TYPE } from '../types.js';
 
 export const ratingField: PluginFieldTypeRegistration = {

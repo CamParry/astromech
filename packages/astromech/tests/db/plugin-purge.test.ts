@@ -5,8 +5,8 @@
  *
  * Two plugins are seeded side by side — tables, `kysely_migration` rows and
  * `_astromech_plugins` rows each — so every assertion is really about the blast
- * radius: everything belonging to the purged alias goes, everything belonging to
- * the other one (and to the app itself) stays.
+ * radius: everything belonging to the purged package goes, everything belonging
+ * to the other one (and to the app itself) stays.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -43,13 +43,13 @@ async function migrationNames(db: Db): Promise<string[]> {
     return rows.map((row) => row.name);
 }
 
-async function trackedAliases(db: Db): Promise<string[]> {
+async function trackedPackages(db: Db): Promise<string[]> {
     const rows = await db
         .selectFrom('_astromech_plugins')
-        .select('alias')
-        .orderBy('alias')
+        .select('package')
+        .orderBy('package')
         .execute();
-    return rows.map((row) => row.alias);
+    return rows.map((row) => row.package);
 }
 
 /** Two plugins' worth of tables, migration rows and tracking rows. */
@@ -66,10 +66,10 @@ async function seedTwoPlugins(db: Db): Promise<void> {
             INSERT INTO kysely_migration (name, timestamp) VALUES (${name}, ${'2026-01-01T00:00:00.000Z'})
         `.execute(db);
     }
-    for (const alias of ['alpha', 'beta']) {
+    for (const namespace of ['alpha', 'beta']) {
         await sql`
-            INSERT INTO _astromech_plugins (alias, version, installed_at)
-            VALUES (${alias}, ${'1.0.0'}, ${'2026-01-01T00:00:00.000Z'})
+            INSERT INTO _astromech_plugins (package, namespace, version, installed_at)
+            VALUES (${`@astromech/${namespace}`}, ${namespace}, ${'1.0.0'}, ${'2026-01-01T00:00:00.000Z'})
         `.execute(db);
     }
 }
@@ -83,7 +83,7 @@ beforeEach(async () => {
 
 describe('purgePlugin', () => {
     it('reports the tables it dropped and the row counts it deleted', async () => {
-        const result = await purgePlugin(db, 'alpha');
+        const result = await purgePlugin(db, '@astromech/alpha');
 
         expect(result).toEqual({
             tables: ['plugin_alpha_logs', 'plugin_alpha_runs'],
@@ -92,15 +92,15 @@ describe('purgePlugin', () => {
         });
     });
 
-    it('drops only the purged alias’s tables', async () => {
-        await purgePlugin(db, 'alpha');
+    it('drops only the purged plugin’s tables', async () => {
+        await purgePlugin(db, '@astromech/alpha');
 
         expect(await tableNames(db, 'plugin%')).toEqual(['plugin_beta_runs']);
     });
 
-    it('deletes only the purged alias’s kysely_migration rows', async () => {
+    it('deletes only the purged plugin’s kysely_migration rows', async () => {
         const before = await migrationNames(db);
-        await purgePlugin(db, 'alpha');
+        await purgePlugin(db, '@astromech/alpha');
         const after = await migrationNames(db);
 
         expect(after).toContain('plugin_beta_0000_init');
@@ -110,14 +110,14 @@ describe('purgePlugin', () => {
         expect(after).toEqual(before.filter((name) => !name.startsWith('plugin_alpha_')));
     });
 
-    it('deletes only the purged alias’s tracking row', async () => {
-        await purgePlugin(db, 'alpha');
+    it('deletes only the purged plugin’s tracking row', async () => {
+        await purgePlugin(db, '@astromech/alpha');
 
-        expect(await trackedAliases(db)).toEqual(['beta']);
+        expect(await trackedPackages(db)).toEqual(['@astromech/beta']);
     });
 
     it('leaves the app’s own tables alone', async () => {
-        await purgePlugin(db, 'alpha');
+        await purgePlugin(db, '@astromech/alpha');
 
         const { rows } = await sql<{ name: string }>`
             SELECT name FROM sqlite_master WHERE type='table' AND name='entries'
@@ -125,8 +125,8 @@ describe('purgePlugin', () => {
         expect(rows).toHaveLength(1);
     });
 
-    it('is a no-op for an alias with nothing in the database', async () => {
-        const result = await purgePlugin(db, 'gamma');
+    it('is a no-op for a package with nothing in the database', async () => {
+        const result = await purgePlugin(db, '@astromech/gamma');
 
         expect(result).toEqual({ tables: [], migrations: 0, tracked: 0 });
         expect(await tableNames(db, 'plugin%')).toEqual([
@@ -134,23 +134,27 @@ describe('purgePlugin', () => {
             'plugin_alpha_runs',
             'plugin_beta_runs',
         ]);
-        expect(await trackedAliases(db)).toEqual(['alpha', 'beta']);
+        expect(await trackedPackages(db)).toEqual([
+            '@astromech/alpha',
+            '@astromech/beta',
+        ]);
     });
 
-    it('is idempotent — a second purge of the same alias reports nothing', async () => {
-        await purgePlugin(db, 'alpha');
-        const second = await purgePlugin(db, 'alpha');
+    it('is idempotent — a second purge of the same package reports nothing', async () => {
+        await purgePlugin(db, '@astromech/alpha');
+        const second = await purgePlugin(db, '@astromech/alpha');
 
         expect(second).toEqual({ tables: [], migrations: 0, tracked: 0 });
     });
 
-    // `likePrefix` escapes wildcards inside the alias but leaves the separator
-    // underscores of `plugin_<alias>_%` unescaped, and `_` is a single-character
-    // wildcard in SQL LIKE — so purging `alph` matches `plugin_alpha_*` too.
-    it('does not touch a plugin whose alias merely extends the purged one', async () => {
+    // Regression: `_` is a single-character wildcard in SQL LIKE, so a
+    // `likePrefix` that escaped only wildcards *inside* the namespace and left
+    // the separator underscores of `plugin_<ns>_%` bare would make purging
+    // `alph` also match `plugin_alpha_*`.
+    it('does not touch a plugin whose namespace merely extends the purged one', async () => {
         await sql.raw('CREATE TABLE plugin_alph_runs (id text PRIMARY KEY)').execute(db);
 
-        const result = await purgePlugin(db, 'alph');
+        const result = await purgePlugin(db, '@astromech/alph');
 
         expect(result.tables).toEqual(['plugin_alph_runs']);
         expect(await tableNames(db, 'plugin%')).toEqual([

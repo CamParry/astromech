@@ -4,7 +4,7 @@
  * The `/plugin/$` catch-all provides the identity of the plugin whose
  * surface is rendering; the hook hands plugin components their runtime
  * toolbox: `{ sdk, toast, modal, currentUser, navigate, t }`, with `t`
- * pre-scoped to the plugin's i18n namespace (= permissionNamespace).
+ * pre-scoped to the plugin's i18n namespace (= its derived namespace).
  */
 
 import React from 'react';
@@ -16,9 +16,9 @@ import { useConfirm } from '@/admin/components/ui/confirm.js';
 import { useAuth } from '@/admin/context/auth.js';
 
 export type PluginUiIdentity = {
-    /** Access key, e.g. `seo`. */
-    name: string;
-    /** i18n namespace + permission anchor, e.g. `astromech-seo`. */
+    /** The plugin's derived namespace, e.g. `seo` — also its route segment. */
+    namespace: string;
+    /** i18n namespace + permission anchor. Same string as `namespace`. */
     permissionNamespace: string;
 };
 
@@ -52,8 +52,8 @@ export function useAstromechPlugin() {
     const { t } = useTranslation(identity.permissionNamespace);
 
     return {
-        plugin: identity.name,
-        sdk: (Astromech.plugins as Record<string, unknown>)[identity.name],
+        plugin: identity.namespace,
+        sdk: (Astromech.plugins as Record<string, unknown>)[identity.namespace],
         toast,
         modal: confirm,
         currentUser: user,

@@ -28,6 +28,7 @@
  * index op so a rebuilt table's fresh indexes are never redundantly touched.
  */
 
+import { MAX_IDENTIFIER_BYTES } from './identifiers.js';
 import type {
     Snapshot,
     SnapshotColumn,
@@ -249,6 +250,18 @@ export function diffSnapshots(prev: Snapshot | null, next: Snapshot): DiffResult
 
     const prevTables = prev?.tables ?? {};
     const nextTables = next.tables;
+
+    // Table names are never capped or hashed. Unlike a synthesized index name,
+    // a table name is something a developer types and reads, so overflowing
+    // the identifier budget fails loudly here rather than being mangled.
+    for (const name of Object.keys(nextTables)) {
+        if (name.length > MAX_IDENTIFIER_BYTES) {
+            errors.push(
+                `table name "${name}" is ${name.length} bytes — over the ${MAX_IDENTIFIER_BYTES}-byte ` +
+                    `identifier limit. Table names are never truncated; shorten it.`
+            );
+        }
+    }
 
     const indexNameCounts = new Map<string, number>();
     for (const table of Object.values(nextTables)) {

@@ -1,18 +1,22 @@
 /**
- * `astromech plugin:purge <alias>`
+ * `astromech plugin:purge <package>`
  *
  * Removes every trace of an uninstalled plugin from the app's database: its
- * `plugin_<alias>_*` tables, its `plugin_<alias>_*` rows in `kysely_migration`,
- * and its `_astromech_plugins` tracking row. Destructive and irreversible — the
- * plugin must already be gone from `astromech.config.ts`, otherwise the next
- * boot would simply recreate everything this dropped.
+ * `plugin_<namespace>_*` tables, its `plugin_<namespace>_*` rows in
+ * `kysely_migration`, and its `_astromech_plugins` tracking row. Destructive and
+ * irreversible — the plugin must already be gone from `astromech.config.ts`,
+ * otherwise the next boot would simply recreate everything this dropped.
+ *
+ * Takes the package name (`@astromech/redirects`), not the namespace: at a
+ * destructive call site the canonical identifier is the unambiguous one, and
+ * the namespace is derived from it here.
  */
 
 import { defineCommand } from 'citty';
 import { sql, type Kysely } from 'kysely';
 import { loadConfig, loadRawConfig } from '../config.js';
 import { getDb } from '@/database/registry.js';
-import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity.js';
+import { pluginNamespace } from '@/plugins/runtime/plugin-identity.js';
 import type { DB } from '@/database/types.js';
 
 export type PurgeResult = {
@@ -25,15 +29,15 @@ export type PurgeResult = {
 };
 
 /**
- * The `plugin_<alias>_%` LIKE pattern, with every literal character escaped.
+ * The `plugin_<namespace>_%` LIKE pattern, with every literal character escaped.
  *
  * `_` is a single-character wildcard in SQL LIKE, so the two SEPARATOR
- * underscores must be escaped too, not just any inside the alias: an unescaped
- * `plugin_backup_%` also matches `plugin_backups_runs`, and purging `backup`
- * would irreversibly drop a neighbouring plugin's tables.
+ * underscores must be escaped too, not just any inside the namespace: an
+ * unescaped `plugin_backup_%` also matches `plugin_backups_runs`, and purging
+ * `backup` would irreversibly drop a neighbouring plugin's tables.
  */
-function likePrefix(alias: string): string {
-    const escaped = alias.replace(/[\\%_]/g, '\\$&');
+function likePrefix(namespace: string): string {
+    const escaped = namespace.replace(/[\\%_]/g, '\\$&');
     return `plugin\\_${escaped}\\_%`;
 }
 
@@ -45,8 +49,9 @@ function affected(result: { numAffectedRows?: bigint }): number {
  * The purge itself, DB-in/report-out so it can be driven from a test without
  * citty. Assumes the caller has already checked the plugin is uninstalled.
  */
-export async function purgePlugin(db: Kysely<DB>, alias: string): Promise<PurgeResult> {
-    const pattern = likePrefix(alias);
+export async function purgePlugin(db: Kysely<DB>, pkg: string): Promise<PurgeResult> {
+    const namespace = pluginNamespace(pkg);
+    const pattern = likePrefix(namespace);
 
     // The shared handle runs `CamelCasePlugin`, which snake_cases every
     // identifier node — including the `sql.table()` name we read back out of
@@ -71,7 +76,7 @@ export async function purgePlugin(db: Kysely<DB>, alias: string): Promise<PurgeR
     `.execute(raw);
 
     const tracked = await sql`
-        delete from _astromech_plugins where alias = ${alias}
+        delete from _astromech_plugins where package = ${pkg}
     `.execute(raw);
 
     return {
@@ -87,31 +92,35 @@ export default defineCommand({
         description: "Drop an uninstalled plugin's tables, migrations and tracking row",
     },
     args: {
-        alias: { type: 'positional', required: true, description: 'Plugin alias' },
+        package: {
+            type: 'positional',
+            required: true,
+            description: 'Plugin package name, e.g. @astromech/redirects',
+        },
         config: { type: 'string', description: 'Path to astromech.config.ts' },
     },
     async run({ args }) {
-        const alias = args.alias;
+        const pkg = args.package;
 
         // `resolveConfig` strips `plugins`, so the still-installed guard reads the
         // raw config; `loadConfig` is still what initialises the DB.
         const rawConfig = await loadRawConfig(args.config);
         const installed = (rawConfig.plugins ?? []).some(
-            (plugin) => resolvePluginIdentity(plugin).name === alias
+            (plugin) => plugin.package === pkg
         );
         if (installed) {
             console.error(
-                `[astromech plugin:purge] plugin "${alias}" is still listed in your config. ` +
+                `[astromech plugin:purge] plugin "${pkg}" is still listed in your config. ` +
                     'Remove the plugin from your config first, then re-run this command.'
             );
             process.exit(1);
         }
 
         await loadConfig(args.config);
-        const result = await purgePlugin(getDb(), alias);
+        const result = await purgePlugin(getDb(), pkg);
 
         if (result.tables.length === 0) {
-            console.log(`[astromech plugin:purge] no tables found for "${alias}"`);
+            console.log(`[astromech plugin:purge] no tables found for "${pkg}"`);
         } else {
             for (const table of result.tables) {
                 console.log(`[astromech plugin:purge] dropped ${table}`);
@@ -119,7 +128,7 @@ export default defineCommand({
         }
         console.log(
             `[astromech plugin:purge] removed ${result.migrations} migration row(s) ` +
-                `and ${result.tracked} tracking row(s) for "${alias}"`
+                `and ${result.tracked} tracking row(s) for "${pkg}"`
         );
     },
 });

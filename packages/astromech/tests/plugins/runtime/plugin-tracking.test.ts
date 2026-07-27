@@ -23,7 +23,7 @@ async function trackedRows(db: Db): Promise<PluginTrackingRow[]> {
     const rows = await db
         .selectFrom('_astromech_plugins')
         .selectAll()
-        .orderBy('alias')
+        .orderBy('package')
         .execute();
     return rows.map(
         (row) => decode('_astromech_plugins', row) as unknown as PluginTrackingRow
@@ -37,34 +37,36 @@ beforeEach(async () => {
 });
 
 describe('bootPlugins – plugin tracking', () => {
-    it('records one row per plugin with its alias and version', async () => {
+    it('records one row per plugin, keyed on package, with its namespace and version', async () => {
         await bootPlugins([
             { package: '@astromech/redirects', version: '1.2.3' },
             { package: '@astromech/backups', version: '0.4.0' },
         ]);
 
         const rows = await trackedRows(db);
-        expect(rows.map((row) => [row.alias, row.version])).toEqual([
-            ['backups', '0.4.0'],
-            ['redirects', '1.2.3'],
+        expect(rows.map((row) => [row.package, row.namespace, row.version])).toEqual([
+            ['@astromech/backups', 'backups', '0.4.0'],
+            ['@astromech/redirects', 'redirects', '1.2.3'],
         ]);
         expect(rows[0]?.installedAt).toBeInstanceOf(Date);
     });
 
-    it('records the alias override, not the package-derived name', async () => {
-        await bootPlugins([
-            { package: '@acme/redirects', alias: 'acme-redirects', version: '1.0.0' },
-        ]);
+    it('records the derived namespace, keeping a third-party scope', async () => {
+        await bootPlugins([{ package: '@acme/redirects', version: '1.0.0' }]);
 
         const rows = await trackedRows(db);
-        expect(rows.map((row) => row.alias)).toEqual(['acme-redirects']);
+        expect(rows.map((row) => [row.package, row.namespace])).toEqual([
+            ['@acme/redirects', 'acme_redirects'],
+        ]);
     });
 
     it('defaults the version to 0.0.0 when the plugin declares none', async () => {
         await bootPlugins([{ package: '@astromech/menus' }]);
 
         const rows = await trackedRows(db);
-        expect(rows.map((row) => [row.alias, row.version])).toEqual([['menus', '0.0.0']]);
+        expect(rows.map((row) => [row.namespace, row.version])).toEqual([
+            ['menus', '0.0.0'],
+        ]);
     });
 
     it('does not duplicate rows when the same plugin boots twice', async () => {
@@ -112,8 +114,8 @@ describe('bootPlugins – removed-plugin warning', () => {
         }
 
         expect(messages).toHaveLength(1);
-        expect(messages[0]).toContain('backups');
-        expect(messages[0]).toContain('plugin:purge backups');
+        expect(messages[0]).toContain('@astromech/backups');
+        expect(messages[0]).toContain('plugin:purge @astromech/backups');
     });
 
     it('does not warn while every tracked plugin is still configured', async () => {

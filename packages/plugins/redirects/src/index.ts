@@ -6,8 +6,8 @@
  */
 
 import { definePlugin, withDefaults } from 'astromech';
-import type { PluginDefinition, SdkInterface } from 'astromech';
-import { PACKAGE, VERSION, LABEL, ICON } from './manifest.js';
+import type { SdkInterface } from 'astromech';
+import { plugin } from './plugin.js';
 import type { RedirectsOptions } from './types.js';
 import { migrationProvider } from '../migrations/index.js';
 import { redirectEntryType } from './entries/redirect.js';
@@ -29,25 +29,16 @@ const DEFAULT_OPTIONS: Required<RedirectsOptions> = {
     generateOnSlugChange: true,
 };
 
-export const redirects = definePlugin<RedirectsOptions>((options) => {
+export const redirects = definePlugin<RedirectsOptions>(plugin, (options) => {
     const { generateOnSlugChange } = withDefaults(DEFAULT_OPTIONS, options);
 
-    const definition: PluginDefinition = {
-        package: PACKAGE,
-        version: VERSION,
-        label: LABEL,
-        icon: ICON,
+    return {
         schema: [redirectsTable],
         migrations: migrationProvider,
         entries: [redirectEntryType],
         sdk: redirectsSdk,
+        ...(generateOnSlugChange && { hooks: [slugChangeHook] }),
     };
-
-    if (generateOnSlugChange) {
-        definition.hooks = [slugChangeHook];
-    }
-
-    return definition;
 });
 
 export default redirects;

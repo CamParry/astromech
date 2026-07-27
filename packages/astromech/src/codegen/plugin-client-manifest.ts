@@ -18,7 +18,7 @@ export function generatePluginClientManifest(plugins: PluginDefinition[]): strin
         const identity = resolvePluginIdentity(def);
         return (def.fields ?? []).map(
             (reg: PluginFieldTypeRegistration) =>
-                `\t${JSON.stringify(reg.type)}: { load: () => import(${JSON.stringify(reg.component)}), defaultValue: ${JSON.stringify(reg.defaultValue ?? null)}, plugin: ${JSON.stringify(identity.name)}, namespace: ${JSON.stringify(identity.permissionNamespace)} },`
+                `\t${JSON.stringify(reg.type)}: { load: () => import(${JSON.stringify(reg.component)}), defaultValue: ${JSON.stringify(reg.defaultValue ?? null)}, plugin: ${JSON.stringify(identity.namespace)}, namespace: ${JSON.stringify(identity.permissionNamespace)} },`
         );
     });
 
@@ -41,7 +41,7 @@ export function generatePluginClientManifest(plugins: PluginDefinition[]): strin
                 // the browser-side route resolves it via resolveLabel.
                 const labelRaw: string =
                     typeof page.label === 'string' ? page.label : page.label.$t;
-                return `\t${JSON.stringify(`${identity.name}${page.path}`)}: { load: () => import(${JSON.stringify(page.component)}), plugin: ${JSON.stringify(identity.name)}, permission: ${JSON.stringify(permission)}, label: ${JSON.stringify(labelRaw)} },`;
+                return `\t${JSON.stringify(`${identity.namespace}${page.path}`)}: { load: () => import(${JSON.stringify(page.component)}), plugin: ${JSON.stringify(identity.namespace)}, permission: ${JSON.stringify(permission)}, label: ${JSON.stringify(labelRaw)} },`;
             });
     });
 

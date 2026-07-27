@@ -1,5 +1,7 @@
 /**
- * Local plugin SDK namespace — `Astromech.plugins.<name>.<method>(input)`.
+ * Local plugin SDK namespace — `Astromech.plugins.<key>.<method>(input)`, where
+ * `<key>` is the plugin's SDK key (`acmeSeo`) or, equivalently, its namespace
+ * (`acme_seo`) — `getPluginIdentity` resolves either.
  *
  * Methods resolve against the runtime registry (populated at boot from the live
  * plugin definitions) and call the plugin's handler directly against the DB,
@@ -23,12 +25,14 @@ import {
 type MethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
 
 export const localPlugins: PluginSdkNamespace = new Proxy({} as PluginSdkNamespace, {
-    get(_target, nameProp): MethodMap | EntriesApi | undefined {
-        if (typeof nameProp !== 'string' || nameProp === 'then') return undefined;
-        const name = nameProp;
+    get(_target, keyProp): MethodMap | EntriesApi | undefined {
+        if (typeof keyProp !== 'string' || keyProp === 'then') return undefined;
         // Unknown plugin → undefined; a known plugin with no SDK methods still
-        // exposes its `entries` sub-API.
-        if (!getPluginIdentity(name)) return undefined;
+        // exposes its `entries` sub-API. The registry is keyed by namespace, so
+        // resolve the identity first — the caller may have used the SDK key.
+        const resolved = getPluginIdentity(keyProp);
+        if (!resolved) return undefined;
+        const name = resolved.namespace;
         const methods = getPluginSdkMethods().get(name) ?? {};
 
         return new Proxy({} as MethodMap, {
@@ -42,16 +46,11 @@ export const localPlugins: PluginSdkNamespace = new Proxy({} as PluginSdkNamespa
                 const method = methods[methodProp];
                 if (!method) return undefined;
 
-                return async (input?: unknown): Promise<unknown> => {
-                    const identity = getPluginIdentity(name);
-                    if (!identity) {
-                        throw new Error(`[Astromech] Unknown plugin "${name}".`);
-                    }
-                    return (method.handler as (i: unknown, c: PluginContext) => unknown)(
+                return async (input?: unknown): Promise<unknown> =>
+                    (method.handler as (i: unknown, c: PluginContext) => unknown)(
                         input,
-                        createPluginContext(identity, getCurrentUser())
+                        createPluginContext(resolved, getCurrentUser())
                     );
-                };
             },
         });
     },

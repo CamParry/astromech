@@ -2059,7 +2059,7 @@ async function seed(): Promise<void> {
     console.log('  Wrote globals settings (shared + en + fr)\n');
 
     // -------------------------------------------------------------------------
-    // Menus plugin settings (plugin:astromech-menus:/menus/<key>[:<locale>])
+    // Menus plugin settings (plugin:menus:/menus/<key>[:<locale>])
     // -------------------------------------------------------------------------
 
     // Shared base (non-translatable fields — items are translatable so kept per-locale)
@@ -2119,12 +2119,12 @@ async function seed(): Promise<void> {
         ],
     };
 
-    await upsertSetting('plugin:astromech-menus:/menus/main', menusShared);
-    await upsertSetting('plugin:astromech-menus:/menus/main:en', mainMenuEn);
-    await upsertSetting('plugin:astromech-menus:/menus/main:fr', mainMenuFr);
-    await upsertSetting('plugin:astromech-menus:/menus/footer', menusShared);
-    await upsertSetting('plugin:astromech-menus:/menus/footer:en', footerMenuEn);
-    await upsertSetting('plugin:astromech-menus:/menus/footer:fr', footerMenuFr);
+    await upsertSetting('plugin:menus:/menus/main', menusShared);
+    await upsertSetting('plugin:menus:/menus/main:en', mainMenuEn);
+    await upsertSetting('plugin:menus:/menus/main:fr', mainMenuFr);
+    await upsertSetting('plugin:menus:/menus/footer', menusShared);
+    await upsertSetting('plugin:menus:/menus/footer:en', footerMenuEn);
+    await upsertSetting('plugin:menus:/menus/footer:fr', footerMenuFr);
     console.log('  Wrote menus plugin settings (main + footer, en + fr)\n');
 
     // -------------------------------------------------------------------------

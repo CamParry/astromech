@@ -57,7 +57,11 @@ export function renderOpStatements(op: TableOp, dialect: SqlDialect): string[] {
             const tmpName = `__new_${op.table.name}`;
             const statements: string[] = [
                 'PRAGMA defer_foreign_keys = true',
-                renderCreateTable({ ...op.table, name: tmpName }),
+                // FK constraint names derive from the FINAL table name: they
+                // survive the RENAME below, so naming them after `__new_x`
+                // would leave a rebuilt table permanently out of parity with a
+                // freshly emitted one.
+                renderCreateTable({ ...op.table, name: tmpName }, op.table.name),
             ];
             if (op.copy.length > 0) {
                 const columns = op.copy.map((c) => `\`${c.column}\``).join(', ');

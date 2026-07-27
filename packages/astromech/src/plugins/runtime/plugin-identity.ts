@@ -1,48 +1,57 @@
 /**
  * Plugin identity derivation and validation.
  *
- * Identity = canonical `package` (stable, survives renames) + `name` (access
- * key on `Astromech.plugins.X`). The access key defaults to the last path
- * segment of the package and is overridable via `alias`. The
- * `permissionNamespace` is always the sanitised package and anchors
- * permission strings.
+ * `package` is the single canonical identifier a plugin declares. Every other
+ * representation — table prefix, permission namespace, i18n namespace, HTTP
+ * route segment, SDK key — derives from it mechanically. There is no declared
+ * name, no alias, and no site-level override: a plugin's physical table names
+ * are baked into its shipped migration SQL, so nothing an override could move
+ * at boot actually moves.
+ *
+ * npm is the uniqueness authority. The one lossy edge case (`@acme/seo` and
+ * unscoped `acme-seo` both deriving `acme_seo`) is caught by
+ * {@link assertNoPluginCollisions}.
  */
 
+import {
+    pluginNamespace,
+    pluginSdkKey,
+    type PluginNamespace,
+} from '@/utilities/plugin-namespace.js';
 import type {
     EntryTypeConfig,
     PluginDefinition,
     ResolvedPluginIdentity,
 } from '@/types/index.js';
 
-/** `@astromech/redirects` → `astromech-redirects` (lowercase, no `@`, `/`→`-`). */
-export function sanitisePackage(pkg: string): string {
-    return pkg.toLowerCase().replace(/@/g, '').replace(/\//g, '-');
-}
+/**
+ * The derivation itself lives in a pure leaf: `database/define-plugin-table`
+ * needs the same string — and the same literal type — to build a plugin's
+ * table prefix, and the database capability may not import the plugin runtime.
+ * Re-exported here because this module is the plugin-identity surface every
+ * other consumer (and `astromech/plugin-kit`) imports from.
+ */
+export { pluginNamespace, pluginSdkKey };
+export type { PluginNamespace };
 
-/** Last path segment: `@astromech/redirects` → `redirects`, `redirects` → `redirects`. */
-export function derivePluginName(pkg: string): string {
-    const segments = pkg.split('/');
-    return segments[segments.length - 1] ?? pkg;
-}
-
-/** Table-name prefix for a plugin's own tables: `plugin_{alias}_`. */
-export function pluginTablePrefix(alias: string): string {
-    return `plugin_${alias}_`;
+/** Table-name prefix for a plugin's own tables: `plugin_{namespace}_`. */
+export function pluginTablePrefix(namespace: string): string {
+    return `plugin_${namespace}_`;
 }
 
 /**
  * In-tree module-specifier root for a plugin's admin assets (page/field
- * components, locale bundles) — `@/plugins/{alias}`. When a plugin graduates to
- * its own package this becomes `{package}`, swapped here in one place rather
- * than at every asset site.
+ * components, locale bundles) — `@/plugins/{namespace}`. When a plugin
+ * graduates to its own package this becomes `{package}`, swapped here in one
+ * place rather than at every asset site.
  */
-export function pluginAssetRoot(alias: string): string {
-    return `@/plugins/${alias}`;
+export function pluginAssetRoot(namespace: string): string {
+    return `@/plugins/${namespace}`;
 }
 
-/** `redirects` → `Redirects`, `my-plugin` → `My Plugin`. Fallback admin label. */
-export function titleCaseAlias(alias: string): string {
-    return alias
+/** `redirects` → `Redirects`, `acme_seo` → `Acme Seo`. Fallback admin label. */
+export function titleCaseNamespace(namespace: string): string {
+    return namespace
         .split(/[-_]/)
         .filter(Boolean)
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -68,12 +77,12 @@ export function pluginEntryTypes(def: PluginDefinition): [string, EntryTypeConfi
 
 /** Compute the full identity for a single plugin definition. */
 export function resolvePluginIdentity(def: PluginDefinition): ResolvedPluginIdentity {
-    const name = def.alias ?? def.name ?? derivePluginName(def.package);
+    const namespace = pluginNamespace(def.package);
     const identity: ResolvedPluginIdentity = {
         package: def.package,
-        name,
-        alias: name,
-        permissionNamespace: sanitisePackage(def.package),
+        namespace,
+        sdkKey: pluginSdkKey(namespace),
+        permissionNamespace: namespace,
     };
     if (def.version !== undefined) {
         identity.version = def.version;
@@ -91,8 +100,11 @@ export function resolvePluginPermission(namespace: string, permission: string): 
 }
 
 /**
- * Throw a build error if two plugins resolve to the same access key. The user
- * resolves collisions by setting `alias` on one of them.
+ * Throw a build error if two plugins derive the same namespace — the one lossy
+ * case in the derivation (`@acme/seo` and unscoped `acme-seo`). There is no
+ * override: the two plugins would share a table prefix and a permission
+ * namespace, so this is the plugin authors' problem to resolve by renaming a
+ * package, not the site's.
  */
 export function assertNoPluginCollisions(
     defs: PluginDefinition[]
@@ -101,14 +113,16 @@ export function assertNoPluginCollisions(
     const seen = new Map<string, string>();
 
     for (const id of identities) {
-        const existing = seen.get(id.name);
+        const existing = seen.get(id.namespace);
         if (existing !== undefined) {
             throw new Error(
-                `Astromech plugin access-key collision: "${id.name}" is used by both ` +
-                    `"${existing}" and "${id.package}". Set \`alias\` on one of them to disambiguate.`
+                `Astromech plugin namespace collision: "${existing}" and "${id.package}" both ` +
+                    `derive the namespace "${id.namespace}", so they would share a table prefix ` +
+                    `and a permission namespace. A namespace is derived from the package name and ` +
+                    `cannot be overridden — one of the two packages has to be renamed by its author.`
             );
         }
-        seen.set(id.name, id.package);
+        seen.set(id.namespace, id.package);
     }
 
     return identities;

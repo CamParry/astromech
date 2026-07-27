@@ -7,7 +7,7 @@
 import type { AnyPluginSdkMethod, Entry, PluginContext } from 'astromech';
 import { defineServiceMethod } from 'astromech';
 import { resolveEntryUrl } from 'astromech/plugin-kit';
-import { menuBlobKey } from '../manifest.js';
+import { menuBlobKey } from '../plugin.js';
 import type { MenuConfig, MenuItem } from '../types.js';
 
 /** Raw stored node shape (with reserved underscore keys). */

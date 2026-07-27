@@ -28,7 +28,7 @@ describe('collectPluginSchemas', () => {
         ]);
         expect(collected).toHaveLength(1);
         expect(collected[0]).toMatchObject({
-            alias: 'analytics',
+            namespace: 'analytics',
             tableName: 'plugin_analytics_events',
         });
     });
@@ -61,13 +61,12 @@ describe('assertPluginTablePrefixes', () => {
         ).toThrow(/plugin_audit_/);
     });
 
-    it('uses the alias, not the package, for the prefix', () => {
+    it('uses the derived namespace, not the raw package, for the prefix', () => {
         expect(() =>
             assertPluginTablePrefixes([
                 def({
-                    package: '@astromech/redirects',
-                    alias: 'myredirects',
-                    schema: [table('plugin_myredirects_hits')],
+                    package: '@acme/redirects',
+                    schema: [table('plugin_acme_redirects_hits')],
                 }),
             ])
         ).not.toThrow();

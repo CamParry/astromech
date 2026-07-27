@@ -223,6 +223,19 @@ describe('diffSnapshots', () => {
         expect(result.errors[0]).toMatch(/dup_name/);
     });
 
+    it('a table name over the 63-byte identifier limit → error', () => {
+        const long = `widgets_${'x'.repeat(60)}`;
+        const result = diffSnapshots(null, snap(table(long, [col.id()])));
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toMatch(/63-byte/);
+    });
+
+    it('a table name at exactly 63 bytes is fine — table names are never capped', () => {
+        const exact = `w${'x'.repeat(62)}`;
+        const result = diffSnapshots(null, snap(table(exact, [col.id()])));
+        expect(result.errors).toEqual([]);
+    });
+
     it('a rebuilt table emits no separate index ops', () => {
         const prev = table('widgets', [col.id(), col.text('a')], {
             indexes: [index('idx_widgets_a', ['a'])],

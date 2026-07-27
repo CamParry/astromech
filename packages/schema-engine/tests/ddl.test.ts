@@ -9,6 +9,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+    foreignKeyName,
     renderColumnClause,
     renderCreateIndex,
     renderCreateTable,
@@ -97,12 +98,29 @@ describe('renderCreateTable', () => {
                 '    `created_at` text NOT NULL,',
                 "    `status` text DEFAULT 'a' NOT NULL CHECK (`status` IN ('a', 'b', 'c''d')),",
                 "    `note` text DEFAULT 'it''s',",
-                '    FOREIGN KEY (`parent_id`) REFERENCES `parent`(`id`) ON UPDATE no action ON DELETE cascade,',
-                '    FOREIGN KEY (`owner_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,',
-                '    FOREIGN KEY (`self_id`) REFERENCES `child`(`id`) ON UPDATE no action ON DELETE no action',
+                '    CONSTRAINT `child_parent_id_fkey` FOREIGN KEY (`parent_id`) REFERENCES `parent`(`id`) ON UPDATE no action ON DELETE cascade,',
+                '    CONSTRAINT `child_owner_id_fkey` FOREIGN KEY (`owner_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,',
+                '    CONSTRAINT `child_self_id_fkey` FOREIGN KEY (`self_id`) REFERENCES `child`(`id`) ON UPDATE no action ON DELETE no action',
                 ')',
             ].join('\n')
         );
+    });
+
+    it('names FK constraints after `constraintsFor` when given — the rebuild path', () => {
+        const rendered = renderCreateTable({ ...child, name: '__new_child' }, 'child');
+
+        expect(rendered).toContain('CREATE TABLE `__new_child` (');
+        expect(rendered).toContain('CONSTRAINT `child_parent_id_fkey`');
+        expect(rendered).not.toContain('__new_child_parent_id_fkey');
+    });
+
+    it('caps an over-long FK constraint name', () => {
+        const longName = `t_${'x'.repeat(70)}`;
+        const rendered = renderCreateTable({ ...child, name: longName });
+        const constraint = /CONSTRAINT `([^`]+)`/.exec(rendered)?.[1];
+
+        expect(constraint).toBe(foreignKeyName(longName, 'parent_id'));
+        expect(constraint).toHaveLength(63);
     });
 
     it('omits the FK block entirely when a table has no foreign keys', () => {

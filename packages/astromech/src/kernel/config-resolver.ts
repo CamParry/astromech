@@ -243,7 +243,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     const pluginEntries: Record<string, Record<string, ResolvedEntryTypeConfig>> = {};
     for (const plugin of plugins) {
         if (!plugin.entries) continue;
-        const name = resolvePluginIdentity(plugin).name;
+        const name = resolvePluginIdentity(plugin).namespace;
         const types: Record<string, ResolvedEntryTypeConfig> = {};
         for (const [type, cfg] of pluginEntryTypes(plugin)) {
             types[type] = resolveEntryTypeConfig(

@@ -62,12 +62,20 @@
             "name": "_astromech_plugins",
             "columns": [
                 {
-                    "key": "alias",
-                    "name": "alias",
+                    "key": "package",
+                    "name": "package",
                     "kind": "text",
                     "type": "text",
                     "notNull": true,
                     "primaryKey": true
+                },
+                {
+                    "key": "namespace",
+                    "name": "namespace",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
                 },
                 {
                     "key": "version",
@@ -87,7 +95,13 @@
                 }
             ],
             "fks": [],
-            "indexes": []
+            "indexes": [
+                {
+                    "name": "_astromech_plugins_namespace_unique",
+                    "columns": ["namespace"],
+                    "unique": true
+                }
+            ]
         },
         "entries": {
             "name": "entries",

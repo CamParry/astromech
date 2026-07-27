@@ -127,7 +127,7 @@ describe('registerPlugins indexing', () => {
 
         expect(getPluginSdkMethods().get('redirects')).toHaveProperty('lookup');
         expect(getPluginRawRoutes()).toHaveLength(1);
-        expect(getPluginRawRoutes()[0]?.identity.name).toBe('redirects');
+        expect(getPluginRawRoutes()[0]?.identity.namespace).toBe('redirects');
     });
 });
 

@@ -77,18 +77,17 @@ describe('resolveConfig pluginEntries', () => {
         expect(resolved.pluginEntries.redirects?.redirect?.titleField).toBe('title');
     });
 
-    it('keys pluginEntries by resolved plugin name (alias override)', () => {
+    it('keys pluginEntries by the derived namespace, scope and all', () => {
         const resolved = resolveConfig(
             baseConfig([
                 {
-                    package: '@astromech/redirects',
-                    alias: 'links',
+                    package: '@acme/redirects',
                     entries: [{ ...entryType('Redirect'), type: 'redirect' }],
                 },
             ])
         );
 
-        expect(resolved.pluginEntries.links?.redirect).toBeDefined();
+        expect(resolved.pluginEntries.acme_redirects?.redirect).toBeDefined();
         expect(resolved.pluginEntries.redirects).toBeUndefined();
     });
 

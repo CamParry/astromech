@@ -387,8 +387,8 @@ export type AdminConfig = {
     pages: ResolvedAdminPage[];
     /** Static plugin metadata for the admin shell (serializable only). */
     plugins: {
-        /** Access key (resolved identity name). */
-        name: string;
+        /** The plugin's derived namespace — URL segment and page-key prefix. */
+        namespace: string;
         /** Display name — sidebar group and page-title prefix. */
         label: string;
         /** Anchors permission strings and settings keys. */

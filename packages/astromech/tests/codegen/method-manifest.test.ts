@@ -325,26 +325,26 @@ describe('generateMethodManifest — plugin entries', () => {
     it('should set mount to the plugin permissionNamespace for plugin entries', () => {
         const { methods } = parseManifest();
         const m = findMethod(methods, 'entries.query', 'widget');
-        // @test/my-plugin → test-my-plugin
-        expect(m?.['mount']).toBe('test-my-plugin');
+        // @test/my-plugin → test_my_plugin
+        expect(m?.['mount']).toBe('test_my_plugin');
     });
 
     it('should set plugin field for plugin entry methods', () => {
         const { methods } = parseManifest();
         const m = findMethod(methods, 'entries.query', 'widget');
-        expect(m?.['plugin']).toBe('my-plugin');
+        expect(m?.['plugin']).toBe('test_my_plugin');
     });
 
     it('should set permission using pluginEntryPermission format', () => {
         const { methods } = parseManifest();
         const m = findMethod(methods, 'entries.create', 'widget');
-        expect(m?.['permission']).toBe('plugin:test-my-plugin:entry:widget:create');
+        expect(m?.['permission']).toBe('plugin:test_my_plugin:entry:widget:create');
     });
 
     it('should set permission using read action for entries.get on plugin entries', () => {
         const { methods } = parseManifest();
         const m = findMethod(methods, 'entries.get', 'widget');
-        expect(m?.['permission']).toBe('plugin:test-my-plugin:entry:widget:read');
+        expect(m?.['permission']).toBe('plugin:test_my_plugin:entry:widget:read');
     });
 
     it('should set contentSchema to null for plugin entries', () => {
@@ -359,71 +359,71 @@ describe('generateMethodManifest — plugin entries', () => {
 // ============================================================================
 
 describe('generateMethodManifest — plugin SDK methods', () => {
-    it('should emit plugins.my-plugin.doSomething with source plugin', () => {
+    it('should emit plugins.testMyPlugin.doSomething (SDK key) with source plugin', () => {
         const { methods } = parseManifest();
-        const m = findMethod(methods, 'plugins.my-plugin.doSomething');
+        const m = findMethod(methods, 'plugins.testMyPlugin.doSomething');
         expect(m).toBeDefined();
         expect(m?.['source']).toBe('plugin');
     });
 
     it('should set access to permission for object-form access', () => {
         const { methods } = parseManifest();
-        const m = findMethod(methods, 'plugins.my-plugin.doSomething');
+        const m = findMethod(methods, 'plugins.testMyPlugin.doSomething');
         expect(m?.['access']).toBe('permission');
     });
 
     it('should set permission string from object-form access', () => {
         const { methods } = parseManifest();
-        const m = findMethod(methods, 'plugins.my-plugin.doSomething');
+        const m = findMethod(methods, 'plugins.testMyPlugin.doSomething');
         expect(m?.['permission']).toBe('plugins:x:do');
     });
 
     it('should default mutates to true when not declared', () => {
         const { methods } = parseManifest();
-        const m = findMethod(methods, 'plugins.my-plugin.doSomething');
+        const m = findMethod(methods, 'plugins.testMyPlugin.doSomething');
         expect(m?.['mutates']).toBe(true);
     });
 
     it('should set effectDeclared to false when mutates is not declared', () => {
         const { methods } = parseManifest();
-        const m = findMethod(methods, 'plugins.my-plugin.doSomething');
+        const m = findMethod(methods, 'plugins.testMyPlugin.doSomething');
         expect(m?.['effectDeclared']).toBe(false);
     });
 
     it('should set access to public for string-form access', () => {
         const { methods } = parseManifest();
-        const m = findMethod(methods, 'plugins.my-plugin.readOnly');
+        const m = findMethod(methods, 'plugins.testMyPlugin.readOnly');
         expect(m?.['access']).toBe('public');
     });
 
     it('should set permission to null for public access', () => {
         const { methods } = parseManifest();
-        const m = findMethod(methods, 'plugins.my-plugin.readOnly');
+        const m = findMethod(methods, 'plugins.testMyPlugin.readOnly');
         expect(m?.['permission']).toBeNull();
     });
 
     it('should set mutates to false when explicitly declared', () => {
         const { methods } = parseManifest();
-        const m = findMethod(methods, 'plugins.my-plugin.readOnly');
+        const m = findMethod(methods, 'plugins.testMyPlugin.readOnly');
         expect(m?.['mutates']).toBe(false);
     });
 
     it('should set effectDeclared to true when mutates is explicitly declared', () => {
         const { methods } = parseManifest();
-        const m = findMethod(methods, 'plugins.my-plugin.readOnly');
+        const m = findMethod(methods, 'plugins.testMyPlugin.readOnly');
         expect(m?.['effectDeclared']).toBe(true);
     });
 
     it('should include the summary when declared', () => {
         const { methods } = parseManifest();
-        const m = findMethod(methods, 'plugins.my-plugin.doSomething');
+        const m = findMethod(methods, 'plugins.testMyPlugin.doSomething');
         expect(m?.['summary']).toBe('Do something.');
     });
 
     it('should plugin-scope a bare permission key to match route enforcement', () => {
         const { methods } = parseManifest();
-        const m = findMethod(methods, 'plugins.my-plugin.scoped');
-        // @test/my-plugin → permissionNamespace test-my-plugin; bare `manage` → plugin:test-my-plugin:manage
-        expect(m?.['permission']).toBe('plugin:test-my-plugin:manage');
+        const m = findMethod(methods, 'plugins.testMyPlugin.scoped');
+        // @test/my-plugin → permissionNamespace test_my_plugin; bare `manage` → plugin:test_my_plugin:manage
+        expect(m?.['permission']).toBe('plugin:test_my_plugin:manage');
     });
 });

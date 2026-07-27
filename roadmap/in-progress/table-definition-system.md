@@ -54,15 +54,15 @@ Scope = **our 9 tables only** (`roles, entries, entry_versions, entry_preview_to
 - [x] `purge` command + installed-plugin tracking (`_astromech_plugins`, CORE_TABLES 10)
 - [x] Port `@astromech/redirects` + `@astromech/backups` tables; **`drizzle-orm` fully removed**
 
-### Step 6 — Plugin identity rework _(DESIGN LOCKED 2026-07-27, UNBUILT)_
+### Step 6 — Plugin identity rework _(BUILT 2026-07-27)_
 
 Supersedes step 5's identity model. **Design spec:** `specs/plugin-identity.md`.
 
-- [ ] `package` becomes the single canonical identifier — derive namespace + SDK key; delete `alias`/`name` and the site-level override
-- [ ] Rename the schema factory `definePlugin` → `definePluginTable` (singular, takes the identity object) — resolves the two-exports-one-name collision
-- [ ] `manifest.ts` → one `plugin` identity object across all four plugin packages
-- [ ] Engine: index-name cap-and-hash above 63 bytes, explicit FK constraint names, generate-time table-name length error
-- [ ] Tracking keyed on `package` with UNIQUE on `namespace`; `plugin:purge` takes the package
+- [x] `package` becomes the single canonical identifier — derive namespace + SDK key; delete `alias`/`name` and the site-level override
+- [x] Rename the schema factory `definePlugin` → `definePluginTable` (singular, takes the identity object) — resolves the two-exports-one-name collision
+- [x] `manifest.ts` → one `plugin` identity object across all four plugin packages (+ the demo's `rating`)
+- [x] Engine: index-name cap-and-hash above 63 bytes, explicit FK constraint names, generate-time table-name length error
+- [x] Tracking keyed on `package` with UNIQUE on `namespace`; `plugin:purge` takes the package
 
 ## Open specifics (see spec §9)
 

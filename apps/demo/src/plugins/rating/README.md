@@ -15,7 +15,7 @@ the published package, so it imports from `astromech` and resolves assets via
 
 ```
 rating/
-  manifest.ts            identity (PACKAGE, VERSION, LABEL, ICON) + asset()/locales() helpers
+  plugin.ts              identity object (`plugin`) + asset()/locales() helpers
   types.ts               domain constants (RATING_FIELD_TYPE)
   index.ts               thin definePlugin() composing the surfaces below
   permissions/rating.ts  ratingPermissions bundle + permission declarations

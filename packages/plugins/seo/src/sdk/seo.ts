@@ -7,7 +7,7 @@
 import type { Entry, PluginContext } from 'astromech';
 import { defineServiceMethod } from 'astromech';
 import { resolveEntryPath } from 'astromech/plugin-kit';
-import { PERMISSION_NAMESPACE } from '../manifest.js';
+import { NAMESPACE } from '../plugin.js';
 import { SEO_FIELD_NAME } from '../types.js';
 import type {
     SeoOverview,
@@ -27,7 +27,7 @@ import { parseSeoMetaValue } from '../utilities/meta-value.js';
  * Settings page blob key for the SEO plugin. The settings page has
  * `path: '/settings'`, so the blob lives at `plugin:<ns>:/settings`.
  */
-const SEO_SETTINGS_KEY = `plugin:${PERMISSION_NAMESPACE}:/settings`;
+const SEO_SETTINGS_KEY = `plugin:${NAMESPACE}:/settings`;
 
 async function footprintEntries(
     ctx: PluginContext

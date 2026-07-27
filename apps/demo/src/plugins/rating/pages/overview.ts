@@ -5,7 +5,7 @@
  */
 
 import { defineAdminPage } from 'astromech';
-import { asset } from '../manifest.js';
+import { asset } from '../plugin.js';
 
 export const overviewPage = defineAdminPage({
     path: '/overview',
