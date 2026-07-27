@@ -80,4 +80,4 @@ Follow-ups from step 6's judgment calls.
 ## Deferred
 
 - Postgres driver → `additional-database-drivers.md`
-- Relationships / content-field data model → `populate-and-complex-field-data-model.md` + spec §8
+- Relationships / content-field data model → `planned/relationships-model.md` (supersedes spec §8's sketch)

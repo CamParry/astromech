@@ -48,9 +48,11 @@ These are distinct operations:
 
 ## Populate
 
-The mechanism for resolving relation fields when fetching entries. Pass `populate: ['fieldName']` in query options to include related entries or media inline on the response rather than returning bare IDs.
+The mechanism for resolving relationship fields when fetching entries. Pass `populate: ['fieldName']` in query options to include related entries inline on the response rather than returning bare IDs.
 
-Not to be confused with database-level joins — populate is resolved at the application layer via the relationships table.
+Not to be confused with database-level joins — populate is resolved at the application layer.
+
+> **As built:** only top-level `relationship` fields on single-type queries are populated, resolved via the `relationships` table one entry-field pair at a time. Media fields are **not** populated, and the populated value _replaces_ the ID in `fields`, so the read shape varies by call. All three are known problems — see `roadmap/planned/relationships-model.md`, which moves resolution onto the IDs already present in the field data.
 
 ---
 
@@ -110,11 +112,15 @@ These are different concepts that share a name. When speaking about the SPA exte
 
 ## Relation vs Relationship
 
-**Relation** — a field type (`"relation"`) on a collection that links an entry to one or more entries in another collection. Defined in `CollectionConfig`.
+**Relation** — a field type (`'relationship'`) on an entry type that links an entry to one or more entries (or users) in another type. Authored with `fields.relationship(name, { target, multiple })`.
 
-**Relationship** — the database record in the `relationships` table that backs a relation field. Stores source, target, field name, and position.
+**Relationship** — the row in the `relationships` table recording one source→target edge. Stores source, target, field name, and position.
 
-A single relation field definition can produce many relationship records.
+A single relation field definition can produce many relationship rows.
+
+> **Direction of travel:** today the same fact is stored twice — the IDs live in the entry's `fields` data _and_ are copied into the `relationships` table on write, with nothing reconciling the two. The agreed direction is that **field data is the source of truth and the `relationships` table becomes a derived, rebuildable index** used only for reverse lookup, filter-by-relation and delete-time integrity. See `roadmap/planned/relationships-model.md`.
+>
+> Note also that `col.reference()` in the descriptor layer means a real foreign key and is a **different** thing from a content relationship. Don't conflate them.
 
 ---
 
