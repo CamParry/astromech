@@ -1,6 +1,7 @@
 import React from 'react';
 import { Field } from '@base-ui/react/field';
 import { clsx } from 'clsx';
+import { useFieldControl } from '@/admin/components/fields/field-control-context';
 
 type InputProps = React.ComponentProps<'input'> & {
     error?: string;
@@ -16,7 +17,12 @@ export function Input({
     id,
     ...props
 }: InputProps): React.ReactElement {
-    const inputClass = clsx('am-input', error && 'am-input-error', className);
+    const { hasError, ariaProps } = useFieldControl();
+    const inputClass = clsx(
+        'am-input',
+        (error !== undefined || hasError) && 'am-input-error',
+        className
+    );
 
     if (label !== undefined || error !== undefined || hint !== undefined) {
         return (
@@ -44,7 +50,7 @@ export function Input({
         );
     }
 
-    return <input id={id} className={inputClass} {...props} />;
+    return <input id={id} className={inputClass} {...ariaProps} {...props} />;
 }
 
 export type { InputProps };

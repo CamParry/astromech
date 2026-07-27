@@ -1,20 +1,37 @@
 /**
- * In-memory test harness for the entry data layer.
+ * Test harness for the entry data layer.
  *
- * `createTestDb` spins up a libsql `:memory:` database, applies
- * `apps/demo/migrations`' full migration chain, and registers it via `setDb`
- * so SDK modules (which call `getDb()` per-op) hit it. Running the real
+ * `createTestDb` spins up a file-based libsql database in the OS temp dir,
+ * applies `apps/demo/migrations`' full migration chain, and registers it via
+ * `setDb` so SDK modules (which call `getDb()` per-op) hit it. Running the real
  * migration chain (rather than a throwaway test-only schema) means every
  * harness-based test also exercises the generated `migrationProvider`.
  * `setupTestConfig` resolves a small but representative config and pushes it
  * onto the CLI config shim, which the vitest alias maps
  * `virtual:astromech/config` onto.
  *
+ * Why file-based rather than `:memory:`?
+ * libsql's `client.transaction()` hands the underlying SQLite connection to the
+ * transaction and nulls out the client's stored reference. The client lazily
+ * creates a NEW connection on next use: for `:memory:` that new connection is a
+ * blank database, so any read after a storage transaction throws "no such
+ * table"; for a file path it reopens the same file and sees the committed data.
+ * Entry `create`, `mergeStaged` and the bulk operations all run in transactions,
+ * so a `:memory:` default would poison most of the suite. File-backed temp DBs
+ * keep transaction semantics correct and stay effectively as fast for the small
+ * migration set here.
+ *
+ * Each `createTestDb()` call uses a unique file name so `beforeEach` calls stay
+ * fully isolated even when tests run in a single worker.
+ *
  * FK enforcement: libsql enables `PRAGMA foreign_keys` by default. Entry
  * inserts never set `createdBy`/`updatedBy` (both nullable), so no user row is
  * required for the entry flows — `createTestUser` is provided for completeness.
  */
 
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { createClient } from '@libsql/client';
 import { Kysely, CamelCasePlugin } from 'kysely';
 import type { Insertable, MigrationProvider } from 'kysely';
@@ -86,19 +103,25 @@ async function buildTestDb(url: string): Promise<Db> {
     return db;
 }
 
+// Temp dir for test databases — created once per worker process and removed by
+// the exit handler below. The worker PID in the name avoids collisions when
+// several workers run in parallel.
+const TEST_DB_DIR = fs.mkdtempSync(
+    path.join(os.tmpdir(), `astromech-test-${process.pid}-`)
+);
+process.on('exit', () => fs.rmSync(TEST_DB_DIR, { recursive: true, force: true }));
+
 /**
- * Create a fresh in-memory database, migrate it, and register it globally.
+ * Create a fresh temp-file database, migrate it, and register it globally.
  * Returns the Kysely handle (already the active `getDb()` instance).
  */
 export async function createTestDb(): Promise<Db> {
-    return buildTestDb(':memory:');
+    return buildTestDb(`file:${path.join(TEST_DB_DIR, `${crypto.randomUUID()}.db`)}`);
 }
 
 /**
- * Like {@link createTestDb} but against a temp FILE db (e.g. `file:/tmp/x.db`).
- * Tests that read results committed inside a storage transaction must use this:
- * on a `:memory:` db a committed transaction poisons the base connection
- * (post-commit reads throw "no such table").
+ * Like {@link createTestDb} but against a caller-named file db (e.g.
+ * `file:/tmp/x.db`), for tests that want to inspect or clean up the file.
  */
 export async function createFileTestDb(url: string): Promise<Db> {
     return buildTestDb(url);

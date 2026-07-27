@@ -1,5 +1,6 @@
 import React from 'react';
 import { Switch } from '@base-ui/react/switch';
+import { useFieldControl } from '@/admin/components/fields/field-control-context';
 
 type ToggleProps = {
     checked?: boolean;
@@ -20,6 +21,7 @@ export function Toggle({
     name,
     id,
 }: ToggleProps): React.ReactElement {
+    const { ariaProps } = useFieldControl();
     return (
         <label className="am-toggle">
             <Switch.Root
@@ -30,6 +32,7 @@ export function Toggle({
                 disabled={disabled}
                 name={name}
                 id={id}
+                {...ariaProps}
             >
                 <Switch.Thumb className="am-toggle-thumb" />
             </Switch.Root>

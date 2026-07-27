@@ -7,7 +7,7 @@
  * containers (`group`/`repeater`/`blocks`) introduce a nested data key.
  */
 
-import type { Entry } from './domain.js';
+import type { User } from './domain.js';
 
 // ============================================================================
 // Field Types
@@ -75,8 +75,16 @@ export type BlockDefinition = {
     fields: FieldDefinition[];
 };
 
+/**
+ * A declarative validation rule on a field.
+ *
+ * Rules are serializable (so they can be mirrored client-side later) — except
+ * `custom`, which is an imperative server-only validator. `{ required: true }`
+ * is intentionally absent: required-ness is the `FieldDefinition.required` flag,
+ * declared in exactly one place. `{ unique: true }` resolves to
+ * `ctx.reads.isUnique(field, value)` in the pipeline.
+ */
 export type ValidationRule =
-    | { required: true }
     | { minLength: number }
     | { maxLength: number }
     | { min: number }
@@ -84,7 +92,88 @@ export type ValidationRule =
     | { pattern: string; message?: string }
     | { email: true }
     | { url: true }
-    | { custom: (value: unknown, entry: Entry) => string | null };
+    | { enum: string[] }
+    | { unique: true }
+    | { custom: FieldValidator };
+
+// ============================================================================
+// Validation contract (server-side field pipeline)
+//
+// The descriptor + pipeline implementation lives in `fields/`; these are the
+// shared types. See specs/field-system-and-validation.md §4.
+// ============================================================================
+
+/** Per-field validation errors — the `422 details.fields` wire shape. */
+export type FieldErrors = Record<string, string[]>;
+
+/**
+ * Scoped read access handed to a field validator for async checks (uniqueness,
+ * references). Exposes the sanctioned read paths for the field's host domain
+ * (built on the entry-access port for entries; per-domain reads elsewhere). The
+ * common uniqueness case is the one-line `isUnique` helper. Concrete read paths
+ * are added in P2 alongside the pipeline.
+ */
+export type ScopedReads = {
+    /** True when no other record in the host scope holds `value` for `field`. */
+    isUnique: (field: FieldDefinition, value: unknown) => Promise<boolean>;
+};
+
+/**
+ * Context passed to a `FieldValidator`. Host-generic — works for entries, media,
+ * users, and settings, not just entries. Cross-field rules read siblings off
+ * `values`; the host record is available raw on `host.record`.
+ */
+export type FieldValidationContext = {
+    /** The field's own value. */
+    value: unknown;
+    /** Sibling field values, for cross-field rules. */
+    values: Record<string, unknown>;
+    field: FieldDefinition;
+    /** Nested path to the field, e.g. `['address', '0', 'postcode']`. */
+    path: string[];
+    operation: 'create' | 'update';
+    host: { kind: 'entry' | 'media' | 'user' | 'setting'; record: unknown };
+    user: User | null;
+    /** Scoped read access for async checks. */
+    reads: ScopedReads;
+};
+
+/**
+ * A field validator. Async-only (no sync/async split): uniqueness and other
+ * read-backed checks are just custom validators handed a reads handle. Returns
+ * `true` when valid, or an error message string.
+ */
+export type FieldValidator = (ctx: FieldValidationContext) => Promise<true | string>;
+
+/**
+ * The single source of truth for a field type. Core and plugin field types
+ * register the same descriptor shape; the pipeline dispatches to it. Replaces
+ * the ~6 drifting surfaces (union, builder, component registry, type-gen switch,
+ * defaults, coercion) with one record per type. Populated in P1.
+ */
+export type FieldTypeDescriptor = {
+    type: string;
+    /** The builder factory — `type(name, options?)` returning a `FieldDefinition`. */
+    // `any` — heterogeneous factory option types; a registry can't hold a single precise signature.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    build: (name: string, options?: any) => FieldDefinition;
+    /** Import specifier for the admin (browser) component. */
+    component: string;
+    /** TS type emitted by codegen for this field, or `null` to omit. */
+    tsType: (field: FieldDefinition, shape: 'full' | 'public') => string | null;
+    /** TS type for the relation-expanded form, when the field is a relation. */
+    tsRelationType?: (field: FieldDefinition) => string | null;
+    defaultValue?: unknown;
+    /** Storage normalization applied before validation. */
+    coerce?: (value: unknown) => unknown;
+    /** Type-intrinsic validation rule (plugin `serverValidate` fills this slot). */
+    validate?: FieldValidator;
+    /** Reserved instance keys this type owns, e.g. `['_id', '_disabled', '_title']`. */
+    reservedKeys?: string[];
+    isLayout?: boolean;
+    isContainer?: boolean;
+    isRelation?: boolean;
+};
 
 /**
  * Allow-list for rich-text field features.
@@ -194,4 +283,6 @@ export type BaseFieldProps = {
     required?: boolean;
     onChange: (name: string, value: unknown) => void;
     disabled?: boolean;
+    /** Server (or local) validation errors for this field; rendered by `FieldWrapper`. */
+    error?: string[];
 };

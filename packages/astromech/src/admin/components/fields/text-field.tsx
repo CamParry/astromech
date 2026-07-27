@@ -3,7 +3,14 @@ import { formatValueForInput } from '@/fields/formatters.js';
 import { Input } from '@/admin/components/ui/input';
 import { FieldCount } from './field-count';
 
-export function TextField({ name, value, field, required, onChange }: BaseFieldProps) {
+export function TextField({
+    name,
+    value,
+    field,
+    required,
+    onChange,
+    disabled,
+}: BaseFieldProps) {
     const stringValue =
         typeof value === 'string' ? value : formatValueForInput(value, 'text');
 
@@ -15,6 +22,7 @@ export function TextField({ name, value, field, required, onChange }: BaseFieldP
                 value={stringValue}
                 required={required}
                 maxLength={field.maxLength}
+                disabled={disabled}
                 onChange={(e) => onChange(name, e.target.value)}
             />
             {field.count && <FieldCount value={stringValue} count={field.count} />}

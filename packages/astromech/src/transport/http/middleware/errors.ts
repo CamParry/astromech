@@ -121,6 +121,11 @@ export const onError: ErrorHandler = (err, c) => {
     }
 
     if (err instanceof ValidationError) {
+        // Field-pipeline errors arrive pre-shaped; envelope (Zod) errors derive
+        // their per-field map from the issues.
+        if (err.fields) {
+            return validationFailed(c, err.fields);
+        }
         const fields: Record<string, string[]> = {};
         for (const issue of err.issues) {
             const key = issue.path.join('.') || '_';

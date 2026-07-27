@@ -1,5 +1,6 @@
 import React from 'react';
 import { clsx } from 'clsx';
+import { useFieldControl } from '@/admin/components/fields/field-control-context';
 
 type TextareaProps = React.ComponentProps<'textarea'> & {
     error?: string;
@@ -15,8 +16,15 @@ export function Textarea({
     id,
     ...props
 }: TextareaProps): React.ReactElement {
-    const textareaClass = clsx('am-textarea', error && 'am-textarea-error', className);
-    const textareaEl = <textarea id={id} className={textareaClass} {...props} />;
+    const { hasError, ariaProps } = useFieldControl();
+    const textareaClass = clsx(
+        'am-textarea',
+        (error !== undefined || hasError) && 'am-textarea-error',
+        className
+    );
+    const textareaEl = (
+        <textarea id={id} className={textareaClass} {...ariaProps} {...props} />
+    );
 
     if (label !== undefined || error !== undefined || hint !== undefined) {
         return (

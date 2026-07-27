@@ -18,6 +18,12 @@ import { deepEqual } from '../internal/diff.js';
 import { runBulk } from '../internal/bulk.js';
 import { entryHooksActive, entrySnapshot } from '../internal/hooks.js';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility.js';
+import { createEntryScopedReads } from '../reads.js';
+import { resolveEntryType } from '../type-registry.js';
+import { flattenEntryFields } from '@/fields/helpers.js';
+import { processFields } from '@/fields/pipeline.js';
+import { ValidationError } from '@/errors/index.js';
+import config from 'virtual:astromech/config';
 import type { EntryStorage, StorageDb } from '../storage/types.js';
 import type { Entry, EntryUpdateData, JsonObject } from '@/types/index.js';
 
@@ -31,6 +37,31 @@ export async function updateOne(
 ): Promise<Entry> {
     const validatedData = validate(updateEntrySchemaFor(getTitleField(type)), data);
     const currentEntry = await loadAndAssertType(storage, type, id);
+
+    if (validatedData.fields !== undefined) {
+        const entryTypeConfig = resolveEntryType(config, type);
+        const fieldDefs = entryTypeConfig
+            ? flattenEntryFields(entryTypeConfig.fields)
+            : [];
+        const processed = await processFields(
+            validatedData.fields as Record<string, unknown>,
+            fieldDefs,
+            {
+                operation: 'update',
+                host: { kind: 'entry', record: currentEntry },
+                user: getCurrentUser(),
+                reads: createEntryScopedReads(storage, {
+                    type,
+                    locale: currentEntry.locale,
+                    excludeId: id,
+                }),
+            }
+        );
+        if (Object.keys(processed.errors).length > 0) {
+            throw ValidationError.fromFieldErrors(processed.errors);
+        }
+        validatedData.fields = processed.values as JsonObject;
+    }
 
     if (isVersioningEnabled(type) && storage.versions) {
         const currentRelations = await buildRelationsSnapshot(id, db);

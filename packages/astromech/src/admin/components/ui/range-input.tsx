@@ -7,6 +7,7 @@ export type RangeInputProps = {
     max?: number;
     step?: number;
     'aria-label'?: string;
+    disabled?: boolean;
 };
 
 export function RangeInput({
@@ -16,6 +17,7 @@ export function RangeInput({
     max = 100,
     step = 1,
     'aria-label': ariaLabel,
+    disabled,
 }: RangeInputProps) {
     return (
         <div className="am-slider-range">
@@ -27,6 +29,7 @@ export function RangeInput({
                 min={min}
                 max={max}
                 step={step}
+                {...(disabled !== undefined && { disabled })}
                 {...(ariaLabel !== undefined && { 'aria-label': ariaLabel })}
                 onValueChange={(v) => {
                     const next = Array.isArray(v) ? v[0] : v;

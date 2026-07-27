@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useFieldControl } from '@/admin/components/fields/field-control-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -64,6 +65,7 @@ export function MediaField({
     onChange,
     disabled,
 }: BaseFieldProps) {
+    const { hasError } = useFieldControl();
     const { t } = useTranslation();
     const multiple = field.multiple === true;
     const accept = typeof field.accept === 'string' ? field.accept : undefined;
@@ -313,7 +315,7 @@ export function MediaField({
                 </button>
             ) : null}
 
-            {error && <p className="am-media-picker-error">{error}</p>}
+            {!hasError && error && <p className="am-field-error">{error}</p>}
 
             <input
                 type="hidden"

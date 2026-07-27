@@ -8,13 +8,14 @@
  * create and edit can use different endpoints while sharing everything else.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useMutation } from '@tanstack/react-query';
 import type { UseMutationResult } from '@tanstack/react-query';
 import { useHotkeys } from './index.js';
 import { useToast } from '../components/ui/index.js';
 import type { Entry, EntryStatus, JsonObject } from '../../types/index.js';
+import { AstromechApiError } from '../../transport/http/client/index.js';
 
 // ============================================================================
 // Types
@@ -78,6 +79,7 @@ export function useEntryForm({
     readOnly = false,
 }: UseEntryFormOptions) {
     const { toast } = useToast();
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
     const form = useForm({
         defaultValues: {
@@ -113,6 +115,21 @@ export function useEntryForm({
         return payload;
     }
 
+    function handleFieldError(err: Error, fallback: string): void {
+        if (err instanceof AstromechApiError && err.status === 422) {
+            const fields = (err.details?.fields ?? {}) as Record<string, string[]>;
+            if (Object.keys(fields).length > 0) {
+                setFieldErrors(fields);
+                toast({ message: 'Please fix the highlighted fields', variant: 'error' });
+                return;
+            }
+        }
+        toast({
+            message: err instanceof Error ? err.message : fallback,
+            variant: 'error',
+        });
+    }
+
     const saveMutation: UseMutationResult<Entry, Error, EntryPayload> = useMutation<
         Entry,
         Error,
@@ -125,10 +142,7 @@ export function useEntryForm({
             onSuccess?.(entry);
         },
         onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : 'Save failed',
-                variant: 'error',
-            });
+            handleFieldError(err, 'Save failed');
         },
     });
 
@@ -143,20 +157,19 @@ export function useEntryForm({
             onSuccess?.(entry);
         },
         onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : 'Publish failed',
-                variant: 'error',
-            });
+            handleFieldError(err, 'Publish failed');
         },
     });
 
     function handleSave(): void {
         if (readOnly) return;
+        setFieldErrors({});
         void form.handleSubmit();
     }
 
     function handlePublish(): void {
         if (readOnly) return;
+        setFieldErrors({});
         publishMutation.mutate(buildPayload(form.state.values, 'published'));
     }
 
@@ -167,6 +180,7 @@ export function useEntryForm({
 
     useHotkeys('mod+s', () => {
         if (readOnly || isPendingRef.current) return;
+        setFieldErrors({});
         void form.handleSubmit();
     });
 
@@ -189,6 +203,7 @@ export function useEntryForm({
         handlePublish,
         buildPayload,
         readOnly,
+        fieldErrors,
     };
 }
 

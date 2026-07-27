@@ -1,7 +1,7 @@
 import type { BaseFieldProps } from '@/types/index.js';
 import { Toggle } from '@/admin/components/ui/toggle.js';
 
-export function BooleanField({ name, value, onChange }: BaseFieldProps) {
+export function BooleanField({ name, value, onChange, disabled }: BaseFieldProps) {
     const checked = value === true || value === 'true';
     return (
         <Toggle
@@ -9,6 +9,7 @@ export function BooleanField({ name, value, onChange }: BaseFieldProps) {
             name={name}
             checked={checked}
             onChange={(c) => onChange(name, c)}
+            {...(disabled !== undefined ? { disabled } : {})}
         />
     );
 }

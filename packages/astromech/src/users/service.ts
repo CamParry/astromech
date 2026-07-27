@@ -14,6 +14,11 @@ import type {
 } from '@/types/index.js';
 import { ValidationError } from '@/errors/validation.js';
 import { createUserSchema, updateUserSchema } from './schema.js';
+import config from 'virtual:astromech/config';
+import { processFields } from '@/fields/pipeline.js';
+import { flattenFieldNodes } from '@/fields/helpers.js';
+import { scopedReadsFromRecords } from '@/fields/scoped-reads.js';
+import { getCurrentUser } from '@/context/index.js';
 
 function validate<T>(schema: z.ZodType<T>, data: unknown): T {
     try {
@@ -132,6 +137,27 @@ export const usersApi = {
         roleSlug?: string;
     }): Promise<User> {
         const validated = validate(createUserSchema, data);
+
+        const fieldDefs = flattenFieldNodes(config.users?.fields ?? []);
+        const processedFields = await processFields(
+            (validated.fields ?? {}) as Record<string, unknown>,
+            fieldDefs,
+            {
+                operation: 'create',
+                host: { kind: 'user', record: null },
+                user: getCurrentUser(),
+                reads: scopedReadsFromRecords({
+                    load: async () => (await usersApi.query({ limit: 'all' })).data,
+                    getId: (r) => r.id,
+                    getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
+                }),
+            }
+        );
+        if (Object.keys(processedFields.errors).length > 0) {
+            throw ValidationError.fromFieldErrors(processedFields.errors);
+        }
+        const fields = processedFields.values as JsonObject;
+
         const db = getDb();
         const created = await db
             .insertInto('users')
@@ -139,6 +165,7 @@ export const usersApi = {
                 encode('users', {
                     email: validated.email,
                     name: validated.name,
+                    ...(Object.keys(fields).length > 0 && { fields }),
                     ...(validated.roleSlug !== undefined && {
                         roleSlug: validated.roleSlug,
                     }),
@@ -164,6 +191,31 @@ export const usersApi = {
         }>
     ): Promise<User> {
         const validatedData = validate(updateUserSchema, data);
+
+        if (validatedData.fields !== undefined) {
+            const current = await usersApi.get(id);
+            const fieldDefs = flattenFieldNodes(config.users?.fields ?? []);
+            const processed = await processFields(
+                validatedData.fields as Record<string, unknown>,
+                fieldDefs,
+                {
+                    operation: 'update',
+                    host: { kind: 'user', record: current },
+                    user: getCurrentUser(),
+                    reads: scopedReadsFromRecords({
+                        load: async () => (await usersApi.query({ limit: 'all' })).data,
+                        getId: (r) => r.id,
+                        getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
+                        excludeId: id,
+                    }),
+                }
+            );
+            if (Object.keys(processed.errors).length > 0) {
+                throw ValidationError.fromFieldErrors(processed.errors);
+            }
+            validatedData.fields = processed.values as JsonObject;
+        }
+
         const db = getDb();
         const updated = await db
             .updateTable('users')

@@ -220,8 +220,10 @@ type RefConfig<O extends RefOpts> = {
 // ============================================================================
 
 const passthrough = (v: unknown): unknown => v;
-const jsonSerialize = (v: unknown): unknown =>
-    typeof v === 'string' ? v : JSON.stringify(v);
+// Always stringify: a JSON column whose value *is* a string (`settings.set(k,
+// 'a-string')`) must still round-trip, and `jsonParse` unconditionally parses.
+// Passing strings through unchanged made that case throw on read.
+const jsonSerialize = (v: unknown): unknown => JSON.stringify(v);
 const jsonParse = (v: unknown): unknown => (typeof v === 'string' ? JSON.parse(v) : v);
 const boolSerialize = (v: unknown): unknown => (v ? 1 : 0);
 const boolParse = (v: unknown): unknown => Number(v) === 1;

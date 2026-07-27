@@ -17,7 +17,7 @@ import type {
     EntryTypeConfig,
     ResolvedConfig,
 } from './config.js';
-import type { FieldDefinition } from './fields.js';
+import type { FieldDefinition, FieldValidator } from './fields.js';
 import type { User, NotifyInput } from './domain.js';
 import type { PluginHooks } from './hooks.js';
 import type { AstromechClient } from './sdk.js';
@@ -191,7 +191,8 @@ export type PluginAdmin = {
  * `component` import specifier by the code-gen virtual module) must default-
  * export a component taking the standard field props (`BaseFieldProps`), and
  * may export `validate(value, field)` returning an error message or
- * `undefined`.
+ * `undefined`. That `validate` runs only in the browser; for server-side
+ * enforcement supply `serverValidate` below.
  */
 export type PluginFieldTypeRegistration = {
     /** Field type key, e.g. `seo-preview`. Colliding with a core type or another plugin is a build error. */
@@ -206,6 +207,13 @@ export type PluginFieldTypeRegistration = {
      * preview) so it is omitted from the generated type entirely.
      */
     typeGen?: (field: FieldDefinition) => string | null;
+    /**
+     * Server-side validator — the type-intrinsic rule for this custom field,
+     * enforced by the field pipeline on every mutation (not just the browser).
+     * Async; returns `true` when valid or an error message string. Wired into
+     * the pipeline in P2/P3.
+     */
+    serverValidate?: FieldValidator;
 };
 
 // ============================================================================

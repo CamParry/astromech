@@ -8,6 +8,13 @@ import { getDefaultLocale, getTitleField } from '../internal/type-config.js';
 import { saveRelationships } from '../internal/relationships.js';
 import { asEntry } from '../internal/records.js';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility.js';
+import { createEntryScopedReads } from '../reads.js';
+import { resolveEntryType } from '../type-registry.js';
+import { flattenEntryFields } from '@/fields/helpers.js';
+import { processFields } from '@/fields/pipeline.js';
+import { ValidationError } from '@/errors/index.js';
+import config from 'virtual:astromech/config';
+import type { EntryStorage, StorageDb } from '../storage/types.js';
 import type { Entry, EntryStatus, JsonObject } from '@/types/index.js';
 
 export async function create(params: {
@@ -47,6 +54,24 @@ export async function create(params: {
     const locale = params.locale ?? getDefaultLocale();
     const localeGroup = params.localeGroup ?? crypto.randomUUID();
 
+    const user = getCurrentUser();
+    const entryTypeConfig = resolveEntryType(config, type);
+    const fieldDefs = entryTypeConfig ? flattenEntryFields(entryTypeConfig.fields) : [];
+    const processed = await processFields(
+        (validated.fields ?? {}) as Record<string, unknown>,
+        fieldDefs,
+        {
+            operation: 'create',
+            host: { kind: 'entry', record: null },
+            user,
+            reads: createEntryScopedReads(storage, { type, locale }),
+        }
+    );
+    if (Object.keys(processed.errors).length > 0) {
+        throw ValidationError.fromFieldErrors(processed.errors);
+    }
+    const processedFields = processed.values as JsonObject;
+
     let slug: string | null;
     if (validated.slug) {
         slug = await storage.uniqueSlug(type, locale, validated.slug);
@@ -58,33 +83,42 @@ export async function create(params: {
         slug = await storage.uniqueSlug(type, locale, slugify(title));
     }
 
-    const user = getCurrentUser();
     const createData = {
         title,
         slug,
         locale,
-        fields: (validated.fields ?? {}) as JsonObject,
+        fields: processedFields,
         status,
         publishAt: publishedAt,
     };
     await runBeforeHooks('entry:beforeCreate', { type, data: createData, user }, user);
 
-    const created = asEntry(
-        await storage.create({
-            type,
-            title,
-            slug,
-            locale,
-            localeGroup,
-            fields: (validated.fields ?? {}) as JsonObject,
-            status,
-            publishedAt,
-        })
-    );
-
-    if (validated.fields) {
-        await saveRelationships(created.id, validated.fields as JsonObject, type);
-    }
+    // The row and its derived relationship rows go in together or not at all.
+    // Storages that can't open a transaction fall back to sequential writes.
+    const persist = async (
+        txStorage: EntryStorage,
+        txDb: StorageDb | undefined
+    ): Promise<Entry> => {
+        const row = asEntry(
+            await txStorage.create({
+                type,
+                title,
+                slug,
+                locale,
+                localeGroup,
+                fields: processedFields,
+                status,
+                publishedAt,
+            })
+        );
+        if (Object.keys(processedFields).length > 0) {
+            await saveRelationships(row.id, processedFields, type, txDb);
+        }
+        return row;
+    };
+    const created = storage.transaction
+        ? await storage.transaction(persist)
+        : await persist(storage, undefined);
 
     await runAfterHooks(
         'entry:afterCreate',

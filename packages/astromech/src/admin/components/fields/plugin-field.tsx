@@ -14,6 +14,7 @@ import type { BaseFieldProps } from '@/types/index.js';
 import { Spinner } from '@/admin/components/ui/index.js';
 import { PluginErrorBoundary } from '@/admin/components/plugins/PluginErrorBoundary.js';
 import { PluginUiProvider } from '@/admin/context/plugin.js';
+import { useFieldControl } from '@/admin/components/fields/field-control-context';
 
 export function hasPluginFieldType(type: string): boolean {
     return type in fieldTypes;
@@ -38,6 +39,7 @@ function lazyFieldFor(type: string): LazyField {
         const validate = mod.validate;
 
         function PluginFieldInner(props: BaseFieldProps): React.ReactElement {
+            const { hasError } = useFieldControl();
             const [error, setError] = React.useState<string | undefined>(undefined);
             const value = props.value === undefined ? defaultValue : props.value;
 
@@ -49,7 +51,9 @@ function lazyFieldFor(type: string): LazyField {
             return (
                 <>
                     <Renderer {...props} value={value} onChange={handleChange} />
-                    {error !== undefined && <p className="am-field-error">{error}</p>}
+                    {!hasError && error !== undefined && (
+                        <p className="am-field-error">{error}</p>
+                    )}
                 </>
             );
         }
