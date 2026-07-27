@@ -107,3 +107,116 @@ describe('generatePluginClientManifest', () => {
         expect(result).toContain('export const i18n = {\n\n};');
     });
 });
+
+describe('generatePluginClientManifest — slots', () => {
+    const slotPlugin: PluginDefinition = {
+        package: '@astromech/foo',
+        admin: {
+            slots: [
+                {
+                    slot: 'toolbar',
+                    component: '@astromech/foo/slots/ToolbarWidget',
+                    permission: 'manage',
+                },
+                {
+                    slot: 'global-overlay',
+                    component: '@astromech/foo/slots/Overlay',
+                },
+            ],
+        },
+    };
+
+    it('emits export const slots = { with all three slot keys', () => {
+        const result = generatePluginClientManifest([slotPlugin]);
+        expect(result).toContain('export const slots = {');
+        expect(result).toContain('"global-overlay"');
+        expect(result).toContain('"right-drawer"');
+        expect(result).toContain('"toolbar"');
+    });
+
+    it('places contributions under the correct slot', () => {
+        const result = generatePluginClientManifest([slotPlugin]);
+        expect(result).toContain('import("@astromech/foo/slots/ToolbarWidget")');
+        expect(result).toContain('import("@astromech/foo/slots/Overlay")');
+    });
+
+    it('resolves namespaced permission from bare key', () => {
+        const result = generatePluginClientManifest([slotPlugin]);
+        // `@astromech/foo` strips the first-party scope → namespace "foo"
+        expect(result).toContain('permission: "plugin:foo:manage"');
+    });
+
+    it('emits permission: null when permission is omitted', () => {
+        const result = generatePluginClientManifest([slotPlugin]);
+        expect(result).toContain('permission: null');
+    });
+
+    it('defaults id to ${name}:${slot}:${index}', () => {
+        const result = generatePluginClientManifest([slotPlugin]);
+        expect(result).toContain('id: "foo:toolbar:0"');
+        expect(result).toContain('id: "foo:global-overlay:1"');
+    });
+
+    it('uses provided id when specified', () => {
+        const plugin: PluginDefinition = {
+            package: '@test/plugin',
+            admin: {
+                slots: [
+                    {
+                        slot: 'toolbar',
+                        component: '@test/plugin/ToolbarWidget',
+                        id: 'my-custom-id',
+                    },
+                ],
+            },
+        };
+        const result = generatePluginClientManifest([plugin]);
+        expect(result).toContain('id: "my-custom-id"');
+    });
+
+    it('sorts contributions within the same slot by order ascending', () => {
+        const plugin: PluginDefinition = {
+            package: '@test/order',
+            admin: {
+                slots: [
+                    {
+                        slot: 'toolbar',
+                        component: '@test/order/Second',
+                        order: 2,
+                    },
+                    {
+                        slot: 'toolbar',
+                        component: '@test/order/First',
+                        order: 1,
+                    },
+                ],
+            },
+        };
+        const result = generatePluginClientManifest([plugin]);
+        const idxFirst = result.indexOf('import("@test/order/First")');
+        const idxSecond = result.indexOf('import("@test/order/Second")');
+        expect(idxFirst).toBeLessThan(idxSecond);
+    });
+
+    it('throws for an unknown slot name', () => {
+        const plugin: PluginDefinition = {
+            package: '@test/bad',
+            admin: {
+                // cast to bypass TS — simulate a runtime authoring mistake
+                slots: [{ slot: 'unknown-slot' as 'toolbar', component: '@test/bad/X' }],
+            },
+        };
+        expect(() => generatePluginClientManifest([plugin])).toThrow(
+            'unknown admin slot "unknown-slot"'
+        );
+    });
+
+    it('produces empty arrays for all slots when no plugin declares any', () => {
+        const bare: PluginDefinition = { package: '@test/bare' };
+        const result = generatePluginClientManifest([bare]);
+        // Each slot block should have an empty array
+        expect(result).toContain('"global-overlay": [\n\n\t],');
+        expect(result).toContain('"right-drawer": [\n\n\t],');
+        expect(result).toContain('"toolbar": [\n\n\t],');
+    });
+});

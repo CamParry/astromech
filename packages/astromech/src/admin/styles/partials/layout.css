@@ -18,11 +18,28 @@
     overflow: hidden;
 }
 
+.am-shell-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+}
+
 .am-shell-content {
     flex: 1;
+    min-width: 0;
     overflow-y: auto;
     background-color: var(--am-color-bg-muted);
     /* padding: 2rem; */
+}
+
+.am-shell-drawer {
+    display: flex;
+    flex-shrink: 0;
+    overflow-y: auto;
+}
+
+.am-shell-drawer:empty {
+    display: none;
 }
 
 /* ------------------------------------------------------------------ */

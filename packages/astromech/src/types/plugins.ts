@@ -10,7 +10,13 @@ import type { ComponentType, ReactElement } from 'react';
 import type { Kysely, MigrationProvider } from 'kysely';
 import type { DB } from '@/database/types.js';
 import type { TableDescriptor } from '@/database/define-table.js';
-import type { AdminPage, DbDump, EntryTypeConfig, ResolvedConfig } from './config.js';
+import type {
+    AdminPage,
+    AdminSlotContribution,
+    DbDump,
+    EntryTypeConfig,
+    ResolvedConfig,
+} from './config.js';
 import type { FieldDefinition } from './fields.js';
 import type { User, NotifyInput } from './domain.js';
 import type { PluginHooks } from './hooks.js';
@@ -177,6 +183,7 @@ export type PluginNavItem = {
  */
 export type PluginAdmin = {
     pages?: AdminPage[];
+    slots?: AdminSlotContribution[];
 };
 
 /**

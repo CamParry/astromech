@@ -13,6 +13,7 @@ import { CommandPalette, CommandPaletteProvider } from '../ui/command-palette.js
 import { Sidebar } from './sidebar.js';
 import { Topbar } from './topbar.js';
 import { useHotkeys } from '../../hooks/index.js';
+import { PluginSlot } from '../plugins/PluginSlot.js';
 
 export function AppShell() {
     const { sidebarOpen, setSidebarOpen, shortcutsOpen, setShortcutsOpen } = useUI();
@@ -34,12 +35,18 @@ export function AppShell() {
 
                 <div className="am-shell-main">
                     <Topbar />
-                    <main className="am-shell-content">
-                        <Outlet />
-                    </main>
+                    <div className="am-shell-body">
+                        <main className="am-shell-content">
+                            <Outlet />
+                        </main>
+                        <aside className="am-shell-drawer">
+                            <PluginSlot name="right-drawer" />
+                        </aside>
+                    </div>
                 </div>
             </div>
             <CommandPalette />
+            <PluginSlot name="global-overlay" />
 
             <Dialog.Root open={shortcutsOpen} onOpenChange={setShortcutsOpen}>
                 <Dialog.Portal>

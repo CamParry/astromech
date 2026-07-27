@@ -13,6 +13,14 @@ const main = defineCommand({
         'entries:get': () => import('./commands/entries-get.js').then((m) => m.default),
         'entries:delete': () =>
             import('./commands/entries-delete.js').then((m) => m.default),
+        'entries:create': () =>
+            import('./commands/entries-create.js').then((m) => m.default),
+        'entries:update': () =>
+            import('./commands/entries-update.js').then((m) => m.default),
+        'entries:publish': () =>
+            import('./commands/entries-publish.js').then((m) => m.default),
+        'entries:unpublish': () =>
+            import('./commands/entries-unpublish.js').then((m) => m.default),
         'generate:types': () =>
             import('./commands/generate-types.js').then((m) => m.default),
         'generate:manifest': () =>
@@ -21,6 +29,8 @@ const main = defineCommand({
         'plugin:generate': () =>
             import('./commands/plugin-generate.js').then((m) => m.default),
         'plugin:purge': () => import('./commands/plugin-purge.js').then((m) => m.default),
+        methods: () => import('./commands/methods.js').then((m) => m.default),
+        mcp: () => import('./commands/mcp.js').then((m) => m.default),
     },
 });
 

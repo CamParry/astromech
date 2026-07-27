@@ -11,6 +11,8 @@ Loose tasks pulled from otherwise-shipped features.
 - [ ] Reconcile entry `destructive` semantics: the manifest (mirroring `entryGate`) marks `entries.delete` destructive, but TERMINOLOGY.md says entry delete is a reversible soft-delete (trash). Also `entries.publish` collapses publish+unpublish into one action, so the spec's "unpublish is destructive" (§3.6) can't be expressed. Revisit when the permission model gains `forceDelete`/`unpublish` actions
 - [ ] Close the plugin SDK descriptor-lite gap: first-party plugin sdk methods (e.g. `menus.get`) omit `mutates`, so the manifest defaults them to `mutates:true` (over-gates a future confirm gate). Declare effect hints on first-party plugin methods, and/or add typed input/output schemas (the deferred `AnyPluginSdkMethod` never-variance work)
 - [ ] Add `mount` / `contentSchema` (and clarify `entryType` vs Collection) to TERMINOLOGY.md once the manifest field names stabilise
+- [ ] MCP server coverage gaps (v1 projects core users/settings/media-read + 7 entry actions): (a) plugin SDK methods — need the Astro-boot plugin registry available to the standalone MCP process; (b) `media.upload`/`replace` — `File` can't cross JSON-RPC, needs a path/base64 ingest path; (c) entries long-tail (duplicate/trash/restore/emptyTrash/versions/restoreVersion/schedule). Add adapters in `transport/mcp/dispatch.ts` as each is needed
+- [ ] Notifications domain not in the method manifest — the generator hardcodes the users/media/settings catalogues; the merged `notifications/` domain (and any future domain) is absent. Give each domain a registered `descriptors.ts` the generator discovers, or make catalogue discovery dynamic
 
 ### `@astromech/backups` follow-ups
 

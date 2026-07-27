@@ -268,6 +268,23 @@ export type AdminPage = {
     public?: boolean;
 };
 
+/** Named admin-shell slots a plugin can contribute persistent UI into. */
+export type AdminSlotName = 'global-overlay' | 'right-drawer' | 'toolbar';
+
+/** A plugin contribution mounted into a named admin-shell slot. */
+export type AdminSlotContribution = {
+    /** Which named admin-shell slot to mount into. */
+    slot: AdminSlotName;
+    /** Import specifier for the React component (browser, lazy-loaded). */
+    component: string;
+    /** Stable id for keying/dedup. Defaults to `${plugin}:${slot}:${index}`. */
+    id?: string;
+    /** Render order within the slot, ascending. Defaults to 0. */
+    order?: number;
+    /** Plugin-relative permission key gating visibility (resolved via namespace). */
+    permission?: string;
+};
+
 /**
  * Origin-erased resolved shape. Both host and plugin derivation produce this;
  * the renderer never needs to know the origin.
