@@ -86,7 +86,7 @@ core namespacing plugin registrations at assembly.
 - [ ] `definePluginTable` → `defineTable`. Blocked on the deferred literal-type
       fix in "Known remainders" above; that fix and this rename are one job, and
       it also retires the `<X>_PACKAGE` consts
-- [ ] Delete `defineSdkMethod` — deprecated alias, zero callers
+- [x] Delete `defineSdkMethod` — deprecated alias, zero callers _(done in 2b)_
 - [ ] Adopt `defineEntryType` / `defineEntry` (currently zero callers, kept
       deliberately)
 - [ ] `defineServiceMethod`, `defineHook`, `defineConfig`, `defineAdminPage`,
@@ -115,6 +115,12 @@ the `package` → `namespace` → key derivation is untouched, so every wire val
       (`codegen/type-generator.ts:488`). Left dead by 2d — it existed only to
       type the removed per-plugin `entries` member. Touches the demo's generated
       `astromech.d.ts`
+
+- [x] The published export map. `astromech/local` and `astromech/fetch` pointed
+      at `dist/sdk/{local,fetch}/`, and two unused `astromech/sdk/*` subpath
+      aliases sat beside them — the word surviving in the most user-visible
+      place there is. Build output is now `dist/{local,fetch}/` and the aliases
+      are deleted; nothing in the repo imported them
 
 Also renamed as part of vocabulary consistency (not separately itemised above):
 each plugin's own `src/sdk/*.ts` module → `src/service/*.ts` (redirects, menus,
