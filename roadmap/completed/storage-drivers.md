@@ -4,14 +4,14 @@ Rework the binary-storage layer: one driver contract that survives S3, video and
 Cloudflare; factory-based drivers; and a binding-name seam so one config file
 works on Workers, in the Node CLI, and in tests.
 
-**Design spec:** `specs/storage-drivers.md` (locked 2026-07-28). This file tracks
-status only.
+**Status:** merged to `main` 2026-07-29 (branch `feat/storage-drivers`, green on
+typecheck, lint, 1200 tests, build). The design spec is deleted, as specs are;
+this file is the as-built record, and the notes under each step are the
+rationale worth keeping.
 
-**Branch:** `feat/storage-drivers` (worktree `.claude/worktrees/feat/storage-drivers`), based on `main` @ 28bcacb.
-
-**Status:** all eight steps done and green (typecheck, lint, 1192 tests, build),
-unmerged. Nothing has been run on Cloudflare — see Known gaps and Not verified
-before treating this as finished.
+**Nothing has been run on Cloudflare.** Read Known gaps and Not verified below
+before treating any of this as finished — in particular, `access: 'private'` is
+not access control today.
 
 ## Locked direction
 
