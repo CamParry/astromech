@@ -53,12 +53,12 @@ Real defects, not drift. Each is independent and needs no design.
 
 ## Group 2 — documentation truth
 
-- [ ] **Stale `astromech-<x>` namespace strings.** The derivation strips the
+- [x] **Stale `astromech-<x>` namespace strings.** The derivation strips the
       `@astromech/` scope, so the namespace is `backups` / `seo`. Wrong in
       `backups/src/routes/backups.ts:6-7`, `seo/src/pages/settings.ts:6`,
       `seo/README.md:55` and `seo/README.md:79`. Runtime code is correct
       everywhere — this is comment rot predating the scope-stripping rule.
-- [ ] **seo's README would not run as written.** It imports from
+- [x] **seo's README would not run as written.** It imports from
       `astromech/plugins/seo` (the package is `@astromech/seo`, per
       `package.json:2` and `apps/demo/astromech.config.ts:12`) and calls
       `seoPermissions('view')`, which **is not exported from anywhere** —
@@ -67,7 +67,7 @@ Real defects, not drift. Each is independent and needs no design.
       rewritten again by Phase 3; fix it to today's truth now regardless.
       The same stale `astromech/plugins/*` specifier appears in
       `apps/docs/README.md:29`.
-- [ ] **`rawRoutes` is undocumented.** backups' entire API surface is
+- [x] **`rawRoutes` is undocumented.** backups' entire API surface is
       `rawRoutes` and `authoring.md` never mentions the mechanism — its only
       guidance is "expose data through a service method". Streaming
       download/restore plausibly needs raw HTTP; `listRuns` / `triggerRun` /
@@ -75,6 +75,22 @@ Real defects, not drift. Each is independent and needs no design.
       as a sanctioned surface (and its `routes/` directory, also absent from the
       documented file tree), or migrate the JSON endpoints to
       `defineServiceMethod`. Not a mechanical fix.
+      **Decided: both.** `rawRoutes` is documented as sanctioned with its
+      boundary stated (binary / multipart / streaming only, plus the warning
+      that a raw route is invisible to the method manifest and so to the CLI and
+      MCP). backups' three JSON endpoints then migrate to service methods to
+      stop contradicting that boundary — tracked as its own item below, because
+      it changes an API rather than a document.
+
+- [ ] **backups' JSON endpoints move to `defineServiceMethod`.** `listRuns`,
+      `triggerRun` and `deleteRun` are plain JSON and belong on RPC; only
+      `/runs/:id/download` and `/runs/:id/restore` stream and stay raw. This
+      makes backups discoverable in the method manifest and lets its admin page
+      drop the hand-rolled `pluginFetch` + `__ASTROMECH_API_ROUTE__` shim for
+      the typed `service` off `useAstromechPlugin()`. Note the error channel
+      changes: raw routes signal 409/404/410 by HTTP status, RPC returns the
+      handler result, so the not-found / already-running / artifact-gone cases
+      become result shapes the page branches on. Needs browser verification.
 
 ## Group 3 — mechanical drift
 
@@ -88,11 +104,11 @@ Real defects, not drift. Each is independent and needs no design.
       omits the option and is the correct model. Drop both options and both
       comments.
 
-          Keep the distinction in mind while editing: the raw `settingsApi.get`
-          really does default `full` to `false` (`settings/service.ts:53`), so
-          reading that function in isolation says the opposite of the truth inside a
-          plugin. This misled two independent auditors and the main thread during
-          the audit itself.
+            Keep the distinction in mind while editing: the raw `settingsApi.get`
+            really does default `full` to `false` (`settings/service.ts:53`), so
+            reading that function in isolation says the opposite of the truth inside a
+            plugin. This misled two independent auditors and the main thread during
+            the audit itself.
 
 - [ ] **backups re-derives its own table name.**
       `const TABLE = 'plugin_backups_runs' as const` appears in both

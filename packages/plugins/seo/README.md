@@ -11,7 +11,7 @@ service methods. Non-AI affordances only — AI metadata writing is a future pha
 // astromech.config.ts
 import { defineConfig } from 'astromech';
 import * as fields from 'astromech/fields';
-import { seo, seoSection } from 'astromech/plugins/seo';
+import { seo, seoSection } from '@astromech/seo';
 
 export default defineConfig({
     plugins: [seo()],
@@ -48,23 +48,23 @@ Entry types without a `url` template are skipped, so SEO never guesses a path.
 
 ## Permissions
 
-The plugin exposes `seoPermissions` bundles for composing into roles:
+The plugin factory exposes a `view` bundle for composing into roles:
 
 - `view` — read the SEO overview dashboard
 
-These resolve to `plugin:astromech-seo:view`.
+It resolves to `plugin:seo:view`.
 
 ```ts
 // astromech.config.ts
-import { builtInRole } from 'astromech';
-import { seo, seoPermissions } from 'astromech/plugins/seo';
+import { builtInRole, defineConfig } from 'astromech';
+import { seo } from '@astromech/seo';
 
 export default defineConfig({
     plugins: [seo()],
     roles: {
         'content-editor': {
             name: 'Content Editor',
-            permissions: [...builtInRole('editor'), ...seoPermissions('view')],
+            permissions: [...builtInRole('editor'), ...seo.permissions('view')],
         },
     },
 });
@@ -76,7 +76,7 @@ export default defineConfig({
   description inputs with live character counters
   (title 30–60, description 70–160 characters), and a search-result preview.
 - **Overview dashboard** — `/admin/plugin/seo/overview` (requires
-  `plugin:astromech-seo:view`) shows SEO health totals and a per-entry
+  `plugin:seo:view`) shows SEO health totals and a per-entry
   breakdown across the footprint.
 - **Settings** — `/admin/plugin/seo/settings` holds the default Open Graph
   image, returned by `meta` when an entry has no image of its own.

@@ -64,6 +64,8 @@ my-plugin/
   fields/                custom field-type registrations
   pages/                 admin page registrations
   permissions/           permission bundles + declarations
+  service/               service-method definitions (defineServiceMethod)
+  routes/                raw HTTP routes — the streaming/binary escape hatch
   admin/
     fields/              field renderers (.tsx)
     pages/               page renderers (.tsx)
@@ -499,12 +501,54 @@ The same id is what the HTTP API and `Astromech.entries` use, so there is one
 way to name an entry type everywhere. An unregistered type is rejected on
 write rather than silently stored.
 
+### Raw HTTP routes
+
+`defineServiceMethod` is JSON-in / JSON-out over `POST`, which covers almost
+everything. When a payload can't survive that — binary bodies, `multipart`
+uploads, streamed responses — declare a `rawRoutes` array instead. Each route
+gets a Web-standard `Request` and returns a `Response`; the plugin never
+touches Hono.
+
+```ts
+// routes/exports.ts
+import type { PluginRawRoute } from 'astromech';
+
+export const exportRoutes: PluginRawRoute[] = [
+    {
+        method: 'GET',
+        path: '/exports/:id/download', // relative to /api/plugins/<serviceKey>
+        access: { permission: 'download' },
+        handler: async (request, ctx) => {
+            const obj = await ctx.storage.get(keyFrom(request));
+            return new Response(obj.body, {
+                headers: { 'Content-Type': 'application/gzip' },
+            });
+        },
+    },
+];
+```
+
+Raw routes mount under the **service key**, alongside RPC, and go through the
+same `access` enforcement — `enforceAccess` runs before the handler either way,
+so a bare permission key is namespaced identically.
+
+Two things to hold onto:
+
+- **Reach for it only when RPC genuinely can't carry the payload.** An endpoint
+  that returns plain JSON belongs on `defineServiceMethod`, where it is typed,
+  callable off `Astromech.plugins.<serviceKey>` and `ctx.service` in an admin
+  page, and listed in the method manifest that the CLI and MCP discover from.
+  A raw route is invisible to all of that.
+- **Scope the permission to what the response actually exposes.** The
+  granularity of a raw route is whatever you write, and a streamed artifact is
+  usually a much larger grant than the metadata endpoint next to it.
+
 ### More surfaces
 
 Plugins can also contribute **service methods** (`defineServiceMethod`,
 callable off `Astromech.plugins.<serviceKey>`), **hooks** (`defineHook`, e.g.
-`entry:afterUpdate`), **entry types**, and **i18n** locale bundles. See the
-bundled `redirects` and `seo` plugins for each.
+`entry:afterUpdate`), **entry types**, **cron jobs**, and **i18n** locale
+bundles. See the bundled `redirects` and `seo` plugins for each.
 
 > Plugins can't register routes outside `/api`. To integrate with the front end,
 > expose data through a service method and document a small middleware recipe —

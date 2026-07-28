@@ -4,7 +4,7 @@
  *
  * Access values use bare permission keys — the mount layer calls
  * resolvePluginPermission(namespace, key) which auto-namespaces them to
- * `plugin:astromech-backups:<key>` since they contain no colon.
+ * `plugin:backups:<key>` since they contain no colon.
  */
 
 import { Readable } from 'node:stream';
