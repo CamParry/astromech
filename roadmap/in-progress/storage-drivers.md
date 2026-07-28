@@ -133,9 +133,36 @@ while `getDirectUrl` had no callers; a 404 generator once access modes consult i
 Suffix ranges (`bytes=-N`) are supported. Multi-range is ignored in favour of a
 whole-object 200.
 
-### Step 8 — Docs
+### Step 8 — Docs ✅
 
-- [ ] `apps/docs/configuration/storage.md` + README index entry
+- [x] `apps/docs/configuration/storage.md` + README index entry
+
+## Known gaps
+
+Found by reading the shipped code while writing the docs. All documented
+honestly on the docs page rather than papered over.
+
+- **`access: 'private'` is not access control.** It only stops a direct storage
+  URL being handed out; `src/routes/media-handler.ts` forwards to
+  `handleMediaRequest` with no permission check, so the media route still serves
+  any valid media id to anyone. Private is the _prerequisite_ for authorising
+  media — bytes behind a route we own — not the authorisation. Deciding what
+  authorisation means here is its own piece of work: public sites need
+  unauthenticated images, so it cannot simply be a session check.
+- **Signed URLs have no consumer.** `getSignedUploadUrl`/`getSignedDownloadUrl`
+  exist only on `s3()` and nothing in `src/` or the admin calls them — uploads
+  are still multipart POSTs to `/media/upload`. Direct client upload is a
+  separate feature; the capability is in place for it.
+- **`disposeBindings()` is exported but never called.** Its own doc comment says
+  a Node process that resolved a binding will not exit until it runs, so the
+  first CLI command against an R2-backed config will hang. Nothing exercises it
+  yet (the demo uses `filesystem()`); it needs wiring into CLI teardown.
+- **`s3()` maps HTTP 403 to null on `get`/`stat`** — correct for a missing key
+  in a bucket without `ListBucket`, but it also makes bad credentials or a bad
+  bucket policy present as "media not found" rather than an error.
+- **`filesystem().list` re-walks and re-sorts the whole tree per page**, so
+  `listAll`/`deletePrefix` over a large directory are quadratic. Acceptable for
+  a dev driver, which is all it claims to be.
 
 ## Not verified
 

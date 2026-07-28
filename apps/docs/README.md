@@ -7,6 +7,9 @@ This is a living reference; it grows as the project does.
 
 ## Contents
 
+- [configuration/storage.md](configuration/storage.md) — pick and configure a
+  storage driver (`filesystem`, `r2`, `s3`), media access modes and public URLs,
+  signed URLs and the R2 signing trap, and the contract for writing your own.
 - [data/migrations.md](data/migrations.md) — how migrations are generated from
   your table descriptors, what the generator refuses and why, and the
   hand-authored-ops escape hatch for reshapes it can't derive.
