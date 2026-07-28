@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateSdkTypes } from '@/codegen/type-generator.js';
+import { generateClientTypes } from '@/codegen/type-generator.js';
 import type { ResolvedConfig } from '@/types/index.js';
 
 /**
@@ -88,7 +88,7 @@ const ALL_FIELDS = [
 
 describe('type-generator — golden output (all field types, both shapes)', () => {
     it('emits identical output for the full field matrix', () => {
-        const output = generateSdkTypes(makeConfig(ALL_FIELDS));
+        const output = generateClientTypes(makeConfig(ALL_FIELDS));
         expect(output).toMatchSnapshot();
     });
 });

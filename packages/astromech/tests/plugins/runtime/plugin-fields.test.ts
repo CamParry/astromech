@@ -4,7 +4,7 @@ import {
     assertNoFieldTypeCollisions,
     collectPluginFieldTypes,
 } from '@/plugins/runtime/plugin-fields.js';
-import { generateSdkTypes } from '@/codegen/type-generator.js';
+import { generateClientTypes } from '@/codegen/type-generator.js';
 import type { ResolvedConfig } from '@/types/index.js';
 
 const def = (
@@ -70,7 +70,7 @@ describe('collectPluginFieldTypes', () => {
     });
 });
 
-describe('generateSdkTypes with plugin field types', () => {
+describe('generateClientTypes with plugin field types', () => {
     const config = {
         adminRoute: '/admin',
         apiRoute: '/api',
@@ -88,7 +88,7 @@ describe('generateSdkTypes with plugin field types', () => {
     } as unknown as ResolvedConfig;
 
     it('uses the registration typeGen when provided', () => {
-        const output = generateSdkTypes(
+        const output = generateClientTypes(
             config,
             collectPluginFieldTypes([
                 def({
@@ -107,7 +107,7 @@ describe('generateSdkTypes with plugin field types', () => {
     });
 
     it('falls back to JsonValue without typeGen', () => {
-        const output = generateSdkTypes(
+        const output = generateClientTypes(
             config,
             collectPluginFieldTypes([
                 def({
@@ -120,15 +120,15 @@ describe('generateSdkTypes with plugin field types', () => {
     });
 
     it('skips unknown field types entirely without a registration', () => {
-        const output = generateSdkTypes(config);
+        const output = generateClientTypes(config);
         expect(output).not.toContain('seo?:');
     });
 
-    it('emits hook-event augmentations (SDK lines no longer generated)', () => {
-        const output = generateSdkTypes(config, new Map(), [
+    it('emits hook-event augmentations (service lines no longer generated)', () => {
+        const output = generateClientTypes(config, new Map(), [
             def({
                 package: '@astromech/redirects',
-                sdk: { lookup: { access: 'public', handler: async () => null } },
+                service: { lookup: { access: 'public', handler: async () => null } },
                 hookEvents: ['redirects:resolved'],
             }),
         ]);
@@ -137,8 +137,8 @@ describe('generateSdkTypes with plugin field types', () => {
     });
 
     it('omits the plugin augmentation block when no plugin contributes', () => {
-        const output = generateSdkTypes(config, new Map(), [def({ package: '@a/b' })]);
-        expect(output).not.toContain('AstromechPluginSdks');
+        const output = generateClientTypes(config, new Map(), [def({ package: '@a/b' })]);
+        expect(output).not.toContain('AstromechPluginServices');
     });
 });
 
@@ -146,7 +146,7 @@ describe('generateSdkTypes with plugin field types', () => {
 // Plugin entry typegen
 // ============================================================================
 
-describe('generateSdkTypes — plugin entry types', () => {
+describe('generateClientTypes — plugin entry types', () => {
     const baseConfig = {
         adminRoute: '/admin',
         apiRoute: '/api',
@@ -200,7 +200,7 @@ describe('generateSdkTypes — plugin entry types', () => {
     } as unknown as ResolvedConfig;
 
     it('generates PluginRedirectsRedirectFields interface', () => {
-        const output = generateSdkTypes(configWithPluginEntries);
+        const output = generateClientTypes(configWithPluginEntries);
         expect(output).toContain('export interface PluginRedirectsRedirectFields {');
         expect(output).toContain('from: string;');
         expect(output).toContain('to: string;');
@@ -209,21 +209,12 @@ describe('generateSdkTypes — plugin entry types', () => {
     });
 
     it('generates PluginRedirectsRedirectRelations type', () => {
-        const output = generateSdkTypes(configWithPluginEntries);
+        const output = generateClientTypes(configWithPluginEntries);
         expect(output).toContain('export type PluginRedirectsRedirectRelations =');
     });
 
-    it('augments AstromechPluginEntryTypes with the redirects plugin block', () => {
-        const output = generateSdkTypes(configWithPluginEntries);
-        expect(output).toContain('interface AstromechPluginEntryTypes {');
-        expect(output).toContain('redirects: {');
-        expect(output).toContain(
-            'redirect: { fields: PluginRedirectsRedirectFields; fieldsPublic: PluginRedirectsRedirectFieldsPublic; relations: PluginRedirectsRedirectRelations };'
-        );
-    });
-
     it('uses plugin entry prefix comment marker', () => {
-        const output = generateSdkTypes(configWithPluginEntries);
+        const output = generateClientTypes(configWithPluginEntries);
         expect(output).toContain(
             '// --- Plugin entry: redirects/redirect (PluginRedirectsRedirect) ---'
         );
@@ -251,30 +242,22 @@ describe('generateSdkTypes — plugin entry types', () => {
             },
         } as unknown as ResolvedConfig;
 
-        const output = generateSdkTypes(configWithRelation);
+        const output = generateClientTypes(configWithRelation);
         expect(output).toContain(
             "import('astromech').TypedEntry<PluginRedirectsRedirectFields>"
         );
     });
 
-    it('produces no AstromechPluginEntryTypes augmentation when pluginEntries is empty', () => {
-        const output = generateSdkTypes(baseConfig);
-        const hasEmptyBlock = output.includes(
-            'interface AstromechPluginEntryTypes {\n  }'
-        );
-        expect(hasEmptyBlock).toBe(false);
-    });
-
     it('empty pluginEntries produces output identical to baseline (regression)', () => {
-        const baseline = generateSdkTypes(baseConfig);
-        const withEmpty = generateSdkTypes({
+        const baseline = generateClientTypes(baseConfig);
+        const withEmpty = generateClientTypes({
             ...baseConfig,
             pluginEntries: {},
         } as unknown as ResolvedConfig);
         expect(withEmpty).toBe(baseline);
     });
 
-    it('quotes non-identifier plugin/type keys in augmentation', () => {
+    it('PascalCases hyphenated plugin/type names into the Fields interface name', () => {
         const configWithHyphenated = {
             ...baseConfig,
             pluginEntries: {
@@ -297,9 +280,7 @@ describe('generateSdkTypes — plugin entry types', () => {
             },
         } as unknown as ResolvedConfig;
 
-        const output = generateSdkTypes(configWithHyphenated);
-        expect(output).toContain('"my-plugin": {');
-        expect(output).toContain('"some-type": {');
+        const output = generateClientTypes(configWithHyphenated);
         expect(output).toContain('export interface PluginMyPluginSomeTypeFields {');
     });
 });

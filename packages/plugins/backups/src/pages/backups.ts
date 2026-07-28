@@ -4,12 +4,11 @@
  */
 
 import { defineAdminPage } from 'astromech';
-import { asset } from '../plugin.js';
 
 export const backupsPage = defineAdminPage({
     path: '',
     label: 'Backups',
     icon: 'DatabaseBackup',
-    component: asset('admin/pages/backups-page.tsx'),
+    component: './admin/pages/backups-page.tsx',
     permission: 'read',
 });

@@ -1,5 +1,5 @@
 /**
- * SDK Type Generator
+ * Client Type Generator
  *
  * Generates a .d.ts file from the resolved Astromech config so that
  * `Astromech.entryTypes.posts.get()` returns a typed entry specific
@@ -394,8 +394,10 @@ type PluginEntryBlock = {
 };
 
 /**
- * Generate per-plugin entry type interfaces and the `AstromechPluginEntryTypes`
- * augmentation block. Returns an empty array when there are no plugin entries.
+ * Generate per-plugin entry type interfaces (`Fields`/`FieldsPublic`/`Relations`),
+ * so a root collection's relationship field can target a qualified plugin entry
+ * type (`redirects/redirect`). Returns an empty array when there are no plugin
+ * entries.
  */
 function generatePluginEntryBlocks(
     pluginEntries: Record<string, Record<string, { fields: ResolvedEntryFields }>>,
@@ -440,40 +442,15 @@ function generatePluginEntryBlocks(
 
 /**
  * `declare module` augmentation for installed plugins: declared `hookEvents`
- * on `AstromechPluginHookEvents`, and per-plugin entry types on
- * `AstromechPluginEntryTypes`. SDK method signatures are no longer emitted
- * here — plugins self-augment `AstromechPluginSdks` in their own `.d.ts`.
+ * on `AstromechPluginHookEvents`. Service method signatures are not emitted
+ * here — plugins self-augment `AstromechPluginServices` in their own `.d.ts`.
  */
-function generatePluginAugmentations(
-    plugins: PluginDefinition[],
-    pluginEntryBlocks: PluginEntryBlock[]
-): string[] {
+function generatePluginAugmentations(plugins: PluginDefinition[]): string[] {
     const eventLines = plugins.flatMap((def) =>
         (def.hookEvents ?? []).map((event) => `    '${event}': unknown;`)
     );
 
-    // Group plugin entry blocks by plugin name for the augmentation
-    const entryAugLines: string[] = [];
-    const byPlugin = new Map<string, PluginEntryBlock[]>();
-    for (const block of pluginEntryBlocks) {
-        const arr = byPlugin.get(block.pluginName) ?? [];
-        arr.push(block);
-        byPlugin.set(block.pluginName, arr);
-    }
-    for (const [pluginName, blocks] of byPlugin) {
-        const key = propertyKey(pluginName);
-        entryAugLines.push(`    ${key}: {`);
-        for (const block of blocks) {
-            const prefix = pluginEntryPrefix(block.pluginName, block.typeName);
-            const typeKey = propertyKey(block.typeName);
-            entryAugLines.push(
-                `      ${typeKey}: { fields: ${prefix}Fields; fieldsPublic: ${prefix}FieldsPublic; relations: ${prefix}Relations };`
-            );
-        }
-        entryAugLines.push('    };');
-    }
-
-    if (eventLines.length === 0 && entryAugLines.length === 0) {
+    if (eventLines.length === 0) {
         return [];
     }
 
@@ -485,14 +462,11 @@ function generatePluginAugmentations(
         '  interface AstromechPluginHookEvents {',
         ...eventLines,
         '  }',
-        '  interface AstromechPluginEntryTypes {',
-        ...entryAugLines,
-        '  }',
         '}',
     ];
 }
 
-export function generateSdkTypes(
+export function generateClientTypes(
     config: ResolvedConfig,
     pluginFieldTypes = new Map<string, PluginFieldTypeRegistration>(),
     plugins: PluginDefinition[] = []
@@ -592,12 +566,7 @@ export function generateSdkTypes(
         parts.push('', pluginEntryTypeBlocks);
     }
 
-    parts.push(
-        ...generatePluginAugmentations(plugins, pluginEntryBlocks),
-        '',
-        'export {};',
-        ''
-    );
+    parts.push(...generatePluginAugmentations(plugins), '', 'export {};', '');
 
     return parts.join('\n');
 }

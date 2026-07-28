@@ -21,6 +21,28 @@ export class EntryTypeMismatchError extends Error {
 }
 
 /**
+ * Thrown when a write addresses an entry type that no root or plugin
+ * declaration resolves to.
+ *
+ * Without this an unregistered type is silently accepted: there are no field
+ * definitions to validate against, so the row is written as a ghost stamped
+ * with a type nothing can render or query. Reads already return empty for an
+ * unresolvable type, so only writes need the guard.
+ */
+export class UnknownEntryTypeError extends Error {
+    public readonly entryType: string;
+
+    constructor(type: string) {
+        super(
+            `Entry type '${type}' is not registered. Plugin entry types are addressed ` +
+                `by their qualified id, e.g. \`\${ctx.plugin.namespace}/redirect\`.`
+        );
+        this.name = 'UnknownEntryTypeError';
+        this.entryType = type;
+    }
+}
+
+/**
  * Thrown when a bulk entry operation fails on a specific id. The DB transaction
  * rolls back the entire batch — `succeededBefore` reports which ids the
  * operation completed against *before* the failure (purely informational; those

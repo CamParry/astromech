@@ -1,13 +1,12 @@
 /**
- * SDK method for @astromech/menus. Reads a menu blob from settings, drops
+ * Service method for @astromech/menus. Reads a menu blob from settings, drops
  * disabled nodes, resolves entry refs to front-end URLs via the entry type's
  * `url` template, and returns a clean tree.
  */
 
-import type { AnyPluginSdkMethod, Entry, PluginContext } from 'astromech';
+import type { AnyPluginServiceMethod, Entry, PluginContext } from 'astromech';
 import { defineServiceMethod } from 'astromech';
-import { resolveEntryUrl } from 'astromech/plugin-kit';
-import { menuBlobKey } from '../plugin.js';
+import { resolveEntryUrl } from 'astromech';
 import type { MenuConfig, MenuItem } from '../types.js';
 
 /** Raw stored node shape (with reserved underscore keys). */
@@ -32,7 +31,7 @@ async function resolveEntryRef(
     for (const [type, config] of Object.entries(ctx.config.entries)) {
         if (!config.url) continue;
         try {
-            const { data } = await ctx.sdk.entries.query({
+            const { data } = await ctx.entries.query({
                 type,
                 limit: 'all',
                 ...(locale ? { locale } : {}),
@@ -89,7 +88,9 @@ async function walkNodes(
     return result;
 }
 
-export function buildMenusSdk(configs: MenuConfig[]): Record<string, AnyPluginSdkMethod> {
+export function buildMenusService(
+    configs: MenuConfig[]
+): Record<string, AnyPluginServiceMethod> {
     const configuredKeys = new Set(configs.map((c) => c.key));
 
     return {
@@ -102,12 +103,16 @@ export function buildMenusSdk(configs: MenuConfig[]): Record<string, AnyPluginSd
 
                 const locale =
                     typeof input?.locale === 'string' ? input.locale : undefined;
-                const blobKey = menuBlobKey(key);
+                // The settings page has `path: '/menus/<key>'`, so its blob lives
+                // at `plugin:<ns>:/menus/<key>` — the same `baseKey` core computes
+                // for a plugin page. The namespace comes from the context, not
+                // from an identity import.
+                const blobKey = `plugin:${ctx.plugin.namespace}:/menus/${key}`;
 
                 // Trusted internal read of the plugin's own menu blob: request the
                 // full shape (settings default to public-only) — the handler returns a
                 // sanitised menu tree, never the raw settings, so this never leaks.
-                const blob = await ctx.sdk.settings.get(blobKey, {
+                const blob = await ctx.settings.get(blobKey, {
                     full: true,
                     ...(locale ? { locale } : {}),
                 });

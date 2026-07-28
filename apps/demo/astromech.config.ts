@@ -8,11 +8,12 @@ import {
 } from 'astromech';
 import { sharp } from 'astromech/images/sharp';
 import * as fields from 'astromech/fields';
-import { redirects, redirectsPermissions } from '@astromech/redirects';
-import { seo, seoSection, seoPermissions } from '@astromech/seo';
+import { redirects } from '@astromech/redirects';
+import { seo, seoSection } from '@astromech/seo';
 import { menus } from '@astromech/menus';
-import { backups, backupsPermissions } from '@astromech/backups';
+import { backups } from '@astromech/backups';
 import { rating } from './src/plugins/rating/index.js';
+import { author } from './src/entries/author.js';
 
 // ---------------------------------------------------------------------------
 // Block catalog — shared by `page` and `caseStudy`
@@ -135,9 +136,9 @@ export default defineConfig({
             name: 'Content Editor',
             permissions: [
                 ...builtInRole('editor'),
-                ...seoPermissions('view'),
-                ...redirectsPermissions('manage'),
-                ...backupsPermissions('manage'),
+                ...seo.permissions('view'),
+                ...redirects.permissions('manage'),
+                ...backups.permissions('manage'),
             ],
         },
     },
@@ -248,32 +249,9 @@ export default defineConfig({
             },
         },
 
-        author: {
-            single: 'Author',
-            plural: 'Authors',
-            icon: 'UserRound',
-            translatable: true,
-            url: '/authors/{slug}',
-            fields: {
-                main: [
-                    fields.richtext('bio', { label: 'Bio' }),
-                    fields.text('role', { label: 'Role' }),
-                    fields.repeater('socials', {
-                        label: 'Social Links',
-                        fields: [
-                            fields.select('platform', {
-                                label: 'Platform',
-                                options: ['twitter', 'github', 'linkedin', 'website'],
-                            }),
-                            fields.url('url', { label: 'URL' }),
-                        ],
-                    }),
-                ],
-                sidebar: [
-                    fields.media('avatar', { label: 'Avatar', translatable: false }),
-                ],
-            },
-        },
+        // Declared in its own module with `defineEntryType`; every other type
+        // here is inline. Both are supported — see apps/docs/content/entry-types.md.
+        author,
 
         caseStudy: {
             single: 'Case Study',

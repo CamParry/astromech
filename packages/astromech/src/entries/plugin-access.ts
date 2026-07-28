@@ -16,14 +16,12 @@
 
 import { registerEntryAccess } from '@/plugins/runtime/entry-access.js';
 import { qualifyEntryType } from './type-registry.js';
-import { createScopedEntries } from './scoped-entries.js';
 import { setEntryStorage, resetEntryStorageOverrides } from './storage/registry.js';
 
 /** Wire the entries implementation into the plugin runtime. Idempotent. */
 export function wireEntryAccess(): void {
     registerEntryAccess({
         qualifyEntryType,
-        createScopedEntries,
         setEntryStorage,
         resetEntryStorageOverrides,
     });

@@ -1,18 +1,17 @@
 /**
- * Permission bundles for composing into config roles. Keys resolve to
- * `plugin:redirects:entry:redirect:{action}` — exactly what the
- * mounted entries API checks (`plugin:{permissionNamespace}:entry:{type}:{action}`).
+ * Permission bundles for composing into config roles. Keys are declared bare
+ * and namespaced by core, resolving to
+ * `plugin:redirects:entry:redirect:{action}` — exactly what the mounted
+ * entries API checks (`plugin:{permissionNamespace}:entry:{type}:{action}`).
  *
- *   roles: { editor: { permissions: [...redirectsPermissions('manage')] } }
+ *   roles: { editor: { permissions: [...redirects.permissions('manage')] } }
  */
 
-import { definePermissionBundles } from 'astromech';
-import { plugin } from '../plugin.js';
 import { REDIRECT_TYPE } from '../types.js';
 
 const t = REDIRECT_TYPE;
 
-export const redirectsPermissions = definePermissionBundles(plugin.package, {
+export const redirectsPermissionBundles = {
     manage: [
         `entry:${t}:read`,
         `entry:${t}:create`,
@@ -20,4 +19,4 @@ export const redirectsPermissions = definePermissionBundles(plugin.package, {
         `entry:${t}:delete`,
     ],
     view: [`entry:${t}:read`],
-});
+} as const;

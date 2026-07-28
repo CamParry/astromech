@@ -17,7 +17,7 @@ import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import {
     PERMISSION_ENTRY_READ_FULL,
     type EntryAction,
-    rootEntryPermission,
+    entryPermission,
 } from '@/permissions/index.js';
 import { withPermissions } from '@/policies/with-permissions.js';
 import type {
@@ -37,47 +37,50 @@ import {
     scheduleEntrySchema,
 } from '@/entries/schema.js';
 import { StagedEntryExistsError } from '@/entries/errors.js';
+import { resolveEntryType } from '@/entries/type-registry.js';
 
 type Env = { Variables: AuthVariables };
 
 // ============================================================================
-// Router factory
+// Router
 // ============================================================================
 
-export type EntriesRouterOptions = {
-    /** Resolve a bare type to its config; `undefined` ⇒ the existing 404 path. */
-    lookup: (type: string) => ResolvedEntryTypeConfig | undefined;
-    /** Wire a bare wire-type to the entries service's type id (root: identity; plugin: qualified). */
-    qualify: (type: string) => string;
-    /** Build the permission string a given action checks against. */
-    permissionFor: (type: string, action: EntryAction) => string;
-};
-
 /**
- * Build an entries router. The root export wires the identity transform; a
- * plugin mount wires `lookup`/`qualify`/`permissionFor` to its own namespace.
+ * Build the entries router. There is exactly ONE — root and plugin entry types
+ * are both served here, addressed by the type id the entries service itself
+ * uses: bare (`post`) for a root type, qualified (`redirects/redirect`) for a
+ * plugin type. A qualified id reaches the `:type` path param URL-encoded, which
+ * the client does and Hono decodes.
  *
- * Response envelopes are passed through verbatim: entries returned by the
+ * Nothing is namespaced on the way in or out: the type is passed through to the
+ * entries service verbatim, and the permission an action checks is derived from
+ * the id's own shape by `entryPermission` — the single source that keeps plugin
+ * entries out of the `entry:*` wildcard.
+ *
+ * Response envelopes are passed through verbatim too: entries returned by the
  * entries service carry whatever `type` it assigns (the qualified id for built-in
- * storage, or `undefined` for `tableStorage`). The wire format is not rewritten
- * — a plugin sees the entries service's `type` value as-is.
+ * storage, or `undefined` for `tableStorage`).
+ *
+ * Exported as a factory so tests can mount an isolated instance; production has
+ * the single `entriesRouter` below.
  */
-export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<Env> {
+export function createEntriesRouter(): OpenAPIHono<Env> {
     const router = new OpenAPIHono<Env>();
 
     /**
-     * Wrap the mount's per-(type, action) permission as a method descriptor, so
-     * entries are enforced through the same `withPermissions(...).allowsMethod`
-     * seam as every other service. `permissionFor` stays the mount's namespacing
-     * policy (root: `entry:{type}:{action}`; plugin: `plugin:{ns}:entry:…`) — the
-     * descriptor declaration is mount-aware by construction. Behaviour is identical
-     * to the prior inline `allows(permissionFor(type, action))` check.
+     * Wrap the per-(type, action) permission as a method descriptor, so entries
+     * are enforced through the same `withPermissions(...).allowsMethod` seam as
+     * every other service.
      */
     const entryGate = (type: string, action: EntryAction): ServiceMethodDescriptor => ({
-        permission: options.permissionFor(type, action) as Permission,
+        permission: entryPermission(type, action) as Permission,
         mutates: action !== 'read',
         destructive: action === 'delete',
     });
+
+    /** Resolve a type id against root entries (bare) or pluginEntries (qualified). */
+    const lookup = (type: string): ResolvedEntryTypeConfig | undefined =>
+        resolveEntryType(Astromech.config, type);
 
     // ============================================================================
     // Helpers
@@ -165,16 +168,16 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
     }
 
     function requireEntryType(type: string) {
-        if (!options.lookup(type)) return null;
+        if (!lookup(type)) return null;
         return type;
     }
 
     function getTypeCapabilities(type: string) {
-        return options.lookup(type)?.capabilities;
+        return lookup(type)?.capabilities;
     }
 
     function getTypeTitleField(type: string): 'title' | false {
-        return options.lookup(type)?.titleField ?? 'title';
+        return lookup(type)?.titleField ?? 'title';
     }
 
     function capabilityDenied(
@@ -274,7 +277,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
             const validatedSort = validateSort(body.sort);
             const params: EntryQueryParams & { type: string | readonly string[] } = {
                 ...body,
-                type: types.map(options.qualify),
+                type: types,
                 full: wantsFull,
                 ...(validatedSort !== undefined ? { sort: validatedSort } : {}),
             };
@@ -323,7 +326,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
 
             const params = {
                 ...parseQueryParams(query),
-                type: options.qualify(type),
+                type: type,
                 full: wantsFull,
             };
             return c.json(await Astromech.entries.query(params));
@@ -372,7 +375,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
 
             const qp = parseQueryParams(query);
             const entry = await Astromech.entries.get({
-                type: options.qualify(type),
+                type: type,
                 id,
                 full: wantsFull,
                 ...(qp.populate ? { populate: qp.populate } : {}),
@@ -443,7 +446,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
                 parsed.data;
 
             const entry = await Astromech.entries.create({
-                type: options.qualify(type),
+                type: type,
                 ...(title !== undefined && { title }),
                 ...(slug !== undefined && { slug }),
                 ...(locale !== undefined && { locale }),
@@ -481,7 +484,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
             const validatedSort = validateSort(body.sort);
             const params: EntryQueryParams & { type: string } = {
                 ...body,
-                type: options.qualify(type),
+                type: type,
                 full: wantsFull,
                 ...(validatedSort !== undefined ? { sort: validatedSort } : {}),
             };
@@ -526,7 +529,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
             }
 
             const entries = await Astromech.entries.update({
-                type: options.qualify(type),
+                type: type,
                 id: ids,
                 data: data as EntryUpdateData,
             });
@@ -555,7 +558,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
             if (!parsed.success) return fromZodError(c, parsed.error);
 
             await Astromech.entries.trash({
-                type: options.qualify(type),
+                type: type,
                 id: parsed.data.ids,
                 ...(parsed.data.cascadeLocales ? { cascadeLocales: true } : {}),
             });
@@ -581,7 +584,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
             if (!parsed.success) return fromZodError(c, parsed.error);
 
             await Astromech.entries.delete({
-                type: options.qualify(type),
+                type: type,
                 id: parsed.data.ids,
                 ...(parsed.data.cascadeLocales ? { cascadeLocales: true } : {}),
             });
@@ -610,7 +613,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
             if (!parsed.success) return fromZodError(c, parsed.error);
 
             const entries = await Astromech.entries.restore({
-                type: options.qualify(type),
+                type: type,
                 id: parsed.data.ids,
             });
             return c.json({ data: entries });
@@ -638,7 +641,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
             if (!parsed.success) return fromZodError(c, parsed.error);
 
             const entries = await Astromech.entries.publish({
-                type: options.qualify(type),
+                type: type,
                 id: parsed.data.ids,
             });
             return c.json({ data: entries });
@@ -666,7 +669,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
             if (!parsed.success) return fromZodError(c, parsed.error);
 
             const entries = await Astromech.entries.unpublish({
-                type: options.qualify(type),
+                type: type,
                 id: parsed.data.ids,
             });
             return c.json({ data: entries });
@@ -694,7 +697,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
             if (!parsed.success) return fromZodError(c, parsed.error);
 
             const entries = await Astromech.entries.schedule({
-                type: options.qualify(type),
+                type: type,
                 id: parsed.data.ids,
                 publishAt: parsed.data.publishAt,
             });
@@ -720,7 +723,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
 
         try {
             const entry = await Astromech.entries.restore({
-                type: options.qualify(type),
+                type: type,
                 id,
             });
             return c.json({ data: entry });
@@ -765,7 +768,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
                 // No body / empty body — proceed with no overrides.
             }
             const entry = await Astromech.entries.duplicate({
-                type: options.qualify(type),
+                type: type,
                 id,
                 overrides: overrides as EntryDuplicateOverrides,
             });
@@ -833,7 +836,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
             }
 
             const entry = await Astromech.entries.update({
-                type: options.qualify(type),
+                type: type,
                 id,
                 data: {
                     ...(title !== undefined && { title }),
@@ -865,7 +868,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
         if (!caps?.trash) return capabilityDenied(c, type, 'trash');
 
         try {
-            await Astromech.entries.emptyTrash({ type: options.qualify(type) });
+            await Astromech.entries.emptyTrash({ type: type });
             return c.json({ success: true });
         } catch (err) {
             return internalError(c, err instanceof Error ? err.message : undefined);
@@ -885,7 +888,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
 
         try {
             await Astromech.entries.delete({
-                type: options.qualify(type),
+                type: type,
                 id,
                 cascadeLocales: cascadeLocalesFromQuery(c.req.query()),
             });
@@ -928,13 +931,13 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
             if (!caps?.trash) {
                 // trash is off → hard delete
                 await Astromech.entries.delete({
-                    type: options.qualify(type),
+                    type: type,
                     id,
                     cascadeLocales: cascade,
                 });
             } else {
                 await Astromech.entries.trash({
-                    type: options.qualify(type),
+                    type: type,
                     id,
                     cascadeLocales: cascade,
                 });
@@ -961,7 +964,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
 
         try {
             const entry = await Astromech.entries.publish({
-                type: options.qualify(type),
+                type: type,
                 id,
             });
             return c.json({ data: entry });
@@ -986,7 +989,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
 
         try {
             const entry = await Astromech.entries.unpublish({
-                type: options.qualify(type),
+                type: type,
                 id,
             });
             return c.json({ data: entry });
@@ -1014,7 +1017,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
             const parsed = scheduleEntrySchema.safeParse(raw);
             if (!parsed.success) return fromZodError(c, parsed.error);
             const entry = await Astromech.entries.schedule({
-                type: options.qualify(type),
+                type: type,
                 id,
                 publishAt: parsed.data.publishAt,
             });
@@ -1037,7 +1040,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
 
         try {
             const versions = await Astromech.entries.versions({
-                type: options.qualify(type),
+                type: type,
                 id,
             });
             return c.json({ data: versions });
@@ -1059,7 +1062,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
 
         try {
             const entry = await Astromech.entries.restoreVersion({
-                type: options.qualify(type),
+                type: type,
                 id,
                 versionId,
             });
@@ -1082,7 +1085,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
 
         try {
             const relations = await Astromech.entries.incomingRelations({
-                type: options.qualify(type),
+                type: type,
                 id,
             });
             return c.json({ data: relations });
@@ -1126,7 +1129,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
 
         try {
             const entry = await Astromech.entries.createStaged({
-                type: options.qualify(type),
+                type: type,
                 id,
             });
             return c.json({ data: entry }, 201);
@@ -1157,7 +1160,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
 
         try {
             const entry = await Astromech.entries.getStaged({
-                type: options.qualify(type),
+                type: type,
                 id,
             });
             return c.json({ data: entry });
@@ -1174,7 +1177,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
 
         try {
             const entry = await Astromech.entries.mergeStaged({
-                type: options.qualify(type),
+                type: type,
                 id,
             });
             return c.json({ data: entry });
@@ -1191,7 +1194,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
 
         try {
             await Astromech.entries.deleteStaged({
-                type: options.qualify(type),
+                type: type,
                 id,
             });
             return c.json({ success: true });
@@ -1217,7 +1220,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
                 // No body / empty body — no TTL.
             }
             const result = await Astromech.entries.issuePreviewToken({
-                type: options.qualify(type),
+                type: type,
                 id,
                 expiresAt,
             });
@@ -1235,7 +1238,7 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
 
         try {
             await Astromech.entries.revokePreviewToken({
-                type: options.qualify(type),
+                type: type,
                 id,
             });
             return c.json({ success: true });
@@ -1247,12 +1250,5 @@ export function createEntriesRouter(options: EntriesRouterOptions): OpenAPIHono<
     return router;
 }
 
-/**
- * Root entries router — bare type ids, root `entry:{type}:{action}` permissions,
- * identity type transform. Byte-identical to the pre-factory behavior.
- */
-export const entriesRouter = createEntriesRouter({
-    lookup: (t) => Astromech.config.entries[t],
-    qualify: (t) => t,
-    permissionFor: (t, a) => rootEntryPermission(t, a),
-});
+/** The entries router, mounted at `/entries`. Serves every entry type. */
+export const entriesRouter = createEntriesRouter();

@@ -3,15 +3,15 @@
  *
  * Static segments (`/plugin/$name/entries/$type`) outrank the `/plugin/$`
  * splat, so plugin entry types get real file-based routes. Builds a plugin
- * `EntriesMount` from `adminConfig.plugins` + a `/plugins/{name}/entries`-
- * bound client and renders the shared `EntriesListPage`. Unknown plugin/type
- * falls back to the standard not-found UI.
+ * `EntriesMount` from `adminConfig.plugins` + the one entries client and
+ * renders the shared `EntriesListPage`. Unknown plugin/type falls back to the
+ * standard not-found UI.
  */
 
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { createEntriesApi } from '@/transport/http/client/index.js';
+import { Astromech } from '@/transport/http/client/index.js';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntriesListPage } from '@/admin/components/entries/entries-list-page.js';
 import {
@@ -19,11 +19,12 @@ import {
     validateEntriesListSearch,
 } from '@/admin/components/entries/mount.js';
 import { EmptyState, Page, PageContent } from '@/admin/components/ui/index.js';
+import type { EntriesApi } from '@/types/index.js';
 
 function PluginEntryListPage(): React.ReactElement {
     const { name, type } = Route.useParams();
     const { t } = useTranslation();
-    const api = createEntriesApi(`/plugins/${name}/entries`, 'full');
+    const api = Astromech.entries as unknown as EntriesApi;
     const mount = buildPluginEntriesMount(adminConfig.plugins, name, type, api);
     if (!mount) {
         return (

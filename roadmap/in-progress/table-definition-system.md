@@ -60,6 +60,7 @@ Supersedes step 5's identity model. **Design spec:** `specs/plugin-identity.md`.
 
 - [x] `package` becomes the single canonical identifier — derive namespace + SDK key; delete `alias`/`name` and the site-level override
 - [x] Rename the schema factory `definePlugin` → `definePluginTable` (singular, takes the identity object) — resolves the two-exports-one-name collision
+    - **Superseded by** `plugin-authoring-experience.md` §2a: `definePluginTable` → `defineTable`. The name collision it resolved is gone — the plugin factory now takes one inline-identity object, so nothing else claims `defineTable`. Requires the literal-type fix (bare table names, prefix at assembly, type-only import) and retires the `<X>_PACKAGE` consts with it.
 - [x] `manifest.ts` → one `plugin` identity object across all four plugin packages (+ the demo's `rating`)
 - [x] Engine: index-name cap-and-hash above 63 bytes, explicit FK constraint names, generate-time table-name length error
 - [x] Tracking keyed on `package` with UNIQUE on `namespace`; `plugin:purge` takes the package
@@ -69,6 +70,8 @@ Supersedes step 5's identity model. **Design spec:** `specs/plugin-identity.md`.
 Follow-ups from step 6's judgment calls.
 
 - [x] Plugin API surface keys on `sdkKey` alone (HTTP route segment + `Astromech.plugins.*`); no code inverts `namespace` → `sdkKey`, and `assertNoPluginCollisions` now rejects SDK-key collisions (`@acme/2fa` vs `acme2fa`)
+    - **Renamed by** `plugin-authoring-experience.md` §2b: `sdkKey` → `serviceKey`. Identifier only — the derivation and every wire value are untouched, and the one-direction rule stands.
+    - **Narrowed by** §2d: `Astromech.plugins.<key>.entries` and the per-plugin HTTP entries mount are deleted. The `<key>` segment survives for service methods only; plugin entry types are addressed through the root entries surface by their qualified id, with the `plugin:<ns>:entry:<type>:<action>` permission derived from that id.
 - [x] `db:generate --ops <file>` — hand-authored ops for transitions the differ refuses, with every artefact (SQL, journal, snapshot, index) still machine-written; warns when the differ could have coped
 - [x] `apps/docs/data/migrations.md` documents generation, the refusals, and the escape hatch
 - [ ] Baseline regeneration → `roadmap/planned/migration-baseline-regeneration.md` (deferred; renderer changes still need a hand-edit until then)

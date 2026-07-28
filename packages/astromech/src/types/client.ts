@@ -1,5 +1,5 @@
 /**
- * SDK types — AstromechClient and the typed-entry narrowing surface.
+ * Client types — AstromechClient and the typed-entry narrowing surface.
  *
  * Runtime is `EntriesApi` (api.ts). This file layers literal-type overloads on
  * top so that callers passing string-literal types get a narrowed `TypedEntry`
@@ -19,7 +19,7 @@ import type {
     UsersApi,
 } from './api.js';
 import type { ResolvedConfig } from './config.js';
-import type { PluginSdkMethod } from './plugins.js';
+import type { PluginServiceMethod } from './plugins.js';
 
 // ============================================================================
 // Typed Entry
@@ -78,8 +78,7 @@ export type PublicFieldsFor<T extends keyof AstromechEntryTypes> = PublicFieldsF
  * overload fallback returns `Entry`.
  *
  * `TypedEntriesApi` is the standard alias bound to the global
- * `AstromechEntryTypes`; plugin entry APIs are typed via
- * `TypedEntriesApiFor<AstromechPluginEntryTypes[Name]>`.
+ * `AstromechEntryTypes`.
  */
 export type TypedEntriesApiFor<EntryMap> = {
     // ── query ────────────────────────────────────────────────────────────────
@@ -341,42 +340,29 @@ export type TypedEntriesApi = TypedEntriesApiFor<AstromechEntryTypes>;
 // AstromechClient
 // ============================================================================
 
-/** Map a plugin's SDK object type to its caller-facing callable signatures. */
-export type SdkInterface<T> = {
-    [K in keyof T]: T[K] extends PluginSdkMethod<infer I, infer O>
+/** Map a plugin's service object type to its caller-facing callable signatures. */
+export type ServiceInterface<T> = {
+    [K in keyof T]: T[K] extends PluginServiceMethod<infer I, infer O>
         ? (input: I) => Promise<O>
         : (input?: unknown) => Promise<unknown>;
 };
 
 /**
  * Augmented by plugins' own `.d.ts` via `declare module 'astromech'`: each
- * installed plugin's access key maps to its SDK method signatures. Empty by
- * default; plugins self-augment using `SdkInterface<typeof sdk>`.
+ * installed plugin's access key maps to its service method signatures. Empty
+ * by default; plugins self-augment using `ServiceInterface<typeof service>`.
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
-export interface AstromechPluginSdks {}
+export interface AstromechPluginServices {}
 
 /**
- * Augmented by generated `astromech.d.ts` with per-plugin entry type maps.
- * Each key is a plugin name; the value maps bare type names to
- * `{ fields: ...; relations: ... }` shapes.
+ * Plugin service methods only. A plugin's ENTRY types are NOT reachable here —
+ * they live on the one entries service, addressed by their qualified id
+ * (`Astromech.entries.query({ type: 'redirects/redirect' })`). Two entry points
+ * to the same content was the problem, not a feature.
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
-export interface AstromechPluginEntryTypes {}
-
-/**
- * For a plugin name `Name`, produce an `entries` member typed against the
- * plugin's registered entry types (when present in `AstromechPluginEntryTypes`),
- * or fall back to the wide `EntriesApi`.
- */
-type PluginEntriesFor<Name extends string> = Name extends keyof AstromechPluginEntryTypes
-    ? { entries: TypedEntriesApiFor<AstromechPluginEntryTypes[Name]> }
-    : { entries: EntriesApi };
-
-export type PluginSdkNamespace = AstromechPluginSdks & {
-    [Name in string]: PluginEntriesFor<Name> &
-        Record<string, (input?: unknown) => Promise<unknown>>;
-};
+export type PluginServiceNamespace = AstromechPluginServices &
+    Record<string, Record<string, (input?: unknown) => Promise<unknown>>>;
 
 export type AstromechClient = {
     entries: TypedEntriesApi;
@@ -386,6 +372,6 @@ export type AstromechClient = {
     notifications: NotificationsApi;
     config: ResolvedConfig;
     /** Plugin RPC methods — `Astromech.plugins.<name>.<method>(input)`. */
-    plugins?: PluginSdkNamespace;
+    plugins?: PluginServiceNamespace;
     configure(options: { baseUrl: string }): void;
 };

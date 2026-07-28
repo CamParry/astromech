@@ -1,10 +1,11 @@
 /**
  * Slice 5 validator: the redirects plugin runs on its OWN table
  * (`plugin_redirects_redirects`) via `tableStorage`, exercised end-to-end
- * through the entries service, the plugin SDK, and the slug-change hook.
+ * through the entries service, the plugin service, and the slug-change hook.
  *
  * Covers:
- * - ctx-scoped create lands a row in plugin_redirects_redirects, NOT entries.
+ * - a create through the entries service lands a row in
+ *   plugin_redirects_redirects, NOT entries.
  * - public `lookup` resolves match / miss / disabled.
  * - the entry:afterUpdate hook records old → new on a root slug change, and
  *   does nothing when the slug is unchanged.
@@ -21,7 +22,7 @@ import {
     registerTestPlugins,
     setupTestConfig,
 } from '@tests/harness.js';
-import '@/transport/local/index.js'; // registers the plugin SDK client (setPluginSdkClient)
+import '@/transport/local/index.js'; // registers the plugin client (setPluginClient)
 import { localPlugins } from '@/transport/local/plugins.js';
 import { entries as localEntries } from '@/entries/service.js';
 import { redirects } from '@astromech/redirects';
@@ -36,27 +37,29 @@ import type {
 } from '@/types/index.js';
 
 // Type-level proof: redirects.lookup carries real Input/Output via self-augmentation.
-async function _sdkTypeProof(client: AstromechClient) {
+async function _serviceTypeProof(client: AstromechClient) {
     const result: RedirectMatch | null =
         (await client.plugins?.redirects.lookup({ from: '/x' })) ?? null;
     void result;
 }
-void _sdkTypeProof;
+void _serviceTypeProof;
 
-// `Astromech.plugins.redirects` — the loosely-typed RPC method map, with the
-// reserved `entries` sub-API. Cast narrowly at each access point.
-type RedirectsSdk = Record<string, (input?: unknown) => Promise<unknown>> & {
-    entries: EntriesApi;
-};
-const redirectsSdk = (): RedirectsSdk =>
-    localPlugins['redirects'] as unknown as RedirectsSdk;
+// `Astromech.plugins.redirects` — the loosely-typed RPC method map. There is no
+// per-plugin entries sub-API: a plugin entry type is addressed on the one
+// entries service by its qualified id.
+type RedirectsService = Record<string, (input?: unknown) => Promise<unknown>>;
+const redirectsService = (): RedirectsService =>
+    localPlugins['redirects'] as unknown as RedirectsService;
 
-/** Plugin entries sub-API: `redirectEntriesApi()`. */
-const redirectEntriesApi = (): EntriesApi => redirectsSdk().entries;
+/** The redirect entry type's qualified id — how every caller addresses it. */
+const REDIRECT = 'redirects/redirect';
+
+/** The one entries service, typed to the wide API for these round-trips. */
+const redirectEntriesApi = (): EntriesApi => localEntries as unknown as EntriesApi;
 
 /** Public `lookup` RPC method, the way a frontend middleware would call it. */
 const lookup = (input: { from: string }): Promise<RedirectMatch | null> => {
-    const fn = redirectsSdk()['lookup'];
+    const fn = redirectsService()['lookup'];
     if (!fn) throw new Error('redirects.lookup not registered');
     return fn(input) as Promise<RedirectMatch | null>;
 };
@@ -91,9 +94,9 @@ beforeEach(async () => {
 });
 
 describe('redirects — own-table storage', () => {
-    it('ctx-scoped create lands in plugin_redirects_redirects, not entries', async () => {
+    it('create lands in plugin_redirects_redirects, not entries', async () => {
         await redirectEntriesApi().create({
-            type: 'redirect',
+            type: REDIRECT,
             fields: { from: '/old', to: '/new', status: '301', enabled: true },
         });
 
@@ -111,7 +114,7 @@ describe('redirects — own-table storage', () => {
 
     it('stamps the qualified type onto entries read back from the own table', async () => {
         const created = await redirectEntriesApi().create({
-            type: 'redirect',
+            type: REDIRECT,
             fields: { from: '/old', to: '/new', status: '301', enabled: true },
             status: 'published',
         });
@@ -119,12 +122,12 @@ describe('redirects — own-table storage', () => {
         // query() must return a complete entry — tableStorage rows have no
         // `type` column, so the entries service stamps it. Without this, admin
         // search builds a broken `/entries/undefined/<id>` link.
-        const listed = await redirectEntriesApi().query({ type: 'redirect', limit: 10 });
+        const listed = await redirectEntriesApi().query({ type: REDIRECT, limit: 10 });
         expect(listed.data).toHaveLength(1);
         expect(listed.data[0]?.type).toBe('redirects/redirect');
 
         const fetched = await redirectEntriesApi().get({
-            type: 'redirect',
+            type: REDIRECT,
             id: created.id,
         });
         expect(fetched?.type).toBe('redirects/redirect');
@@ -135,12 +138,12 @@ describe('redirects — lookup', () => {
     beforeEach(async () => {
         // Redirects must be published to pass the public visibility filter.
         await redirectEntriesApi().create({
-            type: 'redirect',
+            type: REDIRECT,
             fields: { from: '/match', to: '/dest', status: '302', enabled: true },
             status: 'published',
         });
         await redirectEntriesApi().create({
-            type: 'redirect',
+            type: REDIRECT,
             fields: { from: '/off', to: '/nope', status: '301', enabled: false },
             status: 'published',
         });
@@ -208,7 +211,7 @@ describe('redirects — hooks observe the qualified type', () => {
         registerTestPlugins([redirects(), probe], resolved);
 
         await redirectEntriesApi().create({
-            type: 'redirect',
+            type: REDIRECT,
             fields: { from: '/a', to: '/b', status: '301', enabled: true },
         });
 

@@ -22,9 +22,8 @@ import { rmSync } from 'node:fs';
 import { setupTestConfig, makeTestConfig, createFileTestDb } from '@tests/harness.js';
 import { entries as api } from '@/entries/service.js';
 import { createEntriesRouter } from '@/transport/http/routes/entries.js';
-import { rootEntryPermission } from '@/permissions/index.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
-import type { ResolvedConfig, Role, User } from '@/types/index.js';
+import type { Role, User } from '@/types/index.js';
 
 const fakeUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;
 
@@ -39,7 +38,6 @@ function roleWith(permissions: string[]): Role {
 
 let dbCounter = 0;
 let dbPath = '';
-let resolved: ResolvedConfig;
 
 beforeEach(async () => {
     dbCounter += 1;
@@ -48,7 +46,7 @@ beforeEach(async () => {
 
     const cfg = makeTestConfig();
     if (cfg.entries.post) cfg.entries.post.staging = true; // versioning on + staging on
-    resolved = setupTestConfig(cfg);
+    setupTestConfig(cfg);
 });
 
 afterEach(() => {
@@ -69,14 +67,7 @@ function mountedApp(role: Role): OpenAPIHono<{ Variables: AuthVariables }> {
         c.set('role', role);
         return next();
     });
-    app.route(
-        '/entries',
-        createEntriesRouter({
-            lookup: (t) => resolved.entries[t],
-            qualify: (t) => t,
-            permissionFor: (t, a) => rootEntryPermission(t, a),
-        })
-    );
+    app.route('/entries', createEntriesRouter());
     return app;
 }
 

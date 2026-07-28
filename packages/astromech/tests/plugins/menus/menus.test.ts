@@ -20,19 +20,19 @@ import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity.js';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-type MenusSdk = {
+type MenusService = {
     get(input: { key: string; locale?: string }): Promise<MenuItem[] | null>;
 };
 
-function menusSdk(): MenusSdk {
-    return localPlugins['menus'] as unknown as MenusSdk;
+function menusService(): MenusService {
+    return localPlugins['menus'] as unknown as MenusService;
 }
 
 async function get(key: string, locale?: string): Promise<MenuItem[] | null> {
     if (locale !== undefined) {
-        return menusSdk().get({ key, locale });
+        return menusService().get({ key, locale });
     }
-    return menusSdk().get({ key });
+    return menusService().get({ key });
 }
 
 async function writeSetting(key: string, value: unknown): Promise<void> {
@@ -116,7 +116,7 @@ describe('menus — plugin structure', () => {
     });
 });
 
-// ── SDK tests ─────────────────────────────────────────────────────────────────
+// ── Service tests ────────────────────────────────────────────────────────────
 
 describe('menus.get — unconfigured key', () => {
     it('returns null for a key not in the menus config', async () => {

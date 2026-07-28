@@ -22,10 +22,6 @@
             "types": "./dist/fields.d.ts",
             "default": "./dist/fields.js"
         },
-        "./plugin-kit": {
-            "types": "./dist/plugin-kit.d.ts",
-            "default": "./dist/plugin-kit.js"
-        },
         "./columns": {
             "types": "./dist/columns.d.ts",
             "default": "./dist/columns.js"
@@ -35,20 +31,12 @@
             "default": "./dist/kernel/astro.js"
         },
         "./local": {
-            "types": "./dist/sdk/local/index.d.ts",
-            "default": "./dist/sdk/local/index.js"
+            "types": "./dist/local/index.d.ts",
+            "default": "./dist/local/index.js"
         },
         "./fetch": {
-            "types": "./dist/sdk/fetch/index.d.ts",
-            "default": "./dist/sdk/fetch/index.js"
-        },
-        "./sdk/local": {
-            "types": "./dist/sdk/local/index.d.ts",
-            "default": "./dist/sdk/local/index.js"
-        },
-        "./sdk/fetch": {
-            "types": "./dist/sdk/fetch/index.d.ts",
-            "default": "./dist/sdk/fetch/index.js"
+            "types": "./dist/fetch/index.d.ts",
+            "default": "./dist/fetch/index.js"
         },
         "./middleware": {
             "types": "./dist/middleware.d.ts",

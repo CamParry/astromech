@@ -39,7 +39,7 @@ const storageDriver: StorageDriver = {
 // Fixtures
 // ============================================================================
 
-/** Plugin with an entry type and two SDK methods to cover the access branches. */
+/** Plugin with an entry type and two service methods to cover the access branches. */
 const testPlugin: PluginDefinition = {
     package: '@test/my-plugin',
     entries: [
@@ -50,7 +50,7 @@ const testPlugin: PluginDefinition = {
             fields: [{ name: 'title', type: 'text' }],
         },
     ],
-    sdk: {
+    service: {
         doSomething: {
             access: { permission: 'plugins:x:do' },
             summary: 'Do something.',
@@ -355,11 +355,11 @@ describe('generateMethodManifest — plugin entries', () => {
 });
 
 // ============================================================================
-// Plugin SDK methods
+// Plugin service methods
 // ============================================================================
 
-describe('generateMethodManifest — plugin SDK methods', () => {
-    it('should emit plugins.testMyPlugin.doSomething (SDK key) with source plugin', () => {
+describe('generateMethodManifest — plugin service methods', () => {
+    it('should emit plugins.testMyPlugin.doSomething (service key) with source plugin', () => {
         const { methods } = parseManifest();
         const m = findMethod(methods, 'plugins.testMyPlugin.doSomething');
         expect(m).toBeDefined();

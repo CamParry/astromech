@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateSdkTypes } from '@/codegen/type-generator.js';
+import { generateClientTypes } from '@/codegen/type-generator.js';
 import type { ResolvedConfig } from '@/types/index.js';
 
 function makeConfig(mainFields: object[], sidebarFields: object[] = []): ResolvedConfig {
@@ -23,7 +23,7 @@ function makeConfig(mainFields: object[], sidebarFields: object[] = []): Resolve
 describe('type-generator — FieldsPublic variant', () => {
     it('emits a FieldsPublic interface alongside Fields for every collection', () => {
         const config = makeConfig([{ name: 'title', type: 'text' }]);
-        const output = generateSdkTypes(config);
+        const output = generateClientTypes(config);
 
         expect(output).toContain('export interface PostsFields {');
         expect(output).toContain('export interface PostsFieldsPublic {');
@@ -31,7 +31,7 @@ describe('type-generator — FieldsPublic variant', () => {
 
     it('adds fieldsPublic to the AstromechEntryTypes map entry', () => {
         const config = makeConfig([{ name: 'title', type: 'text' }]);
-        const output = generateSdkTypes(config);
+        const output = generateClientTypes(config);
 
         expect(output).toContain(
             'posts: { fields: PostsFields; fieldsPublic: PostsFieldsPublic; relations: PostsRelations };'
@@ -40,7 +40,7 @@ describe('type-generator — FieldsPublic variant', () => {
 
     it('FieldsPublic carries the __shape brand marker', () => {
         const config = makeConfig([{ name: 'title', type: 'text' }]);
-        const output = generateSdkTypes(config);
+        const output = generateClientTypes(config);
 
         // The brand must appear inside the PostsFieldsPublic interface.
         const publicIdx = output.indexOf('export interface PostsFieldsPublic {');
@@ -54,7 +54,7 @@ describe('type-generator — FieldsPublic variant', () => {
             { name: 'title', type: 'text' },
             { name: 'internalScore', type: 'number', private: true },
         ]);
-        const output = generateSdkTypes(config);
+        const output = generateClientTypes(config);
 
         // Full type includes it.
         const fullIdx = output.indexOf('export interface PostsFields {');
@@ -76,7 +76,7 @@ describe('type-generator — FieldsPublic variant', () => {
             { name: 'body', type: 'richtext' },
             { name: 'secret', type: 'text', private: true },
         ]);
-        const output = generateSdkTypes(config);
+        const output = generateClientTypes(config);
 
         const pubIdx = output.indexOf('export interface PostsFieldsPublic {');
         const pubEnd = output.indexOf('\n}', pubIdx);
@@ -92,7 +92,7 @@ describe('type-generator — FieldsPublic variant', () => {
                 fields: [{ name: 'label', type: 'text' }],
             },
         ]);
-        const output = generateSdkTypes(config);
+        const output = generateClientTypes(config);
 
         // Full type includes _disabled and _title.
         const fullIdx = output.indexOf('export interface PostsFields {');
@@ -119,7 +119,7 @@ describe('type-generator — FieldsPublic variant', () => {
                 fields: [{ name: 'label', type: 'text' }],
             },
         ]);
-        const output = generateSdkTypes(config);
+        const output = generateClientTypes(config);
 
         // Public tree node interface is emitted with a distinct name.
         expect(output).toContain('export interface NavItemsPublicTreeNode {');
@@ -140,7 +140,7 @@ describe('type-generator — FieldsPublic variant', () => {
 
     it('FieldsPublic omits _disabled and _title from blocks field', () => {
         const config = makeConfig([{ name: 'content', type: 'blocks' }]);
-        const output = generateSdkTypes(config);
+        const output = generateClientTypes(config);
 
         const pubIdx = output.indexOf('export interface PostsFieldsPublic {');
         const pubEnd = output.indexOf('\nexport type PostsRelations', pubIdx);
@@ -154,7 +154,7 @@ describe('type-generator — FieldsPublic variant', () => {
 
     it('FieldsPublic still emits even when no private fields exist (alias pattern)', () => {
         const config = makeConfig([{ name: 'title', type: 'text' }]);
-        const output = generateSdkTypes(config);
+        const output = generateClientTypes(config);
 
         // Both interfaces exist.
         expect(output).toContain('export interface PostsFields {');
@@ -172,7 +172,7 @@ describe('type-generator — FieldsPublic variant', () => {
                 ],
             },
         ]);
-        const output = generateSdkTypes(config);
+        const output = generateClientTypes(config);
 
         const pubIdx = output.indexOf('export interface PostsFieldsPublic {');
         const pubEnd = output.indexOf('\nexport type PostsRelations', pubIdx);
@@ -183,7 +183,7 @@ describe('type-generator — FieldsPublic variant', () => {
 
     it('full Fields type does NOT carry the __shape brand', () => {
         const config = makeConfig([{ name: 'title', type: 'text' }]);
-        const output = generateSdkTypes(config);
+        const output = generateClientTypes(config);
 
         const fullIdx = output.indexOf('export interface PostsFields {');
         const fullEnd = output.indexOf('\nexport interface PostsFieldsPublic', fullIdx);
@@ -223,7 +223,7 @@ describe('type-generator — public relations reference FieldsPublic', () => {
             pluginEntries: {},
         } as unknown as ResolvedConfig;
 
-        const output = generateSdkTypes(config);
+        const output = generateClientTypes(config);
 
         // Relations type uses full Fields (unchanged from original behaviour).
         expect(output).toContain("import('astromech').TypedEntry<CategoriesFields>");

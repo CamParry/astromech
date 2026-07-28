@@ -5,11 +5,10 @@
  */
 
 import type { PluginFieldTypeRegistration } from 'astromech';
-import { asset } from '../plugin.js';
 
 export const seoPreviewField: PluginFieldTypeRegistration = {
     type: 'seo-preview',
-    component: asset('admin/fields/seo-preview-field.tsx'),
+    component: './admin/fields/seo-preview-field.tsx',
     defaultValue: null,
     typeGen: () => null,
 };

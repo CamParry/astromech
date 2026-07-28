@@ -9,5 +9,5 @@ export * from './hooks.js';
 export * from './plugins.js';
 export * from './services.js';
 export * from './api.js';
-export * from './sdk.js';
+export * from './client.js';
 export * from './definitions.js';

@@ -1,11 +1,11 @@
 /**
  * Shim for virtual:astromech/config
  *
- * The SDK modules (`services/entries/service.ts`, `transport/local/index.ts`) import from
- * `virtual:astromech/config` which is normally injected by the Astro integration
- * at build time. In the CLI context this virtual module does not exist, so we
- * shim it with a live getter that reads from the global registry populated by
- * `loadConfig`.
+ * The local-transport modules (`services/entries/service.ts`, `transport/local/index.ts`)
+ * import from `virtual:astromech/config` which is normally injected by the Astro
+ * integration at build time. In the CLI context this virtual module does not
+ * exist, so we shim it with a live getter that reads from the global registry
+ * populated by `loadConfig`.
  *
  * tsup aliases this path to here for the CLI build only.
  */
@@ -30,7 +30,7 @@ function getCliConfig(): ResolvedConfig {
 }
 
 // Export as a Proxy so property accesses are always forwarded to the live config.
-// This matches the shape of ResolvedConfig used by the SDK (entries, defaultLocale, etc.)
+// This matches the shape of ResolvedConfig used by the local transport (entries, defaultLocale, etc.)
 const configProxy = new Proxy({} as ResolvedConfig, {
     get(_target, prop: string) {
         return (getCliConfig() as Record<string, unknown>)[prop];

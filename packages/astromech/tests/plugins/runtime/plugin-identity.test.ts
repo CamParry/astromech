@@ -4,7 +4,7 @@ import {
     assertNoPluginCollisions,
     checkPluginDependencies,
     pluginNamespace,
-    pluginSdkKey,
+    pluginServiceKey,
     resolvePluginIdentity,
     satisfiesRange,
 } from '@/plugins/runtime/plugin-identity.js';
@@ -40,22 +40,22 @@ describe('pluginNamespace', () => {
     });
 });
 
-describe('pluginSdkKey', () => {
+describe('pluginServiceKey', () => {
     it.each([
         ['redirects', 'redirects'],
         ['acme_seo', 'acmeSeo'],
         ['acme_digital_seo_tools', 'acmeDigitalSeoTools'],
     ])('%s → %s', (namespace, key) => {
-        expect(pluginSdkKey(namespace)).toBe(key);
+        expect(pluginServiceKey(namespace)).toBe(key);
     });
 
     // A separator before a character with no uppercase form collapses, so the
-    // mapping has no inverse. Nothing may reconstruct a namespace from an SDK
-    // key — the collision check below is what makes the key safe to use as the
-    // one lookup identifier on the API surface.
+    // mapping has no inverse. Nothing may reconstruct a namespace from a
+    // service key — the collision check below is what makes the key safe to
+    // use as the one lookup identifier on the API surface.
     it('is lossy when a separator precedes a digit', () => {
-        expect(pluginSdkKey('acme_2fa')).toBe('acme2fa');
-        expect(pluginSdkKey('acme2fa')).toBe('acme2fa');
+        expect(pluginServiceKey('acme_2fa')).toBe('acme2fa');
+        expect(pluginServiceKey('acme2fa')).toBe('acme2fa');
     });
 });
 
@@ -65,7 +65,7 @@ describe('resolvePluginIdentity', () => {
         expect(id).toEqual({
             package: '@astromech/redirects',
             namespace: 'redirects',
-            sdkKey: 'redirects',
+            serviceKey: 'redirects',
             permissionNamespace: 'redirects',
         });
     });
@@ -73,7 +73,7 @@ describe('resolvePluginIdentity', () => {
     it('keeps the scope for a third-party package and carries version', () => {
         const id = resolvePluginIdentity(def({ package: '@x/y-z', version: '1.2.3' }));
         expect(id.namespace).toBe('x_y_z');
-        expect(id.sdkKey).toBe('xYZ');
+        expect(id.serviceKey).toBe('xYZ');
         expect(id.permissionNamespace).toBe('x_y_z');
         expect(id.version).toBe('1.2.3');
     });
@@ -116,24 +116,24 @@ describe('assertNoPluginCollisions', () => {
         ).toThrow(/cannot be overridden/);
     });
 
-    // `acme_2fa` and `acme2fa` are distinct namespaces that derive one SDK key.
-    // Left unchecked they would silently share an `Astromech.plugins.acme2fa`
+    // `acme_2fa` and `acme2fa` are distinct namespaces that derive one service
+    // key. Left unchecked they would silently share an `Astromech.plugins.acme2fa`
     // property and one HTTP route segment, so the second plugin installed would
     // shadow the first.
-    it('throws when two distinct namespaces derive the same SDK key', () => {
+    it('throws when two distinct namespaces derive the same service key', () => {
         const identities = [
             resolvePluginIdentity(def({ package: '@acme/2fa' })),
             resolvePluginIdentity(def({ package: 'acme2fa' })),
         ];
         expect(identities[0]?.namespace).not.toBe(identities[1]?.namespace);
-        expect(identities[0]?.sdkKey).toBe(identities[1]?.sdkKey);
+        expect(identities[0]?.serviceKey).toBe(identities[1]?.serviceKey);
 
         expect(() =>
             assertNoPluginCollisions([
                 def({ package: '@acme/2fa' }),
                 def({ package: 'acme2fa' }),
             ])
-        ).toThrow(/SDK key collision.*acme2fa/s);
+        ).toThrow(/service key collision.*acme2fa/s);
     });
 });
 

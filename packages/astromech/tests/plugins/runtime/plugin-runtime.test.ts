@@ -11,7 +11,7 @@ import {
     emitEvent,
     getPluginIdentity,
     getPluginRawRoutes,
-    getPluginSdkMethods,
+    getPluginServiceMethods,
     registerPlugins,
     runAfterHooks,
     runBeforeHooks,
@@ -107,12 +107,12 @@ beforeEach(() => {
 });
 
 describe('registerPlugins indexing', () => {
-    it('indexes sdk methods and raw routes by access key', () => {
+    it('indexes service methods and raw routes by access key', () => {
         registerPlugins(
             [
                 def({
                     package: '@astromech/redirects',
-                    sdk: { lookup: { access: 'public', handler: async () => null } },
+                    service: { lookup: { access: 'public', handler: async () => null } },
                     rawRoutes: [
                         {
                             path: '/upload',
@@ -126,7 +126,7 @@ describe('registerPlugins indexing', () => {
             config
         );
 
-        expect(getPluginSdkMethods().get('redirects')).toHaveProperty('lookup');
+        expect(getPluginServiceMethods().get('redirects')).toHaveProperty('lookup');
         expect(getPluginRawRoutes()).toHaveLength(1);
         expect(getPluginRawRoutes()[0]?.identity.namespace).toBe('redirects');
     });
@@ -134,10 +134,10 @@ describe('registerPlugins indexing', () => {
 
 describe('getPluginIdentity', () => {
     // The API surface (HTTP route segment and `Astromech.plugins.<key>`) keys on
-    // the SDK key alone. Resolving a namespace here as well would let a caller
-    // reach a plugin by a string the client can never produce, and would hide
-    // the fact that the namespace → SDK key derivation has no inverse.
-    it('resolves by SDK key and NOT by namespace', () => {
+    // the service key alone. Resolving a namespace here as well would let a
+    // caller reach a plugin by a string the client can never produce, and would
+    // hide the fact that the namespace → service key derivation has no inverse.
+    it('resolves by service key and NOT by namespace', () => {
         registerPlugins([def({ package: '@acme/seo-tools' })], config);
 
         const identity = getPluginIdentity('acmeSeoTools');
