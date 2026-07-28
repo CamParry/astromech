@@ -10,11 +10,12 @@ import type {
     EntryTypeConfig,
     HookEvent,
     HookHandlerFor,
+    Permission,
     PluginDefinition,
     PluginFactory,
-    PluginIdentity,
     PluginSdkMethod,
 } from '@/types/index.js';
+import { pluginNamespace } from '@/utilities/plugin-namespace.js';
 
 // ============================================================================
 // Type Exports
@@ -30,11 +31,7 @@ export type { SmtpDriverOptions } from '@/email/drivers/smtp.js';
 export { libsqlDriver } from '@/database/drivers/libsql.js';
 export { d1Driver } from '@/database/drivers/d1.js';
 export { runScheduledJobs } from '@/cron/index.js';
-export {
-    builtInRole,
-    definePermissionBundles,
-    BUILT_IN_ROLES,
-} from '@/permissions/index.js';
+export { builtInRole, BUILT_IN_ROLES } from '@/permissions/index.js';
 export type { BuiltInRoleSlug } from '@/permissions/index.js';
 export { withDefaults } from '@/utilities/options.js';
 export { resolveEntryUrl, resolveEntryPath } from '@/entries/utils/url.js';
@@ -63,27 +60,76 @@ export function defineEntryType(config: EntryTypeConfig): EntryTypeConfig {
 }
 
 /**
- * Define a plugin as a factory. Identity comes from argument one — the same
- * `plugin.ts` object the plugin's tables are declared against — and behaviour
- * from the factory, so a plugin states its package, version, label and icon
- * exactly once.
+ * Define a plugin from one object — identity and behaviour together, the way
+ * `defineConfig` takes one config. `package` is a key like any other, so a
+ * plugin never has to hand its own identity to itself, and nothing inside the
+ * package needs to import an identity module to build a namespaced string.
  *
- * First-party plugins export the returned function and are callable with zero
- * args (`redirects()`); options are always optional, and the factory is
- * responsible for validating them and applying defaults internally.
+ * Pass a plain definition, or a factory when the plugin takes options. Either
+ * way the result is a **factory**, so sites always call it: `plugins: [seo(),
+ * redirects({ … })]`.
+ *
+ * Relative asset specifiers (`'./admin/pages/overview.tsx'`) on `fields`,
+ * `admin.pages`, `admin.slots` and `i18n` resolve against `root` — see
+ * {@link PluginDefinition.root}.
+ *
+ * The factory carries a `permissions(bundle)` accessor for any
+ * `permissionBundles` the definition declares, already namespaced, so a site
+ * composes roles straight off the plugin: `[...seo.permissions('view')]`.
+ *
+ * A factory MUST be a pure data builder: Astromech calls it once with no
+ * options to read identity and permission bundles, and again for each site
+ * instantiation.
  *
  * @example
- * export const redirects = definePlugin(plugin, (options: RedirectsOptions = {}) => ({
- *     schema: [redirectsTable],
+ * export const seo = definePlugin({
+ *     package: '@astromech/seo',
+ *     label: 'SEO',
+ *     fields: [seoPreviewField],
+ * });
+ *
+ * @example
+ * export const redirects = definePlugin((options?: RedirectsOptions) => ({
+ *     package: '@astromech/redirects',
  *     entries: [redirectEntryType],
- *     // ...declarative definition...
+ *     ...(options?.generateOnSlugChange !== false && { hooks: [slugChangeHook] }),
  * }));
  */
-export function definePlugin<Options = void>(
-    identity: PluginIdentity,
-    factory: (options?: Options) => Omit<PluginDefinition, keyof PluginIdentity>
-): PluginFactory<Options> {
-    return (options?: Options) => ({ ...identity, ...factory(options) });
+export function definePlugin<const Def extends PluginDefinition, Options = void>(
+    source: Def | ((options?: Options) => Def)
+): PluginFactory<Options, Def> {
+    const build = (options?: Options): Def =>
+        typeof source === 'function' ? source(options) : source;
+
+    // One no-options build backs the surfaces a site reads *without*
+    // instantiating the plugin — identity and permission bundles. Cached so a
+    // factory is not re-run per `permissions()` call.
+    let base: Def | undefined;
+    const baseDefinition = (): Def => (base ??= build());
+
+    const factory = ((options?: Options) => build(options)) as PluginFactory<
+        Options,
+        Def
+    >;
+
+    factory.permissions = (bundle: string) => {
+        const definition = baseDefinition();
+        const bundles = definition.permissionBundles ?? {};
+        const keys = bundles[bundle];
+        if (!keys) {
+            const available = Object.keys(bundles);
+            throw new Error(
+                `Unknown permission bundle "${bundle}" for plugin "${definition.package}". ` +
+                    (available.length > 0
+                        ? `Available: ${available.join(', ')}.`
+                        : `The plugin declares no \`permissionBundles\`.`)
+            );
+        }
+        const namespace = pluginNamespace(definition.package);
+        return keys.map((key) => `plugin:${namespace}:${key}` as Permission);
+    };
+
+    return factory;
 }
 
 /**

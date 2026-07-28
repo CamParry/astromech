@@ -14,7 +14,6 @@
 import { defineAdminPage, definePlugin, defineServiceMethod } from 'astromech';
 import type { SdkInterface } from 'astromech';
 import * as fields from 'astromech/fields';
-import { plugin } from './plugin.js';
 import { buildMenusSdk } from './sdk/menus.js';
 import type { MenusOptions, MenuItem } from './types.js';
 
@@ -43,7 +42,7 @@ declare module 'astromech' {
 
 export type { MenuItem, MenuConfig, MenusOptions } from './types.js';
 
-export const menus = definePlugin<MenusOptions>(plugin, (options) => {
+export const menus = definePlugin((options?: MenusOptions) => {
     const menuConfigs = options?.menus ?? [];
 
     const pages = menuConfigs.map(({ key, label }) =>
@@ -64,6 +63,10 @@ export const menus = definePlugin<MenusOptions>(plugin, (options) => {
     const sdk = buildMenusSdk(menuConfigs);
 
     return {
+        package: '@astromech/menus',
+        version: '0.1.0',
+        label: 'Menus',
+        icon: 'Menu',
         admin: {
             pages,
         },

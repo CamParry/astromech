@@ -424,6 +424,7 @@ export function createPluginContext(
         get db(): Kysely<DB> {
             return getDb();
         },
+        plugin: identity,
         config: configView,
         user,
         get sdk(): AstromechClient {

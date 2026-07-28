@@ -8,10 +8,10 @@ import {
 } from 'astromech';
 import { sharp } from 'astromech/images/sharp';
 import * as fields from 'astromech/fields';
-import { redirects, redirectsPermissions } from '@astromech/redirects';
-import { seo, seoSection, seoPermissions } from '@astromech/seo';
+import { redirects } from '@astromech/redirects';
+import { seo, seoSection } from '@astromech/seo';
 import { menus } from '@astromech/menus';
-import { backups, backupsPermissions } from '@astromech/backups';
+import { backups } from '@astromech/backups';
 import { rating } from './src/plugins/rating/index.js';
 
 // ---------------------------------------------------------------------------
@@ -135,9 +135,9 @@ export default defineConfig({
             name: 'Content Editor',
             permissions: [
                 ...builtInRole('editor'),
-                ...seoPermissions('view'),
-                ...redirectsPermissions('manage'),
-                ...backupsPermissions('manage'),
+                ...seo.permissions('view'),
+                ...redirects.permissions('manage'),
+                ...backups.permissions('manage'),
             ],
         },
     },

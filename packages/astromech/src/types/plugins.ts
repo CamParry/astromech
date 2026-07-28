@@ -18,7 +18,7 @@ import type {
     ResolvedConfig,
 } from './config.js';
 import type { FieldDefinition, FieldValidator } from './fields.js';
-import type { User, NotifyInput } from './domain.js';
+import type { User, NotifyInput, Permission } from './domain.js';
 import type { PluginHooks } from './hooks.js';
 import type { AstromechClient } from './sdk.js';
 import type { EntriesApi } from './api.js';
@@ -80,6 +80,13 @@ export type PluginConfigView = ResolvedConfig & {
 
 export type PluginContext = {
     db: Kysely<DB>;
+    /**
+     * This plugin's own resolved identity. Runtime code that needs a namespaced
+     * string — a settings key, a permission, an i18n bundle name — reads it
+     * from here rather than importing an identity module, which is what keeps a
+     * plugin's sub-modules free of any dependency on its identity.
+     */
+    plugin: ResolvedPluginIdentity;
     config: PluginConfigView;
     /** The acting user, or null for unauthenticated / system contexts. */
     user: User | null;
@@ -226,20 +233,23 @@ export type PluginFieldTypeRegistration = {
  * string, i18n bundle and SDK key is derived from it mechanically, and cannot
  * be declared or overridden.
  *
- * A plugin package exports one of these (`plugin.ts`) and passes it to both
- * `definePlugin` and `definePluginTable`:
+ * Identity is declared inline in the plugin's `definePlugin` call, alongside
+ * everything else the plugin contributes — a plugin never passes its own
+ * identity to itself:
  *
  * ```ts
- * export const plugin = {
+ * export const redirects = definePlugin({
  *     package: '@astromech/redirects',
  *     version: '0.1.0',
  *     label: 'Redirects',
  *     icon: 'Signpost',
- * } as const satisfies PluginIdentity;
+ *     // ...the rest of the definition...
+ * });
  * ```
  *
- * `as const` is what gives `package` a literal type, which is what lets
- * `definePluginTable` derive a literal table name for `PluginDB`.
+ * `definePluginTable` still takes a package name directly, because it needs
+ * that string as a *literal type* to derive a table name for `PluginDB` — a
+ * value declared inside the definition can't reach a module-scope descriptor.
  */
 export type PluginIdentity = {
     /** Canonical package name, e.g. `@astromech/redirects`. */
@@ -256,8 +266,39 @@ export type PluginIdentity = {
 };
 
 export type PluginDefinition = PluginIdentity & {
+    /**
+     * Base for resolving this plugin's *relative* asset specifiers (`'./admin/
+     * pages/overview.tsx'`) on `fields`, `admin.pages`, `admin.slots` and
+     * `i18n`. Declared once here so no sub-module has to build a path.
+     *
+     * Pass `import.meta.url` from the module holding the definition; an
+     * in-tree or otherwise unpublished plugin needs this, because its assets
+     * have no package specifier to resolve through. Omit it for a published
+     * package and relative specifiers resolve to `<package>/<path>` instead —
+     * the subpath the package exports them under.
+     *
+     * Absolute and bare specifiers are passed through untouched, so an asset
+     * that lives outside the plugin can still be named directly.
+     */
+    root?: string;
+
     // ── Declarative surfaces ────────────────────────────────────────────
     permissions?: PluginPermission[];
+    /**
+     * Named permission bundles a *site* composes into its roles, surfaced on
+     * the plugin factory with the namespace already applied:
+     *
+     * ```ts
+     * permissionBundles: { manage: ['read', 'run'], view: ['read'] }
+     * // site: roles: { admin: { permissions: [...backups.permissions('manage')] } }
+     * ```
+     *
+     * Keys are plugin-scoped exactly like `permissions[].key` — including keys
+     * that already contain `:`, so `entry:redirect:read` becomes
+     * `plugin:redirects:entry:redirect:read`. Bundles never grant core
+     * permissions; sites compose those via `builtInRole()` or literals.
+     */
+    permissionBundles?: Record<string, readonly string[]>;
     /** Entry types contributed by the plugin. Each self-declares its `type`. */
     entries?: EntryTypeConfig[];
     fields?: PluginFieldTypeRegistration[];
@@ -281,12 +322,15 @@ export type PluginDefinition = PluginIdentity & {
     cron?: PluginCronJob[];
     admin?: PluginAdmin;
     /**
-     * Admin-UI locale resources, keyed by locale code. Values are import
-     * specifiers (STRINGS, e.g. `'./locales/en.json'` resolved by the
-     * plugin) so the code-gen virtual module can emit lazy `import()` calls
-     * (spec §11). Namespace = the derived plugin namespace.
+     * Admin-UI locale resources. Namespace = the derived plugin namespace.
+     *
+     * Usually just the locale codes — `['en', 'fr']` — which expand to
+     * `./locales/<code>.json` and resolve against {@link PluginDefinition.root}
+     * like any other asset. Pass a `{ locale: specifier }` map instead when the
+     * bundles don't follow that layout. Values are import specifiers (STRINGS)
+     * so the code-gen virtual module can emit lazy `import()` calls (spec §11).
      */
-    i18n?: Record<string, string>;
+    i18n?: string[] | Record<string, string>;
     requiredEnv?: string[];
     /** Package name → semver range. Existence + basic range check only. */
     dependsOn?: Record<string, string>;
@@ -297,8 +341,25 @@ export type PluginDefinition = PluginIdentity & {
     setup?: (ctx: PluginContext) => void | Promise<void>;
 };
 
-/** The result of a plugin factory — what users place in `config.plugins`. */
-export type PluginFactory<Options = void> = (options?: Options) => PluginDefinition;
+/**
+ * What `definePlugin` returns and a plugin package exports. Calling it yields
+ * the definition a site places in `config.plugins`; `permissions(bundle)`
+ * resolves one of the definition's `permissionBundles` to fully-namespaced
+ * permission strings, so a site composes roles without importing anything else
+ * from the package.
+ *
+ * `Def` is the definition's own type, which is what keeps the bundle names
+ * literal — `seo.permissions('view')` type-checks, `seo.permissions('viwe')`
+ * does not.
+ */
+export type PluginFactory<
+    Options = void,
+    Def extends PluginDefinition = PluginDefinition,
+> = ((options?: Options) => Def) & {
+    permissions: (
+        bundle: Def extends { permissionBundles: infer B } ? keyof B & string : string
+    ) => Permission[];
+};
 
 /**
  * Fully-derived plugin identity, computed once during config resolution.

@@ -6,17 +6,21 @@
 
 import { definePluginTable } from 'astromech/plugin-kit';
 import type { TableInsert, TableSelect } from 'astromech/plugin-kit';
-import { plugin } from '../plugin.js';
+import { REDIRECTS_PACKAGE } from '../types.js';
 
-export const redirectsTable = definePluginTable(plugin, 'redirects', ({ col }) => ({
-    id: col.id(),
-    from: col.text({ notNull: true }),
-    to: col.text({ notNull: true }),
-    status: col.text({ notNull: true, default: '301' }),
-    enabled: col.boolean({ notNull: true, default: true }),
-    createdAt: col.timestamp({ notNull: true, defaultNow: true }),
-    updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
-}));
+export const redirectsTable = definePluginTable(
+    REDIRECTS_PACKAGE,
+    'redirects',
+    ({ col }) => ({
+        id: col.id(),
+        from: col.text({ notNull: true }),
+        to: col.text({ notNull: true }),
+        status: col.text({ notNull: true, default: '301' }),
+        enabled: col.boolean({ notNull: true, default: true }),
+        createdAt: col.timestamp({ notNull: true, defaultNow: true }),
+        updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
+    })
+);
 
 export type RedirectRow = TableSelect<typeof redirectsTable>;
 export type NewRedirectRow = TableInsert<typeof redirectsTable>;

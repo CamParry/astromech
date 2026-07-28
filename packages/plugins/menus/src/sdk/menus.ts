@@ -7,7 +7,6 @@
 import type { AnyPluginSdkMethod, Entry, PluginContext } from 'astromech';
 import { defineServiceMethod } from 'astromech';
 import { resolveEntryUrl } from 'astromech/plugin-kit';
-import { menuBlobKey } from '../plugin.js';
 import type { MenuConfig, MenuItem } from '../types.js';
 
 /** Raw stored node shape (with reserved underscore keys). */
@@ -102,7 +101,11 @@ export function buildMenusSdk(configs: MenuConfig[]): Record<string, AnyPluginSd
 
                 const locale =
                     typeof input?.locale === 'string' ? input.locale : undefined;
-                const blobKey = menuBlobKey(key);
+                // The settings page has `path: '/menus/<key>'`, so its blob lives
+                // at `plugin:<ns>:/menus/<key>` — the same `baseKey` core computes
+                // for a plugin page. The namespace comes from the context, not
+                // from an identity import.
+                const blobKey = `plugin:${ctx.plugin.namespace}:/menus/${key}`;
 
                 // Trusted internal read of the plugin's own menu blob: request the
                 // full shape (settings default to public-only) — the handler returns a

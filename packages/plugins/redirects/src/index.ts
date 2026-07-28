@@ -7,10 +7,11 @@
 
 import { definePlugin, withDefaults } from 'astromech';
 import type { SdkInterface } from 'astromech';
-import { plugin } from './plugin.js';
+import { REDIRECTS_PACKAGE } from './types.js';
 import type { RedirectsOptions } from './types.js';
 import { migrationProvider } from '../migrations/index.js';
 import { redirectEntryType } from './entries/redirect.js';
+import { redirectsPermissionBundles } from './permissions/redirects.js';
 import { redirectsTable } from './schema/redirects.js';
 import { redirectsSdk } from './sdk/redirects.js';
 import { slugChangeHook } from './hooks/slug-change.js';
@@ -23,16 +24,20 @@ declare module 'astromech' {
 }
 
 export type { RedirectMatch, RedirectStatus, RedirectsOptions } from './types.js';
-export { redirectsPermissions } from './permissions/redirects.js';
 
 const DEFAULT_OPTIONS: Required<RedirectsOptions> = {
     generateOnSlugChange: true,
 };
 
-export const redirects = definePlugin<RedirectsOptions>(plugin, (options) => {
+export const redirects = definePlugin((options?: RedirectsOptions) => {
     const { generateOnSlugChange } = withDefaults(DEFAULT_OPTIONS, options);
 
     return {
+        package: REDIRECTS_PACKAGE,
+        version: '0.1.0',
+        label: 'Redirects',
+        icon: 'Signpost',
+        permissionBundles: redirectsPermissionBundles,
         schema: [redirectsTable],
         migrations: migrationProvider,
         entries: [redirectEntryType],
