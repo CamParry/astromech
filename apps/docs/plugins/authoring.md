@@ -223,9 +223,9 @@ Then reference it anywhere a field is declared: `{ name: 'quality', type: 'ratin
 
 ### Admin pages
 
-Pages mount under `/admin/plugin/<name>/<path>` and appear in the sidebar. A
-page is **either** a `component` view **or** an auto-rendered `fields`
-settings form.
+A page appears in the sidebar (unless it sets `nav: false`) and is **either** a
+`component` view **or** an auto-rendered `fields` settings form — exactly one,
+validated crash-loud at config resolution.
 
 ```ts
 // pages/overview.ts
@@ -252,6 +252,33 @@ export const settingsPage = defineAdminPage({
     fields: [fields.boolean('showInListing', { label: 'Show ratings in lists' })],
 });
 ```
+
+#### Where a page ends up
+
+`defineAdminPage` is one helper for both origins — a host app's `admin.pages`
+and a plugin's `admin.pages` take the same object. **The registration site
+decides the scoping, not the name of the helper**, so what you declare is a
+**bare `path`** and Astromech absolutizes it wherever it was registered:
+
+| declared in     | route                             | settings `baseKey`          | default permission                                 |
+| --------------- | --------------------------------- | --------------------------- | -------------------------------------------------- |
+| a plugin        | `/admin/plugin/<namespace><path>` | `plugin:<namespace>:<path>` | `settings:read` for `fields`, none for `component` |
+| the host config | `/admin/page/<path>`              | `<path>`                    | `settings:read`                                    |
+
+The `baseKey` is the settings key a `fields` page reads and writes: a
+non-translatable page stores one blob at `baseKey`, a translatable one stores
+the shared fields at `baseKey` and per-locale fields at `baseKey:<locale>`.
+
+Plugin paths lead with a `/` (`'/overview'` → `/admin/plugin/seo/overview`);
+`path: ''` is legal and mounts the page at the plugin's root,
+`/admin/plugin/backups`. Host paths don't (`path: 'globals'` →
+`/admin/page/globals`), because the host route already supplies the separator.
+
+**Do not namespace the path yourself.** A declaration is relative by design and
+there is no double-prefix guard — writing `path: '/myplugin/overview'` inside
+`@acme/myplugin` gets you `/admin/plugin/myplugin/myplugin/overview` and a
+`baseKey` of `plugin:myplugin:/myplugin/overview`. The same rule holds for
+`permission`, which takes a bare key (`'view'` → `plugin:<namespace>:view`).
 
 Page components call `useAstromechPlugin()` (from `astromech/ui`) for context:
 

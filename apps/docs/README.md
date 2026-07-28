@@ -7,6 +7,9 @@ This is a living reference; it grows as the project does.
 
 ## Contents
 
+- [content/entry-types.md](content/entry-types.md) — declaring entry types: the
+  `entries` record, and `defineEntryType` for splitting a type into its own
+  module.
 - [data/migrations.md](data/migrations.md) — how migrations are generated from
   your table descriptors, what the generator refuses and why, and the
   hand-authored-ops escape hatch for reshapes it can't derive.

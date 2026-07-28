@@ -2,14 +2,14 @@
 
 **Status:** branch `feat/plugin-authoring-dx`, not yet merged to `main`.
 
-|         | scope                                                              | state                                              |
-| ------- | ------------------------------------------------------------------ | -------------------------------------------------- |
-| Phase 1 | one `definePlugin` call; identity-unaware sub-modules              | built, gate + browser verified, **awaiting merge** |
-| 2d      | flatten `ctx.sdk`, delete scoped entries, move the permission seam | built (`fc63be5`), gate + browser verified         |
-| 2b      | retire "SDK" → "service"                                           | built, gate verified                               |
-| 2c      | dissolve `astromech/plugin-kit`                                    | built, gate + browser verified                     |
-| 2a      | drop "plugin" from the define names                                | planned, blocked on 2c                             |
-| Phase 3 | candidates, not yet designed                                       | —                                                  |
+|         | scope                                                              | state                                                                     |
+| ------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| Phase 1 | one `definePlugin` call; identity-unaware sub-modules              | built, gate + browser verified, **awaiting merge**                        |
+| 2d      | flatten `ctx.sdk`, delete scoped entries, move the permission seam | built (`fc63be5`), gate + browser verified                                |
+| 2b      | retire "SDK" → "service"                                           | built, gate verified                                                      |
+| 2c      | dissolve `astromech/plugin-kit`                                    | built, gate + browser verified                                            |
+| 2a      | drop "plugin" from the define names                                | naming + docs done, gate verified; `definePluginTable` rename outstanding |
+| Phase 3 | candidates, not yet designed                                       | —                                                                         |
 
 Sub-phases are sequenced rather than parallel: 2b, 2c and 2d all rewrite the
 same plugin call sites, and 2d's deletion of `ctx.sdk` shrinks 2b's rename
@@ -90,14 +90,23 @@ core namespacing plugin registrations at assembly.
       fix in "Known remainders" above; that fix and this rename are one job, and
       it also retires the `<X>_PACKAGE` consts
 - [x] Delete `defineSdkMethod` — deprecated alias, zero callers _(done in 2b)_
-- [ ] Adopt `defineEntryType` / `defineEntry` (currently zero callers, kept
-      deliberately)
-- [ ] `defineServiceMethod`, `defineHook`, `defineConfig`, `defineAdminPage`,
-      `definePlugin` — names already correct, unchanged
-- [ ] Document the admin-page path derivation rather than guarding it. A plugin
+- [x] Keep `defineEntryType`; there is no `defineEntry`. It defines a _type_,
+      not content, and it earns its keep the moment an entry type is authored
+      outside `defineConfig`'s call — a bare exported object is unchecked until
+      it is spread in, and reports errors at the spread site. Now documented
+      (`apps/docs/content/entry-types.md`) and demonstrated: the demo's `author`
+      type moved to `apps/demo/src/entries/author.ts`
+- [x] `defineServiceMethod`, `defineHook`, `defineConfig`, `defineAdminPage`,
+      `definePlugin` — names already correct, unchanged. Verified: nothing else
+      in the repo is named `define*Plugin*` bar `definePlugin` itself and
+      `definePluginTable`
+- [x] Document the admin-page path derivation rather than guarding it. A plugin
       declares a bare `path`; core mounts it at `/admin/plugin/<ns><path>` with
       `baseKey = 'plugin:<ns>:<path>'`. No enforcement of namespaced paths and
-      no double-prefix guard — a declaration is relative by design
+      no double-prefix guard — a declaration is relative by design. The host
+      side is `/admin/page/<path>` with `baseKey = path` (not `/admin<path>` —
+      there is a dedicated `page/$` route), and plugin paths lead with `/`
+      while host paths do not
 
 ### 2b. Retire "SDK" → "service"
 
