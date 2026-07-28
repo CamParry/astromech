@@ -3,7 +3,7 @@
  * `/admin/plugin/seo/settings`. Holds the default Open Graph image, returned
  * by the `meta` service method when an entry has no image of its own.
  *
- * Values are stored as one object blob at `plugin:astromech-seo:/settings`
+ * Values are stored as one object blob at `plugin:seo:/settings`
  * in the core settings table.
  */
 

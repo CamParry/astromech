@@ -27,11 +27,11 @@ function HealthBadge({ status }: { status: LengthStatus }): React.ReactElement {
 }
 
 export default function SeoOverviewPage(): React.ReactElement {
-    const { service, t, navigate } = useAstromechPlugin();
+    const { plugin, service, t, navigate } = useAstromechPlugin();
     const seoService = service as { overview: () => Promise<SeoOverview> };
 
     const { data, isLoading, isError } = useQuery({
-        queryKey: ['plugin', 'seo', 'overview'],
+        queryKey: ['plugin', plugin, 'overview'],
         queryFn: () => seoService.overview(),
     });
 

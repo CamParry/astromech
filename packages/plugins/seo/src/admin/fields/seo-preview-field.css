@@ -11,12 +11,12 @@
 }
 
 .am-seo-preview-title {
-    font-size: 1.125rem;
+    font-size: 1rem;
     color: var(--am-color-primary);
 }
 
 .am-seo-preview-description {
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
     color: var(--am-color-text-secondary);
 }
 

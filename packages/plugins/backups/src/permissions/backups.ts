@@ -8,7 +8,7 @@
 import type { PluginPermission } from 'astromech';
 
 export const backupsPermissionBundles = {
-    manage: ['read', 'run', 'restore', 'delete'],
+    manage: ['read', 'run', 'download', 'restore', 'delete'],
     view: ['read'],
 } as const;
 
@@ -19,6 +19,12 @@ export const backupsPermissionDefs: PluginPermission[] = [
         description: 'List backup runs and artifact metadata.',
     },
     { key: 'run', label: 'Trigger backup', description: 'Manually trigger a backup.' },
+    {
+        key: 'download',
+        label: 'Download backup',
+        description:
+            'Download a backup artifact — a complete dump of every table, including user records and private settings.',
+    },
     {
         key: 'restore',
         label: 'Restore from backup',

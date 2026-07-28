@@ -96,6 +96,8 @@ export function buildMenusService(
     return {
         get: defineServiceMethod<{ key: string; locale?: string }, MenuItem[] | null>({
             access: 'public',
+            summary: 'Resolve a configured menu into a nested tree of menu items.',
+            mutates: false,
             handler: async (input, ctx): Promise<MenuItem[] | null> => {
                 const key = typeof input?.key === 'string' ? input.key : null;
                 if (!key) return null;
@@ -109,11 +111,11 @@ export function buildMenusService(
                 // from an identity import.
                 const blobKey = `plugin:${ctx.plugin.namespace}:/menus/${key}`;
 
-                // Trusted internal read of the plugin's own menu blob: request the
-                // full shape (settings default to public-only) — the handler returns a
-                // sanitised menu tree, never the raw settings, so this never leaks.
+                // Trusted internal read of the plugin's own menu blob: reads through
+                // ctx.settings are full-shaped by default (plugin altitude is trusted
+                // server code) — the handler returns a sanitised menu tree, never the
+                // raw settings, so this never leaks.
                 const blob = await ctx.settings.get(blobKey, {
-                    full: true,
                     ...(locale ? { locale } : {}),
                 });
                 if (blob === null || typeof blob !== 'object' || Array.isArray(blob)) {

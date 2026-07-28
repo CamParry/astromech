@@ -5,7 +5,7 @@
  */
 
 import { definePlugin, withDefaults } from 'astromech';
-import type { PluginContext } from 'astromech';
+import type { PluginContext, ServiceInterface } from 'astromech';
 import { BACKUPS_PACKAGE } from './types.js';
 import type { BackupsOptions } from './types.js';
 import { migrationProvider } from '../migrations/index.js';
@@ -15,10 +15,24 @@ import {
     backupsPermissionDefs,
 } from './permissions/backups.js';
 import { performBackup, resolveKeep } from './backup.js';
+import { buildBackupsService } from './service/backups.js';
 import { buildBackupRoutes } from './routes/backups.js';
 import { backupsPage } from './pages/backups.js';
 
+declare module 'astromech' {
+    // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+    interface AstromechPluginServices {
+        backups: ServiceInterface<ReturnType<typeof buildBackupsService>>;
+    }
+}
+
 export type { BackupsOptions } from './types.js';
+export type {
+    BackupCapabilities,
+    DeleteRunResult,
+    ListRunsResult,
+    TriggerRunResult,
+} from './service/backups.js';
 
 const DEFAULT_OPTIONS: Required<BackupsOptions> = {
     schedule: '0 3 * * *',
@@ -41,6 +55,8 @@ export const backups = definePlugin((options?: BackupsOptions) => {
         admin: {
             pages: [backupsPage],
         },
+        service: buildBackupsService(keep),
+        // Streaming only — the JSON endpoints live on the service above.
         rawRoutes: buildBackupRoutes(keep),
         cron: [
             {

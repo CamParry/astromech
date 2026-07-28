@@ -7,15 +7,6 @@
 import type { LengthStatus } from './utilities/length.js';
 
 /**
- * The package name, as a literal.
- *
- * Identity is declared in `index.ts` alongside the rest of the definition.
- * `fields/groups.ts` hand-writes the derived namespace (`'seo'`) rather than
- * importing this const — see the comment there.
- */
-export const SEO_PACKAGE = '@astromech/seo';
-
-/**
  * The field name `seoSection()` attaches — also the footprint anchor:
  * `ctx.config.entryTypesWithField(SEO_FIELD_NAME)`.
  */

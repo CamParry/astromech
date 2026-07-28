@@ -24,11 +24,20 @@ This is a living reference; it grows as the project does.
 
 ## Learning from the bundled plugins
 
-Astromech ships two plugins you can read as worked examples — install them, then
-look at how they're put together:
+Astromech ships four plugins you can read as worked examples — install them,
+then look at how they're put together:
 
-- `astromech/plugins/redirects` — a plugin with its own database table, an entry
+- `@astromech/redirects` — a plugin with its own database table, an entry
   type, a public service lookup method, and an optional hook.
-- `astromech/plugins/seo` — a custom field, a field-section helper you compose
+- `@astromech/seo` — a custom field, a field-section helper you compose
   into your entry types, admin pages (a dashboard and a settings form),
   localized strings, and footprint-derived behaviour.
+- `@astromech/menus` — options-driven admin pages generated per configured
+  menu, and a public service method that resolves entry refs to URLs.
+- `@astromech/backups` — a database table, a cron job, plugin storage, and raw
+  HTTP routes for the streaming endpoints.
+
+The demo app also carries `apps/demo/src/plugins/rating`, a deliberately small
+teaching plugin that shows the same conventions for an **in-tree** plugin (one
+that declares `root: import.meta.url` instead of resolving assets against a
+package specifier).

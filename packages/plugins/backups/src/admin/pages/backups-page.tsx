@@ -18,19 +18,25 @@ import {
     useAstromechPlugin,
 } from 'astromech/ui';
 import type { BackupRunRow } from '../../schema/runs.js';
+import type {
+    DeleteRunResult,
+    ListRunsResult,
+    TriggerRunResult,
+} from '../../service/backups.js';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-type Capabilities = {
-    canDump: boolean;
-    canRestore: boolean;
-};
-
-type ListRunsResponse = {
-    data: BackupRunRow[];
-    capabilities: Capabilities;
+/**
+ * The plugin's own JSON methods, as `useAstromechPlugin().service` exposes
+ * them. Restore and download are not here — they stream, so they stay raw
+ * routes and are called through `pluginFetch` / `downloadUrl` below.
+ */
+type BackupsService = {
+    listRuns: () => Promise<ListRunsResult>;
+    triggerRun: () => Promise<TriggerRunResult>;
+    deleteRun: (input: { id: string }) => Promise<DeleteRunResult>;
 };
 
 type ConfirmState =
@@ -44,10 +50,15 @@ type ConfirmState =
 
 declare const __ASTROMECH_API_ROUTE__: string;
 
-function pluginFetch(path: string, init?: RequestInit): Promise<Response> {
-    const base =
-        typeof __ASTROMECH_API_ROUTE__ !== 'undefined' ? __ASTROMECH_API_ROUTE__ : '/api';
-    return fetch(`${base}/plugins/backups${path}`, {
+/** Base for the two raw (streaming) routes; everything else goes through `service`. */
+function apiBase(): string {
+    return typeof __ASTROMECH_API_ROUTE__ !== 'undefined'
+        ? __ASTROMECH_API_ROUTE__
+        : '/api';
+}
+
+function rawFetch(plugin: string, path: string, init?: RequestInit): Promise<Response> {
+    return fetch(`${apiBase()}/plugins/${plugin}${path}`, {
         credentials: 'include',
         ...init,
     });
@@ -88,42 +99,39 @@ function formatDate(date: Date | null | undefined): string {
 // ============================================================================
 
 export default function BackupsPage(): React.ReactElement {
-    const { toast, t } = useAstromechPlugin();
+    const { plugin, serviceKey, service, toast, t } = useAstromechPlugin();
+    const backupsService = service as BackupsService;
     const queryClient = useQueryClient();
 
     const [confirmState, setConfirmState] = useState<ConfirmState>(null);
 
-    const { data, isLoading, isError } = useQuery<ListRunsResponse>({
-        queryKey: ['plugin', 'backups', 'runs'],
-        queryFn: async () => {
-            const res = await pluginFetch('/runs');
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return res.json() as Promise<ListRunsResponse>;
-        },
+    const runsKey = ['plugin', plugin, 'runs'];
+
+    const { data, isLoading, isError } = useQuery<ListRunsResult>({
+        queryKey: runsKey,
+        queryFn: () => backupsService.listRuns(),
     });
 
     const triggerMutation = useMutation({
-        mutationFn: async () => {
-            const res = await pluginFetch('/run', { method: 'POST' });
-            if (res.status === 409) {
+        mutationFn: () => backupsService.triggerRun(),
+        onSuccess: (result) => {
+            if (!result.ok) {
                 toast({ message: t('backups.alreadyRunning'), variant: 'warning' });
                 return;
             }
-            if (!res.ok) {
-                toast({ message: t('backups.runFailed'), variant: 'error' });
-                return;
-            }
+            void queryClient.invalidateQueries({ queryKey: runsKey });
         },
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: ['plugin', 'backups', 'runs'],
-            });
+        onError: () => {
+            toast({ message: t('backups.runFailed'), variant: 'error' });
         },
     });
 
+    // Restore streams a gunzipped dump into the driver, so it stays a raw route.
     const restoreMutation = useMutation({
         mutationFn: async (id: string) => {
-            const res = await pluginFetch(`/runs/${id}/restore`, { method: 'POST' });
+            const res = await rawFetch(serviceKey, `/runs/${id}/restore`, {
+                method: 'POST',
+            });
             if (!res.ok) {
                 const body = (await res.json().catch(() => null)) as {
                     error?: string;
@@ -133,9 +141,7 @@ export default function BackupsPage(): React.ReactElement {
         },
         onSuccess: () => {
             toast({ message: t('backups.restore.success'), variant: 'success' });
-            void queryClient.invalidateQueries({
-                queryKey: ['plugin', 'backups', 'runs'],
-            });
+            void queryClient.invalidateQueries({ queryKey: runsKey });
         },
         onError: () => {
             toast({ message: t('backups.restore.failed'), variant: 'error' });
@@ -146,20 +152,14 @@ export default function BackupsPage(): React.ReactElement {
     });
 
     const deleteMutation = useMutation({
-        mutationFn: async (id: string) => {
-            const res = await pluginFetch(`/runs/${id}`, { method: 'DELETE' });
-            if (!res.ok) {
-                const body = (await res.json().catch(() => null)) as {
-                    error?: string;
-                } | null;
-                throw new Error(body?.error ?? `HTTP ${res.status}`);
+        mutationFn: (id: string) => backupsService.deleteRun({ id }),
+        onSuccess: (result: DeleteRunResult) => {
+            if (!result.ok) {
+                toast({ message: t('backups.delete.failed'), variant: 'error' });
+                return;
             }
-        },
-        onSuccess: () => {
             toast({ message: t('backups.delete.success'), variant: 'success' });
-            void queryClient.invalidateQueries({
-                queryKey: ['plugin', 'backups', 'runs'],
-            });
+            void queryClient.invalidateQueries({ queryKey: runsKey });
         },
         onError: () => {
             toast({ message: t('backups.delete.failed'), variant: 'error' });
@@ -185,7 +185,7 @@ export default function BackupsPage(): React.ReactElement {
         );
     }
 
-    const runs = data.data;
+    const runs = data.runs;
 
     // ---- confirm dialog helpers ----
 
@@ -238,12 +238,9 @@ export default function BackupsPage(): React.ReactElement {
 
     // ---- download URL ----
 
+    // Streams a gzipped artifact, so it stays a raw route and is linked directly.
     function downloadUrl(run: BackupRunRow): string {
-        const base =
-            typeof __ASTROMECH_API_ROUTE__ !== 'undefined'
-                ? __ASTROMECH_API_ROUTE__
-                : '/api';
-        return `${base}/plugins/backups/runs/${run.id}/download`;
+        return `${apiBase()}/plugins/${serviceKey}/runs/${run.id}/download`;
     }
 
     return (
