@@ -11,7 +11,7 @@ still in `in-progress/`.
 | 2b      | retire "SDK" → "service"                                           | built, gate verified                                                                |
 | 2c      | dissolve `astromech/plugin-kit`                                    | built, gate + browser verified                                                      |
 | 2a      | drop "plugin" from the define names                                | done, gate + browser verified; `definePluginTable` rename rejected (see remainders) |
-| Phase 3 | candidates, not yet designed                                       | —                                                                                   |
+| Phase 3 | `definePermissions`; the effect axis stays on service methods      | designed 2026-07-29, not started                                                    |
 
 Sub-phases are sequenced rather than parallel: 2b, 2c and 2d all rewrite the
 same plugin call sites, and 2d's deletion of `ctx.sdk` shrinks 2b's rename
@@ -309,19 +309,164 @@ Permissions themselves are unchanged by Phase 2 — plugin altitude stays
 trusted, with HTTP as the enforcement boundary. Neither surface checked
 permissions before the merge (`scoped-entries.ts:8`, `transport/local/index.ts:8`).
 
-To check while implementing: `seo/src/service/seo.ts:44` reads its own settings
-blob _without_ `{ full: true }` against a private-by-default store — either a
-latent bug or a lucky escape.
+Resolved (2026-07-29): `seo/src/service/seo.ts:44` reads its own settings blob
+without `{ full: true }` and is **correct** — 2d closed this in the same phase
+that raised it. `ctx.settings` is wrapped by
+`withDefaultSettingsShape(requireClient().settings, 'full')`
+(`plugins/runtime/plugin-runtime.ts:423`), which injects `full: true` whenever
+the caller passes no `full` option.
 
-## Phase 3 — candidates, not yet designed
+The trap for anyone re-checking this: the _raw_ `settingsApi.get` still defaults
+`full` to `false` (`settings/service.ts:53`) and returns `null` before any DB
+round-trip for a non-public key. Reading that function alone says the opposite
+of the truth at plugin altitude. It is why `backups/src/backup.ts:186` and
+`menus/src/service/menus.ts:118` still pass a now-redundant `{ full: true }`
+with comments asserting a private-by-default store — both are stale, tracked in
+`roadmap/planned/plugin-consistency-sweep.md`.
+
+## Phase 3 — `definePermissions`
+
+Designed 2026-07-29. The trigger was a five-plugin audit (see
+`roadmap/planned/plugin-consistency-sweep.md`), which found the permission
+surface is the last one with no `define*` helper, and that its declaration half
+is dead: `PluginDefinition.permissions` (`types/plugins.ts:298`) has **zero
+consumers** anywhere in core. Three of five plugins dutifully write it and it
+goes nowhere; `redirects` omits it and loses nothing.
+
+### Decided: no auto-granting of plugin permissions
+
+Investigated and **rejected**, deliberately, so it doesn't get re-raised: there
+is no auto-opt-in, no per-plugin catch-all that roles inherit, and no global
+`plugin:*` that a site opts out of.
+
+The behaviour we want is already the behaviour we have. `admin` is `['*']`, so
+it picks up every plugin permission that will ever exist. `editor` carries no
+`plugin:` grant, so it gets nothing from a plugin until a site says so. And the
+split is load-bearing by design, not by omission —
+`permissions/entry-permission.ts:38` states that keeping the root and plugin
+entry-permission forms apart "is what stops an `entry:*` grant from reaching
+plugin entries."
+
+Reasons the alternatives lose:
+
+1. **Auto-grant everything** puts `backups:restore` and `backups:delete` on
+   editors the moment the plugin is installed.
+2. **A global `plugin:*` that must be opted out of** inverts the safe default:
+   the site author has to know to decline a capability they never requested.
+3. **Per-plugin catch-alls** (`plugin:seo:*`) already work with today's matcher
+   (`matchesPermission('plugin:*', 'plugin:seo:view')` is true) and need no new
+   code, so they stay available as the escape hatch — but they are all-or-nothing
+   and don't answer the question, they relocate it.
+4. **Classifying each permission by effect** (`read` / `write` / `destructive`)
+   so core could auto-grant the safe tier was designed and dropped — see the
+   effect-axis decision below, which is why.
+
+Most sites run on the admin role; a site that deliberately runs editors
+generally wants to state what those editors can reach. Defaults there cause
+incidents rather than preventing toil. Nothing to build.
+
+### Decided: groups are deleted, not renamed
+
+`permissionBundles` was going to be renamed to permission _groups_. It is being
+removed instead.
+
+Under explicit opt-in a named group is a coarse handle that conceals what it
+grants, and the repo already has the incident to prove it: the demo's
+`content-editor` spreads `backups.permissions('manage')`
+(`apps/demo/astromech.config.ts:141`), which expands to
+`['read', 'run', 'restore', 'delete']` — so a content editor can restore and
+delete the production database. One word, four permissions, one of them
+catastrophic. Enumeration is the _point_ of an opt-in model, not friction to be
+smoothed away.
+
+So `definePermissions` takes **one** argument — the flat keyed declaration —
+and the factory selects from it, literal-typed:
+
+```ts
+// permissions/backups.ts
+export const backupsPermissions = definePermissions({
+    read: {
+        label: 'View backups',
+        description: 'List backup runs and artifact metadata.',
+    },
+    run: { label: 'Trigger backup' },
+    restore: { label: 'Restore from backup' },
+    delete: { label: 'Delete backup' },
+});
+```
+
+```ts
+// a site's config
+permissions: [
+    ...builtInRole('editor'),
+    ...backups.permissions('read'),
+    ...seo.permissions('view'),
+];
+```
+
+`key` stops being a field and becomes the record key, so the two parallel
+exports every plugin writes today (`<x>PermissionBundles` + `<x>PermissionDefs`)
+collapse to one. The helper owns the `const` type parameters, so `as const` —
+currently load-bearing and silently droppable — stops being the author's
+problem. `plugin:backups:*` remains available for "grant everything", and it is
+honest because it _looks_ like everything.
+
+- [ ] `definePermissions(declaration)` — one argument, record keyed by bare
+      permission key, `{ label, description? }` values
+- [ ] Factory accessor `plugin.permissions(...keys)` — variadic, literal-typed
+      against the declaration, keeps the existing spread-at-call-site shape
+- [ ] Retire `PluginDefinition.permissionBundles` and the
+      `factory.permissions(bundle)` bundle resolver (`index.ts:179-194`)
+- [ ] Give the declaration list a real consumer, or it stays as dead as the
+      field it replaces. It is the input to a permissions matrix view — a CLI
+      (`astromech permissions`) or an admin page. **Open: which.**
+- [ ] Core declares its own permissions through the same helper. There is no
+      separate plugin API — the registration site decides scoping, exactly as
+      `defineAdminPage` already works. `BUILT_IN_ROLES`' string literals
+      (`permissions/index.ts:28-47`) become a declaration, and
+      `builtInRole('editor')` becomes a selection over it
+
+### Decided: `redirects` stops declaring entry permissions
+
+`permissions/redirects.ts` deletes entirely. Its members
+(`entry:${t}:read`, …) are a hand-maintained mirror of a derivation core
+already owns: `entryPermission()` computes
+`plugin:<ns>:entry:<type>:<action>` from the type id alone
+(`permissions/entry-permission.ts:45-49`), at enforcement time, whether or not
+the plugin declared anything.
+
+Core enumerates them from the registered entry types instead. This is also what
+makes the "one level deep" rule true — the colon-bearing keys were exactly the
+ones that should never have been hand-written.
+
+- [ ] Core derives entry permissions per plugin entry type for the declaration
+      list; delete `packages/plugins/redirects/src/permissions/redirects.ts`
+
+### Decided: the effect axis stays on service methods
+
+`read` / `write` / `destructive` on a _permission_ was designed and dropped.
+Effect describes an **action** — what happens when you call this. A permission
+describes an **authorization** — who may. The axis already exists in the right
+place: `defineServiceMethod` carries `mutates`, `destructive` and `idempotent`,
+and `codegen/method-manifest.ts` projects them with an `effectDeclared` flag for
+the AI confirm gate. Putting it on permissions too creates a second vocabulary
+for one fact, guaranteed to drift the first time a method is gated on a
+permission whose effect disagrees.
+
+The useful change is enforcement, not duplication.
+`mutates: serviceMethod.mutates ?? true` (`method-manifest.ts:332`) is a silent
+fail-safe, and it is what reports `menus.get` — a public, pure read — as a
+mutation with `effectDeclared: false`. Making the declaration mandatory turns a
+runtime mislabel into a compile error.
+
+- [ ] Make `mutates` required on `PluginServiceMethod`; drop the `?? true`
+      default once nothing relies on it
+
+### Still candidates, not yet designed
 
 - Asset root: whether `root: import.meta.url` can be inferred rather than
   declared
 - Host-facing extras on the factory, closing the seo remainder above
-- A `definePermissions` helper — raised alongside Phase 2 but a separate design
 - `astromech plugin:new` scaffolding (there is `plugin:generate` and
   `plugin:purge`, but nothing to start from — today a new plugin begins by
   copying `redirects/`)
-- Effect hints (`mutates`/`destructive`) on first-party plugin service methods —
-  the manifest currently defaults them to `mutates: true`, over-gating the
-  future AI confirm gate (see `backlog.md`)
