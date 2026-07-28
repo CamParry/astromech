@@ -9,8 +9,9 @@ status only.
 
 **Branch:** `feat/storage-drivers` (worktree `.claude/worktrees/feat/storage-drivers`), based on `main` @ 28bcacb.
 
-**Status:** steps 1–7 built and green (typecheck, lint, 1189 tests, build).
-Docs are the last piece. Nothing has been run on Workers yet — see Not verified.
+**Status:** all eight steps done and green (typecheck, lint, 1192 tests, build),
+unmerged. Nothing has been run on Cloudflare — see Known gaps and Not verified
+before treating this as finished.
 
 ## Locked direction
 
