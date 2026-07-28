@@ -36,8 +36,10 @@ import type {
 } from '@/types/index.js';
 
 export type S3Options = {
-    endpoint: string;
-    bucket: string;
+    /** Falls back to `S3_ENDPOINT` on Node. Required on Workers. */
+    endpoint?: string;
+    /** Falls back to `S3_BUCKET` on Node. Required on Workers. */
+    bucket?: string;
     /** Defaults to `'auto'`, which is what R2 expects. */
     region?: string;
     accessKeyId?: string;
@@ -99,7 +101,8 @@ function unescapeXml(value: string): string {
 export function s3(options: S3Options): StorageDriver {
     // Safe eagerly: reading the environment cannot throw, and `getPublicUrl` is
     // synchronous so it has nowhere to resolve lazily.
-    const publicUrl = options.publicUrl ?? envVar('S3_PUBLIC_URL');
+    // Trailing slash stripped so `${publicUrl}/${key}` can never double up.
+    const publicUrl = (options.publicUrl ?? envVar('S3_PUBLIC_URL'))?.replace(/\/+$/, '');
 
     // Resolution must never happen at construction — the config module is
     // imported by the CLI in plain Node, and a Workers deployment has no

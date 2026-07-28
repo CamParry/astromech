@@ -45,7 +45,9 @@ function emptyStream(): ReadableStream {
 }
 
 export function filesystem(options: FilesystemOptions): StorageDriver {
-    const { dir, urlPrefix } = options;
+    const { dir } = options;
+    // Trailing slash stripped so `${urlPrefix}/${key}` can never double up.
+    const urlPrefix = options.urlPrefix?.replace(/\/+$/, '');
 
     /**
      * Every key under `prefix`, sorted. The sort is what makes the `list`

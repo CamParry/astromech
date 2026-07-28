@@ -271,8 +271,12 @@ export type RoleConfig = {
 
 /**
  * How media is delivered. `'public'` serves direct driver URLs where the driver
- * offers them; `'private'` always proxies through the media route so access can
- * be authorised.
+ * offers them; `'private'` never hands one out, so every request goes through
+ * the media route.
+ *
+ * `'private'` is NOT access control today: the media route serves any valid
+ * media id to anyone. It exists so bytes stay behind a route we own, which is
+ * the prerequisite for authorising them — not the authorisation itself.
  */
 export type MediaAccess = 'public' | 'private';
 

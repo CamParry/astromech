@@ -208,6 +208,11 @@ describe('filesystem()', () => {
             expect(driver.getPublicUrl?.('photo.jpg')).toBeNull();
         });
 
+        it('strips a trailing slash rather than emitting a double slash', () => {
+            const custom = filesystem({ dir, urlPrefix: '/media/' });
+            expect(custom.getPublicUrl?.('photo.jpg')).toBe('/media/photo.jpg');
+        });
+
         it('honours a configured urlPrefix', () => {
             const custom = filesystem({ dir, urlPrefix: '/media' });
             expect(custom.getPublicUrl?.('nested/photo.jpg')).toBe(

@@ -388,6 +388,16 @@ describe('r2()', () => {
             const driver = r2({ bucket: makeFakeBucket() });
             expect(driver.getPublicUrl?.('uploads/photo.jpg')).toBeNull();
         });
+
+        it('strips a trailing slash rather than emitting a double slash', () => {
+            const driver = r2({
+                bucket: makeFakeBucket(),
+                publicUrl: 'https://assets.example.com/',
+            });
+            expect(driver.getPublicUrl?.('photo.jpg')).toBe(
+                'https://assets.example.com/photo.jpg'
+            );
+        });
     });
 
     describe('signing capabilities', () => {

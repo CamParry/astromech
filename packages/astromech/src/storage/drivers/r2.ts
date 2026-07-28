@@ -69,7 +69,8 @@ export type R2Options = { publicUrl?: string } & (
 );
 
 export function r2(options: R2Options): StorageDriver {
-    const { publicUrl } = options;
+    // Trailing slash stripped so `${publicUrl}/${key}` can never double up.
+    const publicUrl = options.publicUrl?.replace(/\/+$/, '');
 
     // Resolution must never happen at construction — a plain `bucket` is
     // already resolved, but a `binding` name is only looked up lazily, on

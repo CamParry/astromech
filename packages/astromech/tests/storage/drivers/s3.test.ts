@@ -311,6 +311,13 @@ describe('s3()', () => {
         it('returns null when not configured', () => {
             expect(s3(CREDENTIALS).getPublicUrl?.('uploads/photo.jpg')).toBeNull();
         });
+
+        it('strips a trailing slash rather than emitting a double slash', () => {
+            const driver = s3({ ...CREDENTIALS, publicUrl: 'https://cdn.example.com/' });
+            expect(driver.getPublicUrl?.('photo.jpg')).toBe(
+                'https://cdn.example.com/photo.jpg'
+            );
+        });
     });
 
     describe('signed URLs', () => {
