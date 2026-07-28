@@ -1,10 +1,12 @@
 # Plugin authoring experience
 
-**Status:** branch `feat/plugin-authoring-dx`, not yet merged to `main`.
+**Status:** phases 1 and 2 merged to `main` (2026-07-28, from
+`feat/plugin-authoring-dx`). Phase 3 is not started, which is why this file is
+still in `in-progress/`.
 
 |         | scope                                                              | state                                                                               |
 | ------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| Phase 1 | one `definePlugin` call; identity-unaware sub-modules              | built, gate + browser verified, **awaiting merge**                                  |
+| Phase 1 | one `definePlugin` call; identity-unaware sub-modules              | merged, gate + browser verified                                                     |
 | 2d      | flatten `ctx.sdk`, delete scoped entries, move the permission seam | built (`fc63be5`), gate + browser verified                                          |
 | 2b      | retire "SDK" → "service"                                           | built, gate verified                                                                |
 | 2c      | dissolve `astromech/plugin-kit`                                    | built, gate + browser verified                                                      |
