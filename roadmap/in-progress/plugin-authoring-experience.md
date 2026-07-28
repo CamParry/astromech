@@ -5,8 +5,8 @@
 |         | scope                                                              | state                                              |
 | ------- | ------------------------------------------------------------------ | -------------------------------------------------- |
 | Phase 1 | one `definePlugin` call; identity-unaware sub-modules              | built, gate + browser verified, **awaiting merge** |
-| 2d      | flatten `ctx.sdk`, delete scoped entries, move the permission seam | in progress                                        |
-| 2b      | retire "SDK" → "service"                                           | planned, blocked on 2d                             |
+| 2d      | flatten `ctx.sdk`, delete scoped entries, move the permission seam | built (`fc63be5`), gate + browser verified         |
+| 2b      | retire "SDK" → "service"                                           | in progress                                        |
 | 2c      | dissolve `astromech/plugin-kit`                                    | planned, blocked on 2b                             |
 | 2a      | drop "plugin" from the define names                                | planned, blocked on 2c                             |
 | Phase 3 | candidates, not yet designed                                       | —                                                  |
@@ -110,6 +110,10 @@ the `package` → `namespace` → key derivation is untouched, so every wire val
       only today
 - [ ] `types/sdk.ts` → `types/client.ts`. `AstromechClient` keeps its name; it
       genuinely is a client
+- [ ] Delete `AstromechPluginEntryTypes` and the codegen that emits it
+      (`codegen/type-generator.ts:488`). Left dead by 2d — it existed only to
+      type the removed per-plugin `entries` member. Touches the demo's generated
+      `astromech.d.ts`
 
 ### 2c. Dissolve `astromech/plugin-kit`
 
