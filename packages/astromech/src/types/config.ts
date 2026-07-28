@@ -269,8 +269,22 @@ export type RoleConfig = {
     permissions: Permission[];
 };
 
+/**
+ * How media is delivered. `'public'` serves direct driver URLs where the driver
+ * offers them; `'private'` always proxies through the media route so access can
+ * be authorised.
+ */
+export type MediaAccess = 'public' | 'private';
+
 export type MediaConfig = {
     fields?: FieldDefinition[];
+    /** How media is delivered. Default: `'public'`. */
+    access?: MediaAccess;
+};
+
+/** `MediaConfig` with its defaults applied. */
+export type ResolvedMediaConfig = Omit<MediaConfig, 'access'> & {
+    access: MediaAccess;
 };
 
 export type UsersConfig = {
@@ -418,6 +432,8 @@ export type ResolvedConfig = Omit<AstromechConfig, 'plugins' | 'db' | 'scheduler
     apiRoute: string;
     mediaRoute: string;
     entries: Record<string, ResolvedEntryTypeConfig>;
+    /** Always present — `access` defaults to `'public'`. */
+    media: ResolvedMediaConfig;
     /**
      * Plugin-contributed entry types, namespaced by plugin name → bare type →
      * resolved config. Always present (empty when no plugins contribute types).

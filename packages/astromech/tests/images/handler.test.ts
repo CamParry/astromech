@@ -81,20 +81,30 @@ function makeMemoryStorage(): StorageDriver {
                       })();
             store.set(key, bytes);
         },
-        async get(key) {
+        async get(key, opts) {
             const bytes = store.get(key);
             if (!bytes) return null;
+            // Honest range support: the slice is what the body carries (`size`),
+            // while `totalSize` stays the whole object — that split is exactly
+            // what `Content-Range` is built from.
+            const range = opts?.range;
+            const offset = range?.offset ?? 0;
+            const end =
+                range?.length === undefined
+                    ? bytes.length
+                    : Math.min(bytes.length, offset + range.length);
+            const slice = bytes.slice(offset, end);
             let pos = 0;
             const body = new ReadableStream<Uint8Array>({
                 pull(controller) {
-                    if (pos < bytes.length) {
-                        controller.enqueue(bytes.slice(pos));
-                        pos = bytes.length;
+                    if (pos < slice.length) {
+                        controller.enqueue(slice.slice(pos));
+                        pos = slice.length;
                     }
                     controller.close();
                 },
             });
-            return { body, size: bytes.length, totalSize: bytes.length };
+            return { body, size: slice.length, totalSize: bytes.length };
         },
         async stat(key) {
             const bytes = store.get(key);
@@ -341,5 +351,149 @@ describe('handleMediaRequest', () => {
         expect(res.headers.get('Content-Type')).toBe('image/jpeg');
         const body = await readBody(res);
         expect(body).toEqual(jpegBytes);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Range requests — originals only (video seeking). Spec §7, §9.
+// ---------------------------------------------------------------------------
+
+const CLIP = 'abcdefghijklmnopqrstuvwxyz'; // 26 bytes
+
+async function uploadClip(): Promise<string> {
+    const media = await mediaApi.upload(
+        new File([new TextEncoder().encode(CLIP) as BlobPart], 'clip.mp4', {
+            type: 'video/mp4',
+        })
+    );
+    return media.id;
+}
+
+async function requestClip(range?: string): Promise<Response> {
+    const id = await uploadClip();
+    return handleMediaRequest({
+        id,
+        ext: 'mp4',
+        search: new URLSearchParams(),
+        origin: 'http://x',
+        ...(range === undefined ? {} : { range }),
+    });
+}
+
+describe('handleMediaRequest — range requests', () => {
+    it('advertises Accept-Ranges on a plain 200', async () => {
+        const res = await requestClip();
+        expect(res.status).toBe(200);
+        expect(res.headers.get('Accept-Ranges')).toBe('bytes');
+        expect(res.headers.get('Content-Range')).toBeNull();
+        expect(await res.text()).toBe(CLIP);
+    });
+
+    it('a satisfiable range → 206 with Content-Range and Content-Length', async () => {
+        const res = await requestClip('bytes=0-9');
+        expect(res.status).toBe(206);
+        expect(res.headers.get('Content-Range')).toBe('bytes 0-9/26');
+        expect(res.headers.get('Content-Length')).toBe('10');
+        expect(res.headers.get('Accept-Ranges')).toBe('bytes');
+        expect(res.headers.get('Content-Type')).toBe('video/mp4');
+        expect(await res.text()).toBe('abcdefghij');
+    });
+
+    it('an open-ended range runs to the end of the object', async () => {
+        const res = await requestClip('bytes=10-');
+        expect(res.status).toBe(206);
+        expect(res.headers.get('Content-Range')).toBe('bytes 10-25/26');
+        expect(res.headers.get('Content-Length')).toBe('16');
+        expect(await res.text()).toBe('klmnopqrstuvwxyz');
+    });
+
+    it('clamps an end past the last byte', async () => {
+        const res = await requestClip('bytes=20-100');
+        expect(res.status).toBe(206);
+        expect(res.headers.get('Content-Range')).toBe('bytes 20-25/26');
+        expect(await res.text()).toBe('uvwxyz');
+    });
+
+    it('a suffix range serves the last N bytes (never byte 0)', async () => {
+        const res = await requestClip('bytes=-5');
+        expect(res.status).toBe(206);
+        expect(res.headers.get('Content-Range')).toBe('bytes 21-25/26');
+        expect(await res.text()).toBe('vwxyz');
+    });
+
+    it('a suffix longer than the object serves the whole object as 206', async () => {
+        const res = await requestClip('bytes=-100');
+        expect(res.status).toBe(206);
+        expect(res.headers.get('Content-Range')).toBe('bytes 0-25/26');
+        expect(await res.text()).toBe(CLIP);
+    });
+
+    it('a zero-length suffix is unsatisfiable → 416', async () => {
+        const res = await requestClip('bytes=-0');
+        expect(res.status).toBe(416);
+        expect(res.headers.get('Content-Range')).toBe('bytes */26');
+    });
+
+    it('a start past the end → 416 with the total and no body', async () => {
+        const res = await requestClip('bytes=100-200');
+        expect(res.status).toBe(416);
+        expect(res.headers.get('Content-Range')).toBe('bytes */26');
+        expect(res.headers.get('Accept-Ranges')).toBe('bytes');
+        expect(await res.text()).toBe('');
+    });
+
+    it('ignores a multi-range request and serves the whole object with 200', async () => {
+        const res = await requestClip('bytes=0-9,20-25');
+        expect(res.status).toBe(200);
+        expect(res.headers.get('Content-Range')).toBeNull();
+        expect(await res.text()).toBe(CLIP);
+    });
+
+    it('ignores a malformed or non-bytes range and serves 200', async () => {
+        for (const header of ['bytes=abc', 'items=0-9', 'bytes=9-0', 'bytes=-', '']) {
+            const res = await requestClip(header);
+            expect(res.status).toBe(200);
+            expect(await res.text()).toBe(CLIP);
+        }
+    });
+
+    it('the 304 short-circuit wins over a range header', async () => {
+        const jpegBytes = makeJpegBytes();
+        const media = await mediaApi.upload(
+            new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' })
+        );
+        const etag = `"${media.metadata?.version ?? ''}"`;
+
+        const res = await handleMediaRequest({
+            id: media.id,
+            ext: 'jpg',
+            search: new URLSearchParams(),
+            origin: 'http://x',
+            ifNoneMatch: etag,
+            range: 'bytes=0-9',
+        });
+
+        expect(res.status).toBe(304);
+        expect(res.headers.get('Content-Range')).toBeNull();
+    });
+
+    it('ignores a range on a variant request — variants are served whole', async () => {
+        const jpegBytes = makeJpegBytes();
+        const media = await mediaApi.upload(
+            new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' })
+        );
+        const version = media.metadata?.version ?? '';
+
+        const res = await handleMediaRequest({
+            id: media.id,
+            ext: 'jpg',
+            search: new URLSearchParams({ w: '320', f: 'webp', v: version }),
+            origin: 'http://x',
+            range: 'bytes=0-1',
+        });
+
+        expect(res.status).toBe(200);
+        expect(res.headers.get('Content-Range')).toBeNull();
+        expect(await readBody(res)).toEqual(VARIANT_BYTES);
     });
 });

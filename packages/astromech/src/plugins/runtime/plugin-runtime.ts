@@ -484,6 +484,7 @@ function emptyConfig(): ResolvedConfig {
             list: () => Promise.resolve({ keys: [] }),
         },
         mediaRoute: '/_media',
+        media: { access: 'public' },
     } as ResolvedConfig;
 }
 

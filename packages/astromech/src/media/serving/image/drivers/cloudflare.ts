@@ -16,9 +16,16 @@
 
 import type { ImageDriver } from '@/types/index.js';
 
+/**
+ * Driver name. Exported because config resolution has to recognise this driver
+ * to reject `media.access: 'private'` alongside it — Cloudflare's network must
+ * be able to fetch the origin URL itself.
+ */
+export const CLOUDFLARE_IMAGES_DRIVER = 'cloudflare-images';
+
 export function cloudflareImages(): ImageDriver {
     return {
-        name: 'cloudflare-images',
+        name: CLOUDFLARE_IMAGES_DRIVER,
 
         async transform(src, { width, format }) {
             const res = await fetch(src.originUrl, {

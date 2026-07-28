@@ -38,6 +38,7 @@ const attrs = buildImageAttrs(
         height: src.height,
         version: src.metadata?.version,
         blurhash: src.metadata?.blurhash,
+        url: src.url,
     },
     { sizes, widths },
     ctx

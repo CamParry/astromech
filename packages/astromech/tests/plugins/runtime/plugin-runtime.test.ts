@@ -81,6 +81,7 @@ const config: ResolvedConfig = {
         list: () => Promise.resolve({ keys: [] }),
     },
     mediaRoute: '/_media',
+    media: { access: 'public' },
 };
 
 const def = (

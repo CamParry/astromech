@@ -43,10 +43,39 @@ function extOf(filename: string): string {
     return i >= 0 ? filename.slice(i + 1) : '';
 }
 
+/** Storage key for an original, derived from the record (never from a URL). */
+function originalKey(id: string, filename: string): string {
+    const ext = extOf(filename);
+    return ext ? `${id}.${ext}` : id;
+}
+
+/**
+ * Resolve the delivery URL for a media record — the one place the `media.access`
+ * policy is applied, because `toMedia` is the one place a `Media.url` is made.
+ *
+ * `access: 'public'` prefers the driver's own URL; anything else (and any driver
+ * without one) falls back to the proxying media route, which is what keeps
+ * `filesystem()` in dev and `r2()` without a `publicUrl` working unchanged.
+ *
+ * A public URL must be PERMANENT. Astro bakes these into static HTML at build
+ * time, and the same strings end up in `og:image`, RSS and email — so nothing
+ * expiring may ever be returned from here. That is why presigned URLs are an
+ * upload path, not the delivery path.
+ */
+function resolveMediaUrl(id: string, filename: string): string {
+    if (config.media.access === 'public') {
+        // Optional capability, genuinely absent on some drivers — feature-detect.
+        const publicUrl =
+            getStorageDriver().getPublicUrl?.(originalKey(id, filename)) ?? null;
+        if (publicUrl !== null) return publicUrl;
+    }
+    return buildMediaUrl(config.mediaRoute, id, extOf(filename));
+}
+
 function toMedia(row: MediaRow): Media {
     return {
         ...row,
-        url: buildMediaUrl(config.mediaRoute, row.id, extOf(row.filename)),
+        url: resolveMediaUrl(row.id, row.filename),
     } as Media;
 }
 
