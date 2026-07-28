@@ -47,7 +47,7 @@ let originalSecret: string | undefined;
 
 beforeEach(async () => {
     // Reset cron globals.
-    globalThis.__astromechCronJobs = [];
+    delete globalThis.__astromech?.cronJobs;
     globalThis.__astromechCronTickRunning = false;
     globalThis.__astromechCronUnscheduledWarned = new Set();
 
@@ -72,7 +72,7 @@ afterEach(() => {
         process.env.ASTROMECH_CRON_SECRET = originalSecret;
     }
 
-    globalThis.__astromechCronJobs = [];
+    delete globalThis.__astromech?.cronJobs;
     globalThis.__astromechCronTickRunning = false;
     globalThis.__astromechCronUnscheduledWarned = new Set();
 });

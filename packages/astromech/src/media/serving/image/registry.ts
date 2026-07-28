@@ -1,3 +1,4 @@
+import { defineRegistry } from '@/utilities/registry.js';
 import type { ImageDriver } from '@/types/index.js';
 
 export type ResolvedImageConfig = {
@@ -7,14 +8,8 @@ export type ResolvedImageConfig = {
     mediaRoute: string;
 };
 
-declare global {
-    var __astromechImageConfig: ResolvedImageConfig | undefined;
-}
+/** Optional — no image driver means originals are served unchanged. */
+const image = defineRegistry<ResolvedImageConfig>('image', { required: false });
 
-export function setImageConfig(c: ResolvedImageConfig): void {
-    globalThis.__astromechImageConfig = c;
-}
-
-export function getImageConfig(): ResolvedImageConfig | null {
-    return globalThis.__astromechImageConfig ?? null;
-}
+export const setImageConfig = image.set;
+export const getImageConfig = image.peek;

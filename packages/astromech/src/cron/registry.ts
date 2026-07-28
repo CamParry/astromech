@@ -1,10 +1,12 @@
 /**
  * CRON job registry.
  *
- * Uses globalThis so jobs registered during Astro's config:setup hook
- * are visible to the runner at request/scheduled event time.
+ * globalThis-backed (see `@/utilities/registry.js`) so jobs registered during
+ * Astro's config:setup hook are visible to the runner at request/scheduled
+ * event time.
  */
 
+import { defineRegistry } from '@/utilities/registry.js';
 import type { Kysely } from 'kysely';
 import type { DB } from '@/database/types.js';
 import type { ResolvedConfig, SchedulerDriver } from '@/types/index.js';
@@ -25,36 +27,22 @@ export type CronJob = {
     handler: (ctx: CronContext) => Promise<void>;
 };
 
-declare global {
-    var __astromechCronJobs: CronJob[] | undefined;
-}
+const jobs = defineRegistry<CronJob[]>('cronJobs', { required: false });
 
 export function registerCronJob(job: CronJob): void {
-    if (!globalThis.__astromechCronJobs) {
-        globalThis.__astromechCronJobs = [];
-    }
-    globalThis.__astromechCronJobs.push(job);
+    const list = jobs.peek() ?? [];
+    list.push(job);
+    jobs.set(list);
 }
 
 export function getCronJobs(): CronJob[] {
-    return globalThis.__astromechCronJobs ?? [];
+    return jobs.peek() ?? [];
 }
 
-declare global {
-    var __astromechScheduler: SchedulerDriver | undefined;
-}
+const scheduler = defineRegistry<SchedulerDriver>('scheduler', { required: false });
 
-export function setSchedulerDriver(driver: SchedulerDriver): void {
-    globalThis.__astromechScheduler = driver;
-}
-
-export function getSchedulerDriver(): SchedulerDriver | null {
-    return globalThis.__astromechScheduler ?? null;
-}
-
-declare global {
-    var __astromechRuntimeConfig: ResolvedConfig | undefined;
-}
+export const setSchedulerDriver = scheduler.set;
+export const getSchedulerDriver = scheduler.peek;
 
 /**
  * Stash the resolved config at boot so the cron runner can read it WITHOUT
@@ -64,15 +52,9 @@ declare global {
  * the integration's plain-Node boot is visible to the SSR module graph and the
  * detached timer alike.
  */
-export function setRuntimeConfig(config: ResolvedConfig): void {
-    globalThis.__astromechRuntimeConfig = config;
-}
+const runtimeConfig = defineRegistry<ResolvedConfig>('runtimeConfig', {
+    hint: 'initRuntime() must run before the scheduler ticks.',
+});
 
-export function getRuntimeConfig(): ResolvedConfig {
-    if (!globalThis.__astromechRuntimeConfig) {
-        throw new Error(
-            '[astromech/cron] Runtime config not set. initRuntime() must run before the scheduler ticks.'
-        );
-    }
-    return globalThis.__astromechRuntimeConfig;
-}
+export const setRuntimeConfig = runtimeConfig.set;
+export const getRuntimeConfig = runtimeConfig.get;

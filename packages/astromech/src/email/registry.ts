@@ -1,22 +1,17 @@
 /**
  * Email driver registry.
  *
- * Uses globalThis so the driver set during Astro's config:setup hook
- * (integration context) is visible to the server at request time.
+ * globalThis-backed (see `@/utilities/registry.js`) so the driver set during
+ * Astro's config:setup hook (integration context) is visible to the server at
+ * request time. Email is optional — reads probe rather than throw.
  */
 
+import { defineRegistry } from '@/utilities/registry.js';
 import type { EmailDriver } from '@/types/index.js';
 
 type EmailConfig = { driver: EmailDriver; from: string };
 
-declare global {
-    var __astromechEmail: EmailConfig | undefined;
-}
+const email = defineRegistry<EmailConfig>('email', { required: false });
 
-export function setEmailConfig(config: EmailConfig): void {
-    globalThis.__astromechEmail = config;
-}
-
-export function getEmailConfig(): EmailConfig | null {
-    return globalThis.__astromechEmail ?? null;
-}
+export const setEmailConfig = email.set;
+export const getEmailConfig = email.peek;

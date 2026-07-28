@@ -1,21 +1,17 @@
 /**
  * Storage driver registry.
  *
- * Uses globalThis so the driver set during Astro's config:setup hook
- * (integration context) is visible to the server SDK at request time
- * (Vite SSR context) — both run in the same Node.js process.
+ * globalThis-backed (see `@/utilities/registry.js`) so the driver set during
+ * Astro's config:setup hook (integration context) is visible to the server at
+ * request time (Vite SSR context) — both run in the same Node.js process.
  */
 
+import { defineRegistry } from '@/utilities/registry.js';
 import type { StorageDriver } from '@/types/index.js';
 
-declare global {
-    var __astromechStorage: StorageDriver | undefined;
-}
+const storage = defineRegistry<StorageDriver>('storage', {
+    hint: 'Set `storage` in your Astromech config.',
+});
 
-export function setStorageDriver(driver: StorageDriver): void {
-    globalThis.__astromechStorage = driver;
-}
-
-export function getStorageDriver(): StorageDriver | null {
-    return globalThis.__astromechStorage ?? null;
-}
+export const setStorageDriver = storage.set;
+export const getStorageDriver = storage.get;

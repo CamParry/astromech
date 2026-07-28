@@ -10,7 +10,7 @@ import {
 } from './image/url.js';
 import type { ImageFormat } from './image/url.js';
 import { isOptimisableImage } from './image/dimensions.js';
-import type { ImageSource } from '@/types/index.js';
+import type { ImageSource, StorageDriver } from '@/types/index.js';
 
 export type MediaRequestInfo = {
     id: string;
@@ -63,9 +63,6 @@ export async function handleMediaRequest(info: MediaRequestInfo): Promise<Respon
     }
 
     const storage = getStorageDriver();
-    if (!storage) {
-        return new Response('Storage not configured', { status: 500 });
-    }
 
     const params = parseImageParams(search);
     // Derive the extension from the stored record, never the URL path — the URL
@@ -180,7 +177,7 @@ async function serveOriginal(
     key: string,
     mimeType: string,
     version: string | null,
-    storage: NonNullable<ReturnType<typeof getStorageDriver>>,
+    storage: StorageDriver,
     ifNoneMatch?: string | null
 ): Promise<Response> {
     const etag = version ? `"${version}"` : null;

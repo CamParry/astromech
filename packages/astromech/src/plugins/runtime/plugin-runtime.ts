@@ -35,7 +35,7 @@ import {
     kyselyTableKey,
     registerDescriptorCodec,
 } from '@/database/codec.js';
-import { getDatabaseDriver } from '@/database/driver-registry.js';
+import { peekDatabaseDriver } from '@/database/driver-registry.js';
 import { getStorageDriver } from '@/storage/registry.js';
 import { getEmailConfig } from '@/email/registry.js';
 import { renderEmail } from '@/email/render.js';
@@ -399,14 +399,6 @@ async function sendEmail(
     await emailConfig.driver.send({ to, from: emailConfig.from, subject, html, text });
 }
 
-function requireStorage() {
-    const driver = getStorageDriver();
-    if (!driver) {
-        throw new Error('[astromech] No storage driver configured');
-    }
-    return driver;
-}
-
 /**
  * Build the unified PluginContext for a given plugin and acting user. `db` and
  * `sdk` are lazy so a context can be constructed in environments where they are
@@ -448,16 +440,18 @@ export function createPluginContext(
         env: resolveEnv(),
         emit: (event, payload) => emitEvent(event, payload, user),
         storage: {
-            put: (key, body, opts) => requireStorage().put(PREFIX + key, body, opts),
-            get: (key) => requireStorage().get(PREFIX + key),
-            delete: (key) => requireStorage().delete(PREFIX + key),
+            put: (key, body, opts) => getStorageDriver().put(PREFIX + key, body, opts),
+            get: (key) => getStorageDriver().get(PREFIX + key),
+            delete: (key) => getStorageDriver().delete(PREFIX + key),
             list: async (prefix = '') =>
-                (await requireStorage().list(PREFIX + prefix)).map((k) =>
+                (await getStorageDriver().list(PREFIX + prefix)).map((k) =>
                     k.slice(PREFIX.length)
                 ),
         },
         get database(): PluginDatabase {
-            const drv = getDatabaseDriver();
+            // Probes rather than throws: plugin unit tests build a context
+            // without ever wiring a db driver, and read `dialect` from it.
+            const drv = peekDatabaseDriver();
             const dialect = drv?.type ?? 'unknown';
             const dump = drv?.dump?.bind(drv);
             const restore = drv?.restore?.bind(drv);

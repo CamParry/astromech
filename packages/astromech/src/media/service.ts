@@ -176,7 +176,6 @@ export const mediaApi = {
     async upload(file: File): Promise<Media> {
         const db = getDb();
         const driver = getStorageDriver();
-        if (!driver) throw new Error('Storage driver not configured');
 
         const id = crypto.randomUUID();
         const ext = extOf(file.name);
@@ -264,20 +263,18 @@ export const mediaApi = {
         const db = getDb();
         const driver = getStorageDriver();
 
-        if (driver) {
-            const row = await db
-                .selectFrom('media')
-                .selectAll()
-                .where('id', '=', id)
-                .limit(1)
-                .executeTakeFirst();
-            if (row) {
-                const decoded = decode('media', row) as unknown as MediaRow;
-                const ext = extOf(decoded.filename);
-                const key = ext ? `${decoded.id}.${ext}` : decoded.id;
-                await driver.delete(key);
-                await deletePrefix(driver, variantPrefix(id));
-            }
+        const row = await db
+            .selectFrom('media')
+            .selectAll()
+            .where('id', '=', id)
+            .limit(1)
+            .executeTakeFirst();
+        if (row) {
+            const decoded = decode('media', row) as unknown as MediaRow;
+            const ext = extOf(decoded.filename);
+            const key = ext ? `${decoded.id}.${ext}` : decoded.id;
+            await driver.delete(key);
+            await deletePrefix(driver, variantPrefix(id));
         }
 
         await createRelationshipStorage(getDb()).deleteByMedia(id);
@@ -287,7 +284,6 @@ export const mediaApi = {
     async replace(id: string, file: File): Promise<Media> {
         const db = getDb();
         const driver = getStorageDriver();
-        if (!driver) throw new Error('Storage driver not configured');
 
         const existingRaw = await db
             .selectFrom('media')

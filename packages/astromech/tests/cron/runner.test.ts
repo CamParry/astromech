@@ -32,7 +32,7 @@ function singleRow(rows: CronRow[]): CronRow {
 
 beforeEach(async () => {
     // Reset all cron globalThis state between tests.
-    globalThis.__astromechCronJobs = [];
+    delete globalThis.__astromech?.cronJobs;
     globalThis.__astromechCronTickRunning = false;
     globalThis.__astromechCronUnscheduledWarned = new Set();
 
@@ -41,7 +41,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-    globalThis.__astromechCronJobs = [];
+    delete globalThis.__astromech?.cronJobs;
     globalThis.__astromechCronTickRunning = false;
     globalThis.__astromechCronUnscheduledWarned = new Set();
 });
@@ -388,7 +388,7 @@ describe('onTick / runDue', () => {
     describe('runtime config source (no virtual: import)', () => {
         it('10. throws a clear error when the runtime config registry is unset', async () => {
             // Clear the registry that setupTestConfig populated in beforeEach.
-            globalThis.__astromechRuntimeConfig = undefined;
+            delete globalThis.__astromech?.runtimeConfig;
 
             registerCronJob({
                 name: 'test-job',
@@ -397,7 +397,7 @@ describe('onTick / runDue', () => {
             });
 
             await expect(runDue(new Date('2024-06-01T00:00:00.000Z'))).rejects.toThrow(
-                /Runtime config not set/
+                /'runtimeConfig' is not configured\. initRuntime\(\) must run/
             );
         });
 

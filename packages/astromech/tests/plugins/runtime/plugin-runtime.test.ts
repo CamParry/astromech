@@ -102,7 +102,7 @@ const user: User = {
 
 beforeEach(() => {
     globalThis.__astromechPluginRuntime = undefined;
-    globalThis.__astromechCronJobs = undefined;
+    delete globalThis.__astromech?.cronJobs;
     vi.restoreAllMocks();
 });
 
