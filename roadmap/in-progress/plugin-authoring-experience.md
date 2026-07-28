@@ -8,7 +8,7 @@
 | 2d      | flatten `ctx.sdk`, delete scoped entries, move the permission seam | built (`fc63be5`), gate + browser verified                                |
 | 2b      | retire "SDK" → "service"                                           | built, gate verified                                                      |
 | 2c      | dissolve `astromech/plugin-kit`                                    | built, gate + browser verified                                            |
-| 2a      | drop "plugin" from the define names                                | naming + docs done, gate verified; `definePluginTable` rename outstanding |
+| 2a      | drop "plugin" from the define names                                | done, gate verified; `definePluginTable` rename rejected (see remainders) |
 | Phase 3 | candidates, not yet designed                                       | —                                                                         |
 
 Sub-phases are sequenced rather than parallel: 2b, 2c and 2d all rewrite the
@@ -57,9 +57,69 @@ takes a bare `permission: 'view'` and namespaces it, and computes a settings
 - **Table-bearing plugins keep one `<X>_PACKAGE` string const** in a
   dependency-free leaf. `definePluginTable` needs the package as a _literal
   type_ to derive `PluginDB` keys, and a value inside `definePlugin` can't reach
-  a module-scope descriptor. Fixable by having descriptors hold bare names,
-  prefixing at assembly, and composing the literal via a **type-only** import of
-  `typeof plugin` from `index.ts` (erased, so no runtime cycle) — deferred.
+  a module-scope descriptor.
+
+    The proposed fix — descriptors hold bare names, prefixed at assembly, with
+    the literal recovered by a **type-only** import of `typeof plugin` from
+    `index.ts` — was investigated in 2a and **rejected**. Three findings, any
+    one of which is disqualifying:
+    1. **It does not compile.** `import type` erases the _runtime_ edge, but the
+       _type_ edge is real and self-referential: the descriptor's name type is
+       `` `plugin_${PluginNamespace<typeof plugin['package']>}_<bare>` ``, while
+       `typeof plugin` is inferred from an initializer containing that
+       descriptor. tsc reports TS7022 on the plugin binding ("referenced
+       directly or indirectly in its own initializer") and TS2456 on the alias.
+       Widening `schema` to `TableDescriptor[]` doesn't help — inferring an
+       un-annotated `const` resolves the whole initializer regardless. The only
+       variant that compiles imports a _standalone_ binding whose type can't
+       reach the descriptor (`export const PACKAGE = '…'` in `index.ts`, used as
+       `typeof PACKAGE`), which relocates the const rather than deleting it and
+       still can't put the literal inline in the definition object.
+       dep-cruiser never gets a say: it cruises `packages/astromech/src` only,
+       so plugin-internal cycles aren't cruised at all.
+    2. **Two consumers read `descriptor.name` before any assembly exists.**
+       `tableStorage` caches `kyselyTableKey(table.name)` in its constructor
+       (`entries/storage/table.ts:91`) and redirects calls it at module scope
+       (`entries/redirect.ts`), long before `registerPlugins` — a bare name
+       there points every redirects query at `redirects`. And `plugin:generate`
+       has no assembly _by design_ ("must never load `astromech.config.ts`"): it
+       jiti-imports the schema module and writes both the migration SQL and
+       `snapshot.json` from `table.name`. Each is fixable alone (a lazy
+       `tableKey`; a prefix pass in the generator) — but descriptors are shared
+       value objects, so prefixing at assembly means either mutating them in
+       place (and `registerPlugins` is re-entrant, so that needs a
+       `startsWith(prefix)` idempotency guard — exactly the double-prefix guard
+       2a declines to add elsewhere) or cloning them, which strands every
+       module-scope reference.
+    3. **It trades a build error for a silent wrong-table bug.** Baking the
+       package into the descriptor at define time is what lets two _independent_
+       checks cross-validate identity: `plugin:generate` derives the prefix from
+       `package.json`'s `name` and hard-exits on a mismatch, and
+       `assertPluginTablePrefixes` derives it from the definition's `package` and
+       throws on a mismatch. Prefix-at-assembly makes both tautologies — each
+       would assert a string it had just constructed — so a disagreement between
+       those two sources stops being a generate-time failure and becomes a
+       plugin that migrates `plugin_a_x` and queries `plugin_b_x` in production.
+
+    The payoff was two lines: neither `types.ts` is a leaf existing only for the
+    const (redirects' also carries `REDIRECT_TYPE` and four types; backups'
+    carries `BackupsOptions`), so no module is deleted. And the type machinery
+    being repaired has **zero consumers** — nothing in the repo uses `PluginDB`
+    or `KyselyTableKey`, and backups queries via a hand-written
+    `const TABLE = 'plugin_backups_runs' as const`. No emitted table name would
+    have changed, so it isn't a schema change; that is the only one of the three
+    checks it passes.
+
+    So `definePluginTable` keeps its name and its package argument. Renaming it
+    to `defineTable` without the fix is strictly worse: root `astromech` would
+    export a 4-arg `defineTable(pkg, name, cols, indexes)` beside the internal
+    3-arg `defineTable(name, cols, indexes)` it wraps, both in
+    `packages/astromech/src/database/`. Revisit only if `PluginDB` acquires a
+    real consumer, and then compose the literal at the _consumption_ site
+    (`PluginDB<typeof plugin, { runs: typeof runsTable }>`), which is acyclic
+    because the tables don't depend on the plugin — that needs no runtime change
+    at all.
+
 - **seo hardcodes its own namespace literal.** `seoSection()` is called from the
   _site's_ config, so there is no assembly moment and no context to inject
   identity from. 2c deleted `labels.ts` and its `pluginNamespace` call, but the
@@ -86,9 +146,11 @@ core namespacing plugin registrations at assembly.
 
 ### 2a. Drop "plugin" from the define names
 
-- [ ] `definePluginTable` → `defineTable`. Blocked on the deferred literal-type
-      fix in "Known remainders" above; that fix and this rename are one job, and
-      it also retires the `<X>_PACKAGE` consts
+- [ ] `definePluginTable` → `defineTable` — **investigated and rejected**, not
+      deferred. The rename and the literal-type fix are one job, and the fix
+      doesn't compile, removes two identity cross-checks, and pays for it with
+      two deleted lines. Full write-up in "Known remainders" above; that bullet
+      is now the durable record and this box stays unticked on purpose
 - [x] Delete `defineSdkMethod` — deprecated alias, zero callers _(done in 2b)_
 - [x] Keep `defineEntryType`; there is no `defineEntry`. It defines a _type_,
       not content, and it earns its keep the moment an entry type is authored
