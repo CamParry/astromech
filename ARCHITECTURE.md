@@ -15,8 +15,10 @@ plus an Astro integration that injects the admin SPA, an HTTP API, and a
 type-safe client for reading content in templates.
 
 **Infrastructure target:** Cloudflare — Workers runtime, D1 (SQLite) database, R2
-(S3-compatible) storage. Other drivers exist (libsql, filesystem) but Cloudflare
-is the shape decisions are made for. **SSR only** for now.
+(S3-compatible) storage. Other drivers exist (libsql, filesystem, s3) but
+Cloudflare is the shape decisions are made for. **SSR only** for now. The D1
+driver is not built yet (`roadmap/planned/additional-database-drivers.md`), and
+nothing has been run on Workers.
 
 ## The layer model
 
@@ -51,8 +53,15 @@ Key invariants:
   table aggregator) or a shared capability — never via a direct peer import. The
   only permitted exception is a `schema.ts` foreign-key cross-reference.
 - **Capabilities sit below domains.** They expose primitives (`storage`, `database`,
-  `fields`, `permissions`, `context`, `email`, `cron`) and may not orchestrate
-  domain logic.
+  `fields`, `permissions`, `context`, `email`, `cron`, `cloudflare`) and may not
+  orchestrate domain logic.
+- **Each capability owns its own driver slot; there is no central context object.**
+  Slots share one mechanism (`utilities/registry.ts`) over a single
+  `globalThis.__astromech` namespace, but never a shared type. A hub carrying every
+  driver would have to import every domain's types, which is what this DAG exists
+  to prevent. globalThis is not a taste choice — tsup emits several entry chunks and
+  a module-level singleton duplicates across them. Required slots resolve-or-throw;
+  genuinely optional ones expose `peek()` and no `get()` at all.
 - **Leaves are pure.** `types/`, `utilities/`, and `errors/` import only other
   leaves or third-party packages.
 - **Enforced** by `packages/astromech/.dependency-cruiser.cjs` (`npm run lint:deps`), which scans `packages/astromech/src` only — core's internal DAG. Cross-package isolation is enforced by `exports` boundaries at publish, not a repo-wide scan.
@@ -102,7 +111,8 @@ packages/
 │   │   │
 │   │   │   ── capabilities ───────────────────────────────────────────────
 │   │   ├── database/       # Drizzle client/drivers + schema.ts aggregator (was db/; public subpath unchanged)
-│   │   ├── storage/        # file-storage drivers (R2, filesystem)
+│   │   ├── storage/        # blob-storage registry + drivers/ (filesystem, r2, s3)
+│   │   ├── cloudflare/     # binding-name resolution across Workers and Node
 │   │   ├── permissions/    # permission model: roles, grammar, BUILT_IN_ROLES, can()
 │   │   ├── fields/         # field/column builder, formatters, rich-text, helpers
 │   │   ├── context/        # shared server request-context (was services/_shared/)

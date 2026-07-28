@@ -10,9 +10,12 @@ The standard term for any pluggable backend implementation in Astromech. A drive
 
 Current drivers:
 
-- **DatabaseDriver** — wraps a database connection (`libsqlDriver`, `d1Driver`)
-- **StorageDriver** — wraps a file storage backend (`FilesystemStorage`, and future S3/R2 drivers)
+- **DatabaseDriver** — wraps a database connection (`libsqlDriver`)
+- **StorageDriver** — wraps a file storage backend (`filesystem()`, `r2()`, `s3()`)
 - **EmailDriver** — wraps an email sending service (`SmtpDriver`, `ResendDriver`, `ConsoleDriver`)
+
+Storage drivers are factories on their own subpaths (`astromech/storage/r2`),
+never classes on the root barrel — see `apps/docs/configuration/storage.md`.
 
 > **Why "driver" and not "adapter"?** Both terms are used in the ecosystem (Payload uses "adapter", AdonisJS uses "driver"). We chose "driver" for consistency with `DatabaseDriver`, which was already established, and because it better conveys the idea of a low-level connector to a specific technology — not just a compatibility shim.
 
