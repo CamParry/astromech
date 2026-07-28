@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { r2 } from '@/storage/drivers/r2.js';
 import type { R2BucketLike } from '@/storage/drivers/r2.js';
+import { setBindingEnv, resetBindingEnv } from '@/cloudflare/bindings.js';
 
 // ---------------------------------------------------------------------------
 // In-memory R2 fake
@@ -394,6 +395,84 @@ describe('r2()', () => {
             const driver = r2({ bucket: makeFakeBucket() });
             expect(driver.getSignedUploadUrl).toBeUndefined();
             expect(driver.getSignedDownloadUrl).toBeUndefined();
+        });
+    });
+
+    describe('binding form', () => {
+        beforeEach(() => {
+            resetBindingEnv();
+        });
+
+        it('round-trips put/get against a bucket supplied via setBindingEnv', async () => {
+            const bucket = makeFakeBucket();
+            setBindingEnv({ MEDIA: bucket });
+            const driver = r2({ binding: 'MEDIA' });
+
+            await driver.put('uploads/photo.jpg', new Uint8Array([1, 2, 3]), {
+                contentType: 'image/jpeg',
+            });
+            const result = await driver.get('uploads/photo.jpg');
+            if (!result) throw new Error('expected a result');
+            expect(await drain(result.body)).toEqual(new Uint8Array([1, 2, 3]));
+        });
+
+        it('constructing with an unknown binding name does not throw — resolution is deferred to first use', async () => {
+            resetBindingEnv();
+            setBindingEnv({ OTHER: makeFakeBucket() });
+
+            expect(() => r2({ binding: 'MEDIA' })).not.toThrow();
+
+            const driver = r2({ binding: 'MEDIA' });
+            await expect(driver.get('any-key')).rejects.toThrow(
+                "[Astromech] Cloudflare binding 'MEDIA' not found."
+            );
+        });
+
+        it('does not memoise a failed lookup, so a later env still resolves', async () => {
+            resetBindingEnv();
+            setBindingEnv({ OTHER: makeFakeBucket() });
+            const driver = r2({ binding: 'MEDIA' });
+            await expect(driver.get('any-key')).rejects.toThrow(/not found/);
+
+            const bucket = makeFakeBucket();
+            resetBindingEnv();
+            setBindingEnv({ MEDIA: bucket });
+            await driver.put('photo.jpg', new TextEncoder().encode('bytes'));
+            expect(await driver.get('photo.jpg')).not.toBeNull();
+        });
+
+        it('resolves the binding once across several method calls', async () => {
+            let resolutions = 0;
+            const bucket = makeFakeBucket();
+            const env: Record<string, unknown> = {};
+            Object.defineProperty(env, 'MEDIA', {
+                enumerable: true,
+                get() {
+                    resolutions++;
+                    return bucket;
+                },
+            });
+            setBindingEnv(env);
+
+            const driver = r2({ binding: 'MEDIA' });
+            await driver.put('a.txt', new Uint8Array([1]));
+            await driver.get('a.txt');
+            await driver.stat('a.txt');
+            await driver.delete('a.txt');
+            await driver.list('');
+
+            expect(resolutions).toBe(1);
+        });
+
+        it('getPublicUrl works on a binding-configured driver without any binding being resolvable', () => {
+            resetBindingEnv();
+            const driver = r2({
+                binding: 'MEDIA',
+                publicUrl: 'https://assets.example.com',
+            });
+            expect(driver.getPublicUrl?.('uploads/photo.jpg')).toBe(
+                'https://assets.example.com/uploads/photo.jpg'
+            );
         });
     });
 });

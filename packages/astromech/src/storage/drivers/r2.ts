@@ -1,8 +1,14 @@
 /**
  * R2 storage driver for Cloudflare Workers.
  *
- * The `bucket` option must be a Cloudflare R2 bucket binding, typically passed
- * from the Worker environment: `r2({ bucket: env.MY_BUCKET })`.
+ * Normal usage names a binding: `r2({ binding: 'MEDIA' })`. The same
+ * `astromech.config.ts` is loaded both by the Worker and by the CLI in plain
+ * Node, and a resolved bucket object is not reachable from Node — a binding
+ * NAME resolves in either runtime, so the driver resolves it lazily on first
+ * use (see `@/cloudflare/bindings.js`) rather than at construction.
+ *
+ * `bucket` remains as an escape hatch for callers that already hold a
+ * resolved R2 bucket binding: `r2({ bucket: env.MY_BUCKET })`.
  *
  * R2 buckets have no public URL by default. Pass `publicUrl` (an r2.dev subdomain
  * or a custom domain bound to the bucket) to enable `getPublicUrl`. Without it,
@@ -13,6 +19,7 @@
  * S3-compatible endpoint when signing is required.
  */
 
+import { resolveBinding } from '@/cloudflare/bindings.js';
 import type {
     StorageDriver,
     StorageList,
@@ -56,13 +63,33 @@ export type R2BucketLike = {
     }>;
 };
 
-type R2Options = {
-    bucket: R2BucketLike;
-    publicUrl?: string;
-};
+export type R2Options = { publicUrl?: string } & (
+    | { binding: string; bucket?: never }
+    | { bucket: R2BucketLike; binding?: never }
+);
 
 export function r2(options: R2Options): StorageDriver {
-    const { bucket, publicUrl } = options;
+    const { publicUrl } = options;
+
+    // Resolution must never happen at construction — a plain `bucket` is
+    // already resolved, but a `binding` name is only looked up lazily, on
+    // first use, and memoised so concurrent calls share one resolution.
+    let pending: Promise<R2BucketLike> | undefined;
+    function getBucket(): Promise<R2BucketLike> {
+        if ('binding' in options) {
+            // A failed lookup is dropped rather than memoised, matching the
+            // resolver: a caller that supplies the environment afterwards must
+            // still recover instead of being stuck with the first rejection.
+            pending ??= resolveBinding<R2BucketLike>(options.binding).catch(
+                (err: unknown) => {
+                    pending = undefined;
+                    throw err;
+                }
+            );
+            return pending;
+        }
+        return Promise.resolve(options.bucket);
+    }
 
     return {
         name: 'r2',
@@ -72,6 +99,7 @@ export function r2(options: R2Options): StorageDriver {
             body: ReadableStream | Uint8Array,
             opts?: { contentType?: string }
         ): Promise<void> {
+            const bucket = await getBucket();
             const value = body as ReadableStream | ArrayBuffer | ArrayBufferView;
             const contentType = opts?.contentType;
             await bucket.put(
@@ -85,6 +113,7 @@ export function r2(options: R2Options): StorageDriver {
             key: string,
             opts?: { range?: StorageRange }
         ): Promise<StorageObject | null> {
+            const bucket = await getBucket();
             const range = opts?.range;
             const obj = await bucket.get(
                 key,
@@ -115,6 +144,7 @@ export function r2(options: R2Options): StorageDriver {
         },
 
         async stat(key: string): Promise<StorageStat | null> {
+            const bucket = await getBucket();
             const obj = await bucket.head(key);
             if (!obj) return null;
             const contentType = obj.httpMetadata?.contentType;
@@ -127,6 +157,7 @@ export function r2(options: R2Options): StorageDriver {
         },
 
         async delete(key: string): Promise<void> {
+            const bucket = await getBucket();
             await bucket.delete(key);
         },
 
@@ -134,6 +165,7 @@ export function r2(options: R2Options): StorageDriver {
             prefix: string,
             opts?: { cursor?: string; limit?: number }
         ): Promise<StorageList> {
+            const bucket = await getBucket();
             const page = await bucket.list({
                 prefix,
                 ...(opts?.cursor !== undefined ? { cursor: opts.cursor } : {}),
