@@ -1,5 +1,20 @@
 # Plugin authoring experience
 
+**Status:** branch `feat/plugin-authoring-dx`, not yet merged to `main`.
+
+|         | scope                                                              | state                                              |
+| ------- | ------------------------------------------------------------------ | -------------------------------------------------- |
+| Phase 1 | one `definePlugin` call; identity-unaware sub-modules              | built, gate + browser verified, **awaiting merge** |
+| 2d      | flatten `ctx.sdk`, delete scoped entries, move the permission seam | in progress                                        |
+| 2b      | retire "SDK" → "service"                                           | planned, blocked on 2d                             |
+| 2c      | dissolve `astromech/plugin-kit`                                    | planned, blocked on 2b                             |
+| 2a      | drop "plugin" from the define names                                | planned, blocked on 2c                             |
+| Phase 3 | candidates, not yet designed                                       | —                                                  |
+
+Sub-phases are sequenced rather than parallel: 2b, 2c and 2d all rewrite the
+same plugin call sites, and 2d's deletion of `ctx.sdk` shrinks 2b's rename
+surface. 2a runs last because it is the only one carrying design risk.
+
 Make a plugin declare itself the way an app declares its config: **one
 `definePlugin` call holding identity and behaviour together**, with nothing
 inside the package importing the package's own identity to build a namespaced
