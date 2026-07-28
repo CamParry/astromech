@@ -60,11 +60,14 @@ takes a bare `permission: 'view'` and namespaces it, and computes a settings
   a module-scope descriptor. Fixable by having descriptors hold bare names,
   prefixing at assembly, and composing the literal via a **type-only** import of
   `typeof plugin` from `index.ts` (erased, so no runtime cycle) — deferred.
-- **seo keeps `tKey`** for the same class of reason: `seoSection()` is called
-  from the _site's_ config, so there is no assembly moment and no context to
-  inject identity from. The general fix is to hang host-facing helpers off the
-  factory (`seo.section()`, as `plugin.permissions()` already does), which needs
-  `definePlugin` to carry plugin-declared extras.
+- **seo hardcodes its own namespace literal.** `seoSection()` is called from the
+  _site's_ config, so there is no assembly moment and no context to inject
+  identity from. 2c deleted `labels.ts` and its `pluginNamespace` call, but the
+  fact had to land somewhere: `fields/groups.ts` now writes `const NAMESPACE =
+'seo'` by hand. That is a stand-in, not the fix. The fix is to hang
+  host-facing helpers off the factory (`seo.section()`, as
+  `plugin.permissions()` already does), which needs `definePlugin` to carry
+  plugin-declared extras — Phase 3.
 - **Service module augmentation stays hand-written.** `declare module
 'astromech' { interface AstromechPluginServices { seo: … } }` needs the
   service key as a source-level literal; TS cannot compute an interface key

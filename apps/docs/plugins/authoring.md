@@ -338,14 +338,14 @@ and `myPlugin.permissions('viwe')` does not.
 ### Database tables
 
 A plugin that needs its own storage declares each table with
-`definePluginTable` from `astromech/plugin-kit`, one file per table. It is
+`definePluginTable` from `astromech`, one file per table. It is
 `defineTable` scoped to your plugin: you pass your package name and a bare
 name, and it prefixes both the table and any index names with
 `plugin_<namespace>_` so two plugins can never collide.
 
 ```ts
 // schema/widgets.ts
-import { definePluginTable, type TableSelect } from 'astromech/plugin-kit';
+import { definePluginTable, type TableSelect } from 'astromech';
 import { MY_PLUGIN_PACKAGE } from '../types.js';
 
 export const widgetsTable = definePluginTable(
@@ -426,7 +426,7 @@ identifier is the unambiguous one.
 
 For reads and writes that bypass a storage layer, decode and encode rows with
 the descriptor: `decodeWith(widgetsTable, row)`, `encodeWith(widgetsTable, values)`,
-`encodePatchWith(widgetsTable, patch)` — all from `astromech/plugin-kit`.
+`encodePatchWith(widgetsTable, patch)` — all from `astromech`.
 
 ### Runtime identity
 
