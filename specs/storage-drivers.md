@@ -1,9 +1,16 @@
 # Storage Drivers — contract, packaging, and cross-runtime binding resolution
 
-**Status:** Design locked (discussion 2026-07-28). Not yet implemented. Branch `feat/storage-drivers`, worktree `.claude/worktrees/feat/storage-drivers`, based on `main` @ 28bcacb.
-**Touches:** `packages/astromech/src/storage/**`, `packages/astromech/src/types/config.ts`, `packages/astromech/src/media/**`, every `*/registry.ts`, `packages/astromech/src/database/drivers/d1.ts`, `packages/astromech/src/kernel/boot.ts`, `apps/demo/astromech.config.ts`.
-**Related roadmap:** `in-progress/storage-drivers.md` (status), `planned/multi-runtime-and-framework-adapters.md` (owns the runtime adapter this depends on), `planned/additional-database-drivers.md` (same binding-resolution problem for D1).
-**Related memories:** `project_globalthis_singletons.md`, `integration-config-load-no-virtual.md`, `project_modular_architecture.md`, `project_app_owned_migrations.md`.
+**Status:** Design locked 2026-07-28; **steps 1–7 implemented 2026-07-29** on `feat/storage-drivers` (worktree `.claude/worktrees/feat/storage-drivers`, based on `main` @ 28bcacb). This document is the design record and is now behind the code in two places — `roadmap/in-progress/storage-drivers.md` is the as-built status. Delete this file when the branch merges.
+
+**Overruled during implementation:**
+
+1. **§5's `@aws-sdk/client-s3`** — `s3()` is built on **`aws4fetch`** instead. §5 also requires the driver to run on Workers, where the AWS SDK is a poor fit; aws4fetch is ~6kB of SigV4 over `fetch`, identical in both runtimes, and query-signs.
+2. **§11 step 5's `d1({ binding })`** — the stub is deleted but the driver is deferred to `roadmap/planned/additional-database-drivers.md`. `DatabaseDriver.getInstance()` is synchronous while binding resolution is async, so it needs a Kysely dialect resolving inside `acquireConnection()`, and no D1 dialect exists in the repo. Do not widen `DatabaseDriver` to work around this.
+3. **§7's `src/support/registry.ts`** — landed at `src/utilities/registry.ts`; there is no `support/` directory, and `utilities/` is the pure-leaf home dep-cruiser already enforces.
+4. **§8.2's parenthetical that `filesystem()` has no public URL** — it does, but `urlPrefix` had to become opt-in rather than defaulting to `/uploads`, which is only a real URL when `dir` sits under `public/`.
+   **Touches:** `packages/astromech/src/storage/**`, `packages/astromech/src/types/config.ts`, `packages/astromech/src/media/**`, every `*/registry.ts`, `packages/astromech/src/database/drivers/d1.ts`, `packages/astromech/src/kernel/boot.ts`, `apps/demo/astromech.config.ts`.
+   **Related roadmap:** `in-progress/storage-drivers.md` (status), `planned/multi-runtime-and-framework-adapters.md` (owns the runtime adapter this depends on), `planned/additional-database-drivers.md` (same binding-resolution problem for D1).
+   **Related memories:** `project_globalthis_singletons.md`, `integration-config-load-no-virtual.md`, `project_modular_architecture.md`, `project_app_owned_migrations.md`.
 
 > Nothing here is deployed and nothing outside the repo consumes these APIs. Every
 > decision below is free to break the existing shape, and several do.
@@ -17,7 +24,7 @@ uploads), then had an R2 driver added without revisiting the contract. Concrete
 issues found in the 2026-07-28 audit:
 
 - **`getDirectUrl` has zero callers.** Both drivers implement it; nothing in
-  `src/` or `apps/` calls it. It is also *sync* and returns a permanent URL,
+  `src/` or `apps/` calls it. It is also _sync_ and returns a permanent URL,
   which cannot express a presigned URL.
 - **No `stat`.** Probing for an object requires `get`, which opens a body stream
   that is then discarded.
@@ -30,7 +37,7 @@ issues found in the 2026-07-28 audit:
   root `astromech` barrel — which puts `node:fs` in the barrel Workers code
   imports — while `r2()` is a factory on a subpath.
 - **Nullable accessors on required config.** `types/config.ts:316` declares
-  `storage: StorageDriver` as *required*, yet `getStorageDriver()` returns
+  `storage: StorageDriver` as _required_, yet `getStorageDriver()` returns
   `StorageDriver | null` and eight call sites branch on it. A missing driver is
   a boot bug being modelled as a per-request data condition.
 - **The Workers path has never been run.** `d1Driver()` throws by design
@@ -42,9 +49,9 @@ issues found in the 2026-07-28 audit:
 
 ## 2. Terminology (locked)
 
-| Term | Meaning |
-| --- | --- |
-| **Driver** | A pluggable backend for a capability slot — `StorageDriver`, `DatabaseDriver`, `ImageDriver`, `EmailDriver`, `SchedulerDriver`. Supplied by userland config as a value. |
+| Term        | Meaning                                                                                                                                                                                                                                  |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Driver**  | A pluggable backend for a capability slot — `StorageDriver`, `DatabaseDriver`, `ImageDriver`, `EmailDriver`, `SchedulerDriver`. Supplied by userland config as a value.                                                                  |
 | **Adapter** | A host runtime or framework integration — `RuntimeAdapter` (Node, Cloudflare), `FrameworkAdapter` (Astro, SvelteKit, Next). Owns environment concerns such as binding resolution. See `planned/multi-runtime-and-framework-adapters.md`. |
 
 The codebase is already unanimous on "Driver" for capability slots
@@ -52,7 +59,7 @@ The codebase is already unanimous on "Driver" for capability slots
 "Adapter" for the host layer.
 
 **Ecosystem note:** Payload and EmDash both say "adapter" where we say "driver".
-Neither has a runtime-adapter concept — Payload ships per-host *templates*, and
+Neither has a runtime-adapter concept — Payload ships per-host _templates_, and
 EmDash puts its Cloudflare pieces in a separate package — so neither needed the
 word for two jobs. We do. Accepted cost: mild unfamiliarity for people arriving
 from those projects.
@@ -81,7 +88,7 @@ the rename candidate `blob-storage/` stays in the backlog.
 5. **Three media access modes**, chosen by config, not per item (§8).
 6. **Presigned URLs are for uploads, not for the R2 download path** (§8.3).
 7. **Video ships as bytes + range on R2/S3.** Cloudflare Stream is deliberately
-   *not* a `StorageDriver` and is deferred to the roadmap (§9).
+   _not_ a `StorageDriver` and is deferred to the roadmap (§9).
 
 ---
 
@@ -130,7 +137,10 @@ export type StorageDriver = {
     get(key: string, opts?: { range?: StorageRange }): Promise<StorageObject | null>;
     stat(key: string): Promise<StorageStat | null>;
     delete(key: string): Promise<void>;
-    list(prefix: string, opts?: { cursor?: string; limit?: number }): Promise<StorageList>;
+    list(
+        prefix: string,
+        opts?: { cursor?: string; limit?: number }
+    ): Promise<StorageList>;
 
     // --- optional capabilities, feature-detected at the call site ---
     /** Permanent, cacheable, CDN-frontable URL. Null when the driver has none. */
@@ -156,7 +166,7 @@ export type StorageDriver = {
 - **`list` is paginated** and returns an object rather than `string[]`.
   `deletePrefix` (`storage/prefix.ts`) becomes a cursor loop.
 - **`getDirectUrl` is deleted and split in two.** `getPublicUrl` is sync and
-  means *permanent and cacheable*. Signing is async, expiring, and separate.
+  means _permanent and cacheable_. Signing is async, expiring, and separate.
   Conflating them is what made the old method unusable and therefore uncalled.
 - **`etag` surfaces from the driver.** The media handler currently synthesises
   etags from `media.metadata.version`; drivers that have a real one should be
@@ -173,11 +183,11 @@ load-bearing: the R2 **binding** cannot sign URLs at all (§8.3), and
 
 ## 5. Drivers and packaging
 
-| Driver | Import | Options | Runtime |
-| --- | --- | --- | --- |
-| `filesystem` | `astromech/storage/filesystem` | `{ dir, urlPrefix? }` | Node |
-| `s3` | `astromech/storage/s3` | `{ endpoint, bucket, region?, accessKeyId?, secretAccessKey?, publicUrl? }` | Node + Workers |
-| `r2` | `astromech/storage/r2` | `{ binding }` \| `{ bucket }`, `publicUrl?` | Workers (+ Node CLI via §6) |
+| Driver       | Import                         | Options                                                                     | Runtime                     |
+| ------------ | ------------------------------ | --------------------------------------------------------------------------- | --------------------------- |
+| `filesystem` | `astromech/storage/filesystem` | `{ dir, urlPrefix? }`                                                       | Node                        |
+| `s3`         | `astromech/storage/s3`         | `{ endpoint, bucket, region?, accessKeyId?, secretAccessKey?, publicUrl? }` | Node + Workers              |
+| `r2`         | `astromech/storage/r2`         | `{ binding }` \| `{ bucket }`, `publicUrl?`                                 | Workers (+ Node CLI via §6) |
 
 - **One subpath per driver.** `@aws-sdk/client-s3` is a heavy, Node-flavoured
   optional peer dependency and must never enter the root graph; `filesystem`
@@ -188,7 +198,7 @@ load-bearing: the R2 **binding** cannot sign URLs at all (§8.3), and
   only.** On Workers, secrets arrive via `env`, not `process.env`, so values
   must be passed explicitly. This mirrors EmDash exactly, including the caveat.
 - **`s3()` pointed at R2's S3-compatible endpoint is a supported configuration**
-  and is the *only* way to get signed uploads on R2 (§8.3).
+  and is the _only_ way to get signed uploads on R2 (§8.3).
 
 ---
 
@@ -197,7 +207,7 @@ load-bearing: the R2 **binding** cannot sign URLs at all (§8.3), and
 ### What changed
 
 `import { env } from 'cloudflare:workers'` makes bindings available at **module
-scope**. The only restriction is that Workers forbid *I/O* outside a request
+scope**. The only restriction is that Workers forbid _I/O_ outside a request
 context — retrieving a binding is fine, calling `.get()`/`.put()` on it at the
 top level is not. Drivers only invoke methods at request time, so this never
 bites. Separately, Astro 6 **removed** `Astro.locals.runtime.env` and points at
@@ -236,11 +246,11 @@ fixes names by convention (`DB`, `BLOB`, `KV`).
 
 Binding resolution is a **runtime adapter** concern, not a driver concern:
 
-| Context | Mechanism |
-| --- | --- |
-| Workers | `import { env } from 'cloudflare:workers'` |
+| Context                    | Mechanism                                                                                                                                                   |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Workers                    | `import { env } from 'cloudflare:workers'`                                                                                                                  |
 | Node (CLI, scripts, tests) | `getPlatformProxy()` from `wrangler` — emulates the Workers platform in a Node process, reads `wrangler.jsonc`, and shares Wrangler's persistence directory |
-| Unit tests | miniflare, or a hand-rolled fake driver |
+| Unit tests                 | miniflare, or a hand-rolled fake driver                                                                                                                     |
 
 Constraints on the implementation:
 
@@ -258,7 +268,7 @@ Constraints on the implementation:
 duplicating the surface every project must maintain.
 
 **Noted for later, not adopted:** drizzle-kit solves the CLI half by giving the
-CLI a *different connection entirely* — the D1 HTTP API with an account ID and
+CLI a _different connection entirely_ — the D1 HTTP API with an account ID and
 token (`driver: 'd1-http'`) — while the Worker uses the binding. Worth
 revisiting if `getPlatformProxy()` proves awkward.
 
@@ -268,7 +278,7 @@ revisiting if `getPlatformProxy()` proves awkward.
 
 ### Decision
 
-Keep `globalThis`. Share the *mechanism*, not the state. Reject a single central
+Keep `globalThis`. Share the _mechanism_, not the state. Reject a single central
 runtime-context object.
 
 ### Why not one central global object
@@ -288,7 +298,7 @@ is not a taste choice — module-level singletons duplicate across tsup entry
 chunks (`project_globalthis_singletons.md`), so a memoised-resolver design would
 still need one. It would change the interface over the global, not remove it.
 
-Cloudflare's own guidance supports the current use: mutable *request-scoped*
+Cloudflare's own guidance supports the current use: mutable _request-scoped_
 state must never live in module scope, but write-once immutable initialisation
 belongs there. Our registries hold write-once, request-independent driver
 objects — the sanctioned category. The design we avoided in §6 (resolving
@@ -314,14 +324,14 @@ export function defineRegistry<T>(
 
 ### Required vs optional slots
 
-| Slot | Required | Reason |
-| --- | --- | --- |
-| `db` | yes | Already throws (`database/registry.ts`) — the model for the rest |
-| `storage` | yes | `types/config.ts:316` declares it non-optional |
-| `dbClient` | yes | Already throws |
-| `dbDriver` | yes | Set from `config.db`, which is required |
-| `image` | **no** | `config.image` is genuinely optional — `peek()` |
-| `email` | **no** | `config.email` is genuinely optional — `peek()` |
+| Slot       | Required | Reason                                                           |
+| ---------- | -------- | ---------------------------------------------------------------- |
+| `db`       | yes      | Already throws (`database/registry.ts`) — the model for the rest |
+| `storage`  | yes      | `types/config.ts:316` declares it non-optional                   |
+| `dbClient` | yes      | Already throws                                                   |
+| `dbDriver` | yes      | Set from `config.db`, which is required                          |
+| `image`    | **no**   | `config.image` is genuinely optional — `peek()`                  |
+| `email`    | **no**   | `config.email` is genuinely optional — `peek()`                  |
 
 `plugin-runtime.ts:387` already invented `requireStorage()` locally. This
 generalises that and deletes the local copy.
@@ -396,7 +406,7 @@ Two further facts the contract has to live with:
 
 - **Storage doubles as a variant cache.** On a miss the handler transforms and
   writes `variantStorageKey(id, version, width, format)` back to the same bucket,
-  guarded by `!driver.cachesVariants`. One driver serves durable uploads *and*
+  guarded by `!driver.cachesVariants`. One driver serves durable uploads _and_
   regenerable derivatives. `stat` makes probing a variant cheap; variants should
   stay under a purgeable prefix.
 - **`getBytes()` buffers the whole original into memory** (`streamToBytes`),
@@ -421,7 +431,7 @@ Decision:
 - **v1: video is bytes on R2/S3**, which is what makes `get(range)` and `stat`
   required rather than nice-to-have. HTTP 206 is not optional for video.
 - **Future: Stream becomes a separate optional driver in the media domain**,
-  sibling to `ImageDriver` — it changes how an item is *delivered* (returns a
+  sibling to `ImageDriver` — it changes how an item is _delivered_ (returns a
   playback manifest or embed instead of bytes), not where bytes live.
   `ImageDriver.cachesVariants` is the precedent for a driver that says "I own
   delivery, don't write variants to storage."
@@ -434,14 +444,17 @@ Decision:
 
 ## 10. Open questions
 
-- **Range + the variant cache.** Ranged reads of *variants* are meaningless
-  (images are served whole). Decide whether `get(range)` is rejected for variant
-  keys or simply unused.
-- **Variant prefix.** Whether variants move under a dedicated prefix now, so a
-  wholesale purge is one `deletePrefix`, or stay interleaved.
-- **Boot validation.** Where the `access: 'private'` + Cloudflare Images
-  incompatibility is detected — config resolution is the obvious seam.
-- **`etag` precedence.** Driver-supplied vs version-derived when both exist.
+- ~~**Range + the variant cache.**~~ **Resolved:** ranges apply to originals
+  only. `serveOriginal` implements them; a `Range` header on a variant request
+  (one carrying `?w`/`?f`) is ignored and the whole image is served.
+- ~~**Boot validation.**~~ **Resolved:** config resolution, matched against an
+  exported `CLOUDFLARE_IMAGES_DRIVER` constant so renaming the driver cannot
+  silently disable the guard.
+- **Variant prefix.** Still open. Whether variants move under a dedicated prefix
+  so a wholesale purge is one `deletePrefix`, or stay interleaved.
+- **`etag` precedence.** Still open. Drivers now surface a real etag but the
+  media handler still uses the version-derived one, and nothing consumes the
+  driver's.
 
 ---
 
