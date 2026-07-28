@@ -7,7 +7,7 @@
 
 import { group, section, text, textarea } from 'astromech/fields';
 import type { FieldDefinition, Label } from 'astromech';
-import { tKey } from '../plugin.js';
+import { tKey } from '../labels.js';
 import { SEO_FIELD_NAME } from '../types.js';
 import { SEO_DESCRIPTION_RANGE, SEO_TITLE_RANGE } from '../utilities/length.js';
 

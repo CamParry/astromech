@@ -7,7 +7,6 @@
 import type { Entry, PluginContext } from 'astromech';
 import { defineServiceMethod } from 'astromech';
 import { resolveEntryPath } from 'astromech/plugin-kit';
-import { NAMESPACE } from '../plugin.js';
 import { SEO_FIELD_NAME } from '../types.js';
 import type {
     SeoOverview,
@@ -23,12 +22,6 @@ import {
 } from '../utilities/length.js';
 import { parseSeoMetaValue } from '../utilities/meta-value.js';
 
-/**
- * Settings page blob key for the SEO plugin. The settings page has
- * `path: '/settings'`, so the blob lives at `plugin:<ns>:/settings`.
- */
-const SEO_SETTINGS_KEY = `plugin:${NAMESPACE}:/settings`;
-
 async function footprintEntries(
     ctx: PluginContext
 ): Promise<{ type: string; entry: Entry }[]> {
@@ -43,8 +36,12 @@ async function footprintEntries(
     return collected;
 }
 
+/**
+ * Settings page blob key for the SEO plugin. The settings page has
+ * `path: '/settings'`, so the blob lives at `plugin:<ns>:/settings`.
+ */
 async function resolveDefaultOgImage(ctx: PluginContext): Promise<string | null> {
-    const blob = await ctx.sdk.settings.get(SEO_SETTINGS_KEY);
+    const blob = await ctx.sdk.settings.get(`plugin:${ctx.plugin.namespace}:/settings`);
     if (blob === null || typeof blob !== 'object' || Array.isArray(blob)) return null;
     const mediaId = (blob as Record<string, unknown>).defaultOgImage;
     if (typeof mediaId !== 'string' || mediaId === '') return null;

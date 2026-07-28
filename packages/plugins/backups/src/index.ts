@@ -6,31 +6,38 @@
 
 import { definePlugin, withDefaults } from 'astromech';
 import type { PluginContext } from 'astromech';
-import { plugin, locales } from './plugin.js';
+import { BACKUPS_PACKAGE } from './types.js';
 import type { BackupsOptions } from './types.js';
 import { migrationProvider } from '../migrations/index.js';
 import { backupRunsTable } from './schema/runs.js';
-import { backupsPermissionDefs } from './permissions/backups.js';
+import {
+    backupsPermissionBundles,
+    backupsPermissionDefs,
+} from './permissions/backups.js';
 import { performBackup, resolveKeep } from './backup.js';
 import { buildBackupRoutes } from './routes/backups.js';
 import { backupsPage } from './pages/backups.js';
 
 export type { BackupsOptions } from './types.js';
-export { backupsPermissions } from './permissions/backups.js';
 
 const DEFAULT_OPTIONS: Required<BackupsOptions> = {
     schedule: '0 3 * * *',
     keep: 7,
 };
 
-export const backups = definePlugin<BackupsOptions>(plugin, (options) => {
+export const backups = definePlugin((options?: BackupsOptions) => {
     const { schedule, keep } = withDefaults(DEFAULT_OPTIONS, options);
 
     return {
+        package: BACKUPS_PACKAGE,
+        version: '0.1.0',
+        label: 'Backups',
+        icon: 'DatabaseBackup',
         schema: [backupRunsTable],
         migrations: migrationProvider,
         permissions: backupsPermissionDefs,
-        i18n: locales(['en']),
+        permissionBundles: backupsPermissionBundles,
+        i18n: ['en'],
         admin: {
             pages: [backupsPage],
         },

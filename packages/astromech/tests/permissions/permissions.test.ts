@@ -4,10 +4,10 @@ import {
     hasPermission,
     can,
     builtInRole,
-    definePermissionBundles,
     BUILT_IN_ROLES,
     resolveRoles,
 } from '@/permissions/index.js';
+import { definePlugin } from '@/index.js';
 
 // ============================================================================
 // hasPermission — new grammar (resource[:identifier]:action, action last)
@@ -173,17 +173,20 @@ describe('builtInRole', () => {
 });
 
 // ============================================================================
-// definePermissionBundles — owner-prefixed bundles, never core permissions
+// permissionBundles — owner-prefixed bundles, never core permissions
 // ============================================================================
 
-describe('definePermissionBundles', () => {
-    const bundle = definePermissionBundles('@astromech/redirects', {
-        manage: ['entry:redirect:*', 'lookup'],
-        view: ['entry:redirect:read'],
+describe('permissionBundles (via definePlugin)', () => {
+    const plugin = definePlugin({
+        package: '@astromech/redirects',
+        permissionBundles: {
+            manage: ['entry:redirect:*', 'lookup'],
+            view: ['entry:redirect:read'],
+        },
     });
 
     it('prefixes every key with plugin:{ns}: — including nested keys', () => {
-        expect(bundle('manage')).toEqual([
+        expect(plugin.permissions('manage')).toEqual([
             'plugin:redirects:entry:redirect:*',
             'plugin:redirects:lookup',
         ]);
@@ -191,11 +194,11 @@ describe('definePermissionBundles', () => {
 
     it('throws on an unknown bundle name', () => {
         // @ts-expect-error — unknown bundle name is rejected at the type level
-        expect(() => bundle('nope')).toThrow(/Unknown permission bundle/);
+        expect(() => plugin.permissions('nope')).toThrow(/Unknown permission bundle/);
     });
 
     it('composes with builtInRole into a working role', () => {
-        const permissions = [...builtInRole('editor'), ...bundle('manage')];
+        const permissions = [...builtInRole('editor'), ...plugin.permissions('manage')];
         expect(hasPermission(permissions, 'entry:posts:publish')).toBe(true);
         expect(hasPermission(permissions, 'plugin:redirects:entry:redirect:read')).toBe(
             true

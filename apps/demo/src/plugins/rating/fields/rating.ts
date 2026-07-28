@@ -5,12 +5,11 @@
  */
 
 import type { PluginFieldTypeRegistration } from 'astromech';
-import { asset } from '../plugin.js';
 import { RATING_FIELD_TYPE } from '../types.js';
 
 export const ratingField: PluginFieldTypeRegistration = {
     type: RATING_FIELD_TYPE,
-    component: asset('fields/rating-field.tsx'),
+    component: './admin/fields/rating-field.tsx',
     defaultValue: 0,
     typeGen: () => 'number',
 };

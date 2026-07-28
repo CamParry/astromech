@@ -7,6 +7,18 @@
 import type { LengthStatus } from './utilities/length.js';
 
 /**
+ * The package name, as a literal.
+ *
+ * Identity is declared in `index.ts` alongside the rest of the definition.
+ * This const exists because `labels.ts` needs the namespace *eagerly* — the
+ * `tKey()` helper backs `seoSection()`, which a site calls from its own
+ * config with no `PluginContext` to read `ctx.plugin.namespace` from — and
+ * because it keeps the package name written exactly once for that leaf to
+ * import.
+ */
+export const SEO_PACKAGE = '@astromech/seo';
+
+/**
  * The field name `seoSection()` attaches — also the footprint anchor:
  * `ctx.config.entryTypesWithField(SEO_FIELD_NAME)`.
  */

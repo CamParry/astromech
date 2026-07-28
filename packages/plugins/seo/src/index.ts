@@ -9,8 +9,8 @@
 
 import { definePlugin } from 'astromech';
 import type { SdkInterface } from 'astromech';
-import { plugin, locales } from './plugin.js';
-import { seoPermissionDefs } from './permissions/seo.js';
+import { SEO_PACKAGE } from './types.js';
+import { seoPermissionBundles, seoPermissionDefs } from './permissions/seo.js';
 import { seoPreviewField } from './fields/seo-preview.js';
 import { seoSdk } from './sdk/seo.js';
 import { overviewPage } from './pages/overview.js';
@@ -43,16 +43,19 @@ export type { LengthRange, LengthStatus } from './utilities/length.js';
 export { parseSeoMetaValue } from './utilities/meta-value.js';
 export type { SeoMetaValue } from './utilities/meta-value.js';
 
-export { seoPermissions } from './permissions/seo.js';
-
-export const seo = definePlugin(plugin, () => ({
+export const seo = definePlugin({
+    package: SEO_PACKAGE,
+    version: '0.1.0',
+    label: 'SEO',
+    icon: 'Search',
     permissions: seoPermissionDefs,
-    i18n: locales(['en', 'fr']),
+    permissionBundles: seoPermissionBundles,
+    i18n: ['en', 'fr'],
     fields: [seoPreviewField],
     admin: {
         pages: [overviewPage, settingsPage],
     },
     sdk: seoSdk,
-}));
+});
 
 export default seo;

@@ -11,7 +11,6 @@ import { createGzip } from 'node:zlib';
 import type { Kysely } from 'kysely';
 import type { PluginContext } from 'astromech';
 import { decodeWith, encodeWith, encodePatchWith } from 'astromech/plugin-kit';
-import { NAMESPACE } from './plugin.js';
 import { backupRunsTable, type BackupRunRow } from './schema/runs.js';
 
 // ============================================================================
@@ -178,11 +177,11 @@ export async function performBackup(
 
 /**
  * Read the retention setting for this plugin from the settings store.
- * Key: `plugin:astromech-backups:retention`. Private setting — pass `{ full: true }`.
+ * Key: `plugin:backups:retention`. Private setting — pass `{ full: true }`.
  * Falls back to `fallback` if the setting is absent or not a valid positive number.
  */
 export async function resolveKeep(ctx: PluginContext, fallback: number): Promise<number> {
-    const key = `plugin:${NAMESPACE}:retention`;
+    const key = `plugin:${ctx.plugin.namespace}:retention`;
     try {
         const value = await ctx.sdk.settings.get(key, { full: true });
         if (typeof value === 'number' && Number.isFinite(value) && value > 0) {

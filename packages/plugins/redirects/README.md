@@ -12,7 +12,7 @@ through the standard entry admin UI as a titleless entry type.
 ```ts
 // astromech.config.ts
 import { defineConfig } from 'astromech';
-import { redirects } from 'astromech/plugins/redirects';
+import { redirects } from '@astromech/redirects';
 
 export default defineConfig({
     plugins: [redirects()],
@@ -47,24 +47,25 @@ This adds a **Redirects** entry type to the admin (managed like any other) with
 
 ## Permissions
 
-The plugin exposes `redirectsPermissions` bundles for composing into roles:
+The plugin declares permission bundles for composing into roles, read straight
+off the plugin:
 
 - `manage` — read/create/update/delete redirects
 - `view` — read only
 
-These resolve to `plugin:astromech-redirects:entry:redirect:{action}`.
+These resolve to `plugin:redirects:entry:redirect:{action}`.
 
 ```ts
 // astromech.config.ts
 import { builtInRole } from 'astromech';
-import { redirects, redirectsPermissions } from 'astromech/plugins/redirects';
+import { redirects } from '@astromech/redirects';
 
 export default defineConfig({
     plugins: [redirects()],
     roles: {
         'content-editor': {
             name: 'Content Editor',
-            permissions: [...builtInRole('editor'), ...redirectsPermissions('manage')],
+            permissions: [...builtInRole('editor'), ...redirects.permissions('manage')],
         },
     },
 });

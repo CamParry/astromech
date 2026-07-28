@@ -3,16 +3,14 @@
  * permission declarations (for the admin permission UI). Bundle keys resolve
  * to `plugin:seo:{key}`.
  *
- *   roles: { editor: { permissions: [...seoPermissions('view')] } }
+ *   roles: { editor: { permissions: [...seo.permissions('view')] } }
  */
 
-import { definePermissionBundles } from 'astromech';
 import type { PluginPermission } from 'astromech';
-import { plugin } from '../plugin.js';
 
-export const seoPermissions = definePermissionBundles(plugin.package, {
+export const seoPermissionBundles = {
     view: ['view'],
-});
+} as const;
 
 export const seoPermissionDefs: PluginPermission[] = [
     {

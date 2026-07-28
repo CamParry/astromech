@@ -89,6 +89,13 @@ function makeCtx(
         // Cast through unknown: the plugin source is being ported to Kysely in a
         // sibling agent; the type will be Kysely<DB> once that lands.
         db: db as unknown as PluginContext['db'],
+        plugin: {
+            package: '@astromech/backups',
+            namespace: 'backups',
+            sdkKey: 'backups',
+            permissionNamespace: 'backups',
+            version: '0.1.0',
+        },
         config: null as unknown as PluginContext['config'],
         user: null,
         sdk: null as unknown as PluginContext['sdk'],

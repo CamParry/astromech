@@ -8,24 +8,23 @@ localized strings, and a permission bundle.
 It is structured exactly like a first-party plugin — see
 [`apps/docs/plugins/authoring.md`](../../../../apps/docs/plugins/authoring.md) for the
 canonical convention — with one difference: it lives in the demo app rather than
-the published package, so it imports from `astromech` and resolves assets via
-`fileURLToPath` instead of published module specifiers.
+a published package, so it declares `root: import.meta.url` and its relative
+asset specifiers resolve against this directory instead of a package specifier.
 
 ## Layout
 
 ```
 rating/
-  plugin.ts              identity object (`plugin`) + asset()/locales() helpers
-  types.ts               domain constants (RATING_FIELD_TYPE)
-  index.ts               thin definePlugin() composing the surfaces below
-  permissions/rating.ts  ratingPermissions bundle + permission declarations
-  fields/rating.ts       the `rating` field-type registration
-  fields/rating-field.tsx   the field renderer (browser asset) + validate()
-  pages/overview.ts      defineAdminPage — component view
-  pages/overview-page.tsx   the overview renderer (browser asset)
-  pages/settings.ts      defineAdminPage — auto-rendered settings form
-  sdk/describe.ts        an RPC method (the repo's only multi-word SDK key)
-  locales/en.json        i18n bundle
+  types.ts                    domain constants (RATING_FIELD_TYPE)
+  index.ts                    definePlugin() — identity + composing the surfaces below
+  permissions/rating.ts       ratingPermissionBundles + permission declarations
+  fields/rating.ts            the `rating` field-type registration
+  admin/fields/rating-field.tsx  the field renderer (browser asset) + validate()
+  pages/overview.ts           defineAdminPage — component view
+  admin/pages/overview-page.tsx  the overview renderer (browser asset)
+  pages/settings.ts           defineAdminPage — auto-rendered settings form
+  sdk/describe.ts             an RPC method (the repo's only multi-word SDK key)
+  locales/en.json             i18n bundle
 ```
 
 ## Install
@@ -63,13 +62,13 @@ is where the two derived forms are actually distinguishable:
 
 ## Permissions
 
-`ratingPermissions` exposes a `view` bundle, resolving to
+The plugin factory exposes a `view` bundle, resolving to
 `plugin:demo_rating:view`:
 
 ```ts
 roles: {
     'content-editor': {
-        permissions: [...builtInRole('editor'), ...ratingPermissions('view')],
+        permissions: [...builtInRole('editor'), ...rating.permissions('view')],
     },
 }
 ```
