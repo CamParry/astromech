@@ -69,6 +69,10 @@
             "types": "./dist/storage/drivers/r2.d.ts",
             "default": "./dist/storage/drivers/r2.js"
         },
+        "./cloudflare": {
+            "types": "./dist/cloudflare/index.d.ts",
+            "default": "./dist/cloudflare/index.js"
+        },
         "./admin/shell.astro": "./src/admin/shell.astro",
         "./Image": "./src/media/serving/image/Image.astro",
         "./ui": {
