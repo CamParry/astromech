@@ -15,10 +15,9 @@ asset specifiers resolve against this directory instead of a package specifier.
 
 ```
 rating/
-  types.ts                    domain constants (RATING_FIELD_TYPE)
   index.ts                    definePlugin() — identity + composing the surfaces below
   permissions/rating.ts       ratingPermissionBundles + permission declarations
-  fields/rating.ts            the `rating` field-type registration
+  fields/rating.ts            the `rating` field-type registration + RATING_FIELD_TYPE
   admin/fields/rating-field.tsx  the field renderer (browser asset) + validate()
   pages/overview.ts           defineAdminPage — component view
   admin/pages/overview-page.tsx  the overview renderer (browser asset)

@@ -18,7 +18,7 @@ import { overviewPage } from './pages/overview.js';
 import { settingsPage } from './pages/settings.js';
 import { ratingSdk } from './sdk/describe.js';
 
-export { RATING_FIELD_TYPE } from './types.js';
+export { RATING_FIELD_TYPE } from './fields/rating.js';
 
 export const rating = definePlugin({
     package: 'demo-rating',

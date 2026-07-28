@@ -5,7 +5,9 @@
  */
 
 import type { PluginFieldTypeRegistration } from 'astromech';
-import { RATING_FIELD_TYPE } from '../types.js';
+
+/** The custom field type this plugin registers. */
+export const RATING_FIELD_TYPE = 'rating';
 
 export const ratingField: PluginFieldTypeRegistration = {
     type: RATING_FIELD_TYPE,

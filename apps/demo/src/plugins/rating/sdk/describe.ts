@@ -12,7 +12,7 @@
  */
 
 import { defineServiceMethod } from 'astromech';
-import { RATING_FIELD_TYPE } from '../types.js';
+import { RATING_FIELD_TYPE } from '../fields/rating.js';
 
 export type RatingDescription = {
     fieldType: string;
