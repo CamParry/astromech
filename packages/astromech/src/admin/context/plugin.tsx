@@ -62,6 +62,13 @@ export function useAstromechPlugin() {
 
     return {
         plugin: identity.namespace,
+        /**
+         * The `/api/plugins/<serviceKey>` route segment. Needed only to build a
+         * URL for a raw (streaming) route by hand — RPC methods are already
+         * bound on `service`. Exposed rather than derived because the
+         * namespace → service key mapping is lossy in that direction.
+         */
+        serviceKey: identity.serviceKey,
         service: (Astromech.plugins as Record<string, unknown>)[identity.serviceKey],
         toast,
         modal: confirm,

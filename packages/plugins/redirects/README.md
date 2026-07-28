@@ -7,6 +7,35 @@ Redirects are stored in the plugin's **own table** (`plugin_redirects_redirects`
 via `tableStorage`, not in the shared `entries` table. They are still managed
 through the standard entry admin UI as a titleless entry type.
 
+## Layout
+
+```
+redirects/
+  src/index.ts                definePlugin() — identity + composing the surfaces below
+  src/types.ts                RedirectsOptions + REDIRECTS_PACKAGE
+  src/schema/redirects.ts     definePluginTable — the `redirects` table descriptor
+  src/schema/index.ts         the ./schema subpath entry (descriptors only)
+  migrations/                 generated — never hand-edited
+  src/entries/redirect.ts     defineEntryType — the table-backed entry type
+  src/service/redirects.ts    the public `lookup` method
+  src/hooks/slug-change.ts    defineHook — auto-create a redirect on URL change
+  src/permissions/redirects.ts  permission bundles + declarations
+```
+
+## Identity
+
+`package: '@astromech/redirects'` is the only identifier declared. The
+`@astromech/` scope is stripped when deriving, and `redirects` is a single
+word, so both derived forms come out identical:
+
+| form        | value       | where it appears                                          |
+| ----------- | ----------- | --------------------------------------------------------- |
+| namespace   | `redirects` | permissions, entry type ids, admin URLs, table prefix     |
+| service key | `redirects` | `Astromech.plugins.redirects`, `/api/plugins/redirects/…` |
+
+The table is `plugin_redirects_redirects` — `definePluginTable` owns that
+prefix, so the descriptor declares the bare name `redirects`.
+
 ## Install
 
 ```ts

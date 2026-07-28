@@ -10,7 +10,6 @@
 
 import { definePlugin } from 'astromech';
 import type { ServiceInterface } from 'astromech';
-import { SEO_PACKAGE } from './types.js';
 import { seoPermissionBundles, seoPermissionDefs } from './permissions/seo.js';
 import { seoPreviewField } from './fields/seo-preview.js';
 import { seoService } from './service/seo.js';
@@ -45,7 +44,7 @@ export { parseSeoMetaValue } from './utilities/meta-value.js';
 export type { SeoMetaValue } from './utilities/meta-value.js';
 
 export const seo = definePlugin({
-    package: SEO_PACKAGE,
+    package: '@astromech/seo',
     version: '0.1.0',
     label: 'SEO',
     icon: 'Search',

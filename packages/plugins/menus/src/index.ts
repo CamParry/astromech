@@ -11,19 +11,11 @@
  *   // → [{ label, url?, newTab?, children: [...] }]
  */
 
-import { defineAdminPage, definePlugin, defineServiceMethod } from 'astromech';
+import { definePlugin, defineServiceMethod } from 'astromech';
 import type { ServiceInterface } from 'astromech';
-import * as fields from 'astromech/fields';
 import { buildMenusService } from './service/menus.js';
+import { buildMenuPages } from './pages/menus.js';
 import type { MenusOptions, MenuItem } from './types.js';
-
-/** The node schema used at every depth of the menu item tree. */
-const menuItemFields = [
-    fields.text('label', { label: 'Label', translatable: true }),
-    fields.relationship('entry', { label: 'Entry (internal link)' }),
-    fields.url('url', { label: 'URL (external link)', translatable: true }),
-    fields.boolean('newTab', { label: 'Open in new tab' }),
-];
 
 /** Typed service shape — used only for the module augmentation. */
 const _menusServiceTyped = {
@@ -47,20 +39,7 @@ export type { MenuItem, MenuConfig, MenusOptions } from './types.js';
 export const menus = definePlugin((options?: MenusOptions) => {
     const menuConfigs = options?.menus ?? [];
 
-    const pages = menuConfigs.map(({ key, label }) =>
-        defineAdminPage({
-            path: `/menus/${key}`,
-            label,
-            icon: 'Menu',
-            translatable: true,
-            fields: [
-                fields.tree('items', {
-                    label: 'Menu Items',
-                    fields: menuItemFields,
-                }),
-            ],
-        })
-    );
+    const pages = buildMenuPages(menuConfigs);
 
     const service = buildMenusService(menuConfigs);
 

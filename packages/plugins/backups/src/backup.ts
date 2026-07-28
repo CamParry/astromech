@@ -39,7 +39,8 @@ function db(ctx: PluginContext): Kysely<Record<string, BackupRunRow>> {
     return ctx.db as unknown as Kysely<Record<string, BackupRunRow>>;
 }
 
-const TABLE = 'plugin_backups_runs' as const;
+/** The descriptor owns the prefixed name — never re-spell it as a literal. */
+const TABLE = backupRunsTable.name;
 
 // ============================================================================
 // Core
@@ -177,13 +178,15 @@ export async function performBackup(
 
 /**
  * Read the retention setting for this plugin from the settings store.
- * Key: `plugin:backups:retention`. Private setting — pass `{ full: true }`.
+ * Key: `plugin:<namespace>:retention`. Reads through `ctx.settings` are
+ * full-shaped by default — plugin altitude is trusted server code — so a
+ * private setting needs no options here.
  * Falls back to `fallback` if the setting is absent or not a valid positive number.
  */
 export async function resolveKeep(ctx: PluginContext, fallback: number): Promise<number> {
     const key = `plugin:${ctx.plugin.namespace}:retention`;
     try {
-        const value = await ctx.settings.get(key, { full: true });
+        const value = await ctx.settings.get(key);
         if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
             return Math.floor(value);
         }

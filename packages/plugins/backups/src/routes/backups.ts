@@ -2,6 +2,12 @@
  * Raw HTTP routes for the backups plugin.
  * Mounted at `/api/plugins/backups/*` by the plugin runtime.
  *
+ * Only the two STREAMING endpoints live here — a gzipped artifact going out,
+ * and a gunzipped one going back into the database. Everything else the plugin
+ * exposes is plain JSON and belongs on `defineServiceMethod` (see
+ * `../service/backups.ts`), where it is typed and discoverable through the
+ * method manifest; a raw route is invisible to the CLI and MCP.
+ *
  * Access values use bare permission keys — the mount layer calls
  * resolvePluginPermission(namespace, key) which auto-namespaces them to
  * `plugin:backups:<key>` since they contain no colon.
@@ -15,8 +21,7 @@ import { decodeWith } from 'astromech';
 import { backupRunsTable, type BackupRunRow } from '../schema/runs.js';
 import { isBackupRunning, performBackup, resolveKeep } from '../backup.js';
 
-const MAX_RUNS = 100;
-const TABLE = 'plugin_backups_runs' as const;
+const TABLE = backupRunsTable.name;
 
 // ============================================================================
 // Row access
@@ -64,36 +69,6 @@ function parseSegment(pathname: string, offset: number): string {
 // ============================================================================
 // Handlers
 // ============================================================================
-
-async function listRuns(_request: Request, ctx: PluginContext): Promise<Response> {
-    const rows = await db(ctx)
-        .selectFrom(TABLE)
-        .selectAll()
-        .orderBy('startedAt', 'desc')
-        .limit(MAX_RUNS)
-        .execute();
-    const capabilities = {
-        canDump: ctx.database.dump !== undefined,
-        canRestore: ctx.database.restore !== undefined,
-    };
-    return Response.json({
-        data: rows.map((raw) => decodeWith(backupRunsTable, raw)),
-        capabilities,
-    });
-}
-
-async function triggerRun(
-    _request: Request,
-    ctx: PluginContext,
-    keep: number
-): Promise<Response> {
-    if (isBackupRunning()) {
-        return Response.json({ error: 'A backup is already running' }, { status: 409 });
-    }
-    const resolvedKeep = await resolveKeep(ctx, keep);
-    const row = await performBackup(ctx, 'manual', { keep: resolvedKeep });
-    return Response.json({ data: row }, { status: 202 });
-}
 
 async function downloadArtifact(request: Request, ctx: PluginContext): Promise<Response> {
     const url = new URL(request.url);
@@ -171,7 +146,7 @@ async function restoreFromBackup(
         const plain = Readable.toWeb(gunzip) as ReadableStream<Uint8Array>;
 
         await ctx.database.restore(plain, {
-            preserve: ['plugin_backups_runs', '_astromech_cron'],
+            preserve: [TABLE, '_astromech_cron'],
         });
 
         return Response.json({ data: { restored: row.id } });
@@ -181,50 +156,12 @@ async function restoreFromBackup(
     }
 }
 
-async function deleteRun(request: Request, ctx: PluginContext): Promise<Response> {
-    const url = new URL(request.url);
-    // pathname: /api/plugins/backups/runs/:id → id is last segment
-    const id = parseSegment(url.pathname, 0);
-
-    const row = await findRun(ctx, id);
-    if (row === null) {
-        return Response.json({ error: 'Backup run not found' }, { status: 404 });
-    }
-
-    // Delete the storage artifact if present and not already rotated away.
-    // Manual delete = hard-delete the row entirely; this differs from rotation
-    // (rotate() marks artifactDeletedAt and keeps the row for audit history).
-    if (
-        row.key !== null &&
-        row.key !== undefined &&
-        (row.artifactDeletedAt === null || row.artifactDeletedAt === undefined)
-    ) {
-        await ctx.storage.delete(row.key);
-    }
-
-    await db(ctx).deleteFrom(TABLE).where('id', '=', id).execute();
-
-    return Response.json({ data: { deleted: id } });
-}
-
 // ============================================================================
 // Route array factory
 // ============================================================================
 
 export function buildBackupRoutes(defaultKeep: number): PluginRawRoute[] {
     return [
-        {
-            method: 'GET',
-            path: '/runs',
-            access: { permission: 'read' },
-            handler: (req, ctx) => listRuns(req, ctx),
-        },
-        {
-            method: 'POST',
-            path: '/run',
-            access: { permission: 'run' },
-            handler: (req, ctx) => triggerRun(req, ctx, defaultKeep),
-        },
         {
             method: 'GET',
             path: '/runs/:id/download',
@@ -238,12 +175,6 @@ export function buildBackupRoutes(defaultKeep: number): PluginRawRoute[] {
             path: '/runs/:id/restore',
             access: { permission: 'restore' },
             handler: (req, ctx) => restoreFromBackup(req, ctx, defaultKeep),
-        },
-        {
-            method: 'DELETE',
-            path: '/runs/:id',
-            access: { permission: 'delete' },
-            handler: (req, ctx) => deleteRun(req, ctx),
         },
     ];
 }
