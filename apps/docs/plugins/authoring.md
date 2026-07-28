@@ -1,7 +1,7 @@
 # Authoring a plugin
 
 A plugin is **one package** that extends Astromech — with custom field types,
-admin pages, admin slots, permissions, SDK methods, hooks, entry types, or
+admin pages, admin slots, permissions, service methods, hooks, entry types, or
 database tables.
 A plugin is mostly **declarative data**: you describe what it adds, and
 Astromech wires it in.
@@ -77,7 +77,7 @@ Only include what you use.
 ### The namespace
 
 `package` is the **only** identifier you declare. Everything else — table
-prefix, permission namespace, i18n namespace, HTTP route segment, SDK key —
+prefix, permission namespace, i18n namespace, HTTP route segment, service key —
 derives from it mechanically. There is no `name`, no `alias`, and no
 site-level override: a plugin's table names are baked into its shipped
 migration SQL, so nothing an override could move actually moves.
@@ -86,7 +86,7 @@ The derivation, in order: `@astromech/*` packages strip their scope; everything
 else drops the leading `@` and keeps its scope; then lowercase, and `/` and `-`
 become `_`.
 
-| package                   | namespace                | SDK key               |
+| package                   | namespace                | service key           |
 | ------------------------- | ------------------------ | --------------------- |
 | `@astromech/redirects`    | `redirects`              | `redirects`           |
 | `@acme/seo`               | `acme_seo`               | `acmeSeo`             |
@@ -98,22 +98,23 @@ The two forms split cleanly by audience:
 - **namespace** — everything that lives in your database or your permission
   strings: `plugin_acme_seo_settings`, `plugin:acme_seo:view`, the i18n bundle
   key, and the admin URL `/admin/plugin/acme_seo/*`.
-- **SDK key** — everything an API caller says: `Astromech.plugins.acmeSeo` and
-  the matching route, `POST /api/plugins/acmeSeo/*`. Both transports use it, so
-  the property you write is the segment that goes on the wire.
+- **service key** — everything an API caller says: `Astromech.plugins.acmeSeo`
+  and the matching route, `POST /api/plugins/acmeSeo/*`. Both transports use it,
+  so the property you write is the segment that goes on the wire.
 
-Derivation runs one way only — `package` → namespace → SDK key. Nothing inverts
-it, and neither should your code: if you have one form and need another, read
-both off the identity rather than transforming the string. Both steps are lossy,
-so a reverse transform is a guess. At runtime, read it off `ctx.plugin`
-(`package`, `namespace`, `sdkKey`, `permissionNamespace`) rather than deriving
-it yourself — see [Runtime identity](#runtime-identity) below.
+Derivation runs one way only — `package` → namespace → service key. Nothing
+inverts it, and neither should your code: if you have one form and need
+another, read both off the identity rather than transforming the string. Both
+steps are lossy, so a reverse transform is a guess. At runtime, read it off
+`ctx.plugin` (`package`, `namespace`, `serviceKey`, `permissionNamespace`)
+rather than deriving it yourself — see [Runtime identity](#runtime-identity)
+below.
 
 Which is why a collision on either form is a hard install error. npm already
 guarantees package names are unique, so you can only hit it via one of the lossy
 steps: `@acme/seo` vs unscoped `acme-seo` (same namespace), or `@acme/2fa` vs
-`acme2fa` (same SDK key). There is no way to resolve it site-side; one of the
-packages has to be renamed by its author.
+`acme2fa` (same service key). There is no way to resolve it site-side; one of
+the packages has to be renamed by its author.
 
 **Identifier length.** Emitted index and constraint names are capped at 63 bytes
 (Postgres' limit) with a deterministic hash suffix. Table names are never
@@ -429,11 +430,11 @@ the descriptor: `decodeWith(widgetsTable, row)`, `encodeWith(widgetsTable, value
 
 ### Runtime identity
 
-Hooks, SDK methods, cron handlers and `setup()` all receive a `PluginContext`,
-which carries the plugin's own resolved identity at `ctx.plugin` — `package`,
-`namespace`, `sdkKey`, `permissionNamespace`, and `version` if declared.
-Runtime code that needs a namespaced string reads it from there instead of
-importing an identity module:
+Hooks, service methods, cron handlers and `setup()` all receive a
+`PluginContext`, which carries the plugin's own resolved identity at
+`ctx.plugin` — `package`, `namespace`, `serviceKey`, `permissionNamespace`, and
+`version` if declared. Runtime code that needs a namespaced string reads it
+from there instead of importing an identity module:
 
 ```ts
 // backup.ts
@@ -445,7 +446,7 @@ export async function resolveKeep(ctx: PluginContext, fallback: number): Promise
 ```
 
 ```ts
-// menus/sdk/menus.ts
+// menus/service/menus.ts
 const blobKey = `plugin:${ctx.plugin.namespace}:/menus/${key}`;
 ```
 
@@ -473,14 +474,14 @@ write rather than silently stored.
 
 ### More surfaces
 
-Plugins can also contribute **SDK methods** (`defineServiceMethod`, callable
-off `Astromech.plugins.<sdkKey>`), **hooks** (`defineHook`, e.g.
+Plugins can also contribute **service methods** (`defineServiceMethod`,
+callable off `Astromech.plugins.<serviceKey>`), **hooks** (`defineHook`, e.g.
 `entry:afterUpdate`), **entry types**, and **i18n** locale bundles. See the
 bundled `redirects` and `seo` plugins for each.
 
 > Plugins can't register routes outside `/api`. To integrate with the front end,
-> expose data through an SDK method and document a small middleware recipe — the
-> plugin owns the data, the app owns the route.
+> expose data through a service method and document a small middleware recipe —
+> the plugin owns the data, the app owns the route.
 
 ## Putting it together
 
@@ -496,7 +497,7 @@ import { migrationProvider } from '../migrations/index.js';
 import { redirectEntryType } from './entries/redirect.js';
 import { redirectsPermissionBundles } from './permissions/redirects.js';
 import { redirectsTable } from './schema/redirects.js';
-import { redirectsSdk } from './sdk/redirects.js';
+import { redirectsService } from './service/redirects.js';
 import { slugChangeHook } from './hooks/slug-change.js';
 
 const DEFAULT_OPTIONS: Required<RedirectsOptions> = {
@@ -515,7 +516,7 @@ export const redirects = definePlugin((options?: RedirectsOptions) => {
         schema: [redirectsTable],
         migrations: migrationProvider,
         entries: [redirectEntryType],
-        sdk: redirectsSdk,
+        service: redirectsService,
         ...(generateOnSlugChange && { hooks: [slugChangeHook] }),
     };
 });

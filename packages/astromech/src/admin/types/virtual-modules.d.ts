@@ -22,8 +22,8 @@ declare module 'virtual:astromech/plugins/components' {
             defaultValue: unknown;
             /** Owning plugin's namespace. */
             plugin: string;
-            /** Owning plugin's SDK key — its `Astromech.plugins.*` property. */
-            sdkKey: string;
+            /** Owning plugin's service key — its `Astromech.plugins.*` property. */
+            serviceKey: string;
             /** Owning plugin's permissionNamespace (i18n namespace). */
             namespace: string;
         }
@@ -52,8 +52,8 @@ declare module 'virtual:astromech/plugins/components' {
             load: () => Promise<PluginPageModule>;
             /** Owning plugin's namespace. */
             plugin: string;
-            /** Owning plugin's SDK key — its `Astromech.plugins.*` property. */
-            sdkKey: string;
+            /** Owning plugin's service key — its `Astromech.plugins.*` property. */
+            serviceKey: string;
             /** Owning plugin's permissionNamespace (i18n namespace). */
             namespace: string;
             permission: string | null;

@@ -23,7 +23,7 @@ import type {
     MediaQueryParams,
     Notification,
     NotificationsApi,
-    PluginSdkNamespace,
+    PluginServiceNamespace,
     ResolvedConfig,
     Setting,
     SettingsApi,
@@ -760,11 +760,11 @@ const notificationsApi: NotificationsApi = {
 
 type FetchMethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
 
-const pluginsApi: PluginSdkNamespace = new Proxy({} as PluginSdkNamespace, {
+const pluginsApi: PluginServiceNamespace = new Proxy({} as PluginServiceNamespace, {
     get(_target, nameProp): FetchMethodMap | undefined {
         if (typeof nameProp !== 'string' || nameProp === 'then') return undefined;
         // The property key IS the route segment: plugin routes mount under the
-        // plugin's SDK key (`acmeSeo`), so there is nothing to transform here.
+        // plugin's service key (`acmeSeo`), so there is nothing to transform here.
         // Routes deliberately do not mount under the namespace (`acme_seo`) —
         // deriving one from the other on this side would mean inverting a lossy
         // mapping (`acme_2fa` → `acme2fa` → ?).

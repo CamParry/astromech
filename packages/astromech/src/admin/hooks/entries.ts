@@ -6,7 +6,7 @@
  * for consistent operations. Page-specific callbacks (e.g. navigation) are
  * accepted via optional onSuccess.
  *
- * SDK surface: options-object, type required.
+ * Client surface: options-object, type required.
  */
 
 import {
@@ -424,7 +424,7 @@ export function useScheduleEntry(
 }
 
 // ============================================================================
-// Bulk mutation hooks (atomic — single SDK call per action)
+// Bulk mutation hooks (atomic — single client call per action)
 // ============================================================================
 
 function bulkErrorMessage(err: unknown, fallback: string): string {

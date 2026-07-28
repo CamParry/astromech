@@ -1,10 +1,10 @@
 /**
- * SDK method for @astromech/menus. Reads a menu blob from settings, drops
+ * Service method for @astromech/menus. Reads a menu blob from settings, drops
  * disabled nodes, resolves entry refs to front-end URLs via the entry type's
  * `url` template, and returns a clean tree.
  */
 
-import type { AnyPluginSdkMethod, Entry, PluginContext } from 'astromech';
+import type { AnyPluginServiceMethod, Entry, PluginContext } from 'astromech';
 import { defineServiceMethod } from 'astromech';
 import { resolveEntryUrl } from 'astromech/plugin-kit';
 import type { MenuConfig, MenuItem } from '../types.js';
@@ -88,7 +88,9 @@ async function walkNodes(
     return result;
 }
 
-export function buildMenusSdk(configs: MenuConfig[]): Record<string, AnyPluginSdkMethod> {
+export function buildMenusService(
+    configs: MenuConfig[]
+): Record<string, AnyPluginServiceMethod> {
     const configuredKeys = new Set(configs.map((c) => c.key));
 
     return {

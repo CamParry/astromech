@@ -2,7 +2,7 @@
  * Roles & Permission utilities
  *
  * Roles are code-defined (AstromechConfig.roles + built-in defaults).
- * The server SDK bypasses permission checks by design — only the HTTP API enforces them.
+ * The local transport bypasses permission checks by design — only the HTTP API enforces them.
  */
 
 import type { AstromechConfig, ResolvedConfig } from '@/types/config.js';

@@ -2,7 +2,7 @@
 
 A teaching plugin that demonstrates the **external-plugin** authoring format on
 a small surface: a custom `rating` field type (1–5 stars, with a validator), a
-component overview page, an auto-rendered settings form, an SDK method,
+component overview page, an auto-rendered settings form, a service method,
 localized strings, and a permission bundle.
 
 It is structured exactly like a first-party plugin — see
@@ -22,7 +22,7 @@ rating/
   pages/overview.ts           defineAdminPage — component view
   admin/pages/overview-page.tsx  the overview renderer (browser asset)
   pages/settings.ts           defineAdminPage — auto-rendered settings form
-  sdk/describe.ts             an RPC method (the repo's only multi-word SDK key)
+  service/describe.ts         an RPC method (the repo's only multi-word service key)
   locales/en.json             i18n bundle
 ```
 
@@ -54,10 +54,10 @@ declared:
 derives from it, and this plugin is the demo's one **multi-word** example, so it
 is where the two derived forms are actually distinguishable:
 
-| form      | value         | where it appears                                 |
-| --------- | ------------- | ------------------------------------------------ |
-| namespace | `demo_rating` | permissions, settings keys, i18n, admin URLs     |
-| SDK key   | `demoRating`  | `Astromech.plugins.demoRating`, `/api/plugins/…` |
+| form        | value         | where it appears                                 |
+| ----------- | ------------- | ------------------------------------------------ |
+| namespace   | `demo_rating` | permissions, settings keys, i18n, admin URLs     |
+| service key | `demoRating`  | `Astromech.plugins.demoRating`, `/api/plugins/…` |
 
 ## Permissions
 
@@ -72,15 +72,15 @@ roles: {
 }
 ```
 
-## SDK method
+## Service method
 
 ```ts
 const { fieldType, usedBy, max } = await Astromech.plugins.demoRating.describe();
 ```
 
-Addressed by the SDK key in both transports — locally as above, and over HTTP as
-`POST /api/plugins/demoRating/describe`. The namespace form (`demo_rating`) is
-not a route and 404s.
+Addressed by the service key in both transports — locally as above, and over
+HTTP as `POST /api/plugins/demoRating/describe`. The namespace form
+(`demo_rating`) is not a route and 404s.
 
 ## Admin surface
 

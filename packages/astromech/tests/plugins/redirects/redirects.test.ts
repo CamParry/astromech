@@ -1,7 +1,7 @@
 /**
  * Slice 5 validator: the redirects plugin runs on its OWN table
  * (`plugin_redirects_redirects`) via `tableStorage`, exercised end-to-end
- * through the entries service, the plugin SDK, and the slug-change hook.
+ * through the entries service, the plugin service, and the slug-change hook.
  *
  * Covers:
  * - a create through the entries service lands a row in
@@ -22,7 +22,7 @@ import {
     registerTestPlugins,
     setupTestConfig,
 } from '@tests/harness.js';
-import '@/transport/local/index.js'; // registers the plugin SDK client (setPluginSdkClient)
+import '@/transport/local/index.js'; // registers the plugin client (setPluginClient)
 import { localPlugins } from '@/transport/local/plugins.js';
 import { entries as localEntries } from '@/entries/service.js';
 import { redirects } from '@astromech/redirects';
@@ -37,19 +37,19 @@ import type {
 } from '@/types/index.js';
 
 // Type-level proof: redirects.lookup carries real Input/Output via self-augmentation.
-async function _sdkTypeProof(client: AstromechClient) {
+async function _serviceTypeProof(client: AstromechClient) {
     const result: RedirectMatch | null =
         (await client.plugins?.redirects.lookup({ from: '/x' })) ?? null;
     void result;
 }
-void _sdkTypeProof;
+void _serviceTypeProof;
 
 // `Astromech.plugins.redirects` — the loosely-typed RPC method map. There is no
 // per-plugin entries sub-API: a plugin entry type is addressed on the one
 // entries service by its qualified id.
-type RedirectsSdk = Record<string, (input?: unknown) => Promise<unknown>>;
-const redirectsSdk = (): RedirectsSdk =>
-    localPlugins['redirects'] as unknown as RedirectsSdk;
+type RedirectsService = Record<string, (input?: unknown) => Promise<unknown>>;
+const redirectsService = (): RedirectsService =>
+    localPlugins['redirects'] as unknown as RedirectsService;
 
 /** The redirect entry type's qualified id — how every caller addresses it. */
 const REDIRECT = 'redirects/redirect';
@@ -59,7 +59,7 @@ const redirectEntriesApi = (): EntriesApi => localEntries as unknown as EntriesA
 
 /** Public `lookup` RPC method, the way a frontend middleware would call it. */
 const lookup = (input: { from: string }): Promise<RedirectMatch | null> => {
-    const fn = redirectsSdk()['lookup'];
+    const fn = redirectsService()['lookup'];
     if (!fn) throw new Error('redirects.lookup not registered');
     return fn(input) as Promise<RedirectMatch | null>;
 };

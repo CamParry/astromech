@@ -114,7 +114,7 @@ is missing, the command prints an install hint and exits with code 1.
 
 **v1 coverage:** core domain methods (users, settings, media query/get/delete)
 and the standard entry CRUD+publish actions (query, get, create, update,
-publish, unpublish, delete). Not yet projected: plugin SDK methods, media
+publish, unpublish, delete). Not yet projected: plugin service methods, media
 upload/replace (binary data cannot cross JSON-RPC), and entries long-tail
 actions (duplicate, trash, restore, emptyTrash, versions, restoreVersion,
 schedule).

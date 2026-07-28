@@ -20,7 +20,7 @@ import type {
 import type { FieldDefinition, FieldValidator } from './fields.js';
 import type { User, NotifyInput, Permission } from './domain.js';
 import type { PluginHooks } from './hooks.js';
-import type { PluginSdkNamespace, TypedEntriesApi } from './sdk.js';
+import type { PluginServiceNamespace, TypedEntriesApi } from './client.js';
 import type { MediaApi, NotificationsApi, SettingsApi, UsersApi } from './api.js';
 import type { ServiceMethodEffect } from './services.js';
 
@@ -34,7 +34,7 @@ export type EmailTemplateOverride = {
 };
 
 // ============================================================================
-// Plugin Context — unified across hooks / sdk / cron / api
+// Plugin Context — unified across hooks / service / cron / api
 // ============================================================================
 
 /** Storage scoped to a plugin — keys are transparently namespaced under `plugin/<alias>/`. */
@@ -107,8 +107,8 @@ export type PluginContext = {
     users: UsersApi;
     /** The global notifications service (session-scoped). */
     notifications: NotificationsApi;
-    /** Other plugins' service methods — `ctx.plugins.<sdkKey>.<method>(input)`. */
-    plugins?: PluginSdkNamespace | undefined;
+    /** Other plugins' service methods — `ctx.plugins.<serviceKey>.<method>(input)`. */
+    plugins?: PluginServiceNamespace | undefined;
     sendEmail: (to: string, subject: string, element: ReactElement) => Promise<void>;
     notify: (input: NotifyInput) => Promise<void>;
     logger: PluginLogger;
@@ -123,24 +123,24 @@ export type PluginContext = {
 };
 
 // ============================================================================
-// SDK methods + raw escape hatch
+// Service methods + raw escape hatch
 // ============================================================================
 
 /**
- * Access policy for a plugin SDK method or raw route. There is no default —
- * omitting `access` is a build error (the field is required).
+ * Access policy for a plugin service method or raw route. There is no
+ * default — omitting `access` is a build error (the field is required).
  */
 export type PluginAccess = 'public' | 'authenticated' | { permission: string };
 
-export type PluginSdkMethod<Input = unknown, Output = unknown> = {
+export type PluginServiceMethod<Input = unknown, Output = unknown> = {
     access: PluginAccess;
     handler: (input: Input, ctx: PluginContext) => Promise<Output> | Output;
     /** One-line summary for the method manifest (discovery / MCP / AI tool-loop). */
     summary?: string;
 } & Partial<ServiceMethodEffect>;
 
-/** Collection element for a plugin's sdk record: variance-safe over any concrete method. */
-export type AnyPluginSdkMethod = PluginSdkMethod<never, unknown>;
+/** Collection element for a plugin's service record: variance-safe over any concrete method. */
+export type AnyPluginServiceMethod = PluginServiceMethod<never, unknown>;
 
 /**
  * Raw request handler for payloads RPC-JSON can't carry (binary / multipart /
@@ -242,8 +242,8 @@ export type PluginFieldTypeRegistration = {
 /**
  * What a plugin declares about itself, and nothing more. `package` is the one
  * canonical identifier — the namespace behind every table prefix, permission
- * string, i18n bundle and SDK key is derived from it mechanically, and cannot
- * be declared or overridden.
+ * string, i18n bundle and service key is derived from it mechanically, and
+ * cannot be declared or overridden.
  *
  * Identity is declared inline in the plugin's `definePlugin` call, alongside
  * everything else the plugin contributes — a plugin never passes its own
@@ -326,7 +326,7 @@ export type PluginDefinition = PluginIdentity & {
      * files keep their bare `NNNN_<tag>` names.
      */
     migrations?: MigrationProvider;
-    sdk?: Record<string, AnyPluginSdkMethod>;
+    service?: Record<string, AnyPluginServiceMethod>;
     rawRoutes?: PluginRawRoute[];
     hooks?: PluginHooks;
     /** Custom events this plugin fires via `ctx.emit`. Type-augmented in 18b. */
@@ -380,13 +380,13 @@ export type PluginFactory<
  * prefix, i18n bundle, HTTP route segment and permission strings all use it.
  * `permissionNamespace` is the same string, kept as its own field because
  * permission call sites read better naming what they anchor to.
- * `sdkKey` is the camelCase form, used only where a JS property key is
- * required (`sdk.acmeSeo`, `Astromech.plugins.acmeSeo`).
+ * `serviceKey` is the camelCase form, used only where a JS property key is
+ * required (`ctx.plugins.acmeSeo`, `Astromech.plugins.acmeSeo`).
  */
 export type ResolvedPluginIdentity = {
     package: string;
     namespace: string;
-    sdkKey: string;
+    serviceKey: string;
     permissionNamespace: string;
     version?: string;
 };

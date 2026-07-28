@@ -3,7 +3,7 @@
  *
  * `createTestDb` spins up a file-based libsql database in the OS temp dir,
  * applies `apps/demo/migrations`' full migration chain, and registers it via
- * `setDb` so SDK modules (which call `getDb()` per-op) hit it. Running the real
+ * `setDb` so service modules (which call `getDb()` per-op) hit it. Running the real
  * migration chain (rather than a throwaway test-only schema) means every
  * harness-based test also exercises the generated `migrationProvider`.
  * `setupTestConfig` resolves a small but representative config and pushes it

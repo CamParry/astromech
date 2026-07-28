@@ -13,7 +13,7 @@ import type {
     Permission,
     PluginDefinition,
     PluginFactory,
-    PluginSdkMethod,
+    PluginServiceMethod,
 } from '@/types/index.js';
 import { pluginNamespace } from '@/utilities/plugin-namespace.js';
 
@@ -146,21 +146,15 @@ export function defineAdminPage(page: AdminPage): AdminPage {
 /**
  * Define a typed service method (a plugin's contribution to the unified services
  * layer). The Input/Output generics flow into the plugin's self-augmentation of
- * `AstromechPluginSdks` so callers see real signatures. The method may carry
+ * `AstromechPluginServices` so callers see real signatures. The method may carry
  * descriptor metadata (`summary`, `input`, `mutates`, `destructive`, …) for the
  * method manifest.
  */
 export function defineServiceMethod<Input = unknown, Output = unknown>(
-    method: PluginSdkMethod<Input, Output>
-): PluginSdkMethod<Input, Output> {
+    method: PluginServiceMethod<Input, Output>
+): PluginServiceMethod<Input, Output> {
     return method;
 }
-
-/**
- * @deprecated Renamed to {@link defineServiceMethod}. Kept as an alias so existing
- * plugins keep working; will be removed in a future major.
- */
-export const defineSdkMethod = defineServiceMethod;
 
 /**
  * Define a single plugin hook; payload type is inferred from the event key.

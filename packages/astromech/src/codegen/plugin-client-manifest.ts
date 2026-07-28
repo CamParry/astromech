@@ -45,7 +45,7 @@ export function generatePluginClientManifest(plugins: PluginDefinition[]): strin
         const identity = resolvePluginIdentity(def);
         return (def.fields ?? []).map(
             (reg: PluginFieldTypeRegistration) =>
-                `\t${JSON.stringify(reg.type)}: { load: () => import(${JSON.stringify(resolveAssetSpecifier(def, reg.component))}), defaultValue: ${JSON.stringify(reg.defaultValue ?? null)}, plugin: ${JSON.stringify(identity.namespace)}, sdkKey: ${JSON.stringify(identity.sdkKey)}, namespace: ${JSON.stringify(identity.permissionNamespace)} },`
+                `\t${JSON.stringify(reg.type)}: { load: () => import(${JSON.stringify(resolveAssetSpecifier(def, reg.component))}), defaultValue: ${JSON.stringify(reg.defaultValue ?? null)}, plugin: ${JSON.stringify(identity.namespace)}, serviceKey: ${JSON.stringify(identity.serviceKey)}, namespace: ${JSON.stringify(identity.permissionNamespace)} },`
         );
     });
 
@@ -95,7 +95,7 @@ export function generatePluginClientManifest(plugins: PluginDefinition[]): strin
                     : null;
             const id = slot.id ?? `${identity.namespace}:${slot.slot}:${index}`;
             const order = slot.order ?? 0;
-            const line = `\t\t{ id: ${JSON.stringify(id)}, load: () => import(${JSON.stringify(resolveAssetSpecifier(def, slot.component))}), plugin: ${JSON.stringify(identity.namespace)}, sdkKey: ${JSON.stringify(identity.sdkKey)}, namespace: ${JSON.stringify(identity.permissionNamespace)}, permission: ${JSON.stringify(permission)}, order: ${JSON.stringify(order)} },`;
+            const line = `\t\t{ id: ${JSON.stringify(id)}, load: () => import(${JSON.stringify(resolveAssetSpecifier(def, slot.component))}), plugin: ${JSON.stringify(identity.namespace)}, serviceKey: ${JSON.stringify(identity.serviceKey)}, namespace: ${JSON.stringify(identity.permissionNamespace)}, permission: ${JSON.stringify(permission)}, order: ${JSON.stringify(order)} },`;
             slotRows[slot.slot].push({ order, line });
         });
     });

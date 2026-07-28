@@ -1,5 +1,5 @@
 /**
- * Public SDK surface. No options involved, so a plain object rather than a
+ * Public service surface. No options involved, so a plain object rather than a
  * per-instance builder.
  */
 
@@ -8,7 +8,7 @@ import { defineServiceMethod } from 'astromech';
 import { REDIRECT_TYPE } from '../types.js';
 import type { RedirectFields, RedirectMatch, RedirectStatus } from '../types.js';
 
-export const redirectsSdk = {
+export const redirectsService = {
     // Resolve a request path to its redirect target. Public so a frontend
     // middleware can call it without a session.
     lookup: defineServiceMethod<{ from: string }, RedirectMatch | null>({

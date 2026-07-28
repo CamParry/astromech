@@ -1,6 +1,6 @@
 # @astromech/redirects
 
-Manage URL redirects, look them up from anywhere via the SDK, and (optionally)
+Manage URL redirects, look them up from anywhere via Astromech, and (optionally)
 auto-create a redirect whenever an entry's front-end URL changes.
 
 Redirects are stored in the plugin's **own table** (`plugin_redirects_redirects`)

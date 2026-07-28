@@ -12,7 +12,7 @@
 
 export {
     pluginNamespace,
-    pluginSdkKey,
+    pluginServiceKey,
     pluginTablePrefix,
 } from '@/plugins/runtime/plugin-identity.js';
 export type { PluginNamespace } from '@/plugins/runtime/plugin-identity.js';

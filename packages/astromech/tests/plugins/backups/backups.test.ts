@@ -92,7 +92,7 @@ function makeCtx(
         plugin: {
             package: '@astromech/backups',
             namespace: 'backups',
-            sdkKey: 'backups',
+            serviceKey: 'backups',
             permissionNamespace: 'backups',
             version: '0.1.0',
         },

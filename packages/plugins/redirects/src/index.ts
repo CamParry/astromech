@@ -1,25 +1,25 @@
 /**
  * @astromech/redirects — URL redirects as a first-class entry type, with a
- * public `lookup` SDK method and optional auto-redirect on slug change.
+ * public `lookup` service method and optional auto-redirect on slug change.
  * Frontend integration is a copy-paste middleware recipe (see README): the
  * plugin exposes data, the app owns the route.
  */
 
 import { definePlugin, withDefaults } from 'astromech';
-import type { SdkInterface } from 'astromech';
+import type { ServiceInterface } from 'astromech';
 import { REDIRECTS_PACKAGE } from './types.js';
 import type { RedirectsOptions } from './types.js';
 import { migrationProvider } from '../migrations/index.js';
 import { redirectEntryType } from './entries/redirect.js';
 import { redirectsPermissionBundles } from './permissions/redirects.js';
 import { redirectsTable } from './schema/redirects.js';
-import { redirectsSdk } from './sdk/redirects.js';
+import { redirectsService } from './service/redirects.js';
 import { slugChangeHook } from './hooks/slug-change.js';
 
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
-    interface AstromechPluginSdks {
-        redirects: SdkInterface<typeof redirectsSdk>;
+    interface AstromechPluginServices {
+        redirects: ServiceInterface<typeof redirectsService>;
     }
 }
 
@@ -41,7 +41,7 @@ export const redirects = definePlugin((options?: RedirectsOptions) => {
         schema: [redirectsTable],
         migrations: migrationProvider,
         entries: [redirectEntryType],
-        sdk: redirectsSdk,
+        service: redirectsService,
         ...(generateOnSlugChange && { hooks: [slugChangeHook] }),
     };
 });

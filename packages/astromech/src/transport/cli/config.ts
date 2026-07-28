@@ -2,7 +2,7 @@
  * CLI Config Loader
  *
  * Loads astromech.config.ts using jiti (so TypeScript files are supported
- * without a pre-build step) and initialises the DB registry so SDK methods work.
+ * without a pre-build step) and initialises the DB registry so service methods work.
  */
 
 import { createJiti } from 'jiti';
@@ -30,7 +30,7 @@ export async function loadConfig(configPath?: string): Promise<ResolvedConfig> {
 
     const resolved = resolveConfig(rawConfig);
 
-    // Populate the virtual:astromech/config shim so SDK modules work
+    // Populate the virtual:astromech/config shim so local-transport modules work
     setCliConfig(resolved);
 
     return resolved;

@@ -6,8 +6,8 @@
 | ------- | ------------------------------------------------------------------ | -------------------------------------------------- |
 | Phase 1 | one `definePlugin` call; identity-unaware sub-modules              | built, gate + browser verified, **awaiting merge** |
 | 2d      | flatten `ctx.sdk`, delete scoped entries, move the permission seam | built (`fc63be5`), gate + browser verified         |
-| 2b      | retire "SDK" → "service"                                           | in progress                                        |
-| 2c      | dissolve `astromech/plugin-kit`                                    | planned, blocked on 2b                             |
+| 2b      | retire "SDK" → "service"                                           | built, gate verified                               |
+| 2c      | dissolve `astromech/plugin-kit`                                    | planned                                            |
 | 2a      | drop "plugin" from the define names                                | planned, blocked on 2c                             |
 | Phase 3 | candidates, not yet designed                                       | —                                                  |
 
@@ -65,9 +65,10 @@ takes a bare `permission: 'view'` and namespaces it, and computes a settings
   inject identity from. The general fix is to hang host-facing helpers off the
   factory (`seo.section()`, as `plugin.permissions()` already does), which needs
   `definePlugin` to carry plugin-declared extras.
-- **SDK module augmentation stays hand-written.** `declare module 'astromech' {
-interface AstromechPluginSdks { seo: … } }` needs the SDK key as a
-  source-level literal; TS cannot compute an interface key from a value's type.
+- **Service module augmentation stays hand-written.** `declare module
+'astromech' { interface AstromechPluginServices { seo: … } }` needs the
+  service key as a source-level literal; TS cannot compute an interface key
+  from a value's type.
 
 ## Phase 2 — one vocabulary, one context
 
@@ -102,18 +103,25 @@ Not a software development kit; it is the set of methods a plugin exposes.
 the `package` → `namespace` → key derivation is untouched, so every wire value
 (HTTP route segment, `Astromech.plugins.<key>`) is byte-identical.
 
-- [ ] `sdk:` definition key → `service:`; `sdkKey` → `serviceKey` (42)
-- [ ] `PluginSdkMethod` → `PluginServiceMethod` (16); `SdkInterface` →
+- [x] `sdk:` definition key → `service:`; `sdkKey` → `serviceKey` (42)
+- [x] `PluginSdkMethod` → `PluginServiceMethod` (16); `SdkInterface` →
       `ServiceInterface` (14); `PluginSdkNamespace` → `PluginServiceNamespace` (8)
-- [ ] `AstromechPluginSdks` → `AstromechPluginServices` (10). The only breaking
+- [x] `AstromechPluginSdks` → `AstromechPluginServices` (10). The only breaking
       rename — it is the hand-written `declare module` augmentation. First-party
       only today
-- [ ] `types/sdk.ts` → `types/client.ts`. `AstromechClient` keeps its name; it
+- [x] `types/sdk.ts` → `types/client.ts`. `AstromechClient` keeps its name; it
       genuinely is a client
-- [ ] Delete `AstromechPluginEntryTypes` and the codegen that emits it
+- [x] Delete `AstromechPluginEntryTypes` and the codegen that emits it
       (`codegen/type-generator.ts:488`). Left dead by 2d — it existed only to
       type the removed per-plugin `entries` member. Touches the demo's generated
       `astromech.d.ts`
+
+Also renamed as part of vocabulary consistency (not separately itemised above):
+each plugin's own `src/sdk/*.ts` module → `src/service/*.ts` (redirects, menus,
+seo, and the demo's rating), `pluginSdkKey` → `pluginServiceKey`,
+`defineSdkMethod` deleted (deprecated zero-caller alias), and `generateSdkTypes`
+→ `generateClientTypes` (the codegen entry point that emits the file `types/
+sdk.ts` was renamed for).
 
 ### 2c. Dissolve `astromech/plugin-kit`
 
@@ -208,9 +216,9 @@ Permissions themselves are unchanged by Phase 2 — plugin altitude stays
 trusted, with HTTP as the enforcement boundary. Neither surface checked
 permissions before the merge (`scoped-entries.ts:8`, `transport/local/index.ts:8`).
 
-To check while implementing: `seo/src/sdk/seo.ts:44` reads its own settings blob
-_without_ `{ full: true }` against a private-by-default store — either a latent
-bug or a lucky escape.
+To check while implementing: `seo/src/service/seo.ts:44` reads its own settings
+blob _without_ `{ full: true }` against a private-by-default store — either a
+latent bug or a lucky escape.
 
 ## Phase 3 — candidates, not yet designed
 

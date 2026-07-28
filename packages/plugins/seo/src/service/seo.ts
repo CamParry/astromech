@@ -1,5 +1,5 @@
 /**
- * SDK methods for @astromech/seo. Paths come from each entry type's `url`
+ * Service methods for @astromech/seo. Paths come from each entry type's `url`
  * template (core's single source of truth) via `resolveEntryPath`; entry types
  * without a `url` are skipped, so the plugin never guesses a path.
  */
@@ -55,7 +55,7 @@ function entryPath(ctx: PluginContext, type: string, entry: Entry): string | nul
     return template ? resolveEntryPath(template, entry) : null;
 }
 
-export const seoSdk = {
+export const seoService = {
     // Published entries across the plugin footprint, as sitemap URL data.
     // Public so the app's /sitemap.xml endpoint can call it.
     // `void` input: takes no argument, so callers invoke `.sitemap()` bare.

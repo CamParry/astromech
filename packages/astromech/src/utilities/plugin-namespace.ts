@@ -56,15 +56,15 @@ export function pluginNamespace<const P extends string>(pkg: P): PluginNamespace
 }
 
 /**
- * The JS-identifier form, for SDK property keys and HTTP route segments:
+ * The JS-identifier form, for service property keys and HTTP route segments:
  * `acme_seo` → `acmeSeo`.
  *
  * LOSSY, and deliberately not inverted anywhere. A separator followed by a
  * character with no uppercase form collapses (`acme_2fa` → `acme2fa`), so two
- * distinct namespaces can land on one SDK key. That is a hard error rather than
- * a caveat: `assertNoPluginCollisions` rejects the plugin set at boot, which is
- * what lets every consumer treat the key as unique.
+ * distinct namespaces can land on one service key. That is a hard error rather
+ * than a caveat: `assertNoPluginCollisions` rejects the plugin set at boot,
+ * which is what lets every consumer treat the key as unique.
  */
-export function pluginSdkKey(namespace: string): string {
+export function pluginServiceKey(namespace: string): string {
     return namespace.replace(/_(.)/g, (_, char: string) => char.toUpperCase());
 }

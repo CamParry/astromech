@@ -1,8 +1,8 @@
 /**
  * Plugin runtime.
  *
- * Holds the registry of installed plugins (hooks / sdk / raw routes), builds
- * the unified PluginContext, and runs hooks with the documented failure
+ * Holds the registry of installed plugins (hooks / service / raw routes),
+ * builds the unified PluginContext, and runs hooks with the documented failure
  * semantics: `before*` hooks gate the operation (a throw aborts), `after*`
  * hooks and emitted events are swallow-and-logged (a throw never rolls back).
  *
@@ -14,7 +14,7 @@ import type { Insertable, Kysely, Updateable } from 'kysely';
 import type { DB } from '@/database/types.js';
 import type { ReactElement } from 'react';
 import type {
-    AnyPluginSdkMethod,
+    AnyPluginServiceMethod,
     AstromechClient,
     EntriesApi,
     MediaApi,
@@ -25,7 +25,7 @@ import type {
     PluginDefinition,
     PluginLogger,
     PluginRawRoute,
-    PluginSdkNamespace,
+    PluginServiceNamespace,
     ResolvedConfig,
     ResolvedPluginIdentity,
     SettingsApi,
@@ -72,9 +72,9 @@ type PluginRuntimeState = {
     config: ResolvedConfig | null;
     identities: ResolvedPluginIdentity[];
     hooks: Map<string, RegisteredHook[]>;
-    sdk: Map<string, Record<string, AnyPluginSdkMethod>>;
+    service: Map<string, Record<string, AnyPluginServiceMethod>>;
     rawRoutes: RegisteredRawRoute[];
-    sdkClient: AstromechClient | null;
+    client: AstromechClient | null;
 };
 
 declare global {
@@ -87,9 +87,9 @@ function state(): PluginRuntimeState {
             config: null,
             identities: [],
             hooks: new Map(),
-            sdk: new Map(),
+            service: new Map(),
             rawRoutes: [],
-            sdkClient: null,
+            client: null,
         };
     }
     return globalThis.__astromechPluginRuntime;
@@ -105,7 +105,7 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
     s.config = config;
     s.identities = [];
     s.hooks = new Map();
-    s.sdk = new Map();
+    s.service = new Map();
     s.rawRoutes = [];
     // Drop stale plugin storages before re-registering (test setups re-run this).
     entryAccess().resetEntryStorageOverrides();
@@ -129,11 +129,11 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
             s.hooks.set(event, list);
         }
 
-        // `entries` used to be reserved on both the SDK map and the raw-route
-        // path — it named the per-plugin entries surface. That surface is gone
-        // (entry types live on the one entries service), so neither name
-        // collides with anything any more.
-        if (def.sdk) s.sdk.set(identity.namespace, def.sdk);
+        // `entries` used to be reserved on both the service map and the
+        // raw-route path — it named the per-plugin entries surface. That
+        // surface is gone (entry types live on the one entries service), so
+        // neither name collides with anything any more.
+        if (def.service) s.service.set(identity.namespace, def.service);
 
         for (const route of def.rawRoutes ?? []) {
             s.rawRoutes.push({ identity, route });
@@ -278,20 +278,25 @@ export function hasHookHandlers(event: string): boolean {
 }
 
 /**
- * Resolved identity for a plugin, by SDK key (`acmeSeo`) — the single
+ * Resolved identity for a plugin, by service key (`acmeSeo`) — the single
  * identifier the API surface addresses a plugin by, in both transports and on
- * the wire. Deliberately NOT tolerant of the namespace form: `sdkKey` is
+ * the wire. Deliberately NOT tolerant of the namespace form: `serviceKey` is
  * derived from `namespace` lossily (`acme_2fa` → `acme2fa`), so accepting both
  * would mean guessing an inverse that does not exist. The namespace stays
  * authoritative for tables, permissions and storage prefixes; look those up
  * through the returned identity, never by re-deriving a string.
  */
-export function getPluginIdentity(sdkKey: string): ResolvedPluginIdentity | undefined {
-    return state().identities.find((identity) => identity.sdkKey === sdkKey);
+export function getPluginIdentity(
+    serviceKey: string
+): ResolvedPluginIdentity | undefined {
+    return state().identities.find((identity) => identity.serviceKey === serviceKey);
 }
 
-export function getPluginSdkMethods(): Map<string, Record<string, AnyPluginSdkMethod>> {
-    return state().sdk;
+export function getPluginServiceMethods(): Map<
+    string,
+    Record<string, AnyPluginServiceMethod>
+> {
+    return state().service;
 }
 
 export function getPluginRawRoutes(): RegisteredRawRoute[] {
@@ -299,17 +304,15 @@ export function getPluginRawRoutes(): RegisteredRawRoute[] {
 }
 
 /** Set by the Local API at module load to break the import cycle. */
-export function setPluginSdkClient(client: AstromechClient): void {
-    state().sdkClient = client;
+export function setPluginClient(client: AstromechClient): void {
+    state().client = client;
 }
 
-/** The registered SDK client, or crash-loud if a context reaches for it too early. */
-function requireSdkClient(): AstromechClient {
-    const client = state().sdkClient;
+/** The registered client, or crash-loud if a context reaches for it too early. */
+function requireClient(): AstromechClient {
+    const client = state().client;
     if (!client) {
-        throw new Error(
-            '[Astromech] Plugin SDK client is not available in this context.'
-        );
+        throw new Error('[Astromech] Plugin client is not available in this context.');
     }
     return client;
 }
@@ -408,25 +411,25 @@ export function createPluginContext(
         // sanitized rich text, stripped private fields and null private settings.
         get entries(): TypedEntriesApi {
             return withDefaultShape(
-                requireSdkClient().entries as unknown as EntriesApi,
+                requireClient().entries as unknown as EntriesApi,
                 'full'
             ) as unknown as TypedEntriesApi;
         },
         // media / users / notifications have no shape axis, so they pass through.
         get media(): MediaApi {
-            return requireSdkClient().media;
+            return requireClient().media;
         },
         get settings(): SettingsApi {
-            return withDefaultSettingsShape(requireSdkClient().settings, 'full');
+            return withDefaultSettingsShape(requireClient().settings, 'full');
         },
         get users(): UsersApi {
-            return requireSdkClient().users;
+            return requireClient().users;
         },
         get notifications(): NotificationsApi {
-            return requireSdkClient().notifications;
+            return requireClient().notifications;
         },
-        get plugins(): PluginSdkNamespace | undefined {
-            return requireSdkClient().plugins;
+        get plugins(): PluginServiceNamespace | undefined {
+            return requireClient().plugins;
         },
         sendEmail,
         notify: (input: NotifyInput) =>

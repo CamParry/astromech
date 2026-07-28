@@ -24,7 +24,7 @@ export const SEO_PACKAGE = '@astromech/seo';
  */
 export const SEO_FIELD_NAME = 'seo';
 
-// ── SDK method shapes ───────────────────────────────────────────────────
+// ── Service method shapes ─────────────────────────────────────────────────
 
 export type SeoSitemapUrl = {
     loc: string;
