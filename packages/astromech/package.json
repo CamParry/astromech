@@ -69,6 +69,10 @@
             "types": "./dist/storage/drivers/r2.d.ts",
             "default": "./dist/storage/drivers/r2.js"
         },
+        "./storage/filesystem": {
+            "types": "./dist/storage/drivers/filesystem.d.ts",
+            "default": "./dist/storage/drivers/filesystem.js"
+        },
         "./cloudflare": {
             "types": "./dist/cloudflare/index.d.ts",
             "default": "./dist/cloudflare/index.js"

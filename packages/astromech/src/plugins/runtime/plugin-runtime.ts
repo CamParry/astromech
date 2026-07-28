@@ -37,6 +37,7 @@ import {
 } from '@/database/codec.js';
 import { peekDatabaseDriver } from '@/database/driver-registry.js';
 import { getStorageDriver } from '@/storage/registry.js';
+import { listAll } from '@/storage/prefix.js';
 import { getEmailConfig } from '@/email/registry.js';
 import { renderEmail } from '@/email/render.js';
 import { notify } from '@/notifications/index.js';
@@ -444,7 +445,7 @@ export function createPluginContext(
             get: (key) => getStorageDriver().get(PREFIX + key),
             delete: (key) => getStorageDriver().delete(PREFIX + key),
             list: async (prefix = '') =>
-                (await getStorageDriver().list(PREFIX + prefix)).map((k) =>
+                (await listAll(getStorageDriver(), PREFIX + prefix)).map((k) =>
                     k.slice(PREFIX.length)
                 ),
         },
@@ -478,8 +479,9 @@ function emptyConfig(): ResolvedConfig {
             name: 'noop',
             put: () => Promise.resolve(),
             get: () => Promise.resolve(null),
+            stat: () => Promise.resolve(null),
             delete: () => Promise.resolve(),
-            list: () => Promise.resolve([]),
+            list: () => Promise.resolve({ keys: [] }),
         },
         mediaRoute: '/_media',
     } as ResolvedConfig;

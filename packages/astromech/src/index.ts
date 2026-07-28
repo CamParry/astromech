@@ -21,7 +21,6 @@ import type {
 // ============================================================================
 
 export * from '@/types/index.js';
-export { FilesystemStorage } from '@/storage/filesystem.js';
 export { ConsoleDriver } from '@/email/drivers/console.js';
 export { ResendDriver } from '@/email/drivers/resend.js';
 export type { ResendDriverOptions } from '@/email/drivers/resend.js';

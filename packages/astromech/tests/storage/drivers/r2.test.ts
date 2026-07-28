@@ -8,6 +8,8 @@ import type { R2BucketLike } from '@/storage/drivers/r2.js';
 
 type StoredObject = { bytes: Uint8Array; contentType?: string };
 
+const UPLOADED = new Date('2026-07-28T12:00:00.000Z');
+
 function makeFakeBucket(opts?: {
     /** If set, the first list() call returns only `firstPageKeys` and sets truncated=true */
     firstPageKeys?: string[];
@@ -15,6 +17,18 @@ function makeFakeBucket(opts?: {
 }): R2BucketLike & { store: Map<string, StoredObject>; listCallCount: number } {
     const store = new Map<string, StoredObject>();
     let listCallCount = 0;
+
+    /** Metadata as R2 reports it: `size` is always the FULL object size. */
+    function meta(key: string, entry: StoredObject) {
+        return {
+            size: entry.bytes.length,
+            httpEtag: `"etag-${key}"`,
+            uploaded: UPLOADED,
+            ...(entry.contentType !== undefined
+                ? { httpMetadata: { contentType: entry.contentType } }
+                : {}),
+        };
+    }
 
     return {
         store,
@@ -64,27 +78,35 @@ function makeFakeBucket(opts?: {
             return undefined;
         },
 
-        async get(key: string): Promise<{
-            body: ReadableStream;
-            size: number;
-            httpMetadata?: { contentType?: string };
-        } | null> {
+        async head(key: string) {
+            const entry = store.get(key);
+            return entry ? meta(key, entry) : null;
+        },
+
+        async get(
+            key: string,
+            getOpts?: { range?: { offset: number; length?: number } }
+        ) {
             const entry = store.get(key);
             if (!entry) return null;
+            const range = getOpts?.range;
+            const slice =
+                range === undefined
+                    ? entry.bytes
+                    : entry.bytes.slice(
+                          range.offset,
+                          range.length === undefined
+                              ? undefined
+                              : range.offset + range.length
+                      );
             const body = new ReadableStream<Uint8Array>({
                 start(controller) {
-                    controller.enqueue(entry.bytes);
+                    controller.enqueue(slice);
                     controller.close();
                 },
             });
-            if (entry.contentType !== undefined) {
-                return {
-                    body,
-                    size: entry.bytes.length,
-                    httpMetadata: { contentType: entry.contentType },
-                };
-            }
-            return { body, size: entry.bytes.length };
+            // R2 reports the FULL object size even when a range was requested.
+            return { ...meta(key, entry), body };
         },
 
         async delete(key: string): Promise<void> {
@@ -94,6 +116,7 @@ function makeFakeBucket(opts?: {
         async list(listOpts?: {
             prefix?: string;
             cursor?: string;
+            limit?: number;
         }): Promise<{ objects: { key: string }[]; truncated: boolean; cursor?: string }> {
             listCallCount++;
             const prefix = listOpts?.prefix ?? '';
@@ -178,7 +201,9 @@ describe('r2()', () => {
             const bytes = await drain(result.body);
             expect(bytes).toEqual(original);
             expect(result.size).toBe(4);
+            expect(result.totalSize).toBe(4);
             expect(result.contentType).toBe('image/jpeg');
+            expect(result.etag).toBe('"etag-uploads/photo.jpg"');
         });
 
         it('returns null for a missing key', async () => {
@@ -195,6 +220,70 @@ describe('r2()', () => {
             const result = await driver.get('raw.bin');
             if (!result) throw new Error('expected a result');
             expect('contentType' in result).toBe(false);
+        });
+    });
+
+    describe('get with a range', () => {
+        it('reports the slice length as size and the whole object as totalSize', async () => {
+            const bucket = makeFakeBucket();
+            const driver = r2({ bucket });
+            await driver.put('video.mp4', new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]));
+
+            const result = await driver.get('video.mp4', {
+                range: { offset: 2, length: 3 },
+            });
+            if (!result) throw new Error('expected a result');
+            expect(await drain(result.body)).toEqual(new Uint8Array([2, 3, 4]));
+            expect(result.size).toBe(3);
+            expect(result.totalSize).toBe(8);
+        });
+
+        it('clamps a length running past the end', async () => {
+            const bucket = makeFakeBucket();
+            const driver = r2({ bucket });
+            await driver.put('video.mp4', new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]));
+
+            const result = await driver.get('video.mp4', {
+                range: { offset: 6, length: 100 },
+            });
+            if (!result) throw new Error('expected a result');
+            expect(result.size).toBe(2);
+            expect(result.totalSize).toBe(8);
+        });
+
+        it('reads to the end when length is omitted', async () => {
+            const bucket = makeFakeBucket();
+            const driver = r2({ bucket });
+            await driver.put('video.mp4', new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]));
+
+            const result = await driver.get('video.mp4', { range: { offset: 5 } });
+            if (!result) throw new Error('expected a result');
+            expect(await drain(result.body)).toEqual(new Uint8Array([5, 6, 7]));
+            expect(result.size).toBe(3);
+            expect(result.totalSize).toBe(8);
+        });
+    });
+
+    describe('stat', () => {
+        it('returns metadata without a body for a stored key', async () => {
+            const bucket = makeFakeBucket();
+            const driver = r2({ bucket });
+            await driver.put('uploads/photo.jpg', new Uint8Array([1, 2, 3]), {
+                contentType: 'image/jpeg',
+            });
+
+            const info = await driver.stat('uploads/photo.jpg');
+            expect(info).toEqual({
+                size: 3,
+                contentType: 'image/jpeg',
+                etag: '"etag-uploads/photo.jpg"',
+                uploadedAt: UPLOADED,
+            });
+        });
+
+        it('returns null for a missing key', async () => {
+            const driver = r2({ bucket: makeFakeBucket() });
+            expect(await driver.stat('ghost.bin')).toBeNull();
         });
     });
 
@@ -231,19 +320,20 @@ describe('r2()', () => {
             await driver.put('variants/abc/w800.jpg', new Uint8Array([2]));
             await driver.put('originals/abc.jpg', new Uint8Array([3]));
 
-            const keys = await driver.list('variants/abc/');
-            expect(keys.sort()).toEqual([
+            const page = await driver.list('variants/abc/');
+            expect(page.keys.sort()).toEqual([
                 'variants/abc/w400.jpg',
                 'variants/abc/w800.jpg',
             ]);
+            expect(page.cursor).toBeUndefined();
         });
 
-        it('returns an empty array when no keys match', async () => {
+        it('returns an empty page when no keys match', async () => {
             await driver.put('something/else.txt', new Uint8Array([1]));
-            expect(await driver.list('variants/')).toEqual([]);
+            expect(await driver.list('variants/')).toEqual({ keys: [] });
         });
 
-        it('handles two-page truncated response and returns all keys', async () => {
+        it('returns one page and surfaces the cursor when truncated', async () => {
             const page1 = ['variants/abc/w400.jpg', 'variants/abc/w800.jpg'];
             const page2 = ['variants/abc/w1200.jpg', 'variants/abc/w1600.jpg'];
 
@@ -253,28 +343,57 @@ describe('r2()', () => {
             });
             const pagedDriver = r2({ bucket: pagedBucket });
 
-            const keys = await pagedDriver.list('variants/abc/');
+            const first = await pagedDriver.list('variants/abc/');
+            expect(first.keys).toEqual(page1);
+            expect(first.cursor).toBe('page2');
+            // One call per list(): the driver no longer loops internally.
+            expect(pagedBucket.listCallCount).toBe(1);
+            if (first.cursor === undefined) throw new Error('expected a cursor');
 
-            expect(keys.sort()).toEqual([...page1, ...page2].sort());
-            // Confirm list was called twice (pagination loop executed)
+            const second = await pagedDriver.list('variants/abc/', {
+                cursor: first.cursor,
+            });
+            expect(second.keys).toEqual(page2);
+            expect(second.cursor).toBeUndefined();
             expect(pagedBucket.listCallCount).toBe(2);
+        });
+
+        it('passes limit through to the bucket', async () => {
+            const seen: (number | undefined)[] = [];
+            const spyBucket: R2BucketLike = {
+                ...makeFakeBucket(),
+                async list(listOpts) {
+                    seen.push(listOpts?.limit);
+                    return { objects: [], truncated: false };
+                },
+            };
+            await r2({ bucket: spyBucket }).list('variants/', { limit: 25 });
+            expect(seen).toEqual([25]);
         });
     });
 
-    describe('getDirectUrl', () => {
+    describe('getPublicUrl', () => {
         it('returns publicUrl/key when publicUrl is configured', () => {
             const driver = r2({
                 bucket: makeFakeBucket(),
                 publicUrl: 'https://assets.example.com',
             });
-            expect(driver.getDirectUrl?.('uploads/photo.jpg')).toBe(
+            expect(driver.getPublicUrl?.('uploads/photo.jpg')).toBe(
                 'https://assets.example.com/uploads/photo.jpg'
             );
         });
 
         it('returns null when publicUrl is not configured', () => {
             const driver = r2({ bucket: makeFakeBucket() });
-            expect(driver.getDirectUrl?.('uploads/photo.jpg')).toBeNull();
+            expect(driver.getPublicUrl?.('uploads/photo.jpg')).toBeNull();
+        });
+    });
+
+    describe('signing capabilities', () => {
+        it('exposes none — an R2 binding cannot sign', () => {
+            const driver = r2({ bucket: makeFakeBucket() });
+            expect(driver.getSignedUploadUrl).toBeUndefined();
+            expect(driver.getSignedDownloadUrl).toBeUndefined();
         });
     });
 });

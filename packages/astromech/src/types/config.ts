@@ -46,19 +46,66 @@ export type DatabaseDriver = {
     ): Promise<void>;
 };
 
+export type StorageRange = {
+    /** Byte offset of the first byte to return. */
+    offset: number;
+    /** Bytes to return. Omit for "to the end of the object". */
+    length?: number;
+};
+
+export type StorageObject = {
+    body: ReadableStream;
+    /** Bytes in `body` — less than `totalSize` for a ranged read. */
+    size: number;
+    /** Full object size, regardless of range. Needed to emit `Content-Range`. */
+    totalSize: number;
+    contentType?: string;
+    etag?: string;
+};
+
+export type StorageStat = {
+    size: number;
+    contentType?: string;
+    etag?: string;
+    uploadedAt?: Date;
+};
+
+export type StorageList = {
+    keys: string[];
+    /** Present when more keys remain. Pass back to continue. */
+    cursor?: string;
+};
+
 export type StorageDriver = {
     name: string;
+
+    // --- required ---
     put(
         key: string,
         body: ReadableStream | Uint8Array,
         opts?: { contentType?: string }
     ): Promise<void>;
-    get(
-        key: string
-    ): Promise<{ body: ReadableStream; size: number; contentType?: string } | null>;
+    get(key: string, opts?: { range?: StorageRange }): Promise<StorageObject | null>;
+    stat(key: string): Promise<StorageStat | null>;
     delete(key: string): Promise<void>;
-    list(prefix: string): Promise<string[]>;
-    getDirectUrl?(key: string): string | null;
+    list(
+        prefix: string,
+        opts?: { cursor?: string; limit?: number }
+    ): Promise<StorageList>;
+
+    // --- optional capabilities, feature-detected at the call site ---
+    // Detection is load-bearing, not politeness: an R2 binding cannot sign URLs
+    // at all and `filesystem()` cannot either, so these are genuinely absent on
+    // shipped drivers. Never assume a method exists.
+    /** Permanent, cacheable, CDN-frontable URL. Null when the driver has none. */
+    getPublicUrl?(key: string): string | null;
+    /** Time-limited upload URL for direct client uploads. */
+    getSignedUploadUrl?(
+        key: string,
+        opts: { expiresIn: number; contentType?: string }
+    ): Promise<string>;
+    /** Time-limited download URL. */
+    getSignedDownloadUrl?(key: string, opts: { expiresIn: number }): Promise<string>;
 };
 
 export type ImageSource = {

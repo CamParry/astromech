@@ -16,6 +16,7 @@ import type {
     DbDump,
     EntryTypeConfig,
     ResolvedConfig,
+    StorageObject,
 } from './config.js';
 import type { FieldDefinition, FieldValidator } from './fields.js';
 import type { User, NotifyInput } from './domain.js';
@@ -44,9 +45,7 @@ export type PluginStorage = {
         body: ReadableStream | Uint8Array,
         opts?: { contentType?: string }
     ): Promise<void>;
-    get(
-        key: string
-    ): Promise<{ body: ReadableStream; size: number; contentType?: string } | null>;
+    get(key: string): Promise<StorageObject | null>;
     list(prefix?: string): Promise<string[]>;
     delete(key: string): Promise<void>;
 };

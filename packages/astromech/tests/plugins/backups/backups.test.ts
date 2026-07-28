@@ -3,7 +3,7 @@
  *
  * Uses a real libsql FILE database (dump/restore require file:) with the
  * plugin_backups_runs table created directly via drizzle push. Storage is
- * backed by FilesystemStorage pointed at a tmpdir. The PluginContext is
+ * backed by the filesystem driver pointed at a tmpdir. The PluginContext is
  * built by hand — no need for the full plugin runtime.
  *
  * Cases:
@@ -23,7 +23,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import { libsqlDriver } from '@/database/drivers/libsql.js';
-import { FilesystemStorage } from '@/storage/filesystem.js';
+import { filesystem } from '@/storage/drivers/filesystem.js';
+import { listAll } from '@/storage/prefix.js';
 import { decodeWith } from '@/database/codec.js';
 import { backupRunsTable } from '@astromech/backups/schema';
 import type { DB } from '@/database/types.js';
@@ -107,9 +108,18 @@ function makeCtx(
     };
 }
 
-/** Wrap a FilesystemStorage to satisfy PluginStorage (same interface). */
+/**
+ * Adapt the filesystem driver to PluginStorage: plugins get the simple
+ * all-keys `list`, so the driver's paginated one is followed via `listAll`.
+ */
 function makeStorage(dir: string): PluginStorage {
-    return new FilesystemStorage({ dir });
+    const driver = filesystem({ dir });
+    return {
+        put: (key, body, opts) => driver.put(key, body, opts),
+        get: (key) => driver.get(key),
+        delete: (key) => driver.delete(key),
+        list: (prefix = '') => listAll(driver, prefix),
+    };
 }
 
 // ============================================================================

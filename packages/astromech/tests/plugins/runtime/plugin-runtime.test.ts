@@ -76,8 +76,9 @@ const config: ResolvedConfig = {
         name: 'noop',
         put: () => Promise.resolve(),
         get: () => Promise.resolve(null),
+        stat: () => Promise.resolve(null),
         delete: () => Promise.resolve(),
-        list: () => Promise.resolve([]),
+        list: () => Promise.resolve({ keys: [] }),
     },
     mediaRoute: '/_media',
 };

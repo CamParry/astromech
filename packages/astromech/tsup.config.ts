@@ -23,6 +23,7 @@ export default defineConfig([
             'images/drivers/sharp': 'src/exports/image-sharp.ts',
             'images/drivers/cloudflare': 'src/exports/image-cloudflare.ts',
             'storage/drivers/r2': 'src/exports/storage-r2.ts',
+            'storage/drivers/filesystem': 'src/exports/storage-filesystem.ts',
             'cloudflare/index': 'src/exports/cloudflare.ts',
         },
         format: ['esm'],
