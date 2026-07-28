@@ -1,12 +1,7 @@
 import { fileURLToPath } from 'node:url';
-import {
-    builtInRole,
-    defineAdminPage,
-    defineConfig,
-    FilesystemStorage,
-    libsqlDriver,
-} from 'astromech';
+import { builtInRole, defineAdminPage, defineConfig, libsqlDriver } from 'astromech';
 import { sharp } from 'astromech/images/sharp';
+import { filesystem } from 'astromech/storage/filesystem';
 import * as fields from 'astromech/fields';
 import { redirects } from '@astromech/redirects';
 import { seo, seoSection } from '@astromech/seo';
@@ -115,7 +110,7 @@ export default defineConfig({
     db: libsqlDriver({
         url: 'file:' + fileURLToPath(new URL('./database.db', import.meta.url)),
     }),
-    storage: new FilesystemStorage({ dir: './public/uploads' }),
+    storage: filesystem({ dir: './public/uploads', urlPrefix: '/uploads' }),
     image: { driver: sharp() },
     locales: ['en', 'fr'],
     defaultLocale: 'en-GB',

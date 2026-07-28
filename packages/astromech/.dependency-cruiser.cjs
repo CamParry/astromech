@@ -58,9 +58,9 @@ module.exports = {
         {
             name: 'capability-no-upward',
             comment:
-                'Capabilities (storage, email, cron, context, fields) sit below the domains: they expose primitives, they do not orchestrate. They must not import a domain, an upper layer, or a first-party plugin.',
+                'Capabilities (storage, email, cron, context, fields, cloudflare) sit below the domains: they expose primitives, they do not orchestrate. They must not import a domain, an upper layer, or a first-party plugin.',
             severity: 'error',
-            from: { path: '^src/(storage|email|cron|context|fields|permissions)/' },
+            from: { path: '^src/(storage|email|cron|context|fields|permissions|cloudflare)/' },
             to: {
                 path: '^src/(entries|media|users|settings|routes|admin|transport|policies|kernel|codegen)/',
             },

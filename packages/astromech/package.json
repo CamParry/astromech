@@ -57,6 +57,18 @@
             "types": "./dist/storage/drivers/r2.d.ts",
             "default": "./dist/storage/drivers/r2.js"
         },
+        "./storage/filesystem": {
+            "types": "./dist/storage/drivers/filesystem.d.ts",
+            "default": "./dist/storage/drivers/filesystem.js"
+        },
+        "./storage/s3": {
+            "types": "./dist/storage/drivers/s3.d.ts",
+            "default": "./dist/storage/drivers/s3.js"
+        },
+        "./cloudflare": {
+            "types": "./dist/cloudflare/index.d.ts",
+            "default": "./dist/cloudflare/index.js"
+        },
         "./admin/shell.astro": "./src/admin/shell.astro",
         "./Image": "./src/media/serving/image/Image.astro",
         "./ui": {
@@ -126,6 +138,7 @@
         "@tiptap/react": "^3.0.0",
         "@tiptap/starter-kit": "^3.0.0",
         "@tiptap/static-renderer": "^3.26.1",
+        "aws4fetch": "^1.0.20",
         "better-auth": "^1.5.5",
         "blurhash": "^2.0.5",
         "citty": "^0.2.1",

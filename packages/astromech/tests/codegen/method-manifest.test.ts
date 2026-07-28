@@ -27,11 +27,14 @@ const storageDriver: StorageDriver = {
     async get() {
         return null;
     },
+    async stat() {
+        return null;
+    },
     async delete() {
         return undefined;
     },
     async list() {
-        return [];
+        return { keys: [] };
     },
 };
 

@@ -177,3 +177,39 @@ describe('buildImageAttrs — per-call widths override', () => {
         expect(entries[1]).toContain('w=960');
     });
 });
+
+describe('buildImageAttrs — pre-resolved original url (media access mode)', () => {
+    const withUrl: ImageAttrsInput = {
+        ...jpegInput,
+        url: 'https://cdn.example/img-abc.jpg',
+    };
+
+    it('uses the supplied url for the bare img src', () => {
+        const result = buildImageAttrs(withUrl, {}, ctx);
+        expect(result.img.src).toBe('https://cdn.example/img-abc.jpg');
+    });
+
+    it('keeps every srcset candidate on the media route', () => {
+        const result = buildImageAttrs(withUrl, {}, ctx);
+        for (const source of result.sources) {
+            for (const candidate of source.srcset.split(', ')) {
+                expect(candidate.startsWith(`${MEDIA_ROUTE}/img-abc.jpg?`)).toBe(true);
+            }
+        }
+    });
+
+    it('uses the supplied url on the non-optimisable bare-img path too', () => {
+        const result = buildImageAttrs(
+            { ...withUrl, mimeType: 'image/svg+xml', filename: 'logo.svg' },
+            {},
+            ctx
+        );
+        expect(result.sources).toHaveLength(0);
+        expect(result.img.src).toBe('https://cdn.example/img-abc.jpg');
+    });
+
+    it('falls back to the media route when url is absent', () => {
+        const result = buildImageAttrs(jpegInput, {}, ctx);
+        expect(result.img.src).toBe(`${MEDIA_ROUTE}/img-abc.jpg`);
+    });
+});

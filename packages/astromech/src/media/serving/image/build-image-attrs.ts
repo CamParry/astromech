@@ -16,6 +16,11 @@ export type ImageAttrsInput = {
     height?: number | null;
     version?: string | null;
     blurhash?: string | null;
+    /**
+     * Already-resolved original URL (from `Media.url`), honouring media access
+     * mode. Falls back to the media route when absent.
+     */
+    url?: string | null;
 };
 
 export type ImageAttrsContext = {
@@ -59,7 +64,9 @@ export function buildImageAttrs(
 ): ImageAttrs {
     const ext = extFromFilename(input.filename);
     const sizes = options.sizes ?? '100vw';
-    const bareUrl = buildMediaUrl(ctx.mediaRoute, input.id, ext);
+    // The bare <img> src is the original, so it honours the access mode: use the
+    // already-resolved `Media.url` when the caller passed one.
+    const bareUrl = input.url ?? buildMediaUrl(ctx.mediaRoute, input.id, ext);
 
     const bareImg: ImageAttrs = {
         sources: [],
@@ -87,6 +94,9 @@ export function buildImageAttrs(
 
     const formats: ImageFormat[] = ctx.avif ? ['avif', 'webp'] : ['webp'];
 
+    // Variant URLs ALWAYS stay on the media route, whatever the access mode: a
+    // variant is generated on demand by `handleMediaRequest` on a cache miss, so
+    // a direct storage URL would 404 until something happened to produce it.
     const sources = formats.map((format) => ({
         type: `image/${format}`,
         srcset: ladder

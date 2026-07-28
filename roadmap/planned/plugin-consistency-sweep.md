@@ -86,11 +86,11 @@ Real defects, not drift. Each is independent and needs no design.
       omits the option and is the correct model. Drop both options and both
       comments.
 
-        Keep the distinction in mind while editing: the raw `settingsApi.get`
-        really does default `full` to `false` (`settings/service.ts:53`), so
-        reading that function in isolation says the opposite of the truth inside a
-        plugin. This misled two independent auditors and the main thread during
-        the audit itself.
+          Keep the distinction in mind while editing: the raw `settingsApi.get`
+          really does default `full` to `false` (`settings/service.ts:53`), so
+          reading that function in isolation says the opposite of the truth inside a
+          plugin. This misled two independent auditors and the main thread during
+          the audit itself.
 
 - [ ] **backups re-derives its own table name.**
       `const TABLE = 'plugin_backups_runs' as const` appears in both

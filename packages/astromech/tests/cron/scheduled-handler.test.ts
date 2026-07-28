@@ -18,23 +18,23 @@ import { encodePatch } from '@/database/codec.js';
 import type { DB } from '@/database/types.js';
 
 beforeEach(async () => {
-    globalThis.__astromechCronJobs = [];
+    delete globalThis.__astromech?.cronJobs;
     globalThis.__astromechCronTickRunning = false;
     globalThis.__astromechCronUnscheduledWarned = new Set();
     // Clear any held scheduler / node interval between tests.
     globalThis.__astromechCronInterval = undefined;
-    globalThis.__astromechScheduler = undefined;
+    delete globalThis.__astromech?.scheduler;
 
     await createTestDb();
     setupTestConfig(makeTestConfig());
 });
 
 afterEach(() => {
-    globalThis.__astromechCronJobs = [];
+    delete globalThis.__astromech?.cronJobs;
     globalThis.__astromechCronTickRunning = false;
     globalThis.__astromechCronUnscheduledWarned = new Set();
     globalThis.__astromechCronInterval = undefined;
-    globalThis.__astromechScheduler = undefined;
+    delete globalThis.__astromech?.scheduler;
 });
 
 describe('handleScheduled', () => {
@@ -108,7 +108,7 @@ describe('scheduler driver selection', () => {
     });
 
     it('getSchedulerDriver returns null when no driver is set', () => {
-        globalThis.__astromechScheduler = undefined;
+        delete globalThis.__astromech?.scheduler;
         expect(getSchedulerDriver()).toBeNull();
     });
 });

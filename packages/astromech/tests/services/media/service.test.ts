@@ -62,7 +62,11 @@ function makeTrackingStorage(): StorageDriver & {
                     c.close();
                 },
             });
-            return { body, size: bytes.length };
+            return { body, size: bytes.length, totalSize: bytes.length };
+        },
+        async stat(key) {
+            const bytes = store.get(key);
+            return bytes ? { size: bytes.length } : null;
         },
         async delete(key) {
             deletes.push(key);
@@ -70,9 +74,9 @@ function makeTrackingStorage(): StorageDriver & {
             this.keys = new Set(store.keys());
         },
         async list(prefix) {
-            return [...store.keys()].filter((k) => k.startsWith(prefix));
+            return { keys: [...store.keys()].filter((k) => k.startsWith(prefix)) };
         },
-        getDirectUrl: () => null,
+        getPublicUrl: () => null,
     };
 }
 

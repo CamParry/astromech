@@ -6,16 +6,15 @@
  * registry pattern.
  */
 
+import { defineRegistry } from '@/utilities/registry.js';
 import type { DatabaseDriver } from '@/types/index.js';
 
-declare global {
-    var __astromechDbDriver: DatabaseDriver | undefined;
-}
+const dbDriver = defineRegistry<DatabaseDriver>('dbDriver', {
+    hint: 'Ensure the Astromech integration is configured with a db driver.',
+});
 
-export function setDatabaseDriver(driver: DatabaseDriver): void {
-    globalThis.__astromechDbDriver = driver;
-}
+export const setDatabaseDriver = dbDriver.set;
+export const getDatabaseDriver = dbDriver.get;
 
-export function getDatabaseDriver(): DatabaseDriver | null {
-    return globalThis.__astromechDbDriver ?? null;
-}
+/** Feature-detect the driver without requiring one — null when unwired. */
+export const peekDatabaseDriver = dbDriver.peek;

@@ -53,6 +53,7 @@ import type {
     PluginDefinition,
     ResolvedConfig,
     StorageDriver,
+    StorageList,
 } from '@/types/index.js';
 
 // Wire the entry-access port (entries → runtime dependency inversion) once for
@@ -135,13 +136,16 @@ const noopStorage: StorageDriver = {
     async get(): Promise<null> {
         return null;
     },
+    async stat(): Promise<null> {
+        return null;
+    },
     async delete(): Promise<void> {
         return undefined;
     },
-    async list(): Promise<string[]> {
-        return [];
+    async list(): Promise<StorageList> {
+        return { keys: [] };
     },
-    getDirectUrl(key: string): string | null {
+    getPublicUrl(key: string): string | null {
         return `/${key}`;
     },
 };

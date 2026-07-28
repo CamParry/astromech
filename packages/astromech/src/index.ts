@@ -22,14 +22,12 @@ import { pluginNamespace } from '@/utilities/plugin-namespace.js';
 // ============================================================================
 
 export * from '@/types/index.js';
-export { FilesystemStorage } from '@/storage/filesystem.js';
 export { ConsoleDriver } from '@/email/drivers/console.js';
 export { ResendDriver } from '@/email/drivers/resend.js';
 export type { ResendDriverOptions } from '@/email/drivers/resend.js';
 export { SmtpDriver } from '@/email/drivers/smtp.js';
 export type { SmtpDriverOptions } from '@/email/drivers/smtp.js';
 export { libsqlDriver } from '@/database/drivers/libsql.js';
-export { d1Driver } from '@/database/drivers/d1.js';
 export { runScheduledJobs } from '@/cron/index.js';
 export { builtInRole, BUILT_IN_ROLES } from '@/permissions/index.js';
 export type { BuiltInRoleSlug } from '@/permissions/index.js';

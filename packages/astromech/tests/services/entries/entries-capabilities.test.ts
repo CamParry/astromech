@@ -32,11 +32,14 @@ function makeCapabilityTestConfig(): AstromechConfig {
             async get() {
                 return null;
             },
+            async stat() {
+                return null;
+            },
             async delete(): Promise<void> {
                 return undefined;
             },
             async list() {
-                return [];
+                return { keys: [] };
             },
         },
         defaultLocale: 'en',

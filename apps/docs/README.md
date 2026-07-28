@@ -7,6 +7,9 @@ This is a living reference; it grows as the project does.
 
 ## Contents
 
+- [configuration/storage.md](configuration/storage.md) — pick and configure a
+  storage driver (`filesystem`, `r2`, `s3`), media access modes and public URLs,
+  signed URLs and the R2 signing trap, and the contract for writing your own.
 - [content/entry-types.md](content/entry-types.md) — declaring entry types: the
   `entries` record, and `defineEntryType` for splitting a type into its own
   module.

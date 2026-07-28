@@ -15,5 +15,6 @@ export const ALL: APIRoute = ({ params, request }) => {
         search: url.searchParams,
         origin: url.origin,
         ifNoneMatch: request.headers.get('if-none-match'),
+        range: request.headers.get('range'),
     });
 };

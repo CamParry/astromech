@@ -10,7 +10,7 @@ import {
 } from './image/url.js';
 import type { ImageFormat } from './image/url.js';
 import { isOptimisableImage } from './image/dimensions.js';
-import type { ImageSource } from '@/types/index.js';
+import type { ImageSource, StorageDriver } from '@/types/index.js';
 
 export type MediaRequestInfo = {
     id: string;
@@ -18,6 +18,8 @@ export type MediaRequestInfo = {
     search: URLSearchParams;
     origin: string;
     ifNoneMatch?: string | null;
+    /** Raw `Range` request header. Honoured for originals only (see below). */
+    range?: string | null;
 };
 
 async function streamToBytes(stream: ReadableStream): Promise<Uint8Array> {
@@ -55,7 +57,7 @@ function extOf(filename: string): string {
 }
 
 export async function handleMediaRequest(info: MediaRequestInfo): Promise<Response> {
-    const { id, search, origin, ifNoneMatch } = info;
+    const { id, search, origin, ifNoneMatch, range } = info;
 
     const media = await mediaApi.get(id);
     if (!media) {
@@ -63,9 +65,6 @@ export async function handleMediaRequest(info: MediaRequestInfo): Promise<Respon
     }
 
     const storage = getStorageDriver();
-    if (!storage) {
-        return new Response('Storage not configured', { status: 500 });
-    }
 
     const params = parseImageParams(search);
     // Derive the extension from the stored record, never the URL path — the URL
@@ -75,26 +74,28 @@ export async function handleMediaRequest(info: MediaRequestInfo): Promise<Respon
 
     // No image params — serve original
     if (params.width == null && params.format == null) {
-        return serveOriginal(
+        return serveOriginal({
             key,
-            media.mimeType,
-            media.metadata?.version ?? null,
+            mimeType: media.mimeType,
+            version: media.metadata?.version ?? null,
             storage,
-            ifNoneMatch
-        );
+            ifNoneMatch,
+            range,
+        });
     }
 
     const imageConfig = getImageConfig();
 
     // No image driver or non-optimisable type — serve original, ignore params
     if (!imageConfig || !isOptimisableImage(media.mimeType)) {
-        return serveOriginal(
+        return serveOriginal({
             key,
-            media.mimeType,
-            media.metadata?.version ?? null,
+            mimeType: media.mimeType,
+            version: media.metadata?.version ?? null,
             storage,
-            ifNoneMatch
-        );
+            ifNoneMatch,
+            range,
+        });
     }
 
     // Validate width
@@ -106,7 +107,14 @@ export async function handleMediaRequest(info: MediaRequestInfo): Promise<Respon
 
     // No version — can't safely version a variant
     if (version == null) {
-        return serveOriginal(key, media.mimeType, null, storage, ifNoneMatch);
+        return serveOriginal({
+            key,
+            mimeType: media.mimeType,
+            version: null,
+            storage,
+            ifNoneMatch,
+            range,
+        });
     }
 
     const wantFormat: ImageFormat = params.format ?? (imageConfig.avif ? 'avif' : 'webp');
@@ -121,7 +129,11 @@ export async function handleMediaRequest(info: MediaRequestInfo): Promise<Respon
         return new Response(null, { status: 302, headers: { Location: location } });
     }
 
-    // All valid: width in allowlist, format explicit, version correct — serve variant
+    // All valid: width in allowlist, format explicit, version correct — serve variant.
+    // A `Range` header is deliberately ignored from here down: variants are images
+    // and are served whole, and one may not exist yet (a cache miss transforms it
+    // on the spot), so there is nothing stable to range over. Ranges are an
+    // originals-only concern — see `serveOriginal`.
     const format = params.format;
     const vKey = variantStorageKey(id, version, params.width, format);
     const etag = `"${version}-${params.width}-${format}"`;
@@ -176,23 +188,120 @@ export async function handleMediaRequest(info: MediaRequestInfo): Promise<Respon
     });
 }
 
-async function serveOriginal(
-    key: string,
-    mimeType: string,
-    version: string | null,
-    storage: NonNullable<ReturnType<typeof getStorageDriver>>,
-    ifNoneMatch?: string | null
-): Promise<Response> {
+/** A single `bytes=` range: either an offset-anchored one or a suffix. */
+type ByteRange = { start: number; end: number | null } | { suffix: number };
+
+/**
+ * Parse a single-range `Range` header.
+ *
+ * Returns null for everything we serve whole: an absent header, a unit other
+ * than `bytes`, a malformed spec, and — deliberately — a multi-range request
+ * (`bytes=0-99,200-299`). RFC 9110 lets a server ignore a `Range` it does not
+ * support and answer 200 with the full representation, which is what a null
+ * here means. Suffix ranges (`bytes=-500`, the last 500 bytes) ARE supported:
+ * silently mis-serving one as `start=0` is the trap this shape avoids.
+ */
+function parseByteRange(header: string | null | undefined): ByteRange | null {
+    if (typeof header !== 'string' || header === '') return null;
+
+    const match = /^bytes=(\d*)-(\d*)$/i.exec(header.trim());
+    if (!match) return null;
+
+    const [, rawStart, rawEnd] = match;
+    if (rawStart === '') {
+        // `bytes=-N` — the last N bytes. `bytes=-` is malformed.
+        if (rawEnd === '') return null;
+        return { suffix: Number(rawEnd) };
+    }
+
+    const start = Number(rawStart);
+    if (rawEnd === '') return { start, end: null };
+
+    const end = Number(rawEnd);
+    // last-pos < first-pos is an invalid spec — ignore the whole field.
+    if (end < start) return null;
+    return { start, end };
+}
+
+/** Resolve a parsed range against the object's real size. */
+function resolveRange(
+    range: ByteRange,
+    totalSize: number
+): { offset: number; length: number } | null {
+    if ('suffix' in range) {
+        if (range.suffix <= 0) return null;
+        const offset = Math.max(0, totalSize - range.suffix);
+        const length = totalSize - offset;
+        return length > 0 ? { offset, length } : null;
+    }
+    if (range.start >= totalSize) return null;
+    const end = range.end === null ? totalSize - 1 : Math.min(range.end, totalSize - 1);
+    return { offset: range.start, length: end - range.start + 1 };
+}
+
+type ServeOriginalInput = {
+    key: string;
+    mimeType: string;
+    version: string | null;
+    storage: StorageDriver;
+    ifNoneMatch?: string | null | undefined;
+    range?: string | null | undefined;
+};
+
+async function serveOriginal(input: ServeOriginalInput): Promise<Response> {
+    const { key, mimeType, version, storage, ifNoneMatch } = input;
     const etag = version ? `"${version}"` : null;
     const cacheControl = 'public, max-age=300, must-revalidate';
 
     // Check the conditional request before touching storage — avoids opening a
-    // read stream we'd immediately discard on a 304.
+    // read stream we'd immediately discard on a 304. This runs before any range
+    // handling: a validated cache entry needs no bytes at all.
     if (etag && ifNoneMatch === etag) {
         return new Response(null, {
             status: 304,
             headers: { 'Cache-Control': cacheControl, ETag: etag },
         });
+    }
+
+    const requested = parseByteRange(input.range);
+    if (requested) {
+        // `stat` first: the range has to be validated against the real size
+        // before asking for it, and an unsatisfiable one must answer 416 with
+        // the total — which we have no object to read it from.
+        const stat = await storage.stat(key);
+        if (!stat) {
+            return new Response('Not found', { status: 404 });
+        }
+
+        const resolved = resolveRange(requested, stat.size);
+        if (!resolved) {
+            return new Response(null, {
+                status: 416,
+                headers: {
+                    'Accept-Ranges': 'bytes',
+                    'Content-Range': `bytes */${stat.size}`,
+                    'Cache-Control': cacheControl,
+                },
+            });
+        }
+
+        const part = await storage.get(key, { range: resolved });
+        if (!part) {
+            return new Response('Not found', { status: 404 });
+        }
+
+        // `size` is the bytes in this body; `totalSize` is the whole object.
+        const last = resolved.offset + part.size - 1;
+        const headers: Record<string, string> = {
+            'Content-Type': mimeType,
+            'Content-Length': String(part.size),
+            'Content-Range': `bytes ${resolved.offset}-${last}/${part.totalSize}`,
+            'Accept-Ranges': 'bytes',
+            'Cache-Control': cacheControl,
+        };
+        if (etag) headers['ETag'] = etag;
+
+        return new Response(part.body, { status: 206, headers });
     }
 
     const obj = await storage.get(key);
@@ -203,6 +312,8 @@ async function serveOriginal(
     const headers: Record<string, string> = {
         'Content-Type': mimeType,
         'Content-Length': String(obj.size),
+        // Advertised on a plain 200 too, so a video client knows it may seek.
+        'Accept-Ranges': 'bytes',
         'Cache-Control': cacheControl,
     };
     if (etag) {
