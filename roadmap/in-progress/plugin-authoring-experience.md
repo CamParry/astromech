@@ -35,7 +35,7 @@ takes a bare `permission: 'view'` and namespaces it, and computes a settings
 - [x] Migrate all five plugins; delete every `plugin.ts`
 - [x] `.tsx` under `src/admin/{fields,pages}/` — rating matches the convention
       seo and backups already used; deleted two dead duplicate components
-- [ ] Rewrite `apps/docs/plugins/authoring.md` for the new surface
+- [x] Rewrite `apps/docs/plugins/authoring.md` for the new surface
 
 ## Known remainders (deliberate, not oversights)
 
