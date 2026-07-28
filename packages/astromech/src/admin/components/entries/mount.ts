@@ -6,9 +6,10 @@
  *
  * Root routes build a mount bound to `Astromech.entries`, an empty cache
  * scope (keys byte-identical to today's), `/entries/{type}` link bases, and
- * `entry:{type}:{action}` permission strings. Plugin routes build a mount
- * bound to a `/plugins/{name}/entries`-rooted client, the plugin name as cache
- * scope, `/plugin/{name}/entries/{type}` link bases, and
+ * `entry:{type}:{action}` permission strings. Plugin routes build a mount on
+ * the SAME client — there is one entries service — carrying the plugin type's
+ * QUALIFIED id (`redirects/redirect`), the plugin name as cache scope,
+ * `/plugin/{name}/entries/{type}` link bases, and
  * `plugin:{namespace}:entry:{type}:{action}` permission strings.
  *
  * Phase 4 refits the page bodies onto the definition layer (derived
@@ -18,13 +19,14 @@
 
 import type { AdminConfig } from '@/types/index.js';
 import type { EntriesApi } from '@/types/index.js';
+import { qualifyEntryType } from '@/entries/type-registry.js';
 
 export type EntryAction = 'read' | 'create' | 'update' | 'delete' | 'publish';
 
 export type EntriesMount = {
     /** Entries client bound to the mount's base path. */
     api: EntriesApi;
-    /** Bare wire type (`post`, `redirect`). */
+    /** Wire type id: bare for a root type (`post`), qualified for a plugin type (`redirects/redirect`). */
     type: string;
     /** Cache scope: `''` (root) or the plugin name. Namespaces react-query keys. */
     cacheScope: string;
@@ -43,8 +45,11 @@ export type EntriesMount = {
 
 /**
  * Build the mount for a plugin-namespaced entry type, or `null` when the
- * plugin or type is unknown (caller renders standard not-found UI). The
- * entries client must be bound to `/plugins/{name}/entries` by the caller.
+ * plugin or type is unknown (caller renders standard not-found UI).
+ *
+ * `type` is the BARE type from the route params (`redirect`); the mount carries
+ * the qualified id the entries service addresses it by, while URLs and
+ * permission strings keep the bare form they have always used.
  */
 export function buildPluginEntriesMount(
     plugins: AdminConfig['plugins'],
@@ -59,7 +64,7 @@ export function buildPluginEntriesMount(
     const ns = plugin.permissionNamespace;
     return {
         api,
-        type,
+        type: qualifyEntryType(name, type),
         cacheScope: name,
         config,
         basePath: `/plugin/${name}/entries/${type}`,

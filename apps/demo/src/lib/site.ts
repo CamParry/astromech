@@ -46,7 +46,7 @@ export function localizedPath(path: string, locale: Locale): string {
  * locale, resolve the slug of the sibling entry for that locale.
  * Returns null if no sibling exists for the target locale.
  *
- * NOTE: the `locales` map from the SDK stores `{ [locale]: entryId }`.
+ * NOTE: the `locales` map returned by Astromech stores `{ [locale]: entryId }`.
  * To get the slug for a different locale, you need to fetch that entry.
  * This helper just returns the entry id so the caller can fetch it.
  */

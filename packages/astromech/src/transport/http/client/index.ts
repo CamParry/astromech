@@ -23,7 +23,7 @@ import type {
     MediaQueryParams,
     Notification,
     NotificationsApi,
-    PluginSdkNamespace,
+    PluginServiceNamespace,
     ResolvedConfig,
     Setting,
     SettingsApi,
@@ -174,6 +174,17 @@ export function createEntriesApi(
     defaultShape: 'public' | 'full' = 'public'
 ): EntriesApi {
     /**
+     * Encode a type id for the `:type` path segment. A plugin entry type is
+     * addressed by its qualified id (`redirects/redirect`), whose separator
+     * would otherwise split into two segments and miss the route; encoded, it
+     * matches `:type` and Hono decodes it back on the server. A bare id encodes
+     * to itself.
+     */
+    function typeSeg(type: string): string {
+        return encodeURIComponent(type);
+    }
+
+    /**
      * Resolve the effective `full` flag for a read call.
      * If the param object has an explicit `full` key (even `false`), use it.
      * Otherwise fall back to the client-level default.
@@ -192,7 +203,7 @@ export function createEntriesApi(
             // Cross-type: /entries/query (no :type). Single-type: /entries/:type/query.
             const path = isArray
                 ? `${basePath}/query`
-                : `${basePath}/${typeParam as string}/query`;
+                : `${basePath}/${typeSeg(typeParam as string)}/query`;
             const full = effectiveFull(params);
             const body = isArray
                 ? { ...params, ...(full !== undefined ? { full } : {}) }
@@ -214,7 +225,7 @@ export function createEntriesApi(
         }): Promise<Entry | null> {
             const full = effectiveFull(params);
             const res = await apiFetch<{ data: Entry } | null>(
-                `${basePath}/${params.type}/${params.id}`,
+                `${basePath}/${typeSeg(params.type)}/${params.id}`,
                 {
                     params: {
                         populate: params.populate?.join(','),
@@ -242,7 +253,7 @@ export function createEntriesApi(
             publishAt?: Date | null;
         }): Promise<Entry> {
             const { type, ...rest } = params;
-            const res = await apiFetch<{ data: Entry }>(`${basePath}/${type}`, {
+            const res = await apiFetch<{ data: Entry }>(`${basePath}/${typeSeg(type)}`, {
                 method: 'POST',
                 body: rest,
             });
@@ -256,13 +267,13 @@ export function createEntriesApi(
         }): Promise<Entry | Entry[]> => {
             if (Array.isArray(params.id)) {
                 const res = await apiFetch<{ data: Entry[] }>(
-                    `${basePath}/${params.type}/bulk-update`,
+                    `${basePath}/${typeSeg(params.type)}/bulk-update`,
                     { method: 'POST', body: { ids: params.id, data: params.data } }
                 );
                 return res.data;
             }
             const res = await apiFetch<{ data: Entry }>(
-                `${basePath}/${params.type}/${params.id as string}`,
+                `${basePath}/${typeSeg(params.type)}/${params.id as string}`,
                 { method: 'PUT', body: params.data }
             );
             return res.data;
@@ -274,16 +285,24 @@ export function createEntriesApi(
             cascadeLocales?: boolean;
         }): Promise<void> {
             if (Array.isArray(params.id)) {
-                await apiFetch<unknown>(`${basePath}/${params.type}/bulk-trash`, {
-                    method: 'POST',
-                    body: { ids: params.id, cascadeLocales: !!params.cascadeLocales },
-                });
+                await apiFetch<unknown>(
+                    `${basePath}/${typeSeg(params.type)}/bulk-trash`,
+                    {
+                        method: 'POST',
+                        body: { ids: params.id, cascadeLocales: !!params.cascadeLocales },
+                    }
+                );
                 return;
             }
-            await apiFetch<unknown>(`${basePath}/${params.type}/${params.id as string}`, {
-                method: 'DELETE',
-                ...(params.cascadeLocales ? { params: { cascadeLocales: true } } : {}),
-            });
+            await apiFetch<unknown>(
+                `${basePath}/${typeSeg(params.type)}/${params.id as string}`,
+                {
+                    method: 'DELETE',
+                    ...(params.cascadeLocales
+                        ? { params: { cascadeLocales: true } }
+                        : {}),
+                }
+            );
         },
 
         async duplicate(params: {
@@ -292,7 +311,7 @@ export function createEntriesApi(
             overrides?: EntryDuplicateOverrides;
         }): Promise<Entry> {
             const res = await apiFetch<{ data: Entry }>(
-                `${basePath}/${params.type}/${params.id}/duplicate`,
+                `${basePath}/${typeSeg(params.type)}/${params.id}/duplicate`,
                 { method: 'POST', body: params.overrides ?? {} }
             );
             return res.data;
@@ -304,13 +323,13 @@ export function createEntriesApi(
         }): Promise<Entry | Entry[]> => {
             if (Array.isArray(params.id)) {
                 const res = await apiFetch<{ data: Entry[] }>(
-                    `${basePath}/${params.type}/bulk-restore`,
+                    `${basePath}/${typeSeg(params.type)}/bulk-restore`,
                     { method: 'POST', body: { ids: params.id } }
                 );
                 return res.data;
             }
             const res = await apiFetch<{ data: Entry }>(
-                `${basePath}/${params.type}/${params.id as string}/restore`,
+                `${basePath}/${typeSeg(params.type)}/${params.id as string}/restore`,
                 { method: 'POST' }
             );
             return res.data;
@@ -322,14 +341,17 @@ export function createEntriesApi(
             cascadeLocales?: boolean;
         }): Promise<void> {
             if (Array.isArray(params.id)) {
-                await apiFetch<unknown>(`${basePath}/${params.type}/bulk-delete`, {
-                    method: 'POST',
-                    body: { ids: params.id, cascadeLocales: !!params.cascadeLocales },
-                });
+                await apiFetch<unknown>(
+                    `${basePath}/${typeSeg(params.type)}/bulk-delete`,
+                    {
+                        method: 'POST',
+                        body: { ids: params.id, cascadeLocales: !!params.cascadeLocales },
+                    }
+                );
                 return;
             }
             await apiFetch<unknown>(
-                `${basePath}/${params.type}/${params.id as string}/force`,
+                `${basePath}/${typeSeg(params.type)}/${params.id as string}/force`,
                 {
                     method: 'DELETE',
                     ...(params.cascadeLocales
@@ -340,14 +362,14 @@ export function createEntriesApi(
         },
 
         async emptyTrash(params: { type: string }): Promise<void> {
-            await apiFetch<unknown>(`${basePath}/${params.type}/trash`, {
+            await apiFetch<unknown>(`${basePath}/${typeSeg(params.type)}/trash`, {
                 method: 'DELETE',
             });
         },
 
         async versions(params: { type: string; id: string }): Promise<EntryVersion[]> {
             const res = await apiFetch<{ data: EntryVersion[] }>(
-                `${basePath}/${params.type}/${params.id}/versions`
+                `${basePath}/${typeSeg(params.type)}/${params.id}/versions`
             );
             return res.data;
         },
@@ -358,7 +380,7 @@ export function createEntriesApi(
             versionId: string;
         }): Promise<Entry> {
             const res = await apiFetch<{ data: Entry }>(
-                `${basePath}/${params.type}/${params.id}/versions/${params.versionId}/restore`,
+                `${basePath}/${typeSeg(params.type)}/${params.id}/versions/${params.versionId}/restore`,
                 { method: 'POST' }
             );
             return res.data;
@@ -369,7 +391,7 @@ export function createEntriesApi(
             id: string;
         }): Promise<IncomingRelation[]> {
             const res = await apiFetch<{ data: IncomingRelation[] }>(
-                `${basePath}/${params.type}/${params.id}/incoming-relations`
+                `${basePath}/${typeSeg(params.type)}/${params.id}/incoming-relations`
             );
             return res.data;
         },
@@ -380,13 +402,13 @@ export function createEntriesApi(
         }): Promise<Entry | Entry[]> => {
             if (Array.isArray(params.id)) {
                 const res = await apiFetch<{ data: Entry[] }>(
-                    `${basePath}/${params.type}/bulk-publish`,
+                    `${basePath}/${typeSeg(params.type)}/bulk-publish`,
                     { method: 'POST', body: { ids: params.id } }
                 );
                 return res.data;
             }
             const res = await apiFetch<{ data: Entry }>(
-                `${basePath}/${params.type}/${params.id as string}/publish`,
+                `${basePath}/${typeSeg(params.type)}/${params.id as string}/publish`,
                 { method: 'POST' }
             );
             return res.data;
@@ -398,13 +420,13 @@ export function createEntriesApi(
         }): Promise<Entry | Entry[]> => {
             if (Array.isArray(params.id)) {
                 const res = await apiFetch<{ data: Entry[] }>(
-                    `${basePath}/${params.type}/bulk-unpublish`,
+                    `${basePath}/${typeSeg(params.type)}/bulk-unpublish`,
                     { method: 'POST', body: { ids: params.id } }
                 );
                 return res.data;
             }
             const res = await apiFetch<{ data: Entry }>(
-                `${basePath}/${params.type}/${params.id as string}/unpublish`,
+                `${basePath}/${typeSeg(params.type)}/${params.id as string}/unpublish`,
                 { method: 'POST' }
             );
             return res.data;
@@ -418,13 +440,13 @@ export function createEntriesApi(
             const publishAtIso = params.publishAt.toISOString();
             if (Array.isArray(params.id)) {
                 const res = await apiFetch<{ data: Entry[] }>(
-                    `${basePath}/${params.type}/bulk-schedule`,
+                    `${basePath}/${typeSeg(params.type)}/bulk-schedule`,
                     { method: 'POST', body: { ids: params.id, publishAt: publishAtIso } }
                 );
                 return res.data;
             }
             const res = await apiFetch<{ data: Entry }>(
-                `${basePath}/${params.type}/${params.id as string}/schedule`,
+                `${basePath}/${typeSeg(params.type)}/${params.id as string}/schedule`,
                 { method: 'POST', body: { publishAt: publishAtIso } }
             );
             return res.data;
@@ -433,7 +455,7 @@ export function createEntriesApi(
         // ── Forward versioning (staged entries) ────────────────────────────
         async createStaged(params: { type: string; id: string }): Promise<Entry> {
             const res = await apiFetch<{ data: Entry }>(
-                `${basePath}/${params.type}/${params.id}/staged`,
+                `${basePath}/${typeSeg(params.type)}/${params.id}/staged`,
                 { method: 'POST' }
             );
             return res.data;
@@ -441,23 +463,26 @@ export function createEntriesApi(
 
         async getStaged(params: { type: string; id: string }): Promise<Entry | null> {
             const res = await apiFetch<{ data: Entry } | null>(
-                `${basePath}/${params.type}/${params.id}/staged`
+                `${basePath}/${typeSeg(params.type)}/${params.id}/staged`
             );
             return res?.data ?? null;
         },
 
         async mergeStaged(params: { type: string; id: string }): Promise<Entry> {
             const res = await apiFetch<{ data: Entry }>(
-                `${basePath}/${params.type}/${params.id}/staged/merge`,
+                `${basePath}/${typeSeg(params.type)}/${params.id}/staged/merge`,
                 { method: 'POST' }
             );
             return res.data;
         },
 
         async deleteStaged(params: { type: string; id: string }): Promise<void> {
-            await apiFetch<unknown>(`${basePath}/${params.type}/${params.id}/staged`, {
-                method: 'DELETE',
-            });
+            await apiFetch<unknown>(
+                `${basePath}/${typeSeg(params.type)}/${params.id}/staged`,
+                {
+                    method: 'DELETE',
+                }
+            );
         },
 
         async issuePreviewToken(params: {
@@ -466,7 +491,7 @@ export function createEntriesApi(
             expiresAt?: Date | null;
         }): Promise<{ token: string }> {
             const res = await apiFetch<{ data: { token: string } }>(
-                `${basePath}/${params.type}/${params.id}/preview-token`,
+                `${basePath}/${typeSeg(params.type)}/${params.id}/preview-token`,
                 {
                     method: 'POST',
                     body: {
@@ -482,7 +507,7 @@ export function createEntriesApi(
 
         async revokePreviewToken(params: { type: string; id: string }): Promise<void> {
             await apiFetch<unknown>(
-                `${basePath}/${params.type}/${params.id}/preview-token`,
+                `${basePath}/${typeSeg(params.type)}/${params.id}/preview-token`,
                 { method: 'DELETE' }
             );
         },
@@ -735,23 +760,11 @@ const notificationsApi: NotificationsApi = {
 
 type FetchMethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
 
-// One entries API per plugin name (paths rooted at `/plugins/{name}/entries`).
-const pluginEntriesCache = new Map<string, EntriesApi>();
-
-function pluginEntriesApi(name: string): EntriesApi {
-    let api = pluginEntriesCache.get(name);
-    if (!api) {
-        api = createEntriesApi(`/plugins/${name}/entries`, 'full');
-        pluginEntriesCache.set(name, api);
-    }
-    return api;
-}
-
-const pluginsApi: PluginSdkNamespace = new Proxy({} as PluginSdkNamespace, {
-    get(_target, nameProp): FetchMethodMap | EntriesApi | undefined {
+const pluginsApi: PluginServiceNamespace = new Proxy({} as PluginServiceNamespace, {
+    get(_target, nameProp): FetchMethodMap | undefined {
         if (typeof nameProp !== 'string' || nameProp === 'then') return undefined;
         // The property key IS the route segment: plugin routes mount under the
-        // plugin's SDK key (`acmeSeo`), so there is nothing to transform here.
+        // plugin's service key (`acmeSeo`), so there is nothing to transform here.
         // Routes deliberately do not mount under the namespace (`acme_seo`) —
         // deriving one from the other on this side would mean inverting a lossy
         // mapping (`acme_2fa` → `acme2fa` → ?).
@@ -760,9 +773,6 @@ const pluginsApi: PluginSdkNamespace = new Proxy({} as PluginSdkNamespace, {
             get(_t, methodProp) {
                 if (typeof methodProp !== 'string' || methodProp === 'then')
                     return undefined;
-                // `entries` is a reserved key: the per-plugin entries sub-API,
-                // not an RPC method.
-                if (methodProp === 'entries') return pluginEntriesApi(name);
                 const method = methodProp;
                 return (input?: unknown) =>
                     apiFetch<unknown>(`/plugins/${name}/${method}`, {

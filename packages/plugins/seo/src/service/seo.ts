@@ -1,13 +1,12 @@
 /**
- * SDK methods for @astromech/seo. Paths come from each entry type's `url`
+ * Service methods for @astromech/seo. Paths come from each entry type's `url`
  * template (core's single source of truth) via `resolveEntryPath`; entry types
  * without a `url` are skipped, so the plugin never guesses a path.
  */
 
 import type { Entry, PluginContext } from 'astromech';
 import { defineServiceMethod } from 'astromech';
-import { resolveEntryPath } from 'astromech/plugin-kit';
-import { NAMESPACE } from '../plugin.js';
+import { resolveEntryPath } from 'astromech';
 import { SEO_FIELD_NAME } from '../types.js';
 import type {
     SeoOverview,
@@ -23,19 +22,13 @@ import {
 } from '../utilities/length.js';
 import { parseSeoMetaValue } from '../utilities/meta-value.js';
 
-/**
- * Settings page blob key for the SEO plugin. The settings page has
- * `path: '/settings'`, so the blob lives at `plugin:<ns>:/settings`.
- */
-const SEO_SETTINGS_KEY = `plugin:${NAMESPACE}:/settings`;
-
 async function footprintEntries(
     ctx: PluginContext
 ): Promise<{ type: string; entry: Entry }[]> {
     const types = ctx.config.entryTypesWithField(SEO_FIELD_NAME);
     const collected: { type: string; entry: Entry }[] = [];
     for (const type of types) {
-        const { data } = await ctx.sdk.entries.query({ type, limit: 'all' });
+        const { data } = await ctx.entries.query({ type, limit: 'all' });
         for (const entry of data as Entry[]) {
             collected.push({ type, entry });
         }
@@ -43,12 +36,16 @@ async function footprintEntries(
     return collected;
 }
 
+/**
+ * Settings page blob key for the SEO plugin. The settings page has
+ * `path: '/settings'`, so the blob lives at `plugin:<ns>:/settings`.
+ */
 async function resolveDefaultOgImage(ctx: PluginContext): Promise<string | null> {
-    const blob = await ctx.sdk.settings.get(SEO_SETTINGS_KEY);
+    const blob = await ctx.settings.get(`plugin:${ctx.plugin.namespace}:/settings`);
     if (blob === null || typeof blob !== 'object' || Array.isArray(blob)) return null;
     const mediaId = (blob as Record<string, unknown>).defaultOgImage;
     if (typeof mediaId !== 'string' || mediaId === '') return null;
-    const media = await ctx.sdk.media.get(mediaId);
+    const media = await ctx.media.get(mediaId);
     return media?.url ?? null;
 }
 
@@ -58,7 +55,7 @@ function entryPath(ctx: PluginContext, type: string, entry: Entry): string | nul
     return template ? resolveEntryPath(template, entry) : null;
 }
 
-export const seoSdk = {
+export const seoService = {
     // Published entries across the plugin footprint, as sitemap URL data.
     // Public so the app's /sitemap.xml endpoint can call it.
     // `void` input: takes no argument, so callers invoke `.sitemap()` bare.
@@ -96,7 +93,7 @@ export const seoSdk = {
                 return null;
             }
 
-            const { data } = await ctx.sdk.entries.query({ type, limit: 'all' });
+            const { data } = await ctx.entries.query({ type, limit: 'all' });
             const entry = (data as Entry[]).find(
                 (candidate) => candidate.slug === slug && candidate.status === 'published'
             );

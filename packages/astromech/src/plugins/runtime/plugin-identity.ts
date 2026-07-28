@@ -3,13 +3,13 @@
  *
  * `package` is the single canonical identifier a plugin declares. Every other
  * representation — table prefix, permission namespace, i18n namespace, HTTP
- * route segment, SDK key — derives from it mechanically. There is no declared
- * name, no alias, and no site-level override: a plugin's physical table names
- * are baked into its shipped migration SQL, so nothing an override could move
- * at boot actually moves.
+ * route segment, service key — derives from it mechanically. There is no
+ * declared name, no alias, and no site-level override: a plugin's physical
+ * table names are baked into its shipped migration SQL, so nothing an
+ * override could move at boot actually moves.
  *
- * Derivation runs ONE direction — `package` → `namespace` → `sdkKey` — and no
- * consumer inverts it. Both steps are lossy, so an inverse would be a guess;
+ * Derivation runs ONE direction — `package` → `namespace` → `serviceKey` — and
+ * no consumer inverts it. Both steps are lossy, so an inverse would be a guess;
  * code that needs another form of an identifier resolves the identity once and
  * reads the field it wants. Anything that re-derives a string backwards from a
  * route segment or a property key is a bug.
@@ -20,7 +20,7 @@
 
 import {
     pluginNamespace,
-    pluginSdkKey,
+    pluginServiceKey,
     type PluginNamespace,
 } from '@/utilities/plugin-namespace.js';
 import type {
@@ -34,9 +34,11 @@ import type {
  * needs the same string — and the same literal type — to build a plugin's
  * table prefix, and the database capability may not import the plugin runtime.
  * Re-exported here because this module is the plugin-identity surface every
- * other consumer (and `astromech/plugin-kit`) imports from.
+ * other internal consumer imports from. Not part of the public surface — see
+ * roadmap/in-progress/plugin-authoring-experience.md (2c): a plugin reads its
+ * own resolved identity off `ctx.plugin` instead of deriving it.
  */
-export { pluginNamespace, pluginSdkKey };
+export { pluginNamespace, pluginServiceKey };
 export type { PluginNamespace };
 
 /** Table-name prefix for a plugin's own tables: `plugin_{namespace}_`. */
@@ -86,7 +88,7 @@ export function resolvePluginIdentity(def: PluginDefinition): ResolvedPluginIden
     const identity: ResolvedPluginIdentity = {
         package: def.package,
         namespace,
-        sdkKey: pluginSdkKey(namespace),
+        serviceKey: pluginServiceKey(namespace),
         permissionNamespace: namespace,
     };
     if (def.version !== undefined) {
@@ -110,11 +112,11 @@ export function resolvePluginPermission(namespace: string, permission: string): 
  * Both derivation steps are lossy, and each has its own collision:
  *   - `package` → `namespace` — `@acme/seo` and unscoped `acme-seo` both give
  *     `acme_seo`, which would share a table prefix and a permission namespace.
- *   - `namespace` → `sdkKey` — `acme_2fa` and `acme2fa` both give `acme2fa`,
+ *   - `namespace` → `serviceKey` — `acme_2fa` and `acme2fa` both give `acme2fa`,
  *     which would share an `Astromech.plugins.*` key and an HTTP route segment.
  *
- * The second check is what makes `sdkKey` safe to treat as a unique lookup key
- * everywhere else, so nothing has to invert the derivation to find a plugin.
+ * The second check is what makes `serviceKey` safe to treat as a unique lookup
+ * key everywhere else, so nothing has to invert the derivation to find a plugin.
  *
  * There is no override for either: the identifiers derive from the package
  * name, so this is the plugin authors' problem to resolve by renaming a
@@ -125,7 +127,7 @@ export function assertNoPluginCollisions(
 ): ResolvedPluginIdentity[] {
     const identities = defs.map(resolvePluginIdentity);
     const byNamespace = new Map<string, string>();
-    const bySdkKey = new Map<string, string>();
+    const byServiceKey = new Map<string, string>();
 
     for (const id of identities) {
         const sameNamespace = byNamespace.get(id.namespace);
@@ -139,17 +141,17 @@ export function assertNoPluginCollisions(
         }
         byNamespace.set(id.namespace, id.package);
 
-        const sameSdkKey = bySdkKey.get(id.sdkKey);
-        if (sameSdkKey !== undefined) {
+        const sameServiceKey = byServiceKey.get(id.serviceKey);
+        if (sameServiceKey !== undefined) {
             throw new Error(
-                `Astromech plugin SDK key collision: "${sameSdkKey}" and "${id.package}" both ` +
-                    `derive the SDK key "${id.sdkKey}", so they would share an ` +
-                    `\`Astromech.plugins.${id.sdkKey}\` property and an HTTP route segment. ` +
-                    `An SDK key is derived from the package name and cannot be overridden — ` +
+                `Astromech plugin service key collision: "${sameServiceKey}" and "${id.package}" both ` +
+                    `derive the service key "${id.serviceKey}", so they would share an ` +
+                    `\`Astromech.plugins.${id.serviceKey}\` property and an HTTP route segment. ` +
+                    `A service key is derived from the package name and cannot be overridden — ` +
                     `one of the two packages has to be renamed by its author.`
             );
         }
-        bySdkKey.set(id.sdkKey, id.package);
+        byServiceKey.set(id.serviceKey, id.package);
     }
 
     return identities;

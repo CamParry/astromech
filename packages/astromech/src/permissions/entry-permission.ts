@@ -21,3 +21,29 @@ export function pluginEntryPermission(
 ): string {
     return `plugin:${permissionNamespace}:entry:${type}:${action}`;
 }
+
+/**
+ * Separator between a plugin's namespace and its bare type in a qualified entry
+ * type id (`redirects/redirect`). Duplicated from `entries/type-registry.ts`
+ * deliberately: `permissions` is a capability and must not import a domain.
+ */
+const QUALIFIED_SEPARATOR = '/';
+
+/**
+ * Derive the permission an action on `typeId` checks, from the type id alone.
+ *
+ * There is one entries router, so the shape of the id is the only signal for
+ * which permission form applies: a qualified id (`<namespace>/<type>`) yields
+ * the plugin form, a bare id the root form. Keeping the two apart is what stops
+ * an `entry:*` grant from reaching plugin entries.
+ *
+ * Safe as a pure string operation — `permissionNamespace` is the namespace
+ * verbatim (`plugins/runtime/plugin-identity.ts`) and namespaces are
+ * collision-checked at config resolve time, so nothing here inverts a lossy
+ * derivation.
+ */
+export function entryPermission(typeId: string, action: EntryAction): string {
+    const index = typeId.indexOf(QUALIFIED_SEPARATOR);
+    if (index === -1) return rootEntryPermission(typeId, action);
+    return pluginEntryPermission(typeId.slice(0, index), typeId.slice(index + 1), action);
+}

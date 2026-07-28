@@ -3,16 +3,14 @@
  * permission declarations (for the admin permission UI). Bundle keys resolve
  * to `plugin:demo_rating:{key}`.
  *
- *   roles: { editor: { permissions: [...ratingPermissions('view')] } }
+ *   roles: { editor: { permissions: [...rating.permissions('view')] } }
  */
 
-import { definePermissionBundles } from 'astromech';
 import type { PluginPermission } from 'astromech';
-import { plugin } from '../plugin.js';
 
-export const ratingPermissions = definePermissionBundles(plugin.package, {
+export const ratingPermissionBundles = {
     view: ['view'],
-});
+} as const;
 
 export const ratingPermissionDefs: PluginPermission[] = [
     {

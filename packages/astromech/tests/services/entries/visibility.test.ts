@@ -2,7 +2,7 @@
  * Unit tests for applyVisibility / applyVisibilityWithRelations.
  *
  * All tests call the functions directly with hand-built Entry + FieldDefinition[]
- * — no SDK, no virtual:astromech/config, no getDb().
+ * — no client, no virtual:astromech/config, no getDb().
  */
 
 import { describe, expect, it } from 'vitest';

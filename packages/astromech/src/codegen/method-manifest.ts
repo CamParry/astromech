@@ -2,7 +2,7 @@
  * Method Manifest Generator
  *
  * Produces a JSON catalogue of every service-method descriptor: core domain
- * methods (users, media, settings), per-type entry methods, and plugin SDK
+ * methods (users, media, settings), per-type entry methods, and plugin service
  * methods. Pure function — callers are responsible for writing the result to
  * disk or injecting it into a virtual module.
  *
@@ -12,7 +12,7 @@
 import { z } from '@hono/zod-openapi';
 import type {
     PluginDefinition,
-    AnyPluginSdkMethod,
+    AnyPluginServiceMethod,
     PluginAccess,
 } from '@/types/index.js';
 import type { ResolvedConfig } from '@/types/index.js';
@@ -83,7 +83,7 @@ type ManifestMethod = {
      * Present when `source === 'entries'`.
      */
     contentSchema?: null;
-    // ── plugin SDK method-specific ────────────────────────────────────────
+    // ── plugin service method-specific ────────────────────────────────────
     /**
      * Normalised access level. Present when `source === 'plugin'`.
      * `'permission'` means an object form with a concrete permission string.
@@ -296,7 +296,7 @@ function buildEntriesMethods(
 }
 
 // ============================================================================
-// Plugin SDK methods group
+// Plugin service methods group
 // ============================================================================
 
 function normaliseAccess(
@@ -306,33 +306,33 @@ function normaliseAccess(
     return access;
 }
 
-function buildPluginSdkMethods(plugins: PluginDefinition[]): ManifestMethod[] {
+function buildPluginServiceMethods(plugins: PluginDefinition[]): ManifestMethod[] {
     const methods: ManifestMethod[] = [];
 
     for (const def of plugins) {
         const identity = resolvePluginIdentity(def);
-        for (const [key, m] of Object.entries(def.sdk ?? {})) {
-            const sdkMethod = m as AnyPluginSdkMethod;
+        for (const [key, m] of Object.entries(def.service ?? {})) {
+            const serviceMethod = m as AnyPluginServiceMethod;
             const method: ManifestMethod = {
-                name: `plugins.${identity.sdkKey}.${key}`,
-                summary: sdkMethod.summary,
+                name: `plugins.${identity.serviceKey}.${key}`,
+                summary: serviceMethod.summary,
                 source: 'plugin',
                 plugin: identity.namespace,
-                access: normaliseAccess(sdkMethod.access),
+                access: normaliseAccess(serviceMethod.access),
                 // Mirror the route's enforcement: bare keys are plugin-scoped
                 // (`view` → `plugin:<ns>:view`); keys with a `:` pass through.
                 permission:
-                    typeof sdkMethod.access === 'object'
+                    typeof serviceMethod.access === 'object'
                         ? resolvePluginPermission(
                               identity.permissionNamespace,
-                              sdkMethod.access.permission
+                              serviceMethod.access.permission
                           )
                         : null,
                 // Default to mutating when undeclared — fail-safe for the future confirm gate.
-                mutates: sdkMethod.mutates ?? true,
-                destructive: sdkMethod.destructive ?? false,
-                idempotent: sdkMethod.idempotent ?? false,
-                effectDeclared: sdkMethod.mutates !== undefined,
+                mutates: serviceMethod.mutates ?? true,
+                destructive: serviceMethod.destructive ?? false,
+                idempotent: serviceMethod.idempotent ?? false,
+                effectDeclared: serviceMethod.mutates !== undefined,
             };
             methods.push(method);
         }
@@ -357,7 +357,7 @@ export function generateMethodManifest(
     const methods: ManifestMethod[] = [
         ...buildCoreMethods(),
         ...buildEntriesMethods(config, plugins),
-        ...buildPluginSdkMethods(plugins),
+        ...buildPluginServiceMethods(plugins),
     ];
 
     // Stable output: sort by method name (ties broken by entryType then plugin).

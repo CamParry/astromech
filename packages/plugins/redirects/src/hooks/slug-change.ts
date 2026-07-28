@@ -8,7 +8,7 @@
 
 import type { DefinedHook, JsonObject } from 'astromech';
 import { defineHook } from 'astromech';
-import { resolveEntryPath } from 'astromech/plugin-kit';
+import { resolveEntryPath } from 'astromech';
 import { REDIRECT_TYPE } from '../types.js';
 
 export const slugChangeHook: DefinedHook = defineHook(
@@ -25,6 +25,10 @@ export const slugChangeHook: DefinedHook = defineHook(
         if (!from || !to || from === to) return;
 
         const fields: JsonObject = { from, to, status: '301', enabled: true };
-        await ctx.entries.create({ type: REDIRECT_TYPE, fields });
+        // Qualified id, built from context — `ctx.entries` is the global service.
+        await ctx.entries.create({
+            type: `${ctx.plugin.namespace}/${REDIRECT_TYPE}`,
+            fields,
+        });
     }
 );

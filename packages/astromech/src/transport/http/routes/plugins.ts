@@ -1,17 +1,21 @@
 /**
  * Plugin RPC + raw routes — mounted at `/api/plugins/*`.
  *
- * RPC: `POST /plugins/{sdkKey}/{method}` calls a plugin's declared SDK method
- * (JSON in/out). Raw routes (binary/multipart/streaming escape hatch) mount at
- * `/plugins/{sdkKey}{route.path}` and receive a Web-standard Request via a thin
- * wrapper (the plugin never touches Hono).
+ * RPC: `POST /plugins/{serviceKey}/{method}` calls a plugin's declared service
+ * method (JSON in/out). Raw routes (binary/multipart/streaming escape hatch)
+ * mount at `/plugins/{serviceKey}{route.path}` and receive a Web-standard
+ * Request via a thin wrapper (the plugin never touches Hono).
  *
- * The route segment is the plugin's SDK key (`acmeSeo`), not its namespace
+ * The route segment is the plugin's service key (`acmeSeo`), not its namespace
  * (`acme_seo`), so that the HTTP client can put its property key straight into
- * the URL: `sdkKey` is derived from `namespace` lossily, and mounting on the
- * namespace would force the client to invert that derivation. Everything below
- * the routing layer — permissions, entry-type qualification, table prefixes —
- * still keys on the namespace, reached through the resolved identity.
+ * the URL: `serviceKey` is derived from `namespace` lossily, and mounting on
+ * the namespace would force the client to invert that derivation. Everything
+ * below the routing layer — permissions, table prefixes — still keys on the
+ * namespace, reached through the resolved identity.
+ *
+ * A plugin's ENTRY types are not served here. They live on the single entries
+ * router at `/entries/{qualified type}` like every other entry type, which
+ * derives `plugin:{ns}:entry:{type}:{action}` from the qualified id itself.
  *
  * Every method/route declares `access`; this router enforces it against the
  * resolved session. It mounts BEFORE the app-wide `requireAuth`, so `public`
@@ -20,20 +24,16 @@
 
 import { Hono } from 'hono';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
-import { optionalAuth, requireAuth } from '@/transport/http/middleware/auth.js';
+import { optionalAuth } from '@/transport/http/middleware/auth.js';
 import { forbidden, notFound, unauthorized } from '@/transport/http/middleware/errors.js';
 import {
     createPluginContext,
-    getPluginEntryMounts,
     getPluginIdentity,
     getPluginRawRoutes,
-    getPluginSdkMethods,
+    getPluginServiceMethods,
 } from '@/plugins/runtime/plugin-runtime.js';
 import { withPermissions } from '@/policies/with-permissions.js';
 import { resolvePluginPermission } from '@/plugins/runtime/plugin-identity.js';
-import { pluginEntryPermission } from '@/permissions/index.js';
-import { qualifyEntryType } from '@/entries/type-registry.js';
-import { createEntriesRouter } from '@/transport/http/routes/entries.js';
 import type { Context } from 'hono';
 import type {
     Permission,
@@ -69,33 +69,10 @@ function enforceAccess(
     return null;
 }
 
-// ── Per-plugin entries mounts (registered before the RPC catch-all so the
-//    static `/{name}/entries` segments win over `/:name/:method`) ────────────
-//
-// Each mount is its own entries router, namespaced to the plugin: bare wire
-// types resolve against `pluginEntries[name]`, the entries service sees the
-// qualified id, and permissions root at `plugin:{ns}:entry:{type}:{action}`.
-// The plugins router runs `optionalAuth` (public RPC), so the entries subtree
-// gets an explicit `requireAuth` — these routes are never public.
-for (const { identity, entryTypes } of getPluginEntryMounts()) {
-    pluginsRouter.use(`/${identity.sdkKey}/entries/*`, requireAuth);
-    // The entries router needs full `AuthVariables` (requireAuth guarantees them
-    // upstream); `.route` onto the partial-typed plugins router needs the cast.
-    pluginsRouter.route(
-        `/${identity.sdkKey}/entries`,
-        createEntriesRouter({
-            lookup: (t) => entryTypes[t],
-            qualify: (t) => qualifyEntryType(identity.namespace, t),
-            permissionFor: (t, a) =>
-                pluginEntryPermission(identity.permissionNamespace, t, a),
-        }) as unknown as Hono<PluginEnv>
-    );
-}
-
 // ── Raw escape-hatch routes (registered before the RPC catch-all) ──────────
 for (const { identity, route } of getPluginRawRoutes()) {
     const method = (route.method ?? 'GET').toUpperCase();
-    const path = `/${identity.sdkKey}${route.path}`;
+    const path = `/${identity.serviceKey}${route.path}`;
     pluginsRouter.on(method, path, (c) => {
         const denied = enforceAccess(c, route.access, identity);
         if (denied) return denied;
@@ -106,29 +83,28 @@ for (const { identity, route } of getPluginRawRoutes()) {
     });
 }
 
-// ── RPC: POST /plugins/{sdkKey}/{method} ───────────────────────────────────
+// ── RPC: POST /plugins/{serviceKey}/{method} ───────────────────────────────
 pluginsRouter.post('/:name/:method', async (c) => {
     const name = c.req.param('name');
     const method = c.req.param('method');
 
-    // Resolve the identity first, then reach the registry through it — the SDK
-    // registry keys on the namespace, and the segment is the SDK key.
+    // Resolve the identity first, then reach the registry through it — the
+    // service registry keys on the namespace, and the segment is the service key.
     const identity = getPluginIdentity(name);
     if (!identity) return notFound(c, `Plugin "${name}" not found`);
 
-    const sdkMethod = getPluginSdkMethods().get(identity.namespace)?.[method];
-    if (!sdkMethod) {
+    const serviceMethod = getPluginServiceMethods().get(identity.namespace)?.[method];
+    if (!serviceMethod) {
         return notFound(c, `Plugin method "${name}.${method}" not found`);
     }
 
-    const denied = enforceAccess(c, sdkMethod.access, identity);
+    const denied = enforceAccess(c, serviceMethod.access, identity);
     if (denied) return denied;
 
     const input = await c.req.json().catch(() => undefined);
-    const result = await (sdkMethod.handler as (i: unknown, c: PluginContext) => unknown)(
-        input,
-        createPluginContext(identity, c.var.user ?? null)
-    );
+    const result = await (
+        serviceMethod.handler as (i: unknown, c: PluginContext) => unknown
+    )(input, createPluginContext(identity, c.var.user ?? null));
     // Build the JSON Response directly: c.json's generic chokes on the
     // recursive JsonValue type. RPC returns the raw handler result.
     return new Response(JSON.stringify(result ?? null), {

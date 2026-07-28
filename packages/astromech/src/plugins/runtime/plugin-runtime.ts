@@ -1,8 +1,8 @@
 /**
  * Plugin runtime.
  *
- * Holds the registry of installed plugins (hooks / sdk / raw routes), builds
- * the unified PluginContext, and runs hooks with the documented failure
+ * Holds the registry of installed plugins (hooks / service / raw routes),
+ * builds the unified PluginContext, and runs hooks with the documented failure
  * semantics: `before*` hooks gate the operation (a throw aborts), `after*`
  * hooks and emitted events are swallow-and-logged (a throw never rolls back).
  *
@@ -14,19 +14,24 @@ import type { Insertable, Kysely, Updateable } from 'kysely';
 import type { DB } from '@/database/types.js';
 import type { ReactElement } from 'react';
 import type {
-    AnyPluginSdkMethod,
+    AnyPluginServiceMethod,
     AstromechClient,
     EntriesApi,
+    MediaApi,
+    NotificationsApi,
     PluginContext,
     PluginConfigView,
     PluginDatabase,
     PluginDefinition,
     PluginLogger,
     PluginRawRoute,
+    PluginServiceNamespace,
     ResolvedConfig,
-    ResolvedEntryTypeConfig,
     ResolvedPluginIdentity,
+    SettingsApi,
+    TypedEntriesApi,
     User,
+    UsersApi,
 } from '@/types/index.js';
 import { getDb } from '@/database/registry.js';
 import {
@@ -50,7 +55,10 @@ import { entryAccess } from '@/plugins/runtime/entry-access.js';
 import { isTableDescriptor } from '@/plugins/runtime/plugin-schema.js';
 import { registerCronJob } from '@/cron/registry.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
-import { withDefaultShape } from '@/utilities/with-default-shape.js';
+import {
+    withDefaultShape,
+    withDefaultSettingsShape,
+} from '@/utilities/with-default-shape.js';
 
 // ============================================================================
 // Registry (globalThis — visible from config:setup through request time)
@@ -65,9 +73,9 @@ type PluginRuntimeState = {
     config: ResolvedConfig | null;
     identities: ResolvedPluginIdentity[];
     hooks: Map<string, RegisteredHook[]>;
-    sdk: Map<string, Record<string, AnyPluginSdkMethod>>;
+    service: Map<string, Record<string, AnyPluginServiceMethod>>;
     rawRoutes: RegisteredRawRoute[];
-    sdkClient: AstromechClient | null;
+    client: AstromechClient | null;
 };
 
 declare global {
@@ -80,9 +88,9 @@ function state(): PluginRuntimeState {
             config: null,
             identities: [],
             hooks: new Map(),
-            sdk: new Map(),
+            service: new Map(),
             rawRoutes: [],
-            sdkClient: null,
+            client: null,
         };
     }
     return globalThis.__astromechPluginRuntime;
@@ -98,7 +106,7 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
     s.config = config;
     s.identities = [];
     s.hooks = new Map();
-    s.sdk = new Map();
+    s.service = new Map();
     s.rawRoutes = [];
     // Drop stale plugin storages before re-registering (test setups re-run this).
     entryAccess().resetEntryStorageOverrides();
@@ -122,25 +130,13 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
             s.hooks.set(event, list);
         }
 
-        if (def.sdk) {
-            // `entries` is reserved for the Phase 3 entries sub-namespace.
-            if ('entries' in def.sdk) {
-                throw new Error(
-                    `Astromech plugin "${def.package}" defines a reserved SDK method "entries". ` +
-                        `The "entries" key is reserved for plugin entry types — rename your method.`
-                );
-            }
-            s.sdk.set(identity.namespace, def.sdk);
-        }
+        // `entries` used to be reserved on both the service map and the
+        // raw-route path — it named the per-plugin entries surface. That
+        // surface is gone (entry types live on the one entries service), so
+        // neither name collides with anything any more.
+        if (def.service) s.service.set(identity.namespace, def.service);
 
         for (const route of def.rawRoutes ?? []) {
-            // `/entries` is reserved for the Phase 3 plugin entries surface.
-            if (route.path === '/entries' || route.path.startsWith('/entries/')) {
-                throw new Error(
-                    `Astromech plugin "${def.package}" defines a raw route "${route.path}" under the ` +
-                        `reserved "/entries" path. That path is reserved for plugin entry types.`
-                );
-            }
             s.rawRoutes.push({ identity, route });
         }
 
@@ -283,62 +279,41 @@ export function hasHookHandlers(event: string): boolean {
 }
 
 /**
- * Resolved identity for a plugin, by SDK key (`acmeSeo`) — the single
+ * Resolved identity for a plugin, by service key (`acmeSeo`) — the single
  * identifier the API surface addresses a plugin by, in both transports and on
- * the wire. Deliberately NOT tolerant of the namespace form: `sdkKey` is
+ * the wire. Deliberately NOT tolerant of the namespace form: `serviceKey` is
  * derived from `namespace` lossily (`acme_2fa` → `acme2fa`), so accepting both
  * would mean guessing an inverse that does not exist. The namespace stays
  * authoritative for tables, permissions and storage prefixes; look those up
  * through the returned identity, never by re-deriving a string.
  */
-export function getPluginIdentity(sdkKey: string): ResolvedPluginIdentity | undefined {
-    return state().identities.find((identity) => identity.sdkKey === sdkKey);
+export function getPluginIdentity(
+    serviceKey: string
+): ResolvedPluginIdentity | undefined {
+    return state().identities.find((identity) => identity.serviceKey === serviceKey);
 }
 
-export function getPluginSdkMethods(): Map<string, Record<string, AnyPluginSdkMethod>> {
-    return state().sdk;
+export function getPluginServiceMethods(): Map<
+    string,
+    Record<string, AnyPluginServiceMethod>
+> {
+    return state().service;
 }
 
 export function getPluginRawRoutes(): RegisteredRawRoute[] {
     return state().rawRoutes;
 }
 
-export type PluginEntryMount = {
-    identity: ResolvedPluginIdentity;
-    entryTypes: Record<string, ResolvedEntryTypeConfig>;
-};
-
-/**
- * The plugin identities that contribute entry types, paired with the resolved
- * config so the API layer can mount a per-plugin entries router. Returns an
- * empty list when config has not been registered. Mirrors `getPluginRawRoutes`:
- * read once at router-build time, after `registerPlugins`.
- */
-export function getPluginEntryMounts(): PluginEntryMount[] {
-    const s = state();
-    if (!s.config) return [];
-    const mounts: PluginEntryMount[] = [];
-    for (const identity of s.identities) {
-        const entryTypes = s.config.pluginEntries[identity.namespace];
-        if (entryTypes && Object.keys(entryTypes).length > 0) {
-            mounts.push({ identity, entryTypes });
-        }
-    }
-    return mounts;
-}
-
 /** Set by the Local API at module load to break the import cycle. */
-export function setPluginSdkClient(client: AstromechClient): void {
-    state().sdkClient = client;
+export function setPluginClient(client: AstromechClient): void {
+    state().client = client;
 }
 
-/** The registered SDK client, or crash-loud if a context reaches for it too early. */
-function requireSdkClient(): AstromechClient {
-    const client = state().sdkClient;
+/** The registered client, or crash-loud if a context reaches for it too early. */
+function requireClient(): AstromechClient {
+    const client = state().client;
     if (!client) {
-        throw new Error(
-            '[Astromech] Plugin SDK client is not available in this context.'
-        );
+        throw new Error('[Astromech] Plugin client is not available in this context.');
     }
     return client;
 }
@@ -402,8 +377,9 @@ async function sendEmail(
 
 /**
  * Build the unified PluginContext for a given plugin and acting user. `db` and
- * `sdk` are lazy so a context can be constructed in environments where they are
- * not yet wired (e.g. unit tests that exercise only hook semantics).
+ * every domain are lazy getters so a context can be constructed in environments
+ * where they are not yet wired (e.g. unit tests that exercise only hook
+ * semantics).
  */
 export function createPluginContext(
     identity: ResolvedPluginIdentity,
@@ -417,22 +393,36 @@ export function createPluginContext(
         get db(): Kysely<DB> {
             return getDb();
         },
+        plugin: identity,
         config: configView,
         user,
-        get sdk(): AstromechClient {
-            return requireSdkClient();
+        // The domains, flattened onto the context. These are the global services
+        // — a plugin addresses its own entry types explicitly by their qualified
+        // id (`` `${ctx.plugin.namespace}/redirect` ``) rather than through a
+        // scoping wrapper. Both domains with a shape axis default to `full`:
+        // plugin altitude is trusted server code, and a `public` default hands it
+        // sanitized rich text, stripped private fields and null private settings.
+        get entries(): TypedEntriesApi {
+            return withDefaultShape(
+                requireClient().entries as unknown as EntriesApi,
+                'full'
+            ) as unknown as TypedEntriesApi;
         },
-        get entries(): EntriesApi {
-            // Auto-scoped to this plugin's own entry types: bare keys in, qualified
-            // ids out. Default shape is `full` (privileged server RMW context, per
-            // spec §7.1 decision 7). An explicit per-call `full` still wins.
-            return entryAccess().createScopedEntries(
-                identity.namespace,
-                withDefaultShape(
-                    requireSdkClient().entries as unknown as EntriesApi,
-                    'full'
-                )
-            );
+        // media / users / notifications have no shape axis, so they pass through.
+        get media(): MediaApi {
+            return requireClient().media;
+        },
+        get settings(): SettingsApi {
+            return withDefaultSettingsShape(requireClient().settings, 'full');
+        },
+        get users(): UsersApi {
+            return requireClient().users;
+        },
+        get notifications(): NotificationsApi {
+            return requireClient().notifications;
+        },
+        get plugins(): PluginServiceNamespace | undefined {
+            return requireClient().plugins;
         },
         sendEmail,
         notify: (input: NotifyInput) =>

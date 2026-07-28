@@ -3,7 +3,7 @@
  *
  * The `/plugin/$` catch-all provides the identity of the plugin whose
  * surface is rendering; the hook hands plugin components their runtime
- * toolbox: `{ sdk, toast, modal, currentUser, navigate, t }`, with `t`
+ * toolbox: `{ service, toast, modal, currentUser, navigate, t }`, with `t`
  * pre-scoped to the plugin's i18n namespace (= its derived namespace).
  */
 
@@ -19,13 +19,14 @@ export type PluginUiIdentity = {
     /** The plugin's derived namespace, e.g. `seo` — also its admin route segment. */
     namespace: string;
     /**
-     * The plugin's derived SDK key, e.g. `acmeSeo` — the `Astromech.plugins.*`
-     * property. Supplied by whoever renders the surface rather than computed
-     * from `namespace` here: the namespace → SDK key derivation is lossy, so it
-     * cannot be run backwards, and running it forwards in the browser would be
-     * a second implementation of a rule the server already resolved.
+     * The plugin's derived service key, e.g. `acmeSeo` — the
+     * `Astromech.plugins.*` property. Supplied by whoever renders the surface
+     * rather than computed from `namespace` here: the namespace → service key
+     * derivation is lossy, so it cannot be run backwards, and running it
+     * forwards in the browser would be a second implementation of a rule the
+     * server already resolved.
      */
-    sdkKey: string;
+    serviceKey: string;
     /** i18n namespace + permission anchor. Same string as `namespace`. */
     permissionNamespace: string;
 };
@@ -61,7 +62,7 @@ export function useAstromechPlugin() {
 
     return {
         plugin: identity.namespace,
-        sdk: (Astromech.plugins as Record<string, unknown>)[identity.sdkKey],
+        service: (Astromech.plugins as Record<string, unknown>)[identity.serviceKey],
         toast,
         modal: confirm,
         currentUser: user,

@@ -3,7 +3,7 @@
 Search metadata for any entry type: a composed `seo` field group (meta title +
 description with length recommendations and a search preview), an SEO health
 dashboard, a default Open Graph image setting, and public `sitemap` / `meta`
-SDK methods. Non-AI affordances only — AI metadata writing is a future phase.
+service methods. Non-AI affordances only — AI metadata writing is a future phase.
 
 ## Install
 

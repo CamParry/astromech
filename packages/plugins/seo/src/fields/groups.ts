@@ -6,12 +6,34 @@
  */
 
 import { group, section, text, textarea } from 'astromech/fields';
-import type { FieldDefinition, Label } from 'astromech';
-import { tKey } from '../plugin.js';
+import { t } from 'astromech';
+import type { FieldDefinition, Label, MessageDescriptor } from 'astromech';
 import { SEO_FIELD_NAME } from '../types.js';
 import { SEO_DESCRIPTION_RANGE, SEO_TITLE_RANGE } from '../utilities/length.js';
 
 export type SeoSectionOptions = { label?: Label };
+
+/**
+ * `seoSection()` is host-facing: a site calls it directly from its own
+ * entry-type config, before any plugin runtime exists, so there is no
+ * `PluginContext` to read `ctx.plugin.namespace` from. `NAMESPACE` is a
+ * deliberate package-local stand-in for that — the real fix is hanging
+ * host-facing helpers off the plugin factory (`seo.section()`), tracked as
+ * Phase 3 in roadmap/in-progress/plugin-authoring-experience.md. The
+ * `@astromech/seo` → `seo` derivation is stable and collision-checked at
+ * resolve time, so hand-writing it here is safe, just not elegant.
+ *
+ * Plugin labels are composed into arbitrary entry types (including core
+ * ones), so a bare `t('seo.x')` would resolve against the host entry's
+ * namespace and miss. Prefixing with the namespace (`seo:seo.x`) pins
+ * resolution to this plugin's bundle regardless of where the section is
+ * mounted.
+ */
+const NAMESPACE = 'seo';
+
+function tKey(key: string): MessageDescriptor {
+    return t(`${NAMESPACE}:${key}`);
+}
 
 /**
  * Field-section factory — compose into an entry type's `fields`. Renders a

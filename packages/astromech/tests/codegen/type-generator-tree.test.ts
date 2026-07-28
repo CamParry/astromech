@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateSdkTypes } from '@/codegen/type-generator.js';
+import { generateClientTypes } from '@/codegen/type-generator.js';
 import type { ResolvedConfig } from '@/types/index.js';
 
 function makeConfig(fields: object[]): ResolvedConfig {
@@ -30,7 +30,7 @@ describe('type-generator — tree field', () => {
             },
         ]);
 
-        const output = generateSdkTypes(config);
+        const output = generateClientTypes(config);
 
         // Named node interface must appear.
         expect(output).toContain('export interface NavItemsTreeNode');
@@ -49,7 +49,7 @@ describe('type-generator — tree field', () => {
             },
         ]);
 
-        const output = generateSdkTypes(config);
+        const output = generateClientTypes(config);
 
         expect(output).toContain('_id: string;');
         expect(output).toContain('_disabled?: boolean;');
@@ -67,7 +67,7 @@ describe('type-generator — tree field', () => {
             },
         ]);
 
-        const output = generateSdkTypes(config);
+        const output = generateClientTypes(config);
 
         expect(output).toContain('label?: string;');
         expect(output).toContain('count?: number;');
@@ -82,7 +82,7 @@ describe('type-generator — tree field', () => {
             },
         ]);
 
-        const output = generateSdkTypes(config);
+        const output = generateClientTypes(config);
 
         const nodePos = output.indexOf('export interface MenuItemsTreeNode');
         const fieldsPos = output.indexOf('export interface PagesFields');
@@ -101,7 +101,7 @@ describe('type-generator — tree field', () => {
             },
         ]);
 
-        const output = generateSdkTypes(config);
+        const output = generateClientTypes(config);
 
         // Required field — no optional marker.
         expect(output).toContain('items: ItemsTreeNode[]');

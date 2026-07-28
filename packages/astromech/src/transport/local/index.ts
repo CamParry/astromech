@@ -10,13 +10,17 @@
  */
 
 import config from 'virtual:astromech/config';
-import type { AstromechClient, NotificationsApi, TypedEntriesApi } from '@/types/index.js';
+import type {
+    AstromechClient,
+    NotificationsApi,
+    TypedEntriesApi,
+} from '@/types/index.js';
 import { usersApi } from '@/users/index.js';
 import { entries, initServerContext } from '@/entries/index.js';
 import { mediaApi } from '@/media/index.js';
 import { settingsApi } from '@/settings/index.js';
 import { setCurrentUser } from '@/context/index.js';
-import { setPluginSdkClient } from '@/plugins/runtime/plugin-runtime.js';
+import { setPluginClient } from '@/plugins/runtime/plugin-runtime.js';
 import { localPlugins } from '@/transport/local/plugins.js';
 
 export { initServerContext, setCurrentUser };
@@ -27,7 +31,7 @@ export { initServerContext, setCurrentUser };
 
 const notImplemented = (): never => {
     throw new Error(
-        '[Astromech] notifications are session-scoped and not available in the in-process SDK; use ctx.notify to emit, or the HTTP API to read.'
+        '[Astromech] notifications are session-scoped and not available in the in-process client; use ctx.notify to emit, or the HTTP API to read.'
     );
 };
 
@@ -51,8 +55,9 @@ export const Astromech: AstromechClient = {
     },
 };
 
-// Register the client so plugin contexts can reach `ctx.sdk` without a static
-// import cycle (plugin-runtime → transport/local → plugin-runtime).
-setPluginSdkClient(Astromech);
+// Register the client so plugin contexts can reach the flattened domains
+// (`ctx.entries`, `ctx.media`, …) without a static import cycle
+// (plugin-runtime → transport/local → plugin-runtime).
+setPluginClient(Astromech);
 
 export default Astromech;

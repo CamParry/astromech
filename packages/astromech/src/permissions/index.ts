@@ -2,17 +2,17 @@
  * Roles & Permission utilities
  *
  * Roles are code-defined (AstromechConfig.roles + built-in defaults).
- * The server SDK bypasses permission checks by design — only the HTTP API enforces them.
+ * The local transport bypasses permission checks by design — only the HTTP API enforces them.
  */
 
 import type { AstromechConfig, ResolvedConfig } from '@/types/config.js';
 import type { Permission, Role } from '@/types/domain.js';
 
 import { hasPermission as hasPermissionImpl } from '@/utilities/permission-match.js';
-import { pluginNamespace } from '@/utilities/plugin-namespace.js';
 export { hasPermission, matchesPermission } from '@/utilities/permission-match.js';
 export {
     type EntryAction,
+    entryPermission,
     rootEntryPermission,
     pluginEntryPermission,
 } from '@/permissions/entry-permission.js';
@@ -57,28 +57,6 @@ export function builtInRole(slug: BuiltInRoleSlug): Permission[] {
         );
     }
     return [...role.permissions];
-}
-
-/**
- * Define named permission bundles for a plugin. Every bundle entry is
- * prefixed `plugin:{ns}:` (ns = the plugin's derived namespace) — including keys that
- * already contain `:`, so nested keys like `entry:redirect:read` become
- * `plugin:{ns}:entry:redirect:read`. Bundles never grant core permissions;
- * users compose those via builtInRole() or literals.
- */
-export function definePermissionBundles<
-    const B extends Record<string, readonly string[]>,
->(pkg: string, bundles: B): (bundle: keyof B & string) => Permission[] {
-    const namespace = pluginNamespace(pkg);
-    return (bundle) => {
-        const keys = bundles[bundle];
-        if (!keys) {
-            throw new Error(
-                `Unknown permission bundle "${bundle}" for ${pkg}. Available: ${Object.keys(bundles).join(', ')}`
-            );
-        }
-        return keys.map((key) => `plugin:${namespace}:${key}` as Permission);
-    };
 }
 
 // ============================================================================

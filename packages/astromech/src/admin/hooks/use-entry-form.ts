@@ -4,7 +4,7 @@
  * Owns: useForm setup, buildPayload, save/publish mutations, Cmd+S shortcut,
  * beforeunload dirty-state guard, and toast error handling.
  *
- * The caller supplies `saveFn` / `publishFn` as the actual SDK calls so that
+ * The caller supplies `saveFn` / `publishFn` as the actual client calls so that
  * create and edit can use different endpoints while sharing everything else.
  */
 

@@ -5,12 +5,11 @@
  */
 
 import { defineAdminPage } from 'astromech';
-import { asset } from '../plugin.js';
 
 export const overviewPage = defineAdminPage({
     path: '/overview',
     label: 'Overview',
     icon: 'Gauge',
-    component: asset('admin/pages/overview-page.tsx'),
+    component: './admin/pages/overview-page.tsx',
     permission: 'view',
 });

@@ -4,16 +4,23 @@
  *
  * A plugin's tables live in the same database as the app's, so they are
  * namespaced: `plugin_<namespace>_<name>`, where the namespace derives from the
- * plugin's `package` and nothing else. Taking the identity object as the first
- * argument means no call site hand-writes a prefixed string, no plugin can
- * accidentally ship an unprefixed table, and the prefix can never disagree with
- * the one the runtime computes for permissions, routes and migrations.
+ * plugin's `package` and nothing else. Taking the package as the first argument
+ * means no call site hand-writes a prefixed string, no plugin can accidentally
+ * ship an unprefixed table, and the prefix can never disagree with the one the
+ * runtime computes for permissions, routes and migrations.
+ *
+ * The package is passed here as a value — rather than read from the plugin's
+ * definition — because the prefix has to exist as a literal *type* for
+ * `PluginDB` to key on, and a descriptor declared at module scope cannot reach
+ * a value that lives inside `definePlugin`. Keep that literal in a
+ * dependency-free module the definition also imports, so the package name is
+ * still written exactly once.
  *
  * ```ts
- * import { definePluginTable } from 'astromech/plugin-kit';
- * import { plugin } from '../plugin.js';
+ * import { definePluginTable } from 'astromech';
+ * import { BACKUPS_PACKAGE } from '../types.js';
  *
- * export const runsTable = definePluginTable(plugin, 'runs', ({ col }) => ({
+ * export const runsTable = definePluginTable(BACKUPS_PACKAGE, 'runs', ({ col }) => ({
  *     id: col.id(),
  *     status: col.text({ notNull: true }),
  * }));
@@ -38,6 +45,16 @@ import {
 import { pluginNamespace, type PluginNamespace } from '@/utilities/plugin-namespace.js';
 import type { PluginIdentity } from '@/types/plugins.js';
 
+/** Accepted first argument: the package name, or any object carrying one. */
+type PackageSource = string | PluginIdentity;
+
+/** The package name a {@link PackageSource} denotes, as a literal type. */
+type PackageOf<S extends PackageSource> = S extends string
+    ? S
+    : S extends { package: infer P extends string }
+      ? P
+      : never;
+
 const TABLE_NAME_PATTERN = /^[a-z0-9_]+$/;
 
 /**
@@ -49,16 +66,17 @@ const TABLE_NAME_PATTERN = /^[a-z0-9_]+$/;
  * malformed or already-prefixed table name.
  */
 export function definePluginTable<
-    const I extends PluginIdentity,
+    const S extends PackageSource,
     const N extends string,
     const C extends AnyCols,
 >(
-    identity: I,
+    source: S,
     name: N,
     cols: (helpers: { col: ColFactory }) => C,
     indexes?: (helpers: { index: IndexFactory }) => IndexSpec[]
-): TableDescriptor<C, `plugin_${PluginNamespace<I['package']>}_${N}`> {
-    const namespace = pluginNamespace(identity.package);
+): TableDescriptor<C, `plugin_${PluginNamespace<PackageOf<S>>}_${N}`> {
+    const pkg = typeof source === 'string' ? source : source.package;
+    const namespace = pluginNamespace(pkg);
     // Same shape as `pluginTablePrefix(namespace)` in
     // `plugins/runtime/plugin-identity.ts`; only the derivation is shared (via
     // the pure leaf), so the database layer keeps no dependency on the runtime.
@@ -78,7 +96,7 @@ export function definePluginTable<
     }
 
     return defineTable(
-        `${prefix}${name}` as `plugin_${PluginNamespace<I['package']>}_${N}`,
+        `${prefix}${name}` as `plugin_${PluginNamespace<PackageOf<S>>}_${N}`,
         cols,
         indexes
             ? (helpers) =>

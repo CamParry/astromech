@@ -1,7 +1,7 @@
 /**
  * SEO settings — an auto-rendered settings form at
  * `/admin/plugin/seo/settings`. Holds the default Open Graph image, returned
- * by the `meta` SDK method when an entry has no image of its own.
+ * by the `meta` service method when an entry has no image of its own.
  *
  * Values are stored as one object blob at `plugin:astromech-seo:/settings`
  * in the core settings table.
@@ -18,7 +18,7 @@ export const settingsPage = defineAdminPage({
         fields.media('defaultOgImage', {
             label: 'Default Open Graph image',
             description:
-                'Returned by the meta SDK method when an entry has no image of its own.',
+                'Returned by the meta service method when an entry has no image of its own.',
         }),
     ],
 });

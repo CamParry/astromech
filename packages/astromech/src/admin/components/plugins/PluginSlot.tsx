@@ -44,7 +44,7 @@ export function PluginSlot({ name }: { name: AdminSlotName }): React.ReactElemen
                         key={c.id}
                         identity={{
                             namespace: c.plugin,
-                            sdkKey: c.sdkKey,
+                            serviceKey: c.serviceKey,
                             permissionNamespace: c.namespace,
                         }}
                     >

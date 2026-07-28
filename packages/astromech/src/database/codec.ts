@@ -199,8 +199,8 @@ export function encodePatch(
 // ============================================================================
 // Descriptor-keyed API — the same three conversions, addressed by descriptor
 // rather than by table-name string. Plugin code holds its own descriptors, so
-// it decodes rows without needing to know the `DB` key. Exported via
-// `astromech/plugin-kit`.
+// it decodes rows without needing to know the `DB` key. Exported from root
+// `astromech`.
 // ============================================================================
 
 /** Storage → JS for one descriptor's row. */

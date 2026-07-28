@@ -19,10 +19,10 @@ import type {
     StorageObject,
 } from './config.js';
 import type { FieldDefinition, FieldValidator } from './fields.js';
-import type { User, NotifyInput } from './domain.js';
+import type { User, NotifyInput, Permission } from './domain.js';
 import type { PluginHooks } from './hooks.js';
-import type { AstromechClient } from './sdk.js';
-import type { EntriesApi } from './api.js';
+import type { PluginServiceNamespace, TypedEntriesApi } from './client.js';
+import type { MediaApi, NotificationsApi, SettingsApi, UsersApi } from './api.js';
 import type { ServiceMethodEffect } from './services.js';
 
 // ============================================================================
@@ -35,7 +35,7 @@ export type EmailTemplateOverride = {
 };
 
 // ============================================================================
-// Plugin Context — unified across hooks / sdk / cron / api
+// Plugin Context — unified across hooks / service / cron / api
 // ============================================================================
 
 /** Storage scoped to a plugin — keys are transparently namespaced under `plugin/<alias>/`. */
@@ -79,16 +79,35 @@ export type PluginConfigView = ResolvedConfig & {
 
 export type PluginContext = {
     db: Kysely<DB>;
+    /**
+     * This plugin's own resolved identity. Runtime code that needs a namespaced
+     * string — a settings key, a permission, an i18n bundle name — reads it
+     * from here rather than importing an identity module, which is what keeps a
+     * plugin's sub-modules free of any dependency on its identity.
+     */
+    plugin: ResolvedPluginIdentity;
     config: PluginConfigView;
     /** The acting user, or null for unauthenticated / system contexts. */
     user: User | null;
-    sdk: AstromechClient;
     /**
-     * Entries API auto-scoped to this plugin's own entry types. Address types by
-     * their bare keys (`'redirect'`, not `'myplugin/redirect'`); the wrapper
-     * qualifies them. No permission checks — server-side plugin altitude.
+     * The GLOBAL entries service — not scoped, not qualified. A plugin addresses
+     * its own types explicitly, built from context rather than an import:
+     * `` ctx.entries.query({ type: `${ctx.plugin.namespace}/redirect` }) ``.
+     * Reads default to the `full` shape (plugin altitude is trusted server code);
+     * an explicit per-call `full` still wins. No permission checks — HTTP is the
+     * enforcement boundary.
      */
-    entries: EntriesApi;
+    entries: TypedEntriesApi;
+    /** The global media service. */
+    media: MediaApi;
+    /** The global settings service. Reads default to the `full` shape. */
+    settings: SettingsApi;
+    /** The global users service. */
+    users: UsersApi;
+    /** The global notifications service (session-scoped). */
+    notifications: NotificationsApi;
+    /** Other plugins' service methods — `ctx.plugins.<serviceKey>.<method>(input)`. */
+    plugins?: PluginServiceNamespace | undefined;
     sendEmail: (to: string, subject: string, element: ReactElement) => Promise<void>;
     notify: (input: NotifyInput) => Promise<void>;
     logger: PluginLogger;
@@ -103,24 +122,24 @@ export type PluginContext = {
 };
 
 // ============================================================================
-// SDK methods + raw escape hatch
+// Service methods + raw escape hatch
 // ============================================================================
 
 /**
- * Access policy for a plugin SDK method or raw route. There is no default —
- * omitting `access` is a build error (the field is required).
+ * Access policy for a plugin service method or raw route. There is no
+ * default — omitting `access` is a build error (the field is required).
  */
 export type PluginAccess = 'public' | 'authenticated' | { permission: string };
 
-export type PluginSdkMethod<Input = unknown, Output = unknown> = {
+export type PluginServiceMethod<Input = unknown, Output = unknown> = {
     access: PluginAccess;
     handler: (input: Input, ctx: PluginContext) => Promise<Output> | Output;
     /** One-line summary for the method manifest (discovery / MCP / AI tool-loop). */
     summary?: string;
 } & Partial<ServiceMethodEffect>;
 
-/** Collection element for a plugin's sdk record: variance-safe over any concrete method. */
-export type AnyPluginSdkMethod = PluginSdkMethod<never, unknown>;
+/** Collection element for a plugin's service record: variance-safe over any concrete method. */
+export type AnyPluginServiceMethod = PluginServiceMethod<never, unknown>;
 
 /**
  * Raw request handler for payloads RPC-JSON can't carry (binary / multipart /
@@ -222,23 +241,26 @@ export type PluginFieldTypeRegistration = {
 /**
  * What a plugin declares about itself, and nothing more. `package` is the one
  * canonical identifier — the namespace behind every table prefix, permission
- * string, i18n bundle and SDK key is derived from it mechanically, and cannot
- * be declared or overridden.
+ * string, i18n bundle and service key is derived from it mechanically, and
+ * cannot be declared or overridden.
  *
- * A plugin package exports one of these (`plugin.ts`) and passes it to both
- * `definePlugin` and `definePluginTable`:
+ * Identity is declared inline in the plugin's `definePlugin` call, alongside
+ * everything else the plugin contributes — a plugin never passes its own
+ * identity to itself:
  *
  * ```ts
- * export const plugin = {
+ * export const redirects = definePlugin({
  *     package: '@astromech/redirects',
  *     version: '0.1.0',
  *     label: 'Redirects',
  *     icon: 'Signpost',
- * } as const satisfies PluginIdentity;
+ *     // ...the rest of the definition...
+ * });
  * ```
  *
- * `as const` is what gives `package` a literal type, which is what lets
- * `definePluginTable` derive a literal table name for `PluginDB`.
+ * `definePluginTable` still takes a package name directly, because it needs
+ * that string as a *literal type* to derive a table name for `PluginDB` — a
+ * value declared inside the definition can't reach a module-scope descriptor.
  */
 export type PluginIdentity = {
     /** Canonical package name, e.g. `@astromech/redirects`. */
@@ -255,8 +277,39 @@ export type PluginIdentity = {
 };
 
 export type PluginDefinition = PluginIdentity & {
+    /**
+     * Base for resolving this plugin's *relative* asset specifiers (`'./admin/
+     * pages/overview.tsx'`) on `fields`, `admin.pages`, `admin.slots` and
+     * `i18n`. Declared once here so no sub-module has to build a path.
+     *
+     * Pass `import.meta.url` from the module holding the definition; an
+     * in-tree or otherwise unpublished plugin needs this, because its assets
+     * have no package specifier to resolve through. Omit it for a published
+     * package and relative specifiers resolve to `<package>/<path>` instead —
+     * the subpath the package exports them under.
+     *
+     * Absolute and bare specifiers are passed through untouched, so an asset
+     * that lives outside the plugin can still be named directly.
+     */
+    root?: string;
+
     // ── Declarative surfaces ────────────────────────────────────────────
     permissions?: PluginPermission[];
+    /**
+     * Named permission bundles a *site* composes into its roles, surfaced on
+     * the plugin factory with the namespace already applied:
+     *
+     * ```ts
+     * permissionBundles: { manage: ['read', 'run'], view: ['read'] }
+     * // site: roles: { admin: { permissions: [...backups.permissions('manage')] } }
+     * ```
+     *
+     * Keys are plugin-scoped exactly like `permissions[].key` — including keys
+     * that already contain `:`, so `entry:redirect:read` becomes
+     * `plugin:redirects:entry:redirect:read`. Bundles never grant core
+     * permissions; sites compose those via `builtInRole()` or literals.
+     */
+    permissionBundles?: Record<string, readonly string[]>;
     /** Entry types contributed by the plugin. Each self-declares its `type`. */
     entries?: EntryTypeConfig[];
     fields?: PluginFieldTypeRegistration[];
@@ -272,7 +325,7 @@ export type PluginDefinition = PluginIdentity & {
      * files keep their bare `NNNN_<tag>` names.
      */
     migrations?: MigrationProvider;
-    sdk?: Record<string, AnyPluginSdkMethod>;
+    service?: Record<string, AnyPluginServiceMethod>;
     rawRoutes?: PluginRawRoute[];
     hooks?: PluginHooks;
     /** Custom events this plugin fires via `ctx.emit`. Type-augmented in 18b. */
@@ -280,12 +333,15 @@ export type PluginDefinition = PluginIdentity & {
     cron?: PluginCronJob[];
     admin?: PluginAdmin;
     /**
-     * Admin-UI locale resources, keyed by locale code. Values are import
-     * specifiers (STRINGS, e.g. `'./locales/en.json'` resolved by the
-     * plugin) so the code-gen virtual module can emit lazy `import()` calls
-     * (spec §11). Namespace = the derived plugin namespace.
+     * Admin-UI locale resources. Namespace = the derived plugin namespace.
+     *
+     * Usually just the locale codes — `['en', 'fr']` — which expand to
+     * `./locales/<code>.json` and resolve against {@link PluginDefinition.root}
+     * like any other asset. Pass a `{ locale: specifier }` map instead when the
+     * bundles don't follow that layout. Values are import specifiers (STRINGS)
+     * so the code-gen virtual module can emit lazy `import()` calls (spec §11).
      */
-    i18n?: Record<string, string>;
+    i18n?: string[] | Record<string, string>;
     requiredEnv?: string[];
     /** Package name → semver range. Existence + basic range check only. */
     dependsOn?: Record<string, string>;
@@ -296,8 +352,25 @@ export type PluginDefinition = PluginIdentity & {
     setup?: (ctx: PluginContext) => void | Promise<void>;
 };
 
-/** The result of a plugin factory — what users place in `config.plugins`. */
-export type PluginFactory<Options = void> = (options?: Options) => PluginDefinition;
+/**
+ * What `definePlugin` returns and a plugin package exports. Calling it yields
+ * the definition a site places in `config.plugins`; `permissions(bundle)`
+ * resolves one of the definition's `permissionBundles` to fully-namespaced
+ * permission strings, so a site composes roles without importing anything else
+ * from the package.
+ *
+ * `Def` is the definition's own type, which is what keeps the bundle names
+ * literal — `seo.permissions('view')` type-checks, `seo.permissions('viwe')`
+ * does not.
+ */
+export type PluginFactory<
+    Options = void,
+    Def extends PluginDefinition = PluginDefinition,
+> = ((options?: Options) => Def) & {
+    permissions: (
+        bundle: Def extends { permissionBundles: infer B } ? keyof B & string : string
+    ) => Permission[];
+};
 
 /**
  * Fully-derived plugin identity, computed once during config resolution.
@@ -306,13 +379,13 @@ export type PluginFactory<Options = void> = (options?: Options) => PluginDefinit
  * prefix, i18n bundle, HTTP route segment and permission strings all use it.
  * `permissionNamespace` is the same string, kept as its own field because
  * permission call sites read better naming what they anchor to.
- * `sdkKey` is the camelCase form, used only where a JS property key is
- * required (`sdk.acmeSeo`, `Astromech.plugins.acmeSeo`).
+ * `serviceKey` is the camelCase form, used only where a JS property key is
+ * required (`ctx.plugins.acmeSeo`, `Astromech.plugins.acmeSeo`).
  */
 export type ResolvedPluginIdentity = {
     package: string;
     namespace: string;
-    sdkKey: string;
+    serviceKey: string;
     permissionNamespace: string;
     version?: string;
 };

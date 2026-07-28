@@ -165,10 +165,11 @@ export function astromech(config: AstromechConfig): AstroIntegration {
             },
 
             'astro:config:done': async ({ injectTypes, logger, config: astroConfig }) => {
-                const { generateSdkTypes } = await import('@/codegen/type-generator.js');
+                const { generateClientTypes } =
+                    await import('@/codegen/type-generator.js');
                 injectTypes({
                     filename: 'astromech.d.ts',
-                    content: generateSdkTypes(
+                    content: generateClientTypes(
                         resolvedConfig,
                         collectPluginFieldTypes(config.plugins ?? []),
                         config.plugins ?? []
