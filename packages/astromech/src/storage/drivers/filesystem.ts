@@ -24,7 +24,13 @@ import type {
 type FilesystemOptions = {
     /** Absolute or cwd-relative path to write files, e.g. `'./public/uploads'` */
     dir: string;
-    /** URL prefix for served files. Defaults to `'/uploads'` */
+    /**
+     * Public URL prefix at which `dir` is already being served — e.g.
+     * `'/uploads'` when `dir` is `'./public/uploads'`. Opt-in and deliberately
+     * undefaulted: nothing here can verify that `dir` is web-served at all, and
+     * guessing a prefix for a directory outside `public/` would hand out URLs
+     * that 404. Omit it and media is served through the media route instead.
+     */
     urlPrefix?: string;
 };
 
@@ -39,7 +45,7 @@ function emptyStream(): ReadableStream {
 }
 
 export function filesystem(options: FilesystemOptions): StorageDriver {
-    const { dir, urlPrefix = '/uploads' } = options;
+    const { dir, urlPrefix } = options;
 
     /**
      * Every key under `prefix`, sorted. The sort is what makes the `list`
@@ -161,7 +167,7 @@ export function filesystem(options: FilesystemOptions): StorageDriver {
         },
 
         getPublicUrl(key: string): string | null {
-            return `${urlPrefix}/${key}`;
+            return urlPrefix === undefined ? null : `${urlPrefix}/${key}`;
         },
     };
 }

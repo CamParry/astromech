@@ -204,11 +204,11 @@ describe('filesystem()', () => {
     });
 
     describe('getPublicUrl', () => {
-        it('defaults the prefix to /uploads', () => {
-            expect(driver.getPublicUrl?.('photo.jpg')).toBe('/uploads/photo.jpg');
+        it('returns null without a urlPrefix — nothing proves dir is web-served', () => {
+            expect(driver.getPublicUrl?.('photo.jpg')).toBeNull();
         });
 
-        it('honours a custom urlPrefix', () => {
+        it('honours a configured urlPrefix', () => {
             const custom = filesystem({ dir, urlPrefix: '/media' });
             expect(custom.getPublicUrl?.('nested/photo.jpg')).toBe(
                 '/media/nested/photo.jpg'

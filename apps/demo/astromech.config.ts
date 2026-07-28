@@ -109,7 +109,7 @@ export default defineConfig({
     db: libsqlDriver({
         url: 'file:' + fileURLToPath(new URL('./database.db', import.meta.url)),
     }),
-    storage: filesystem({ dir: './public/uploads' }),
+    storage: filesystem({ dir: './public/uploads', urlPrefix: '/uploads' }),
     image: { driver: sharp() },
     locales: ['en', 'fr'],
     defaultLocale: 'en-GB',
