@@ -48,6 +48,39 @@ export type {
 // Field factories now live in the `astromech/fields` subpath (see src/fields.ts).
 
 // ============================================================================
+// Plugin schema authoring (formerly `astromech/plugin-kit`, dissolved in 2c —
+// see roadmap/in-progress/plugin-authoring-experience.md)
+// ============================================================================
+
+export { definePluginTable } from '@/database/define-plugin-table.js';
+export type { KyselyTableKey, PluginDB } from '@/database/define-plugin-table.js';
+// The whole descriptor type vocabulary, not just the headline types: a plugin's
+// emitted `.d.ts` has to be able to *name* the type `definePluginTable` infers,
+// and that mentions `Column`/`IndexSpec` structurally. Without them on this
+// public surface, a plugin build fails with TS2742 ("inferred type cannot be
+// named without a reference to <hashed dts chunk>").
+export type {
+    AnyCols,
+    ColFactory,
+    Column,
+    ColumnKind,
+    ColumnRuntime,
+    IndexFactory,
+    IndexSpec,
+    KyselyOf,
+    OnDelete,
+    ReferenceSpec,
+    ReferenceTarget,
+    TableDescriptor,
+    TableInsert,
+    TableSelect,
+    TableUpdate,
+} from '@/database/define-table.js';
+export { decodeWith, encodeWith, encodePatchWith } from '@/database/codec.js';
+export { tableStorage } from '@/entries/storage/table.js';
+export { t } from '@/utilities/labels.js';
+
+// ============================================================================
 // Config / Collection / Plugin Helpers
 // ============================================================================
 

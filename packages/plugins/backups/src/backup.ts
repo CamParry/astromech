@@ -10,7 +10,7 @@ import { Readable } from 'node:stream';
 import { createGzip } from 'node:zlib';
 import type { Kysely } from 'kysely';
 import type { PluginContext } from 'astromech';
-import { decodeWith, encodeWith, encodePatchWith } from 'astromech/plugin-kit';
+import { decodeWith, encodeWith, encodePatchWith } from 'astromech';
 import { backupRunsTable, type BackupRunRow } from './schema/runs.js';
 
 // ============================================================================

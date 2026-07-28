@@ -32,7 +32,6 @@
             "astromech": ["./src/index.ts"],
             "astromech/fields": ["./src/exports/fields.ts"],
             "astromech/columns": ["./src/exports/columns.ts"],
-            "astromech/plugin-kit": ["./src/exports/plugin-kit.ts"],
             "@astromech/schema-engine/generate": ["../schema-engine/src/generate.ts"],
             "@astromech/schema-engine": ["../schema-engine/src/index.ts"],
             "@astromech/menus": ["../plugins/menus/src/index.ts"],

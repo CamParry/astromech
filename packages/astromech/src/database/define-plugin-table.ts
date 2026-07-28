@@ -17,7 +17,7 @@
  * still written exactly once.
  *
  * ```ts
- * import { definePluginTable } from 'astromech/plugin-kit';
+ * import { definePluginTable } from 'astromech';
  * import { BACKUPS_PACKAGE } from '../types.js';
  *
  * export const runsTable = definePluginTable(BACKUPS_PACKAGE, 'runs', ({ col }) => ({

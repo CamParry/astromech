@@ -11,7 +11,7 @@ import { Readable } from 'node:stream';
 import { createGunzip } from 'node:zlib';
 import type { Kysely } from 'kysely';
 import type { PluginContext, PluginRawRoute } from 'astromech';
-import { decodeWith } from 'astromech/plugin-kit';
+import { decodeWith } from 'astromech';
 import { backupRunsTable, type BackupRunRow } from '../schema/runs.js';
 import { isBackupRunning, performBackup, resolveKeep } from '../backup.js';
 

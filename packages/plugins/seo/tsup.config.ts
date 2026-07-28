@@ -11,6 +11,6 @@ export default defineConfig({
     dts: true,
     sourcemap: true,
     clean: true,
-    external: ['astromech', 'astromech/fields', 'astromech/plugin-kit'],
+    external: ['astromech', 'astromech/fields'],
     treeshake: true,
 });

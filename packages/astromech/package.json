@@ -22,10 +22,6 @@
             "types": "./dist/fields.d.ts",
             "default": "./dist/fields.js"
         },
-        "./plugin-kit": {
-            "types": "./dist/plugin-kit.d.ts",
-            "default": "./dist/plugin-kit.js"
-        },
         "./columns": {
             "types": "./dist/columns.d.ts",
             "default": "./dist/columns.js"

@@ -6,7 +6,7 @@
  */
 
 import type { EntryTypeConfig } from 'astromech';
-import { tableStorage } from 'astromech/plugin-kit';
+import { tableStorage } from 'astromech';
 import { redirectsTable } from '../schema/redirects.js';
 import { REDIRECT_TYPE } from '../types.js';
 import * as fields from 'astromech/fields';

@@ -6,7 +6,7 @@
 
 import type { Entry, PluginContext } from 'astromech';
 import { defineServiceMethod } from 'astromech';
-import { resolveEntryPath } from 'astromech/plugin-kit';
+import { resolveEntryPath } from 'astromech';
 import { SEO_FIELD_NAME } from '../types.js';
 import type {
     SeoOverview,

@@ -30,9 +30,6 @@ export default defineConfig({
             'astromech/columns': fileURLToPath(
                 new URL('./src/exports/columns.ts', import.meta.url)
             ),
-            'astromech/plugin-kit': fileURLToPath(
-                new URL('./src/exports/plugin-kit.ts', import.meta.url)
-            ),
             // The schema engine resolves to source under vitest (no build step
             // before tests). Subpath alias FIRST — longest match must win.
             '@astromech/schema-engine/generate': fileURLToPath(

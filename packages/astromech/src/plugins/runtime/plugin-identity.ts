@@ -34,7 +34,9 @@ import type {
  * needs the same string — and the same literal type — to build a plugin's
  * table prefix, and the database capability may not import the plugin runtime.
  * Re-exported here because this module is the plugin-identity surface every
- * other consumer (and `astromech/plugin-kit`) imports from.
+ * other internal consumer imports from. Not part of the public surface — see
+ * roadmap/in-progress/plugin-authoring-experience.md (2c): a plugin reads its
+ * own resolved identity off `ctx.plugin` instead of deriving it.
  */
 export { pluginNamespace, pluginServiceKey };
 export type { PluginNamespace };

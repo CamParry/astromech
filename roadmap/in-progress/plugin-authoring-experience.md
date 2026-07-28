@@ -7,7 +7,7 @@
 | Phase 1 | one `definePlugin` call; identity-unaware sub-modules              | built, gate + browser verified, **awaiting merge** |
 | 2d      | flatten `ctx.sdk`, delete scoped entries, move the permission seam | built (`fc63be5`), gate + browser verified         |
 | 2b      | retire "SDK" → "service"                                           | built, gate verified                               |
-| 2c      | dissolve `astromech/plugin-kit`                                    | planned                                            |
+| 2c      | dissolve `astromech/plugin-kit`                                    | built, gate + browser verified                     |
 | 2a      | drop "plugin" from the define names                                | planned, blocked on 2c                             |
 | Phase 3 | candidates, not yet designed                                       | —                                                  |
 
@@ -139,14 +139,25 @@ Root `astromech` (55 modules) already runtime-contains `codec.ts`,
 module or db client. The subpath was curation only — the exact distinction 2a
 deletes.
 
-- [ ] Move the generic exports to root `astromech`: descriptor type vocabulary,
+- [x] Move the generic exports to root `astromech`: descriptor type vocabulary,
       `decodeWith` / `encodeWith` / `encodePatchWith`, `tableStorage`,
-      `resolveEntryUrl` / `resolveEntryPath`, `t`
-- [ ] Delete seo's `labels.ts` (`tKey`), the last caller of the identity helpers
-- [ ] Drop `pluginNamespace` / `pluginSdkKey` / `pluginTablePrefix` from the
+      `resolveEntryUrl` / `resolveEntryPath`, `t` (the last two were already
+      there). `definePluginTable` + `KyselyTableKey` + `PluginDB` moved too,
+      keeping the name — the rename to `defineTable` stays 2a's job
+- [x] Delete seo's `labels.ts` (`tKey`), the last caller of the identity
+      helpers. `seoSection()` is host-facing config with no `PluginContext` to
+      read identity from, so `fields/groups.ts` now hand-writes the derived
+      namespace as a package-local `const NAMESPACE = 'seo'` — a deliberate
+      stand-in for the Phase 3 factory-extras fix, not a design change
+- [x] Drop `pluginNamespace` / `pluginServiceKey` / `pluginTablePrefix` from the
       public surface entirely. Reintroduce only if something needs them again —
-      no `plugin-utilities` module for its own sake
-- [ ] Delete the `plugin-kit` subpath export
+      no `plugin-utilities` module for its own sake. They stay as internal
+      modules core still uses (`plugin-generate`, `plugin-purge`, `plugin-schema`)
+- [x] Delete the `plugin-kit` subpath export: the barrel, its `package.json`
+      export, its tsup entry, and the vitest/tsconfig path aliases. No
+      dependency-cruiser rule named it directly. All five plugins (redirects,
+      seo, menus, backups; rating had no plugin-kit imports) now import these
+      from root `astromech`
 
 Noted, separate thread: `tableStorage` drags `@hono/zod-openapi` into the
 runtime graph via the domain schema files, so "author a plugin table" currently

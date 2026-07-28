@@ -8,7 +8,7 @@
 
 import type { DefinedHook, JsonObject } from 'astromech';
 import { defineHook } from 'astromech';
-import { resolveEntryPath } from 'astromech/plugin-kit';
+import { resolveEntryPath } from 'astromech';
 import { REDIRECT_TYPE } from '../types.js';
 
 export const slugChangeHook: DefinedHook = defineHook(
