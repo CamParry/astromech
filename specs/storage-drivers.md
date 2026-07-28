@@ -8,9 +8,12 @@
 2. **§11 step 5's `d1({ binding })`** — the stub is deleted but the driver is deferred to `roadmap/planned/additional-database-drivers.md`. `DatabaseDriver.getInstance()` is synchronous while binding resolution is async, so it needs a Kysely dialect resolving inside `acquireConnection()`, and no D1 dialect exists in the repo. Do not widen `DatabaseDriver` to work around this.
 3. **§7's `src/support/registry.ts`** — landed at `src/utilities/registry.ts`; there is no `support/` directory, and `utilities/` is the pure-leaf home dep-cruiser already enforces.
 4. **§8.2's parenthetical that `filesystem()` has no public URL** — it does, but `urlPrefix` had to become opt-in rather than defaulting to `/uploads`, which is only a real URL when `dir` sits under `public/`.
-   **Touches:** `packages/astromech/src/storage/**`, `packages/astromech/src/types/config.ts`, `packages/astromech/src/media/**`, every `*/registry.ts`, `packages/astromech/src/database/drivers/d1.ts`, `packages/astromech/src/kernel/boot.ts`, `apps/demo/astromech.config.ts`.
-   **Related roadmap:** `in-progress/storage-drivers.md` (status), `planned/multi-runtime-and-framework-adapters.md` (owns the runtime adapter this depends on), `planned/additional-database-drivers.md` (same binding-resolution problem for D1).
-   **Related memories:** `project_globalthis_singletons.md`, `integration-config-load-no-virtual.md`, `project_modular_architecture.md`, `project_app_owned_migrations.md`.
+
+**Touches:** `packages/astromech/src/storage/**`, `packages/astromech/src/types/config.ts`, `packages/astromech/src/media/**`, every `*/registry.ts`, `packages/astromech/src/database/drivers/d1.ts`, `packages/astromech/src/kernel/boot.ts`, `apps/demo/astromech.config.ts`.
+
+**Related roadmap:** `in-progress/storage-drivers.md` (status), `planned/multi-runtime-and-framework-adapters.md` (owns the runtime adapter this depends on), `planned/additional-database-drivers.md` (same binding-resolution problem for D1).
+
+**Related memories:** `project_globalthis_singletons.md`, `integration-config-load-no-virtual.md`, `project_modular_architecture.md`, `project_app_owned_migrations.md`.
 
 > Nothing here is deployed and nothing outside the repo consumes these APIs. Every
 > decision below is free to break the existing shape, and several do.
