@@ -17,16 +17,21 @@ import type {
     AnyPluginSdkMethod,
     AstromechClient,
     EntriesApi,
+    MediaApi,
+    NotificationsApi,
     PluginContext,
     PluginConfigView,
     PluginDatabase,
     PluginDefinition,
     PluginLogger,
     PluginRawRoute,
+    PluginSdkNamespace,
     ResolvedConfig,
-    ResolvedEntryTypeConfig,
     ResolvedPluginIdentity,
+    SettingsApi,
+    TypedEntriesApi,
     User,
+    UsersApi,
 } from '@/types/index.js';
 import { getDb } from '@/database/registry.js';
 import {
@@ -49,7 +54,10 @@ import { entryAccess } from '@/plugins/runtime/entry-access.js';
 import { isTableDescriptor } from '@/plugins/runtime/plugin-schema.js';
 import { registerCronJob } from '@/cron/registry.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
-import { withDefaultShape } from '@/utilities/with-default-shape.js';
+import {
+    withDefaultShape,
+    withDefaultSettingsShape,
+} from '@/utilities/with-default-shape.js';
 
 // ============================================================================
 // Registry (globalThis — visible from config:setup through request time)
@@ -121,25 +129,13 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
             s.hooks.set(event, list);
         }
 
-        if (def.sdk) {
-            // `entries` is reserved for the Phase 3 entries sub-namespace.
-            if ('entries' in def.sdk) {
-                throw new Error(
-                    `Astromech plugin "${def.package}" defines a reserved SDK method "entries". ` +
-                        `The "entries" key is reserved for plugin entry types — rename your method.`
-                );
-            }
-            s.sdk.set(identity.namespace, def.sdk);
-        }
+        // `entries` used to be reserved on both the SDK map and the raw-route
+        // path — it named the per-plugin entries surface. That surface is gone
+        // (entry types live on the one entries service), so neither name
+        // collides with anything any more.
+        if (def.sdk) s.sdk.set(identity.namespace, def.sdk);
 
         for (const route of def.rawRoutes ?? []) {
-            // `/entries` is reserved for the Phase 3 plugin entries surface.
-            if (route.path === '/entries' || route.path.startsWith('/entries/')) {
-                throw new Error(
-                    `Astromech plugin "${def.package}" defines a raw route "${route.path}" under the ` +
-                        `reserved "/entries" path. That path is reserved for plugin entry types.`
-                );
-            }
             s.rawRoutes.push({ identity, route });
         }
 
@@ -302,30 +298,6 @@ export function getPluginRawRoutes(): RegisteredRawRoute[] {
     return state().rawRoutes;
 }
 
-export type PluginEntryMount = {
-    identity: ResolvedPluginIdentity;
-    entryTypes: Record<string, ResolvedEntryTypeConfig>;
-};
-
-/**
- * The plugin identities that contribute entry types, paired with the resolved
- * config so the API layer can mount a per-plugin entries router. Returns an
- * empty list when config has not been registered. Mirrors `getPluginRawRoutes`:
- * read once at router-build time, after `registerPlugins`.
- */
-export function getPluginEntryMounts(): PluginEntryMount[] {
-    const s = state();
-    if (!s.config) return [];
-    const mounts: PluginEntryMount[] = [];
-    for (const identity of s.identities) {
-        const entryTypes = s.config.pluginEntries[identity.namespace];
-        if (entryTypes && Object.keys(entryTypes).length > 0) {
-            mounts.push({ identity, entryTypes });
-        }
-    }
-    return mounts;
-}
-
 /** Set by the Local API at module load to break the import cycle. */
 export function setPluginSdkClient(client: AstromechClient): void {
     state().sdkClient = client;
@@ -409,8 +381,9 @@ function requireStorage() {
 
 /**
  * Build the unified PluginContext for a given plugin and acting user. `db` and
- * `sdk` are lazy so a context can be constructed in environments where they are
- * not yet wired (e.g. unit tests that exercise only hook semantics).
+ * every domain are lazy getters so a context can be constructed in environments
+ * where they are not yet wired (e.g. unit tests that exercise only hook
+ * semantics).
  */
 export function createPluginContext(
     identity: ResolvedPluginIdentity,
@@ -427,20 +400,33 @@ export function createPluginContext(
         plugin: identity,
         config: configView,
         user,
-        get sdk(): AstromechClient {
-            return requireSdkClient();
+        // The domains, flattened onto the context. These are the global services
+        // — a plugin addresses its own entry types explicitly by their qualified
+        // id (`` `${ctx.plugin.namespace}/redirect` ``) rather than through a
+        // scoping wrapper. Both domains with a shape axis default to `full`:
+        // plugin altitude is trusted server code, and a `public` default hands it
+        // sanitized rich text, stripped private fields and null private settings.
+        get entries(): TypedEntriesApi {
+            return withDefaultShape(
+                requireSdkClient().entries as unknown as EntriesApi,
+                'full'
+            ) as unknown as TypedEntriesApi;
         },
-        get entries(): EntriesApi {
-            // Auto-scoped to this plugin's own entry types: bare keys in, qualified
-            // ids out. Default shape is `full` (privileged server RMW context, per
-            // spec §7.1 decision 7). An explicit per-call `full` still wins.
-            return entryAccess().createScopedEntries(
-                identity.namespace,
-                withDefaultShape(
-                    requireSdkClient().entries as unknown as EntriesApi,
-                    'full'
-                )
-            );
+        // media / users / notifications have no shape axis, so they pass through.
+        get media(): MediaApi {
+            return requireSdkClient().media;
+        },
+        get settings(): SettingsApi {
+            return withDefaultSettingsShape(requireSdkClient().settings, 'full');
+        },
+        get users(): UsersApi {
+            return requireSdkClient().users;
+        },
+        get notifications(): NotificationsApi {
+            return requireSdkClient().notifications;
+        },
+        get plugins(): PluginSdkNamespace | undefined {
+            return requireSdkClient().plugins;
         },
         sendEmail,
         notify: (input: NotifyInput) =>

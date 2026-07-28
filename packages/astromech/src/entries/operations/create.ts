@@ -8,6 +8,7 @@ import { getDefaultLocale, getTitleField } from '../internal/type-config.js';
 import { saveRelationships } from '../internal/relationships.js';
 import { asEntry } from '../internal/records.js';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility.js';
+import { UnknownEntryTypeError } from '../errors.js';
 import { createEntryScopedReads } from '../reads.js';
 import { resolveEntryType } from '../type-registry.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
@@ -32,6 +33,11 @@ export async function create(params: {
         throw new PublicShapeWriteError();
     }
     const { type } = params;
+    // Reject an unresolvable type up front. There are no field definitions to
+    // validate against, so proceeding would write a ghost row stamped with a
+    // type nothing can render or query.
+    const entryTypeConfig = resolveEntryType(config, type);
+    if (!entryTypeConfig) throw new UnknownEntryTypeError(type);
     const titleField = getTitleField(type);
     const validated = validate(createEntrySchemaFor(titleField), {
         title: params.title,
@@ -55,8 +61,7 @@ export async function create(params: {
     const localeGroup = params.localeGroup ?? crypto.randomUUID();
 
     const user = getCurrentUser();
-    const entryTypeConfig = resolveEntryType(config, type);
-    const fieldDefs = entryTypeConfig ? flattenEntryFields(entryTypeConfig.fields) : [];
+    const fieldDefs = flattenEntryFields(entryTypeConfig.fields);
     const processed = await processFields(
         (validated.fields ?? {}) as Record<string, unknown>,
         fieldDefs,

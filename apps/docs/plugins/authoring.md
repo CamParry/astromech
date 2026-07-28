@@ -439,7 +439,7 @@ importing an identity module:
 // backup.ts
 export async function resolveKeep(ctx: PluginContext, fallback: number): Promise<number> {
     const key = `plugin:${ctx.plugin.namespace}:retention`;
-    const value = await ctx.sdk.settings.get(key, { full: true });
+    const value = await ctx.settings.get(key);
     // ...
 }
 ```
@@ -448,6 +448,28 @@ export async function resolveKeep(ctx: PluginContext, fallback: number): Promise
 // menus/sdk/menus.ts
 const blobKey = `plugin:${ctx.plugin.namespace}:/menus/${key}`;
 ```
+
+### Reaching the content services
+
+The domains sit directly on the context — `ctx.entries`, `ctx.media`,
+`ctx.settings`, `ctx.users`, `ctx.notifications`, `ctx.plugins` — and each is
+the **global** service, not a per-plugin view. Reads default to the `full`
+shape, because plugin altitude is trusted server code; pass an explicit
+`full: false` if you want the public shape.
+
+`ctx.entries` therefore addresses a plugin's own entry types by their qualified
+id, built from context rather than from an identity import:
+
+```ts
+const { data } = await ctx.entries.query({
+    type: `${ctx.plugin.namespace}/redirect`,
+    limit: 'all',
+});
+```
+
+The same id is what the HTTP API and `Astromech.entries` use, so there is one
+way to name an entry type everywhere. An unregistered type is rejected on
+write rather than silently stored.
 
 ### More surfaces
 

@@ -31,7 +31,7 @@ async function resolveEntryRef(
     for (const [type, config] of Object.entries(ctx.config.entries)) {
         if (!config.url) continue;
         try {
-            const { data } = await ctx.sdk.entries.query({
+            const { data } = await ctx.entries.query({
                 type,
                 limit: 'all',
                 ...(locale ? { locale } : {}),
@@ -110,7 +110,7 @@ export function buildMenusSdk(configs: MenuConfig[]): Record<string, AnyPluginSd
                 // Trusted internal read of the plugin's own menu blob: request the
                 // full shape (settings default to public-only) — the handler returns a
                 // sanitised menu tree, never the raw settings, so this never leaks.
-                const blob = await ctx.sdk.settings.get(blobKey, {
+                const blob = await ctx.settings.get(blobKey, {
                     full: true,
                     ...(locale ? { locale } : {}),
                 });

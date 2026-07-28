@@ -98,8 +98,11 @@ function makeCtx(
         },
         config: null as unknown as PluginContext['config'],
         user: null,
-        sdk: null as unknown as PluginContext['sdk'],
         entries: null as unknown as PluginContext['entries'],
+        media: null as unknown as PluginContext['media'],
+        settings: null as unknown as PluginContext['settings'],
+        users: null as unknown as PluginContext['users'],
+        notifications: null as unknown as PluginContext['notifications'],
         sendEmail: async () => undefined,
         logger: {
             info: () => undefined,

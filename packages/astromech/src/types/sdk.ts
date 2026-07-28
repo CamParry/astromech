@@ -365,18 +365,13 @@ export interface AstromechPluginSdks {}
 export interface AstromechPluginEntryTypes {}
 
 /**
- * For a plugin name `Name`, produce an `entries` member typed against the
- * plugin's registered entry types (when present in `AstromechPluginEntryTypes`),
- * or fall back to the wide `EntriesApi`.
+ * Plugin service methods only. A plugin's ENTRY types are NOT reachable here —
+ * they live on the one entries service, addressed by their qualified id
+ * (`Astromech.entries.query({ type: 'redirects/redirect' })`). Two entry points
+ * to the same content was the problem, not a feature.
  */
-type PluginEntriesFor<Name extends string> = Name extends keyof AstromechPluginEntryTypes
-    ? { entries: TypedEntriesApiFor<AstromechPluginEntryTypes[Name]> }
-    : { entries: EntriesApi };
-
-export type PluginSdkNamespace = AstromechPluginSdks & {
-    [Name in string]: PluginEntriesFor<Name> &
-        Record<string, (input?: unknown) => Promise<unknown>>;
-};
+export type PluginSdkNamespace = AstromechPluginSdks &
+    Record<string, Record<string, (input?: unknown) => Promise<unknown>>>;
 
 export type AstromechClient = {
     entries: TypedEntriesApi;

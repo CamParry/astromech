@@ -143,14 +143,17 @@ building wrappers. Real domain footprint across every installed plugin is
 `plugins` have zero call sites, and `sdk.config` is already redundant with
 `ctx.config` (`PluginConfigView` extends `ResolvedConfig`).
 
-- [ ] Remove `ctx.sdk`; surface the domains directly on `ctx`. Accepted cost:
+- [x] Remove `ctx.sdk`; surface the domains directly on `ctx`. Accepted cost:
       the near-miss pairs `ctx.user`/`ctx.users`, `ctx.plugin`/`ctx.plugins`,
       `ctx.notify`/`ctx.notifications`. `configure()` stops leaking onto context
-- [ ] Default shape `full` across the flattened domains — plugin altitude is
+- [x] Default shape `full` across the flattened domains — plugin altitude is
       trusted server code, and a `public` default hands it sanitized rich text
       and stripped private fields. Two of the three existing `ctx.sdk.settings`
-      call sites already pass `{ full: true }` by hand
-- [ ] **Delete `createScopedEntries` and every consumer.** No implicit
+      call sites already pass `{ full: true }` by hand. `entries` and `settings`
+      are the two with a shape axis (`withDefaultShape` /
+      `withDefaultSettingsShape`); `media`/`users`/`notifications` have none and
+      pass through unwrapped
+- [x] **Delete `createScopedEntries` and every consumer.** No implicit
       qualification anywhere: `ctx.entries` is the global entries service, and a
       plugin addresses its own types explicitly as
       `` `${ctx.plugin.namespace}/redirect` `` — built from context, never from
@@ -158,7 +161,7 @@ building wrappers. Real domain footprint across every installed plugin is
       (`plugin-runtime.ts:437`, `transport/local/plugins.ts:44`), taking
       `Astromech.plugins.<key>.entries` with them: two entry points to the same
       content is the problem, not a feature
-- [ ] Retire the per-plugin HTTP mount `/plugins/<key>/entries`
+- [x] Retire the per-plugin HTTP mount `/plugins/<key>/entries`
 
     **This mount is the permission seam, not a convenience path.** It supplies
     `permissionFor: (t, a) => pluginEntryPermission(ns, t, a)`
@@ -173,17 +176,29 @@ building wrappers. Real domain footprint across every installed plugin is
     (`plugin-identity.ts:90`) and namespaces are collision-checked at resolve
     time — nothing inverts the lossy derivation
 
-- [ ] Fixes a live bug: `qualifyEntryType` is unconditional string concatenation
+    Landed as `entryPermission(typeId, action)` in
+    `permissions/entry-permission.ts`, used by the one `createEntriesRouter()` —
+    whose `lookup`/`qualify`/`permissionFor` options are gone with it. The
+    qualified id reaches `:type` percent-encoded (client encodes, Hono decodes),
+    so `/entries/redirects%2Fredirect` matches one segment. The admin's four
+    plugin entry routes moved off the retired mount onto `Astromech.entries`.
+
+- [x] Fixes a live bug: `qualifyEntryType` is unconditional string concatenation
       with no registry check, so a foreign or mistyped key neither throws nor
       passes through. Reads silently return empty; **writes silently succeed**,
       creating a ghost row stamped with an unregistered type and no field
-      validation
-- [ ] Update the redirects README — `Astromech.plugins.redirects.entries.create`
+      validation. `entries.create` now throws `UnknownEntryTypeError` on an
+      unresolvable type; `qualifyEntryType` survives only where a plugin
+      registers its OWN declared types, which are resolvable by construction
+- [x] Update the redirects README — `Astromech.plugins.redirects.entries.create`
       becomes `Astromech.entries.create({ type: 'redirects/redirect', … })`
 
 Accepted regression: a template-literal type argument degrades
 `TypedEntriesApi`'s narrowing to `string`, so a plugin addressing its own types
 loses the typing the merge otherwise gains.
+
+Also dropped with the mount: the reservations on the SDK method name `entries`
+and the raw-route path `/entries`, which existed only to protect it.
 
 Permissions themselves are unchanged by Phase 2 — plugin altitude stays
 trusted, with HTTP as the enforcement boundary. Neither surface checked

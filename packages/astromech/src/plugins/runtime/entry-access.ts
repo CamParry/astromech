@@ -3,21 +3,24 @@
  *
  * The plugin runtime is a capability and must not import the `entries` domain
  * directly (that would make the DAG cyclic: entries → runtime for hooks, runtime
- * → entries for scoping/storage). Instead the runtime declares the narrow slice
- * of entries behaviour it needs as a port, and the entries domain injects the
- * implementation at boot via `registerEntryAccess` (see `@/entries/plugin-access`).
+ * → entries for type qualification/storage). Instead the runtime declares the
+ * narrow slice of entries behaviour it needs as a port, and the entries domain
+ * injects the implementation at boot via `registerEntryAccess` (see
+ * `@/entries/plugin-access`).
  *
  * State lives on globalThis (like the other registries) so it survives the
  * package's multiple bundle entry points.
  */
 
-import type { EntriesApi, EntryTypeConfig } from '@/types/index.js';
+import type { EntryTypeConfig } from '@/types/index.js';
 
 export type EntryAccess = {
-    /** Qualify a plugin's bare entry-type id: `(name, 'redirect') → 'name/redirect'`. */
+    /**
+     * Qualify a plugin's bare entry-type id: `(name, 'redirect') → 'name/redirect'`.
+     * Called only while REGISTERING a plugin's own declared entry types, where
+     * the type is resolvable by construction — it is not an addressing helper.
+     */
     qualifyEntryType(plugin: string, type: string): string;
-    /** Wrap an EntriesApi so a plugin addresses its own types by their bare keys. */
-    createScopedEntries(pluginName: string, api: EntriesApi): EntriesApi;
     /** Mount a per-type storage override under its qualified id. */
     setEntryStorage(
         qualifiedId: string,

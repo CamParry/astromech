@@ -12,6 +12,7 @@ import { hasPermission as hasPermissionImpl } from '@/utilities/permission-match
 export { hasPermission, matchesPermission } from '@/utilities/permission-match.js';
 export {
     type EntryAction,
+    entryPermission,
     rootEntryPermission,
     pluginEntryPermission,
 } from '@/permissions/entry-permission.js';

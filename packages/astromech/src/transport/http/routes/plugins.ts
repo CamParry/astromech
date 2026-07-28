@@ -10,8 +10,12 @@
  * (`acme_seo`), so that the HTTP client can put its property key straight into
  * the URL: `sdkKey` is derived from `namespace` lossily, and mounting on the
  * namespace would force the client to invert that derivation. Everything below
- * the routing layer — permissions, entry-type qualification, table prefixes —
- * still keys on the namespace, reached through the resolved identity.
+ * the routing layer — permissions, table prefixes — still keys on the
+ * namespace, reached through the resolved identity.
+ *
+ * A plugin's ENTRY types are not served here. They live on the single entries
+ * router at `/entries/{qualified type}` like every other entry type, which
+ * derives `plugin:{ns}:entry:{type}:{action}` from the qualified id itself.
  *
  * Every method/route declares `access`; this router enforces it against the
  * resolved session. It mounts BEFORE the app-wide `requireAuth`, so `public`
@@ -20,20 +24,16 @@
 
 import { Hono } from 'hono';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
-import { optionalAuth, requireAuth } from '@/transport/http/middleware/auth.js';
+import { optionalAuth } from '@/transport/http/middleware/auth.js';
 import { forbidden, notFound, unauthorized } from '@/transport/http/middleware/errors.js';
 import {
     createPluginContext,
-    getPluginEntryMounts,
     getPluginIdentity,
     getPluginRawRoutes,
     getPluginSdkMethods,
 } from '@/plugins/runtime/plugin-runtime.js';
 import { withPermissions } from '@/policies/with-permissions.js';
 import { resolvePluginPermission } from '@/plugins/runtime/plugin-identity.js';
-import { pluginEntryPermission } from '@/permissions/index.js';
-import { qualifyEntryType } from '@/entries/type-registry.js';
-import { createEntriesRouter } from '@/transport/http/routes/entries.js';
 import type { Context } from 'hono';
 import type {
     Permission,
@@ -67,29 +67,6 @@ function enforceAccess(
     ) as Permission;
     if (!permissions.allows(permission)) return forbidden(c);
     return null;
-}
-
-// ── Per-plugin entries mounts (registered before the RPC catch-all so the
-//    static `/{name}/entries` segments win over `/:name/:method`) ────────────
-//
-// Each mount is its own entries router, namespaced to the plugin: bare wire
-// types resolve against `pluginEntries[name]`, the entries service sees the
-// qualified id, and permissions root at `plugin:{ns}:entry:{type}:{action}`.
-// The plugins router runs `optionalAuth` (public RPC), so the entries subtree
-// gets an explicit `requireAuth` — these routes are never public.
-for (const { identity, entryTypes } of getPluginEntryMounts()) {
-    pluginsRouter.use(`/${identity.sdkKey}/entries/*`, requireAuth);
-    // The entries router needs full `AuthVariables` (requireAuth guarantees them
-    // upstream); `.route` onto the partial-typed plugins router needs the cast.
-    pluginsRouter.route(
-        `/${identity.sdkKey}/entries`,
-        createEntriesRouter({
-            lookup: (t) => entryTypes[t],
-            qualify: (t) => qualifyEntryType(identity.namespace, t),
-            permissionFor: (t, a) =>
-                pluginEntryPermission(identity.permissionNamespace, t, a),
-        }) as unknown as Hono<PluginEnv>
-    );
 }
 
 // ── Raw escape-hatch routes (registered before the RPC catch-all) ──────────

@@ -12,10 +12,8 @@
  * at module-load time.
  */
 
-import type { EntriesApi, PluginContext, PluginSdkNamespace } from '@/types/index.js';
+import type { PluginContext, PluginSdkNamespace } from '@/types/index.js';
 import { getCurrentUser } from '@/context/index.js';
-import { entries as localEntries } from '@/entries/service.js';
-import { createScopedEntries } from '@/entries/scoped-entries.js';
 import {
     createPluginContext,
     getPluginIdentity,
@@ -25,10 +23,9 @@ import {
 type MethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
 
 export const localPlugins: PluginSdkNamespace = new Proxy({} as PluginSdkNamespace, {
-    get(_target, keyProp): MethodMap | EntriesApi | undefined {
+    get(_target, keyProp): MethodMap | undefined {
         if (typeof keyProp !== 'string' || keyProp === 'then') return undefined;
-        // Unknown plugin → undefined; a known plugin with no SDK methods still
-        // exposes its `entries` sub-API. The registry is keyed by namespace, so
+        // Unknown plugin → undefined. The registry is keyed by namespace, so
         // resolve the identity from the SDK key first.
         const resolved = getPluginIdentity(keyProp);
         if (!resolved) return undefined;
@@ -39,10 +36,6 @@ export const localPlugins: PluginSdkNamespace = new Proxy({} as PluginSdkNamespa
             get(_t, methodProp) {
                 if (typeof methodProp !== 'string' || methodProp === 'then')
                     return undefined;
-                // `entries` is the reserved per-plugin entries sub-API, not RPC.
-                if (methodProp === 'entries') {
-                    return createScopedEntries(name, localEntries);
-                }
                 const method = methods[methodProp];
                 if (!method) return undefined;
 

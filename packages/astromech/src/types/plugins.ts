@@ -20,8 +20,8 @@ import type {
 import type { FieldDefinition, FieldValidator } from './fields.js';
 import type { User, NotifyInput, Permission } from './domain.js';
 import type { PluginHooks } from './hooks.js';
-import type { AstromechClient } from './sdk.js';
-import type { EntriesApi } from './api.js';
+import type { PluginSdkNamespace, TypedEntriesApi } from './sdk.js';
+import type { MediaApi, NotificationsApi, SettingsApi, UsersApi } from './api.js';
 import type { ServiceMethodEffect } from './services.js';
 
 // ============================================================================
@@ -90,13 +90,25 @@ export type PluginContext = {
     config: PluginConfigView;
     /** The acting user, or null for unauthenticated / system contexts. */
     user: User | null;
-    sdk: AstromechClient;
     /**
-     * Entries API auto-scoped to this plugin's own entry types. Address types by
-     * their bare keys (`'redirect'`, not `'myplugin/redirect'`); the wrapper
-     * qualifies them. No permission checks — server-side plugin altitude.
+     * The GLOBAL entries service — not scoped, not qualified. A plugin addresses
+     * its own types explicitly, built from context rather than an import:
+     * `` ctx.entries.query({ type: `${ctx.plugin.namespace}/redirect` }) ``.
+     * Reads default to the `full` shape (plugin altitude is trusted server code);
+     * an explicit per-call `full` still wins. No permission checks — HTTP is the
+     * enforcement boundary.
      */
-    entries: EntriesApi;
+    entries: TypedEntriesApi;
+    /** The global media service. */
+    media: MediaApi;
+    /** The global settings service. Reads default to the `full` shape. */
+    settings: SettingsApi;
+    /** The global users service. */
+    users: UsersApi;
+    /** The global notifications service (session-scoped). */
+    notifications: NotificationsApi;
+    /** Other plugins' service methods — `ctx.plugins.<sdkKey>.<method>(input)`. */
+    plugins?: PluginSdkNamespace | undefined;
     sendEmail: (to: string, subject: string, element: ReactElement) => Promise<void>;
     notify: (input: NotifyInput) => Promise<void>;
     logger: PluginLogger;

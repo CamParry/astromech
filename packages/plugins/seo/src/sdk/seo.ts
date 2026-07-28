@@ -28,7 +28,7 @@ async function footprintEntries(
     const types = ctx.config.entryTypesWithField(SEO_FIELD_NAME);
     const collected: { type: string; entry: Entry }[] = [];
     for (const type of types) {
-        const { data } = await ctx.sdk.entries.query({ type, limit: 'all' });
+        const { data } = await ctx.entries.query({ type, limit: 'all' });
         for (const entry of data as Entry[]) {
             collected.push({ type, entry });
         }
@@ -41,11 +41,11 @@ async function footprintEntries(
  * `path: '/settings'`, so the blob lives at `plugin:<ns>:/settings`.
  */
 async function resolveDefaultOgImage(ctx: PluginContext): Promise<string | null> {
-    const blob = await ctx.sdk.settings.get(`plugin:${ctx.plugin.namespace}:/settings`);
+    const blob = await ctx.settings.get(`plugin:${ctx.plugin.namespace}:/settings`);
     if (blob === null || typeof blob !== 'object' || Array.isArray(blob)) return null;
     const mediaId = (blob as Record<string, unknown>).defaultOgImage;
     if (typeof mediaId !== 'string' || mediaId === '') return null;
-    const media = await ctx.sdk.media.get(mediaId);
+    const media = await ctx.media.get(mediaId);
     return media?.url ?? null;
 }
 
@@ -93,7 +93,7 @@ export const seoSdk = {
                 return null;
             }
 
-            const { data } = await ctx.sdk.entries.query({ type, limit: 'all' });
+            const { data } = await ctx.entries.query({ type, limit: 'all' });
             const entry = (data as Entry[]).find(
                 (candidate) => candidate.slug === slug && candidate.status === 'published'
             );

@@ -83,11 +83,12 @@ const match = await Astromech.plugins.redirects.lookup({ from: '/old-path' });
 // → { to: '/new-path', status: '301' } | null
 ```
 
-Managing redirects directly via the SDK uses the plugin entries surface:
+Redirects are ordinary entries, so manage them through the one entries service.
+A plugin entry type is addressed by its qualified id, `<namespace>/<type>`:
 
 ```ts
-await Astromech.plugins.redirects.entries.create({
-    type: 'redirect',
+await Astromech.entries.create({
+    type: 'redirects/redirect',
     fields: { from: '/old', to: '/new', status: '301', enabled: true },
 });
 ```

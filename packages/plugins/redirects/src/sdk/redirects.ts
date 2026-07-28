@@ -19,8 +19,11 @@ export const redirectsSdk = {
             const from = typeof input?.from === 'string' ? input.from : null;
             if (!from) return null;
 
+            // `ctx.entries` is the global entries service, so this plugin's own
+            // type is addressed by its qualified id — built from context, never
+            // from an identity import.
             const { data } = await ctx.entries.query({
-                type: REDIRECT_TYPE,
+                type: `${ctx.plugin.namespace}/${REDIRECT_TYPE}`,
                 limit: 'all',
             });
 
