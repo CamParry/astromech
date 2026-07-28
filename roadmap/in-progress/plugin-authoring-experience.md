@@ -2,14 +2,14 @@
 
 **Status:** branch `feat/plugin-authoring-dx`, not yet merged to `main`.
 
-|         | scope                                                              | state                                                                     |
-| ------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------- |
-| Phase 1 | one `definePlugin` call; identity-unaware sub-modules              | built, gate + browser verified, **awaiting merge**                        |
-| 2d      | flatten `ctx.sdk`, delete scoped entries, move the permission seam | built (`fc63be5`), gate + browser verified                                |
-| 2b      | retire "SDK" → "service"                                           | built, gate verified                                                      |
-| 2c      | dissolve `astromech/plugin-kit`                                    | built, gate + browser verified                                            |
-| 2a      | drop "plugin" from the define names                                | done, gate verified; `definePluginTable` rename rejected (see remainders) |
-| Phase 3 | candidates, not yet designed                                       | —                                                                         |
+|         | scope                                                              | state                                                                               |
+| ------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| Phase 1 | one `definePlugin` call; identity-unaware sub-modules              | built, gate + browser verified, **awaiting merge**                                  |
+| 2d      | flatten `ctx.sdk`, delete scoped entries, move the permission seam | built (`fc63be5`), gate + browser verified                                          |
+| 2b      | retire "SDK" → "service"                                           | built, gate verified                                                                |
+| 2c      | dissolve `astromech/plugin-kit`                                    | built, gate + browser verified                                                      |
+| 2a      | drop "plugin" from the define names                                | done, gate + browser verified; `definePluginTable` rename rejected (see remainders) |
+| Phase 3 | candidates, not yet designed                                       | —                                                                                   |
 
 Sub-phases are sequenced rather than parallel: 2b, 2c and 2d all rewrite the
 same plugin call sites, and 2d's deletion of `ctx.sdk` shrinks 2b's rename
