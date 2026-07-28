@@ -29,6 +29,8 @@ const menuItemFields = [
 const _menusServiceTyped = {
     get: defineServiceMethod<{ key: string; locale?: string }, MenuItem[] | null>({
         access: 'public',
+        summary: 'Resolve a configured menu into a nested tree of menu items.',
+        mutates: false,
         handler: async () => null,
     }),
 };

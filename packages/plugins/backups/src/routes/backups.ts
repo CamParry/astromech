@@ -228,7 +228,9 @@ export function buildBackupRoutes(defaultKeep: number): PluginRawRoute[] {
         {
             method: 'GET',
             path: '/runs/:id/download',
-            access: { permission: 'read' },
+            // NOT `read` — the artifact is a full database dump, so this is a
+            // strictly higher grant than listing run metadata.
+            access: { permission: 'download' },
             handler: (req, ctx) => downloadArtifact(req, ctx),
         },
         {

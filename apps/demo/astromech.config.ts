@@ -138,7 +138,9 @@ export default defineConfig({
                 ...builtInRole('editor'),
                 ...seo.permissions('view'),
                 ...redirects.permissions('manage'),
-                ...backups.permissions('manage'),
+                // `view`, not `manage` — a content editor has no business
+                // downloading, restoring or deleting the database.
+                ...backups.permissions('view'),
             ],
         },
     },

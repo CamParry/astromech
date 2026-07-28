@@ -96,6 +96,8 @@ export function buildMenusService(
     return {
         get: defineServiceMethod<{ key: string; locale?: string }, MenuItem[] | null>({
             access: 'public',
+            summary: 'Resolve a configured menu into a nested tree of menu items.',
+            mutates: false,
             handler: async (input, ctx): Promise<MenuItem[] | null> => {
                 const key = typeof input?.key === 'string' ? input.key : null;
                 if (!key) return null;

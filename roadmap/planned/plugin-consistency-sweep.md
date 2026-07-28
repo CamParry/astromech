@@ -30,21 +30,23 @@ touches core.
 
 Real defects, not drift. Each is independent and needs no design.
 
-- [ ] **backups' database download is under-gated.**
+- [x] **backups' database download is under-gated.**
       `packages/plugins/backups/src/routes/backups.ts:229-233` gates
       `GET /runs/:id/download` on `read`, whose own description is "List backup
       runs and artifact metadata". The `view` bundle is `['read']`, so a
       view-only role can pull the complete gzipped dump — every table, user
       records, password hashes, private settings. `restore` already has its own
       permission; download needs one too (or `restore`).
-- [ ] **`menus.get` is reported to the manifest as a mutation.**
+      **Fixed:** new `download` permission key, in the `manage` bundle only —
+      `view` stays `['read']`, so a view-only role loses artifact access.
+- [x] **`menus.get` is reported to the manifest as a mutation.**
       `packages/plugins/menus/src/service/menus.ts:97` omits `mutates` and
       `summary`. `codegen/method-manifest.ts:332` applies `mutates ?? true` as a
       deliberate fail-safe, so a public pure read ships to the manifest and MCP
       as mutating with `effectDeclared: false` — exactly the false positive the
       confirm gate exists to avoid. Fix the handler and the phantom typed stub
       at `menus/src/index.ts:30-33` together.
-- [ ] **The demo over-grants.** `apps/demo/astromech.config.ts:141` gives
+- [x] **The demo over-grants.** `apps/demo/astromech.config.ts:141` gives
       `content-editor` `backups.permissions('manage')` =
       `['read','run','restore','delete']`, so a content editor can restore and
       delete the database. Narrow it to `read`.
@@ -86,11 +88,11 @@ Real defects, not drift. Each is independent and needs no design.
       omits the option and is the correct model. Drop both options and both
       comments.
 
-        Keep the distinction in mind while editing: the raw `settingsApi.get`
-        really does default `full` to `false` (`settings/service.ts:53`), so
-        reading that function in isolation says the opposite of the truth inside a
-        plugin. This misled two independent auditors and the main thread during
-        the audit itself.
+          Keep the distinction in mind while editing: the raw `settingsApi.get`
+          really does default `full` to `false` (`settings/service.ts:53`), so
+          reading that function in isolation says the opposite of the truth inside a
+          plugin. This misled two independent auditors and the main thread during
+          the audit itself.
 
 - [ ] **backups re-derives its own table name.**
       `const TABLE = 'plugin_backups_runs' as const` appears in both
