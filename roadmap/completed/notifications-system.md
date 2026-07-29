@@ -24,7 +24,9 @@ emitters — wiring real CMS functionality to fire notifications — are tracked
 - **Domain module** `packages/astromech/src/notifications/` (schema + service + barrel).
   `notificationsTable`: `id`, `userId` (fk → users, cascade), `type`, `title`, `message`,
   `href` (nullable, admin-relative), `createdAt`. No `readAt`.
-  Migrations (app-owned, `apps/demo/drizzle/`): `0010` create, `0012` drop `read_at`.
+  Migrations (app-owned, `apps/demo/migrations/`): one migration created the table, a
+  later one dropped `read_at` (the drizzle-kit-numbered migrations from that era no
+  longer correspond to files in the current homegrown chain).
 - **`notify({ target, type, title, message, href? })`** — privileged server-side emit.
   `target` is `{ user } | { role } | { all }`; resolves to user ids → bulk insert.
 - **User-facing API/SDK** (session-scoped, ownership in every WHERE): `GET /notifications`,

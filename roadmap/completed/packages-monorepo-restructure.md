@@ -6,8 +6,7 @@ deployable-but-never-published workspaces. Behaviour-preserving. Shipped on bran
 `refactor/packages-monorepo`.
 
 **STATUS: COMPLETE** — phases 1–3 done, each gate-green (typecheck 0 · 721 tests · build · lint:deps
-clean · db:generate neutral) and demo browser-verified; docs + memory updated. The only remaining
-action is the **merge to `main` (awaiting user confirmation)**.
+clean · db:generate neutral) and demo browser-verified; docs + memory updated. Merged to `main`.
 
 **Final tree:**
 
@@ -42,7 +41,7 @@ use the `"*"` workspace specifier.
 - [x] **Close-out**: ARCHITECTURE.md + memories updated (`packages-monorepo-layout`,
       `ambient-dts-virtual-modules`, `verify-subagent-gate-claims`; demo/browser/modular memories
       repointed); this file moved to `completed/`.
-- [ ] **Merge to `main` + push** — awaiting user confirmation.
+- [x] **Merge to `main` + push**.
 
 ## As-built notes / deviations from the plan
 

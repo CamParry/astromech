@@ -37,18 +37,20 @@ plugins/runtime · database · storage ·         capabilities
 types · utilities · errors                     pure leaves
 ```
 
-The three first-party plugins (`@astromech/{seo,redirects,menus}`) live OUTSIDE
-this `src/` graph, in `packages/plugins/` — each a separately published npm
-package that consumes core only through the public `astromech` surface (incl.
-`astromech/plugin-kit`, the plugin-authoring API). They prove the public surface
-can build a real plugin; cross-package isolation is enforced by each package's
-`exports` boundary at publish time. The plugin **runtime** (hook engine) stays a
-core capability.
+The four first-party plugins (`@astromech/{seo,redirects,menus,backups}`) live
+OUTSIDE this `src/` graph, in `packages/plugins/` — each a separately published
+npm package that consumes core only through the public `astromech` surface. The
+plugin-authoring API (`definePluginTable`, codec helpers, descriptor type
+vocabulary, …) is part of the root `astromech` export, not a separate
+subpath — the standalone `astromech/plugin-kit` package was dissolved. They
+prove the public surface can build a real plugin; cross-package isolation is
+enforced by each package's `exports` boundary at publish time. The plugin
+**runtime** (hook engine) stays a core capability.
 
 Key invariants:
 
 - **Domains are deep modules named for the business, not the tech.** Each owns its
-  `service.ts`, `schema.ts` (Drizzle table + Zod validation), `descriptors.ts`,
+  `service.ts`, `schema.ts` (`defineTable` table descriptor + Zod validation), `descriptors.ts`,
   and `visibility.ts`. Cross-domain data goes through `@/database/schema` (the
   table aggregator) or a shared capability — never via a direct peer import. The
   only permitted exception is a `schema.ts` foreign-key cross-reference.
@@ -110,7 +112,7 @@ packages/
 │   │   ├── settings/       # settings domain: service · schema · page-values
 │   │   │
 │   │   │   ── capabilities ───────────────────────────────────────────────
-│   │   ├── database/       # Drizzle client/drivers + schema.ts aggregator (was db/; public subpath unchanged)
+│   │   ├── database/       # Kysely client/drivers + schema.ts aggregator (was db/; public subpath unchanged)
 │   │   ├── storage/        # blob-storage registry + drivers/ (filesystem, r2, s3)
 │   │   ├── cloudflare/     # binding-name resolution across Workers and Node
 │   │   ├── permissions/    # permission model: roles, grammar, BUILT_IN_ROLES, can()
@@ -128,12 +130,12 @@ packages/
 │   │   └── exports/        # thin re-export barrels; tsup builds from here — internals are private
 │   ├── tests/              # mirrors src/
 │   ├── scripts/
-│   ├── drizzle/
-│   └── (tsup|vitest|drizzle).config.ts · tsconfig*.json · .dependency-cruiser.cjs
+│   └── (tsup|vitest).config.ts · tsconfig*.json · .dependency-cruiser.cjs
 │
 └── plugins/         # first-party plugins as separate published packages
+    ├── backups/     # @astromech/backups
     ├── menus/       # @astromech/menus
-    ├── redirects/   # @astromech/redirects  (ships a ./schema subpath for drizzle)
+    ├── redirects/   # @astromech/redirects  (ships a ./schema subpath of plain table descriptors)
     └── seo/         # @astromech/seo        (admin React components ship as source via ./admin/*)
 
 apps/
@@ -146,7 +148,7 @@ apps/
 Plugins access platform resources through two sanctioned, plugin-scoped handles on `PluginContext`:
 
 - **`ctx.storage`** — a plugin-scoped view of the storage registry. Keys are auto-prefixed `plugin/<alias>/` on `put`/`get`/`delete` and de-prefixed on `list()`. Plugins never see or construct raw storage keys.
-- **`ctx.database`** — `{ dialect, dump?, restore? }`. `dump` and `restore` are optional and feature-detected from the driver. Code against their presence, not the dialect. Backed by the **driver registry** (`src/database/driver-registry.ts`), which retains the full `DatabaseDriver` object alongside the Drizzle instance.
+- **`ctx.database`** — `{ dialect, dump?, restore? }`. `dump` and `restore` are optional and feature-detected from the driver. Code against their presence, not the dialect. Backed by the **driver registry** (`src/database/driver-registry.ts`), which retains the full `DatabaseDriver` object alongside the Kysely instance.
 
 **`DatabaseDriver` capability seam:** `dump?()` and `restore?()` are optional fields on `DatabaseDriver` (`src/types/config.ts`). Implemented for libsql (local `file:` connections only — `VACUUM INTO` requires a local path); unimplemented on D1/Postgres drivers (feature-detects off). A driver may implement `dump` without `restore`.
 
@@ -175,11 +177,13 @@ Cadence lives in the **database**, not in deploy config, because schedules are r
 
 Consumers import from subpaths, never deep into `src/`. The published surface is
 defined by `exports` in `package.json` — that's canonical. The ones to know:
-`astromech` (core helpers + types), `astromech/astro` (integration),
+`astromech` (core helpers + types, incl. the plugin-authoring API — there is no
+separate `plugin-kit` subpath), `astromech/astro` (integration),
 `astromech/local` & `astromech/fetch` (the two API consumers), `astromech/middleware`,
-`astromech/fields`, `astromech/db/schema`, `astromech/plugin-kit` (the
-plugin-authoring API), and the `astromech` CLI bin. The first-party plugins are
-their own packages — `@astromech/{seo,redirects,menus}` (see `packages/`).
+`astromech/fields`, `astromech/db/schema`, `astromech/storage/{filesystem,r2,s3}`
+(storage drivers), `astromech/cloudflare` (binding-name resolution), and the
+`astromech` CLI bin. The first-party plugins are their own packages —
+`@astromech/{seo,redirects,menus,backups}` (see `packages/`).
 
 ## The development gate
 

@@ -3,7 +3,7 @@
 Reorganises `src/` from the old linear spine (`storage→services→policies→transport→Client`)
 into a modular screaming-architecture **DAG** of deep domain modules. Behaviour-preserving;
 published package surface frozen via `src/exports/`. Branch: `refactor/modular-architecture`.
-In-flight design contract: `specs/modular-architecture.md` (delete once Stage 4 ships).
+The in-flight design contract (`specs/modular-architecture.md`) was deleted when this shipped, per the specs-are-ephemeral convention.
 
 - [x] Stage 1 — `src/exports/` public layer (sole published surface; tsup builds from it, package.json subpaths frozen)
 - [x] Stage 2 — domain modules `entries/ media/ users/ settings/`; `fields/` shared-core; `services/`→`context/` capability; modular dep-cruiser DAG enforced

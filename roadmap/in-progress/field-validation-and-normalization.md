@@ -1,6 +1,8 @@
 # Field Validation & System Normalization
 
-Server-side field validation as the headline, framed as a field-system normalization. Full design + rationale: `specs/field-system-and-validation.md`.
+Server-side field validation as the headline, framed as a field-system
+normalization. The P0–P5 design spec was retired once that work shipped; the
+remaining design state lives in `specs/field-validation-next-phase.md`.
 
 **P0 — Contract & types (no behaviour change)** ✅
 
@@ -50,7 +52,7 @@ Server-side field validation as the headline, framed as a field-system normaliza
 
 **P6 — Remaining design work** (full design state: `specs/field-validation-next-phase.md`)
 
-- [ ] **Nested / container validation** (foundational; coupled to `populate-and-complex-field-data-model`). DECISION LOCKED: nested-error addressing is `_id`-based (`blocks._abc123.heading`), not index-based — reorder-stable, shared with the populate feature's path scheme. Pipeline recursion + exact path grammar still to design
+- [ ] **Nested / container validation** (foundational; coupled to the populate/`_id` identity model, now part of `roadmap/planned/relationships-model.md`). DECISION LOCKED: nested-error addressing is `_id`-based (`blocks._abc123.heading`), not index-based — reorder-stable, shared with the populate feature's path scheme. Pipeline recursion + exact path grammar still to design
 - [ ] Error/warning severity (Sanity-style) — design open
 - [ ] Document-level `validate` hook — design open
 - [ ] Client-side declarative-rule mirror (declarative rules only; async/custom/unique stay server-side)
@@ -58,5 +60,5 @@ Server-side field validation as the headline, framed as a field-system normaliza
 
 **Entry-create bugs** (folded into this branch by user request)
 
-- [~] **Atomic create + relationships** — DONE but UNCOMMITTED in the worktree. `entries.create` now wraps entry-create + `saveRelationships` in `storage.transaction` (was two separate ops → orphaned entry on relationship failure). Changes: `entries/service.ts`, new `tests/services/entries/create-atomicity.test.ts`, `tests/_support/harness.ts` (test DB `:memory:`→temp file; libsql nulls the in-memory handle after a transaction). Re-run the gate before committing
+- [x] **Atomic create + relationships** — `entries.create` (`entries/operations/create.ts`) wraps entry-create + `saveRelationships` in `storage.transaction` (was two separate ops → orphaned entry on relationship failure). Changes: `entries/operations/create.ts`, `tests/services/entries/create-atomicity.test.ts`, `tests/_support/harness.ts` (test DB `:memory:`→temp file; libsql nulls the in-memory handle after a transaction)
 - [ ] **Translatable propagation on create** — DECISION OPEN. Non-translatable (group-shared) fields aren't synced when creating a translation that joins an existing group. Options: (1) inherit from siblings [recommended, non-destructive], (2) push like update [wipes on the blank-in-group flow], (3) smart merge. See spec §7.2

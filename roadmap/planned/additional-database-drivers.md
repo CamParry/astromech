@@ -23,9 +23,9 @@ one thing worth knowing before starting:
 
 Note v1 is SQLite-only; Postgres and MySQL are a future major.
 
-- [ ] `src/db/drivers/postgres.ts` — Postgres driver
-- [ ] `src/db/drivers/mysql.ts` — MySQL driver
-- [ ] Drizzle schema variants for Postgres/MySQL column types
+- [ ] `packages/astromech/src/database/drivers/postgres.ts` — Postgres driver
+- [ ] `packages/astromech/src/database/drivers/mysql.ts` — MySQL driver
+- [ ] `defineTable` descriptor / DDL-emitter dialect variants for Postgres/MySQL column types
 - [ ] Migration pipeline per dialect
 - [ ] Update `AstromechConfig` DB config type for each dialect
 - [ ] Test coverage for each new driver

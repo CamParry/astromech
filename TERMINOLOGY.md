@@ -21,13 +21,13 @@ never classes on the root barrel — see `apps/docs/configuration/storage.md`.
 
 ---
 
-## Collection vs CollectionConfig
+## Entry type vs EntryTypeConfig
 
-**Collection** refers to the concept — a named content type (e.g. "posts", "products"). It is identified by its string name throughout the API.
+**Entry type** refers to the concept — a named content type (e.g. "posts", "products"). It is identified by its string name throughout the API.
 
-**CollectionConfig** is the configuration object that defines a collection: its field groups, slug rules, admin columns, etc.
+**`EntryTypeConfig`** is the configuration object that defines an entry type: its field groups, slug rules, admin columns, etc. (`packages/astromech/src/types/config.ts`).
 
-Prefer "collection config" when referring to the config object in conversation, to avoid ambiguity.
+Prefer "entry type config" when referring to the config object in conversation, to avoid ambiguity.
 
 ---
 
@@ -37,15 +37,16 @@ Prefer "collection config" when referring to the config object in conversation, 
 
 ---
 
-## Delete vs Trash vs Force Delete
+## Trash vs Delete
 
-These are distinct operations:
+These are distinct operations on the entries service:
 
-- **Trash** (soft delete) — sets `deletedAt` on the entry; the row is preserved. The API method is `delete()`.
-- **Force delete** — permanently removes the row. The API method is `forceDelete()`.
+- **`trash()`** (soft delete) — sets `deletedAt` on the entry; the row is preserved.
+- **`delete()`** — **permanent**. Removes the row and its `relationships` rows outright.
+- **`emptyTrash()`** — permanently deletes every trashed entry of a type in one go (also cleans up their `relationships` rows first).
 - **Restore** — clears `deletedAt`, returning a trashed entry to active status.
 
-> **Known ambiguity:** The API method `delete()` performs a soft delete (trash), which is non-obvious. A future API revision may rename this to `trash()` and make `delete()` a force delete. This has not been decided yet.
+`trash()` and `delete()` are two separate, named methods — there is no `forceDelete()`.
 
 ---
 
@@ -73,9 +74,9 @@ The three values of `EntryStatus`:
 
 ## Versioning
 
-Per-collection opt-in via `CollectionConfig.versioning: true`. When enabled, a snapshot of the entry's fields and status is saved to the `entry_versions` table on each update.
+Per-entry-type opt-in via `EntryTypeConfig.versioning: true`. When enabled, a snapshot of the entry's fields and status is saved to the `entry_versions` table on each update.
 
-The table always exists in the schema regardless of whether any collection enables versioning.
+The table always exists in the schema regardless of whether any entry type enables versioning.
 
 This is **backward versioning** — an immutable, append-only record of the past. Contrast it with a **staged entry** (below), which is a mutable, prepared _future_ change. The two are distinct and do not unify: a **version** is a past snapshot for record-keeping; a **staged entry** is a forthcoming change you prepare, preview, and merge on purpose.
 

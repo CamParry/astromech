@@ -49,12 +49,15 @@ export default defineConfig({
 });
 ```
 
-After adding the plugin, generate and apply the migration for its table:
+After adding the plugin, apply its migrations:
 
 ```sh
-astromech db:generate   # emits a migration covering plugin_redirects_redirects
-astromech db:migrate
+astromech db:init
 ```
+
+The table's migration ships pre-generated inside the package
+(`migrations/0000_baseline.ts`); `db:init` merges it into the app's chain and
+applies it — there's nothing to generate.
 
 ## Options
 

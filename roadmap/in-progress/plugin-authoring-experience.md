@@ -322,12 +322,12 @@ round-trip for a non-public key. Reading that function alone says the opposite
 of the truth at plugin altitude. It is why `backups/src/backup.ts:186` and
 `menus/src/service/menus.ts:118` still pass a now-redundant `{ full: true }`
 with comments asserting a private-by-default store — both are stale, tracked in
-`roadmap/planned/plugin-consistency-sweep.md`.
+`roadmap/completed/plugin-consistency-sweep.md`.
 
 ## Phase 3 — `definePermissions`
 
 Designed 2026-07-29. The trigger was a five-plugin audit (see
-`roadmap/planned/plugin-consistency-sweep.md`), which found the permission
+`roadmap/completed/plugin-consistency-sweep.md`), which found the permission
 surface is the last one with no `define*` helper, and that its declaration half
 is dead: `PluginDefinition.permissions` (`types/plugins.ts:298`) has **zero
 consumers** anywhere in core. Three of five plugins dutifully write it and it

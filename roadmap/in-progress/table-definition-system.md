@@ -20,7 +20,6 @@ Feature 2 (the ergonomic `findOne`/`findMany`/`populate` storage wrapper) is spl
 - [x] Drop `drizzle-kit` + `apps/demo/drizzle` journal; hand-author one Kysely baseline migration (raw `CREATE TABLE`s); `db:init` → Kysely `Migrator`
 - [x] Update test harness DB setup (`tests/_support/harness.ts`) to Kysely
 - [x] Drop `drizzle-kit`; **keep `drizzle-orm` installed** AND its `*Table` schema objects (seed + tableStorage introspection + plugin authoring need them until step 5)
-- **→ current implementation handoff: `/tmp/astromech-step1-impl-handoff.md`** (supersedes the original `astromech-step1-drizzle-to-kysely-handoff.md` with the corrected/locked decisions)
 
 ### Step 2 — Table definitions _(DONE — committed `aeefe75` on `feat/data-layer-step2-definetable`)_
 
@@ -56,11 +55,12 @@ Scope = **our 9 tables only** (`roles, entries, entry_versions, entry_preview_to
 
 ### Step 6 — Plugin identity rework _(BUILT 2026-07-27)_
 
-Supersedes step 5's identity model. **Design spec:** `specs/plugin-identity.md`.
+Supersedes step 5's identity model. The design spec was retired once this
+shipped; the locked decisions it held are recorded in the checklist below.
 
 - [x] `package` becomes the single canonical identifier — derive namespace + SDK key; delete `alias`/`name` and the site-level override
 - [x] Rename the schema factory `definePlugin` → `definePluginTable` (singular, takes the identity object) — resolves the two-exports-one-name collision
-    - **Superseded by** `plugin-authoring-experience.md` §2a: `definePluginTable` → `defineTable`. The name collision it resolved is gone — the plugin factory now takes one inline-identity object, so nothing else claims `defineTable`. Requires the literal-type fix (bare table names, prefix at assembly, type-only import) and retires the `<X>_PACKAGE` consts with it.
+    - **Investigated and rejected by** `plugin-authoring-experience.md` §2a: a further rename `definePluginTable` → `defineTable` (bare table names, prefix at assembly, type-only import to recover the literal) was designed but does not survive contact — see that file's "Known remainders" section for the three disqualifying findings (TS7022/TS2456 compile failure; two consumers read `descriptor.name` before assembly exists; it trades a build error for a silent wrong-table bug). The `<X>_PACKAGE` consts therefore remain.
 - [x] `manifest.ts` → one `plugin` identity object across all four plugin packages (+ the demo's `rating`)
 - [x] Engine: index-name cap-and-hash above 63 bytes, explicit FK constraint names, generate-time table-name length error
 - [x] Tracking keyed on `package` with UNIQUE on `namespace`; `plugin:purge` takes the package

@@ -12,10 +12,10 @@ Design was grilled and locked (see commit history). Durable architecture: `ARCHI
 
 ### Migration pipeline → app-owned, dynamic
 
-- [x] `db:init` applies from the **app cwd's** `./drizzle` (not the core package's hardcoded folder).
+- [x] `db:init` applies from the **app cwd's** `./migrations` (not the core package's hardcoded folder).
 - [x] npm scripts call the `astromech` CLI (`db:generate`/`db:init`), not raw drizzle-kit against a static config.
 - [x] Delete hardcoded plugin schema paths + static `drizzle.config.ts` (core + demo); `db:generate` codegens an ephemeral config from the app's plugin list (`schemaModule` specifiers).
-- [x] Relocate existing migrations `packages/astromech/drizzle/` → `apps/demo/drizzle/` (preserve `meta/` journal). Core ships schema/types, not migrations.
+- [x] Relocate existing migrations `packages/astromech/drizzle/` → `apps/demo/migrations/` (preserve `meta/` journal). Core ships schema/types, not migrations.
 
 ### Expose storage + db capabilities to plugins (sanctioned port, no boundary-crossing)
 
