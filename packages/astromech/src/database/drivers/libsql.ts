@@ -46,13 +46,17 @@ export function libsqlDriver(options?: LibSQLDriverOptions) {
         return client;
     }
 
+    function createDialect(): LibsqlDialect {
+        // `@libsql/kysely-libsql` pins an older `@libsql/core` whose `Client`
+        // type differs from `@libsql/client`'s by an unrelated `sync()` return
+        // type; the runtime client is fully compatible.
+        return new LibsqlDialect({ client: getClient() as never });
+    }
+
     function getInstance(): Kysely<DB> {
         if (!instance) {
             instance = new Kysely<DB>({
-                // `@libsql/kysely-libsql` pins an older `@libsql/core` whose
-                // `Client` type differs from `@libsql/client`'s by an unrelated
-                // `sync()` return type; the runtime client is fully compatible.
-                dialect: new LibsqlDialect({ client: getClient() as never }),
+                dialect: createDialect(),
                 plugins: [new CamelCasePlugin()],
             });
         }
@@ -75,7 +79,8 @@ export function libsqlDriver(options?: LibSQLDriverOptions) {
     return {
         type: 'libsql' as const,
         getInstance,
-        getClient,
+        createDialect,
+        supportsTransactions: true,
 
         async dump(): Promise<DbDump> {
             assertFileUrl();

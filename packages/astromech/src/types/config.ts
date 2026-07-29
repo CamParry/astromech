@@ -2,8 +2,7 @@
  * Configuration types — collection config, drivers, Astromech config
  */
 
-import type { Client } from '@libsql/client';
-import type { Kysely } from 'kysely';
+import type { Dialect, Kysely } from 'kysely';
 import type { DB } from '@/database/types.js';
 import type { CellKind } from './definitions.js';
 import type { Permission } from './domain.js';
@@ -32,11 +31,20 @@ export type DatabaseDriver = {
     type: string;
     getInstance(): Kysely<DB>;
     /**
-     * Shared libsql `Client` backing better-auth's Kysely adapter and
-     * dump/restore. Optional — absent on drivers without an in-process client
-     * (e.g. D1).
+     * A fresh, plugin-free Kysely dialect. better-auth builds its own Kysely
+     * instance and must not inherit the `CamelCasePlugin` the main instance
+     * uses, so it needs its own dialect rather than the shared instance. Each
+     * call returns a new dialect.
      */
-    getClient?(): Client;
+    createDialect(): Dialect;
+    /**
+     * Whether the driver supports interactive transactions (`BEGIN`/`COMMIT`
+     * across round-trips). Absent or `true` means yes. Cloudflare D1 has no
+     * interactive transactions — only `batch()` — so it declares `false`, and
+     * domains that can degrade (entry storage) drop their transaction method
+     * rather than pretending.
+     */
+    supportsTransactions?: boolean;
     /** Produce a consistent full-DB snapshot. Optional — absent on drivers that can't dump in-process (e.g. D1). */
     dump?(): Promise<DbDump>;
     /** Restore a full-DB snapshot from raw SQLite bytes. `preserve` = table names to leave untouched. Optional. */

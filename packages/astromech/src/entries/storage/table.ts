@@ -35,8 +35,10 @@
  *
  * uniqueSlug: not supported — throws with an instructional error.
  * transaction: wraps fn in a Kysely tx, rebinding a new tableStorage instance.
+ *   Absent entirely when the active driver has no interactive transactions.
  */
 
+import { supportsTransactions } from '@/database/capabilities.js';
 import {
     createStorage,
     type QueryHandle,
@@ -73,6 +75,17 @@ export type TableStorageOptions = {
 class TableStorage implements EntryStorage<EntryRecord> {
     public readonly supports: readonly never[] = Object.freeze([]) as readonly never[];
 
+    /**
+     * Assigned in the constructor only when the active driver supports
+     * interactive transactions — an own `undefined` property would still
+     * satisfy `'transaction' in storage`, so degrading means never assigning
+     * it at all. `EntryStorage.transaction` is optional and every caller
+     * already falls back to sequential writes.
+     */
+    public transaction?: <T>(
+        fn: (storage: EntryStorage<EntryRecord>, db: StorageDb) => Promise<T>
+    ) => Promise<T>;
+
     private readonly table: TableDescriptor;
     private readonly storage: Storage<TableDescriptor>;
     private readonly idCol: string;
@@ -90,6 +103,38 @@ class TableStorage implements EntryStorage<EntryRecord> {
         } else {
             this.createdAtCol = options?.timestamps?.createdAt ?? 'createdAt';
             this.updatedAtCol = options?.timestamps?.updatedAt ?? 'updatedAt';
+        }
+
+        // `EntryStorage.transaction` is optional and every caller
+        // (operations/create.ts, internal/bulk.ts, operations/staging/merge.ts)
+        // already falls back to sequential writes, so leaving it unassigned on a
+        // driver without interactive transactions (D1) degrades correctly
+        // instead of throwing at runtime.
+        if (supportsTransactions()) {
+            this.transaction = async <T>(
+                fn: (storage: EntryStorage<EntryRecord>, db: StorageDb) => Promise<T>
+            ): Promise<T> => {
+                const { db } = this.storage.query();
+                return db.transaction().execute(async (trx) => {
+                    let timestamps: TableStorageOptions['timestamps'];
+                    if (this.createdAtCol === false) {
+                        timestamps = false;
+                    } else if (this.updatedAtCol === false) {
+                        timestamps = { createdAt: this.createdAtCol };
+                    } else {
+                        timestamps = {
+                            createdAt: this.createdAtCol,
+                            updatedAt: this.updatedAtCol,
+                        };
+                    }
+                    const txStorage = new TableStorage(
+                        this.table,
+                        { idColumn: this.idCol, timestamps },
+                        trx as unknown as Db
+                    );
+                    return fn(txStorage, trx as unknown as StorageDb);
+                });
+            };
         }
     }
 
@@ -145,31 +190,6 @@ class TableStorage implements EntryStorage<EntryRecord> {
         if (column === false) return new Date(0);
         const value = row[column];
         return value instanceof Date ? value : new Date(value as string | number);
-    }
-
-    async transaction<T>(
-        fn: (storage: EntryStorage<EntryRecord>, db: StorageDb) => Promise<T>
-    ): Promise<T> {
-        const { db } = this.storage.query();
-        return db.transaction().execute(async (trx) => {
-            let timestamps: TableStorageOptions['timestamps'];
-            if (this.createdAtCol === false) {
-                timestamps = false;
-            } else if (this.updatedAtCol === false) {
-                timestamps = { createdAt: this.createdAtCol };
-            } else {
-                timestamps = {
-                    createdAt: this.createdAtCol,
-                    updatedAt: this.updatedAtCol,
-                };
-            }
-            const txStorage = new TableStorage(
-                this.table,
-                { idColumn: this.idCol, timestamps },
-                trx as unknown as Db
-            );
-            return fn(txStorage, trx as unknown as StorageDb);
-        });
     }
 
     uniqueSlug(): Promise<string> {

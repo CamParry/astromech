@@ -32,6 +32,7 @@
 
 import type { ExpressionBuilder, Updateable } from 'kysely';
 import { getDb } from '@/database/registry.js';
+import { supportsTransactions } from '@/database/capabilities.js';
 import { encodePatch, decode } from '@/database/codec.js';
 import { createStorage } from '@/database/storage/create-storage.js';
 import { entries } from '@/database/schema.js';
@@ -482,7 +483,12 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
 
     return {
         supports,
-        transaction,
+        // `EntryStorage.transaction` is optional and every caller
+        // (operations/create.ts, internal/bulk.ts, operations/staging/merge.ts)
+        // already falls back to sequential writes, so omitting it on a driver
+        // without interactive transactions degrades correctly instead of
+        // throwing at runtime.
+        ...(supportsTransactions() ? { transaction } : {}),
         uniqueSlug,
         list,
         get,

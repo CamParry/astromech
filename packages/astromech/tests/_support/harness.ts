@@ -34,9 +34,10 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { createClient } from '@libsql/client';
 import { Kysely, CamelCasePlugin } from 'kysely';
-import type { Insertable, MigrationProvider } from 'kysely';
+import type { Dialect, Insertable, MigrationProvider } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
-import { setDb, setDbClient } from '@/database/registry.js';
+import { setDb } from '@/database/registry.js';
+import { setDatabaseDriver } from '@/database/driver-registry.js';
 import { mergeMigrationProviders, migrateToLatest } from '@astromech/schema-engine';
 import { encode, decode } from '@/database/codec.js';
 import type { DB } from '@/database/types.js';
@@ -66,8 +67,8 @@ type Db = Kysely<DB>;
 const FIRST_PARTY_PLUGIN_MIGRATIONS = ['redirects', 'backups'] as const;
 
 /**
- * Build a Kysely instance over a libsql `url`, register it (+ its raw client)
- * globally, and apply the full migration chain. The app-owned migration
+ * Build a Kysely instance over a libsql `url`, register it (+ a driver wrapping
+ * it) globally, and apply the full migration chain. The app-owned migration
  * provider lives outside this package's rootDir, so it is imported
  * dynamically by URL (vitest resolves the .ts) to avoid pulling apps/demo
  * into the tsconfig project.
@@ -81,7 +82,12 @@ async function buildTestDb(url: string): Promise<Db> {
         plugins: [new CamelCasePlugin()],
     });
     setDb(db);
-    setDbClient(client);
+    setDatabaseDriver({
+        type: 'libsql',
+        getInstance: () => db,
+        createDialect: () => new LibsqlDialect({ client: client as never }),
+        supportsTransactions: true,
+    });
     const { migrationProvider } = await import(
         new URL('../../../../apps/demo/migrations/index.ts', import.meta.url).href
     );
@@ -150,10 +156,16 @@ const noopStorage: StorageDriver = {
     },
 };
 
+// `makeTestConfig()`'s `db` field is never actually resolved: tests wire the
+// active driver themselves via `createTestDb()` → `setDatabaseDriver`, and
+// `setupTestConfig()` never reads `config.db`. This just satisfies the type.
 const noopDriver: DatabaseDriver = {
     type: 'test',
     getInstance(): Kysely<DB> {
         throw new Error('test driver getInstance should not be called');
+    },
+    createDialect(): Dialect {
+        throw new Error('test driver createDialect should not be called');
     },
 };
 
