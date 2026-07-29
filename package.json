@@ -12,8 +12,8 @@
     ],
     "scripts": {
         "dev": "npm run dev -w astromech",
-        "build": "npm run build -w @astromech/schema-engine && npm run build -w astromech && npm run build -w @astromech/menus -w @astromech/redirects -w @astromech/seo -w @astromech/backups",
-        "typecheck": "npm run typecheck -w @astromech/schema-engine && npm run typecheck -w astromech && npm run typecheck -w @astromech/menus -w @astromech/redirects -w @astromech/seo -w @astromech/backups",
+        "build": "npm run build -w @astromech/schema-engine && npm run build -w astromech && npm run build -w @astromech/menus -w @astromech/redirects -w @astromech/seo -w @astromech/backups -w @astromech/forms",
+        "typecheck": "npm run typecheck -w @astromech/schema-engine && npm run typecheck -w astromech && npm run typecheck -w @astromech/menus -w @astromech/redirects -w @astromech/seo -w @astromech/backups -w @astromech/forms",
         "lint": "npm run lint -w @astromech/schema-engine && npm run lint -w astromech",
         "lint:deps": "npm run lint:deps -w astromech",
         "format": "prettier --write .",

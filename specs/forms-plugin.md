@@ -74,6 +74,19 @@ It is currently unexported (`fields/index.ts` re-exports only `builder.js`).
 **Why:** the alternative is a second rule evaluator inside forms that silently
 drifts from core's.
 
+### 2c. Export `renderRichText`
+
+`renderRichText` (`fields/rich-text/index.ts`) is internal, used only by
+`entries/visibility.ts` to render richtext on public reads. Forms needs it to
+turn a stored email body into HTML for `ctx.sendEmail` — and cannot get it from
+a public read, because those bodies are `private` (§8).
+
+**Change:** export it from the public surface alongside `processFields`.
+
+**Why:** the only alternative is forms reimplementing core's ProseMirror
+sanitizer, which is exactly the drift 2b exists to avoid — and a sanitizer is
+the worst possible thing to have two of.
+
 Implementation note: `processFields`'s ctx requires a `reads` port for `unique`
 and reference rules. Forms never emits those rules, so it passes a stub that
 throws if called — verify the exact `FieldValidationContext` shape when wiring.
@@ -122,7 +135,10 @@ Fields, grouped into tabs:
 
 Each block type is one field kind. Every block carries `label` (required),
 `name` (the key in submission data, required), `required` (boolean) and
-`helpText`. Per-kind extras:
+`description`. Note the field API has **no `helpText`** — `BaseOptions` is
+`label`, `required`, `defaultValue`, `description`, `validation`,
+`translatable`, `searchable`, `private`, and nothing else. There is likewise no
+read-only or disabled option. Per-kind extras:
 
 | `_type`         | Extra config                  | Compiles to           |
 | --------------- | ----------------------------- | --------------------- |
@@ -145,6 +161,12 @@ Stored instances use the reserved block keys — `{ _type, _id, name, label, …
 
 **Notifications tab**
 
+Every field in this tab is declared `private: true`. `forms/form` entries are
+readable through the **public** entries API, so without it the notification
+recipients and copy would be world-readable on any published form. Core strips
+`private` fields from the public shape, which makes this an enforced boundary
+rather than a convention `get` has to remember.
+
 - `notifyEnabled` (boolean)
 - `notifyTo` (repeater of email)
 - `notifySubject` (text, placeholders allowed)
@@ -165,14 +187,25 @@ Stored instances use the reserved block keys — `{ _type, _id, name, label, …
 `storage: tableStorage(submissionsTable)`, exactly as `redirect` does. Table
 `plugin_forms_submissions`:
 
-| Column        | Type            | Notes                          |
-| ------------- | --------------- | ------------------------------ |
-| `id`          | ulid, pk        |                                |
-| `formId`      | text, indexed   | the form entry's id            |
-| `formSlug`    | text            | denormalised for listing       |
-| `data`        | json            | the submitted answers          |
-| `meta`        | json, nullable  | ip / userAgent / referer       |
-| `submittedAt` | ISO text        |                                |
+| Column                     | Type            | Notes                                |
+| -------------------------- | --------------- | ------------------------------------ |
+| `id`                       | ulid, pk        |                                      |
+| `formId`                   | text, indexed   | the form entry's id                  |
+| `formSlug`                 | text            | denormalised for listing             |
+| `data`                     | json            | the submitted answers                |
+| `summary`                  | text, nullable  | see below                            |
+| `meta`                     | json, nullable  | ip / userAgent / referer             |
+| `submittedAt`              | timestamp       |                                      |
+| `createdAt` / `updatedAt`  | timestamp       | required by `tableStorage`, see below |
+
+`summary` is a short human-readable rendering of `data`, computed once at submit
+time. It exists because the submissions list needs a column an editor can scan,
+and no `CellKind` can summarise a JSON blob — the text cell is `String(value)`,
+which renders an object as `[object Object]`.
+
+`createdAt`/`updatedAt` are not optional decoration: `tableStorage` defaults
+`timestamps` on and assumes both columns exist, so omitting them without passing
+`{ timestamps: false }` decodes `undefined` into an Invalid Date.
 
 Entry config: `titleField: false`, `statuses: false`, `slug: false`,
 `trash: false`. Admin columns: form, submitted-at, a short summary of `data`.
@@ -200,9 +233,17 @@ service: {
 `enabled`, the compiled field list, and — when configured — the spam provider
 and its **site** key.
 
-It must **never** leak notification settings or secrets. Build the projection by
-explicit allow-list: `ctx.entries` defaults to the `full` shape at plugin
-altitude, so a public shape is not handed to you.
+It must **never** leak notification settings or secrets. Two independent
+defences, because this is the one method an anonymous caller can reach:
+
+1. The notification fields are `private: true` (§4), so core strips them from
+   the public shape regardless of what this method does.
+2. `get` still builds its result by **explicit allow-list**, never by spreading
+   the entry — `ctx.entries` defaults to the `full` shape at plugin altitude, so
+   a public shape is not what you are handed.
+
+A test asserts a `full`-shaped form entry does not leak notification settings
+through `get`.
 
 **`submit({ slug, data, token? })`** → `{ ok: true, id }` or
 `{ ok: false, errors: FieldErrors }`.
@@ -258,11 +299,18 @@ substituted from the submission.
 
 **Rich text → HTML.** `ctx.sendEmail` takes a `ReactElement`, but the bodies are
 stored as ProseMirror JSON. Core renders richtext to sanitized HTML on **public**
-reads (`entries/visibility.ts`), and `renderRichText` is internal. v1 therefore
-reads the form entry a second time with `full: false` to obtain the sanitized
-HTML, and injects it into the email component. Alternative considered: export
-`renderRichText` as a third core change. Rejected for v1 — the double read costs
-nothing on an already-cached entry and adds no public surface.
+reads (`entries/visibility.ts`), and `renderRichText` is internal.
+
+An earlier draft planned to read the form a second time with `full: false` to
+obtain that HTML. **That does not work**, because §4 marks every notification
+field `private: true` — a private field is stripped from the public shape
+entirely, so the second read returns nothing to render.
+
+v1 therefore takes the third core change in §2c: export `renderRichText`, and
+render the stored JSON directly. The two requirements are in genuine tension —
+the bodies must be invisible to public reads *and* renderable by the plugin —
+and a public renderer is the only thing that satisfies both without forms
+duplicating core's sanitizer.
 
 ## 9. Permissions
 
@@ -279,6 +327,14 @@ blocks field gives the form builder its editor for free.
 ## 11. Verification
 
 - `npm run typecheck`, `npm run lint`, full test suite, `npm run build`.
+
+  **Trap:** the root `build` and `typecheck` scripts do not use the
+  `packages/plugins/*` workspace glob — they hardcode each plugin by name
+  (`-w @astromech/menus -w @astromech/redirects …`). A new plugin is invisible
+  to the root gate until it is added to both. `@astromech/forms` has been. Root
+  `lint` covers only schema-engine and astromech; plugin packages have no lint
+  script and are linted by the pre-commit hook instead, so lint them directly
+  with `npx eslint packages/plugins/forms/src` when verifying by hand.
 - Tests (real fixtures, never a mocked DB): the block→`FieldDefinition`
   compiler, `submit` happy path, `submit` validation failure shape, the gating
   hook actually aborting, `get` **not** leaking notification settings or the
