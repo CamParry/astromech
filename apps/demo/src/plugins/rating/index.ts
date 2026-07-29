@@ -1,7 +1,7 @@
 /**
  * demo-rating — a teaching plugin that exercises the external-plugin surface:
  * a custom `rating` field type, a component admin page, an auto-rendered
- * settings form, a service method, localized strings, and a permission bundle.
+ * settings form, a service method, localized strings, and a declared permission.
  *
  * It is structured exactly like a first-party plugin (types / permissions /
  * fields / pages / a thin `index`), but authored as an *external* plugin: it
@@ -12,7 +12,7 @@
  */
 
 import { definePlugin } from 'astromech';
-import { ratingPermissionBundles, ratingPermissionDefs } from './permissions/rating.js';
+import { ratingPermissions } from './permissions/rating.js';
 import { ratingField } from './fields/rating.js';
 import { overviewPage } from './pages/overview.js';
 import { settingsPage } from './pages/settings.js';
@@ -26,8 +26,7 @@ export const rating = definePlugin({
     label: 'Ratings',
     icon: 'Star',
     root: import.meta.url,
-    permissionBundles: ratingPermissionBundles,
-    permissions: ratingPermissionDefs,
+    permissions: ratingPermissions,
     i18n: ['en'],
     fields: [ratingField],
     service: ratingService,

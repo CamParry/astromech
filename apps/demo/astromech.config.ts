@@ -1,5 +1,11 @@
 import { fileURLToPath } from 'node:url';
-import { builtInRole, defineAdminPage, defineConfig, libsqlDriver } from 'astromech';
+import {
+    builtInRole,
+    defineAdminPage,
+    defineConfig,
+    entryPermissions,
+    libsqlDriver,
+} from 'astromech';
 import { sharp } from 'astromech/images/sharp';
 import { filesystem } from 'astromech/storage/filesystem';
 import * as fields from 'astromech/fields';
@@ -132,10 +138,18 @@ export default defineConfig({
             permissions: [
                 ...builtInRole('editor'),
                 ...seo.permissions('view'),
-                ...redirects.permissions('manage'),
-                // `view`, not `manage` — a content editor has no business
-                // downloading, restoring or deleting the database.
-                ...backups.permissions('view'),
+                // Redirects declares no permissions — its entry type's are
+                // derived by core, so a site enumerates the actions it grants.
+                ...entryPermissions(
+                    'redirects/redirect',
+                    'read',
+                    'create',
+                    'update',
+                    'delete'
+                ),
+                // `read` alone — a content editor has no business downloading,
+                // restoring or deleting the database.
+                ...backups.permissions('read'),
             ],
         },
     },

@@ -47,3 +47,21 @@ export function entryPermission(typeId: string, action: EntryAction): string {
     if (index === -1) return rootEntryPermission(typeId, action);
     return pluginEntryPermission(typeId.slice(0, index), typeId.slice(index + 1), action);
 }
+
+/**
+ * The permissions for several actions on one entry type — what a site grants a
+ * role for a plugin's entry type, now that plugins no longer hand-declare them:
+ *
+ * ```ts
+ * ...entryPermissions('redirects/redirect', 'read', 'create', 'update', 'delete')
+ * ```
+ */
+export function entryPermissions(typeId: string, ...actions: EntryAction[]): string[] {
+    if (actions.length === 0) {
+        throw new Error(
+            `entryPermissions("${typeId}") needs at least one action. ` +
+                `Pass the actions to grant, e.g. entryPermissions("${typeId}", 'read', 'update').`
+        );
+    }
+    return actions.map((action) => entryPermission(typeId, action));
+}

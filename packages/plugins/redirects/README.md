@@ -19,8 +19,10 @@ redirects/
   src/entries/redirect.ts     defineEntryType — the table-backed entry type
   src/service/redirects.ts    the public `lookup` method
   src/hooks/slug-change.ts    defineHook — auto-create a redirect on URL change
-  src/permissions/redirects.ts  permission bundles + declarations
 ```
+
+There is no `permissions/` directory: this plugin declares no permissions of
+its own (see below).
 
 ## Identity
 
@@ -79,17 +81,17 @@ This adds a **Redirects** entry type to the admin (managed like any other) with
 
 ## Permissions
 
-The plugin declares permission bundles for composing into roles, read straight
-off the plugin:
+The plugin declares **no** permissions of its own: `lookup` is public, and a
+redirect is an ordinary entry, so its permissions are the entry permissions core
+derives from the registered type — `plugin:redirects:entry:redirect:{action}`
+for `read`, `create`, `update` and `delete`.
 
-- `manage` — read/create/update/delete redirects
-- `view` — read only
-
-These resolve to `plugin:redirects:entry:redirect:{action}`.
+A site grants them by naming the qualified type id and the actions it wants.
+There are no bundles; enumeration is the point of an opt-in model.
 
 ```ts
 // astromech.config.ts
-import { builtInRole } from 'astromech';
+import { builtInRole, defineConfig, entryPermissions } from 'astromech';
 import { redirects } from '@astromech/redirects';
 
 export default defineConfig({
@@ -97,11 +99,25 @@ export default defineConfig({
     roles: {
         'content-editor': {
             name: 'Content Editor',
-            permissions: [...builtInRole('editor'), ...redirects.permissions('manage')],
+            permissions: [
+                ...builtInRole('editor'),
+                ...entryPermissions(
+                    'redirects/redirect',
+                    'read',
+                    'create',
+                    'update',
+                    'delete'
+                ),
+            ],
         },
     },
 });
 ```
+
+Note that `builtInRole('editor')`'s `entry:*` does **not** reach these — the
+plugin form is deliberately a separate namespace, so a plugin's entry types are
+never granted by a root-level wildcard. Run `astromech permissions` to list
+every grantable string your config produces.
 
 ## Looking up a redirect
 

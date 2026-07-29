@@ -1,21 +1,15 @@
 /**
- * Permission bundles (for composing into config roles) and the plugin's
- * permission declarations (for the admin permission UI). Bundle keys resolve
- * to `plugin:seo:{key}`.
+ * The permissions this plugin makes grantable. Bare keys; core namespaces them
+ * to `plugin:seo:{key}`. A site enumerates the ones it grants:
  *
  *   roles: { editor: { permissions: [...seo.permissions('view')] } }
  */
 
-import type { PluginPermission } from 'astromech';
+import { definePermissions } from 'astromech';
 
-export const seoPermissionBundles = {
-    view: ['view'],
-} as const;
-
-export const seoPermissionDefs: PluginPermission[] = [
-    {
-        key: 'view',
+export const seoPermissions = definePermissions({
+    view: {
         label: 'View SEO overview',
         description: 'See the SEO health dashboard.',
     },
-];
+});

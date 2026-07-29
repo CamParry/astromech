@@ -24,6 +24,7 @@ import type { PluginHooks } from './hooks.js';
 import type { PluginServiceNamespace, TypedEntriesApi } from './client.js';
 import type { MediaApi, NotificationsApi, SettingsApi, UsersApi } from './api.js';
 import type { ServiceMethodEffect } from './services.js';
+import type { PermissionDeclarations } from '@/permissions/define.js';
 
 // ============================================================================
 // Email overrides (carried over from the prior plugin surface)
@@ -136,7 +137,11 @@ export type PluginServiceMethod<Input = unknown, Output = unknown> = {
     handler: (input: Input, ctx: PluginContext) => Promise<Output> | Output;
     /** One-line summary for the method manifest (discovery / MCP / AI tool-loop). */
     summary?: string;
-} & Partial<ServiceMethodEffect>;
+    // The effect declaration is MANDATORY (`ServiceMethodEffect` requires
+    // `mutates`; `destructive`/`idempotent` stay optional). An undeclared effect
+    // used to fall back to "mutating", which silently mislabelled pure reads in
+    // the method manifest and so in MCP; it is now a compile error instead.
+} & ServiceMethodEffect;
 
 /** Collection element for a plugin's service record: variance-safe over any concrete method. */
 export type AnyPluginServiceMethod = PluginServiceMethod<never, unknown>;
@@ -151,17 +156,6 @@ export type PluginRawRoute = {
     path: string;
     access: PluginAccess;
     handler: (request: Request, ctx: PluginContext) => Promise<Response> | Response;
-};
-
-// ============================================================================
-// Permissions
-// ============================================================================
-
-export type PluginPermission = {
-    /** Action segment, e.g. `lookup` → `plugin:<namespace>:lookup`. */
-    key: string;
-    label: string;
-    description?: string;
 };
 
 // ============================================================================
@@ -294,22 +288,24 @@ export type PluginDefinition = PluginIdentity & {
     root?: string;
 
     // ── Declarative surfaces ────────────────────────────────────────────
-    permissions?: PluginPermission[];
     /**
-     * Named permission bundles a *site* composes into its roles, surfaced on
-     * the plugin factory with the namespace already applied:
+     * The permission keys this plugin makes grantable, declared with
+     * `definePermissions` — a flat record of **bare** keys (no `:`), which core
+     * namespaces to `plugin:<namespace>:<key>` at registration.
      *
      * ```ts
-     * permissionBundles: { manage: ['read', 'run'], view: ['read'] }
-     * // site: roles: { admin: { permissions: [...backups.permissions('manage')] } }
+     * permissions: definePermissions({
+     *     read: { label: 'View backups' },
+     *     restore: { label: 'Restore from backup' },
+     * })
      * ```
      *
-     * Keys are plugin-scoped exactly like `permissions[].key` — including keys
-     * that already contain `:`, so `entry:redirect:read` becomes
-     * `plugin:redirects:entry:redirect:read`. Bundles never grant core
-     * permissions; sites compose those via `builtInRole()` or literals.
+     * It feeds two consumers: the factory's `permissions(...)` grant accessor,
+     * which a site spreads into a role, and the permission catalogue
+     * (`astromech permissions`). Entry permissions are NOT declared here — core
+     * derives them from the plugin's registered entry types.
      */
-    permissionBundles?: Record<string, readonly string[]>;
+    permissions?: PermissionDeclarations;
     /** Entry types contributed by the plugin. Each self-declares its `type`. */
     entries?: EntryTypeConfig[];
     fields?: PluginFieldTypeRegistration[];
@@ -354,21 +350,20 @@ export type PluginDefinition = PluginIdentity & {
 
 /**
  * What `definePlugin` returns and a plugin package exports. Calling it yields
- * the definition a site places in `config.plugins`; `permissions(bundle)`
- * resolves one of the definition's `permissionBundles` to fully-namespaced
- * permission strings, so a site composes roles without importing anything else
- * from the package.
+ * the definition a site places in `config.plugins`; `permissions(...keys)`
+ * selects keys from the definition's `permissions` declaration and returns them
+ * fully namespaced, so a site composes roles without importing anything else
+ * from the package — and enumerates exactly what it grants.
  *
- * `Def` is the definition's own type, which is what keeps the bundle names
- * literal — `seo.permissions('view')` type-checks, `seo.permissions('viwe')`
- * does not.
+ * `Def` is the definition's own type, which is what keeps the keys literal —
+ * `seo.permissions('view')` type-checks, `seo.permissions('viwe')` does not.
  */
 export type PluginFactory<
     Options = void,
     Def extends PluginDefinition = PluginDefinition,
 > = ((options?: Options) => Def) & {
     permissions: (
-        bundle: Def extends { permissionBundles: infer B } ? keyof B & string : string
+        ...keys: (Def extends { permissions: infer P } ? keyof P & string : string)[]
     ) => Permission[];
 };
 

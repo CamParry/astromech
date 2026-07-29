@@ -3,7 +3,7 @@
 A teaching plugin that demonstrates the **external-plugin** authoring format on
 a small surface: a custom `rating` field type (1–5 stars, with a validator), a
 component overview page, an auto-rendered settings form, a service method,
-localized strings, and a permission bundle.
+localized strings, and a declared permission.
 
 It is structured exactly like a first-party plugin — see
 [`apps/docs/plugins/authoring.md`](../../../../apps/docs/plugins/authoring.md) for the
@@ -16,7 +16,7 @@ asset specifiers resolve against this directory instead of a package specifier.
 ```
 rating/
   index.ts                    definePlugin() — identity + composing the surfaces below
-  permissions/rating.ts       ratingPermissionBundles + permission declarations
+  permissions/rating.ts       definePermissions() — the grantable permission keys
   fields/rating.ts            the `rating` field-type registration + RATING_FIELD_TYPE
   admin/fields/rating-field.tsx  the field renderer (browser asset) + validate()
   pages/overview.ts           defineAdminPage — component view
@@ -61,8 +61,9 @@ is where the two derived forms are actually distinguishable:
 
 ## Permissions
 
-The plugin factory exposes a `view` bundle, resolving to
-`plugin:demo_rating:view`:
+The plugin declares one permission, `view`. The factory's `permissions()`
+accessor returns it already namespaced, as `plugin:demo_rating:view`. There are
+no bundles — a role names the keys it grants:
 
 ```ts
 roles: {

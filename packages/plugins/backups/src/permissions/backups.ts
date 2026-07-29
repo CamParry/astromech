@@ -1,38 +1,29 @@
 /**
- * Permission bundles for composing into config roles. Bundle keys resolve to
- * `plugin:backups:{key}`.
+ * The permissions this plugin makes grantable. Bare keys; core namespaces them
+ * to `plugin:backups:{key}`. A site enumerates the ones it grants:
  *
- *   roles: { admin: { permissions: [...backups.permissions('manage')] } }
+ *   roles: { admin: { permissions: [...backups.permissions('read', 'run')] } }
  */
 
-import type { PluginPermission } from 'astromech';
+import { definePermissions } from 'astromech';
 
-export const backupsPermissionBundles = {
-    manage: ['read', 'run', 'download', 'restore', 'delete'],
-    view: ['read'],
-} as const;
-
-export const backupsPermissionDefs: PluginPermission[] = [
-    {
-        key: 'read',
+export const backupsPermissions = definePermissions({
+    read: {
         label: 'View backups',
         description: 'List backup runs and artifact metadata.',
     },
-    { key: 'run', label: 'Trigger backup', description: 'Manually trigger a backup.' },
-    {
-        key: 'download',
+    run: { label: 'Trigger backup', description: 'Manually trigger a backup.' },
+    download: {
         label: 'Download backup',
         description:
             'Download a backup artifact — a complete dump of every table, including user records and private settings.',
     },
-    {
-        key: 'restore',
+    restore: {
         label: 'Restore from backup',
         description: 'Restore the database from a backup artifact.',
     },
-    {
-        key: 'delete',
+    delete: {
         label: 'Delete backup',
         description: 'Delete backup artifacts from storage.',
     },
-];
+});

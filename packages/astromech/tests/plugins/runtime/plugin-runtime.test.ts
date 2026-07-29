@@ -114,7 +114,13 @@ describe('registerPlugins indexing', () => {
             [
                 def({
                     package: '@astromech/redirects',
-                    service: { lookup: { access: 'public', handler: async () => null } },
+                    service: {
+                        lookup: {
+                            access: 'public',
+                            mutates: false,
+                            handler: async () => null,
+                        },
+                    },
                     rawRoutes: [
                         {
                             path: '/upload',

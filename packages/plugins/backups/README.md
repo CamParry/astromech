@@ -23,7 +23,7 @@ backups/
   src/backup.ts                 performBackup / rotate / resolveKeep — the core work
   src/service/backups.ts        listRuns, triggerRun, deleteRun (JSON, over RPC)
   src/routes/backups.ts         download + restore (raw routes — they stream)
-  src/permissions/backups.ts    permission bundles + declarations
+  src/permissions/backups.ts    definePermissions — the grantable permission keys
   src/pages/backups.ts          defineAdminPage — the run history page
   src/admin/pages/backups-page.tsx  the page renderer (browser asset)
   src/locales/en.json           i18n bundle
@@ -78,16 +78,23 @@ the descriptor declares the bare name `runs`.
 | `restore`  | Restore the database from an artifact               |
 | `delete`   | Delete artifacts from storage                       |
 
-Two bundles compose them: `view` is `['read']`, and `manage` is everything.
+There are no bundles. A role enumerates the keys it grants, which is the whole
+point of an opt-in model — you can see what a role can do by reading it:
 
 ```ts
 roles: {
     'ops': {
         name: 'Ops',
-        permissions: [...builtInRole('editor'), ...backups.permissions('manage')],
+        permissions: [
+            ...builtInRole('editor'),
+            ...backups.permissions('read', 'run'),
+        ],
     },
 }
 ```
+
+`plugin:backups:*` is the all-or-nothing escape hatch if you really do want
+every key, present and future.
 
 `download` is deliberately **not** part of `view`. An artifact is a dump of
 every table — user records, password hashes, private settings — so being able

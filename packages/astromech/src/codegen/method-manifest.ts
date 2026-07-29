@@ -89,12 +89,6 @@ type ManifestMethod = {
      * `'permission'` means an object form with a concrete permission string.
      */
     access?: 'public' | 'authenticated' | 'permission';
-    /**
-     * True when `mutates` is a default (the plugin method did not declare it).
-     * Consumers should treat the default conservatively. Present when
-     * `source === 'plugin'`.
-     */
-    effectDeclared?: boolean;
 };
 
 type MethodManifest = {
@@ -328,11 +322,9 @@ function buildPluginServiceMethods(plugins: PluginDefinition[]): ManifestMethod[
                               serviceMethod.access.permission
                           )
                         : null,
-                // Default to mutating when undeclared — fail-safe for the future confirm gate.
-                mutates: serviceMethod.mutates ?? true,
+                mutates: serviceMethod.mutates,
                 destructive: serviceMethod.destructive ?? false,
                 idempotent: serviceMethod.idempotent ?? false,
-                effectDeclared: serviceMethod.mutates !== undefined,
             };
             methods.push(method);
         }

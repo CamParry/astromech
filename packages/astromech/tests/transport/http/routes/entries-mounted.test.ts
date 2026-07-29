@@ -22,7 +22,7 @@ import type { AstromechConfig, PluginDefinition, Role, User } from '@/types/inde
 const widgetsPlugin: PluginDefinition = {
     package: 'widgets',
     service: {
-        ping: { access: 'public', handler: () => 'pong' },
+        ping: { access: 'public', mutates: false, handler: () => 'pong' },
     },
     entries: [
         {

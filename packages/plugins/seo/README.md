@@ -48,11 +48,13 @@ Entry types without a `url` template are skipped, so SEO never guesses a path.
 
 ## Permissions
 
-The plugin factory exposes a `view` bundle for composing into roles:
+The plugin declares one permission, which the factory's `permissions()`
+accessor returns already namespaced:
 
-- `view` — read the SEO overview dashboard
+- `view` — read the SEO overview dashboard, i.e. `plugin:seo:view`
 
-It resolves to `plugin:seo:view`.
+Nothing is granted automatically: `admin` holds `*` and so has it already,
+every other role opts in by naming the key.
 
 ```ts
 // astromech.config.ts

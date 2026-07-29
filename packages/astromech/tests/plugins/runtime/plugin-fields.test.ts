@@ -128,7 +128,13 @@ describe('generateClientTypes with plugin field types', () => {
         const output = generateClientTypes(config, new Map(), [
             def({
                 package: '@astromech/redirects',
-                service: { lookup: { access: 'public', handler: async () => null } },
+                service: {
+                    lookup: {
+                        access: 'public',
+                        mutates: false,
+                        handler: async () => null,
+                    },
+                },
                 hookEvents: ['redirects:resolved'],
             }),
         ]);
