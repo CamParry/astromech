@@ -32,9 +32,11 @@ The whole thing is too big for one chunk. Split into two features, build Feature
 
 `defineTable` + `col` factory + runtime codec + type inference (Select/Insert/Update **+ the Kysely `DB` interface**) + dialect seam + homegrown migration generator (snapshot/diff/DDL/SQLite-rebuild) + CLI repoint (`db:generate`/`db:init`) + drift gate + scoped plugin factory. Everything that turns descriptors into **schema, types, and migrations**. Includes the Drizzle→Kysely runtime swap (below) — otherwise the app is stranded.
 
-### Feature 2 — Data-layer storage API (SHELVED — see `roadmap/planned/data-layer-storage-api.md`)
+### Feature 2 — Data-layer storage API (ACTIVE — see `roadmap/in-progress/data-layer-storage-api.md`)
 
-The ergonomic `createXStorage` surface layered on the working Kysely base: `findOne`/`findMany`/`query`/`create`/`update`/`delete`/`updateMany`/`deleteMany`/`upsert`, the flat `where` DSL, and `reference` populate. Plus relationships (already deferred — see §8).
+The ergonomic surface layered on the working Kysely base: `findOne`/`findMany`/`count`/`query`/`create`/`update`/`delete`/`updateMany`/`deleteMany`/`upsert`, the flat `where` DSL with wrapper-owned value serialization, composed **inside** the existing `createXStorage` factories. Relationships stay deferred (§8).
+
+Unshelved 2026-07-29 once Feature 1 steps 1–7 landed. The same pass **cut** two items from the original lock — the `findMany(qb => …)` builder callback and `reference` populate — and **added** `count`; each is recorded with its reasoning at the point it was decided (§4, §5).
 
 The §5 read/write API and §4 `where` DSL below are **Feature 2** decisions, recorded here so they aren't lost.
 
@@ -233,6 +235,50 @@ findMany({
 - All keys AND together. **No `or`, no `not(...)` nesting, no raw SQL** in the flat form — that's the `query()` boundary. `like` stays case-sensitive (no `ilike`).
 - Typing: `where` keys `keyof Cols`, operator values typed to the column JS type; `orderBy` is `[keyof Cols, 'asc'|'desc'][]`.
 
+#### Value serialization is the wrapper's job (resolved 2026-07-29)
+
+Every comparison value reaching SQL is a **domain** value (a `Date`, a `boolean`,
+a parsed object) and must pass through that column's `col.serialize` before it
+becomes a predicate literal — the timestamp columns are ISO-TEXT, so an
+unserialized `Date` silently compares wrong rather than failing.
+
+- The wrapper holds its `TableDescriptor`, so it serializes `where` values
+  itself. Callers never hand-convert. This deletes the hand-written
+  `now.toISOString()` at each date predicate (`entries/storage/maintenance.ts`)
+  and its explanatory comment.
+- **Each element of an `in`/`notIn` array** is serialized individually.
+- **`like` patterns are passed through raw** — a pattern is a SQL literal, not a
+  domain value, and `col.serialize` would corrupt it.
+- `null` bypasses serialization entirely (it renders as `IS NULL` / `IS NOT NULL`).
+
+The reference implementation already exists: `entries/storage/table.ts`'s
+`buildWhere`/`serialize`. Feature 2 **lifts that code into the shared wrapper**
+rather than writing a second one, and `tableStorage` then consumes the shared
+version.
+
+**One deliberate behaviour change on extraction.** `tableStorage:325` currently
+does `if (value === undefined || value === null) continue` — it reads a `null`
+where-value as _no filter_. This spec says bare `null` means `IS NULL`. The spec
+wins: omitting the key (or `undefined`) is how you mean "no filter", and a
+`null` you deliberately passed should filter. Audit `tableStorage`'s callers for
+`where` values that can arrive `null` when they mean unfiltered.
+
+#### `count(where)` is first-class (added 2026-07-29)
+
+Not in the original Q5 lock; added because a codebase audit found count-then-rows
+is the single most duplicated raw-Kysely pattern — `entries/storage/built-in.ts`,
+`entries/storage/table.ts`, `transport/http/routes/users.ts` (×2),
+`media/service.ts`, `notifications/service.ts`.
+
+```ts
+count(where?): Promise<number>;
+```
+
+**No combined `paginate()` returning `{ data, total }`**, despite that shape also
+recurring. The call sites disagree on their pagination contract (`limit: 'all'`
+vs page-number vs raw offset), so a shared helper would immediately grow options
+to cover the disagreement. `count` is the honest primitive; domains compose it.
+
 ---
 
 ## 5. Write API — LOCKED (Q6) — **Feature 2**
@@ -257,10 +303,120 @@ upsert(data, { target?, set? }): Promise<T>    // default conflict target = PK
 ### Reads (handoff §E, Feature 2)
 
 - `findOne(where)` → unique lookup → `T | null` (by id / email / any unique col — replaces `get(id)`).
-- `findMany({ where, orderBy, limit, offset })` → `T[]`, **or** `findMany(qb => qb…)` builder callback → `T[]`. Both decode + return typed objects.
-- `query()` → raw scoped Kysely builder (undecoded escape hatch — joins/custom shape; caller owns decode).
+- `findMany({ where, orderBy, limit, offset })` → `T[]`, decoded + typed.
+- `count(where?)` → `number` (see §4).
+- `query()` → raw scoped Kysely builder (undecoded escape hatch; caller owns decode).
 - No `findFirst` (use `findMany` `limit:1`). No nestable `{where,include,select}` DSL.
-- `populate` option: `findMany({ populate:['createdBy'] })` → batched app-level resolve of `reference` columns → `T & { createdBy: User|null }`. Cross-scope populate is a CORE service (plugin never queries `users` itself).
+
+#### Dropped: the `findMany(qb => …)` builder callback (resolved 2026-07-29)
+
+The original lock offered a builder-callback overload alongside the object form,
+promising both "decode + return typed objects". That promise is unsound: the
+moment a callback joins or projects, there is no longer a single descriptor the
+result decodes against.
+
+The justification for accepting that risk was joins. **There are none** — a sweep
+for `innerJoin|leftJoin|rightJoin` across core _and_ every plugin returns zero
+hits. What actually exceeds the flat DSL is narrower: `count` (now first-class),
+column projections (`select('id')`, `select(['id','fields'])`), one
+`max('versionNumber')`, and one offset-based delete (`versions.deleteExcess`).
+
+Those remaining cases go to `query()`, where the caller owning decode is
+explicit rather than implied. If a join ever appears, it starts at `query()` too,
+and only earns a typed seam once there is more than one.
+
+#### Dropped: `populate` of `reference` columns (resolved 2026-07-29)
+
+The original lock included `findMany({ populate: ['createdBy'] })` → batched
+app-level resolve of `col.reference` columns, with cross-scope resolution as a
+core service. **Cut from Feature 2** for three independent reasons:
+
+1. **No consumer.** Ten `col.reference` columns exist (`createdBy`, `updatedBy`,
+   `userId`, `entryId`, `stagedFor`) and _nothing in the codebase resolves any of
+   them_. `col.reference` is DDL + type only today. Shipping a resolver for
+   references nobody resolves repeats the mistake `definePermissions` was
+   created to fix — a declaration with no reader.
+2. **Name collision.** `populate` already means something else here:
+   `entries/internal/populate.ts` populates content _relationship fields_ via the
+   `relationships` table. A second `populate` with different semantics is a
+   comprehension trap — and that table is itself mid-redesign into a derived
+   index (`roadmap/planned/relationships-model.md`).
+3. **The cross-scope seam is undesigned.** "A plugin's `createdBy → users` is
+   resolved by core" states a policy, not a mechanism: a plugin needs a handle to
+   core's resolver while remaining unable to address core tables. That deserves a
+   design pass driven by a real requirement.
+
+`col.reference` keeps generating FKs and types exactly as it does now. When a
+first consumer appears — admin rendering "created by …" is the likely one —
+design it then and name it `resolveRefs` / `withRefs`. **Never `populate`.**
+
+### Construction: where the wrapper meets `createXStorage` (resolved 2026-07-29)
+
+`createStorage(descriptor, db = getDb())` returns the generic CRUD object.
+(Named `createStorage`, not `createTableStorage`: it belongs to the
+`createXStorage` family as its unnamed X, and `tableStorage` is already taken by
+the unrelated `EntryStorage`-over-a-descriptor adapter in `entries/storage/`.)
+It sits **inside** the existing `createXStorage` factories; it does not replace
+them.
+
+The factories are load-bearing for two reasons a generic wrapper cannot absorb:
+they are the **transaction rebinding point** (`entries/storage/table.ts:185` and
+`built-in.ts:188` construct a fresh storage bound to `trx`), and they carry the
+**domain vocabulary** — `getLatestNumber`, `deleteExcess`, `publishDueScheduled`
+are names, not queries. Dissolving them would push transaction handling and
+naming out into callers.
+
+So each `createXStorage` composes the generic object and adds its domain methods
+on top, keeping its `(db = getDb())` signature and its tx-rebind behaviour.
+
+**The codec collapses as a consequence.** `database/codec.ts` currently exposes
+the same three conversions twice — string-keyed (`decode('entryVersions', row)`)
+and descriptor-keyed (`decodeWith(desc, row)`). The string-keyed form needs a
+hand-maintained `DESCRIPTORS` map plus `kyselyTableKey`'s snake↔camel remapping,
+and every call site double-casts through `unknown`:
+
+```ts
+encode('entryVersions', data as unknown as Record<string, unknown>)
+    as unknown as Insertable<DB['entryVersions']>;
+```
+
+Once storage holds its descriptor, that form has no reason to exist **at the
+sites the wrapper covers**.
+
+- The wrapper **owns** encode/decode for its own table (`decodeWith`/`encodeWith`/
+  `encodePatchWith` become its internals), and stays exported for the `query()`
+  path where the caller decodes by hand.
+- The `as unknown as` casts go **at every migrated site** — the wrapper is
+  generic over the descriptor, so its inputs and results are already
+  storage-shaped.
+
+**But the string-keyed form does _not_ delete in this workstream, and
+`kyselyTableKey` does not delete at all.** Both were claimed in an earlier draft
+of this section; a call-site census disproved them:
+
+- `kyselyTableKey` maps `descriptor.name` (snake) → the Kysely `DB` key (camel).
+  The wrapper itself needs it, and so does
+  `plugins/runtime/plugin-runtime.ts:123` when registering plugin descriptor
+  codecs. It is load-bearing, not legacy.
+- The `DESCRIPTORS` map cannot go while descriptor-table string-keyed calls
+  remain, and **half of them are in files this workstream declares out of
+  scope**: `settings/service.ts`, `media/service.ts` (~10 sites),
+  `notifications/service.ts`, `cron/runner.ts` (`_astromech_cron`),
+  `plugins/runtime/plugin-runtime.ts` (`_astromech_plugins`).
+
+So the collapse is a **follow-up**, gated on the services migration, and its
+precondition is precise: `DESCRIPTORS` deletes once no string-keyed
+`decode`/`encode`/`encodePatch` call names a descriptor-backed table. The 4
+legacy better-auth entries (`LEGACY_CODECS`) stay regardless — better-auth owns
+that format.
+
+**Scope discipline.** This workstream migrates `storage/` only. Raw Kysely also
+lives in four services (`media`, `notifications`, `settings`, `users`), three
+transport files, `cron/runner.ts`, and three `backups`-plugin files — 21 files
+in total, and four of those domains have no storage layer at all. Folding them
+in turns a well-specced piece into an open-ended sweep. They are also the sites
+that most want `count`, which does not exist until this lands. Separate
+follow-up.
 
 ---
 

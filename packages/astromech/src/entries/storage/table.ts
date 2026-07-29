@@ -1,6 +1,16 @@
 /**
  * tableStorage — EntryStorage implementation over an arbitrary `defineTable`
- * descriptor, queried through the shared Kysely handle.
+ * descriptor.
+ *
+ * This is an *adapter*, not a query layer: every read and write goes through
+ * `createStorage` (`database/storage/create-storage.ts`), which owns the `where`
+ * DSL, value serialization and row decoding. That file documents the semantics —
+ * bare `null` means `IS NULL`, unknown column keys throw, `like` patterns are
+ * raw — and is the only place they are implemented. `list` is the one method on
+ * the raw handle, and it still compiles its filters with the wrapper's own
+ * `where` (handed out by `query()`) rather than restating them.
+ *
+ * What this adapter adds on top:
  *
  * Maps any descriptor to the EntryStorage contract by treating every column
  * that is not the id/timestamp/actor-reserved set as a "field". Declares no
@@ -8,23 +18,17 @@
  * translatable must all be disabled for any entry type using this storage.
  *
  * Column keys are the descriptor's camelCase keys throughout: `fields`, `where`,
- * `sort` and `searchFields` are all keyed by them. Rows are decoded/encoded with
- * the descriptor's own per-column codec (`decodeWith`/`encodeWith`/
- * `encodePatchWith`), so callers hand over and receive *domain* values (Date,
- * boolean, parsed json) while SQL only ever sees *storage* values.
+ * `sort` and `searchFields` are all keyed by them.
  *
  * When `timestamps: false`, createdAt/updatedAt return new Date(0) and are not
- * written. createdBy/updatedBy are written only when those columns are present
- * on the descriptor.
+ * written by the adapter. createdBy/updatedBy are written only when those
+ * columns are present on the descriptor.
  *
- * search + searchFields: OR-LIKE across the named columns. If searchFields names
- * a column not on the table, throws at list-time (config bug — crash loud).
- * If search is set but no searchFields, search is a no-op.
- *
- * where filters: keyed by COLUMN names. Supports eq, in (via { in: [...] }),
- * and like (via { like: '%...' }) operators — mirrors what built-in exposes.
- * Every comparison value (including each element of an `in` array) is run
- * through the column's `serialize`; a `like` pattern is passed through raw.
+ * search + searchFields: OR-LIKE across the named columns — the one predicate
+ * the flat `where` DSL cannot express, so `list` ANDs it onto the compiled DSL
+ * filter as a raw clause, in the same statement. If searchFields names a column
+ * not on the table, throws at list-time (config bug — crash loud). If search is
+ * set but no searchFields, search is a no-op.
  *
  * sort: field names must match column names (id, createdAt, updatedAt, or any
  * field column); unknown names are skipped silently.
@@ -33,15 +37,14 @@
  * transaction: wraps fn in a Kysely tx, rebinding a new tableStorage instance.
  */
 
-import type { Expression, ExpressionBuilder, Kysely, SqlBool } from 'kysely';
-import { getDb } from '@/database/registry.js';
 import {
-    decodeWith,
-    encodePatchWith,
-    encodeWith,
-    kyselyTableKey,
-} from '@/database/codec.js';
+    createStorage,
+    type QueryHandle,
+    type Storage,
+} from '@/database/storage/create-storage.js';
+import { decodeWith } from '@/database/codec.js';
 import type { Column, TableDescriptor } from '@/database/define-table.js';
+import type { Db } from '@/database/types.js';
 import type { JsonObject } from '@/types/index.js';
 import type {
     EntryRecord,
@@ -51,15 +54,10 @@ import type {
     StorageDb,
 } from './types.js';
 
-/**
- * The descriptor's table may be any shape, so tableStorage queries through a
- * fully generic `DB` interface rather than the typed core one. Values crossing
- * the boundary are encoded/decoded by the descriptor codec, not by Kysely.
- */
-type Schema = Record<string, Record<string, unknown>>;
-type GenericDb = Kysely<Schema>;
-type WhereFn = (eb: ExpressionBuilder<Schema, string>) => Expression<SqlBool>;
 type OrderPair = [column: string, direction: 'asc' | 'desc'];
+
+/** The wrapper's compiled `where`, the shape a raw clause has to AND onto. */
+type Predicate = ReturnType<QueryHandle<TableDescriptor>['where']>;
 
 export type TableStorageOptions = {
     /** Primary key column name. Default 'id'. */
@@ -76,19 +74,14 @@ class TableStorage implements EntryStorage<EntryRecord> {
     public readonly supports: readonly never[] = Object.freeze([]) as readonly never[];
 
     private readonly table: TableDescriptor;
-    private readonly tableKey: string;
+    private readonly storage: Storage<TableDescriptor>;
     private readonly idCol: string;
     private readonly createdAtCol: string | false;
     private readonly updatedAtCol: string | false;
-    private readonly dbOverride: GenericDb | undefined;
 
-    constructor(
-        table: TableDescriptor,
-        options?: TableStorageOptions,
-        dbOverride?: GenericDb
-    ) {
+    constructor(table: TableDescriptor, options?: TableStorageOptions, db?: Db) {
         this.table = table;
-        this.tableKey = kyselyTableKey(table.name);
+        this.storage = createStorage(table, db);
         this.idCol = options?.idColumn ?? 'id';
 
         if (options?.timestamps === false) {
@@ -98,12 +91,6 @@ class TableStorage implements EntryStorage<EntryRecord> {
             this.createdAtCol = options?.timestamps?.createdAt ?? 'createdAt';
             this.updatedAtCol = options?.timestamps?.updatedAt ?? 'updatedAt';
         }
-
-        this.dbOverride = dbOverride;
-    }
-
-    private get db(): GenericDb {
-        return this.dbOverride ?? (getDb() as unknown as GenericDb);
     }
 
     private getColumns(): Record<string, Column> {
@@ -121,27 +108,8 @@ class TableStorage implements EntryStorage<EntryRecord> {
         return reserved;
     }
 
-    /** Column descriptor by key; throws if not found. */
-    private col(name: string): Column {
-        const col = this.getColumns()[name];
-        if (!col) throw new Error(`tableStorage: column "${name}" not found on table`);
-        return col;
-    }
-
-    /**
-     * Domain → storage for a comparison value. `where` arrives with domain
-     * values (a boolean for an INTEGER 0/1 column, a Date for a timestamp), so
-     * every literal that reaches SQL must go through the column's serializer —
-     * drizzle did this implicitly via column mode.
-     */
-    private serialize(col: Column, value: unknown): unknown {
-        if (value === null || value === undefined) return value;
-        return col.serialize(value);
-    }
-
-    /** Build an EntryRecord from a raw (storage-shaped) row. */
-    private rowToRecord(raw: Record<string, unknown>): EntryRecord {
-        const row = decodeWith(this.table, raw);
+    /** Build an EntryRecord from a decoded (domain-shaped) row. */
+    private toRecord(row: Record<string, unknown>): EntryRecord {
         const reserved = this.reservedNames();
         const cols = this.getColumns();
         const fields: Record<string, unknown> = {};
@@ -182,7 +150,8 @@ class TableStorage implements EntryStorage<EntryRecord> {
     async transaction<T>(
         fn: (storage: EntryStorage<EntryRecord>, db: StorageDb) => Promise<T>
     ): Promise<T> {
-        return this.db.transaction().execute(async (trx) => {
+        const { db } = this.storage.query();
+        return db.transaction().execute(async (trx) => {
             let timestamps: TableStorageOptions['timestamps'];
             if (this.createdAtCol === false) {
                 timestamps = false;
@@ -197,7 +166,7 @@ class TableStorage implements EntryStorage<EntryRecord> {
             const txStorage = new TableStorage(
                 this.table,
                 { idColumn: this.idCol, timestamps },
-                trx
+                trx as unknown as Db
             );
             return fn(txStorage, trx as unknown as StorageDb);
         });
@@ -214,8 +183,9 @@ class TableStorage implements EntryStorage<EntryRecord> {
         const reserved = this.reservedNames();
         const now = new Date();
 
-        // The id is NOT minted here — `encodeWith` fills any column carrying an
-        // app default (col.id() → ULID, col.timestamp({ defaultNow }) → now).
+        // The id is NOT minted here — `createStorage.create` runs `encodeWith`,
+        // which fills any column carrying an app default (col.id() → ULID,
+        // col.timestamp({ defaultNow }) → now) that is still undefined.
         const insertValues: Record<string, unknown> = {};
 
         if (this.createdAtCol !== false && this.createdAtCol in cols)
@@ -235,27 +205,28 @@ class TableStorage implements EntryStorage<EntryRecord> {
             }
         }
 
-        const row = await this.db
-            .insertInto(this.tableKey)
-            .values(encodeWith(this.table, insertValues))
-            .returningAll()
-            .executeTakeFirst();
-
-        if (!row) throw new Error('tableStorage: insert returned no row');
-        return this.rowToRecord(row);
+        return this.toRecord(await this.storage.create(insertValues));
     }
 
     async update(id: string, data: EntryWrite): Promise<EntryRecord> {
         const cols = this.getColumns();
         const reserved = this.reservedNames();
-        const now = new Date();
-
-        // `encodePatchWith` never injects defaults (by design), so the updatedAt
-        // stamp stays explicit.
         const setValues: Record<string, unknown> = {};
 
-        if (this.updatedAtCol !== false && this.updatedAtCol in cols)
-            setValues[this.updatedAtCol] = now;
+        // `createStorage.update` stamps every column the descriptor marks
+        // `onUpdate`, so the ordinary case (`updatedAt` declared with
+        // `onUpdate: true`) needs no explicit stamp. The explicit stamp survives
+        // for the case the descriptor cannot express: an updatedAt column this
+        // adapter was *configured* onto that is not marked `onUpdate`.
+        //
+        // The two can also disagree the other way — `timestamps: false` against
+        // a descriptor column marked `onUpdate`, which is still stamped. That is
+        // correct: `onUpdate` is the table's own declaration about its column,
+        // while `timestamps: false` only says this adapter neither manages nor
+        // reports entry timestamps.
+        const updatedAtCol = this.updatedAtCol;
+        if (updatedAtCol !== false && cols[updatedAtCol]?.onUpdate === false)
+            setValues[updatedAtCol] = new Date();
 
         if ('updatedBy' in cols && data.updatedBy !== undefined)
             setValues['updatedBy'] = data.updatedBy;
@@ -267,92 +238,67 @@ class TableStorage implements EntryStorage<EntryRecord> {
             }
         }
 
-        const row = await this.db
-            .updateTable(this.tableKey)
-            .set(encodePatchWith(this.table, setValues))
-            .where(this.idCol, '=', this.serialize(this.col(this.idCol), id))
-            .returningAll()
-            .executeTakeFirst();
+        // By-id writes go through the where-based `updateMany`/`deleteMany`
+        // rather than the wrapper's by-primary-key `update`/`delete`, because
+        // `idColumn` is configurable and need not be the descriptor's primary
+        // key — keying on the wrong column would silently write the wrong row.
+        const affected = await this.storage.updateMany({ [this.idCol]: id }, setValues);
+        if (affected === 0) throw new Error(`tableStorage: no row found for id "${id}"`);
 
+        const row = await this.get(id);
         if (!row) throw new Error(`tableStorage: no row found for id "${id}"`);
-        return this.rowToRecord(row);
+        return row;
     }
 
     async get(id: string): Promise<EntryRecord | null> {
-        const row = await this.db
-            .selectFrom(this.tableKey)
-            .selectAll()
-            .where(this.idCol, '=', this.serialize(this.col(this.idCol), id))
-            .limit(1)
-            .executeTakeFirst();
-
-        if (!row) return null;
-        return this.rowToRecord(row);
+        const row = await this.storage.findOne({ [this.idCol]: id });
+        return row ? this.toRecord(row) : null;
     }
 
     async delete(id: string): Promise<void> {
-        await this.db
-            .deleteFrom(this.tableKey)
-            .where(this.idCol, '=', this.serialize(this.col(this.idCol), id))
-            .execute();
+        await this.storage.deleteMany({ [this.idCol]: id });
     }
 
     /**
-     * The returned callback throws for a `searchFields`/`where` key naming a
-     * column the table doesn't have — Kysely evaluates it eagerly at `.where()`,
-     * so the config bug surfaces as a rejected `list()`.
+     * `params.where` → the shared `where` DSL. `locale` is dropped because a
+     * table-backed entry type has no locale concept; the shared builder throws
+     * on any key that is not a column, so the knowledge that this key is not
+     * columnar has to live here.
      */
-    private buildWhere(params: ListParams): WhereFn {
-        return (eb) => {
-            const conditions: Expression<SqlBool>[] = [];
+    private whereFilters(params: ListParams): Record<string, unknown> {
+        const out: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(params.where ?? {})) {
+            if (key === 'locale') continue; // no locale concept
+            out[key] = value;
+        }
+        return out;
+    }
 
-            // search + searchFields
-            if (params.search && params.searchFields && params.searchFields.length > 0) {
-                const term = `%${params.search}%`;
-                const orClauses = params.searchFields.map((fieldName) => {
-                    this.col(fieldName); // throws if missing — config bug
-                    return eb(fieldName, 'like', term);
-                });
-                const [only] = orClauses;
-                conditions.push(orClauses.length === 1 && only ? only : eb.or(orClauses));
+    /**
+     * The columns `search` runs over, or `[]` when no search is active.
+     *
+     * A `searchFields` entry naming a column the table doesn't have throws —
+     * config bug, crash loud.
+     */
+    private searchColumns(params: ListParams): string[] {
+        const fields = params.searchFields;
+        if (
+            params.search === undefined ||
+            params.search === '' ||
+            fields === undefined ||
+            fields.length === 0
+        ) {
+            return [];
+        }
+
+        const cols = this.getColumns();
+        for (const field of fields) {
+            if (!(field in cols)) {
+                throw new Error(`tableStorage: column "${field}" not found on table`);
             }
-            // If search is set but no searchFields, it's a no-op (documented).
+        }
 
-            // where filters — keyed by column name
-            if (params.where) {
-                for (const [key, value] of Object.entries(params.where)) {
-                    if (value === undefined || value === null) continue;
-                    if (key === 'locale') continue; // no locale concept
-
-                    const col = this.col(key);
-
-                    if (typeof value === 'object' && !Array.isArray(value)) {
-                        const v = value as Record<string, unknown>;
-                        if ('in' in v && Array.isArray(v['in'])) {
-                            const list = (v['in'] as unknown[]).map((item) =>
-                                this.serialize(col, item)
-                            );
-                            conditions.push(eb(key, 'in', list));
-                        } else if ('like' in v && typeof v['like'] === 'string') {
-                            // A LIKE pattern is a SQL literal, never a domain value.
-                            conditions.push(eb(key, 'like', v['like']));
-                        } else {
-                            conditions.push(eb(key, '=', this.serialize(col, value)));
-                        }
-                    } else if (Array.isArray(value)) {
-                        const list = (value as unknown[]).map((item) =>
-                            this.serialize(col, item)
-                        );
-                        conditions.push(eb(key, 'in', list));
-                    } else {
-                        conditions.push(eb(key, '=', this.serialize(col, value)));
-                    }
-                }
-            }
-
-            // An empty list renders as `1 = 1` — an unfiltered query.
-            return eb.and(conditions);
-        };
+        return [...fields];
     }
 
     /** Unknown sort columns are skipped silently (unlike searchFields). */
@@ -378,46 +324,48 @@ class TableStorage implements EntryStorage<EntryRecord> {
     }
 
     async list(params: ListParams): Promise<{ data: EntryRecord[]; total: number }> {
-        const db = this.db;
-        const whereFn = this.buildWhere(params);
-        const orderPairs = this.buildOrderBy(params);
+        const { db, table, where } = this.storage.query();
+
+        // One predicate for both the count and the rows, so the two cannot
+        // drift: the DSL filters compiled by the wrapper, ANDed with the search
+        // OR the DSL cannot express.
+        const dsl = where(this.whereFilters(params));
+        const searchColumns = this.searchColumns(params);
+        const term = `%${params.search ?? ''}%`;
+        const predicate: Predicate =
+            searchColumns.length === 0
+                ? dsl
+                : (eb) =>
+                      eb.and([
+                          dsl(eb),
+                          eb.or(searchColumns.map((col) => eb(col, 'like', term))),
+                      ]);
+
+        let rowsQuery = db.selectFrom(table).selectAll().where(predicate);
+        for (const [column, direction] of this.buildOrderBy(params)) {
+            rowsQuery = rowsQuery.orderBy(column, direction);
+        }
+
+        const toRecords = (rows: Record<string, unknown>[]): EntryRecord[] =>
+            rows.map((row) => this.toRecord(decodeWith(this.table, row)));
 
         const limit = params.limit;
-        const page = params.page ?? 1;
-
         if (limit === 'all') {
-            let q = db.selectFrom(this.tableKey).selectAll().where(whereFn);
-            for (const [column, dir] of orderPairs) {
-                q = q.orderBy(column, dir);
-            }
-            const rows = await q.execute();
-            const data = rows.map((r) => this.rowToRecord(r));
+            const data = toRecords(await rowsQuery.execute());
             return { data, total: data.length };
         }
 
         const perPage = typeof limit === 'number' ? limit : 20;
-        const offset = (page - 1) * perPage;
+        const offset = ((params.page ?? 1) - 1) * perPage;
 
-        const countRow = await db
-            .selectFrom(this.tableKey)
-            .select((eb) => eb.fn.countAll<number>().as('c'))
-            .where(whereFn)
+        const counted = await db
+            .selectFrom(table)
+            .select((eb) => eb.fn.countAll<number>().as('total'))
+            .where(predicate)
             .executeTakeFirst();
-        const total = Number(countRow?.c ?? 0);
+        const rows = await rowsQuery.limit(perPage).offset(offset).execute();
 
-        let rowsQ = db
-            .selectFrom(this.tableKey)
-            .selectAll()
-            .where(whereFn)
-            .limit(perPage)
-            .offset(offset);
-        for (const [column, dir] of orderPairs) {
-            rowsQ = rowsQ.orderBy(column, dir);
-        }
-        const rows = await rowsQ.execute();
-
-        const data = rows.map((r) => this.rowToRecord(r));
-        return { data, total };
+        return { data: toRecords(rows), total: Number(counted?.total ?? 0) };
     }
 }
 

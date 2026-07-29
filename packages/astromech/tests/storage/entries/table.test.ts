@@ -29,6 +29,8 @@ const testLinksTable = defineTable('test_links', ({ col }) => ({
     from: col.text({ notNull: true }),
     to: col.text({ notNull: true }),
     status: col.text({ notNull: true, default: '301' }),
+    /** Nullable on purpose — the `IS NULL` where-semantics need a null column. */
+    note: col.text(),
     enabled: col.boolean({ notNull: true, default: true }),
     createdAt: col.timestamp({ notNull: true, defaultNow: true }),
     updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
@@ -49,6 +51,7 @@ beforeEach(async () => {
             "from" text NOT NULL,
             "to" text NOT NULL,
             status text NOT NULL DEFAULT '301',
+            note text,
             enabled integer NOT NULL DEFAULT 1,
             created_at text NOT NULL,
             updated_at text NOT NULL
@@ -334,6 +337,33 @@ describe('list – where filters', () => {
         expect(res.data).toHaveLength(1);
         expect(res.data[0]?.fields['from']).toBe('/admin/page');
     });
+
+    it('bare null filters to IS NULL rather than meaning "unfiltered"', async () => {
+        await storage.create({
+            type: 'link',
+            fields: { from: '/a', to: '/x', note: 'kept' },
+        });
+        await storage.create({ type: 'link', fields: { from: '/b', to: '/y' } });
+
+        const res = await storage.list({
+            type: 'link',
+            limit: 'all',
+            where: { note: null },
+        });
+        expect(res.data).toHaveLength(1);
+        expect(res.data[0]?.fields['from']).toBe('/b');
+    });
+
+    it('ignores a `locale` where key instead of throwing (no locale concept)', async () => {
+        await storage.create({ type: 'link', fields: { from: '/a', to: '/x' } });
+
+        const res = await storage.list({
+            type: 'link',
+            limit: 'all',
+            where: { locale: 'en' },
+        });
+        expect(res.data).toHaveLength(1);
+    });
 });
 
 // ============================================================================
@@ -371,6 +401,27 @@ describe('list – search and searchFields', () => {
             // no searchFields
         });
         expect(res.data).toHaveLength(2);
+    });
+
+    it('combines search with a where filter on the id column', async () => {
+        const a = await storage.create({
+            type: 'link',
+            fields: { from: '/hello', to: '/x' },
+        });
+        await storage.create({
+            type: 'link',
+            fields: { from: '/hello-two', to: '/y' },
+        });
+
+        const res = await storage.list({
+            type: 'link',
+            limit: 'all',
+            search: 'hello',
+            searchFields: ['from'],
+            where: { id: a.id },
+        });
+        expect(res.data).toHaveLength(1);
+        expect(res.data[0]?.id).toBe(a.id);
     });
 
     it('searchFields naming a missing column throws', async () => {

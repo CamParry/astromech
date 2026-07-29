@@ -6,10 +6,10 @@
  * One active token per entry: issuing replaces any existing token.
  */
 
-import type { Insertable } from 'kysely';
 import { getDb } from '@/database/registry.js';
-import { encode } from '@/database/codec.js';
-import type { DB, Db } from '@/database/types.js';
+import { createStorage } from '@/database/storage/create-storage.js';
+import { entryPreviewTokens } from '@/database/schema.js';
+import type { Db } from '@/database/types.js';
 
 export type PreviewTokenStorage = ReturnType<typeof createPreviewTokenStorage>;
 
@@ -23,6 +23,8 @@ export async function hashPreviewToken(plaintext: string): Promise<string> {
 }
 
 export function createPreviewTokenStorage(db: Db = getDb()) {
+    const storage = createStorage(entryPreviewTokens, db);
+
     /** Replace any existing token for `entryId` with a freshly-hashed one. */
     async function issue(
         entryId: string,
@@ -30,29 +32,18 @@ export function createPreviewTokenStorage(db: Db = getDb()) {
         expiresAt: Date | null,
         createdBy: string | null
     ): Promise<void> {
-        await db
-            .deleteFrom('entryPreviewTokens')
-            .where('entryId', '=', entryId)
-            .execute();
-        await db
-            .insertInto('entryPreviewTokens')
-            .values(
-                encode('entryPreviewTokens', {
-                    entryId,
-                    token: tokenHash,
-                    expiresAt,
-                    createdBy,
-                }) as unknown as Insertable<DB['entryPreviewTokens']>
-            )
-            .execute();
+        await storage.deleteMany({ entryId });
+        await storage.create({
+            entryId,
+            token: tokenHash,
+            expiresAt,
+            createdBy,
+        });
     }
 
     /** Remove all preview tokens for `entryId`. */
     async function revoke(entryId: string): Promise<void> {
-        await db
-            .deleteFrom('entryPreviewTokens')
-            .where('entryId', '=', entryId)
-            .execute();
+        await storage.deleteMany({ entryId });
     }
 
     /** True if `tokenHash` is a current (non-expired) token for `entryId`. */
@@ -61,10 +52,15 @@ export function createPreviewTokenStorage(db: Db = getDb()) {
         tokenHash: string,
         now: Date
     ): Promise<boolean> {
-        // Tier-1 timestamps are ISO-TEXT; ISO strings compare correctly with >.
+        // The "no expiry OR still in the future" comparison is an OR across two
+        // columns, which the flat `where` DSL cannot express, so this stays on
+        // the raw `query()` escape hatch — which means it also owns its own
+        // serialization. Tier-1 timestamps are ISO-TEXT; ISO strings compare
+        // correctly with `>`.
         const nowIso = now.toISOString();
-        const rows = await db
-            .selectFrom('entryPreviewTokens')
+        const { db: handle, table } = storage.query();
+        const rows = await handle
+            .selectFrom(table)
             .select('id')
             .where((eb) =>
                 eb.and([
