@@ -1,8 +1,18 @@
 # Data-Layer Storage API (ergonomic Kysely wrapper)
 
-The ergonomic storage wrapper layered on top of raw Kysely. **Unshelved
-2026-07-29** — Feature 1 (`table-definition-system.md`) steps 1–7 have all
-landed, which was the only precondition.
+The ergonomic storage wrapper layered on top of raw Kysely. Unshelved and
+**SHIPPED 2026-07-29** (merged to `main`, branch and worktree gone) once
+Feature 1 (`table-definition-system.md`) steps 1–7 had landed, which was the
+only precondition.
+
+`createStorage(descriptor, db?)` lives at
+`packages/astromech/src/database/storage/create-storage.ts`; six storage modules
+were migrated onto it. Test baseline 1211 → 1256.
+
+**Everything deliberately left behind is tracked in
+`roadmap/planned/storage-layer-follow-ups.md`** — the raw-Kysely sites above
+`storage/`, the gated codec collapse, four pre-existing defects the migration
+surfaced, and `col.reference` resolution.
 
 **Design spec:** `specs/data-layer.md` §4–§5 (locked via grilling; revised
 2026-07-29 by a codebase audit — see "Scope changes" below). This file tracks
@@ -44,24 +54,14 @@ Three findings from reading the code rather than the spec:
 - **`count(where)` — ADDED.** Not in the original lock. Count-then-rows is the
   most duplicated raw-Kysely pattern in the repo (6 sites).
 
-## Found while migrating (not fixed here)
+## Found while migrating
 
-- **`trashed: true` reads return nothing through the HTTP query endpoint**, while
-  the write path is correct — trashing removes an entry from the live list and
-  restoring brings it back, verified end-to-end against the demo. The list
-  filter's SQL (`buildListWhere` in `entries/storage/built-in.ts`) is outside
-  every hunk of this workstream's diff, so this is pre-existing. Most likely the
-  public visibility shape filters trashed rows out of that endpoint. Worth its
-  own look; it is not a storage-layer defect.
-- **`localeGroup` is minted with `crypto.randomUUID()`** although its descriptor
-  declares `defaultUlid: true`, so the descriptor default is dead code for that
-  column. Pre-existing; preserved deliberately to keep this diff behaviour-only.
-- **A tx-bound storage's `transaction()` calls `getDb()`**, so it opens a new
-  transaction on the base handle rather than reusing the bound one. Pre-existing,
-  uncovered by tests.
-- **`built-in.ts` still reads a bare `null` in its own fixed-key `where` builder
-  as "no filter"**, so it and `tableStorage` now disagree about bare null. It is
-  a contained whitelist builder, not the shared DSL, but the divergence is real.
+Four pre-existing defects surfaced, each verified to sit outside this
+workstream's diff. All are filed in
+`roadmap/planned/storage-layer-follow-ups.md` §3: the empty `trashed: true`
+read, `localeGroup` minting a UUID against a `defaultUlid` descriptor, a
+tx-bound `transaction()` calling `getDb()`, and `built-in.ts`'s private `where`
+builder still reading bare `null` as "no filter".
 
 ## Locked policy (spec §5)
 
@@ -71,23 +71,18 @@ Three findings from reading the code rather than the spec:
 - Bare `null` in `where` means `IS NULL`. This **changes** `tableStorage`'s
   current behaviour (it reads null as "no filter"); audit its callers.
 
-## Out of scope (deliberate)
+## Out of scope (deliberate) — now tracked in `planned/storage-layer-follow-ups.md`
 
-- **Raw Kysely above `storage/`.** Four services (`media`, `notifications`,
-  `settings`, `users`), three transport files, `cron/runner.ts` and three
-  `backups`-plugin files query raw — 21 files, four of those domains with no
-  storage layer at all. Migrating them is a separate follow-up; they are also
-  the sites that most want `count`, which does not exist until this lands.
-- **The codec collapse.** An earlier draft had this workstream delete the
-  string-keyed `decode`/`encode`/`encodePatch` API. A call-site census killed
-  that: half the descriptor-table string-keyed calls live in the out-of-scope
-  files above (`settings`, `media`, `notifications`, `cron/runner.ts`,
-  `plugin-runtime.ts`). `kyselyTableKey` turns out not to be deletable at all —
-  the wrapper and the plugin codec registry both need it.
-
-    Follow-up precondition, stated precisely: `DESCRIPTORS` deletes once no
-    string-keyed call names a descriptor-backed table. `LEGACY_CODECS` (the 4
-    better-auth tables) stays regardless.
+- **Raw Kysely above `storage/`** (§1 there). Four services (`media`,
+  `notifications`, `settings`, `users`), three transport files, `cron/runner.ts`
+  and three `backups`-plugin files query raw — 21 files, four of those domains
+  with no storage layer at all. They are also the sites that most wanted
+  `count`, which did not exist until this landed.
+- **The codec collapse** (§2 there), gated on the above. An earlier draft had
+  this workstream delete the string-keyed `decode`/`encode`/`encodePatch` API; a
+  call-site census killed that, and also disproved the claim that
+  `kyselyTableKey` was deletable — the wrapper and the plugin codec registry
+  both need it.
 
 ## Deferred (separate workstream)
 
@@ -98,5 +93,7 @@ Three findings from reading the code rather than the spec:
   derived, rebuildable index keyed on field _path_.
 
     This never applied to `col.reference` columns, which are a different
-    mechanism from content relationships — and whose resolution is now cut from
-    this workstream entirely (see above).
+    mechanism from content relationships — and whose resolution was cut from
+    this workstream entirely. It is tracked in
+    `planned/storage-layer-follow-ups.md` §4, with the naming constraint that
+    matters: it must **not** be called `populate`.
