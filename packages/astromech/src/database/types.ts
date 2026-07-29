@@ -22,12 +22,22 @@
 
 import type { Generated, Kysely, Transaction } from 'kysely';
 import type { KyselyOf } from '@/database/define-table.js';
-import type { roles } from '@/users/schema.js';
-import type { entries, entryVersions, entryPreviewTokens } from '@/entries/schema.js';
-import type { media } from '@/media/schema.js';
-import type { settings } from '@/settings/schema.js';
-import type { notifications } from '@/notifications/schema.js';
-import type { relationships, cron, plugins } from '@/database/schema.js';
+// Every descriptor comes through the `database/schema.ts` aggregator rather than
+// from each domain directly — that indirection is the whole reason the
+// aggregator exists, and it keeps the rest of `database/` below the domains in
+// the dependency graph (see the `database-no-upward-except-aggregate` rule).
+import type {
+    roles,
+    entries,
+    entryVersions,
+    entryPreviewTokens,
+    media,
+    settings,
+    notifications,
+    relationships,
+    cron,
+    plugins,
+} from '@/database/schema.js';
 
 export type DB = {
     // ── 10 ours — derived from defineTable descriptors (ISO-TEXT timestamps) ─

@@ -22,12 +22,22 @@
  */
 
 import type { TableDescriptor } from '@/database/define-table.js';
-import { roles } from '@/users/schema.js';
-import { entries, entryVersions, entryPreviewTokens } from '@/entries/schema.js';
-import { media } from '@/media/schema.js';
-import { settings } from '@/settings/schema.js';
-import { notifications } from '@/notifications/schema.js';
-import { relationships, cron, plugins } from '@/database/schema.js';
+// Every descriptor comes through the `database/schema.ts` aggregator rather than
+// from each domain directly — that indirection is the whole reason the
+// aggregator exists, and it keeps the rest of `database/` below the domains in
+// the dependency graph (see the `database-no-upward-except-aggregate` rule).
+import {
+    roles,
+    entries,
+    entryVersions,
+    entryPreviewTokens,
+    media,
+    settings,
+    notifications,
+    relationships,
+    cron,
+    plugins,
+} from '@/database/schema.js';
 
 // ── Descriptor-driven tables (ours) ─────────────────────────────────────────
 // Keyed by the *Kysely* `DB` property name (camelCase, e.g. `entryVersions`),
