@@ -1,0 +1,289 @@
+# `@astromech/forms` — working spec
+
+Ephemeral. Delete when the feature ships; never link from durable docs.
+
+Roadmap: `roadmap/in-progress/forms-plugin.md`.
+
+## 1. Scope
+
+**In (v1)**
+
+- A `form` entry type whose **fields** are composed at runtime by an editor.
+- A `submission` entry type backed by the plugin's own table.
+- A public `submit` service method that validates against the form's stored
+  fields using **core's own field pipeline**.
+- Gating `forms:beforeSubmit` + post-commit `forms:afterSubmit` hook events.
+- Turnstile **and** reCAPTCHA verification, shipped in-box, configurable,
+  implemented **as a `forms:beforeSubmit` subscriber** — the dogfooding proof
+  that the extension point is real.
+- Two optional, per-form configurable emails: a **notification** to the site
+  and a **confirmation** to the submitter.
+
+**Out (v1)** — each goes to `backlog.md`
+
+- Any frontend rendering. The site author owns the markup; the plugin exposes
+  data (`forms.get`) and accepts submissions (`forms.submit`). This follows the
+  `@astromech/redirects` precedent: the plugin exposes data, the app owns the
+  route.
+- File-upload fields (drags in a multipart `rawRoute` + media ingest).
+- CSV export of submissions.
+- Rate limiting.
+- Per-form success redirect (a frontend concern).
+
+## 2. Two core changes this depends on
+
+Both are small, both land on this branch, and both are audited as having zero
+existing consumers.
+
+### 2a. Custom `*:before*` events must gate
+
+`ctx.emit` → `emitEvent` → `runAfterHooks`, which is swallow-and-log. A
+Turnstile handler that throws would be logged and the spam submission saved
+anyway, so the roadmap's "Turnstile via `forms:beforeSubmit`" cannot work as
+written.
+
+Core already draws the gating line **by name** — `types/hooks.ts`: "`before*`
+handlers gate the operation (a throw aborts); `after*` handlers run post-commit
+and are swallow-and-logged".
+
+**Change:** `emitEvent` applies that same rule to custom events — an event whose
+name contains `:before` runs through `runBeforeHooks` (throws propagate);
+everything else keeps swallow-and-log. No new API, and the convention already
+documented for core events now holds for plugin events too.
+
+**Why it's safe:** `ctx.emit` has **zero call sites** in the repo and no plugin
+declares `hookEvents`. Forms is the first consumer of the custom-event system,
+so there is no behaviour to preserve.
+
+Update the doc comments on `ctx.emit`, `hookEvents` and `emitEvent` to state the
+convention.
+
+### 2b. Export the field pipeline
+
+`processFields(values, definitions, ctx)` in `fields/pipeline.ts` is generic over
+`FieldDefinition[]` — it is not entries-specific. It is exactly what forms needs
+to validate runtime-composed fields through the identical
+coerce → default → validate path as every other domain, including the
+serializable `ValidationRule` union.
+
+It is currently unexported (`fields/index.ts` re-exports only `builder.js`).
+
+**Change:** export `processFields` and its context/error types from
+`astromech/fields`.
+
+**Why:** the alternative is a second rule evaluator inside forms that silently
+drifts from core's.
+
+Implementation note: `processFields`'s ctx requires a `reads` port for `unique`
+and reference rules. Forms never emits those rules, so it passes a stub that
+throws if called — verify the exact `FieldValidationContext` shape when wiring.
+
+## 3. Package
+
+`packages/plugins/forms`, package `@astromech/forms`, namespace `forms`,
+service key `forms`. Layout mirrors `redirects`: `src/index.ts` holds the
+`definePlugin` call, sub-modules stay identity-unaware and read identity from
+`ctx.plugin`.
+
+`tsup` builds two entries — `index` and a `./schema` subpath shipping only the
+table descriptor, so `plugin:generate` can load the schema standalone.
+
+### Options
+
+```ts
+type FormsOptions = {
+    spam?: {
+        provider: 'turnstile' | 'recaptcha';
+        siteKey: string;
+        /** Read from `import.meta.env` in the site's config — never stored in content. */
+        secretKey: string;
+        /** reCAPTCHA v3 only. Default 0.5. */
+        minScore?: number;
+    };
+    /** Store ip / userAgent / referer on each submission. Default true. */
+    storeMeta?: boolean;
+};
+```
+
+Secrets live in site config, not in entry content. Per project convention the
+site reads them with `import.meta.env`, not `process.env`.
+
+## 4. The `form` entry type — `forms/form`
+
+Default (core) entry storage. `slug: true` — the slug is how the frontend
+addresses a form. The entry `title` is the form's name. No versioning, no trash.
+
+Fields, grouped into tabs:
+
+**Fields tab**
+
+- `enabled` (boolean, default true) — accept submissions.
+- `fields` — `fields.blocks('fields', { blocks: [...] })`.
+
+Each block type is one field kind. Every block carries `label` (required),
+`name` (the key in submission data, required), `required` (boolean) and
+`helpText`. Per-kind extras:
+
+| `_type`         | Extra config                  | Compiles to           |
+| --------------- | ----------------------------- | --------------------- |
+| `text`          | placeholder, minLength, maxLength | `fields.text`     |
+| `textarea`      | placeholder, maxLength, rows  | `fields.textarea`     |
+| `email`         | placeholder                   | `fields.email`        |
+| `tel`           | placeholder                   | `fields.text`         |
+| `url`           | placeholder                   | `fields.url`          |
+| `number`        | min, max                      | `fields.number`       |
+| `select`        | options, placeholder          | `fields.select`       |
+| `radio`         | options                       | `fields.radioGroup`   |
+| `checkbox`      | — (single consent box)        | `fields.boolean`      |
+| `checkboxGroup` | options                       | `fields.multiselect`  |
+| `date`          | —                             | `fields.date`         |
+| `hidden`        | defaultValue                  | `fields.text`         |
+
+Stored instances use the reserved block keys — `{ _type, _id, name, label, … }`
+— so `_type` is what the compiler switches on. The author-side schema keeps
+`type`.
+
+**Notifications tab**
+
+- `notifyEnabled` (boolean)
+- `notifyTo` (repeater of email)
+- `notifySubject` (text, placeholders allowed)
+- `notifyBody` (richtext, optional — empty means "the default answers table")
+- `confirmEnabled` (boolean)
+- `confirmSubject` (text)
+- `confirmBody` (richtext)
+- `confirmToField` (text, optional) — names the field holding the submitter's
+  address. Empty means "the first `email` field on the form".
+
+**Spam tab**
+
+- `spamProtection` (boolean, default true) — only has effect when the plugin is
+  configured with a provider.
+
+## 5. The `submission` entry type — `forms/submission`
+
+`storage: tableStorage(submissionsTable)`, exactly as `redirect` does. Table
+`plugin_forms_submissions`:
+
+| Column        | Type            | Notes                          |
+| ------------- | --------------- | ------------------------------ |
+| `id`          | ulid, pk        |                                |
+| `formId`      | text, indexed   | the form entry's id            |
+| `formSlug`    | text            | denormalised for listing       |
+| `data`        | json            | the submitted answers          |
+| `meta`        | json, nullable  | ip / userAgent / referer       |
+| `submittedAt` | ISO text        |                                |
+
+Entry config: `titleField: false`, `statuses: false`, `slug: false`,
+`trash: false`. Admin columns: form, submitted-at, a short summary of `data`.
+
+Submissions are not hand-authored. v1 relies on permissions for that (grant read
++ delete, withhold create + update) rather than a new read-only entry flag.
+
+Migrations come from `astromech plugin:generate` — never hand-authored. Note
+that a worktree needs `npm install` before generation works.
+
+## 6. Service
+
+Both methods are `access: 'public'` with a declared effect (`mutates` is
+mandatory). Per the plugin-consistency sweep, RPC has **no status channel**, so
+failures are result shapes, not throws.
+
+```ts
+service: {
+    get:    { access: 'public', mutates: false, handler: … },
+    submit: { access: 'public', mutates: true,  handler: … },
+}
+```
+
+**`get({ slug })`** returns a render-ready public projection: title, slug,
+`enabled`, the compiled field list, and — when configured — the spam provider
+and its **site** key.
+
+It must **never** leak notification settings or secrets. Build the projection by
+explicit allow-list: `ctx.entries` defaults to the `full` shape at plugin
+altitude, so a public shape is not handed to you.
+
+**`submit({ slug, data, token? })`** → `{ ok: true, id }` or
+`{ ok: false, errors: FieldErrors }`.
+
+Flow:
+
+1. Load the form by slug. Missing, unpublished or `enabled: false` → error result.
+2. Compile stored blocks → `FieldDefinition[]`; run `processFields`. Errors →
+   `{ ok: false, errors }`.
+3. `ctx.emit('forms:beforeSubmit', payload)` — **gating** (§2a). The plugin's own
+   spam handler subscribes here; a throw becomes an error result.
+4. Persist the submission.
+5. `ctx.emit('forms:afterSubmit', payload)` — swallow-and-log.
+6. Send emails. Failures are logged, never fatal — the submission is already
+   committed.
+7. `{ ok: true, id }`.
+
+Field validation runs *before* the spam gate so a legitimate user with an
+expired token still sees their field errors.
+
+`hookEvents: ['forms:beforeSubmit', 'forms:afterSubmit']`.
+
+## 7. Spam protection
+
+Registered by the plugin itself, only when `options.spam` is set:
+
+```ts
+hooks: spamConfigured ? [defineHook('forms:beforeSubmit', spamHook)] : [],
+```
+
+The handler reads `token` from the payload, POSTs to the provider's verify
+endpoint (Turnstile `siteverify`, reCAPTCHA `siteverify`), and throws on
+failure — which the gating change turns into a rejected submission. reCAPTCHA v3
+additionally compares `score` against `minScore`.
+
+It skips when the form has `spamProtection: false`.
+
+This is the dogfooding requirement from the roadmap: the built-in providers use
+the same public extension point a third party would.
+
+## 8. Emails
+
+Both optional and per-form configurable. Rendered as React Email components
+wrapped in core's exported `BaseLayout`, sent via `ctx.sendEmail`.
+
+- **Notification** → each address in `notifyTo`. Body is `notifyBody`, or a
+  default table of every submitted field when empty.
+- **Confirmation** → the submitter, resolved from `confirmToField` or the first
+  `email` field. Skipped silently when no address is present.
+
+Placeholders `{{fieldName}}`, `{{formTitle}}` and `{{submittedAt}}` are
+substituted from the submission.
+
+**Rich text → HTML.** `ctx.sendEmail` takes a `ReactElement`, but the bodies are
+stored as ProseMirror JSON. Core renders richtext to sanitized HTML on **public**
+reads (`entries/visibility.ts`), and `renderRichText` is internal. v1 therefore
+reads the form entry a second time with `full: false` to obtain the sanitized
+HTML, and injects it into the email component. Alternative considered: export
+`renderRichText` as a third core change. Rejected for v1 — the double read costs
+nothing on an already-cached entry and adds no public surface.
+
+## 9. Permissions
+
+None declared. Core derives entry permissions for `forms/form` and
+`forms/submission` from the registered entry types; a site grants them with
+`entryPermissions('forms/form', …)`. This matches `redirects`, which likewise
+declares no plugin permissions.
+
+## 10. Admin
+
+No custom admin pages in v1 — both entry types get the standard entry UI. The
+blocks field gives the form builder its editor for free.
+
+## 11. Verification
+
+- `npm run typecheck`, `npm run lint`, full test suite, `npm run build`.
+- Tests (real fixtures, never a mocked DB): the block→`FieldDefinition`
+  compiler, `submit` happy path, `submit` validation failure shape, the gating
+  hook actually aborting, `get` **not** leaking notification settings or the
+  spam secret, and both email paths.
+- Register the plugin in `apps/demo`, seed a contact form, browser-verify on
+  port 4323 (`admin@astromech.dev` / `password`). Remember the demo loads the
+  library from `dist/` — rebuild and restart the dev server first. Discard demo
+  DB writes afterwards.
