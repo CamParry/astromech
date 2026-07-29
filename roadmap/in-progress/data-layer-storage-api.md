@@ -25,7 +25,7 @@ status only.
 - [x] `updateMany(where, patch)` / `deleteMany(where)` (absorb maintenance ops
       inside the choke point)
 - [x] `upsert(data, { target?, set? })`
-- [ ] Migrate `createXStorage` internals from raw Kysely to this wrapper,
+- [x] Migrate `createXStorage` internals from raw Kysely to this wrapper,
       dropping the `as unknown as` cast pairs at every migrated site
 
 ## Scope changes (2026-07-29 audit)
@@ -43,6 +43,25 @@ Three findings from reading the code rather than the spec:
   design. Revisit under a different name when a consumer appears.
 - **`count(where)` — ADDED.** Not in the original lock. Count-then-rows is the
   most duplicated raw-Kysely pattern in the repo (6 sites).
+
+## Found while migrating (not fixed here)
+
+- **`trashed: true` reads return nothing through the HTTP query endpoint**, while
+  the write path is correct — trashing removes an entry from the live list and
+  restoring brings it back, verified end-to-end against the demo. The list
+  filter's SQL (`buildListWhere` in `entries/storage/built-in.ts`) is outside
+  every hunk of this workstream's diff, so this is pre-existing. Most likely the
+  public visibility shape filters trashed rows out of that endpoint. Worth its
+  own look; it is not a storage-layer defect.
+- **`localeGroup` is minted with `crypto.randomUUID()`** although its descriptor
+  declares `defaultUlid: true`, so the descriptor default is dead code for that
+  column. Pre-existing; preserved deliberately to keep this diff behaviour-only.
+- **A tx-bound storage's `transaction()` calls `getDb()`**, so it opens a new
+  transaction on the base handle rather than reusing the bound one. Pre-existing,
+  uncovered by tests.
+- **`built-in.ts` still reads a bare `null` in its own fixed-key `where` builder
+  as "no filter"**, so it and `tableStorage` now disagree about bare null. It is
+  a contained whitelist builder, not the shared DSL, but the divergence is real.
 
 ## Locked policy (spec §5)
 

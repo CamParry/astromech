@@ -298,6 +298,25 @@ describe('createStorage – findMany paging + ordering', () => {
         });
         expect(page.map((r) => r.title)).toEqual(['C', 'B']);
     });
+
+    it('offsets with no limit — everything past the first N', async () => {
+        // SQLite only admits OFFSET inside a LIMIT clause, so the wrapper emits
+        // `LIMIT -1 OFFSET n` here. A regression is a driver syntax error, not a
+        // wrong result.
+        const storage = entryStorage();
+        for (const title of ['A', 'B', 'C', 'D']) {
+            await storage.create({ type: 'post', locale: 'en', title });
+        }
+
+        const rest = await storage.findMany({
+            orderBy: [['title', 'asc']],
+            offset: 2,
+        });
+        expect(rest.map((r) => r.title)).toEqual(['C', 'D']);
+
+        const none = await storage.findMany({ orderBy: [['title', 'asc']], offset: 9 });
+        expect(none).toEqual([]);
+    });
 });
 
 describe('createStorage – count', () => {
@@ -497,5 +516,62 @@ describe('createStorage – query escape hatch', () => {
 
     it('exposes the descriptor', () => {
         expect(entryStorage().descriptor.name).toBe('entries');
+    });
+
+    it('composes the exposed where compiler with a raw or in one statement', async () => {
+        const storage = entryStorage();
+        await storage.create({
+            type: 'post',
+            locale: 'en',
+            title: 'Hello world',
+            slug: 'hello',
+        });
+        await storage.create({
+            type: 'post',
+            locale: 'en',
+            title: 'Goodbye',
+            slug: 'hello-again',
+        });
+        // Excluded by the DSL half (trashed), matched by the raw half.
+        await storage.create({
+            type: 'post',
+            locale: 'en',
+            title: 'Hello trashed',
+            slug: 'trashed',
+            deletedAt: MIDDLE,
+        });
+        // Excluded by the DSL half (wrong type), matched by the raw half.
+        await storage.create({
+            type: 'note',
+            locale: 'en',
+            title: 'Hello note',
+            slug: 'note',
+        });
+        // Matched by neither half of the OR.
+        await storage.create({
+            type: 'post',
+            locale: 'en',
+            title: 'Unrelated',
+            slug: 'unrelated',
+        });
+
+        const { db, table, where } = storage.query();
+        const dsl = where({ type: 'post', deletedAt: null });
+        const rows = await db
+            .selectFrom(table)
+            .selectAll()
+            .where((eb) =>
+                eb.and([
+                    dsl(eb),
+                    eb.or([
+                        eb('title', 'like', '%Hello%'),
+                        eb('slug', 'like', '%hello%'),
+                    ]),
+                ])
+            )
+            .orderBy('title', 'asc')
+            .execute();
+
+        expect(rows.map((row) => row['title'])).toEqual(['Goodbye', 'Hello world']);
     });
 });

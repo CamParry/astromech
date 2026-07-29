@@ -7,14 +7,34 @@
  * Policy (validation, hooks, relationships, versioning *decisions*, bulk
  * dispatch) stays in the entries service.
  *
- * No `virtual:astromech/config` import — this stays directly testable. Calls
- * `getDb()` per-op like the original data layer; `transaction` rebinds a fresh
+ * Row access goes through `createStorage(entries)` — the descriptor-backed CRUD
+ * wrapper — which owns encoding, `updatedAt` stamping and result decoding. Four
+ * things it cannot express stay on the raw Kysely handle:
+ *
+ *   - `list`: the search predicate is `title LIKE ? OR slug LIKE ?`, and the flat
+ *     `where` DSL has no `or`. The row query and the count share one compiled
+ *     predicate, so the count stays raw with it rather than being restated in the
+ *     DSL where the two could drift apart.
+ *   - `populateLocales`: a `localeGroup IN (…)` sibling lookup projected to three
+ *     columns, fanned out over a page of rows.
+ *   - `trash.restore`: one statement that is guarded (`deletedAt IS NOT NULL`)
+ *     *and* returns the row. The wrapper's `update` is primary-key-only and
+ *     `updateMany` returns a count, so splitting it would change both the query
+ *     count and what restoring a live entry does.
+ *
+ * Soft delete is a domain policy, not a wrapper feature: trashing is an ordinary
+ * `deletedAt` write and every read filters `deletedAt: null` itself.
+ *
+ * No `virtual:astromech/config` import — this stays directly testable. Resolves
+ * the db per-op like the original data layer; `transaction` rebinds a fresh
  * instance to the Kysely tx handle.
  */
 
-import type { ExpressionBuilder, Insertable, Updateable } from 'kysely';
+import type { ExpressionBuilder, Updateable } from 'kysely';
 import { getDb } from '@/database/registry.js';
-import { encode, encodePatch, decode } from '@/database/codec.js';
+import { encodePatch, decode } from '@/database/codec.js';
+import { createStorage } from '@/database/storage/create-storage.js';
+import { entries } from '@/database/schema.js';
 import type { DB, Db } from '@/database/types.js';
 import type { EntryRow } from '../schema.js';
 import { createVersionStorage } from './versions.js';
@@ -179,6 +199,10 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
 
     const handle = (): Db => dbOverride ?? getDb();
 
+    // Unbound when there is no override, so it follows `setDb` per call exactly
+    // as `handle()` does.
+    const storage = createStorage(entries, dbOverride);
+
     const supports: readonly Capability[] = BUILT_IN_SUPPORTS;
 
     async function transaction<T>(
@@ -198,31 +222,22 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
         baseSlug: string,
         excludeId?: string
     ): Promise<string> {
-        const db = handle();
         let candidate = baseSlug;
         let counter = 1;
 
         while (true) {
-            const existing = await db
-                .selectFrom('entries')
-                .select('id')
-                .where((eb) => {
-                    const conditions = [
-                        eb('type', '=', type),
-                        eb('locale', '=', locale),
-                        eb('slug', '=', candidate),
-                        eb('deletedAt', 'is', null),
-                        // Staged rows legitimately share their canonical's slug; they are
-                        // outside the (partial) slug unique index, so ignore them here.
-                        eb('stagedFor', 'is', null),
-                        ...(excludeId ? [eb('id', '!=', excludeId)] : []),
-                    ];
-                    return eb.and(conditions);
-                })
-                .limit(1)
-                .execute();
+            const existing = await storage.findOne({
+                type,
+                locale,
+                slug: candidate,
+                deletedAt: null,
+                // Staged rows legitimately share their canonical's slug; they are
+                // outside the (partial) slug unique index, so ignore them here.
+                stagedFor: null,
+                id: excludeId === undefined ? undefined : { ne: excludeId },
+            });
 
-            if (!existing[0]) return candidate;
+            if (!existing) return candidate;
 
             counter++;
             candidate = `${baseSlug}-${counter}`;
@@ -285,19 +300,16 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
         id: string,
         opts?: { includeTrashed?: boolean }
     ): Promise<Entry | null> {
-        const db = handle();
-        let q = db.selectFrom('entries').selectAll().where('id', '=', id);
-        if (!opts?.includeTrashed) {
-            q = q.where('deletedAt', 'is', null);
-        }
-        const row = await q.limit(1).executeTakeFirst();
+        const row = await storage.findOne({
+            id,
+            deletedAt: opts?.includeTrashed === true ? undefined : null,
+        });
         if (!row) return null;
-        return populateLocaleSingle(db, decode('entries', row) as unknown as EntryRow);
+        return populateLocaleSingle(handle(), row);
     }
 
     async function create(data: EntryWrite & { type: string }): Promise<Entry> {
-        const db = handle();
-        const values = {
+        const created = await storage.create({
             type: data.type,
             title: data.title ?? '',
             slug: data.slug ?? null,
@@ -309,21 +321,16 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
             publishedAt: data.publishedAt ?? null,
             createdBy: data.createdBy ?? null,
             updatedBy: data.updatedBy ?? null,
-        };
-        const created = await db
-            .insertInto('entries')
-            .values(encode('entries', values) as unknown as Insertable<DB['entries']>)
-            .returningAll()
-            .executeTakeFirstOrThrow();
-        return populateLocaleSingle(
-            db,
-            decode('entries', created) as unknown as EntryRow
-        );
+        });
+        return populateLocaleSingle(handle(), created);
     }
 
     async function update(id: string, data: EntryWrite): Promise<Entry> {
-        const db = handle();
-        const patch = {
+        // An explicitly-`undefined` key means "leave this column alone" (`Patch`
+        // admits it and the encoder drops it), so the partial write forwards
+        // straight through. `updatedAt` is stamped by the wrapper (the column
+        // declares `onUpdate`).
+        const updated = await storage.update(id, {
             title: data.title,
             slug: data.slug,
             fields: data.fields,
@@ -332,87 +339,49 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
             locale: data.locale,
             localeGroup: data.localeGroup,
             updatedBy: data.updatedBy,
-            updatedAt: new Date(),
-        };
-        const updated = await db
-            .updateTable('entries')
-            .set(encodePatch('entries', patch) as unknown as Updateable<DB['entries']>)
-            .where('id', '=', id)
-            .returningAll()
-            .executeTakeFirstOrThrow();
-        return populateLocaleSingle(
-            db,
-            decode('entries', updated) as unknown as EntryRow
-        );
+        });
+        return populateLocaleSingle(handle(), updated);
     }
 
     async function del(id: string, opts?: { cascadeLocales?: boolean }): Promise<void> {
-        const db = handle();
-        if (opts?.cascadeLocales) {
-            const existing = await db
-                .selectFrom('entries')
-                .select('localeGroup')
-                .where('id', '=', id)
-                .limit(1)
-                .executeTakeFirst();
+        if (opts?.cascadeLocales === true) {
+            const existing = await storage.findOne({ id });
             const localeGroup = existing?.localeGroup;
-            if (localeGroup) {
-                await db
-                    .deleteFrom('entries')
-                    .where('localeGroup', '=', localeGroup)
-                    .execute();
+            if (localeGroup !== undefined) {
+                await storage.deleteMany({ localeGroup });
                 return;
             }
         }
-        await db.deleteFrom('entries').where('id', '=', id).execute();
+        await storage.delete(id);
     }
 
     const trash = {
         trash: async (id: string, opts?: { cascadeLocales?: boolean }): Promise<void> => {
-            const db = handle();
-            const row = await db
-                .selectFrom('entries')
-                .select(['localeGroup', 'deletedAt'])
-                .where('id', '=', id)
-                .limit(1)
-                .executeTakeFirst();
+            const row = await storage.findOne({ id });
             if (!row) throw new Error(`Entry '${id}' not found`);
             const now = new Date();
 
             // Idempotent: re-trashing an already-trashed entry is a no-op.
-            if (row.deletedAt == null) {
-                await db
-                    .updateTable('entries')
-                    .set(
-                        encodePatch('entries', {
-                            deletedAt: now,
-                        }) as unknown as Updateable<DB['entries']>
-                    )
-                    .where('id', '=', id)
-                    .execute();
+            if (row.deletedAt === null) {
+                await storage.update(id, { deletedAt: now });
             }
 
-            if (opts?.cascadeLocales) {
-                await db
-                    .updateTable('entries')
-                    .set(
-                        encodePatch('entries', {
-                            deletedAt: now,
-                        }) as unknown as Updateable<DB['entries']>
-                    )
-                    .where((eb) =>
-                        eb.and([
-                            eb('localeGroup', '=', row.localeGroup),
-                            eb('id', '!=', id),
-                            eb('deletedAt', 'is', null),
-                        ])
-                    )
-                    .execute();
+            if (opts?.cascadeLocales === true) {
+                await storage.updateMany(
+                    {
+                        localeGroup: row.localeGroup,
+                        id: { ne: id },
+                        deletedAt: null,
+                    },
+                    { deletedAt: now }
+                );
             }
         },
 
         restore: async (id: string): Promise<Entry> => {
             const db = handle();
+            // Guarded *and* returning: not expressible through the wrapper's
+            // primary-key `update` / count-returning `updateMany`.
             const restored = await db
                 .updateTable('entries')
                 .set(
@@ -433,13 +402,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
         },
 
         emptyTrash: async (type: string): Promise<void> => {
-            const db = handle();
-            await db
-                .deleteFrom('entries')
-                .where((eb) =>
-                    eb.and([eb('type', '=', type), eb('deletedAt', 'is not', null)])
-                )
-                .execute();
+            await storage.deleteMany({ type, deletedAt: { ne: null } });
         },
     };
 
@@ -473,45 +436,25 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
 
     const staging = {
         getByCanonical: async (canonicalId: string): Promise<Entry | null> => {
-            const db = handle();
-            const row = await db
-                .selectFrom('entries')
-                .selectAll()
-                .where((eb) =>
-                    eb.and([
-                        eb('stagedFor', '=', canonicalId),
-                        eb('deletedAt', 'is', null),
-                    ])
-                )
-                .limit(1)
-                .executeTakeFirst();
+            const row = await storage.findOne({
+                stagedFor: canonicalId,
+                deletedAt: null,
+            });
             if (!row) return null;
-            return populateLocaleSingle(
-                db,
-                decode('entries', row) as unknown as EntryRow
-            );
+            return populateLocaleSingle(handle(), row);
         },
     };
 
     const translatable = {
         siblings: async (localeGroup: string, excludeId?: string): Promise<Entry[]> => {
-            const db = handle();
-            const rawRows = await db
-                .selectFrom('entries')
-                .selectAll()
-                .where((eb) => {
-                    const conditions = [
-                        eb('localeGroup', '=', localeGroup),
-                        eb('deletedAt', 'is', null),
-                        ...(excludeId ? [eb('id', '!=', excludeId)] : []),
-                    ];
-                    return eb.and(conditions);
-                })
-                .execute();
-            const decodedRows = rawRows.map((r) =>
-                decode('entries', r)
-            ) as unknown as EntryRow[];
-            return populateLocales(db, decodedRows);
+            const siblingRows = await storage.findMany({
+                where: {
+                    localeGroup,
+                    deletedAt: null,
+                    id: excludeId === undefined ? undefined : { ne: excludeId },
+                },
+            });
+            return populateLocales(handle(), siblingRows);
         },
 
         propagateFields: async (
@@ -519,35 +462,20 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
             excludeId: string,
             values: JsonObject
         ): Promise<void> => {
-            const db = handle();
-            const siblings = await db
-                .selectFrom('entries')
-                .select(['id', 'fields'])
-                .where((eb) =>
-                    eb.and([
-                        eb('localeGroup', '=', localeGroup),
-                        eb('id', '!=', excludeId),
-                        eb('deletedAt', 'is', null),
-                    ])
-                )
-                .execute();
+            const siblings = await storage.findMany({
+                where: {
+                    localeGroup,
+                    id: { ne: excludeId },
+                    deletedAt: null,
+                },
+            });
 
             for (const sibling of siblings) {
-                const existingFields: JsonObject =
-                    typeof sibling.fields === 'string'
-                        ? (JSON.parse(sibling.fields) as JsonObject)
-                        : {};
-                const mergedFields = { ...existingFields, ...values };
-                await db
-                    .updateTable('entries')
-                    .set(
-                        encodePatch('entries', {
-                            fields: mergedFields,
-                            updatedAt: new Date(),
-                        }) as unknown as Updateable<DB['entries']>
-                    )
-                    .where('id', '=', sibling.id)
-                    .execute();
+                // Rows come back decoded, so `fields` is already the parsed object.
+                const existingFields = (sibling.fields ?? {}) as JsonObject;
+                await storage.update(sibling.id, {
+                    fields: { ...existingFields, ...values },
+                });
             }
         },
     };

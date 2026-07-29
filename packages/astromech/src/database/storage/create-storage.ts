@@ -127,11 +127,55 @@ export type FindManyParams<D> = {
     offset?: number;
 };
 
+/**
+ * An update patch, widened to admit explicit `undefined` per key.
+ *
+ * `TableUpdate<D>` is `Partial<TableInsert<D>>`, and under
+ * `exactOptionalPropertyTypes` a `Partial` rejects an explicitly-`undefined`
+ * value — so the natural forwarding call `update(id, { title: data.title })`,
+ * where `data.title` is `string | undefined`, fails to compile. Callers were
+ * otherwise forced into `...(x !== undefined && { x })` spreads at every field.
+ *
+ * Widening here rather than on `TableUpdate` itself is deliberate: that type
+ * also describes domain row updates elsewhere, where the strictness is wanted.
+ * `undefined` means "leave this column alone" — the same meaning it already has
+ * in `Where<D>` — and `encodePatchWith` strips undefined keys before the write.
+ */
+export type Patch<D> = {
+    [K in keyof TableUpdate<D>]?: TableUpdate<D>[K] | undefined;
+};
+
 export type UpsertOptions<D> = {
     /** Conflict target columns. Defaults to the descriptor's primary key. */
     target?: readonly string[];
     /** Columns to write on conflict. Defaults to all provided non-target columns. */
-    set?: TableUpdate<D>;
+    set?: Patch<D>;
+};
+
+/**
+ * What `query()` hands out: the generic Kysely handle, the resolved table key,
+ * and the wrapper's own `where` compiler.
+ *
+ * `where` is exposed because the escape hatch is otherwise all-or-nothing. The
+ * flat DSL cannot express an OR, so a query mixing a normal filter with a search
+ * predicate had to abandon the DSL entirely and either restate every branch by
+ * hand — two copies of a filter that must agree exactly — or run a second query
+ * to materialise matching ids. Handing back the compiler makes the mixed case
+ * one statement:
+ *
+ * ```ts
+ * const { db, table, where } = storage.query();
+ * db.selectFrom(table)
+ *     .selectAll()
+ *     .where((eb) => eb.and([where(dslFilter)(eb), eb.or(searchClauses)]));
+ * ```
+ *
+ * The caller still owns decoding (`decodeWith(storage.descriptor, row)`).
+ */
+export type QueryHandle<D> = {
+    db: GenericDb;
+    table: string;
+    where: (where?: Where<D>) => WhereFn;
 };
 
 export type Storage<D extends TableDescriptor> = {
@@ -142,19 +186,18 @@ export type Storage<D extends TableDescriptor> = {
     count(where?: Where<D>): Promise<number>;
     create(data: TableInsert<D>): Promise<TableSelect<D>>;
     /** By primary key. Throws when no row matched. */
-    update(id: string, patch: TableUpdate<D>): Promise<TableSelect<D>>;
+    update(id: string, patch: Patch<D>): Promise<TableSelect<D>>;
     /** By primary key. Hard delete — soft delete stays a domain policy. */
     delete(id: string): Promise<void>;
     /** Returns the affected row count; 0 silently when nothing matched. */
-    updateMany(where: Where<D>, patch: TableUpdate<D>): Promise<number>;
+    updateMany(where: Where<D>, patch: Patch<D>): Promise<number>;
     deleteMany(where: Where<D>): Promise<number>;
     upsert(data: TableInsert<D>, opts?: UpsertOptions<D>): Promise<TableSelect<D>>;
     /**
-     * The raw escape hatch: the generic Kysely handle plus the resolved table
-     * key, for projections, aggregates and anything the flat DSL cannot express.
-     * The caller owns decoding (`decodeWith(storage.descriptor, row)`).
+     * The raw escape hatch, for projections, aggregates, ORs and anything else
+     * the flat DSL cannot express. See {@link QueryHandle}.
      */
-    query(): { db: GenericDb; table: string };
+    query(): QueryHandle<D>;
 };
 
 // ============================================================================
@@ -363,7 +406,14 @@ export function createStorage<D extends TableDescriptor>(
         for (const [key, direction] of params?.orderBy ?? []) {
             q = q.orderBy(key, direction);
         }
+        // SQLite's grammar only admits OFFSET *inside* a LIMIT clause, so an
+        // offset with no limit is a syntax error at the driver rather than an
+        // unbounded skip — which is exactly what "everything past the first N"
+        // (version trimming, tail pagination) asks for. `LIMIT -1` is SQLite's
+        // documented idiom for no limit. Postgres spells it `LIMIT ALL`, so this
+        // line moves behind the dialect seam when that driver lands.
         if (params?.limit !== undefined) q = q.limit(params.limit);
+        else if (params?.offset !== undefined) q = q.limit(-1);
         if (params?.offset !== undefined) q = q.offset(params.offset);
         const rows = await q.execute();
         return rows.map((row) => decodeRow(row));
@@ -394,7 +444,7 @@ export function createStorage<D extends TableDescriptor>(
         return decodeRow(row);
     }
 
-    async function update(id: string, patch: TableUpdate<D>): Promise<TableSelect<D>> {
+    async function update(id: string, patch: Patch<D>): Promise<TableSelect<D>> {
         const idCol = idColumn();
         const row = await handle()
             .updateTable(tableKey)
@@ -419,7 +469,7 @@ export function createStorage<D extends TableDescriptor>(
             .execute();
     }
 
-    async function updateMany(where: Where<D>, patch: TableUpdate<D>): Promise<number> {
+    async function updateMany(where: Where<D>, patch: Patch<D>): Promise<number> {
         const result = await handle()
             .updateTable(tableKey)
             .set(encodeUpdate(patch))
@@ -475,8 +525,8 @@ export function createStorage<D extends TableDescriptor>(
         return decodeRow(row);
     }
 
-    function query(): { db: GenericDb; table: string } {
-        return { db: handle(), table: tableKey };
+    function query(): QueryHandle<D> {
+        return { db: handle(), table: tableKey, where: whereFn };
     }
 
     return {
