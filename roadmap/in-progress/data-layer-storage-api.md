@@ -10,25 +10,23 @@ status only.
 
 ## Scope
 
-- [ ] `createTableStorage(descriptor, db = getDb())` — the generic CRUD object,
+- [x] `createStorage(descriptor, db = getDb())` — the generic CRUD object,
       composed **inside** the existing `createXStorage` factories (which keep
       transaction rebinding and the domain vocabulary)
-- [ ] Flat `where` DSL: `eq/ne/in/notIn/gt/gte/lt/lte/like`, bare value = eq,
+- [x] Flat `where` DSL: `eq/ne/in/notIn/gt/gte/lt/lte/like`, bare value = eq,
       bare null = IS NULL; `or`/nesting → `query()`
-- [ ] Wrapper-owned value serialization — every predicate value through
+- [x] Wrapper-owned value serialization — every predicate value through
       `col.serialize`, each `in` element individually, `like` patterns raw
-- [ ] `findOne(where)` → `T | null` (unique lookup; replaces `get(id)`)
-- [ ] `findMany({ where, orderBy, limit, offset })` → `T[]`
-- [ ] `count(where?)` → `number`
-- [ ] `query()` → raw scoped Kysely builder (undecoded escape hatch)
-- [ ] `create` / `update(id, patch)` / `delete(id)` (codec choke point)
-- [ ] `updateMany(where, patch)` / `deleteMany(where)` (absorb maintenance ops
+- [x] `findOne(where)` → `T | null` (unique lookup; replaces `get(id)`)
+- [x] `findMany({ where, orderBy, limit, offset })` → `T[]`
+- [x] `count(where?)` → `number`
+- [x] `query()` → raw scoped Kysely builder (undecoded escape hatch)
+- [x] `create` / `update(id, patch)` / `delete(id)` (codec choke point)
+- [x] `updateMany(where, patch)` / `deleteMany(where)` (absorb maintenance ops
       inside the choke point)
-- [ ] `upsert(data, { target?, set? })`
-- [ ] Migrate `createXStorage` internals from raw Kysely to this wrapper
-- [ ] Collapse the codec: string-keyed `decode`/`encode`/`encodePatch` shrink to
-      the 4 legacy better-auth tables; delete `DESCRIPTORS` + `kyselyTableKey`
-      and the `as unknown as` casts at every call site
+- [x] `upsert(data, { target?, set? })`
+- [x] Migrate `createXStorage` internals from raw Kysely to this wrapper,
+      dropping the `as unknown as` cast pairs at every migrated site
 
 ## Scope changes (2026-07-29 audit)
 
@@ -46,6 +44,25 @@ Three findings from reading the code rather than the spec:
 - **`count(where)` — ADDED.** Not in the original lock. Count-then-rows is the
   most duplicated raw-Kysely pattern in the repo (6 sites).
 
+## Found while migrating (not fixed here)
+
+- **`trashed: true` reads return nothing through the HTTP query endpoint**, while
+  the write path is correct — trashing removes an entry from the live list and
+  restoring brings it back, verified end-to-end against the demo. The list
+  filter's SQL (`buildListWhere` in `entries/storage/built-in.ts`) is outside
+  every hunk of this workstream's diff, so this is pre-existing. Most likely the
+  public visibility shape filters trashed rows out of that endpoint. Worth its
+  own look; it is not a storage-layer defect.
+- **`localeGroup` is minted with `crypto.randomUUID()`** although its descriptor
+  declares `defaultUlid: true`, so the descriptor default is dead code for that
+  column. Pre-existing; preserved deliberately to keep this diff behaviour-only.
+- **A tx-bound storage's `transaction()` calls `getDb()`**, so it opens a new
+  transaction on the base handle rather than reusing the bound one. Pre-existing,
+  uncovered by tests.
+- **`built-in.ts` still reads a bare `null` in its own fixed-key `where` builder
+  as "no filter"**, so it and `tableStorage` now disagree about bare null. It is
+  a contained whitelist builder, not the shared DSL, but the divergence is real.
+
 ## Locked policy (spec §5)
 
 - No built-in soft-delete in the generic wrapper — `delete` is hard delete;
@@ -61,6 +78,16 @@ Three findings from reading the code rather than the spec:
   `backups`-plugin files query raw — 21 files, four of those domains with no
   storage layer at all. Migrating them is a separate follow-up; they are also
   the sites that most want `count`, which does not exist until this lands.
+- **The codec collapse.** An earlier draft had this workstream delete the
+  string-keyed `decode`/`encode`/`encodePatch` API. A call-site census killed
+  that: half the descriptor-table string-keyed calls live in the out-of-scope
+  files above (`settings`, `media`, `notifications`, `cron/runner.ts`,
+  `plugin-runtime.ts`). `kyselyTableKey` turns out not to be deletable at all —
+  the wrapper and the plugin codec registry both need it.
+
+    Follow-up precondition, stated precisely: `DESCRIPTORS` deletes once no
+    string-keyed call names a descriptor-backed table. `LEGACY_CODECS` (the 4
+    better-auth tables) stays regardless.
 
 ## Deferred (separate workstream)
 
