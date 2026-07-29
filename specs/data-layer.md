@@ -352,7 +352,10 @@ design it then and name it `resolveRefs` / `withRefs`. **Never `populate`.**
 
 ### Construction: where the wrapper meets `createXStorage` (resolved 2026-07-29)
 
-`createTableStorage(descriptor, db = getDb())` returns the generic CRUD object.
+`createStorage(descriptor, db = getDb())` returns the generic CRUD object.
+(Named `createStorage`, not `createTableStorage`: it belongs to the
+`createXStorage` family as its unnamed X, and `tableStorage` is already taken by
+the unrelated `EntryStorage`-over-a-descriptor adapter in `entries/storage/`.)
 It sits **inside** the existing `createXStorage` factories; it does not replace
 them.
 

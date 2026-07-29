@@ -10,21 +10,21 @@ status only.
 
 ## Scope
 
-- [ ] `createTableStorage(descriptor, db = getDb())` — the generic CRUD object,
+- [x] `createStorage(descriptor, db = getDb())` — the generic CRUD object,
       composed **inside** the existing `createXStorage` factories (which keep
       transaction rebinding and the domain vocabulary)
-- [ ] Flat `where` DSL: `eq/ne/in/notIn/gt/gte/lt/lte/like`, bare value = eq,
+- [x] Flat `where` DSL: `eq/ne/in/notIn/gt/gte/lt/lte/like`, bare value = eq,
       bare null = IS NULL; `or`/nesting → `query()`
-- [ ] Wrapper-owned value serialization — every predicate value through
+- [x] Wrapper-owned value serialization — every predicate value through
       `col.serialize`, each `in` element individually, `like` patterns raw
-- [ ] `findOne(where)` → `T | null` (unique lookup; replaces `get(id)`)
-- [ ] `findMany({ where, orderBy, limit, offset })` → `T[]`
-- [ ] `count(where?)` → `number`
-- [ ] `query()` → raw scoped Kysely builder (undecoded escape hatch)
-- [ ] `create` / `update(id, patch)` / `delete(id)` (codec choke point)
-- [ ] `updateMany(where, patch)` / `deleteMany(where)` (absorb maintenance ops
+- [x] `findOne(where)` → `T | null` (unique lookup; replaces `get(id)`)
+- [x] `findMany({ where, orderBy, limit, offset })` → `T[]`
+- [x] `count(where?)` → `number`
+- [x] `query()` → raw scoped Kysely builder (undecoded escape hatch)
+- [x] `create` / `update(id, patch)` / `delete(id)` (codec choke point)
+- [x] `updateMany(where, patch)` / `deleteMany(where)` (absorb maintenance ops
       inside the choke point)
-- [ ] `upsert(data, { target?, set? })`
+- [x] `upsert(data, { target?, set? })`
 - [ ] Migrate `createXStorage` internals from raw Kysely to this wrapper,
       dropping the `as unknown as` cast pairs at every migrated site
 
