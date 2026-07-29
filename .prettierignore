@@ -1,0 +1,9 @@
+# Prettier already honours .gitignore (dist/, coverage/, .wrangler/, generated
+# routeTree.gen.ts, apps/demo/database.db, **/.astromech/). Only additions go
+# here.
+
+# Untracked, per-developer Claude Code settings — not repo content.
+.claude/settings.local.json
+
+# Lockfile: npm owns the formatting.
+package-lock.json

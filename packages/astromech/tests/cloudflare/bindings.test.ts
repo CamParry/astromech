@@ -1,9 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import {
-    resolveBinding,
-    setBindingEnv,
-    resetBindingEnv,
-} from '@/cloudflare/bindings.js';
+import { resolveBinding, setBindingEnv, resetBindingEnv } from '@/cloudflare/bindings.js';
 
 // The Workers (`cloudflare:workers`) and Node (`wrangler` getPlatformProxy())
 // detection paths are intentionally not exercised here: neither package is
