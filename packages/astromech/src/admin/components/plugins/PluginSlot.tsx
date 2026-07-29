@@ -11,7 +11,7 @@ import { slots } from 'virtual:astromech/plugins/components';
 import type { AdminSlotName } from '@/types/config.js';
 import { usePermissions } from '@/admin/hooks/index.js';
 import { PluginUiProvider } from '@/admin/context/plugin.js';
-import { PluginErrorBoundary } from '@/admin/components/plugins/PluginErrorBoundary.js';
+import { ComponentErrorBoundary } from '@/admin/components/pages/ComponentErrorBoundary.js';
 
 type LazySlot = React.LazyExoticComponent<React.ComponentType>;
 const lazyCache = new Map<string, LazySlot>();
@@ -48,11 +48,11 @@ export function PluginSlot({ name }: { name: AdminSlotName }): React.ReactElemen
                             permissionNamespace: c.namespace,
                         }}
                     >
-                        <PluginErrorBoundary plugin={c.plugin}>
+                        <ComponentErrorBoundary source={c.plugin}>
                             <React.Suspense fallback={null}>
                                 <Lazy />
                             </React.Suspense>
-                        </PluginErrorBoundary>
+                        </ComponentErrorBoundary>
                     </PluginUiProvider>
                 );
             })}

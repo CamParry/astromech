@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { generatePluginClientManifest } from '@/codegen/plugin-client-manifest.js';
+import type { AdminPage } from '@/types/config.js';
 import type { PluginDefinition } from '@/types/plugins.js';
 
 const seoPlugin: PluginDefinition = {
@@ -105,6 +106,70 @@ describe('generatePluginClientManifest', () => {
         expect(result).toContain('export const fieldTypes = {\n\n};');
         expect(result).toContain('export const pages = {\n\n};');
         expect(result).toContain('export const i18n = {\n\n};');
+    });
+});
+
+describe('generatePluginClientManifest — host pages', () => {
+    const root = 'file:///repo/apps/demo/';
+
+    const hostPage = (overrides: Partial<AdminPage> = {}): AdminPage => ({
+        path: 'site-status',
+        label: 'Site Status',
+        component: './src/admin/pages/site-status.tsx',
+        ...overrides,
+    });
+
+    it('always emits hostPages, even with no host arg', () => {
+        const result = generatePluginClientManifest([seoPlugin]);
+        expect(result).toContain('export const hostPages = {\n\n};');
+    });
+
+    it('emits an empty hostPages block when the host has no pages', () => {
+        const result = generatePluginClientManifest([], { pages: [], root });
+        expect(result).toContain('export const hostPages = {\n\n};');
+    });
+
+    it('keys the entry by path and resolves a relative specifier against root', () => {
+        const result = generatePluginClientManifest([], { pages: [hostPage()], root });
+        expect(result).toContain('"site-status"');
+        expect(result).toContain(
+            'import("/repo/apps/demo/src/admin/pages/site-status.tsx")'
+        );
+    });
+
+    it('passes a bare package specifier through untouched', () => {
+        const result = generatePluginClientManifest([], {
+            pages: [hostPage({ component: '@acme/widgets/StatusPage' })],
+            root,
+        });
+        expect(result).toContain('import("@acme/widgets/StatusPage")');
+    });
+
+    it('emits permission: null by default and the raw key when set', () => {
+        const bare = generatePluginClientManifest([], { pages: [hostPage()], root });
+        expect(bare).toContain(
+            '"site-status": { load: () => import("/repo/apps/demo/src/admin/pages/site-status.tsx"), permission: null, label: "Site Status" },'
+        );
+
+        const guarded = generatePluginClientManifest([], {
+            pages: [hostPage({ permission: 'users:read' })],
+            root,
+        });
+        expect(guarded).toContain('permission: "users:read"');
+    });
+
+    it('omits fields-mode host pages', () => {
+        const result = generatePluginClientManifest([], {
+            pages: [
+                {
+                    path: 'globals',
+                    label: 'Globals',
+                    fields: [{ name: 'siteName', type: 'text' }],
+                },
+            ],
+            root,
+        });
+        expect(result).toContain('export const hostPages = {\n\n};');
     });
 });
 

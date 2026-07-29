@@ -8,4 +8,5 @@
  */
 export const fieldTypes = {} as Record<string, never>;
 export const pages = {} as Record<string, never>;
+export const hostPages = {} as Record<string, never>;
 export const i18n = {} as Record<string, never>;
