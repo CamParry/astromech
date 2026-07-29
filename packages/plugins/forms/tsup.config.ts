@@ -9,6 +9,12 @@ export default defineConfig({
     dts: true,
     sourcemap: true,
     clean: true,
-    external: ['astromech', 'astromech/fields', 'astromech/columns'],
+    external: [
+        'astromech',
+        'astromech/fields',
+        'astromech/columns',
+        'astromech/email',
+        'react',
+    ],
     treeshake: true,
 });

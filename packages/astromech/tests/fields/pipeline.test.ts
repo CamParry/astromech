@@ -466,6 +466,39 @@ describe('rule: enum', () => {
         );
         expect(errors.status).toEqual(['Must be one of: draft, published']);
     });
+
+    // A multiselect / checkbox group holds an array. The rule has to mean
+    // "every selected value is permitted" — testing the array itself for
+    // membership rejects every non-empty selection.
+    it('pass: every value of a multi-value field is in enum', async () => {
+        const { errors } = await processFields(
+            { tags: ['draft', 'published'] },
+            [
+                field({
+                    name: 'tags',
+                    type: 'multiselect',
+                    validation: [{ enum: ['draft', 'published'] }],
+                }),
+            ],
+            fakeCtx()
+        );
+        expect(errors.tags).toBeUndefined();
+    });
+
+    it('fail: one value of a multi-value field is not in enum', async () => {
+        const { errors } = await processFields(
+            { tags: ['draft', 'archived'] },
+            [
+                field({
+                    name: 'tags',
+                    type: 'multiselect',
+                    validation: [{ enum: ['draft', 'published'] }],
+                }),
+            ],
+            fakeCtx()
+        );
+        expect(errors.tags).toEqual(['Must be one of: draft, published']);
+    });
 });
 
 // ---------------------------------------------------------------------------

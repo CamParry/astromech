@@ -91,6 +91,20 @@ Implementation note: `processFields`'s ctx requires a `reads` port for `unique`
 and reference rules. Forms never emits those rules, so it passes a stub that
 throws if called — verify the exact `FieldValidationContext` shape when wiring.
 
+### 2d. The `enum` rule must accept multi-value fields
+
+Found while reviewing the compiler. `runRule`'s `enum` branch was
+`rule.enum.includes(value)`, which asks whether the _whole value_ is a permitted
+string. A `multiselect` — and so a checkbox group — holds an **array**, so that
+test rejected every non-empty selection with "Must be one of: …".
+
+**Change:** the rule now means "every selected value is permitted", normalising a
+scalar to a one-element array.
+
+This is a pre-existing core bug affecting any `multiselect` + `enum` pairing, not
+just forms; it simply had no consumer until now. Regression tests added in
+`tests/fields/pipeline.test.ts`.
+
 ## 3. Package
 
 `packages/plugins/forms`, package `@astromech/forms`, namespace `forms`,
@@ -140,20 +154,20 @@ Each block type is one field kind. Every block carries `label` (required),
 `translatable`, `searchable`, `private`, and nothing else. There is likewise no
 read-only or disabled option. Per-kind extras:
 
-| `_type`         | Extra config                  | Compiles to           |
-| --------------- | ----------------------------- | --------------------- |
-| `text`          | placeholder, minLength, maxLength | `fields.text`     |
-| `textarea`      | placeholder, maxLength, rows  | `fields.textarea`     |
-| `email`         | placeholder                   | `fields.email`        |
-| `tel`           | placeholder                   | `fields.text`         |
-| `url`           | placeholder                   | `fields.url`          |
-| `number`        | min, max                      | `fields.number`       |
-| `select`        | options, placeholder          | `fields.select`       |
-| `radio`         | options                       | `fields.radioGroup`   |
-| `checkbox`      | — (single consent box)        | `fields.boolean`      |
-| `checkboxGroup` | options                       | `fields.multiselect`  |
-| `date`          | —                             | `fields.date`         |
-| `hidden`        | defaultValue                  | `fields.text`         |
+| `_type`         | Extra config                      | Compiles to          |
+| --------------- | --------------------------------- | -------------------- |
+| `text`          | placeholder, minLength, maxLength | `fields.text`        |
+| `textarea`      | placeholder, maxLength, rows      | `fields.textarea`    |
+| `email`         | placeholder                       | `fields.email`       |
+| `tel`           | placeholder                       | `fields.text`        |
+| `url`           | placeholder                       | `fields.url`         |
+| `number`        | min, max                          | `fields.number`      |
+| `select`        | options, placeholder              | `fields.select`      |
+| `radio`         | options                           | `fields.radioGroup`  |
+| `checkbox`      | — (single consent box)            | `fields.boolean`     |
+| `checkboxGroup` | options                           | `fields.multiselect` |
+| `date`          | —                                 | `fields.date`        |
+| `hidden`        | defaultValue                      | `fields.text`        |
 
 Stored instances use the reserved block keys — `{ _type, _id, name, label, … }`
 — so `_type` is what the compiler switches on. The author-side schema keeps
@@ -187,16 +201,16 @@ rather than a convention `get` has to remember.
 `storage: tableStorage(submissionsTable)`, exactly as `redirect` does. Table
 `plugin_forms_submissions`:
 
-| Column                     | Type            | Notes                                |
-| -------------------------- | --------------- | ------------------------------------ |
-| `id`                       | ulid, pk        |                                      |
-| `formId`                   | text, indexed   | the form entry's id                  |
-| `formSlug`                 | text            | denormalised for listing             |
-| `data`                     | json            | the submitted answers                |
-| `summary`                  | text, nullable  | see below                            |
-| `meta`                     | json, nullable  | ip / userAgent / referer             |
-| `submittedAt`              | timestamp       |                                      |
-| `createdAt` / `updatedAt`  | timestamp       | required by `tableStorage`, see below |
+| Column                    | Type           | Notes                                 |
+| ------------------------- | -------------- | ------------------------------------- |
+| `id`                      | ulid, pk       |                                       |
+| `formId`                  | text, indexed  | the form entry's id                   |
+| `formSlug`                | text           | denormalised for listing              |
+| `data`                    | json           | the submitted answers                 |
+| `summary`                 | text, nullable | see below                             |
+| `meta`                    | json, nullable | ip / userAgent / referer              |
+| `submittedAt`             | timestamp      |                                       |
+| `createdAt` / `updatedAt` | timestamp      | required by `tableStorage`, see below |
 
 `summary` is a short human-readable rendering of `data`, computed once at submit
 time. It exists because the submissions list needs a column an editor can scan,
@@ -211,7 +225,8 @@ Entry config: `titleField: false`, `statuses: false`, `slug: false`,
 `trash: false`. Admin columns: form, submitted-at, a short summary of `data`.
 
 Submissions are not hand-authored. v1 relies on permissions for that (grant read
-+ delete, withhold create + update) rather than a new read-only entry flag.
+
+- delete, withhold create + update) rather than a new read-only entry flag.
 
 Migrations come from `astromech plugin:generate` — never hand-authored. Note
 that a worktree needs `npm install` before generation works.
@@ -261,7 +276,7 @@ Flow:
    committed.
 7. `{ ok: true, id }`.
 
-Field validation runs *before* the spam gate so a legitimate user with an
+Field validation runs _before_ the spam gate so a legitimate user with an
 expired token still sees their field errors.
 
 `hookEvents: ['forms:beforeSubmit', 'forms:afterSubmit']`.
@@ -308,7 +323,7 @@ entirely, so the second read returns nothing to render.
 
 v1 therefore takes the third core change in §2c: export `renderRichText`, and
 render the stored JSON directly. The two requirements are in genuine tension —
-the bodies must be invisible to public reads *and* renderable by the plugin —
+the bodies must be invisible to public reads _and_ renderable by the plugin —
 and a public renderer is the only thing that satisfies both without forms
 duplicating core's sanitizer.
 
@@ -328,13 +343,14 @@ blocks field gives the form builder its editor for free.
 
 - `npm run typecheck`, `npm run lint`, full test suite, `npm run build`.
 
-  **Trap:** the root `build` and `typecheck` scripts do not use the
-  `packages/plugins/*` workspace glob — they hardcode each plugin by name
-  (`-w @astromech/menus -w @astromech/redirects …`). A new plugin is invisible
-  to the root gate until it is added to both. `@astromech/forms` has been. Root
-  `lint` covers only schema-engine and astromech; plugin packages have no lint
-  script and are linted by the pre-commit hook instead, so lint them directly
-  with `npx eslint packages/plugins/forms/src` when verifying by hand.
+    **Trap:** the root `build` and `typecheck` scripts do not use the
+    `packages/plugins/*` workspace glob — they hardcode each plugin by name
+    (`-w @astromech/menus -w @astromech/redirects …`). A new plugin is invisible
+    to the root gate until it is added to both. `@astromech/forms` has been. Root
+    `lint` covers only schema-engine and astromech; plugin packages have no lint
+    script and are linted by the pre-commit hook instead, so lint them directly
+    with `npx eslint packages/plugins/forms/src` when verifying by hand.
+
 - Tests (real fixtures, never a mocked DB): the block→`FieldDefinition`
   compiler, `submit` happy path, `submit` validation failure shape, the gating
   hook actually aborting, `get` **not** leaking notification settings or the

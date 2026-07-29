@@ -32,6 +32,7 @@
             "astromech": ["./src/index.ts"],
             "astromech/fields": ["./src/exports/fields.ts"],
             "astromech/columns": ["./src/exports/columns.ts"],
+            "astromech/email": ["./src/exports/email.ts"],
             "@astromech/schema-engine/generate": ["../schema-engine/src/generate.ts"],
             "@astromech/schema-engine": ["../schema-engine/src/index.ts"],
             "@astromech/menus": ["../plugins/menus/src/index.ts"],
@@ -39,7 +40,8 @@
             "@astromech/redirects/schema": ["../plugins/redirects/src/schema/index.ts"],
             "@astromech/backups": ["../plugins/backups/src/index.ts"],
             "@astromech/backups/schema": ["../plugins/backups/src/schema/index.ts"],
-            "@astromech/backups/internals": ["../plugins/backups/src/backup.ts"]
+            "@astromech/backups/internals": ["../plugins/backups/src/backup.ts"],
+            "@astromech/forms/emails": ["../plugins/forms/src/emails/index.ts"]
         }
     },
     "include": ["src/**/*"],

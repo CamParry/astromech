@@ -30,6 +30,9 @@ export default defineConfig({
             'astromech/columns': fileURLToPath(
                 new URL('./src/exports/columns.ts', import.meta.url)
             ),
+            'astromech/email': fileURLToPath(
+                new URL('./src/exports/email.ts', import.meta.url)
+            ),
             // The schema engine resolves to source under vitest (no build step
             // before tests). Subpath alias FIRST — longest match must win.
             '@astromech/schema-engine/generate': fileURLToPath(
@@ -56,6 +59,11 @@ export default defineConfig({
             ),
             '@astromech/backups': fileURLToPath(
                 new URL('../plugins/backups/src/index.ts', import.meta.url)
+            ),
+            // Forms plugin — only the pure `emails/` sub-module is consumed by
+            // tests so far; no bare `@astromech/forms` alias yet.
+            '@astromech/forms/emails': fileURLToPath(
+                new URL('../plugins/forms/src/emails/index.ts', import.meta.url)
             ),
             astromech: fileURLToPath(new URL('./src/exports/index.ts', import.meta.url)),
         },

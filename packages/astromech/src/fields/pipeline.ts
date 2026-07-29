@@ -102,7 +102,13 @@ async function runRule(
     }
 
     if ('enum' in rule) {
-        if (!rule.enum.includes(value as string)) {
+        // A multi-value field (`multiselect`, and so a checkbox group) holds an
+        // ARRAY. The rule then means "every selected value is permitted" — not
+        // "the array itself is a permitted value", which is what a bare
+        // `includes` asks and which rejects every non-empty selection.
+        const selected = Array.isArray(value) ? value : [value];
+        const permitted = selected.every((entry) => rule.enum.includes(entry as string));
+        if (!permitted) {
             return `Must be one of: ${rule.enum.join(', ')}`;
         }
         return null;
