@@ -35,6 +35,9 @@ jobs:
                   node-version: 20
                   cache: npm
             - run: npm ci
+            # The plugin packages import `astromech` through its published
+            # exports map, so they only typecheck against `dist/`. Build first.
+            - run: npm run build
             - run: npm run typecheck
 
     build:
