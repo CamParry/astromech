@@ -44,7 +44,14 @@ export function Sidebar() {
     const { canReadMedia, canReadUsers, canReadSettings, hasPermission } =
         usePermissions();
     const entryTypes = Object.entries(adminConfig.entries);
-    const appPages = adminConfig.pages ?? [];
+    // Each host page carries its own resolved permission (`settings:read` for a
+    // fields page, null/explicit for a component page), so the group gates
+    // per-page rather than on settings access as a whole.
+    const appPages = (adminConfig.pages ?? []).filter(
+        (page) =>
+            page.nav !== false &&
+            (page.permission === null || hasPermission(page.permission))
+    );
     const pluginNavItems = filterNavItems(
         adminConfig.plugins.flatMap((plugin) => plugin.nav),
         hasPermission
@@ -103,7 +110,7 @@ export function Sidebar() {
                         </ul>
                     </nav>
                 )}
-                {appPages.length > 0 && canReadSettings() && (
+                {appPages.length > 0 && (
                     <>
                         <div className="am-sidebar-nav-divider"></div>
                         <nav className="am-sidebar-nav" aria-label={t('nav.pages')}>

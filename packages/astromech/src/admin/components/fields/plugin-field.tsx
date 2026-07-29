@@ -12,7 +12,7 @@ import React from 'react';
 import { fieldTypes } from 'virtual:astromech/plugins/components';
 import type { BaseFieldProps } from '@/types/index.js';
 import { Spinner } from '@/admin/components/ui/index.js';
-import { PluginErrorBoundary } from '@/admin/components/plugins/PluginErrorBoundary.js';
+import { ComponentErrorBoundary } from '@/admin/components/pages/ComponentErrorBoundary.js';
 import { PluginUiProvider } from '@/admin/context/plugin.js';
 import { useFieldControl } from '@/admin/components/fields/field-control-context';
 
@@ -75,11 +75,11 @@ export function PluginField(props: BaseFieldProps): React.ReactElement {
     };
     return (
         <PluginUiProvider identity={identity}>
-            <PluginErrorBoundary plugin={identity.namespace}>
+            <ComponentErrorBoundary source={identity.namespace}>
                 <React.Suspense fallback={<Spinner size="sm" />}>
                     <Lazy {...props} />
                 </React.Suspense>
-            </PluginErrorBoundary>
+            </ComponentErrorBoundary>
         </PluginUiProvider>
     );
 }

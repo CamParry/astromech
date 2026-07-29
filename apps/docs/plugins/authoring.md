@@ -265,7 +265,15 @@ decides the scoping, not the name of the helper**, so what you declare is a
 | declared in     | route                             | settings `baseKey`          | default permission                                 |
 | --------------- | --------------------------------- | --------------------------- | -------------------------------------------------- |
 | a plugin        | `/admin/plugin/<namespace><path>` | `plugin:<namespace>:<path>` | `settings:read` for `fields`, none for `component` |
-| the host config | `/admin/page/<path>`              | `<path>`                    | `settings:read`                                    |
+| the host config | `/admin/page/<path>`              | `<path>`                    | `settings:read` for `fields`, none for `component` |
+
+A `component` specifier is resolved relative to the **plugin's `root`** for a
+plugin page and relative to the **Astro project root** for a host page — so a
+host page writes `component: './src/admin/pages/site-status.tsx'`, the path as
+it appears in the repo. A non-relative specifier passes through untouched in
+both cases, so a page component can come from a package subpath. Host page
+components must **not** call `useAstromechPlugin()`: there is no plugin identity
+to provide and the hook throws. Use the `astromech/ui` primitives directly.
 
 The `baseKey` is the settings key a `fields` page reads and writes: a
 non-translatable page stores one blob at `baseKey`, a translatable one stores

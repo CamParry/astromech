@@ -418,10 +418,10 @@
         "notFound": "Page not found",
         "unauthorized": "You must be logged in to access this page",
         "forbidden": "You do not have permission to access this page",
-        "generic": "An unexpected error occurred"
+        "generic": "An unexpected error occurred",
+        "componentCrashed": "The \"{{source}}\" component failed to render."
     },
     "plugins": {
-        "componentError": "The \"{{plugin}}\" plugin component failed to render.",
         "pageNotFound": "Plugin page not found",
         "accessDenied": "You don't have permission to view this page.",
         "settingsSaved": "Settings saved."

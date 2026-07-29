@@ -399,6 +399,12 @@ export default defineConfig({
                     }),
                 ],
             }),
+            defineAdminPage({
+                path: 'site-status',
+                label: 'Site Status',
+                icon: 'Activity',
+                component: './src/admin/pages/site-status.tsx',
+            }),
         ],
     },
 
