@@ -89,6 +89,11 @@ export type {
 export { decodeWith, encodeWith, encodePatchWith } from '@/database/codec.js';
 export { tableStorage } from '@/entries/storage/table.js';
 export { t } from '@/utilities/labels.js';
+// Rich text is stored as ProseMirror JSON and rendered to sanitized HTML on
+// public reads. A plugin holding richtext that is `private` — and so absent
+// from the public shape — has no read to get HTML from, and must render it
+// itself. Exported so that never means reimplementing the sanitizer.
+export { renderRichText } from '@/fields/rich-text/index.js';
 
 // ============================================================================
 // Config / Collection / Plugin Helpers

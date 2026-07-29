@@ -114,7 +114,12 @@ export type PluginContext = {
     logger: PluginLogger;
     /** Env vars (resolved via import.meta.env in Vite/Astro SSR). Never the browser. */
     env: Record<string, string | undefined>;
-    /** Fire a (typically plugin-declared) hook event. */
+    /**
+     * Fire a (typically plugin-declared) hook event. Follows core's `before*`
+     * gating convention by name: an event whose name contains `:before` gates
+     * the operation (a throwing subscriber aborts, and the error propagates to
+     * the caller); every other event is swallow-and-logged.
+     */
     emit: (event: string, payload: unknown) => Promise<void>;
     /** Storage scoped to this plugin — keys are namespaced under `plugin/<alias>/` transparently. */
     storage: PluginStorage;
@@ -324,7 +329,11 @@ export type PluginDefinition = PluginIdentity & {
     service?: Record<string, AnyPluginServiceMethod>;
     rawRoutes?: PluginRawRoute[];
     hooks?: PluginHooks;
-    /** Custom events this plugin fires via `ctx.emit`. Type-augmented in 18b. */
+    /**
+     * Custom events this plugin fires via `ctx.emit`. Type-augmented in 18b.
+     * An event name containing `:before` gates the operation on emit (a
+     * throwing subscriber aborts); every other event is swallow-and-logged.
+     */
     hookEvents?: string[];
     cron?: PluginCronJob[];
     admin?: PluginAdmin;

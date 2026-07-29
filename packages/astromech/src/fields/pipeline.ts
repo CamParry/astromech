@@ -4,8 +4,9 @@
  * Pure logic: no domain/DB imports. The `reads` handle on `ctx` is the
  * injection point for any async checks (uniqueness, references).
  *
- * Internal use only — deep-import from `@/fields/pipeline.js`; not
- * re-exported from `fields/index.ts`.
+ * Public API via `astromech/fields` (`processFields`). Entries is not its
+ * only consumer: any plugin that composes `FieldDefinition[]` at runtime can
+ * validate through the same coerce → default → validate path as core.
  *
  * P2 scope: top-level data fields only. Data containers (group/repeater/
  * blocks/tree) are treated as opaque leaves; their children are not recursed

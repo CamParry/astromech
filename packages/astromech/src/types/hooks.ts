@@ -5,6 +5,12 @@
  * `CoreHookHandlers`), and plugins may declare and fire their own events
  * (`hookEvents` + `ctx.emit`). A hook event name is therefore
  * `KnownCoreEvent | (string & {})`.
+ *
+ * Failure semantics are keyed off the event name for both core and custom
+ * events: `before*` handlers gate the operation (a throw aborts); `after*`
+ * handlers run post-commit and are swallow-and-logged. A custom event emitted
+ * via `ctx.emit` follows the same rule by substring — a name containing
+ * `:before` gates; everything else is swallow-and-logged.
  */
 
 import type { Entry, EntryStatus, JsonObject, Media, User } from './domain.js';

@@ -4,7 +4,9 @@
  * Holds the registry of installed plugins (hooks / service / raw routes),
  * builds the unified PluginContext, and runs hooks with the documented failure
  * semantics: `before*` hooks gate the operation (a throw aborts), `after*`
- * hooks and emitted events are swallow-and-logged (a throw never rolls back).
+ * hooks are swallow-and-logged (a throw never rolls back). Custom events fired
+ * via `ctx.emit` follow the same by-name convention: an event whose name
+ * contains `:before` gates; every other emitted event is swallow-and-logged.
  *
  * Config is injected via `registerPlugins` rather than imported from
  * `virtual:astromech/config`, so this module stays unit-testable.
@@ -516,13 +518,21 @@ export async function runAfterHooks(
 }
 
 /**
- * Fire a (typically plugin-declared) custom event. Subscribers run with
- * swallow-and-log semantics, like `after*` hooks.
+ * Fire a (typically plugin-declared) custom event.
+ *
+ * Subscriber semantics follow the same by-name convention core uses for its
+ * own events: an event whose name marks it as a `before` phase GATES — a
+ * throwing subscriber aborts the operation and the error propagates to the
+ * caller. Every other event is swallow-and-logged, like `after*` hooks.
  */
 export async function emitEvent(
     event: string,
     payload: unknown,
     user: User | null
 ): Promise<void> {
+    if (event.includes(':before')) {
+        await runBeforeHooks(event, payload, user);
+        return;
+    }
     await runAfterHooks(event, payload, user);
 }
