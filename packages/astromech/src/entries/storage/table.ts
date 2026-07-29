@@ -35,6 +35,7 @@
 
 import type { Expression, ExpressionBuilder, Kysely, SqlBool } from 'kysely';
 import { getDb } from '@/database/registry.js';
+import { supportsTransactions } from '@/database/capabilities.js';
 import {
     decodeWith,
     encodePatchWith,
@@ -433,5 +434,13 @@ export function tableStorage(
     table: TableDescriptor,
     options?: TableStorageOptions
 ): EntryStorage {
-    return new TableStorage(table, options) as EntryStorage;
+    const instance = new TableStorage(table, options);
+    if (!supportsTransactions()) {
+        // `transaction` is a prototype method, so an own `undefined` property
+        // shadows it — same "degrade, don't throw" contract as built-in
+        // storage: EntryStorage.transaction is optional and every caller
+        // already falls back to sequential writes.
+        (instance as unknown as { transaction: undefined }).transaction = undefined;
+    }
+    return instance as EntryStorage;
 }

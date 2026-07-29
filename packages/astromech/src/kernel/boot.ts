@@ -9,7 +9,7 @@
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { AstromechConfig, PluginDefinition, ResolvedConfig } from '@/types/index.js';
-import { setDb, getDb, setDbClient } from '@/database/registry.js';
+import { setDb, getDb } from '@/database/registry.js';
 import { migrateToLatest, mergeMigrationProviders } from '@astromech/schema-engine';
 import { collectPluginMigrations } from '@/database/plugin-migrations.js';
 import { setDatabaseDriver } from '@/database/driver-registry.js';
@@ -41,10 +41,6 @@ export async function initRuntime(
     resolvedConfig: ResolvedConfig
 ): Promise<void> {
     setDb(config.db.getInstance());
-    // Stash the shared libsql client (better-auth's Kysely adapter + dump/restore
-    // run against it). Absent on drivers without an in-process client (e.g. D1).
-    const client = config.db.getClient?.();
-    if (client) setDbClient(client);
     setDatabaseDriver(config.db);
     setStorageDriver(config.storage);
     if (config.image) {
