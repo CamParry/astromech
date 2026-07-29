@@ -104,6 +104,8 @@
     "scripts": {
         "dev": "tsup --watch",
         "build": "tsup",
+        "routes:generate": "tsr generate",
+        "pretypecheck": "npm run routes:generate",
         "typecheck": "tsc -p tsconfig.test.json",
         "lint": "eslint src",
         "lint:deps": "depcruise src --config .dependency-cruiser.cjs",
@@ -161,8 +163,8 @@
         "zod": "^4.3.6"
     },
     "peerDependencies": {
-        "astro": "^6.0.8",
-        "@modelcontextprotocol/sdk": "*"
+        "@modelcontextprotocol/sdk": "*",
+        "astro": "^6.0.8"
     },
     "peerDependenciesMeta": {
         "@modelcontextprotocol/sdk": {
@@ -172,6 +174,7 @@
     "devDependencies": {
         "@cloudflare/workers-types": "^4.20260214.0",
         "@modelcontextprotocol/sdk": "^1.29.0",
+        "@tanstack/router-cli": "^1.167.21",
         "@types/lodash-es": "^4.17.12",
         "@types/node": "^25.5.0",
         "@types/react": "^19.0.0",
