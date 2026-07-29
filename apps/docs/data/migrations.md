@@ -8,6 +8,12 @@ npm run db:generate -- --name add-author-column   # write the next migration
 npm run db:init                                    # apply the chain
 ```
 
+None of this is driver-specific. Migrations apply without a transaction on
+every driver — Kysely only wraps a migration in one when the dialect reports
+transactional DDL support, and the SQLite adapter reports `false` — so the
+chain applies the same way on D1 as on libsql. See
+[configuration/database.md](../configuration/database.md).
+
 ## What lives in `migrations/`
 
 | File             | Written by | What it is                                            |
