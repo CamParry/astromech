@@ -13,6 +13,9 @@ const driver: DatabaseDriver = {
     getInstance() {
         throw new Error('not called');
     },
+    createDialect() {
+        throw new Error('not called');
+    },
 };
 
 const storageDriver: StorageDriver = {
@@ -397,21 +400,89 @@ describe('resolveConfig adminPages — XOR validation', () => {
         );
     });
 
-    it('throws for host component pages (not yet supported)', () => {
+    it('accepts a page with only fields', () => {
+        expect(() =>
+            resolveConfig(baseConfig({ admin: { pages: [simplePage()] } }))
+        ).not.toThrow();
+    });
+
+    it('accepts a page with only component', () => {
         const page: AdminPage = {
             path: 'widget',
             label: 'Widget',
             component: './Widget.tsx',
         };
-        expect(() => resolveConfig(baseConfig({ admin: { pages: [page] } }))).toThrow(
-            /not yet supported/
-        );
+        expect(() =>
+            resolveConfig(baseConfig({ admin: { pages: [page] } }))
+        ).not.toThrow();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Host component-mode pages
+// ---------------------------------------------------------------------------
+
+describe('resolveConfig adminPages — component mode', () => {
+    const componentPage = (overrides: Partial<AdminPage> = {}): AdminPage => ({
+        path: 'site-status',
+        label: 'Site Status',
+        component: './src/admin/pages/site-status.tsx',
+        ...overrides,
     });
 
-    it('accepts a page with only fields', () => {
-        expect(() =>
-            resolveConfig(baseConfig({ admin: { pages: [simplePage()] } }))
-        ).not.toThrow();
+    it('resolves fields to null', () => {
+        const resolved = resolveConfig(
+            baseConfig({ admin: { pages: [componentPage()] } })
+        );
+        expect(resolved.adminPages[0]?.fields).toBeNull();
+    });
+
+    it('sets componentKey to the page path', () => {
+        const resolved = resolveConfig(
+            baseConfig({ admin: { pages: [componentPage()] } })
+        );
+        expect(resolved.adminPages[0]?.componentKey).toBe('site-status');
+    });
+
+    it('defaults permission to null (nothing to guard)', () => {
+        const resolved = resolveConfig(
+            baseConfig({ admin: { pages: [componentPage()] } })
+        );
+        expect(resolved.adminPages[0]?.permission).toBeNull();
+    });
+
+    it('honours an explicit permission', () => {
+        const resolved = resolveConfig(
+            baseConfig({
+                admin: { pages: [componentPage({ permission: 'users:read' })] },
+            })
+        );
+        expect(resolved.adminPages[0]?.permission).toBe('users:read');
+    });
+
+    it('still resolves label, icon, nav and public', () => {
+        const resolved = resolveConfig(
+            baseConfig({
+                admin: {
+                    pages: [
+                        componentPage({ icon: 'Activity', nav: false, public: true }),
+                    ],
+                },
+            })
+        );
+        const page = resolved.adminPages[0];
+        expect(page?.label).toBe('Site Status');
+        expect(page?.icon).toBe('Activity');
+        expect(page?.nav).toBe(false);
+        expect(page?.public).toBe(true);
+    });
+
+    it('defaults nav to true and public to false', () => {
+        const resolved = resolveConfig(
+            baseConfig({ admin: { pages: [componentPage()] } })
+        );
+        expect(resolved.adminPages[0]?.nav).toBe(true);
+        expect(resolved.adminPages[0]?.public).toBe(false);
     });
 });
 

@@ -44,6 +44,16 @@ declare module 'virtual:astromech/plugins/components' {
         }
     >;
 
+    /** Host `admin.pages` component views, keyed by `path` — matches the `/page/$` splat. */
+    export const hostPages: Record<
+        string,
+        {
+            load: () => Promise<PluginPageModule>;
+            permission: string | null;
+            label: string;
+        }
+    >;
+
     /** Plugin contributions to named admin-shell slots, grouped by slot, order-sorted. */
     export const slots: Record<
         AdminSlotName,

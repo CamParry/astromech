@@ -1,7 +1,6 @@
 import { betterAuth } from 'better-auth';
 import type { Auth, BetterAuthOptions } from 'better-auth';
-import { LibsqlDialect } from '@libsql/kysely-libsql';
-import { getDbClient } from '@/database/registry.js';
+import { getDatabaseDriver } from '@/database/driver-registry.js';
 
 const apiRoute = process.env.ASTROMECH_API_ROUTE ?? '/api';
 
@@ -13,9 +12,7 @@ function getAuth(): Auth<BetterAuthOptions> {
             baseURL: import.meta.env.BETTER_AUTH_URL,
             basePath: `${apiRoute}/auth`,
             database: {
-                // See libsql driver: `@libsql/kysely-libsql` pins an older
-                // `@libsql/core` Client type; the runtime client is compatible.
-                dialect: new LibsqlDialect({ client: getDbClient() as never }),
+                dialect: getDatabaseDriver().createDialect(),
                 type: 'sqlite',
             },
             user: {

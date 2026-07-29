@@ -269,8 +269,11 @@ describe('transaction', () => {
     // characterization test documents).
     it('rejects and rolls back when the callback throws', async () => {
         const e = await storage.create({ type: 'post', title: 'Keep', slug: 'keep' });
+        // The harness driver always supports transactions — asserted so a
+        // regression there surfaces here rather than as a confusing TypeError.
+        expect(storage.transaction).toBeDefined();
         await expect(
-            storage.transaction(async (tx) => {
+            storage.transaction!(async (tx) => {
                 await tx.update(e.id, { title: 'Changed' });
                 throw new Error('boom');
             })
@@ -282,7 +285,8 @@ describe('transaction', () => {
         // The committed value is observed via the in-tx return; libsql :memory:
         // routes the tx through a separate connection, so a post-commit read on
         // the base handle is unreliable here — assert the tx result instead.
-        const result = await storage.transaction(async (tx) =>
+        expect(storage.transaction).toBeDefined();
+        const result = await storage.transaction!(async (tx) =>
             tx.update(e.id, { title: 'After' })
         );
         expect(result.title).toBe('After');

@@ -24,6 +24,7 @@ export default defineConfig([
             'storage/drivers/r2': 'src/exports/storage-r2.ts',
             'storage/drivers/filesystem': 'src/exports/storage-filesystem.ts',
             'storage/drivers/s3': 'src/exports/storage-s3.ts',
+            'database/drivers/d1': 'src/exports/db-d1.ts',
             'cloudflare/index': 'src/exports/cloudflare.ts',
         },
         format: ['esm'],

@@ -130,6 +130,14 @@ function resolveEntryTypeConfig(
     };
 }
 
+/** Normalize + structurally validate a `fields`-mode host admin page's tree. */
+function resolvePageFields(page: AdminPage): ResolvedEntryFields {
+    const fields = toResolvedFields(page.fields);
+    validateFieldTree(page.path, fields.main, false);
+    validateFieldTree(page.path, fields.sidebar, false);
+    return fields;
+}
+
 /** Resolve a single host admin page to the unified ResolvedAdminPage. */
 function resolveAdminPage(page: AdminPage): ResolvedAdminPage {
     // XOR validation: exactly one of fields / component.
@@ -144,19 +152,22 @@ function resolveAdminPage(page: AdminPage): ResolvedAdminPage {
         );
     }
 
-    // Host component pages: not yet supported — guard with clear error.
-    if (page.component !== undefined) {
-        throw new Error(
-            `Astromech admin page "${page.path}": host custom-component admin pages are not yet supported. ` +
-                `Use \`fields\` for a managed settings form, or define the page as a plugin page.`
-            // TODO: extend the plugin-components codegen to scan host admin.pages and emit
-            // lazy imports for host component pages.
-        );
-    }
-
-    const fields = toResolvedFields(page.fields);
-    validateFieldTree(page.path, fields.main, false);
-    validateFieldTree(page.path, fields.sidebar, false);
+    // Component mode renders its own React component: nothing to validate, and
+    // no settings to guard, so permission defaults to none (as for plugin
+    // component pages). `componentKey` is the bare path — both the `/page/$`
+    // splat and the key of the codegen'd `hostPages` registry.
+    const mode: Pick<ResolvedAdminPage, 'fields' | 'componentKey' | 'permission'> =
+        page.component !== undefined
+            ? {
+                  fields: null,
+                  componentKey: page.path,
+                  permission: page.permission ?? null,
+              }
+            : {
+                  fields: resolvePageFields(page),
+                  componentKey: null,
+                  permission: page.permission ?? 'settings:read',
+              };
 
     return {
         key: page.path,
@@ -164,10 +175,8 @@ function resolveAdminPage(page: AdminPage): ResolvedAdminPage {
         label: page.label,
         ...(page.icon !== undefined ? { icon: page.icon } : {}),
         baseKey: page.path,
-        fields,
-        componentKey: null,
+        ...mode,
         translatable: page.translatable ?? false,
-        permission: page.permission ?? 'settings:read',
         nav: page.nav !== false,
         public: page.public ?? false,
     };

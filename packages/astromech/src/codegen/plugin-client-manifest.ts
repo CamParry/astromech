@@ -1,9 +1,9 @@
 /**
  * Code-gen for the `virtual:astromech/plugins/components` virtual module.
  *
- * Browser-bound plugin assets must be statically importable, so this module
- * CODE-GENS lazy `import()` calls from the string import specifiers in plugin
- * definitions (spec §11).
+ * Browser-bound assets must be statically importable, so this module CODE-GENS
+ * lazy `import()` calls from the string import specifiers in plugin definitions
+ * (spec §11) and in the host app's own `admin.pages`.
  */
 
 import { fileURLToPath } from 'node:url';
@@ -40,7 +40,28 @@ function resolveAssetSpecifier(def: PluginDefinition, specifier: string): string
     return `${root ?? def.package}/${specifier.replace(/^\.\//, '')}`;
 }
 
-export function generatePluginClientManifest(plugins: PluginDefinition[]): string {
+/**
+ * Turn a host `admin.pages` component specifier into one this module can emit
+ * an `import()` for. A host page has no plugin `root`, so relative specifiers
+ * resolve against the Astro project root (`file:` URL) — which is what lets a
+ * host page name its own file the way it appears in the repo
+ * (`'./src/admin/pages/site-status.tsx'`). Non-relative specifiers pass through
+ * untouched, so a page component can still come from a package.
+ */
+function resolveHostSpecifier(root: string, specifier: string): string {
+    if (!specifier.startsWith('./') && !specifier.startsWith('../')) return specifier;
+    return fileURLToPath(new URL(specifier, root));
+}
+
+/** `Label` is `string | { $t }`; the browser-side route resolves it via resolveLabel. */
+function labelText(label: AdminPage['label']): string {
+    return typeof label === 'string' ? label : label.$t;
+}
+
+export function generatePluginClientManifest(
+    plugins: PluginDefinition[],
+    host?: { pages: AdminPage[]; root: string }
+): string {
     const fieldTypeLines = plugins.flatMap((def) => {
         const identity = resolvePluginIdentity(def);
         return (def.fields ?? []).map(
@@ -64,13 +85,21 @@ export function generatePluginClientManifest(plugins: PluginDefinition[]): strin
                               page.permission
                           )
                         : null;
-                // page.label is Label (string | {$t}); stringify directly —
-                // the browser-side route resolves it via resolveLabel.
-                const labelRaw: string =
-                    typeof page.label === 'string' ? page.label : page.label.$t;
-                return `\t${JSON.stringify(`${identity.namespace}${page.path}`)}: { load: () => import(${JSON.stringify(resolveAssetSpecifier(def, page.component as string))}), plugin: ${JSON.stringify(identity.namespace)}, permission: ${JSON.stringify(permission)}, label: ${JSON.stringify(labelRaw)} },`;
+                return `\t${JSON.stringify(`${identity.namespace}${page.path}`)}: { load: () => import(${JSON.stringify(resolveAssetSpecifier(def, page.component as string))}), plugin: ${JSON.stringify(identity.namespace)}, permission: ${JSON.stringify(permission)}, label: ${JSON.stringify(labelText(page.label))} },`;
             });
     });
+
+    // Host `admin.pages` component views, keyed by the bare `path` — exactly the
+    // `/page/$` splat. Host keys are NOT namespaced: namespacing is the rule for
+    // plugin registrations only. Permissions are taken verbatim (a host page
+    // authors a real permission key, not a bare plugin-relative one).
+    const hostRoot = host?.root ?? '';
+    const hostPageLines = (host?.pages ?? [])
+        .filter((page) => page.component !== undefined)
+        .map(
+            (page) =>
+                `\t${JSON.stringify(page.path)}: { load: () => import(${JSON.stringify(resolveHostSpecifier(hostRoot, page.component as string))}), permission: ${JSON.stringify(page.permission ?? null)}, label: ${JSON.stringify(labelText(page.label))} },`
+        );
 
     const SLOT_NAMES: AdminSlotName[] = ['global-overlay', 'right-drawer', 'toolbar'];
     const slotRows: Record<AdminSlotName, { order: number; line: string }[]> = {
@@ -129,6 +158,7 @@ export function generatePluginClientManifest(plugins: PluginDefinition[]): strin
     return [
         `export const fieldTypes = {\n${fieldTypeLines.join('\n')}\n};`,
         `export const pages = {\n${pageLines.join('\n')}\n};`,
+        `export const hostPages = {\n${hostPageLines.join('\n')}\n};`,
         `export const slots = {\n${slotBlocks.join('\n')}\n};`,
         `export const i18n = {\n${i18nLines.join('\n')}\n};`,
         '',

@@ -23,6 +23,9 @@ function makeCapabilityTestConfig(): AstromechConfig {
             getInstance() {
                 throw new Error('test driver getInstance should not be called');
             },
+            createDialect() {
+                throw new Error('test driver createDialect should not be called');
+            },
         },
         storage: {
             name: 'test-noop',

@@ -40,6 +40,7 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                 injectRoute,
                 addMiddleware,
                 logger,
+                config: astroConfig,
             }) => {
                 logger.info('Initializing Astromech CMS');
 
@@ -128,7 +129,8 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                             {
                                 // Browser-bound plugin assets must be statically importable, so
                                 // this module CODE-GENS lazy `import()` calls from the string
-                                // import specifiers in plugin definitions (spec §11).
+                                // import specifiers in plugin definitions (spec §11) and in the
+                                // host's own `admin.pages`.
                                 name: 'virtual:astromech/plugins/components',
                                 resolveId(id) {
                                     if (id === 'virtual:astromech/plugins/components') {
@@ -139,7 +141,11 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                                 load(id) {
                                     if (id === '\0virtual:astromech/plugins/components') {
                                         return generatePluginClientManifest(
-                                            config.plugins ?? []
+                                            config.plugins ?? [],
+                                            {
+                                                pages: config.admin?.pages ?? [],
+                                                root: astroConfig.root.href,
+                                            }
                                         );
                                     }
                                     return undefined;

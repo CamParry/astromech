@@ -3,9 +3,9 @@
  *
  * Plugin routes merge into the file-based tree through this single
  * runtime-resolved route (spec §7): the splat (`{name}{path}`) looks up the
- * page registration code-gen'd into `virtual:astromech/plugins/components`,
- * lazy-loads its component, and renders it behind a permission check and a
- * per-plugin error boundary.
+ * page registration code-gen'd into `virtual:astromech/plugins/components` and
+ * hands it, behind a permission check, to the shared ComponentPageView — which
+ * owns the lazy load, the error boundary and the page shell.
  *
  * Settings pages (those with `fields`, no `component`) use the shared
  * SettingsPageForm renderer — same layout as host pages: header save button,
@@ -18,35 +18,12 @@ import { useTranslation } from 'react-i18next';
 import { pages } from 'virtual:astromech/plugins/components';
 import adminConfig from 'virtual:astromech/admin-config';
 import { usePermissions } from '@/admin/hooks/index.js';
-import { PluginErrorBoundary } from '@/admin/components/plugins/PluginErrorBoundary.js';
+import { ComponentErrorBoundary } from '@/admin/components/pages/ComponentErrorBoundary.js';
+import { ComponentPageView } from '@/admin/components/pages/ComponentPageView.js';
 import { SettingsPageForm } from '@/admin/components/pages/SettingsPageForm.js';
 import { PluginUiProvider } from '@/admin/context/plugin.js';
-import {
-    EmptyState,
-    Page,
-    PageContent,
-    PageHeader,
-    PageTitle,
-    Spinner,
-} from '@/admin/components/ui/index.js';
+import { EmptyState, Page, PageContent } from '@/admin/components/ui/index.js';
 import { resolveLabel } from '@/admin/i18n/labels.js';
-
-type LazyPage = React.LazyExoticComponent<React.ComponentType>;
-
-const lazyCache = new Map<string, LazyPage>();
-
-function lazyPageFor(key: string): LazyPage {
-    const cached = lazyCache.get(key);
-    if (cached) return cached;
-
-    const registration = pages[key];
-    if (!registration) {
-        throw new Error(`[Astromech] No plugin page registered for "${key}".`);
-    }
-    const lazy = React.lazy(registration.load);
-    lazyCache.set(key, lazy);
-    return lazy;
-}
 
 function PluginPage(): React.ReactElement {
     const params = Route.useParams();
@@ -97,7 +74,7 @@ function PluginPage(): React.ReactElement {
                     permissionNamespace: settingsPlugin.permissionNamespace,
                 }}
             >
-                <PluginErrorBoundary plugin={settingsPlugin.namespace}>
+                <ComponentErrorBoundary source={settingsPlugin.namespace}>
                     <SettingsPageForm
                         baseKey={settingsPage.baseKey}
                         fields={settingsPage.fields}
@@ -105,7 +82,7 @@ function PluginPage(): React.ReactElement {
                         translatable={settingsPage.translatable}
                         readOnly={!canUpdateSettings()}
                     />
-                </PluginErrorBoundary>
+                </ComponentErrorBoundary>
             </PluginUiProvider>
         );
     }
@@ -138,39 +115,31 @@ function PluginPage(): React.ReactElement {
         );
     }
 
-    const LazyComponent = lazyPageFor(splat);
     const owner = adminConfig.plugins.find(
         (plugin) => plugin.namespace === registration.plugin
     );
 
+    // A page whose label already matches its plugin's stands alone; otherwise
+    // compose the two ("SEO Overview"). A null label means no header at all.
+    const title =
+        registration.label === null
+            ? undefined
+            : owner !== undefined && owner.label !== registration.label
+              ? `${owner.label} ${registration.label}`
+              : registration.label;
+
     return (
-        <Page>
-            {registration.label !== null && (
-                <PageHeader>
-                    <PageTitle>
-                        {owner !== undefined && owner.label !== registration.label
-                            ? `${owner.label} ${registration.label}`
-                            : registration.label}
-                    </PageTitle>
-                </PageHeader>
-            )}
-            <PageContent>
-                <PluginUiProvider
-                    identity={{
-                        namespace: registration.plugin,
-                        serviceKey: owner?.serviceKey ?? registration.plugin,
-                        permissionNamespace:
-                            owner?.permissionNamespace ?? registration.plugin,
-                    }}
-                >
-                    <PluginErrorBoundary plugin={registration.plugin}>
-                        <React.Suspense fallback={<Spinner size="md" />}>
-                            <LazyComponent />
-                        </React.Suspense>
-                    </PluginErrorBoundary>
-                </PluginUiProvider>
-            </PageContent>
-        </Page>
+        <ComponentPageView
+            cacheKey={splat}
+            load={registration.load}
+            title={title}
+            source={registration.plugin}
+            identity={{
+                namespace: registration.plugin,
+                serviceKey: owner?.serviceKey ?? registration.plugin,
+                permissionNamespace: owner?.permissionNamespace ?? registration.plugin,
+            }}
+        />
     );
 }
 

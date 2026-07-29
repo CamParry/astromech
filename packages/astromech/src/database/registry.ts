@@ -6,7 +6,6 @@
  */
 
 import { defineRegistry } from '@/utilities/registry.js';
-import type { Client } from '@libsql/client';
 import type { Kysely } from 'kysely';
 import type { DB } from '@/database/types.js';
 
@@ -18,16 +17,3 @@ const db = defineRegistry<AnyDb>('db', {
 
 export const setDb = db.set;
 export const getDb = db.get;
-
-/**
- * Shared libsql `Client` registry. better-auth's Kysely adapter and the
- * dump/restore paths run against this raw client (a Kysely-free escape hatch)
- * so the `CamelCasePlugin` on the main instance never double-transforms
- * better-auth's own snake_case field maps.
- */
-const dbClient = defineRegistry<Client>('dbClient', {
-    hint: 'Ensure the Astromech integration is configured with a db driver.',
-});
-
-export const setDbClient = dbClient.set;
-export const getDbClient = dbClient.get;
