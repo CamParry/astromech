@@ -13,17 +13,16 @@
  *   every emitted event was swallow-and-logged and a rejected spam check would
  *   have been saved anyway.
  *
- * Forms has no generated `migrations/` yet, so the harness chain does not
- * create `plugin_forms_submissions`. The table is emitted here from the plugin's
- * own descriptor through the same renderer the migration generator uses, so the
- * shape under test is the shape the generator will produce.
+ * `plugin_forms_submissions` is created by the plugin's own generated migration
+ * chain, which the harness applies (forms is in `FIRST_PARTY_PLUGIN_MIGRATIONS`)
+ * — so these tests run against the table a real install would get, not one
+ * emitted from the descriptor alongside it.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import { defineHook } from '@/index.js';
-import { emitTableStatements } from '@/database/descriptor-snapshot.js';
 import { setEmailConfig } from '@/email/registry.js';
 import {
     createTestDb,
@@ -35,7 +34,6 @@ import '@/transport/local/index.js'; // registers the plugin client (setPluginCl
 import { localPlugins } from '@/transport/local/plugins.js';
 import { entries as localEntries } from '@/entries/service.js';
 import { forms } from '@astromech/forms';
-import { submissionsTable } from '@astromech/forms/schema';
 import type { FormsOptions, PublicForm, SubmitResult } from '@astromech/forms';
 import type { DB } from '@/database/types.js';
 import type {
@@ -106,10 +104,12 @@ function recordEmails(send?: () => never): void {
 }
 
 async function setup(options?: FormsOptions): Promise<ResolvedConfig> {
+    // `plugin_forms_submissions` comes from the plugin's own generated
+    // migration chain, which the harness applies — forms is registered in
+    // `FIRST_PARTY_PLUGIN_MIGRATIONS`. Emitting the table from the descriptor
+    // here instead would test a table the migrations might not actually
+    // produce.
     db = await createTestDb();
-    for (const statement of emitTableStatements(submissionsTable, 'sqlite')) {
-        await sql.raw(statement).execute(db);
-    }
     recordEmails();
     return setupTestConfig(configWithForms(options));
 }

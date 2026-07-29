@@ -1,0 +1,91 @@
+{
+    "version": 1,
+    "dialect": "sqlite",
+    "tables": {
+        "plugin_forms_submissions": {
+            "name": "plugin_forms_submissions",
+            "columns": [
+                {
+                    "key": "id",
+                    "name": "id",
+                    "kind": "id",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": true
+                },
+                {
+                    "key": "formId",
+                    "name": "form_id",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "formSlug",
+                    "name": "form_slug",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "data",
+                    "name": "data",
+                    "kind": "json",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "summary",
+                    "name": "summary",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "meta",
+                    "name": "meta",
+                    "kind": "json",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "submittedAt",
+                    "name": "submitted_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "createdAt",
+                    "name": "created_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "updatedAt",
+                    "name": "updated_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                }
+            ],
+            "fks": [],
+            "indexes": [
+                {
+                    "name": "plugin_forms_idx_form_id",
+                    "columns": ["form_id"],
+                    "unique": false
+                }
+            ]
+        }
+    }
+}

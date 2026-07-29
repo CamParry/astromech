@@ -63,7 +63,7 @@ wireEntryAccess();
 type Db = Kysely<DB>;
 
 /** Plugins whose generated baselines the harness chain includes. */
-const FIRST_PARTY_PLUGIN_MIGRATIONS = ['redirects', 'backups'] as const;
+export const FIRST_PARTY_PLUGIN_MIGRATIONS = ['redirects', 'backups', 'forms'] as const;
 
 /**
  * Build a Kysely instance over a libsql `url`, register it (+ its raw client)

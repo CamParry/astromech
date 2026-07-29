@@ -12,7 +12,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
-import { createTestDb } from '@tests/harness.js';
+import { createTestDb, FIRST_PARTY_PLUGIN_MIGRATIONS } from '@tests/harness.js';
 import { purgePlugin } from '@/transport/cli/commands/plugin-purge.js';
 import type { DB } from '@/database/types.js';
 
@@ -22,8 +22,14 @@ type Db = Kysely<DB>;
  * The harness applies the merged migration chain, so the first-party plugins'
  * own tables exist in every test db. They are not part of these fixtures —
  * filter them out so a `plugin%` assertion describes only what the test seeded.
+ *
+ * Derived from the harness's own list rather than spelled out, so installing a
+ * new first-party plugin doesn't silently break assertions here (it did once:
+ * adding forms turned three of these red).
  */
-const HARNESS_PLUGIN_TABLES = ['plugin_redirects_redirects', 'plugin_backups_runs'];
+const HARNESS_PLUGIN_PREFIXES = FIRST_PARTY_PLUGIN_MIGRATIONS.map(
+    (alias) => `plugin_${alias}_`
+);
 
 async function tableNames(db: Db, pattern: string): Promise<string[]> {
     const { rows } = await sql<{ name: string }>`
@@ -33,7 +39,9 @@ async function tableNames(db: Db, pattern: string): Promise<string[]> {
     `.execute(db);
     return rows
         .map((row) => row.name)
-        .filter((name) => !HARNESS_PLUGIN_TABLES.includes(name));
+        .filter(
+            (name) => !HARNESS_PLUGIN_PREFIXES.some((prefix) => name.startsWith(prefix))
+        );
 }
 
 async function migrationNames(db: Db): Promise<string[]> {

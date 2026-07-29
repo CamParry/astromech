@@ -11,6 +11,7 @@ import { definePlugin, withDefaults } from 'astromech';
 import type { ServiceInterface } from 'astromech';
 import { FORMS_PACKAGE } from './types.js';
 import type { FormsOptions } from './types.js';
+import { migrationProvider } from '../migrations/index.js';
 import { formEntryType } from './entries/form.js';
 import { submissionEntryType } from './entries/submission.js';
 import { submissionsTable } from './schema/submissions.js';
@@ -52,9 +53,8 @@ export const forms = definePlugin((options?: FormsOptions) => {
         label: 'Forms',
         icon: 'ClipboardList',
         root: import.meta.url,
-        // TODO: `migrations: migrationProvider` once `astromech plugin:generate`
-        // has produced `migrations/` for this table (needs `npm install` first).
         schema: [submissionsTable],
+        migrations: migrationProvider,
         entries: [formEntryType, submissionEntryType],
         service: buildFormsService({ storeMeta, spam }),
         hookEvents: ['forms:beforeSubmit', 'forms:afterSubmit'],
