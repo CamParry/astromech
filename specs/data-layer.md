@@ -377,15 +377,35 @@ encode('entryVersions', data as unknown as Record<string, unknown>)
     as unknown as Insertable<DB['entryVersions']>;
 ```
 
-Once storage holds its descriptor, that form has no reason to exist.
+Once storage holds its descriptor, that form has no reason to exist **at the
+sites the wrapper covers**.
 
 - The wrapper **owns** encode/decode for its own table (`decodeWith`/`encodeWith`/
   `encodePatchWith` become its internals), and stays exported for the `query()`
   path where the caller decodes by hand.
-- String-keyed `decode`/`encode`/`encodePatch` **shrink to the 4 legacy
-  better-auth tables only**; `DESCRIPTORS` and `kyselyTableKey` delete with them.
-- The `as unknown as` casts go — the wrapper is generic over the descriptor, so
-  its inputs and results are already storage-shaped.
+- The `as unknown as` casts go **at every migrated site** — the wrapper is
+  generic over the descriptor, so its inputs and results are already
+  storage-shaped.
+
+**But the string-keyed form does _not_ delete in this workstream, and
+`kyselyTableKey` does not delete at all.** Both were claimed in an earlier draft
+of this section; a call-site census disproved them:
+
+- `kyselyTableKey` maps `descriptor.name` (snake) → the Kysely `DB` key (camel).
+  The wrapper itself needs it, and so does
+  `plugins/runtime/plugin-runtime.ts:123` when registering plugin descriptor
+  codecs. It is load-bearing, not legacy.
+- The `DESCRIPTORS` map cannot go while descriptor-table string-keyed calls
+  remain, and **half of them are in files this workstream declares out of
+  scope**: `settings/service.ts`, `media/service.ts` (~10 sites),
+  `notifications/service.ts`, `cron/runner.ts` (`_astromech_cron`),
+  `plugins/runtime/plugin-runtime.ts` (`_astromech_plugins`).
+
+So the collapse is a **follow-up**, gated on the services migration, and its
+precondition is precise: `DESCRIPTORS` deletes once no string-keyed
+`decode`/`encode`/`encodePatch` call names a descriptor-backed table. The 4
+legacy better-auth entries (`LEGACY_CODECS`) stay regardless — better-auth owns
+that format.
 
 **Scope discipline.** This workstream migrates `storage/` only. Raw Kysely also
 lives in four services (`media`, `notifications`, `settings`, `users`), three

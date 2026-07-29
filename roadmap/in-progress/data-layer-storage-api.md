@@ -25,10 +25,8 @@ status only.
 - [ ] `updateMany(where, patch)` / `deleteMany(where)` (absorb maintenance ops
       inside the choke point)
 - [ ] `upsert(data, { target?, set? })`
-- [ ] Migrate `createXStorage` internals from raw Kysely to this wrapper
-- [ ] Collapse the codec: string-keyed `decode`/`encode`/`encodePatch` shrink to
-      the 4 legacy better-auth tables; delete `DESCRIPTORS` + `kyselyTableKey`
-      and the `as unknown as` casts at every call site
+- [ ] Migrate `createXStorage` internals from raw Kysely to this wrapper,
+      dropping the `as unknown as` cast pairs at every migrated site
 
 ## Scope changes (2026-07-29 audit)
 
@@ -61,6 +59,16 @@ Three findings from reading the code rather than the spec:
   `backups`-plugin files query raw — 21 files, four of those domains with no
   storage layer at all. Migrating them is a separate follow-up; they are also
   the sites that most want `count`, which does not exist until this lands.
+- **The codec collapse.** An earlier draft had this workstream delete the
+  string-keyed `decode`/`encode`/`encodePatch` API. A call-site census killed
+  that: half the descriptor-table string-keyed calls live in the out-of-scope
+  files above (`settings`, `media`, `notifications`, `cron/runner.ts`,
+  `plugin-runtime.ts`). `kyselyTableKey` turns out not to be deletable at all —
+  the wrapper and the plugin codec registry both need it.
+
+    Follow-up precondition, stated precisely: `DESCRIPTORS` deletes once no
+    string-keyed call names a descriptor-backed table. `LEGACY_CODECS` (the 4
+    better-auth tables) stays regardless.
 
 ## Deferred (separate workstream)
 
