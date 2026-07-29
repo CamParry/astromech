@@ -1,10 +1,10 @@
 # Field Validation — Next Phase (design state)
 
-In-flight design notes for the work remaining on `feat/field-validation` after the
-P0–P5 headline (server-side field validation) shipped. Companion to
-`specs/field-system-and-validation.md` (the shipped P0–P5 design — delete that one
-once the branch merges). This spec covers what's left: nested validation, a few
-pipeline add-ons, and two entry-create bugs surfaced alongside the validation work.
+In-flight design notes for the work remaining after the P0–P5 headline
+(server-side field validation) shipped and merged to `main` on 2026-07-28. The
+P0–P5 design spec it accompanied has been deleted, as planned. This spec covers
+what's left: nested validation, a few pipeline add-ons, and the entry-create bugs
+surfaced alongside the validation work.
 
 Status legend: ✅ done (committed) · 🟡 done but uncommitted · ⬜ not started ·
 ❓ design decision open.
@@ -36,7 +36,7 @@ These are NOT peers — there's a spine:
 
 `processFields` must recurse into container instances, applying each child field's
 descriptor + declarative rules. Coupled to
-`roadmap/in-progress/populate-and-complex-field-data-model.md` (the `_id`/identity
+`roadmap/planned/relationships-model.md` (the `_id`/identity
 model): item storage there is **arrays of objects, each with a persisted `_id` UUID**;
 its unstarted foundation item is "stable `_id`-based paths for nested-field keys."
 
@@ -135,5 +135,5 @@ Options (decision needed before building):
 ## 8. After this phase
 
 - Tick items in `roadmap/in-progress/field-validation-and-normalization.md`.
-- On full verification + merge: move the roadmap file to `completed/` and DELETE both
-  specs (`field-system-and-validation.md` and this file) — specs are ephemeral.
+- On full verification of the remaining work: move the roadmap file to
+  `completed/` and DELETE this spec — specs are ephemeral.

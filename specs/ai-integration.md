@@ -1,7 +1,19 @@
 # AI Integration — services layer, method manifest, agentic authoring & context-aware chat
 
-**Status:** Designed (discussion 2026-06-16); not yet implemented. Concepts locked; several decisions deferred to iteration (see §6). Spawns multiple workstreams (§7).
-**Touches:** `src/sdk/{local,fetch}`, `src/schemas/*`, `src/core/permissions.ts`, `src/core/plugin-runtime.ts`, `src/types/plugins.ts`, `src/index.ts` (`defineSdkMethod`), `src/adapters/astro.ts` (virtual modules / build hooks), `src/cli/*`, `src/api/routes/*`, `src/admin/*` (chat UI, context bus, chrome-injection slots), new `src/core/method-generator.ts`, new MCP server package.
+**Status:** Partly shipped. WS1–3 (admin UI slots, CLI, MCP) merged to `main`
+2026-07-28. WS4 (the confirm gate) is **paused and reframed** onto the core
+draft / forward-versioning system rather than built as designed here — the
+sections below describing it are design history, not a current plan. Several
+decisions remain deferred to iteration (see §6).
+**Touches:** `packages/astromech/src/transport/{local,http,cli,mcp}`,
+`packages/astromech/src/codegen/method-manifest.ts`,
+`packages/astromech/src/permissions/`, `packages/astromech/src/plugins/runtime/`,
+`packages/astromech/src/types/plugins.ts`, `packages/astromech/src/kernel/`
+(virtual modules / build hooks), `packages/astromech/src/routes/`,
+`packages/astromech/src/admin/*` (chat UI, context bus, chrome-injection slots).
+Paths below predate the monorepo restructure and the services refactor — the
+`src/…` and `sdk`/`core` names in later sections map onto the list above
+(`defineSdkMethod` is now `defineServiceMethod`).
 **Related memories:** `project_content_visibility.md`, `reserved_instance_keys.md`.
 
 ---
@@ -34,7 +46,7 @@ The canonical layer vocabulary (storage · services · policies · transport · 
 
 | Term                    | Meaning                                                                                                                                                                                                            |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **service**             | The CMS's capability verbs (entries, media, users, settings). **Internal/private** (never in user docs); the glue that calls storage and has policies composed onto it.   |
+| **service**             | The CMS's capability verbs (entries, media, users, settings). **Internal/private** (never in user docs); the glue that calls storage and has policies composed onto it.                                            |
 | **service method**      | One verb on a service, e.g. `entries.create`, `plugins.redirects.lookup`. The unit the manifest and the AI deal in.                                                                                                |
 | **policy**              | A composable wrapper _over_ services: permissions, visibility, confirmation. Not a tier — just a feature consumed by composition.                                                                                  |
 | **transport**           | A projection of service methods into a consumption shape. Public names: **Local API**, **HTTP API**, **CLI**, **MCP server**. Each composes which policies apply.                                                  |
