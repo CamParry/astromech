@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import {
     builtInRole,
+    ConsoleDriver,
     defineAdminPage,
     defineConfig,
     entryPermissions,
@@ -13,6 +14,7 @@ import { redirects } from '@astromech/redirects';
 import { seo, seoSection } from '@astromech/seo';
 import { menus } from '@astromech/menus';
 import { backups } from '@astromech/backups';
+import { forms } from '@astromech/forms';
 import { rating } from './src/plugins/rating/index.js';
 import { author } from './src/entries/author.js';
 
@@ -117,6 +119,11 @@ export default defineConfig({
         url: 'file:' + fileURLToPath(new URL('./database.db', import.meta.url)),
     }),
     storage: filesystem({ dir: './public/uploads', urlPrefix: '/uploads' }),
+    // The demo sends nothing real — the console driver prints each message so
+    // form notifications (and anything else that emails) are visible in the dev
+    // server output. Without an `email` block at all, `ctx.sendEmail` throws and
+    // plugins can only log the failure.
+    email: { driver: new ConsoleDriver(), from: 'demo@astromech.dev' },
     image: { driver: sharp() },
     locales: ['en', 'fr'],
     defaultLocale: 'en-GB',
@@ -131,6 +138,11 @@ export default defineConfig({
             ],
         }),
         rating(),
+        // No `spam` provider configured — the demo has no Turnstile/reCAPTCHA
+        // keys, and a configured provider would fail every seeded submission's
+        // gate. A real site would pass something like:
+        // forms({ spam: { provider: 'turnstile', siteKey: '…', secretKey: import.meta.env.TURNSTILE_SECRET } })
+        forms(),
     ],
     roles: {
         'content-editor': {
@@ -147,6 +159,11 @@ export default defineConfig({
                     'update',
                     'delete'
                 ),
+                ...entryPermissions('forms/form', 'read', 'create', 'update', 'delete'),
+                // `read` + `delete` only — submissions are written by the public
+                // API and must not be hand-authored or edited. This is v1's
+                // stand-in for a read-only entry flag, which core does not have.
+                ...entryPermissions('forms/submission', 'read', 'delete'),
                 // `read` alone — a content editor has no business downloading,
                 // restoring or deleting the database.
                 ...backups.permissions('read'),

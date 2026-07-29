@@ -190,7 +190,7 @@ async function seed(): Promise<void> {
     // Delete old content entries (any type in the list + legacy types)
     await db
         .deleteFrom('entries')
-        .where('type', 'in', [...CONTENT_TYPES, 'showcase'])
+        .where('type', 'in', [...CONTENT_TYPES, 'showcase', 'forms/form'])
         .execute();
 
     // Clear settings and redirects
@@ -2157,6 +2157,92 @@ async function seed(): Promise<void> {
     console.log('  Created 3 redirects\n');
 
     // -------------------------------------------------------------------------
+    // Forms — one published contact form. `forms/form` uses core (default)
+    // entry storage, so it's seeded exactly like any other entry. `fields`
+    // composes stored block instances — `_type`/`_id` are core's reserved
+    // block-instance keys (see packages/plugins/forms/src/entries/form.ts for
+    // the exact per-kind config keys and the notifications tab's field names).
+    // -------------------------------------------------------------------------
+    const formContactId = crypto.randomUUID();
+
+    await db
+        .insertInto('entries')
+        .values(
+            schema.encode('entries', {
+                id: formContactId,
+                type: 'forms/form',
+                locale: 'en',
+                localeGroup: crypto.randomUUID(),
+                slug: 'contact',
+                title: 'Contact',
+                fields: {
+                    enabled: true,
+                    fields: [
+                        {
+                            _id: bid(),
+                            _type: 'text',
+                            name: 'name',
+                            label: 'Your name',
+                            required: true,
+                        },
+                        {
+                            _id: bid(),
+                            _type: 'email',
+                            name: 'email',
+                            label: 'Email address',
+                            required: true,
+                        },
+                        {
+                            _id: bid(),
+                            _type: 'select',
+                            name: 'topic',
+                            label: 'Topic',
+                            options: [
+                                { label: 'General', value: 'general' },
+                                { label: 'Support', value: 'support' },
+                                { label: 'Sales', value: 'sales' },
+                            ],
+                        },
+                        {
+                            _id: bid(),
+                            _type: 'textarea',
+                            name: 'message',
+                            label: 'Message',
+                            required: true,
+                        },
+                        {
+                            _id: bid(),
+                            _type: 'checkbox',
+                            name: 'consent',
+                            label: 'I agree to be contacted',
+                        },
+                    ],
+                    notifyEnabled: true,
+                    notifyTo: [{ address: 'ops@astromech.dev' }],
+                    notifySubject: 'New enquiry from {{name}}',
+                    // notifyBody left unset — exercises the documented default
+                    // (a table of the submitted answers).
+                    confirmEnabled: true,
+                    confirmSubject: 'Thanks, {{name}}',
+                    confirmToField: 'email',
+                    // confirmBody left unset — exercises the documented default
+                    // (the neutral thank-you).
+                    // No spam provider is configured in the demo (see
+                    // astromech.config.ts), so the gate is left off explicitly
+                    // rather than relying on it being skipped.
+                    spamProtection: false,
+                },
+                status: 'published',
+                publishedAt: PUBLISHED_AT,
+                createdAt: now,
+                updatedAt: now,
+                createdBy: adminId,
+            } as Record<string, unknown>) as never
+        )
+        .execute();
+    console.log('  Created 1 form (contact)\n');
+
+    // -------------------------------------------------------------------------
     // Summary
     // -------------------------------------------------------------------------
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -2180,6 +2266,7 @@ async function seed(): Promise<void> {
         '  Menus          6  settings keys (main + footer, shared + en + fr each)'
     );
     console.log('  Redirects      3');
+    console.log('  Forms          1  (contact)');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('  Admin login: admin@astromech.dev / password');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
