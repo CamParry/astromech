@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 export type BlockWithId = {
     _id: string;
@@ -33,6 +33,18 @@ export function useBlocksField({ name, value, onChange }: UseBlocksFieldOptions)
     const rawArray = Array.isArray(value) ? (value as SerializedBlock[]) : [];
 
     const [blocks, setBlocks] = useState<BlockWithId[]>(() => rawArray.map(attachId));
+
+    // `useState`'s initializer runs on the FIRST render only. An entry edit
+    // route fetches its entry rather than preloading it, so that first render
+    // sees no value — and without this the field would stay empty forever,
+    // showing "No blocks yet" for an entry that has plenty. Seed once, when real
+    // data first arrives; later renders must NOT resync or they would clobber
+    // in-progress edits with the last-saved value.
+    const seeded = useRef(rawArray.length > 0);
+    if (!seeded.current && rawArray.length > 0) {
+        seeded.current = true;
+        setBlocks(rawArray.map(attachId));
+    }
 
     // `_id` is a persisted UUID (stable item identity for diffs/versioning), so
     // blocks commit as-is — no key stripping.

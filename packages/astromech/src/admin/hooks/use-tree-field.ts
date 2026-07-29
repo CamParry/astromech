@@ -95,7 +95,7 @@ function deepCloneNode(node: TreeNode): TreeNode {
 // Hook
 // ============================================================================
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 type UseTreeFieldOptions = {
     name: string;
@@ -110,6 +110,17 @@ export function useTreeField({ name, value, onChange, maxDepth }: UseTreeFieldOp
     const [nodes, setNodes] = useState<TreeNode[]>(() =>
         rawArray.map((n) => withId(n as Partial<TreeNode>))
     );
+
+    // Same seeding problem as `useBlocksField`: the initializer runs on the
+    // first render only, and an entry edit route fetches its entry rather than
+    // preloading it, so a tree authored on an entry would render permanently
+    // empty. Seed once when real data arrives; never resync after, or an
+    // in-progress edit would be clobbered by the last-saved value.
+    const seeded = useRef(rawArray.length > 0);
+    if (!seeded.current && rawArray.length > 0) {
+        seeded.current = true;
+        setNodes(rawArray.map((n) => withId(n as Partial<TreeNode>)));
+    }
 
     const flat = flattenTree(nodes);
 
