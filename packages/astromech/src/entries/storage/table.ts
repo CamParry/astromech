@@ -76,6 +76,17 @@ export type TableStorageOptions = {
 class TableStorage implements EntryStorage<EntryRecord> {
     public readonly supports: readonly never[] = Object.freeze([]) as readonly never[];
 
+    /**
+     * Assigned in the constructor only when the active driver supports
+     * interactive transactions — an own `undefined` property would still
+     * satisfy `'transaction' in storage`, so degrading means never assigning
+     * it at all. `EntryStorage.transaction` is optional and every caller
+     * already falls back to sequential writes.
+     */
+    public transaction?: <T>(
+        fn: (storage: EntryStorage<EntryRecord>, db: StorageDb) => Promise<T>
+    ) => Promise<T>;
+
     private readonly table: TableDescriptor;
     private readonly tableKey: string;
     private readonly idCol: string;
@@ -101,6 +112,32 @@ class TableStorage implements EntryStorage<EntryRecord> {
         }
 
         this.dbOverride = dbOverride;
+
+        if (supportsTransactions()) {
+            this.transaction = async <T>(
+                fn: (storage: EntryStorage<EntryRecord>, db: StorageDb) => Promise<T>
+            ): Promise<T> => {
+                return this.db.transaction().execute(async (trx) => {
+                    let timestamps: TableStorageOptions['timestamps'];
+                    if (this.createdAtCol === false) {
+                        timestamps = false;
+                    } else if (this.updatedAtCol === false) {
+                        timestamps = { createdAt: this.createdAtCol };
+                    } else {
+                        timestamps = {
+                            createdAt: this.createdAtCol,
+                            updatedAt: this.updatedAtCol,
+                        };
+                    }
+                    const txStorage = new TableStorage(
+                        this.table,
+                        { idColumn: this.idCol, timestamps },
+                        trx
+                    );
+                    return fn(txStorage, trx as unknown as StorageDb);
+                });
+            };
+        }
     }
 
     private get db(): GenericDb {
@@ -178,30 +215,6 @@ class TableStorage implements EntryStorage<EntryRecord> {
         if (column === false) return new Date(0);
         const value = row[column];
         return value instanceof Date ? value : new Date(value as string | number);
-    }
-
-    async transaction<T>(
-        fn: (storage: EntryStorage<EntryRecord>, db: StorageDb) => Promise<T>
-    ): Promise<T> {
-        return this.db.transaction().execute(async (trx) => {
-            let timestamps: TableStorageOptions['timestamps'];
-            if (this.createdAtCol === false) {
-                timestamps = false;
-            } else if (this.updatedAtCol === false) {
-                timestamps = { createdAt: this.createdAtCol };
-            } else {
-                timestamps = {
-                    createdAt: this.createdAtCol,
-                    updatedAt: this.updatedAtCol,
-                };
-            }
-            const txStorage = new TableStorage(
-                this.table,
-                { idColumn: this.idCol, timestamps },
-                trx
-            );
-            return fn(txStorage, trx as unknown as StorageDb);
-        });
     }
 
     uniqueSlug(): Promise<string> {
@@ -434,13 +447,5 @@ export function tableStorage(
     table: TableDescriptor,
     options?: TableStorageOptions
 ): EntryStorage {
-    const instance = new TableStorage(table, options);
-    if (!supportsTransactions()) {
-        // `transaction` is a prototype method, so an own `undefined` property
-        // shadows it — same "degrade, don't throw" contract as built-in
-        // storage: EntryStorage.transaction is optional and every caller
-        // already falls back to sequential writes.
-        (instance as unknown as { transaction: undefined }).transaction = undefined;
-    }
-    return instance as EntryStorage;
+    return new TableStorage(table, options) as EntryStorage;
 }

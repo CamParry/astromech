@@ -65,6 +65,10 @@
             "types": "./dist/storage/drivers/s3.d.ts",
             "default": "./dist/storage/drivers/s3.js"
         },
+        "./db/d1": {
+            "types": "./dist/database/drivers/d1.d.ts",
+            "default": "./dist/database/drivers/d1.js"
+        },
         "./cloudflare": {
             "types": "./dist/cloudflare/index.d.ts",
             "default": "./dist/cloudflare/index.js"
