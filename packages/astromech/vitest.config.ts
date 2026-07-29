@@ -60,10 +60,15 @@ export default defineConfig({
             '@astromech/backups': fileURLToPath(
                 new URL('../plugins/backups/src/index.ts', import.meta.url)
             ),
-            // Forms plugin — only the pure `emails/` sub-module is consumed by
-            // tests so far; no bare `@astromech/forms` alias yet.
+            // Forms plugin — subpath aliases before the bare package alias.
             '@astromech/forms/emails': fileURLToPath(
                 new URL('../plugins/forms/src/emails/index.ts', import.meta.url)
+            ),
+            '@astromech/forms/schema': fileURLToPath(
+                new URL('../plugins/forms/src/schema/index.ts', import.meta.url)
+            ),
+            '@astromech/forms': fileURLToPath(
+                new URL('../plugins/forms/src/index.ts', import.meta.url)
             ),
             astromech: fileURLToPath(new URL('./src/exports/index.ts', import.meta.url)),
         },

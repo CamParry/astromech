@@ -30,10 +30,10 @@ Roadmap: `roadmap/in-progress/forms-plugin.md`.
 - Rate limiting.
 - Per-form success redirect (a frontend concern).
 
-## 2. Two core changes this depends on
+## 2. Core changes this depends on
 
-Both are small, both land on this branch, and both are audited as having zero
-existing consumers.
+All four are small and land on this branch. 2a–2c were audited as having zero
+existing consumers; 2d is a bug fix.
 
 ### 2a. Custom `*:before*` events must gate
 
@@ -137,8 +137,10 @@ site reads them with `import.meta.env`, not `process.env`.
 
 ## 4. The `form` entry type — `forms/form`
 
-Default (core) entry storage. `slug: true` — the slug is how the frontend
-addresses a form. The entry `title` is the form's name. No versioning, no trash.
+Default (core) entry storage — the slug is how the frontend addresses a form,
+and core's built-in storage already enables slugs, so the key is omitted
+entirely. (`EntryTypeConfig.slug` is `SlugConfig | false`; there is no `true`
+literal to pass.) The entry `title` is the form's name.
 
 Fields, grouped into tabs:
 
@@ -310,7 +312,24 @@ wrapped in core's exported `BaseLayout`, sent via `ctx.sendEmail`.
   `email` field. Skipped silently when no address is present.
 
 Placeholders `{{fieldName}}`, `{{formTitle}}` and `{{submittedAt}}` are
-substituted from the submission.
+substituted from the submission, in both the subject and the body.
+
+**Where substitution happens is a security decision.** Subjects are plain
+strings. Bodies are rich text, and the rendered HTML goes to
+`dangerouslySetInnerHTML` — so substituting into the _rendered string_ would
+splice submitted answers in past the sanitizer. Instead the tokens are
+substituted into the body's **ProseMirror JSON**, and rendering happens after,
+because the renderer escapes text-node content. An answer containing
+`<script>` therefore arrives as visible text.
+
+Two supporting guarantees, both tested:
+
+- Core's renderer really does escape text nodes
+  (`tests/fields/rich-text-escaping.test.ts`) — the assumption the above rests
+  on, pinned rather than trusted.
+- Only the `text` of text nodes is substituted. Marks and attrs are left alone,
+  so a token in a link's `href` stays literal — otherwise a submitted value
+  could choose a URL.
 
 **Rich text → HTML.** `ctx.sendEmail` takes a `ReactElement`, but the bodies are
 stored as ProseMirror JSON. Core renders richtext to sanitized HTML on **public**

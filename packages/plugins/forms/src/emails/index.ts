@@ -1,4 +1,8 @@
-export { applyPlaceholders, submissionVars } from './placeholders.js';
+export {
+    applyPlaceholders,
+    submissionVars,
+    substituteInRichText,
+} from './placeholders.js';
 export { displayValue, toAnswerRows } from './answers.js';
 export type { AnswerRow } from './answers.js';
 export { NotificationEmail } from './notification-email.js';

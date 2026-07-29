@@ -77,14 +77,12 @@ describe('verifySpamToken', () => {
     });
 
     it('surfaces turnstile error-codes on failure', async () => {
-        const fetchMock = vi
-            .fn()
-            .mockResolvedValue(
-                jsonResponse({
-                    success: false,
-                    'error-codes': ['invalid-input-response'],
-                })
-            );
+        const fetchMock = vi.fn().mockResolvedValue(
+            jsonResponse({
+                success: false,
+                'error-codes': ['invalid-input-response'],
+            })
+        );
         vi.stubGlobal('fetch', fetchMock);
 
         const verdict = await verifySpamToken(turnstile, 'a-token');
@@ -125,14 +123,12 @@ describe('verifySpamToken', () => {
     });
 
     it('fails closed on a malformed JSON body', async () => {
-        const fetchMock = vi
-            .fn()
-            .mockResolvedValue(
-                new Response('not json', {
-                    status: 200,
-                    headers: { 'Content-Type': 'application/json' },
-                })
-            );
+        const fetchMock = vi.fn().mockResolvedValue(
+            new Response('not json', {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+            })
+        );
         vi.stubGlobal('fetch', fetchMock);
 
         const verdict = await verifySpamToken(turnstile, 'a-token');
