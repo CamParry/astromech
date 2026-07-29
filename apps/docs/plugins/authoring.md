@@ -63,7 +63,7 @@ my-plugin/
   migrations/            generated — never hand-edited
   fields/                custom field-type registrations
   pages/                 admin page registrations
-  permissions/           permission bundles + declarations
+  permissions/           definePermissions() — the grantable permission keys
   service/               service-method definitions (defineServiceMethod)
   routes/                raw HTTP routes — the streaming/binary escape hatch
   admin/
@@ -329,40 +329,74 @@ through a module both contributions import.
 
 ### Permissions
 
-Declare permissions for the admin UI, and expose **bundles** for composing
-into roles. Both live on the definition, and they answer different questions:
-`permissions` is the flat list that powers the admin permission UI;
-`permissionBundles` is what a site actually composes into a role. Bundle keys
-resolve to `plugin:<namespace>:<key>`.
+Declare the permissions your plugin makes grantable with `definePermissions` —
+one flat record of **bare** keys, each with the label a permissions matrix
+shows. Core namespaces them to `plugin:<namespace>:<key>` at registration, so
+you never write a prefix and never have to know one.
 
 ```ts
 // permissions/rating.ts
-import type { PluginPermission } from 'astromech';
+import { definePermissions } from 'astromech';
 
-export const ratingPermissionBundles = {
-    view: ['view'],
-} as const;
-
-export const ratingPermissionDefs: PluginPermission[] = [
-    {
-        key: 'view',
+export const ratingPermissions = definePermissions({
+    view: {
         label: 'View rating reports',
         description: 'See the ratings overview dashboard.',
     },
-];
+});
 ```
 
-A site reads a bundle straight off the plugin factory, namespaced already:
+```ts
+// index.ts
+permissions: ratingPermissions,
+```
+
+One declaration serves every consumer: the `astromech permissions` catalogue,
+the grant accessor below, and any future permissions matrix in the admin.
+
+A site reads permissions straight off the plugin factory, namespaced already.
+The accessor is **variadic** — a role enumerates the keys it grants, because
+enumeration is the point of an opt-in model:
 
 ```ts
 // in a consumer's config
 roles: {
-    editor: { name: 'Editor', permissions: [...builtInRole('editor'), ...myPlugin.permissions('view')] },
+    editor: {
+        name: 'Editor',
+        permissions: [...builtInRole('editor'), ...myPlugin.permissions('view', 'export')],
+    },
 }
 ```
 
-Bundle names are literal-typed, so `myPlugin.permissions('view')` type-checks
-and `myPlugin.permissions('viwe')` does not.
+Keys are literal-typed, so `myPlugin.permissions('view')` type-checks and
+`myPlugin.permissions('viwe')` does not — and an unknown key throws at config
+load rather than silently granting nothing. Calling `permissions()` with no
+keys throws too.
+
+**Keys must be one level deep.** A `:` anywhere in a key is a crash-loud error
+at define time, because two rules turn a key into a permission string and they
+disagree the moment a key contains a colon: route enforcement passes any string
+containing `:` through unchanged, while the grant accessor prefixes
+unconditionally. Forbidding `:` makes the two agree for every key that can
+exist.
+
+**Entry permissions are derived, never declared.** If your plugin contributes
+entry types, core already generates `plugin:<ns>:entry:<type>:<action>` for
+`read`, `create`, `update`, `delete` (and `publish`, for a versioned type) from
+the registered type. Don't mirror them in `definePermissions` — a site grants
+them from the qualified type id:
+
+```ts
+import { entryPermissions } from 'astromech';
+
+...entryPermissions('redirects/redirect', 'read', 'create', 'update', 'delete');
+```
+
+**Nothing is auto-granted.** The `admin` role holds `*` and therefore already
+has every permission any plugin will ever declare; every other role opts in
+explicitly. If a role really should get everything one plugin offers, present
+and future, `plugin:<namespace>:*` is the all-or-nothing escape hatch — but
+naming the keys is the honest default.
 
 ### Database tables
 
@@ -566,7 +600,6 @@ import type { RedirectsOptions } from './types.js';
 import { REDIRECTS_PACKAGE } from './types.js';
 import { migrationProvider } from '../migrations/index.js';
 import { redirectEntryType } from './entries/redirect.js';
-import { redirectsPermissionBundles } from './permissions/redirects.js';
 import { redirectsTable } from './schema/redirects.js';
 import { redirectsService } from './service/redirects.js';
 import { slugChangeHook } from './hooks/slug-change.js';
@@ -583,7 +616,6 @@ export const redirects = definePlugin((options?: RedirectsOptions) => {
         version: '0.1.0',
         label: 'Redirects',
         icon: 'Signpost',
-        permissionBundles: redirectsPermissionBundles,
         schema: [redirectsTable],
         migrations: migrationProvider,
         entries: [redirectEntryType],
@@ -595,6 +627,9 @@ export const redirects = definePlugin((options?: RedirectsOptions) => {
 export default redirects;
 ```
 
+Redirects declares no `permissions`: its only service method is public, and its
+entry type's permissions are derived by core.
+
 A factory **must be a pure data builder**: Astromech calls it once with no
-options to read identity and permission bundles, and again for each site
+options to read identity and permission declarations, and again for each site
 instantiation — `plugins: [redirects({ generateOnSlugChange: false })]`.

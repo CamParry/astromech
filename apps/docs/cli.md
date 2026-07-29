@@ -62,6 +62,22 @@ astromech methods --filter create     # case-insensitive substring on method nam
 astromech methods --json              # full manifest entries (input/output schemas, entryType, …)
 ```
 
+## Permission discovery
+
+`permissions` lists every grantable permission your resolved config produces —
+the strings you put in a role. Three sources: `core` (the fixed set core
+enforces), `entry` (derived per registered entry type — nothing declares
+these), and `plugin` (each plugin's `definePermissions` declaration, already
+namespaced). Like `methods`, it resolves your config in-memory and needs no
+prior build.
+
+```sh
+astromech permissions                 # text: permission, label, (owner)
+astromech permissions --source plugin # filter by source: core | entry | plugin
+astromech permissions --filter media  # case-insensitive substring on the permission string
+astromech permissions --json          # full catalogue entries (description, source, owner)
+```
+
 ## Users & database
 
 | Command                                                      | Description                                  |

@@ -1,7 +1,7 @@
 /**
  * @astromech/backups — scheduled and on-demand database backups stored in
  * plugin storage (R2 / filesystem). HTTP routes and the admin UI are separate
- * slices; this module wires up the cron job and the permission bundle.
+ * slices; this module wires up the cron job and the permission declarations.
  */
 
 import { definePlugin, withDefaults } from 'astromech';
@@ -10,10 +10,7 @@ import { BACKUPS_PACKAGE } from './types.js';
 import type { BackupsOptions } from './types.js';
 import { migrationProvider } from '../migrations/index.js';
 import { backupRunsTable } from './schema/runs.js';
-import {
-    backupsPermissionBundles,
-    backupsPermissionDefs,
-} from './permissions/backups.js';
+import { backupsPermissions } from './permissions/backups.js';
 import { performBackup, resolveKeep } from './backup.js';
 import { buildBackupsService } from './service/backups.js';
 import { buildBackupRoutes } from './routes/backups.js';
@@ -49,8 +46,7 @@ export const backups = definePlugin((options?: BackupsOptions) => {
         icon: 'DatabaseBackup',
         schema: [backupRunsTable],
         migrations: migrationProvider,
-        permissions: backupsPermissionDefs,
-        permissionBundles: backupsPermissionBundles,
+        permissions: backupsPermissions,
         i18n: ['en'],
         admin: {
             pages: [backupsPage],

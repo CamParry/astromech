@@ -58,9 +58,8 @@ function entryPath(ctx: PluginContext, type: string, entry: Entry): string | nul
 export const seoService = {
     // Published entries across the plugin footprint, as sitemap URL data.
     // Public so the app's /sitemap.xml endpoint can call it.
-    // `void` input: takes no argument, so callers invoke `.sitemap()` bare.
-    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-    sitemap: defineServiceMethod<void, SeoSitemap>({
+    // `undefined` input: takes no argument, so callers invoke `.sitemap()` bare.
+    sitemap: defineServiceMethod<undefined, SeoSitemap>({
         access: 'public',
         summary: 'List sitemap URLs for all SEO-tracked entries.',
         mutates: false,
@@ -111,8 +110,7 @@ export const seoService = {
 
     // SEO health across every entry in the footprint — drives the overview
     // dashboard page.
-    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-    overview: defineServiceMethod<void, SeoOverview>({
+    overview: defineServiceMethod<undefined, SeoOverview>({
         access: { permission: 'view' },
         summary: 'Report SEO coverage across all tracked entries.',
         mutates: false,

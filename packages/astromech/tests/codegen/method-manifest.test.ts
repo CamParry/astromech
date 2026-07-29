@@ -57,17 +57,18 @@ const testPlugin: PluginDefinition = {
         doSomething: {
             access: { permission: 'plugins:x:do' },
             summary: 'Do something.',
-            // mutates intentionally omitted — should default to true, effectDeclared false
+            mutates: true,
             handler: async () => undefined,
         },
         readOnly: {
             access: 'public',
-            mutates: false, // explicitly declared
+            mutates: false,
             handler: async () => undefined,
         },
         scoped: {
             // Bare permission key — must be plugin-scoped to match route enforcement
             access: { permission: 'manage' },
+            mutates: true,
             handler: async () => undefined,
         },
     },
@@ -381,16 +382,10 @@ describe('generateMethodManifest — plugin service methods', () => {
         expect(m?.['permission']).toBe('plugins:x:do');
     });
 
-    it('should default mutates to true when not declared', () => {
+    it('should set mutates to true when explicitly declared', () => {
         const { methods } = parseManifest();
         const m = findMethod(methods, 'plugins.testMyPlugin.doSomething');
         expect(m?.['mutates']).toBe(true);
-    });
-
-    it('should set effectDeclared to false when mutates is not declared', () => {
-        const { methods } = parseManifest();
-        const m = findMethod(methods, 'plugins.testMyPlugin.doSomething');
-        expect(m?.['effectDeclared']).toBe(false);
     });
 
     it('should set access to public for string-form access', () => {
@@ -409,12 +404,6 @@ describe('generateMethodManifest — plugin service methods', () => {
         const { methods } = parseManifest();
         const m = findMethod(methods, 'plugins.testMyPlugin.readOnly');
         expect(m?.['mutates']).toBe(false);
-    });
-
-    it('should set effectDeclared to true when mutates is explicitly declared', () => {
-        const { methods } = parseManifest();
-        const m = findMethod(methods, 'plugins.testMyPlugin.readOnly');
-        expect(m?.['effectDeclared']).toBe(true);
     });
 
     it('should include the summary when declared', () => {

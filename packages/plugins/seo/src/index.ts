@@ -10,7 +10,7 @@
 
 import { definePlugin } from 'astromech';
 import type { ServiceInterface } from 'astromech';
-import { seoPermissionBundles, seoPermissionDefs } from './permissions/seo.js';
+import { seoPermissions } from './permissions/seo.js';
 import { seoPreviewField } from './fields/seo-preview.js';
 import { seoService } from './service/seo.js';
 import { overviewPage } from './pages/overview.js';
@@ -48,8 +48,7 @@ export const seo = definePlugin({
     version: '0.1.0',
     label: 'SEO',
     icon: 'Search',
-    permissions: seoPermissionDefs,
-    permissionBundles: seoPermissionBundles,
+    permissions: seoPermissions,
     i18n: ['en', 'fr'],
     fields: [seoPreviewField],
     admin: {

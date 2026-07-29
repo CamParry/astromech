@@ -31,6 +31,18 @@ export { libsqlDriver } from '@/database/drivers/libsql.js';
 export { runScheduledJobs } from '@/cron/index.js';
 export { builtInRole, BUILT_IN_ROLES } from '@/permissions/index.js';
 export type { BuiltInRoleSlug } from '@/permissions/index.js';
+export { definePermissions } from '@/permissions/define.js';
+export type {
+    PermissionDeclaration,
+    PermissionDeclarations,
+} from '@/permissions/define.js';
+// Entry permissions are derived, never declared — a site grants a plugin's entry
+// types with these rather than reading a list off the plugin.
+export {
+    type EntryAction,
+    entryPermission,
+    entryPermissions,
+} from '@/permissions/entry-permission.js';
 export { withDefaults } from '@/utilities/options.js';
 export { resolveEntryUrl, resolveEntryPath } from '@/entries/utils/url.js';
 export type { UrlEntry } from '@/entries/utils/url.js';
@@ -135,12 +147,13 @@ export function defineEntryType(config: EntryTypeConfig): EntryTypeConfig {
  * `admin.pages`, `admin.slots` and `i18n` resolve against `root` — see
  * {@link PluginDefinition.root}.
  *
- * The factory carries a `permissions(bundle)` accessor for any
- * `permissionBundles` the definition declares, already namespaced, so a site
- * composes roles straight off the plugin: `[...seo.permissions('view')]`.
+ * The factory carries a `permissions(...keys)` accessor that selects individual
+ * keys from the definition's `permissions` declaration and returns them already
+ * namespaced, so a site composes roles straight off the plugin and enumerates
+ * exactly what it grants: `[...seo.permissions('view', 'write')]`.
  *
  * A factory MUST be a pure data builder: Astromech calls it once with no
- * options to read identity and permission bundles, and again for each site
+ * options to read identity and permission declarations, and again for each site
  * instantiation.
  *
  * @example
@@ -164,8 +177,8 @@ export function definePlugin<const Def extends PluginDefinition, Options = void>
         typeof source === 'function' ? source(options) : source;
 
     // One no-options build backs the surfaces a site reads *without*
-    // instantiating the plugin — identity and permission bundles. Cached so a
-    // factory is not re-run per `permissions()` call.
+    // instantiating the plugin — identity and permission declarations. Cached so
+    // a factory is not re-run per `permissions()` call.
     let base: Def | undefined;
     const baseDefinition = (): Def => (base ??= build());
 
@@ -174,18 +187,25 @@ export function definePlugin<const Def extends PluginDefinition, Options = void>
         Def
     >;
 
-    factory.permissions = (bundle: string) => {
+    factory.permissions = (...keys: string[]) => {
         const definition = baseDefinition();
-        const bundles = definition.permissionBundles ?? {};
-        const keys = bundles[bundle];
-        if (!keys) {
-            const available = Object.keys(bundles);
+        const declared = definition.permissions ?? {};
+        if (keys.length === 0) {
             throw new Error(
-                `Unknown permission bundle "${bundle}" for plugin "${definition.package}". ` +
-                    (available.length > 0
-                        ? `Available: ${available.join(', ')}.`
-                        : `The plugin declares no \`permissionBundles\`.`)
+                `\`${definition.package}\`.permissions() needs at least one permission key. ` +
+                    `Name the permissions to grant, e.g. permissions('read', 'update').`
             );
+        }
+        const available = Object.keys(declared);
+        for (const key of keys) {
+            if (!(key in declared)) {
+                throw new Error(
+                    `Unknown permission "${key}" for plugin "${definition.package}". ` +
+                        (available.length > 0
+                            ? `Available: ${available.join(', ')}.`
+                            : `The plugin declares no \`permissions\`.`)
+                );
+            }
         }
         const namespace = pluginNamespace(definition.package);
         return keys.map((key) => `plugin:${namespace}:${key}` as Permission);

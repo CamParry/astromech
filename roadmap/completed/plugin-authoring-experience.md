@@ -1,8 +1,13 @@
 # Plugin authoring experience
 
-**Status:** phases 1 and 2 merged to `main` (2026-07-28, from
-`feat/plugin-authoring-dx`). Phase 3 is not started, which is why this file is
-still in `in-progress/`.
+**Status:** done. Phases 1 and 2 merged to `main` (2026-07-28, from
+`feat/plugin-authoring-dx`); Phase 3 built on `feat/plugin-permissions`
+(2026-07-29), gate + CLI verified.
+
+The three items under "Still candidates" moved to
+`roadmap/planned/plugin-factory-extras.md` — they were never designed, and one
+of them (host-facing factory extras) is what the seo namespace remainder below
+is really waiting on.
 
 |         | scope                                                              | state                                                                               |
 | ------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
@@ -11,7 +16,7 @@ still in `in-progress/`.
 | 2b      | retire "SDK" → "service"                                           | built, gate verified                                                                |
 | 2c      | dissolve `astromech/plugin-kit`                                    | built, gate + browser verified                                                      |
 | 2a      | drop "plugin" from the define names                                | done, gate + browser verified; `definePluginTable` rename rejected (see remainders) |
-| Phase 3 | `definePermissions`; the effect axis stays on service methods      | designed 2026-07-29, not started                                                    |
+| Phase 3 | `definePermissions`; the effect axis stays on service methods      | built 2026-07-29, gate + CLI verified                                               |
 
 Sub-phases are sequenced rather than parallel: 2b, 2c and 2d all rewrite the
 same plugin call sites, and 2d's deletion of `ctx.sdk` shrinks 2b's rename
@@ -129,7 +134,14 @@ takes a bare `permission: 'view'` and namespaces it, and computes a settings
 'seo'` by hand. That is a stand-in, not the fix. The fix is to hang
   host-facing helpers off the factory (`seo.section()`, as
   `plugin.permissions()` already does), which needs `definePlugin` to carry
-  plugin-declared extras — Phase 3.
+  plugin-declared extras.
+
+            This bullet used to say "— Phase 3", which was wrong and stayed wrong
+            through the Phase 3 build: Phase 3 as designed is `definePermissions` and
+            nothing else, and the factory-extras mechanism was never designed. Tracked
+            in `roadmap/planned/plugin-factory-extras.md`; the stand-in survives until
+            then and is harmless (seo has no tables, so no identifier derives from it).
+
 - **Service module augmentation stays hand-written.** `declare module
 'astromech' { interface AstromechPluginServices { seo: … } }` needs the
   service key as a source-level literal; TS cannot compute an interface key
@@ -411,20 +423,49 @@ currently load-bearing and silently droppable — stops being the author's
 problem. `plugin:backups:*` remains available for "grant everything", and it is
 honest because it _looks_ like everything.
 
-- [ ] `definePermissions(declaration)` — one argument, record keyed by bare
+- [x] `definePermissions(declaration)` — one argument, record keyed by bare
       permission key, `{ label, description? }` values
-- [ ] Factory accessor `plugin.permissions(...keys)` — variadic, literal-typed
+- [x] Factory accessor `plugin.permissions(...keys)` — variadic, literal-typed
       against the declaration, keeps the existing spread-at-call-site shape
-- [ ] Retire `PluginDefinition.permissionBundles` and the
+- [x] Retire `PluginDefinition.permissionBundles` and the
       `factory.permissions(bundle)` bundle resolver (`index.ts:179-194`)
-- [ ] Give the declaration list a real consumer, or it stays as dead as the
-      field it replaces. It is the input to a permissions matrix view — a CLI
-      (`astromech permissions`) or an admin page. **Open: which.**
-- [ ] Core declares its own permissions through the same helper. There is no
+- [x] Give the declaration list a real consumer, or it stays as dead as the
+      field it replaces. **Resolved: the CLI.** `astromech permissions` is a
+      near-copy of the existing `methods` command — same args, same output
+      shape, so it costs almost nothing and makes the declaration load-bearing
+      immediately. It reads `buildPermissionCatalogue()`
+      (`permissions/catalogue.ts`), which is pure and takes
+      `(resolvedConfig, plugins)` exactly as `generateMethodManifest` does. An
+      admin permissions matrix can consume the same catalogue later; it was not
+      chosen now because it is a real UI surface and `unified-admin-pages` is
+      already in flight
+- [x] Core declares its own permissions through the same helper. There is no
       separate plugin API — the registration site decides scoping, exactly as
       `defineAdminPage` already works. `BUILT_IN_ROLES`' string literals
       (`permissions/index.ts:28-47`) become a declaration, and
       `builtInRole('editor')` becomes a selection over it
+
+    Two things this surfaced, both now closed:
+
+    **Keys must be one level deep, enforced.** There were two rules for turning
+    a declared key into a permission string and they disagreed:
+    `resolvePluginPermission` (`plugin-identity.ts:105`, the ENFORCEMENT side)
+    passes any string containing `:` through unchanged so core permissions stay
+    expressible, while the grant accessor prefixed unconditionally. A
+    colon-bearing key therefore resolved differently depending on which side
+    asked. `definePermissions` now throws on any key containing `:`, which makes
+    the two agree for every key that can exist — this is what makes the "one
+    level deep" rule true rather than aspirational.
+
+    **Core needed an escape hatch from that rule.** `media:upload` and friends
+    _are_ the full permission string — core is the root namespace, so there is
+    nothing to prefix. Hence `defineAbsolutePermissions`, deliberately NOT
+    exported from the package root: a plugin using it would write permission
+    strings its own grant accessor could not reproduce.
+
+    Wildcards (`*`, `entry:*`) are deliberately NOT in `CORE_PERMISSIONS`. A
+    declaration lists grantable units; a wildcard is a matcher feature. Both
+    built-in roles keep theirs as literals with a comment.
 
 ### Decided: `redirects` stops declaring entry permissions
 
@@ -439,8 +480,24 @@ Core enumerates them from the registered entry types instead. This is also what
 makes the "one level deep" rule true — the colon-bearing keys were exactly the
 ones that should never have been hand-written.
 
-- [ ] Core derives entry permissions per plugin entry type for the declaration
+- [x] Core derives entry permissions per plugin entry type for the declaration
       list; delete `packages/plugins/redirects/src/permissions/redirects.ts`
+
+          A site still has to _grant_ those permissions, and with nothing declared
+          there was nothing to spread. The replacement is `entryPermissions(typeId,
+
+    ...actions)` (`permissions/entry-permission.ts`), exported from the package
+    root — core's own derivation, enumerated at the call site:
+
+          ```ts
+          ...entryPermissions('redirects/redirect', 'read', 'create', 'update', 'delete')
+          ```
+
+          That is what stops a site hand-writing
+          `plugin:redirects:entry:redirect:*`, which is precisely the string this
+          design exists to stop people writing. `redirects` now declares no
+          permissions at all, which is correct: its one service method is `public`
+          and its entry permissions are derived.
 
 ### Decided: the effect axis stays on service methods
 
@@ -459,14 +516,29 @@ fail-safe, and it is what reports `menus.get` — a public, pure read — as a
 mutation with `effectDeclared: false`. Making the declaration mandatory turns a
 runtime mislabel into a compile error.
 
-- [ ] Make `mutates` required on `PluginServiceMethod`; drop the `?? true`
+- [x] Make `mutates` required on `PluginServiceMethod`; drop the `?? true`
       default once nothing relies on it
 
-### Still candidates, not yet designed
+    One token in the end — `& Partial<ServiceMethodEffect>` became
+    `& ServiceMethodEffect`, which already had `mutates` required and
+    `destructive`/`idempotent` optional. `effectDeclared` went with it: once the
+    declaration is mandatory the flag is always true, so it carried no
+    information. Its only consumers were two tests and the generated manifest
+    JSON, which already read `true` everywhere. All five plugin service modules
+    already declared `mutates` (the consistency sweep fixed the last one), so no
+    plugin source broke; three core test fixtures did need it added.
 
-- Asset root: whether `root: import.meta.url` can be inferred rather than
-  declared
-- Host-facing extras on the factory, closing the seo remainder above
-- `astromech plugin:new` scaffolding (there is `plugin:generate` and
-  `plugin:purge`, but nothing to start from — today a new plugin begins by
-  copying `redirects/`)
+### What Phase 3 shipped
+
+`definePermissions` + `defineAbsolutePermissions` (`permissions/define.ts`),
+`CORE_PERMISSIONS` and a `builtInRole('editor')` built as a selection over it,
+`entryPermissions()`, `buildPermissionCatalogue()` (`permissions/catalogue.ts`)
+and the `astromech permissions` CLI, plus `mutates` made required. All four
+plugins and the demo's `rating` migrated; `redirects/src/permissions/` deleted
+outright.
+
+Verified against the demo: 48 permissions — 11 core, 30 derived entry, 7
+plugin-declared. `publish` appears only for `page` and `post`, the only two
+versioned types, so the capability gate is real and not assumed.
+
+Follow-ups moved to `roadmap/planned/plugin-factory-extras.md`.

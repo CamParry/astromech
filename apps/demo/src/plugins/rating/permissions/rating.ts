@@ -1,21 +1,20 @@
 /**
- * Permission bundles (for composing into config roles) and the plugin's
- * permission declarations (for the admin permission UI). Bundle keys resolve
- * to `plugin:demo_rating:{key}`.
+ * The permissions this plugin makes grantable. Keys are declared **bare** — no
+ * prefix, no `:` — and core namespaces them to `plugin:demo_rating:{key}`. The
+ * declaration feeds both the `astromech permissions` catalogue and the
+ * factory's grant accessor, so a site enumerates exactly what it hands out:
  *
  *   roles: { editor: { permissions: [...rating.permissions('view')] } }
+ *
+ * Nothing is granted automatically. `admin` holds `*` and so already has this;
+ * every other role opts in.
  */
 
-import type { PluginPermission } from 'astromech';
+import { definePermissions } from 'astromech';
 
-export const ratingPermissionBundles = {
-    view: ['view'],
-} as const;
-
-export const ratingPermissionDefs: PluginPermission[] = [
-    {
-        key: 'view',
+export const ratingPermissions = definePermissions({
+    view: {
         label: 'View rating reports',
         description: 'See the ratings overview dashboard.',
     },
-];
+});
