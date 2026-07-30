@@ -3,6 +3,7 @@ import type { FieldPathSegment } from '@/fields/field-path.js';
 import {
     formatFieldPath,
     formatSchemaPath,
+    isValidFieldName,
     parseFieldPath,
 } from '@/fields/field-path.js';
 
@@ -17,6 +18,48 @@ function f(name: string): FieldPathSegment {
 function item(id: string): FieldPathSegment {
     return { kind: 'item', id };
 }
+
+// ---------------------------------------------------------------------------
+// isValidFieldName
+// ---------------------------------------------------------------------------
+
+describe('isValidFieldName', () => {
+    const valid = [
+        'title',
+        'firstName',
+        'my_field_2',
+        'my-field',
+        'UPPER',
+        '_leading',
+        '9',
+        'a b', // a space is ugly, but the grammar does not spend it
+        'héllo',
+        'a{b}c',
+    ];
+
+    for (const name of valid) {
+        it(`accepts '${name}'`, () => {
+            expect(isValidFieldName(name)).toBe(true);
+        });
+    }
+
+    const invalid = ['', 'user.email', '.', 'a[', 'a]', 'a[0]', 'blocks[a1].title'];
+
+    for (const name of invalid) {
+        it(`rejects '${name}'`, () => {
+            expect(isValidFieldName(name)).toBe(false);
+        });
+    }
+
+    it('agrees with formatFieldPath on every case', () => {
+        for (const name of valid) {
+            expect(() => formatFieldPath([f(name)])).not.toThrow();
+        }
+        for (const name of invalid) {
+            expect(() => formatFieldPath([f(name)])).toThrow();
+        }
+    });
+});
 
 // ---------------------------------------------------------------------------
 // formatFieldPath — happy paths

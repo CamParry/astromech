@@ -48,8 +48,11 @@
  * it must not contain.
  *
  * Pure module: its only import is type-only (erased at build), so it is safe to
- * load in the browser. Deliberately not re-exported from `fields/index.js`,
- * because that barrel reaches server code.
+ * load in the browser. The formatters and parser are deliberately not
+ * re-exported from `fields/index.js`, because that barrel reaches server code
+ * and browser consumers must deep-import this file instead. `isValidFieldName`
+ * is the one exception: it is on the public `astromech/fields` surface so a
+ * plugin composing fields from stored JSON can check a name it did not author.
  *
  * `FieldPathSegment` itself is declared with the other field contracts in
  * `types/fields.ts` — the field-type descriptor and the validation context both
@@ -60,6 +63,22 @@
 import type { FieldPathSegment } from '@/types/fields.js';
 
 export type { FieldPathSegment };
+
+/** The three characters a `field` segment may not contain, because the grammar spends them. */
+const RESERVED_NAME_CHARS = ['.', '[', ']'] as const;
+
+/**
+ * True when `name` can be used as a `field` path segment: non-empty and free of
+ * `.`, `[` and `]`.
+ *
+ * Exported because a field name doesn't always come from a schema an author
+ * wrote by hand — a plugin can compose `FieldDefinition`s from stored JSON — and
+ * such a caller needs to reject an unusable name before it reaches a formatter.
+ * This is the one place the character rules are stated.
+ */
+export function isValidFieldName(name: string): boolean {
+    return name !== '' && !RESERVED_NAME_CHARS.some((char) => name.includes(char));
+}
 
 /**
  * Shared shape check for both formatters. A path has to start at a declared
@@ -82,11 +101,7 @@ function assertValidSegments(segments: readonly FieldPathSegment[]): void {
             if (segment.name === '') {
                 throw new Error('Field path segment name must not be empty');
             }
-            if (
-                segment.name.includes('.') ||
-                segment.name.includes('[') ||
-                segment.name.includes(']')
-            ) {
+            if (!isValidFieldName(segment.name)) {
                 throw new Error(
                     `Field path segment name must not contain '.', '[' or ']', got '${segment.name}'`
                 );

@@ -1,0 +1,66 @@
+/**
+ * The `form` entry type's own schema, validated through core's pipeline.
+ *
+ * The only rule under test is the `name` pattern on every field block: a stored
+ * `name` becomes a compiled field's name at submit time (`../../../..
+ * /plugins/forms/src/fields/compile.ts`), and a submission error is keyed by the
+ * field-path grammar — which cannot address a name containing `.`, `[` or `]`.
+ * The rule is only reachable server-side because the pipeline recurses into the
+ * `fields` blocks container.
+ *
+ * Lives here, under `packages/astromech/tests/`, for the same reason
+ * `compile.test.ts` does: `@astromech/forms` has no vitest instance of its own.
+ */
+
+import { describe, expect, it } from 'vitest';
+import type { FieldDefinition } from '@/types/fields.js';
+import { processFields } from '@/fields/pipeline.js';
+import { formEntryType } from '../../../../plugins/forms/src/entries/form.js';
+
+/** The `form` type declares a plain array; narrow the `EntryFields` union to it. */
+function definitions(): FieldDefinition[] {
+    const { fields } = formEntryType;
+    if (fields === undefined) return [];
+    return Array.isArray(fields) ? fields : fields.main;
+}
+
+function ctx() {
+    return {
+        operation: 'create' as const,
+        host: { kind: 'entry' as const, record: {} },
+        user: null,
+        reads: { isUnique: async () => true },
+    };
+}
+
+/** Validate a form whose `fields` holds one text block with the given `name`. */
+async function nameErrors(name: unknown): Promise<string[] | undefined> {
+    const { errors } = await processFields(
+        {
+            title: 'Contact',
+            fields: [{ _id: 'b1', _type: 'text', name, label: 'Label' }],
+        },
+        definitions(),
+        ctx()
+    );
+    return errors['fields[b1].name'];
+}
+
+describe("form builder's `name` rule", () => {
+    it.each(['user.email', 'answers[0]', 'My Field', 'Name', '1st', 'user email'])(
+        'rejects %s',
+        async (name) => {
+            expect(await nameErrors(name)).toEqual([
+                'Must start with a lowercase letter and use only lowercase letters, numbers, underscores and hyphens.',
+            ]);
+        }
+    );
+
+    it.each(['user_email', 'email', 'field-2', 'a'])('accepts %s', async (name) => {
+        expect(await nameErrors(name)).toBeUndefined();
+    });
+
+    it('reports a missing name as required, not as a pattern failure', async () => {
+        expect(await nameErrors(undefined)).toEqual(['This field is required']);
+    });
+});

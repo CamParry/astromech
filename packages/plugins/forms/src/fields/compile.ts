@@ -5,21 +5,31 @@
  * instead of a second, drifting evaluator.
  *
  * Input is untrusted stored JSON (`unknown`) — every step is defensive.
- * `processFields` treats containers as opaque leaves and does not recurse, so
- * the output here is deliberately a FLAT list of leaf fields, never
- * containers.
+ * The output is deliberately a FLAT list of leaf fields, never containers,
+ * because a form submission is a flat map of answers: one stored block instance
+ * is one answer key. That is the shape being modelled, not a limitation of the
+ * pipeline (which does recurse into containers).
  */
 
 import type { FieldDefinition, Label, SelectOption, ValidationRule } from 'astromech';
 import * as fields from 'astromech/fields';
 import type { FormFieldKind, StoredFormField } from '../types.js';
 
-/** True for a stored block instance that should be compiled: an enabled object with a usable `name`. */
+/**
+ * True for a stored block instance that should be compiled: an enabled object
+ * with a usable `name`.
+ *
+ * "Usable" includes satisfying the core field-path grammar. The form builder
+ * rejects a bad `name` on save, but a form stored before that rule existed can
+ * still hold one, and a name containing `.`, `[` or `]` cannot be used as an
+ * error key — `processFields` throws on it. Skipping the field degrades to a
+ * missing question rather than a 500 on every submission.
+ */
 function isUsable(instance: unknown): instance is StoredFormField {
     if (typeof instance !== 'object' || instance === null) return false;
     const stored = instance as StoredFormField;
     if (stored._disabled === true) return false;
-    return typeof stored.name === 'string' && stored.name.length > 0;
+    return typeof stored.name === 'string' && fields.isValidFieldName(stored.name);
 }
 
 /** Numeric-only extraction — stored config is untrusted JSON, may hold anything. */

@@ -17,6 +17,13 @@ import * as columns from 'astromech/columns';
 /**
  * The four fields every block starts with, identically — the key an answer is
  * stored under, its label, whether it's required, and optional help text.
+ *
+ * The `name` pattern is enforceable server-side because the validation pipeline
+ * now recurses into data containers: these are children of the `fields` blocks
+ * field below, and before that recursion existed they were never validated on
+ * save at all. The rule matters because a stored `name` becomes a compiled
+ * field's name at submit time, and a submission error is keyed by the field-path
+ * grammar — which spends `.`, `[` and `]`.
  */
 function commonFields(): FieldDefinition[] {
     return [
@@ -24,6 +31,13 @@ function commonFields(): FieldDefinition[] {
             label: 'Name',
             required: true,
             description: 'The key this answer is stored under — lowercase, no spaces.',
+            validation: [
+                {
+                    pattern: '^[a-z][a-z0-9_-]*$',
+                    message:
+                        'Must start with a lowercase letter and use only lowercase letters, numbers, underscores and hyphens.',
+                },
+            ],
         }),
         fields.text('label', { label: 'Label', required: true }),
         fields.boolean('required', { label: 'Required', defaultValue: false }),

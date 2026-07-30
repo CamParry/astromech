@@ -9,6 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { processFields } from '@/fields/pipeline.js';
 import {
     compileFormFields,
     firstEmailFieldName,
@@ -181,6 +182,35 @@ describe('compileFormFields', () => {
             { _type: 'text', name: '', label: 'Blank name' },
         ]);
         expect(compiled).toHaveLength(0);
+    });
+
+    // A form saved before the builder enforced its `name` pattern can still hold
+    // a name the field-path grammar cannot address. `processFields` throws on one,
+    // so compiling it would turn every submission into a 500 — skip it instead.
+    it.each(['user.email', 'answers[0]', 'a]b'])(
+        'skips an instance whose name breaks the field-path grammar (%s)',
+        (name) => {
+            const compiled = compileFormFields([
+                { _type: 'text', name, label: 'Legacy' },
+                { _type: 'text', name: 'user_email', label: 'Valid' },
+            ]);
+            expect(compiled).toHaveLength(1);
+            expect(compiled[0]?.name).toBe('user_email');
+        }
+    );
+
+    it('a form holding a bad name still validates its remaining fields', async () => {
+        const definitions = compileFormFields([
+            { _type: 'email', name: 'user.email', label: 'Email', required: true },
+            { _type: 'text', name: 'message', label: 'Message', required: true },
+        ]);
+        const { errors } = await processFields({ message: '' }, definitions, {
+            operation: 'create',
+            host: { kind: 'entry', record: {} },
+            user: null,
+            reads: { isUnique: async () => true },
+        });
+        expect(errors).toEqual({ message: ['This field is required'] });
     });
 
     it('skips an instance with an unknown _type', () => {

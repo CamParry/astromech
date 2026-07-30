@@ -969,3 +969,51 @@ describe('top-level error keys', () => {
         expect(Object.keys(errors)).toEqual(['sections']);
     });
 });
+
+// ---------------------------------------------------------------------------
+// Field names the path grammar cannot address
+// ---------------------------------------------------------------------------
+
+describe('invalid field names', () => {
+    it('a top-level name containing a dot throws, naming the field and the rule', async () => {
+        await expect(
+            processFields(
+                { 'user.email': 'x' },
+                [field({ name: 'user.email', type: 'email' })],
+                fakeCtx()
+            )
+        ).rejects.toThrow(
+            "Field name 'user.email' (type 'email') cannot be used: field names must not contain '.', '[' or ']'"
+        );
+    });
+
+    it('a bracket in a name throws the same way', async () => {
+        await expect(
+            processFields({}, [field({ name: 'answers[0]', type: 'text' })], fakeCtx())
+        ).rejects.toThrow(/Field name 'answers\[0\]'/);
+    });
+
+    it('a name nested inside a container throws too', async () => {
+        await expect(
+            processFields(
+                { seo: {} },
+                [
+                    field({
+                        name: 'seo',
+                        type: 'group',
+                        fields: [field({ name: 'og.title', type: 'text' })],
+                    }),
+                ],
+                fakeCtx()
+            )
+        ).rejects.toThrow(/Field name 'og.title'/);
+    });
+
+    it('an empty name throws, saying it must not be empty', async () => {
+        await expect(
+            processFields({}, [field({ name: '', type: 'text' })], fakeCtx())
+        ).rejects.toThrow(
+            "Field name '' (type 'text') cannot be used: field names must not be empty"
+        );
+    });
+});

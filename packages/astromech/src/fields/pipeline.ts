@@ -24,7 +24,7 @@ import type {
     ValidationRule,
 } from '@/types/fields.js';
 import { getFieldTypeDescriptor } from './descriptors.js';
-import { formatFieldPath } from './field-path.js';
+import { formatFieldPath, isValidFieldName } from './field-path.js';
 import { flattenFieldNodes } from './helpers.js';
 
 // ---------------------------------------------------------------------------
@@ -35,6 +35,28 @@ function isEmpty(v: unknown): boolean {
     return (
         v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0)
     );
+}
+
+/**
+ * A field whose name breaks the path grammar has nowhere to put its errors, so
+ * this is a schema error and failing loudly is correct. Checked here, rather than
+ * left to the formatter, so the message names the offending field instead of
+ * surfacing as a bare path error from deep in the stack.
+ */
+function fieldErrorPath(
+    segments: readonly FieldPathSegment[],
+    field: FieldDefinition
+): string {
+    if (!isValidFieldName(field.name)) {
+        const reason =
+            field.name === ''
+                ? 'field names must not be empty'
+                : "field names must not contain '.', '[' or ']'";
+        throw new Error(
+            `Field name '${field.name}' (type '${field.type}') cannot be used: ${reason}`
+        );
+    }
+    return formatFieldPath(segments);
 }
 
 // ---------------------------------------------------------------------------
@@ -164,7 +186,7 @@ async function processScope(
             ...parentSegments,
             { kind: 'field', name: field.name },
         ];
-        const path = formatFieldPath(segments);
+        const path = fieldErrorPath(segments, field);
 
         // Step a: coerce
         let v = descriptor?.coerce
