@@ -92,6 +92,24 @@ export class StagedEntryExistsError extends Error {
 }
 
 /**
+ * Thrown when a read asks for trashed entries in the public shape.
+ *
+ * The two are mutually exclusive: public visibility drops every trashed row
+ * after the storage call, so the combination returned an empty list that was
+ * indistinguishable from "nothing is trashed". Failing names the caller bug.
+ */
+export class PublicTrashedReadError extends Error {
+    constructor() {
+        super(
+            '[astromech] entries.query: trashed reads require the full shape — a ' +
+                'public read never returns trashed entries. Pass full: true (and ' +
+                'authenticate).'
+        );
+        this.name = 'PublicTrashedReadError';
+    }
+}
+
+/**
  * Thrown when a route or entries-service operation is attempted on an entry type
  * that does not support the required capability.
  */

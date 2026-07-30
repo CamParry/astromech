@@ -40,7 +40,9 @@ describe('create', () => {
         expect(e.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/); // ULID
         expect(e.type).toBe('post');
         expect(e.locale).toBe('en'); // defaultLocale
-        expect(e.localeGroup).toMatch(/[0-9a-f-]{36}/);
+        // A ULID like every other generated id — the `entries` descriptor's
+        // `defaultUlid` mints it, so nothing hands out a UUID here.
+        expect(e.localeGroup).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
         expect(e.status).toBe('unpublished');
         expect(e.title).toBe('Hello World');
         expect(e.slug).toBe('hello-world'); // slugify
@@ -203,6 +205,17 @@ describe('query', () => {
 
         const trashed = await api.query({ type: 'post', full: true, trashed: true });
         expect(trashed.data.map((e) => e.title)).toEqual(['A']);
+    });
+
+    it('rejects a trashed read in the public shape', async () => {
+        // Public visibility drops every trashed row, so the combination used to
+        // return an empty list indistinguishable from "nothing is trashed".
+        const a = await api.create({ type: 'post', title: 'A', status: 'published' });
+        await api.trash({ type: 'post', id: a.id });
+
+        await expect(api.query({ type: 'post', trashed: true })).rejects.toThrow(
+            /trashed reads require the full shape/
+        );
     });
 
     it('filters by locale and returns all locales with the all sentinel', async () => {

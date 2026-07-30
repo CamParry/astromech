@@ -8,6 +8,7 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { Astromech } from '@/transport/local/index.js';
 import {
+    badRequest,
     forbidden,
     fromZodError,
     internalError,
@@ -36,7 +37,7 @@ import {
     updateEntrySchemaFor,
     scheduleEntrySchema,
 } from '@/entries/schema.js';
-import { StagedEntryExistsError } from '@/entries/errors.js';
+import { PublicTrashedReadError, StagedEntryExistsError } from '@/entries/errors.js';
 import { resolveEntryType } from '@/entries/type-registry.js';
 
 type Env = { Variables: AuthVariables };
@@ -210,6 +211,16 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         return c.json({ success: false, error: err }, 400);
     }
 
+    /**
+     * Map a query's failure to a response. `trashed` without the full shape is a
+     * caller bug (a public read never returns trashed rows), so it answers 400
+     * rather than the catch-all 500.
+     */
+    function queryFailed(c: Parameters<typeof forbidden>[0], err: unknown): Response {
+        if (err instanceof PublicTrashedReadError) return badRequest(c, err.message);
+        return internalError(c, err instanceof Error ? err.message : undefined);
+    }
+
     const bulkIdsSchema = z.object({
         ids: z.array(z.string().min(1)).min(1),
     });
@@ -283,7 +294,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
             };
             return c.json(await Astromech.entries.query(params));
         } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
+            return queryFailed(c, err);
         }
     });
 
@@ -331,7 +342,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
             };
             return c.json(await Astromech.entries.query(params));
         } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
+            return queryFailed(c, err);
         }
     });
 
@@ -490,7 +501,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
             };
             return c.json(await Astromech.entries.query(params));
         } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
+            return queryFailed(c, err);
         }
     });
 
