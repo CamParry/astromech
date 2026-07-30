@@ -8,10 +8,9 @@
 
 import { Readable } from 'node:stream';
 import { createGzip } from 'node:zlib';
-import type { Kysely } from 'kysely';
 import type { PluginContext } from 'astromech';
-import { decodeWith, encodeWith, encodePatchWith } from 'astromech';
-import { backupRunsTable, type BackupRunRow } from './schema/runs.js';
+import { createBackupRunsStorage } from './storage.js';
+import type { BackupRunRow } from './schema/runs.js';
 
 // ============================================================================
 // In-process overlap guard
@@ -26,23 +25,6 @@ export function isBackupRunning(): boolean {
 }
 
 // ============================================================================
-// Row access
-// ============================================================================
-
-/**
- * Access the Kysely instance that ctx.db holds at runtime, typed against the
- * descriptor's domain row. These are raw queries — the shared handle applies no
- * codec — so every read is passed through `decodeWith` and every write is built
- * with `encodeWith`/`encodePatchWith` before it reaches the query builder.
- */
-function db(ctx: PluginContext): Kysely<Record<string, BackupRunRow>> {
-    return ctx.db as unknown as Kysely<Record<string, BackupRunRow>>;
-}
-
-/** The descriptor owns the prefixed name — never re-spell it as a literal. */
-const TABLE = backupRunsTable.name;
-
-// ============================================================================
 // Core
 // ============================================================================
 
@@ -51,56 +33,27 @@ export async function performBackup(
     trigger: 'scheduled' | 'manual' | 'pre-restore',
     opts: { keep: number }
 ): Promise<BackupRunRow> {
+    const runs = createBackupRunsStorage(ctx.db);
+
     if (isBackupRunning()) {
         ctx.logger.warn('[backups] A backup is already in progress — skipping.');
-        const existing = await db(ctx)
-            .selectFrom(TABLE)
-            .selectAll()
-            .where('status', '=', 'running')
-            .orderBy('startedAt', 'desc')
-            .limit(1)
-            .execute();
-        const first = existing[0];
-        if (first !== undefined) return decodeWith(backupRunsTable, first);
+        const existing = await runs.latestRunning();
+        if (existing !== null) return existing;
     }
 
-    // Insert the running row — `encodeWith` fills the descriptor's app defaults
-    // (`id` as a ULID, `startedAt` as now), so the id comes back off the row.
-    const inserted = await db(ctx)
-        .insertInto(TABLE)
-        .values(
-            encodeWith(backupRunsTable, {
-                status: 'running',
-                trigger,
-            }) as unknown as BackupRunRow
-        )
-        .returningAll()
-        .executeTakeFirst();
-
-    if (inserted === undefined) {
-        throw new Error('[backups] Failed to insert backup run row.');
-    }
-
-    const row = decodeWith(backupRunsTable, inserted);
+    const row = await runs.start(trigger);
     const id = row.id;
 
     globalThis.__astromechBackupRunning = true;
     try {
         // Feature-check: does this driver support dump?
         if (!ctx.database.dump) {
-            const failed = await db(ctx)
-                .updateTable(TABLE)
-                .set(
-                    encodePatchWith(backupRunsTable, {
-                        status: 'failed',
-                        error: 'dump not supported by this database driver',
-                        finishedAt: new Date(),
-                    }) as unknown as BackupRunRow
-                )
-                .where('id', '=', id)
-                .returningAll()
-                .executeTakeFirst();
-            return failed !== undefined ? decodeWith(backupRunsTable, failed) : row;
+            const failed = await runs.patch(id, {
+                status: 'failed',
+                error: 'dump not supported by this database driver',
+                finishedAt: new Date(),
+            });
+            return failed ?? row;
         }
 
         const dump = await ctx.database.dump();
@@ -128,22 +81,14 @@ export async function performBackup(
             const obj = await ctx.storage.get(key);
             const sizeBytes = obj?.size ?? null;
 
-            const success = await db(ctx)
-                .updateTable(TABLE)
-                .set(
-                    encodePatchWith(backupRunsTable, {
-                        status: 'success',
-                        key,
-                        sizeBytes,
-                        finishedAt: new Date(),
-                    }) as unknown as BackupRunRow
-                )
-                .where('id', '=', id)
-                .returningAll()
-                .executeTakeFirst();
+            const success = await runs.patch(id, {
+                status: 'success',
+                key,
+                sizeBytes,
+                finishedAt: new Date(),
+            });
 
-            const successRow =
-                success !== undefined ? decodeWith(backupRunsTable, success) : row;
+            const successRow = success ?? row;
 
             // Rotate old artifacts after a successful run.
             await rotate(ctx, opts.keep);
@@ -154,19 +99,12 @@ export async function performBackup(
         }
     } catch (err) {
         ctx.logger.error('[backups] Backup failed', err);
-        const failed = await db(ctx)
-            .updateTable(TABLE)
-            .set(
-                encodePatchWith(backupRunsTable, {
-                    status: 'failed',
-                    error: String(err),
-                    finishedAt: new Date(),
-                }) as unknown as BackupRunRow
-            )
-            .where('id', '=', id)
-            .returningAll()
-            .executeTakeFirst();
-        return failed !== undefined ? decodeWith(backupRunsTable, failed) : row;
+        const failed = await runs.patch(id, {
+            status: 'failed',
+            error: String(err),
+            finishedAt: new Date(),
+        });
+        return failed ?? row;
     } finally {
         globalThis.__astromechBackupRunning = false;
     }
@@ -202,28 +140,14 @@ export async function resolveKeep(ctx: PluginContext, fallback: number): Promise
  * we only touch artifacts that haven't already been deleted (`artifactDeletedAt IS NULL`).
  */
 export async function rotate(ctx: PluginContext, keep: number): Promise<void> {
-    const rows = await db(ctx)
-        .selectFrom(TABLE)
-        .selectAll()
-        .where('status', '=', 'success')
-        .where('artifactDeletedAt', 'is', null)
-        .orderBy('startedAt', 'desc')
-        .execute();
+    const runs = createBackupRunsStorage(ctx.db);
+    const candidates = await runs.rotationCandidates();
 
-    const decoded = rows.map((raw) => decodeWith(backupRunsTable, raw));
-    const toDelete = decoded.slice(keep);
+    const toDelete = candidates.slice(keep);
     for (const row of toDelete) {
         if (row.key !== null && row.key !== undefined) {
             await ctx.storage.delete(row.key);
         }
-        await db(ctx)
-            .updateTable(TABLE)
-            .set(
-                encodePatchWith(backupRunsTable, {
-                    artifactDeletedAt: new Date(),
-                }) as unknown as BackupRunRow
-            )
-            .where('id', '=', row.id)
-            .execute();
+        await runs.markArtifactDeleted(row.id);
     }
 }

@@ -15,26 +15,18 @@
 
 import { Readable } from 'node:stream';
 import { createGunzip } from 'node:zlib';
-import type { Kysely } from 'kysely';
 import type { PluginContext, PluginRawRoute } from 'astromech';
-import { decodeWith } from 'astromech';
 import { backupRunsTable, type BackupRunRow } from '../schema/runs.js';
+import { createBackupRunsStorage } from '../storage.js';
 import { isBackupRunning, performBackup, resolveKeep } from '../backup.js';
 
-const TABLE = backupRunsTable.name;
-
-// ============================================================================
-// Row access
-// ============================================================================
-
 /**
- * Access the Kysely instance that ctx.db holds at runtime, typed against the
- * descriptor's domain row. These are raw queries — the shared handle applies no
- * codec — so every read is passed through `decodeWith`.
+ * The table's **SQL** name, for the restore driver's `preserve` list — that is a
+ * list of real table names, not Kysely `DB` keys, so it stays the descriptor's
+ * `name` rather than anything the storage wrapper hands out. Row access goes
+ * through `createBackupRunsStorage`; this is the one thing it cannot answer.
  */
-function db(ctx: PluginContext): Kysely<Record<string, BackupRunRow>> {
-    return ctx.db as unknown as Kysely<Record<string, BackupRunRow>>;
-}
+const RUNS_TABLE = backupRunsTable.name;
 
 // ============================================================================
 // Shared helpers
@@ -47,16 +39,6 @@ function isArtifactAvailable(row: BackupRunRow): boolean {
         row.key !== undefined &&
         (row.artifactDeletedAt === null || row.artifactDeletedAt === undefined)
     );
-}
-
-async function findRun(ctx: PluginContext, id: string): Promise<BackupRunRow | null> {
-    const row = await db(ctx)
-        .selectFrom(TABLE)
-        .selectAll()
-        .where('id', '=', id)
-        .limit(1)
-        .executeTakeFirst();
-    return row !== undefined ? decodeWith(backupRunsTable, row) : null;
 }
 
 /** Parse the last path segment from a URL pathname, e.g. `/backups/runs/abc-123/download` → `abc-123`. */
@@ -75,7 +57,7 @@ async function downloadArtifact(request: Request, ctx: PluginContext): Promise<R
     // pathname: /api/plugins/backups/runs/:id/download → id is second from end
     const id = parseSegment(url.pathname, 1);
 
-    const row = await findRun(ctx, id);
+    const row = await createBackupRunsStorage(ctx.db).get(id);
     if (row === null) {
         return Response.json({ error: 'Backup run not found' }, { status: 404 });
     }
@@ -112,7 +94,7 @@ async function restoreFromBackup(
     // pathname: /api/plugins/backups/runs/:id/restore → id is second from end
     const id = parseSegment(url.pathname, 1);
 
-    const row = await findRun(ctx, id);
+    const row = await createBackupRunsStorage(ctx.db).get(id);
     if (row === null) {
         return Response.json({ error: 'Backup run not found' }, { status: 404 });
     }
@@ -146,7 +128,7 @@ async function restoreFromBackup(
         const plain = Readable.toWeb(gunzip) as ReadableStream<Uint8Array>;
 
         await ctx.database.restore(plain, {
-            preserve: [TABLE, '_astromech_cron'],
+            preserve: [RUNS_TABLE, '_astromech_cron'],
         });
 
         return Response.json({ data: { restored: row.id } });

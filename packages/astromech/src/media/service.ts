@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ulid } from 'ulidx';
 import type { MediaRow } from './schema.js';
 import { createMediaStorage } from './storage.js';
 import { getStorageDriver } from '@/storage/registry.js';
@@ -142,7 +143,12 @@ export const mediaApi = {
     async upload(file: File): Promise<Media> {
         const driver = getStorageDriver();
 
-        const id = crypto.randomUUID();
+        // Minted here rather than left to the descriptor's `col.id()` default:
+        // the storage key is derived from the id and the bytes are written
+        // BEFORE the row is inserted, so the id has to exist first. `ulid()` is
+        // the same generator the descriptor default uses, so an explicit mint
+        // agrees with the column instead of fighting it.
+        const id = ulid();
         const ext = extOf(file.name);
         const key = ext ? `${id}.${ext}` : id;
 

@@ -40,9 +40,9 @@ types · utilities · errors                     pure leaves
 The four first-party plugins (`@astromech/{seo,redirects,menus,backups}`) live
 OUTSIDE this `src/` graph, in `packages/plugins/` — each a separately published
 npm package that consumes core only through the public `astromech` surface. The
-plugin-authoring API (`definePluginTable`, codec helpers, descriptor type
-vocabulary, …) is part of the root `astromech` export, not a separate
-subpath — the standalone `astromech/plugin-kit` package was dissolved. They
+plugin-authoring API (`definePluginTable`, `createStorage`, codec helpers,
+descriptor type vocabulary, …) is part of the root `astromech` export, not a
+separate subpath — the standalone `astromech/plugin-kit` package was dissolved. They
 prove the public surface can build a real plugin; cross-package isolation is
 enforced by each package's `exports` boundary at publish time. The plugin
 **runtime** (hook engine) stays a core capability.

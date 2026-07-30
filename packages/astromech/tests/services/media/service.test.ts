@@ -101,6 +101,17 @@ describe('mediaApi.upload', () => {
         expect(storage.puts.at(-1)?.streamed).toBe(false);
     });
 
+    it('mints a ULID id, not a UUID', async () => {
+        const media = await mediaApi.upload(
+            new File([jpegBytes() as BlobPart], 'photo.jpg', { type: 'image/jpeg' })
+        );
+        // Crockford base32, 26 chars — matches `col.id()`'s own default generator.
+        expect(media.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
+        expect(media.id).not.toMatch(/-/);
+        // The storage key is derived from the id, so the two must agree.
+        expect(storage.keys.has(`${media.id}.jpg`)).toBe(true);
+    });
+
     it('streams a non-image straight to storage (never buffered)', async () => {
         const media = await mediaApi.upload(
             new File(['hello world' as BlobPart], 'notes.txt', { type: 'text/plain' })

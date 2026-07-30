@@ -6,18 +6,16 @@
  * typed, callable off `Astromech.plugins.backups` and off `service` in the
  * admin page, and visible to the method manifest the CLI and MCP discover from.
  *
- * These are raw Kysely queries — the shared handle applies no codec — so every
- * read is passed through `decodeWith`.
+ * Row access goes through `createBackupRunsStorage`, which owns the table name,
+ * the codec and the ordering.
  */
 
-import type { Kysely } from 'kysely';
-import type { PluginContext } from 'astromech';
-import { decodeWith, defineServiceMethod } from 'astromech';
-import { backupRunsTable, type BackupRunRow } from '../schema/runs.js';
+import { defineServiceMethod } from 'astromech';
+import type { BackupRunRow } from '../schema/runs.js';
+import { createBackupRunsStorage } from '../storage.js';
 import { isBackupRunning, performBackup, resolveKeep } from '../backup.js';
 
 const MAX_RUNS = 100;
-const TABLE = backupRunsTable.name;
 
 // ============================================================================
 // Result shapes
@@ -47,14 +45,6 @@ export type DeleteRunResult =
     | { ok: false; reason: 'not-found' };
 
 // ============================================================================
-// Row access
-// ============================================================================
-
-function db(ctx: PluginContext): Kysely<Record<string, BackupRunRow>> {
-    return ctx.db as unknown as Kysely<Record<string, BackupRunRow>>;
-}
-
-// ============================================================================
 // Service
 // ============================================================================
 
@@ -65,14 +55,8 @@ export function buildBackupsService(defaultKeep: number) {
             summary: 'List recent backup runs and the driver capabilities.',
             mutates: false,
             handler: async (_input, ctx): Promise<ListRunsResult> => {
-                const rows = await db(ctx)
-                    .selectFrom(TABLE)
-                    .selectAll()
-                    .orderBy('startedAt', 'desc')
-                    .limit(MAX_RUNS)
-                    .execute();
                 return {
-                    runs: rows.map((raw) => decodeWith(backupRunsTable, raw)),
+                    runs: await createBackupRunsStorage(ctx.db).recent(MAX_RUNS),
                     capabilities: {
                         canDump: ctx.database.dump !== undefined,
                         canRestore: ctx.database.restore !== undefined,
@@ -99,15 +83,9 @@ export function buildBackupsService(defaultKeep: number) {
             destructive: true,
             handler: async (input, ctx): Promise<DeleteRunResult> => {
                 const id = typeof input?.id === 'string' ? input.id : '';
-                const rows = await db(ctx)
-                    .selectFrom(TABLE)
-                    .selectAll()
-                    .where('id', '=', id)
-                    .limit(1)
-                    .execute();
-                const found = rows[0];
-                if (found === undefined) return { ok: false, reason: 'not-found' };
-                const row = decodeWith(backupRunsTable, found);
+                const runs = createBackupRunsStorage(ctx.db);
+                const row = await runs.get(id);
+                if (row === null) return { ok: false, reason: 'not-found' };
 
                 // A manual delete hard-deletes the row. This differs from
                 // rotation, which marks `artifactDeletedAt` and keeps the row
@@ -121,7 +99,7 @@ export function buildBackupsService(defaultKeep: number) {
                     await ctx.storage.delete(row.key);
                 }
 
-                await db(ctx).deleteFrom(TABLE).where('id', '=', id).execute();
+                await runs.delete(id);
                 return { ok: true, id };
             },
         }),
