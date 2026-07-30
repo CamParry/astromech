@@ -50,7 +50,11 @@ export function FormField({
         />
     );
 
-    const error = useFieldError(field.name);
+    // Errors are keyed by the FULL field path (`blocks[6f1e2a].heading`), not the
+    // bare field name — a nested field keyed on `field.name` would look up
+    // `heading` and never find the error the server produced. At the top level
+    // `commonProps.name` falls back to `field.name`, so the two agree there.
+    const error = useFieldError(commonProps.name);
 
     // A container-less group is invisible chrome — pure data nesting. It renders
     // its sub-fields inline with no label or box; pair it with a `section` for a

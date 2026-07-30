@@ -33,6 +33,8 @@ import { FormField } from '@/admin/components/fields/form-field';
 import { InlineTitle } from '@/admin/components/fields/inline-title';
 import { useBlocksField } from '@/admin/hooks/use-blocks-field';
 import { useLabel } from '@/admin/i18n/entry-namespace.js';
+// Deep import: the `fields/` barrel reaches server code (virtual config / DB).
+import { formatFieldPath, parseFieldPath } from '@/fields/field-path.js';
 import type { BlockWithId } from '@/admin/hooks/use-blocks-field';
 import './blocks-field.css';
 
@@ -111,7 +113,6 @@ function BlockPicker({
 
 type SortableBlockProps = {
     block: BlockWithId;
-    index: number;
     blockDef: BlockDefinition | undefined;
     name: string;
     disabled?: boolean;
@@ -124,7 +125,6 @@ type SortableBlockProps = {
 
 function SortableBlock({
     block,
-    index,
     blockDef,
     name,
     disabled,
@@ -147,6 +147,13 @@ function SortableBlock({
         transform: CSS.Transform.toString(transform),
         transition: transition ?? undefined,
     };
+
+    // Sub-field paths select the block by its persisted `_id`, never by index —
+    // an index shifts if the editor reorders between form load and save.
+    const blockSegments = [
+        ...parseFieldPath(name),
+        { kind: 'item' as const, id: block._id },
+    ];
 
     const blockLabel = blockDef
         ? resolveLabelText(blockDef.label, block._type)
@@ -262,7 +269,10 @@ function SortableBlock({
                                 key={subField.name}
                                 field={subField}
                                 value={block[subField.name]}
-                                name={`${name}[${index}].${subField.name}`}
+                                name={formatFieldPath([
+                                    ...blockSegments,
+                                    { kind: 'field', name: subField.name },
+                                ])}
                                 onChange={(_fieldName, fieldValue) =>
                                     onFieldChange(block._id, subField.name, fieldValue)
                                 }
@@ -345,11 +355,10 @@ export function BlocksField({
                         strategy={verticalListSortingStrategy}
                     >
                         <div className="am-blocks-list">
-                            {blocks.map((block, index) => (
+                            {blocks.map((block) => (
                                 <SortableBlock
                                     key={block._id}
                                     block={block}
-                                    index={index}
                                     blockDef={blockDefMap.get(block._type)}
                                     name={name}
                                     {...(disabled !== undefined ? { disabled } : {})}

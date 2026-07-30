@@ -34,6 +34,8 @@ import type { BaseFieldProps, FieldDefinition } from '@/types/index.js';
 import { FormField } from '@/admin/components/fields/form-field';
 import type { TreeNode } from '@/admin/hooks/use-tree-field.js';
 import { useTreeField } from '@/admin/hooks/use-tree-field.js';
+// Deep import: the `fields/` barrel reaches server code (virtual config / DB).
+import { formatFieldPath, parseFieldPath } from '@/fields/field-path.js';
 import './tree-field.css';
 
 // Lock dragging to the vertical axis — sortable strategy governs reordering
@@ -188,6 +190,13 @@ function SortableTreeNode({
         transition: transition ?? undefined,
     };
 
+    // Node ids are unique across the whole tree, so a node at any depth addresses
+    // as `<field>[<id>].<sub>` — `_children` never appears in the path.
+    const nodeSegments = [
+        ...parseFieldPath(fieldName),
+        { kind: 'item' as const, id: node._id },
+    ];
+
     const children = Array.isArray(node._children) ? node._children : [];
     const canAddChild = maxDepth === undefined || depth + 1 < maxDepth;
     // Indent: can only indent if not the first sibling.
@@ -325,7 +334,10 @@ function SortableTreeNode({
                                     key={subField.name}
                                     field={subField}
                                     value={node[subField.name]}
-                                    name={`${fieldName}[${node._id}].${subField.name}`}
+                                    name={formatFieldPath([
+                                        ...nodeSegments,
+                                        { kind: 'field', name: subField.name },
+                                    ])}
                                     onChange={(_n, v) =>
                                         onUpdateField(node._id, subField.name, v)
                                     }

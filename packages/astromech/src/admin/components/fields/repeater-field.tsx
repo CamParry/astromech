@@ -31,6 +31,8 @@ import {
 import type { BaseFieldProps, FieldDefinition } from '@/types/index.js';
 import { FormField } from '@/admin/components/fields/form-field';
 import { InlineTitle } from '@/admin/components/fields/inline-title';
+// Deep import: the `fields/` barrel reaches server code (virtual config / DB).
+import { formatFieldPath, parseFieldPath } from '@/fields/field-path.js';
 import './repeater-field.css';
 
 // Lock dragging to the vertical axis — verticalListSortingStrategy only governs
@@ -88,6 +90,13 @@ function SortableRepeaterItem({
     const { t } = useTranslation();
     const [open, setOpen] = useState(true);
     const itemDisabled = item._disabled === true;
+
+    // Sub-field paths select the item by its persisted `_id`, never by index —
+    // an index shifts if the editor reorders between form load and save.
+    const itemSegments = [
+        ...parseFieldPath(name),
+        { kind: 'item' as const, id: item._id },
+    ];
 
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
         useSortable({
@@ -214,7 +223,10 @@ function SortableRepeaterItem({
                                 key={subField.name}
                                 field={subField}
                                 value={item[subField.name]}
-                                name={`${name}[${index}].${subField.name}`}
+                                name={formatFieldPath([
+                                    ...itemSegments,
+                                    { kind: 'field', name: subField.name },
+                                ])}
                                 onChange={onFieldChange}
                                 {...(disabled !== undefined ? { disabled } : {})}
                             />
