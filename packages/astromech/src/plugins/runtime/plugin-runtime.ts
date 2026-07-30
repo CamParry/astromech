@@ -12,7 +12,7 @@
  * `virtual:astromech/config`, so this module stays unit-testable.
  */
 
-import type { Insertable, Kysely, Updateable } from 'kysely';
+import type { Kysely } from 'kysely';
 import type { DB } from '@/database/types.js';
 import type { ReactElement } from 'react';
 import type {
@@ -36,12 +36,7 @@ import type {
     UsersApi,
 } from '@/types/index.js';
 import { getDb } from '@/database/registry.js';
-import {
-    encode,
-    encodePatch,
-    kyselyTableKey,
-    registerDescriptorCodec,
-} from '@/database/codec.js';
+import { kyselyTableKey, registerDescriptorCodec } from '@/database/codec.js';
 import { peekDatabaseDriver } from '@/database/driver-registry.js';
 import { getStorageDriver } from '@/storage/registry.js';
 import { listAll } from '@/storage/prefix.js';
@@ -55,6 +50,7 @@ import {
 } from '@/plugins/runtime/plugin-identity.js';
 import { entryAccess } from '@/plugins/runtime/entry-access.js';
 import { isTableDescriptor } from '@/plugins/runtime/plugin-schema.js';
+import { createPluginTrackingStorage } from '@/plugins/runtime/plugin-tracking-storage.js';
 import { registerCronJob } from '@/cron/registry.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
 import {
@@ -217,27 +213,7 @@ async function trackPlugin(
     version: string
 ): Promise<void> {
     try {
-        await getDb()
-            .insertInto('_astromech_plugins')
-            .values(
-                encode('_astromech_plugins', {
-                    package: pkg,
-                    namespace,
-                    version,
-                    installedAt: new Date(),
-                }) as unknown as Insertable<DB['_astromech_plugins']>
-            )
-            .onConflict((oc) =>
-                // `encodePatch`, not `encode`: the insert codec injects app
-                // defaults, which would re-stamp `installedAt` on every boot.
-                oc.column('package').doUpdateSet(
-                    encodePatch('_astromech_plugins', {
-                        namespace,
-                        version,
-                    }) as unknown as Updateable<DB['_astromech_plugins']>
-                )
-            )
-            .execute();
+        await createPluginTrackingStorage().track(pkg, namespace, version);
     } catch (error) {
         console.warn(
             `[astromech] Could not record plugin "${pkg}" in _astromech_plugins: ` +
@@ -253,12 +229,8 @@ async function trackPlugin(
  */
 async function warnOnUntrackedRemovals(configured: string[]): Promise<void> {
     try {
-        const tracked = await getDb()
-            .selectFrom('_astromech_plugins')
-            .select('package')
-            .execute();
-        for (const row of tracked) {
-            const pkg = row.package;
+        const tracked = await createPluginTrackingStorage().packages();
+        for (const pkg of tracked) {
             if (configured.includes(pkg)) continue;
             console.warn(
                 `[astromech] Plugin "${pkg}" is still tracked in the database but is no ` +
