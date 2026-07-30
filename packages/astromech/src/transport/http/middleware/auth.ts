@@ -7,8 +7,7 @@
 
 import { createMiddleware } from 'hono/factory';
 import { auth } from '@/users/index.js';
-import { getDb } from '@/database/registry.js';
-import { decode } from '@/database/codec.js';
+import { createUserStorage } from '@/users/storage.js';
 import { Astromech } from '@/transport/local/index.js';
 import { resolveRole } from '@/permissions/index.js';
 import { unauthorized } from './errors.js';
@@ -30,27 +29,19 @@ export async function resolveSessionUser(
     if (!session?.user) return null;
 
     // Load the full user row (Better Auth session may not include custom fields)
-    const db = getDb();
-    const rawRow = await db
-        .selectFrom('users')
-        .selectAll()
-        .where('id', '=', session.user.id)
-        .limit(1)
-        .executeTakeFirst();
-
-    if (!rawRow) return null;
-    const userRow = decode('users', rawRow);
+    const userRow = await createUserStorage().get(session.user.id);
+    if (!userRow) return null;
 
     const user: User = {
         id: userRow.id,
         email: userRow.email,
         name: userRow.name,
-        emailVerified: userRow.emailVerified as unknown as boolean,
-        image: userRow.image ?? null,
+        emailVerified: userRow.emailVerified,
+        image: userRow.image,
         fields: (userRow.fields as User['fields']) ?? null,
         roleSlug: userRow.roleSlug,
-        createdAt: userRow.createdAt as unknown as Date,
-        updatedAt: userRow.updatedAt as unknown as Date,
+        createdAt: userRow.createdAt,
+        updatedAt: userRow.updatedAt,
     };
 
     return { user, role: resolveRole(Astromech.config, userRow.roleSlug) };

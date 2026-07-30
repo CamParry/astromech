@@ -12,7 +12,8 @@ import type { Insertable } from 'kysely';
 import { createTestDb, setupTestConfig } from '@tests/harness.js';
 import { createBuiltInEntryStorage } from '@/entries/storage/built-in.js';
 import { BUILT_IN_SUPPORTS } from '@/entries/storage/capabilities.js';
-import { encode } from '@/database/codec.js';
+import { encodeWith } from '@/database/codec.js';
+import { entries } from '@/database/schema.js';
 import type { DB } from '@/database/types.js';
 
 let storage: ReturnType<typeof createBuiltInEntryStorage>;
@@ -52,6 +53,13 @@ describe('base CRUD', () => {
 
         await storage.delete(created.id);
         expect(await storage.get(created.id)).toBeNull();
+    });
+
+    it('mints a ULID localeGroup, not a UUID, when none is supplied', async () => {
+        // The `entries` descriptor declares `defaultUlid` on localeGroup, so
+        // storage must leave the key absent rather than minting its own id.
+        const created = await storage.create({ type: 'post', title: 'L', slug: 'l' });
+        expect(created.localeGroup).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
     });
 
     it('get filters trashed rows unless includeTrashed is set', async () => {
@@ -100,6 +108,28 @@ describe('list', () => {
         expect(bySlug.data.map((e) => e.title)).toEqual(['Welcome']);
     });
 
+    it('reads a bare null in `where` as IS NULL, and undefined as unfiltered', async () => {
+        // Same semantics as the shared `where` DSL (create-storage.ts): reading
+        // null as "no filter" returned every row to a caller asking for the
+        // null-slug ones.
+        await storage.create({ type: 'card', title: '', slug: null });
+        await storage.create({ type: 'card', title: 'Has slug', slug: 'has-slug' });
+
+        const nullSlug = await storage.list({
+            type: 'card',
+            where: { slug: null },
+            limit: 'all',
+        });
+        expect(nullSlug.data.map((e) => e.slug)).toEqual([null]);
+
+        const unfiltered = await storage.list({
+            type: 'card',
+            where: { slug: undefined },
+            limit: 'all',
+        });
+        expect(unfiltered.total).toBe(2);
+    });
+
     it('excludes trashed unless requested', async () => {
         const a = await storage.create({ type: 'post', title: 'A', slug: 'a' });
         await storage.create({ type: 'post', title: 'B', slug: 'b' });
@@ -126,7 +156,7 @@ describe('staging (forward versioning) schema', () => {
         await db
             .insertInto('entries')
             .values(
-                encode('entries', {
+                encodeWith(entries, {
                     type: 'post',
                     locale: 'en',
                     slug: 'live',
@@ -144,7 +174,7 @@ describe('staging (forward versioning) schema', () => {
         await db
             .insertInto('entries')
             .values(
-                encode('entries', {
+                encodeWith(entries, {
                     type: 'post',
                     locale: 'en',
                     slug: 'ghost',
@@ -278,6 +308,34 @@ describe('transaction', () => {
                 throw new Error('boom');
             })
         ).rejects.toThrow('boom');
+    });
+
+    // `transaction()` used to call `getDb()` rather than the storage's own
+    // `handle()`, so a storage bound to another handle (the tx handle it was
+    // rebound to, in production) opened its transaction on the *registered base*
+    // connection instead — its writes escaping the outer transaction entirely.
+    //
+    // Two databases make that observable deterministically. A nested tx cannot:
+    // Kysely refuses `.transaction()` on a `Transaction` outright ("calling the
+    // transaction method for a Transaction is not supported"), so with the bound
+    // handle the inner call now fails loudly rather than joining or escaping.
+    it('opens its transaction on the bound handle, not the registered base db', async () => {
+        const bound = await createTestDb();
+        const boundStorage = createBuiltInEntryStorage({ db: bound });
+        // Registering a second db makes it the `getDb()` base; boundStorage stays
+        // bound to the first.
+        const base = await createTestDb();
+        const baseStorage = createBuiltInEntryStorage({ db: base });
+
+        expect(boundStorage.transaction).toBeDefined();
+        await boundStorage.transaction!(async (tx) => {
+            await tx.create({ type: 'post', title: 'Bound', slug: 'bound' });
+        });
+
+        const onBound = await boundStorage.list({ type: 'post', limit: 'all' });
+        expect(onBound.data.map((e) => e.title)).toEqual(['Bound']);
+        const onBase = await baseStorage.list({ type: 'post', limit: 'all' });
+        expect(onBase.data).toEqual([]);
     });
 
     it('binds the tx storage so writes inside the callback take effect', async () => {

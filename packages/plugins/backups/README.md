@@ -20,6 +20,7 @@ backups/
   src/schema/runs.ts            definePluginTable — the `runs` table descriptor
   src/schema/index.ts           the ./schema subpath entry (descriptors only)
   migrations/                   generated — never hand-edited
+  src/storage.ts                createStorage over the descriptor — the only DB access
   src/backup.ts                 performBackup / rotate / resolveKeep — the core work
   src/service/backups.ts        listRuns, triggerRun, deleteRun (JSON, over RPC)
   src/routes/backups.ts         download + restore (raw routes — they stream)

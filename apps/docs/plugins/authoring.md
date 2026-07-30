@@ -495,9 +495,70 @@ migration rows and tracking row once you are sure. Purge takes the package name
 (`@acme/seo`), not the namespace — at a destructive call site the canonical
 identifier is the unambiguous one.
 
-For reads and writes that bypass a storage layer, decode and encode rows with
-the descriptor: `decodeWith(widgetsTable, row)`, `encodeWith(widgetsTable, values)`,
-`encodePatchWith(widgetsTable, patch)` — all from `astromech`.
+#### Reading and writing the table
+
+Don't query the table from your handlers. Give it a storage module —
+`createStorage` from `astromech` turns a descriptor into typed
+`findOne`/`findMany`/`count`/`create`/`update`/`delete`/`updateMany`/`deleteMany`/`upsert`,
+and owns encoding, `where`-value serialization and row decoding, so nothing above
+it spells the table name or touches a codec.
+
+Compose it inside your own `createXStorage(db)` factory, exactly as core's domains
+do, and give the methods your plugin's vocabulary. The handle is an argument: a
+plugin is _handed_ its database on `ctx.db`.
+
+```ts
+// storage.ts
+import { createStorage } from 'astromech';
+import type { PluginContext } from 'astromech';
+import { widgetsTable, type WidgetRow } from './schema/widgets.js';
+
+export function createWidgetsStorage(db: PluginContext['db']) {
+    const storage = createStorage(widgetsTable, db);
+
+    async function live(limit: number): Promise<WidgetRow[]> {
+        return storage.findMany({
+            where: { status: 'live' },
+            orderBy: [['createdAt', 'desc']],
+            limit,
+        });
+    }
+
+    return { get: (id: string) => storage.findOne({ id }), live };
+}
+```
+
+```ts
+// service/widgets.ts
+const widgets = await createWidgetsStorage(ctx.db).live(20);
+```
+
+`where` is flat and ANDs its keys together: a bare value means `=`, a bare `null`
+means `IS NULL` (omit the key, or pass `undefined`, for "no filter"), and a
+per-column object takes `eq`/`ne`/`in`/`notIn`/`gt`/`gte`/`lt`/`lte`/`like`. An
+unknown column name throws rather than being skipped, because a dropped
+predicate returns too many rows.
+
+For anything the flat DSL cannot express — an `OR`, a projection, an aggregate —
+`storage.query()` is the escape hatch. It hands back the Kysely handle, the
+resolved table key, and the wrapper's own `where` compiler, so a mixed query
+ANDs a raw clause onto the DSL filter in one statement instead of restating it:
+
+```ts
+const { db, table, where } = storage.query();
+const rows = await db
+    .selectFrom(table)
+    .selectAll()
+    .where((eb) => eb.and([where({ status: 'live' })(eb), eb.or(searchClauses)]))
+    .execute();
+// query() hands out raw rows — decode them yourself.
+const widgets = rows.map((row) => decodeWith(widgetsTable, row));
+```
+
+That decoding is also what you want for a read or write that bypasses a storage
+layer entirely: `decodeWith(widgetsTable, row)`,
+`encodeWith(widgetsTable, values)`, `encodePatchWith(widgetsTable, patch)` — all
+from `astromech`.
 
 ### Runtime identity
 

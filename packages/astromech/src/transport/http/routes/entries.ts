@@ -8,6 +8,7 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { Astromech } from '@/transport/local/index.js';
 import {
+    badRequest,
     forbidden,
     fromZodError,
     internalError,
@@ -36,7 +37,7 @@ import {
     updateEntrySchemaFor,
     scheduleEntrySchema,
 } from '@/entries/schema.js';
-import { StagedEntryExistsError } from '@/entries/errors.js';
+import { PublicTrashedReadError, StagedEntryExistsError } from '@/entries/errors.js';
 import { resolveEntryType } from '@/entries/type-registry.js';
 
 type Env = { Variables: AuthVariables };
@@ -210,6 +211,24 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         return c.json({ success: false, error: err }, 400);
     }
 
+    /**
+     * Run a query, answering 400 for a public `trashed` read. That is a caller
+     * bug — a public read never returns trashed rows — so it does not deserve the
+     * catch-all 500. Every other failure is re-thrown so `onError` classifies it;
+     * a blanket catch here would turn a `ValidationError` back into a 500.
+     */
+    async function runQuery(
+        c: Parameters<typeof forbidden>[0],
+        params: EntryQueryParams & { type: string | readonly string[] }
+    ): Promise<Response> {
+        try {
+            return c.json(await Astromech.entries.query(params));
+        } catch (err) {
+            if (err instanceof PublicTrashedReadError) return badRequest(c, err.message);
+            throw err;
+        }
+    }
+
     const bulkIdsSchema = z.object({
         ids: z.array(z.string().min(1)).min(1),
     });
@@ -279,7 +298,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
             full: wantsFull,
             ...(validatedSort !== undefined ? { sort: validatedSort } : {}),
         };
-        return c.json(await Astromech.entries.query(params));
+        return runQuery(c, params);
     });
 
     // ============================================================================
@@ -323,7 +342,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
             type: type,
             full: wantsFull,
         };
-        return c.json(await Astromech.entries.query(params));
+        return runQuery(c, params);
     });
 
     // ============================================================================
@@ -470,7 +489,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
             full: wantsFull,
             ...(validatedSort !== undefined ? { sort: validatedSort } : {}),
         };
-        return c.json(await Astromech.entries.query(params));
+        return runQuery(c, params);
     });
 
     // ============================================================================

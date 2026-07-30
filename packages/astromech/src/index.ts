@@ -87,6 +87,23 @@ export type {
     TableUpdate,
 } from '@/database/define-table.js';
 export { decodeWith, encodeWith, encodePatchWith } from '@/database/codec.js';
+// The descriptor-backed CRUD wrapper, on the same surface as the descriptor
+// vocabulary and the codec it is built on: a plugin holding a `definePluginTable`
+// descriptor composes `createStorage` inside its own `createXStorage(db)` factory
+// exactly as core's domains do, and then never spells the table name or reaches
+// for a codec again. Its public types ship with it for the TS2742 reason above —
+// a plugin's `.d.ts` has to be able to *name* what the factory returns.
+export { createStorage } from '@/database/storage/create-storage.js';
+export type {
+    FindManyParams,
+    GenericDb,
+    OrderBy,
+    Patch,
+    QueryHandle,
+    Storage,
+    UpsertOptions,
+    Where,
+} from '@/database/storage/create-storage.js';
 export { tableStorage } from '@/entries/storage/table.js';
 export { t } from '@/utilities/labels.js';
 // Rich text is stored as ProseMirror JSON and rendered to sanitized HTML on

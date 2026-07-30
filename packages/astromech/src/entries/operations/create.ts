@@ -58,7 +58,6 @@ export async function create(params: {
         status === 'published' ? new Date() : (validated.publishAt ?? null);
 
     const locale = params.locale ?? getDefaultLocale();
-    const localeGroup = params.localeGroup ?? crypto.randomUUID();
 
     const user = getCurrentUser();
     const fieldDefs = flattenEntryFields(entryTypeConfig.fields);
@@ -110,7 +109,9 @@ export async function create(params: {
                 title,
                 slug,
                 locale,
-                localeGroup,
+                // Absent means "start a fresh translation group"; storage's
+                // descriptor mints the ULID.
+                localeGroup: params.localeGroup,
                 fields: processedFields,
                 status,
                 publishedAt,

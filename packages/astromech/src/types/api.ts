@@ -151,7 +151,7 @@ export type EntriesApi = {
         title?: string;
         slug?: string;
         locale?: string;
-        /** Existing localeGroup to join. Omit for a fresh group (UUID generated). */
+        /** Existing localeGroup to join. Omit for a fresh group (ULID generated). */
         localeGroup?: string;
         fields?: JsonObject;
         status?: EntryStatus;

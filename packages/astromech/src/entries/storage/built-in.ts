@@ -33,7 +33,7 @@
 import type { ExpressionBuilder, Updateable } from 'kysely';
 import { getDb } from '@/database/registry.js';
 import { supportsTransactions } from '@/database/capabilities.js';
-import { encodePatch, decode } from '@/database/codec.js';
+import { encodePatchWith, decodeWith } from '@/database/codec.js';
 import { createStorage } from '@/database/storage/create-storage.js';
 import { entries } from '@/database/schema.js';
 import type { DB, Db } from '@/database/types.js';
@@ -119,28 +119,49 @@ function buildListWhere(params: ListParams, defaultLocale: string, types: string
             conditions.push(eb.or([eb('title', 'like', term), eb('slug', 'like', term)]));
         }
 
-        // where filters
+        // where filters. Column comparisons follow the shared `where` DSL
+        // (database/storage/create-storage.ts): `undefined` or an absent key means
+        // unfiltered, a deliberate `null` renders `IS NULL`. Reading a bare `null`
+        // as unfiltered instead returned every row to a caller asking for the
+        // null ones.
         if (params.where) {
             for (const [key, value] of Object.entries(params.where)) {
-                if (value === undefined || value === null) continue;
+                if (value === undefined) continue;
                 if (key === 'locale') continue; // handled above
 
                 if (key === '_search') {
-                    conditions.push(eb('title', 'like', `%${value as string}%`));
+                    // Not a column: a LIKE against null says nothing, so only a
+                    // term filters.
+                    if (typeof value === 'string') {
+                        conditions.push(eb('title', 'like', `%${value}%`));
+                    }
                 } else if (key === 'status') {
                     if (Array.isArray(value)) {
                         conditions.push(eb('status', 'in', value as EntryStatus[]));
+                    } else if (value === null) {
+                        conditions.push(eb('status', 'is', null));
                     } else {
                         conditions.push(eb('status', '=', value as EntryStatus));
                     }
                 } else if (key === 'slug') {
-                    conditions.push(eb('slug', '=', value as string));
+                    conditions.push(
+                        value === null
+                            ? eb('slug', 'is', null)
+                            : eb('slug', '=', value as string)
+                    );
                 } else if (key === 'title') {
-                    conditions.push(eb('title', '=', value as string));
+                    conditions.push(
+                        value === null
+                            ? eb('title', 'is', null)
+                            : eb('title', '=', value as string)
+                    );
                 } else if (key === 'id') {
-                    const inClause = (value as { in?: unknown }).in;
+                    const inClause =
+                        value === null ? undefined : (value as { in?: unknown }).in;
                     if (Array.isArray(inClause)) {
                         conditions.push(eb('id', 'in', inClause as string[]));
+                    } else if (value === null) {
+                        conditions.push(eb('id', 'is', null));
                     } else {
                         conditions.push(eb('id', '=', value as string));
                     }
@@ -209,7 +230,10 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
     async function transaction<T>(
         fn: (storage: EntryStorage<Entry>, db: Db) => Promise<T>
     ): Promise<T> {
-        return getDb()
+        // `handle()`, not `getDb()`: a storage already bound to a tx handle must
+        // nest on that handle, or it opens a second transaction on the base
+        // connection and the inner writes escape the outer rollback.
+        return handle()
             .transaction()
             .execute(async (trx) => {
                 const txStorage = createBuiltInEntryStorage({ db: trx, defaultLocale });
@@ -264,7 +288,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
             }
             const rawRows = await q.execute();
             const decodedRows = rawRows.map((r) =>
-                decode('entries', r)
+                decodeWith(entries, r)
             ) as unknown as EntryRow[];
             const data = await populateLocales(db, decodedRows);
             return { data, total: data.length };
@@ -291,7 +315,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
         }
         const rawRows = await rowsQ.execute();
         const decodedRows = rawRows.map((r) =>
-            decode('entries', r)
+            decodeWith(entries, r)
         ) as unknown as EntryRow[];
         const data = await populateLocales(db, decodedRows);
         return { data, total };
@@ -315,7 +339,11 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
             title: data.title ?? '',
             slug: data.slug ?? null,
             locale: data.locale ?? defaultLocale,
-            localeGroup: data.localeGroup ?? crypto.randomUUID(),
+            // Omitted rather than passed as undefined when absent: `encodeWith`
+            // only fills a column's app default for a key that isn't there, and
+            // the descriptor declares `defaultUlid` — so this is the one place a
+            // localeGroup is minted, in the same id format as every other id.
+            ...(data.localeGroup !== undefined && { localeGroup: data.localeGroup }),
             fields: data.fields ?? {},
             status: data.status ?? 'unpublished',
             stagedFor: data.stagedFor ?? null,
@@ -386,7 +414,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
             const restored = await db
                 .updateTable('entries')
                 .set(
-                    encodePatch('entries', {
+                    encodePatchWith(entries, {
                         deletedAt: null,
                         updatedAt: new Date(),
                     }) as unknown as Updateable<DB['entries']>
@@ -398,7 +426,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
                 .executeTakeFirstOrThrow();
             return populateLocaleSingle(
                 db,
-                decode('entries', restored) as unknown as EntryRow
+                decodeWith(entries, restored) as unknown as EntryRow
             );
         },
 

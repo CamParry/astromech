@@ -3,18 +3,33 @@
  * values for the Kysely query layer, reproducing the conversions Drizzle did
  * silently but `@libsql/client` does not.
  *
- * Three tiers:
- *   - **Descriptor-driven (the 10 tables we own):** each table's `defineTable`
- *     descriptor carries per-column `serialize`/`parse`/`default` fns. Our
- *     timestamps are ISO-8601 **TEXT**, ids/localeGroup ULID, json TEXT, bool
- *     INTEGER 0/1. This is the step-2 deliverable replacing the hand-written map.
- *   - **Plugin descriptors (registered at boot):** plugins ship `definePlugin`
- *     descriptors, which `registerPlugins` feeds to `registerDescriptorCodec`.
- *     Same handling as ours — the registry is mutable only because the table set
- *     is not known until config resolves.
- *   - **Legacy (the 4 better-auth tables):** still seconds-INTEGER timestamps /
- *     json TEXT / bool INTEGER, kept verbatim from the step-1 throwaway codec.
- *     better-auth's adapter owns that format; flipping it would break login.
+ * Two tiers, divided by whether the caller can hold the table's descriptor:
+ *
+ *   - **Descriptor-keyed** (`decodeWith`/`encodeWith`/`encodePatchWith`) — the
+ *     primary path, and the only one used for the 10 tables we own. A
+ *     `defineTable` descriptor carries per-column `serialize`/`parse`/`default`
+ *     fns, so the caller passes the descriptor it already has and the codec needs
+ *     no table registry at all. Our tables store timestamps as ISO-8601 **TEXT**,
+ *     ids/localeGroup as ULID, json as TEXT, bool as INTEGER 0/1.
+ *
+ *   - **Table-name-keyed** (`decode`/`encode`/`encodePatch`) — for the rows whose
+ *     descriptor the caller *cannot* hold. Exactly two cases:
+ *       1. the 4 better-auth tables (`users`, `sessions`, `accounts`,
+ *          `verifications`), which have **no** descriptor and never will:
+ *          better-auth's adapter owns their format (seconds-INTEGER timestamps,
+ *          uuid ids) and flipping it would break login, so their conversions are
+ *          hand-listed in `LEGACY_CODECS`. This is why `users/storage.ts` cannot
+ *          move onto the descriptor-driven `createStorage`.
+ *       2. a plugin table reached by name — resolved through the descriptors
+ *          `registerPlugins` hands to `registerDescriptorCodec` at boot. The
+ *          registry is mutable only because the table set is unknown until config
+ *          resolves.
+ *
+ * There was a third tier: a hand-maintained `DESCRIPTORS` map that let our own 10
+ * tables be addressed by name as well. Every core call site passes its descriptor
+ * now, so it is gone — adding a table no longer means remembering to list it
+ * here, and this file imports no descriptor at all (which keeps it a plain
+ * `database/` leaf rather than a consumer of the schema aggregator).
  *
  * Keys are camelCase to match the active `CamelCasePlugin`. Do NOT use
  * `ParseJSONResultsPlugin` — it would corrupt TEXT columns holding JSON-ish
@@ -22,42 +37,6 @@
  */
 
 import type { TableDescriptor } from '@/database/define-table.js';
-// Every descriptor comes through the `database/schema.ts` aggregator rather than
-// from each domain directly — that indirection is the whole reason the
-// aggregator exists, and it keeps the rest of `database/` below the domains in
-// the dependency graph (see the `database-no-upward-except-aggregate` rule).
-import {
-    roles,
-    entries,
-    entryVersions,
-    entryPreviewTokens,
-    media,
-    settings,
-    notifications,
-    relationships,
-    cron,
-    plugins,
-} from '@/database/schema.js';
-
-// ── Descriptor-driven tables (ours) ─────────────────────────────────────────
-// Keyed by the *Kysely* `DB` property name (camelCase, e.g. `entryVersions`),
-// NOT `descriptor.name` (the snake_case SQL table name, e.g. `entry_versions`)
-// — `decode`/`encode`/`encodePatch` are called with the former throughout
-// storage code. `database/schema.ts`'s `CORE_TABLES` is the same 10 as a plain
-// array (no key mapping needed there); this map stays hand-listed rather than
-// derived from it so the keys are greppable next to the `DB` interface.
-const DESCRIPTORS: Record<string, TableDescriptor> = {
-    roles,
-    entries,
-    entryVersions,
-    entryPreviewTokens,
-    media,
-    settings,
-    notifications,
-    relationships,
-    _astromech_cron: cron,
-    _astromech_plugins: plugins,
-};
 
 // ── Plugin descriptors (registered at boot) ─────────────────────────────────
 
@@ -77,9 +56,10 @@ export function kyselyTableKey(sqlName: string): string {
 }
 
 /**
- * Register a plugin's `defineTable` descriptor so `decode`/`encode`/
- * `encodePatch` handle its rows like one of ours. Called by `registerPlugins`
- * for every descriptor in every plugin's `schema`.
+ * Register a plugin's `defineTable` descriptor so its rows can also be converted
+ * by table name — the descriptor-keyed functions need no registration, this is
+ * purely so `decode`/`encode`/`encodePatch` resolve the plugin's tables. Called
+ * by `registerPlugins` for every descriptor in every plugin's `schema`.
  *
  * Re-registering the same table is a no-op — boot runs more than once in dev.
  * Registering a *different* descriptor under a key already taken is a
@@ -104,10 +84,6 @@ function sameDescriptor(a: TableDescriptor, b: TableDescriptor): boolean {
     const aKeys = Object.keys(a.columns).sort();
     const bKeys = Object.keys(b.columns).sort();
     return aKeys.length === bKeys.length && aKeys.every((key, i) => key === bKeys[i]);
-}
-
-function lookupDescriptor(table: string): TableDescriptor | undefined {
-    return DESCRIPTORS[table] ?? PLUGIN_DESCRIPTORS.get(table);
 }
 
 // ── Legacy seconds-INTEGER tables (better-auth) ──────────────────────────────
@@ -148,13 +124,18 @@ const LEGACY_CODECS: Record<string, LegacyCodec> = {
 };
 
 // ============================================================================
-// Public API — signatures identical to the step-1 throwaway codec.
+// Table-name-keyed API — better-auth's descriptor-less tables, plus any plugin
+// table a caller reaches by name. A name that matches neither passes through
+// untouched (only `undefined` keys are dropped), because there is nothing to
+// convert it by; if that name is one of ours, the caller wants `*With` below.
+// Exported from `astromech/db/schema` for seed scripts, which need the
+// seconds-INTEGER format for `users`/`accounts`.
 // ============================================================================
 
-/** Storage → JS. Call on every row a query returns (selects AND `returningAll`). */
+/** Storage → JS for one row of a better-auth or plugin table, keyed by name. */
 export function decode<T extends Record<string, unknown>>(table: string, row: T): T {
     if (!row) return row;
-    const desc = lookupDescriptor(table);
+    const desc = PLUGIN_DESCRIPTORS.get(table);
     if (desc) return decodeWith(desc, row);
     const legacy = LEGACY_CODECS[table];
     if (!legacy) return row;
@@ -170,14 +151,14 @@ export function decode<T extends Record<string, unknown>>(table: string, row: T)
 }
 
 /**
- * JS → storage for INSERTs. Injects app-side defaults (id/now) for omitted
- * columns, then serializes. Mirrors Drizzle's `$defaultFn` semantics.
+ * JS → storage for INSERTs, keyed by name. Injects app-side defaults (id/now) for
+ * omitted columns, then serializes. Mirrors Drizzle's `$defaultFn` semantics.
  */
 export function encode(
     table: string,
     values: Record<string, unknown>
 ): Record<string, unknown> {
-    const desc = lookupDescriptor(table);
+    const desc = PLUGIN_DESCRIPTORS.get(table);
     if (desc) return encodeWith(desc, values);
     const legacy = LEGACY_CODECS[table];
     if (!legacy) return stripUndefined(values);
@@ -191,15 +172,15 @@ export function encode(
 }
 
 /**
- * JS → storage for UPDATEs. Serializes provided columns and drops `undefined`
- * keys (Drizzle `.set()` skips them). Never injects app defaults — `updatedAt`
- * is stamped explicitly by callers, exactly as before.
+ * JS → storage for UPDATEs, keyed by name. Serializes provided columns and drops
+ * `undefined` keys (Drizzle `.set()` skips them). Never injects app defaults —
+ * `updatedAt` is stamped explicitly by callers, exactly as before.
  */
 export function encodePatch(
     table: string,
     values: Record<string, unknown>
 ): Record<string, unknown> {
-    const desc = lookupDescriptor(table);
+    const desc = PLUGIN_DESCRIPTORS.get(table);
     if (desc) return encodePatchWith(desc, values);
     const legacy = LEGACY_CODECS[table];
     if (!legacy) return stripUndefined(values);
@@ -207,13 +188,16 @@ export function encodePatch(
 }
 
 // ============================================================================
-// Descriptor-keyed API — the same three conversions, addressed by descriptor
-// rather than by table-name string. Plugin code holds its own descriptors, so
-// it decodes rows without needing to know the `DB` key. Exported from root
-// `astromech`.
+// Descriptor-keyed API — the primary path. The caller passes the descriptor it
+// already holds, so there is no name→descriptor map to keep in step with the
+// `DB` interface, and plugin code converts its own rows without knowing the
+// `DB` key at all. Exported from root `astromech`.
 // ============================================================================
 
-/** Storage → JS for one descriptor's row. */
+/**
+ * Storage → JS for one descriptor's row. Call on every row a query returns
+ * (selects AND `returningAll`).
+ */
 export function decodeWith<T extends Record<string, unknown>>(
     desc: TableDescriptor,
     row: T

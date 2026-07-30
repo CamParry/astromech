@@ -10,11 +10,9 @@
  * the registry only supplies handlers + seed schedules.
  */
 
-import type { Insertable, Updateable } from 'kysely';
 import { Cron } from 'croner';
 import { getDb } from '@/database/registry.js';
-import { encode, encodePatch, decode } from '@/database/codec.js';
-import type { DB } from '@/database/types.js';
+import { createCronStorage, type CronStorage } from '@/cron/storage.js';
 import { getCronJobs, getRuntimeConfig } from '@/cron/registry.js';
 
 /** Claim lease: generous so a normal job never self-expires mid-run. A crashed
@@ -32,15 +30,11 @@ function nextRunFrom(schedule: string, from: Date, timezone: string): Date | nul
 }
 
 /**
- * Seed the table from registered jobs. Idempotent: ON CONFLICT DO NOTHING never
- * overwrites a stored (possibly admin-edited) row. Jobs with no seed schedule
- * and no existing row are not scheduled — warn once.
+ * Seed the table from registered jobs. Idempotent: seeding never overwrites a
+ * stored (possibly admin-edited) row. Jobs with no seed schedule and no existing
+ * row are not scheduled — warn once.
  */
-async function seed(
-    db: ReturnType<typeof getDb>,
-    now: Date,
-    timezone: string
-): Promise<void> {
+async function seed(storage: CronStorage, now: Date, timezone: string): Promise<void> {
     const warned = (globalThis.__astromechCronUnscheduledWarned ??= new Set());
     for (const job of getCronJobs()) {
         if (!job.schedule) {
@@ -52,18 +46,12 @@ async function seed(
             }
             continue;
         }
-        await db
-            .insertInto('_astromech_cron')
-            .values(
-                encode('_astromech_cron', {
-                    name: job.name,
-                    schedule: job.schedule,
-                    enabled: true,
-                    nextRun: nextRunFrom(job.schedule, now, timezone),
-                }) as unknown as Insertable<DB['_astromech_cron']>
-            )
-            .onConflict((oc) => oc.doNothing())
-            .execute();
+        await storage.seedJob({
+            name: job.name,
+            schedule: job.schedule,
+            enabled: true,
+            nextRun: nextRunFrom(job.schedule, now, timezone),
+        });
     }
 }
 
@@ -72,52 +60,25 @@ async function seed(
  * DB lock by running passes concurrently). Production code calls onTick().
  */
 export async function runDue(now: Date): Promise<void> {
+    // Cron handlers are handed the raw Kysely handle — that is their public
+    // contract, so the runner still resolves one even though its own queries go
+    // through the storage.
     const db = getDb();
     const config = getRuntimeConfig();
     const timezone = config.timezone ?? 'UTC';
+    const storage = createCronStorage();
 
-    await seed(db, now, timezone);
+    await seed(storage, now, timezone);
 
     const handlers = new Map(getCronJobs().map((j) => [j.name, j]));
 
-    const rawDue = await db
-        .selectFrom('_astromech_cron')
-        .selectAll()
-        .where((eb) =>
-            eb.and([
-                eb('enabled', '=', 1),
-                eb.or([
-                    // Tier-1 `_astromech_cron` timestamps are ISO-TEXT.
-                    eb('nextRun', '<=', now.toISOString()),
-                    eb('nextRun', 'is', null),
-                ]),
-            ])
-        )
-        .execute();
-
-    const due = rawDue.map((row) => decode('_astromech_cron', row));
-
-    for (const row of due) {
+    for (const row of await storage.due(now)) {
         const job = handlers.get(row.name);
         if (!job) continue; // orphan table row (handler not registered) — skip
 
         // CAS-claim: succeeds only if unlocked or the prior claim expired.
         const expiry = new Date(now.getTime() + LOCK_TTL_MS);
-        const claim = await db
-            .updateTable('_astromech_cron')
-            .set(
-                encodePatch('_astromech_cron', { lock: expiry }) as unknown as Updateable<
-                    DB['_astromech_cron']
-                >
-            )
-            .where((eb) =>
-                eb.and([
-                    eb('name', '=', row.name),
-                    eb.or([eb('lock', 'is', null), eb('lock', '<=', now.toISOString())]),
-                ])
-            )
-            .executeTakeFirst();
-        if (claim.numUpdatedRows !== 1n) continue; // another tick/instance owns it
+        if (!(await storage.claim(row.name, now, expiry))) continue; // another tick owns it
 
         try {
             await job.handler({ db, config });
@@ -125,24 +86,13 @@ export async function runDue(now: Date): Promise<void> {
             console.error(`[astromech/cron] Job "${row.name}" failed:`, err);
         }
 
-        // Record + release, gated on our exact claim token. If our lease expired
-        // and was re-claimed, this matches 0 rows and we leave the new owner's
-        // state untouched (closes the ABA window). next_run recomputes from
-        // `now` (missed runs fire once, no backfill) using the row's CURRENT
-        // (possibly admin-edited) schedule.
-        await db
-            .updateTable('_astromech_cron')
-            .set(
-                encodePatch('_astromech_cron', {
-                    lastRun: now,
-                    nextRun: nextRunFrom(row.schedule, now, timezone),
-                    lock: null,
-                }) as unknown as Updateable<DB['_astromech_cron']>
-            )
-            .where((eb) =>
-                eb.and([eb('name', '=', row.name), eb('lock', '=', expiry.toISOString())])
-            )
-            .execute();
+        // Record + release, gated on our exact claim token (see `claim`'s ABA
+        // note). next_run recomputes from `now` — missed runs fire once, no
+        // backfill — using the row's CURRENT (possibly admin-edited) schedule.
+        await storage.recordRunAndRelease(row.name, expiry, {
+            lastRun: now,
+            nextRun: nextRunFrom(row.schedule, now, timezone),
+        });
     }
 }
 

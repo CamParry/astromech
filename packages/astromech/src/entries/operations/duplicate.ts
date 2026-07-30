@@ -13,7 +13,6 @@ export async function duplicate(params: {
     const source = await loadAndAssertType(storage, type, id);
 
     const locale = overrides?.locale ?? source.locale;
-    const localeGroup = overrides?.localeGroup ?? crypto.randomUUID();
     const status = overrides?.status ?? 'unpublished';
     const title = overrides?.title ?? source.title;
     const mergedFields: JsonObject = {
@@ -29,7 +28,9 @@ export async function duplicate(params: {
         title,
         slug,
         locale,
-        localeGroup,
+        // No override means the copy starts its own translation group; storage's
+        // descriptor mints the ULID.
+        localeGroup: overrides?.localeGroup,
         fields: mergedFields,
         status,
         publishedAt: status === 'published' ? new Date() : null,

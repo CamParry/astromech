@@ -7,14 +7,23 @@
  * Uses better-auth's own hashPassword so no extra dependencies are required.
  *
  * Usage (from project root):
- *   npm run seed
+ *   npm run db:seed
  */
 
+import { fileURLToPath } from 'node:url';
 import { hashPassword } from 'better-auth/crypto';
 import * as schema from 'astromech/db/schema';
 
+// Resolved against this file, not the cwd: `npm run db:seed` delegates with `-w
+// astromech`, which runs the script from `packages/astromech` where a relative
+// `./apps/demo/database.db` does not exist (libsql then fails with
+// ConnectionFailed). Same trick as apps/demo/astromech.config.ts.
+const DEFAULT_DB_URL = `file:${fileURLToPath(
+    new URL('../../../apps/demo/database.db', import.meta.url)
+)}`;
+
 const db = schema
-    .libsqlDriver({ url: process.env.DATABASE_URL ?? 'file:./apps/demo/database.db' })
+    .libsqlDriver({ url: process.env.DATABASE_URL ?? DEFAULT_DB_URL })
     .getInstance();
 
 const PASSWORD = 'password';
@@ -86,7 +95,7 @@ async function insertRelationships(rows: RelationshipInput[]): Promise<void> {
         .values(
             rows.map(
                 (r) =>
-                    schema.encode('relationships', {
+                    schema.encodeWith(schema.relationships, {
                         id: crypto.randomUUID(),
                         sourceId: r.sourceId,
                         sourceType: 'entry' as const,
@@ -270,7 +279,7 @@ async function seed(): Promise<void> {
                         createdBy: adminId,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('media', r) as never)
+            ).map((r) => schema.encodeWith(schema.media, r) as never)
         )
         .execute();
     console.log('✓ Created 8 media items\n');
@@ -337,7 +346,7 @@ async function seed(): Promise<void> {
                         updatedAt: now,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('entries', r) as never)
+            ).map((r) => schema.encodeWith(schema.entries, r) as never)
         )
         .execute();
     console.log('✓ Created 4 categories\n');
@@ -417,7 +426,7 @@ async function seed(): Promise<void> {
                         updatedAt: now,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('entries', r) as never)
+            ).map((r) => schema.encodeWith(schema.entries, r) as never)
         )
         .execute();
     console.log('✓ Created 5 tags\n');
@@ -517,7 +526,7 @@ async function seed(): Promise<void> {
                         updatedAt: now,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('entries', r) as never)
+            ).map((r) => schema.encodeWith(schema.entries, r) as never)
         )
         .execute();
 
@@ -675,7 +684,7 @@ async function seed(): Promise<void> {
                         updatedAt: now,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('entries', r) as never)
+            ).map((r) => schema.encodeWith(schema.entries, r) as never)
         )
         .execute();
 
@@ -989,7 +998,7 @@ async function seed(): Promise<void> {
                         updatedAt: now,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('entries', r) as never)
+            ).map((r) => schema.encodeWith(schema.entries, r) as never)
         )
         .execute();
 
@@ -1154,7 +1163,7 @@ async function seed(): Promise<void> {
                         updatedAt: now,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('entries', r) as never)
+            ).map((r) => schema.encodeWith(schema.entries, r) as never)
         )
         .execute();
 

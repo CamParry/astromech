@@ -7,6 +7,7 @@ import { populateEntries } from '../internal/populate.js';
 import { getDefaultLocale, resolveRelatedFields } from '../internal/type-config.js';
 import { asEntry } from '../internal/records.js';
 import { runPreviewQuery } from './preview/read.js';
+import { PublicTrashedReadError } from '../errors.js';
 import {
     applyVisibilityWithRelations,
     markPublic,
@@ -29,6 +30,12 @@ export async function query(
     // Resolve effective visibility shape.
     // Step 4 will layer client-level defaults; absent `full` ⇒ public is correct here.
     const shape: VisibilityShape = params.full ? 'full' : 'public';
+
+    // A public read can never return a trashed row: the public shape forces
+    // `status: 'published'` below and `applyVisibilityWithRelations` drops every
+    // trashed row afterwards. Asking for both used to yield an empty list,
+    // indistinguishable from "nothing is trashed", so reject it instead.
+    if (params.trashed === true && shape === 'public') throw new PublicTrashedReadError();
 
     // Populate only applies when all rows share a single type config.
     const singleType = types.length === 1 ? (types[0] ?? null) : null;

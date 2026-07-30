@@ -19,13 +19,13 @@ export async function createStaged(params: { type: string; id: string }): Promis
 
     // A staged row copies the canonical's content but gets a FRESH localeGroup
     // (it does not join the canonical's translation group) and is always
-    // unpublished. The slug is shared with the canonical (kept as-is).
+    // unpublished. The slug is shared with the canonical (kept as-is). Passing no
+    // localeGroup is what asks storage's descriptor to mint a fresh one.
     const created = await storage.create({
         type,
         title: canonical.title,
         slug: canonical.slug,
         locale: canonical.locale,
-        localeGroup: crypto.randomUUID(),
         fields: canonical.fields,
         status: 'unpublished',
         stagedFor: id,

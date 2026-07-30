@@ -11,8 +11,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTestDb } from '@tests/harness.js';
 import { bootPlugins } from '@/plugins/runtime/plugin-runtime.js';
-import { type PluginTrackingRow } from '@/database/schema.js';
-import { decode } from '@/database/codec.js';
+import { plugins, type PluginTrackingRow } from '@/database/schema.js';
+import { decodeWith } from '@/database/codec.js';
 import type { DB } from '@/database/types.js';
 import type { Kysely } from 'kysely';
 
@@ -25,9 +25,7 @@ async function trackedRows(db: Db): Promise<PluginTrackingRow[]> {
         .selectAll()
         .orderBy('package')
         .execute();
-    return rows.map(
-        (row) => decode('_astromech_plugins', row) as unknown as PluginTrackingRow
-    );
+    return rows.map((row) => decodeWith(plugins, row) as unknown as PluginTrackingRow);
 }
 
 let db: Db;
