@@ -8,6 +8,10 @@ items are all covered here, its settled decisions are recorded below).
 **Status:** direction agreed in discussion (2026-07-27), NOT locked. No implementation started.
 Needs a grilling pass before it becomes a spec.
 
+Filtering/sorting entries by their own scalar field values (the `meta_query` equivalent) was
+considered alongside this and **split out** to `planned/field-value-query-indexing.md` (2026-07-30):
+it shares the motivation but not the mechanism — generated columns, no derived table, no traversal.
+
 ## The problem with what exists
 
 The same fact is stored twice and nothing reconciles the two:
