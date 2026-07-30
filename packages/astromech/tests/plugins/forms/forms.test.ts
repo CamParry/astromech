@@ -169,7 +169,11 @@ describe('forms.get', () => {
         // the entry it holds. Prove that first — otherwise the assertions below
         // would pass for the wrong reason.
         const stored = await entriesApi().get({ type: FORM, id: created.id, full: true });
-        expect(stored?.fields['notifyTo']).toEqual([{ address: 'ops@example.com' }]);
+        // `notifyTo` is a repeater, so the field pipeline mints an `_id` on each
+        // stored item — assert the authored data, not the normalized item shape.
+        expect(stored?.fields['notifyTo']).toEqual([
+            expect.objectContaining({ address: 'ops@example.com' }),
+        ]);
         expect(stored?.fields['confirmToField']).toBe('email');
 
         const form = await getForm('contact');

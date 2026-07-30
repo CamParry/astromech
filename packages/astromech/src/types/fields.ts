@@ -97,6 +97,23 @@ export type ValidationRule =
     | { custom: FieldValidator };
 
 // ============================================================================
+// Field paths
+// ============================================================================
+
+/**
+ * One step of a field path: a declared field, or one item of a container.
+ *
+ * The *contract* lives here with the other field types (pure leaf layer) so that
+ * `FieldTypeDescriptor` and `FieldValidationContext` can reference it; the
+ * formatters and parser that render and read it live in `fields/field-path.ts`,
+ * which re-exports this type. Items are addressed by their persisted `_id`,
+ * never by array index — see that module's header for the full grammar.
+ */
+export type FieldPathSegment =
+    | { kind: 'field'; name: string }
+    | { kind: 'item'; id: string };
+
+// ============================================================================
 // Validation contract (server-side field pipeline)
 //
 // The descriptor + pipeline implementation lives in `fields/`; these are the
@@ -129,8 +146,14 @@ export type FieldValidationContext = {
     /** Sibling field values, for cross-field rules. */
     values: Record<string, unknown>;
     field: FieldDefinition;
-    /** Nested path to the field, e.g. `['address', '0', 'postcode']`. */
-    path: string[];
+    /**
+     * Path to the field, as segments — one `field` segment per declared field
+     * plus an `item` segment per container item traversed, e.g.
+     * `[{kind:'field',name:'sections'},{kind:'item',id:'a1'},{kind:'field',name:'title'}]`.
+     * Render it with `formatFieldPath` (`fields/field-path.ts`) to get the key
+     * the pipeline files this field's errors under.
+     */
+    path: FieldPathSegment[];
     operation: 'create' | 'update';
     host: { kind: 'entry' | 'media' | 'user' | 'setting'; record: unknown };
     user: User | null;
@@ -144,6 +167,24 @@ export type FieldValidationContext = {
  * `true` when valid, or an error message string.
  */
 export type FieldValidator = (ctx: FieldValidationContext) => Promise<true | string>;
+
+/** One nested value scope inside a container field's value. */
+export type ContainerScope = {
+    /**
+     * Path segments from the container field down to this scope, e.g.
+     * `[{kind:'field',name:'blocks'},{kind:'item',id:'6f1e'}]`. Relative to the
+     * container field itself — the pipeline prepends the container's own parent
+     * segments, so a scope is describable without knowing where it is nested.
+     */
+    segments: FieldPathSegment[];
+    /** The field definitions that apply to this scope's values. */
+    definitions: FieldDefinition[];
+    /**
+     * LIVE reference to this scope's value object inside the normalized
+     * container value returned as `next`. The pipeline mutates it in place.
+     */
+    values: Record<string, unknown>;
+};
 
 /**
  * The single source of truth for a field type. Core and plugin field types
@@ -168,6 +209,16 @@ export type FieldTypeDescriptor = {
     coerce?: (value: unknown) => unknown;
     /** Type-intrinsic validation rule (plugin `serverValidate` fills this slot). */
     validate?: FieldValidator;
+    /**
+     * Container types only: expose the nested scopes inside this field's value
+     * so the pipeline can recurse generically instead of switching on type.
+     * Returns the normalized container value (`next` — cloned, with item `_id`s
+     * minted) plus a flat list of scopes holding live references into it.
+     */
+    children?: (
+        field: FieldDefinition,
+        value: unknown
+    ) => { next: unknown; scopes: ContainerScope[] };
     /** Reserved instance keys this type owns, e.g. `['_id', '_disabled', '_title']`. */
     reservedKeys?: string[];
     isLayout?: boolean;

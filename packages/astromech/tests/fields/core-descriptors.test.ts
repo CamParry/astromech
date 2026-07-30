@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CORE_FIELD_TYPES } from '@/types/fields.js';
+import type { FieldDefinition } from '@/types/fields.js';
 import { getFieldTypeDescriptor } from '@/fields/descriptors.js';
 
 const LAYOUT_TYPES = new Set(['section', 'tabs', 'tab', 'accordion']);
@@ -158,6 +159,132 @@ describe('core field-type descriptors', () => {
         it('text has no isRelation', () => {
             const d = getFieldTypeDescriptor('text');
             expect(d?.isRelation).toBeUndefined();
+        });
+    });
+
+    describe('children', () => {
+        it('every container type exposes children', () => {
+            for (const type of ['group', 'repeater', 'blocks', 'tree']) {
+                expect(
+                    getFieldTypeDescriptor(type)?.children,
+                    `missing children for "${type}"`
+                ).toBeTypeOf('function');
+            }
+        });
+
+        it('non-container types expose no children', () => {
+            for (const type of ['text', 'json', 'multiselect', 'key-value']) {
+                expect(
+                    getFieldTypeDescriptor(type)?.children,
+                    `unexpected children for "${type}"`
+                ).toBeUndefined();
+            }
+        });
+
+        it('group: one scope holding a live reference into next', () => {
+            const d = getFieldTypeDescriptor('group');
+            const field: FieldDefinition = {
+                name: 'seo',
+                type: 'group',
+                fields: [{ name: 'title', type: 'text' }],
+            };
+            const { next, scopes } = d?.children?.(field, { title: 'a' }) ?? {
+                next: undefined,
+                scopes: [],
+            };
+            expect(scopes).toHaveLength(1);
+            expect(scopes[0]?.segments).toEqual([{ kind: 'field', name: 'seo' }]);
+            expect(scopes[0]?.definitions).toEqual(field.fields);
+            // Live reference: mutating the scope mutates `next`.
+            (scopes[0]?.values ?? {}).title = 'b';
+            expect((next as { title: string }).title).toBe('b');
+        });
+
+        it('repeater: one scope per item, keyed by minted _id', () => {
+            const d = getFieldTypeDescriptor('repeater');
+            const field: FieldDefinition = {
+                name: 'sections',
+                type: 'repeater',
+                fields: [{ name: 'title', type: 'text' }],
+            };
+            const input = [{ _id: 'a1' }, {}];
+            const { next, scopes } = d?.children?.(field, input) ?? {
+                next: undefined,
+                scopes: [],
+            };
+            const out = next as { _id: string }[];
+            expect(scopes).toHaveLength(2);
+            expect(scopes[0]?.segments).toEqual([
+                { kind: 'field', name: 'sections' },
+                { kind: 'item', id: 'a1' },
+            ]);
+            expect(out[1]?._id).toBeTypeOf('string');
+            expect(scopes[1]?.segments[1]).toEqual({
+                kind: 'item',
+                id: out[1]?._id,
+            });
+            // Input untouched.
+            expect(input[1]).toEqual({});
+        });
+
+        it('blocks: an undeclared _type yields an item but no scope', () => {
+            const d = getFieldTypeDescriptor('blocks');
+            const field: FieldDefinition = {
+                name: 'content',
+                type: 'blocks',
+                blocks: [{ type: 'hero', fields: [{ name: 'heading', type: 'text' }] }],
+            };
+            const { next, scopes } = d?.children?.(field, [
+                { _id: 'h1', _type: 'hero' },
+                { _id: 'x1', _type: 'mystery' },
+            ]) ?? { next: undefined, scopes: [] };
+            expect((next as unknown[]).length).toBe(2);
+            expect(scopes).toHaveLength(1);
+            expect(scopes[0]?.segments[1]).toEqual({ kind: 'item', id: 'h1' });
+            expect(scopes[0]?.definitions).toEqual([{ name: 'heading', type: 'text' }]);
+        });
+
+        it('tree: nodes at every depth get a flat scope, _children never a segment', () => {
+            const d = getFieldTypeDescriptor('tree');
+            const field: FieldDefinition = {
+                name: 'nav',
+                type: 'tree',
+                fields: [{ name: 'label', type: 'text' }],
+            };
+            const { scopes } = d?.children?.(field, [
+                { _id: 'n1', _children: [{ _id: 'n2' }] },
+            ]) ?? { next: undefined, scopes: [] };
+            expect(scopes.map((s) => s.segments)).toEqual([
+                [
+                    { kind: 'field', name: 'nav' },
+                    { kind: 'item', id: 'n2' },
+                ],
+                [
+                    { kind: 'field', name: 'nav' },
+                    { kind: 'item', id: 'n1' },
+                ],
+            ]);
+        });
+
+        it('non-array / non-object values fall back to the empty default', () => {
+            expect(
+                getFieldTypeDescriptor('repeater')?.children?.(
+                    { name: 'x', type: 'repeater' },
+                    'nope'
+                )
+            ).toEqual({ next: [], scopes: [] });
+            expect(
+                getFieldTypeDescriptor('tree')?.children?.(
+                    { name: 'x', type: 'tree' },
+                    undefined
+                )
+            ).toEqual({ next: [], scopes: [] });
+            expect(
+                getFieldTypeDescriptor('group')?.children?.(
+                    { name: 'x', type: 'group' },
+                    42
+                )?.next
+            ).toEqual({});
         });
     });
 });

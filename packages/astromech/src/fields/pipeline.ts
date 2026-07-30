@@ -8,18 +8,23 @@
  * only consumer: any plugin that composes `FieldDefinition[]` at runtime can
  * validate through the same coerce → default → validate path as core.
  *
- * P2 scope: top-level data fields only. Data containers (group/repeater/
- * blocks/tree) are treated as opaque leaves; their children are not recursed
- * here (that's P3/P4).
+ * Data containers (group/repeater/blocks/tree) are recursed into: a descriptor
+ * with a `children` slot reports its nested value scopes, each of which is run
+ * through the same coerce → default → validate pass. Errors are keyed by the
+ * `_id`-based path grammar (`fields/field-path.ts`), so a nested error lands on
+ * `sections[a1].items[b2].title` and a top-level one stays the bare field name.
+ * Nothing here switches on field type.
  */
 
 import type {
     FieldDefinition,
     FieldErrors,
+    FieldPathSegment,
     FieldValidationContext,
     ValidationRule,
 } from '@/types/fields.js';
 import { getFieldTypeDescriptor } from './descriptors.js';
+import { formatFieldPath } from './field-path.js';
 import { flattenFieldNodes } from './helpers.js';
 
 // ---------------------------------------------------------------------------
@@ -135,18 +140,33 @@ async function runRule(
 // Pipeline
 // ---------------------------------------------------------------------------
 
-export async function processFields(
+/** The host-supplied half of the validation context — everything not per-field. */
+type PipelineContext = Omit<
+    FieldValidationContext,
+    'value' | 'values' | 'field' | 'path'
+>;
+
+/**
+ * Run one value scope: the root record, or one container item / group object.
+ * `values` is mutated in place, because a nested scope object is a live
+ * reference inside the container value already written to its parent.
+ */
+async function processScope(
     values: Record<string, unknown>,
     definitions: FieldDefinition[],
-    ctx: Omit<FieldValidationContext, 'value' | 'values' | 'field' | 'path'>
-): Promise<{ values: Record<string, unknown>; errors: FieldErrors }> {
-    const fields = flattenFieldNodes(definitions);
-    const result = { ...values };
-    const errors: FieldErrors = {};
-
-    for (const field of fields) {
-        // Step a: coerce
+    parentSegments: readonly FieldPathSegment[],
+    ctx: PipelineContext,
+    errors: FieldErrors
+): Promise<void> {
+    for (const field of flattenFieldNodes(definitions)) {
         const descriptor = getFieldTypeDescriptor(field.type);
+        const segments: FieldPathSegment[] = [
+            ...parentSegments,
+            { kind: 'field', name: field.name },
+        ];
+        const path = formatFieldPath(segments);
+
+        // Step a: coerce
         let v = descriptor?.coerce
             ? descriptor.coerce(values[field.name])
             : values[field.name];
@@ -162,46 +182,91 @@ export async function processFields(
 
         // Step c: write back (never introduce undefined keys)
         if (v !== undefined) {
-            result[field.name] = v;
+            values[field.name] = v;
         }
 
-        // Step d: validate
+        // Step d: recurse into a container's children, before validating the
+        // container itself — `children` normalizes the value (clones, mints
+        // missing item `_id`s), and the container's own rules should see that
+        // normalized form. A scope's segments are relative to its container, so
+        // this scope's parents are prepended; deeper containers accumulate.
+        if (descriptor?.children !== undefined) {
+            const { next, scopes } = descriptor.children(field, v);
+            v = next;
+            values[field.name] = next;
+            for (const scope of scopes) {
+                await processScope(
+                    scope.values,
+                    scope.definitions,
+                    [...parentSegments, ...scope.segments],
+                    ctx,
+                    errors
+                );
+            }
+        }
+
+        // Step e: validate
         const messages: string[] = [];
 
         if (field.required === true && isEmpty(v)) {
             // Required + empty: single message, skip all other rules
             messages.push('This field is required');
-        } else if (!isEmpty(v)) {
-            // Present value: run all rules, collect all messages
-            const fieldCtx: FieldValidationContext = {
-                value: v,
-                values: result,
-                field,
-                path: [field.name],
-                operation: ctx.operation,
-                host: ctx.host,
-                user: ctx.user,
-                reads: ctx.reads,
-            };
-
-            // 1. Declarative rules
-            for (const rule of field.validation ?? []) {
-                const msg = await runRule(rule, fieldCtx);
-                if (msg !== null) messages.push(msg);
+        } else {
+            // `min`/`max` on a container mean ITEM COUNTS, not numeric bounds —
+            // checked outside the `isEmpty` guard so that `min` still fires on an
+            // empty (but not required) container, which is its whole point.
+            if (descriptor?.isContainer === true && Array.isArray(v)) {
+                if (field.min !== undefined && v.length < field.min) {
+                    messages.push(`Must have at least ${field.min} items`);
+                }
+                if (field.max !== undefined && v.length > field.max) {
+                    messages.push(`Must have at most ${field.max} items`);
+                }
             }
 
-            // 2. Descriptor-level validator
-            if (descriptor?.validate) {
-                const r = await descriptor.validate(fieldCtx);
-                if (r !== true) messages.push(r);
+            if (!isEmpty(v)) {
+                // Present value: run all rules, collect all messages
+                const fieldCtx: FieldValidationContext = {
+                    value: v,
+                    // Siblings within THIS scope — a nested field's cross-field
+                    // rules read its own item, not the root record.
+                    values,
+                    field,
+                    path: segments,
+                    operation: ctx.operation,
+                    host: ctx.host,
+                    user: ctx.user,
+                    reads: ctx.reads,
+                };
+
+                // 1. Declarative rules
+                for (const rule of field.validation ?? []) {
+                    const msg = await runRule(rule, fieldCtx);
+                    if (msg !== null) messages.push(msg);
+                }
+
+                // 2. Descriptor-level validator
+                if (descriptor?.validate) {
+                    const r = await descriptor.validate(fieldCtx);
+                    if (r !== true) messages.push(r);
+                }
             }
+            // else: optional + empty → no rules (valid)
         }
-        // else: optional + empty → no messages (valid)
 
         if (messages.length > 0) {
-            errors[field.name] = messages;
+            errors[path] = messages;
         }
     }
+}
 
+export async function processFields(
+    values: Record<string, unknown>,
+    definitions: FieldDefinition[],
+    ctx: PipelineContext
+): Promise<{ values: Record<string, unknown>; errors: FieldErrors }> {
+    const result = { ...values };
+    const errors: FieldErrors = {};
+    await processScope(result, definitions, [], ctx, errors);
     return { values: result, errors };
 }

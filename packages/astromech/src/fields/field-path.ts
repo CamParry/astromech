@@ -47,14 +47,19 @@
  * contains `-` — so nothing here assumes an id character set beyond the brackets
  * it must not contain.
  *
- * Pure module: no imports, safe to load in the browser. Deliberately not
- * re-exported from `fields/index.js`, because that barrel reaches server code.
+ * Pure module: its only import is type-only (erased at build), so it is safe to
+ * load in the browser. Deliberately not re-exported from `fields/index.js`,
+ * because that barrel reaches server code.
+ *
+ * `FieldPathSegment` itself is declared with the other field contracts in
+ * `types/fields.ts` — the field-type descriptor and the validation context both
+ * reference it, and the pure leaf layer may not import a capability. It is
+ * re-exported here so this module stays the one place to reach for the grammar.
  */
 
-/** One step of a field path: a declared field, or one item of a container. */
-export type FieldPathSegment =
-    | { kind: 'field'; name: string }
-    | { kind: 'item'; id: string };
+import type { FieldPathSegment } from '@/types/fields.js';
+
+export type { FieldPathSegment };
 
 /**
  * Shared shape check for both formatters. A path has to start at a declared

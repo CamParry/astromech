@@ -709,33 +709,30 @@ describe('layout flattening', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Data-container opacity (P2 limit — children not recursed)
+// Data containers — keyed by path, never by bare child name
 // ---------------------------------------------------------------------------
 
-describe('data-container opacity', () => {
+describe('data containers', () => {
     /**
-     * P2 limit: the pipeline treats `group`, `repeater`, `blocks`, and `tree`
-     * as opaque leaves. Their children are not recursed in P2 — that's P3/P4.
-     * This test documents the CURRENT expected behaviour.
+     * Containers ARE recursed (see pipeline-nested.test.ts for the full matrix).
+     * What matters here is that recursion never leaks a child's bare name into
+     * the top-level error keys — a nested error always carries its path.
      */
-    it('group child required but absent → NO error for the child (children not recursed)', async () => {
+    it('group child required but absent → error keyed by path, not bare name', async () => {
         const { errors } = await processFields(
             {},
             [
                 field({
                     name: 'address',
                     type: 'group',
-                    fields: [
-                        // This child has required:true but P2 does not recurse into groups.
-                        field({ name: 'postcode', type: 'text', required: true }),
-                    ],
+                    fields: [field({ name: 'postcode', type: 'text', required: true })],
                 }),
             ],
             fakeCtx()
         );
-        // The child 'postcode' is NOT validated — group is an opaque leaf in P2.
+        expect(errors['address.postcode']).toEqual(['This field is required']);
         expect(errors.postcode).toBeUndefined();
-        // The group itself is not required, so no error there either.
+        // The group itself is not required, so no error on the container.
         expect(errors.address).toBeUndefined();
     });
 });

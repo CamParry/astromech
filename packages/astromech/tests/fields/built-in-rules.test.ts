@@ -22,7 +22,7 @@ function ctx(value: unknown): FieldValidationContext {
         value,
         values: {},
         field: { name: 'f', type: 'x' },
-        path: ['f'],
+        path: [{ kind: 'field', name: 'f' }],
         operation: 'create',
         host: { kind: 'entry', record: null },
         user: null,
