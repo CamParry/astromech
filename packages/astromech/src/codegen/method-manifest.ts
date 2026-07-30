@@ -6,7 +6,11 @@
  * methods. Pure function — callers are responsible for writing the result to
  * disk or injecting it into a virtual module.
  *
- * Schema version: 1
+ * Every schema is authored in the domain that owns the method; this file only
+ * projects descriptors into the manifest shape. A method's `input` is its
+ * ARGUMENT object, not the HTTP body.
+ *
+ * Schema version: 2
  */
 
 import { z } from '@hono/zod-openapi';
@@ -14,16 +18,17 @@ import type {
     PluginDefinition,
     AnyPluginServiceMethod,
     PluginAccess,
+    ServiceMethodDescriptor,
 } from '@/types/index.js';
 import type { ResolvedConfig } from '@/types/index.js';
 import { usersDescriptors } from '@/users/descriptors.js';
 import { mediaDescriptors } from '@/media/descriptors.js';
 import { settingsDescriptors } from '@/settings/descriptors.js';
 import {
-    type EntryAction,
-    rootEntryPermission,
-    pluginEntryPermission,
-} from '@/permissions/entry-permission.js';
+    entryMethodDescriptors,
+    type EntryMethodDescriptor,
+} from '@/entries/descriptors.js';
+import { qualifyEntryType } from '@/entries/type-registry.js';
 import {
     resolvePluginIdentity,
     resolvePluginPermission,
@@ -78,11 +83,6 @@ type ManifestMethod = {
     mount?: string;
     /** Plugin name this entry type belongs to. Present for plugin-mounted entries. */
     plugin?: string;
-    /**
-     * Entry content schema (reserved for a future field-level schema; null for now).
-     * Present when `source === 'entries'`.
-     */
-    contentSchema?: null;
     // ── plugin service method-specific ────────────────────────────────────
     /**
      * Normalised access level. Present when `source === 'plugin'`.
@@ -92,7 +92,7 @@ type ManifestMethod = {
 };
 
 type MethodManifest = {
-    version: 1;
+    version: 2;
     methods: ManifestMethod[];
 };
 
@@ -103,67 +103,28 @@ type MethodManifest = {
 /**
  * Convert a Zod schema to a JSON Schema object. Returns null on any error so
  * a single broken schema does not abort the whole manifest.
+ *
+ * `io` must match which side of a transforming schema is being described. A
+ * descriptor's `input` is what the caller passes IN, so a `z.string().datetime()`
+ * that transforms to a `Date` has to render as the string — Zod's default
+ * (`'output'`) renders the `Date`, which is unrepresentable and degrades to `{}`,
+ * telling an AI consumer nothing about what to send.
  */
-function toJSONSchema(schema: z.ZodType): unknown {
+function toJSONSchema(schema: z.ZodType, io: 'input' | 'output'): unknown {
     try {
-        return z.toJSONSchema(schema, { unrepresentable: 'any' });
+        return z.toJSONSchema(schema, { unrepresentable: 'any', io });
     } catch {
         return null;
     }
 }
 
 /**
- * Entry method/action pairs. Order matches the logical CRUD+publish sequence,
- * then the forward-versioning (staged entries) methods. `requires` gates a
- * method on a capability: `publish` needs `versioning`; the staging/preview
- * methods need `staging` (the action they enforce against is separate — e.g.
- * `mergeStaged` enforces `publish` but is gated on `staging`).
+ * A descriptor's statically-serialisable permission. Function-form permissions
+ * resolve from the call input, so they cannot go in the manifest as a string —
+ * `permissionDynamic` flags them instead.
  */
-const ENTRY_METHODS: {
-    method: string;
-    action: EntryAction;
-    idempotent?: boolean;
-    requires?: 'versioning' | 'staging';
-}[] = [
-    { method: 'query', action: 'read' },
-    { method: 'get', action: 'read' },
-    { method: 'create', action: 'create' },
-    // Re-applying the same update lands the same end-state — matches the core
-    // `users.update`/`settings.set` idempotent hint (ai-integration §3.6).
-    { method: 'update', action: 'update', idempotent: true },
-    { method: 'delete', action: 'delete' },
-    { method: 'publish', action: 'publish', requires: 'versioning' },
-    { method: 'createStaged', action: 'update', requires: 'staging' },
-    { method: 'getStaged', action: 'read', requires: 'staging' },
-    { method: 'mergeStaged', action: 'publish', requires: 'staging' },
-    { method: 'deleteStaged', action: 'update', requires: 'staging' },
-    { method: 'issuePreviewToken', action: 'update', requires: 'staging' },
-    { method: 'revokePreviewToken', action: 'update', requires: 'staging' },
-];
-
-/**
- * Human-readable summary for a generated entry method.
- * e.g. method='query', type='posts' → 'List "posts" entries.'
- */
-function entryMethodSummary(method: string, action: EntryAction, type: string): string {
-    switch (method) {
-        case 'query':
-            return `List "${type}" entries.`;
-        case 'createStaged':
-            return `Stage a change to a "${type}" entry.`;
-        case 'getStaged':
-            return `Get the staged change of a "${type}" entry.`;
-        case 'mergeStaged':
-            return `Merge the staged change into a "${type}" entry.`;
-        case 'deleteStaged':
-            return `Discard the staged change of a "${type}" entry.`;
-        case 'issuePreviewToken':
-            return `Issue a preview token for a "${type}" entry.`;
-        case 'revokePreviewToken':
-            return `Revoke the preview token of a "${type}" entry.`;
-    }
-    const verb = action.charAt(0).toUpperCase() + action.slice(1);
-    return `${verb} a "${type}" entry.`;
+function staticPermission(descriptor: ServiceMethodDescriptor): string | null {
+    return typeof descriptor.permission === 'string' ? descriptor.permission : null;
 }
 
 /** Whether a method's capability requirement is met for an entry type's caps. */
@@ -181,19 +142,23 @@ function methodCapabilityMet(
 // ============================================================================
 
 function buildCoreMethods(): ManifestMethod[] {
-    const catalogues = [usersDescriptors, mediaDescriptors, settingsDescriptors] as const;
+    // The domain prefix is paired with the catalogue here, so a method's name is
+    // its position (`users.query`) rather than a hand-written string that can
+    // drift from the key it sits under.
+    const catalogues: [string, Record<string, ServiceMethodDescriptor>][] = [
+        ['users', usersDescriptors],
+        ['media', mediaDescriptors],
+        ['settings', settingsDescriptors],
+    ];
     const methods: ManifestMethod[] = [];
 
-    for (const catalogue of catalogues) {
-        for (const descriptor of Object.values(catalogue)) {
+    for (const [domain, catalogue] of catalogues) {
+        for (const [key, descriptor] of Object.entries(catalogue)) {
             const method: ManifestMethod = {
-                name: descriptor.name ?? '(unnamed)',
+                name: `${domain}.${key}`,
                 summary: descriptor.summary,
                 source: 'core',
-                permission:
-                    typeof descriptor.permission === 'string'
-                        ? descriptor.permission
-                        : null,
+                permission: staticPermission(descriptor),
                 mutates: descriptor.mutates,
                 destructive: descriptor.destructive ?? false,
                 idempotent: descriptor.idempotent ?? false,
@@ -205,10 +170,10 @@ function buildCoreMethods(): ManifestMethod[] {
             }
 
             if (descriptor.input) {
-                method.input = toJSONSchema(descriptor.input);
+                method.input = toJSONSchema(descriptor.input, 'input');
             }
             if (descriptor.output) {
-                method.output = toJSONSchema(descriptor.output);
+                method.output = toJSONSchema(descriptor.output, 'output');
             }
 
             methods.push(method);
@@ -235,58 +200,67 @@ function buildEntriesMethods(
         pluginNsMap.set(identity.namespace, identity.permissionNamespace);
     }
 
-    // Root entry types
+    // Root entry types — addressed by their bare id.
     for (const [type, cfg] of Object.entries(config.entries)) {
-        for (const { method, action, idempotent, requires } of ENTRY_METHODS) {
+        for (const descriptor of entryMethodDescriptors({
+            typeId: type,
+            titleField: cfg.titleField,
+        })) {
             // Gate capability-bound methods: `publish` needs versioning; the
             // staged-entry/preview methods need the `staging` capability.
-            if (!methodCapabilityMet(requires, cfg.capabilities)) {
+            if (!methodCapabilityMet(descriptor.requires, cfg.capabilities)) {
                 continue;
             }
 
             methods.push({
-                name: `entries.${method}`,
-                summary: entryMethodSummary(method, action, type),
-                source: 'entries',
+                ...projectEntryMethod(descriptor),
                 entryType: type,
                 mount: 'root',
-                permission: rootEntryPermission(type, action),
-                mutates: action !== 'read',
-                destructive: action === 'delete',
-                idempotent: idempotent ?? false,
-                contentSchema: null,
             });
         }
     }
 
-    // Plugin entry types
+    // Plugin entry types — addressed by their qualified id (`<namespace>/<type>`).
     for (const [pluginName, types] of Object.entries(config.pluginEntries)) {
         const permissionNamespace = pluginNsMap.get(pluginName) ?? pluginName;
         for (const [type, cfg] of Object.entries(types)) {
-            for (const { method, action, idempotent, requires } of ENTRY_METHODS) {
+            for (const descriptor of entryMethodDescriptors({
+                typeId: qualifyEntryType(pluginName, type),
+                titleField: cfg.titleField,
+            })) {
                 // Same capability gating as root entry types.
-                if (!methodCapabilityMet(requires, cfg.capabilities)) {
+                if (!methodCapabilityMet(descriptor.requires, cfg.capabilities)) {
                     continue;
                 }
 
                 methods.push({
-                    name: `entries.${method}`,
-                    summary: entryMethodSummary(method, action, type),
-                    source: 'entries',
+                    ...projectEntryMethod(descriptor),
                     entryType: type,
                     mount: permissionNamespace,
                     plugin: pluginName,
-                    permission: pluginEntryPermission(permissionNamespace, type, action),
-                    mutates: action !== 'read',
-                    destructive: action === 'delete',
-                    idempotent: idempotent ?? false,
-                    contentSchema: null,
                 });
             }
         }
     }
 
     return methods;
+}
+
+/** The type-independent half of an entry method's manifest entry. */
+function projectEntryMethod(descriptor: EntryMethodDescriptor): ManifestMethod {
+    const method: ManifestMethod = {
+        name: `entries.${descriptor.method}`,
+        summary: descriptor.summary,
+        source: 'entries',
+        permission: staticPermission(descriptor),
+        mutates: descriptor.mutates,
+        destructive: descriptor.destructive ?? false,
+        idempotent: descriptor.idempotent ?? false,
+    };
+    if (descriptor.input) {
+        method.input = toJSONSchema(descriptor.input, 'input');
+    }
+    return method;
 }
 
 // ============================================================================
@@ -326,6 +300,14 @@ function buildPluginServiceMethods(plugins: PluginDefinition[]): ManifestMethod[
                 destructive: serviceMethod.destructive ?? false,
                 idempotent: serviceMethod.idempotent ?? false,
             };
+
+            if (serviceMethod.input) {
+                method.input = toJSONSchema(serviceMethod.input, 'input');
+            }
+            if (serviceMethod.output) {
+                method.output = toJSONSchema(serviceMethod.output, 'output');
+            }
+
             methods.push(method);
         }
     }
@@ -361,6 +343,6 @@ export function generateMethodManifest(
         return (a.plugin ?? '').localeCompare(b.plugin ?? '');
     });
 
-    const manifest: MethodManifest = { version: 1, methods };
+    const manifest: MethodManifest = { version: 2, methods };
     return JSON.stringify(manifest, null, 2) + '\n';
 }

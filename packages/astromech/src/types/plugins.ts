@@ -7,6 +7,7 @@
  */
 
 import type { ComponentType, ReactElement } from 'react';
+import type { z } from '@hono/zod-openapi';
 import type { Kysely, MigrationProvider } from 'kysely';
 import type { DB } from '@/database/types.js';
 import type { TableDescriptor } from '@/database/define-table.js';
@@ -142,14 +143,32 @@ export type PluginServiceMethod<Input = unknown, Output = unknown> = {
     handler: (input: Input, ctx: PluginContext) => Promise<Output> | Output;
     /** One-line summary for the method manifest (discovery / MCP / AI tool-loop). */
     summary?: string;
+    /**
+     * Zod schema for the call input — how the method is called, which is what
+     * the manifest publishes to MCP and the AI tool-loop. Optional, but without
+     * it a caller that isn't reading the plugin's TypeScript has no schema.
+     */
+    input?: z.ZodType<Input>;
+    /** Zod schema for the result, where worth declaring. */
+    output?: z.ZodType<Output>;
     // The effect declaration is MANDATORY (`ServiceMethodEffect` requires
     // `mutates`; `destructive`/`idempotent` stay optional). An undeclared effect
     // used to fall back to "mutating", which silently mislabelled pure reads in
     // the method manifest and so in MCP; it is now a compile error instead.
 } & ServiceMethodEffect;
 
-/** Collection element for a plugin's service record: variance-safe over any concrete method. */
-export type AnyPluginServiceMethod = PluginServiceMethod<never, unknown>;
+/**
+ * Collection element for a plugin's service record: variance-safe over any
+ * concrete method. `Input` is contravariant in `handler` (hence `never`) but
+ * covariant in `input`, so the schema position is widened separately — a single
+ * type argument cannot satisfy both.
+ */
+export type AnyPluginServiceMethod = Omit<
+    PluginServiceMethod<never, unknown>,
+    'input'
+> & {
+    input?: z.ZodType;
+};
 
 /**
  * Raw request handler for payloads RPC-JSON can't carry (binary / multipart /

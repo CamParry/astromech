@@ -31,13 +31,20 @@ export type PermissionRule<Input = unknown> = Permission | ((input: Input) => Pe
  * A service method's descriptor. Authored once (via `defineServiceMethod` for
  * plugin methods, or a service's descriptor catalogue for core methods); the
  * single declaration the `withPermissions` policy enforces and the manifest reads.
+ *
+ * There is no `name`: a method's dotted id is its position in the catalogue
+ * (`<domain>.<key>`), derived by the manifest generator. Restating it by hand
+ * meant a typo produced a mis-named manifest entry with no build failure.
  */
 export type ServiceMethodDescriptor<Input = unknown, Output = unknown> = {
-    /** Dotted method id, e.g. `entries.create`, `plugins.redirects.lookup`. */
-    name?: string;
     /** One-line summary for humans / the AI tool-loop. */
     summary?: string;
-    /** Zod schema for the call input (the "method schema" — how to call it). */
+    /**
+     * Zod schema for the call input — the METHOD schema (how the method is
+     * called), NOT the HTTP body. A method whose transport puts part of the
+     * input in the path (`settings.set({ key, value })`) still declares the
+     * whole argument object here.
+     */
     input?: z.ZodType<Input>;
     /** Zod schema for the result, where worth declaring. */
     output?: z.ZodType<Output>;
