@@ -3,6 +3,7 @@ import type { Insertable } from 'kysely';
 import { loadConfig } from '../config.js';
 import { getDb } from '@/database/registry.js';
 import { encode } from '@/database/codec.js';
+import { createUserStorage } from '@/users/storage.js';
 import type { DB } from '@/database/types.js';
 
 export default defineCommand({
@@ -39,21 +40,18 @@ export default defineCommand({
         const accountId = crypto.randomUUID();
         const hashedPassword = await hashPassword(password);
 
-        await db
-            .insertInto('users')
-            .values(
-                encode('users', {
-                    id: userId,
-                    email,
-                    name,
-                    emailVerified: true,
-                    roleSlug,
-                    createdAt: now,
-                    updatedAt: now,
-                }) as unknown as Insertable<DB['users']>
-            )
-            .execute();
+        await createUserStorage().create({
+            id: userId,
+            email,
+            name,
+            emailVerified: true,
+            roleSlug,
+            createdAt: now,
+            updatedAt: now,
+        });
 
+        // `accounts` is a better-auth table with no storage layer of its own, and
+        // it is not the `users` domain's to own — so this one insert stays raw.
         await db
             .insertInto('accounts')
             .values(

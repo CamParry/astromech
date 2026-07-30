@@ -8,13 +8,11 @@
  * not as a cross-cutting policy.
  */
 
-import type { Insertable, Updateable } from 'kysely';
 import config from 'virtual:astromech/config';
-import { getDb } from '@/database/registry.js';
-import type { DB } from '@/database/types.js';
-import { encode, encodePatch, decode } from '@/database/codec.js';
 import type { JsonValue, Setting, SettingsApi } from '@/types/index.js';
 import type { ResolvedConfig } from '@/types/config.js';
+import { createSettingsStorage } from './storage.js';
+import type { SettingRow } from './schema.js';
 import { mergeLocaleSetting } from './page-values.js';
 import { isPublicSettingKey } from './visibility.js';
 import { processFields } from '@/fields/pipeline.js';
@@ -26,29 +24,30 @@ import { ValidationError } from '@/errors/validation.js';
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
     typeof v === 'object' && v !== null && !Array.isArray(v);
 
+function toSetting(row: SettingRow): Setting {
+    return {
+        key: row.key,
+        value: row.value ?? null,
+        updatedAt: row.updatedAt,
+        updatedBy: row.updatedBy ?? null,
+    };
+}
+
 export const settingsApi: SettingsApi = {
     async all(opts?: { full?: boolean }): Promise<Setting[]> {
-        const db = getDb();
-        const rawRows = await db.selectFrom('settings').selectAll().execute();
-        const rows = rawRows.map((r) => decode('settings', r));
+        const rows = await createSettingsStorage().all();
         const full = opts?.full ?? false;
         const publicKeys =
             (config as { publicSettingKeys?: string[] }).publicSettingKeys ?? [];
         return rows
             .filter((row) => full || isPublicSettingKey(row.key, publicKeys))
-            .map((row) => ({
-                key: row.key,
-                value: (row.value as JsonValue) ?? null,
-                updatedAt: row.updatedAt as unknown as Date,
-                updatedBy: (row.updatedBy as string | null) ?? null,
-            }));
+            .map(toSetting);
     },
 
     async get(
         key: string,
         opts?: { locale?: string; full?: boolean }
     ): Promise<JsonValue | null> {
-        const db = getDb();
         const locale = opts?.locale ?? config.defaultLocale;
         const full = opts?.full ?? false;
         const publicKeys =
@@ -59,20 +58,23 @@ export const settingsApi: SettingsApi = {
             return null;
         }
 
-        const rawRows = await db.selectFrom('settings').selectAll().execute();
-        const rows = rawRows.map((r) => decode('settings', r));
-        const byKey: Record<string, JsonValue | null> = {};
-        for (const row of rows) {
-            byKey[row.key] = (row.value as JsonValue) ?? null;
-        }
-        const base = byKey[key] ?? null;
-        if (locale) {
-            const locKey = `${key}:${locale}`;
+        const locKey = locale ? `${key}:${locale}` : null;
+        const rows = await createSettingsStorage().byKeys(
+            locKey === null ? [key] : [key, locKey]
+        );
+        // An absent row must stay `undefined` here, not become `null`:
+        // `mergeLocaleSetting` treats both the same, but a stored `null` and a
+        // withheld key are distinguishable and that distinction is free to keep.
+        const byKey = new Map<string, JsonValue | null>(
+            rows.map((row) => [row.key, row.value ?? null])
+        );
+        const base = byKey.get(key) ?? null;
+        if (locKey !== null) {
             // Public read: the per-locale key must also be public (it will be,
             // because the prefix `'<key>:'` covers all `<key>:<locale>` variants).
             const loc =
                 full || isPublicSettingKey(locKey, publicKeys)
-                    ? byKey[locKey]
+                    ? byKey.get(locKey)
                     : undefined;
             return mergeLocaleSetting(base, loc);
         }
@@ -119,38 +121,6 @@ export const settingsApi: SettingsApi = {
             effectiveValue = processed.values as JsonValue;
         }
 
-        const db = getDb();
-        const now = new Date();
-        const row = await db
-            .insertInto('settings')
-            .values(
-                encode('settings', {
-                    key,
-                    value: effectiveValue,
-                    updatedAt: now,
-                }) as unknown as Insertable<DB['settings']>
-            )
-            .onConflict((oc) =>
-                oc.column('key').doUpdateSet(
-                    encodePatch('settings', {
-                        value: effectiveValue,
-                        updatedAt: now,
-                    }) as unknown as Updateable<DB['settings']>
-                )
-            )
-            .returningAll()
-            .executeTakeFirst();
-
-        if (!row) {
-            throw new Error('Failed to upsert setting');
-        }
-
-        const decoded = decode('settings', row);
-        return {
-            key: decoded.key,
-            value: (decoded.value as JsonValue) ?? null,
-            updatedAt: decoded.updatedAt as unknown as Date,
-            updatedBy: (decoded.updatedBy as string | null) ?? null,
-        };
+        return toSetting(await createSettingsStorage().set(key, effectiveValue));
     },
 };

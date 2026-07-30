@@ -22,8 +22,8 @@ import {
 } from '@/transport/http/middleware/errors.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import { withPermissions } from '@/policies/with-permissions.js';
-import { getDb } from '@/database/registry.js';
 import { createUserSchema, updateUserSchema, usersDescriptors } from '@/users/index.js';
+import { createUserStorage } from '@/users/storage.js';
 import type { JsonObject, UserQueryParams } from '@/types/index.js';
 
 type Env = { Variables: AuthVariables };
@@ -131,13 +131,7 @@ router.put('/:id', async (c) => {
             // Last-admin check: if changing away from 'admin', ensure it's not the last one
             const targetUser = await Astromech.users.get(id);
             if (targetUser && targetUser.roleSlug === 'admin' && roleSlug !== 'admin') {
-                const db = getDb();
-                const result = await db
-                    .selectFrom('users')
-                    .select((eb) => eb.fn.countAll<number>().as('c'))
-                    .where('roleSlug', '=', 'admin')
-                    .executeTakeFirst();
-                const adminCount = Number(result?.c ?? 0);
+                const adminCount = await createUserStorage().countByRole('admin');
                 if (adminCount <= 1) {
                     return badRequest(c, 'Cannot remove the last administrator');
                 }
@@ -169,13 +163,7 @@ router.delete('/:id', async (c) => {
         // Last-admin check
         const targetUser = await Astromech.users.get(id);
         if (targetUser && targetUser.roleSlug === 'admin') {
-            const db = getDb();
-            const result = await db
-                .selectFrom('users')
-                .select((eb) => eb.fn.countAll<number>().as('c'))
-                .where('roleSlug', '=', 'admin')
-                .executeTakeFirst();
-            const adminCount = Number(result?.c ?? 0);
+            const adminCount = await createUserStorage().countByRole('admin');
             if (adminCount <= 1) {
                 return badRequest(c, 'Cannot delete the last administrator');
             }
