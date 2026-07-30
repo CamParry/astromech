@@ -22,9 +22,9 @@ Not yet merged to `main`; awaits the user's browser-verification + merge.
 
 These are NOT peers — there's a spine:
 
-- **Nested / container validation is foundational.** Today `processFields` validates
-  top-level fields only; data containers (group / repeater / blocks / tree) are
-  opaque. Everything below is easier once this exists.
+- **Nested / container validation is foundational.** ✅ Done — `processFields` now
+  recurses. Everything below is easier as a result: the pipeline is already open, and
+  `FieldPathSegment` gives severity and document-level errors a path model to key on.
 - **Severity** and **document-level `validate`** are small additions _to the pipeline_ —
   natural to fold in while it's already open for nesting.
 - **Client-side declarative-rule mirror** is a separate axis (UX/perf: run the
@@ -32,7 +32,30 @@ These are NOT peers — there's a spine:
 - **JSON-indexed uniqueness** is a pure optimization of the existing in-memory
   `isUnique` scan. Orthogonal, low priority.
 
-## 2. Nested / container validation — ⬜ (design partly locked)
+## 2. Nested / container validation — ✅ SHIPPED 2026-07-30
+
+Built on `feat/nested-field-validation`, merged to `main`. The design notes below are
+kept only as the record of what was decided; the implementation is the authority now
+(`packages/astromech/src/fields/field-path.ts`, `pipeline.ts`, `core-descriptors.ts`).
+
+**The "coupled to the relationships work" framing was wrong** and cost a round of
+analysis — worth recording. `_id` was already persisted client-side for
+repeater/blocks/tree, and `tree-field.tsx` already emitted `nav[<uuid>].label`. The
+only real coupling was the path grammar itself, shared with the relationships derived
+index (which keys on field path). That was resolved by owning the grammar here as one
+module serving both: `formatFieldPath` for instance paths, `formatSchemaPath` for the
+index. Nothing else was blocked.
+
+**What shipped, beyond the notes below:** brackets not dots (`blocks[<id>].heading` —
+dots read as keyed-object access, the wrong mental model, and brackets need no
+"field names can't start with `_`" rule); `_children` is never a segment, so paths
+chain through declared fields only and one rule covers all four containers;
+descriptor-driven recursion via a `children(field, value)` slot rather than a type
+switch; server-side `_id` minting; item-count `min`/`max`; an error on an undeclared
+block `_type`; and `isValidFieldName`, because the grammar reserves `.`/`[`/`]` in a
+field name and the forms plugin takes names from untrusted JSON.
+
+### Original design notes (superseded by the implementation)
 
 `processFields` must recurse into container instances, applying each child field's
 descriptor + declarative rules. Coupled to

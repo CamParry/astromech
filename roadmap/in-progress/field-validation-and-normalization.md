@@ -50,9 +50,16 @@ remaining design state lives in `specs/field-validation-next-phase.md`.
 
 - [x] Consolidate runtime reserved-key usage — `fields/reserved-keys.ts` is the single source (`RESERVED_KEY`/`RESERVED_KEY_META`/`PUBLIC_STRIPPED_KEYS`); codegen + `entries/visibility.ts` derive public-read visibility from it (can't drift). Typed instance shapes (`use-blocks-field`/`use-tree-field`, generated `.d.ts`) keep literal property names by design
 
+**Bugs found by the nested-validation work** (all fixed on the same branch)
+
+- [x] `FormField` looked its error up by the bare `field.name`, so **no** nested error could ever render regardless of what the server sent — the full path was already in hand as `commonProps.name`
+- [x] `repeater` and `blocks` built child paths from the array index, which shifts if an item moves between form load and save
+- [x] `repeater` and `group` used the child's _reported_ name as a bare object key, but leaf components report the FULL path — so editing a sub-field wrote a junk key (`socials[<id>].url`) and silently never updated the field. Pre-existing on `main` with zero test coverage; `blocks`/`tree` were already correct
+- [x] The forms plugin takes `FieldDefinition.name` verbatim from form-builder JSON, so a field named `user.email` turned a 422 into a 500. Fixed at both ends — `pattern` on the builder's `name` (only _enforceable_ now, since that field lives in a blocks container) and `compile.ts` skipping names the grammar can't express
+
 **P6 — Remaining design work** (full design state: `specs/field-validation-next-phase.md`)
 
-- [ ] **Nested / container validation** (foundational; coupled to the populate/`_id` identity model, now part of `roadmap/planned/relationships-model.md`). DECISION LOCKED: nested-error addressing is `_id`-based (`blocks._abc123.heading`), not index-based — reorder-stable, shared with the populate feature's path scheme. Pipeline recursion + exact path grammar still to design
+- [x] **Nested / container validation** — `fields/field-path.ts` is the one addressing grammar (`blocks[<id>].heading`; item selectors are `_id`-based, brackets not dots, `_children` never a segment because tree ids are unique tree-wide, so paths chain through declared fields only). Recursion is descriptor-driven — a `children(field, value)` slot returns the normalized container value plus `ContainerScope[]` holding live references into it, so a plugin container type nests for free and the pipeline never reassembles. It was NOT blocked on `relationships-model.md`: `_id` was already persisted client-side and the only genuine coupling was the grammar, which `formatSchemaPath` now exposes for the relationships index. Container `_id`s are minted server-side (API/CLI writes stored items with no identity while codegen has always emitted `_id: string` non-optional) — a real stored-shape change. Also enforces repeater/blocks/tree `min`/`max` as item counts, and errors on an undeclared block `_type`
 - [ ] Error/warning severity (Sanity-style) — design open
 - [ ] Document-level `validate` hook — design open
 - [ ] Client-side declarative-rule mirror (declarative rules only; async/custom/unique stay server-side)
