@@ -134,7 +134,7 @@ async function insertRels(rows: RelInput[]): Promise<void> {
         .values(
             rows.map(
                 (r) =>
-                    schema.encode('relationships', {
+                    schema.encodeWith(schema.relationships, {
                         id: crypto.randomUUID(),
                         sourceId: r.sourceId,
                         sourceType: 'entry' as const,
@@ -152,12 +152,14 @@ async function insertRels(rows: RelInput[]): Promise<void> {
 async function upsertSetting(key: string, value: unknown): Promise<void> {
     await db
         .insertInto('settings')
-        .values(schema.encode('settings', { key, value, updatedAt: now }) as never)
+        .values(
+            schema.encodeWith(schema.settings, { key, value, updatedAt: now }) as never
+        )
         .onConflict((oc) =>
             oc
                 .column('key')
                 .doUpdateSet(
-                    schema.encode('settings', { value, updatedAt: now }) as never
+                    schema.encodeWith(schema.settings, { value, updatedAt: now }) as never
                 )
         )
         .execute();
@@ -402,7 +404,7 @@ async function seed(): Promise<void> {
         .insertInto('media')
         .values(
             (mediaRows as Record<string, unknown>[]).map(
-                (r) => schema.encode('media', r) as never
+                (r) => schema.encodeWith(schema.media, r) as never
             )
         )
         .execute();
@@ -493,7 +495,7 @@ async function seed(): Promise<void> {
                         createdBy: adminId,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('entries', r) as never)
+            ).map((r) => schema.encodeWith(schema.entries, r) as never)
         )
         .execute();
     console.log('  Created 4 categories\n');
@@ -583,7 +585,7 @@ async function seed(): Promise<void> {
                         createdBy: adminId,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('entries', r) as never)
+            ).map((r) => schema.encodeWith(schema.entries, r) as never)
         )
         .execute();
     console.log('  Created 5 tags\n');
@@ -700,7 +702,7 @@ async function seed(): Promise<void> {
                         createdBy: adminId,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('entries', r) as never)
+            ).map((r) => schema.encodeWith(schema.entries, r) as never)
         )
         .execute();
     console.log('  Created 3 authors\n');
@@ -1084,7 +1086,7 @@ async function seed(): Promise<void> {
                         createdBy: adminId,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('entries', r) as never)
+            ).map((r) => schema.encodeWith(schema.entries, r) as never)
         )
         .execute();
     console.log('  Created 4 pages (home, features, pricing, about)\n');
@@ -1453,7 +1455,7 @@ async function seed(): Promise<void> {
                         createdBy: adminId,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('entries', r) as never)
+            ).map((r) => schema.encodeWith(schema.entries, r) as never)
         )
         .execute();
 
@@ -1815,7 +1817,7 @@ async function seed(): Promise<void> {
                         createdBy: adminId,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('entries', r) as never)
+            ).map((r) => schema.encodeWith(schema.entries, r) as never)
         )
         .execute();
 
@@ -1976,7 +1978,7 @@ async function seed(): Promise<void> {
                         createdBy: adminId,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('entries', r) as never)
+            ).map((r) => schema.encodeWith(schema.entries, r) as never)
         )
         .execute();
 
@@ -2168,7 +2170,7 @@ async function seed(): Promise<void> {
     await db
         .insertInto('entries')
         .values(
-            schema.encode('entries', {
+            schema.encodeWith(schema.entries, {
                 id: formContactId,
                 type: 'forms/form',
                 locale: 'en',

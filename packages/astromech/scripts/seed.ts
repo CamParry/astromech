@@ -95,7 +95,7 @@ async function insertRelationships(rows: RelationshipInput[]): Promise<void> {
         .values(
             rows.map(
                 (r) =>
-                    schema.encode('relationships', {
+                    schema.encodeWith(schema.relationships, {
                         id: crypto.randomUUID(),
                         sourceId: r.sourceId,
                         sourceType: 'entry' as const,
@@ -279,7 +279,7 @@ async function seed(): Promise<void> {
                         createdBy: adminId,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('media', r) as never)
+            ).map((r) => schema.encodeWith(schema.media, r) as never)
         )
         .execute();
     console.log('✓ Created 8 media items\n');
@@ -346,7 +346,7 @@ async function seed(): Promise<void> {
                         updatedAt: now,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('entries', r) as never)
+            ).map((r) => schema.encodeWith(schema.entries, r) as never)
         )
         .execute();
     console.log('✓ Created 4 categories\n');
@@ -426,7 +426,7 @@ async function seed(): Promise<void> {
                         updatedAt: now,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('entries', r) as never)
+            ).map((r) => schema.encodeWith(schema.entries, r) as never)
         )
         .execute();
     console.log('✓ Created 5 tags\n');
@@ -526,7 +526,7 @@ async function seed(): Promise<void> {
                         updatedAt: now,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('entries', r) as never)
+            ).map((r) => schema.encodeWith(schema.entries, r) as never)
         )
         .execute();
 
@@ -684,7 +684,7 @@ async function seed(): Promise<void> {
                         updatedAt: now,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('entries', r) as never)
+            ).map((r) => schema.encodeWith(schema.entries, r) as never)
         )
         .execute();
 
@@ -998,7 +998,7 @@ async function seed(): Promise<void> {
                         updatedAt: now,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('entries', r) as never)
+            ).map((r) => schema.encodeWith(schema.entries, r) as never)
         )
         .execute();
 
@@ -1163,7 +1163,7 @@ async function seed(): Promise<void> {
                         updatedAt: now,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encode('entries', r) as never)
+            ).map((r) => schema.encodeWith(schema.entries, r) as never)
         )
         .execute();
 

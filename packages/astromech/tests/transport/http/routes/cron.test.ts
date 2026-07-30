@@ -13,7 +13,8 @@ import type { Kysely } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
 import { registerCronJob } from '@/cron/registry.js';
 import { cronRouter } from '@/transport/http/routes/cron.js';
-import { encodePatch } from '@/database/codec.js';
+import { encodePatchWith } from '@/database/codec.js';
+import { cron } from '@/database/schema.js';
 import type { DB } from '@/database/types.js';
 
 // Mock resolveSessionUser so tests control the session branch without a real
@@ -104,7 +105,7 @@ async function seedDueJob(): Promise<{ ran: boolean }> {
     await db
         .updateTable('_astromech_cron')
         .set(
-            encodePatch('_astromech_cron', {
+            encodePatchWith(cron, {
                 nextRun: new Date('2023-01-01T00:00:00.000Z'),
                 lock: null,
             }) as unknown as Updateable<DB['_astromech_cron']>

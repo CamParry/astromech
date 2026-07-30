@@ -33,7 +33,7 @@
 import type { ExpressionBuilder, Updateable } from 'kysely';
 import { getDb } from '@/database/registry.js';
 import { supportsTransactions } from '@/database/capabilities.js';
-import { encodePatch, decode } from '@/database/codec.js';
+import { encodePatchWith, decodeWith } from '@/database/codec.js';
 import { createStorage } from '@/database/storage/create-storage.js';
 import { entries } from '@/database/schema.js';
 import type { DB, Db } from '@/database/types.js';
@@ -288,7 +288,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
             }
             const rawRows = await q.execute();
             const decodedRows = rawRows.map((r) =>
-                decode('entries', r)
+                decodeWith(entries, r)
             ) as unknown as EntryRow[];
             const data = await populateLocales(db, decodedRows);
             return { data, total: data.length };
@@ -315,7 +315,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
         }
         const rawRows = await rowsQ.execute();
         const decodedRows = rawRows.map((r) =>
-            decode('entries', r)
+            decodeWith(entries, r)
         ) as unknown as EntryRow[];
         const data = await populateLocales(db, decodedRows);
         return { data, total };
@@ -414,7 +414,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
             const restored = await db
                 .updateTable('entries')
                 .set(
-                    encodePatch('entries', {
+                    encodePatchWith(entries, {
                         deletedAt: null,
                         updatedAt: new Date(),
                     }) as unknown as Updateable<DB['entries']>
@@ -426,7 +426,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
                 .executeTakeFirstOrThrow();
             return populateLocaleSingle(
                 db,
-                decode('entries', restored) as unknown as EntryRow
+                decodeWith(entries, restored) as unknown as EntryRow
             );
         },
 
