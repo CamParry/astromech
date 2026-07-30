@@ -227,7 +227,12 @@ function SortableRepeaterItem({
                                     ...itemSegments,
                                     { kind: 'field', name: subField.name },
                                 ])}
-                                onChange={onFieldChange}
+                                // `name` is the full path (error lookup, sibling
+                                // reads); the container keys its item by the BARE
+                                // sub-field name, so the reported name is dropped.
+                                onChange={(_path, fieldValue) =>
+                                    onFieldChange(subField.name, fieldValue)
+                                }
                                 {...(disabled !== undefined ? { disabled } : {})}
                             />
                         ))}

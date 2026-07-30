@@ -32,7 +32,12 @@ export function GroupField({ name, value, field, onChange }: BaseFieldProps) {
                         ...parentSegments,
                         { kind: 'field', name: subField.name },
                     ])}
-                    onChange={handleSubFieldChange}
+                    // `name` is the full path (error lookup, sibling reads); the
+                    // group keys its value by the BARE sub-field name, so the
+                    // reported name is dropped.
+                    onChange={(_path, fieldValue) =>
+                        handleSubFieldChange(subField.name, fieldValue)
+                    }
                 />
             ))}
         </div>
