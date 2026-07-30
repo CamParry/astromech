@@ -18,6 +18,45 @@ Loose tasks pulled from otherwise-shipped features.
 - [ ] The root `/entries/<type>` admin route renders for a **qualified** plugin type (`forms/form`) but generates unencoded links (`/admin/entries/forms/form/<id>`) that 404, and shows the raw type as its heading. Plugin entry types have their own working `/plugin/<ns>/entries/<type>` route and nothing links to the root one with a qualified type — so this is a latent trap rather than a live bug. Either encode the segment or reject a qualified type on that route
 - [ ] Admin hooks and components have no render-level test coverage. The `useBlocksField`/`useTreeField` seeding bug (entry blocks rendering permanently empty) survived precisely because nothing renders a hook in the suite; `tests/admin/hooks/container-field-seeding.test.tsx` hand-rolls a React root because there is no `@testing-library/react`. Consider adding it and covering the field components
 
+### Storage-layer follow-ups (from `completed/storage-layer-follow-ups.md`)
+
+- [ ] `buildListWhere`'s silent drop of unknown `where` keys has its own file —
+      `planned/field-value-query-indexing.md`. One live consequence found while
+      migrating storage and worth recording there: `apps/demo/src/lib/data.ts:143,157`
+      pass `where: { category: categoryId }` and `where: { tags: tagId }`, so the
+      demo's category and tag pages **silently return every post** today. It was
+      deliberately not fixed on the storage-follow-ups branch — making the key
+      throw would turn those pages into errors until JSON-field filtering lands,
+      which is a call to make on purpose rather than in passing.
+- [ ] Give the `users` table a real `defineTable` descriptor so
+      `users/storage.ts` can compose on `createStorage` like every other domain.
+      Needs the column vocabulary to express better-auth's format —
+      seconds-INTEGER timestamps and uuid ids — and better-auth still owns the
+      DDL, so the baseline's hand-authored `users` table would have to agree with
+      a descriptor it does not generate. Would let `LEGACY_CODECS` shrink.
+- [ ] Derive `encodeWith`'s return type from the descriptor. It returns a bare
+      `Record<string, unknown>`, so every call site still needs
+      `as unknown as Insertable<DB[…]>` — the codec collapse removed zero casts
+      because the `*With` form takes a descriptor as an _argument_ rather than
+      being descriptor-_typed_.
+- [ ] Decide whether storage should support **savepoint-based nested
+      transactions**. Kysely refuses nesting outright, so a tx-bound storage's
+      `transaction()` now fails loudly rather than silently escaping the outer
+      rollback. No production path nests today.
+- [ ] Route `plugin-purge.ts`'s raw `sql` delete against the plugin-tracking
+      table through `deleteMany`, if its sibling raw DDL and `kysely_migration`
+      statements in the same command ever move too. Left raw because converting
+      one of a cluster reads worse than leaving all of them.
+- [ ] `entries/storage/related-records.ts` keeps a raw `selectFrom('users')`:
+      `domain-no-peer-imports` bars entries from importing `users/storage.ts`, and
+      that storage has no `byIds` anyway. Needs either a dep-rule decision or a
+      shared seam.
+- [ ] `performBackup`'s status transitions are `updateMany` + `findOne` (two
+      round-trips) rather than one `UPDATE … RETURNING`, because `storage.update`
+      throws on a missing row and that would have turned the catch block's
+      failure-recording into a thrown backup. Collapsible via `query()` if the
+      extra round-trip ever matters.
+
 ### `@astromech/forms` follow-ups
 
 - [ ] File-upload fields — needs a multipart `rawRoute` (raw routes are streaming-only) plus media ingest for the uploaded file
