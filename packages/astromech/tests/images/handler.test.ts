@@ -179,9 +179,9 @@ async function readBody(res: Response): Promise<Uint8Array> {
 describe('handleMediaRequest', () => {
     it('1. no params → 200 original bytes', async () => {
         const jpegBytes = makeJpegBytes();
-        const media = await mediaApi.upload(
-            new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' })
-        );
+        const media = await mediaApi.upload({
+            file: new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' }),
+        });
 
         const res = await handleMediaRequest({
             id: media.id,
@@ -209,9 +209,9 @@ describe('handleMediaRequest', () => {
 
     it('3. disallowed width → 404', async () => {
         const jpegBytes = makeJpegBytes();
-        const media = await mediaApi.upload(
-            new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' })
-        );
+        const media = await mediaApi.upload({
+            file: new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' }),
+        });
         const version = media.metadata?.version ?? '';
 
         const search = new URLSearchParams({ w: '999', f: 'webp', v: version });
@@ -227,9 +227,9 @@ describe('handleMediaRequest', () => {
 
     it('4. valid width + format but missing version → 302 with correct params', async () => {
         const jpegBytes = makeJpegBytes();
-        const media = await mediaApi.upload(
-            new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' })
-        );
+        const media = await mediaApi.upload({
+            file: new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' }),
+        });
         const version = media.metadata?.version ?? '';
 
         // Request with w and f but no v
@@ -250,9 +250,9 @@ describe('handleMediaRequest', () => {
 
     it('5. valid variant cache miss → 200, immutable, body=VARIANT, transform called once, variant stored', async () => {
         const jpegBytes = makeJpegBytes();
-        const media = await mediaApi.upload(
-            new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' })
-        );
+        const media = await mediaApi.upload({
+            file: new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' }),
+        });
         const version = media.metadata?.version ?? '';
 
         const search = new URLSearchParams({ w: '320', f: 'webp', v: version });
@@ -280,9 +280,9 @@ describe('handleMediaRequest', () => {
 
     it('6. valid variant cache hit → 200, transform NOT called again', async () => {
         const jpegBytes = makeJpegBytes();
-        const media = await mediaApi.upload(
-            new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' })
-        );
+        const media = await mediaApi.upload({
+            file: new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' }),
+        });
         const version = media.metadata?.version ?? '';
         const search = new URLSearchParams({ w: '320', f: 'webp', v: version });
 
@@ -313,9 +313,11 @@ describe('handleMediaRequest', () => {
 
     it('7. non-optimisable type → serves original, transform not called', async () => {
         const pdfBytes = new TextEncoder().encode('%PDF-1.4 fake content');
-        const media = await mediaApi.upload(
-            new File([pdfBytes as BlobPart], 'document.pdf', { type: 'application/pdf' })
-        );
+        const media = await mediaApi.upload({
+            file: new File([pdfBytes as BlobPart], 'document.pdf', {
+                type: 'application/pdf',
+            }),
+        });
         const version = media.metadata?.version ?? '';
 
         const search = new URLSearchParams({ w: '320', f: 'webp', v: version });
@@ -333,9 +335,9 @@ describe('handleMediaRequest', () => {
 
     it('8. ignores the URL extension — storage key derives from the record (traversal guard)', async () => {
         const jpegBytes = makeJpegBytes();
-        const media = await mediaApi.upload(
-            new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' })
-        );
+        const media = await mediaApi.upload({
+            file: new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' }),
+        });
 
         // A malicious / mismatched URL ext must NOT influence the storage key:
         // the original is keyed by `${id}.jpg` (from media.filename), so it still
@@ -361,11 +363,11 @@ describe('handleMediaRequest', () => {
 const CLIP = 'abcdefghijklmnopqrstuvwxyz'; // 26 bytes
 
 async function uploadClip(): Promise<string> {
-    const media = await mediaApi.upload(
-        new File([new TextEncoder().encode(CLIP) as BlobPart], 'clip.mp4', {
+    const media = await mediaApi.upload({
+        file: new File([new TextEncoder().encode(CLIP) as BlobPart], 'clip.mp4', {
             type: 'video/mp4',
-        })
-    );
+        }),
+    });
     return media.id;
 }
 
@@ -459,9 +461,9 @@ describe('handleMediaRequest — range requests', () => {
 
     it('the 304 short-circuit wins over a range header', async () => {
         const jpegBytes = makeJpegBytes();
-        const media = await mediaApi.upload(
-            new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' })
-        );
+        const media = await mediaApi.upload({
+            file: new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' }),
+        });
         const etag = `"${media.metadata?.version ?? ''}"`;
 
         const res = await handleMediaRequest({
@@ -479,9 +481,9 @@ describe('handleMediaRequest — range requests', () => {
 
     it('ignores a range on a variant request — variants are served whole', async () => {
         const jpegBytes = makeJpegBytes();
-        const media = await mediaApi.upload(
-            new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' })
-        );
+        const media = await mediaApi.upload({
+            file: new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' }),
+        });
         const version = media.metadata?.version ?? '';
 
         const res = await handleMediaRequest({

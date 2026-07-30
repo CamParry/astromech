@@ -134,7 +134,7 @@ function buildUsersAdapter(
                 inputSchema: ID_REQUIRED,
                 invoke: async (args) => {
                     const api = await getUsersApi();
-                    return api.get(args['id'] as string);
+                    return api.get({ id: args['id'] as string });
                 },
             };
 
@@ -177,7 +177,10 @@ function buildUsersAdapter(
                         unknown
                     >;
                     const api = await getUsersApi();
-                    return api.update(id, rest as Parameters<typeof usersApi.update>[1]);
+                    return api.update({
+                        id,
+                        data: rest as Parameters<typeof usersApi.update>[0]['data'],
+                    });
                 },
             };
         }
@@ -188,7 +191,7 @@ function buildUsersAdapter(
                 inputSchema: ID_REQUIRED,
                 invoke: async (args) => {
                     const api = await getUsersApi();
-                    return api.delete(args['id'] as string);
+                    return api.delete({ id: args['id'] as string });
                 },
             };
 
@@ -256,7 +259,8 @@ function buildSettingsAdapter(
                         locale?: string;
                         full?: boolean;
                     };
-                    return api.get(key, {
+                    return api.get({
+                        key,
                         ...(locale !== undefined && { locale }),
                         ...(full !== undefined && { full }),
                     });
@@ -278,7 +282,10 @@ function buildSettingsAdapter(
                 invoke: async (args) => {
                     const api = await getSettingsApi();
                     const { key, value } = args as { key: string; value: unknown };
-                    return api.set(key, value as Parameters<typeof settingsApi.set>[1]);
+                    return api.set({
+                        key,
+                        value: value as Parameters<typeof settingsApi.set>[0]['value'],
+                    });
                 },
             };
 
@@ -331,7 +338,7 @@ function buildMediaAdapter(
                 inputSchema: ID_REQUIRED,
                 invoke: async (args) => {
                     const api = await getMediaApi();
-                    return api.get(args['id'] as string);
+                    return api.get({ id: args['id'] as string });
                 },
             };
 
@@ -341,7 +348,7 @@ function buildMediaAdapter(
                 inputSchema: ID_REQUIRED,
                 invoke: async (args) => {
                     const api = await getMediaApi();
-                    return api.delete(args['id'] as string);
+                    return api.delete({ id: args['id'] as string });
                 },
             };
 

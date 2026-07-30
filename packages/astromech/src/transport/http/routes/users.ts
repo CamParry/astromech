@@ -64,7 +64,7 @@ router.get('/:id', async (c) => {
     if (!permissions.allowsMethod(usersDescriptors.get) && currentUser.id !== id)
         return forbidden(c);
 
-    const user = await Astromech.users.get(id);
+    const user = await Astromech.users.get({ id });
     if (!user) return notFound(c, `User '${id}' not found`);
     return c.json({ data: user });
 });
@@ -115,7 +115,7 @@ router.put('/:id', async (c) => {
         if (!canUpdateUsers) return forbidden(c);
 
         // Last-admin check: if changing away from 'admin', ensure it's not the last one
-        const targetUser = await Astromech.users.get(id);
+        const targetUser = await Astromech.users.get({ id });
         if (targetUser && targetUser.roleSlug === 'admin' && roleSlug !== 'admin') {
             const adminCount = await createUserStorage().countByRole('admin');
             if (adminCount <= 1) {
@@ -124,11 +124,14 @@ router.put('/:id', async (c) => {
         }
     }
 
-    const user = await Astromech.users.update(id, {
-        ...(email !== undefined && { email }),
-        ...(name !== undefined && { name }),
-        ...(fields !== undefined && { fields: fields as JsonObject }),
-        ...(roleSlug !== undefined && { roleSlug }),
+    const user = await Astromech.users.update({
+        id,
+        data: {
+            ...(email !== undefined && { email }),
+            ...(name !== undefined && { name }),
+            ...(fields !== undefined && { fields: fields as JsonObject }),
+            ...(roleSlug !== undefined && { roleSlug }),
+        },
     });
     return c.json({ data: user });
 });
@@ -143,7 +146,7 @@ router.delete('/:id', async (c) => {
     if (!permissions.allowsMethod(usersDescriptors.delete)) return forbidden(c);
 
     // Last-admin check
-    const targetUser = await Astromech.users.get(id);
+    const targetUser = await Astromech.users.get({ id });
     if (targetUser && targetUser.roleSlug === 'admin') {
         const adminCount = await createUserStorage().countByRole('admin');
         if (adminCount <= 1) {
@@ -151,7 +154,7 @@ router.delete('/:id', async (c) => {
         }
     }
 
-    await Astromech.users.delete(id);
+    await Astromech.users.delete({ id });
     return c.json({ success: true });
 });
 

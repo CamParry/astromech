@@ -23,13 +23,16 @@ export async function saveSettingsPage(opts: {
     locale?: string;
 }): Promise<void> {
     if (!opts.translatable) {
-        await Astromech.settings.set(opts.baseKey, opts.values as JsonValue);
+        await Astromech.settings.set({
+            key: opts.baseKey,
+            value: opts.values as JsonValue,
+        });
         return;
     }
     const { shared, perLocale } = partitionGlobalValues(opts.fields, opts.values);
-    await Astromech.settings.set(opts.baseKey, shared as JsonValue);
-    await Astromech.settings.set(
-        `${opts.baseKey}:${opts.locale}`,
-        perLocale as JsonValue
-    );
+    await Astromech.settings.set({ key: opts.baseKey, value: shared as JsonValue });
+    await Astromech.settings.set({
+        key: `${opts.baseKey}:${opts.locale}`,
+        value: perLocale as JsonValue,
+    });
 }

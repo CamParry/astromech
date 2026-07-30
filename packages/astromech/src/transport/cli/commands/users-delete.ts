@@ -24,7 +24,7 @@ export default defineCommand({
                 return;
             }
         }
-        await usersApi.delete(args.id);
+        await usersApi.delete({ id: args.id });
         console.log(`User ${args.id} deleted`);
     },
 });

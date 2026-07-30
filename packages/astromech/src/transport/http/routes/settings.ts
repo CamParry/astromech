@@ -48,7 +48,7 @@ router.get('/:key', async (c) => {
     // full shape so private settings (e.g. plugin pages) are editable. The
     // the Client requests base + per-locale keys separately, so no locale
     // merge is needed here.
-    const value = await Astromech.settings.get(key, { full: true });
+    const value = await Astromech.settings.get({ key, full: true });
     if (value === null) return notFound(c, `Setting '${key}' not found`);
     return c.json({ data: { key, value } });
 });
@@ -66,7 +66,10 @@ router.put('/:key', async (c) => {
     const parsed = setSettingSchema.safeParse(raw);
     if (!parsed.success) return fromZodError(c, parsed.error);
 
-    const setting = await Astromech.settings.set(key, parsed.data.value as JsonValue);
+    const setting = await Astromech.settings.set({
+        key,
+        value: parsed.data.value as JsonValue,
+    });
     return c.json({ data: setting });
 });
 

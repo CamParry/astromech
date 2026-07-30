@@ -69,7 +69,7 @@ describe('usersApi create / get / update / delete', () => {
         expect(created.roleSlug).toBe('admin');
         expect(created.createdAt).toBeInstanceOf(Date);
         expect(created.updatedAt).toBeInstanceOf(Date);
-        expect(await usersApi.get(created.id)).toMatchObject({ name: 'New' });
+        expect(await usersApi.get({ id: created.id })).toMatchObject({ name: 'New' });
     });
 
     it('creates with an explicit role', async () => {
@@ -84,24 +84,29 @@ describe('usersApi create / get / update / delete', () => {
     it('leaves columns absent from the patch alone', async () => {
         const created = await usersApi.create({ email: 'p@test.dev', name: 'Patchable' });
 
-        const patched = await usersApi.update(created.id, { name: 'Renamed' });
+        const patched = await usersApi.update({
+            id: created.id,
+            data: { name: 'Renamed' },
+        });
         expect(patched.name).toBe('Renamed');
         expect(patched.email).toBe('p@test.dev');
         expect(patched.roleSlug).toBe(created.roleSlug);
     });
 
     it('throws when updating a row that does not exist', async () => {
-        await expect(usersApi.update('nope', { name: 'x' })).rejects.toThrow(/nope/);
+        await expect(
+            usersApi.update({ id: 'nope', data: { name: 'x' } })
+        ).rejects.toThrow(/nope/);
     });
 
     it('returns null for an unknown id', async () => {
-        expect(await usersApi.get('nope')).toBeNull();
+        expect(await usersApi.get({ id: 'nope' })).toBeNull();
     });
 
     it('deletes the row', async () => {
         const created = await usersApi.create({ email: 'd@test.dev', name: 'Doomed' });
 
-        await usersApi.delete(created.id);
-        expect(await usersApi.get(created.id)).toBeNull();
+        await usersApi.delete({ id: created.id });
+        expect(await usersApi.get({ id: created.id })).toBeNull();
     });
 });

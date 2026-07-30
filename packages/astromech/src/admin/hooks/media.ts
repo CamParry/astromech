@@ -30,7 +30,7 @@ export function useMediaQuery(params?: MediaQueryParams) {
 export function mediaItemQueryOptions(id: string) {
     return queryOptions({
         queryKey: queryKeys.media.detail(id),
-        queryFn: () => Astromech.media.get(id),
+        queryFn: () => Astromech.media.get({ id }),
     });
 }
 
@@ -51,7 +51,8 @@ export function useUpdateMedia(
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: (data: Record<string, unknown>) => Astromech.media.update(id, data),
+        mutationFn: (data: Record<string, unknown>) =>
+            Astromech.media.update({ id, data }),
         onSuccess: (media) => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.media.detail(id),
@@ -76,7 +77,7 @@ export function useDeleteMedia(options?: { id?: string; onSuccess?: () => void }
 
     return useMutation({
         mutationFn: (id?: string) =>
-            Astromech.media.delete((options?.id ?? id) as string),
+            Astromech.media.delete({ id: (options?.id ?? id) as string }),
         onSuccess: () => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.media.all() });
             toast({ message: t('media.deleted'), variant: 'success' });
@@ -99,7 +100,7 @@ export function useBulkDeleteMedia(options?: { onSuccess?: (ids: string[]) => vo
     return useMutation({
         mutationFn: async (ids: string[]) => {
             for (const id of ids) {
-                await Astromech.media.delete(id);
+                await Astromech.media.delete({ id });
             }
             return ids;
         },

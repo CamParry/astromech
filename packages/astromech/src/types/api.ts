@@ -262,13 +262,13 @@ export type MediaQueryParams = {
 
 export type MediaApi = {
     query(params?: MediaQueryParams): Promise<QueryResult<Media>>;
-    get(id: string): Promise<Media | null>;
-    upload(file: File): Promise<Media>;
-    update(
-        id: string,
-        data: Partial<{ alt: string; fields: JsonObject }>
-    ): Promise<Media>;
-    delete(id: string): Promise<void>;
+    get(params: { id: string }): Promise<Media | null>;
+    upload(params: { file: File }): Promise<Media>;
+    update(params: {
+        id: string;
+        data: Partial<{ alt: string; fields: JsonObject }>;
+    }): Promise<Media>;
+    delete(params: { id: string }): Promise<void>;
 };
 
 export type SettingsApi = {
@@ -277,27 +277,28 @@ export type SettingsApi = {
      * returned (private keys are omitted). Pass `{ full: true }` from a trusted
      * (server-side / authenticated) context to receive all keys.
      */
-    all(opts?: { full?: boolean }): Promise<Setting[]>;
+    all(params?: { full?: boolean }): Promise<Setting[]>;
     /**
      * Return a single setting value. Without `full: true` only public-marked
      * keys resolve; a non-public key returns `null` on a public read.
      */
-    get(
-        key: string,
-        opts?: { locale?: string; full?: boolean }
-    ): Promise<JsonValue | null>;
-    set(key: string, value: JsonValue): Promise<Setting>;
+    get(params: {
+        key: string;
+        locale?: string;
+        full?: boolean;
+    }): Promise<JsonValue | null>;
+    set(params: { key: string; value: JsonValue }): Promise<Setting>;
 };
 
 export type UsersApi = {
     query(params?: UserQueryParams): Promise<QueryResult<User>>;
-    get(id: string): Promise<User | null>;
-    create(data: { email: string; name: string; fields?: JsonObject }): Promise<User>;
-    update(
-        id: string,
-        data: Partial<{ email: string; name: string; fields?: JsonObject }>
-    ): Promise<User>;
-    delete(id: string): Promise<void>;
+    get(params: { id: string }): Promise<User | null>;
+    create(params: { email: string; name: string; fields?: JsonObject }): Promise<User>;
+    update(params: {
+        id: string;
+        data: Partial<{ email: string; name: string; fields?: JsonObject }>;
+    }): Promise<User>;
+    delete(params: { id: string }): Promise<void>;
 };
 
 // ============================================================================
@@ -307,6 +308,6 @@ export type UsersApi = {
 export type NotificationsApi = {
     list(): Promise<Notification[]>;
     count(): Promise<number>;
-    dismiss(id: string): Promise<void>;
+    dismiss(params: { id: string }): Promise<void>;
     dismissAll(): Promise<void>;
 };

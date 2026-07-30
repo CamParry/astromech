@@ -28,7 +28,7 @@ const {
 // Fetch globals settings
 let globals: Record<string, unknown> = {};
 try {
-    const raw = await Astromech.settings.get('globals', { locale });
+    const raw = await Astromech.settings.get({ key: 'globals', locale });
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
         globals = raw as Record<string, unknown>;
     }

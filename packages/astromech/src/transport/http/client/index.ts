@@ -533,14 +533,14 @@ const mediaApi: MediaApi = {
         });
     },
 
-    async get(id: string): Promise<Media | null> {
-        const res = await apiFetch<{ data: Media } | null>(`/media/${id}`);
+    async get(params: { id: string }): Promise<Media | null> {
+        const res = await apiFetch<{ data: Media } | null>(`/media/${params.id}`);
         return res?.data ?? null;
     },
 
-    async upload(file: File): Promise<Media> {
+    async upload(params: { file: File }): Promise<Media> {
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', params.file);
 
         const response = await fetch(`${apiBase}/media`, {
             method: 'POST',
@@ -578,19 +578,19 @@ const mediaApi: MediaApi = {
         return body.data;
     },
 
-    async update(
-        id: string,
-        data: Partial<{ alt: string; fields: JsonObject }>
-    ): Promise<Media> {
-        const res = await apiFetch<{ data: Media }>(`/media/${id}`, {
+    async update(params: {
+        id: string;
+        data: Partial<{ alt: string; fields: JsonObject }>;
+    }): Promise<Media> {
+        const res = await apiFetch<{ data: Media }>(`/media/${params.id}`, {
             method: 'PUT',
-            body: data,
+            body: params.data,
         });
         return res.data;
     },
 
-    async delete(id: string): Promise<void> {
-        await apiFetch<unknown>(`/media/${id}`, {
+    async delete(params: { id: string }): Promise<void> {
+        await apiFetch<unknown>(`/media/${params.id}`, {
             method: 'DELETE',
         });
     },
@@ -605,15 +605,17 @@ const settingsApi: SettingsApi = {
     // the authenticated admin SPA, so the HTTP endpoint always returns the full
     // set (guarded by `requireAuth` + `settings:read`). The flag is ignored on
     // the wire — the HTTP route does not yet expose a public endpoint.
-    async all(_opts?: { full?: boolean }): Promise<Setting[]> {
+    async all(_params?: { full?: boolean }): Promise<Setting[]> {
         const res = await apiFetch<{ data: Setting[] }>('/settings');
         return res.data;
     },
 
-    async get(
-        key: string,
-        opts?: { locale?: string; full?: boolean }
-    ): Promise<JsonValue | null> {
+    async get(params: {
+        key: string;
+        locale?: string;
+        full?: boolean;
+    }): Promise<JsonValue | null> {
+        const { key } = params;
         // A missing setting is a normal state, not an error: swallow the 404 so
         // react-query doesn't treat it as a failure (and retry with backoff —
         // the cause of the slow settings-page spinner).
@@ -632,12 +634,12 @@ const settingsApi: SettingsApi = {
             }
         };
 
-        if (opts?.locale) {
+        if (params.locale) {
             // Base (shared) and per-locale values are independent keys — fetch
             // them concurrently rather than serially.
             const [base, loc] = await Promise.all([
                 getValue(key),
-                getValue(`${key}:${opts.locale}`),
+                getValue(`${key}:${params.locale}`),
             ]);
             if (
                 base !== null &&
@@ -657,12 +659,12 @@ const settingsApi: SettingsApi = {
         return getValue(key);
     },
 
-    async set(key: string, value: JsonValue): Promise<Setting> {
+    async set(params: { key: string; value: JsonValue }): Promise<Setting> {
         const res = await apiFetch<{ data: Setting }>(
-            `/settings/${encodeURIComponent(key)}`,
+            `/settings/${encodeURIComponent(params.key)}`,
             {
                 method: 'PUT',
-                body: { value },
+                body: { value: params.value },
             }
         );
         return res.data;
@@ -692,36 +694,36 @@ const usersApi: UsersApi = {
         });
     },
 
-    async get(id: string): Promise<User | null> {
-        const res = await apiFetch<{ data: User } | null>(`/users/${id}`);
+    async get(params: { id: string }): Promise<User | null> {
+        const res = await apiFetch<{ data: User } | null>(`/users/${params.id}`);
         return res?.data ?? null;
     },
 
-    async create(data: {
+    async create(params: {
         email: string;
         name?: string;
         roleSlug?: string;
     }): Promise<User> {
         const res = await apiFetch<{ data: User }>('/users', {
             method: 'POST',
-            body: data,
+            body: params,
         });
         return res.data;
     },
 
-    async update(
-        id: string,
-        data: Partial<{ name: string; roleSlug: string; fields: JsonObject }>
-    ): Promise<User> {
-        const res = await apiFetch<{ data: User }>(`/users/${id}`, {
+    async update(params: {
+        id: string;
+        data: Partial<{ name: string; roleSlug: string; fields: JsonObject }>;
+    }): Promise<User> {
+        const res = await apiFetch<{ data: User }>(`/users/${params.id}`, {
             method: 'PUT',
-            body: data,
+            body: params.data,
         });
         return res.data;
     },
 
-    async delete(id: string): Promise<void> {
-        await apiFetch<unknown>(`/users/${id}`, {
+    async delete(params: { id: string }): Promise<void> {
+        await apiFetch<unknown>(`/users/${params.id}`, {
             method: 'DELETE',
         });
     },
@@ -742,8 +744,8 @@ const notificationsApi: NotificationsApi = {
         return res.data.count;
     },
 
-    async dismiss(id: string): Promise<void> {
-        await apiFetch<unknown>(`/notifications/${id}`, { method: 'DELETE' });
+    async dismiss(params: { id: string }): Promise<void> {
+        await apiFetch<unknown>(`/notifications/${params.id}`, { method: 'DELETE' });
     },
 
     async dismissAll(): Promise<void> {

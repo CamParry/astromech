@@ -325,9 +325,9 @@ describe('users routes — invalid field value', () => {
 
 describe('PUT /media/:id — invalid field value', () => {
     it('422s with details.fields', async () => {
-        const item = await Astromech.media.upload(
-            new File(['hello' as BlobPart], 'doc.txt', { type: 'text/plain' })
-        );
+        const item = await Astromech.media.upload({
+            file: new File(['hello' as BlobPart], 'doc.txt', { type: 'text/plain' }),
+        });
 
         const app = mountedApp();
         const res = await app.request(`/media/${item.id}`, {

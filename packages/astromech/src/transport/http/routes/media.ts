@@ -64,7 +64,7 @@ router.get('/:id', async (c) => {
     const permissions = withPermissions(c.var.role);
     if (!permissions.allowsMethod(mediaDescriptors.get)) return forbidden(c);
 
-    const item = await Astromech.media.get(id);
+    const item = await Astromech.media.get({ id });
     if (!item) return notFound(c, `Media '${id}' not found`);
     return c.json({ data: item });
 });
@@ -84,7 +84,7 @@ router.post('/upload', async (c) => {
         return badRequest(c, 'A file field is required');
     }
 
-    const media = await Astromech.media.upload(file);
+    const media = await Astromech.media.upload({ file });
     return c.json({ data: media }, 201);
 });
 
@@ -102,10 +102,13 @@ router.put('/:id', async (c) => {
     if (!parsed.success) return fromZodError(c, parsed.error);
 
     const { alt, title, fields } = parsed.data;
-    const media = await Astromech.media.update(id, {
-        ...(alt !== undefined && { alt }),
-        ...(title !== undefined && { title }),
-        ...(fields !== undefined && { fields: fields as JsonObject }),
+    const media = await Astromech.media.update({
+        id,
+        data: {
+            ...(alt !== undefined && { alt }),
+            ...(title !== undefined && { title }),
+            ...(fields !== undefined && { fields: fields as JsonObject }),
+        },
     });
     return c.json({ data: media });
 });
@@ -119,7 +122,7 @@ router.delete('/:id', async (c) => {
     const permissions = withPermissions(c.var.role);
     if (!permissions.allowsMethod(mediaDescriptors.delete)) return forbidden(c);
 
-    await Astromech.media.delete(id);
+    await Astromech.media.delete({ id });
     return c.json({ success: true });
 });
 

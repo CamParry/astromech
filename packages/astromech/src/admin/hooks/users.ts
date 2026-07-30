@@ -28,7 +28,7 @@ export function useUsersQuery(params?: UserQueryParams) {
 export function userQueryOptions(id: string) {
     return queryOptions({
         queryKey: queryKeys.users.detail(id),
-        queryFn: () => Astromech.users.get(id),
+        queryFn: () => Astromech.users.get({ id }),
     });
 }
 
@@ -75,7 +75,7 @@ export function useUpdateUser(
 
     return useMutation({
         mutationFn: (data: Partial<{ name: string; roleSlug: string }>) =>
-            Astromech.users.update(id, data),
+            Astromech.users.update({ id, data }),
         onSuccess: (user) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(id) });
             void queryClient.invalidateQueries({ queryKey: queryKeys.users.all() });
@@ -99,7 +99,7 @@ export function useDeleteUser(options?: { id?: string; onSuccess?: () => void })
 
     return useMutation({
         mutationFn: (id?: string) =>
-            Astromech.users.delete((options?.id ?? id) as string),
+            Astromech.users.delete({ id: (options?.id ?? id) as string }),
         onSuccess: () => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.users.all() });
             toast({ message: t('users.deleted'), variant: 'success' });

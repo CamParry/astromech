@@ -59,7 +59,7 @@ function extOf(filename: string): string {
 export async function handleMediaRequest(info: MediaRequestInfo): Promise<Response> {
     const { id, search, origin, ifNoneMatch, range } = info;
 
-    const media = await mediaApi.get(id);
+    const media = await mediaApi.get({ id });
     if (!media) {
         return new Response('Media not found', { status: 404 });
     }

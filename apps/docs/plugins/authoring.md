@@ -572,7 +572,7 @@ from there instead of importing an identity module:
 // backup.ts
 export async function resolveKeep(ctx: PluginContext, fallback: number): Promise<number> {
     const key = `plugin:${ctx.plugin.namespace}:retention`;
-    const value = await ctx.settings.get(key);
+    const value = await ctx.settings.get({ key });
     // ...
 }
 ```

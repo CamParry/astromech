@@ -91,9 +91,11 @@ beforeEach(async () => {
 
 describe('mediaApi.upload', () => {
     it('buffers an image and records dimensions + version', async () => {
-        const media = await mediaApi.upload(
-            new File([jpegBytes() as BlobPart], 'photo.jpg', { type: 'image/jpeg' })
-        );
+        const media = await mediaApi.upload({
+            file: new File([jpegBytes() as BlobPart], 'photo.jpg', {
+                type: 'image/jpeg',
+            }),
+        });
         expect(media.width).toBe(1);
         expect(media.height).toBe(1);
         expect(media.metadata?.version).toMatch(/^[0-9a-f]{12}$/);
@@ -102,9 +104,11 @@ describe('mediaApi.upload', () => {
     });
 
     it('mints a ULID id, not a UUID', async () => {
-        const media = await mediaApi.upload(
-            new File([jpegBytes() as BlobPart], 'photo.jpg', { type: 'image/jpeg' })
-        );
+        const media = await mediaApi.upload({
+            file: new File([jpegBytes() as BlobPart], 'photo.jpg', {
+                type: 'image/jpeg',
+            }),
+        });
         // Crockford base32, 26 chars — matches `col.id()`'s own default generator.
         expect(media.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
         expect(media.id).not.toMatch(/-/);
@@ -113,9 +117,11 @@ describe('mediaApi.upload', () => {
     });
 
     it('streams a non-image straight to storage (never buffered)', async () => {
-        const media = await mediaApi.upload(
-            new File(['hello world' as BlobPart], 'notes.txt', { type: 'text/plain' })
-        );
+        const media = await mediaApi.upload({
+            file: new File(['hello world' as BlobPart], 'notes.txt', {
+                type: 'text/plain',
+            }),
+        });
         expect(media.width).toBeNull();
         expect(media.height).toBeNull();
         expect(media.metadata?.version).toBeUndefined();
@@ -125,19 +131,23 @@ describe('mediaApi.upload', () => {
 
 describe('mediaApi.replace', () => {
     it('purges variants and overwrites when the extension is unchanged', async () => {
-        const m = await mediaApi.upload(
-            new File([jpegBytes() as BlobPart], 'photo.jpg', { type: 'image/jpeg' })
-        );
+        const m = await mediaApi.upload({
+            file: new File([jpegBytes() as BlobPart], 'photo.jpg', {
+                type: 'image/jpeg',
+            }),
+        });
         // Simulate a cached variant for this item.
         await storage.put(
             `variants/${m.id}/${m.metadata?.version}/320.webp`,
             new Uint8Array([1])
         );
 
-        await mediaApi.replace(
-            m.id,
-            new File([jpegBytes() as BlobPart], 'photo.jpg', { type: 'image/jpeg' })
-        );
+        await mediaApi.replace({
+            id: m.id,
+            file: new File([jpegBytes() as BlobPart], 'photo.jpg', {
+                type: 'image/jpeg',
+            }),
+        });
 
         expect(storage.keys.has(`${m.id}.jpg`)).toBe(true);
         // Old variant purged via deletePrefix.
@@ -147,15 +157,17 @@ describe('mediaApi.replace', () => {
     });
 
     it('deletes the old original when the extension changes', async () => {
-        const m = await mediaApi.upload(
-            new File([jpegBytes() as BlobPart], 'photo.jpg', { type: 'image/jpeg' })
-        );
+        const m = await mediaApi.upload({
+            file: new File([jpegBytes() as BlobPart], 'photo.jpg', {
+                type: 'image/jpeg',
+            }),
+        });
         expect(storage.keys.has(`${m.id}.jpg`)).toBe(true);
 
-        await mediaApi.replace(
-            m.id,
-            new File([jpegBytes() as BlobPart], 'photo.png', { type: 'image/png' })
-        );
+        await mediaApi.replace({
+            id: m.id,
+            file: new File([jpegBytes() as BlobPart], 'photo.png', { type: 'image/png' }),
+        });
 
         expect(storage.deletes).toContain(`${m.id}.jpg`);
         expect(storage.keys.has(`${m.id}.jpg`)).toBe(false);

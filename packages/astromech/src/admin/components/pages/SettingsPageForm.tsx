@@ -81,10 +81,10 @@ export function SettingsPageForm({
     const { data: loadedValues, isLoading } = useQuery({
         queryKey: settingsPageKey(baseKey, effectiveLocale),
         queryFn: async () => {
-            const val = await Astromech.settings.get(
-                baseKey,
-                effectiveLocale ? { locale: effectiveLocale } : undefined
-            );
+            const val = await Astromech.settings.get({
+                key: baseKey,
+                ...(effectiveLocale ? { locale: effectiveLocale } : {}),
+            });
             if (val !== null && typeof val === 'object' && !Array.isArray(val)) {
                 return val as Record<string, unknown>;
             }

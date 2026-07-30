@@ -41,11 +41,13 @@ async function footprintEntries(
  * `path: '/settings'`, so the blob lives at `plugin:<ns>:/settings`.
  */
 async function resolveDefaultOgImage(ctx: PluginContext): Promise<string | null> {
-    const blob = await ctx.settings.get(`plugin:${ctx.plugin.namespace}:/settings`);
+    const blob = await ctx.settings.get({
+        key: `plugin:${ctx.plugin.namespace}:/settings`,
+    });
     if (blob === null || typeof blob !== 'object' || Array.isArray(blob)) return null;
     const mediaId = (blob as Record<string, unknown>).defaultOgImage;
     if (typeof mediaId !== 'string' || mediaId === '') return null;
-    const media = await ctx.media.get(mediaId);
+    const media = await ctx.media.get({ id: mediaId });
     return media?.url ?? null;
 }
 
