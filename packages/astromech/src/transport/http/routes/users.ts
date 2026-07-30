@@ -17,7 +17,6 @@ import {
     badRequest,
     forbidden,
     fromZodError,
-    internalError,
     notFound,
 } from '@/transport/http/middleware/errors.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
@@ -40,22 +39,18 @@ router.get('/', async (c) => {
     const permissions = withPermissions(c.var.role);
     if (!permissions.allowsMethod(usersDescriptors.query)) return forbidden(c);
 
-    try {
-        const q = c.req.query();
-        const params: UserQueryParams = {};
-        if (q['search']) params.search = q['search'];
-        if (q['page']) params.page = Number(q['page']);
-        if (q['limit'] === 'all') params.limit = 'all';
-        else if (q['limit']) params.limit = Number(q['limit']);
-        const sortField = q['sort'];
-        if (sortField && SORTABLE_FIELDS.has(sortField)) {
-            const dir = q['dir'] === 'asc' ? 'asc' : 'desc';
-            params.sort = { [sortField]: dir };
-        }
-        return c.json(await Astromech.users.query(params));
-    } catch (err) {
-        return internalError(c, err instanceof Error ? err.message : undefined);
+    const q = c.req.query();
+    const params: UserQueryParams = {};
+    if (q['search']) params.search = q['search'];
+    if (q['page']) params.page = Number(q['page']);
+    if (q['limit'] === 'all') params.limit = 'all';
+    else if (q['limit']) params.limit = Number(q['limit']);
+    const sortField = q['sort'];
+    if (sortField && SORTABLE_FIELDS.has(sortField)) {
+        const dir = q['dir'] === 'asc' ? 'asc' : 'desc';
+        params.sort = { [sortField]: dir };
     }
+    return c.json(await Astromech.users.query(params));
 });
 
 // ============================================================================
@@ -69,13 +64,9 @@ router.get('/:id', async (c) => {
     if (!permissions.allowsMethod(usersDescriptors.get) && currentUser.id !== id)
         return forbidden(c);
 
-    try {
-        const user = await Astromech.users.get(id);
-        if (!user) return notFound(c, `User '${id}' not found`);
-        return c.json({ data: user });
-    } catch (err) {
-        return internalError(c, err instanceof Error ? err.message : undefined);
-    }
+    const user = await Astromech.users.get(id);
+    if (!user) return notFound(c, `User '${id}' not found`);
+    return c.json({ data: user });
 });
 
 // ============================================================================
@@ -86,22 +77,18 @@ router.post('/', async (c) => {
     const permissions = withPermissions(c.var.role);
     if (!permissions.allowsMethod(usersDescriptors.create)) return forbidden(c);
 
-    try {
-        const raw = await c.req.json();
-        const parsed = createUserSchema.safeParse(raw);
-        if (!parsed.success) return fromZodError(c, parsed.error);
+    const raw = await c.req.json();
+    const parsed = createUserSchema.safeParse(raw);
+    if (!parsed.success) return fromZodError(c, parsed.error);
 
-        const { email, name, fields, roleSlug } = parsed.data;
-        const user = await Astromech.users.create({
-            email,
-            name,
-            ...(fields !== undefined && { fields: fields as JsonObject }),
-            ...(roleSlug !== undefined && { roleSlug }),
-        });
-        return c.json({ data: user }, 201);
-    } catch (err) {
-        return internalError(c, err instanceof Error ? err.message : undefined);
-    }
+    const { email, name, fields, roleSlug } = parsed.data;
+    const user = await Astromech.users.create({
+        email,
+        name,
+        ...(fields !== undefined && { fields: fields as JsonObject }),
+        ...(roleSlug !== undefined && { roleSlug }),
+    });
+    return c.json({ data: user }, 201);
 });
 
 // ============================================================================
@@ -117,43 +104,39 @@ router.put('/:id', async (c) => {
 
     if (!canUpdateUsers && !isSelf) return forbidden(c);
 
-    try {
-        const raw = await c.req.json();
-        const parsed = updateUserSchema.safeParse(raw);
-        if (!parsed.success) return fromZodError(c, parsed.error);
+    const raw = await c.req.json();
+    const parsed = updateUserSchema.safeParse(raw);
+    if (!parsed.success) return fromZodError(c, parsed.error);
 
-        const { email, name, fields, roleSlug } = parsed.data;
+    const { email, name, fields, roleSlug } = parsed.data;
 
-        // Prevent self-role change or role change without users:update permission
-        if (roleSlug !== undefined) {
-            if (!canUpdateUsers) return forbidden(c);
+    // Prevent self-role change or role change without users:update permission
+    if (roleSlug !== undefined) {
+        if (!canUpdateUsers) return forbidden(c);
 
-            // Last-admin check: if changing away from 'admin', ensure it's not the last one
-            const targetUser = await Astromech.users.get(id);
-            if (targetUser && targetUser.roleSlug === 'admin' && roleSlug !== 'admin') {
-                const db = getDb();
-                const result = await db
-                    .selectFrom('users')
-                    .select((eb) => eb.fn.countAll<number>().as('c'))
-                    .where('roleSlug', '=', 'admin')
-                    .executeTakeFirst();
-                const adminCount = Number(result?.c ?? 0);
-                if (adminCount <= 1) {
-                    return badRequest(c, 'Cannot remove the last administrator');
-                }
+        // Last-admin check: if changing away from 'admin', ensure it's not the last one
+        const targetUser = await Astromech.users.get(id);
+        if (targetUser && targetUser.roleSlug === 'admin' && roleSlug !== 'admin') {
+            const db = getDb();
+            const result = await db
+                .selectFrom('users')
+                .select((eb) => eb.fn.countAll<number>().as('c'))
+                .where('roleSlug', '=', 'admin')
+                .executeTakeFirst();
+            const adminCount = Number(result?.c ?? 0);
+            if (adminCount <= 1) {
+                return badRequest(c, 'Cannot remove the last administrator');
             }
         }
-
-        const user = await Astromech.users.update(id, {
-            ...(email !== undefined && { email }),
-            ...(name !== undefined && { name }),
-            ...(fields !== undefined && { fields: fields as JsonObject }),
-            ...(roleSlug !== undefined && { roleSlug }),
-        });
-        return c.json({ data: user });
-    } catch (err) {
-        return internalError(c, err instanceof Error ? err.message : undefined);
     }
+
+    const user = await Astromech.users.update(id, {
+        ...(email !== undefined && { email }),
+        ...(name !== undefined && { name }),
+        ...(fields !== undefined && { fields: fields as JsonObject }),
+        ...(roleSlug !== undefined && { roleSlug }),
+    });
+    return c.json({ data: user });
 });
 
 // ============================================================================
@@ -165,27 +148,23 @@ router.delete('/:id', async (c) => {
     const permissions = withPermissions(c.var.role);
     if (!permissions.allowsMethod(usersDescriptors.delete)) return forbidden(c);
 
-    try {
-        // Last-admin check
-        const targetUser = await Astromech.users.get(id);
-        if (targetUser && targetUser.roleSlug === 'admin') {
-            const db = getDb();
-            const result = await db
-                .selectFrom('users')
-                .select((eb) => eb.fn.countAll<number>().as('c'))
-                .where('roleSlug', '=', 'admin')
-                .executeTakeFirst();
-            const adminCount = Number(result?.c ?? 0);
-            if (adminCount <= 1) {
-                return badRequest(c, 'Cannot delete the last administrator');
-            }
+    // Last-admin check
+    const targetUser = await Astromech.users.get(id);
+    if (targetUser && targetUser.roleSlug === 'admin') {
+        const db = getDb();
+        const result = await db
+            .selectFrom('users')
+            .select((eb) => eb.fn.countAll<number>().as('c'))
+            .where('roleSlug', '=', 'admin')
+            .executeTakeFirst();
+        const adminCount = Number(result?.c ?? 0);
+        if (adminCount <= 1) {
+            return badRequest(c, 'Cannot delete the last administrator');
         }
-
-        await Astromech.users.delete(id);
-        return c.json({ success: true });
-    } catch (err) {
-        return internalError(c, err instanceof Error ? err.message : undefined);
     }
+
+    await Astromech.users.delete(id);
+    return c.json({ success: true });
 });
 
 export { router as usersRouter };

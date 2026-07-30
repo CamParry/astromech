@@ -242,49 +242,44 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.post('/query', async (c) => {
         const permissions = withPermissions(c.var.role);
-        try {
-            const body = await c.req.json<EntryQueryParams & Record<string, unknown>>();
-            const typeParam = body.type;
-            const types = Array.isArray(typeParam)
-                ? Array.from(typeParam)
-                : typeParam
-                  ? [typeParam as string]
-                  : [];
+        const body = await c.req.json<EntryQueryParams & Record<string, unknown>>();
+        const typeParam = body.type;
+        const types = Array.isArray(typeParam)
+            ? Array.from(typeParam)
+            : typeParam
+              ? [typeParam as string]
+              : [];
 
-            if (types.length === 0) {
-                return c.json(
-                    {
-                        error: {
-                            code: 'invalid_input',
-                            message: '`type` is required (string or string[])',
-                            status: 400,
-                        },
+        if (types.length === 0) {
+            return c.json(
+                {
+                    error: {
+                        code: 'invalid_input',
+                        message: '`type` is required (string or string[])',
+                        status: 400,
                     },
-                    400
-                );
-            }
-
-            for (const t of types) {
-                if (!requireEntryType(t))
-                    return notFound(c, `Entry type '${t}' not found`);
-                if (!permissions.allowsMethod(entryGate(t, 'read'))) return forbidden(c);
-            }
-
-            const wantsFull = parseFullFromBody(body);
-            if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL))
-                return forbidden(c);
-
-            const validatedSort = validateSort(body.sort);
-            const params: EntryQueryParams & { type: string | readonly string[] } = {
-                ...body,
-                type: types,
-                full: wantsFull,
-                ...(validatedSort !== undefined ? { sort: validatedSort } : {}),
-            };
-            return c.json(await Astromech.entries.query(params));
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
+                },
+                400
+            );
         }
+
+        for (const t of types) {
+            if (!requireEntryType(t)) return notFound(c, `Entry type '${t}' not found`);
+            if (!permissions.allowsMethod(entryGate(t, 'read'))) return forbidden(c);
+        }
+
+        const wantsFull = parseFullFromBody(body);
+        if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL))
+            return forbidden(c);
+
+        const validatedSort = validateSort(body.sort);
+        const params: EntryQueryParams & { type: string | readonly string[] } = {
+            ...body,
+            type: types,
+            full: wantsFull,
+            ...(validatedSort !== undefined ? { sort: validatedSort } : {}),
+        };
+        return c.json(await Astromech.entries.query(params));
     });
 
     // ============================================================================
@@ -318,21 +313,17 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         if (!permissions.allowsMethod(entryGate(type, 'read'))) return forbidden(c);
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
-        try {
-            const query = c.req.query();
-            const wantsFull = parseFullFromQuery(query);
-            if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL))
-                return forbidden(c);
+        const query = c.req.query();
+        const wantsFull = parseFullFromQuery(query);
+        if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL))
+            return forbidden(c);
 
-            const params = {
-                ...parseQueryParams(query),
-                type: type,
-                full: wantsFull,
-            };
-            return c.json(await Astromech.entries.query(params));
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        const params = {
+            ...parseQueryParams(query),
+            type: type,
+            full: wantsFull,
+        };
+        return c.json(await Astromech.entries.query(params));
     });
 
     // ============================================================================
@@ -367,27 +358,23 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
-        try {
-            const query = c.req.query();
-            const wantsFull = parseFullFromQuery(query);
-            if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL))
-                return forbidden(c);
+        const query = c.req.query();
+        const wantsFull = parseFullFromQuery(query);
+        if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL))
+            return forbidden(c);
 
-            const qp = parseQueryParams(query);
-            const entry = await Astromech.entries.get({
-                type: type,
-                id,
-                full: wantsFull,
-                ...(qp.populate ? { populate: qp.populate } : {}),
-                ...(qp.locale ? { locale: qp.locale } : {}),
-                ...(qp.previewToken ? { previewToken: qp.previewToken } : {}),
-                ...(qp.staged ? { staged: true } : {}),
-            });
-            if (!entry) return notFound(c, `Entry '${id}' not found`);
-            return c.json({ data: entry });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        const qp = parseQueryParams(query);
+        const entry = await Astromech.entries.get({
+            type: type,
+            id,
+            full: wantsFull,
+            ...(qp.populate ? { populate: qp.populate } : {}),
+            ...(qp.locale ? { locale: qp.locale } : {}),
+            ...(qp.previewToken ? { previewToken: qp.previewToken } : {}),
+            ...(qp.staged ? { staged: true } : {}),
+        });
+        if (!entry) return notFound(c, `Entry '${id}' not found`);
+        return c.json({ data: entry });
     });
 
     // ============================================================================
@@ -424,42 +411,38 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
-        try {
-            const raw = await c.req.json();
-            const parsed = createEntrySchemaFor(getTypeTitleField(type)).safeParse(raw);
-            if (!parsed.success) return zodValidationError(c, parsed.error);
+        const raw = await c.req.json();
+        const parsed = createEntrySchemaFor(getTypeTitleField(type)).safeParse(raw);
+        if (!parsed.success) return zodValidationError(c, parsed.error);
 
-            const caps = getTypeCapabilities(type);
+        const caps = getTypeCapabilities(type);
 
-            if (
-                !caps?.statuses &&
-                (parsed.data.status !== undefined || parsed.data.publishAt !== undefined)
-            ) {
-                return capabilityDenied(c, type, 'statuses');
-            }
-
-            if (!caps?.slug && parsed.data.slug !== undefined) {
-                return capabilityDenied(c, type, 'slug');
-            }
-
-            const { title, slug, fields, status, publishAt, locale, localeGroup } =
-                parsed.data;
-
-            const entry = await Astromech.entries.create({
-                type: type,
-                ...(title !== undefined && { title }),
-                ...(slug !== undefined && { slug }),
-                ...(locale !== undefined && { locale }),
-                ...(localeGroup !== undefined && { localeGroup }),
-                ...(fields !== undefined && { fields: fields as JsonObject }),
-                ...(status !== undefined && { status }),
-                ...(publishAt !== undefined && { publishAt }),
-            });
-
-            return c.json({ data: entry }, 201);
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
+        if (
+            !caps?.statuses &&
+            (parsed.data.status !== undefined || parsed.data.publishAt !== undefined)
+        ) {
+            return capabilityDenied(c, type, 'statuses');
         }
+
+        if (!caps?.slug && parsed.data.slug !== undefined) {
+            return capabilityDenied(c, type, 'slug');
+        }
+
+        const { title, slug, fields, status, publishAt, locale, localeGroup } =
+            parsed.data;
+
+        const entry = await Astromech.entries.create({
+            type: type,
+            ...(title !== undefined && { title }),
+            ...(slug !== undefined && { slug }),
+            ...(locale !== undefined && { locale }),
+            ...(localeGroup !== undefined && { localeGroup }),
+            ...(fields !== undefined && { fields: fields as JsonObject }),
+            ...(status !== undefined && { status }),
+            ...(publishAt !== undefined && { publishAt }),
+        });
+
+        return c.json({ data: entry }, 201);
     });
 
     // ============================================================================
@@ -473,25 +456,21 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
-        try {
-            const body = await c.req.json<
-                Omit<EntryQueryParams, 'type'> & Record<string, unknown>
-            >();
-            const wantsFull = parseFullFromBody(body);
-            if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL))
-                return forbidden(c);
+        const body = await c.req.json<
+            Omit<EntryQueryParams, 'type'> & Record<string, unknown>
+        >();
+        const wantsFull = parseFullFromBody(body);
+        if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL))
+            return forbidden(c);
 
-            const validatedSort = validateSort(body.sort);
-            const params: EntryQueryParams & { type: string } = {
-                ...body,
-                type: type,
-                full: wantsFull,
-                ...(validatedSort !== undefined ? { sort: validatedSort } : {}),
-            };
-            return c.json(await Astromech.entries.query(params));
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        const validatedSort = validateSort(body.sort);
+        const params: EntryQueryParams & { type: string } = {
+            ...body,
+            type: type,
+            full: wantsFull,
+            ...(validatedSort !== undefined ? { sort: validatedSort } : {}),
+        };
+        return c.json(await Astromech.entries.query(params));
     });
 
     // ============================================================================
@@ -504,39 +483,35 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         if (!permissions.allowsMethod(entryGate(type, 'update'))) return forbidden(c);
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
-        try {
-            const raw = await c.req.json();
-            const parsed = bulkUpdateSchema.safeParse(raw);
-            if (!parsed.success) return fromZodError(c, parsed.error);
+        const raw = await c.req.json();
+        const parsed = bulkUpdateSchema.safeParse(raw);
+        if (!parsed.success) return fromZodError(c, parsed.error);
 
-            const { ids, data } = parsed.data;
-            const caps = getTypeCapabilities(type);
+        const { ids, data } = parsed.data;
+        const caps = getTypeCapabilities(type);
 
-            if (
-                !caps?.statuses &&
-                (data.status !== undefined || data.publishAt !== undefined)
-            ) {
-                return capabilityDenied(c, type, 'statuses');
-            }
-
-            if (!caps?.slug && data.slug !== undefined) {
-                return capabilityDenied(c, type, 'slug');
-            }
-
-            if (data.status === 'published') {
-                if (!permissions.allowsMethod(entryGate(type, 'publish')))
-                    return forbidden(c);
-            }
-
-            const entries = await Astromech.entries.update({
-                type: type,
-                id: ids,
-                data: data as EntryUpdateData,
-            });
-            return c.json({ data: entries });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
+        if (
+            !caps?.statuses &&
+            (data.status !== undefined || data.publishAt !== undefined)
+        ) {
+            return capabilityDenied(c, type, 'statuses');
         }
+
+        if (!caps?.slug && data.slug !== undefined) {
+            return capabilityDenied(c, type, 'slug');
+        }
+
+        if (data.status === 'published') {
+            if (!permissions.allowsMethod(entryGate(type, 'publish')))
+                return forbidden(c);
+        }
+
+        const entries = await Astromech.entries.update({
+            type: type,
+            id: ids,
+            data: data as EntryUpdateData,
+        });
+        return c.json({ data: entries });
     });
 
     // ============================================================================
@@ -552,20 +527,16 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         const caps = getTypeCapabilities(type);
         if (!caps?.trash) return capabilityDenied(c, type, 'trash');
 
-        try {
-            const raw = await c.req.json();
-            const parsed = bulkTrashOrDeleteSchema.safeParse(raw);
-            if (!parsed.success) return fromZodError(c, parsed.error);
+        const raw = await c.req.json();
+        const parsed = bulkTrashOrDeleteSchema.safeParse(raw);
+        if (!parsed.success) return fromZodError(c, parsed.error);
 
-            await Astromech.entries.trash({
-                type: type,
-                id: parsed.data.ids,
-                ...(parsed.data.cascadeLocales ? { cascadeLocales: true } : {}),
-            });
-            return c.json({ success: true });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        await Astromech.entries.trash({
+            type: type,
+            id: parsed.data.ids,
+            ...(parsed.data.cascadeLocales ? { cascadeLocales: true } : {}),
+        });
+        return c.json({ success: true });
     });
 
     // ============================================================================
@@ -578,20 +549,16 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         if (!permissions.allowsMethod(entryGate(type, 'delete'))) return forbidden(c);
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
-        try {
-            const raw = await c.req.json();
-            const parsed = bulkTrashOrDeleteSchema.safeParse(raw);
-            if (!parsed.success) return fromZodError(c, parsed.error);
+        const raw = await c.req.json();
+        const parsed = bulkTrashOrDeleteSchema.safeParse(raw);
+        if (!parsed.success) return fromZodError(c, parsed.error);
 
-            await Astromech.entries.delete({
-                type: type,
-                id: parsed.data.ids,
-                ...(parsed.data.cascadeLocales ? { cascadeLocales: true } : {}),
-            });
-            return c.json({ success: true });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        await Astromech.entries.delete({
+            type: type,
+            id: parsed.data.ids,
+            ...(parsed.data.cascadeLocales ? { cascadeLocales: true } : {}),
+        });
+        return c.json({ success: true });
     });
 
     // ============================================================================
@@ -607,19 +574,15 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         const caps = getTypeCapabilities(type);
         if (!caps?.trash) return capabilityDenied(c, type, 'trash');
 
-        try {
-            const raw = await c.req.json();
-            const parsed = bulkIdsSchema.safeParse(raw);
-            if (!parsed.success) return fromZodError(c, parsed.error);
+        const raw = await c.req.json();
+        const parsed = bulkIdsSchema.safeParse(raw);
+        if (!parsed.success) return fromZodError(c, parsed.error);
 
-            const entries = await Astromech.entries.restore({
-                type: type,
-                id: parsed.data.ids,
-            });
-            return c.json({ data: entries });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        const entries = await Astromech.entries.restore({
+            type: type,
+            id: parsed.data.ids,
+        });
+        return c.json({ data: entries });
     });
 
     // ============================================================================
@@ -635,19 +598,15 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         const caps = getTypeCapabilities(type);
         if (!caps?.statuses) return capabilityDenied(c, type, 'statuses');
 
-        try {
-            const raw = await c.req.json();
-            const parsed = bulkIdsSchema.safeParse(raw);
-            if (!parsed.success) return fromZodError(c, parsed.error);
+        const raw = await c.req.json();
+        const parsed = bulkIdsSchema.safeParse(raw);
+        if (!parsed.success) return fromZodError(c, parsed.error);
 
-            const entries = await Astromech.entries.publish({
-                type: type,
-                id: parsed.data.ids,
-            });
-            return c.json({ data: entries });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        const entries = await Astromech.entries.publish({
+            type: type,
+            id: parsed.data.ids,
+        });
+        return c.json({ data: entries });
     });
 
     // ============================================================================
@@ -663,19 +622,15 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         const caps = getTypeCapabilities(type);
         if (!caps?.statuses) return capabilityDenied(c, type, 'statuses');
 
-        try {
-            const raw = await c.req.json();
-            const parsed = bulkIdsSchema.safeParse(raw);
-            if (!parsed.success) return fromZodError(c, parsed.error);
+        const raw = await c.req.json();
+        const parsed = bulkIdsSchema.safeParse(raw);
+        if (!parsed.success) return fromZodError(c, parsed.error);
 
-            const entries = await Astromech.entries.unpublish({
-                type: type,
-                id: parsed.data.ids,
-            });
-            return c.json({ data: entries });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        const entries = await Astromech.entries.unpublish({
+            type: type,
+            id: parsed.data.ids,
+        });
+        return c.json({ data: entries });
     });
 
     // ============================================================================
@@ -691,20 +646,16 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         const caps = getTypeCapabilities(type);
         if (!caps?.statuses) return capabilityDenied(c, type, 'statuses');
 
-        try {
-            const raw = await c.req.json();
-            const parsed = bulkScheduleSchema.safeParse(raw);
-            if (!parsed.success) return fromZodError(c, parsed.error);
+        const raw = await c.req.json();
+        const parsed = bulkScheduleSchema.safeParse(raw);
+        if (!parsed.success) return fromZodError(c, parsed.error);
 
-            const entries = await Astromech.entries.schedule({
-                type: type,
-                id: parsed.data.ids,
-                publishAt: parsed.data.publishAt,
-            });
-            return c.json({ data: entries });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        const entries = await Astromech.entries.schedule({
+            type: type,
+            id: parsed.data.ids,
+            publishAt: parsed.data.publishAt,
+        });
+        return c.json({ data: entries });
     });
 
     // ============================================================================
@@ -721,15 +672,11 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         const caps = getTypeCapabilities(type);
         if (!caps?.trash) return capabilityDenied(c, type, 'trash');
 
-        try {
-            const entry = await Astromech.entries.restore({
-                type: type,
-                id,
-            });
-            return c.json({ data: entry });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        const entry = await Astromech.entries.restore({
+            type: type,
+            id,
+        });
+        return c.json({ data: entry });
     });
 
     // ============================================================================
@@ -757,25 +704,21 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
+        let overrides: Record<string, unknown> = {};
         try {
-            let overrides: Record<string, unknown> = {};
-            try {
-                const raw = await c.req.json();
-                const parsed = duplicateOverridesSchema.safeParse(raw);
-                if (!parsed.success) return fromZodError(c, parsed.error);
-                overrides = parsed.data as Record<string, unknown>;
-            } catch {
-                // No body / empty body — proceed with no overrides.
-            }
-            const entry = await Astromech.entries.duplicate({
-                type: type,
-                id,
-                overrides: overrides as EntryDuplicateOverrides,
-            });
-            return c.json({ data: entry }, 201);
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
+            const raw = await c.req.json();
+            const parsed = duplicateOverridesSchema.safeParse(raw);
+            if (!parsed.success) return fromZodError(c, parsed.error);
+            overrides = parsed.data as Record<string, unknown>;
+        } catch {
+            // No body / empty body — proceed with no overrides.
         }
+        const entry = await Astromech.entries.duplicate({
+            type: type,
+            id,
+            overrides: overrides as EntryDuplicateOverrides,
+        });
+        return c.json({ data: entry }, 201);
     });
 
     // ============================================================================
@@ -810,47 +753,43 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
-        try {
-            const raw = await c.req.json();
-            const parsed = updateEntrySchemaFor(getTypeTitleField(type)).safeParse(raw);
-            if (!parsed.success) return fromZodError(c, parsed.error);
+        const raw = await c.req.json();
+        const parsed = updateEntrySchemaFor(getTypeTitleField(type)).safeParse(raw);
+        if (!parsed.success) return fromZodError(c, parsed.error);
 
-            const caps = getTypeCapabilities(type);
+        const caps = getTypeCapabilities(type);
 
-            if (
-                !caps?.statuses &&
-                (parsed.data.status !== undefined || parsed.data.publishAt !== undefined)
-            ) {
-                return capabilityDenied(c, type, 'statuses');
-            }
-
-            if (!caps?.slug && parsed.data.slug !== undefined) {
-                return capabilityDenied(c, type, 'slug');
-            }
-
-            const { title, slug, fields, status, publishAt } = parsed.data;
-
-            if (parsed.data.status === 'published') {
-                if (!permissions.allowsMethod(entryGate(type, 'publish')))
-                    return forbidden(c);
-            }
-
-            const entry = await Astromech.entries.update({
-                type: type,
-                id,
-                data: {
-                    ...(title !== undefined && { title }),
-                    ...(slug !== undefined && { slug }),
-                    ...(fields !== undefined && { fields: fields as JsonObject }),
-                    ...(status !== undefined && { status }),
-                    ...(publishAt !== undefined && { publishAt }),
-                },
-            });
-
-            return c.json({ data: entry });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
+        if (
+            !caps?.statuses &&
+            (parsed.data.status !== undefined || parsed.data.publishAt !== undefined)
+        ) {
+            return capabilityDenied(c, type, 'statuses');
         }
+
+        if (!caps?.slug && parsed.data.slug !== undefined) {
+            return capabilityDenied(c, type, 'slug');
+        }
+
+        const { title, slug, fields, status, publishAt } = parsed.data;
+
+        if (parsed.data.status === 'published') {
+            if (!permissions.allowsMethod(entryGate(type, 'publish')))
+                return forbidden(c);
+        }
+
+        const entry = await Astromech.entries.update({
+            type: type,
+            id,
+            data: {
+                ...(title !== undefined && { title }),
+                ...(slug !== undefined && { slug }),
+                ...(fields !== undefined && { fields: fields as JsonObject }),
+                ...(status !== undefined && { status }),
+                ...(publishAt !== undefined && { publishAt }),
+            },
+        });
+
+        return c.json({ data: entry });
     });
 
     // ============================================================================
@@ -867,12 +806,8 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         const caps = getTypeCapabilities(type);
         if (!caps?.trash) return capabilityDenied(c, type, 'trash');
 
-        try {
-            await Astromech.entries.emptyTrash({ type: type });
-            return c.json({ success: true });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        await Astromech.entries.emptyTrash({ type: type });
+        return c.json({ success: true });
     });
 
     // ============================================================================
@@ -886,16 +821,12 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
-        try {
-            await Astromech.entries.delete({
-                type: type,
-                id,
-                cascadeLocales: cascadeLocalesFromQuery(c.req.query()),
-            });
-            return c.json({ success: true });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        await Astromech.entries.delete({
+            type: type,
+            id,
+            cascadeLocales: cascadeLocalesFromQuery(c.req.query()),
+        });
+        return c.json({ success: true });
     });
 
     // ============================================================================
@@ -927,25 +858,21 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         const cascade = cascadeLocalesFromQuery(c.req.query());
         const caps = getTypeCapabilities(type);
 
-        try {
-            if (!caps?.trash) {
-                // trash is off → hard delete
-                await Astromech.entries.delete({
-                    type: type,
-                    id,
-                    cascadeLocales: cascade,
-                });
-            } else {
-                await Astromech.entries.trash({
-                    type: type,
-                    id,
-                    cascadeLocales: cascade,
-                });
-            }
-            return c.json({ success: true });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
+        if (!caps?.trash) {
+            // trash is off → hard delete
+            await Astromech.entries.delete({
+                type: type,
+                id,
+                cascadeLocales: cascade,
+            });
+        } else {
+            await Astromech.entries.trash({
+                type: type,
+                id,
+                cascadeLocales: cascade,
+            });
         }
+        return c.json({ success: true });
     });
 
     // ============================================================================
@@ -962,15 +889,11 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         const caps = getTypeCapabilities(type);
         if (!caps?.statuses) return capabilityDenied(c, type, 'statuses');
 
-        try {
-            const entry = await Astromech.entries.publish({
-                type: type,
-                id,
-            });
-            return c.json({ data: entry });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        const entry = await Astromech.entries.publish({
+            type: type,
+            id,
+        });
+        return c.json({ data: entry });
     });
 
     // ============================================================================
@@ -987,15 +910,11 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         const caps = getTypeCapabilities(type);
         if (!caps?.statuses) return capabilityDenied(c, type, 'statuses');
 
-        try {
-            const entry = await Astromech.entries.unpublish({
-                type: type,
-                id,
-            });
-            return c.json({ data: entry });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        const entry = await Astromech.entries.unpublish({
+            type: type,
+            id,
+        });
+        return c.json({ data: entry });
     });
 
     // ============================================================================
@@ -1012,19 +931,15 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         const caps = getTypeCapabilities(type);
         if (!caps?.statuses) return capabilityDenied(c, type, 'statuses');
 
-        try {
-            const raw = await c.req.json();
-            const parsed = scheduleEntrySchema.safeParse(raw);
-            if (!parsed.success) return fromZodError(c, parsed.error);
-            const entry = await Astromech.entries.schedule({
-                type: type,
-                id,
-                publishAt: parsed.data.publishAt,
-            });
-            return c.json({ data: entry });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        const raw = await c.req.json();
+        const parsed = scheduleEntrySchema.safeParse(raw);
+        if (!parsed.success) return fromZodError(c, parsed.error);
+        const entry = await Astromech.entries.schedule({
+            type: type,
+            id,
+            publishAt: parsed.data.publishAt,
+        });
+        return c.json({ data: entry });
     });
 
     // ============================================================================
@@ -1038,15 +953,11 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
-        try {
-            const versions = await Astromech.entries.versions({
-                type: type,
-                id,
-            });
-            return c.json({ data: versions });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        const versions = await Astromech.entries.versions({
+            type: type,
+            id,
+        });
+        return c.json({ data: versions });
     });
 
     // ============================================================================
@@ -1060,16 +971,12 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
-        try {
-            const entry = await Astromech.entries.restoreVersion({
-                type: type,
-                id,
-                versionId,
-            });
-            return c.json({ data: entry });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        const entry = await Astromech.entries.restoreVersion({
+            type: type,
+            id,
+            versionId,
+        });
+        return c.json({ data: entry });
     });
 
     // ============================================================================
@@ -1083,15 +990,11 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
-        try {
-            const relations = await Astromech.entries.incomingRelations({
-                type: type,
-                id,
-            });
-            return c.json({ data: relations });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        const relations = await Astromech.entries.incomingRelations({
+            type: type,
+            id,
+        });
+        return c.json({ data: relations });
     });
 
     // ========================================================================
@@ -1158,15 +1061,11 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         const denied = requireStaging(c, type, 'read');
         if (denied) return denied;
 
-        try {
-            const entry = await Astromech.entries.getStaged({
-                type: type,
-                id,
-            });
-            return c.json({ data: entry });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        const entry = await Astromech.entries.getStaged({
+            type: type,
+            id,
+        });
+        return c.json({ data: entry });
     });
 
     // ── POST /:type/:id/staged/merge  (publish) ─────────────────────────────
@@ -1175,15 +1074,11 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         const denied = requireStaging(c, type, 'publish');
         if (denied) return denied;
 
-        try {
-            const entry = await Astromech.entries.mergeStaged({
-                type: type,
-                id,
-            });
-            return c.json({ data: entry });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        const entry = await Astromech.entries.mergeStaged({
+            type: type,
+            id,
+        });
+        return c.json({ data: entry });
     });
 
     // ── DELETE /:type/:id/staged  (discard) ─────────────────────────────────
@@ -1192,15 +1087,11 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         const denied = requireStaging(c, type, 'update');
         if (denied) return denied;
 
-        try {
-            await Astromech.entries.deleteStaged({
-                type: type,
-                id,
-            });
-            return c.json({ success: true });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        await Astromech.entries.deleteStaged({
+            type: type,
+            id,
+        });
+        return c.json({ success: true });
     });
 
     // ── POST /:type/:id/preview-token  (issue) ──────────────────────────────
@@ -1209,25 +1100,21 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         const denied = requireStaging(c, type, 'update');
         if (denied) return denied;
 
+        let expiresAt: Date | null = null;
         try {
-            let expiresAt: Date | null = null;
-            try {
-                const raw = await c.req.json();
-                const parsed = previewTokenSchema.safeParse(raw);
-                if (!parsed.success) return fromZodError(c, parsed.error);
-                if (parsed.data.expiresAt) expiresAt = new Date(parsed.data.expiresAt);
-            } catch {
-                // No body / empty body — no TTL.
-            }
-            const result = await Astromech.entries.issuePreviewToken({
-                type: type,
-                id,
-                expiresAt,
-            });
-            return c.json({ data: result }, 201);
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
+            const raw = await c.req.json();
+            const parsed = previewTokenSchema.safeParse(raw);
+            if (!parsed.success) return fromZodError(c, parsed.error);
+            if (parsed.data.expiresAt) expiresAt = new Date(parsed.data.expiresAt);
+        } catch {
+            // No body / empty body — no TTL.
         }
+        const result = await Astromech.entries.issuePreviewToken({
+            type: type,
+            id,
+            expiresAt,
+        });
+        return c.json({ data: result }, 201);
     });
 
     // ── DELETE /:type/:id/preview-token  (revoke) ───────────────────────────
@@ -1236,15 +1123,11 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         const denied = requireStaging(c, type, 'update');
         if (denied) return denied;
 
-        try {
-            await Astromech.entries.revokePreviewToken({
-                type: type,
-                id,
-            });
-            return c.json({ success: true });
-        } catch (err) {
-            return internalError(c, err instanceof Error ? err.message : undefined);
-        }
+        await Astromech.entries.revokePreviewToken({
+            type: type,
+            id,
+        });
+        return c.json({ success: true });
     });
 
     return router;

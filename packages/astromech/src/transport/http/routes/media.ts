@@ -17,7 +17,6 @@ import {
     badRequest,
     forbidden,
     fromZodError,
-    internalError,
     notFound,
 } from '@/transport/http/middleware/errors.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
@@ -38,26 +37,22 @@ router.get('/', async (c) => {
     const permissions = withPermissions(c.var.role);
     if (!permissions.allowsMethod(mediaDescriptors.query)) return forbidden(c);
 
-    try {
-        const q = c.req.query();
-        const params: MediaQueryParams = {};
-        if (q['search']) params.search = q['search'];
-        if (q['page']) params.page = Number(q['page']);
-        if (q['limit'] === 'all') params.limit = 'all';
-        else if (q['limit']) params.limit = Number(q['limit']);
-        const mimeType = q['mimeType'];
-        if (
-            mimeType === 'images' ||
-            mimeType === 'videos' ||
-            mimeType === 'documents' ||
-            mimeType === 'other'
-        ) {
-            params.where = { mimeType };
-        }
-        return c.json(await Astromech.media.query(params));
-    } catch (err) {
-        return internalError(c, err instanceof Error ? err.message : undefined);
+    const q = c.req.query();
+    const params: MediaQueryParams = {};
+    if (q['search']) params.search = q['search'];
+    if (q['page']) params.page = Number(q['page']);
+    if (q['limit'] === 'all') params.limit = 'all';
+    else if (q['limit']) params.limit = Number(q['limit']);
+    const mimeType = q['mimeType'];
+    if (
+        mimeType === 'images' ||
+        mimeType === 'videos' ||
+        mimeType === 'documents' ||
+        mimeType === 'other'
+    ) {
+        params.where = { mimeType };
     }
+    return c.json(await Astromech.media.query(params));
 });
 
 // ============================================================================
@@ -69,13 +64,9 @@ router.get('/:id', async (c) => {
     const permissions = withPermissions(c.var.role);
     if (!permissions.allowsMethod(mediaDescriptors.get)) return forbidden(c);
 
-    try {
-        const item = await Astromech.media.get(id);
-        if (!item) return notFound(c, `Media '${id}' not found`);
-        return c.json({ data: item });
-    } catch (err) {
-        return internalError(c, err instanceof Error ? err.message : undefined);
-    }
+    const item = await Astromech.media.get(id);
+    if (!item) return notFound(c, `Media '${id}' not found`);
+    return c.json({ data: item });
 });
 
 // ============================================================================
@@ -86,19 +77,15 @@ router.post('/upload', async (c) => {
     const permissions = withPermissions(c.var.role);
     if (!permissions.allowsMethod(mediaDescriptors.upload)) return forbidden(c);
 
-    try {
-        const formData = await c.req.formData();
-        const file = formData.get('file');
+    const formData = await c.req.formData();
+    const file = formData.get('file');
 
-        if (!(file instanceof File)) {
-            return badRequest(c, 'A file field is required');
-        }
-
-        const media = await Astromech.media.upload(file);
-        return c.json({ data: media }, 201);
-    } catch (err) {
-        return internalError(c, err instanceof Error ? err.message : undefined);
+    if (!(file instanceof File)) {
+        return badRequest(c, 'A file field is required');
     }
+
+    const media = await Astromech.media.upload(file);
+    return c.json({ data: media }, 201);
 });
 
 // ============================================================================
@@ -110,21 +97,17 @@ router.put('/:id', async (c) => {
     const permissions = withPermissions(c.var.role);
     if (!permissions.allowsMethod(mediaDescriptors.update)) return forbidden(c);
 
-    try {
-        const raw = await c.req.json();
-        const parsed = updateMediaSchema.safeParse(raw);
-        if (!parsed.success) return fromZodError(c, parsed.error);
+    const raw = await c.req.json();
+    const parsed = updateMediaSchema.safeParse(raw);
+    if (!parsed.success) return fromZodError(c, parsed.error);
 
-        const { alt, title, fields } = parsed.data;
-        const media = await Astromech.media.update(id, {
-            ...(alt !== undefined && { alt }),
-            ...(title !== undefined && { title }),
-            ...(fields !== undefined && { fields: fields as JsonObject }),
-        });
-        return c.json({ data: media });
-    } catch (err) {
-        return internalError(c, err instanceof Error ? err.message : undefined);
-    }
+    const { alt, title, fields } = parsed.data;
+    const media = await Astromech.media.update(id, {
+        ...(alt !== undefined && { alt }),
+        ...(title !== undefined && { title }),
+        ...(fields !== undefined && { fields: fields as JsonObject }),
+    });
+    return c.json({ data: media });
 });
 
 // ============================================================================
@@ -136,12 +119,8 @@ router.delete('/:id', async (c) => {
     const permissions = withPermissions(c.var.role);
     if (!permissions.allowsMethod(mediaDescriptors.delete)) return forbidden(c);
 
-    try {
-        await Astromech.media.delete(id);
-        return c.json({ success: true });
-    } catch (err) {
-        return internalError(c, err instanceof Error ? err.message : undefined);
-    }
+    await Astromech.media.delete(id);
+    return c.json({ success: true });
 });
 
 export { router as mediaRouter };

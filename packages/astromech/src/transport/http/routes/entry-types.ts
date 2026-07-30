@@ -11,7 +11,7 @@
 
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { Astromech } from '@/transport/local/index.js';
-import { internalError, notFound } from '@/transport/http/middleware/errors.js';
+import { notFound } from '@/transport/http/middleware/errors.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 
 type Env = { Variables: AuthVariables };
@@ -23,25 +23,21 @@ const router = new OpenAPIHono<Env>();
 // ============================================================================
 
 router.get('/', (c) => {
-    try {
-        const { entries } = Astromech.config;
+    const { entries } = Astromech.config;
 
-        const meta = Object.entries(entries).map(([type, config]) => ({
-            type,
-            single: config.single,
-            plural: config.plural,
-            versioning: config.versioning ?? false,
-            slug: config.slug ?? null,
-            adminColumns: config.adminColumns ?? [],
-            fields: config.fields,
-            capabilities: config.capabilities,
-            titleField: config.titleField,
-        }));
+    const meta = Object.entries(entries).map(([type, config]) => ({
+        type,
+        single: config.single,
+        plural: config.plural,
+        versioning: config.versioning ?? false,
+        slug: config.slug ?? null,
+        adminColumns: config.adminColumns ?? [],
+        fields: config.fields,
+        capabilities: config.capabilities,
+        titleField: config.titleField,
+    }));
 
-        return c.json(meta);
-    } catch (err) {
-        return internalError(c, err instanceof Error ? err.message : undefined);
-    }
+    return c.json(meta);
 });
 
 // ============================================================================
@@ -49,26 +45,22 @@ router.get('/', (c) => {
 // ============================================================================
 
 router.get('/:type', (c) => {
-    try {
-        const { type } = c.req.param();
-        const config = Astromech.config.entries[type];
+    const { type } = c.req.param();
+    const config = Astromech.config.entries[type];
 
-        if (!config) return notFound(c, `Entry type '${type}' not found`);
+    if (!config) return notFound(c, `Entry type '${type}' not found`);
 
-        return c.json({
-            type,
-            single: config.single,
-            plural: config.plural,
-            versioning: config.versioning ?? false,
-            slug: config.slug ?? null,
-            adminColumns: config.adminColumns ?? [],
-            fields: config.fields,
-            capabilities: config.capabilities,
-            titleField: config.titleField,
-        });
-    } catch (err) {
-        return internalError(c, err instanceof Error ? err.message : undefined);
-    }
+    return c.json({
+        type,
+        single: config.single,
+        plural: config.plural,
+        versioning: config.versioning ?? false,
+        slug: config.slug ?? null,
+        adminColumns: config.adminColumns ?? [],
+        fields: config.fields,
+        capabilities: config.capabilities,
+        titleField: config.titleField,
+    });
 });
 
 export { router as entryTypesRouter };

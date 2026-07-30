@@ -10,7 +10,7 @@
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { internalError, unauthorized } from '@/transport/http/middleware/errors.js';
+import { unauthorized } from '@/transport/http/middleware/errors.js';
 import { resolveSessionUser } from '@/transport/http/middleware/auth.js';
 import { onTick } from '@/cron/runner.js';
 
@@ -34,12 +34,8 @@ router.post('/run', async (c) => {
 
     if (!bearerOk && !sessionOk) return unauthorized(c);
 
-    try {
-        await onTick(new Date());
-        return c.json({ success: true });
-    } catch (err) {
-        return internalError(c, err instanceof Error ? err.message : undefined);
-    }
+    await onTick(new Date());
+    return c.json({ success: true });
 });
 
 export { router as cronRouter };
