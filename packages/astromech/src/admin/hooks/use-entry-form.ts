@@ -12,13 +12,20 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useForm, useStore } from '@tanstack/react-form';
 import { useMutation } from '@tanstack/react-query';
 import type { UseMutationResult } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useHotkeys } from './index.js';
 import { useFieldValidation } from './use-field-validation.js';
 import { useToast } from '../components/ui/index.js';
+import {
+    fieldErrorNames,
+    validationSummaryMessage,
+} from '@/admin/components/fields/field-error-summary.js';
+import { resolveLabel } from '@/admin/i18n/labels.js';
 import type {
     Entry,
     EntryStatus,
     FieldDefinition,
+    FieldErrors,
     JsonObject,
 } from '../../types/index.js';
 // Deep import of a pure leaf: the browser must pick the same stage the server
@@ -55,6 +62,12 @@ type UseEntryFormOptions = {
     fieldDefinitions: FieldDefinition[];
     /** Which pipeline operation a submit performs — `'create'` seeds defaults. */
     operation: 'create' | 'update';
+    /**
+     * The i18n namespace field labels resolve against — `namespaceForScope(cacheScope)`.
+     * Passed rather than read from `EntryNamespaceProvider`, because this hook is
+     * called ABOVE that provider and `useLabel()` would answer for the wrong one.
+     */
+    namespace: string;
     /** Whether this collection has a slug field. */
     hasSlug: boolean;
     /**
@@ -88,6 +101,7 @@ type UseEntryFormOptions = {
 export function useEntryForm({
     fieldDefinitions,
     operation,
+    namespace,
     hasSlug,
     hasStatuses = true,
     defaultValues,
@@ -97,6 +111,21 @@ export function useEntryForm({
     readOnly = false,
 }: UseEntryFormOptions) {
     const { toast } = useToast();
+    const { t } = useTranslation();
+
+    /**
+     * Name the fields that failed rather than pointing at highlights the author
+     * has to hunt for — the fields that fail a publish are typically the empty
+     * ones they never scrolled to.
+     */
+    function validationMessage(errors: FieldErrors): string {
+        const names = fieldErrorNames(errors, fieldDefinitions, (label) =>
+            // The label is always present here (the resolver substitutes the
+            // field's own name), so the name fallback is unreachable.
+            resolveLabel(label, '', t, namespace)
+        );
+        return validationSummaryMessage(names, t);
+    }
 
     const form = useForm({
         defaultValues: {
@@ -112,7 +141,7 @@ export function useEntryForm({
                 entryValidationStage({ status: payload.status, hasStatuses })
             );
             if (Object.keys(errors).length > 0) {
-                toast({ message: 'Please fix the highlighted fields', variant: 'error' });
+                toast({ message: validationMessage(errors), variant: 'error' });
                 return;
             }
             saveMutation.mutate(payload);
@@ -154,10 +183,10 @@ export function useEntryForm({
 
     function handleFieldError(err: Error, fallback: string): void {
         if (err instanceof AstromechApiError && err.status === 422) {
-            const fields = (err.details?.fields ?? {}) as Record<string, string[]>;
+            const fields = (err.details?.fields ?? {}) as FieldErrors;
             if (Object.keys(fields).length > 0) {
                 validation.setServerErrors(fields);
-                toast({ message: 'Please fix the highlighted fields', variant: 'error' });
+                toast({ message: validationMessage(fields), variant: 'error' });
                 return;
             }
         }
@@ -218,10 +247,7 @@ export function useEntryForm({
             .validateAll(entryValidationStage({ status: payload.status, hasStatuses }))
             .then((errors) => {
                 if (Object.keys(errors).length > 0) {
-                    toast({
-                        message: 'Please fix the highlighted fields',
-                        variant: 'error',
-                    });
+                    toast({ message: validationMessage(errors), variant: 'error' });
                     return;
                 }
                 publishMutation.mutate(payload);

@@ -161,6 +161,7 @@ export function EntryEditPage({
         {
             fieldDefinitions,
             operation: 'update',
+            namespace: namespaceForScope(cacheScope),
             defaultValues: {
                 title: entry?.title ?? '',
                 slug: entry?.slug ?? '',

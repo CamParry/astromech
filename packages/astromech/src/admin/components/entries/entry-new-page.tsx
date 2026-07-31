@@ -272,6 +272,7 @@ export function EntryNewPage({
     } = useEntryForm({
         fieldDefinitions,
         operation: 'create',
+        namespace: namespaceForScope(cacheScope),
         hasSlug,
         hasStatuses,
         saveFn: (payload) =>
