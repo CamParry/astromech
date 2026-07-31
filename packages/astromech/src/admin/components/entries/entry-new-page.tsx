@@ -37,6 +37,7 @@ import {
 } from '@/admin/components/ui/index.js';
 import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer.js';
 import { FieldErrorsProvider } from '@/admin/components/fields/field-errors-context.js';
+import { FieldValidationProvider } from '@/admin/components/fields/field-validation-context.js';
 import {
     EntryNamespaceProvider,
     namespaceForScope,
@@ -244,6 +245,12 @@ export function EntryNewPage({
     const [chosenLocaleGroup, setChosenLocaleGroup] = useState<string | null>(null);
     const [modalOpen, setModalOpen] = useState<boolean>(isNonDefaultLocale);
 
+    const formDef = deriveFormDefinition(resolveConfigForDerive(entryTypeConfig, type));
+    const { hasTitle, hasSlug, hasStatuses, main, sidebar } = formDef;
+    // The two columns together ARE the full field tree the client validates.
+    // Derived above the permission bail-out so the memo keeps its hook slot.
+    const fieldDefinitions = React.useMemo(() => [...main, ...sidebar], [main, sidebar]);
+
     if (!canCreate) {
         toast({
             message: t('permissions.forbidden'),
@@ -254,10 +261,17 @@ export function EntryNewPage({
     }
     const single = entryTypeConfig?.single ?? type;
     const plural = entryTypeConfig?.plural ?? type;
-    const formDef = deriveFormDefinition(resolveConfigForDerive(entryTypeConfig, type));
-    const { hasTitle, hasSlug, hasStatuses, main, sidebar } = formDef;
 
-    const { form, saveMutation, handleSave, handlePublish, fieldErrors } = useEntryForm({
+    const {
+        form,
+        saveMutation,
+        handleSave,
+        handlePublish,
+        fieldErrors,
+        fieldValidation,
+    } = useEntryForm({
+        fieldDefinitions,
+        operation: 'create',
         hasSlug,
         hasStatuses,
         saveFn: (payload) =>
@@ -385,162 +399,181 @@ export function EntryNewPage({
                 </PageHeader>
 
                 <PageContent>
-                    <FieldErrorsProvider value={fieldErrors}>
-                        <FormLayout>
-                            <FormLayoutContent>
-                                {/* Main column */}
-                                <Stack gap={8}>
-                                    {/* Title + optional slug */}
-                                    {(hasTitle || hasSlug) && (
-                                        <Panel>
-                                            {hasTitle && (
-                                                <form.Field
-                                                    name="title"
-                                                    validators={{
-                                                        onChange: ({ value }) =>
-                                                            value.trim() === ''
-                                                                ? t(
-                                                                      'entries.titleRequired'
-                                                                  )
-                                                                : undefined,
-                                                    }}
-                                                >
-                                                    {(field) => (
-                                                        <div className="am-field">
-                                                            <label
-                                                                className="am-field-label"
-                                                                htmlFor="entry-title"
-                                                            >
-                                                                {t('entries.titleField')}{' '}
-                                                                <span className="am-field-required">
-                                                                    *
-                                                                </span>
-                                                            </label>
-                                                            <Input
-                                                                id="entry-title"
-                                                                type="text"
-                                                                value={field.state.value}
-                                                                onChange={(e) =>
-                                                                    field.handleChange(
-                                                                        e.target.value
-                                                                    )
-                                                                }
-                                                                onBlur={field.handleBlur}
-                                                                placeholder={`${single} title`}
-                                                                required
-                                                            />
-                                                            {field.state.meta.errors
-                                                                .length > 0 && (
-                                                                <p className="am-field-error">
-                                                                    {
-                                                                        field.state.meta
-                                                                            .errors[0]
+                    <FieldValidationProvider value={fieldValidation}>
+                        <FieldErrorsProvider value={fieldErrors}>
+                            <FormLayout>
+                                <FormLayoutContent>
+                                    {/* Main column */}
+                                    <Stack gap={8}>
+                                        {/* Title + optional slug */}
+                                        {(hasTitle || hasSlug) && (
+                                            <Panel>
+                                                {hasTitle && (
+                                                    <form.Field
+                                                        name="title"
+                                                        validators={{
+                                                            onChange: ({ value }) =>
+                                                                value.trim() === ''
+                                                                    ? t(
+                                                                          'entries.titleRequired'
+                                                                      )
+                                                                    : undefined,
+                                                        }}
+                                                    >
+                                                        {(field) => (
+                                                            <div className="am-field">
+                                                                <label
+                                                                    className="am-field-label"
+                                                                    htmlFor="entry-title"
+                                                                >
+                                                                    {t(
+                                                                        'entries.titleField'
+                                                                    )}{' '}
+                                                                    <span className="am-field-required">
+                                                                        *
+                                                                    </span>
+                                                                </label>
+                                                                <Input
+                                                                    id="entry-title"
+                                                                    type="text"
+                                                                    value={
+                                                                        field.state.value
                                                                     }
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </form.Field>
-                                            )}
+                                                                    onChange={(e) =>
+                                                                        field.handleChange(
+                                                                            e.target.value
+                                                                        )
+                                                                    }
+                                                                    onBlur={
+                                                                        field.handleBlur
+                                                                    }
+                                                                    placeholder={`${single} title`}
+                                                                    required
+                                                                />
+                                                                {field.state.meta.errors
+                                                                    .length > 0 && (
+                                                                    <p className="am-field-error">
+                                                                        {
+                                                                            field.state
+                                                                                .meta
+                                                                                .errors[0]
+                                                                        }
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </form.Field>
+                                                )}
 
-                                            {hasSlug && (
-                                                <form.Field name="slug">
-                                                    {(field) => (
-                                                        <div
-                                                            className="am-field"
-                                                            style={{ marginTop: '1rem' }}
-                                                        >
-                                                            <label
-                                                                className="am-field-label"
-                                                                htmlFor="entry-slug"
+                                                {hasSlug && (
+                                                    <form.Field name="slug">
+                                                        {(field) => (
+                                                            <div
+                                                                className="am-field"
+                                                                style={{
+                                                                    marginTop: '1rem',
+                                                                }}
                                                             >
-                                                                {t('entries.slugField')}
-                                                            </label>
-                                                            <Input
-                                                                id="entry-slug"
-                                                                type="text"
-                                                                value={field.state.value}
-                                                                onChange={(e) =>
-                                                                    field.handleChange(
-                                                                        e.target.value
-                                                                    )
-                                                                }
-                                                                onBlur={field.handleBlur}
-                                                                placeholder="auto-generated-from-title"
-                                                                pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
-                                                            />
-                                                        </div>
-                                                    )}
-                                                </form.Field>
-                                            )}
-                                        </Panel>
-                                    )}
-
-                                    <form.Field name="fields">
-                                        {(f) => (
-                                            <EntryFieldColumn
-                                                nodes={main}
-                                                values={f.state.value}
-                                                onChange={(name, value) =>
-                                                    f.handleChange({
-                                                        ...f.state.value,
-                                                        [name]: value,
-                                                    })
-                                                }
-                                            />
+                                                                <label
+                                                                    className="am-field-label"
+                                                                    htmlFor="entry-slug"
+                                                                >
+                                                                    {t(
+                                                                        'entries.slugField'
+                                                                    )}
+                                                                </label>
+                                                                <Input
+                                                                    id="entry-slug"
+                                                                    type="text"
+                                                                    value={
+                                                                        field.state.value
+                                                                    }
+                                                                    onChange={(e) =>
+                                                                        field.handleChange(
+                                                                            e.target.value
+                                                                        )
+                                                                    }
+                                                                    onBlur={
+                                                                        field.handleBlur
+                                                                    }
+                                                                    placeholder="auto-generated-from-title"
+                                                                    pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </form.Field>
+                                                )}
+                                            </Panel>
                                         )}
-                                    </form.Field>
-                                </Stack>
 
-                                {/* Sidebar column */}
-                                <Stack gap={8}>
-                                    {hasStatuses && (
-                                        <form.Field name="status">
-                                            {(statusField) => (
-                                                <form.Field name="publishAt">
-                                                    {(publishAtField) => (
-                                                        <PublishPanel
-                                                            status={
-                                                                statusField.state.value
-                                                            }
-                                                            publishAt={
-                                                                publishAtField.state.value
-                                                            }
-                                                            onStatusChange={(s) =>
-                                                                statusField.handleChange(
-                                                                    s
-                                                                )
-                                                            }
-                                                            onPublishAtChange={(v) =>
-                                                                publishAtField.handleChange(
-                                                                    v
-                                                                )
-                                                            }
-                                                        />
-                                                    )}
-                                                </form.Field>
+                                        <form.Field name="fields">
+                                            {(f) => (
+                                                <EntryFieldColumn
+                                                    nodes={main}
+                                                    values={f.state.value}
+                                                    onChange={(name, value) =>
+                                                        f.handleChange({
+                                                            ...f.state.value,
+                                                            [name]: value,
+                                                        })
+                                                    }
+                                                />
                                             )}
                                         </form.Field>
-                                    )}
+                                    </Stack>
 
-                                    <form.Field name="fields">
-                                        {(f) => (
-                                            <EntryFieldColumn
-                                                nodes={sidebar}
-                                                values={f.state.value}
-                                                onChange={(name, value) =>
-                                                    f.handleChange({
-                                                        ...f.state.value,
-                                                        [name]: value,
-                                                    })
-                                                }
-                                            />
+                                    {/* Sidebar column */}
+                                    <Stack gap={8}>
+                                        {hasStatuses && (
+                                            <form.Field name="status">
+                                                {(statusField) => (
+                                                    <form.Field name="publishAt">
+                                                        {(publishAtField) => (
+                                                            <PublishPanel
+                                                                status={
+                                                                    statusField.state
+                                                                        .value
+                                                                }
+                                                                publishAt={
+                                                                    publishAtField.state
+                                                                        .value
+                                                                }
+                                                                onStatusChange={(s) =>
+                                                                    statusField.handleChange(
+                                                                        s
+                                                                    )
+                                                                }
+                                                                onPublishAtChange={(v) =>
+                                                                    publishAtField.handleChange(
+                                                                        v
+                                                                    )
+                                                                }
+                                                            />
+                                                        )}
+                                                    </form.Field>
+                                                )}
+                                            </form.Field>
                                         )}
-                                    </form.Field>
-                                </Stack>
-                            </FormLayoutContent>
-                        </FormLayout>
-                    </FieldErrorsProvider>
+
+                                        <form.Field name="fields">
+                                            {(f) => (
+                                                <EntryFieldColumn
+                                                    nodes={sidebar}
+                                                    values={f.state.value}
+                                                    onChange={(name, value) =>
+                                                        f.handleChange({
+                                                            ...f.state.value,
+                                                            [name]: value,
+                                                        })
+                                                    }
+                                                />
+                                            )}
+                                        </form.Field>
+                                    </Stack>
+                                </FormLayoutContent>
+                            </FormLayout>
+                        </FieldErrorsProvider>
+                    </FieldValidationProvider>
                 </PageContent>
             </Page>
         </EntryNamespaceProvider>

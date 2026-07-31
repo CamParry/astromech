@@ -7,6 +7,7 @@ import { hasPluginFieldType, PluginField } from './plugin-field';
 import { FieldPathProvider } from './field-context';
 import { FieldWrapper } from './field-wrapper';
 import { useFieldError } from './field-errors-context';
+import { useFieldValidationHandlers } from './field-validation-context';
 
 export type FormFieldProps = {
     field: FieldDefinition;
@@ -25,13 +26,26 @@ export function FormField({
 }: FormFieldProps): React.ReactElement {
     const required = field.required ?? false;
     const label = useLabel();
+    const { onFieldChange, onFieldBlur } = useFieldValidationHandlers();
+
+    // The FULL path (`blocks[6f1e2a].heading`), the only place it is known — a
+    // container drops it when bubbling the change up to its own onChange.
+    const path = name ?? field.name;
+
+    // A nested change marks BOTH the nested field and each enclosing container
+    // dirty, since every level's FormField wraps the one below in turn. Harmless:
+    // a container's own rules are item counts, which the author did just change.
+    const handleChange = (changedName: string, changedValue: unknown): void => {
+        onFieldChange(path);
+        onChange(changedName, changedValue);
+    };
 
     const commonProps = {
-        name: name ?? field.name,
+        name: path,
         value,
         field,
         required,
-        onChange,
+        onChange: handleChange,
         ...(disabled !== undefined ? { disabled } : {}),
     };
 
@@ -46,7 +60,7 @@ export function FormField({
             name={field.name}
             defaultValue={typeof value === 'string' ? value : ''}
             required={required}
-            onChange={(e) => onChange(field.name, e.target.value)}
+            onChange={(e) => handleChange(field.name, e.target.value)}
         />
     );
 
@@ -54,13 +68,14 @@ export function FormField({
     // bare field name — a nested field keyed on `field.name` would look up
     // `heading` and never find the error the server produced. At the top level
     // `commonProps.name` falls back to `field.name`, so the two agree there.
-    const error = useFieldError(commonProps.name);
+    const error = useFieldError(path);
 
     // A container-less group is invisible chrome — pure data nesting. It renders
     // its sub-fields inline with no label or box; pair it with a `section` for a
-    // heading/surface.
+    // heading/surface. No wrapper here means no blur reporter either — its
+    // children each carry their own.
     if (field.type === 'group' && field.container === false) {
-        return <FieldPathProvider path={commonProps.name}>{control}</FieldPathProvider>;
+        return <FieldPathProvider path={path}>{control}</FieldPathProvider>;
     }
 
     return (
@@ -73,8 +88,15 @@ export function FormField({
             }
             required={required}
             error={error}
+            // React's onBlur bubbles (it is focusout), so without the stop,
+            // focus leaving a nested field would report every enclosing
+            // container too. The innermost wrapper owns the event.
+            onBlur={(event) => {
+                event.stopPropagation();
+                onFieldBlur(path);
+            }}
         >
-            <FieldPathProvider path={commonProps.name}>{control}</FieldPathProvider>
+            <FieldPathProvider path={path}>{control}</FieldPathProvider>
         </FieldWrapper>
     );
 }

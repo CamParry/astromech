@@ -6,6 +6,7 @@ export type FieldWrapperProps = {
     description?: React.ReactNode;
     required?: boolean;
     error?: string[] | undefined;
+    onBlur?: React.FocusEventHandler<HTMLDivElement>;
     children: React.ReactNode;
 };
 
@@ -14,12 +15,17 @@ export function FieldWrapper({
     description,
     required,
     error,
+    onBlur,
     children,
 }: FieldWrapperProps): React.ReactElement {
     const hasError = error !== undefined && error.length > 0;
     const errorId = React.useId();
     return (
-        <div className="am-field" {...(hasError ? { 'data-invalid': '' } : {})}>
+        <div
+            className="am-field"
+            onBlur={onBlur}
+            {...(hasError ? { 'data-invalid': '' } : {})}
+        >
             <label className="am-field-label">
                 {label}
                 {required === true && <span className="am-field-required">*</span>}
