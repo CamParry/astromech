@@ -7,8 +7,9 @@
  * disk or injecting it into a virtual module.
  *
  * Every schema is authored in the domain that owns the method; this file only
- * projects descriptors into the manifest shape. A method's `input` is its
- * ARGUMENT object, not the HTTP body.
+ * projects descriptors into the manifest shape (`ManifestMethod`, declared in
+ * `types/services.ts` so consumers share the emitter's declaration). A method's
+ * `input` is its ARGUMENT object, not the HTTP body.
  *
  * Schema version: 2
  */
@@ -19,6 +20,13 @@ import type {
     AnyPluginServiceMethod,
     PluginAccess,
     ServiceMethodDescriptor,
+    CoreManifestMethod,
+    EntriesManifestMethod,
+    JsonSchemaObject,
+    ManifestAccess,
+    ManifestMethod,
+    MethodManifest,
+    PluginManifestMethod,
 } from '@/types/index.js';
 import type { ResolvedConfig } from '@/types/index.js';
 import { usersDescriptors } from '@/users/descriptors.js';
@@ -42,61 +50,6 @@ import {
 export const METHOD_MANIFEST_FILENAME = 'astromech.methods.json';
 
 // ============================================================================
-// Manifest shape
-// ============================================================================
-
-/**
- * A single entry in the methods array. `source` discriminates the three origin
- * groups; optional fields apply only to specific sources.
- */
-type ManifestMethod = {
-    /** Dotted method identifier, e.g. `users.create`, `entries.get`, `plugins.redirects.lookup`. */
-    name: string;
-    /** One-line human summary. */
-    summary?: string | undefined;
-    /** Origin group. */
-    source: 'core' | 'entries' | 'plugin';
-    /**
-     * Static permission string, or null when the permission is dynamic
-     * (resolved at call time from the input — see `permissionDynamic`).
-     */
-    permission: string | null;
-    /** True when `permission` is null because it is input-derived, not absent. */
-    permissionDynamic?: true;
-    /** Does the method change persisted state? */
-    mutates: boolean;
-    /** Irreversible or data-losing? */
-    destructive: boolean;
-    /** Repeating the call lands the same end-state? */
-    idempotent: boolean;
-    /** JSON Schema for the call input (null when schema extraction failed). */
-    input?: unknown;
-    /** JSON Schema for the call output (null when schema extraction failed). */
-    output?: unknown;
-    // ── entries-specific ──────────────────────────────────────────────────
-    /** Bare wire type (e.g. `posts`). Present when `source === 'entries'`. */
-    entryType?: string;
-    /**
-     * `'root'` for root-mounted types, or the plugin's permissionNamespace for
-     * plugin-mounted types. Present when `source === 'entries'`.
-     */
-    mount?: string;
-    /** Plugin name this entry type belongs to. Present for plugin-mounted entries. */
-    plugin?: string;
-    // ── plugin service method-specific ────────────────────────────────────
-    /**
-     * Normalised access level. Present when `source === 'plugin'`.
-     * `'permission'` means an object form with a concrete permission string.
-     */
-    access?: 'public' | 'authenticated' | 'permission';
-};
-
-type MethodManifest = {
-    version: 2;
-    methods: ManifestMethod[];
-};
-
-// ============================================================================
 // Helpers
 // ============================================================================
 
@@ -110,7 +63,10 @@ type MethodManifest = {
  * (`'output'`) renders the `Date`, which is unrepresentable and degrades to `{}`,
  * telling an AI consumer nothing about what to send.
  */
-function toJSONSchema(schema: z.ZodType, io: 'input' | 'output'): unknown {
+function toJSONSchema(
+    schema: z.ZodType,
+    io: 'input' | 'output'
+): JsonSchemaObject | null {
     try {
         return z.toJSONSchema(schema, { unrepresentable: 'any', io });
     } catch {
@@ -141,7 +97,7 @@ function methodCapabilityMet(
 // Core descriptors group
 // ============================================================================
 
-function buildCoreMethods(): ManifestMethod[] {
+function buildCoreMethods(): CoreManifestMethod[] {
     // The domain prefix is paired with the catalogue here, so a method's name is
     // its position (`users.query`) rather than a hand-written string that can
     // drift from the key it sits under.
@@ -150,14 +106,19 @@ function buildCoreMethods(): ManifestMethod[] {
         ['media', mediaDescriptors],
         ['settings', settingsDescriptors],
     ];
-    const methods: ManifestMethod[] = [];
+    const methods: CoreManifestMethod[] = [];
 
     for (const [domain, catalogue] of catalogues) {
         for (const [key, descriptor] of Object.entries(catalogue)) {
-            const method: ManifestMethod = {
+            const method: CoreManifestMethod = {
+                // A core domain has one method per key, so the name is already
+                // unique — id and name coincide.
+                id: `${domain}.${key}`,
                 name: `${domain}.${key}`,
                 summary: descriptor.summary,
                 source: 'core',
+                domain,
+                method: key,
                 permission: staticPermission(descriptor),
                 mutates: descriptor.mutates,
                 destructive: descriptor.destructive ?? false,
@@ -190,8 +151,8 @@ function buildCoreMethods(): ManifestMethod[] {
 function buildEntriesMethods(
     config: ResolvedConfig,
     plugins: PluginDefinition[]
-): ManifestMethod[] {
-    const methods: ManifestMethod[] = [];
+): EntriesManifestMethod[] {
+    const methods: EntriesManifestMethod[] = [];
 
     // Build plugin name → permissionNamespace map for plugin entry types.
     const pluginNsMap = new Map<string, string>();
@@ -212,11 +173,13 @@ function buildEntriesMethods(
                 continue;
             }
 
-            methods.push({
-                ...projectEntryMethod(descriptor),
-                entryType: type,
-                mount: 'root',
-            });
+            methods.push(
+                projectEntryMethod(descriptor, {
+                    typeId: type,
+                    entryType: type,
+                    mount: 'root',
+                })
+            );
         }
     }
 
@@ -224,8 +187,9 @@ function buildEntriesMethods(
     for (const [pluginName, types] of Object.entries(config.pluginEntries)) {
         const permissionNamespace = pluginNsMap.get(pluginName) ?? pluginName;
         for (const [type, cfg] of Object.entries(types)) {
+            const typeId = qualifyEntryType(pluginName, type);
             for (const descriptor of entryMethodDescriptors({
-                typeId: qualifyEntryType(pluginName, type),
+                typeId,
                 titleField: cfg.titleField,
             })) {
                 // Same capability gating as root entry types.
@@ -233,12 +197,14 @@ function buildEntriesMethods(
                     continue;
                 }
 
-                methods.push({
-                    ...projectEntryMethod(descriptor),
-                    entryType: type,
-                    mount: permissionNamespace,
-                    plugin: pluginName,
-                });
+                methods.push(
+                    projectEntryMethod(descriptor, {
+                        typeId,
+                        entryType: type,
+                        mount: permissionNamespace,
+                        plugin: pluginName,
+                    })
+                );
             }
         }
     }
@@ -246,17 +212,36 @@ function buildEntriesMethods(
     return methods;
 }
 
-/** The type-independent half of an entry method's manifest entry. */
-function projectEntryMethod(descriptor: EntryMethodDescriptor): ManifestMethod {
-    const method: ManifestMethod = {
+/**
+ * Project one entry method for one type. The id carries the type id — the
+ * dimension `name` lacks, since `entries.create` names every type's create.
+ */
+function projectEntryMethod(
+    descriptor: EntryMethodDescriptor,
+    placement: {
+        typeId: string;
+        entryType: string;
+        mount: string;
+        plugin?: string;
+    }
+): EntriesManifestMethod {
+    const method: EntriesManifestMethod = {
+        id: `entries.${placement.typeId}.${descriptor.method}`,
         name: `entries.${descriptor.method}`,
         summary: descriptor.summary,
         source: 'entries',
+        method: descriptor.method,
+        typeId: placement.typeId,
+        entryType: placement.entryType,
+        mount: placement.mount,
         permission: staticPermission(descriptor),
         mutates: descriptor.mutates,
         destructive: descriptor.destructive ?? false,
         idempotent: descriptor.idempotent ?? false,
     };
+    if (placement.plugin !== undefined) {
+        method.plugin = placement.plugin;
+    }
     if (descriptor.input) {
         method.input = toJSONSchema(descriptor.input, 'input');
     }
@@ -267,25 +252,28 @@ function projectEntryMethod(descriptor: EntryMethodDescriptor): ManifestMethod {
 // Plugin service methods group
 // ============================================================================
 
-function normaliseAccess(
-    access: PluginAccess
-): 'public' | 'authenticated' | 'permission' {
+function normaliseAccess(access: PluginAccess): ManifestAccess {
     if (typeof access === 'object') return 'permission';
     return access;
 }
 
-function buildPluginServiceMethods(plugins: PluginDefinition[]): ManifestMethod[] {
-    const methods: ManifestMethod[] = [];
+function buildPluginServiceMethods(plugins: PluginDefinition[]): PluginManifestMethod[] {
+    const methods: PluginManifestMethod[] = [];
 
     for (const def of plugins) {
         const identity = resolvePluginIdentity(def);
         for (const [key, m] of Object.entries(def.service ?? {})) {
             const serviceMethod = m as AnyPluginServiceMethod;
-            const method: ManifestMethod = {
+            const method: PluginManifestMethod = {
+                // Service keys are collision-checked at boot, so the name is
+                // already unique — id and name coincide.
+                id: `plugins.${identity.serviceKey}.${key}`,
                 name: `plugins.${identity.serviceKey}.${key}`,
                 summary: serviceMethod.summary,
                 source: 'plugin',
                 plugin: identity.namespace,
+                serviceKey: identity.serviceKey,
+                method: key,
                 access: normaliseAccess(serviceMethod.access),
                 // Mirror the route's enforcement: bare keys are plugin-scoped
                 // (`view` → `plugin:<ns>:view`); keys with a `:` pass through.
@@ -334,14 +322,12 @@ export function generateMethodManifest(
         ...buildPluginServiceMethods(plugins),
     ];
 
-    // Stable output: sort by method name (ties broken by entryType then plugin).
-    methods.sort((a, b) => {
-        const nameCmp = a.name.localeCompare(b.name);
-        if (nameCmp !== 0) return nameCmp;
-        const typeCmp = (a.entryType ?? '').localeCompare(b.entryType ?? '');
-        if (typeCmp !== 0) return typeCmp;
-        return (a.plugin ?? '').localeCompare(b.plugin ?? '');
-    });
+    // Stable output: `id` is unique, so ordering by it alone is a TOTAL order —
+    // no tiebreakers, nothing left to chance. Compared by code unit rather than
+    // `localeCompare`, whose result depends on the host's default locale and ICU
+    // build: the MCP tool list renders at prompt position 0, so a reorder
+    // between machines would invalidate every downstream prompt cache.
+    methods.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
     const manifest: MethodManifest = { version: 2, methods };
     return JSON.stringify(manifest, null, 2) + '\n';

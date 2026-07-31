@@ -5,6 +5,7 @@
  * list plus a dispatch map keyed by tool name. No I/O; unit-testable.
  */
 
+import type { JsonSchemaObject, MethodManifest } from '@/types/index.js';
 import { buildDispatch, type ToolDispatch, type ToolAnnotations } from './dispatch.js';
 
 // ============================================================================
@@ -15,27 +16,8 @@ import { buildDispatch, type ToolDispatch, type ToolAnnotations } from './dispat
 export type McpToolDef = {
     name: string;
     description: string;
-    inputSchema: Record<string, unknown>;
+    inputSchema: JsonSchemaObject;
     annotations: ToolAnnotations;
-};
-
-/** Parsed method manifest — minimal slice this module cares about. */
-type ManifestMethod = {
-    name: string;
-    summary?: string | undefined;
-    source: 'core' | 'entries' | 'plugin';
-    mutates: boolean;
-    destructive: boolean;
-    idempotent: boolean;
-    input?: unknown;
-    entryType?: string;
-    mount?: string;
-    plugin?: string;
-};
-
-type ParsedManifest = {
-    version: number;
-    methods: ManifestMethod[];
 };
 
 type BuildToolsResult = {
@@ -52,9 +34,10 @@ type BuildToolsResult = {
  * Build the MCP tool list and dispatch map from the method manifest.
  *
  * Duplicate tool names are deduplicated by keeping the first occurrence; the
- * second occurrence is added to `skipped` with a note.
+ * second occurrence is added to `skipped` with a note. `skipped` reports method
+ * IDs, not names — `entries.create` alone names every entry type's create.
  */
-export function buildTools(manifest: ParsedManifest): BuildToolsResult {
+export function buildTools(manifest: MethodManifest): BuildToolsResult {
     const tools: McpToolDef[] = [];
     const dispatch = new Map<
         string,
@@ -68,12 +51,12 @@ export function buildTools(manifest: ParsedManifest): BuildToolsResult {
         try {
             toolDispatch = buildDispatch(method);
         } catch {
-            skipped.push(method.name);
+            skipped.push(method.id);
             continue;
         }
 
         if (toolDispatch === null) {
-            skipped.push(method.name);
+            skipped.push(method.id);
             continue;
         }
 
@@ -83,7 +66,7 @@ export function buildTools(manifest: ParsedManifest): BuildToolsResult {
         const safeName = toolName.replace(/\./g, '_');
 
         if (seenToolNames.has(safeName)) {
-            skipped.push(`${method.name} (duplicate tool name: ${safeName})`);
+            skipped.push(`${method.id} (duplicate tool name: ${safeName})`);
             continue;
         }
 
