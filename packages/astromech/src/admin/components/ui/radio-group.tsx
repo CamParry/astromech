@@ -1,4 +1,5 @@
 import React from 'react';
+import { useFieldControl } from '@/admin/components/fields/field-control-context';
 
 export type RadioGroupOption = { label: string; value: string };
 
@@ -17,6 +18,7 @@ export function RadioGroup({
     name,
     disabled,
 }: RadioGroupProps): React.ReactElement {
+    const { ariaProps } = useFieldControl();
     return (
         <div className="am-radio-group">
             {options.map((opt) => {
@@ -32,6 +34,7 @@ export function RadioGroup({
                             onChange={() => onChange?.(opt.value)}
                             className="am-radio-group-input"
                             disabled={disabled}
+                            {...ariaProps}
                         />
                         <span className="am-radio-group-label">{opt.label}</span>
                     </label>

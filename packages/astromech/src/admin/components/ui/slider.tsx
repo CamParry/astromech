@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { Slider as BaseSlider } from '@base-ui/react/slider';
+import { useFieldControl } from '@/admin/components/fields/field-control-context';
 
 type SliderProps = {
     label?: string;
@@ -28,6 +29,13 @@ export function Slider({
     onValueChange,
     'aria-label': ariaLabel,
 }: SliderProps): React.ReactElement {
+    // Base UI's thumb renders a wrapper div plus the `<input type="range">` that
+    // actually takes focus, and forwards only `aria-label`/`aria-labelledby`/
+    // `aria-describedby` to that input. `aria-invalid` would stay on the
+    // role-less wrapper, so only the description — the part carrying the message
+    // — is passed through.
+    const { ariaProps } = useFieldControl();
+    const describedBy = ariaProps['aria-describedby'];
     const thumbCount = Array.isArray(defaultValue ?? value)
         ? ((defaultValue ?? value) as number[]).length
         : 1;
@@ -54,6 +62,9 @@ export function Slider({
                                 index={i}
                                 className="am-slider-thumb"
                                 aria-label={ariaLabel ?? label ?? `Value ${i + 1}`}
+                                {...(describedBy !== undefined
+                                    ? { 'aria-describedby': describedBy }
+                                    : {})}
                             />
                         ))}
                     </BaseSlider.Track>

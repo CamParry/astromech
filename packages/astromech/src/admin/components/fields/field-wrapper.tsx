@@ -36,8 +36,16 @@ export function FieldWrapper({
             >
                 {children}
             </FieldControlProvider>
+            {/*
+             * Deliberately NOT a live region. An assertive one clips the name of
+             * the field just tabbed to; a polite one appends the previous field's
+             * error after the new field's name. The association that works is the
+             * persistent `aria-invalid` + `aria-describedby` the control applies
+             * from `FieldControlContext`; live-region announcement is reserved for
+             * the submit-time summary toast.
+             */}
             {hasError && (
-                <p className="am-field-error" id={errorId} role="alert">
+                <p className="am-field-error" id={errorId}>
                     {error[0]}
                 </p>
             )}

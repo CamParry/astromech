@@ -1,5 +1,6 @@
 import React from 'react';
 import { Checkbox as BaseCheckbox } from '@base-ui/react/checkbox';
+import { useFieldControl } from '@/admin/components/fields/field-control-context';
 
 type CheckboxProps = {
     checked?: boolean;
@@ -18,6 +19,7 @@ export function Checkbox({
     disabled,
     id,
 }: CheckboxProps): React.ReactElement {
+    const { ariaProps } = useFieldControl();
     return (
         <label className="am-checkbox" htmlFor={id}>
             <BaseCheckbox.Root
@@ -27,6 +29,7 @@ export function Checkbox({
                 defaultChecked={defaultChecked}
                 onCheckedChange={onChange}
                 disabled={disabled}
+                {...ariaProps}
             >
                 <BaseCheckbox.Indicator className="am-checkbox-indicator">
                     <svg

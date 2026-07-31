@@ -1,5 +1,6 @@
 import type { BaseFieldProps } from '@/types/index.js';
 import { Input } from '@/admin/components/ui/input';
+import { useFieldControl } from './field-control-context';
 import './link-field.css';
 
 type LinkValue = {
@@ -22,6 +23,9 @@ function toLinkValue(v: unknown): LinkValue {
 
 export function LinkField({ name, value, onChange, disabled }: BaseFieldProps) {
     const link = toLinkValue(value);
+    // The two `Input`s pick the error association up from the context themselves;
+    // this bare `select` is the one control that has to apply it by hand.
+    const { ariaProps } = useFieldControl();
 
     function handleChange(key: keyof LinkValue, val: string) {
         onChange(name, { ...link, [key]: val });
@@ -68,6 +72,7 @@ export function LinkField({ name, value, onChange, disabled }: BaseFieldProps) {
                     disabled={disabled}
                     onChange={(e) => handleChange('target', e.target.value)}
                     className="am-input am-link-field-select"
+                    {...ariaProps}
                 >
                     <option value="_self">Same tab</option>
                     <option value="_blank">New tab</option>
