@@ -8,16 +8,23 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { FieldDefinition, FieldValidationContext } from '@/types/fields.js';
+import type {
+    FieldDefinition,
+    FieldValidationContext,
+    ValidationStage,
+} from '@/types/fields.js';
 import { processFields } from '@/fields/pipeline.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function fakeCtx(operation: 'create' | 'update' = 'create') {
+function fakeCtx(operation: 'create' | 'update' = 'create', stage?: ValidationStage) {
     return {
         operation,
+        // `exactOptionalPropertyTypes`: an omitted stage must be absent, not
+        // present-and-undefined.
+        ...(stage !== undefined ? { stage } : {}),
         host: { kind: 'entry' as const, record: {} },
         user: null,
         reads: { isUnique: async () => true },
@@ -805,6 +812,48 @@ describe('container item counts', () => {
             fakeCtx()
         );
         expect(errors).toEqual({});
+    });
+});
+
+// ---------------------------------------------------------------------------
+// stage inside containers
+// ---------------------------------------------------------------------------
+
+describe('stage below a container', () => {
+    const sections = field({
+        name: 'sections',
+        type: 'repeater',
+        fields: [
+            field({ name: 'title', type: 'text', required: true }),
+            field({ name: 'link', type: 'url' }),
+        ],
+    });
+
+    it("'save' skips a required child, keyed by its _id path", async () => {
+        const { errors } = await processFields(
+            { sections: [{ _id: 'a1', title: '' }] },
+            [sections],
+            fakeCtx('create', 'save')
+        );
+        expect(errors).toEqual({});
+    });
+
+    it("'publish' reports the same required child at its _id path", async () => {
+        const { errors } = await processFields(
+            { sections: [{ _id: 'a1', title: '' }] },
+            [sections],
+            fakeCtx('create', 'publish')
+        );
+        expect(errors['sections[a1].title']).toEqual(['This field is required']);
+    });
+
+    it("a correctness failure inside an item still fires on 'save'", async () => {
+        const { errors } = await processFields(
+            { sections: [{ _id: 'a1', title: '', link: 'not-a-url' }] },
+            [sections],
+            fakeCtx('create', 'save')
+        );
+        expect(errors).toEqual({ 'sections[a1].link': ['Must be a valid URL'] });
     });
 });
 

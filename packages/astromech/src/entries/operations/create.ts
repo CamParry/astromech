@@ -11,6 +11,7 @@ import { isPublicBranded, PublicShapeWriteError } from '../visibility.js';
 import { UnknownEntryTypeError } from '../errors.js';
 import { createEntryScopedReads } from '../reads.js';
 import { resolveEntryType } from '../type-registry.js';
+import { entryValidationStage } from '../validation-stage.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
 import { processFields } from '@/fields/pipeline.js';
 import { ValidationError } from '@/errors/index.js';
@@ -66,6 +67,10 @@ export async function create(params: {
         fieldDefs,
         {
             operation: 'create',
+            stage: entryValidationStage({
+                status,
+                hasStatuses: entryTypeConfig.capabilities.statuses !== false,
+            }),
             host: { kind: 'entry', record: null },
             user,
             reads: createEntryScopedReads(storage, { type, locale }),

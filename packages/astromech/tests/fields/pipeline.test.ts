@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { FieldDefinition, FieldValidationContext } from '@/types/fields.js';
+import type {
+    FieldDefinition,
+    FieldValidationContext,
+    ValidationStage,
+} from '@/types/fields.js';
 import { registerFieldTypeDescriptor } from '@/fields/descriptors.js';
 import { processFields } from '@/fields/pipeline.js';
 
@@ -9,6 +13,7 @@ import { processFields } from '@/fields/pipeline.js';
 
 type CtxOverrides = Partial<{
     operation: 'create' | 'update';
+    stage: ValidationStage;
     host: { kind: 'entry' | 'media' | 'user' | 'setting'; record: unknown };
     user: null;
     reads: { isUnique: (field: FieldDefinition, value: unknown) => Promise<boolean> };
@@ -95,6 +100,169 @@ describe('required', () => {
         );
         expect(values.status).toBe('draft');
         expect(errors.status).toBeUndefined();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// stage: completeness vs correctness
+//
+// `required` and a container's `min` are COMPLETENESS — "is this finished?" —
+// and run only at `'publish'`. Everything else, `max` included, is CORRECTNESS
+// and runs on every write.
+// ---------------------------------------------------------------------------
+
+describe('stage', () => {
+    const bounded = field({
+        name: 'sections',
+        type: 'repeater',
+        min: 2,
+        max: 3,
+        fields: [field({ name: 'title', type: 'text' })],
+    });
+
+    describe("'save' skips completeness", () => {
+        it('required + empty → no error', async () => {
+            const { errors } = await processFields(
+                { title: '' },
+                [field({ name: 'title', type: 'text', required: true })],
+                fakeCtx({ stage: 'save' })
+            );
+            expect(errors).toEqual({});
+        });
+
+        it('container below min → no error', async () => {
+            const { errors } = await processFields(
+                { sections: [{ _id: 'a1', title: 'a' }] },
+                [bounded],
+                fakeCtx({ stage: 'save' })
+            );
+            expect(errors).toEqual({});
+        });
+    });
+
+    describe("'save' still runs correctness", () => {
+        it('container above max → error', async () => {
+            const { errors } = await processFields(
+                {
+                    sections: [
+                        { _id: 'a1' },
+                        { _id: 'a2' },
+                        { _id: 'a3' },
+                        { _id: 'a4' },
+                    ],
+                },
+                [bounded],
+                fakeCtx({ stage: 'save' })
+            );
+            expect(errors.sections).toEqual(['Must have at most 3 items']);
+        });
+
+        it('malformed url → error', async () => {
+            const { errors } = await processFields(
+                { website: 'not-a-url' },
+                [field({ name: 'website', type: 'url' })],
+                fakeCtx({ stage: 'save' })
+            );
+            expect(errors.website).toEqual(['Must be a valid URL']);
+        });
+
+        it('malformed email → error', async () => {
+            const { errors } = await processFields(
+                { email: 'not-an-email' },
+                [field({ name: 'email', type: 'text', validation: [{ email: true }] })],
+                fakeCtx({ stage: 'save' })
+            );
+            expect(errors.email).toEqual(['Must be a valid email address']);
+        });
+
+        it('pattern mismatch → error', async () => {
+            const { errors } = await processFields(
+                { code: 'abc123' },
+                [
+                    field({
+                        name: 'code',
+                        type: 'text',
+                        validation: [{ pattern: '^[A-Z]+\\d+$' }],
+                    }),
+                ],
+                fakeCtx({ stage: 'save' })
+            );
+            expect(errors.code).toEqual(['Invalid format']);
+        });
+
+        it('maxLength exceeded → error', async () => {
+            const { errors } = await processFields(
+                { slug: 'toolongslug' },
+                [field({ name: 'slug', type: 'text', validation: [{ maxLength: 5 }] })],
+                fakeCtx({ stage: 'save' })
+            );
+            expect(errors.slug).toEqual(['Must be at most 5 characters']);
+        });
+    });
+
+    describe("'publish' enforces completeness", () => {
+        it('required + empty → error', async () => {
+            const { errors } = await processFields(
+                { title: '' },
+                [field({ name: 'title', type: 'text', required: true })],
+                fakeCtx({ stage: 'publish' })
+            );
+            expect(errors.title).toEqual(['This field is required']);
+        });
+
+        it('container below min → error', async () => {
+            const { errors } = await processFields(
+                { sections: [{ _id: 'a1', title: 'a' }] },
+                [bounded],
+                fakeCtx({ stage: 'publish' })
+            );
+            expect(errors.sections).toEqual(['Must have at least 2 items']);
+        });
+    });
+
+    // Media, users and settings never pass a stage; they must keep behaving
+    // exactly as they did before the split existed.
+    describe('an omitted stage behaves as publish', () => {
+        it('required + empty → error', async () => {
+            const { errors } = await processFields(
+                { title: '' },
+                [field({ name: 'title', type: 'text', required: true })],
+                fakeCtx()
+            );
+            expect(errors.title).toEqual(['This field is required']);
+        });
+
+        it('container below min → error', async () => {
+            const { errors } = await processFields(
+                { sections: [{ _id: 'a1', title: 'a' }] },
+                [bounded],
+                fakeCtx()
+            );
+            expect(errors.sections).toEqual(['Must have at least 2 items']);
+        });
+    });
+
+    it('a custom validator sees a concrete stage', async () => {
+        const seen: unknown[] = [];
+        await processFields(
+            { title: 'x' },
+            [
+                field({
+                    name: 'title',
+                    type: 'text',
+                    validation: [
+                        {
+                            custom: async (ctx: FieldValidationContext) => {
+                                seen.push(ctx.stage);
+                                return true;
+                            },
+                        },
+                    ],
+                }),
+            ],
+            fakeCtx()
+        );
+        expect(seen).toEqual(['publish']);
     });
 });
 

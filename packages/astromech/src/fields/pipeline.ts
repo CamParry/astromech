@@ -14,6 +14,13 @@
  * `_id`-based path grammar (`fields/field-path.ts`), so a nested error lands on
  * `sections[a1].items[b2].title` and a top-level one stays the bare field name.
  * Nothing here switches on field type.
+ *
+ * Validation splits in two along `ctx.stage`. COMPLETENESS — `required` and a
+ * container's `min` item count — answers "is this finished?" and runs only at
+ * `'publish'`, so a draft save can leave work half-done. CORRECTNESS —
+ * everything else, including a container's `max` — answers "is what you typed
+ * valid?" and runs on every write, because storing a malformed URL is a
+ * data-integrity problem rather than an incomplete one.
  */
 
 import type {
@@ -22,6 +29,7 @@ import type {
     FieldPathSegment,
     FieldValidationContext,
     ValidationRule,
+    ValidationStage,
 } from '@/types/fields.js';
 import { getFieldTypeDescriptor } from './descriptors.js';
 import { formatFieldPath, isValidFieldName } from './field-path.js';
@@ -162,11 +170,17 @@ async function runRule(
 // Pipeline
 // ---------------------------------------------------------------------------
 
-/** The host-supplied half of the validation context — everything not per-field. */
+/**
+ * The host-supplied half of the validation context — everything not per-field.
+ * `stage` is optional for callers and concrete inside (see `processFields`).
+ */
 type PipelineContext = Omit<
     FieldValidationContext,
-    'value' | 'values' | 'field' | 'path'
->;
+    'value' | 'values' | 'field' | 'path' | 'stage'
+> & { stage?: ValidationStage };
+
+/** The same context once `stage` has been resolved to a concrete value. */
+type ScopeContext = Omit<FieldValidationContext, 'value' | 'values' | 'field' | 'path'>;
 
 /**
  * Run one value scope: the root record, or one container item / group object.
@@ -177,7 +191,7 @@ async function processScope(
     values: Record<string, unknown>,
     definitions: FieldDefinition[],
     parentSegments: readonly FieldPathSegment[],
-    ctx: PipelineContext,
+    ctx: ScopeContext,
     errors: FieldErrors
 ): Promise<void> {
     for (const field of flattenFieldNodes(definitions)) {
@@ -230,15 +244,23 @@ async function processScope(
         // Step e: validate
         const messages: string[] = [];
 
-        if (field.required === true && isEmpty(v)) {
-            // Required + empty: single message, skip all other rules
+        if (ctx.stage === 'publish' && field.required === true && isEmpty(v)) {
+            // Required + empty: single message, skip all other rules. A
+            // completeness check, so a `'save'` write never reaches this branch.
             messages.push('This field is required');
         } else {
             // `min`/`max` on a container mean ITEM COUNTS, not numeric bounds —
             // checked outside the `isEmpty` guard so that `min` still fires on an
             // empty (but not required) container, which is its whole point.
+            // `min` is completeness (publish only); `max` is correctness, so it
+            // runs on a draft save too — no write should store more items than
+            // the type permits.
             if (descriptor?.isContainer === true && Array.isArray(v)) {
-                if (field.min !== undefined && v.length < field.min) {
+                if (
+                    ctx.stage === 'publish' &&
+                    field.min !== undefined &&
+                    v.length < field.min
+                ) {
                     messages.push(`Must have at least ${field.min} items`);
                 }
                 if (field.max !== undefined && v.length > field.max) {
@@ -256,6 +278,7 @@ async function processScope(
                     field,
                     path: segments,
                     operation: ctx.operation,
+                    stage: ctx.stage,
                     host: ctx.host,
                     user: ctx.user,
                     reads: ctx.reads,
@@ -289,6 +312,9 @@ export async function processFields(
 ): Promise<{ values: Record<string, unknown>; errors: FieldErrors }> {
     const result = { ...values };
     const errors: FieldErrors = {};
-    await processScope(result, definitions, [], ctx, errors);
+    // Default to `'publish'`, i.e. today's behaviour: media, users and settings
+    // have no draft concept, so completeness must keep applying to them.
+    const stage: ValidationStage = ctx.stage ?? 'publish';
+    await processScope(result, definitions, [], { ...ctx, stage }, errors);
     return { values: result, errors };
 }

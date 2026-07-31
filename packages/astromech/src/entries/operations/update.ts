@@ -20,6 +20,7 @@ import { entryHooksActive, entrySnapshot } from '../internal/hooks.js';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility.js';
 import { createEntryScopedReads } from '../reads.js';
 import { resolveEntryType } from '../type-registry.js';
+import { entryValidationStage } from '../validation-stage.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
 import { processFields } from '@/fields/pipeline.js';
 import { ValidationError } from '@/errors/index.js';
@@ -48,6 +49,14 @@ export async function updateOne(
             fieldDefs,
             {
                 operation: 'update',
+                // An update that omits `status` keeps the row's current one, so
+                // editing an already-published entry still enforces completeness.
+                stage: entryValidationStage({
+                    status: validatedData.status ?? currentEntry.status,
+                    hasStatuses: entryTypeConfig
+                        ? entryTypeConfig.capabilities.statuses !== false
+                        : true,
+                }),
                 host: { kind: 'entry', record: currentEntry },
                 user: getCurrentUser(),
                 reads: createEntryScopedReads(storage, {

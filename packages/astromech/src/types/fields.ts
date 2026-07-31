@@ -124,6 +124,14 @@ export type FieldPathSegment =
 export type FieldErrors = Record<string, string[]>;
 
 /**
+ * Which half of validation applies to a write. `'publish'` runs everything;
+ * `'save'` skips the completeness checks (`required`, container `min`) so a
+ * draft can be saved half-finished without losing correctness checks on what
+ * IS filled in.
+ */
+export type ValidationStage = 'save' | 'publish';
+
+/**
  * Scoped read access handed to a field validator for async checks (uniqueness,
  * references). Exposes the sanctioned read paths for the field's host domain
  * (built on the entry-access port for entries; per-domain reads elsewhere). The
@@ -155,6 +163,12 @@ export type FieldValidationContext = {
      */
     path: FieldPathSegment[];
     operation: 'create' | 'update';
+    /**
+     * Whether this write runs completeness checks. Always concrete here — a
+     * `custom` validator never has to guess — even though the pipeline's callers
+     * may leave it out and take the `'publish'` default.
+     */
+    stage: ValidationStage;
     host: { kind: 'entry' | 'media' | 'user' | 'setting'; record: unknown };
     user: User | null;
     /** Scoped read access for async checks. */
