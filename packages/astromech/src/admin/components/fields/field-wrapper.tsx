@@ -32,7 +32,7 @@ export function FieldWrapper({
             </FieldControlProvider>
             {hasError && (
                 <p className="am-field-error" id={errorId} role="alert">
-                    {error.join(', ')}
+                    {error[0]}
                 </p>
             )}
         </div>

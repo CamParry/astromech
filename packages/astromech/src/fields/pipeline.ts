@@ -21,6 +21,14 @@
  * everything else, including a container's `max` — answers "is what you typed
  * valid?" and runs on every write, because storing a malformed URL is a
  * data-integrity problem rather than an incomplete one.
+ *
+ * A field reports at most ONE message. The checks short-circuit in the order
+ * `required` → container item counts → the type's own descriptor validator →
+ * the author's declarative `field.validation` rules (in declaration order). The
+ * type's validator precedes the author's rules because an author rule ("must be
+ * on example.com") is unevaluable against a value that is not even a URL.
+ * `FieldErrors` is still `Record<string, string[]>` on the wire — the array just
+ * carries one entry.
  */
 
 import type {
@@ -241,17 +249,18 @@ async function processScope(
             }
         }
 
-        // Step e: validate
-        const messages: string[] = [];
+        // Step e: validate. One message per field — the checks below run in a
+        // fixed order and the FIRST failure wins.
+        let message: string | null = null;
 
         if (ctx.stage === 'publish' && field.required === true && isEmpty(v)) {
-            // Required + empty: single message, skip all other rules. A
-            // completeness check, so a `'save'` write never reaches this branch.
-            messages.push('This field is required');
+            // 1. Required + empty: skips all other rules. A completeness check,
+            // so a `'save'` write never reaches this branch.
+            message = 'This field is required';
         } else {
-            // `min`/`max` on a container mean ITEM COUNTS, not numeric bounds —
-            // checked outside the `isEmpty` guard so that `min` still fires on an
-            // empty (but not required) container, which is its whole point.
+            // 2. `min`/`max` on a container mean ITEM COUNTS, not numeric bounds
+            // — checked outside the `isEmpty` guard so that `min` still fires on
+            // an empty (but not required) container, which is its whole point.
             // `min` is completeness (publish only); `max` is correctness, so it
             // runs on a draft save too — no write should store more items than
             // the type permits.
@@ -261,15 +270,13 @@ async function processScope(
                     field.min !== undefined &&
                     v.length < field.min
                 ) {
-                    messages.push(`Must have at least ${field.min} items`);
-                }
-                if (field.max !== undefined && v.length > field.max) {
-                    messages.push(`Must have at most ${field.max} items`);
+                    message = `Must have at least ${field.min} items`;
+                } else if (field.max !== undefined && v.length > field.max) {
+                    message = `Must have at most ${field.max} items`;
                 }
             }
 
-            if (!isEmpty(v)) {
-                // Present value: run all rules, collect all messages
+            if (message === null && !isEmpty(v)) {
                 const fieldCtx: FieldValidationContext = {
                     value: v,
                     // Siblings within THIS scope — a nested field's cross-field
@@ -284,23 +291,33 @@ async function processScope(
                     reads: ctx.reads,
                 };
 
-                // 1. Declarative rules
-                for (const rule of field.validation ?? []) {
-                    const msg = await runRule(rule, fieldCtx);
-                    if (msg !== null) messages.push(msg);
-                }
-
-                // 2. Descriptor-level validator
+                // 3. The type's own validator, BEFORE the author's rules: an
+                // author rule ("must be on example.com") cannot be evaluated
+                // against a value that is not even a URL, so reporting it first
+                // sends the author chasing the wrong problem.
                 if (descriptor?.validate) {
                     const r = await descriptor.validate(fieldCtx);
-                    if (r !== true) messages.push(r);
+                    if (r !== true) message = r;
+                }
+
+                // 4. Author-supplied declarative rules, in declaration order.
+                if (message === null) {
+                    for (const rule of field.validation ?? []) {
+                        const msg = await runRule(rule, fieldCtx);
+                        if (msg !== null) {
+                            message = msg;
+                            break;
+                        }
+                    }
                 }
             }
             // else: optional + empty → no rules (valid)
         }
 
-        if (messages.length > 0) {
-            errors[path] = messages;
+        // `FieldErrors` stays `Record<string, string[]>` on the wire; the array
+        // simply carries the one message.
+        if (message !== null) {
+            errors[path] = [message];
         }
     }
 }

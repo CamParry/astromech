@@ -279,7 +279,7 @@ describe('create — email validation', () => {
         ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: {
-                contact_email: expect.arrayContaining(['Must be a valid email address']),
+                contact_email: ['Must be a valid email address'],
             },
         });
     });
@@ -376,7 +376,7 @@ describe('update — email validation', () => {
         ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: {
-                contact_email: expect.arrayContaining(['Must be a valid email address']),
+                contact_email: ['Must be a valid email address'],
             },
         });
     });

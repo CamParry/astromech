@@ -670,11 +670,14 @@ describe('rule: enum', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Multiple errors collected
+// One message per field, in a fixed order
+//
+// A field reports its FIRST failure only: required → container counts → the
+// type's own validator → the author's declarative rules in declaration order.
 // ---------------------------------------------------------------------------
 
-describe('multiple errors', () => {
-    it('both minLength and pattern fail → 2 messages collected', async () => {
+describe('one message per field', () => {
+    it('two failing rules → only the first-declared one is reported', async () => {
         const { errors } = await processFields(
             { code: 'ab' },
             [
@@ -689,9 +692,84 @@ describe('multiple errors', () => {
             ],
             fakeCtx()
         );
-        expect(errors.code).toHaveLength(2);
-        expect(errors.code).toContain('Must be at least 5 characters');
-        expect(errors.code).toContain('Must be uppercase');
+        expect(errors.code).toEqual(['Must be at least 5 characters']);
+    });
+
+    it('declaration order decides which of two failures is reported', async () => {
+        const { errors } = await processFields(
+            { code: 'ab' },
+            [
+                field({
+                    name: 'code',
+                    type: 'text',
+                    validation: [
+                        { pattern: '^[A-Z]+$', message: 'Must be uppercase' },
+                        { minLength: 5 },
+                    ],
+                }),
+            ],
+            fakeCtx()
+        );
+        expect(errors.code).toEqual(['Must be uppercase']);
+    });
+
+    // The case that motivated the reorder: an author rule cannot be judged
+    // against a value that is not even a URL, so the type's own validator wins.
+    it("the type's validator beats an author rule on the same field", async () => {
+        const { errors } = await processFields(
+            { website: 'not-a-url' },
+            [
+                field({
+                    name: 'website',
+                    type: 'url',
+                    validation: [
+                        {
+                            pattern: '^https://example\\.com',
+                            message: 'Must be on example.com',
+                        },
+                    ],
+                }),
+            ],
+            fakeCtx()
+        );
+        expect(errors.website).toEqual(['Must be a valid URL']);
+    });
+
+    it('a well-formed value then falls through to the author rule', async () => {
+        const { errors } = await processFields(
+            { website: 'https://other.com' },
+            [
+                field({
+                    name: 'website',
+                    type: 'url',
+                    validation: [
+                        {
+                            pattern: '^https://example\\.com',
+                            message: 'Must be on example.com',
+                        },
+                    ],
+                }),
+            ],
+            fakeCtx()
+        );
+        expect(errors.website).toEqual(['Must be on example.com']);
+    });
+
+    it('a container count failure suppresses the rules on the same container', async () => {
+        const { errors } = await processFields(
+            { sections: [{ _id: 'a1' }] },
+            [
+                field({
+                    name: 'sections',
+                    type: 'repeater',
+                    min: 2,
+                    fields: [field({ name: 'title', type: 'text' })],
+                    validation: [{ minLength: 3 }],
+                }),
+            ],
+            fakeCtx()
+        );
+        expect(errors.sections).toEqual(['Must have at least 2 items']);
     });
 });
 
