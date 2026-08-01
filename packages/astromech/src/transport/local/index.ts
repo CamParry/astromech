@@ -16,14 +16,14 @@ import type {
     TypedEntriesApi,
 } from '@/types/index.js';
 import { usersApi } from '@/users/index.js';
-import { entries, initServerContext } from '@/entries/index.js';
+import { entries } from '@/entries/index.js';
 import { mediaApi } from '@/media/index.js';
 import { settingsApi } from '@/settings/index.js';
-import { setCurrentUser } from '@/context/index.js';
+import { runWithContext } from '@/context/index.js';
 import { setPluginClient } from '@/plugins/runtime/plugin-runtime.js';
 import { localPlugins } from '@/transport/local/plugins.js';
 
-export { initServerContext, setCurrentUser };
+export { runWithContext };
 
 // ============================================================================
 // Assemble the Local API

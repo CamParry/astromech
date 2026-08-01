@@ -47,7 +47,7 @@ import { setCliConfig } from '@/transport/cli/virtual-config-shim.js';
 import { setRuntimeConfig } from '@/cron/registry.js';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime.js';
 import { wireEntryAccess } from '@/entries/plugin-access.js';
-import { setCurrentUser } from '@/context/index.js';
+import { runWithContext } from '@/context/index.js';
 import type {
     AstromechConfig,
     DatabaseDriver,
@@ -55,6 +55,7 @@ import type {
     ResolvedConfig,
     StorageDriver,
     StorageList,
+    User,
 } from '@/types/index.js';
 
 // Wire the entry-access port (entries → runtime dependency inversion) once for
@@ -263,8 +264,15 @@ export function setupTestConfig(
     // from `virtual:astromech/config`.
     setRuntimeConfig(resolved);
     registerPlugins(config.plugins ?? [], resolved);
-    setCurrentUser(null);
     return resolved;
+}
+
+/**
+ * Run `fn` with `user` as the request-scoped identity. Tests that need no
+ * identity need no reset — outside `runWithContext` there simply is no user.
+ */
+export function runAsUser<T>(user: User | null, fn: () => T): T {
+    return runWithContext({ user, role: null }, fn);
 }
 
 /**

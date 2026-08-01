@@ -19,11 +19,11 @@ import type { DB } from '@/database/types.js';
 
 // Mock resolveSessionUser so tests control the session branch without a real
 // Better Auth stack.
-vi.mock('@/transport/http/middleware/auth.js', () => ({
+vi.mock('@/users/session.js', () => ({
     resolveSessionUser: vi.fn(),
 }));
 
-import { resolveSessionUser } from '@/transport/http/middleware/auth.js';
+import { resolveSessionUser } from '@/users/session.js';
 
 const mockResolveSessionUser = vi.mocked(resolveSessionUser);
 
@@ -171,6 +171,7 @@ describe('POST /cron/run — auth branches', () => {
         mockResolveSessionUser.mockResolvedValue({
             user: { id: 'u1', email: 'admin@test.dev' } as never,
             role: { slug: 'admin', name: 'Admin', permissions: [], isBuiltIn: true },
+            session: { id: 's1', userId: 'u1' } as never,
         });
 
         const ref = await seedDueJob();

@@ -11,7 +11,7 @@
 
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { unauthorized } from '@/transport/http/middleware/errors.js';
-import { resolveSessionUser } from '@/transport/http/middleware/auth.js';
+import { resolveSessionUser } from '@/users/index.js';
 import { onTick } from '@/cron/runner.js';
 
 const router = new OpenAPIHono();

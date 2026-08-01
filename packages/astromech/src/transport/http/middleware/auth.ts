@@ -1,15 +1,17 @@
 /**
  * Auth Middleware
  *
- * Validates the Better Auth session, loads the user's role from config,
- * and attaches both to the Hono context.
+ * Attaches the current user + role to the Hono context. Identity itself is
+ * resolved by the `users` domain (`resolveSessionUser`) and held in the
+ * request-scoped context, so when the Astro middleware has already established
+ * one this reuses it rather than resolving the same session a second time. When
+ * nothing has (the Hono app mounted on its own), it resolves and establishes
+ * the context itself.
  */
 
 import { createMiddleware } from 'hono/factory';
-import { auth } from '@/users/index.js';
-import { createUserStorage } from '@/users/storage.js';
-import { Astromech } from '@/transport/local/index.js';
-import { resolveRole } from '@/permissions/index.js';
+import { resolveSessionUser } from '@/users/index.js';
+import { getRequestContext, runWithContext } from '@/context/index.js';
 import { unauthorized } from './errors.js';
 import type { User, Role } from '@/types/index.js';
 
@@ -19,48 +21,26 @@ export type AuthVariables = {
 };
 
 /**
- * Resolve the Better Auth session into a full user row + role, or null if there
- * is no valid session. Shared by `requireAuth` and `optionalAuth`.
- */
-export async function resolveSessionUser(
-    headers: Headers
-): Promise<{ user: User; role: Role } | null> {
-    const session = await auth.api.getSession({ headers });
-    if (!session?.user) return null;
-
-    // Load the full user row (Better Auth session may not include custom fields)
-    const userRow = await createUserStorage().get(session.user.id);
-    if (!userRow) return null;
-
-    const user: User = {
-        id: userRow.id,
-        email: userRow.email,
-        name: userRow.name,
-        emailVerified: userRow.emailVerified,
-        image: userRow.image,
-        fields: (userRow.fields as User['fields']) ?? null,
-        roleSlug: userRow.roleSlug,
-        createdAt: userRow.createdAt,
-        updatedAt: userRow.updatedAt,
-    };
-
-    return { user, role: resolveRole(Astromech.config, userRow.roleSlug) };
-}
-
-/**
  * Require an authenticated session.
  * Attaches `user` and `role` to context variables.
  * Returns 401 if no valid session is found.
  */
 export const requireAuth = createMiddleware<{ Variables: AuthVariables }>(
     async (c, next) => {
+        const existing = getRequestContext();
+        if (existing?.user && existing.role) {
+            c.set('user', existing.user);
+            c.set('role', existing.role);
+            return next();
+        }
+
         const resolved = await resolveSessionUser(c.req.raw.headers);
         if (!resolved) {
             return unauthorized(c);
         }
         c.set('user', resolved.user);
         c.set('role', resolved.role);
-        return next();
+        return runWithContext({ user: resolved.user, role: resolved.role }, () => next());
     }
 );
 
@@ -71,11 +51,19 @@ export const requireAuth = createMiddleware<{ Variables: AuthVariables }>(
  */
 export const optionalAuth = createMiddleware<{ Variables: Partial<AuthVariables> }>(
     async (c, next) => {
-        const resolved = await resolveSessionUser(c.req.raw.headers);
-        if (resolved) {
-            c.set('user', resolved.user);
-            c.set('role', resolved.role);
+        const existing = getRequestContext();
+        if (existing?.user && existing.role) {
+            c.set('user', existing.user);
+            c.set('role', existing.role);
+            return next();
         }
-        return next();
+
+        const resolved = await resolveSessionUser(c.req.raw.headers);
+        if (!resolved) {
+            return next();
+        }
+        c.set('user', resolved.user);
+        c.set('role', resolved.role);
+        return runWithContext({ user: resolved.user, role: resolved.role }, () => next());
     }
 );
