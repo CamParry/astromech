@@ -88,6 +88,47 @@ function entryMethodSummary(method: string, action: EntryAction, type: string): 
     return `${verb} a "${type}" entry.`;
 }
 
+/**
+ * The permission action each `EntriesApi` method enforces.
+ *
+ * Declared once and read by both consumers: the descriptors below (which project
+ * it into the manifest's `permission`) and the scoped entries handle (which
+ * resolves it at call time). Restating the pairs at the call site would be a
+ * second declaration of the same fact, and the enforcement half is exactly the
+ * half that must not drift.
+ *
+ * Covers every key on `EntriesApi`; a key missing here has no derivable
+ * permission and the scoped handle refuses it.
+ */
+export const ENTRY_METHOD_ACTIONS = {
+    query: 'read',
+    get: 'read',
+    create: 'create',
+    update: 'update',
+    delete: 'delete',
+    duplicate: 'create',
+    trash: 'delete',
+    restore: 'update',
+    emptyTrash: 'delete',
+    versions: 'read',
+    restoreVersion: 'update',
+    publish: 'publish',
+    unpublish: 'publish',
+    schedule: 'publish',
+    incomingRelations: 'read',
+    createStaged: 'update',
+    getStaged: 'read',
+    // Merging a staged change is what makes it live — enforced as a publish even
+    // though the capability gating it is `staging`.
+    mergeStaged: 'publish',
+    deleteStaged: 'update',
+    issuePreviewToken: 'update',
+    revokePreviewToken: 'update',
+} as const satisfies Record<string, EntryAction>;
+
+/** A key on `EntriesApi` whose permission action is known. */
+export type EntryMethodName = keyof typeof ENTRY_METHOD_ACTIONS;
+
 const sortDirection = z.enum(['asc', 'desc']);
 
 const sortParam = z.union([
@@ -122,18 +163,25 @@ export function entryMethodDescriptors(params: {
     const ids = z.union([z.string(), z.array(z.string())]);
     const canonical = z.object({ type, id });
 
-    /** The facts every entry method derives from its (method, action) pair. */
-    const base = (method: string, action: EntryAction) => ({
-        method,
-        summary: entryMethodSummary(method, action, label),
-        permission: entryPermission(typeId, action),
-        mutates: action !== 'read',
-        destructive: action === 'delete',
-    });
+    /**
+     * The facts every entry method derives from its action. The action comes
+     * from {@link ENTRY_METHOD_ACTIONS} rather than being passed in, so the
+     * (method, action) pairing is declared exactly once.
+     */
+    const base = (method: EntryMethodName) => {
+        const action = ENTRY_METHOD_ACTIONS[method];
+        return {
+            method,
+            summary: entryMethodSummary(method, action, label),
+            permission: entryPermission(typeId, action),
+            mutates: action !== 'read',
+            destructive: action === 'delete',
+        };
+    };
 
     return [
         {
-            ...base('query', 'read'),
+            ...base('query'),
             input: z.object({
                 type,
                 search: z.string().optional(),
@@ -150,7 +198,7 @@ export function entryMethodDescriptors(params: {
             }),
         },
         {
-            ...base('get', 'read'),
+            ...base('get'),
             input: z.object({
                 type,
                 id,
@@ -162,18 +210,18 @@ export function entryMethodDescriptors(params: {
             }),
         },
         {
-            ...base('create', 'create'),
+            ...base('create'),
             input: createEntrySchemaFor(titleField).extend({ type }),
         },
         {
-            ...base('update', 'update'),
+            ...base('update'),
             // Re-applying the same update lands the same end-state — matches the
             // core `users.update`/`settings.set` idempotent hint.
             idempotent: true,
             input: z.object({ type, id: ids, data: updateEntrySchemaFor(titleField) }),
         },
         {
-            ...base('delete', 'delete'),
+            ...base('delete'),
             input: z.object({
                 type,
                 id: ids,
@@ -181,7 +229,7 @@ export function entryMethodDescriptors(params: {
             }),
         },
         {
-            ...base('duplicate', 'create'),
+            ...base('duplicate'),
             input: z.object({
                 type,
                 id,
@@ -189,7 +237,7 @@ export function entryMethodDescriptors(params: {
             }),
         },
         {
-            ...base('trash', 'delete'),
+            ...base('trash'),
             requires: 'trash',
             // NOT destructive: trash is the reversible half of the delete pair —
             // `restore` undoes it. `emptyTrash` and `delete` are the ones that
@@ -203,36 +251,36 @@ export function entryMethodDescriptors(params: {
             }),
         },
         {
-            ...base('restore', 'update'),
+            ...base('restore'),
             requires: 'trash',
             idempotent: true,
             input: z.object({ type, id: ids }),
         },
         {
-            ...base('emptyTrash', 'delete'),
+            ...base('emptyTrash'),
             requires: 'trash',
             idempotent: true,
             input: z.object({ type }),
         },
         {
-            ...base('versions', 'read'),
+            ...base('versions'),
             requires: 'versioning',
             input: canonical,
         },
         {
-            ...base('restoreVersion', 'update'),
+            ...base('restoreVersion'),
             requires: 'versioning',
             idempotent: true,
             input: z.object({ type, id, versionId: z.string() }),
         },
         {
-            ...base('publish', 'publish'),
+            ...base('publish'),
             requires: 'statuses',
             idempotent: true,
             input: z.object({ type, id: ids }),
         },
         {
-            ...base('unpublish', 'publish'),
+            ...base('unpublish'),
             requires: 'statuses',
             // Data-losing in the sense the effect hints mean: the entry stops
             // being served. `ServiceMethodEffect` names unpublish explicitly.
@@ -241,23 +289,23 @@ export function entryMethodDescriptors(params: {
             input: z.object({ type, id: ids }),
         },
         {
-            ...base('schedule', 'publish'),
+            ...base('schedule'),
             requires: 'statuses',
             idempotent: true,
             input: z.object({ type, id: ids }).extend(scheduleEntrySchema.shape),
         },
-        { ...base('incomingRelations', 'read'), input: canonical },
-        { ...base('createStaged', 'update'), requires: 'staging', input: canonical },
-        { ...base('getStaged', 'read'), requires: 'staging', input: canonical },
-        { ...base('mergeStaged', 'publish'), requires: 'staging', input: canonical },
-        { ...base('deleteStaged', 'update'), requires: 'staging', input: canonical },
+        { ...base('incomingRelations'), input: canonical },
+        { ...base('createStaged'), requires: 'staging', input: canonical },
+        { ...base('getStaged'), requires: 'staging', input: canonical },
+        { ...base('mergeStaged'), requires: 'staging', input: canonical },
+        { ...base('deleteStaged'), requires: 'staging', input: canonical },
         {
-            ...base('issuePreviewToken', 'update'),
+            ...base('issuePreviewToken'),
             requires: 'staging',
             input: z.object({ type, id, expiresAt: z.date().nullable().optional() }),
         },
         {
-            ...base('revokePreviewToken', 'update'),
+            ...base('revokePreviewToken'),
             requires: 'staging',
             input: canonical,
         },

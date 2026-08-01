@@ -1,41 +1,30 @@
 /**
  * Astromech Middleware
  *
- * Loads the session, populates context locals, and initializes the server
- * context. Auth routing is handled client-side by the SPA.
+ * Resolves the session ONCE per request, populates context locals, and
+ * establishes the request-scoped context every server-side read of the current
+ * user goes through. Auth routing is handled client-side by the SPA.
  */
 
 import type { MiddlewareHandler } from 'astro';
-import { auth } from '@/users/index.js';
-import { setCurrentUser } from '@/transport/local/index.js';
+import { resolveSessionUser } from '@/users/index.js';
+import { runWithContext } from '@/context/index.js';
 
 export const onRequest: MiddlewareHandler = async (context, next) => {
     const { request } = context;
 
-    // Load session from Better Auth
-    const sessionData = await auth.api.getSession({ headers: request.headers });
+    const resolved = await resolveSessionUser(request.headers);
 
-    const user = sessionData?.user
-        ? {
-              id: sessionData.user.id,
-              name: sessionData.user.name,
-              email: sessionData.user.email,
-              emailVerified: sessionData.user.emailVerified,
-              image: sessionData.user.image ?? null,
-              fields: null,
-              roleSlug: 'admin',
-              createdAt: sessionData.user.createdAt,
-              updatedAt: sessionData.user.updatedAt,
-          }
-        : null;
+    // `locals.user` is now the real user row — custom `fields` and the actual
+    // `roleSlug` — rather than a session-shaped stand-in with a hardcoded
+    // 'admin' role, and it is the same object the API middleware sees.
+    context.locals.user = resolved?.user ?? null;
+    context.locals.session = resolved?.session ?? null;
 
-    context.locals.user = user;
-    context.locals.session = sessionData?.session ?? null;
-
-    // Set the current user for the request
-    setCurrentUser(user);
-
-    return next();
+    return runWithContext(
+        { user: resolved?.user ?? null, role: resolved?.role ?? null },
+        () => next()
+    );
 };
 
 export default onRequest;

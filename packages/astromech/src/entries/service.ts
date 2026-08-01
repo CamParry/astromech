@@ -8,8 +8,7 @@
  * Import from 'astromech/local'.
  */
 
-import { setCurrentUser } from '@/context/index.js';
-import type { EntriesApi, User } from '@/types/index.js';
+import type { EntriesApi } from '@/types/index.js';
 import { query } from './operations/query.js';
 import { get } from './operations/get.js';
 import { create } from './operations/create.js';
@@ -30,17 +29,6 @@ import { issuePreviewToken, revokePreviewToken } from './operations/preview/toke
 
 /** @deprecated Slug uniqueness is now a storage concern. */
 export { generateUniqueSlug } from './internal/slug.js';
-
-/**
- * @deprecated Use setCurrentUser from @/context/index.js instead.
- */
-export function initServerContext(ctx: {
-    db: unknown;
-    config: unknown;
-    user: User | null;
-}): void {
-    setCurrentUser(ctx.user);
-}
 
 export const entries: EntriesApi = {
     query,
