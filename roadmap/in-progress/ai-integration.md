@@ -26,8 +26,8 @@ Fix before building on top. All four are refactors that _delete_ code and shrink
 the rest; nothing is deployed, so this is the cheapest moment. Full detail with
 file references in the spec.
 
-**P0a, P0 and P1 landed.** The audit's counts were stale: the manifest was 83
-methods at P0, not 71, and is 145 after P1. P2 is next.
+**P0a, P0, P1 and P2 landed.** The audit's counts were stale: the manifest was
+83 methods at P0, not 71, and is 145 after P1. P3 is next.
 
 - [x] **P0a — normalise every service method to a parameter object.** Shipped
       2026-07-31 (`934f1d0`). `update` takes a nested `data` (`update({id, data})`)
@@ -88,11 +88,50 @@ methods at P0, not 71, and is 145 after P1. P2 is next.
       declare an input.
     - **Open, and worth deciding before P7:** 144 tools is a large fixed prompt
       prefix and there is no filtering mechanism. Tracked in `backlog.md`.
-- [ ] **P2 — request-scoped context + a real permission wrapper.**
-      `context/index.ts` holds the request user in a mutable module-level
-      variable; move to `AsyncLocalStorage`. Add `scopedService(principal)` so a
-      caller cannot exceed its principal by construction, and annotate the
-      manifest per-principal.
+- [x] **P2 — request-scoped context + a real permission wrapper.** Shipped
+      2026-08-01 (`7d3e7eb`, `99b35ab`). `context/index.ts` holds the request
+      identity in an `AsyncLocalStorage` store on `globalThis`; `setCurrentUser`
+      is deleted rather than deprecated, because a setter is the defect. Outside
+      `runWithContext` there is no identity and `getCurrentUser()` is null —
+      previously a cron tick in a warm process saw whoever last hit the server.
+      `scopedService(principal)` wraps every domain against its descriptor and
+      fails CLOSED. The audit's chunk-duplication worry does NOT bite: the two
+      copies of `currentUser` were the library build and the CLI build, one copy
+      each, in separate processes. Don't re-derive it as a bug.
+    - Defect found and fixed in passing: the Astro middleware was fabricating
+      its half of the identity — hardcoded `roleSlug: 'admin'`, `fields: null` —
+      while Hono's `requireAuth` resolved the real row into `c.var`, so the
+      service layer and the route layer disagreed about who was calling and each
+      authenticated request resolved the session twice. Resolution moved to
+      `users/session.ts` and both layers share it; `requireAuth` reuses an
+      established context and establishes one itself when nothing has, so the
+      Hono app stays mountable standalone. `AuthVariables` and the
+      `c.var.user`/`c.var.role` contract are untouched — no route changed.
+    - Bypass found in the new wrapper and closed before it shipped:
+      `entry:read:full` was enforced ONLY in the HTTP entries routes, which is
+      the layer the handle replaces for callers that get no route. Left there,
+      `{ full: true }` walks the admin projection past anyone holding a bare
+      read. Enforced in `scopeEntries` for every method, not only the ones whose
+      signature declares `full` today.
+    - Two more the wrapper had to get right, each with a test: `entries.query`
+      takes a LIST of types, so a call must hold the permission for every type it
+      names (a list is not a way to pair a type you hold with one you don't); and
+      `resolveRole` falls back to ADMIN on an unknown slug, so
+      `methods --role typo` would have answered "you may call everything" — the
+      CLI checks membership itself now.
+    - Gap this surfaced rather than hid: `mediaApi.replace` has no descriptor, so
+      it is absent from the manifest and invisible to the CLI, MCP and the AI
+      surface. The fail-closed handle refuses it even for `*`, and a test records
+      that. Giving it one means deciding its permission and input schema —
+      tracked in `backlog.md`, not fixed in passing.
+    - **`scopedService` has no production consumer yet.** It is the seam P3's
+      confirm gate and any remote transport land on. The HTTP routes deliberately
+      keep `allows`/`allowsMethod`, because several carry logic a descriptor
+      cannot state (`users.get` allowing self-access, the last-admin guard).
+    - Manifest byte-parity verified across the `ENTRY_METHOD_ACTIONS` refactor by
+      building the preceding commit in-tree and diffing — 185,508 bytes,
+      identical. The artefact in a stale checkout is NOT a valid baseline; it was
+      pre-P1 and made the first comparison meaningless.
 - [ ] **P3 — confirm gate.** Stateless, on MCP's MRTR shape, with elicitation's
       three actions (`accept`/`decline`/`cancel`). Keyed off `mutates`/`destructive`.
 - [ ] **P4 — wire-safe read-shape contract.** The existing write-back guard is a
