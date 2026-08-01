@@ -22,24 +22,42 @@ design history.
 
 ## Foundation — a 2026-07-30 audit found four substrate defects
 
-Fix before building on top. All four are refactors that *delete* code and shrink
+Fix before building on top. All four are refactors that _delete_ code and shrink
 the rest; nothing is deployed, so this is the cheapest moment. Full detail with
 file references in the spec.
 
-- [ ] **P0a — normalise every service method to a parameter object.** Core is
-      positional today (`users.update(id, data)`, `settings.set(key, value)`)
-      while entries already takes an object. Two calling conventions make generic
-      dispatch impossible regardless of how good the schemas are. Mechanical, no
-      behaviour change, own commit — ideally after `feat/nested-field-validation`
-      merges, since the validation work touched the same service files.
-- [ ] **P0 — descriptor describes the method, not the HTTP body.** `input` is
-      currently the route's body schema, so it omits path params and 67 of 71
-      manifest methods carry no schema at all. This has already caused live drift
-      in MCP's hand-written `users.update` tool. Includes stable unique ids, real
-      entries descriptors, exporting `ManifestMethod` as a discriminated union
-      (its shape is hand-copied five times today), `input`/`output` on
-      `PluginServiceMethod`, dropping the always-null `contentSchema`, and the
-      descriptor↔tool-schema parity test whose absence let the drift ship.
+**P0a and P0 landed 2026-07-31.** The audit's counts were stale: the manifest is
+83 methods, not 71. P1 is the next piece of work and has no handoff written yet.
+
+- [x] **P0a — normalise every service method to a parameter object.** Shipped
+      2026-07-31 (`934f1d0`). `update` takes a nested `data` (`update({id, data})`)
+      matching the entries precedent, not a flattened `{id, ...patch}`. The
+      manifest was byte-identical before and after, which is what proved the
+      commit changed signatures and not semantics. `notificationsRepo` stays
+      positional deliberately — it is a userId-explicit internal repository at the
+      storage layer, not a service API.
+- [x] **P0 — descriptor describes the method, not the HTTP body.** Shipped
+      2026-07-31 (`2a81d11`, `43a82ea`). Methods carrying a usable `input`:
+      **4 of 83 → 72 of 83** (the 11 gaps are first-party plugin service methods,
+      which now _can_ declare one). Manifest `version` 1 → 2, since `input`
+      changed meaning under an unchanged name. Includes stable unique ids
+      (`entries.forms/form.get`), `ManifestMethod` exported as a discriminated
+      union with all five hand-copied slices deleted, and the parity test — which
+      was verified to bite by deliberately breaking an adapter. The MCP
+      `users.update` drift is fixed at the wire level: the live server now
+      advertises `data.fields`.
+
+        Two defects found and fixed in passing: schemas were emitted in Zod's
+        `io: 'output'` mode (the wrong side for a call-input schema — `publishAt`
+        rendered as an empty `{}`), and a method with no declared `input` was given
+        a synthesised one, which is the mechanism the original drift used.
+
+        Left for later: `types/api.ts` is not the source of truth for three methods
+        — `UsersApi.create`/`update` omit `roleSlug` and `MediaApi.update` omits
+        `title`, though the services and Zod schemas all accept them. The manifest
+        composes from the schemas, so it is correct; the type declarations need
+        reconciling on their own.
+
 - [ ] **P1 — one generic dispatcher** replacing the per-domain adapters. Threads
       the plugin handlers that `transport/mcp/index.ts` currently loads and then
       discards. Closes three `backlog.md` items as a side effect.
@@ -69,7 +87,7 @@ file references in the spec.
 
 - **MCP: borrow the shape, don't chase the wire format.** The spec was revised
   2026-07-28 (stateless core, MRTR, several deprecations) but the SDK tops out at
-  the previous revision and real clients track the SDK. Adopt MRTR's *shape* for
+  the previous revision and real clients track the SDK. Adopt MRTR's _shape_ for
   our gate; leave the transport where the SDK is.
 - **The tool-loop does not hold alone.** `specs/ai-integration.md` §3.13 is
   overturned: a tool-loop keeps the long tail, and content operations own
