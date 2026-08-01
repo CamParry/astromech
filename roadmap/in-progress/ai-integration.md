@@ -16,9 +16,9 @@ design history.
 - [x] **CLI rebuild** — entry create/update/publish/unpublish + JSON output, plus
       a `methods` command that reflects the manifest. Trusted transport (no eval).
 - [x] **MCP server** — dev-only in-tree transport (`transport/mcp`, `astromech mcp`);
-      projects manifest methods as MCP tools over stdio (core + 7 entry actions in
-      v1; plugin methods / media upload / entries long-tail backlogged — P1 closes
-      these).
+      projects manifest methods as MCP tools over stdio. Shipped with core + 7
+      entry actions; P1 closed the plugin-method and entries-long-tail gaps, and
+      media upload stays out by declaration (`binaryInput`).
 
 ## Foundation — a 2026-07-30 audit found four substrate defects
 
@@ -26,8 +26,8 @@ Fix before building on top. All four are refactors that _delete_ code and shrink
 the rest; nothing is deployed, so this is the cheapest moment. Full detail with
 file references in the spec.
 
-**P0a and P0 landed 2026-07-31.** The audit's counts were stale: the manifest is
-83 methods, not 71. P1 is the next piece of work and has no handoff written yet.
+**P0a, P0 and P1 landed.** The audit's counts were stale: the manifest was 83
+methods at P0, not 71, and is 145 after P1. P2 is next.
 
 - [x] **P0a — normalise every service method to a parameter object.** Shipped
       2026-07-31 (`934f1d0`). `update` takes a nested `data` (`update({id, data})`)
@@ -46,21 +46,48 @@ file references in the spec.
       was verified to bite by deliberately breaking an adapter. The MCP
       `users.update` drift is fixed at the wire level: the live server now
       advertises `data.fields`.
-
-        Two defects found and fixed in passing: schemas were emitted in Zod's
-        `io: 'output'` mode (the wrong side for a call-input schema — `publishAt`
-        rendered as an empty `{}`), and a method with no declared `input` was given
-        a synthesised one, which is the mechanism the original drift used.
-
-        Left for later: `types/api.ts` is not the source of truth for three methods
-        — `UsersApi.create`/`update` omit `roleSlug` and `MediaApi.update` omits
-        `title`, though the services and Zod schemas all accept them. The manifest
-        composes from the schemas, so it is correct; the type declarations need
-        reconciling on their own.
-
-- [ ] **P1 — one generic dispatcher** replacing the per-domain adapters. Threads
-      the plugin handlers that `transport/mcp/index.ts` currently loads and then
-      discards. Closes three `backlog.md` items as a side effect.
+    - Two defects found and fixed in passing: schemas were emitted in Zod's
+      `io: 'output'` mode (the wrong side for a call-input schema — `publishAt`
+      rendered as an empty `{}`), and a method with no declared `input` was given
+      a synthesised one, which is the mechanism the original drift used.
+    - Left for later: `types/api.ts` is not the source of truth for three methods
+      — `UsersApi.create`/`update` omit `roleSlug` and `MediaApi.update` omits
+      `title`, though the services and Zod schemas all accept them. The manifest
+      composes from the schemas, so it is correct; the type declarations need
+      reconciling on their own.
+- [x] **P1 — one generic dispatcher** replacing the per-domain adapters. Shipped
+      2026-08-01 (`4f487a0`). Tool name, description, schema and annotations are
+      all projections of manifest fields; `invoke` resolves the service method by
+      key at call time. It fits in one line only because P0a normalised every
+      method to a single parameter object. Demo surface: **83 → 145 manifest
+      methods, 58 → 144 MCP tools, 25 → 1 skips** — and that one skip is
+      `media.upload`, which declares `binaryInput` rather than the transport
+      keeping a list of exceptions. Verified against a live `astromech mcp` stdio
+      session, not only unit tests: 144 tools listed, and
+      `plugins_demoRating_describe` called over the wire.
+    - Closed with it: plugin methods dispatch (`runMcpServer` registers the plugin
+      runtime — local client → `wireEntryAccess` → `registerPlugins`, the order
+      `kernel/boot.ts` uses; `bootPlugins` deliberately NOT called), and the
+      entries long tail (duplicate/trash/restore/emptyTrash/versions/
+      restoreVersion/unpublish/schedule/incomingRelations gained descriptors, and
+      the staged-entry/preview methods that had descriptors but no adapter lit
+      up).
+    - One defect fixed in passing: `publish` was gated on the `versioning`
+      capability while `operations/status.ts` asserts `statuses`, so the manifest
+      hid publish/unpublish/schedule from every unversioned type — nine of eleven
+      in the demo — while the service accepted the call. `requires` is now the
+      full `Capability` union, gated on what the service actually asserts.
+      `issuePreviewToken` also gained the `expiresAt` coercion `schedule` already
+      had for `publishAt`; without it a JSON caller writes a string into a date
+      column, which became reachable the moment the tool existed.
+    - Substrate gap this exposed and closed: P0 gave `PluginServiceMethod` an
+      `input` slot no plugin could fill — a plugin package carries no `zod`
+      dependency, and a second copy would break `z.toJSONSchema` anyway. Core now
+      re-exports `z`, plus `noInput()` for the no-argument case (a tool with no
+      object schema cannot be published at all). All 11 first-party plugin methods
+      declare an input.
+    - **Open, and worth deciding before P7:** 144 tools is a large fixed prompt
+      prefix and there is no filtering mechanism. Tracked in `backlog.md`.
 - [ ] **P2 — request-scoped context + a real permission wrapper.**
       `context/index.ts` holds the request user in a mutable module-level
       variable; move to `AsyncLocalStorage`. Add `scopedService(principal)` so a
