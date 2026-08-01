@@ -74,9 +74,9 @@ async function setup(
 }
 
 async function uploadJpeg(): Promise<{ id: string; url: string }> {
-    const media = await mediaApi.upload(
-        new File([jpegBytes() as BlobPart], 'photo.jpg', { type: 'image/jpeg' })
-    );
+    const media = await mediaApi.upload({
+        file: new File([jpegBytes() as BlobPart], 'photo.jpg', { type: 'image/jpeg' }),
+    });
     return { id: media.id, url: media.url };
 }
 
@@ -108,7 +108,7 @@ describe('media access mode → Media.url', () => {
     it('applies to reads as well as the upload response', async () => {
         await setup('public', 'cdn');
         const { id } = await uploadJpeg();
-        const fetched = await mediaApi.get(id);
+        const fetched = await mediaApi.get({ id: id });
         const listed = await mediaApi.query({ limit: 'all' });
         expect(fetched?.url).toBe(`https://cdn.example/${id}.jpg`);
         expect(listed.data[0]?.url).toBe(`https://cdn.example/${id}.jpg`);
@@ -119,7 +119,7 @@ describe('media access mode → image attrs', () => {
     it("keeps srcset variants on the media route under access 'public'", async () => {
         await setup('public', 'cdn');
         const { id, url } = await uploadJpeg();
-        const media = await mediaApi.get(id);
+        const media = await mediaApi.get({ id: id });
 
         const attrs = buildImageAttrs(
             {

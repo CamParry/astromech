@@ -4,19 +4,27 @@
  * Builds a ToolDispatch descriptor from a ManifestMethod. Returns null for
  * methods without a v1 adapter (plugin methods, binary-upload methods, and
  * long-tail entries actions).
+ *
+ * A tool's `inputSchema` is ALWAYS the manifest's serialised method input. The
+ * adapters below choose which service method to call and how to shape its
+ * arguments; they do not describe it. Hand-written schema literals here are what
+ * let `users_update` advertise a shape the method had not accepted for months.
  */
 
 import type { usersApi } from '@/users/service.js';
 import type { mediaApi } from '@/media/service.js';
 import type { settingsApi } from '@/settings/service.js';
 import type { entries } from '@/entries/service.js';
+import type {
+    CoreManifestMethod,
+    EntriesManifestMethod,
+    JsonSchemaObject,
+    ManifestMethod,
+} from '@/types/index.js';
 
 // ============================================================================
 // Types
 // ============================================================================
-
-/** Raw JSON Schema object — passed verbatim to the MCP SDK as inputSchema. */
-type JsonSchema = Record<string, unknown>;
 
 /** Annotations carried on a tool definition. */
 export type ToolAnnotations = {
@@ -32,23 +40,9 @@ export type ToolAnnotations = {
 export type ToolDispatch = {
     toolName: string;
     description: string;
-    inputSchema: JsonSchema;
+    inputSchema: JsonSchemaObject;
     annotations: ToolAnnotations;
     invoke: (args: Record<string, unknown>) => Promise<unknown>;
-};
-
-/** Minimal slice of ManifestMethod consumed here. */
-type ManifestMethodSlice = {
-    name: string;
-    summary?: string | undefined;
-    source: 'core' | 'entries' | 'plugin';
-    mutates: boolean;
-    destructive: boolean;
-    idempotent: boolean;
-    input?: unknown;
-    entryType?: string;
-    mount?: string;
-    plugin?: string;
 };
 
 // ============================================================================
@@ -78,29 +72,18 @@ async function getEntries(): Promise<typeof entries> {
 }
 
 // ============================================================================
-// Shared JSON Schema fragments
-// ============================================================================
-
-const ID_REQUIRED: JsonSchema = {
-    type: 'object',
-    properties: {
-        id: { type: 'string', description: 'Record ID' },
-    },
-    required: ['id'],
-    additionalProperties: false,
-};
-
-// ============================================================================
 // Core — users adapters
 // ============================================================================
 
 function buildUsersAdapter(
-    action: string,
-    manifest: ManifestMethodSlice
+    manifest: CoreManifestMethod,
+    inputSchema: JsonSchemaObject
 ): ToolDispatch | null {
+    const action = manifest.method;
     const base = {
         toolName: `users_${action}`,
         description: manifest.summary ?? `${action} user`,
+        inputSchema,
         annotations: {
             title: `Users: ${action}`,
             readOnlyHint: !manifest.mutates,
@@ -113,15 +96,6 @@ function buildUsersAdapter(
         case 'query':
             return {
                 ...base,
-                inputSchema: (manifest.input as JsonSchema | undefined) ?? {
-                    type: 'object',
-                    properties: {
-                        search: { type: 'string' },
-                        page: { type: 'number' },
-                        limit: { type: 'number' },
-                    },
-                    additionalProperties: true,
-                },
                 invoke: async (args) => {
                     const api = await getUsersApi();
                     return api.query(args as Parameters<typeof usersApi.query>[0]);
@@ -131,64 +105,36 @@ function buildUsersAdapter(
         case 'get':
             return {
                 ...base,
-                inputSchema: ID_REQUIRED,
                 invoke: async (args) => {
                     const api = await getUsersApi();
-                    return api.get(args['id'] as string);
+                    return api.get({ id: args['id'] as string });
                 },
             };
 
         case 'create':
             return {
                 ...base,
-                inputSchema: (manifest.input as JsonSchema | undefined) ?? {
-                    type: 'object',
-                    properties: {
-                        email: { type: 'string' },
-                        name: { type: 'string' },
-                        roleSlug: { type: 'string' },
-                    },
-                    required: ['email', 'name'],
-                    additionalProperties: false,
-                },
                 invoke: async (args) => {
                     const api = await getUsersApi();
                     return api.create(args as Parameters<typeof usersApi.create>[0]);
                 },
             };
 
-        case 'update': {
+        case 'update':
             return {
                 ...base,
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        id: { type: 'string', description: 'User ID' },
-                        name: { type: 'string' },
-                        email: { type: 'string' },
-                        roleSlug: { type: 'string' },
-                    },
-                    required: ['id'],
-                    additionalProperties: false,
-                },
                 invoke: async (args) => {
-                    const { id, ...rest } = args as { id: string } & Record<
-                        string,
-                        unknown
-                    >;
                     const api = await getUsersApi();
-                    return api.update(id, rest as Parameters<typeof usersApi.update>[1]);
+                    return api.update(args as Parameters<typeof usersApi.update>[0]);
                 },
             };
-        }
 
         case 'delete':
             return {
                 ...base,
-                inputSchema: ID_REQUIRED,
                 invoke: async (args) => {
                     const api = await getUsersApi();
-                    return api.delete(args['id'] as string);
+                    return api.delete({ id: args['id'] as string });
                 },
             };
 
@@ -202,12 +148,14 @@ function buildUsersAdapter(
 // ============================================================================
 
 function buildSettingsAdapter(
-    action: string,
-    manifest: ManifestMethodSlice
+    manifest: CoreManifestMethod,
+    inputSchema: JsonSchemaObject
 ): ToolDispatch | null {
+    const action = manifest.method;
     const base = {
         toolName: `settings_${action}`,
         description: manifest.summary ?? `${action} settings`,
+        inputSchema,
         annotations: {
             title: `Settings: ${action}`,
             readOnlyHint: !manifest.mutates,
@@ -220,16 +168,6 @@ function buildSettingsAdapter(
         case 'all':
             return {
                 ...base,
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        full: {
-                            type: 'boolean',
-                            description: 'Include private settings',
-                        },
-                    },
-                    additionalProperties: false,
-                },
                 invoke: async (args) => {
                     const api = await getSettingsApi();
                     return api.all(args as Parameters<typeof settingsApi.all>[0]);
@@ -239,16 +177,6 @@ function buildSettingsAdapter(
         case 'get':
             return {
                 ...base,
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        key: { type: 'string', description: 'Setting key' },
-                        locale: { type: 'string' },
-                        full: { type: 'boolean' },
-                    },
-                    required: ['key'],
-                    additionalProperties: false,
-                },
                 invoke: async (args) => {
                     const api = await getSettingsApi();
                     const { key, locale, full } = args as {
@@ -256,7 +184,8 @@ function buildSettingsAdapter(
                         locale?: string;
                         full?: boolean;
                     };
-                    return api.get(key, {
+                    return api.get({
+                        key,
                         ...(locale !== undefined && { locale }),
                         ...(full !== undefined && { full }),
                     });
@@ -266,19 +195,13 @@ function buildSettingsAdapter(
         case 'set':
             return {
                 ...base,
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        key: { type: 'string', description: 'Setting key' },
-                        value: { description: 'New value (any JSON-serializable type)' },
-                    },
-                    required: ['key', 'value'],
-                    additionalProperties: false,
-                },
                 invoke: async (args) => {
                     const api = await getSettingsApi();
                     const { key, value } = args as { key: string; value: unknown };
-                    return api.set(key, value as Parameters<typeof settingsApi.set>[1]);
+                    return api.set({
+                        key,
+                        value: value as Parameters<typeof settingsApi.set>[0]['value'],
+                    });
                 },
             };
 
@@ -292,12 +215,14 @@ function buildSettingsAdapter(
 // ============================================================================
 
 function buildMediaAdapter(
-    action: string,
-    manifest: ManifestMethodSlice
+    manifest: CoreManifestMethod,
+    inputSchema: JsonSchemaObject
 ): ToolDispatch | null {
+    const action = manifest.method;
     const base = {
         toolName: `media_${action}`,
         description: manifest.summary ?? `${action} media`,
+        inputSchema,
         annotations: {
             title: `Media: ${action}`,
             readOnlyHint: !manifest.mutates,
@@ -310,15 +235,6 @@ function buildMediaAdapter(
         case 'query':
             return {
                 ...base,
-                inputSchema: (manifest.input as JsonSchema | undefined) ?? {
-                    type: 'object',
-                    properties: {
-                        search: { type: 'string' },
-                        page: { type: 'number' },
-                        limit: { type: 'number' },
-                    },
-                    additionalProperties: true,
-                },
                 invoke: async (args) => {
                     const api = await getMediaApi();
                     return api.query(args as Parameters<typeof mediaApi.query>[0]);
@@ -328,20 +244,18 @@ function buildMediaAdapter(
         case 'get':
             return {
                 ...base,
-                inputSchema: ID_REQUIRED,
                 invoke: async (args) => {
                     const api = await getMediaApi();
-                    return api.get(args['id'] as string);
+                    return api.get({ id: args['id'] as string });
                 },
             };
 
         case 'delete':
             return {
                 ...base,
-                inputSchema: ID_REQUIRED,
                 invoke: async (args) => {
                     const api = await getMediaApi();
-                    return api.delete(args['id'] as string);
+                    return api.delete({ id: args['id'] as string });
                 },
             };
 
@@ -355,67 +269,21 @@ function buildMediaAdapter(
 // Entries adapters
 // ============================================================================
 
-const ENTRIES_QUERY_SCHEMA: JsonSchema = {
-    type: 'object',
-    properties: {
-        locale: { type: 'string' },
-        full: { type: 'boolean' },
-        search: { type: 'string' },
-        page: { type: 'number' },
-        limit: { type: 'number' },
-        status: { type: 'string' },
-    },
-    additionalProperties: true,
-};
-
-const ENTRIES_GET_SCHEMA: JsonSchema = {
-    type: 'object',
-    properties: {
-        id: { type: 'string' },
-        locale: { type: 'string' },
-        full: { type: 'boolean' },
-    },
-    required: ['id'],
-    additionalProperties: false,
-};
-
-const ENTRIES_CREATE_SCHEMA: JsonSchema = {
-    type: 'object',
-    properties: {
-        title: { type: 'string' },
-        slug: { type: 'string' },
-        locale: { type: 'string' },
-        status: { type: 'string' },
-        fields: { type: 'object' },
-    },
-    additionalProperties: false,
-};
-
-const ENTRIES_UPDATE_SCHEMA: JsonSchema = {
-    type: 'object',
-    properties: {
-        id: { type: 'string' },
-        data: { type: 'object' },
-    },
-    required: ['id', 'data'],
-    additionalProperties: false,
-};
-
-const ENTRIES_ID_SCHEMA: JsonSchema = {
-    type: 'object',
-    properties: {
-        id: { type: 'string' },
-    },
-    required: ['id'],
-    additionalProperties: false,
-};
+/**
+ * Every entries tool pins its own type id — the id the SERVICE is called with,
+ * which is qualified (`redirects/redirect`) for a plugin-mounted type. Pinned
+ * last so a client cannot redirect the call at another type by passing one.
+ */
+function withType<T>(args: Record<string, unknown>, typeId: string): T {
+    return { ...args, type: typeId } as T;
+}
 
 function buildEntriesAdapter(
-    action: string,
-    entryType: string,
-    mount: string,
-    manifest: ManifestMethodSlice
+    manifest: EntriesManifestMethod,
+    inputSchema: JsonSchemaObject
 ): ToolDispatch | null {
+    const { method: action, entryType, mount, typeId } = manifest;
+
     // Tool name: entries_<mount>_<type>_<action> when mount !== 'root',
     // otherwise entries_<type>_<action>.
     const toolName =
@@ -423,121 +291,87 @@ function buildEntriesAdapter(
             ? `entries_${mount}_${entryType}_${action}`
             : `entries_${entryType}_${action}`;
 
-    const description = manifest.summary ?? `${action} ${entryType} entry`;
-
-    const annotations: ToolAnnotations = {
-        title: `${entryType}: ${action}`,
-        readOnlyHint: !manifest.mutates,
-        destructiveHint: manifest.destructive,
-        idempotentHint: manifest.idempotent,
+    const base = {
+        toolName,
+        description: manifest.summary ?? `${action} ${entryType} entry`,
+        inputSchema,
+        annotations: {
+            title: `${entryType}: ${action}`,
+            readOnlyHint: !manifest.mutates,
+            destructiveHint: manifest.destructive,
+            idempotentHint: manifest.idempotent,
+        },
     };
 
     switch (action) {
         case 'query':
             return {
-                toolName,
-                description,
-                annotations,
-                inputSchema: ENTRIES_QUERY_SCHEMA,
+                ...base,
                 invoke: async (args) => {
                     const svc = await getEntries();
-                    return svc.query({ type: entryType, ...args });
+                    return svc.query(withType(args, typeId));
                 },
             };
 
         case 'get':
             return {
-                toolName,
-                description,
-                annotations,
-                inputSchema: ENTRIES_GET_SCHEMA,
+                ...base,
                 invoke: async (args) => {
                     const svc = await getEntries();
-                    const { id, locale, full } = args as {
-                        id: string;
-                        locale?: string;
-                        full?: boolean;
-                    };
-                    return svc.get({
-                        type: entryType,
-                        id,
-                        ...(locale !== undefined && { locale }),
-                        ...(full !== undefined && { full }),
-                    });
+                    return svc.get(withType(args, typeId));
                 },
             };
 
         case 'create':
             return {
-                toolName,
-                description,
-                annotations,
-                inputSchema: ENTRIES_CREATE_SCHEMA,
+                ...base,
                 invoke: async (args) => {
                     const svc = await getEntries();
-                    return svc.create({ type: entryType, ...args } as Parameters<
-                        typeof entries.create
-                    >[0]);
+                    return svc.create(withType(args, typeId));
                 },
             };
 
         case 'update':
             return {
-                toolName,
-                description,
-                annotations,
-                inputSchema: ENTRIES_UPDATE_SCHEMA,
+                ...base,
                 invoke: async (args) => {
                     const svc = await getEntries();
-                    const { id, data } = args as {
-                        id: string;
-                        data: Record<string, unknown>;
-                    };
-                    return svc.update({
-                        type: entryType,
-                        id,
-                        data: data as Parameters<typeof entries.update>[0]['data'],
-                    });
+                    return svc.update(withType(args, typeId));
                 },
             };
 
         case 'publish':
             return {
-                toolName,
-                description,
-                annotations,
-                inputSchema: ENTRIES_ID_SCHEMA,
+                ...base,
                 invoke: async (args) => {
                     const svc = await getEntries();
-                    return svc.publish({ type: entryType, id: args['id'] as string });
+                    return svc.publish(withType(args, typeId));
                 },
             };
 
+        // No descriptor declares `entries.unpublish` yet, so the manifest never
+        // emits it and this arm is currently unreachable — kept so adding the
+        // descriptor is all it takes to expose the tool.
         case 'unpublish':
             return {
-                toolName,
-                description,
-                annotations,
-                inputSchema: ENTRIES_ID_SCHEMA,
+                ...base,
                 invoke: async (args) => {
                     const svc = await getEntries();
-                    return svc.unpublish({ type: entryType, id: args['id'] as string });
+                    return svc.unpublish(withType(args, typeId));
                 },
             };
 
         case 'delete':
             return {
-                toolName,
-                description,
-                annotations,
-                inputSchema: ENTRIES_ID_SCHEMA,
+                ...base,
                 invoke: async (args) => {
                     const svc = await getEntries();
-                    return svc.delete({ type: entryType, id: args['id'] as string });
+                    return svc.delete(withType(args, typeId));
                 },
             };
 
-        // duplicate/trash/restore/emptyTrash/versions/restoreVersion/schedule → skip v1
+        // duplicate/trash/restore/emptyTrash/versions/restoreVersion/schedule,
+        // and the staged-entry methods → skip v1
         default:
             return null;
     }
@@ -550,33 +384,32 @@ function buildEntriesAdapter(
 /**
  * Build a ToolDispatch from a ManifestMethod. Returns null when no v1 adapter
  * exists for this method (plugin methods, binary uploads, entries long-tail).
+ *
+ * The manifest carries `source`, `domain` and `method` as fields, so nothing
+ * here re-derives them by splitting a name apart.
  */
-export function buildDispatch(manifest: ManifestMethodSlice): ToolDispatch | null {
+export function buildDispatch(manifest: ManifestMethod): ToolDispatch | null {
     if (manifest.source === 'plugin') {
         return null;
     }
 
-    if (manifest.source === 'entries') {
-        const entryType = manifest.entryType;
-        const mount = manifest.mount ?? 'root';
-        if (!entryType) return null;
+    // Resolved once, here, so no adapter can substitute a literal: a method with
+    // no serialisable input cannot be honestly described to a client, so it is
+    // skipped rather than given a hand-written stand-in that drifts.
+    const inputSchema = manifest.input ?? null;
+    if (inputSchema === null) return null;
 
-        // action is the part after the dot in manifest.name (e.g. 'entries.query' → 'query')
-        const action = manifest.name.split('.').pop() ?? '';
-        return buildEntriesAdapter(action, entryType, mount, manifest);
+    if (manifest.source === 'entries') {
+        return buildEntriesAdapter(manifest, inputSchema);
     }
 
-    // source === 'core' — name is domain.action e.g. 'users.create'
-    const [domain, action] = manifest.name.split('.');
-    if (!domain || !action) return null;
-
-    switch (domain) {
+    switch (manifest.domain) {
         case 'users':
-            return buildUsersAdapter(action, manifest);
+            return buildUsersAdapter(manifest, inputSchema);
         case 'settings':
-            return buildSettingsAdapter(action, manifest);
+            return buildSettingsAdapter(manifest, inputSchema);
         case 'media':
-            return buildMediaAdapter(action, manifest);
+            return buildMediaAdapter(manifest, inputSchema);
         default:
             return null;
     }

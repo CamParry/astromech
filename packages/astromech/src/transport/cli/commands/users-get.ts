@@ -10,7 +10,7 @@ export default defineCommand({
     },
     async run({ args }) {
         await loadConfig(args.config);
-        const user = await usersApi.get(args.id);
+        const user = await usersApi.get({ id: args.id });
         if (!user) {
             console.error('User not found');
             process.exit(1);

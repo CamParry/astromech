@@ -115,7 +115,8 @@ export function buildMenusService(
                 // ctx.settings are full-shaped by default (plugin altitude is trusted
                 // server code) — the handler returns a sanitised menu tree, never the
                 // raw settings, so this never leaks.
-                const blob = await ctx.settings.get(blobKey, {
+                const blob = await ctx.settings.get({
+                    key: blobKey,
                     ...(locale ? { locale } : {}),
                 });
                 if (blob === null || typeof blob !== 'object' || Array.isArray(blob)) {

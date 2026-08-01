@@ -4,100 +4,146 @@
 
 import { describe, it, expect } from 'vitest';
 import { buildTools } from '@/transport/mcp/tools.js';
+import type {
+    CoreManifestMethod,
+    EntriesManifestMethod,
+    JsonSchemaObject,
+    MethodManifest,
+    PluginManifestMethod,
+} from '@/types/index.js';
 
 // ============================================================================
 // Sample manifest
 // ============================================================================
 
-const sampleManifest = {
-    version: 1,
+/**
+ * A tool's `inputSchema` is now the manifest's own `input`, so these fixtures
+ * carry real schemas rather than relying on adapter-side literals. A method with
+ * no `input` is skipped by design — `idSchema` is what most of these need.
+ */
+function idSchema(...extra: string[]): JsonSchemaObject {
+    return {
+        type: 'object',
+        properties: Object.fromEntries(
+            ['id', ...extra].map((k) => [k, { type: 'string' }])
+        ),
+        required: ['id', ...extra],
+        additionalProperties: false,
+    };
+}
+
+const objectSchema: JsonSchemaObject = {
+    type: 'object',
+    properties: {},
+    additionalProperties: false,
+};
+
+function core(
+    domain: string,
+    method: string,
+    rest: Partial<CoreManifestMethod> & Pick<CoreManifestMethod, 'mutates'>
+): CoreManifestMethod {
+    return {
+        id: `${domain}.${method}`,
+        name: `${domain}.${method}`,
+        source: 'core',
+        domain,
+        method,
+        permission: null,
+        destructive: false,
+        idempotent: false,
+        ...rest,
+    };
+}
+
+function entry(
+    method: string,
+    rest: Partial<EntriesManifestMethod> & Pick<EntriesManifestMethod, 'mutates'>
+): EntriesManifestMethod {
+    const entryType = rest.entryType ?? 'post';
+    const mount = rest.mount ?? 'root';
+    return {
+        id: `entries.${mount}.${entryType}.${method}`,
+        name: `entries.${method}`,
+        source: 'entries',
+        method,
+        typeId: entryType,
+        entryType,
+        mount,
+        permission: null,
+        destructive: false,
+        idempotent: false,
+        ...rest,
+    };
+}
+
+const pluginMethod: PluginManifestMethod = {
+    id: 'plugins.foo.bar',
+    name: 'plugins.foo.bar',
+    summary: 'A plugin method.',
+    source: 'plugin',
+    plugin: 'foo',
+    serviceKey: 'foo',
+    method: 'bar',
+    access: 'authenticated',
+    permission: null,
+    mutates: true,
+    destructive: false,
+    idempotent: false,
+    input: objectSchema,
+};
+
+const sampleManifest: MethodManifest = {
+    version: 2,
     methods: [
         // core — users
-        {
-            name: 'users.create',
+        core('users', 'create', {
             summary: 'Create a new CMS user.',
-            source: 'core' as const,
             mutates: true,
-            destructive: false,
-            idempotent: false,
-        },
-        {
-            name: 'users.get',
+            input: objectSchema,
+        }),
+        core('users', 'get', {
             summary: 'Read one user by id.',
-            source: 'core' as const,
             mutates: false,
-            destructive: false,
-            idempotent: false,
-        },
+            input: idSchema(),
+        }),
         // core — settings
-        {
-            name: 'settings.set',
+        core('settings', 'set', {
             summary: 'Write a setting.',
-            source: 'core' as const,
             mutates: true,
-            destructive: false,
             idempotent: true,
-        },
+            input: objectSchema,
+        }),
         // entries — post
-        {
-            name: 'entries.create',
+        entry('create', {
             summary: 'Create a "post" entry.',
-            source: 'entries' as const,
-            entryType: 'post',
-            mount: 'root',
             mutates: true,
-            destructive: false,
-            idempotent: false,
-        },
-        {
-            name: 'entries.delete',
+            input: objectSchema,
+        }),
+        entry('delete', {
             summary: 'Delete a "post" entry.',
-            source: 'entries' as const,
-            entryType: 'post',
-            mount: 'root',
             mutates: true,
             destructive: true,
-            idempotent: false,
-        },
-        {
-            name: 'entries.get',
+            input: idSchema(),
+        }),
+        entry('get', {
             summary: 'Get a "post" entry.',
-            source: 'entries' as const,
-            entryType: 'post',
-            mount: 'root',
             mutates: false,
-            destructive: false,
-            idempotent: false,
-        },
-        {
-            name: 'entries.publish',
+            input: idSchema(),
+        }),
+        entry('publish', {
             summary: 'Publish a "post" entry.',
-            source: 'entries' as const,
-            entryType: 'post',
-            mount: 'root',
             mutates: true,
-            destructive: false,
-            idempotent: false,
-        },
-        // plugin — should be skipped
-        {
-            name: 'plugins.foo.bar',
-            summary: 'A plugin method.',
-            source: 'plugin' as const,
-            plugin: 'foo',
-            mutates: true,
-            destructive: false,
-            idempotent: false,
-        },
-        // media.upload — no adapter → skipped
-        {
-            name: 'media.upload',
+            input: idSchema(),
+        }),
+        // plugin — should be skipped (no adapter until P1)
+        pluginMethod,
+        // media.upload — File is not callable over JSON-RPC → skipped
+        core('media', 'upload', {
             summary: 'Upload a file.',
-            source: 'core' as const,
             mutates: true,
-            destructive: false,
-            idempotent: false,
-        },
+            input: objectSchema,
+        }),
     ],
 };
 
@@ -200,22 +246,39 @@ describe('buildTools', () => {
     });
 
     it('entries tool with non-root mount uses mount in name', () => {
-        const manifestWithMount = {
-            version: 1,
+        const manifestWithMount: MethodManifest = {
+            version: 2,
             methods: [
-                {
-                    name: 'entries.get',
+                entry('get', {
                     summary: 'Get a "redirect" entry.',
-                    source: 'entries' as const,
                     entryType: 'redirect',
                     mount: 'redirects',
+                    typeId: 'redirects/redirect',
                     mutates: false,
-                    destructive: false,
-                    idempotent: false,
-                },
+                    input: idSchema(),
+                }),
             ],
         };
         const { tools } = buildTools(manifestWithMount);
         expect(tools[0]?.name).toBe('entries_redirects_redirect_get');
+    });
+
+    it('a method with no input schema is skipped, not given a synthesised one', () => {
+        // The adapters used to carry hand-written `inputSchema` literals, which is
+        // how MCP's `users.update` tool drifted from the descriptor. A tool now
+        // exists only if the manifest gave it a schema.
+        const schemaless: MethodManifest = {
+            version: 2,
+            methods: [core('users', 'get', { mutates: false })],
+        };
+        const { tools, skipped } = buildTools(schemaless);
+        expect(tools).toHaveLength(0);
+        expect(skipped.join(' ')).toContain('users.get');
+    });
+
+    it('passes the manifest input through verbatim as the tool inputSchema', () => {
+        const { tools } = buildTools(sampleManifest);
+        const tool = tools.find((t) => t.name === 'users_get');
+        expect(tool?.inputSchema).toEqual(idSchema());
     });
 });

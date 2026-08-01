@@ -42,3 +42,27 @@ export const updateMediaSchema = z
         fields: z.record(z.string(), z.unknown()).optional(),
     })
     .openapi('UpdateMedia');
+
+const sortDirection = z.enum(['asc', 'desc']);
+
+/**
+ * Call schema for `media.query` — mirrors `MediaQueryParams`. Not a request body:
+ * the HTTP route reads these off the query string, so this exists purely so the
+ * method manifest can describe how the method is called.
+ */
+export const mediaQuerySchema = z.object({
+    search: z.string().optional(),
+    where: z
+        .object({
+            mimeType: z.enum(['images', 'videos', 'documents', 'other']).optional(),
+        })
+        .optional(),
+    page: z.number().optional(),
+    limit: z.union([z.number(), z.literal('all')]).optional(),
+    sort: z
+        .union([
+            z.record(z.string(), sortDirection),
+            z.array(z.record(z.string(), sortDirection)),
+        ])
+        .optional(),
+});

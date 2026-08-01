@@ -5,42 +5,46 @@
  * a single method permission (self-access on read/update, the last-admin guard)
  * stays explicit in the route, per the services-architecture decision that such
  * rules are identity/policy concerns, not the method's declared permission.
+ *
+ * `input` is the METHOD's argument object, not the HTTP body: `users.update` is
+ * called `update({ id, data })`, so the descriptor composes the body schema into
+ * that shape rather than declaring the body alone. The routes still parse the
+ * body schemas directly — nothing here changes what the wire accepts.
  */
 
+import { z } from '@hono/zod-openapi';
 import type { ServiceMethodDescriptor } from '@/types/index.js';
-import { createUserSchema, updateUserSchema } from './schema.js';
+import { createUserSchema, updateUserSchema, userQuerySchema } from './schema.js';
 
 export const usersDescriptors = {
     query: {
-        name: 'users.query',
         summary: 'List CMS users.',
+        input: userQuerySchema,
         permission: 'users:read',
         mutates: false,
     },
     get: {
-        name: 'users.get',
         summary: 'Read one user by id.',
+        input: z.object({ id: z.string() }),
         permission: 'users:read',
         mutates: false,
     },
     create: {
-        name: 'users.create',
         summary: 'Create a new CMS user.',
         input: createUserSchema,
         permission: 'users:create',
         mutates: true,
     },
     update: {
-        name: 'users.update',
         summary: 'Update a user’s profile or role.',
-        input: updateUserSchema,
+        input: z.object({ id: z.string(), data: updateUserSchema }),
         permission: 'users:update',
         mutates: true,
         idempotent: true,
     },
     delete: {
-        name: 'users.delete',
         summary: 'Delete a CMS user.',
+        input: z.object({ id: z.string() }),
         permission: 'users:delete',
         mutates: true,
         destructive: true,

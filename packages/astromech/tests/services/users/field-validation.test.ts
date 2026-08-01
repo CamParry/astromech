@@ -154,7 +154,7 @@ describe('usersApi.update — validation', () => {
             fields: { bio: 'Hi' },
         });
         await expect(
-            usersApi.update(user.id, { fields: { bio: '' } })
+            usersApi.update({ id: user.id, data: { fields: { bio: '' } } })
         ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: { bio: ['This field is required'] },
@@ -167,8 +167,11 @@ describe('usersApi.update — validation', () => {
             name: 'Alice',
             fields: { bio: 'Hi' },
         });
-        const updated = await usersApi.update(user.id, {
-            fields: { bio: 'Updated', handle: 'New Handle' },
+        const updated = await usersApi.update({
+            id: user.id,
+            data: {
+                fields: { bio: 'Updated', handle: 'New Handle' },
+            },
         });
         expect(updated.fields?.handle).toBe('new-handle');
     });
@@ -185,8 +188,11 @@ describe('usersApi.update — uniqueness self-exclusion', () => {
             name: 'Alice',
             fields: { bio: 'Hi', badge: 'mycode' },
         });
-        const updated = await usersApi.update(user.id, {
-            fields: { bio: 'Updated', badge: 'mycode' },
+        const updated = await usersApi.update({
+            id: user.id,
+            data: {
+                fields: { bio: 'Updated', badge: 'mycode' },
+            },
         });
         expect(updated.fields?.badge).toBe('mycode');
     });
@@ -203,7 +209,10 @@ describe('usersApi.update — uniqueness self-exclusion', () => {
             fields: { bio: 'Hey', badge: 'free' },
         });
         await expect(
-            usersApi.update(bob.id, { fields: { bio: 'Hey', badge: 'taken' } })
+            usersApi.update({
+                id: bob.id,
+                data: { fields: { bio: 'Hey', badge: 'taken' } },
+            })
         ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: { badge: ['Already in use'] },
@@ -222,7 +231,7 @@ describe('usersApi.update — no fields key', () => {
             name: 'Alice',
             fields: { bio: 'Hi' },
         });
-        const updated = await usersApi.update(user.id, { name: 'Alicia' });
+        const updated = await usersApi.update({ id: user.id, data: { name: 'Alicia' } });
         expect(updated.name).toBe('Alicia');
     });
 });

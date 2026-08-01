@@ -135,12 +135,13 @@ export const mediaApi = {
         };
     },
 
-    async get(id: string): Promise<Media | null> {
-        const row = await createMediaStorage().get(id);
+    async get(params: { id: string }): Promise<Media | null> {
+        const row = await createMediaStorage().get(params.id);
         return row ? toMedia(row) : null;
     },
 
-    async upload(file: File): Promise<Media> {
+    async upload(params: { file: File }): Promise<Media> {
+        const { file } = params;
         const driver = getStorageDriver();
 
         // Minted here rather than left to the descriptor's `col.id()` default:
@@ -167,14 +168,15 @@ export const mediaApi = {
         );
     },
 
-    async update(
-        id: string,
-        data: Partial<{ alt: string; title: string; fields: JsonObject }>
-    ): Promise<Media> {
-        const validatedData = validate(updateMediaSchema, data);
+    async update(params: {
+        id: string;
+        data: Partial<{ alt: string; title: string; fields: JsonObject }>;
+    }): Promise<Media> {
+        const { id } = params;
+        const validatedData = validate(updateMediaSchema, params.data);
 
         if (validatedData.fields !== undefined) {
-            const current = await mediaApi.get(id);
+            const current = await mediaApi.get({ id });
             const fieldDefs = flattenFieldNodes(config.media?.fields ?? []);
             const processed = await processFields(
                 validatedData.fields as Record<string, unknown>,
@@ -207,7 +209,8 @@ export const mediaApi = {
         );
     },
 
-    async delete(id: string): Promise<void> {
+    async delete(params: { id: string }): Promise<void> {
+        const { id } = params;
         const storage = createMediaStorage();
         const driver = getStorageDriver();
 
@@ -222,7 +225,8 @@ export const mediaApi = {
         await storage.delete(id);
     },
 
-    async replace(id: string, file: File): Promise<Media> {
+    async replace(params: { id: string; file: File }): Promise<Media> {
+        const { id, file } = params;
         const storage = createMediaStorage();
         const driver = getStorageDriver();
 

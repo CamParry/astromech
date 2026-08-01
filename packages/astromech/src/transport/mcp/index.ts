@@ -10,22 +10,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { loadConfig, loadRawConfig } from '@/transport/cli/config.js';
 import { generateMethodManifest } from '@/codegen/method-manifest.js';
 import { createMcpServer } from './server.js';
-
-type ParsedManifest = {
-    version: number;
-    methods: {
-        name: string;
-        summary?: string | undefined;
-        source: 'core' | 'entries' | 'plugin';
-        mutates: boolean;
-        destructive: boolean;
-        idempotent: boolean;
-        input?: unknown;
-        entryType?: string;
-        mount?: string;
-        plugin?: string;
-    }[];
-};
+import type { MethodManifest } from '@/types/index.js';
 
 export async function runMcpServer(configPath?: string): Promise<void> {
     const raw = await loadRawConfig(configPath);
@@ -33,7 +18,7 @@ export async function runMcpServer(configPath?: string): Promise<void> {
 
     const manifest = JSON.parse(
         generateMethodManifest(resolved, raw.plugins ?? [])
-    ) as ParsedManifest;
+    ) as MethodManifest;
 
     const { server, tools, skipped } = createMcpServer(manifest);
 

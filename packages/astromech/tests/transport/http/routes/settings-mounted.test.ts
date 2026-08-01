@@ -53,7 +53,7 @@ describe('settings router — private slashed keys (plugin settings pages)', () 
         await createTestDb();
         // makeTestConfig declares no public settings pages → every key is private.
         setupTestConfig(makeTestConfig());
-        await Astromech.settings.set(KEY, VALUE);
+        await Astromech.settings.set({ key: KEY, value: VALUE });
     });
 
     it('returns the private value for an authenticated admin (full shape)', async () => {

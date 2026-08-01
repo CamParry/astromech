@@ -83,14 +83,14 @@ export function withDefaultSettingsShape(
     if (shape === 'public') return settings;
 
     return {
-        all(opts) {
-            if (opts && 'full' in opts) return settings.all(opts);
-            return settings.all({ ...opts, full: true });
+        all(params) {
+            if (params && 'full' in params) return settings.all(params);
+            return settings.all({ ...params, full: true });
         },
-        get(key, opts) {
-            if (opts && 'full' in opts) return settings.get(key, opts);
-            return settings.get(key, { ...opts, full: true });
+        get(params) {
+            if ('full' in params) return settings.get(params);
+            return settings.get({ ...params, full: true });
         },
-        set: (key, value) => settings.set(key, value),
+        set: (params) => settings.set(params),
     };
 }

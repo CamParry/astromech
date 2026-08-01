@@ -39,8 +39,10 @@ async function writeSetting(key: string, value: unknown): Promise<void> {
     // Use the Local API to write settings directly
     const { default: Astromech } = await import('@/transport/local/index.js');
     await (
-        Astromech as { settings: { set(k: string, v: unknown): Promise<unknown> } }
-    ).settings.set(key, value as JsonValue);
+        Astromech as {
+            settings: { set(params: { key: string; value: unknown }): Promise<unknown> };
+        }
+    ).settings.set({ key, value: value as JsonValue });
 }
 
 function makeMenusConfig(

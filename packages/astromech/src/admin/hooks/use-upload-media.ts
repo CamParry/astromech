@@ -18,7 +18,7 @@ export function useUploadMedia(): UseUploadMediaResult {
         mutationFn: async (files: File[]) => {
             const results: Media[] = [];
             for (const file of files) {
-                const uploaded = await Astromech.media.upload(file);
+                const uploaded = await Astromech.media.upload({ file });
                 results.push(uploaded);
             }
             return results;

@@ -105,17 +105,19 @@ beforeEach(async () => {
 
 describe('mediaApi.update — required field', () => {
     it('rejects when required field is absent', async () => {
-        const m = await mediaApi.upload(textFile());
-        await expect(mediaApi.update(m.id, { fields: {} })).rejects.toMatchObject({
+        const m = await mediaApi.upload({ file: textFile() });
+        await expect(
+            mediaApi.update({ id: m.id, data: { fields: {} } })
+        ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: { caption: ['This field is required'] },
         });
     });
 
     it('rejects when required field is empty string', async () => {
-        const m = await mediaApi.upload(textFile());
+        const m = await mediaApi.upload({ file: textFile() });
         await expect(
-            mediaApi.update(m.id, { fields: { caption: '' } })
+            mediaApi.update({ id: m.id, data: { fields: { caption: '' } } })
         ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: { caption: ['This field is required'] },
@@ -129,9 +131,12 @@ describe('mediaApi.update — required field', () => {
 
 describe('mediaApi.update — coercion', () => {
     it('coerces a slug field to slugified form and persists it', async () => {
-        const m = await mediaApi.upload(textFile());
-        const updated = await mediaApi.update(m.id, {
-            fields: { caption: 'A photo', slug_field: 'My Image Title' },
+        const m = await mediaApi.upload({ file: textFile() });
+        const updated = await mediaApi.update({
+            id: m.id,
+            data: {
+                fields: { caption: 'A photo', slug_field: 'My Image Title' },
+            },
         });
         expect(updated.fields?.slug_field).toBe('my-image-title');
     });
@@ -143,12 +148,18 @@ describe('mediaApi.update — coercion', () => {
 
 describe('mediaApi.update — uniqueness', () => {
     it('rejects a duplicate tag across two media items', async () => {
-        const a = await mediaApi.upload(textFile('a.txt'));
-        await mediaApi.update(a.id, { fields: { caption: 'A', tag: 'alpha' } });
+        const a = await mediaApi.upload({ file: textFile('a.txt') });
+        await mediaApi.update({
+            id: a.id,
+            data: { fields: { caption: 'A', tag: 'alpha' } },
+        });
 
-        const b = await mediaApi.upload(textFile('b.txt'));
+        const b = await mediaApi.upload({ file: textFile('b.txt') });
         await expect(
-            mediaApi.update(b.id, { fields: { caption: 'B', tag: 'alpha' } })
+            mediaApi.update({
+                id: b.id,
+                data: { fields: { caption: 'B', tag: 'alpha' } },
+            })
         ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: { tag: ['Already in use'] },
@@ -156,22 +167,34 @@ describe('mediaApi.update — uniqueness', () => {
     });
 
     it('allows a media item to keep its own unique tag (self-exclusion)', async () => {
-        const m = await mediaApi.upload(textFile());
-        await mediaApi.update(m.id, { fields: { caption: 'First', tag: 'beta' } });
+        const m = await mediaApi.upload({ file: textFile() });
+        await mediaApi.update({
+            id: m.id,
+            data: { fields: { caption: 'First', tag: 'beta' } },
+        });
 
-        const updated = await mediaApi.update(m.id, {
-            fields: { caption: 'Updated', tag: 'beta' },
+        const updated = await mediaApi.update({
+            id: m.id,
+            data: {
+                fields: { caption: 'Updated', tag: 'beta' },
+            },
         });
         expect(updated.fields?.tag).toBe('beta');
     });
 
     it('accepts a different unique tag', async () => {
-        const a = await mediaApi.upload(textFile('a.txt'));
-        await mediaApi.update(a.id, { fields: { caption: 'A', tag: 'gamma' } });
+        const a = await mediaApi.upload({ file: textFile('a.txt') });
+        await mediaApi.update({
+            id: a.id,
+            data: { fields: { caption: 'A', tag: 'gamma' } },
+        });
 
-        const b = await mediaApi.upload(textFile('b.txt'));
-        const updated = await mediaApi.update(b.id, {
-            fields: { caption: 'B', tag: 'delta' },
+        const b = await mediaApi.upload({ file: textFile('b.txt') });
+        const updated = await mediaApi.update({
+            id: b.id,
+            data: {
+                fields: { caption: 'B', tag: 'delta' },
+            },
         });
         expect(updated.fields?.tag).toBe('delta');
     });
@@ -183,8 +206,8 @@ describe('mediaApi.update — uniqueness', () => {
 
 describe('mediaApi.update — no fields key', () => {
     it('updates alt without triggering field validation', async () => {
-        const m = await mediaApi.upload(textFile());
-        const updated = await mediaApi.update(m.id, { alt: 'A nice doc' });
+        const m = await mediaApi.upload({ file: textFile() });
+        const updated = await mediaApi.update({ id: m.id, data: { alt: 'A nice doc' } });
         expect(updated.alt).toBe('A nice doc');
     });
 });

@@ -107,7 +107,7 @@ export function MediaField({
         }
 
         setIsLoadingItems(true);
-        Promise.all(ids.map((id) => Astromech.media.get(id)))
+        Promise.all(ids.map((id) => Astromech.media.get({ id })))
             .then((items) => {
                 setSelectedIds(ids);
                 setSelectedItems(items.filter(Boolean) as MediaItem[]);
@@ -209,7 +209,7 @@ export function MediaField({
         setError(null);
         for (const file of files) {
             try {
-                await Astromech.media.upload(file);
+                await Astromech.media.upload({ file });
                 queryClient.invalidateQueries({ queryKey: queryKeys.media.list({}) });
                 toast({ message: `${file.name} uploaded.`, variant: 'success' });
             } catch {

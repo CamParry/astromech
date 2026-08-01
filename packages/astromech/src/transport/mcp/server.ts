@@ -11,26 +11,11 @@ import {
     CallToolRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { buildTools, type McpToolDef } from './tools.js';
+import type { MethodManifest } from '@/types/index.js';
 
 // ============================================================================
 // Types
 // ============================================================================
-
-type ParsedManifest = {
-    version: number;
-    methods: {
-        name: string;
-        summary?: string | undefined;
-        source: 'core' | 'entries' | 'plugin';
-        mutates: boolean;
-        destructive: boolean;
-        idempotent: boolean;
-        input?: unknown;
-        entryType?: string;
-        mount?: string;
-        plugin?: string;
-    }[];
-};
 
 type CreateMcpServerResult = {
     server: Server;
@@ -52,7 +37,7 @@ export function toToolResultText(result: unknown): string {
 // Factory
 // ============================================================================
 
-export function createMcpServer(manifest: ParsedManifest): CreateMcpServerResult {
+export function createMcpServer(manifest: MethodManifest): CreateMcpServerResult {
     const { tools, dispatch, skipped } = buildTools(manifest);
 
     const server = new Server(

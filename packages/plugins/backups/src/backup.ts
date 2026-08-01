@@ -124,7 +124,7 @@ export async function performBackup(
 export async function resolveKeep(ctx: PluginContext, fallback: number): Promise<number> {
     const key = `plugin:${ctx.plugin.namespace}:retention`;
     try {
-        const value = await ctx.settings.get(key);
+        const value = await ctx.settings.get({ key });
         if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
             return Math.floor(value);
         }

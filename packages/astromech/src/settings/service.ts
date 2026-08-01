@@ -34,9 +34,9 @@ function toSetting(row: SettingRow): Setting {
 }
 
 export const settingsApi: SettingsApi = {
-    async all(opts?: { full?: boolean }): Promise<Setting[]> {
+    async all(params?: { full?: boolean }): Promise<Setting[]> {
         const rows = await createSettingsStorage().all();
-        const full = opts?.full ?? false;
+        const full = params?.full ?? false;
         const publicKeys =
             (config as { publicSettingKeys?: string[] }).publicSettingKeys ?? [];
         return rows
@@ -44,12 +44,14 @@ export const settingsApi: SettingsApi = {
             .map(toSetting);
     },
 
-    async get(
-        key: string,
-        opts?: { locale?: string; full?: boolean }
-    ): Promise<JsonValue | null> {
-        const locale = opts?.locale ?? config.defaultLocale;
-        const full = opts?.full ?? false;
+    async get(params: {
+        key: string;
+        locale?: string;
+        full?: boolean;
+    }): Promise<JsonValue | null> {
+        const { key } = params;
+        const locale = params.locale ?? config.defaultLocale;
+        const full = params.full ?? false;
         const publicKeys =
             (config as { publicSettingKeys?: string[] }).publicSettingKeys ?? [];
 
@@ -81,8 +83,9 @@ export const settingsApi: SettingsApi = {
         return base;
     },
 
-    async set(key: string, value: JsonValue): Promise<Setting> {
-        let effectiveValue = value;
+    async set(params: { key: string; value: JsonValue }): Promise<Setting> {
+        const { key } = params;
+        let effectiveValue = params.value;
 
         const baseKey = key.includes(':') ? key.slice(0, key.indexOf(':')) : key;
         const page = (config as ResolvedConfig).adminPages.find(

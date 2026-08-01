@@ -139,9 +139,9 @@ describe('generateMethodManifest', () => {
         expect(() => JSON.parse(result)).not.toThrow();
     });
 
-    it('should set version to 1', () => {
+    it('should set version to 2', () => {
         const { version } = parseManifest([]);
-        expect(version).toBe(1);
+        expect(version).toBe(2);
     });
 
     it('should include a methods array', () => {
@@ -192,6 +192,44 @@ describe('generateMethodManifest — core methods', () => {
         const { methods } = parseManifest([]);
         const m = findMethod(methods, 'users.query');
         expect(m?.['mutates']).toBe(false);
+    });
+
+    it('should describe users.update as the METHOD { id, data }, not the body', () => {
+        const { methods } = parseManifest([]);
+        const input = findMethod(methods, 'users.update')?.['input'] as {
+            properties?: Record<string, { properties?: Record<string, unknown> }>;
+            required?: string[];
+        };
+        expect(Object.keys(input?.properties ?? {})).toEqual(['id', 'data']);
+        expect(input?.required).toEqual(['id', 'data']);
+        // The body schema is nested intact — `fields` was dropped by the
+        // hand-written MCP schema this replaces.
+        expect(Object.keys(input?.properties?.['data']?.properties ?? {})).toContain(
+            'fields'
+        );
+    });
+
+    it('should include the path param in settings.set (key + value)', () => {
+        const { methods } = parseManifest([]);
+        const input = findMethod(methods, 'settings.set')?.['input'] as {
+            properties?: Record<string, unknown>;
+        };
+        expect(Object.keys(input?.properties ?? {}).sort()).toEqual(['key', 'value']);
+    });
+
+    it('should give every core method an input schema', () => {
+        const { methods } = parseManifest([]);
+        const core = methods.filter((m) => m['source'] === 'core');
+        expect(core.length).toBeGreaterThan(0);
+        for (const m of core) {
+            expect(m['input'], String(m['name'])).toBeDefined();
+        }
+    });
+
+    it('should derive names from the catalogue key, never "(unnamed)"', () => {
+        const { methods } = parseManifest();
+        expect(methods.map((m) => m['name'])).not.toContain('(unnamed)');
+        expect(findMethod(methods, 'media.upload')).toBeDefined();
     });
 
     it('should include media and settings core methods', () => {
@@ -272,10 +310,46 @@ describe('generateMethodManifest — root entries', () => {
         expect(names).not.toContain('entries.publish');
     });
 
-    it('should set contentSchema to null for root entries', () => {
+    it('should not emit contentSchema (removed in manifest v2)', () => {
         const { methods } = parseManifest([]);
-        const m = findMethod(methods, 'entries.query', 'posts');
-        expect(m?.['contentSchema']).toBeNull();
+        expect(methods.some((m) => 'contentSchema' in m)).toBe(false);
+    });
+
+    it('should give every root entry method an input schema naming its type', () => {
+        const { methods } = parseManifest([]);
+        const postMethods = methods.filter((m) => m['entryType'] === 'posts');
+        expect(postMethods.length).toBeGreaterThan(0);
+        for (const m of postMethods) {
+            const input = m['input'] as { properties?: Record<string, unknown> };
+            expect(input?.properties?.['type'], String(m['name'])).toEqual({
+                type: 'string',
+                const: 'posts',
+            });
+        }
+    });
+
+    it('should include id in the input of the id-taking entry methods', () => {
+        const { methods } = parseManifest([]);
+        for (const name of ['entries.get', 'entries.update', 'entries.delete']) {
+            const input = findMethod(methods, name, 'posts')?.['input'] as {
+                properties?: Record<string, unknown>;
+                required?: string[];
+            };
+            expect(Object.keys(input?.properties ?? {}), name).toContain('id');
+            expect(input?.required, name).toContain('id');
+        }
+    });
+
+    it('should describe the update method as { type, id, data }', () => {
+        const { methods } = parseManifest([]);
+        const input = findMethod(methods, 'entries.update', 'posts')?.['input'] as {
+            properties?: Record<string, { properties?: Record<string, unknown> }>;
+        };
+        expect(Object.keys(input?.properties ?? {})).toEqual(['type', 'id', 'data']);
+        // `data` is the update payload, not a flattened patch.
+        expect(Object.keys(input?.properties?.['data']?.properties ?? {})).toContain(
+            'title'
+        );
     });
 });
 
@@ -354,10 +428,15 @@ describe('generateMethodManifest — plugin entries', () => {
         expect(m?.['permission']).toBe('plugin:test_my_plugin:entry:widget:read');
     });
 
-    it('should set contentSchema to null for plugin entries', () => {
+    it('should name the QUALIFIED type in a plugin entry method input', () => {
         const { methods } = parseManifest();
-        const m = findMethod(methods, 'entries.query', 'widget');
-        expect(m?.['contentSchema']).toBeNull();
+        const input = findMethod(methods, 'entries.get', 'widget')?.['input'] as {
+            properties?: Record<string, unknown>;
+        };
+        expect(input?.properties?.['type']).toEqual({
+            type: 'string',
+            const: 'test_my_plugin/widget',
+        });
     });
 });
 

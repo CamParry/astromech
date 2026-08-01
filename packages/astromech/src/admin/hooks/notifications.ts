@@ -37,7 +37,7 @@ export function useDismiss() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (id: string) => Astromech.notifications.dismiss(id),
+        mutationFn: (id: string) => Astromech.notifications.dismiss({ id }),
         onSuccess: () => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.notifications.all(),

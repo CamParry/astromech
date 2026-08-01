@@ -61,7 +61,7 @@ beforeEach(async () => {
 describe('settingsApi.set — email field', () => {
     it('rejects an invalid email', async () => {
         await expect(
-            settingsApi.set(BASE_KEY, { contact: 'not-an-email' })
+            settingsApi.set({ key: BASE_KEY, value: { contact: 'not-an-email' } })
         ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: { contact: ['Must be a valid email address'] },
@@ -70,7 +70,7 @@ describe('settingsApi.set — email field', () => {
 
     it('accepts a valid email', async () => {
         await expect(
-            settingsApi.set(BASE_KEY, { contact: 'hello@example.com' })
+            settingsApi.set({ key: BASE_KEY, value: { contact: 'hello@example.com' } })
         ).resolves.toBeDefined();
     });
 });
@@ -82,8 +82,8 @@ describe('settingsApi.set — email field', () => {
 describe('settingsApi.set — coercion', () => {
     it('coerces a slug field value and persists the coerced form', async () => {
         // 'handle' is type:'slug' which runs coerceSlug → slugify('Hello World') = 'hello-world'
-        await settingsApi.set(BASE_KEY, { handle: 'Hello World' });
-        const stored = await settingsApi.get(BASE_KEY, { full: true });
+        await settingsApi.set({ key: BASE_KEY, value: { handle: 'Hello World' } });
+        const stored = await settingsApi.get({ key: BASE_KEY, full: true });
         expect((stored as Record<string, unknown>)?.handle).toBe('hello-world');
     });
 });
@@ -97,7 +97,7 @@ describe('settingsApi.set — present-only semantics', () => {
         // `title` is required but not included here — should NOT fail because
         // present-only semantics mean we only validate keys that appear in the blob.
         await expect(
-            settingsApi.set(BASE_KEY, { contact: 'ok@example.com' })
+            settingsApi.set({ key: BASE_KEY, value: { contact: 'ok@example.com' } })
         ).resolves.toBeDefined();
     });
 });
@@ -109,12 +109,14 @@ describe('settingsApi.set — present-only semantics', () => {
 describe('settingsApi.set — pass-through cases', () => {
     it('resolves without validation for a key with no matching admin page', async () => {
         await expect(
-            settingsApi.set('no-such-page', { anything: 'goes' })
+            settingsApi.set({ key: 'no-such-page', value: { anything: 'goes' } })
         ).resolves.toBeDefined();
     });
 
     it('resolves without validation for a scalar (non-object) value', async () => {
-        await expect(settingsApi.set(BASE_KEY, 'just-a-string')).resolves.toBeDefined();
+        await expect(
+            settingsApi.set({ key: BASE_KEY, value: 'just-a-string' })
+        ).resolves.toBeDefined();
     });
 });
 
@@ -125,11 +127,11 @@ describe('settingsApi.set — pass-through cases', () => {
 describe('settingsApi.set — unique field', () => {
     it('rejects when another key under the same baseKey holds the same unique value', async () => {
         // Store the handle on the per-locale key
-        await settingsApi.set(`${BASE_KEY}:de`, { handle: 'my-handle' });
+        await settingsApi.set({ key: `${BASE_KEY}:de`, value: { handle: 'my-handle' } });
 
         // Attempting to store the same handle on the base key should fail
         await expect(
-            settingsApi.set(BASE_KEY, { handle: 'my-handle' })
+            settingsApi.set({ key: BASE_KEY, value: { handle: 'my-handle' } })
         ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: { handle: ['Already in use'] },
@@ -138,11 +140,11 @@ describe('settingsApi.set — unique field', () => {
 
     it('does NOT reject when setting the same key again with its own value (self-exclusion)', async () => {
         // Set the handle on the base key first
-        await settingsApi.set(BASE_KEY, { handle: 'my-handle' });
+        await settingsApi.set({ key: BASE_KEY, value: { handle: 'my-handle' } });
 
         // Re-saving the same value to the same key must not reject (excludeId = key)
         await expect(
-            settingsApi.set(BASE_KEY, { handle: 'my-handle' })
+            settingsApi.set({ key: BASE_KEY, value: { handle: 'my-handle' } })
         ).resolves.toBeDefined();
     });
 });

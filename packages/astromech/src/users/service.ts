@@ -65,18 +65,18 @@ export const usersApi = {
         };
     },
 
-    async get(id: string): Promise<User | null> {
-        const row = await createUserStorage().get(id);
+    async get(params: { id: string }): Promise<User | null> {
+        const row = await createUserStorage().get(params.id);
         return row ? toUser(row) : null;
     },
 
-    async create(data: {
+    async create(params: {
         email: string;
         name: string;
         fields?: JsonObject;
         roleSlug?: string;
     }): Promise<User> {
-        const validated = validate(createUserSchema, data);
+        const validated = validate(createUserSchema, params);
 
         const fieldDefs = flattenFieldNodes(config.users?.fields ?? []);
         const processedFields = await processFields(
@@ -108,19 +108,20 @@ export const usersApi = {
         );
     },
 
-    async update(
-        id: string,
+    async update(params: {
+        id: string;
         data: Partial<{
             name: string;
             email: string;
             fields: JsonObject;
             roleSlug: string;
-        }>
-    ): Promise<User> {
-        const validatedData = validate(updateUserSchema, data);
+        }>;
+    }): Promise<User> {
+        const { id } = params;
+        const validatedData = validate(updateUserSchema, params.data);
 
         if (validatedData.fields !== undefined) {
-            const current = await usersApi.get(id);
+            const current = await usersApi.get({ id });
             const fieldDefs = flattenFieldNodes(config.users?.fields ?? []);
             const processed = await processFields(
                 validatedData.fields as Record<string, unknown>,
@@ -155,7 +156,7 @@ export const usersApi = {
         );
     },
 
-    async delete(id: string): Promise<void> {
-        await createUserStorage().delete(id);
+    async delete(params: { id: string }): Promise<void> {
+        await createUserStorage().delete(params.id);
     },
 };
