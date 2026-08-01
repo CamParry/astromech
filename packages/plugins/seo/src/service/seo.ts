@@ -5,7 +5,7 @@
  */
 
 import type { Entry, PluginContext } from 'astromech';
-import { defineServiceMethod } from 'astromech';
+import { defineServiceMethod, noInput, z } from 'astromech';
 import { resolveEntryPath } from 'astromech';
 import { SEO_FIELD_NAME } from '../types.js';
 import type {
@@ -61,9 +61,11 @@ export const seoService = {
     // Published entries across the plugin footprint, as sitemap URL data.
     // Public so the app's /sitemap.xml endpoint can call it.
     // `undefined` input: takes no argument, so callers invoke `.sitemap()` bare.
+    // `noInput()` is what still lets it be published as a tool.
     sitemap: defineServiceMethod<undefined, SeoSitemap>({
         access: 'public',
         summary: 'List sitemap URLs for all SEO-tracked entries.',
+        input: noInput(),
         mutates: false,
         handler: async (_input, ctx): Promise<SeoSitemap> => {
             const urls: SeoSitemapUrl[] = [];
@@ -85,6 +87,7 @@ export const seoService = {
     meta: defineServiceMethod<{ type: string; slug: string }, SeoResolvedMeta | null>({
         access: 'public',
         summary: 'Resolve the SEO meta tags for one entry by type + slug.',
+        input: z.object({ type: z.string(), slug: z.string() }),
         mutates: false,
         handler: async (input, ctx): Promise<SeoResolvedMeta | null> => {
             const type = typeof input?.type === 'string' ? input.type : null;
@@ -115,6 +118,7 @@ export const seoService = {
     overview: defineServiceMethod<undefined, SeoOverview>({
         access: { permission: 'view' },
         summary: 'Report SEO coverage across all tracked entries.',
+        input: noInput(),
         mutates: false,
         handler: async (_input, ctx): Promise<SeoOverview> => {
             const items: SeoOverviewItem[] = [];

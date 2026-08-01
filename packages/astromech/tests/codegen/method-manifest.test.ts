@@ -292,13 +292,18 @@ describe('generateMethodManifest — root entries', () => {
         expect(m?.['permission']).toBe('entry:posts:publish');
     });
 
-    it('should NOT emit entries.publish for non-versioned type pages', () => {
+    it('should emit entries.publish for non-versioned type pages too', () => {
+        // Publish is gated on `statuses`, which is what `operations/status.ts`
+        // asserts — not on `versioning`, which it was gated on until P1. Under
+        // the old gate the manifest hid publish/unpublish/schedule from every
+        // unversioned type while the service accepted the call perfectly well.
         const { methods } = parseManifest([]);
         const m = findMethod(methods, 'entries.publish', 'pages');
-        expect(m).toBeUndefined();
+        expect(m).toBeDefined();
+        expect(m?.['permission']).toBe('entry:pages:publish');
     });
 
-    it('should emit all 5 non-publish methods for non-versioned type pages', () => {
+    it('should omit the versioning-gated methods for non-versioned type pages', () => {
         const { methods } = parseManifest([]);
         const pagesMethods = methods.filter((m) => m['entryType'] === 'pages');
         const names = pagesMethods.map((m) => m['name']);
@@ -307,7 +312,11 @@ describe('generateMethodManifest — root entries', () => {
         expect(names).toContain('entries.create');
         expect(names).toContain('entries.update');
         expect(names).toContain('entries.delete');
-        expect(names).not.toContain('entries.publish');
+        // Version history needs the capability the type does not declare.
+        expect(names).not.toContain('entries.versions');
+        expect(names).not.toContain('entries.restoreVersion');
+        // Nor does it stage.
+        expect(names).not.toContain('entries.createStaged');
     });
 
     it('should not emit contentSchema (removed in manifest v2)', () => {

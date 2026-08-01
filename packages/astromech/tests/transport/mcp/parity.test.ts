@@ -14,8 +14,18 @@
  * descriptor change that an adapter fails to follow fails here.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 import { generateMethodManifest } from '@/codegen/method-manifest.js';
+
+// The dispatcher resolves the entries service at CALL time, so a stub here is
+// enough to observe exactly what arguments a tool passes it — which is the only
+// thing the dispatcher is responsible for.
+vi.mock('@/entries/service.js', () => ({
+    entries: {
+        get: async (params: unknown) => params,
+    },
+}));
 import { resolveConfig } from '@/kernel/config-resolver.js';
 import { buildDispatch } from '@/transport/mcp/dispatch.js';
 import { buildTools } from '@/transport/mcp/tools.js';
@@ -75,7 +85,16 @@ const testPlugin: PluginDefinition = {
         doSomething: {
             access: { permission: 'plugins:x:do' },
             summary: 'Do something.',
+            input: z.object({ thing: z.string() }),
             mutates: true,
+            handler: async () => undefined,
+        },
+        // No `input` — the honest skip. A method that does not describe its call
+        // cannot be projected as a tool, and never gets a synthesised stand-in.
+        undescribed: {
+            access: 'public',
+            summary: 'Undescribed.',
+            mutates: false,
             handler: async () => undefined,
         },
     },
@@ -120,13 +139,13 @@ describe('descriptor ↔ MCP tool schema parity', () => {
         const checked: string[] = [];
 
         for (const method of manifest.methods) {
-            const dispatch = buildDispatch(method);
-            if (dispatch === null) continue;
+            const result = buildDispatch(method);
+            if (!result.ok) continue;
 
-            // Identity, not equivalence: the adapter must pass the manifest's
+            // Identity, not equivalence: the dispatcher must pass the manifest's
             // schema through, never restate or "improve" it.
             expect(
-                dispatch.inputSchema,
+                result.tool.inputSchema,
                 `${method.id} tool schema diverges from its descriptor input`
             ).toEqual(method.input);
             checked.push(method.id);
@@ -174,14 +193,126 @@ describe('descriptor ↔ MCP tool schema parity', () => {
         const method = manifest.methods.find((m) => m.id === 'users.update');
         expect(method).toBeDefined();
 
-        const dispatch = method ? buildDispatch(method) : null;
-        expect(dispatch).not.toBeNull();
+        const result = method ? buildDispatch(method) : null;
+        expect(result?.ok).toBe(true);
 
-        const schema = dispatch?.inputSchema as {
+        const schema = (result?.ok ? result.tool.inputSchema : {}) as {
             properties: { data: { properties: Record<string, unknown> } };
         };
         const data = schema.properties.data.properties;
         expect(Object.keys(data)).toContain('fields');
         expect(data['email']).toMatchObject({ format: 'email' });
+    });
+});
+
+// ============================================================================
+// Coverage — the manifest and the tool list describe the same surface
+// ============================================================================
+
+describe('manifest ↔ MCP tool coverage', () => {
+    const { tools, dispatch, skipped } = buildTools(manifest);
+
+    it('accounts for every manifest method exactly once', () => {
+        expect(tools.length + skipped.length).toBe(manifest.methods.length);
+        expect(new Set(tools.map((t) => t.name)).size).toBe(tools.length);
+        expect(dispatch.size).toBe(tools.length);
+    });
+
+    it('skips only methods that declared themselves uncallable', () => {
+        // The P1 acceptance condition: with one generic dispatcher, "no adapter
+        // written yet" is no longer a reason anything is missing. What is left
+        // out is left out because the DESCRIPTOR said so.
+        expect(skipped.map((s) => s.id).sort()).toEqual([
+            'media.upload',
+            'plugins.testMyPlugin.undescribed',
+        ]);
+        expect(skipped.find((s) => s.id === 'media.upload')?.reason).toContain(
+            'binary input'
+        );
+        expect(
+            skipped.find((s) => s.id === 'plugins.testMyPlugin.undescribed')?.reason
+        ).toContain('no input schema');
+    });
+
+    it('projects a plugin service method that declares its input', () => {
+        // Plugin methods returned null from every previous dispatcher, which is
+        // the backlog item P1 closes.
+        const tool = tools.find((t) => t.name === 'plugins_testMyPlugin_doSomething');
+        expect(tool).toBeDefined();
+        expect(tool?.inputSchema).toEqual(
+            manifest.methods.find((m) => m.id === 'plugins.testMyPlugin.doSomething')
+                ?.input
+        );
+    });
+
+    it('projects the entries long tail, not just CRUD', () => {
+        // duplicate/trash/restore/versions/staging/preview/schedule all had
+        // descriptors or service methods and no adapter. `posts` declares every
+        // capability, so it should carry the full catalogue.
+        const posts = tools
+            .map((t) => t.name)
+            .filter((n) => n.startsWith('entries_posts_'))
+            .map((n) => n.replace('entries_posts_', ''))
+            .sort();
+
+        expect(posts).toEqual(
+            [
+                'create',
+                'createStaged',
+                'delete',
+                'deleteStaged',
+                'duplicate',
+                'emptyTrash',
+                'get',
+                'getStaged',
+                'incomingRelations',
+                'issuePreviewToken',
+                'mergeStaged',
+                'publish',
+                'query',
+                'restore',
+                'restoreVersion',
+                'revokePreviewToken',
+                'schedule',
+                'trash',
+                'unpublish',
+                'update',
+                'versions',
+            ].sort()
+        );
+    });
+
+    it('gates a capability-bound method on the capability the SERVICE asserts', () => {
+        // `pages` declares no versioning and no staging, so it has no version
+        // history and no staged-entry methods — but it DOES have statuses, and
+        // `operations/status.ts` gates publish on statuses. Gating publish on
+        // versioning (as the descriptor did before P1) hid it from every
+        // unversioned type while the service happily accepted the call.
+        const pages = tools.map((t) => t.name);
+        expect(pages).toContain('entries_pages_publish');
+        expect(pages).toContain('entries_pages_unpublish');
+        expect(pages).not.toContain('entries_pages_versions');
+        expect(pages).not.toContain('entries_pages_createStaged');
+    });
+
+    it('pins the entry type on the call, overriding one the caller passes', async () => {
+        // A client must not be able to aim the `posts` tool at another type by
+        // putting `type` in its arguments — the tool's own id is pinned last.
+        const invoke = dispatch.get('entries_posts_get');
+        expect(invoke).toBeDefined();
+
+        const passed = (await invoke?.({ id: 'abc', type: 'pages' })) as {
+            type: string;
+            id: string;
+        };
+        expect(passed).toEqual({ id: 'abc', type: 'posts' });
+    });
+
+    it('addresses a plugin entry type by its QUALIFIED id, not its bare one', async () => {
+        const invoke = dispatch.get('entries_test_my_plugin_widget_get');
+        expect(invoke).toBeDefined();
+
+        const passed = (await invoke?.({ id: 'abc' })) as { type: string };
+        expect(passed.type).toBe('test_my_plugin/widget');
     });
 });

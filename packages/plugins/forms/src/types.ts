@@ -74,8 +74,14 @@ export type StoredFormField = {
     [key: string]: unknown;
 };
 
+/**
+ * Request metadata stored alongside a submission. Optionals carry `| undefined`
+ * so the Zod schema that publishes this shape to the method manifest describes
+ * it exactly — `.optional()` always widens, and `exactOptionalPropertyTypes`
+ * treats the two as different types.
+ */
 export type SubmissionMeta = {
-    ip?: string;
-    userAgent?: string;
-    referer?: string;
+    ip?: string | undefined;
+    userAgent?: string | undefined;
+    referer?: string | undefined;
 };

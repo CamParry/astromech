@@ -36,6 +36,8 @@ import {
     entryMethodDescriptors,
     type EntryMethodDescriptor,
 } from '@/entries/descriptors.js';
+import type { Capability } from '@/entries/storage/capabilities.js';
+import type { ResolvedEntryCapabilities } from '@/types/index.js';
 import { qualifyEntryType } from '@/entries/type-registry.js';
 import {
     resolvePluginIdentity,
@@ -83,14 +85,16 @@ function staticPermission(descriptor: ServiceMethodDescriptor): string | null {
     return typeof descriptor.permission === 'string' ? descriptor.permission : null;
 }
 
-/** Whether a method's capability requirement is met for an entry type's caps. */
+/**
+ * Whether a method's capability requirement is met for an entry type's caps.
+ * Reads the capability by name rather than branching per capability, so adding
+ * one to `Capability` cannot silently leave a method ungated here.
+ */
 function methodCapabilityMet(
-    requires: 'versioning' | 'staging' | undefined,
-    capabilities: { versioning: boolean; staging: boolean }
+    requires: Capability | undefined,
+    capabilities: ResolvedEntryCapabilities
 ): boolean {
-    if (requires === 'versioning') return capabilities.versioning;
-    if (requires === 'staging') return capabilities.staging;
-    return true;
+    return requires === undefined || capabilities[requires];
 }
 
 // ============================================================================
@@ -135,6 +139,11 @@ function buildCoreMethods(): CoreManifestMethod[] {
             }
             if (descriptor.output) {
                 method.output = toJSONSchema(descriptor.output, 'output');
+            }
+            // Emitted only when true — a JSON-RPC transport reads this to skip a
+            // method whose schema renders as callable but whose input is a File.
+            if (descriptor.binaryInput === true) {
+                method.binaryInput = true;
             }
 
             methods.push(method);

@@ -18,7 +18,7 @@ import type {
     PluginContext,
     ScopedReads,
 } from 'astromech';
-import { defineServiceMethod } from 'astromech';
+import { defineServiceMethod, z } from 'astromech';
 import { processFields } from 'astromech/fields';
 import { compileFormFields } from '../fields/compile.js';
 import { toAnswerRows } from '../emails/index.js';
@@ -54,11 +54,33 @@ export type PublicForm = {
 export type SubmitInput = {
     slug: string;
     data: Record<string, unknown>;
-    token?: string;
-    meta?: SubmissionMeta;
+    // `| undefined` on the optionals so the declared Zod `input` schema — whose
+    // `.optional()` always widens to `T | undefined` — describes exactly this
+    // type under `exactOptionalPropertyTypes`.
+    token?: string | undefined;
+    meta?: SubmissionMeta | undefined;
 };
 
 export type SubmitResult = { ok: true; id: string } | { ok: false; errors: FieldErrors };
+
+/**
+ * Call schema for `submit`, published to the method manifest (and so to MCP and
+ * the AI tool-loop). It describes the ARGUMENT OBJECT only — the per-field
+ * validation of `data` happens against the form's own compiled definitions at
+ * call time, since no static schema can know a user-authored form's fields.
+ */
+const submitInputSchema = z.object({
+    slug: z.string(),
+    data: z.record(z.string(), z.unknown()),
+    token: z.string().optional(),
+    meta: z
+        .object({
+            ip: z.string().optional(),
+            userAgent: z.string().optional(),
+            referer: z.string().optional(),
+        })
+        .optional(),
+});
 
 /** Reserved `FieldErrors` key for errors that belong to the form, not a field. */
 export const FORM_ERROR_KEY = '_form';
@@ -166,6 +188,7 @@ export function buildFormsService(
         get: defineServiceMethod<{ slug: string }, PublicForm | null>({
             access: 'public',
             summary: 'Fetch a published form’s public definition by slug.',
+            input: z.object({ slug: z.string() }),
             mutates: false,
             handler: async (input, ctx): Promise<PublicForm | null> => {
                 const form = await loadForm(ctx, input?.slug);
@@ -192,6 +215,7 @@ export function buildFormsService(
         submit: defineServiceMethod<SubmitInput, SubmitResult>({
             access: 'public',
             summary: 'Validate and store a submission against a published form.',
+            input: submitInputSchema,
             mutates: true,
             handler: async (input, ctx): Promise<SubmitResult> => {
                 const form = await loadForm(ctx, input?.slug);

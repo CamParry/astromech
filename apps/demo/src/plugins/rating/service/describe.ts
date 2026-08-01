@@ -11,7 +11,7 @@
  * on the wire.
  */
 
-import { defineServiceMethod } from 'astromech';
+import { defineServiceMethod, noInput } from 'astromech';
 import { RATING_FIELD_TYPE } from '../fields/rating.js';
 
 export type RatingDescription = {
@@ -25,6 +25,7 @@ export const ratingService = {
     describe: defineServiceMethod<undefined, RatingDescription>({
         access: 'authenticated',
         summary: 'Describe the rating field type and where it is used.',
+        input: noInput(),
         mutates: false,
         handler: (_input, ctx): RatingDescription => ({
             fieldType: RATING_FIELD_TYPE,

@@ -27,8 +27,12 @@ export const mediaDescriptors = {
     upload: {
         summary: 'Upload a new media file.',
         // `File` has no JSON Schema representation — the manifest generator's
-        // `unrepresentable: 'any'` degrades it to `{}` rather than throwing.
+        // `unrepresentable: 'any'` degrades it to `{}` rather than throwing, so
+        // the emitted schema looks callable and isn't. `binaryInput` is what
+        // says so out loud; a JSON-RPC transport skips the method by that flag
+        // rather than by keeping its own list of exceptions.
         input: z.object({ file: z.instanceof(File) }),
+        binaryInput: true,
         permission: 'media:upload',
         mutates: true,
     },

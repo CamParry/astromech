@@ -7,6 +7,8 @@ import {
 import { loadAndAssertType } from '../../internal/records.js';
 import { assertCapability } from '../../internal/supports.js';
 import { generatePreviewSecret } from '../../internal/preview.js';
+import { previewTokenSchema } from '../../schema.js';
+import { validate } from '../../internal/validation.js';
 
 export async function issuePreviewToken(params: {
     type: string;
@@ -25,10 +27,14 @@ export async function issuePreviewToken(params: {
     const token = generatePreviewSecret();
     const hash = await hashPreviewToken(token);
     const user = getCurrentUser();
+    // Coerced, not trusted: a JSON transport (MCP, the AI tool-loop) sends an
+    // ISO string, and this column is a date. `schedule` validates `publishAt`
+    // the same way for the same reason.
+    const { expiresAt } = validate(previewTokenSchema, { expiresAt: params.expiresAt });
     await createPreviewTokenStorage().issue(
         id,
         hash,
-        params.expiresAt ?? null,
+        expiresAt ?? null,
         user?.id ?? null
     );
     return { token };

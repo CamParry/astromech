@@ -19,7 +19,10 @@ import type { MenusOptions, MenuItem } from './types.js';
 
 /** Typed service shape — used only for the module augmentation. */
 const _menusServiceTyped = {
-    get: defineServiceMethod<{ key: string; locale?: string }, MenuItem[] | null>({
+    get: defineServiceMethod<
+        { key: string; locale?: string | undefined },
+        MenuItem[] | null
+    >({
         access: 'public',
         summary: 'Resolve a configured menu into a nested tree of menu items.',
         mutates: false,

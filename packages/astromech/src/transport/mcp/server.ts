@@ -10,7 +10,7 @@ import {
     ListToolsRequestSchema,
     CallToolRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { buildTools, type McpToolDef } from './tools.js';
+import { buildTools, type McpToolDef, type SkippedMethod } from './tools.js';
 import type { MethodManifest } from '@/types/index.js';
 
 // ============================================================================
@@ -20,7 +20,7 @@ import type { MethodManifest } from '@/types/index.js';
 type CreateMcpServerResult = {
     server: Server;
     tools: McpToolDef[];
-    skipped: string[];
+    skipped: SkippedMethod[];
 };
 
 /**

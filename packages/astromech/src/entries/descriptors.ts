@@ -16,7 +16,13 @@ import { z } from '@hono/zod-openapi';
 import type { ServiceMethodDescriptor } from '@/types/index.js';
 import { entryPermission, type EntryAction } from '@/permissions/entry-permission.js';
 import { parseEntryTypeId } from './type-registry.js';
-import { createEntrySchemaFor, updateEntrySchemaFor } from './schema.js';
+import type { Capability } from './storage/capabilities.js';
+import {
+    createEntrySchemaFor,
+    duplicateOverridesSchema,
+    scheduleEntrySchema,
+    updateEntrySchemaFor,
+} from './schema.js';
 
 /**
  * A per-type entry method descriptor. Adds the two facts the manifest needs
@@ -28,12 +34,15 @@ export type EntryMethodDescriptor = ServiceMethodDescriptor & {
     /** Key on `EntriesApi` — the manifest name is `entries.<method>`. */
     method: string;
     /**
-     * Capability gate: `publish` needs `versioning`; the staged-entry/preview
-     * methods need `staging`. Absent ⇒ the method is always available. The
-     * action the method enforces against is separate — `mergeStaged` enforces
-     * `publish` but is gated on `staging`.
+     * Capability gate — the SAME capability the service asserts, so the manifest
+     * advertises a method exactly when calling it would succeed. `publish` is
+     * gated on `statuses` because that is what `operations/status.ts` asserts;
+     * it was gated on `versioning` until P1, which hid publish/unpublish from
+     * every unversioned type while the service accepted the call. Absent ⇒
+     * always available. The action the method enforces against is separate —
+     * `mergeStaged` enforces `publish` but is gated on `staging`.
      */
-    requires?: 'versioning' | 'staging';
+    requires?: Capability;
 };
 
 /**
@@ -44,6 +53,24 @@ function entryMethodSummary(method: string, action: EntryAction, type: string): 
     switch (method) {
         case 'query':
             return `List "${type}" entries.`;
+        case 'duplicate':
+            return `Copy a "${type}" entry into a new one.`;
+        case 'unpublish':
+            return `Unpublish a "${type}" entry.`;
+        case 'schedule':
+            return `Schedule a "${type}" entry to publish at a future time.`;
+        case 'trash':
+            return `Move a "${type}" entry to the trash (reversible).`;
+        case 'restore':
+            return `Restore a trashed "${type}" entry.`;
+        case 'emptyTrash':
+            return `Permanently delete every trashed "${type}" entry.`;
+        case 'versions':
+            return `List the version history of a "${type}" entry.`;
+        case 'restoreVersion':
+            return `Roll a "${type}" entry back to an earlier version.`;
+        case 'incomingRelations':
+            return `List the entries that reference a "${type}" entry.`;
         case 'createStaged':
             return `Stage a change to a "${type}" entry.`;
         case 'getStaged':
@@ -154,10 +181,72 @@ export function entryMethodDescriptors(params: {
             }),
         },
         {
-            ...base('publish', 'publish'),
-            requires: 'versioning',
+            ...base('duplicate', 'create'),
+            input: z.object({
+                type,
+                id,
+                overrides: duplicateOverridesSchema.optional(),
+            }),
+        },
+        {
+            ...base('trash', 'delete'),
+            requires: 'trash',
+            // NOT destructive: trash is the reversible half of the delete pair —
+            // `restore` undoes it. `emptyTrash` and `delete` are the ones that
+            // lose data, and both keep the flag `base()` derives.
+            destructive: false,
+            idempotent: true,
+            input: z.object({
+                type,
+                id: ids,
+                cascadeLocales: z.boolean().optional(),
+            }),
+        },
+        {
+            ...base('restore', 'update'),
+            requires: 'trash',
+            idempotent: true,
             input: z.object({ type, id: ids }),
         },
+        {
+            ...base('emptyTrash', 'delete'),
+            requires: 'trash',
+            idempotent: true,
+            input: z.object({ type }),
+        },
+        {
+            ...base('versions', 'read'),
+            requires: 'versioning',
+            input: canonical,
+        },
+        {
+            ...base('restoreVersion', 'update'),
+            requires: 'versioning',
+            idempotent: true,
+            input: z.object({ type, id, versionId: z.string() }),
+        },
+        {
+            ...base('publish', 'publish'),
+            requires: 'statuses',
+            idempotent: true,
+            input: z.object({ type, id: ids }),
+        },
+        {
+            ...base('unpublish', 'publish'),
+            requires: 'statuses',
+            // Data-losing in the sense the effect hints mean: the entry stops
+            // being served. `ServiceMethodEffect` names unpublish explicitly.
+            destructive: true,
+            idempotent: true,
+            input: z.object({ type, id: ids }),
+        },
+        {
+            ...base('schedule', 'publish'),
+            requires: 'statuses',
+            idempotent: true,
+            input: z.object({ type, id: ids }).extend(scheduleEntrySchema.shape),
+        },
+        { ...base('incomingRelations', 'read'), input: canonical },
         { ...base('createStaged', 'update'), requires: 'staging', input: canonical },
         { ...base('getStaged', 'read'), requires: 'staging', input: canonical },
         { ...base('mergeStaged', 'publish'), requires: 'staging', input: canonical },
