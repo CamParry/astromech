@@ -44,6 +44,20 @@ export type ToolDispatch = {
     description: string;
     inputSchema: JsonSchemaObject;
     annotations: ToolAnnotations;
+    /**
+     * The permission this tool's method declares — null when it is ungated, or
+     * when it is input-derived (see `permissionDynamic`).
+     *
+     * Carried, NOT enforced, and deliberately unread today: this MCP server is
+     * dev-only and trusted, runs with no principal, and enforces a method's
+     * permission no more than the CLI does. It exists so the seam is already in
+     * place when a remote transport — which does have a principal — dispatches
+     * through here; that transport enforces via `policies/scoped-service.ts`,
+     * and reads this only to say up front what it would refuse.
+     */
+    permission: string | null;
+    /** True when `permission` is null because the method derives it from the input. */
+    permissionDynamic: boolean;
     invoke: (args: Record<string, unknown>) => Promise<unknown>;
 };
 
@@ -216,6 +230,8 @@ export function buildDispatch(manifest: ManifestMethod): DispatchResult {
                 destructiveHint: manifest.destructive,
                 idempotentHint: manifest.idempotent,
             },
+            permission: manifest.permission,
+            permissionDynamic: manifest.permissionDynamic === true,
             invoke,
         },
     };
