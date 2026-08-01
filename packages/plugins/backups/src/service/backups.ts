@@ -10,7 +10,7 @@
  * the codec and the ordering.
  */
 
-import { defineServiceMethod } from 'astromech';
+import { defineServiceMethod, noInput, z } from 'astromech';
 import type { BackupRunRow } from '../schema/runs.js';
 import { createBackupRunsStorage } from '../storage.js';
 import { isBackupRunning, performBackup, resolveKeep } from '../backup.js';
@@ -53,6 +53,7 @@ export function buildBackupsService(defaultKeep: number) {
         listRuns: defineServiceMethod<undefined, ListRunsResult>({
             access: { permission: 'read' },
             summary: 'List recent backup runs and the driver capabilities.',
+            input: noInput(),
             mutates: false,
             handler: async (_input, ctx): Promise<ListRunsResult> => {
                 return {
@@ -68,6 +69,7 @@ export function buildBackupsService(defaultKeep: number) {
         triggerRun: defineServiceMethod<undefined, TriggerRunResult>({
             access: { permission: 'run' },
             summary: 'Take a backup now.',
+            input: noInput(),
             mutates: true,
             handler: async (_input, ctx): Promise<TriggerRunResult> => {
                 if (isBackupRunning()) return { ok: false, reason: 'already-running' };
@@ -79,6 +81,7 @@ export function buildBackupsService(defaultKeep: number) {
         deleteRun: defineServiceMethod<{ id: string }, DeleteRunResult>({
             access: { permission: 'delete' },
             summary: 'Delete a backup run and its stored artifact.',
+            input: z.object({ id: z.string() }),
             mutates: true,
             destructive: true,
             handler: async (input, ctx): Promise<DeleteRunResult> => {

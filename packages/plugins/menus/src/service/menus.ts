@@ -5,7 +5,7 @@
  */
 
 import type { AnyPluginServiceMethod, Entry, PluginContext } from 'astromech';
-import { defineServiceMethod } from 'astromech';
+import { defineServiceMethod, z } from 'astromech';
 import { resolveEntryUrl } from 'astromech';
 import type { MenuConfig, MenuItem } from '../types.js';
 
@@ -94,9 +94,13 @@ export function buildMenusService(
     const configuredKeys = new Set(configs.map((c) => c.key));
 
     return {
-        get: defineServiceMethod<{ key: string; locale?: string }, MenuItem[] | null>({
+        get: defineServiceMethod<
+            { key: string; locale?: string | undefined },
+            MenuItem[] | null
+        >({
             access: 'public',
             summary: 'Resolve a configured menu into a nested tree of menu items.',
+            input: z.object({ key: z.string(), locale: z.string().optional() }),
             mutates: false,
             handler: async (input, ctx): Promise<MenuItem[] | null> => {
                 const key = typeof input?.key === 'string' ? input.key : null;

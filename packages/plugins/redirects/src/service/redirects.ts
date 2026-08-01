@@ -4,7 +4,7 @@
  */
 
 import type { Entry } from 'astromech';
-import { defineServiceMethod } from 'astromech';
+import { defineServiceMethod, z } from 'astromech';
 import { REDIRECT_TYPE } from '../types.js';
 import type { RedirectFields, RedirectMatch, RedirectStatus } from '../types.js';
 
@@ -14,6 +14,7 @@ export const redirectsService = {
     lookup: defineServiceMethod<{ from: string }, RedirectMatch | null>({
         access: 'public',
         summary: 'Look up the redirect target for an incoming path.',
+        input: z.object({ from: z.string() }),
         mutates: false,
         handler: async (input, ctx): Promise<RedirectMatch | null> => {
             const from = typeof input?.from === 'string' ? input.from : null;

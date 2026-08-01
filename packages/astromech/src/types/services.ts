@@ -55,6 +55,17 @@ export type ServiceMethodDescriptor<Input = unknown, Output = unknown> = {
     output?: z.ZodType<Output>;
     /** The permission this method requires; absent ⇒ no permission gate. */
     permission?: PermissionRule<Input>;
+    /**
+     * The input carries a value JSON cannot express — a `File`, a stream. Such a
+     * method is unreachable from a JSON-RPC transport however well it describes
+     * itself, so it declares that here rather than leaving each transport to keep
+     * its own list of exceptions.
+     *
+     * `unrepresentable: 'any'` degrades a `File` to `{}` instead of throwing, so
+     * the emitted schema LOOKS callable. Without this flag a generic dispatcher
+     * offers the method and fails at invoke time.
+     */
+    binaryInput?: boolean;
 } & ServiceMethodEffect;
 
 // ============================================================================
@@ -105,6 +116,12 @@ type ManifestMethodBase = {
     input?: JsonSchemaObject | null;
     /** JSON Schema for the call output. */
     output?: JsonSchemaObject | null;
+    /**
+     * The input carries a value JSON cannot express, so a JSON-RPC transport
+     * cannot call this method — see `ServiceMethodDescriptor['binaryInput']`.
+     * Emitted only when true, so absence means "callable".
+     */
+    binaryInput?: true;
 };
 
 /** A core domain method (`users`, `media`, `settings`). */

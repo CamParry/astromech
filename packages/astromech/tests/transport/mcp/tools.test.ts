@@ -93,6 +93,20 @@ const pluginMethod: PluginManifestMethod = {
     input: objectSchema,
 };
 
+/** No `input` — the one honest reason a described method still gets no tool. */
+const undescribedPluginMethod: PluginManifestMethod = (() => {
+    // Omitted, not set to `undefined`: `exactOptionalPropertyTypes` treats an
+    // absent key and an explicit undefined as different things, and the manifest
+    // genuinely omits the key.
+    const { input: _input, ...rest } = pluginMethod;
+    return {
+        ...rest,
+        id: 'plugins.foo.undescribed',
+        name: 'plugins.foo.undescribed',
+        method: 'undescribed',
+    };
+})();
+
 const sampleManifest: MethodManifest = {
     version: 2,
     methods: [
@@ -136,13 +150,17 @@ const sampleManifest: MethodManifest = {
             mutates: true,
             input: idSchema(),
         }),
-        // plugin — should be skipped (no adapter until P1)
+        // plugin — dispatched like anything else since P1
         pluginMethod,
-        // media.upload — File is not callable over JSON-RPC → skipped
+        // plugin with no declared input — skipped
+        undescribedPluginMethod,
+        // media.upload — File is not callable over JSON-RPC → skipped, and it
+        // says so itself: the schema alone still renders as an object.
         core('media', 'upload', {
             summary: 'Upload a file.',
             mutates: true,
             input: objectSchema,
+            binaryInput: true,
         }),
     ],
 };
@@ -171,20 +189,27 @@ describe('buildTools', () => {
         }
     });
 
-    it('puts plugin + media.upload in skipped, not in tools', () => {
+    it('projects a plugin method, and skips only what declares itself uncallable', () => {
         const { tools, skipped } = buildTools(sampleManifest);
         const toolNames = tools.map((t) => t.name);
 
-        // Plugin method should be skipped
-        const skippedNames = skipped.join(' ');
-        expect(skippedNames).toContain('plugins.foo.bar');
+        // Plugin methods used to return null from every adapter. P1 dispatches
+        // them like anything else.
+        expect(toolNames).toContain('plugins_foo_bar');
 
-        // media.upload should be skipped (no adapter)
-        expect(skippedNames).toContain('media.upload');
-
-        // Neither should appear as a tool
-        expect(toolNames).not.toContain('plugins_foo_bar');
+        // What remains skipped is skipped for a reason the METHOD stated.
+        expect(skipped).toEqual([
+            {
+                id: 'plugins.foo.undescribed',
+                reason: 'no input schema declared on the descriptor',
+            },
+            {
+                id: 'media.upload',
+                reason: 'binary input — not expressible over JSON-RPC',
+            },
+        ]);
         expect(toolNames).not.toContain('media_upload');
+        expect(toolNames).not.toContain('plugins_foo_undescribed');
     });
 
     it('annotations: users_create → readOnlyHint:false', () => {
@@ -273,7 +298,7 @@ describe('buildTools', () => {
         };
         const { tools, skipped } = buildTools(schemaless);
         expect(tools).toHaveLength(0);
-        expect(skipped.join(' ')).toContain('users.get');
+        expect(skipped.map((s) => s.id)).toContain('users.get');
     });
 
     it('passes the manifest input through verbatim as the tool inputSchema', () => {

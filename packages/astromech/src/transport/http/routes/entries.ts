@@ -34,6 +34,7 @@ import type {
 import {
     updateEntrySchema,
     createEntrySchemaFor,
+    duplicateOverridesSchema,
     updateEntrySchemaFor,
     scheduleEntrySchema,
 } from '@/entries/schema.js';
@@ -701,20 +702,6 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
     // ============================================================================
     // POST /entries/:type/:id/duplicate
     // ============================================================================
-
-    const duplicateOverridesSchema = z
-        .object({
-            title: z.string().min(1).optional(),
-            slug: z
-                .string()
-                .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
-                .optional(),
-            locale: z.string().min(1).optional(),
-            localeGroup: z.string().min(1).optional(),
-            fields: z.record(z.string(), z.unknown()).optional(),
-            status: z.enum(['unpublished', 'published', 'scheduled']).optional(),
-        })
-        .partial();
 
     router.post('/:type/:id/duplicate', async (c) => {
         const { type, id } = c.req.param();

@@ -6,7 +6,7 @@
  */
 
 import type { JsonSchemaObject, MethodManifest } from '@/types/index.js';
-import { buildDispatch, type ToolDispatch, type ToolAnnotations } from './dispatch.js';
+import { buildDispatch, type DispatchResult, type ToolAnnotations } from './dispatch.js';
 
 // ============================================================================
 // Types
@@ -20,10 +20,18 @@ export type McpToolDef = {
     annotations: ToolAnnotations;
 };
 
+/**
+ * A manifest method that produced no tool, and why. The reason is the point:
+ * with one generic dispatcher, every remaining skip is either a method that
+ * declared itself uncallable or a real gap, and a bare list of ids cannot tell
+ * the two apart.
+ */
+export type SkippedMethod = { id: string; reason: string };
+
 type BuildToolsResult = {
     tools: McpToolDef[];
     dispatch: Map<string, (args: Record<string, unknown>) => Promise<unknown>>;
-    skipped: string[];
+    skipped: SkippedMethod[];
 };
 
 // ============================================================================
@@ -34,8 +42,8 @@ type BuildToolsResult = {
  * Build the MCP tool list and dispatch map from the method manifest.
  *
  * Duplicate tool names are deduplicated by keeping the first occurrence; the
- * second occurrence is added to `skipped` with a note. `skipped` reports method
- * IDs, not names — `entries.create` alone names every entry type's create.
+ * second is recorded as skipped. `skipped` reports method IDs, not names —
+ * `entries.create` alone names every entry type's create.
  */
 export function buildTools(manifest: MethodManifest): BuildToolsResult {
     const tools: McpToolDef[] = [];
@@ -43,30 +51,34 @@ export function buildTools(manifest: MethodManifest): BuildToolsResult {
         string,
         (args: Record<string, unknown>) => Promise<unknown>
     >();
-    const skipped: string[] = [];
+    const skipped: SkippedMethod[] = [];
     const seenToolNames = new Set<string>();
 
     for (const method of manifest.methods) {
-        let toolDispatch: ToolDispatch | null;
+        let result: DispatchResult;
         try {
-            toolDispatch = buildDispatch(method);
-        } catch {
-            skipped.push(method.id);
+            result = buildDispatch(method);
+        } catch (err) {
+            skipped.push({
+                id: method.id,
+                reason: err instanceof Error ? err.message : String(err),
+            });
             continue;
         }
 
-        if (toolDispatch === null) {
-            skipped.push(method.id);
+        if (!result.ok) {
+            skipped.push({ id: method.id, reason: result.reason });
             continue;
         }
 
-        const { toolName, description, inputSchema, annotations, invoke } = toolDispatch;
+        const { toolName, description, inputSchema, annotations, invoke } = result.tool;
 
-        // Sanitize: replace dots with underscores (names must match ^[a-zA-Z0-9_-]{1,128}$)
-        const safeName = toolName.replace(/\./g, '_');
+        // Sanitize: names must match ^[a-zA-Z0-9_-]{1,128}$. A plugin's service
+        // key is author-supplied, so this is not merely belt-and-braces.
+        const safeName = toolName.replace(/[^a-zA-Z0-9_-]/g, '_');
 
         if (seenToolNames.has(safeName)) {
-            skipped.push(`${method.id} (duplicate tool name: ${safeName})`);
+            skipped.push({ id: method.id, reason: `duplicate tool name: ${safeName}` });
             continue;
         }
 

@@ -1,25 +1,29 @@
 /**
  * MCP Tool Dispatch
  *
- * Builds a ToolDispatch descriptor from a ManifestMethod. Returns null for
- * methods without a v1 adapter (plugin methods, binary-upload methods, and
- * long-tail entries actions).
+ * ONE dispatcher for every manifest method. A tool's name, description, schema
+ * and annotations are all projections of manifest fields, and `invoke` resolves
+ * the service method by key at call time. There is no per-domain adapter, and no
+ * `switch` over method names.
  *
- * A tool's `inputSchema` is ALWAYS the manifest's serialised method input. The
- * adapters below choose which service method to call and how to shape its
- * arguments; they do not describe it. Hand-written schema literals here are what
- * let `users_update` advertise a shape the method had not accepted for months.
+ * Every adapter this replaced was a second declaration of a method that already
+ * described itself, and the second declaration is what drifted: `users_update`
+ * advertised a hand-written schema that rejected custom user fields for months.
+ * A dispatcher that cannot restate a method cannot disagree with it, and adding
+ * a descriptor is now all it takes to get a tool.
+ *
+ * A method is skipped only for a reason it declares — no input schema, or a
+ * `binaryInput` a JSON-RPC transport cannot carry. Each skip carries that reason
+ * so the server can log deliberate omissions as deliberate.
  */
 
-import type { usersApi } from '@/users/service.js';
-import type { mediaApi } from '@/media/service.js';
-import type { settingsApi } from '@/settings/service.js';
-import type { entries } from '@/entries/service.js';
 import type {
     CoreManifestMethod,
     EntriesManifestMethod,
     JsonSchemaObject,
     ManifestMethod,
+    PluginContext,
+    PluginManifestMethod,
 } from '@/types/index.js';
 
 // ============================================================================
@@ -34,9 +38,7 @@ export type ToolAnnotations = {
     idempotentHint: boolean;
 };
 
-/**
- * A fully-resolved dispatch descriptor for a single MCP tool.
- */
+/** A fully-resolved dispatch descriptor for a single MCP tool. */
 export type ToolDispatch = {
     toolName: string;
     description: string;
@@ -45,335 +47,123 @@ export type ToolDispatch = {
     invoke: (args: Record<string, unknown>) => Promise<unknown>;
 };
 
-// ============================================================================
-// Lazy service accessors — imported here; called only at runtime
-// ============================================================================
+/**
+ * Either a dispatchable tool or the reason there isn't one. A bare `null` told
+ * the caller nothing, so every omission looked the same as a bug.
+ */
+export type DispatchResult =
+    | { ok: true; tool: ToolDispatch }
+    | { ok: false; reason: string };
 
-// These are imported dynamically rather than at module-level so they don't
-// pull in the full services tree until the MCP server actually starts.
-async function getUsersApi(): Promise<typeof usersApi> {
-    const mod = await import('@/users/service.js');
-    return mod.usersApi;
-}
+/** Anything callable by string key — a domain service or a plugin's service record. */
+type ServiceObject = Record<string, unknown>;
 
-async function getMediaApi(): Promise<typeof mediaApi> {
-    const mod = await import('@/media/service.js');
-    return mod.mediaApi;
-}
-
-async function getSettingsApi(): Promise<typeof settingsApi> {
-    const mod = await import('@/settings/service.js');
-    return mod.settingsApi;
-}
-
-async function getEntries(): Promise<typeof entries> {
-    const mod = await import('@/entries/service.js');
-    return mod.entries;
-}
+/** The shape `invoke` takes once a method has been resolved to a call. */
+type Invoke = (args: Record<string, unknown>) => Promise<unknown>;
 
 // ============================================================================
-// Core — users adapters
-// ============================================================================
-
-function buildUsersAdapter(
-    manifest: CoreManifestMethod,
-    inputSchema: JsonSchemaObject
-): ToolDispatch | null {
-    const action = manifest.method;
-    const base = {
-        toolName: `users_${action}`,
-        description: manifest.summary ?? `${action} user`,
-        inputSchema,
-        annotations: {
-            title: `Users: ${action}`,
-            readOnlyHint: !manifest.mutates,
-            destructiveHint: manifest.destructive,
-            idempotentHint: manifest.idempotent,
-        },
-    };
-
-    switch (action) {
-        case 'query':
-            return {
-                ...base,
-                invoke: async (args) => {
-                    const api = await getUsersApi();
-                    return api.query(args as Parameters<typeof usersApi.query>[0]);
-                },
-            };
-
-        case 'get':
-            return {
-                ...base,
-                invoke: async (args) => {
-                    const api = await getUsersApi();
-                    return api.get({ id: args['id'] as string });
-                },
-            };
-
-        case 'create':
-            return {
-                ...base,
-                invoke: async (args) => {
-                    const api = await getUsersApi();
-                    return api.create(args as Parameters<typeof usersApi.create>[0]);
-                },
-            };
-
-        case 'update':
-            return {
-                ...base,
-                invoke: async (args) => {
-                    const api = await getUsersApi();
-                    return api.update(args as Parameters<typeof usersApi.update>[0]);
-                },
-            };
-
-        case 'delete':
-            return {
-                ...base,
-                invoke: async (args) => {
-                    const api = await getUsersApi();
-                    return api.delete({ id: args['id'] as string });
-                },
-            };
-
-        default:
-            return null;
-    }
-}
-
-// ============================================================================
-// Core — settings adapters
-// ============================================================================
-
-function buildSettingsAdapter(
-    manifest: CoreManifestMethod,
-    inputSchema: JsonSchemaObject
-): ToolDispatch | null {
-    const action = manifest.method;
-    const base = {
-        toolName: `settings_${action}`,
-        description: manifest.summary ?? `${action} settings`,
-        inputSchema,
-        annotations: {
-            title: `Settings: ${action}`,
-            readOnlyHint: !manifest.mutates,
-            destructiveHint: manifest.destructive,
-            idempotentHint: manifest.idempotent,
-        },
-    };
-
-    switch (action) {
-        case 'all':
-            return {
-                ...base,
-                invoke: async (args) => {
-                    const api = await getSettingsApi();
-                    return api.all(args as Parameters<typeof settingsApi.all>[0]);
-                },
-            };
-
-        case 'get':
-            return {
-                ...base,
-                invoke: async (args) => {
-                    const api = await getSettingsApi();
-                    const { key, locale, full } = args as {
-                        key: string;
-                        locale?: string;
-                        full?: boolean;
-                    };
-                    return api.get({
-                        key,
-                        ...(locale !== undefined && { locale }),
-                        ...(full !== undefined && { full }),
-                    });
-                },
-            };
-
-        case 'set':
-            return {
-                ...base,
-                invoke: async (args) => {
-                    const api = await getSettingsApi();
-                    const { key, value } = args as { key: string; value: unknown };
-                    return api.set({
-                        key,
-                        value: value as Parameters<typeof settingsApi.set>[0]['value'],
-                    });
-                },
-            };
-
-        default:
-            return null;
-    }
-}
-
-// ============================================================================
-// Core — media adapters
-// ============================================================================
-
-function buildMediaAdapter(
-    manifest: CoreManifestMethod,
-    inputSchema: JsonSchemaObject
-): ToolDispatch | null {
-    const action = manifest.method;
-    const base = {
-        toolName: `media_${action}`,
-        description: manifest.summary ?? `${action} media`,
-        inputSchema,
-        annotations: {
-            title: `Media: ${action}`,
-            readOnlyHint: !manifest.mutates,
-            destructiveHint: manifest.destructive,
-            idempotentHint: manifest.idempotent,
-        },
-    };
-
-    switch (action) {
-        case 'query':
-            return {
-                ...base,
-                invoke: async (args) => {
-                    const api = await getMediaApi();
-                    return api.query(args as Parameters<typeof mediaApi.query>[0]);
-                },
-            };
-
-        case 'get':
-            return {
-                ...base,
-                invoke: async (args) => {
-                    const api = await getMediaApi();
-                    return api.get({ id: args['id'] as string });
-                },
-            };
-
-        case 'delete':
-            return {
-                ...base,
-                invoke: async (args) => {
-                    const api = await getMediaApi();
-                    return api.delete({ id: args['id'] as string });
-                },
-            };
-
-        // upload/replace require File — skip in v1
-        default:
-            return null;
-    }
-}
-
-// ============================================================================
-// Entries adapters
+// Service resolution
 // ============================================================================
 
 /**
- * Every entries tool pins its own type id — the id the SERVICE is called with,
- * which is qualified (`redirects/redirect`) for a plugin-mounted type. Pinned
- * last so a client cannot redirect the call at another type by passing one.
+ * Core domain services, keyed by the manifest's `domain`. Imported lazily so
+ * building the tool LIST pulls in no service code; only an actual call does.
  */
-function withType<T>(args: Record<string, unknown>, typeId: string): T {
-    return { ...args, type: typeId } as T;
+const CORE_SERVICES: Record<string, () => Promise<ServiceObject>> = {
+    users: async () => (await import('@/users/service.js')).usersApi,
+    media: async () => (await import('@/media/service.js')).mediaApi,
+    settings: async () => (await import('@/settings/service.js')).settingsApi,
+};
+
+async function getEntriesService(): Promise<ServiceObject> {
+    return (await import('@/entries/service.js')).entries as unknown as ServiceObject;
 }
 
-function buildEntriesAdapter(
-    manifest: EntriesManifestMethod,
-    inputSchema: JsonSchemaObject
-): ToolDispatch | null {
-    const { method: action, entryType, mount, typeId } = manifest;
+/**
+ * Call `service[key](args)`. Every service method takes a single parameter
+ * object — P0a normalised the last positional ones — which is what lets one line
+ * stand in for all the per-method argument shuffling the adapters used to do.
+ *
+ * Called with `service` as the receiver so a method that reaches for a sibling
+ * through the object keeps working; a detached function reference would pass
+ * today and break on the first one that doesn't.
+ */
+async function callServiceMethod(
+    service: ServiceObject,
+    key: string,
+    args: unknown
+): Promise<unknown> {
+    const fn = service[key];
+    if (typeof fn !== 'function') {
+        throw new Error(
+            `Method "${key}" is in the manifest but absent from the service it names.`
+        );
+    }
+    return (fn as (input: unknown) => Promise<unknown>).call(service, args);
+}
 
-    // Tool name: entries_<mount>_<type>_<action> when mount !== 'root',
-    // otherwise entries_<type>_<action>.
-    const toolName =
-        mount !== 'root'
-            ? `entries_${mount}_${entryType}_${action}`
-            : `entries_${entryType}_${action}`;
+/**
+ * Invoke a plugin service method through the same registry the HTTP RPC route
+ * uses, resolved at CALL time. `runMcpServer` registers the plugins at boot; a
+ * missing entry means it did not, and says so rather than failing silently.
+ *
+ * The context carries the current user, which is `null` on this transport — MCP
+ * is dev-only and trusted, exactly like the CLI, and a method's declared
+ * `access` is not enforced here any more than a core method's permission is.
+ * Request-scoped principals and a real permission wrapper are P2; when
+ * `getCurrentUser()` starts returning one, this call site needs no change.
+ */
+async function invokePluginMethod(
+    manifest: PluginManifestMethod,
+    args: Record<string, unknown>
+): Promise<unknown> {
+    const [{ getCurrentUser }, runtime] = await Promise.all([
+        import('@/context/index.js'),
+        import('@/plugins/runtime/plugin-runtime.js'),
+    ]);
 
-    const base = {
-        toolName,
-        description: manifest.summary ?? `${action} ${entryType} entry`,
-        inputSchema,
-        annotations: {
-            title: `${entryType}: ${action}`,
-            readOnlyHint: !manifest.mutates,
-            destructiveHint: manifest.destructive,
-            idempotentHint: manifest.idempotent,
-        },
-    };
+    const identity = runtime.getPluginIdentity(manifest.serviceKey);
+    if (!identity) {
+        throw new Error(
+            `Plugin "${manifest.serviceKey}" is not registered in this process.`
+        );
+    }
 
-    switch (action) {
-        case 'query':
-            return {
-                ...base,
-                invoke: async (args) => {
-                    const svc = await getEntries();
-                    return svc.query(withType(args, typeId));
-                },
-            };
+    const methods = runtime.getPluginServiceMethods().get(identity.namespace);
+    const method = methods?.[manifest.method];
+    if (!method) {
+        throw new Error(
+            `Plugin method "${manifest.serviceKey}.${manifest.method}" is not registered.`
+        );
+    }
 
-        case 'get':
-            return {
-                ...base,
-                invoke: async (args) => {
-                    const svc = await getEntries();
-                    return svc.get(withType(args, typeId));
-                },
-            };
+    return (method.handler as (input: unknown, ctx: PluginContext) => Promise<unknown>)(
+        args,
+        runtime.createPluginContext(identity, getCurrentUser())
+    );
+}
 
-        case 'create':
-            return {
-                ...base,
-                invoke: async (args) => {
-                    const svc = await getEntries();
-                    return svc.create(withType(args, typeId));
-                },
-            };
+// ============================================================================
+// Naming
+// ============================================================================
 
-        case 'update':
-            return {
-                ...base,
-                invoke: async (args) => {
-                    const svc = await getEntries();
-                    return svc.update(withType(args, typeId));
-                },
-            };
-
-        case 'publish':
-            return {
-                ...base,
-                invoke: async (args) => {
-                    const svc = await getEntries();
-                    return svc.publish(withType(args, typeId));
-                },
-            };
-
-        // No descriptor declares `entries.unpublish` yet, so the manifest never
-        // emits it and this arm is currently unreachable — kept so adding the
-        // descriptor is all it takes to expose the tool.
-        case 'unpublish':
-            return {
-                ...base,
-                invoke: async (args) => {
-                    const svc = await getEntries();
-                    return svc.unpublish(withType(args, typeId));
-                },
-            };
-
-        case 'delete':
-            return {
-                ...base,
-                invoke: async (args) => {
-                    const svc = await getEntries();
-                    return svc.delete(withType(args, typeId));
-                },
-            };
-
-        // duplicate/trash/restore/emptyTrash/versions/restoreVersion/schedule,
-        // and the staged-entry methods → skip v1
-        default:
-            return null;
+/**
+ * The tool name for a method. MCP names must match `^[a-zA-Z0-9_-]{1,128}$`, so
+ * every separator is an underscore; `buildTools` still sanitises, because a
+ * plugin's service key is author-supplied.
+ */
+function toolNameFor(manifest: ManifestMethod): string {
+    switch (manifest.source) {
+        case 'core':
+            return `${manifest.domain}_${manifest.method}`;
+        case 'plugin':
+            return `plugins_${manifest.serviceKey}_${manifest.method}`;
+        case 'entries':
+            // Root types are addressed bare; a plugin type keeps its mount, so
+            // two plugins mounting a `page` type do not collide.
+            return manifest.mount === 'root'
+                ? `entries_${manifest.entryType}_${manifest.method}`
+                : `entries_${manifest.mount}_${manifest.entryType}_${manifest.method}`;
     }
 }
 
@@ -382,35 +172,81 @@ function buildEntriesAdapter(
 // ============================================================================
 
 /**
- * Build a ToolDispatch from a ManifestMethod. Returns null when no v1 adapter
- * exists for this method (plugin methods, binary uploads, entries long-tail).
+ * Build a ToolDispatch from a ManifestMethod, or explain why the method is not
+ * callable over JSON-RPC.
  *
- * The manifest carries `source`, `domain` and `method` as fields, so nothing
- * here re-derives them by splitting a name apart.
+ * The manifest carries `source`, `domain`, `method`, `typeId` and `serviceKey`
+ * as fields, so nothing here re-derives them by splitting a name apart.
  */
-export function buildDispatch(manifest: ManifestMethod): ToolDispatch | null {
-    if (manifest.source === 'plugin') {
-        return null;
+export function buildDispatch(manifest: ManifestMethod): DispatchResult {
+    // Declared uncallable by the method itself (a `File` input). Checked before
+    // the schema, because such a method HAS a schema — one that degrades to `{}`
+    // and would otherwise look perfectly callable.
+    if (manifest.binaryInput === true) {
+        return { ok: false, reason: 'binary input — not expressible over JSON-RPC' };
     }
 
-    // Resolved once, here, so no adapter can substitute a literal: a method with
-    // no serialisable input cannot be honestly described to a client, so it is
-    // skipped rather than given a hand-written stand-in that drifts.
+    // A method with no serialisable input cannot be honestly described to a
+    // client, so it is skipped rather than given a hand-written stand-in that
+    // drifts. This is the rule the `users_update` schema literal broke.
     const inputSchema = manifest.input ?? null;
-    if (inputSchema === null) return null;
-
-    if (manifest.source === 'entries') {
-        return buildEntriesAdapter(manifest, inputSchema);
+    if (inputSchema === null) {
+        return { ok: false, reason: 'no input schema declared on the descriptor' };
     }
 
-    switch (manifest.domain) {
-        case 'users':
-            return buildUsersAdapter(manifest, inputSchema);
-        case 'settings':
-            return buildSettingsAdapter(manifest, inputSchema);
-        case 'media':
-            return buildMediaAdapter(manifest, inputSchema);
-        default:
-            return null;
+    const invoke = resolveInvoke(manifest);
+    if (invoke === null) {
+        return {
+            ok: false,
+            reason: `no service registered for domain "${manifest.name}"`,
+        };
     }
+
+    return {
+        ok: true,
+        tool: {
+            toolName: toolNameFor(manifest),
+            description: manifest.summary ?? manifest.name,
+            inputSchema,
+            annotations: {
+                // The id, not the name: `entries.get` is the name of every entry
+                // type's get, so a name would title nine tools identically.
+                title: manifest.id,
+                readOnlyHint: !manifest.mutates,
+                destructiveHint: manifest.destructive,
+                idempotentHint: manifest.idempotent,
+            },
+            invoke,
+        },
+    };
+}
+
+/** The call this method maps to, or null when its domain names no service. */
+function resolveInvoke(manifest: ManifestMethod): Invoke | null {
+    switch (manifest.source) {
+        case 'core':
+            return resolveCoreInvoke(manifest);
+        case 'entries':
+            return resolveEntriesInvoke(manifest);
+        case 'plugin':
+            return (args) => invokePluginMethod(manifest, args);
+    }
+}
+
+function resolveCoreInvoke(manifest: CoreManifestMethod): Invoke | null {
+    const load = CORE_SERVICES[manifest.domain];
+    if (!load) return null;
+    return async (args) => callServiceMethod(await load(), manifest.method, args);
+}
+
+function resolveEntriesInvoke(manifest: EntriesManifestMethod): Invoke {
+    return async (args) =>
+        callServiceMethod(await getEntriesService(), manifest.method, {
+            ...args,
+            // Every entries tool pins its own type id — the id the SERVICE is
+            // called with, qualified (`redirects/redirect`) for a plugin-mounted
+            // type. Pinned LAST so a client cannot redirect the call at another
+            // type by passing one of its own.
+            type: manifest.typeId,
+        });
 }

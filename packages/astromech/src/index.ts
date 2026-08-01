@@ -16,6 +16,7 @@ import type {
     PluginServiceMethod,
 } from '@/types/index.js';
 import { pluginNamespace } from '@/utilities/plugin-namespace.js';
+import * as zod from 'zod';
 
 // ============================================================================
 // Type Exports
@@ -245,6 +246,34 @@ export function definePlugin<const Def extends PluginDefinition, Options = void>
  */
 export function defineAdminPage(page: AdminPage): AdminPage {
     return page;
+}
+
+/**
+ * Zod, re-exported so a plugin can declare a service method's `input` schema
+ * without adding a `zod` dependency of its own — and, more to the point, without
+ * risking a SECOND copy. `z.toJSONSchema` and every `instanceof` check inside
+ * the manifest generator work on the core's instance; a plugin schema built by a
+ * different copy would silently fail to serialise.
+ *
+ * A method with no `input` cannot be projected as an MCP tool at all, so this is
+ * what makes plugin methods reachable from the AI/MCP surface.
+ */
+export { z } from 'zod';
+
+/**
+ * The `input` schema for a service method that takes no arguments.
+ *
+ * A no-argument method still has to declare an input, because a tool with no
+ * `inputSchema` cannot be published at all — MCP requires an object schema, and
+ * a method that declares nothing is skipped rather than given a synthesised one.
+ *
+ * `z.object({})` alone would not typecheck against `defineServiceMethod<undefined,
+ * …>`; the transform is what reconciles the two, and it renders as
+ * `{type: 'object', properties: {}}` — "send me an empty object" — which is
+ * precisely the truth.
+ */
+export function noInput(): zod.ZodType<undefined> {
+    return zod.object({}).transform(() => undefined);
 }
 
 /**

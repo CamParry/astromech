@@ -181,3 +181,27 @@ export const scheduleEntrySchema = z.object({
             .transform((v) => new Date(v)),
     ]),
 });
+
+/**
+ * Overrides accepted by `duplicate`. Authored here, in the domain, rather than
+ * inline in the route that first needed it: the method descriptor publishes the
+ * same payload to MCP and the AI tool-loop, and two copies of a schema is how
+ * the transport and the manifest end up describing different things.
+ */
+export const duplicateOverridesSchema = z
+    .object({
+        title: z.string().min(1).optional(),
+        slug: slugField,
+        locale: z.string().min(1).optional(),
+        localeGroup: z.string().min(1).optional(),
+        fields: z.record(z.string(), z.unknown()).optional(),
+        status: entryStatusEnum.optional(),
+    })
+    .partial();
+
+/**
+ * `expiresAt` for a preview token. Coerces an ISO string like every other date
+ * the domain accepts, so a JSON caller (MCP, the AI tool-loop) does not write a
+ * string into a date column.
+ */
+export const previewTokenSchema = z.object({ expiresAt: publishAtField });
