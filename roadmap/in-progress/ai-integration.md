@@ -27,7 +27,9 @@ the rest; nothing is deployed, so this is the cheapest moment. Full detail with
 file references in the spec.
 
 **P0a, P0, P1, P2 and P3 landed.** The audit's counts were stale: the manifest
-was 83 methods at P0, not 71, and is 145 after P1. P4 is next.
+was 83 methods at P0, not 71, and is 145 after P1. **P4 is parked** behind the
+across-the-board field-validation work — most of it turns out to be ordinary
+input validation, so the sequence continues at P5.
 
 - [x] **P0a — normalise every service method to a parameter object.** Shipped
       2026-07-31 (`934f1d0`). `update` takes a nested `data` (`update({id, data})`)
@@ -174,9 +176,88 @@ was 83 methods at P0, not 71, and is 145 after P1. P4 is next.
       whenever the caller said nothing, so every token ever issued was still
       valid. Defaults to 7 days now; an explicit `null` still means forever, but
       has to be asked for rather than being what everyone silently got.
-- [ ] **P4 — wire-safe read-shape contract.** The existing write-back guard is a
-      non-enumerable `Symbol` brand, so it cannot survive JSON and cannot protect
-      the agent path. Carry the shape in the payload for wire crossings.
+- [ ] **P4 — wire-safe read-shape contract. PARKED 2026-08-02**, pending the
+      across-the-board field-validation work, then re-scope against whatever gaps
+      remain. Design settled and the substrate surveyed; nothing built.
+    - **The guard has never worked anywhere**, which is a bigger finding than the
+      audit's "it cannot cross the wire". `markPublic` brands the **Entry**;
+      `create`/`update` check `isPublicBranded(params.fields)` — a different
+      object, since `applyVisibility` returns `{...entry, fields: cleanFields}`.
+      So `update({data: {fields: entry.fields}})` sails through in-process. The
+      existing tests brand a bare object and pass it directly, exercising the
+      helper and never the path.
+    - **The damage is real.** `fields` is a whole-blob column replacement —
+      `updateOne` forwards it to `storage.update` with no merge against
+      `currentEntry.fields`. A public-shape write-back permanently drops every
+      `private: true` field and every `_disabled` item.
+    - **Separate stored-content gap, independent of the shape question:** the
+      rich-text `allow` list is enforced only at RENDER (`renderRichText`
+      sanitizes on the way out). `richtext` is `{name, type, ...options}` with no
+      validator, so any node type can be stored and a `full` read returns it raw.
+    - **Research conclusion — no one solves this with a payload marker.** Two
+      structural levers converge instead. (1) _The write shape differs from the
+      read shape_: WordPress returns `content.rendered` in `context=view` and
+      makes only `content.raw` writable, so writing back a view response is a
+      type error, not silent corruption; GraphQL separates input from output
+      types; Contentful splits CDA and CMA into different products. (2) _Writes
+      merge by declared intent rather than replace_: Kubernetes hit this exact
+      bug — client-side apply deleted fields the client never knew about — and
+      fixed it with Server-Side Apply + `managedFields`, not with markers.
+      `FieldMask` and JSON:API PATCH are the same lever. Astromech has neither.
+    - **Direction agreed:** validation on the way in carries the load; an
+      entry-level `_shape` key is a diagnostic only and must not do the
+      enforcing. Rich text should accept only a valid ProseMirror document for
+      its `allow` list and reject a string outright.
+    - **Trap for whoever builds it:** `Node.fromJSON` does NOT validate nested
+      content rules — it deserializes unsupported content happily. Validation is
+      `Node.fromJSON(schema, doc)` followed by `.check()`. `@tiptap/pm` and
+      `getSchema` are already dependencies; no new packages needed.
+    - **`update` becomes PATCH-only — DECIDED 2026-08-02, not yet built.** The
+      API already claims patch semantics and fails to honour them one level down:
+      top-level columns treat `undefined` as "leave alone", but `fields` is a
+      single JSON column, so `update({data: {fields: {a: 1}}})` deletes every
+      other field while `update({data: {title: 'x'}})` leaves them be. That
+      inconsistency is the real trap; the public/full shape mismatch is just the
+      case that makes it visible. It also fixes the precondition — PUT requires
+      the caller to know the complete current state, which is unreasonable for
+      any caller and impossible for one holding a projection.
+    - Together with input validation this closes the whole class. Validation
+      catches fields whose public shape is distinguishable (rich text: string vs
+      ProseMirror JSON); merge catches the ones that are not — a dropped
+      `private: true` **text** field is simply absent from the patch, so it
+      survives. This is why the `_shape` key ends up nearly vestigial.
+    - The four semantics, settled:
+        1. **Patch at the root field level and the root table level only.** No
+           deeply nested patching — it gets complex fast and becomes a pain when
+           you genuinely do want to remove something.
+        2. **Arrays are atomic values**, replaced wholesale (repeaters, blocks,
+           trees). Index-wise merging is ambiguous; RFC 7396 replaces arrays for
+           the same reason. Editing one item in ten still means sending ten —
+           which is where P5's content operations should own the edit anyway.
+        3. **`null` is a legitimate stored value, not a delete.** The schema is
+           predefined, so the key set is fixed and dropping a key is the wrong
+           idea. Absent means "leave alone"; explicit `null` means "store null",
+           allowed as long as the field is not required. NOT RFC 7396 semantics,
+           deliberately.
+        4. **Validation runs against the merged result**, or a small patch fails
+           completeness checks it should never have been subject to.
+    - Refinement on (4): **coerce the patch, validate the merged.** Running the
+      whole pipeline on the merged result re-coerces untouched fields on every
+      write, and coercion is not guaranteed idempotent (`slug`, `email`, `url`
+      and `key-value` all have coercers), so a non-idempotent one would silently
+      rewrite data the caller never mentioned.
+    - Consequence to handle: merge surrenders the one thing full-replace gave
+      free — **orphaned keys**. Data left by a field since removed from the schema
+      is cleared by the next write today; under merge it survives indefinitely.
+      Projecting the merged result through the schema before writing cleans them
+      on next write with no separate purge. Check whether `processFields` already
+      drops unknown keys — that decides whether this is free.
+    - `exactOptionalPropertyTypes: true` is already on, so
+      absent/`undefined`/`null` stay distinguishable at the type level; the
+      distinction needs no encoding tricks to survive.
+    - Check before building, do not assume: whether anything currently clears
+      fields by omission. The admin form submits every field, so it is likely a
+      no-op there, but it would fail silently.
 
 ## Then
 
