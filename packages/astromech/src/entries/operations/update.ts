@@ -44,6 +44,25 @@ export async function updateOne(
         const fieldDefs = entryTypeConfig
             ? flattenEntryFields(entryTypeConfig.fields)
             : [];
+
+        // A canonical and its staged copy are one logical entry as far as
+        // uniqueness is concerned, so each has to be invisible to the other's
+        // scan. Only worth a lookup when the type can actually stage and some
+        // field is actually unique — every other update would pay a round trip
+        // for nothing. (Built-in storage already keeps staged rows out of
+        // `list`, so today only the staged-row side changes any outcome; the
+        // canonical side holds the invariant for a storage that doesn't.)
+        const excludeIds = [id];
+        const canStage = entryTypeConfig?.capabilities.staging === true;
+        const hasUniqueField = fieldDefs.some((field) =>
+            field.validation?.some((rule) => 'unique' in rule)
+        );
+        if (canStage && hasUniqueField) {
+            const paired =
+                currentEntry.stagedFor ?? (await storage.staging?.getByCanonical(id))?.id;
+            if (paired) excludeIds.push(paired);
+        }
+
         const processed = await processFields(
             validatedData.fields as Record<string, unknown>,
             fieldDefs,
@@ -62,7 +81,7 @@ export async function updateOne(
                 reads: createEntryScopedReads(storage, {
                     type,
                     locale: currentEntry.locale,
-                    excludeId: id,
+                    excludeId: excludeIds,
                 }),
             }
         );

@@ -3,12 +3,20 @@
  *
  * Plugin custom field types compose from these core renderers plus the
  * `astromech/ui` atoms. Every renderer takes the standard `BaseFieldProps`.
+ *
+ * `useFieldControl` is for a field type that renders its OWN control rather than
+ * composing from the atoms: the atoms self-apply the enclosing `FieldWrapper`'s
+ * `aria-invalid`/`aria-describedby`, and this is how a hand-rolled control reads
+ * the same state and spreads the same ARIA onto itself.
  */
 
 export { FormField } from './form-field.js';
 export type { FormFieldProps } from './form-field.js';
 
 export { useFieldValue } from './field-context.js';
+
+export { useFieldControl } from './field-control-context.js';
+export type { FieldControlState } from './field-control-context.js';
 
 export { TextField } from './text-field.js';
 export { TextareaField } from './textarea-field.js';
