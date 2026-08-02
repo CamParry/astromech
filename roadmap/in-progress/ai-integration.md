@@ -132,8 +132,27 @@ file references in the spec.
       building the preceding commit in-tree and diffing — 185,508 bytes,
       identical. The artefact in a stale checkout is NOT a valid baseline; it was
       pre-P1 and made the first comparison meaningless.
-- [ ] **P3 — confirm gate.** Stateless, on MCP's MRTR shape, with elicitation's
-      three actions (`accept`/`decline`/`cancel`). Keyed off `mutates`/`destructive`.
+- [ ] **P3 — reduction, then the confirm gate.** Reframed 2026-08-02 after
+      researching how vendors with sensitive data actually handle this. A
+      stateless gate cannot tell a human's approval from a caller fabricating
+      one, so it is a runaway-loop brake, not a boundary — and the axis is not
+      stateless vs stateful but which channel the approval arrives on, which the
+      access point decides.
+    - **Layer 1, highest value: a reduced tool surface.** `--read-only` as a
+      strict filter that overrides an explicit include (GitHub's semantics;
+      Stripe ships the same flag). This is the convergent industry lever and the
+      one we lacked. Cheap now that `mutates` is on every descriptor.
+    - **Layer 2: the stateless MRTR gate** for MCP/CLI, where the human really is
+      in the client. Trigger is a predicate with presets, not a hardcoded rule.
+    - **Layer 3: no new mechanism.** Staged entries + preview tokens already ARE
+      MCP's URL mode — stage server-side, human opens the preview in admin, merge
+      runs as an authenticated admin action. Content ops route through it at P5;
+      the admin chat drawer gets its human from the session, not the protocol.
+    - A signed nonce was considered and REJECTED: it proves a round-trip
+      happened, not that anyone saw it, while carrying the state cost of the
+      thing that would.
+    - Preview tokens never expire today; the gate hands out preview links, so a
+      default TTL lands here.
 - [ ] **P4 — wire-safe read-shape contract.** The existing write-back guard is a
       non-enumerable `Symbol` brand, so it cannot survive JSON and cannot protect
       the agent path. Carry the shape in the payload for wire crossings.

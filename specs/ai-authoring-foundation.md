@@ -7,7 +7,7 @@ Delete this spec once the work ships.
 **Why now:** WS1–3 (admin UI slots, CLI, MCP) shipped 2026-07-28. Before building
 the confirm gate, context bus and authoring plugin on top, four defects in the
 shipped substrate need fixing. All four are refactors of existing code — fixing
-them *deletes* code and shrinks WS4–6. Nothing is deployed, so this is the
+them _deletes_ code and shrinks WS4–6. Nothing is deployed, so this is the
 cheapest moment to do it.
 
 ---
@@ -59,7 +59,7 @@ resolved for P1 to be possible at all.
 matching the entries precedent. `users.update({id, ...patch})`,
 `settings.set({key, value})`, `media.delete({id})`. Dispatch then becomes
 `service[method](input)` with no per-method knowledge at all, and the descriptor's
-`input` schema *is* the argument — one shape, no mapping layer.
+`input` schema _is_ the argument — one shape, no mapping layer.
 
 A descriptor-declared argument mapping (`args: ['id','data']`) was considered and
 rejected: it is a smaller diff but it adds a second concept whose only job is to
@@ -114,7 +114,7 @@ and `create`/`update` throw `PublicShapeWriteError` when they see it
 But the brand is **object identity**, and it does not survive serialization. The
 agent path is definitionally a serialize-and-reconstruct boundary: MCP returns
 tool results through `JSON.stringify` (`toToolResultText`,
-`transport/mcp/server.ts:47-49`), the model reads text, then builds a *fresh*
+`transport/mcp/server.ts:47-49`), the model reads text, then builds a _fresh_
 input object for the next call. `isPublicBranded` sees a plain object and the
 guard stays silent.
 
@@ -139,7 +139,7 @@ don't." A new consumer gets no structural protection, and `ToolDispatch`
 ### Verified sound — do not re-litigate
 
 - **Permission parity.** Core routes enforce
-  `allowsMethod(<domain>Descriptors.<method>)`, so the manifest's permission *is*
+  `allowsMethod(<domain>Descriptors.<method>)`, so the manifest's permission _is_
   the enforced value. Entries synthesise an ad-hoc descriptor from
   `entryPermission(type, action)` (`transport/http/routes/entries.ts:75-79`) —
   the same shared helper the manifest imports. `entry:*` provably cannot reach
@@ -169,7 +169,7 @@ don't." A new consumer gets no structural protection, and `ToolDispatch`
   codegen time (`codegen/plugin-client-manifest.ts:31-41`) — trusted input today,
   but inconsistent with its sibling branch, which deliberately leaves `../` to
   fail loudly.
-- Notifications cannot be expressed: its permission is *identity*-derived (off
+- Notifications cannot be expressed: its permission is _identity_-derived (off
   the caller's session), and `PermissionRule` models only static or
   input-derived. Document the third category.
 
@@ -184,7 +184,7 @@ server-initiated requests (return `resultType: 'input_required'` with the
 requests you need; the caller retries with `inputResponses`). The pinned SDK
 (`@modelcontextprotocol/sdk` 1.29.0) tops out at protocol `2025-11-25`, and real
 clients track the SDK, so speaking the new revision ahead of it would make us
-*incompatible* with the clients this serves. MCP is dev-only scaffolding here,
+_incompatible_ with the clients this serves. MCP is dev-only scaffolding here,
 so protocol currency is low-stakes. The deprecations (Sampling, Roots, Logging,
 HTTP+SSE) touch nothing we use — we are stdio only.
 
@@ -194,6 +194,64 @@ keeps speaking whatever the SDK speaks. When the SDK catches up the transport
 swap is mechanical, because the gate is already the right shape.
 
 No server-side staged-action store, no TTL, no session id.
+
+### The confirm gate is a brake, not a boundary — reframed 2026-08-02
+
+The "stateless, no store" lock above stands, but the reasoning under it was
+wrong, and it mattered: a stateless gate **cannot distinguish a human's approval
+from a caller fabricating one**. The answer is just a value the caller supplies.
+§3.12's "holds it until an explicit human click" is not something a stateless
+gate can promise.
+
+Researched how vendors with sensitive data actually handle this. Three findings:
+
+- **Authorization is the boundary; confirmation is not.** Sentry's remote MCP
+  chains MCP OAuth → Sentry OAuth, presenting _Skills_ (capability bundles)
+  rather than raw scopes because its own scopes are too coarse for the MCP
+  capability model. Cloudflare Access gates which tools an identity may call
+  before any tool runs.
+- **Capability reduction is the convergent safety lever.** GitHub's MCP server
+  ships `--read-only` as "a strict security filter that takes precedence over any
+  other configuration, disabling write tools even when explicitly requested",
+  plus toolsets / excluded tools / lockdown mode. Stripe's has `--read-only`.
+  This is structural where an annotation is advisory — and it is the piece we
+  did not have.
+- **When a server genuinely needs proof, the protocol's answer is URL mode, not
+  a nonce.** MCP URL-mode elicitation issues an `elicitationId`, the client
+  redirects the user OUT, and completion "must be tracked and validated by the
+  server, not inferred from client behavior". A client accepting means only that
+  it displayed the message and began navigating. Same shape as GitHub sudo mode
+  and S3 MFA-delete: **the proof arrives on a channel the requester does not
+  control.**
+
+**So the axis is not stateless vs stateful — it is which channel the approval
+arrives on, which the access point decides:**
+
+| Access point      | Caller                        | Where a human can be                    |
+| ----------------- | ----------------------------- | --------------------------------------- |
+| MCP / stdio       | a local MCP client            | in the client; dev-only regardless      |
+| CLI               | a developer at a terminal     | the terminal                            |
+| Admin chat drawer | our own server-side tool-loop | the admin UI — real session, real click |
+
+For the first two, stateless in-band confirm is correct and is what the
+ecosystem does. For the third, approval need not be inferred from the caller at
+all: the drawer is served by our own admin app over an authenticated session, so
+a confirmation is an ordinary authenticated request from a browser. That is
+stronger than a stateful gate, not weaker.
+
+And the out-of-band half already exists. Forward versioning shipped staged
+entries + preview tokens: stage server-side, human opens the preview in admin,
+merge runs as an authenticated admin action. That IS URL mode, server-validated.
+Content ops (P5) route through it; P3 adds no new mechanism for it.
+
+A signed nonce was considered and **rejected**: it proves a round-trip happened,
+not that anyone saw it, while carrying the state cost of the thing that would.
+
+**Cautionary tale, directly on our path:** CVE-2026-48529 against GitHub's MCP
+server — the lockdown cache was a process-global singleton initialised with the
+FIRST authenticated user's client, so every later user's queries ran with that
+user's credentials. That is the bug class P2 removed. The gate must not keep
+state in a module-level map either.
 
 ### Tool-loop alone does not hold — split by whether field data is involved
 
@@ -229,7 +287,7 @@ not need it. Remove the field rather than fill it.
 
 ### Tool surface sizing
 
-71 methods at ~4.7k tokens *without* schemas; real schemas would balloon it. Use
+71 methods at ~4.7k tokens _without_ schemas; real schemas would balloon it. Use
 `tool_search_tool_regex_20251119` (or `_bm25`) with `defer_loading: true` on the
 rest — discovered schemas are appended rather than swapped, so the prompt cache
 survives. Tools render at prompt position 0, so the tool list must stay
@@ -303,18 +361,37 @@ names; no `skipped[]` entries except deliberate ones, and those are logged.
 **Verify:** a test that a scoped handle refuses a method the principal lacks,
 and that two interleaved requests never observe each other's user.
 
-### P3 — Confirm gate
+### P3 — Reduction, then the confirm gate
 
-- Gate contract on the MRTR shape: a mutating call returns
-  `{status: 'input_required', requests: [...]}`; the caller re-invokes with
-  answers. Three actions: `accept` / `decline` / `cancel`.
-- Form mode (flat primitives) for discrete confirms; URL mode → staged entry
-  preview for content review.
-- Default preview tokens to a TTL.
-- Keyed off `mutates`/`destructive`, which are trustworthy today.
+Three layers, in value order. See "The confirm gate is a brake, not a boundary"
+in §2 for why reduction comes first.
+
+**Layer 1 — reduced tool surface (new; the highest-value piece).** A read-only /
+reduced projection of the manifest, following the GitHub–Stripe convergence.
+`readOnly` is a STRICT filter that overrides an explicit include, per GitHub's
+semantics — copy them, they are load-bearing. Cheap now: `mutates` is on every
+descriptor and `scopedService` already composes. Surfaces as `--read-only` on
+`astromech mcp` and `astromech methods`, and excluded methods are logged with a
+reason the way P1's skips are.
+
+**Layer 2 — stateless MRTR confirm gate.** A mutating call returns
+`{status: 'input_required', requests: [...]}`; the caller re-invokes carrying an
+answer. Three actions: `accept` / `decline` / `cancel`. Documented in the code as
+a runaway-loop brake, NOT a security boundary — permissions are the boundary.
+Trigger is a predicate over the descriptor with named presets (`'mutating'`
+default, `'destructive'`), not a hardcoded rule.
+
+**Layer 3 — out-of-band approval. No new mechanism.** Staged entries + preview
+tokens already are URL mode. Content ops route through them at P5; the admin
+path gets its human from the session, not the protocol.
+
+Also here: default preview tokens to a TTL (they never expire today —
+`token.ts` passes `expiresAt ?? null` and `isValid` treats null as forever), and
+that matters because the gate hands out preview links.
 
 **Verify:** a declined and a cancelled call both leave state untouched and are
-distinguishable by the caller.
+distinguishable by the caller; `--read-only` refuses a mutating method even when
+that method is explicitly included.
 
 ### P4 — Read-shape contract across the wire
 
@@ -331,7 +408,7 @@ wire-safe counterpart for the agent path:
   having content ops own the read entirely.
 
 **Verify:** a rich-text round-trip through the agent path preserves ProseMirror
-JSON, and a write assembled from a public-shape read is rejected *after* crossing
+JSON, and a write assembled from a public-shape read is rejected _after_ crossing
 JSON. This is the regression test for D3 and it must exercise the serialized
 path — an in-process test passes today and proves nothing.
 
@@ -355,7 +432,7 @@ breakpoint.
 
 Claude adapter + chat drawer. Notes:
 
-- Use `client.beta.messages.toolRunner()`. Its per-turn hooks *are* the approval
+- Use `client.beta.messages.toolRunner()`. Its per-turn hooks _are_ the approval
   gate — gate inside the tool's `run`, or intervene on the yielded assistant
   message before tools execute. No manual loop needed.
 - `betaTool()` takes raw JSON Schema, which is what the manifest already emits —
