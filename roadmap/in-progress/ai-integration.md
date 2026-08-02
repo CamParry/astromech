@@ -212,13 +212,52 @@ input validation, so the sequence continues at P5.
       content rules — it deserializes unsupported content happily. Validation is
       `Node.fromJSON(schema, doc)` followed by `.check()`. `@tiptap/pm` and
       `getSchema` are already dependencies; no new packages needed.
-    - **Open question, deliberately not decided:** whether `update` keeps
-      replacing the whole `fields` blob. Validation cannot catch a public read
-      that dropped a `private: true` **text** field — same type, same shape as a
-      deliberate clear — so a write-back still deletes it silently. Merge-by-
-      intent is the only thing that closes it, and it changes what "set `fields`"
-      means everywhere: clearing a field would need an explicit null rather than
-      an omission.
+    - **`update` becomes PATCH-only — DECIDED 2026-08-02, not yet built.** The
+      API already claims patch semantics and fails to honour them one level down:
+      top-level columns treat `undefined` as "leave alone", but `fields` is a
+      single JSON column, so `update({data: {fields: {a: 1}}})` deletes every
+      other field while `update({data: {title: 'x'}})` leaves them be. That
+      inconsistency is the real trap; the public/full shape mismatch is just the
+      case that makes it visible. It also fixes the precondition — PUT requires
+      the caller to know the complete current state, which is unreasonable for
+      any caller and impossible for one holding a projection.
+    - Together with input validation this closes the whole class. Validation
+      catches fields whose public shape is distinguishable (rich text: string vs
+      ProseMirror JSON); merge catches the ones that are not — a dropped
+      `private: true` **text** field is simply absent from the patch, so it
+      survives. This is why the `_shape` key ends up nearly vestigial.
+    - The four semantics, settled:
+        1. **Patch at the root field level and the root table level only.** No
+           deeply nested patching — it gets complex fast and becomes a pain when
+           you genuinely do want to remove something.
+        2. **Arrays are atomic values**, replaced wholesale (repeaters, blocks,
+           trees). Index-wise merging is ambiguous; RFC 7396 replaces arrays for
+           the same reason. Editing one item in ten still means sending ten —
+           which is where P5's content operations should own the edit anyway.
+        3. **`null` is a legitimate stored value, not a delete.** The schema is
+           predefined, so the key set is fixed and dropping a key is the wrong
+           idea. Absent means "leave alone"; explicit `null` means "store null",
+           allowed as long as the field is not required. NOT RFC 7396 semantics,
+           deliberately.
+        4. **Validation runs against the merged result**, or a small patch fails
+           completeness checks it should never have been subject to.
+    - Refinement on (4): **coerce the patch, validate the merged.** Running the
+      whole pipeline on the merged result re-coerces untouched fields on every
+      write, and coercion is not guaranteed idempotent (`slug`, `email`, `url`
+      and `key-value` all have coercers), so a non-idempotent one would silently
+      rewrite data the caller never mentioned.
+    - Consequence to handle: merge surrenders the one thing full-replace gave
+      free — **orphaned keys**. Data left by a field since removed from the schema
+      is cleared by the next write today; under merge it survives indefinitely.
+      Projecting the merged result through the schema before writing cleans them
+      on next write with no separate purge. Check whether `processFields` already
+      drops unknown keys — that decides whether this is free.
+    - `exactOptionalPropertyTypes: true` is already on, so
+      absent/`undefined`/`null` stay distinguishable at the type level; the
+      distinction needs no encoding tricks to survive.
+    - Check before building, do not assume: whether anything currently clears
+      fields by omission. The admin form submits every field, so it is likely a
+      no-op there, but it would fail silently.
 
 ## Then
 
