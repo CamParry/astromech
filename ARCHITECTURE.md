@@ -134,7 +134,7 @@ packages/
 │
 └── plugins/         # first-party plugins as separate published packages
     ├── backups/     # @astromech/backups     (ships a ./tables subpath of plain table descriptors)
-    ├── forms/       # @astromech/forms
+    ├── forms/       # @astromech/forms      (notification + spam provider seams a site can extend)
     ├── menus/       # @astromech/menus
     ├── redirects/   # @astromech/redirects  (ships a ./tables subpath of plain table descriptors)
     └── seo/         # @astromech/seo        (admin React components ship as source via ./admin/*)

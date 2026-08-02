@@ -30,11 +30,14 @@ This is a living reference; it grows as the project does.
 
 ## Learning from the bundled plugins
 
-Astromech ships four plugins you can read as worked examples — install them,
+Astromech ships five plugins you can read as worked examples — install them,
 then look at how they're put together:
 
 - `@astromech/redirects` — a plugin with its own database table, an entry
   type, a public service lookup method, and an optional hook.
+- `@astromech/forms` — two entry types (one core-stored, one table-backed),
+  public service methods an anonymous caller reaches, gating hooks, and two
+  provider seams (notification kinds and spam services) a site can extend.
 - `@astromech/seo` — a custom field, a field-section helper you compose
   into your entry types, admin pages (a dashboard and a settings form),
   localized strings, and footprint-derived behaviour.

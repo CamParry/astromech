@@ -61,11 +61,14 @@ my-plugin/
   types.ts                domain constants (and a <X>_PACKAGE literal, if you have tables)
   tables/widgets.ts      one file per database table (definePluginTable)
   migrations/            generated — never hand-edited
+  entries/               entry-type definitions, one per file
   fields/                custom field-type registrations
   pages/                 admin page registrations
   permissions/           definePermissions() — the grantable permission keys
   service/               service-method definitions (defineServiceMethod)
+  hooks/                 defineHook subscribers, and your own event names
   routes/                raw HTTP routes — the streaming/binary escape hatch
+  utilities/             pure helpers shared across the above
   admin/
     fields/              field renderers (.tsx)
     pages/               page renderers (.tsx)
@@ -75,6 +78,18 @@ my-plugin/
 ```
 
 Only include what you use.
+
+Each directory holds the thing it is named after and nothing else — `tables/`
+holds table descriptors, `service/` holds service-method definitions. When a
+method grows a loader or a formatter, that helper belongs in `utilities/`, not
+beside the definition. A trivial single-use guard can stay inline; the rule is
+about what a directory is _for_.
+
+Within a file, put the main export first and its private helpers below it.
+Function declarations hoist, so nothing has to be defined before it is used.
+
+Every plugin ships a `README.md`: what it does, how to install it, its options,
+and its public surface.
 
 ### The namespace
 
@@ -656,6 +671,37 @@ bundles. See the bundled `redirects` and `seo` plugins for each.
 > Plugins can't register routes outside `/api`. To integrate with the front end,
 > expose data through a service method and document a small middleware recipe —
 > the plugin owns the data, the app owns the route.
+
+### Offering your own extension point
+
+A plugin can expose a seam of its own, so a site extends it without forking.
+Declare a contract, ship implementations of it, and take one as an option:
+
+```ts
+export type SpamProvider = {
+    name: string;
+    siteKey: string;
+    verify(token: string | undefined, context: { ip?: string }): Promise<SpamVerdict>;
+};
+
+export function turnstile(options: TurnstileOptions): SpamProvider {
+    /* ... */
+}
+```
+
+```ts
+forms({ spam: turnstile({ siteKey, secretKey }) });
+```
+
+The type is the public surface, the factories are conveniences, and a site can
+pass an object it wrote itself. Prefer this to a string union the moment there
+is a plausible second implementation you don't want to own.
+
+`@astromech/forms` has two such seams. Its spam providers take the shape above.
+Its **notification providers** go further: one provider owns both halves of a
+notification kind — the `fields.block(...)` an editor fills in _and_ the delivery
+that reads it — so adding a kind is one file plus a registry entry, and the
+editor UI follows automatically.
 
 ## Putting it together
 

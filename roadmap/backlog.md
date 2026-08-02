@@ -68,6 +68,9 @@ Loose tasks pulled from otherwise-shipped features.
 - [ ] A frontend form component/helper. v1 deliberately exposes data only (`forms.get`) and lets the site author own the markup, following the redirects precedent — revisit if hand-rendering proves tedious in practice
 - [ ] Per-form success redirect, once there is a frontend story to redirect within
 - [ ] A read-only entry flag in core, so `forms/submission` can express "written by the API, never hand-authored" directly instead of relying on a site granting read+delete and withholding create+update
+- [ ] More notification providers now the seam exists (`decisions/0002`) — Slack, Mailchimp, a generic webhook. Each is one file in `notifications/providers/` plus a `registry.ts` entry; the editor block and the delivery come as a pair
+- [ ] Notification providers are a closed built-in list. A site can write a `SpamProvider` and pass it through config, but there is no equivalent option for a `NotificationProvider` — the registry is compiled in. Open it up if a site needs a kind we don't ship
+- [ ] A block added while **editing** an existing entry never receives its declared `defaultValue`s: `addBlock` creates a bare `{ _type }`, and the pipeline's default step is `operation === 'create'` only (`fields/pipeline.ts`). So the email notification's default subject lands on a form's first save and never again. `@astromech/forms` carries a matching runtime fallback in `notifications/providers/email.ts` to cover it — fix the pipeline or the blocks field, then drop the fallback
 
 ### `@astromech/backups` follow-ups
 

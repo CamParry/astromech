@@ -8,6 +8,13 @@ user-invocable: false
 
 - Files: kebab-case · Types: PascalCase · Functions/variables: camelCase
 
+## File ordering
+
+- **The main thing comes first.** A file's primary export — the service builder, the component, the entry-type config — goes at the top, and its private helpers follow below it. Never stack helpers above the payoff.
+- Function declarations hoist, so their order is free.
+- `const` does **not** hoist. A module-level `const` built eagerly from a helper (`export const formEntryType = { fields: [...fieldBlocks()] }`) throws a TDZ `ReferenceError` if that helper reads a `const` declared lower down. Turn the data into a function and keep any lookup table it reads above the eager object.
+- A `const` only read inside a deferred body — a handler, a factory's return — is safe below the main export.
+
 ## Rules
 
 - Never use `any`,
