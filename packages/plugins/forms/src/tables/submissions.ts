@@ -1,7 +1,6 @@
 /**
- * Table descriptor for the forms plugin. `definePluginTable` owns the
- * `plugin_<namespace>_` prefix, so the table is declared with its bare name
- * and comes out as `plugin_forms_submissions`.
+ * Table descriptor for submissions. `definePluginTable` adds the
+ * `plugin_<namespace>_` prefix, so this declares the bare name.
  */
 
 import { definePluginTable } from 'astromech';
@@ -17,10 +16,8 @@ export const submissionsTable = definePluginTable(
         formId: col.text({ notNull: true }),
         formSlug: col.text({ notNull: true }),
         data: col.json<Record<string, unknown>>({ notNull: true }),
-        // A short, human-scannable rendering of `data`, computed once at submit
-        // time. The submissions list needs a column an editor can actually read,
-        // and no cell kind can summarise a JSON blob — a plain text cell renders
-        // one as "[object Object]".
+        // A readable rendering of `data` for the list column, computed at
+        // submit time — no cell kind can summarise a JSON blob.
         summary: col.text(),
         meta: col.json<SubmissionMeta>(),
         submittedAt: col.timestamp({ notNull: true, defaultNow: true }),

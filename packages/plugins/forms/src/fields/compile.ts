@@ -1,14 +1,7 @@
 /**
- * Compiles a form's stored `fields` block instances into real core
- * `FieldDefinition`s, so `processFields` (`astromech/fields`) validates
- * submissions through core's own coerce → default → validate pipeline
- * instead of a second, drifting evaluator.
- *
- * Input is untrusted stored JSON (`unknown`) — every step is defensive.
- * The output is deliberately a FLAT list of leaf fields, never containers,
- * because a form submission is a flat map of values: one stored block instance
- * is one value key. That is the shape being modelled, not a limitation of the
- * pipeline (which does recurse into containers).
+ * Compiles a form's stored `fields` block instances into core
+ * `FieldDefinition`s, so submissions validate through core's own pipeline.
+ * Input is untrusted stored JSON, so every step here is defensive.
  */
 
 import type { FieldDefinition, Label, SelectOption, ValidationRule } from 'astromech';
@@ -16,14 +9,9 @@ import * as fields from 'astromech/fields';
 import type { FormFieldKind, StoredFormField } from '../types.js';
 
 /**
- * True for a stored block instance that should be compiled: an enabled object
- * with a usable `name`.
- *
- * "Usable" includes satisfying the core field-path grammar. The form builder
- * rejects a bad `name` on save, but a form stored before that rule existed can
- * still hold one, and a name containing `.`, `[` or `]` cannot be used as an
- * error key — `processFields` throws on it. Skipping the field degrades to a
- * missing question rather than a 500 on every submission.
+ * True for an enabled block instance whose `name` fits the field-path grammar.
+ * A name holding `.`, `[` or `]` cannot be an error key, so skipping it costs
+ * one field rather than 500-ing every submission.
  */
 function isUsable(instance: unknown): instance is StoredFormField {
     if (typeof instance !== 'object' || instance === null) return false;
@@ -32,12 +20,12 @@ function isUsable(instance: unknown): instance is StoredFormField {
     return typeof stored.name === 'string' && fields.isValidFieldName(stored.name);
 }
 
-/** Numeric-only extraction — stored config is untrusted JSON, may hold anything. */
+/** The value if it is a number, else `undefined`. */
 function asNumber(value: unknown): number | undefined {
     return typeof value === 'number' ? value : undefined;
 }
 
-/** `{ label, value }` rows from the `options` repeater, tolerant of malformed entries. */
+/** `{ label, value }` rows from the `options` repeater, skipping malformed ones. */
 function asOptions(value: unknown): SelectOption[] {
     if (!Array.isArray(value)) return [];
     const options: SelectOption[] = [];
@@ -53,10 +41,12 @@ function asOptions(value: unknown): SelectOption[] {
     return options;
 }
 
+/** An `enum` rule constraining a choice field to its declared options. */
 function choiceRules(options: SelectOption[]): ValidationRule[] {
     return options.length > 0 ? [{ enum: options.map((option) => option.value) }] : [];
 }
 
+/** `minLength` / `maxLength` rules, for whichever the author set. */
 function lengthRules(stored: StoredFormField): ValidationRule[] {
     const rules: ValidationRule[] = [];
     const minLength = asNumber(stored.minLength);
@@ -66,6 +56,7 @@ function lengthRules(stored: StoredFormField): ValidationRule[] {
     return rules;
 }
 
+/** `min` / `max` rules, for whichever the author set. */
 function rangeRules(stored: StoredFormField): ValidationRule[] {
     const rules: ValidationRule[] = [];
     const min = asNumber(stored.min);
@@ -77,8 +68,10 @@ function rangeRules(stored: StoredFormField): ValidationRule[] {
 
 type CommonOptions = { label?: Label; required: boolean; description?: Label };
 
-// `exactOptionalPropertyTypes` treats `{ label: undefined }` as distinct from
-// an absent `label` key, so an unusable value must be omitted, not nulled out.
+/**
+ * The label / required / description every kind shares. Unusable values are
+ * omitted rather than set to `undefined`, per `exactOptionalPropertyTypes`.
+ */
 function baseOptions(stored: StoredFormField): CommonOptions {
     const label = typeof stored.label === 'string' ? stored.label : undefined;
     const description =
@@ -90,7 +83,7 @@ function baseOptions(stored: StoredFormField): CommonOptions {
     };
 }
 
-/** Compiles one stored block instance into a leaf `FieldDefinition`, or `null` for an unknown `_type`. */
+/** One block instance as a leaf field, or `null` for an unknown `_type`. */
 function compileOne(stored: StoredFormField): FieldDefinition | null {
     const name = stored.name as string;
     const kind = stored._type as FormFieldKind;
@@ -148,9 +141,8 @@ function compileOne(stored: StoredFormField): FieldDefinition | null {
 }
 
 /**
- * Turns a form's stored `fields` block instances into a flat list of core
- * `FieldDefinition`s. Non-array input, disabled instances, instances without
- * a usable `name`, and unknown `_type`s are all skipped rather than thrown.
+ * A form's stored blocks as a flat list of leaf fields — a submission is a flat
+ * map of values. Anything unusable is skipped rather than thrown.
  */
 export function compileFormFields(stored: unknown): FieldDefinition[] {
     if (!Array.isArray(stored)) return [];
@@ -164,9 +156,8 @@ export function compileFormFields(stored: unknown): FieldDefinition[] {
 }
 
 /**
- * The `name` of the first enabled `email` block on a form, or `undefined` when
- * there is none. Used to resolve the confirmation email's recipient when the
- * form doesn't declare an explicit `confirmToField`.
+ * The `name` of the first enabled `email` block, used as the confirmation
+ * recipient when the form declares no explicit `confirmToField`.
  */
 export function firstEmailFieldName(stored: unknown): string | undefined {
     if (!Array.isArray(stored)) return undefined;

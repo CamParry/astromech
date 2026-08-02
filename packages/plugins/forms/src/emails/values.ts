@@ -27,9 +27,8 @@ export function toValueRows(
     fields: readonly { name: string; label?: unknown }[],
     data: Record<string, unknown>
 ): ValueRow[] {
-    // Order follows `fields`, not `data` — the form's own order is what the
-    // author expects to read. A field absent from `data` still appears,
-    // because `displayValue(undefined)` resolves to the em-dash fallback.
+    // Ordered by `fields`, not `data`, and a field missing from `data` still
+    // appears as the em-dash fallback.
     return fields.map((field) => ({
         label: typeof field.label === 'string' ? field.label : field.name,
         value: displayValue(data[field.name]),

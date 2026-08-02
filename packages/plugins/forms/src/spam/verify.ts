@@ -1,13 +1,7 @@
 /**
- * Verifies a spam-provider token (Turnstile or reCAPTCHA) against the
- * provider's `siteverify` endpoint. Pure network client — no dependency on
- * plugin context, so it can run anywhere `fetch` exists, including a
- * Cloudflare Worker.
- *
- * Fails closed everywhere: a missing token, a non-OK HTTP status, an
- * unparseable body, or a thrown network error all produce `{ ok: false }`.
- * A spam gate that fails OPEN on error is worse than no gate at all — an
- * outage in the provider would otherwise let every submission through.
+ * Verifies a spam-provider token (Turnstile or reCAPTCHA) against the provider's
+ * `siteverify` endpoint. Fails closed on every error path — a missing token, a
+ * bad status, an unparseable body and a network throw all return `ok: false`.
  */
 
 import type { SpamOptions } from '../types.js';
@@ -28,16 +22,19 @@ type SiteverifyResponse = {
     'error-codes'?: unknown;
 };
 
+/** Narrows an unknown response body to the shape the checks below read. */
 function isSiteverifyResponse(value: unknown): value is SiteverifyResponse {
     return typeof value === 'object' && value !== null;
 }
 
+/** The provider's error codes as a comma-separated string, or `undefined`. */
 function formatErrorCodes(body: SiteverifyResponse): string | undefined {
     const codes = body['error-codes'];
     if (!Array.isArray(codes) || codes.length === 0) return undefined;
     return codes.map((code) => String(code)).join(', ');
 }
 
+/** Verify one token against the configured provider. */
 export async function verifySpamToken(
     spam: SpamOptions,
     token: string | undefined,
@@ -60,7 +57,6 @@ export async function verifySpamToken(
             body: params,
         });
     } catch {
-        // Network failure — fail closed, never assume success.
         return { ok: false, reason: 'Verification request failed' };
     }
 
@@ -72,7 +68,6 @@ export async function verifySpamToken(
     try {
         body = await response.json();
     } catch {
-        // Unparseable body — fail closed, never assume success.
         return { ok: false, reason: 'Verification response was not valid JSON' };
     }
 
@@ -91,8 +86,7 @@ export async function verifySpamToken(
         };
     }
 
-    // reCAPTCHA v3 carries a numeric `score`; v2 and Turnstile don't, and pass
-    // on `success` alone.
+    // reCAPTCHA v3 carries a numeric `score`; v2 and Turnstile pass on `success`.
     if (spam.provider === 'recaptcha' && typeof body.score === 'number') {
         const minScore = spam.minScore ?? DEFAULT_MIN_SCORE;
         if (body.score < minScore) {

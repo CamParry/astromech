@@ -1,10 +1,7 @@
 /**
  * @astromech/forms — forms with runtime-composed fields, a public submission
- * API, and spam protection. The `form` entry type lets an editor compose
- * fields through the standard blocks editor; the `submission` entry type
- * stores what gets posted. Frontend rendering is the site's own — the plugin
- * exposes data and accepts submissions, following the `@astromech/redirects`
- * precedent.
+ * API, and spam protection. An editor composes a `form` entry's fields in the
+ * blocks editor; a `submission` entry stores what gets posted.
  */
 
 import { definePlugin, withDefaults } from 'astromech';
@@ -58,9 +55,8 @@ export const forms = definePlugin((options?: FormsOptions) => {
         entries: [formEntryType, submissionEntryType],
         service: buildFormsService({ storeMeta, spam }),
         hookEvents: ['forms:beforeSubmit', 'forms:afterSubmit'],
-        // The built-in providers subscribe through the same public extension
-        // point a third party would — no privileged path. Registered only when
-        // the site configured one, so an unconfigured install has no gate.
+        // Registered through the same public extension point a third party
+        // would use, and only when the site configured a provider.
         ...(spam !== undefined && { hooks: [spamHook(spam)] }),
     };
 });

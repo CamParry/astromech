@@ -1,12 +1,7 @@
 /**
- * The package name, as a literal.
- *
- * Identity is declared in `index.ts` alongside the rest of the definition;
- * this const exists only because `definePluginTable` needs the package as a
- * *type* to derive `plugin_forms_*` table names for `PluginDB`, and a value
- * inside the definition can't reach a module-scope descriptor. It is the one
- * thing in this package that names its identity outside `index.ts` — keep it
- * that way.
+ * The package name as a literal, needed because `definePluginTable` takes it as
+ * a *type* to derive `plugin_forms_*` names. Identity itself is declared in
+ * `index.ts`; keep this the only other place naming it.
  */
 export const FORMS_PACKAGE = '@astromech/forms';
 
@@ -49,11 +44,8 @@ export type FormFieldKind = (typeof FORM_FIELD_KINDS)[number];
 
 /**
  * Tolerant shape of one stored `fields` block instance on a `form` entry.
- *
- * `_type`, `_id` and `_disabled` are core's reserved block-instance keys (the
- * author-side block schema uses `type` instead); everything else is the
- * author's per-kind config. Values are typed `unknown` because this is
- * untrusted stored JSON — callers narrow per `_type` before use.
+ * `_type`, `_id` and `_disabled` are core's reserved keys; the rest is per-kind
+ * author config. Everything is `unknown` — callers narrow on `_type` first.
  */
 export type StoredFormField = {
     _type?: unknown;
@@ -75,10 +67,8 @@ export type StoredFormField = {
 };
 
 /**
- * Request metadata stored alongside a submission. Optionals carry `| undefined`
- * so the Zod schema that publishes this shape to the method manifest describes
- * it exactly — `.optional()` always widens, and `exactOptionalPropertyTypes`
- * treats the two as different types.
+ * Request metadata stored alongside a submission. Explicit `| undefined` to
+ * match what the published Zod schema's `.optional()` widens to.
  */
 export type SubmissionMeta = {
     ip?: string | undefined;

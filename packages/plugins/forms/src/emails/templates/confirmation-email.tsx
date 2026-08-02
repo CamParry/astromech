@@ -10,6 +10,7 @@ export type ConfirmationEmailProps = {
     rows?: ValueRow[];
 };
 
+/** The submitter's copy: the author's body, then what they sent. */
 export function ConfirmationEmail({
     formTitle,
     bodyHtml,
@@ -18,9 +19,8 @@ export function ConfirmationEmail({
     return (
         <BaseLayout preview={`Thanks for your submission — ${formTitle}`}>
             {bodyHtml !== undefined ? (
-                // The sanitization boundary is core's `renderRichText` (see
-                // `entries/visibility.ts`). No unsanitized string may ever be
-                // passed to `bodyHtml` — that is the whole contract of this prop.
+                // `bodyHtml` takes `renderRichText` output only — it is the
+                // sanitization boundary for this prop.
                 <div
                     style={{ margin: '0 0 16px' }}
                     dangerouslySetInnerHTML={{ __html: bodyHtml }}
