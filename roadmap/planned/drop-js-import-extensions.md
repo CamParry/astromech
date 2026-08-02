@@ -33,8 +33,8 @@ must already be the emitted path. We are not in that case:
 
 - Roughly a 1400-line mechanical diff. Land it on its own branch, in one commit, when no
   other large refactor is mid-flight — it will conflict with anything touching imports
-  (currently: table-definition-system, entries-module-reshape, ai-integration,
-  field-validation). **Do this after those land, not before.**
+  (currently: entries-module-reshape, ai-integration — table-definition-system and
+  field-validation have since landed). **Do this after those land, not before.**
 - The one thing the extensions preserve is portability to a tsc-emitted `nodenext` build.
   That is not the plan (tsup is the build), so this is an accepted trade.
 - Alternative considered and rejected: TS 5.7+'s `rewriteRelativeImportExtensions` (write

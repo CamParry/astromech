@@ -157,9 +157,9 @@ Plugins access platform resources through two sanctioned, plugin-scoped handles 
 
 Migrations are an **app artifact**, not a core artifact. Core ships schema definitions and types; it does not ship migration files.
 
-- `astromech db:generate` — diffs the core `defineTable` descriptors (`CORE_TABLES`) against the app's `migrations/snapshot.json` (a homegrown snapshot/diff generator, not drizzle-kit — see `src/database/{diff,generator,migration-render}.ts`) and, if anything changed, writes a new `NNNN_<name>.ts` migration + regenerates `migrations/index.ts`'s static `MigrationProvider`. Output lands in the **app's** `migrations/` folder (e.g. `apps/demo/migrations/`). No-op prints "no changes" — this doubles as a CI drift gate.
+- `astromech db:generate` — diffs the core `defineTable` descriptors (`CORE_TABLES`) against the app's `migrations/snapshot.json` (a homegrown snapshot/diff generator, not drizzle-kit — see `@astromech/schema-engine` for the engine and `src/database/generate.ts` for the descriptor-facing wrapper) and, if anything changed, writes a new `NNNN_<name>.ts` migration + regenerates `migrations/index.ts`'s static `MigrationProvider`. Output lands in the **app's** `migrations/` folder (e.g. `apps/demo/migrations/`). No-op prints "no changes" — this doubles as a CI drift gate.
 - `astromech db:init` / `runMigrations` — resolve migrations from the **app cwd's** `./migrations/index.ts`, not the core package folder, and apply them via Kysely's `Migrator`.
-- Plugin-owned tables are not yet generated for (single-scope core generation only) — see `roadmap/in-progress/table-definition-system.md`.
+- `astromech plugin:generate` — run from inside a **plugin package**: diffs that plugin's `definePluginTable` descriptors against its own `migrations/snapshot.json` and writes into the plugin's own `migrations/` directory. `db:generate` covers `CORE_TABLES` only; the app merges the two chains via `mergeMigrationProviders`.
 
 The app owns its migration history. Adding a plugin, running `db:generate`, and committing the new migration files is the full workflow.
 

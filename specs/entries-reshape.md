@@ -4,7 +4,7 @@
 operations-per-file split, de-repository. Layers 2–3 sketched, not started, and
 will evolve.
 **Touches (Layer 1):** `packages/astromech/src/entries/**`, `packages/astromech/src/database/{repositories→storage}/**`, `packages/astromech/src/utilities/`.
-**Related roadmap:** `in-progress/unified-admin-pages.md` (the Layer 2 admin contract), `planned/additional-database-drivers.md` (the Layer 3 adapter), `planned/relationships-model.md` (populate lives here — it absorbed the former `populate-and-complex-field-data-model.md`).
+**Related roadmap:** `completed/unified-admin-pages.md` (the Layer 2 admin contract), `planned/additional-database-drivers.md` (the Layer 3 adapter), `planned/relationships-model.md` (populate lives here — it absorbed the former `populate-and-complex-field-data-model.md`).
 **Related memories:** `project_modular_architecture.md`, `project_forward_versioning.md`, `tableStorage omits type`, `dep-cruiser self-import → src`.
 
 > This is the **testing ground** for module organisation. Whatever lands here becomes the template applied to `media`, `users`, `settings`. Get it right here first.
@@ -119,7 +119,7 @@ database/
 
 **Layer 1 — Reshape (this spec's actionable scope).** Pure relocation + decomposition + de-repository. Single DB. **Zero behaviour change** — existing tests stay green throughout.
 
-**Layer 2 — Split.** Hoist the table kit entirely out of `entries/`; migrate the redirects plugin onto it; collapse entries to one storage (delete `table.ts` divergence, `registry.ts` simplifies); `capabilities` → `supports` as behaviour/UI flags; build the composable admin contract `{ data methods + column shape + supports }` and refactor admin pages to consume it for both entries and tables. Connects to `roadmap/in-progress/unified-admin-pages.md`.
+**Layer 2 — Split.** Hoist the table kit entirely out of `entries/`; migrate the redirects plugin onto it; collapse entries to one storage (delete `table.ts` divergence, `registry.ts` simplifies); `capabilities` → `supports` as behaviour/UI flags; build the composable admin contract `{ data methods + column shape + supports }` and refactor admin pages to consume it for both entries and tables. Connects to `roadmap/completed/unified-admin-pages.md`.
 
 **Layer 3 — Adapter.** Design `getStorage()` + the adapter granularity; add Postgres. **Opens with research** (see §7). Connects to `roadmap/planned/additional-database-drivers.md`.
 

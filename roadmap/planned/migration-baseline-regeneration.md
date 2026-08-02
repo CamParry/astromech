@@ -53,7 +53,7 @@ more than a dozen lines to patch.
 
 ## Related
 
-- `roadmap/in-progress/table-definition-system.md` — the generator this extends.
+- `roadmap/completed/table-definition-system.md` — the generator this extends.
 - `apps/docs/data/migrations.md` — the hand-authored-ops escape hatch, which
   solves the adjacent problem (transitions the differ refuses) and deliberately
   does **not** solve this one: ops append a migration, they don't rewrite one.

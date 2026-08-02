@@ -2,9 +2,22 @@
 
 Replace Drizzle ORM with a homegrown schema toolkit + thin row codec over Kysely. Owns `defineTable`, a homegrown state-based migration generator, a per-column runtime codec, and the Kysely connection/types. NOT an ORM — raw Kysely stays the query layer.
 
+**Shipped 2026-08-03** — steps 1–7 all merged to `main`; `drizzle-orm` is gone
+from every `package.json`, `defineTable` owns the 9 core tables, and
+`db:generate`/`db:init`/`plugin:generate`/`plugin:purge` all run off descriptors.
+Two remainders are tracked in their own files, not here:
+`planned/migration-baseline-regeneration.md` (`db:rebaseline`) and
+`completed/data-layer-storage-api.md` (the storage wrapper).
+
 **Design spec:** `specs/data-layer.md` (full locked decisions). This file tracks status only.
 
 Feature 2 (the ergonomic `findOne`/`findMany`/`populate` storage wrapper) is split off → `data-layer-storage-api.md`.
+
+The step-3/4 emit and diff modules named below were later extracted to the
+`@astromech/schema-engine` package (`ddl.ts`, `diff.ts`, `render.ts`,
+`generate.ts`); `database/generate.ts` is the descriptor-facing wrapper that
+remains in core. The `database/*` paths in those steps are where the code landed
+at the time, not where it lives now.
 
 ## Sequence (strictly ordered; each step stays green)
 
@@ -74,7 +87,6 @@ Follow-ups from step 6's judgment calls.
     - **Narrowed by** §2d: `Astromech.plugins.<key>.entries` and the per-plugin HTTP entries mount are deleted. The `<key>` segment survives for service methods only; plugin entry types are addressed through the root entries surface by their qualified id, with the `plugin:<ns>:entry:<type>:<action>` permission derived from that id.
 - [x] `db:generate --ops <file>` — hand-authored ops for transitions the differ refuses, with every artefact (SQL, journal, snapshot, index) still machine-written; warns when the differ could have coped
 - [x] `apps/docs/data/migrations.md` documents generation, the refusals, and the escape hatch
-- [ ] Baseline regeneration → `roadmap/planned/migration-baseline-regeneration.md` (deferred; renderer changes still need a hand-edit until then)
 
 ## Open specifics (see spec §9)
 
@@ -82,5 +94,6 @@ Follow-ups from step 6's judgment calls.
 
 ## Deferred
 
+- Baseline regeneration (`db:rebaseline`) → `planned/migration-baseline-regeneration.md`. Until it lands, a change to the DDL **renderer** still needs a hand-edit of `apps/demo/migrations/0000_baseline.ts`
 - Postgres driver → `additional-database-drivers.md`
 - Relationships / content-field data model → `planned/relationships-model.md` (supersedes spec §8's sketch)

@@ -4,6 +4,12 @@ Collapse `defineSettingsPage` (app) and `defineAdminPage` (plugin) into **one pa
 form optional** — host + plugins author with the same `defineAdminPage`, rendered by one
 shared `SettingsPageForm`.
 
+**Shipped 2026-08-03** — `defineSettingsPage`, `AppAdminPage`, `PluginPage`,
+`PluginSettingsSchema` and `PluginSettingsPage` are all gone from the codebase;
+`page/$.tsx` and `plugin/$.tsx` both render `SettingsPageForm`. The one open
+question — composing a managed form _and_ custom widgets on one page — is
+additive to the shipped `AdminPage` type and now sits in `roadmap/backlog.md`.
+
 `plugin-authoring-experience.md` §2a keeps this premise and generalises it: one
 helper, named for what it does rather than who calls it, with core namespacing
 plugin registrations at assembly. It adds no enforcement of namespaced `path`
@@ -15,4 +21,3 @@ values — a plugin declares a bare `path` and core mounts it at
 - [x] Plugin settings forms move from the flat `PluginSettingsSchema` to the full `EntryFields` tree (gain sections/tabs/sidebar)
 - [x] Host pages gain the custom-`component` escape hatch (extend the plugin-components codegen to scan host `admin.pages`)
 - [x] Remove `defineSettingsPage`; migrate demo Globals page + all plugin pages (`settings:` → `fields:`)
-- [ ] **Investigate composition** (future) — one page rendering **both** a managed form and custom widgets (Sanity-style view tabs, or a custom component mounting managed form regions via a `useSettingsForm` hook). XOR ships first; keep the `AdminPage` type open so this is additive

@@ -7,7 +7,7 @@ the `@astromech/schema-engine` extraction. What remains: the storage-wrapper
 dialect seam, #9 discovery). v1 is **SQLite-only** — Postgres is a future major.
 **Supersedes:** the data-layer parts of `project_data_layer_architecture` memory + `/tmp/astromech-data-layer-handoff.md` + `/tmp/astromech-definetable-handoff.md` (this is the consolidated, current source of truth).
 **Touches:** `packages/astromech/src/database/**`, every `*/storage/*.ts`, `media/service.ts`, `cron/runner.ts`, `transport/cli/commands/db-*.ts`, `apps/demo/migrations/**`, plugin schema files under `packages/plugins/*`.
-**Related roadmap:** `in-progress/table-definition-system.md` (Feature 1 — steps 1–7 shipped), `planned/data-layer-storage-api.md` (Feature 2 — shelved), `planned/additional-database-drivers.md` (Postgres adapter slots in), `planned/relationships-model.md` (content relationships — separate mechanism from `col.reference`), `in-progress/entries-module-reshape.md` (storage pattern this builds on).
+**Related roadmap:** `completed/table-definition-system.md` (Feature 1 — steps 1–7 shipped), `completed/data-layer-storage-api.md` (Feature 2), `planned/additional-database-drivers.md` (Postgres adapter slots in), `planned/relationships-model.md` (content relationships — separate mechanism from `col.reference`), `in-progress/entries-module-reshape.md` (storage pattern this builds on).
 **Related memories:** `project_data_layer_architecture`, `project_modular_architecture`, `project_entries_reshape`, `app-owned migrations`, `drizzle migration ordering`, `test tx :memory: poison`, `domain barrel browser boundary`.
 
 > Specs are ephemeral (in-flight designs only). Delete this once the work ships; don't link to it from durable docs/code.
