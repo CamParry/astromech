@@ -74,6 +74,16 @@ Querying a non-promoted field must throw naming the field path and the command t
 silently full-scan. On D1 an unindexed scan is billed per row read against a single-threaded
 database, so a silent slow success is materially worse than an error.
 
+## Also waiting on this
+
+- [ ] **Indexed field uniqueness.** `{ unique: true }` resolves to `ScopedReads.isUnique`, which
+      today scans candidate rows in memory (`entries/reads.ts`). It wants exactly the mechanism
+      above — a promoted column with an index — so it moved here from the field-validation
+      roadmap rather than committing to a second, bespoke JSON-index strategy first. Note the
+      uniqueness scan has an extra constraint the query case doesn't: built-in storage's `list`
+      filters `stagedFor IS NULL`, so staged rows are invisible to it, and any indexed
+      replacement has to decide deliberately whether to keep that.
+
 ## Open questions
 
 - [ ] **D1's 100-column-per-table cap.** `entries` is one shared polymorphic table, so promoted

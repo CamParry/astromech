@@ -95,6 +95,37 @@ Field types that bring their own validator: `url`, `email`, `json`,
 `key-value`, and `blocks` (which rejects an undeclared block type). `slug`
 normalizes its value but does not reject one.
 
+## Warnings
+
+A rule can be advisory instead of blocking:
+
+```ts
+fields.text('title', {
+    label: 'Title',
+    validation: [
+        { maxLength: 60, severity: 'warning' }, // flagged, still saves
+        { maxLength: 200 }, // blocks
+    ],
+}),
+```
+
+`severity` defaults to `'error'`. A `'warning'` shows in the editor and the
+write goes through — it never reaches the 422.
+
+A field reports at most one error **and** at most one warning, each the first of
+its kind in declaration order. An error supersedes a warning in the UI: they are
+never shown together, and the warning reappears once the error is fixed.
+
+Three things are always errors and cannot be softened: `required`, a container's
+`min`/`max` item counts, and a field type's own validator. Completeness and type
+validity are not matters of taste.
+
+> Warnings are an **editor** feature. The server does not evaluate them at all —
+> not "evaluates and discards", genuinely skips. A rule that needs a database
+> read costs nothing when nobody is looking at it. The practical consequence is
+> that `{ unique: true, severity: 'warning' }` never fires, because the browser
+> has no way to answer it.
+
 ## Custom validators
 
 `custom` is an imperative validator. It is async, it receives the full
@@ -123,6 +154,55 @@ rules), `field`, `path`, `operation` (`'create'` or `'update'`), `stage`
 `values` is scoped to the field's own container, not the whole record — a rule
 on a field inside a repeater item sees that item's siblings.
 
+> **Known limitation.** `custom` does not currently run under `astro dev` or
+> `astro build`. The server's config is serialized to JSON before it reaches the
+> running server, which turns `{ custom: fn }` into an empty rule — silently. It
+> does work through the CLI. Until that is fixed, do not rely on `custom` as a
+> data-integrity guarantee. See `roadmap/planned/config-functions-reach-the-server.md`.
+
+## Whole-document validation
+
+Some rules belong to no single field — "an event's end date must follow its
+start", "supply at least one contact method". Declare a `validate` on the entry
+type (or on `media`, `users`, or a settings page):
+
+```ts
+entries: {
+    event: {
+        single: 'Event',
+        plural: 'Events',
+        fields: [...],
+        validate: async ({ values }) => {
+            if (values.startsAt > values.endsAt) {
+                return { endsAt: 'Must be after the start date' };
+            }
+            if (!values.email && !values.phone) {
+                return 'Provide either an email address or a phone number';
+            }
+            return null;
+        },
+    },
+},
+```
+
+Return an **object** to attach messages to fields by path — the same
+`_id`-segmented paths described below, so a nested field works too. Return a
+**string** for a form-level message that belongs to the document as a whole;
+those render in an alert above the form rather than against a field. Return
+`null` or `undefined` when there is nothing to report.
+
+Every path must return explicitly, as with `custom`'s `return true`. A body that
+just falls off the end is a `void` return and will not type-check.
+
+It runs after every field, over the coerced values, and it runs **whether or not
+the fields reported** — so one submit surfaces cross-field and per-field problems
+together instead of one round at a time. Those values may therefore have failed
+their own validation; guard accordingly. If a field already reported an error on
+a key you also target, the field's own message wins.
+
+Like `custom`, it is a function and so server-only — it never runs in the
+browser.
+
 ## What runs in the browser
 
 The admin runs the same pipeline over the same field definitions. There is no
@@ -134,11 +214,14 @@ check is declarative:
 
 - **`unique`** needs a database read the browser cannot make. Skipped in
   silence — no "checking…" state. The server runs it on submit.
-- **`custom`** is a function. The admin config is serialized as JSON to reach
-  the browser, which strips it. Server-only, and not by choice.
+- **`custom`** and the document-level **`validate`** are functions. The admin
+  config is serialized as JSON to reach the browser, which strips them.
+  Server-only, and not by choice.
 - **Everything else runs**, including the type-intrinsic validators like `url`
   and `email`. Those are imperative but pure, and they are the checks an author
   trips over most.
+- **Warnings run here and only here.** They are advisory, so the server has no
+  use for them.
 
 The server remains authoritative. Client-side validation is a faster answer to
 the same question, never the only answer.
@@ -191,10 +274,16 @@ same map of path to messages:
 The map's values are arrays because that is the wire shape, but the pipeline
 short-circuits, so each one carries a single message.
 
+A document-level message travels alongside them as `details.form`, an array of
+strings. The key is omitted entirely when there are none, so a response with
+only field errors looks exactly as it always has.
+
 ## Accessibility
 
 A field's error is associated with its control through `aria-invalid` and
-`aria-describedby`, present for as long as the error is. It is deliberately
+`aria-describedby`, present for as long as the error is. A **warning** sets
+`aria-describedby` but deliberately not `aria-invalid` — the value is not
+invalid, and marking it so would misreport the field to a screen reader. It is deliberately
 **not** a live region: an assertive one clips the name of the field the author
 just tabbed to, and a polite one reads the previous field's error after the new
 field's name. Announcement is left to the submit-time toast, where one message
