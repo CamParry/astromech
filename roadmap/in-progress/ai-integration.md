@@ -26,8 +26,8 @@ Fix before building on top. All four are refactors that _delete_ code and shrink
 the rest; nothing is deployed, so this is the cheapest moment. Full detail with
 file references in the spec.
 
-**P0a, P0, P1 and P2 landed.** The audit's counts were stale: the manifest was
-83 methods at P0, not 71, and is 145 after P1. P3 is next.
+**P0a, P0, P1, P2 and P3 landed.** The audit's counts were stale: the manifest
+was 83 methods at P0, not 71, and is 145 after P1. P4 is next.
 
 - [x] **P0a — normalise every service method to a parameter object.** Shipped
       2026-07-31 (`934f1d0`). `update` takes a nested `data` (`update({id, data})`)
@@ -132,18 +132,36 @@ file references in the spec.
       building the preceding commit in-tree and diffing — 185,508 bytes,
       identical. The artefact in a stale checkout is NOT a valid baseline; it was
       pre-P1 and made the first comparison meaningless.
-- [ ] **P3 — reduction, then the confirm gate.** Reframed 2026-08-02 after
-      researching how vendors with sensitive data actually handle this. A
-      stateless gate cannot tell a human's approval from a caller fabricating
-      one, so it is a runaway-loop brake, not a boundary — and the axis is not
-      stateless vs stateful but which channel the approval arrives on, which the
-      access point decides.
-    - **Layer 1, highest value: a reduced tool surface.** `--read-only` as a
-      strict filter that overrides an explicit include (GitHub's semantics;
-      Stripe ships the same flag). This is the convergent industry lever and the
-      one we lacked. Cheap now that `mutates` is on every descriptor.
-    - **Layer 2: the stateless MRTR gate** for MCP/CLI, where the human really is
-      in the client. Trigger is a predicate with presets, not a hardcoded rule.
+- [x] **P3 — reduction, then the confirm gate.** Shipped 2026-08-02 (`617ef01`,
+      `aaf4942`). Reframed first, after researching how vendors with sensitive
+      data actually handle this. A stateless gate cannot tell a human's approval
+      from a caller fabricating one, so it is a runaway-loop brake, not a
+      boundary — and the axis is not stateless vs stateful but which channel the
+      approval arrives on, which the access point decides.
+    - **Layer 1, highest value: a reduced tool surface.** `--read-only`,
+      `--include`, `--exclude` in `policies/tool-surface.ts`, applied by both
+      `methods` and `mcp`. `readOnly` overrides an explicit include (GitHub's
+      semantics, copied deliberately including the part that looks like a bug).
+      The reduction is STRUCTURAL where `readOnlyHint` is advisory: an excluded
+      method gets no dispatch entry at all. Verified over live stdio, not only
+      in unit tests — `entries_post_publish` reaches the service on the full
+      surface and returns `Unknown tool` under `--read-only`. Demo: 145 methods
+      / 100 mutating → 45 / **0**; `--read-only --include users.create` → 0.
+    - **Layer 2: the stateless MRTR gate** (`policies/confirm-gate.ts`), pure and
+      dispatch-level, keeping no state anywhere. Trigger is a predicate with
+      `mutating`/`destructive` presets. **Off by default** — an MCP client
+      already prompts before running a tool, so gating by default double-prompts
+      for no added safety; `--confirm` is for callers that aren't a prompting
+      client, chiefly P7's tool-loop. Live stdio: no `_confirm` →
+      `input_required`, `decline` → `declined`, `cancel` → `cancelled`, garbage
+      → `input_required` (fails closed), `accept` → reaches the service.
+    - Two things the gate had to get right. The manifest emits
+      `additionalProperties: false`, so a gated tool must **advertise `_confirm`
+      in its published schema** or it publishes one forbidding the only argument
+      that can unblock it. And the invoke is wrapped even when the gate is OFF,
+      purely so `_confirm` is always stripped — a stray one must never reach a
+      Zod schema that rejects unknown keys, or a method with a loose `fields`
+      record that would store it.
     - **Layer 3: no new mechanism.** Staged entries + preview tokens already ARE
       MCP's URL mode — stage server-side, human opens the preview in admin, merge
       runs as an authenticated admin action. Content ops route through it at P5;
@@ -151,8 +169,11 @@ file references in the spec.
     - A signed nonce was considered and REJECTED: it proves a round-trip
       happened, not that anyone saw it, while carrying the state cost of the
       thing that would.
-    - Preview tokens never expire today; the gate hands out preview links, so a
-      default TTL lands here.
+    - Bug found and fixed in passing: **preview tokens never expired.** `isValid`
+      treats a null `expiresAt` as "forever" and the operation passed null
+      whenever the caller said nothing, so every token ever issued was still
+      valid. Defaults to 7 days now; an explicit `null` still means forever, but
+      has to be asked for rather than being what everyone silently got.
 - [ ] **P4 — wire-safe read-shape contract.** The existing write-back guard is a
       non-enumerable `Symbol` brand, so it cannot survive JSON and cannot protect
       the agent path. Carry the shape in the payload for wire crossings.
