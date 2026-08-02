@@ -27,7 +27,9 @@ the rest; nothing is deployed, so this is the cheapest moment. Full detail with
 file references in the spec.
 
 **P0a, P0, P1, P2 and P3 landed.** The audit's counts were stale: the manifest
-was 83 methods at P0, not 71, and is 145 after P1. P4 is next.
+was 83 methods at P0, not 71, and is 145 after P1. **P4 is parked** behind the
+across-the-board field-validation work — most of it turns out to be ordinary
+input validation, so the sequence continues at P5.
 
 - [x] **P0a — normalise every service method to a parameter object.** Shipped
       2026-07-31 (`934f1d0`). `update` takes a nested `data` (`update({id, data})`)
@@ -174,9 +176,49 @@ was 83 methods at P0, not 71, and is 145 after P1. P4 is next.
       whenever the caller said nothing, so every token ever issued was still
       valid. Defaults to 7 days now; an explicit `null` still means forever, but
       has to be asked for rather than being what everyone silently got.
-- [ ] **P4 — wire-safe read-shape contract.** The existing write-back guard is a
-      non-enumerable `Symbol` brand, so it cannot survive JSON and cannot protect
-      the agent path. Carry the shape in the payload for wire crossings.
+- [ ] **P4 — wire-safe read-shape contract. PARKED 2026-08-02**, pending the
+      across-the-board field-validation work, then re-scope against whatever gaps
+      remain. Design settled and the substrate surveyed; nothing built.
+    - **The guard has never worked anywhere**, which is a bigger finding than the
+      audit's "it cannot cross the wire". `markPublic` brands the **Entry**;
+      `create`/`update` check `isPublicBranded(params.fields)` — a different
+      object, since `applyVisibility` returns `{...entry, fields: cleanFields}`.
+      So `update({data: {fields: entry.fields}})` sails through in-process. The
+      existing tests brand a bare object and pass it directly, exercising the
+      helper and never the path.
+    - **The damage is real.** `fields` is a whole-blob column replacement —
+      `updateOne` forwards it to `storage.update` with no merge against
+      `currentEntry.fields`. A public-shape write-back permanently drops every
+      `private: true` field and every `_disabled` item.
+    - **Separate stored-content gap, independent of the shape question:** the
+      rich-text `allow` list is enforced only at RENDER (`renderRichText`
+      sanitizes on the way out). `richtext` is `{name, type, ...options}` with no
+      validator, so any node type can be stored and a `full` read returns it raw.
+    - **Research conclusion — no one solves this with a payload marker.** Two
+      structural levers converge instead. (1) _The write shape differs from the
+      read shape_: WordPress returns `content.rendered` in `context=view` and
+      makes only `content.raw` writable, so writing back a view response is a
+      type error, not silent corruption; GraphQL separates input from output
+      types; Contentful splits CDA and CMA into different products. (2) _Writes
+      merge by declared intent rather than replace_: Kubernetes hit this exact
+      bug — client-side apply deleted fields the client never knew about — and
+      fixed it with Server-Side Apply + `managedFields`, not with markers.
+      `FieldMask` and JSON:API PATCH are the same lever. Astromech has neither.
+    - **Direction agreed:** validation on the way in carries the load; an
+      entry-level `_shape` key is a diagnostic only and must not do the
+      enforcing. Rich text should accept only a valid ProseMirror document for
+      its `allow` list and reject a string outright.
+    - **Trap for whoever builds it:** `Node.fromJSON` does NOT validate nested
+      content rules — it deserializes unsupported content happily. Validation is
+      `Node.fromJSON(schema, doc)` followed by `.check()`. `@tiptap/pm` and
+      `getSchema` are already dependencies; no new packages needed.
+    - **Open question, deliberately not decided:** whether `update` keeps
+      replacing the whole `fields` blob. Validation cannot catch a public read
+      that dropped a `private: true` **text** field — same type, same shape as a
+      deliberate clear — so a write-back still deletes it silently. Merge-by-
+      intent is the only thing that closes it, and it changes what "set `fields`"
+      means everywhere: clearing a field would need an explicit null rather than
+      an omission.
 
 ## Then
 
