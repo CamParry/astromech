@@ -26,10 +26,11 @@ Fix before building on top. All four are refactors that _delete_ code and shrink
 the rest; nothing is deployed, so this is the cheapest moment. Full detail with
 file references in the spec.
 
-**P0a, P0, P1, P2 and P3 landed.** The audit's counts were stale: the manifest
-was 83 methods at P0, not 71, and is 145 after P1. **P4 is unparked and half
-shipped** — its validation half rode along with the field-validation work that
-was blocking it (`221989a`); one item remains, PATCH-only `update`.
+**The foundation is complete — P0a, P0, P1, P2, P3 and both halves of P4 have
+landed.** The audit's counts were stale: the manifest was 83 methods at P0, not
+71, and is 145 after P1. P4 was unparked when the field-validation work that
+blocked it carried its validation half along (`221989a`); the PATCH-only half
+followed on 2026-08-03. Next is P5.
 
 - [x] **P0a — normalise every service method to a parameter object.** Shipped
       2026-07-31 (`934f1d0`). `update` takes a nested `data` (`update({id, data})`)
@@ -207,64 +208,60 @@ was blocking it (`221989a`); one item remains, PATCH-only `update`.
       `full` write is a compile error.
     - The `_shape` key stays a diagnostic and must not do the enforcing — that
       was the direction, and it held.
-- [ ] **P4b — `update` becomes PATCH-only (lever 2).** DECIDED 2026-08-02, still
-      not built; verified against `entries/operations/update.ts` on 2026-08-03,
-      which still forwards `fields` to `storage.update` whole-blob. This is the
+- [x] **P4b — `update` becomes PATCH-only (lever 2).** Shipped 2026-08-03. The
       half that catches the _indistinguishable_ cases: a dropped `private: true`
       **text** field is simply absent from a patch, so it survives. P4a and P4b
-      were always a pair — P4a alone leaves the class open.
-    - **The damage is real.** `fields` is a whole-blob column replacement —
-      `updateOne` forwards it to `storage.update` with no merge against
-      `currentEntry.fields`. A public-shape write-back permanently drops every
-      `private: true` field and every `_disabled` item.
-    - **The runtime guard has never worked anywhere** (re-verified 2026-08-03),
-      which is a bigger finding than the audit's "it cannot cross the wire".
-      `markPublic` brands the **Entry** (`operations/get.ts`); `create`/`update`
-      check `isPublicBranded(params.data.fields)` — a different object. So
-      `update({data: {fields: entry.fields}})` sails through in-process. The
-      existing tests brand a bare object and pass it directly, exercising the
-      helper and never the path. Merge is what makes this near-vestigial; fixing
-      the brand in isolation would be defending a door in a wall that isn't there.
-    - The API already claims patch semantics and fails to honour them one level down:
-      top-level columns treat `undefined` as "leave alone", but `fields` is a
-      single JSON column, so `update({data: {fields: {a: 1}}})` deletes every
-      other field while `update({data: {title: 'x'}})` leaves them be. That
-      inconsistency is the real trap; the public/full shape mismatch is just the
+      were always a pair — P4a alone leaves the class open. - The API already claimed patch semantics and failed to honour them one level
+      down: top-level columns treat `undefined` as "leave alone", but `fields` is
+      a single JSON column, so `update({data: {fields: {a: 1}}})` deleted every
+      other field while `update({data: {title: 'x'}})` left them be. That
+      inconsistency was the real trap; the public/full shape mismatch is just the
       case that makes it visible. It also fixes the precondition — PUT requires
       the caller to know the complete current state, which is unreasonable for
-      any caller and impossible for one holding a projection.
-    - The four semantics, settled:
-        1. **Patch at the root field level and the root table level only.** No
-           deeply nested patching — it gets complex fast and becomes a pain when
-           you genuinely do want to remove something.
-        2. **Arrays are atomic values**, replaced wholesale (repeaters, blocks,
-           trees). Index-wise merging is ambiguous; RFC 7396 replaces arrays for
-           the same reason. Editing one item in ten still means sending ten —
-           which is where P5's content operations should own the edit anyway.
-        3. **`null` is a legitimate stored value, not a delete.** The schema is
-           predefined, so the key set is fixed and dropping a key is the wrong
-           idea. Absent means "leave alone"; explicit `null` means "store null",
-           allowed as long as the field is not required. NOT RFC 7396 semantics,
-           deliberately.
-        4. **Validation runs against the merged result**, or a small patch fails
-           completeness checks it should never have been subject to.
-    - Refinement on (4): **coerce the patch, validate the merged.** Running the
-      whole pipeline on the merged result re-coerces untouched fields on every
-      write, and coercion is not guaranteed idempotent (`slug`, `email`, `url`
-      and `key-value` all have coercers), so a non-idempotent one would silently
-      rewrite data the caller never mentioned.
-    - Consequence to handle: merge surrenders the one thing full-replace gave
-      free — **orphaned keys**. Data left by a field since removed from the schema
-      is cleared by the next write today; under merge it survives indefinitely.
-      Projecting the merged result through the schema before writing cleans them
-      on next write with no separate purge. Check whether `processFields` already
-      drops unknown keys — that decides whether this is free.
-    - `exactOptionalPropertyTypes: true` is already on, so
-      absent/`undefined`/`null` stay distinguishable at the type level; the
-      distinction needs no encoding tricks to survive.
-    - Check before building, do not assume: whether anything currently clears
-      fields by omission. The admin form submits every field, so it is likely a
-      no-op there, but it would fail silently.
+      any caller and impossible for one holding a projection. - The four semantics, settled and built: 1. **Patch at the root field level and the root table level only.** No
+      deeply nested patching — it gets complex fast and becomes a pain when
+      you genuinely do want to remove something. 2. **Arrays are atomic values**, replaced wholesale (repeaters, blocks,
+      trees). Index-wise merging is ambiguous; RFC 7396 replaces arrays for
+      the same reason. Editing one item in ten still means sending ten —
+      which is where P5's content operations should own the edit anyway. 3. **`null` is a legitimate stored value, not a delete.** The schema is
+      predefined, so the key set is fixed and dropping a key is the wrong
+      idea. Absent means "leave alone"; explicit `null` means "store null",
+      allowed as long as the field is not required. NOT RFC 7396 semantics,
+      deliberately. 4. **Validation runs against the merged result**, or a small patch fails
+      completeness checks it should never have been subject to. Refined to
+      **coerce the patch, validate the merged**: coercion is not guaranteed
+      idempotent, so re-running it over untouched values would rewrite data
+      the caller never mentioned. `processFields` gained `coerceOnly` — the
+      root names a patch carries; coercion runs for those and their subtrees
+      only, while defaults, `children()` normalization and validation still
+      see the whole merged document. - **The same defect was in `users.update` and `media.update`**, both live MCP
+      tools, and both are fixed the same way. `settings.set`, `staging/merge`,
+      `restoreVersion` and `create` stay whole-document writes by design. - Orphaned keys: `processFields` does NOT drop unknown keys (`result =
+{...values}`), so the projection is an explicit step, not free. The merged
+      result is projected through the schema before the write. An empty
+      definition list means the schema is UNKNOWN here, not empty, and projects
+      nothing — without that guard a type whose config failed to resolve would
+      have its data wiped. - `mergePatch` clones its base. The pipeline mutates nested scope objects in
+      place, so without the clone it rewrites the freshly-loaded current record —
+      which the versioning change-detection then compares against, and a real
+      change reads as "unchanged" and skips its backup version. - Translatable propagation now keys off the PATCHED names, not the merged
+      document's keys; the merged document holds every field, so propagating from
+      it would overwrite sibling locales with values nobody touched. - **No built-in coercer turned out to be non-idempotent** (`slug`, `email`,
+      `url`, `key-value`, `number`, `date`, `richtext` all satisfy `f(f(x)) ===
+f(x)`), so re-coercion is only observable when the STORED value is not
+      already in coerced form — schema drift. `coerceOnly` is still the right
+      mechanism; it just means the guarantee is cheap today rather than urgent.
+      Both cases are tested: a probe field type in the pipeline unit test, and a
+      `text` → `slug` drift in the entries integration test. - **The runtime guard has never worked anywhere** (re-verified 2026-08-03),
+      which is a bigger finding than the audit's "it cannot cross the wire".
+      `markPublic` brands the **Entry** (`operations/get.ts`); `create`/`update`
+      check `isPublicBranded(params.data.fields)` — a different object. The merge
+      makes it vestigial and it was left exactly as it is: the regression test
+      round-trips a public read through `JSON.parse(JSON.stringify(...))` and the
+      private field survives because of the MERGE, not the brand. - Nothing cleared fields by omission: the admin form submits every field, so
+      merge is a superset there. Answered before building, as required. - Left open: **`create` does not project to the schema** — an orphan key sent
+      to `create` is stored verbatim, and only `update` drops them. Worth
+      deciding on its own.
 
 ## Then
 
