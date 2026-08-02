@@ -15,6 +15,7 @@ import type {
 import { ValidationError } from '@/errors/validation.js';
 import { updateMediaSchema } from './schema.js';
 import { processFields } from '@/fields/pipeline.js';
+import { getDocumentValidator } from '@/fields/document-validators.js';
 import { flattenFieldNodes } from '@/fields/helpers.js';
 import { scopedReadsFromRecords } from '@/fields/scoped-reads.js';
 import { getCurrentUser } from '@/context/index.js';
@@ -178,6 +179,11 @@ export const mediaApi = {
         if (validatedData.fields !== undefined) {
             const current = await mediaApi.get({ id });
             const fieldDefs = flattenFieldNodes(config.media?.fields ?? []);
+            // Registry first: the Astro config is JSON, so an authored
+            // `validate` only survives boot's registration. The config value is
+            // the fallback for the live-config paths (CLI, tests).
+            const documentValidate =
+                getDocumentValidator('media') ?? config.media?.validate;
             const processed = await processFields(
                 validatedData.fields as Record<string, unknown>,
                 fieldDefs,
@@ -191,10 +197,11 @@ export const mediaApi = {
                         getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
                         excludeId: id,
                     }),
+                    ...(documentValidate ? { documentValidate } : {}),
                 }
             );
-            if (Object.keys(processed.errors).length > 0) {
-                throw ValidationError.fromFieldErrors(processed.errors);
+            if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
+                throw ValidationError.fromFieldErrors(processed.errors, processed.form);
             }
             validatedData.fields = processed.values as JsonObject;
         }

@@ -14,6 +14,7 @@ import { resolveEntryType } from '../type-registry.js';
 import { entryValidationStage } from '../validation-stage.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
 import { processFields } from '@/fields/pipeline.js';
+import { getDocumentValidator } from '@/fields/document-validators.js';
 import { ValidationError } from '@/errors/index.js';
 import config from 'virtual:astromech/config';
 import type { EntryStorage, StorageDb } from '../storage/types.js';
@@ -62,22 +63,28 @@ export async function create(params: {
 
     const user = getCurrentUser();
     const fieldDefs = flattenEntryFields(entryTypeConfig.fields);
-    const processed = await processFields(
-        (validated.fields ?? {}) as Record<string, unknown>,
-        fieldDefs,
-        {
-            operation: 'create',
-            stage: entryValidationStage({
-                status,
-                hasStatuses: entryTypeConfig.capabilities.statuses !== false,
-            }),
-            host: { kind: 'entry', record: null },
-            user,
-            reads: createEntryScopedReads(storage, { type, locale }),
-        }
-    );
-    if (Object.keys(processed.errors).length > 0) {
-        throw ValidationError.fromFieldErrors(processed.errors);
+
+    const incomingFields = (validated.fields ?? {}) as Record<string, unknown>;
+
+    // Registry first: the Astro config is JSON, so an authored `validate` only
+    // survives boot's registration. The config value is the fallback for the
+    // live-config paths (CLI, tests).
+    const documentValidate =
+        getDocumentValidator(`entry:${type}`) ?? entryTypeConfig.validate;
+
+    const processed = await processFields(incomingFields, fieldDefs, {
+        operation: 'create',
+        stage: entryValidationStage({
+            status,
+            hasStatuses: entryTypeConfig.capabilities.statuses !== false,
+        }),
+        host: { kind: 'entry', record: null },
+        user,
+        reads: createEntryScopedReads(storage, { type, locale }),
+        ...(documentValidate ? { documentValidate } : {}),
+    });
+    if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
+        throw ValidationError.fromFieldErrors(processed.errors, processed.form);
     }
     const processedFields = processed.values as JsonObject;
 

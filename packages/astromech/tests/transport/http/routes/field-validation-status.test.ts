@@ -15,7 +15,10 @@
  *    that is the key the admin's `useFieldError(path)` looks up;
  *  - a non-`ValidationError` failure must still be a 500 with a `console.error`,
  *    so removing the blanket catches is pinned as behaviour-preserving rather
- *    than "everything is 422 now".
+ *    than "everything is 422 now";
+ *  - a document validator's form-level message rides in `details.form`, which is
+ *    absent entirely when only fields reported — the per-field response body is
+ *    unchanged.
  *
  * Zod envelope errors (a malformed request body) are a separate path handled by
  * the routes' own `fromZodError`/`zodValidationError` helpers and already
@@ -49,7 +52,7 @@ type ErrorBody = {
         code: string;
         message: string;
         status: number;
-        details?: { fields?: Record<string, string[]> };
+        details?: { fields?: Record<string, string[]>; form?: string[] };
     };
 };
 
@@ -150,6 +153,31 @@ function makeConfig(): AstromechConfig {
                         fields: [{ name: 'url', type: 'url', label: 'URL' }],
                     },
                 ],
+            },
+            // The document-validator testbed: a string result is form-level, a
+            // map result lands on a field.
+            event: {
+                single: 'Event',
+                plural: 'Events',
+                fields: [
+                    { name: 'starts', type: 'text', label: 'Starts' },
+                    { name: 'ends', type: 'text', label: 'Ends' },
+                ],
+                validate: async ({ values }) => {
+                    if (values['ends'] === 'clash') {
+                        return { ends: 'Clashes with another event' };
+                    }
+                    const starts = values['starts'];
+                    const ends = values['ends'];
+                    if (
+                        typeof starts === 'string' &&
+                        typeof ends === 'string' &&
+                        ends < starts
+                    ) {
+                        return 'The event ends before it starts';
+                    }
+                    return undefined;
+                },
             },
             note: {
                 ...base.entries['note'],
@@ -275,6 +303,61 @@ describe('POST /entries/:type — invalid field value', () => {
         expect(body.error.details?.fields).toEqual({
             contact: ['Must be a valid email address'],
         });
+    });
+});
+
+// ---------------------------------------------------------------------------
+// document validator
+// ---------------------------------------------------------------------------
+
+describe('POST /entries/:type — document validator', () => {
+    it('carries a form-level message in details.form', async () => {
+        const app = mountedApp();
+        const res = await app.request('/entries/event', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title: 'E1',
+                fields: { starts: '2026-02-01', ends: '2026-01-01' },
+            }),
+        });
+
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as ErrorBody;
+        expect(body.error.code).toBe('VALIDATION_FAILED');
+        expect(body.error.details?.form).toEqual(['The event ends before it starts']);
+        expect(body.error.details?.fields).toEqual({});
+    });
+
+    it('files a map result under details.fields, with no form key', async () => {
+        const app = mountedApp();
+        const res = await app.request('/entries/event', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'E2', fields: { ends: 'clash' } }),
+        });
+
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as ErrorBody;
+        expect(body.error.details?.fields).toEqual({
+            ends: ['Clashes with another event'],
+        });
+        expect(body.error.details).not.toHaveProperty('form');
+    });
+
+    // The envelope is unchanged for everything that reported no form message:
+    // `details` still holds exactly `fields`.
+    it('a plain field failure produces details with no form key at all', async () => {
+        const app = mountedApp();
+        const res = await app.request('/entries/post', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'P3', fields: { contact: 'nope' } }),
+        });
+
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as ErrorBody;
+        expect(Object.keys(body.error.details ?? {})).toEqual(['fields']);
     });
 });
 

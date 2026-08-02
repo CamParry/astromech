@@ -26,6 +26,8 @@ export type ApiErrorCode =
 
 export type ApiErrorDetails = {
     fields?: Record<string, string[]>;
+    /** Form-level validation messages that belong to no single field. */
+    form?: string[];
     [key: string]: unknown;
 };
 
@@ -86,8 +88,19 @@ export function badRequest(
     return apiError(c, 400, 'BAD_REQUEST', message, details);
 }
 
-export function validationFailed(c: Context, fields: Record<string, string[]>): Response {
-    return apiError(c, 422, 'VALIDATION_FAILED', 'Validation failed', { fields });
+/**
+ * `form` is omitted from `details` unless it carries messages, so a plain
+ * per-field failure keeps the response body it has always had.
+ */
+export function validationFailed(
+    c: Context,
+    fields: Record<string, string[]>,
+    form?: string[]
+): Response {
+    return apiError(c, 422, 'VALIDATION_FAILED', 'Validation failed', {
+        fields,
+        ...(form && form.length > 0 ? { form } : {}),
+    });
 }
 
 export function conflict(c: Context, message: string): Response {
@@ -124,14 +137,14 @@ export const onError: ErrorHandler = (err, c) => {
         // Field-pipeline errors arrive pre-shaped; envelope (Zod) errors derive
         // their per-field map from the issues.
         if (err.fields) {
-            return validationFailed(c, err.fields);
+            return validationFailed(c, err.fields, err.form);
         }
         const fields: Record<string, string[]> = {};
         for (const issue of err.issues) {
             const key = issue.path.join('.') || '_';
             (fields[key] ??= []).push(issue.message);
         }
-        return validationFailed(c, fields);
+        return validationFailed(c, fields, err.form);
     }
 
     const isDev = process.env.NODE_ENV !== 'production';

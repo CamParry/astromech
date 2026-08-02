@@ -7,6 +7,7 @@ import type { DB } from '@/database/types.js';
 import type { CellKind } from './definitions.js';
 import type { Permission } from './domain.js';
 import type {
+    DocumentValidator,
     EntryFields,
     FieldDefinition,
     Label,
@@ -246,6 +247,12 @@ export type EntryTypeConfig = {
     storage?: EntryStorage;
     /** Field names a multi-type storage should index for free-text search. */
     search?: string[];
+    /**
+     * Cross-field validator for the whole entry, run after every field has been
+     * processed. Server-side only — it is a function, so it cannot cross into
+     * the admin's JSON config.
+     */
+    validate?: DocumentValidator;
 };
 
 export type ResolvedEntryCapabilities = {
@@ -292,6 +299,12 @@ export type MediaConfig = {
     fields?: FieldDefinition[];
     /** How media is delivered. Default: `'public'`. */
     access?: MediaAccess;
+    /**
+     * Cross-field validator for a media record, run after every field has been
+     * processed. Server-side only — it is a function, so it cannot cross into
+     * the admin's JSON config.
+     */
+    validate?: DocumentValidator;
 };
 
 /** `MediaConfig` with its defaults applied. */
@@ -301,6 +314,12 @@ export type ResolvedMediaConfig = Omit<MediaConfig, 'access'> & {
 
 export type UsersConfig = {
     fields?: FieldDefinition[];
+    /**
+     * Cross-field validator for a user record, run after every field has been
+     * processed. Server-side only — it is a function, so it cannot cross into
+     * the admin's JSON config.
+     */
+    validate?: DocumentValidator;
 };
 
 // ============================================================================
@@ -325,6 +344,12 @@ export type AdminPage = {
     component?: string;
     /** Settings-form mode only; default false. */
     translatable?: boolean;
+    /**
+     * Settings-form mode only. Cross-field validator for the page's values, run
+     * after every field has been processed. Server-side only — it is a
+     * function, so it cannot cross into the admin's JSON config.
+     */
+    validate?: DocumentValidator;
     /**
      * Permission override. Host default: `'settings:read'`. Plugin default:
      * `'settings:read'` for settings pages, null for component pages.

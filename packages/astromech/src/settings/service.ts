@@ -16,6 +16,7 @@ import type { SettingRow } from './schema.js';
 import { mergeLocaleSetting } from './page-values.js';
 import { isPublicSettingKey } from './visibility.js';
 import { processFields } from '@/fields/pipeline.js';
+import { getDocumentValidator } from '@/fields/document-validators.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
 import { scopedReadsFromRecords } from '@/fields/scoped-reads.js';
 import { getCurrentUser } from '@/context/index.js';
@@ -99,6 +100,14 @@ export const settingsApi: SettingsApi = {
             const presentDefs = allDefs.filter((f) =>
                 Object.prototype.hasOwnProperty.call(effectiveValue, f.name)
             );
+            // Registry first: the Astro config is JSON, so an authored
+            // `validate` only survives boot's registration. The fallback reads
+            // the AUTHORED page — `ResolvedAdminPage` drops `validate` along
+            // with everything else it does not project.
+            const documentValidate =
+                getDocumentValidator(`setting:${page.path}`) ??
+                (config as ResolvedConfig).admin?.pages?.find((p) => p.path === page.path)
+                    ?.validate;
             const processed = await processFields(
                 effectiveValue as Record<string, unknown>,
                 presentDefs,
@@ -116,10 +125,11 @@ export const settingsApi: SettingsApi = {
                         getFields: (s) => (isPlainObject(s.value) ? s.value : {}),
                         excludeId: key,
                     }),
+                    ...(documentValidate ? { documentValidate } : {}),
                 }
             );
-            if (Object.keys(processed.errors).length > 0) {
-                throw ValidationError.fromFieldErrors(processed.errors);
+            if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
+                throw ValidationError.fromFieldErrors(processed.errors, processed.form);
             }
             effectiveValue = processed.values as JsonValue;
         }

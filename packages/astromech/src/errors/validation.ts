@@ -9,27 +9,41 @@ export class ValidationError extends Error {
      * directly instead of deriving them from `issues`.
      */
     public readonly fields?: FieldErrors | undefined;
+    /**
+     * Form-level messages from the document validator — problems that belong to
+     * no single field. Surfaced as `422 details.form`.
+     */
+    public readonly form?: string[] | undefined;
 
-    constructor(issues: ZodIssue[], fields?: FieldErrors) {
+    constructor(issues: ZodIssue[], fields?: FieldErrors, form?: string[]) {
         super('Validation failed');
         this.name = 'ValidationError';
         this.issues = issues;
         this.fields = fields;
+        this.form = form;
     }
 
     /**
-     * Build a ValidationError from the field pipeline's per-field error map.
-     * Synthesises matching `issues` (custom code, single-segment path) so any
-     * consumer reading `.issues` stays consistent with `.fields`.
+     * Build a ValidationError from the field pipeline's per-field error map plus
+     * any form-level messages. Synthesises matching `issues` (custom code,
+     * single-segment path; empty path for a form message, which belongs to no
+     * field) so any consumer reading `.issues` stays consistent.
      */
-    static fromFieldErrors(fields: FieldErrors): ValidationError {
-        const issues: ZodIssue[] = Object.entries(fields).flatMap(([key, messages]) =>
-            messages.map((message) => ({
+    static fromFieldErrors(fields: FieldErrors, form?: string[]): ValidationError {
+        const issues: ZodIssue[] = [
+            ...Object.entries(fields).flatMap(([key, messages]) =>
+                messages.map((message) => ({
+                    code: ZodIssueCode.custom,
+                    path: [key],
+                    message,
+                }))
+            ),
+            ...(form ?? []).map((message) => ({
                 code: ZodIssueCode.custom,
-                path: [key],
+                path: [],
                 message,
-            }))
-        ) as ZodIssue[];
-        return new ValidationError(issues, fields);
+            })),
+        ] as ZodIssue[];
+        return new ValidationError(issues, fields, form);
     }
 }

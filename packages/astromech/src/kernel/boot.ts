@@ -27,6 +27,7 @@ import { registerBuiltInEntryJobs } from '@/entries/jobs/index.js';
 // port BEFORE registerPlugins runs. Like the jobs sub-barrel above, this module
 // is service-free, so the integration's plain-Node config load stays safe.
 import { wireEntryAccess } from '@/entries/plugin-access.js';
+import { registerDocumentValidators } from '@/fields/document-validators.js';
 import {
     setSchedulerDriver,
     getSchedulerDriver,
@@ -61,6 +62,7 @@ export async function initRuntime(
     // scheduler tick cannot resolve).
     setRuntimeConfig(resolvedConfig);
     wireEntryAccess();
+    registerDocumentValidators(resolvedConfig);
     registerPlugins(config.plugins ?? [], resolvedConfig);
     await bootPlugins(config.plugins ?? []);
 

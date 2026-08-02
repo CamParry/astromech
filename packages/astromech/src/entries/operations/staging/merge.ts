@@ -9,6 +9,7 @@ import { resolveEntryType } from '../../type-registry.js';
 import { entryValidationStage } from '../../validation-stage.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
 import { processFields } from '@/fields/pipeline.js';
+import { getDocumentValidator } from '@/fields/document-validators.js';
 import { ValidationError } from '@/errors/index.js';
 import config from 'virtual:astromech/config';
 import type { EntryStorage, StorageDb } from '../../storage/types.js';
@@ -27,6 +28,11 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
     // BEFORE the transaction opens so a rejection costs no backup version.
     const entryTypeConfig = resolveEntryType(config, type);
     const fieldDefs = entryTypeConfig ? flattenEntryFields(entryTypeConfig.fields) : [];
+    // The canonical's type governs: the staged row is a copy of it. Registry
+    // first (the Astro config is JSON, so an authored `validate` only survives
+    // boot's registration), config value second for the live-config paths.
+    const documentValidate =
+        getDocumentValidator(`entry:${type}`) ?? entryTypeConfig?.validate;
     const processed = await processFields(
         (staged.fields ?? {}) as Record<string, unknown>,
         fieldDefs,
@@ -49,10 +55,11 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
                 locale: canonical.locale,
                 excludeId: [id, staged.id],
             }),
+            ...(documentValidate ? { documentValidate } : {}),
         }
     );
-    if (Object.keys(processed.errors).length > 0) {
-        throw ValidationError.fromFieldErrors(processed.errors);
+    if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
+        throw ValidationError.fromFieldErrors(processed.errors, processed.form);
     }
     const mergedFields = processed.values as JsonObject;
 

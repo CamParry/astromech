@@ -6,6 +6,7 @@ import { ValidationError } from '@/errors/validation.js';
 import { createUserSchema, updateUserSchema } from './schema.js';
 import config from 'virtual:astromech/config';
 import { processFields } from '@/fields/pipeline.js';
+import { getDocumentValidator } from '@/fields/document-validators.js';
 import { flattenFieldNodes } from '@/fields/helpers.js';
 import { scopedReadsFromRecords } from '@/fields/scoped-reads.js';
 import { getCurrentUser } from '@/context/index.js';
@@ -79,6 +80,10 @@ export const usersApi = {
         const validated = validate(createUserSchema, params);
 
         const fieldDefs = flattenFieldNodes(config.users?.fields ?? []);
+        // Registry first: the Astro config is JSON, so an authored `validate`
+        // only survives boot's registration. The config value is the fallback
+        // for the live-config paths (CLI, tests).
+        const documentValidate = getDocumentValidator('users') ?? config.users?.validate;
         const processedFields = await processFields(
             (validated.fields ?? {}) as Record<string, unknown>,
             fieldDefs,
@@ -91,10 +96,17 @@ export const usersApi = {
                     getId: (r) => r.id,
                     getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
                 }),
+                ...(documentValidate ? { documentValidate } : {}),
             }
         );
-        if (Object.keys(processedFields.errors).length > 0) {
-            throw ValidationError.fromFieldErrors(processedFields.errors);
+        if (
+            Object.keys(processedFields.errors).length > 0 ||
+            processedFields.form.length > 0
+        ) {
+            throw ValidationError.fromFieldErrors(
+                processedFields.errors,
+                processedFields.form
+            );
         }
         const fields = processedFields.values as JsonObject;
 
@@ -123,6 +135,11 @@ export const usersApi = {
         if (validatedData.fields !== undefined) {
             const current = await usersApi.get({ id });
             const fieldDefs = flattenFieldNodes(config.users?.fields ?? []);
+            // Registry first: the Astro config is JSON, so an authored
+            // `validate` only survives boot's registration. The config value is
+            // the fallback for the live-config paths (CLI, tests).
+            const documentValidate =
+                getDocumentValidator('users') ?? config.users?.validate;
             const processed = await processFields(
                 validatedData.fields as Record<string, unknown>,
                 fieldDefs,
@@ -136,10 +153,11 @@ export const usersApi = {
                         getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
                         excludeId: id,
                     }),
+                    ...(documentValidate ? { documentValidate } : {}),
                 }
             );
-            if (Object.keys(processed.errors).length > 0) {
-                throw ValidationError.fromFieldErrors(processed.errors);
+            if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
+                throw ValidationError.fromFieldErrors(processed.errors, processed.form);
             }
             validatedData.fields = processed.values as JsonObject;
         }
