@@ -29,9 +29,23 @@
  * on example.com") is unevaluable against a value that is not even a URL.
  * `FieldErrors` is still `Record<string, string[]>` on the wire — the array just
  * carries one entry.
+ *
+ * An author rule carries a `severity`. `'error'` (the default) files into
+ * `errors` and blocks the write; `'warning'` files into `warnings` and does not.
+ * A field can report one of each, in the same fixed order and under the same
+ * path key. `required`, container item counts and the type's own validator are
+ * error-only. Warnings are evaluated only when `ctx.collectWarnings` is set:
+ * a `{ unique: true, severity: 'warning' }` rule costs a database read and the
+ * server has no consumer for the result — only the editor does.
+ *
+ * `ctx.documentValidate` runs last, over the coerced values, whether or not the
+ * fields reported. It returns a form-level string or a map of path → message;
+ * on a key a field already claimed, the field's own error wins as the more
+ * specific one.
  */
 
 import type {
+    DocumentValidator,
     FieldDefinition,
     FieldErrors,
     FieldPathSegment,
@@ -180,15 +194,25 @@ async function runRule(
 
 /**
  * The host-supplied half of the validation context — everything not per-field.
- * `stage` is optional for callers and concrete inside (see `processFields`).
+ * `stage` and `collectWarnings` are optional for callers and concrete inside
+ * (see `processFields`).
  */
 type PipelineContext = Omit<
     FieldValidationContext,
     'value' | 'values' | 'field' | 'path' | 'stage'
-> & { stage?: ValidationStage };
+> & {
+    stage?: ValidationStage;
+    /** Evaluate warning-severity rules. Default `false`. */
+    collectWarnings?: boolean;
+    /** Whole-document validator, run after every field. */
+    documentValidate?: DocumentValidator;
+};
 
-/** The same context once `stage` has been resolved to a concrete value. */
-type ScopeContext = Omit<FieldValidationContext, 'value' | 'values' | 'field' | 'path'>;
+/** The same context once `stage` and `collectWarnings` are concrete. */
+type ScopeContext = Omit<
+    FieldValidationContext,
+    'value' | 'values' | 'field' | 'path'
+> & { collectWarnings: boolean };
 
 /**
  * Run one value scope: the root record, or one container item / group object.
@@ -200,7 +224,8 @@ async function processScope(
     definitions: FieldDefinition[],
     parentSegments: readonly FieldPathSegment[],
     ctx: ScopeContext,
-    errors: FieldErrors
+    errors: FieldErrors,
+    warnings: FieldErrors
 ): Promise<void> {
     for (const field of flattenFieldNodes(definitions)) {
         const descriptor = getFieldTypeDescriptor(field.type);
@@ -244,19 +269,23 @@ async function processScope(
                     scope.definitions,
                     [...parentSegments, ...scope.segments],
                     ctx,
-                    errors
+                    errors,
+                    warnings
                 );
             }
         }
 
-        // Step e: validate. One message per field — the checks below run in a
-        // fixed order and the FIRST failure wins.
-        let message: string | null = null;
+        // Step e: validate. One message per severity — the checks below run in
+        // a fixed order and the FIRST failure of each severity wins.
+        let error: string | null = null;
+        let warning: string | null = null;
 
         if (ctx.stage === 'publish' && field.required === true && isEmpty(v)) {
-            // 1. Required + empty: skips all other rules. A completeness check,
-            // so a `'save'` write never reaches this branch.
-            message = 'This field is required';
+            // 1. Required + empty: skips all other rules, warnings included — a
+            // field the author has not filled in should not also be nagged
+            // about. A completeness check, so a `'save'` write never reaches
+            // this branch.
+            error = 'This field is required';
         } else {
             // 2. `min`/`max` on a container mean ITEM COUNTS, not numeric bounds
             // — checked outside the `isEmpty` guard so that `min` still fires on
@@ -270,13 +299,13 @@ async function processScope(
                     field.min !== undefined &&
                     v.length < field.min
                 ) {
-                    message = `Must have at least ${field.min} items`;
+                    error = `Must have at least ${field.min} items`;
                 } else if (field.max !== undefined && v.length > field.max) {
-                    message = `Must have at most ${field.max} items`;
+                    error = `Must have at most ${field.max} items`;
                 }
             }
 
-            if (message === null && !isEmpty(v)) {
+            if (error === null && !isEmpty(v)) {
                 const fieldCtx: FieldValidationContext = {
                     value: v,
                     // Siblings within THIS scope — a nested field's cross-field
@@ -297,17 +326,25 @@ async function processScope(
                 // sends the author chasing the wrong problem.
                 if (descriptor?.validate) {
                     const r = await descriptor.validate(fieldCtx);
-                    if (r !== true) message = r;
+                    if (r !== true) error = r;
                 }
 
-                // 4. Author-supplied declarative rules, in declaration order.
-                if (message === null) {
+                // 4. Author-supplied declarative rules, in declaration order,
+                // and only over a value the type itself accepted — including
+                // the warning-severity ones.
+                if (error === null) {
                     for (const rule of field.validation ?? []) {
+                        const severity = rule.severity ?? 'error';
+                        // Each severity keeps only its FIRST message, so a rule
+                        // whose slot is already filled is skipped without being
+                        // evaluated.
+                        if (severity === 'error' ? error !== null : warning !== null)
+                            continue;
+                        if (severity === 'warning' && !ctx.collectWarnings) continue;
                         const msg = await runRule(rule, fieldCtx);
-                        if (msg !== null) {
-                            message = msg;
-                            break;
-                        }
+                        if (msg === null) continue;
+                        if (severity === 'error') error = msg;
+                        else warning = msg;
                     }
                 }
             }
@@ -315,23 +352,69 @@ async function processScope(
         }
 
         // `FieldErrors` stays `Record<string, string[]>` on the wire; the array
-        // simply carries the one message.
-        if (message !== null) {
-            errors[path] = [message];
+        // simply carries the one message. Warnings key by the same path.
+        if (error !== null) {
+            errors[path] = [error];
+        }
+        if (warning !== null) {
+            warnings[path] = [warning];
         }
     }
 }
 
+/**
+ * Run every field definition over `values`, then the document validator.
+ * Returns the coerced values plus blocking `errors`, advisory `warnings` and
+ * form-level `form` messages.
+ */
 export async function processFields(
     values: Record<string, unknown>,
     definitions: FieldDefinition[],
     ctx: PipelineContext
-): Promise<{ values: Record<string, unknown>; errors: FieldErrors }> {
+): Promise<{
+    values: Record<string, unknown>;
+    errors: FieldErrors;
+    warnings: FieldErrors;
+    form: string[];
+}> {
     const result = { ...values };
     const errors: FieldErrors = {};
+    const warnings: FieldErrors = {};
     // Default to `'publish'`, i.e. today's behaviour: media, users and settings
     // have no draft concept, so completeness must keep applying to them.
     const stage: ValidationStage = ctx.stage ?? 'publish';
-    await processScope(result, definitions, [], { ...ctx, stage }, errors);
-    return { values: result, errors };
+    const collectWarnings = ctx.collectWarnings ?? false;
+    await processScope(
+        result,
+        definitions,
+        [],
+        { ...ctx, stage, collectWarnings },
+        errors,
+        warnings
+    );
+
+    // The document validator runs whether or not the fields reported, so one
+    // pass surfaces cross-field and per-field problems together.
+    const form: string[] = [];
+    if (ctx.documentValidate) {
+        const reported = await ctx.documentValidate({
+            values: result,
+            definitions,
+            operation: ctx.operation,
+            stage,
+            host: ctx.host,
+            user: ctx.user,
+            reads: ctx.reads,
+        });
+        if (typeof reported === 'string') {
+            if (reported !== '') form.push(reported);
+        } else if (reported !== null && typeof reported === 'object') {
+            for (const [path, message] of Object.entries(reported)) {
+                // A field's own error is more specific, so it wins the key.
+                if (errors[path] === undefined) errors[path] = [message];
+            }
+        }
+    }
+
+    return { values: result, errors, warnings, form };
 }

@@ -76,6 +76,15 @@ export type BlockDefinition = {
 };
 
 /**
+ * Whether a failing rule blocks the write. `'error'` (the default) rejects it;
+ * `'warning'` is advisory — the editor shows it and the write proceeds. Applies
+ * to `field.validation` rules only: `required`, container `min`/`max` and a
+ * field type's own `validate` are always errors, because completeness and type
+ * validity are never advisory.
+ */
+export type ValidationSeverity = 'error' | 'warning';
+
+/**
  * A declarative validation rule on a field.
  *
  * Rules are serializable (so they can be mirrored client-side later) — except
@@ -84,7 +93,7 @@ export type BlockDefinition = {
  * declared in exactly one place. `{ unique: true }` resolves to
  * `ctx.reads.isUnique(field, value)` in the pipeline.
  */
-export type ValidationRule =
+export type ValidationRule = (
     | { minLength: number }
     | { maxLength: number }
     | { min: number }
@@ -94,7 +103,8 @@ export type ValidationRule =
     | { url: true }
     | { enum: string[] }
     | { unique: true }
-    | { custom: FieldValidator };
+    | { custom: FieldValidator }
+) & { severity?: ValidationSeverity };
 
 // ============================================================================
 // Field paths
@@ -181,6 +191,43 @@ export type FieldValidationContext = {
  * `true` when valid, or an error message string.
  */
 export type FieldValidator = (ctx: FieldValidationContext) => Promise<true | string>;
+
+/**
+ * What a document validator reports. A string is a form-level message (it
+ * belongs to no single field); an object maps field paths to messages, using
+ * the same `_id` path grammar the field pipeline files errors under. A valid
+ * document returns `undefined` or `null` — explicitly, since `void` is not in
+ * the union, so a validator cannot just fall off the end of its body.
+ */
+export type DocumentValidationResult = string | Record<string, string> | null | undefined;
+
+/**
+ * Context handed to a document validator. The same shape as
+ * `FieldValidationContext` minus the per-field members, plus the definitions
+ * the values were validated against.
+ *
+ * `values` are the COERCED values the field pipeline produced, and they may
+ * still hold field errors — a document validator runs regardless, so the author
+ * sees cross-field and per-field problems in one pass. Guard accordingly.
+ */
+export type DocumentValidationContext = {
+    values: Record<string, unknown>;
+    definitions: FieldDefinition[];
+    operation: 'create' | 'update';
+    stage: ValidationStage;
+    host: { kind: 'entry' | 'media' | 'user' | 'setting'; record: unknown };
+    user: User | null;
+    reads: ScopedReads;
+};
+
+/**
+ * A whole-document validator — cross-field rules no single field owns. Async
+ * only, matching `FieldValidator`. Server-side only: it is a function, so it
+ * cannot survive the JSON round trip into the admin config.
+ */
+export type DocumentValidator = (
+    ctx: DocumentValidationContext
+) => Promise<DocumentValidationResult>;
 
 /** One nested value scope inside a container field's value. */
 export type ContainerScope = {
