@@ -75,7 +75,10 @@
         },
         "./admin/shell.astro": "./src/admin/shell.astro",
         "./Image": "./src/media/serving/image/Image.astro",
-        "./ui": "./src/exports/admin/ui.ts",
+        "./ui": {
+            "types": "./dist/admin/components/ui/index.d.ts",
+            "default": "./src/exports/admin/ui.ts"
+        },
         "./db/schema": {
             "types": "./dist/db/schema.d.ts",
             "default": "./dist/db/schema.js"
@@ -84,8 +87,14 @@
             "types": "./dist/email/index.d.ts",
             "default": "./dist/email/index.js"
         },
-        "./ui/fields": "./src/exports/admin/ui-fields.ts",
-        "./ui/layout": "./src/exports/admin/ui-layout.ts"
+        "./ui/fields": {
+            "types": "./dist/admin/components/fields/index.d.ts",
+            "default": "./src/exports/admin/ui-fields.ts"
+        },
+        "./ui/layout": {
+            "types": "./dist/admin/components/ui/layout.d.ts",
+            "default": "./src/exports/admin/ui-layout.ts"
+        }
     },
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
