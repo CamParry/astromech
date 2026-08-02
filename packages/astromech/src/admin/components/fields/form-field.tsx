@@ -6,7 +6,7 @@ import { useLabel } from '@/admin/i18n/entry-namespace.js';
 import { hasPluginFieldType, PluginField } from './plugin-field';
 import { FieldPathProvider } from './field-context';
 import { FieldWrapper } from './field-wrapper';
-import { useFieldError } from './field-errors-context';
+import { useFieldError, useFieldWarning } from './field-errors-context';
 import { useFieldValidationHandlers } from './field-validation-context';
 
 export type FormFieldProps = {
@@ -69,6 +69,7 @@ export function FormField({
     // `heading` and never find the error the server produced. At the top level
     // `commonProps.name` falls back to `field.name`, so the two agree there.
     const error = useFieldError(path);
+    const warning = useFieldWarning(path);
 
     // A container-less group is invisible chrome — pure data nesting. It renders
     // its sub-fields inline with no label or box; pair it with a `section` for a
@@ -88,6 +89,7 @@ export function FormField({
             }
             required={required}
             error={error}
+            warning={warning}
             // React's onBlur bubbles (it is focusout), so without the stop,
             // focus leaving a nested field would report every enclosing
             // container too. The innermost wrapper owns the event.

@@ -13,9 +13,13 @@
  * (`url`, `email`, `json`, `key-value`), which are pure core code already in
  * this bundle.
  *
- * Reveal policy (when an error is allowed to become visible) lives here too —
+ * Reveal policy (when a message is allowed to become visible) lives here too —
  * see `reportBlur`. The pipeline decides what is wrong; this hook decides when
  * the author is told.
+ *
+ * Warnings are advisory and block nothing, so only an editor has any use for
+ * them: the server never asks the pipeline to collect them, and they have no
+ * wire representation. They exist solely here, alongside the errors.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -42,6 +46,8 @@ const CLIENT_READS: ScopedReads = { isUnique: () => Promise.resolve(true) };
 export type FieldValidationHandle = {
     /** What the UI should render: server errors, overlaid by revealed client ones. */
     errors: FieldErrors;
+    /** Revealed advisory messages. An error on the same path supersedes them. */
+    warnings: FieldErrors;
     /** The author changed this field's value. */
     markDirty: (path: string) => void;
     /** Focus left this field. */
@@ -59,15 +65,21 @@ export type UseFieldValidationOptions = {
     operation: 'create' | 'update';
 };
 
-/** The revealed subset of an error map, in the order the map lists it. */
-function revealedSubset(errors: FieldErrors, revealed: ReadonlySet<string>): FieldErrors {
+/** The revealed subset of a message map, in the order the map lists it. */
+function revealedSubset(
+    messages: FieldErrors,
+    revealed: ReadonlySet<string>
+): FieldErrors {
     const visible: FieldErrors = {};
     for (const path of revealed) {
-        const message = errors[path];
+        const message = messages[path];
         if (message !== undefined) visible[path] = message;
     }
     return visible;
 }
+
+/** One pipeline pass, reduced to the two maps the UI renders. */
+type RunResult = { errors: FieldErrors; warnings: FieldErrors };
 
 export function useFieldValidation({
     definitions,
@@ -76,10 +88,13 @@ export function useFieldValidation({
 }: UseFieldValidationOptions): FieldValidationHandle {
     const [clientErrors, setClientErrors] = useState<FieldErrors>({});
     const [serverErrors, setServerErrorsState] = useState<FieldErrors>({});
+    // There is no server counterpart: the server is never asked to collect
+    // warnings, so this is the whole warning state.
+    const [clientWarnings, setClientWarnings] = useState<FieldErrors>({});
 
     /** Paths whose value the author has changed this session. */
     const dirtyRef = useRef<Set<string>>(new Set());
-    /** Paths currently permitted to show a client error. */
+    /** Paths currently permitted to show a client message. */
     const revealedRef = useRef<Set<string>>(new Set());
 
     // The inputs live in refs so every callback below stays referentially stable
@@ -94,12 +109,12 @@ export function useFieldValidation({
     // Monotonic run id: a slower earlier run must not overwrite a later one.
     const runIdRef = useRef(0);
 
-    const run = useCallback(async (stage: ValidationStage): Promise<FieldErrors> => {
-        // `structuredClone` is belt-and-braces. The pipeline clones on its way
-        // in, but it also writes coerced values and (on 'create') seeded
-        // defaults back into what it was handed, and none of that may leak into
-        // the live form state. Only `errors` is used.
-        const { errors } = await processFields(
+    const run = useCallback(async (stage: ValidationStage): Promise<RunResult> => {
+        // `structuredClone` is belt-and-braces. The pipeline clones on its
+        // way in, but it also writes coerced values and (on 'create') seeded
+        // defaults back into what it was handed, and none of that may leak
+        // into the live form state. Only the message maps are used.
+        const { errors, warnings } = await processFields(
             structuredClone(valuesRef.current),
             definitionsRef.current,
             {
@@ -108,9 +123,10 @@ export function useFieldValidation({
                 host: { kind: 'entry', record: null },
                 user: null,
                 reads: CLIENT_READS,
+                collectWarnings: true,
             }
         );
-        return errors;
+        return { errors, warnings };
     }, []);
 
     const markDirty = useCallback((path: string): void => {
@@ -129,12 +145,15 @@ export function useFieldValidation({
             // A pristine field stays silent, so tabbing through a form to survey
             // it turns nothing red.
             if (!dirtyRef.current.has(path)) return;
+            // Revealed unconditionally: a warning-only field would never open up
+            // if reveal were conditional on an error. Both maps render through
+            // `revealedSubset`, so a revealed path with nothing to say is silent.
+            revealedRef.current.add(path);
             const runId = ++runIdRef.current;
-            void run('save').then((errors) => {
+            void run('save').then(({ errors, warnings }) => {
                 if (runId !== runIdRef.current) return;
-                if (errors[path] !== undefined) revealedRef.current.add(path);
-                else revealedRef.current.delete(path);
                 setClientErrors(revealedSubset(errors, revealedRef.current));
+                setClientWarnings(revealedSubset(warnings, revealedRef.current));
             });
         },
         [run]
@@ -146,25 +165,33 @@ export function useFieldValidation({
     useEffect(() => {
         if (revealedRef.current.size === 0) return;
         const runId = ++runIdRef.current;
-        void run('save').then((errors) => {
+        void run('save').then(({ errors, warnings }) => {
             if (runId !== runIdRef.current) return;
             for (const path of [...revealedRef.current]) {
-                if (errors[path] === undefined) revealedRef.current.delete(path);
+                if (errors[path] === undefined && warnings[path] === undefined)
+                    revealedRef.current.delete(path);
             }
             setClientErrors(revealedSubset(errors, revealedRef.current));
+            setClientWarnings(revealedSubset(warnings, revealedRef.current));
         });
     }, [values, run]);
 
     const validateAll = useCallback(
         async (stage: ValidationStage): Promise<FieldErrors> => {
             const runId = ++runIdRef.current;
-            const errors = await run(stage);
+            const { errors, warnings } = await run(stage);
             // The caller awaited THIS run and acts on its result, so it is
             // returned either way; only the revealed state defers to a newer run.
             if (runId === runIdRef.current) {
-                revealedRef.current = new Set(Object.keys(errors));
+                revealedRef.current = new Set([
+                    ...Object.keys(errors),
+                    ...Object.keys(warnings),
+                ]);
                 setClientErrors(errors);
+                setClientWarnings(warnings);
             }
+            // Only errors come back: the caller gates the submit on them, and a
+            // warning must not block one.
             return errors;
         },
         [run]
@@ -192,12 +219,21 @@ export function useFieldValidation({
     return useMemo(
         () => ({
             errors,
+            warnings: clientWarnings,
             markDirty,
             reportBlur,
             validateAll,
             setServerErrors,
             resetServerErrors,
         }),
-        [errors, markDirty, reportBlur, validateAll, setServerErrors, resetServerErrors]
+        [
+            errors,
+            clientWarnings,
+            markDirty,
+            reportBlur,
+            validateAll,
+            setServerErrors,
+            resetServerErrors,
+        ]
     );
 }

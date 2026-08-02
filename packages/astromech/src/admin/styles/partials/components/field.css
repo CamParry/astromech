@@ -21,6 +21,32 @@
     border-left: 2px solid var(--am-color-danger);
 }
 
+/* Advisory: same shape as the error, in the warning ramp. */
+.am-field-warning {
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--am-color-warning);
+}
+
+.am-field[data-warning] {
+    padding-left: 0.5rem;
+    border-left: 2px solid var(--am-color-warning-border);
+}
+
+/* Form-level validation messages, above the fields of an entry form. */
+.am-form-errors {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    color: var(--am-color-danger-emphasis);
+    background-color: var(--am-color-danger-bg);
+    border: 1px solid var(--am-color-danger-border);
+    border-radius: var(--am-radius-md);
+}
+
 .am-field-hint {
     font-size: 0.8125rem;
     color: var(--am-color-text-muted);

@@ -14,6 +14,9 @@
  * read) and `custom` (a function, which `JSON.stringify` strips on its way into
  * the admin config) — which must be skipped in silence, never guessed at.
  *
+ * Warnings ride the same reveal set as errors and block nothing, which is why
+ * blur reveals a path whether or not it has an error to show.
+ *
  * There is no `@testing-library/react` here, so this drives a real React root
  * directly (same approach as container-field-editing.test.tsx).
  */
@@ -29,6 +32,8 @@ type Mounted = {
     handle: () => FieldValidationHandle;
     /** The errors the UI would render right now. */
     errors: () => FieldErrors;
+    /** The advisory messages the UI would render right now. */
+    warnings: () => FieldErrors;
     /** Replace the whole field-value object, as the form does per keystroke. */
     setValues: (values: Record<string, unknown>) => void;
     unmount: () => void;
@@ -64,6 +69,7 @@ function mountValidation(
     return {
         handle,
         errors: () => handle().errors,
+        warnings: () => handle().warnings,
         setValues: (values) => {
             act(() => {
                 replace?.(values);
@@ -296,6 +302,77 @@ describe('nested fields', () => {
         await settle();
 
         expect(m.errors()).toEqual({});
+        m.unmount();
+    });
+});
+
+// ============================================================================
+// Warnings — advisory, and the browser's alone
+// ============================================================================
+
+describe('warnings', () => {
+    /** A length cap the author is nudged about but never stopped by. */
+    const summary: FieldDefinition = {
+        name: 'summary',
+        type: 'text',
+        validation: [{ maxLength: 10, severity: 'warning' }],
+    };
+    const TOO_LONG = 'far longer than ten';
+
+    it('should file a warning-severity rule under warnings, not errors', async () => {
+        const m = mountValidation([summary], { summary: TOO_LONG });
+
+        await validateAll(m, 'publish');
+
+        expect(m.errors()).toEqual({});
+        expect(m.warnings()).toEqual({ summary: ['Must be at most 10 characters'] });
+        m.unmount();
+    });
+
+    it('should not block a submit', async () => {
+        const m = mountValidation([summary], { summary: TOO_LONG });
+
+        expect(await validateAll(m, 'publish')).toEqual({});
+        m.unmount();
+    });
+
+    it('should reveal a warning-only field on blur once it is dirty', async () => {
+        const m = mountValidation([summary], { summary: TOO_LONG });
+
+        act(() => {
+            m.handle().markDirty('summary');
+            m.handle().reportBlur('summary');
+        });
+        await settle();
+
+        expect(m.warnings()).toEqual({ summary: ['Must be at most 10 characters'] });
+        m.unmount();
+    });
+
+    it('should stay silent on blur while the field is pristine', async () => {
+        const m = mountValidation([summary], { summary: TOO_LONG });
+
+        act(() => m.handle().reportBlur('summary'));
+        await settle();
+
+        expect(m.warnings()).toEqual({});
+        m.unmount();
+    });
+
+    it('should file both messages under one path when a field has each', async () => {
+        const both: FieldDefinition = {
+            name: 'summary',
+            type: 'text',
+            validation: [{ minLength: 20 }, { maxLength: 10, severity: 'warning' }],
+        };
+        const m = mountValidation([both], { summary: TOO_LONG });
+
+        await validateAll(m, 'publish');
+
+        // Both are reported; `FieldWrapper` is what drops the warning in favour
+        // of the error (see field-wrapper-warning.test.tsx).
+        expect(m.errors()).toEqual({ summary: ['Must be at least 20 characters'] });
+        expect(m.warnings()).toEqual({ summary: ['Must be at most 10 characters'] });
         m.unmount();
     });
 });

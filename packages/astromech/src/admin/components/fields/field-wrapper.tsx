@@ -6,6 +6,8 @@ export type FieldWrapperProps = {
     description?: React.ReactNode;
     required?: boolean;
     error?: string[] | undefined;
+    /** Advisory message, shown only when the field has no error. */
+    warning?: string[] | undefined;
     onBlur?: React.FocusEventHandler<HTMLDivElement>;
     children: React.ReactNode;
 };
@@ -15,16 +17,23 @@ export function FieldWrapper({
     description,
     required,
     error,
+    warning,
     onBlur,
     children,
 }: FieldWrapperProps): React.ReactElement {
     const hasError = error !== undefined && error.length > 0;
-    const errorId = React.useId();
+    // An error supersedes a warning: two messages under one field leave the
+    // author guessing which one has to be acted on.
+    const hasWarning = !hasError && warning !== undefined && warning.length > 0;
+    // One id serves whichever message renders, so `aria-describedby` resolves
+    // either way.
+    const messageId = React.useId();
     return (
         <div
             className="am-field"
             onBlur={onBlur}
             {...(hasError ? { 'data-invalid': '' } : {})}
+            {...(hasWarning ? { 'data-warning': '' } : {})}
         >
             <label className="am-field-label">
                 {label}
@@ -32,7 +41,11 @@ export function FieldWrapper({
             </label>
             {description !== undefined && <p className="am-field-hint">{description}</p>}
             <FieldControlProvider
-                value={{ hasError, errorId: hasError ? errorId : undefined }}
+                value={{
+                    hasError,
+                    hasWarning,
+                    errorId: hasError || hasWarning ? messageId : undefined,
+                }}
             >
                 {children}
             </FieldControlProvider>
@@ -45,8 +58,13 @@ export function FieldWrapper({
              * the submit-time summary toast.
              */}
             {hasError && (
-                <p className="am-field-error" id={errorId}>
+                <p className="am-field-error" id={messageId}>
                     {error[0]}
+                </p>
+            )}
+            {hasWarning && (
+                <p className="am-field-warning" id={messageId}>
+                    {warning[0]}
                 </p>
             )}
         </div>

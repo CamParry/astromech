@@ -8,7 +8,7 @@
  * create and edit can use different endpoints while sharing everything else.
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, useStore } from '@tanstack/react-form';
 import { useMutation } from '@tanstack/react-query';
 import type { UseMutationResult } from '@tanstack/react-query';
@@ -113,6 +113,9 @@ export function useEntryForm({
     const { toast } = useToast();
     const { t } = useTranslation();
 
+    /** Document-level messages from a 422; they belong to no field. */
+    const [formErrors, setFormErrors] = useState<string[]>([]);
+
     /**
      * Name the fields that failed rather than pointing at highlights the author
      * has to hunt for — the fields that fail a publish are typically the empty
@@ -197,9 +200,18 @@ export function useEntryForm({
     function handleFieldError(err: Error, fallback: string): void {
         if (err instanceof AstromechApiError && err.status === 422) {
             const fields = (err.details?.fields ?? {}) as FieldErrors;
-            if (Object.keys(fields).length > 0) {
+            const form = (err.details?.form ?? []) as string[];
+            if (form.length > 0) setFormErrors(form);
+            if (Object.keys(fields).length > 0 || form.length > 0) {
                 validation.setServerErrors(fields);
-                toast({ message: validationMessage(fields), variant: 'error' });
+                // A form-level message names no field, so it is its own sentence
+                // rather than an entry in the field-name summary.
+                const summary =
+                    Object.keys(fields).length > 0 ? [validationMessage(fields)] : [];
+                toast({
+                    message: [...form, ...summary].join(' '),
+                    variant: 'error',
+                });
                 return;
             }
         }
@@ -240,16 +252,22 @@ export function useEntryForm({
         },
     });
 
+    /** Drop the last response's messages so a new submit starts clean. */
+    function resetServerErrors(): void {
+        validation.resetServerErrors();
+        setFormErrors([]);
+    }
+
     function handleSave(): void {
         if (readOnly) return;
-        validation.resetServerErrors();
+        resetServerErrors();
         // Goes through handleSubmit so TanStack's own title validator runs first.
         void form.handleSubmit();
     }
 
     function handlePublish(): void {
         if (readOnly) return;
-        validation.resetServerErrors();
+        resetServerErrors();
         publishIntentRef.current = true;
         // Cleared once the submit settles so a later plain save isn't published.
         void form.handleSubmit().finally(() => {
@@ -264,7 +282,7 @@ export function useEntryForm({
 
     useHotkeys('mod+s', () => {
         if (readOnly || isPendingRef.current) return;
-        validation.resetServerErrors();
+        resetServerErrors();
         void form.handleSubmit();
     });
 
@@ -297,6 +315,8 @@ export function useEntryForm({
         buildPayload,
         readOnly,
         fieldErrors: validation.errors,
+        fieldWarnings: validation.warnings,
+        formErrors,
         fieldValidation,
     };
 }
