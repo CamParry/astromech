@@ -12,6 +12,7 @@ import { generateMethodManifest } from '@/codegen/method-manifest.js';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime.js';
 import { wireEntryAccess } from '@/entries/plugin-access.js';
 import { reduceSurface, type SurfaceOptions } from '@/policies/tool-surface.js';
+import type { ConfirmOptions } from '@/policies/confirm-gate.js';
 import { createMcpServer } from './server.js';
 import type { AstromechConfig, MethodManifest, ResolvedConfig } from '@/types/index.js';
 
@@ -73,13 +74,28 @@ function reportExclusions(excluded: readonly { id: string; reason: string }[]): 
 }
 
 /**
+ * The confirmation mode, for the ready line. Visible even when off, because a
+ * caller that expected a gate and got none should be able to see that from the
+ * one line the server prints rather than by watching a write land.
+ */
+function describeConfirm(confirm: ConfirmOptions | undefined): string {
+    if (confirm === undefined) return 'off';
+    const trigger = confirm.trigger ?? 'mutating';
+    return typeof trigger === 'function' ? 'custom' : trigger;
+}
+
+/**
  * @param surface Capability reduction applied BEFORE the tool list is built, so
  * an excluded method never becomes a tool and never enters the dispatch map.
  * Filtering the tool list alone would leave the method callable by name.
+ * @param confirm Confirmation policy, OFF unless `--confirm` was passed. An MCP
+ * client already asks its user before running a tool, so a gate here would be a
+ * second prompt answered by the same person — see `cli/confirm-args.ts`.
  */
 export async function runMcpServer(
     configPath?: string,
-    surface: SurfaceOptions = {}
+    surface: SurfaceOptions = {},
+    confirm?: ConfirmOptions
 ): Promise<void> {
     const raw = await loadRawConfig(configPath);
     const resolved = await loadConfig(configPath);
@@ -90,11 +106,12 @@ export async function runMcpServer(
     ) as MethodManifest;
 
     const { methods, excluded } = reduceSurface(manifest.methods, surface);
-    const { server, tools, skipped } = createMcpServer({ ...manifest, methods });
+    const { server, tools, skipped } = createMcpServer({ ...manifest, methods }, confirm);
 
     console.error(
         `[astromech mcp] ready: ${tools.length} tools, ${skipped.length} skipped, ` +
-            `${excluded.length} excluded by surface`
+            `${excluded.length} excluded by surface, ` +
+            `confirm: ${describeConfirm(confirm)}`
     );
 
     // Skipped and excluded stay distinct: a skip is a method that could not be

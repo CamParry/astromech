@@ -12,6 +12,11 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, setupTestConfig, makeTestConfig } from '@tests/harness.js';
 import { entries as api } from '@/entries/service.js';
 import { CapabilityError } from '@/entries/errors.js';
+import { DEFAULT_PREVIEW_TOKEN_TTL_MS } from '@/entries/operations/preview/token.js';
+import {
+    createPreviewTokenStorage,
+    hashPreviewToken,
+} from '@/entries/storage/preview-tokens.js';
 
 beforeEach(async () => {
     await createTestDb();
@@ -58,6 +63,50 @@ describe('issuePreviewToken', () => {
             limit: 1,
         });
         expect(withNew.data).toHaveLength(1);
+    });
+
+    it('defaults to a TTL rather than issuing a token that never expires', async () => {
+        // Every token issued before this defaulted to `null` — forever — which
+        // matters now the confirm gate hands preview links out for review.
+        // Asserted through `isValid` with a moved clock, inside a tolerance
+        // window, rather than against an exact stored timestamp.
+        const e = await api.create({ type: 'post', title: 'X', slug: 'x' });
+        const { token } = await api.issuePreviewToken({ type: 'post', id: e.id });
+
+        const storage = createPreviewTokenStorage();
+        const hash = await hashPreviewToken(token);
+        const tolerance = 60_000;
+
+        expect(await storage.isValid(e.id, hash, new Date())).toBe(true);
+        expect(
+            await storage.isValid(
+                e.id,
+                hash,
+                new Date(Date.now() + DEFAULT_PREVIEW_TOKEN_TTL_MS - tolerance)
+            )
+        ).toBe(true);
+        expect(
+            await storage.isValid(
+                e.id,
+                hash,
+                new Date(Date.now() + DEFAULT_PREVIEW_TOKEN_TTL_MS + tolerance)
+            )
+        ).toBe(false);
+    });
+
+    it('keeps an explicit null as the opt-in "never expires" escape hatch', async () => {
+        const e = await api.create({ type: 'post', title: 'Y', slug: 'y' });
+        const { token } = await api.issuePreviewToken({
+            type: 'post',
+            id: e.id,
+            expiresAt: null,
+        });
+
+        const hash = await hashPreviewToken(token);
+        const farFuture = new Date(Date.now() + 10 * DEFAULT_PREVIEW_TOKEN_TTL_MS);
+        expect(await createPreviewTokenStorage().isValid(e.id, hash, farFuture)).toBe(
+            true
+        );
     });
 });
 

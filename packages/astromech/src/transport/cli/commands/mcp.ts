@@ -1,8 +1,14 @@
 import { defineCommand } from 'citty';
 import { surfaceArgs, toSurfaceOptions } from '../surface-args.js';
+import { confirmArgs, toConfirmOptions } from '../confirm-args.js';
 import type { SurfaceOptions } from '@/policies/tool-surface.js';
+import type { ConfirmOptions } from '@/policies/confirm-gate.js';
 
-type RunMcpServer = (configPath?: string, surface?: SurfaceOptions) => Promise<void>;
+type RunMcpServer = (
+    configPath?: string,
+    surface?: SurfaceOptions,
+    confirm?: ConfirmOptions
+) => Promise<void>;
 
 export default defineCommand({
     meta: { name: 'mcp', description: 'Start the MCP server over stdio' },
@@ -12,6 +18,7 @@ export default defineCommand({
             description: 'Path to astromech.config.ts',
         },
         ...surfaceArgs,
+        ...confirmArgs,
     },
     async run({ args }) {
         let mod: { runMcpServer: RunMcpServer };
@@ -36,6 +43,10 @@ export default defineCommand({
             }
             throw err;
         }
-        await mod.runMcpServer(args.config, toSurfaceOptions(args));
+        await mod.runMcpServer(
+            args.config,
+            toSurfaceOptions(args),
+            toConfirmOptions(args.confirm)
+        );
     },
 });

@@ -11,6 +11,7 @@ import {
     CallToolRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { buildTools, type McpToolDef, type SkippedMethod } from './tools.js';
+import type { ConfirmOptions } from '@/policies/confirm-gate.js';
 import type { MethodManifest } from '@/types/index.js';
 
 // ============================================================================
@@ -37,8 +38,15 @@ export function toToolResultText(result: unknown): string {
 // Factory
 // ============================================================================
 
-export function createMcpServer(manifest: MethodManifest): CreateMcpServerResult {
-    const { tools, dispatch, skipped } = buildTools(manifest);
+/**
+ * @param confirm Confirmation policy, applied inside the dispatch map so a
+ * gated call is turned back before the service is reached. Undefined is off.
+ */
+export function createMcpServer(
+    manifest: MethodManifest,
+    confirm?: ConfirmOptions | undefined
+): CreateMcpServerResult {
+    const { tools, dispatch, skipped } = buildTools(manifest, confirm);
 
     const server = new Server(
         { name: 'astromech', version: String(manifest.version) },
