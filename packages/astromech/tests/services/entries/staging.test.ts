@@ -417,6 +417,156 @@ describe('mergeStaged — field validation', () => {
 });
 
 // ============================================================================
+// update — uniqueness across a canonical and its staged copy
+// ============================================================================
+
+/**
+ * A staged row holds a COPY of its canonical's content, so on a `unique` field
+ * the two rows legitimately hold the same value. Editing either must not
+ * collide with the other copy of itself.
+ */
+describe('update — uniqueness across a canonical and its staged copy', () => {
+    beforeEach(() => {
+        const cfg = makeTestConfig();
+        cfg.entries['post'] = {
+            single: 'Post',
+            plural: 'Posts',
+            staging: true,
+            fields: [
+                { name: 'headline', type: 'text', label: 'Headline' },
+                {
+                    name: 'code',
+                    type: 'text',
+                    label: 'Code',
+                    validation: [{ unique: true }],
+                },
+            ],
+        };
+        // Same unique field, no staging capability: the gating must not skip
+        // the uniqueness check on a type that can't stage.
+        cfg.entries['note'] = {
+            single: 'Note',
+            plural: 'Notes',
+            fields: [
+                {
+                    name: 'code',
+                    type: 'text',
+                    label: 'Code',
+                    validation: [{ unique: true }],
+                },
+            ],
+        };
+        setupTestConfig(cfg);
+    });
+
+    it('lets the staged row keep the unique value it shares with its canonical', async () => {
+        const canonical = await api.create({
+            type: 'post',
+            title: 'Live',
+            slug: 'live',
+            fields: { headline: 'Hello', code: 'abc123' },
+            status: 'published',
+        });
+        const staged = await api.createStaged({ type: 'post', id: canonical.id });
+
+        await api.update({
+            type: 'post',
+            id: staged.id,
+            data: { fields: { headline: 'Reworded', code: 'abc123' } },
+        });
+
+        const after = await api.getStaged({ type: 'post', id: canonical.id });
+        expect(after?.fields.headline).toBe('Reworded');
+        expect(after?.fields.code).toBe('abc123');
+    });
+
+    it('lets the canonical keep its own unique value while a staged copy exists', async () => {
+        const canonical = await api.create({
+            type: 'post',
+            title: 'Live',
+            slug: 'live',
+            fields: { headline: 'Hello', code: 'abc123' },
+            status: 'published',
+        });
+        await api.createStaged({ type: 'post', id: canonical.id });
+
+        await api.update({
+            type: 'post',
+            id: canonical.id,
+            data: { fields: { headline: 'Edited', code: 'abc123' } },
+        });
+
+        const after = await api.get({ type: 'post', id: canonical.id, full: true });
+        expect(after?.fields.headline).toBe('Edited');
+        expect(after?.fields.code).toBe('abc123');
+    });
+
+    it('still rejects a unique value held by a THIRD entry, from either row', async () => {
+        await api.create({
+            type: 'post',
+            title: 'Other',
+            slug: 'other',
+            fields: { headline: 'O', code: 'taken' },
+        });
+        const canonical = await api.create({
+            type: 'post',
+            title: 'Live',
+            slug: 'live',
+            fields: { headline: 'Hello', code: 'free' },
+        });
+        const staged = await api.createStaged({ type: 'post', id: canonical.id });
+
+        await expect(
+            api.update({
+                type: 'post',
+                id: staged.id,
+                data: { fields: { code: 'taken' } },
+            })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { code: ['Already in use'] },
+        });
+
+        await expect(
+            api.update({
+                type: 'post',
+                id: canonical.id,
+                data: { fields: { code: 'taken' } },
+            })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { code: ['Already in use'] },
+        });
+    });
+
+    it('still rejects a duplicate on a type without the staging capability', async () => {
+        await api.create({
+            type: 'note',
+            title: 'A',
+            slug: 'a',
+            fields: { code: 'taken' },
+        });
+        const other = await api.create({
+            type: 'note',
+            title: 'B',
+            slug: 'b',
+            fields: { code: 'free' },
+        });
+
+        await expect(
+            api.update({
+                type: 'note',
+                id: other.id,
+                data: { fields: { code: 'taken' } },
+            })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { code: ['Already in use'] },
+        });
+    });
+});
+
+// ============================================================================
 // deleteStaged
 // ============================================================================
 
