@@ -27,8 +27,9 @@ These are NOT peers — there's a spine:
   `FieldPathSegment` gives severity and document-level errors a path model to key on.
 - **Severity** and **document-level `validate`** are small additions _to the pipeline_ —
   natural to fold in while it's already open for nesting.
-- **Client-side declarative-rule mirror** is a separate axis (UX/perf: run the
-  declarative rules in the browser pre-submit). Independent of nesting; can come last.
+- **Client-side field validation** ✅ Done — and it turned out not to be a "mirror" at
+  all: the browser runs the same `processFields`, and the split is data-dependence,
+  not declarative-vs-imperative. See §5.
 - **JSON-indexed uniqueness** is a pure optimization of the existing in-memory
   `isUnique` scan. Orthogonal, low priority.
 
@@ -94,12 +95,17 @@ A whole-document validator (cross-field rules that no single field owns). Open: 
 surface (config hook? per-entry-type?), how its errors map onto the flat field
 channel (a document-level / form-level error bucket vs attaching to a field).
 
-## 5. Client-side declarative-rule mirror — ⬜
+## 5. Client-side field validation — ✅ SHIPPED 2026-08-02
 
-Run the _declarative_ rules (min/max/length/pattern/email/url/enum/required) in the
-browser before submit for instant feedback; the server stays authoritative. The
-async/`custom`/`unique` rules remain server-only. Open: how to share one rule runner
-across server + browser without dragging server-only deps into the bundle.
+The framing above ("declarative-rule mirror") was wrong on two counts, and the
+as-built record now lives on the roadmap item rather than here.
+
+There is no mirror: `fields/pipeline.ts` was already pure, so the browser runs the
+same `processFields` with a `ScopedReads` stub — which answers the open question about
+sharing one runner. And the line is **data-dependence**, not declarative-vs-imperative:
+the type-intrinsic descriptor validators (`url`, `email`, `json`, `key-value`) are
+imperative but pure, and they were the case the author actually hit. `required` is not
+in the client's always-on set either — it is completeness, gated to publish.
 
 ## 6. JSON-indexed uniqueness — ⬜
 
