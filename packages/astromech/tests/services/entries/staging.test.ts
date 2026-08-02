@@ -21,7 +21,9 @@ import { setupTestConfig, makeTestConfig, createFileTestDb } from '@tests/harnes
 import { getDb } from '@/database/registry.js';
 import { entries as api } from '@/entries/service.js';
 import { createRelationshipStorage } from '@/database/storage/relationships.js';
+import { getEntryStorage } from '@/entries/storage/registry.js';
 import { StagedEntryExistsError, CapabilityError } from '@/entries/errors.js';
+import type { JsonObject } from '@/types/index.js';
 
 let dbCounter = 0;
 let dbPath = '';
@@ -238,6 +240,179 @@ describe('mergeStaged', () => {
         await expect(api.mergeStaged({ type: 'post', id: canonical.id })).rejects.toThrow(
             /No staged change/
         );
+    });
+});
+
+// ============================================================================
+// mergeStaged — field validation
+// ============================================================================
+
+/**
+ * Merging is the promotion moment: the staged row itself is unpublished, so
+ * editing it validates at the `'save'` stage, and the merge is the first write
+ * where the canonical's status decides whether completeness applies.
+ *
+ * Malformed content can't be planted through `api.update` (correctness runs on
+ * every write), so these tests write it straight through storage — standing in
+ * for any path that put content in the row without the pipeline.
+ */
+describe('mergeStaged — field validation', () => {
+    beforeEach(() => {
+        const cfg = makeTestConfig();
+        cfg.entries['post'] = {
+            single: 'Post',
+            plural: 'Posts',
+            versioning: true,
+            staging: true,
+            fields: [
+                { name: 'headline', type: 'text', label: 'Headline', required: true },
+                {
+                    name: 'code',
+                    type: 'text',
+                    label: 'Code',
+                    validation: [{ unique: true }],
+                },
+                { name: 'link', type: 'url', label: 'Link' },
+                { name: 'page_slug', type: 'slug', label: 'Page Slug' },
+            ],
+        };
+        setupTestConfig(cfg);
+    });
+
+    /** Write to a row without going through the field pipeline. */
+    async function plantFields(id: string, fields: JsonObject): Promise<void> {
+        await getEntryStorage('post').update(id, { fields });
+    }
+
+    it('rejects staged content missing a required field when the canonical is published', async () => {
+        const canonical = await api.create({
+            type: 'post',
+            title: 'Live',
+            slug: 'live',
+            fields: { headline: 'Hello' },
+            status: 'published',
+        });
+        const staged = await api.createStaged({ type: 'post', id: canonical.id });
+        await api.update({
+            type: 'post',
+            id: staged.id,
+            data: { fields: { headline: '' } },
+        });
+
+        await expect(
+            api.mergeStaged({ type: 'post', id: canonical.id })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { headline: ['This field is required'] },
+        });
+
+        // Canonical untouched: no partial write, no backup version.
+        const still = await api.get({ type: 'post', id: canonical.id, full: true });
+        expect(still?.fields.headline).toBe('Hello');
+        expect(await api.versions({ type: 'post', id: canonical.id })).toEqual([]);
+    });
+
+    it('accepts the same incomplete content when the canonical is unpublished', async () => {
+        const canonical = await api.create({
+            type: 'post',
+            title: 'Draft',
+            slug: 'draft',
+            fields: { headline: 'Hello' },
+        });
+        const staged = await api.createStaged({ type: 'post', id: canonical.id });
+        await api.update({
+            type: 'post',
+            id: staged.id,
+            data: { fields: { headline: '' } },
+        });
+
+        const merged = await api.mergeStaged({ type: 'post', id: canonical.id });
+        expect(merged.fields.headline).toBe('');
+    });
+
+    it('rejects malformed staged content regardless of the canonical status', async () => {
+        for (const status of ['published', 'unpublished'] as const) {
+            const canonical = await api.create({
+                type: 'post',
+                title: `C-${status}`,
+                slug: `c-${status}`,
+                fields: { headline: 'Hello' },
+                status,
+            });
+            const staged = await api.createStaged({ type: 'post', id: canonical.id });
+            await plantFields(staged.id, { headline: 'Hello', link: 'not a url' });
+
+            await expect(
+                api.mergeStaged({ type: 'post', id: canonical.id })
+            ).rejects.toMatchObject({
+                name: 'ValidationError',
+                fields: { link: ['Must be a valid URL'] },
+            });
+        }
+    });
+
+    it('merges a unique field whose value is unchanged between canonical and staged', async () => {
+        const canonical = await api.create({
+            type: 'post',
+            title: 'Live',
+            slug: 'live',
+            fields: { headline: 'Hello', code: 'abc123' },
+            status: 'published',
+        });
+        // The staged copy carries the same `code`, so the scan must ignore BOTH
+        // rows — otherwise the value collides with its own other copy. (Planted
+        // through storage: editing the staged row via `update` excludes only
+        // itself, so it trips over the canonical's copy — a separate gap.)
+        const staged = await api.createStaged({ type: 'post', id: canonical.id });
+        await plantFields(staged.id, { headline: 'Hello again', code: 'abc123' });
+
+        const merged = await api.mergeStaged({ type: 'post', id: canonical.id });
+        expect(merged.fields.headline).toBe('Hello again');
+        expect(merged.fields.code).toBe('abc123');
+    });
+
+    it('still rejects a unique value held by a THIRD entry', async () => {
+        await api.create({
+            type: 'post',
+            title: 'Other',
+            slug: 'other',
+            fields: { headline: 'O', code: 'taken' },
+        });
+        const canonical = await api.create({
+            type: 'post',
+            title: 'Live',
+            slug: 'live',
+            fields: { headline: 'Hello', code: 'free' },
+        });
+        const staged = await api.createStaged({ type: 'post', id: canonical.id });
+        await plantFields(staged.id, { headline: 'Hello', code: 'taken' });
+
+        await expect(
+            api.mergeStaged({ type: 'post', id: canonical.id })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { code: ['Already in use'] },
+        });
+    });
+
+    it('writes the COERCED staged values onto the canonical', async () => {
+        const canonical = await api.create({
+            type: 'post',
+            title: 'Live',
+            slug: 'live',
+            fields: { headline: 'Hello' },
+            status: 'published',
+        });
+        const staged = await api.createStaged({ type: 'post', id: canonical.id });
+        await plantFields(staged.id, {
+            headline: 'Hello',
+            link: '  https://example.com/  ',
+            page_slug: 'My Page',
+        });
+
+        const merged = await api.mergeStaged({ type: 'post', id: canonical.id });
+        expect(merged.fields.link).toBe('https://example.com/');
+        expect(merged.fields.page_slug).toBe('my-page');
     });
 });
 

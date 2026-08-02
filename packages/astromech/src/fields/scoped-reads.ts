@@ -17,14 +17,25 @@ export function scopedReadsFromRecords<R>(opts: {
     load: () => Promise<R[]>;
     getId: (record: R) => string | undefined;
     getFields: (record: R) => Record<string, unknown>;
-    excludeId?: string | undefined;
+    /**
+     * Rows the scan must ignore. Usually the record being written (so it does
+     * not collide with itself); a merge excludes several, because more than one
+     * row can legitimately hold the value being written.
+     */
+    excludeId?: string | readonly string[] | undefined;
 }): ScopedReads {
+    const excluded =
+        opts.excludeId === undefined
+            ? []
+            : typeof opts.excludeId === 'string'
+              ? [opts.excludeId]
+              : opts.excludeId;
     return {
         async isUnique(field: FieldDefinition, value: unknown): Promise<boolean> {
             const records = await opts.load();
             for (const record of records) {
-                if (opts.excludeId !== undefined && opts.getId(record) === opts.excludeId)
-                    continue;
+                const id = opts.getId(record);
+                if (id !== undefined && excluded.includes(id)) continue;
                 if (valuesEqual(opts.getFields(record)[field.name], value)) return false;
             }
             return true;

@@ -11,7 +11,7 @@ import type { ScopedReads } from '@/types/fields.js';
  */
 export function createEntryScopedReads(
     storage: EntryStorage,
-    scope: { type: string; locale: string; excludeId?: string }
+    scope: { type: string; locale: string; excludeId?: string | readonly string[] }
 ): ScopedReads {
     return scopedReadsFromRecords({
         load: async () => {
