@@ -127,6 +127,14 @@ export function useEntryForm({
         return validationSummaryMessage(names, t);
     }
 
+    /**
+     * Which action the in-flight submit is. Save and publish share one submit
+     * path so both run TanStack's own field validators (the title one the entry
+     * pages register lives there); `handleSubmit` takes no argument we can thread
+     * the intent through, so it rides in a ref that `handlePublish` clears again.
+     */
+    const publishIntentRef = useRef(false);
+
     const form = useForm({
         defaultValues: {
             title: defaultValues?.title ?? '',
@@ -136,7 +144,11 @@ export function useEntryForm({
             fields: defaultValues?.fields ?? ({} as Record<string, unknown>),
         },
         onSubmit: async ({ value }) => {
-            const payload = buildPayload(value);
+            const publishing = publishIntentRef.current;
+            const payload = buildPayload(value, publishing ? 'published' : undefined);
+            // The stage comes from the payload rather than a hardcoded 'publish'
+            // so the browser and the server agree in every case, including a
+            // statuses-off type whose payload carries no status at all.
             const errors = await validation.validateAll(
                 entryValidationStage({ status: payload.status, hasStatuses })
             );
@@ -144,7 +156,8 @@ export function useEntryForm({
                 toast({ message: validationMessage(errors), variant: 'error' });
                 return;
             }
-            saveMutation.mutate(payload);
+            if (publishing) publishMutation.mutate(payload);
+            else saveMutation.mutate(payload);
         },
     });
 
@@ -237,21 +250,11 @@ export function useEntryForm({
     function handlePublish(): void {
         if (readOnly) return;
         validation.resetServerErrors();
-        const payload = buildPayload(form.state.values, 'published');
-        // Publish bypasses `form.handleSubmit`, so the title validator still
-        // does not run on this path — a PRE-EXISTING gap, not one this gate
-        // introduces. The stage comes from the payload rather than a hardcoded
-        // 'publish' so the browser and the server agree in every case, including
-        // a statuses-off type whose payload carries no status at all.
-        void validation
-            .validateAll(entryValidationStage({ status: payload.status, hasStatuses }))
-            .then((errors) => {
-                if (Object.keys(errors).length > 0) {
-                    toast({ message: validationMessage(errors), variant: 'error' });
-                    return;
-                }
-                publishMutation.mutate(payload);
-            });
+        publishIntentRef.current = true;
+        // Cleared once the submit settles so a later plain save isn't published.
+        void form.handleSubmit().finally(() => {
+            publishIntentRef.current = false;
+        });
     }
 
     // Cmd/Ctrl+S — save shortcut. Use a ref so the handler always sees the
