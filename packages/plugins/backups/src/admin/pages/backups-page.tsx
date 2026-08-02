@@ -17,7 +17,7 @@ import {
     Table,
     useAstromechPlugin,
 } from 'astromech/ui';
-import type { BackupRunRow } from '../../schema/runs.js';
+import type { BackupRunRow } from '../../tables/runs.js';
 import type {
     DeleteRunResult,
     ListRunsResult,

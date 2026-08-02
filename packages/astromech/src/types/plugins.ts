@@ -337,7 +337,7 @@ export type PluginDefinition = PluginIdentity & {
      * `defineTable` descriptors shipped by the plugin (create via
      * `definePluginTable`; names are `plugin_<namespace>_` prefixed).
      */
-    schema?: TableDescriptor[];
+    tables?: TableDescriptor[];
     /**
      * The plugin's own migration provider — the `migrations/index.ts` generated
      * by `astromech plugin:generate`. Merged into the app's migration chain at

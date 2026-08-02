@@ -17,8 +17,8 @@ that stream.
 backups/
   src/index.ts                  definePlugin() — identity + composing the surfaces below
   src/types.ts                  BackupsOptions + BACKUPS_PACKAGE
-  src/schema/runs.ts            definePluginTable — the `runs` table descriptor
-  src/schema/index.ts           the ./schema subpath entry (descriptors only)
+  src/tables/runs.ts             definePluginTable — the `runs` table descriptor
+  src/tables/index.ts            the ./tables subpath entry (descriptors only)
   migrations/                   generated — never hand-edited
   src/storage.ts                createStorage over the descriptor — the only DB access
   src/backup.ts                 performBackup / rotate / resolveKeep — the core work

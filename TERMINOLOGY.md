@@ -149,3 +149,19 @@ Not to be confused with **Restore** (entries) — clearing `deletedAt` on a tras
 ## Rotation / retention (backups)
 
 After each successful backup, the plugin prunes the oldest artifacts so that at most N are retained (default 7, configurable). Pruned artifacts are deleted from storage and their run rows are marked with `artifactDeletedAt` — the row itself is kept so run history remains intact. `pre-restore` snapshots are currently counted toward the keep-N limit (excluded count is a backlog item).
+
+---
+
+## Merge tag vs Placeholder (forms)
+
+**Merge tag** — a `{{token}}` an author writes into a form's email subject or body, substituted with that submission's values at send time (`emails/merge-tags.ts` in `@astromech/forms`). `{{fieldName}}`, plus `{{formTitle}}` and `{{submittedAt}}`. Unknown tags are left visible rather than silently deleted. The term is the form world's own — Gravity Forms, Mailchimp.
+
+**Placeholder** — a form field's greyed-out input hint, stored as the `placeholder` key on a field block. Never means `{{token}}`; the two were both called "placeholder" until the vocabulary was split.
+
+---
+
+## Schema vs Tables
+
+**Tables** — a directory of `defineTable` / `definePluginTable` descriptors and nothing else. Every table-bearing plugin keeps its descriptors in `src/tables/`, publishes them (where a consumer needs them) as a `./tables` subpath, and `astromech plugin:generate --tables` reads that module to diff against the package's migration snapshot.
+
+**Schema** — the aggregate shape, or a module that mixes descriptors with validation. Core's `<domain>/schema.ts` holds both table descriptors and the domain's Zod request schemas, so it keeps the wider word; likewise `astromech/db/schema` (every table plus the codec and driver) and `@astromech/schema-engine` (diffing and rendering DDL). A `schema` that means "just these tables" is the one usage that has been retired.

@@ -4,7 +4,7 @@
  * Run from inside a plugin package: diffs the plugin's own `definePluginTable`
  * descriptors against its `migrations/snapshot.json` and writes a migration into
  * the plugin package's own `migrations/` directory. There is no app and no
- * database here — the schema module is loaded with jiti and nothing else is
+ * database here — the table module is loaded with jiti and nothing else is
  * touched, so this must never load `astromech.config.ts`.
  */
 
@@ -27,7 +27,7 @@ function isDescriptor(value: unknown): value is TableDescriptor {
 }
 
 /**
- * Every descriptor a schema module exposes: top-level descriptor exports plus
+ * Every descriptor a table module exposes: top-level descriptor exports plus
  * the values of any exported record. Module export order first, then record key
  * order; duplicates collapse by identity.
  */
@@ -66,10 +66,10 @@ export default defineCommand({
         description: "Generate migrations for a plugin package's own tables",
     },
     args: {
-        schema: {
+        tables: {
             type: 'string',
-            description: 'Path to the schema module',
-            default: './src/schema/index.ts',
+            description: "Path to the module exporting the plugin's table descriptors",
+            default: './src/tables/index.ts',
         },
         name: {
             type: 'string',
@@ -86,16 +86,16 @@ export default defineCommand({
     async run({ args }) {
         const pkg = args.package ?? (await readPackageName());
         const prefix = pluginTablePrefix(pluginNamespace(pkg));
-        const schemaPath = resolve(process.cwd(), args.schema);
+        const tablesPath = resolve(process.cwd(), args.tables);
         const jiti = createJiti(import.meta.url);
-        const mod = (await jiti.import(schemaPath)) as Record<string, unknown>;
+        const mod = (await jiti.import(tablesPath)) as Record<string, unknown>;
         const tables = collectDescriptors(mod);
 
         if (tables.length === 0) {
             console.error(
-                `[astromech plugin:generate] no defineTable descriptors exported from ${schemaPath}. ` +
+                `[astromech plugin:generate] no defineTable descriptors exported from ${tablesPath}. ` +
                     'Export each table declared with `definePluginTable` from that module, ' +
-                    'or point --schema at the module that does.'
+                    'or point --tables at the module that does.'
             );
             process.exit(1);
         }
@@ -111,7 +111,7 @@ export default defineCommand({
                 `[astromech plugin:generate] every table must be prefixed "${prefix}" ` +
                     `(derived from package "${pkg}"), but these are not: ` +
                     `${offenders.join(', ')}. Declare them with \`definePluginTable(plugin, …)\`, ` +
-                    'and keep one schema module to one plugin.'
+                    'and keep one table module to one plugin.'
             );
             process.exit(1);
         }

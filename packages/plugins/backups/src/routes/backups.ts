@@ -16,7 +16,7 @@
 import { Readable } from 'node:stream';
 import { createGunzip } from 'node:zlib';
 import type { PluginContext, PluginRawRoute } from 'astromech';
-import { backupRunsTable, type BackupRunRow } from '../schema/runs.js';
+import { backupRunsTable, type BackupRunRow } from '../tables/runs.js';
 import { createBackupRunsStorage } from '../storage.js';
 import { isBackupRunning, performBackup, resolveKeep } from '../backup.js';
 

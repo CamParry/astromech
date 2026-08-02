@@ -1,7 +1,7 @@
 /**
  * The plugin's public service — the only surface a site's frontend touches.
  * `get` hands over a render-ready form definition; `submit` validates and
- * stores an answer set. Both are `access: 'public'`, so both are reachable by
+ * stores a set of submitted values. Both are `access: 'public'`, so both are reachable by
  * an anonymous caller and neither may assume a session.
  *
  * RPC carries no status channel (see the plugin-consistency sweep), so every
@@ -21,14 +21,14 @@ import type {
 import { defineServiceMethod, z } from 'astromech';
 import { processFields } from 'astromech/fields';
 import { compileFormFields } from '../fields/compile.js';
-import { toAnswerRows } from '../emails/index.js';
+import { toValueRows } from '../emails/values.js';
 import {
     AFTER_SUBMIT,
     BEFORE_SUBMIT,
     type FormsAfterSubmitPayload,
     type FormsBeforeSubmitPayload,
 } from '../hooks/events.js';
-import { sendFormEmails } from './notify.js';
+import { sendFormEmails } from '../emails/send.js';
 import { FORM_TYPE, SUBMISSION_TYPE } from '../types.js';
 import type { FormsOptions, SpamOptions, SubmissionMeta } from '../types.js';
 
@@ -150,7 +150,7 @@ function usesSpam(form: Entry): boolean {
 
 const SUMMARY_MAX_LENGTH = 120;
 const SUMMARY_SEPARATOR = ' · ';
-const SUMMARY_ANSWERS = 3;
+const SUMMARY_ROWS = 3;
 
 /**
  * The denormalised, human-scannable rendering of a submission. Exists because
@@ -161,8 +161,8 @@ function buildSummary(
     definitions: FieldDefinition[],
     values: Record<string, unknown>
 ): string {
-    const text = toAnswerRows(definitions, values)
-        .slice(0, SUMMARY_ANSWERS)
+    const text = toValueRows(definitions, values)
+        .slice(0, SUMMARY_ROWS)
         .map((row) => `${row.label}: ${row.value}`)
         .join(SUMMARY_SEPARATOR);
     if (text.length <= SUMMARY_MAX_LENGTH) return text;

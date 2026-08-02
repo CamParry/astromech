@@ -14,13 +14,13 @@
 import type { Entry, FieldDefinition, PluginContext } from 'astromech';
 import { renderRichText } from 'astromech';
 import {
-    applyPlaceholders,
-    ConfirmationEmail,
-    NotificationEmail,
-    submissionVars,
-    substituteInRichText,
-    toAnswerRows,
-} from '../emails/index.js';
+    applyMergeTags,
+    applyMergeTagsInRichText,
+    mergeTagValues,
+} from './merge-tags.js';
+import { toValueRows } from './values.js';
+import { ConfirmationEmail } from './templates/confirmation-email.js';
+import { NotificationEmail } from './templates/notification-email.js';
 import { firstEmailFieldName } from '../fields/compile.js';
 
 /** `renderRichText` takes tiptap's `JSONContent`; forms doesn't depend on tiptap. */
@@ -32,21 +32,21 @@ function fieldsOf(entry: Entry): Record<string, unknown> {
 
 /**
  * Stored ProseMirror JSON → sanitized HTML, or `undefined` for an empty body
- * (which is the documented signal to render the answers table alone).
+ * (which is the documented signal to render the table of values alone).
  *
  * THIS IS THE ONLY PRODUCER OF `bodyHtml`. Both email templates inject that
  * prop with `dangerouslySetInnerHTML`, so `renderRichText` output — and nothing
  * else — may ever be passed to it.
  *
- * Placeholders are substituted into the JSON *before* rendering, never into the
+ * Merge tags are substituted into the JSON *before* rendering, never into the
  * rendered string: the renderer is the sanitization boundary, so anything
  * spliced in afterwards would arrive past it. Doing it in this order means a
- * submitted answer containing markup is escaped into visible text by the
+ * submitted value containing markup is escaped into visible text by the
  * renderer.
  */
-function bodyHtmlOf(value: unknown, vars: Record<string, string>): string | undefined {
+function bodyHtmlOf(value: unknown, tags: Record<string, string>): string | undefined {
     if (value === null || value === undefined) return undefined;
-    const substituted = substituteInRichText(value, vars);
+    const substituted = applyMergeTagsInRichText(value, tags);
     const html = renderRichText(substituted as RichTextJson);
     return html === '' ? undefined : html;
 }
@@ -67,11 +67,11 @@ function recipients(value: unknown): string[] {
 
 function subjectOf(
     stored: unknown,
-    vars: Record<string, string>,
+    tags: Record<string, string>,
     fallback: string
 ): string {
     if (typeof stored !== 'string' || stored.trim() === '') return fallback;
-    return applyPlaceholders(stored, vars);
+    return applyMergeTags(stored, tags);
 }
 
 /** The submitter's address, from the form's `confirmToField` or its first email field. */
@@ -102,20 +102,20 @@ export async function sendFormEmails(
     const confirmEnabled = fields['confirmEnabled'] === true;
     if (!notifyEnabled && !confirmEnabled) return;
 
-    const rows = toAnswerRows(definitions, values);
+    const rows = toValueRows(definitions, values);
     // Sent immediately after the insert, so this is the submission's time.
     const submittedAt = new Date().toISOString();
     // Substituted into subject lines (plain strings) and into body rich text
     // (pre-render, so the renderer still escapes them).
-    const vars = submissionVars(values, { formTitle: form.title, submittedAt });
+    const tags = mergeTagValues(values, { formTitle: form.title, submittedAt });
 
     if (notifyEnabled) {
         const subject = subjectOf(
             fields['notifySubject'],
-            vars,
+            tags,
             `New submission — ${form.title}`
         );
-        const bodyHtml = bodyHtmlOf(fields['notifyBody'], vars);
+        const bodyHtml = bodyHtmlOf(fields['notifyBody'], tags);
         for (const to of recipients(fields['notifyTo'])) {
             try {
                 await ctx.sendEmail(
@@ -141,10 +141,10 @@ export async function sendFormEmails(
         if (to === undefined) return;
         const subject = subjectOf(
             fields['confirmSubject'],
-            vars,
+            tags,
             `Thanks for your submission — ${form.title}`
         );
-        const bodyHtml = bodyHtmlOf(fields['confirmBody'], vars);
+        const bodyHtml = bodyHtmlOf(fields['confirmBody'], tags);
         try {
             await ctx.sendEmail(
                 to,

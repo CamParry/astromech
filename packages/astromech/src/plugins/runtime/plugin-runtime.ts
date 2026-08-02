@@ -49,7 +49,7 @@ import {
     resolvePluginIdentity,
 } from '@/plugins/runtime/plugin-identity.js';
 import { entryAccess } from '@/plugins/runtime/entry-access.js';
-import { isTableDescriptor } from '@/plugins/runtime/plugin-schema.js';
+import { isTableDescriptor } from '@/plugins/runtime/plugin-tables.js';
 import { createPluginTrackingStorage } from '@/plugins/runtime/plugin-tracking-storage.js';
 import { registerCronJob } from '@/cron/registry.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
@@ -116,7 +116,7 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
         // Teach the row codec about the plugin's own tables so its rows encode /
         // decode like ours. Malformed entries are skipped here —
         // `assertPluginTablePrefixes` at config-resolution time is the loud gate.
-        for (const desc of def.schema ?? []) {
+        for (const desc of def.tables ?? []) {
             if (!isTableDescriptor(desc)) continue;
             registerDescriptorCodec(kyselyTableKey(desc.name), desc);
         }

@@ -11,7 +11,7 @@ import { REDIRECTS_PACKAGE } from './types.js';
 import type { RedirectsOptions } from './types.js';
 import { migrationProvider } from '../migrations/index.js';
 import { redirectEntryType } from './entries/redirect.js';
-import { redirectsTable } from './schema/redirects.js';
+import { redirectsTable } from './tables/redirects.js';
 import { redirectsService } from './service/redirects.js';
 import { slugChangeHook } from './hooks/slug-change.js';
 
@@ -39,7 +39,7 @@ export const redirects = definePlugin((options?: RedirectsOptions) => {
         // No `permissions` declaration: the only service method is public, and
         // the redirect entry type's permissions are derived by core. A site
         // grants them with `entryPermissions('redirects/redirect', …)`.
-        schema: [redirectsTable],
+        tables: [redirectsTable],
         migrations: migrationProvider,
         entries: [redirectEntryType],
         service: redirectsService,

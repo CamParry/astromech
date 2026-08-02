@@ -13,8 +13,8 @@ through the standard entry admin UI as a titleless entry type.
 redirects/
   src/index.ts                definePlugin() — identity + composing the surfaces below
   src/types.ts                RedirectsOptions + REDIRECTS_PACKAGE
-  src/schema/redirects.ts     definePluginTable — the `redirects` table descriptor
-  src/schema/index.ts         the ./schema subpath entry (descriptors only)
+  src/tables/redirects.ts     definePluginTable — the `redirects` table descriptor
+  src/tables/index.ts         the ./tables subpath entry (descriptors only)
   migrations/                 generated — never hand-edited
   src/entries/redirect.ts     defineEntryType — the table-backed entry type
   src/service/redirects.ts    the public `lookup` method

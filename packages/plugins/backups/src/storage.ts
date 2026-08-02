@@ -13,7 +13,7 @@
 
 import { createStorage } from 'astromech';
 import type { Patch, PluginContext } from 'astromech';
-import { backupRunsTable, type BackupRunRow } from './schema/runs.js';
+import { backupRunsTable, type BackupRunRow } from './tables/runs.js';
 
 /** A partial write against a run row — the status transitions below. */
 export type BackupRunPatch = Patch<typeof backupRunsTable>;

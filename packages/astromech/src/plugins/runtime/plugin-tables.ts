@@ -26,12 +26,12 @@ export type CollectedPluginTable = {
 };
 
 /** Flatten every table descriptor declared across the plugin set. */
-export function collectPluginSchemas(defs: PluginDefinition[]): CollectedPluginTable[] {
+export function collectPluginTables(defs: PluginDefinition[]): CollectedPluginTable[] {
     const collected: CollectedPluginTable[] = [];
     for (const def of defs) {
-        if (!def.schema) continue;
+        if (!def.tables) continue;
         const { namespace } = resolvePluginIdentity(def);
-        for (const desc of def.schema) {
+        for (const desc of def.tables) {
             if (!isTableDescriptor(desc)) continue;
             collected.push({ namespace, tableName: desc.name, table: desc });
         }
@@ -40,7 +40,7 @@ export function collectPluginSchemas(defs: PluginDefinition[]): CollectedPluginT
 }
 
 /**
- * Shape check for an entry in a plugin's `schema` array. `schema` is typed, but
+ * Shape check for an entry in a plugin's `tables` array. `tables` is typed, but
  * a plugin is third-party JS — a stale build can still hand us a Drizzle table
  * or a plain object, and that must be skipped rather than crash a read.
  */
@@ -58,7 +58,7 @@ export function isTableDescriptor(value: unknown): value is TableDescriptor {
  * table. Throws a build error on the first violation.
  */
 export function assertPluginTablePrefixes(defs: PluginDefinition[]): void {
-    for (const { namespace, tableName } of collectPluginSchemas(defs)) {
+    for (const { namespace, tableName } of collectPluginTables(defs)) {
         const prefix = pluginTablePrefix(namespace);
         if (!tableName.startsWith(prefix)) {
             throw new Error(
