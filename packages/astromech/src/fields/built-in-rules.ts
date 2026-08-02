@@ -4,7 +4,7 @@
  * Pure functions — no DB imports. Consumed by core-descriptors.ts.
  */
 
-import type { FieldValidator } from '@/types/fields.js';
+import type { FieldDefinition, FieldValidator } from '@/types/fields.js';
 import { slugify } from '@/utilities/strings.js';
 
 // ---------------------------------------------------------------------------
@@ -82,3 +82,112 @@ export const validateKeyValue: FieldValidator = async (ctx) => {
         ? true
         : 'Must be a set of key/value pairs';
 };
+
+// ---------------------------------------------------------------------------
+// choice — select, radio-group, multiselect, checkbox-group
+// ---------------------------------------------------------------------------
+
+/** The field's declared option values, as a set. */
+function optionValues(field: FieldDefinition): Set<string> {
+    const options = field.options ?? [];
+    return new Set(options.map((o) => (typeof o === 'string' ? o : o.value)));
+}
+
+/**
+ * A single-choice value must be one of the field's declared options.
+ * A field that declares none has nothing to check against, so it passes.
+ */
+export const validateChoice: FieldValidator = async (ctx) => {
+    if (typeof ctx.value !== 'string') return 'Must be one of the available options';
+    const allowed = optionValues(ctx.field);
+    if (allowed.size === 0) return true;
+    return allowed.has(ctx.value) ? true : 'Must be one of the available options';
+};
+
+/** A multi-choice value must be a list drawn from the field's declared options. */
+export const validateMultiChoice: FieldValidator = async (ctx) => {
+    if (!Array.isArray(ctx.value)) return 'Must be a list of options';
+    const allowed = optionValues(ctx.field);
+    for (const item of ctx.value) {
+        if (typeof item !== 'string') return 'Must be a list of options';
+        if (allowed.size > 0 && !allowed.has(item)) {
+            return 'Must be one of the available options';
+        }
+    }
+    return true;
+};
+
+// ---------------------------------------------------------------------------
+// number — number, range
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse a numeric string, since an HTML form posts every value as text.
+ * A string that is not a number is left alone for the validator to reject.
+ */
+export const coerceNumber = (v: unknown): unknown => {
+    if (typeof v !== 'string') return v;
+    const trimmed = v.trim();
+    if (trimmed === '') return null;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : v;
+};
+
+export const validateNumber: FieldValidator = async (ctx) =>
+    typeof ctx.value === 'number' && Number.isFinite(ctx.value)
+        ? true
+        : 'Must be a number';
+
+// ---------------------------------------------------------------------------
+// boolean
+// ---------------------------------------------------------------------------
+
+export const validateBoolean: FieldValidator = async (ctx) =>
+    typeof ctx.value === 'boolean' ? true : 'Must be true or false';
+
+// ---------------------------------------------------------------------------
+// date, datetime
+// ---------------------------------------------------------------------------
+
+/**
+ * Callers pass a `Date` as often as a string. Both land in a JSON column as an
+ * ISO string, so normalise here and let the validator deal only in strings.
+ */
+export const coerceDate = (v: unknown): unknown =>
+    v instanceof Date && !Number.isNaN(v.getTime()) ? v.toISOString() : v;
+
+/** Dates are stored as strings, so this checks the string actually parses. */
+export const validateDate: FieldValidator = async (ctx) => {
+    if (typeof ctx.value !== 'string') return 'Must be a date';
+    return Number.isNaN(Date.parse(ctx.value)) ? 'Must be a valid date' : true;
+};
+
+// ---------------------------------------------------------------------------
+// reference — media, relationship
+// ---------------------------------------------------------------------------
+
+/**
+ * A reference is stored as an id, or a list of ids when `multiple`.
+ * Rejects a populated entry object, which is what a caller writing back an
+ * expanded read would send. Whether the id resolves is not checked here.
+ */
+export const validateReference: FieldValidator = async (ctx) => {
+    const many = ctx.field.multiple === true;
+    if (!many) {
+        return typeof ctx.value === 'string' ? true : referenceMessage(ctx.value, false);
+    }
+    if (!Array.isArray(ctx.value)) return referenceMessage(ctx.value, true);
+    for (const item of ctx.value) {
+        if (typeof item !== 'string') return referenceMessage(item, true);
+    }
+    return true;
+};
+
+/** Name the populated-object case, since it is the one worth explaining. */
+function referenceMessage(value: unknown, many: boolean): string {
+    const expected = many ? 'a list of ids' : 'an id';
+    if (typeof value === 'object' && value !== null) {
+        return `Must be ${expected}, not a populated record`;
+    }
+    return `Must be ${expected}`;
+}
