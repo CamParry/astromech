@@ -65,6 +65,7 @@ export type { TooltipProps } from './tooltip.js';
 export {
     Page,
     PageHeader,
+    PageHeaderActions,
     PageTitle,
     PageContent,
     SectionTitle,

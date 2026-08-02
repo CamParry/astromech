@@ -115,6 +115,7 @@
         "trashed": "Trashed",
         "all": "All",
         "editTitle": "{{title}}",
+        "viewLive": "View live page",
         "movedToTrash": "{{name}} moved to trash.",
         "permanentlyDeleted": "{{name}} permanently deleted.",
         "duplicated": "{{name}} duplicated.",

@@ -7,8 +7,40 @@ export function Page({ children }: ChildrenProps): React.ReactElement {
     return <div className="am-page">{children}</div>;
 }
 
+/**
+ * Sticky page header. A zero-height sentinel at the page's top edge reports
+ * when the header has stuck, so it can tighten its padding without resizing.
+ */
 export function PageHeader({ children }: ChildrenProps): React.ReactElement {
-    return <div className="am-page-header">{children}</div>;
+    const sentinelRef = React.useRef<HTMLDivElement>(null);
+    const [stuck, setStuck] = React.useState(false);
+
+    React.useEffect(() => {
+        const sentinel = sentinelRef.current;
+        if (sentinel == null || typeof IntersectionObserver === 'undefined') return;
+        const observer = new IntersectionObserver(([entry]) =>
+            setStuck(entry != null && !entry.isIntersecting)
+        );
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, []);
+
+    return (
+        <>
+            <div
+                ref={sentinelRef}
+                className="am-page-header-sentinel"
+                aria-hidden="true"
+            />
+            <div className="am-page-header" data-stuck={stuck || undefined}>
+                {children}
+            </div>
+        </>
+    );
+}
+
+export function PageHeaderActions({ children }: ChildrenProps): React.ReactElement {
+    return <div className="am-page-header-actions">{children}</div>;
 }
 
 export function PageTitle({ children }: ChildrenProps): React.ReactElement {

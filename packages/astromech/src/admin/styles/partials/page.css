@@ -3,12 +3,21 @@
    ============================================================================ */
 
 .am-page {
+    position: relative;
     display: flex;
     flex-direction: column;
 }
 
+/* Scroll probe for the sticky header — occupies no layout space. */
+.am-page-header-sentinel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+}
+
 .am-page-header {
-    position: sticky;
     position: sticky;
     top: 0;
     z-index: 20;
@@ -18,6 +27,21 @@
     justify-content: space-between;
     padding: 2rem 2rem 0;
     background-color: var(--am-color-bg-muted);
+    transition: padding var(--am-duration-base) var(--am-easing);
+}
+
+/* Stuck: lift the row by half the top padding and give it that much below, so
+   the header's total height is unchanged and the content never jumps. */
+.am-page-header[data-stuck] {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+.am-page-header-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: 0.5rem;
+    align-items: center;
 }
 
 .am-page-title {
@@ -183,6 +207,11 @@
         flex-wrap: wrap;
         gap: 0.75rem;
         padding: 1.25rem 1.25rem 0;
+    }
+
+    .am-page-header[data-stuck] {
+        padding-top: 0.5rem;
+        padding-bottom: 0.75rem;
     }
 }
 

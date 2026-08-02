@@ -36,7 +36,9 @@ import {
     useToast,
     Page,
     PageHeader,
+    PageHeaderActions,
     PageTitle,
+    Tooltip,
     FormLayout,
     FormLayoutContent,
     Stack,
@@ -238,6 +240,12 @@ export function EntryEditPage({
             ? resolveEntryUrl(entryTypeConfig.url, entry)
             : null;
 
+    // One surface control, not two. A published entry links straight to its live
+    // page; anything else opens a tokenised preview of the last saved state.
+    const showViewLive = !isStaged && previewUrl != null && entry?.status === 'published';
+    const showPreview = hasStaging && previewUrl != null && !showViewLive;
+    const previewLabel = isStaged ? t('staging.previewStaged') : t('staging.preview');
+
     function handlePreview(staged: boolean): void {
         if (!previewUrl) return;
         issueToken.mutate(undefined, {
@@ -313,7 +321,7 @@ export function EntryEditPage({
                             ]}
                         />
                     </PageTitle>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <PageHeaderActions>
                         {!isReadOnly && form.state.isDirty && (
                             <span className="am-form-layout-dirty-indicator">
                                 {t('common.unsavedChanges')}
@@ -321,83 +329,6 @@ export function EntryEditPage({
                         )}
                         {hasStatuses && !isStaged && entry != null && (
                             <StatusBadge status={entry.status} />
-                        )}
-                        {!isStaged &&
-                            entryTypeConfig?.url &&
-                            entry?.status === 'published' && (
-                                <a
-                                    href={resolveEntryUrl(entryTypeConfig.url, entry)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="am-btn am-btn-ghost am-btn-sm"
-                                >
-                                    <ExternalLink
-                                        size={14}
-                                        style={{ marginRight: '0.25rem' }}
-                                    />
-                                    {t('common.view')}
-                                </a>
-                            )}
-                        {/* Preview (forward versioning): issue a token, open the front-end URL. */}
-                        {hasStaging && previewUrl != null && (
-                            <Button
-                                variant="ghost"
-                                onClick={() => handlePreview(isStaged)}
-                                loading={issueToken.isPending}
-                            >
-                                <Eye size={14} style={{ marginRight: '0.25rem' }} />
-                                {isStaged
-                                    ? t('staging.previewStaged')
-                                    : t('staging.preview')}
-                            </Button>
-                        )}
-                        {/* Canonical: stage a change, or jump to the existing one. */}
-                        {hasStaging &&
-                            !isStaged &&
-                            !isReadOnly &&
-                            (stagedChange != null ? (
-                                <Link
-                                    to={`${basePath}/${stagedChange.id}`}
-                                    className="am-btn am-btn-secondary am-btn-md"
-                                >
-                                    <Layers
-                                        size={14}
-                                        style={{ marginRight: '0.25rem' }}
-                                    />
-                                    {t('staging.viewStaged')}
-                                </Link>
-                            ) : (
-                                <Button
-                                    variant="secondary"
-                                    onClick={() => createStaged.mutate(id)}
-                                    loading={createStaged.isPending}
-                                >
-                                    <Layers
-                                        size={14}
-                                        style={{ marginRight: '0.25rem' }}
-                                    />
-                                    {t('staging.stageChange')}
-                                </Button>
-                            ))}
-                        {!isReadOnly && (
-                            <Button
-                                variant={isStaged ? 'secondary' : 'primary'}
-                                onClick={handleSave}
-                                loading={saveMutation.isPending}
-                            >
-                                {t('common.update')}
-                            </Button>
-                        )}
-                        {/* Staged: merge is the primary commit action (needs publish). */}
-                        {isStaged && canPublish && (
-                            <Button
-                                variant="primary"
-                                onClick={handleMerge}
-                                loading={mergeStaged.isPending}
-                            >
-                                <GitMerge size={14} style={{ marginRight: '0.25rem' }} />
-                                {t('staging.merge')}
-                            </Button>
                         )}
                         {!isStaged && capabilities?.translatable && entry != null && (
                             <LocaleSwitcher
@@ -414,13 +345,80 @@ export function EntryEditPage({
                                 compact
                             />
                         )}
+                        {showViewLive && (
+                            <Tooltip content={t('entries.viewLive')}>
+                                <a
+                                    href={previewUrl ?? undefined}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="am-btn am-btn-secondary am-btn-md am-btn-icon"
+                                    aria-label={t('entries.viewLive')}
+                                >
+                                    <ExternalLink size={16} />
+                                </a>
+                            </Tooltip>
+                        )}
+                        {/* Preview (forward versioning): issue a token, open the front-end URL. */}
+                        {showPreview && (
+                            <Tooltip content={previewLabel}>
+                                <Button
+                                    variant="secondary"
+                                    aria-label={previewLabel}
+                                    onClick={() => handlePreview(isStaged)}
+                                    loading={issueToken.isPending}
+                                    icon={<Eye size={16} />}
+                                />
+                            </Tooltip>
+                        )}
+                        {/* Canonical: stage a change, or jump to the existing one. */}
+                        {hasStaging &&
+                            !isStaged &&
+                            !isReadOnly &&
+                            (stagedChange != null ? (
+                                <Link
+                                    to={`${basePath}/${stagedChange.id}`}
+                                    className="am-btn am-btn-secondary am-btn-md"
+                                >
+                                    <Layers size={16} />
+                                    {t('staging.viewStaged')}
+                                </Link>
+                            ) : (
+                                <Button
+                                    variant="secondary"
+                                    icon={<Layers size={16} />}
+                                    onClick={() => createStaged.mutate(id)}
+                                    loading={createStaged.isPending}
+                                >
+                                    {t('staging.stageChange')}
+                                </Button>
+                            ))}
+                        {!isReadOnly && (
+                            <Button
+                                variant={isStaged ? 'secondary' : 'primary'}
+                                onClick={handleSave}
+                                loading={saveMutation.isPending}
+                            >
+                                {t('common.update')}
+                            </Button>
+                        )}
+                        {/* Staged: merge is the primary commit action (needs publish). */}
+                        {isStaged && canPublish && (
+                            <Button
+                                variant="primary"
+                                icon={<GitMerge size={16} />}
+                                onClick={handleMerge}
+                                loading={mergeStaged.isPending}
+                            >
+                                {t('staging.merge')}
+                            </Button>
+                        )}
                         {!isReadOnly && (
                             <Menu.Root>
                                 <Menu.Trigger
                                     className="am-btn am-btn-secondary am-btn-md am-btn-icon"
                                     aria-label={t('entries.moreActions')}
                                 >
-                                    <MoreHorizontal size={14} />
+                                    <MoreHorizontal size={16} />
                                 </Menu.Trigger>
                                 <Menu.Portal>
                                     <Menu.Positioner
@@ -491,7 +489,7 @@ export function EntryEditPage({
                                 </Menu.Portal>
                             </Menu.Root>
                         )}
-                    </div>
+                    </PageHeaderActions>
                 </PageHeader>
 
                 <PageContent>
