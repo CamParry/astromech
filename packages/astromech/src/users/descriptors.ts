@@ -36,7 +36,9 @@ export const usersDescriptors = {
         mutates: true,
     },
     update: {
-        summary: 'Update a user’s profile or role.',
+        summary:
+            'Update a user’s profile or role. Fields merge: omitted fields keep ' +
+            'their current value, and arrays are replaced whole.',
         input: z.object({ id: z.string(), data: updateUserSchema }),
         permission: 'users:update',
         mutates: true,

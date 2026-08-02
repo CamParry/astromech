@@ -23,6 +23,7 @@ import { resolveEntryType } from '../type-registry.js';
 import { entryValidationStage } from '../validation-stage.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
 import { processFields } from '@/fields/pipeline.js';
+import { mergePatch, projectToSchema } from '@/fields/patch.js';
 import { getDocumentValidator } from '@/fields/document-validators.js';
 import { ValidationError } from '@/errors/index.js';
 import config from 'virtual:astromech/config';
@@ -39,6 +40,10 @@ export async function updateOne(
 ): Promise<Entry> {
     const validatedData = validate(updateEntrySchemaFor(getTitleField(type)), data);
     const currentEntry = await loadAndAssertType(storage, type, id);
+
+    // Root field names the caller actually sent — needed after the block too,
+    // for the translatable propagation.
+    let patchedFieldNames: string[] = [];
 
     if (validatedData.fields !== undefined) {
         const entryTypeConfig = resolveEntryType(config, type);
@@ -70,33 +75,41 @@ export async function updateOne(
         const documentValidate =
             getDocumentValidator(`entry:${type}`) ?? entryTypeConfig?.validate;
 
-        const processed = await processFields(
-            validatedData.fields as Record<string, unknown>,
-            fieldDefs,
-            {
-                operation: 'update',
-                // An update that omits `status` keeps the row's current one, so
-                // editing an already-published entry still enforces completeness.
-                stage: entryValidationStage({
-                    status: validatedData.status ?? currentEntry.status,
-                    hasStatuses: entryTypeConfig
-                        ? entryTypeConfig.capabilities.statuses !== false
-                        : true,
-                }),
-                host: { kind: 'entry', record: currentEntry },
-                user: getCurrentUser(),
-                reads: createEntryScopedReads(storage, {
-                    type,
-                    locale: currentEntry.locale,
-                    excludeId: excludeIds,
-                }),
-                ...(documentValidate ? { documentValidate } : {}),
-            }
+        // `fields` is a patch, not a replacement: an omitted field keeps its
+        // stored value, an explicit `null` stores null, and an array or
+        // container value replaces wholesale. Only the patched fields are
+        // coerced, but validation sees the merged document.
+        const patch = validatedData.fields as Record<string, unknown>;
+        patchedFieldNames = Object.keys(patch).filter((k) => patch[k] !== undefined);
+        const merged = mergePatch(
+            currentEntry.fields as Record<string, unknown> | null,
+            patch
         );
+
+        const processed = await processFields(merged, fieldDefs, {
+            operation: 'update',
+            // An update that omits `status` keeps the row's current one, so
+            // editing an already-published entry still enforces completeness.
+            stage: entryValidationStage({
+                status: validatedData.status ?? currentEntry.status,
+                hasStatuses: entryTypeConfig
+                    ? entryTypeConfig.capabilities.statuses !== false
+                    : true,
+            }),
+            host: { kind: 'entry', record: currentEntry },
+            user: getCurrentUser(),
+            reads: createEntryScopedReads(storage, {
+                type,
+                locale: currentEntry.locale,
+                excludeId: excludeIds,
+            }),
+            coerceOnly: new Set(patchedFieldNames),
+            ...(documentValidate ? { documentValidate } : {}),
+        });
         if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
             throw ValidationError.fromFieldErrors(processed.errors, processed.form);
         }
-        validatedData.fields = processed.values as JsonObject;
+        validatedData.fields = projectToSchema(processed.values, fieldDefs) as JsonObject;
     }
 
     if (isVersioningEnabled(type) && storage.versions) {
@@ -154,10 +167,11 @@ export async function updateOne(
     }
 
     if (validatedData.fields && storage.translatable) {
-        const changedFieldNames = Object.keys(validatedData.fields);
+        // Only what the caller sent: the merged document holds every field, and
+        // propagating an untouched one would overwrite its sibling locales.
         const nonTranslatableNames = getNonTranslatableFieldNames(
             type,
-            changedFieldNames
+            patchedFieldNames
         );
         if (nonTranslatableNames.length > 0) {
             const nonTranslatableValues: JsonObject = {};

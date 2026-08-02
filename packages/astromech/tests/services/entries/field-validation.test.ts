@@ -151,6 +151,8 @@ describe('validation stage — derived from the status the row will hold', () =>
         });
     });
 
+    // `fields` is a patch, so emptying the required field means sending it
+    // empty — an omitted field keeps its stored value and stays complete.
     it('an update that keeps the row published enforces completeness', async () => {
         const entry = await api.create({
             type: 'post',
@@ -159,7 +161,11 @@ describe('validation stage — derived from the status the row will hold', () =>
             fields: { title_text: 'Hello' },
         });
         await expect(
-            api.update({ type: 'post', id: entry.id, data: { fields: {} } })
+            api.update({
+                type: 'post',
+                id: entry.id,
+                data: { fields: { title_text: '' } },
+            })
         ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: { title_text: ['This field is required'] },

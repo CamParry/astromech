@@ -37,8 +37,8 @@ astromech methods --json
 
 `create`/`update` take scalar flags (`--title`, `--slug`, `--locale`,
 `--status`, `--publishAt`) plus `--fields` for field data. `--fields` (and
-`update`'s `--data`, the full update payload) accept inline JSON or `@file` to
-read from disk. Explicit flags override values in `--data`.
+`update`'s `--data`, the update patch) accept inline JSON or `@file` to read
+from disk. Explicit flags override values in `--data`.
 
 ```sh
 astromech entries:create post \

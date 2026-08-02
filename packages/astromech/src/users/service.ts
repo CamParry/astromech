@@ -6,6 +6,7 @@ import { ValidationError } from '@/errors/validation.js';
 import { createUserSchema, updateUserSchema } from './schema.js';
 import config from 'virtual:astromech/config';
 import { processFields } from '@/fields/pipeline.js';
+import { mergePatch, projectToSchema } from '@/fields/patch.js';
 import { getDocumentValidator } from '@/fields/document-validators.js';
 import { flattenFieldNodes } from '@/fields/helpers.js';
 import { scopedReadsFromRecords } from '@/fields/scoped-reads.js';
@@ -140,26 +141,34 @@ export const usersApi = {
             // the fallback for the live-config paths (CLI, tests).
             const documentValidate =
                 getDocumentValidator('users') ?? config.users?.validate;
-            const processed = await processFields(
-                validatedData.fields as Record<string, unknown>,
-                fieldDefs,
-                {
-                    operation: 'update',
-                    host: { kind: 'user', record: current },
-                    user: getCurrentUser(),
-                    reads: scopedReadsFromRecords({
-                        load: async () => (await usersApi.query({ limit: 'all' })).data,
-                        getId: (r) => r.id,
-                        getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
-                        excludeId: id,
-                    }),
-                    ...(documentValidate ? { documentValidate } : {}),
-                }
+            // `fields` is a patch: an omitted field keeps its stored value, an
+            // explicit `null` stores null, and a container replaces wholesale.
+            const patch = validatedData.fields as Record<string, unknown>;
+            const patchedNames = Object.keys(patch).filter((k) => patch[k] !== undefined);
+            const merged = mergePatch(
+                current?.fields as Record<string, unknown> | null | undefined,
+                patch
             );
+            const processed = await processFields(merged, fieldDefs, {
+                operation: 'update',
+                host: { kind: 'user', record: current },
+                user: getCurrentUser(),
+                reads: scopedReadsFromRecords({
+                    load: async () => (await usersApi.query({ limit: 'all' })).data,
+                    getId: (r) => r.id,
+                    getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
+                    excludeId: id,
+                }),
+                coerceOnly: new Set(patchedNames),
+                ...(documentValidate ? { documentValidate } : {}),
+            });
             if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
                 throw ValidationError.fromFieldErrors(processed.errors, processed.form);
             }
-            validatedData.fields = processed.values as JsonObject;
+            validatedData.fields = projectToSchema(
+                processed.values,
+                fieldDefs
+            ) as JsonObject;
         }
 
         // An explicitly-`undefined` key means "leave this column alone"; storage

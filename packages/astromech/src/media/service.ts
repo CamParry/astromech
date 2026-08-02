@@ -15,6 +15,7 @@ import type {
 import { ValidationError } from '@/errors/validation.js';
 import { updateMediaSchema } from './schema.js';
 import { processFields } from '@/fields/pipeline.js';
+import { mergePatch, projectToSchema } from '@/fields/patch.js';
 import { getDocumentValidator } from '@/fields/document-validators.js';
 import { flattenFieldNodes } from '@/fields/helpers.js';
 import { scopedReadsFromRecords } from '@/fields/scoped-reads.js';
@@ -184,26 +185,34 @@ export const mediaApi = {
             // the fallback for the live-config paths (CLI, tests).
             const documentValidate =
                 getDocumentValidator('media') ?? config.media?.validate;
-            const processed = await processFields(
-                validatedData.fields as Record<string, unknown>,
-                fieldDefs,
-                {
-                    operation: 'update',
-                    host: { kind: 'media', record: current },
-                    user: getCurrentUser(),
-                    reads: scopedReadsFromRecords({
-                        load: async () => (await mediaApi.query({ limit: 'all' })).data,
-                        getId: (r) => r.id,
-                        getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
-                        excludeId: id,
-                    }),
-                    ...(documentValidate ? { documentValidate } : {}),
-                }
+            // `fields` is a patch: an omitted field keeps its stored value, an
+            // explicit `null` stores null, and a container replaces wholesale.
+            const patch = validatedData.fields as Record<string, unknown>;
+            const patchedNames = Object.keys(patch).filter((k) => patch[k] !== undefined);
+            const merged = mergePatch(
+                current?.fields as Record<string, unknown> | null | undefined,
+                patch
             );
+            const processed = await processFields(merged, fieldDefs, {
+                operation: 'update',
+                host: { kind: 'media', record: current },
+                user: getCurrentUser(),
+                reads: scopedReadsFromRecords({
+                    load: async () => (await mediaApi.query({ limit: 'all' })).data,
+                    getId: (r) => r.id,
+                    getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
+                    excludeId: id,
+                }),
+                coerceOnly: new Set(patchedNames),
+                ...(documentValidate ? { documentValidate } : {}),
+            });
             if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
                 throw ValidationError.fromFieldErrors(processed.errors, processed.form);
             }
-            validatedData.fields = processed.values as JsonObject;
+            validatedData.fields = projectToSchema(
+                processed.values,
+                fieldDefs
+            ) as JsonObject;
         }
 
         // `updatedAt` is stamped by the storage wrapper (the column declares

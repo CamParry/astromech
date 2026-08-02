@@ -53,6 +53,11 @@ function entryMethodSummary(method: string, action: EntryAction, type: string): 
     switch (method) {
         case 'query':
             return `List "${type}" entries.`;
+        case 'update':
+            return (
+                `Update a "${type}" entry. Fields merge: omitted fields keep ` +
+                `their current value, and arrays are replaced whole.`
+            );
         case 'duplicate':
             return `Copy a "${type}" entry into a new one.`;
         case 'unpublish':

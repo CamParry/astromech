@@ -221,6 +221,25 @@ describe('usersApi.update — uniqueness self-exclusion', () => {
 });
 
 // ---------------------------------------------------------------------------
+// update: fields merge
+// ---------------------------------------------------------------------------
+
+describe('usersApi.update — fields merge', () => {
+    it('keeps fields the patch omits', async () => {
+        const user = await usersApi.create({
+            email: uniqueEmail(),
+            name: 'Alice',
+            fields: { bio: 'Hi', badge: 'gold' },
+        });
+        const updated = await usersApi.update({
+            id: user.id,
+            data: { fields: { tier: 'pro' } },
+        });
+        expect(updated.fields).toMatchObject({ bio: 'Hi', badge: 'gold', tier: 'pro' });
+    });
+});
+
+// ---------------------------------------------------------------------------
 // update: no fields → skips validation
 // ---------------------------------------------------------------------------
 

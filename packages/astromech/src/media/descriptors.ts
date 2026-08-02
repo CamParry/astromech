@@ -37,7 +37,9 @@ export const mediaDescriptors = {
         mutates: true,
     },
     update: {
-        summary: 'Update a media item’s metadata.',
+        summary:
+            'Update a media item’s metadata. Fields merge: omitted fields keep ' +
+            'their current value, and arrays are replaced whole.',
         input: z.object({ id: z.string(), data: updateMediaSchema }),
         permission: 'media:upload',
         mutates: true,

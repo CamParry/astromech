@@ -42,6 +42,12 @@
  * fields reported. It returns a form-level string or a map of path → message;
  * on a key a field already claimed, the field's own error wins as the more
  * specific one.
+ *
+ * `ctx.coerceOnly` names the root fields a patch actually carries. Coercion then
+ * runs for those fields and their subtrees only, while defaults, `children()`
+ * normalization and validation still run over the whole merged document. A
+ * coercer is not guaranteed idempotent, so re-running one over a value the
+ * caller never mentioned would rewrite stored data behind their back.
  */
 
 import type {
@@ -213,18 +219,26 @@ type PipelineContext = Omit<
     collectWarnings?: boolean;
     /** Whole-document validator, run after every field. */
     documentValidate?: DocumentValidator;
+    /**
+     * Root field names whose value is new in this write. Absent ⇒ coerce
+     * everything; present ⇒ coerce only these fields and their subtrees.
+     */
+    coerceOnly?: ReadonlySet<string>;
 };
 
 /** The same context once `stage` and `collectWarnings` are concrete. */
 type ScopeContext = Omit<
     FieldValidationContext,
     'value' | 'values' | 'field' | 'path'
-> & { collectWarnings: boolean };
+> & { collectWarnings: boolean; coerceOnly?: ReadonlySet<string> };
 
 /**
  * Run one value scope: the root record, or one container item / group object.
  * `values` is mutated in place, because a nested scope object is a live
  * reference inside the container value already written to its parent.
+ *
+ * `inheritedCoercible` is the parent field's coercibility, or `undefined` at the
+ * root scope where `ctx.coerceOnly` decides it per field.
  */
 async function processScope(
     values: Record<string, unknown>,
@@ -232,7 +246,8 @@ async function processScope(
     parentSegments: readonly FieldPathSegment[],
     ctx: ScopeContext,
     errors: FieldErrors,
-    warnings: FieldErrors
+    warnings: FieldErrors,
+    inheritedCoercible?: boolean
 ): Promise<void> {
     for (const field of flattenFieldNodes(definitions)) {
         const descriptor = getFieldTypeDescriptor(field.type);
@@ -242,10 +257,17 @@ async function processScope(
         ];
         const path = fieldErrorPath(segments, field);
 
+        // A patched root container replaces its whole subtree, so every value
+        // below it is new too and inherits the container's coercibility.
+        const coercible =
+            inheritedCoercible ??
+            (ctx.coerceOnly === undefined || ctx.coerceOnly.has(field.name));
+
         // Step a: coerce
-        let v = descriptor?.coerce
-            ? descriptor.coerce(values[field.name])
-            : values[field.name];
+        let v =
+            coercible && descriptor?.coerce
+                ? descriptor.coerce(values[field.name])
+                : values[field.name];
 
         // Step b: default (create only, when value is absent)
         if (ctx.operation === 'create' && (v === undefined || v === null)) {
@@ -277,7 +299,8 @@ async function processScope(
                     [...parentSegments, ...scope.segments],
                     ctx,
                     errors,
-                    warnings
+                    warnings,
+                    coercible
                 );
             }
         }

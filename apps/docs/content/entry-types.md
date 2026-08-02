@@ -33,6 +33,27 @@ property unset. (A plugin's entry types are the exception: they live in an
 array on the plugin definition, so each one self-declares `type` — see
 [plugins/authoring.md](../plugins/authoring.md).)
 
+## Updating entries
+
+`Astromech.entries.update()` takes a **patch**, not a replacement. A field the
+patch omits keeps its stored value; an explicit `null` stores null; an array or
+container value — a repeater, a blocks list, a tree — replaces what was there
+wholesale rather than merging item by item. Validation runs against the merged
+result, so a one-field patch is never failed for a `required` field it did not
+mention. Keys left behind by a field you have since removed from the type are
+dropped on the next write.
+
+```ts
+// `body` and every other field keep their current values.
+await Astromech.entries.update({
+    type: 'author',
+    id,
+    data: { fields: { role: 'Editor' } },
+});
+```
+
+The same applies to `Astromech.users.update()` and `Astromech.media.update()`.
+
 ## Splitting a type into its own module
 
 Entry types are the part of a config that grows without bound. Once one has

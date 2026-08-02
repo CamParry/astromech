@@ -201,6 +201,29 @@ describe('mediaApi.update — uniqueness', () => {
 });
 
 // ---------------------------------------------------------------------------
+// update: fields merge
+// ---------------------------------------------------------------------------
+
+describe('mediaApi.update — fields merge', () => {
+    it('keeps fields the patch omits', async () => {
+        const m = await mediaApi.upload({ file: textFile() });
+        await mediaApi.update({
+            id: m.id,
+            data: { fields: { caption: 'A photo', tag: 'omega' } },
+        });
+        const updated = await mediaApi.update({
+            id: m.id,
+            data: { fields: { slug_field: 'Second Pass' } },
+        });
+        expect(updated.fields).toMatchObject({
+            caption: 'A photo',
+            tag: 'omega',
+            slug_field: 'second-pass',
+        });
+    });
+});
+
+// ---------------------------------------------------------------------------
 // update: no fields → skips validation
 // ---------------------------------------------------------------------------
 
