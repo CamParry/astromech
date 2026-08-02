@@ -11,7 +11,12 @@
 import type { TFunction } from 'i18next';
 import type { Label } from '@/types/index.js';
 
-function titleCase(name: string): string {
+/**
+ * The fallback an omitted `Label` resolves to. Exported so anything building a
+ * label without a `t` in hand (the validation summary) produces the same string
+ * the field's own label does.
+ */
+export function titleCase(name: string): string {
     return name
         .replace(/[-_]+/g, ' ')
         .replace(/\b\w/g, (c) => c.toUpperCase())

@@ -22,6 +22,7 @@ import {
     WrapText,
 } from 'lucide-react';
 import { buildRichTextExtensions, type RichTextAllow } from './rich-text-extensions.js';
+import { useFieldControl } from '@/admin/components/fields/field-control-context';
 
 // ============================================================================
 // Types
@@ -281,7 +282,13 @@ export function RichTextEditor({
     placeholder,
 }: RichTextEditorProps): React.ReactElement | null {
     const [linkPopover, setLinkPopover] = useState<LinkPopoverState>({ open: false });
+    const { ariaProps } = useFieldControl();
 
+    // The focusable control is ProseMirror's contenteditable, not the wrapper
+    // `EditorContent` renders, so the error association has to go through
+    // `editorProps.attributes`. `useEditor` diffs its options each render and
+    // pushes changes with `setOptions` → `view.setProps`, so this tracks the
+    // error state without recreating the editor.
     const editorOptions = {
         extensions: buildRichTextExtensions(allow, placeholder),
         editable: !disabled,
@@ -290,6 +297,12 @@ export function RichTextEditor({
         editorProps: {
             attributes: {
                 class: 'am-richtext-content',
+                ...(ariaProps['aria-invalid'] !== undefined
+                    ? { 'aria-invalid': 'true' }
+                    : {}),
+                ...(ariaProps['aria-describedby'] !== undefined
+                    ? { 'aria-describedby': ariaProps['aria-describedby'] }
+                    : {}),
             },
         },
         onUpdate: ({ editor: ed }: { editor: Editor }) => {

@@ -8,13 +8,29 @@
  * create and edit can use different endpoints while sharing everything else.
  */
 
-import { useEffect, useRef, useState } from 'react';
-import { useForm } from '@tanstack/react-form';
+import { useEffect, useMemo, useRef } from 'react';
+import { useForm, useStore } from '@tanstack/react-form';
 import { useMutation } from '@tanstack/react-query';
 import type { UseMutationResult } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useHotkeys } from './index.js';
+import { useFieldValidation } from './use-field-validation.js';
 import { useToast } from '../components/ui/index.js';
-import type { Entry, EntryStatus, JsonObject } from '../../types/index.js';
+import {
+    fieldErrorNames,
+    validationSummaryMessage,
+} from '@/admin/components/fields/field-error-summary.js';
+import { resolveLabel } from '@/admin/i18n/labels.js';
+import type {
+    Entry,
+    EntryStatus,
+    FieldDefinition,
+    FieldErrors,
+    JsonObject,
+} from '../../types/index.js';
+// Deep import of a pure leaf: the browser must pick the same stage the server
+// will, and the entries barrel would drag a domain service into the bundle.
+import { entryValidationStage } from '@/entries/validation-stage.js';
 import { AstromechApiError } from '../../transport/http/client/index.js';
 
 // ============================================================================
@@ -39,6 +55,19 @@ export type EntryPayload = {
 };
 
 type UseEntryFormOptions = {
+    /**
+     * The type's full field tree (`[...main, ...sidebar]`), which the browser
+     * runs the server's own pipeline over before letting a submit through.
+     */
+    fieldDefinitions: FieldDefinition[];
+    /** Which pipeline operation a submit performs — `'create'` seeds defaults. */
+    operation: 'create' | 'update';
+    /**
+     * The i18n namespace field labels resolve against — `namespaceForScope(cacheScope)`.
+     * Passed rather than read from `EntryNamespaceProvider`, because this hook is
+     * called ABOVE that provider and `useLabel()` would answer for the wrong one.
+     */
+    namespace: string;
     /** Whether this collection has a slug field. */
     hasSlug: boolean;
     /**
@@ -70,6 +99,9 @@ type UseEntryFormOptions = {
 // ============================================================================
 
 export function useEntryForm({
+    fieldDefinitions,
+    operation,
+    namespace,
     hasSlug,
     hasStatuses = true,
     defaultValues,
@@ -79,7 +111,21 @@ export function useEntryForm({
     readOnly = false,
 }: UseEntryFormOptions) {
     const { toast } = useToast();
-    const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+    const { t } = useTranslation();
+
+    /**
+     * Name the fields that failed rather than pointing at highlights the author
+     * has to hunt for — the fields that fail a publish are typically the empty
+     * ones they never scrolled to.
+     */
+    function validationMessage(errors: FieldErrors): string {
+        const names = fieldErrorNames(errors, fieldDefinitions, (label) =>
+            // The label is always present here (the resolver substitutes the
+            // field's own name), so the name fallback is unreachable.
+            resolveLabel(label, '', t, namespace)
+        );
+        return validationSummaryMessage(names, t);
+    }
 
     const form = useForm({
         defaultValues: {
@@ -89,9 +135,29 @@ export function useEntryForm({
             publishAt: defaultValues?.publishAt ?? '',
             fields: defaultValues?.fields ?? ({} as Record<string, unknown>),
         },
-        onSubmit: ({ value }) => {
-            saveMutation.mutate(buildPayload(value));
+        onSubmit: async ({ value }) => {
+            const payload = buildPayload(value);
+            const errors = await validation.validateAll(
+                entryValidationStage({ status: payload.status, hasStatuses })
+            );
+            if (Object.keys(errors).length > 0) {
+                toast({ message: validationMessage(errors), variant: 'error' });
+                return;
+            }
+            saveMutation.mutate(payload);
         },
+    });
+
+    // The entry's field tree sits under a single `form.Field name="fields"`, so
+    // TanStack's per-field validators/blur tracking never see the individual
+    // fields — only this subscription does. Subscribing here is what makes the
+    // re-validate-while-erroring effect fire on each keystroke.
+    const fieldValues = useStore(form.store, (state) => state.values.fields);
+
+    const validation = useFieldValidation({
+        definitions: fieldDefinitions,
+        values: fieldValues,
+        operation,
     });
 
     function buildPayload(
@@ -117,10 +183,10 @@ export function useEntryForm({
 
     function handleFieldError(err: Error, fallback: string): void {
         if (err instanceof AstromechApiError && err.status === 422) {
-            const fields = (err.details?.fields ?? {}) as Record<string, string[]>;
+            const fields = (err.details?.fields ?? {}) as FieldErrors;
             if (Object.keys(fields).length > 0) {
-                setFieldErrors(fields);
-                toast({ message: 'Please fix the highlighted fields', variant: 'error' });
+                validation.setServerErrors(fields);
+                toast({ message: validationMessage(fields), variant: 'error' });
                 return;
             }
         }
@@ -163,14 +229,29 @@ export function useEntryForm({
 
     function handleSave(): void {
         if (readOnly) return;
-        setFieldErrors({});
+        validation.resetServerErrors();
+        // Goes through handleSubmit so TanStack's own title validator runs first.
         void form.handleSubmit();
     }
 
     function handlePublish(): void {
         if (readOnly) return;
-        setFieldErrors({});
-        publishMutation.mutate(buildPayload(form.state.values, 'published'));
+        validation.resetServerErrors();
+        const payload = buildPayload(form.state.values, 'published');
+        // Publish bypasses `form.handleSubmit`, so the title validator still
+        // does not run on this path — a PRE-EXISTING gap, not one this gate
+        // introduces. The stage comes from the payload rather than a hardcoded
+        // 'publish' so the browser and the server agree in every case, including
+        // a statuses-off type whose payload carries no status at all.
+        void validation
+            .validateAll(entryValidationStage({ status: payload.status, hasStatuses }))
+            .then((errors) => {
+                if (Object.keys(errors).length > 0) {
+                    toast({ message: validationMessage(errors), variant: 'error' });
+                    return;
+                }
+                publishMutation.mutate(payload);
+            });
     }
 
     // Cmd/Ctrl+S — save shortcut. Use a ref so the handler always sees the
@@ -180,7 +261,7 @@ export function useEntryForm({
 
     useHotkeys('mod+s', () => {
         if (readOnly || isPendingRef.current) return;
-        setFieldErrors({});
+        validation.resetServerErrors();
         void form.handleSubmit();
     });
 
@@ -195,6 +276,15 @@ export function useEntryForm({
         // form is stable; isDirty is read via the ref on the stable form object
     }, []);
 
+    // Stable identity: this object is handed straight to a context provider.
+    const fieldValidation = useMemo(
+        () => ({
+            onFieldChange: validation.markDirty,
+            onFieldBlur: validation.reportBlur,
+        }),
+        [validation.markDirty, validation.reportBlur]
+    );
+
     return {
         form,
         saveMutation,
@@ -203,7 +293,8 @@ export function useEntryForm({
         handlePublish,
         buildPayload,
         readOnly,
-        fieldErrors,
+        fieldErrors: validation.errors,
+        fieldValidation,
     };
 }
 

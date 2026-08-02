@@ -4,7 +4,7 @@ import { useFieldControl } from '@/admin/components/fields/field-control-context
 import './json-field.css';
 
 export function JsonField({ name, value, required, onChange, disabled }: BaseFieldProps) {
-    const { hasError } = useFieldControl();
+    const { hasError, ariaProps } = useFieldControl();
     const initialJson =
         value !== undefined && value !== null ? JSON.stringify(value, null, 2) : '';
 
@@ -41,6 +41,7 @@ export function JsonField({ name, value, required, onChange, disabled }: BaseFie
                 spellCheck={false}
                 autoComplete="off"
                 disabled={disabled}
+                {...ariaProps}
                 aria-invalid={hasError || error !== null || undefined}
             />
             {showLocalError && <p className="am-field-error">{error}</p>}

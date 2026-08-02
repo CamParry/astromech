@@ -54,6 +54,16 @@ function makeValidationConfig(): AstromechConfig {
                     { name: 'page_slug', type: 'slug', label: 'Page Slug' },
                 ],
             },
+            // `statuses: false` — no draft concept, so every write is a publish.
+            snippet: {
+                ...base.entries['snippet'],
+                single: 'Snippet',
+                plural: 'Snippets',
+                titleField: false,
+                statuses: false,
+                slug: false,
+                fields: [{ name: 'key', type: 'text', label: 'Key', required: true }],
+            },
         },
     };
 }
@@ -70,7 +80,12 @@ beforeEach(async () => {
 describe('create — required field', () => {
     it('rejects when required field is absent', async () => {
         await expect(
-            api.create({ type: 'post', title: 'T', fields: {} })
+            api.create({
+                type: 'post',
+                title: 'T',
+                status: 'published',
+                fields: {},
+            })
         ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: { title_text: ['This field is required'] },
@@ -79,10 +94,133 @@ describe('create — required field', () => {
 
     it('rejects when required field is empty string', async () => {
         await expect(
-            api.create({ type: 'post', title: 'T', fields: { title_text: '' } })
+            api.create({
+                type: 'post',
+                title: 'T',
+                status: 'published',
+                fields: { title_text: '' },
+            })
         ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: { title_text: ['This field is required'] },
+        });
+    });
+});
+
+// ============================================================================
+// stage: completeness is publish-only
+// ============================================================================
+
+describe('validation stage — derived from the status the row will hold', () => {
+    it('an unpublished create with a missing required field succeeds', async () => {
+        const entry = await api.create({
+            type: 'post',
+            title: 'Draft',
+            status: 'unpublished',
+            fields: {},
+        });
+        expect(entry.fields.title_text).toBeUndefined();
+    });
+
+    it('a scheduled create with a missing required field is rejected', async () => {
+        await expect(
+            api.create({
+                type: 'post',
+                title: 'Later',
+                status: 'scheduled',
+                publishAt: new Date(Date.now() + 60_000),
+                fields: {},
+            })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { title_text: ['This field is required'] },
+        });
+    });
+
+    it('correctness still applies to an unpublished create', async () => {
+        await expect(
+            api.create({
+                type: 'post',
+                title: 'Draft',
+                status: 'unpublished',
+                fields: { contact_email: 'not-an-email' },
+            })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { contact_email: ['Must be a valid email address'] },
+        });
+    });
+
+    it('an update that keeps the row published enforces completeness', async () => {
+        const entry = await api.create({
+            type: 'post',
+            title: 'Live',
+            status: 'published',
+            fields: { title_text: 'Hello' },
+        });
+        await expect(
+            api.update({ type: 'post', id: entry.id, data: { fields: {} } })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { title_text: ['This field is required'] },
+        });
+    });
+
+    it('an update of an unpublished row may leave a required field empty', async () => {
+        const entry = await api.create({
+            type: 'post',
+            title: 'Draft',
+            status: 'unpublished',
+            fields: { title_text: 'Hello' },
+        });
+        const updated = await api.update({
+            type: 'post',
+            id: entry.id,
+            data: { fields: { title_text: '' } },
+        });
+        const result = Array.isArray(updated) ? updated[0]! : updated;
+        expect(result.fields.title_text).toBe('');
+    });
+
+    it('an update that publishes the row enforces completeness', async () => {
+        const entry = await api.create({
+            type: 'post',
+            title: 'Draft',
+            status: 'unpublished',
+            fields: {},
+        });
+        await expect(
+            api.update({
+                type: 'post',
+                id: entry.id,
+                data: { status: 'published', fields: {} },
+            })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { title_text: ['This field is required'] },
+        });
+    });
+});
+
+// ============================================================================
+// stage: a type with statuses OFF is always a publish
+// ============================================================================
+
+describe('validation stage — statuses: false', () => {
+    it('rejects a missing required field on create', async () => {
+        await expect(api.create({ type: 'snippet', fields: {} })).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { key: ['This field is required'] },
+        });
+    });
+
+    it('rejects a missing required field on update', async () => {
+        const entry = await api.create({ type: 'snippet', fields: { key: 'k' } });
+        await expect(
+            api.update({ type: 'snippet', id: entry.id, data: { fields: { key: '' } } })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: { key: ['This field is required'] },
         });
     });
 });
@@ -141,7 +279,7 @@ describe('create — email validation', () => {
         ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: {
-                contact_email: expect.arrayContaining(['Must be a valid email address']),
+                contact_email: ['Must be a valid email address'],
             },
         });
     });
@@ -238,7 +376,7 @@ describe('update — email validation', () => {
         ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: {
-                contact_email: expect.arrayContaining(['Must be a valid email address']),
+                contact_email: ['Must be a valid email address'],
             },
         });
     });

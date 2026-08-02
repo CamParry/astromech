@@ -24,6 +24,7 @@ function ctx(value: unknown): FieldValidationContext {
         field: { name: 'f', type: 'x' },
         path: [{ kind: 'field', name: 'f' }],
         operation: 'create',
+        stage: 'publish',
         host: { kind: 'entry', record: null },
         user: null,
         reads: { isUnique: async () => true },
