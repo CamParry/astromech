@@ -1,12 +1,7 @@
 /**
- * The `form` entry type — managed through the standard entry UI, no custom
- * admin surface. Default (core) entry storage, addressed by slug. The entry
- * `title` is the form's name, so `titleField` is left at core's default.
- *
- * `fields` composes the form's field schema at runtime: one `blocks` field
- * whose block catalog has one entry per `FormFieldKind`. Stored block
- * instances are read back by `../fields/compile.ts`, which switches on the
- * same block keys declared here (`_type`, `name`, plus the per-kind extras).
+ * The `form` entry type — core entry storage, standard entry UI, addressed by
+ * slug. Its `fields` is one `blocks` field with a block per `FormFieldKind`;
+ * `../fields/compile.ts` reads the stored instances back.
  */
 
 import type { EntryTypeConfig, FieldDefinition } from 'astromech';
@@ -15,15 +10,9 @@ import * as fields from 'astromech/fields';
 import * as columns from 'astromech/columns';
 
 /**
- * The four fields every block starts with, identically — the key a value is
- * stored under, its label, whether it's required, and optional help text.
- *
- * The `name` pattern is enforceable server-side because the validation pipeline
- * now recurses into data containers: these are children of the `fields` blocks
- * field below, and before that recursion existed they were never validated on
- * save at all. The rule matters because a stored `name` becomes a compiled
- * field's name at submit time, and a submission error is keyed by the field-path
- * grammar — which spends `.`, `[` and `]`.
+ * The four fields every block starts with. The `name` pattern is enforced
+ * because a stored name becomes a compiled field's name at submit time, and
+ * error keys use a path grammar that spends `.`, `[` and `]`.
  */
 function commonFields(): FieldDefinition[] {
     return [
@@ -74,6 +63,7 @@ const BLOCK_LABELS: Record<(typeof FORM_FIELD_KINDS)[number], string> = {
     hidden: 'Hidden',
 };
 
+/** The per-kind config fields a block adds on top of `commonFields`. */
 function extraFields(kind: (typeof FORM_FIELD_KINDS)[number]): FieldDefinition[] {
     switch (kind) {
         case 'text':
@@ -124,8 +114,7 @@ export const formEntryType: EntryTypeConfig = {
     type: FORM_TYPE,
     single: 'Form',
     plural: 'Forms',
-    // Built-in storage defaults slug ON — the slug is how the frontend
-    // addresses a form, so no override is needed here.
+    // Built-in storage defaults slug on, which is how a form is addressed.
     adminColumns: [
         columns.text('title', { label: 'Title' }),
         columns.slug('slug', { label: 'Slug' }),
@@ -146,10 +135,8 @@ export const formEntryType: EntryTypeConfig = {
                 }),
                 fields.tab('notifications', {
                     label: 'Notifications',
-                    // Every field in this tab MUST be `private: true`. `forms/form`
-                    // entries are readable through the PUBLIC entries API, so
-                    // without it the recipient addresses and email copy below
-                    // would be world-readable on any published form.
+                    // Every field in this tab must be `private: true` — these
+                    // entries are readable through the public entries API.
                     fields: [
                         fields.boolean('notifyEnabled', {
                             label: 'Send notification email',

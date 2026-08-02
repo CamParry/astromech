@@ -11,6 +11,7 @@ export type NotificationEmailProps = {
     submittedAt: string;
 };
 
+/** The site's copy: the author's body, then the submitted values. */
 export function NotificationEmail({
     formTitle,
     bodyHtml,
@@ -23,9 +24,8 @@ export function NotificationEmail({
                 New submission — {formTitle}
             </Heading>
             {bodyHtml !== undefined && (
-                // The sanitization boundary is core's `renderRichText` (see
-                // `entries/visibility.ts`). No unsanitized string may ever be
-                // passed to `bodyHtml` — that is the whole contract of this prop.
+                // `bodyHtml` takes `renderRichText` output only — it is the
+                // sanitization boundary for this prop.
                 <div
                     style={{ margin: '0 0 16px' }}
                     dangerouslySetInnerHTML={{ __html: bodyHtml }}

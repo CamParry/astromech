@@ -1,13 +1,7 @@
 /**
- * The `submission` entry type — managed through the standard entry UI, no
- * custom admin surface. Storage is the plugin's own table via `tableStorage`
- * (no core capabilities), so records carry
- * `fields = { formId, formSlug, data, summary, meta, submittedAt }`.
- *
- * Submissions are never hand-authored — they're written by the public
- * `submit` service method. v1 has no read-only-entry flag in core, so this
- * relies on permissions instead: a site grants read + delete on
- * `forms/submission` and withholds create + update.
+ * The `submission` entry type, stored in the plugin's own table via
+ * `tableStorage`. Rows are written by the public `submit` method, never by
+ * hand; a site withholds create and update permission to keep it that way.
  */
 
 import type { EntryTypeConfig } from 'astromech';

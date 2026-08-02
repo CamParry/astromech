@@ -1,14 +1,7 @@
 /**
- * The two optional, per-form emails: a notification to the site and a
- * confirmation to the submitter. Called by `submit` after the row is committed,
- * so nothing in here may throw its way back to the caller — each send is
- * individually caught and logged, so one bad recipient cannot stop the other
- * email.
- *
- * The notification settings this module reads (`notifyTo`, `notifyBody`, …) are
- * all declared `private: true` on the form entry type, which is what keeps them
- * out of the public entries API. They reach this module only because
- * `ctx.entries` is `full`-shaped at plugin altitude.
+ * The two optional per-form emails: a notification to the site and a
+ * confirmation to the submitter. Runs after the row is committed, so every send
+ * is caught and logged rather than thrown back to the caller.
  */
 
 import type { Entry, FieldDefinition, PluginContext } from 'astromech';
@@ -26,23 +19,15 @@ import { firstEmailFieldName } from '../fields/compile.js';
 /** `renderRichText` takes tiptap's `JSONContent`; forms doesn't depend on tiptap. */
 type RichTextJson = Parameters<typeof renderRichText>[0];
 
+/** An entry's stored field values. */
 function fieldsOf(entry: Entry): Record<string, unknown> {
     return (entry.fields ?? {}) as Record<string, unknown>;
 }
 
 /**
- * Stored ProseMirror JSON → sanitized HTML, or `undefined` for an empty body
- * (which is the documented signal to render the table of values alone).
- *
- * THIS IS THE ONLY PRODUCER OF `bodyHtml`. Both email templates inject that
- * prop with `dangerouslySetInnerHTML`, so `renderRichText` output — and nothing
- * else — may ever be passed to it.
- *
- * Merge tags are substituted into the JSON *before* rendering, never into the
- * rendered string: the renderer is the sanitization boundary, so anything
- * spliced in afterwards would arrive past it. Doing it in this order means a
- * submitted value containing markup is escaped into visible text by the
- * renderer.
+ * Stored ProseMirror JSON to sanitized HTML, or `undefined` for an empty body.
+ * The only producer of `bodyHtml`, which the templates inject with
+ * `dangerouslySetInnerHTML` — nothing but `renderRichText` output may reach it.
  */
 function bodyHtmlOf(value: unknown, tags: Record<string, string>): string | undefined {
     if (value === null || value === undefined) return undefined;
@@ -65,6 +50,7 @@ function recipients(value: unknown): string[] {
     return addresses;
 }
 
+/** An author's subject line with tags applied, or the fallback when unset. */
 function subjectOf(
     stored: unknown,
     tags: Record<string, string>,
@@ -91,6 +77,7 @@ function confirmationRecipient(
     return address.trim();
 }
 
+/** Send whichever of the two emails the form has enabled. */
 export async function sendFormEmails(
     form: Entry,
     definitions: FieldDefinition[],
@@ -103,10 +90,7 @@ export async function sendFormEmails(
     if (!notifyEnabled && !confirmEnabled) return;
 
     const rows = toValueRows(definitions, values);
-    // Sent immediately after the insert, so this is the submission's time.
     const submittedAt = new Date().toISOString();
-    // Substituted into subject lines (plain strings) and into body rich text
-    // (pre-render, so the renderer still escapes them).
     const tags = mergeTagValues(values, { formTitle: form.title, submittedAt });
 
     if (notifyEnabled) {
@@ -135,8 +119,7 @@ export async function sendFormEmails(
     }
 
     if (confirmEnabled) {
-        // No resolvable address is a normal outcome (a form with no email
-        // field), so it is skipped silently rather than logged as a failure.
+        // A form with no email field has no address to send to.
         const to = confirmationRecipient(form, values);
         if (to === undefined) return;
         const subject = subjectOf(
