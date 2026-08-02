@@ -37,6 +37,18 @@ Prefer "entry type config" when referring to the config object in conversation, 
 
 ---
 
+## Entry vs Table (as data worlds)
+
+**Entry** — the built-in content unit, on the fixed core schema, with the full feature set available to it (statuses, slug, versions, staging, trash, translation, preview, relationships).
+
+**Table** — a plugin-defined custom table (redirects, logs) on its own schema and its own storage. A table-backed type reaches the admin through `tableStorage`, an `EntryStorage` adapter that declares `supports: []`, so all entry chrome switches off.
+
+The two are separate internally and share only the admin surface. `supports` gates behaviour and UI, **never** schema — toggling one needs no migration, and storage is always full.
+
+Note the neighbouring clash: `<domain>/storage/` is DB access; top-level `storage/` is media binary/blob drivers. Different concepts.
+
+---
+
 ## Trash vs Delete
 
 These are distinct operations on the entries service:
@@ -56,7 +68,7 @@ The mechanism for resolving relationship fields when fetching entries. Pass `pop
 
 Not to be confused with database-level joins — populate is resolved at the application layer.
 
-> **As built:** only top-level `relationship` fields on single-type queries are populated, resolved via the `relationships` table one entry-field pair at a time. Media fields are **not** populated, and the populated value _replaces_ the ID in `fields`, so the read shape varies by call. All three are known problems — see `roadmap/planned/relationships-model.md`, which moves resolution onto the IDs already present in the field data.
+> **As built:** only top-level `relationship` fields on single-type queries are populated, resolved via the `relationships` table one entry-field pair at a time. Media fields are **not** populated, and the populated value _replaces_ the ID in `fields`, so the read shape varies by call. All three are known problems — see `roadmap/in-progress/relationships-model.md`, which moves resolution onto the IDs already present in the field data.
 
 ---
 
@@ -124,7 +136,7 @@ An **admin slot** is distinct from an admin page: a named mount point in the adm
 
 A single relation field definition can produce many relationship rows.
 
-> **Direction of travel:** today the same fact is stored twice — the IDs live in the entry's `fields` data _and_ are copied into the `relationships` table on write, with nothing reconciling the two. The agreed direction is that **field data is the source of truth and the `relationships` table becomes a derived, rebuildable index** used only for reverse lookup, filter-by-relation and delete-time integrity. See `roadmap/planned/relationships-model.md`.
+> **Direction of travel:** today the same fact is stored twice — the IDs live in the entry's `fields` data _and_ are copied into the `relationships` table on write, with nothing reconciling the two. The agreed direction is that **field data is the source of truth and the `relationships` table becomes a derived, rebuildable index** used only for reverse lookup, filter-by-relation and delete-time integrity. See `roadmap/in-progress/relationships-model.md`.
 >
 > Note also that `col.reference()` in the descriptor layer means a real foreign key and is a **different** thing from a content relationship. Don't conflate them.
 

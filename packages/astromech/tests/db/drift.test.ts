@@ -1,6 +1,6 @@
 /**
  * Drift gate — "`db:generate` produces no new migration" as a vitest test, so
- * CI gets it for free (`specs/data-layer.md` §"Step 4", #11b).
+ * CI gets it for free.
  *
  * Reads the COMMITTED `apps/demo/migrations/snapshot.json` and diffs it
  * against a fresh snapshot built from the live `CORE_TABLES` descriptors. If

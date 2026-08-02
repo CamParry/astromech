@@ -9,7 +9,9 @@ Two remainders are tracked in their own files, not here:
 `planned/migration-baseline-regeneration.md` (`db:rebaseline`) and
 `completed/data-layer-storage-api.md` (the storage wrapper).
 
-**Design spec:** `specs/data-layer.md` (full locked decisions). This file tracks status only.
+**Design rationale:** `decisions/0003-data-layer-locks-and-rejected-options.md`
+(the spec it was built from, `specs/data-layer.md`, was deleted on completion per
+the specs-are-ephemeral convention). This file tracks status only.
 
 Feature 2 (the ergonomic `findOne`/`findMany`/`populate` storage wrapper) is split off → `data-layer-storage-api.md`.
 
@@ -96,4 +98,4 @@ Follow-ups from step 6's judgment calls.
 
 - Baseline regeneration (`db:rebaseline`) → `planned/migration-baseline-regeneration.md`. Until it lands, a change to the DDL **renderer** still needs a hand-edit of `apps/demo/migrations/0000_baseline.ts`
 - Postgres driver → `additional-database-drivers.md`
-- Relationships / content-field data model → `planned/relationships-model.md` (supersedes spec §8's sketch)
+- Relationships / content-field data model → `in-progress/relationships-model.md` (supersedes spec §8's sketch)

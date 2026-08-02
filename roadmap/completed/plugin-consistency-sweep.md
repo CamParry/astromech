@@ -180,4 +180,4 @@ Real defects, not drift. Each is independent and needs no design.
   queries all redirects and `.find()`s per public request;
   `menus.resolveEntryRef` (`src/service/menus.ts:24-48`) scans every entry of
   every url-bearing type per node. Both are consequences of there being no
-  reverse index yet — see `roadmap/planned/relationships-model.md`.
+  reverse index yet — see `roadmap/in-progress/relationships-model.md`.

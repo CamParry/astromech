@@ -14,7 +14,7 @@ same one.
 - **Do not call it `populate`.** That name already means content-relationship
   population (`entries/internal/populate.ts`), which is a different mechanism over
   a table that is itself being redesigned into a derived index (see
-  `planned/relationships-model.md`). Use `resolveRefs` / `withRefs`.
+  `in-progress/relationships-model.md`). Use `resolveRefs` / `withRefs`.
 - The **cross-scope case is the actual design problem**: a plugin needs a handle
   to core's resolver while remaining unable to address core tables. "Core resolves
   it" is a policy, not a mechanism.

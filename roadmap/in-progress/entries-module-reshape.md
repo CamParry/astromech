@@ -1,6 +1,6 @@
 # Entries Module Reshape
 
-Reorganise `entries/` as the **template** for all domains: one storage seam, no repository pattern, operations-per-file, entry/table split. Design + Layer 1 plan: `specs/entries-reshape.md`.
+Reorganise `entries/` as the **template** for all domains: one storage seam, no repository pattern, operations-per-file, entry/table split. Design rationale: `decisions/0003-data-layer-locks-and-rejected-options.md`; the storage pattern itself is in the `code` skill. (`specs/entries-reshape.md` was deleted once Layer 1 shipped and Layers 2–3 were re-scoped below.)
 
 **Layer 1 — Reshape** (relocation + decomposition + de-repository; zero behaviour change)
 
