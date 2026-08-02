@@ -113,6 +113,11 @@ export { t } from '@/utilities/labels.js';
 // from the public shape — has no read to get HTML from, and must render it
 // itself. Exported so that never means reimplementing the sanitizer.
 export { renderRichText } from '@/fields/rich-text/index.js';
+// The relationships index is derived from field data, so anything writing
+// entries outside the normal operations (a seed, a rebuild) needs the same pure
+// traversal core uses rather than a second, drifting copy of it.
+export { collectRelationshipEdges } from '@/fields/relationship-edges.js';
+export type { RelationshipEdge, TargetKind } from '@/fields/relationship-edges.js';
 
 // ============================================================================
 // Config / Collection / Plugin Helpers
