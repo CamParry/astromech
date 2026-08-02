@@ -86,6 +86,19 @@ const child = defineTable(
     ]
 );
 
+const edge = defineTable(
+    'edge',
+    ({ col }) => ({
+        sourceId: col.text({ notNull: true }),
+        targetKind: col.enum(['entry', 'user', 'media'], { notNull: true }),
+        label: col.text(),
+    }),
+    {
+        primaryKey: ['sourceId', 'targetKind'],
+        indexes: ({ index }) => [index('idx_edge_label', ['label'])],
+    }
+);
+
 describe('resolveReferenceTarget', () => {
     it('resolves a string target to {table, column: "id"}', () => {
         expect(resolveReferenceTarget('users')).toEqual({ table: 'users', column: 'id' });
@@ -106,6 +119,10 @@ describe('resolveReferenceTarget', () => {
 
     it('throws for a descriptor target with no primary key', () => {
         expect(() => resolveReferenceTarget(orphan)).toThrow();
+    });
+
+    it('throws for a descriptor target with a composite primary key', () => {
+        expect(() => resolveReferenceTarget(edge)).toThrow(/composite primary key/);
     });
 });
 
@@ -159,6 +176,20 @@ describe('descriptorToSnapshotTable', () => {
                 targetColumn: 'id',
                 onDelete: 'no action',
             },
+        ]);
+    });
+
+    it('omits primaryKey entirely for a table with a single-column key', () => {
+        expect(descriptorToSnapshotTable(parent, 'sqlite')).not.toHaveProperty(
+            'primaryKey'
+        );
+    });
+
+    it('snake_cases a composite primary key and keeps the options-form indexes', () => {
+        const snap = descriptorToSnapshotTable(edge, 'sqlite');
+        expect(snap.primaryKey).toEqual(['source_id', 'target_kind']);
+        expect(snap.indexes).toEqual([
+            { name: 'idx_edge_label', columns: ['label'], unique: false },
         ]);
     });
 

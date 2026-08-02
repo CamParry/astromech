@@ -79,11 +79,16 @@ export function index(
 export function table(
     name: string,
     columns: SnapshotColumn[],
-    extra: { fks?: SnapshotForeignKey[]; indexes?: SnapshotIndex[] } = {}
+    extra: {
+        primaryKey?: string[];
+        fks?: SnapshotForeignKey[];
+        indexes?: SnapshotIndex[];
+    } = {}
 ): SnapshotTable {
     return {
         name,
         columns,
+        ...(extra.primaryKey !== undefined && { primaryKey: extra.primaryKey }),
         fks: extra.fks ?? [],
         indexes: extra.indexes ?? [],
     };

@@ -220,7 +220,11 @@ export function createStorage<D extends TableDescriptor>(
 ): Storage<D> {
     const tableKey = kyselyTableKey(descriptor.name);
     const columns: Record<string, ColumnRuntime> = descriptor.columns;
-    const primaryKey = Object.keys(columns).filter((key) => columns[key]?.primaryKey);
+    // A table-level composite key wins: no column carries the inline flag, so
+    // deriving from flags alone would report the table as having no key at all.
+    const primaryKey =
+        descriptor.primaryKey ??
+        Object.keys(columns).filter((key) => columns[key]?.primaryKey);
 
     /** Resolved per call so an unbound storage follows `setDb` across a reload. */
     function handle(): GenericDb {

@@ -84,6 +84,7 @@ export type {
     ReferenceTarget,
     TableDescriptor,
     TableInsert,
+    TableOptions,
     TableSelect,
     TableUpdate,
 } from '@/database/define-table.js';

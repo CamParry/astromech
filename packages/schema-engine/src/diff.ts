@@ -62,6 +62,13 @@ function columnsEqual(a: SnapshotColumn, b: SnapshotColumn): boolean {
     );
 }
 
+/** Composite-PK equality. Order-sensitive: the key's column order determines
+ *  the implicit index's usable prefixes, so a reorder is a real schema change. */
+function primaryKeysEqual(a?: string[], b?: string[]): boolean {
+    if (a === undefined || b === undefined) return a === b;
+    return a.length === b.length && a.every((c, i) => c === b[i]);
+}
+
 function fksEqual(a: SnapshotForeignKey[], b: SnapshotForeignKey[]): boolean {
     if (a.length !== b.length) return false;
     const norm = (fks: SnapshotForeignKey[]) =>
@@ -164,6 +171,10 @@ function diffTable(
     }
 
     if (!fksEqual(prevTable.fks, nextTable.fks)) {
+        rebuild = true;
+    }
+
+    if (!primaryKeysEqual(prevTable.primaryKey, nextTable.primaryKey)) {
         rebuild = true;
     }
 
@@ -291,6 +302,32 @@ export function diffSnapshots(prev: Snapshot | null, next: Snapshot): DiffResult
                 if (!colNames.has(col)) {
                     errors.push(
                         `index "${idx.name}" on table "${name}" references unknown column "${col}"`
+                    );
+                }
+            }
+        }
+
+        if (table.primaryKey !== undefined) {
+            const byName = new Map(table.columns.map((c) => [c.name, c]));
+            if (table.primaryKey.length === 0) {
+                errors.push(`table "${name}" declares an empty composite primary key`);
+            }
+            for (const col of table.primaryKey) {
+                const pkCol = byName.get(col);
+                if (!pkCol) {
+                    errors.push(
+                        `primary key on table "${name}" references unknown column "${col}"`
+                    );
+                    continue;
+                }
+                // SQLite's rowid tables permit NULLs in PRIMARY KEY columns, so
+                // a nullable member silently defeats the uniqueness the key
+                // appears to declare.
+                if (!pkCol.notNull) {
+                    errors.push(
+                        `primary key column "${col}" on table "${name}" is nullable — ` +
+                            `SQLite permits NULLs in a rowid table's PRIMARY KEY, which ` +
+                            `would defeat the uniqueness; mark it NOT NULL`
                     );
                 }
             }
