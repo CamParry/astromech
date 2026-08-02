@@ -25,15 +25,12 @@
     border-bottom: 1px solid var(--am-color-border);
 }
 
+/* The one scroll region — every nav group, system links included, scrolls here */
 .am-sidebar-main {
     flex: 1;
     padding-bottom: 0.5rem;
     overflow-x: hidden;
     overflow-y: auto;
-}
-
-.am-sidebar-end {
-    border-top: 1px solid var(--am-color-border);
 }
 
 .am-sidebar-brand-text {
@@ -223,27 +220,6 @@
     }
 }
 
-.am-sidebar-toggle {
-    all: unset;
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    width: 2.25rem;
-    height: 2.25rem;
-    color: var(--am-color-text-muted);
-    cursor: pointer;
-    border-radius: var(--am-radius-md);
-    transition:
-        background-color var(--am-duration-base) var(--am-easing),
-        color var(--am-duration-base) var(--am-easing);
-
-    &:hover {
-        color: var(--am-color-text-default);
-        background-color: var(--am-color-bg-subtle);
-    }
-}
-
 @media (max-width: 767px) {
     .am-sidebar {
         position: fixed;
@@ -266,11 +242,6 @@
         display: flex;
         width: 2.75rem;
         height: 2.75rem;
-    }
-
-    /* Hide desktop collapse toggle on mobile */
-    .am-sidebar-toggle {
-        display: none;
     }
 
     /* Touch-target enlargement — mobile only */

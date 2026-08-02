@@ -6,12 +6,11 @@
  * tests) without pulling in Astro types.
  */
 
-import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
 import type { AstromechConfig, PluginDefinition, ResolvedConfig } from '@/types/index.js';
 import { setDb, getDb } from '@/database/registry.js';
 import { migrateToLatest, mergeMigrationProviders } from '@astromech/schema-engine';
 import { collectPluginMigrations } from '@/database/plugin-migrations.js';
+import { loadAppMigrations } from '@/database/app-migrations.js';
 import { setDatabaseDriver } from '@/database/driver-registry.js';
 import { setStorageDriver } from '@/storage/registry.js';
 import { setImageConfig } from '@/media/serving/image/registry.js';
@@ -77,13 +76,10 @@ export async function runMigrations(
     plugins: PluginDefinition[]
 ): Promise<void> {
     try {
-        // Resolve the app-owned migration provider from the app's CWD (where
-        // `astro dev` / `astro build` runs). db:init is the primary migration
-        // path; this is belt-and-suspenders, so a failed import is swallowed.
-        const migrationsUrl = pathToFileURL(
-            resolve(process.cwd(), 'migrations/index.ts')
-        ).href;
-        const { migrationProvider } = await import(migrationsUrl);
+        // The app's CWD is where `astro dev` / `astro build` runs. db:init is
+        // the primary migration path; this is belt-and-suspenders, so a failed
+        // load is swallowed.
+        const migrationProvider = await loadAppMigrations();
         // Plugin migrations merge into the app chain at apply time, so a newly
         // installed plugin can introduce a migration that sorts before ones
         // already applied — hence `allowUnorderedMigrations`.

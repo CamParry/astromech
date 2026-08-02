@@ -1,6 +1,6 @@
 /* ============================================================================
    am-topbar
-   Layout: [mobile-toggle] [brand] [search (center, flex:1)] [actions]
+   Layout: [sidebar-toggle] [mobile-toggle] [brand] [search (center, flex:1)] [actions]
    ============================================================================ */
 
 .am-topbar {
@@ -35,6 +35,14 @@
     gap: 0.25rem;
     align-items: center;
     justify-content: flex-end;
+}
+
+/* ------------------------------------------------------------------ */
+/* Sidebar collapse toggle — desktop only, mirrors the sidebar's edge  */
+/* ------------------------------------------------------------------ */
+
+.am-topbar-sidebar-toggle {
+    flex-shrink: 0;
 }
 
 /* ------------------------------------------------------------------ */
@@ -477,6 +485,11 @@
         display: flex;
         width: 2.75rem;
         height: 2.75rem;
+    }
+
+    /* The mobile menu toggle stands in for it */
+    .am-topbar-sidebar-toggle {
+        display: none;
     }
 
     .am-topbar-brand {

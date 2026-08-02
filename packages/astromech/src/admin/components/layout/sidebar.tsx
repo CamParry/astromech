@@ -40,7 +40,7 @@ function filterNavItems(
 
 export function Sidebar() {
     const { t } = useTranslation();
-    const { sidebarOpen, toggleSidebar, setSidebarOpen } = useUI();
+    const { sidebarOpen, setSidebarOpen } = useUI();
     const { canReadMedia, canReadUsers, canReadSettings, hasPermission } =
         usePermissions();
     const entryTypes = Object.entries(adminConfig.entries);
@@ -144,42 +144,29 @@ export function Sidebar() {
                         </nav>
                     </>
                 )}
-            </div>
-            <div className="am-sidebar-end">
-                <nav className="am-sidebar-nav" aria-label={t('nav.system')}>
-                    <ul className="am-sidebar-nav-list" role="list">
-                        {canReadUsers() && (
-                            <SidebarNavItem
-                                to="/users"
-                                label={t('nav.users')}
-                                icon={<Users size={16} />}
-                            />
-                        )}
-                        {canReadSettings() && (
-                            <SidebarNavItem
-                                to="/settings"
-                                label={t('nav.settings')}
-                                icon={<Settings size={16} />}
-                            />
-                        )}
-                    </ul>
-                    <button
-                        type="button"
-                        className="am-sidebar-toggle"
-                        onClick={toggleSidebar}
-                        aria-label={
-                            sidebarOpen
-                                ? t('nav.collapseSidebar')
-                                : t('nav.expandSidebar')
-                        }
-                    >
-                        {sidebarOpen ? (
-                            <ChevronLeft size={16} />
-                        ) : (
-                            <ChevronRight size={16} />
-                        )}
-                    </button>
-                </nav>
+                {(canReadUsers() || canReadSettings()) && (
+                    <>
+                        <div className="am-sidebar-nav-divider"></div>
+                        <nav className="am-sidebar-nav" aria-label={t('nav.system')}>
+                            <ul className="am-sidebar-nav-list" role="list">
+                                {canReadUsers() && (
+                                    <SidebarNavItem
+                                        to="/users"
+                                        label={t('nav.users')}
+                                        icon={<Users size={16} />}
+                                    />
+                                )}
+                                {canReadSettings() && (
+                                    <SidebarNavItem
+                                        to="/settings"
+                                        label={t('nav.settings')}
+                                        icon={<Settings size={16} />}
+                                    />
+                                )}
+                            </ul>
+                        </nav>
+                    </>
+                )}
             </div>
         </aside>
     );
