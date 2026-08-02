@@ -44,15 +44,15 @@ export default defineConfig({
             '@astromech/menus': fileURLToPath(
                 new URL('../plugins/menus/src/index.ts', import.meta.url)
             ),
-            '@astromech/redirects/schema': fileURLToPath(
-                new URL('../plugins/redirects/src/schema/index.ts', import.meta.url)
+            '@astromech/redirects/tables': fileURLToPath(
+                new URL('../plugins/redirects/src/tables/index.ts', import.meta.url)
             ),
             '@astromech/redirects': fileURLToPath(
                 new URL('../plugins/redirects/src/index.ts', import.meta.url)
             ),
             // Backups plugin — subpath aliases before the bare package alias.
-            '@astromech/backups/schema': fileURLToPath(
-                new URL('../plugins/backups/src/schema/index.ts', import.meta.url)
+            '@astromech/backups/tables': fileURLToPath(
+                new URL('../plugins/backups/src/tables/index.ts', import.meta.url)
             ),
             '@astromech/backups/internals': fileURLToPath(
                 new URL('../plugins/backups/src/backup.ts', import.meta.url)
@@ -60,13 +60,8 @@ export default defineConfig({
             '@astromech/backups': fileURLToPath(
                 new URL('../plugins/backups/src/index.ts', import.meta.url)
             ),
-            // Forms plugin — subpath aliases before the bare package alias.
-            '@astromech/forms/emails': fileURLToPath(
-                new URL('../plugins/forms/src/emails/index.ts', import.meta.url)
-            ),
-            '@astromech/forms/schema': fileURLToPath(
-                new URL('../plugins/forms/src/schema/index.ts', import.meta.url)
-            ),
+            // Forms plugin — no subpath aliases: it publishes only the package
+            // root, and its internals are reached by relative path from tests.
             '@astromech/forms': fileURLToPath(
                 new URL('../plugins/forms/src/index.ts', import.meta.url)
             ),

@@ -3,7 +3,7 @@
  * admin surface. Default (core) entry storage, addressed by slug. The entry
  * `title` is the form's name, so `titleField` is left at core's default.
  *
- * `fields` composes the form's answer schema at runtime: one `blocks` field
+ * `fields` composes the form's field schema at runtime: one `blocks` field
  * whose block catalog has one entry per `FormFieldKind`. Stored block
  * instances are read back by `../fields/compile.ts`, which switches on the
  * same block keys declared here (`_type`, `name`, plus the per-kind extras).
@@ -15,7 +15,7 @@ import * as fields from 'astromech/fields';
 import * as columns from 'astromech/columns';
 
 /**
- * The four fields every block starts with, identically — the key an answer is
+ * The four fields every block starts with, identically — the key a value is
  * stored under, its label, whether it's required, and optional help text.
  *
  * The `name` pattern is enforceable server-side because the validation pipeline
@@ -30,7 +30,7 @@ function commonFields(): FieldDefinition[] {
         fields.text('name', {
             label: 'Name',
             required: true,
-            description: 'The key this answer is stored under — lowercase, no spaces.',
+            description: 'The key this value is stored under — lowercase, no spaces.',
             validation: [
                 {
                     pattern: '^[a-z][a-z0-9_-]*$',
@@ -56,8 +56,8 @@ function optionsRepeater(): FieldDefinition {
     });
 }
 
-const PLACEHOLDER_MESSAGE =
-    'Supports {{fieldName}}, {{formTitle}} and {{submittedAt}} placeholders.';
+const MERGE_TAG_MESSAGE =
+    'Supports {{fieldName}}, {{formTitle}} and {{submittedAt}} merge tags.';
 
 const BLOCK_LABELS: Record<(typeof FORM_FIELD_KINDS)[number], string> = {
     text: 'Text',
@@ -169,12 +169,12 @@ export const formEntryType: EntryTypeConfig = {
                         fields.text('notifySubject', {
                             label: 'Subject',
                             private: true,
-                            description: PLACEHOLDER_MESSAGE,
+                            description: MERGE_TAG_MESSAGE,
                         }),
                         fields.richtext('notifyBody', {
                             label: 'Body',
                             private: true,
-                            description: `${PLACEHOLDER_MESSAGE} Leave empty to send the default table of submitted answers.`,
+                            description: `${MERGE_TAG_MESSAGE} Leave empty to send the default table of submitted values.`,
                         }),
                         fields.boolean('confirmEnabled', {
                             label: 'Send confirmation email',
@@ -184,12 +184,12 @@ export const formEntryType: EntryTypeConfig = {
                         fields.text('confirmSubject', {
                             label: 'Subject',
                             private: true,
-                            description: PLACEHOLDER_MESSAGE,
+                            description: MERGE_TAG_MESSAGE,
                         }),
                         fields.richtext('confirmBody', {
                             label: 'Body',
                             private: true,
-                            description: PLACEHOLDER_MESSAGE,
+                            description: MERGE_TAG_MESSAGE,
                         }),
                         fields.text('confirmToField', {
                             label: 'Send to field',

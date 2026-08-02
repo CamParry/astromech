@@ -9,7 +9,7 @@ import type { PluginContext, ServiceInterface } from 'astromech';
 import { BACKUPS_PACKAGE } from './types.js';
 import type { BackupsOptions } from './types.js';
 import { migrationProvider } from '../migrations/index.js';
-import { backupRunsTable } from './schema/runs.js';
+import { backupRunsTable } from './tables/runs.js';
 import { backupsPermissions } from './permissions/backups.js';
 import { performBackup, resolveKeep } from './backup.js';
 import { buildBackupsService } from './service/backups.js';

@@ -26,7 +26,7 @@ import { libsqlDriver } from '@/database/drivers/libsql.js';
 import { filesystem } from '@/storage/drivers/filesystem.js';
 import { listAll } from '@/storage/prefix.js';
 import { decodeWith } from '@/database/codec.js';
-import { backupRunsTable } from '@astromech/backups/schema';
+import { backupRunsTable } from '@astromech/backups/tables';
 import type { DB } from '@/database/types.js';
 import { performBackup, rotate, isBackupRunning } from '@astromech/backups/internals';
 import type { PluginContext, PluginDatabase, PluginStorage } from '@/types/index.js';

@@ -6,8 +6,8 @@
  *
  * Input is untrusted stored JSON (`unknown`) — every step is defensive.
  * The output is deliberately a FLAT list of leaf fields, never containers,
- * because a form submission is a flat map of answers: one stored block instance
- * is one answer key. That is the shape being modelled, not a limitation of the
+ * because a form submission is a flat map of values: one stored block instance
+ * is one value key. That is the shape being modelled, not a limitation of the
  * pipeline (which does recurse into containers).
  */
 

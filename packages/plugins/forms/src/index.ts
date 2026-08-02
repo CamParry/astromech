@@ -14,9 +14,9 @@ import type { FormsOptions } from './types.js';
 import { migrationProvider } from '../migrations/index.js';
 import { formEntryType } from './entries/form.js';
 import { submissionEntryType } from './entries/submission.js';
-import { submissionsTable } from './schema/submissions.js';
+import { submissionsTable } from './tables/submissions.js';
 import { buildFormsService } from './service/forms.js';
-import { spamHook } from './spam/index.js';
+import { spamHook } from './spam/hook.js';
 
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions

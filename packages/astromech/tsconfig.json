@@ -37,11 +37,10 @@
             "@astromech/schema-engine": ["../schema-engine/src/index.ts"],
             "@astromech/menus": ["../plugins/menus/src/index.ts"],
             "@astromech/redirects": ["../plugins/redirects/src/index.ts"],
-            "@astromech/redirects/schema": ["../plugins/redirects/src/schema/index.ts"],
+            "@astromech/redirects/tables": ["../plugins/redirects/src/tables/index.ts"],
             "@astromech/backups": ["../plugins/backups/src/index.ts"],
-            "@astromech/backups/schema": ["../plugins/backups/src/schema/index.ts"],
-            "@astromech/backups/internals": ["../plugins/backups/src/backup.ts"],
-            "@astromech/forms/emails": ["../plugins/forms/src/emails/index.ts"]
+            "@astromech/backups/tables": ["../plugins/backups/src/tables/index.ts"],
+            "@astromech/backups/internals": ["../plugins/backups/src/backup.ts"]
         }
     },
     "include": ["src/**/*"],

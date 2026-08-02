@@ -1,5 +1,5 @@
 /**
- * The plugin's schema module — the `./schema` subpath, and what
+ * The plugin's table module — the `./tables` subpath, and what
  * `astromech plugin:generate` loads to diff descriptors against the snapshot.
  */
 

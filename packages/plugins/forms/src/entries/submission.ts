@@ -12,7 +12,7 @@
 
 import type { EntryTypeConfig } from 'astromech';
 import { tableStorage } from 'astromech';
-import { submissionsTable } from '../schema/submissions.js';
+import { submissionsTable } from '../tables/submissions.js';
 import { SUBMISSION_TYPE } from '../types.js';
 import * as fields from 'astromech/fields';
 import * as columns from 'astromech/columns';

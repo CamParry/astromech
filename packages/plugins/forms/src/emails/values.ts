@@ -1,9 +1,9 @@
-/** One answer, resolved to its human label and a display string. */
-export type AnswerRow = { label: string; value: string };
+/** One submitted value, resolved to its human label and a display string. */
+export type ValueRow = { label: string; value: string };
 
 /**
- * Stringify a submitted value for display in an email. Shared by the
- * placeholders module (subject/body tokens) and the answers table.
+ * Stringify a submitted value for display in an email. Shared by the merge-tag
+ * module (subject/body tokens) and the table of values an email renders.
  */
 export function displayValue(value: unknown): string {
     if (value === null || value === undefined) return '—';
@@ -23,13 +23,13 @@ export function displayValue(value: unknown): string {
  * `fields` is intentionally a minimal structural type so this module does not
  * depend on the field compiler.
  */
-export function toAnswerRows(
+export function toValueRows(
     fields: readonly { name: string; label?: unknown }[],
     data: Record<string, unknown>
-): AnswerRow[] {
+): ValueRow[] {
     // Order follows `fields`, not `data` — the form's own order is what the
     // author expects to read. A field absent from `data` still appears,
-    // because `displayValue(undefined)` resolves to the em-dash placeholder.
+    // because `displayValue(undefined)` resolves to the em-dash fallback.
     return fields.map((field) => ({
         label: typeof field.label === 'string' ? field.label : field.name,
         value: displayValue(data[field.name]),

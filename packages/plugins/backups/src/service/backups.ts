@@ -11,7 +11,7 @@
  */
 
 import { defineServiceMethod, noInput, z } from 'astromech';
-import type { BackupRunRow } from '../schema/runs.js';
+import type { BackupRunRow } from '../tables/runs.js';
 import { createBackupRunsStorage } from '../storage.js';
 import { isBackupRunning, performBackup, resolveKeep } from '../backup.js';
 

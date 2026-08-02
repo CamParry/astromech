@@ -1,10 +1,10 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-    // Two entries: the plugin itself, and a `./schema` subpath that ships only
-    // the table descriptors, so a consuming app (or `plugin:generate`) can load
-    // the schema standalone without pulling in the plugin definition.
-    entry: { index: 'src/index.ts', schema: 'src/schema/index.ts' },
+    // One entry: the plugin itself. `src/tables/index.ts` is deliberately not
+    // built — `plugin:generate` loads it from source with jiti, and no consumer
+    // imports the submissions descriptor.
+    entry: { index: 'src/index.ts' },
     format: ['esm'],
     dts: true,
     sourcemap: true,
