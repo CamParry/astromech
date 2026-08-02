@@ -9,7 +9,7 @@ import { resolveContentLocale } from '@/utilities/locale.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
 import { resolveEntryType } from '../type-registry.js';
 import { getEntryStorage } from '../storage/registry.js';
-import type { Entry, FieldDefinition } from '@/types/index.js';
+import type { FieldDefinition } from '@/types/index.js';
 
 export function getDefaultLocale(): string {
     // `defaultLocale` is a DISPLAY tag (e.g. `en-GB`) and may not be a content
@@ -52,9 +52,4 @@ export function getNonTranslatableFieldNames(
 export function resolveTypeFields(typeName: string): FieldDefinition[] {
     const cfg = resolveEntryType(config, typeName);
     return cfg ? flattenEntryFields(cfg.fields) : [];
-}
-
-/** Field definitions for a (possibly related) entry, resolved by its own type. */
-export function resolveRelatedFields(related: Entry): FieldDefinition[] {
-    return resolveTypeFields(related.type);
 }

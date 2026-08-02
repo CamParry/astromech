@@ -201,7 +201,7 @@ export function createUserStorage(db?: Db) {
     async function del(id: string): Promise<void> {
         const active = handle();
         // Relationship rows first: deleting the user row is what orphans them.
-        await createRelationshipStorage(active).deleteByUser(id);
+        await createRelationshipStorage(active).deleteByResource(id, 'user');
         await active.deleteFrom('users').where('id', '=', id).execute();
     }
 

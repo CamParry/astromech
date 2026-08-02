@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { ulid } from 'ulidx';
 import type { MediaRow } from './schema.js';
 import { createMediaStorage } from './storage.js';
+import { createRelationshipStorage } from '@/database/storage/relationships.js';
+import { collectRelationshipEdges } from '@/fields/relationship-edges.js';
 import { getStorageDriver } from '@/storage/registry.js';
 import { deletePrefix } from '@/storage/prefix.js';
 import type {
@@ -208,12 +210,15 @@ export const mediaApi = {
 
         // `updatedAt` is stamped by the storage wrapper (the column declares
         // `onUpdate`); an explicitly-`undefined` key means "leave this column alone".
-        return toMedia(
-            await createMediaStorage().update(id, {
-                alt: validatedData.alt,
-                fields: validatedData.fields as JsonObject | undefined,
-            })
-        );
+        const updated = await createMediaStorage().update(id, {
+            alt: validatedData.alt,
+            fields: validatedData.fields as JsonObject | undefined,
+        });
+        // An update that never touched `fields` must leave the index alone.
+        if (validatedData.fields !== undefined) {
+            await indexMediaRelationships(id, validatedData.fields as JsonObject);
+        }
+        return toMedia(updated);
     },
 
     async delete(params: { id: string }): Promise<void> {
@@ -266,3 +271,15 @@ export const mediaApi = {
         );
     },
 };
+
+/**
+ * Re-index a media record's relationship fields. `fields` must be
+ * post-`processFields` values — item ids are minted during that pass.
+ */
+async function indexMediaRelationships(id: string, fields: JsonObject): Promise<void> {
+    const definitions = flattenFieldNodes(config.media?.fields ?? []);
+    await createRelationshipStorage().replaceForSource(
+        { id, kind: 'media' },
+        collectRelationshipEdges(definitions, fields)
+    );
+}

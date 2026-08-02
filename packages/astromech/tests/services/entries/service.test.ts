@@ -573,7 +573,7 @@ describe('duplicate', () => {
         expect(dup.slug).toBe('original-2');
     });
 
-    it('copies relationship rows to the duplicate', async () => {
+    it('indexes the copy\u2019s own relationship rows', async () => {
         const target = await api.create({ type: 'post', title: 'Target' });
         const src = await api.create({
             type: 'post',
@@ -595,10 +595,9 @@ describe('duplicate', () => {
 // ============================================================================
 
 describe('relationships', () => {
-    // CHARACTERIZED: a relationship field value in `fields` is the bare target
-    // id(s) (string or string[]), NOT a {id,type} object. Persisted rows carry
-    // targetType 'entry' (or 'user' when target === 'users').
-    it('persists relationship rows from bare id field values', async () => {
+    // A relationship field value in `fields` is the bare target id(s) (string or
+    // string[]), NOT a {id,type} object. The index row derives from it.
+    it('indexes relationship rows from bare id field values', async () => {
         const target = await api.create({ type: 'post', title: 'Target' });
         const src = await api.create({
             type: 'post',
@@ -611,28 +610,31 @@ describe('relationships', () => {
             .where('sourceId', '=', src.id)
             .execute();
         expect(rels).toHaveLength(1);
-        expect(rels[0]?.name).toBe('related');
+        expect(rels[0]?.schemaPath).toBe('related');
+        expect(rels[0]?.instancePath).toBe('related');
+        expect(rels[0]?.sourceKind).toBe('entry');
+        expect(rels[0]?.sourceType).toBe('post');
         expect(rels[0]?.targetId).toBe(target.id);
-        expect(rels[0]?.targetType).toBe('entry');
+        expect(rels[0]?.targetKind).toBe('entry');
     });
 
-    it('populate hydrates relationship targets into fields', async () => {
-        const target = await api.create({
-            type: 'post',
-            title: 'Target',
-            status: 'published',
-        });
+    // The old subsystem skipped falsy values, so clearing a relation left its
+    // row behind. A write replaces the whole source's edge set.
+    it('drops the index row when the relation is cleared', async () => {
+        const target = await api.create({ type: 'post', title: 'Target' });
         const src = await api.create({
             type: 'post',
             title: 'Source',
-            status: 'published',
             fields: { related: [target.id] },
         });
-        const got = await api.get({ type: 'post', id: src.id, populate: ['related'] });
-        const related = got?.fields.related as { id: string; title: string }[];
-        expect(related).toHaveLength(1);
-        expect(related[0]?.id).toBe(target.id);
-        expect(related[0]?.title).toBe('Target');
+        await api.update({ type: 'post', id: src.id, data: { fields: { related: [] } } });
+
+        const rels = await getDb()
+            .selectFrom('relationships')
+            .selectAll()
+            .where('sourceId', '=', src.id)
+            .execute();
+        expect(rels).toHaveLength(0);
     });
 
     it('incomingRelations lists the source with its title', async () => {

@@ -39,7 +39,6 @@ export type SortOption = Record<string, SortDirection>;
 export type WhereFilters = Record<string, unknown>;
 
 export type QueryOptions = {
-    populate?: string[];
     locale?: string;
 };
 
@@ -52,7 +51,6 @@ export type EntryQueryParams = {
     page?: number;
     limit?: number | 'all';
     sort?: SortOption | SortOption[];
-    populate?: string[];
     /** Locale code, or `'all'` for rows across every locale. Defaults to configured `defaultLocale`. */
     locale?: string | AllLocales;
     /** Request the full (admin) shape instead of the default public shape. */
@@ -96,7 +94,7 @@ export type IncomingRelation = {
     sourceTitle: string;
     /** Type of the source entry (only `'entry'`-source rows are returned). */
     sourceType: string;
-    /** Relationship field name on the source entry. */
+    /** Schema path of the relationship field on the source (`sections[].author`). */
     name: string;
 };
 
@@ -132,7 +130,6 @@ export type EntriesApi = {
         type: string;
         id: string;
         locale?: string;
-        populate?: string[];
         /** Request the full (admin) shape instead of the default public shape. */
         full?: boolean;
         /** Preview token — see EntryQueryParams.previewToken (public shape only). */
@@ -214,8 +211,8 @@ export type EntriesApi = {
     // All take the *canonical* entry id. Require the `staging` capability
     // (built-in storage) on the type; the service throws otherwise.
 
-    /** Stage a change: copy the canonical's content + relations into a new linked
-     * row. Throws `StagedEntryExistsError` if one already exists. */
+    /** Stage a change: copy the canonical's content into a new linked row.
+     * Throws `StagedEntryExistsError` if one already exists. */
     createStaged(params: { type: string; id: string }): Promise<Entry>;
     /** The canonical entry's staged change, or null. */
     getStaged(params: { type: string; id: string }): Promise<Entry | null>;

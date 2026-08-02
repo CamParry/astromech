@@ -238,7 +238,6 @@ describe('versions sub-surface', () => {
             title: 'V1',
             slug: 'v',
             fields: { body: 'one' },
-            relations: {},
             createdBy: null,
         });
         await storage.versions.create({
@@ -247,7 +246,6 @@ describe('versions sub-surface', () => {
             title: 'V2',
             slug: 'v',
             fields: { body: 'two' },
-            relations: {},
             createdBy: null,
         });
 

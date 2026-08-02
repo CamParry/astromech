@@ -19,15 +19,15 @@ export async function deleteOne(
     if (cascadeLocales && storage.translatable) {
         const siblings = await storage.translatable.siblings(existing.localeGroup, id);
         for (const sib of siblings) {
-            await relationshipsRepo.deleteByEntry(sib.id);
+            await relationshipsRepo.deleteByResource(sib.id, 'entry');
         }
-        await relationshipsRepo.deleteByEntry(id);
+        await relationshipsRepo.deleteByResource(id, 'entry');
         // Versions cascade-delete via entry_versions.entry_id ON DELETE CASCADE.
         await storage.delete(id, { cascadeLocales: true });
         return;
     }
 
-    await relationshipsRepo.deleteByEntry(id);
+    await relationshipsRepo.deleteByResource(id, 'entry');
     await storage.delete(id);
 }
 

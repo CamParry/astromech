@@ -3,6 +3,7 @@ import type { MigrationProvider } from 'kysely';
 import * as m0000 from './0000_baseline.js';
 import * as m0001 from './0001_plugins-tracking.js';
 import * as m0002 from './0002_plugins-tracking-package.js';
+import * as m0003 from './0003_relationships-index.js';
 
 export const migrationProvider: MigrationProvider = {
     async getMigrations() {
@@ -10,6 +11,7 @@ export const migrationProvider: MigrationProvider = {
             '0000_baseline': m0000,
             '0001_plugins-tracking': m0001,
             '0002_plugins-tracking-package': m0002,
+            '0003_relationships-index': m0003,
         };
     },
 };

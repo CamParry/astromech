@@ -1,178 +1,136 @@
 /**
- * Relationship storage — shared cross-domain data access for entry/user/media
- * relationships. Composed by the services that own those resources (entries,
- * users, media). The only place Kysely touches the relationships table.
+ * Relationship index storage — the only place Kysely touches the relationships
+ * table. Composed by every domain that can hold a relationship field (entries,
+ * users, media).
  *
- * Thin domain vocabulary over `createStorage(relationships)` — the wrapper
- * owns encoding/decoding and value serialization.
+ * The index is derived from field data, so every write is a wholesale replace
+ * of one source's edge set: one DELETE, then one chunked INSERT. Not a set-diff
+ * — a diff needs an "which rows went away" branch, and that branch is exactly
+ * where Payload's stale-relationship bug lives. The index is small and
+ * rebuildable, so the extra write volume is the cheaper side of that trade.
  */
 
 import { getDb } from '@/database/registry.js';
 import type { Db } from '@/database/types.js';
+import { encodeWith } from '@/database/codec.js';
 import { relationships, type RelationshipRow } from '@/database/schema.js';
-import type { ResourceType } from '@/types/index.js';
+import type { RelationshipEdge, TargetKind } from '@/fields/relationship-edges.js';
 import { createStorage } from './create-storage.js';
 
 export type RelationshipStorage = ReturnType<typeof createRelationshipStorage>;
+
+/** What holds the reference. Entries carry an entry type as well; users and
+ *  media do not, so `type` is null for them. */
+export type RelationshipSource = {
+    id: string;
+    kind: TargetKind;
+    /** The entry type — qualified (`<ns>/<type>`) for a plugin type. */
+    type?: string | null;
+    /** True when the source row is a staged copy of a live entry. */
+    staged?: boolean;
+};
+
+/**
+ * Rows per INSERT. D1 caps a query at 100 bound parameters and each row binds
+ * eight columns, so twelve rows is the largest statement that always fits.
+ */
+const INSERT_CHUNK_ROWS = 12;
 
 /** Defaults to the registered db; pass a tx handle to scope it to a transaction. */
 export function createRelationshipStorage(db: Db = getDb()) {
     const storage = createStorage(relationships, db);
 
-    /** Create a new relationship. */
-    async function create(data: {
-        sourceId: string;
-        sourceType: ResourceType;
-        name: string;
-        targetId: string;
-        targetType: ResourceType;
-        position?: number;
-    }): Promise<RelationshipRow> {
-        return storage.create({
-            sourceId: data.sourceId,
-            sourceType: data.sourceType,
-            name: data.name,
-            targetId: data.targetId,
-            targetType: data.targetType,
-            position: data.position ?? 0,
-        });
-    }
-
-    /** Get all relationships for a source resource. */
-    async function getBySource(
-        sourceId: string,
-        sourceType: ResourceType,
-        name?: string
-    ): Promise<RelationshipRow[]> {
-        return storage.findMany({
-            where: { sourceId, sourceType, ...(name ? { name } : {}) },
-            orderBy: [['position', 'asc']],
-        });
-    }
-
-    /** Get all relationships pointing to a target resource. */
-    async function getByTarget(
-        targetId: string,
-        targetType: ResourceType
-    ): Promise<RelationshipRow[]> {
-        return storage.findMany({
-            where: { targetId, targetType },
-            orderBy: [['position', 'asc']],
-        });
-    }
-
-    /** Update relationship positions (for ordered relations). */
-    async function updatePositions(
-        sourceId: string,
-        sourceType: ResourceType,
-        name: string,
-        orderedTargetIds: string[]
+    /**
+     * Replace every edge recorded for one source. The delete covers the whole
+     * source rather than a field at a time: there is then no "did this field go
+     * away" case to get wrong, which is the failure mode a per-field replace has.
+     */
+    async function replaceForSource(
+        source: RelationshipSource,
+        edges: RelationshipEdge[]
     ): Promise<void> {
-        for (let i = 0; i < orderedTargetIds.length; i++) {
-            const targetId = orderedTargetIds[i];
-            if (targetId === undefined) continue;
-            await storage.updateMany(
-                { sourceId, sourceType, name, targetId },
-                { position: i }
-            );
+        await storage.deleteMany({ sourceId: source.id, sourceKind: source.kind });
+        if (edges.length === 0) return;
+
+        const { db: handle, table } = storage.query();
+        const rows = edges.map((edge) =>
+            encodeWith(relationships, {
+                sourceId: source.id,
+                sourceKind: source.kind,
+                sourceType: source.type ?? null,
+                schemaPath: edge.schemaPath,
+                instancePath: edge.instancePath,
+                targetId: edge.targetId,
+                targetKind: edge.targetKind,
+                sourceStaged: source.staged ?? false,
+            })
+        );
+        for (let i = 0; i < rows.length; i += INSERT_CHUNK_ROWS) {
+            await handle
+                .insertInto(table)
+                .values(rows.slice(i, i + INSERT_CHUNK_ROWS))
+                .execute();
         }
     }
 
-    /** Delete a specific relationship. */
-    async function remove(
+    /** Every edge recorded for one source, in no particular order. */
+    async function findBySource(
         sourceId: string,
-        sourceType: ResourceType,
-        name: string,
-        targetId: string
-    ): Promise<void> {
-        await storage.deleteMany({ sourceId, sourceType, name, targetId });
+        sourceKind: TargetKind
+    ): Promise<RelationshipRow[]> {
+        return storage.findMany({ where: { sourceId, sourceKind } });
     }
 
-    /** Delete all relationships for a source. */
+    /**
+     * Every edge pointing at one target. `includeStaged` is the delete-time
+     * question — a pending merge that references the target still counts, even
+     * though a reverse lookup for display would not show it.
+     */
+    async function findByTarget(
+        targetId: string,
+        targetKind: TargetKind,
+        opts?: { includeStaged?: boolean }
+    ): Promise<RelationshipRow[]> {
+        return storage.findMany({
+            where: {
+                targetId,
+                targetKind,
+                ...(opts?.includeStaged === true ? {} : { sourceStaged: false }),
+            },
+        });
+    }
+
+    /** Drop one source's edges — its row is gone, so its edges are meaningless. */
     async function deleteBySource(
         sourceId: string,
-        sourceType: ResourceType,
-        name?: string
+        sourceKind: TargetKind
     ): Promise<void> {
-        await storage.deleteMany({ sourceId, sourceType, ...(name ? { name } : {}) });
+        await storage.deleteMany({ sourceId, sourceKind });
     }
 
     /**
-     * Delete all relationships pointing to a target. Used for cascade delete or
-     * cleaning up when a resource is deleted.
+     * Drop every edge involving a resource, in both directions. Deleting a
+     * target does not rewrite the field data that references it — the dangling
+     * id stays until that source is next written — but the index must not keep
+     * claiming a reference to a row that no longer exists.
      */
-    async function deleteByTarget(
-        targetId: string,
-        targetType: ResourceType
-    ): Promise<void> {
-        await storage.deleteMany({ targetId, targetType });
+    async function deleteByResource(id: string, kind: TargetKind): Promise<void> {
+        await storage.deleteMany({ sourceId: id, sourceKind: kind });
+        await storage.deleteMany({ targetId: id, targetKind: kind });
     }
 
-    /**
-     * Remove every relationship row (incoming and outgoing) involving an entry.
-     * Used when an entry is permanently deleted.
-     */
-    async function deleteByEntry(id: string): Promise<void> {
-        await deleteBySource(id, 'entry');
-        await deleteByTarget(id, 'entry');
-    }
-
-    /**
-     * Remove every relationship row (incoming and outgoing) involving a user.
-     * Used when a user is permanently deleted.
-     */
-    async function deleteByUser(id: string): Promise<void> {
-        await deleteBySource(id, 'user');
-        await deleteByTarget(id, 'user');
-    }
-
-    /**
-     * Remove every relationship row (incoming and outgoing) involving a media item.
-     * Used when a media item is permanently deleted.
-     */
-    async function deleteByMedia(id: string): Promise<void> {
-        await deleteBySource(id, 'media');
-        await deleteByTarget(id, 'media');
-    }
-
-    /**
-     * Replace all relationships for a source/name combination. Useful for form
-     * submissions where all relations are set at once.
-     */
-    async function replaceAll(
-        sourceId: string,
-        sourceType: ResourceType,
-        name: string,
-        targetIds: string[],
-        targetType: ResourceType
-    ): Promise<void> {
-        await deleteBySource(sourceId, sourceType, name);
-
-        for (let i = 0; i < targetIds.length; i++) {
-            const targetId = targetIds[i];
-            if (targetId === undefined) continue;
-            await create({
-                sourceId,
-                sourceType,
-                name,
-                targetId,
-                targetType,
-                position: i,
-            });
-        }
+    /** Wipe the index, optionally for one source kind. The rebuild entry point. */
+    async function clear(sourceKind?: TargetKind): Promise<void> {
+        await storage.deleteMany(sourceKind ? { sourceKind } : {});
     }
 
     return {
-        create,
-        getBySource,
-        getByTarget,
-        updatePositions,
-        delete: remove,
+        replaceForSource,
+        findBySource,
+        findByTarget,
         deleteBySource,
-        deleteByTarget,
-        deleteByEntry,
-        deleteByUser,
-        deleteByMedia,
-        replaceAll,
+        deleteByResource,
+        clear,
+        query: storage.query,
     };
 }

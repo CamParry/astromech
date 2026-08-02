@@ -5,7 +5,7 @@
  *   - Shape axis (`public` / `full`): which fields you see.
  *   - Audience axis (row filter): which entries you may see at all.
  *
- * Applied at the end of `query()` and `get()`, after populate, before return.
+ * Applied at the end of `query()` and `get()`, just before return.
  */
 
 import type {
@@ -178,14 +178,10 @@ function fieldMap(fields: FieldDefinition[]): Map<string, FieldDefinition> {
 /**
  * Strip private fields from a cloned `fields` object using the field definitions.
  * Recurses into group/repeater/blocks/tree child definitions.
- *
- * `resolveRelatedFields` is called for populated relation objects — it should
- * return the FieldDefinition[] for the related entry type (or [] if unknown).
  */
 function stripPrivateFields(
     fields: JsonObject,
-    fieldDefs: FieldDefinition[],
-    resolveRelatedFields: (entry: Entry) => FieldDefinition[]
+    fieldDefs: FieldDefinition[]
 ): JsonObject {
     const defs = fieldMap(fieldDefs);
     const result: JsonObject = {};
@@ -202,46 +198,6 @@ function stripPrivateFields(
         // Step 1: drop private fields
         if (def.private === true) continue;
 
-        // Step 3: recurse into populated relation values (plain entry objects)
-        if (def.type === 'relationship') {
-            const value = rawValue;
-            if (value === null || typeof value === 'string') {
-                // Un-populated (raw id string) or null — pass through
-                result[key] = value;
-            } else if (Array.isArray(value)) {
-                // Multiple relation — may be ids (strings) or populated entry objects
-                const filtered: JsonValue[] = [];
-                for (const item of value as JsonValue[]) {
-                    if (item === null || typeof item === 'string') {
-                        filtered.push(item);
-                    } else if (typeof item === 'object' && !Array.isArray(item)) {
-                        const related = item as unknown as Entry;
-                        const stripped = applyPublicProjectionToRelated(
-                            related,
-                            resolveRelatedFields(related)
-                        );
-                        if (stripped !== null)
-                            filtered.push(stripped as unknown as JsonValue);
-                    } else {
-                        filtered.push(item);
-                    }
-                }
-                result[key] = filtered;
-            } else if (typeof value === 'object') {
-                // Single populated entry object
-                const related = value as unknown as Entry;
-                const stripped = applyPublicProjectionToRelated(
-                    related,
-                    resolveRelatedFields(related)
-                );
-                result[key] =
-                    stripped !== null ? (stripped as unknown as JsonValue) : null;
-            } else {
-                result[key] = value;
-            }
-            continue;
-        }
-
         // Recurse into group children
         if (def.type === 'group' && def.fields && def.fields.length > 0) {
             if (
@@ -249,11 +205,7 @@ function stripPrivateFields(
                 typeof rawValue === 'object' &&
                 !Array.isArray(rawValue)
             ) {
-                result[key] = stripPrivateFields(
-                    rawValue as JsonObject,
-                    def.fields,
-                    resolveRelatedFields
-                );
+                result[key] = stripPrivateFields(rawValue as JsonObject, def.fields);
             } else {
                 result[key] = rawValue;
             }
@@ -270,11 +222,7 @@ function stripPrivateFields(
                         typeof item === 'object' &&
                         !Array.isArray(item)
                     ) {
-                        return stripPrivateFields(
-                            item as JsonObject,
-                            repeaterFields,
-                            resolveRelatedFields
-                        );
+                        return stripPrivateFields(item as JsonObject, repeaterFields);
                     }
                     return item;
                 });
@@ -300,11 +248,7 @@ function stripPrivateFields(
                             ? blockDefsByType.get(blockType)
                             : undefined;
                         if (blockFields) {
-                            return stripPrivateFields(
-                                obj,
-                                blockFields,
-                                resolveRelatedFields
-                            );
+                            return stripPrivateFields(obj, blockFields);
                         }
                     }
                     return item;
@@ -317,11 +261,7 @@ function stripPrivateFields(
 
         // Recurse into tree items (recursive structure with `_children`)
         if (def.type === 'tree' && def.fields && def.fields.length > 0) {
-            result[key] = stripTreeItems(
-                rawValue as JsonValue,
-                def.fields,
-                resolveRelatedFields
-            );
+            result[key] = stripTreeItems(rawValue as JsonValue, def.fields);
             continue;
         }
 
@@ -345,60 +285,20 @@ function stripPrivateFields(
  * Recursively strip private fields from tree items.
  * Tree items are objects with child field data + a `_children` array of more tree items.
  */
-function stripTreeItems(
-    value: JsonValue,
-    childFields: FieldDefinition[],
-    resolveRelatedFields: (entry: Entry) => FieldDefinition[]
-): JsonValue {
+function stripTreeItems(value: JsonValue, childFields: FieldDefinition[]): JsonValue {
     if (Array.isArray(value)) {
-        return (value as JsonValue[]).map((item) =>
-            stripTreeItems(item, childFields, resolveRelatedFields)
-        );
+        return (value as JsonValue[]).map((item) => stripTreeItems(item, childFields));
     }
     if (value !== null && typeof value === 'object') {
         const obj = value as JsonObject;
         const { _children, ...rest } = obj;
-        const stripped = stripPrivateFields(rest, childFields, resolveRelatedFields);
+        const stripped = stripPrivateFields(rest, childFields);
         if (_children !== undefined) {
-            stripped['_children'] = stripTreeItems(
-                _children as JsonValue,
-                childFields,
-                resolveRelatedFields
-            );
+            stripped['_children'] = stripTreeItems(_children as JsonValue, childFields);
         }
         return stripped;
     }
     return value;
-}
-
-// ============================================================================
-// Related entry projection
-// ============================================================================
-
-/**
- * Apply public projection to a populated related entry object.
- * Returns null if the related entry is not published (audience filter).
- * Otherwise strips private fields and structural internals.
- */
-function applyPublicProjectionToRelated(
-    related: Entry,
-    relatedFields: FieldDefinition[]
-): Entry | null {
-    // Audience filter: related entry must itself be published
-    const now = new Date();
-    if (!passesPublicRowFilter(related, now)) return null;
-
-    // Strip private fields (no further relation recursion to prevent deep nesting issues)
-    const strippedFields = stripPrivateFields(
-        { ...(related.fields ?? {}) },
-        relatedFields,
-        () => [] // no deeper relation recursion
-    );
-
-    // Structural strip
-    const cleanFields = structuralStrip(strippedFields as JsonValue) as JsonObject;
-
-    return { ...related, fields: cleanFields };
 }
 
 // ============================================================================
@@ -410,71 +310,27 @@ function applyPublicProjectionToRelated(
  *
  * - `full` shape: returns the entry unchanged (trusted/admin path).
  * - `public` shape:
- *   1. Row filter: returns null if the entry is not published / is scheduled-future / is trashed.
+ *   1. Row filter: returns null if the entry is not published / is scheduled-future
+ *      / is trashed (`preview` bypasses the publish gate, never the trashed check).
  *   2. Projection: strips private fields (using field definitions) and structural
- *      internals (`_disabled` items removed; `_disabled`/`_title` deleted from survivors;
- *      `_type`/`_id`/`_children` kept).
- *   3. Populated relation objects are filtered by audience and projected recursively.
+ *      internals (`_disabled` items removed; `_disabled`/`_title` deleted from
+ *      survivors; `_type`/`_id`/`_children` kept).
  *
+ * A relation value is a raw id, so nothing here recurses into a related record.
  * The returned entry is a shallow clone — stored objects are not mutated.
  */
 export function applyVisibility(entry: Entry, opts: VisibilityOptions): Entry | null {
     const { shape, fields, audience } = opts;
 
-    // full shape: no-op
     if (shape === 'full') return entry;
 
-    // Row filter
-    if (!passesPublicRowFilter(entry, audience.now)) return null;
-
-    // Build a resolver for related entry type fields.
-    // At this point we don't have config access — callers pass fields for the
-    // primary type. For populated relations within those fields, we rely on the
-    // caller to have resolved the correct fields (or pass [] for unknown types).
-    // Step 3 wires this in entries.ts via resolveEntryType per relation target.
-    const resolveRelatedFields = (_related: Entry): FieldDefinition[] => {
-        // Populated relations carry their type — the caller-provided `resolveRelated`
-        // closure (set per call site in entries.ts) handles this. Default: no fields.
-        return [];
-    };
-
-    // Strip private fields (step 1) — clone fields first, never mutate stored object
-    const clonedFields = { ...entry.fields };
-    const projectedFields = stripPrivateFields(
-        clonedFields,
-        fields,
-        resolveRelatedFields
-    );
-
-    // Structural strip (step 2) — removes _disabled items and _disabled/_title keys
-    const cleanFields = structuralStrip(projectedFields as JsonValue) as JsonObject;
-
-    return { ...entry, fields: cleanFields };
-}
-
-/**
- * Variant of applyVisibility that accepts a resolver for related entry field definitions.
- * Used by the entries service to thread config knowledge into relation projection.
- */
-export function applyVisibilityWithRelations(
-    entry: Entry,
-    opts: VisibilityOptions,
-    resolveRelatedFields: (related: Entry) => FieldDefinition[]
-): Entry | null {
-    const { shape, fields, audience } = opts;
-
-    if (shape === 'full') return entry;
     const rowOk = opts.preview
         ? passesPreviewRowFilter(entry)
         : passesPublicRowFilter(entry, audience.now);
     if (!rowOk) return null;
 
-    const clonedFields = { ...entry.fields };
-    const projectedFields = stripPrivateFields(
-        clonedFields,
-        fields,
-        resolveRelatedFields
-    );
+    // Clone fields first — never mutate the stored object.
+    const projectedFields = stripPrivateFields({ ...entry.fields }, fields);
     const cleanFields = structuralStrip(projectedFields as JsonValue) as JsonObject;
 
     return { ...entry, fields: cleanFields };

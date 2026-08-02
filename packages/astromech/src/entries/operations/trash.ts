@@ -56,7 +56,7 @@ export async function emptyTrash(params: { type: string }): Promise<void> {
     });
     const relationshipsRepo = createRelationshipStorage();
     for (const entry of trashed) {
-        await relationshipsRepo.deleteByEntry(entry.id);
+        await relationshipsRepo.deleteByResource(entry.id, 'entry');
     }
 
     await storage.trash.emptyTrash(type);

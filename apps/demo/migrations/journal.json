@@ -16,6 +16,11 @@
             "idx": 2,
             "tag": "0002_plugins-tracking-package",
             "when": 1785182648340
+        },
+        {
+            "idx": 3,
+            "tag": "0003_relationships-index",
+            "when": 1785712265425
         }
     ]
 }

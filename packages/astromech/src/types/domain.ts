@@ -50,7 +50,6 @@ export type EntryVersion = {
     title: string;
     slug: string | null;
     fields: JsonObject | null;
-    relations: Record<string, string | string[]> | null;
     status: EntryStatus | null;
     createdAt: Date;
     createdBy: string | null;
@@ -60,18 +59,12 @@ export type EntryVersion = {
 // Relationships
 // ============================================================================
 
+/** What can hold, or be pointed at by, a relation. */
 export type ResourceType = 'entry' | 'user' | 'media';
 
-export type Relationship = {
-    id: string;
-    sourceId: string;
-    sourceType: ResourceType;
-    name: string;
-    targetId: string;
-    targetType: ResourceType;
-    position: number;
-    createdAt: Date;
-};
+// A relationship row has no hand-written type: it is a derived index whose
+// shape comes from the descriptor, so `RelationshipRow` in `database/schema.ts`
+// is the one definition. A second copy here could only drift out of date.
 
 // ============================================================================
 // Media

@@ -1,8 +1,8 @@
-import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import { asEntry, loadAndAssertType } from '../../internal/records.js';
 import { getStagingStorage } from '../../internal/supports.js';
+import { indexEntryRelationships } from '../../internal/relationships.js';
 import { StagedEntryExistsError } from '../../errors.js';
-import type { Entry } from '@/types/index.js';
+import type { Entry, JsonObject } from '@/types/index.js';
 
 export async function createStaged(params: { type: string; id: string }): Promise<Entry> {
     const { type, id } = params;
@@ -32,18 +32,7 @@ export async function createStaged(params: { type: string; id: string }): Promis
         publishedAt: null,
     });
 
-    const relRepo = createRelationshipStorage();
-    const canonicalRels = await relRepo.getBySource(id, 'entry');
-    for (const rel of canonicalRels) {
-        await relRepo.create({
-            sourceId: created.id,
-            sourceType: 'entry',
-            name: rel.name,
-            targetId: rel.targetId,
-            targetType: rel.targetType,
-            position: rel.position,
-        });
-    }
+    await indexEntryRelationships(created, canonical.fields as JsonObject, type);
 
     return asEntry(created);
 }

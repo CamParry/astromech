@@ -3,7 +3,7 @@ import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import { asEntry, loadAndAssertType } from '../../internal/records.js';
 import { getStagingStorage } from '../../internal/supports.js';
 import { isVersioningEnabled } from '../../internal/type-config.js';
-import { buildRelationsSnapshot } from '../../internal/relationships.js';
+import { indexEntryRelationships } from '../../internal/relationships.js';
 import { createEntryScopedReads } from '../../reads.js';
 import { resolveEntryType } from '../../type-registry.js';
 import { entryValidationStage } from '../../validation-stage.js';
@@ -72,7 +72,6 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
         // 1. Backup (conditional on versioning): snapshot the canonical first so
         //    a partial failure leaves a recoverable version.
         if (versioningOn && txStorage.versions) {
-            const currentRelations = await buildRelationsSnapshot(id, txDb);
             const latestNumber = await txStorage.versions.latestNumber(id);
             await txStorage.versions.create({
                 entryId: id,
@@ -80,7 +79,6 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
                 title: canonical.title,
                 slug: canonical.slug,
                 fields: canonical.fields,
-                relations: currentRelations,
                 createdBy: null,
             });
         }
@@ -94,24 +92,13 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
             fields: mergedFields,
         });
 
-        // Replace the canonical's relations wholesale with the staged ones.
-        const relRepo = createRelationshipStorage(txDb);
-        await relRepo.deleteByEntry(id);
-        const stagedRels = await relRepo.getBySource(staged.id, 'entry');
-        for (const rel of stagedRels) {
-            await relRepo.create({
-                sourceId: id,
-                sourceType: 'entry',
-                name: rel.name,
-                targetId: rel.targetId,
-                targetType: rel.targetType,
-                position: rel.position,
-            });
-        }
+        // The canonical now holds the staged content, so its index rows derive
+        // from that content — and from a source that is no longer staged.
+        await indexEntryRelationships(updated, mergedFields, type, txDb);
 
         // 3. Cleanup: hard-delete the staged entry (its versions cascade; its
-        //    relationship rows are not FK-bound, so drop them explicitly).
-        await relRepo.deleteByEntry(staged.id);
+        //    index rows are not FK-bound, so drop them explicitly).
+        await createRelationshipStorage(txDb).deleteByResource(staged.id, 'entry');
         await txStorage.delete(staged.id);
 
         return asEntry(updated);

@@ -8,7 +8,6 @@ export async function deleteStaged(params: { type: string; id: string }): Promis
     await loadAndAssertType(storage, type, id);
     const staged = await staging.getByCanonical(id);
     if (!staged) throw new Error(`No staged change for entry '${id}'`);
-    const relRepo = createRelationshipStorage();
-    await relRepo.deleteByEntry(staged.id);
+    await createRelationshipStorage().deleteByResource(staged.id, 'entry');
     await storage.delete(staged.id);
 }

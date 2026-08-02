@@ -3,16 +3,11 @@ import { flattenEntryFields } from '@/fields/helpers.js';
 import { getCurrentUser } from '@/context/index.js';
 import { resolveEntryType } from '../type-registry.js';
 import { getEntryStorage } from '../storage/registry.js';
-import { populateEntries } from '../internal/populate.js';
-import { getDefaultLocale, resolveRelatedFields } from '../internal/type-config.js';
+import { getDefaultLocale } from '../internal/type-config.js';
 import { asEntry } from '../internal/records.js';
 import { runPreviewQuery } from './preview/read.js';
 import { PublicTrashedReadError } from '../errors.js';
-import {
-    applyVisibilityWithRelations,
-    markPublic,
-    type VisibilityShape,
-} from '../visibility.js';
+import { applyVisibility, markPublic, type VisibilityShape } from '../visibility.js';
 import type { Entry, EntryQueryParams, QueryResult } from '@/types/index.js';
 
 export async function query(
@@ -32,12 +27,12 @@ export async function query(
     const shape: VisibilityShape = params.full ? 'full' : 'public';
 
     // A public read can never return a trashed row: the public shape forces
-    // `status: 'published'` below and `applyVisibilityWithRelations` drops every
-    // trashed row afterwards. Asking for both used to yield an empty list,
-    // indistinguishable from "nothing is trashed", so reject it instead.
+    // `status: 'published'` below and `applyVisibility` drops every trashed row
+    // afterwards. Asking for both used to yield an empty list, indistinguishable
+    // from "nothing is trashed", so reject it instead.
     if (params.trashed === true && shape === 'public') throw new PublicTrashedReadError();
 
-    // Populate only applies when all rows share a single type config.
+    // A single type resolves one config; a cross-type query resolves per row.
     const singleType = types.length === 1 ? (types[0] ?? null) : null;
     const firstType = types[0] ?? '';
     const storage = getEntryStorage(firstType);
@@ -72,20 +67,8 @@ export async function query(
         limit: params.limit,
     });
 
-    let data = rows.map(asEntry);
+    const data = rows.map(asEntry);
 
-    if (singleType && params.populate && params.populate.length > 0) {
-        const entryTypeConfig = resolveEntryType(config, singleType);
-        if (entryTypeConfig) {
-            data = await populateEntries(
-                data,
-                flattenEntryFields(entryTypeConfig.fields),
-                params.populate
-            );
-        }
-    }
-
-    // Apply visibility filter after populate.
     const user = getCurrentUser();
     const audience = { roleSlug: user?.roleSlug ?? null, now: new Date() };
 
@@ -100,11 +83,11 @@ export async function query(
         const rowTypeCfg = resolveEntryType(config, rowType);
         const rowFields = rowTypeCfg ? flattenEntryFields(rowTypeCfg.fields) : [];
 
-        const filtered = applyVisibilityWithRelations(
-            entry,
-            { shape, fields: rowFields, audience },
-            resolveRelatedFields
-        );
+        const filtered = applyVisibility(entry, {
+            shape,
+            fields: rowFields,
+            audience,
+        });
 
         if (filtered !== null) {
             visibleData.push(shape === 'public' ? markPublic(filtered) : filtered);

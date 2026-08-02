@@ -69,22 +69,43 @@ export {
 // Relationships
 // ============================================================================
 
+/**
+ * The relationships index — DERIVED from field data, never authoritative.
+ *
+ * Read for exactly three things: reverse lookup, filter-by-relation, and
+ * delete-time information. A forward read takes the id out of the field data
+ * itself, so a wrong row here is repaired by a rebuild rather than being data
+ * loss — which is what makes it safe for the table to be polymorphic.
+ *
+ * No surrogate id: the natural key IS the row. No `position`, because order
+ * lives in field data's array order and a second copy of it would drift. No
+ * `createdAt`, because on a row that is rewritten wholesale it would mean "last
+ * indexed", not "when the relation was made".
+ */
 export const relationships = defineTable(
     'relationships',
     ({ col }) => ({
-        id: col.id(),
         sourceId: col.text({ notNull: true }),
-        sourceType: col.enum(['entry', 'user', 'media'], { notNull: true }),
-        name: col.text({ notNull: true }),
+        sourceKind: col.enum(['entry', 'user', 'media'], { notNull: true }),
+        /** The entry type ('post', 'ns/type'); null for user and media sources. */
+        sourceType: col.text(),
+        /** `sections[].gallery` — indexed, and what a query matches on. */
+        schemaPath: col.text({ notNull: true }),
+        /** `sections[a1].gallery` — for deep-linking; never pattern-matched. */
+        instancePath: col.text({ notNull: true }),
         targetId: col.text({ notNull: true }),
-        targetType: col.enum(['entry', 'user', 'media'], { notNull: true }),
-        position: col.integer({ notNull: true, default: 0 }),
-        createdAt: col.timestamp({ notNull: true, defaultNow: true }),
+        targetKind: col.enum(['entry', 'user', 'media'], { notNull: true }),
+        /** Derived from the source row's `stagedFor`, so reverse lookup and
+         *  filter-by-relation can exclude staged sources without a join. */
+        sourceStaged: col.boolean({ notNull: true, default: false }),
     }),
-    ({ index }) => [
-        index('idx_rel_source', ['sourceId', 'sourceType', 'name']),
-        index('idx_rel_target', ['targetId', 'targetType']),
-    ]
+    {
+        primaryKey: ['sourceId', 'sourceKind', 'instancePath', 'targetId', 'targetKind'],
+        indexes: ({ index }) => [
+            index('idx_rel_target', ['targetId', 'targetKind']),
+            index('idx_rel_filter', ['sourceType', 'schemaPath', 'targetId']),
+        ],
+    }
 );
 
 export type RelationshipRow = TableSelect<typeof relationships>;

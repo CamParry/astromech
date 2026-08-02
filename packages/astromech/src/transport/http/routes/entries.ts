@@ -121,9 +121,6 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
     ): Omit<EntryQueryParams, 'type'> {
         const params: Omit<EntryQueryParams, 'type'> = {};
 
-        const populate = query['populate'];
-        if (populate) params.populate = populate.split(',').filter(Boolean);
-
         const locale = query['locale'];
         if (locale) params.locale = locale;
 
@@ -317,7 +314,6 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
                 search: z.string().optional(),
                 trashed: z.string().optional(),
                 locale: z.string().optional().openapi({ example: 'en' }),
-                populate: z.string().optional(),
                 sort: z.string().optional(),
                 dir: z.enum(['asc', 'desc']).optional(),
             }),
@@ -359,7 +355,6 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
                 id: z.string().openapi({ example: 'clx1234abc' }),
             }),
             query: z.object({
-                populate: z.string().optional(),
                 locale: z.string().optional(),
                 previewToken: z.string().optional(),
                 staged: z.string().optional(),
@@ -388,7 +383,6 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
             type: type,
             id,
             full: wantsFull,
-            ...(qp.populate ? { populate: qp.populate } : {}),
             ...(qp.locale ? { locale: qp.locale } : {}),
             ...(qp.previewToken ? { previewToken: qp.previewToken } : {}),
             ...(qp.staged ? { staged: true } : {}),

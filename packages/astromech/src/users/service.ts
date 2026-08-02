@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import type { UserRow } from './schema.js';
 import { createUserStorage } from './storage.js';
+import { createRelationshipStorage } from '@/database/storage/relationships.js';
+import { collectRelationshipEdges } from '@/fields/relationship-edges.js';
 import type { JsonObject, User, QueryResult, UserQueryParams } from '@/types/index.js';
 import { ValidationError } from '@/errors/validation.js';
 import { createUserSchema, updateUserSchema } from './schema.js';
@@ -110,14 +112,14 @@ export const usersApi = {
         }
         const fields = processedFields.values as JsonObject;
 
-        return toUser(
-            await createUserStorage().create({
-                email: validated.email,
-                name: validated.name,
-                ...(Object.keys(fields).length > 0 && { fields }),
-                roleSlug: validated.roleSlug,
-            })
-        );
+        const created = await createUserStorage().create({
+            email: validated.email,
+            name: validated.name,
+            ...(Object.keys(fields).length > 0 && { fields }),
+            roleSlug: validated.roleSlug,
+        });
+        await indexUserRelationships(created.id, fields);
+        return toUser(created);
     },
 
     async update(params: {
@@ -164,17 +166,32 @@ export const usersApi = {
 
         // An explicitly-`undefined` key means "leave this column alone"; storage
         // stamps `updatedAt`.
-        return toUser(
-            await createUserStorage().update(id, {
-                name: validatedData.name,
-                email: validatedData.email,
-                fields: validatedData.fields as JsonObject | undefined,
-                roleSlug: validatedData.roleSlug,
-            })
-        );
+        const updated = await createUserStorage().update(id, {
+            name: validatedData.name,
+            email: validatedData.email,
+            fields: validatedData.fields as JsonObject | undefined,
+            roleSlug: validatedData.roleSlug,
+        });
+        // An update that never touched `fields` must leave the index alone.
+        if (validatedData.fields !== undefined) {
+            await indexUserRelationships(id, validatedData.fields as JsonObject);
+        }
+        return toUser(updated);
     },
 
     async delete(params: { id: string }): Promise<void> {
         await createUserStorage().delete(params.id);
     },
 };
+
+/**
+ * Re-index a user's relationship fields. `fields` must be post-`processFields`
+ * values — item ids are minted during that pass.
+ */
+async function indexUserRelationships(id: string, fields: JsonObject): Promise<void> {
+    const definitions = flattenFieldNodes(config.users?.fields ?? []);
+    await createRelationshipStorage().replaceForSource(
+        { id, kind: 'user' },
+        collectRelationshipEdges(definitions, fields)
+    );
+}

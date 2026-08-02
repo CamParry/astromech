@@ -65,6 +65,23 @@ describe('dumpSchema', () => {
         ]);
     });
 
+    it('normalizes the double-quoted name a RENAME leaves behind', async () => {
+        const db = await makeDb([
+            'CREATE TABLE `__new_widgets` (`id` text PRIMARY KEY NOT NULL)',
+            'ALTER TABLE `__new_widgets` RENAME TO `widgets`',
+        ]);
+
+        const [row] = await dumpSchema(db);
+        expect(row?.sql).toBe('CREATE TABLE `widgets` (`id` text PRIMARY KEY NOT NULL)');
+    });
+
+    it('leaves a double quote inside a string literal alone', async () => {
+        const db = await makeDb(["CREATE TABLE `widgets` (`kind` text DEFAULT 'a\"b')"]);
+
+        const [row] = await dumpSchema(db);
+        expect(row?.sql).toContain("'a\"b'");
+    });
+
     it('excludes internal sqlite_* rows and implicit (NULL-sql) indexes', async () => {
         const db = await makeDb([
             // AUTOINCREMENT creates the internal `sqlite_sequence` table; the

@@ -101,7 +101,6 @@ export type NewEntryVersionSnapshot = {
     title: string;
     slug: string | null;
     fields: JsonObject;
-    relations: Record<string, string | string[]>;
     createdBy: string | null;
 };
 

@@ -47,7 +47,6 @@ export async function getPostBySlug(
             where: { slug },
             locale,
             limit: 1,
-            populate: ['category', 'tags', 'author', 'featured_image'],
             ...(preview?.previewToken ? { previewToken: preview.previewToken } : {}),
             ...(preview?.staged ? { staged: true } : {}),
         });
@@ -63,7 +62,6 @@ export async function getPosts(locale: Locale, limit = 20): Promise<Entry[]> {
             type: 'post',
             locale,
             limit,
-            populate: ['category', 'featured_image'],
         });
         return data;
     } catch {
@@ -81,7 +79,6 @@ export async function getCaseStudyBySlug(
             where: { slug },
             locale,
             limit: 1,
-            populate: ['logo', 'related_posts'],
         });
         return data[0] ?? null;
     } catch {

@@ -2,7 +2,8 @@
  * Built-in CRON job: Purge old trashed entries.
  *
  * Hard-deletes entries that have been in the trash longer than
- * config.trash.retentionDays. Cascade deletes handle relationships/versions.
+ * config.trash.retentionDays. Versions cascade via their FK; relationship index
+ * rows have no FK and are left behind.
  */
 
 import { createEntryMaintenanceStorage } from '../storage/maintenance.js';
