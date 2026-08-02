@@ -91,9 +91,51 @@ URL, so reporting it first would send the author chasing the wrong problem.
 A malformed URL reports `Must be a valid URL`, and only once that is fixed does
 your rule get a say.
 
-Field types that bring their own validator: `url`, `email`, `json`,
-`key-value`, and `blocks` (which rejects an undeclared block type). `slug`
-normalizes its value but does not reject one.
+## What each field type checks
+
+Most types bring their own validator, and it runs on every write whether or not
+you declared any rules. This matters more than it looks: the declarative rules
+all ignore a value of the wrong type — `minLength` only measures strings and
+arrays, `min` only compares numbers — so on a wrong-typed value the type's own
+validator is the only thing standing between the input and storage.
+
+| Field type                      | What it rejects                                                                                      |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `richtext`                      | Anything that is not a rich-text document the field's `allow` list admits — including an HTML string |
+| `select`, `radio-group`         | A value that is not one of the declared `options`                                                    |
+| `multiselect`, `checkbox-group` | A non-list, or a list holding an undeclared option                                                   |
+| `number`, `range`               | A non-number (a numeric string is parsed first), `NaN`, `Infinity`                                   |
+| `boolean`                       | Anything that is not `true` or `false`                                                               |
+| `date`, `datetime`              | A string that does not parse as a date (a `Date` is converted first)                                 |
+| `media`, `relationship`         | Anything that is not an id, or a list of ids when `multiple`                                         |
+| `email`, `url`                  | A malformed address or URL                                                                           |
+| `json`                          | A value that is not JSON-serializable                                                                |
+| `key-value`                     | Anything that is not an object of key/value pairs                                                    |
+| `blocks`                        | An item whose `_type` matches no declared block                                                      |
+
+A field that declares no `options` has nothing to check against, so `select`
+and the other choice types accept any string. `slug` normalizes its value
+rather than rejecting one, and `text`, `textarea`, `color`, `link` and the
+`group`/`repeater`/`tree` containers have no type validator yet — declare
+`pattern` or a `custom` rule if you need one on those.
+
+Two checks are deliberately **not** made. A `relationship` or `media` value is
+checked for being an id, but nothing confirms the id resolves to a record, or
+that the record is the `target` type. And a stored value is only validated when
+it is written — a field whose rules tighten later does not retroactively
+invalidate rows already in the database.
+
+### Writing back what you read
+
+A `public`-shape read is a projection, not a round-trippable record: private
+fields are stripped and rich text is rendered to HTML. Writing one straight back
+is refused rather than silently accepted — `richtext` rejects the rendered
+string, and `relationship`/`media` reject a populated record from an expanded
+read.
+
+Re-read with `full: true` before saving. The projection cannot always tell:
+a public read that dropped a private **text** field looks exactly like a
+deliberate clear, so treat a public read as display data and nothing else.
 
 ## Warnings
 
