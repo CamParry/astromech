@@ -1,7 +1,8 @@
 /**
  * Topbar component for the Astromech admin SPA.
  *
- * Layout: [Menu toggle (mobile)] [Brand] [Search] [Bell] [Quick-create] [User menu]
+ * Layout: [Sidebar toggle] [Menu toggle (mobile)] [Brand] [Search] [Bell]
+ * [Quick-create] [User menu]
  */
 
 import { useNavigate } from '@tanstack/react-router';
@@ -12,6 +13,7 @@ import {
     LogOut,
     Menu as MenuIcon,
     Moon,
+    PanelLeft,
     Plus,
     Search,
     Sun,
@@ -28,7 +30,7 @@ import { PluginSlot } from '../plugins/PluginSlot.js';
 
 export function Topbar() {
     const { user, logout } = useAuth();
-    const { setSidebarOpen, setShortcutsOpen } = useUI();
+    const { sidebarOpen, toggleSidebar, setSidebarOpen, setShortcutsOpen } = useUI();
     const { theme, setTheme } = useTheme();
     const { setOpen: openCommandPalette } = useCommandPalette();
     const { t } = useTranslation();
@@ -43,6 +45,18 @@ export function Topbar() {
     return (
         <header className="am-topbar">
             <div className="am-topbar-left">
+                {/* Desktop sidebar collapse */}
+                <button
+                    type="button"
+                    className="am-topbar-action-btn am-topbar-sidebar-toggle"
+                    onClick={toggleSidebar}
+                    aria-label={
+                        sidebarOpen ? t('nav.collapseSidebar') : t('nav.expandSidebar')
+                    }
+                >
+                    <PanelLeft size={17} />
+                </button>
+
                 {/* Mobile menu toggle */}
                 <button
                     type="button"
