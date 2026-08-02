@@ -80,3 +80,46 @@ there) and the uniqueness half of
 
 - [x] **Atomic create + relationships** — `entries.create` (`entries/operations/create.ts`) wraps entry-create + `saveRelationships` in `storage.transaction` (was two separate ops → orphaned entry on relationship failure). Changes: `entries/operations/create.ts`, `tests/services/entries/create-atomicity.test.ts`, `tests/_support/harness.ts` (test DB `:memory:`→temp file; libsql nulls the in-memory handle after a transaction)
 - [x] **Translatable propagation on create — INHERIT from siblings.** Create backfills non-translatable fields from an existing sibling, overriding whatever the caller sent for those keys: they are owned by the locale group, not by the row, so a value typed into one on a new-translation form is not authoritative. Mirroring update's PUSH was rejected — it blanks the group's shared values in the blank-in-group flow, which is the exact flow that was broken. The backfill runs before `processFields`, so an inherited value is coerced and validated like any other, and only keys the sibling actually holds are copied. The "Translate" flow was never affected: it goes through `duplicate`, which copies every field
+
+## Closed with these gaps open
+
+Ticked complete on 2026-08-02, but three things are deliberately NOT in it. None
+block the feature; all are easy to mistake for "already handled".
+
+- **`{ custom: fn }` still does not run under `astro dev` / `astro build`.** Same JSON
+  round trip that nearly sank the document validator, and the reason that hook needed
+  a boot registry. Not fixed here: doing it properly means addressing every field
+  validator by path through that registry, which is a wider change than P6.
+  `roadmap/planned/config-functions-reach-the-server.md` holds the options, including
+  the one that removes the bug class rather than working around it. The docs page
+  carries a matching **Known limitation** callout, so authors are not left relying on
+  `custom` for data integrity.
+
+- **Nothing in `apps/demo` exercises severity or `validate`.** The warning rule and
+  document validator used to browser-verify the Astro runtime were temporary fixtures
+  and were reverted after the run. So there is no standing example, and no regression
+  cover for the one thing the test suite structurally cannot check — that a config
+  function survives into the running Astro server. A small permanent demo fixture
+  would be worth adding.
+
+- **The entry form can show a stale value after a successful save.** Seen during the
+  same verification run; data is never wrong and a reload corrects it. Not diagnosed
+  and not attributed to this work — `roadmap/planned/entry-form-post-save-value-staleness.md`
+  records what was observed and, importantly, which control run was botched and needs
+  redoing.
+
+One P6 item was also **moved rather than built** (JSON-indexed uniqueness, above). If
+that is not an acceptable reading of "complete", this file belongs back in
+`in-progress/` with that item unticked.
+
+## How this was verified
+
+Gate on the merged result: 137 test files / 1854 tests, typecheck clean across all
+seven packages, lint clean, dep-cruise 0 errors.
+
+Tests alone were not sufficient for the document validator, because vitest and the CLI
+both alias `virtual:astromech/config` to something live — precisely the blind spot that
+hides the JSON round trip. It was browser-verified against a real `astro dev` server:
+field-keyed message rendering on its field, `details.form` on the 422 wire, the
+form-level banner (`role="alert"`), and a warning rendering with `aria-describedby` but
+no `aria-invalid` while not blocking the save.
