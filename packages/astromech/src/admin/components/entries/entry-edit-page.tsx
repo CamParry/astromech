@@ -379,22 +379,16 @@ export function EntryEditPage({
                                     to={`${basePath}/${stagedChange.id}`}
                                     className="am-btn am-btn-secondary am-btn-md"
                                 >
-                                    <Layers
-                                        size={14}
-                                        style={{ marginRight: '0.25rem' }}
-                                    />
+                                    <Layers size={16} />
                                     {t('staging.viewStaged')}
                                 </Link>
                             ) : (
                                 <Button
                                     variant="secondary"
+                                    icon={<Layers size={16} />}
                                     onClick={() => createStaged.mutate(id)}
                                     loading={createStaged.isPending}
                                 >
-                                    <Layers
-                                        size={14}
-                                        style={{ marginRight: '0.25rem' }}
-                                    />
                                     {t('staging.stageChange')}
                                 </Button>
                             ))}
@@ -411,10 +405,10 @@ export function EntryEditPage({
                         {isStaged && canPublish && (
                             <Button
                                 variant="primary"
+                                icon={<GitMerge size={16} />}
                                 onClick={handleMerge}
                                 loading={mergeStaged.isPending}
                             >
-                                <GitMerge size={14} style={{ marginRight: '0.25rem' }} />
                                 {t('staging.merge')}
                             </Button>
                         )}
