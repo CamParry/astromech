@@ -28,6 +28,7 @@ import {
     coerceKeyValue,
     validateKeyValue,
 } from './built-in-rules.js';
+import { coerceRichText, validateRichText } from './rich-text/validate.js';
 import {
     boolean,
     checkboxGroup,
@@ -200,6 +201,8 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         type: 'richtext',
         build: richtext,
         component: '@/admin/components/fields/richtext-field',
+        coerce: coerceRichText,
+        validate: validateRichText,
         tsType: (_field, shape) =>
             shape === 'public' ? 'string' : "import('astromech').JsonValue",
     },
