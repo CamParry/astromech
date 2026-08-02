@@ -4,7 +4,11 @@ import { slugify } from '@/utilities/strings.js';
 import { createEntrySchemaFor } from '../schema.js';
 import { getEntryStorage } from '../storage/registry.js';
 import { validate } from '../internal/validation.js';
-import { getDefaultLocale, getTitleField } from '../internal/type-config.js';
+import {
+    getDefaultLocale,
+    getNonTranslatableFieldNames,
+    getTitleField,
+} from '../internal/type-config.js';
 import { saveRelationships } from '../internal/relationships.js';
 import { asEntry } from '../internal/records.js';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility.js';
@@ -64,7 +68,30 @@ export async function create(params: {
     const user = getCurrentUser();
     const fieldDefs = flattenEntryFields(entryTypeConfig.fields);
 
-    const incomingFields = (validated.fields ?? {}) as Record<string, unknown>;
+    // Non-translatable fields belong to the locale group, not to this row, so a
+    // new translation inherits them from an existing sibling rather than taking
+    // whatever the form sent. Runs before validation so an inherited value is
+    // validated like any other.
+    let incomingFields = (validated.fields ?? {}) as Record<string, unknown>;
+    if (params.localeGroup !== undefined && storage.translatable) {
+        const shared = getNonTranslatableFieldNames(
+            type,
+            fieldDefs.map((field) => field.name)
+        );
+        if (shared.length > 0) {
+            const [sibling] = await storage.translatable.siblings(params.localeGroup);
+            if (sibling) {
+                const siblingFields: Record<string, unknown> = sibling.fields;
+                const inherited: Record<string, unknown> = {};
+                for (const name of shared) {
+                    if (siblingFields[name] !== undefined) {
+                        inherited[name] = siblingFields[name];
+                    }
+                }
+                incomingFields = { ...incomingFields, ...inherited };
+            }
+        }
+    }
 
     // Registry first: the Astro config is JSON, so an authored `validate` only
     // survives boot's registration. The config value is the fallback for the
