@@ -15,13 +15,24 @@ type ComponentErrorBoundaryProps = {
 
 type ComponentErrorBoundaryState = {
     hasError: boolean;
+    message?: string;
 };
 
-function ComponentErrorFallback({ source }: { source: string }): React.ReactElement {
+/** Localized crash banner; in dev it also shows the raw error message. */
+function ComponentErrorFallback({
+    source,
+    message,
+}: {
+    source: string;
+    message?: string | undefined;
+}): React.ReactElement {
     const { t } = useTranslation();
     return (
         <div className="am-banner am-banner-error" role="alert">
             {t('errors.componentCrashed', { source })}
+            {import.meta.env.DEV && message !== undefined && (
+                <pre className="am-banner-detail">{message}</pre>
+            )}
         </div>
     );
 }
@@ -32,8 +43,11 @@ export class ComponentErrorBoundary extends React.Component<
 > {
     override state: ComponentErrorBoundaryState = { hasError: false };
 
-    static getDerivedStateFromError(): ComponentErrorBoundaryState {
-        return { hasError: true };
+    static getDerivedStateFromError(error: unknown): ComponentErrorBoundaryState {
+        return {
+            hasError: true,
+            message: error instanceof Error ? error.message : String(error),
+        };
     }
 
     override componentDidCatch(error: unknown): void {
@@ -42,7 +56,12 @@ export class ComponentErrorBoundary extends React.Component<
 
     override render(): React.ReactNode {
         if (this.state.hasError) {
-            return <ComponentErrorFallback source={this.props.source} />;
+            return (
+                <ComponentErrorFallback
+                    source={this.props.source}
+                    message={this.state.message}
+                />
+            );
         }
         return this.props.children;
     }

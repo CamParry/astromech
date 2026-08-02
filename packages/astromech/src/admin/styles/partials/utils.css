@@ -6,3 +6,12 @@
     white-space: nowrap;
     clip: rect(0 0 0 0);
 }
+
+/* Dev-only error detail inside .am-banner. */
+.am-banner-detail {
+    margin-top: calc(var(--am-space) * 2);
+    overflow-x: auto;
+    font-size: 0.75rem;
+    color: var(--am-color-text-muted);
+    white-space: pre-wrap;
+}

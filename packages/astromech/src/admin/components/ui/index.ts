@@ -1,3 +1,7 @@
+import { assertSingleUiInstance } from '@/admin/support/ui-instance-guard.js';
+
+assertSingleUiInstance(import.meta.url);
+
 export { Button } from './button.js';
 export type { ButtonProps, ButtonVariant, ButtonSize } from './button.js';
 
