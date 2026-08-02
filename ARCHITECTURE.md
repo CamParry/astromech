@@ -133,9 +133,10 @@ packages/
 │   └── (tsup|vitest).config.ts · tsconfig*.json · .dependency-cruiser.cjs
 │
 └── plugins/         # first-party plugins as separate published packages
-    ├── backups/     # @astromech/backups
+    ├── backups/     # @astromech/backups     (ships a ./tables subpath of plain table descriptors)
+    ├── forms/       # @astromech/forms
     ├── menus/       # @astromech/menus
-    ├── redirects/   # @astromech/redirects  (ships a ./schema subpath of plain table descriptors)
+    ├── redirects/   # @astromech/redirects  (ships a ./tables subpath of plain table descriptors)
     └── seo/         # @astromech/seo        (admin React components ship as source via ./admin/*)
 
 apps/
