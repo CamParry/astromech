@@ -330,6 +330,7 @@ describe('coerce', () => {
         component: '',
         tsType: () => 'string',
         coerce: (x) => String(x).trim(),
+        validate: async () => true,
     });
 
     it('trims value via descriptor coerce', async () => {
@@ -405,13 +406,15 @@ describe('rule: minLength', () => {
         expect(errors.tags).toEqual(['Must be at least 2 characters']);
     });
 
-    it('lenient: non-string/array value returns null (no error)', async () => {
+    // A rule that cannot measure the value reports the mismatch. Here the number
+    // type's own validator accepts 1 first, so the rule is what reports.
+    it('reports a mismatch rather than passing a value it cannot measure', async () => {
         const { errors } = await processFields(
             { count: 1 },
             [field({ name: 'count', type: 'number', validation: [{ minLength: 5 }] })],
             fakeCtx()
         );
-        expect(errors.count).toBeUndefined();
+        expect(errors.count).toEqual(['Must be text or a list']);
     });
 });
 
@@ -462,13 +465,13 @@ describe('rule: min', () => {
         expect(errors.age).toEqual(['Must be at least 18']);
     });
 
-    it('lenient: non-number value → no error', async () => {
+    it('reports a mismatch rather than passing a value it cannot compare', async () => {
         const { errors } = await processFields(
             { age: 'old' },
             [field({ name: 'age', type: 'text', validation: [{ min: 18 }] })],
             fakeCtx()
         );
-        expect(errors.age).toBeUndefined();
+        expect(errors.age).toEqual(['Must be a number']);
     });
 });
 

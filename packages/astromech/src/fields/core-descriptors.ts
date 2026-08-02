@@ -35,6 +35,10 @@ import {
     coerceDate,
     validateDate,
     validateReference,
+    validateText,
+    validateLink,
+    validateGroup,
+    validateItemList,
 } from './built-in-rules.js';
 import { coerceRichText, validateRichText } from './rich-text/validate.js';
 import {
@@ -176,7 +180,7 @@ function treeChildren(
  * container's own path instead of letting it through silently.
  */
 const validateBlockTypes: FieldValidator = async (ctx) => {
-    if (!Array.isArray(ctx.value)) return true;
+    if (!Array.isArray(ctx.value)) return 'Must be a list of items';
     const declared = new Set((ctx.field.blocks ?? []).map((block) => block.type));
     const unknownTypes: string[] = [];
     for (const item of ctx.value) {
@@ -197,12 +201,14 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         type: 'text',
         build: text,
         component: '@/admin/components/fields/text-field',
+        validate: validateText,
         tsType: () => 'string',
     },
     {
         type: 'textarea',
         build: textarea,
         component: '@/admin/components/fields/textarea-field',
+        validate: validateText,
         tsType: () => 'string',
     },
     {
@@ -288,6 +294,7 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         type: 'group',
         build: (name, options) => group(name, options as Parameters<typeof group>[1]),
         component: '@/admin/components/fields/group-field',
+        validate: validateGroup,
         tsType: () => null,
         isContainer: true,
         children: (field, value) => {
@@ -309,6 +316,7 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         build: (name, options) =>
             repeater(name, options as Parameters<typeof repeater>[1]),
         component: '@/admin/components/fields/repeater-field',
+        validate: validateItemList,
         tsType: () => null,
         defaultValue: [],
         reservedKeys: [RESERVED_KEY.id, RESERVED_KEY.disabled, RESERVED_KEY.title],
@@ -341,6 +349,7 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         type: 'tree',
         build: (name, options) => tree(name, options as Parameters<typeof tree>[1]),
         component: '@/admin/components/fields/tree-field',
+        validate: validateItemList,
         tsType: () => null,
         defaultValue: [],
         reservedKeys: [RESERVED_KEY.id, RESERVED_KEY.disabled],
@@ -367,12 +376,14 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         type: 'color',
         build: color,
         component: '@/admin/components/fields/color-field',
+        validate: validateText,
         tsType: () => 'string',
     },
     {
         type: 'slug',
         build: slug,
         component: '@/admin/components/fields/slug-field',
+        validate: validateText,
         tsType: () => 'string',
         coerce: coerceSlug,
     },
@@ -403,6 +414,7 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         type: 'link',
         build: link,
         component: '@/admin/components/fields/link-field',
+        validate: validateLink,
         tsType: () => '{ url: string; label: string; target?: string }',
     },
     {

@@ -18,6 +18,10 @@ import {
     coerceDate,
     validateDate,
     validateReference,
+    validateText,
+    validateLink,
+    validateGroup,
+    validateItemList,
 } from '@/fields/built-in-rules.js';
 import { processFields } from '@/fields/pipeline.js';
 
@@ -444,5 +448,65 @@ describe('validateReference', () => {
         expect(await validateReference({ ...ctx('abc'), field: many })).toBe(
             'Must be a list of ids'
         );
+    });
+});
+
+// ---------------------------------------------------------------------------
+// text, link, containers
+// ---------------------------------------------------------------------------
+
+describe('validateText', () => {
+    it('accepts a string', async () => {
+        expect(await validateText(ctx('hello'))).toBe(true);
+    });
+
+    it('rejects a non-string', async () => {
+        expect(await validateText(ctx(1))).toBe('Must be text');
+        expect(await validateText(ctx({}))).toBe('Must be text');
+    });
+});
+
+describe('validateLink', () => {
+    it('accepts a link with a url', async () => {
+        expect(await validateLink(ctx({ url: '/about', label: 'About' }))).toBe(true);
+    });
+
+    it('accepts a relative path or an anchor — the url is not parsed', async () => {
+        expect(await validateLink(ctx({ url: '#top' }))).toBe(true);
+    });
+
+    it('rejects a bare string', async () => {
+        expect(await validateLink(ctx('/about'))).toBe('Must be a link');
+    });
+
+    it('rejects a link with no url', async () => {
+        expect(await validateLink(ctx({ label: 'About' }))).toBe('A link needs a url');
+    });
+
+    it('rejects a non-string label', async () => {
+        expect(await validateLink(ctx({ url: '/x', label: 2 }))).toBe(
+            'A link label must be text'
+        );
+    });
+});
+
+describe('validateGroup', () => {
+    it('accepts an object', async () => {
+        expect(await validateGroup(ctx({ a: 1 }))).toBe(true);
+    });
+
+    it('rejects an array and a scalar', async () => {
+        expect(await validateGroup(ctx([]))).toBe('Must be a group of fields');
+        expect(await validateGroup(ctx('x'))).toBe('Must be a group of fields');
+    });
+});
+
+describe('validateItemList', () => {
+    it('accepts an array', async () => {
+        expect(await validateItemList(ctx([{ a: 1 }]))).toBe(true);
+    });
+
+    it('rejects a non-array', async () => {
+        expect(await validateItemList(ctx({}))).toBe('Must be a list of items');
     });
 });

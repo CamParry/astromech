@@ -268,8 +268,12 @@ export type FieldTypeDescriptor = {
     defaultValue?: unknown;
     /** Storage normalization applied before validation. */
     coerce?: (value: unknown) => unknown;
-    /** Type-intrinsic validation rule (plugin `serverValidate` fills this slot). */
-    validate?: FieldValidator;
+    /**
+     * Type-intrinsic validation, run before any author rule. Required: the
+     * declarative rules all report a mismatch rather than judging a value of
+     * the wrong type, so a type without this has nothing checking its shape.
+     */
+    validate: FieldValidator;
     /**
      * Container types only: expose the nested scopes inside this field's value
      * so the pipeline can recurse generically instead of switching on type.

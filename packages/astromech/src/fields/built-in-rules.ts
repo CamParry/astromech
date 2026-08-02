@@ -191,3 +191,50 @@ function referenceMessage(value: unknown, many: boolean): string {
     }
     return `Must be ${expected}`;
 }
+
+// ---------------------------------------------------------------------------
+// text — text, textarea, slug, color
+// ---------------------------------------------------------------------------
+
+export const validateText: FieldValidator = async (ctx) =>
+    typeof ctx.value === 'string' ? true : 'Must be text';
+
+// ---------------------------------------------------------------------------
+// link
+// ---------------------------------------------------------------------------
+
+/**
+ * A link holds `{ url, label, target? }`. Only the shape is checked — the url
+ * is not parsed, so a `link` is free to hold a relative path or an anchor.
+ */
+export const validateLink: FieldValidator = async (ctx) => {
+    const v = ctx.value;
+    if (typeof v !== 'object' || v === null || Array.isArray(v)) {
+        return 'Must be a link';
+    }
+    const { url, label, target } = v as Record<string, unknown>;
+    if (typeof url !== 'string') return 'A link needs a url';
+    if (label !== undefined && typeof label !== 'string') {
+        return 'A link label must be text';
+    }
+    if (target !== undefined && typeof target !== 'string') {
+        return 'A link target must be text';
+    }
+    return true;
+};
+
+// ---------------------------------------------------------------------------
+// containers — group, repeater, blocks, tree
+// ---------------------------------------------------------------------------
+
+/** A group holds one object of child values. */
+export const validateGroup: FieldValidator = async (ctx) => {
+    const v = ctx.value;
+    return typeof v === 'object' && v !== null && !Array.isArray(v)
+        ? true
+        : 'Must be a group of fields';
+};
+
+/** Repeaters, blocks and trees all hold a list of items. */
+export const validateItemList: FieldValidator = async (ctx) =>
+    Array.isArray(ctx.value) ? true : 'Must be a list of items';

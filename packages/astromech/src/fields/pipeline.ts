@@ -93,6 +93,18 @@ function fieldErrorPath(
 // Rule runner
 // ---------------------------------------------------------------------------
 
+// A rule that cannot judge the value it was given reports the mismatch rather
+// than passing. The field type's own validator normally catches this first, so
+// these fire only for a type that has no validator of its own.
+const NOT_TEXT = 'Must be text';
+const NOT_A_NUMBER = 'Must be a number';
+const NOT_MEASURABLE = 'Must be text or a list';
+
+/** Values with a meaningful `length` for the length rules. */
+function isMeasurable(value: unknown): value is string | unknown[] {
+    return typeof value === 'string' || Array.isArray(value);
+}
+
 async function runRule(
     rule: ValidationRule,
     ctx: FieldValidationContext
@@ -100,60 +112,55 @@ async function runRule(
     const { value } = ctx;
 
     if ('minLength' in rule) {
-        if (
-            (typeof value === 'string' || Array.isArray(value)) &&
-            value.length < rule.minLength
-        ) {
+        if (!isMeasurable(value)) return NOT_MEASURABLE;
+        if (value.length < rule.minLength) {
             return `Must be at least ${rule.minLength} characters`;
         }
         return null;
     }
 
     if ('maxLength' in rule) {
-        if (
-            (typeof value === 'string' || Array.isArray(value)) &&
-            value.length > rule.maxLength
-        ) {
+        if (!isMeasurable(value)) return NOT_MEASURABLE;
+        if (value.length > rule.maxLength) {
             return `Must be at most ${rule.maxLength} characters`;
         }
         return null;
     }
 
     if ('min' in rule) {
-        if (typeof value === 'number' && value < rule.min) {
-            return `Must be at least ${rule.min}`;
-        }
+        if (typeof value !== 'number') return NOT_A_NUMBER;
+        if (value < rule.min) return `Must be at least ${rule.min}`;
         return null;
     }
 
     if ('max' in rule) {
-        if (typeof value === 'number' && value > rule.max) {
-            return `Must be at most ${rule.max}`;
-        }
+        if (typeof value !== 'number') return NOT_A_NUMBER;
+        if (value > rule.max) return `Must be at most ${rule.max}`;
         return null;
     }
 
     if ('pattern' in rule) {
-        if (typeof value === 'string' && !new RegExp(rule.pattern).test(value)) {
+        if (typeof value !== 'string') return NOT_TEXT;
+        if (!new RegExp(rule.pattern).test(value)) {
             return rule.message ?? 'Invalid format';
         }
         return null;
     }
 
     if ('email' in rule) {
-        if (typeof value === 'string' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        if (typeof value !== 'string') return NOT_TEXT;
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
             return 'Must be a valid email address';
         }
         return null;
     }
 
     if ('url' in rule) {
-        if (typeof value === 'string') {
-            try {
-                new URL(value);
-            } catch {
-                return 'Must be a valid URL';
-            }
+        if (typeof value !== 'string') return NOT_TEXT;
+        try {
+            new URL(value);
+        } catch {
+            return 'Must be a valid URL';
         }
         return null;
     }

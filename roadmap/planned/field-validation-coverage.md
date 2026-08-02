@@ -13,9 +13,15 @@ own, nothing is checking the value at all.
 
 ## Done 2026-08-02 (`feat/field-type-validators`)
 
-Type validators added for `richtext`, `select`, `radio-group`, `multiselect`,
-`checkbox-group`, `number`, `range`, `boolean`, `date`, `datetime`, `media` and
-`relationship`. Coverage went from 5 of 25 types to 17.
+Type validators added for every remaining field type — coverage went from 5 of
+25 to **25 of 25** — and `validate` is now **required** on
+`FieldTypeDescriptor`, so a new field type cannot be registered without one.
+That is the structural half: the declarative rules are written to assume a
+well-typed value, and nothing previously enforced that the assumption held.
+
+The declarative rules also **fail closed** now. `minLength` against a number
+reported nothing at all; it reports `Must be text or a list`. Silent-accept was
+the wrong degradation mode for a data-integrity check.
 
 Two coercions came with them, both because the validator would otherwise reject
 values the system itself produces: `Date` → ISO string on `date`/`datetime` (the
@@ -32,11 +38,10 @@ never sees).
       `ScopedReads` currently offers only `isUnique`, so this needs a second
       method on it and a matching change wherever the pipeline context is built
       (entries, media, users, settings).
-- [ ] **Types with no validator at all:** `text`, `textarea`, `color`, `link`,
-      and the `group`/`repeater`/`tree` containers. `text`/`textarea` want a
-      string check; `color` needs a format decision before it can have one;
-      `link` is an object (`{url, label, target?}`) whose shape is unchecked; the
-      containers validate their children but never their own shape.
+- [ ] **`color` and `link` are shape-checked, not format-checked.** `color` must
+      be a string but no format is enforced; `link` must be an object with a
+      string `url`, which is deliberately not parsed so a relative path or an
+      anchor stays valid. Both want a real format decision.
 - [ ] **`slug` normalizes but never rejects.** `coerceSlug` slugifies whatever it
       is given, so a garbage value becomes a garbage slug rather than an error.
       Deliberate today; worth revisiting alongside `text`.
