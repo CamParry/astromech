@@ -16,6 +16,9 @@ This is a living reference; it grows as the project does.
 - [content/entry-types.md](content/entry-types.md) — declaring entry types: the
   `entries` record, and `defineEntryType` for splitting a type into its own
   module.
+- [content/field-validation.md](content/field-validation.md) — declaring rules
+  on fields, why `required` only fires at publish while correctness checks run on
+  every write, custom validators, and what does and does not run in the browser.
 - [data/migrations.md](data/migrations.md) — how migrations are generated from
   your table descriptors, what the generator refuses and why, and the
   hand-authored-ops escape hatch for reshapes it can't derive.
