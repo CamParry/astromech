@@ -206,5 +206,28 @@ A plugin's custom field type gets this for free as long as it builds on the
 enclosing field's error state and apply the association themselves. (`Slider` is
 the exception: the underlying library forwards `aria-describedby` to the input
 that takes focus but not `aria-invalid`, so it carries the message without the
-invalid state.) A field type that renders a raw control instead has no way to
-opt in yet; compose from the atoms where you can.
+invalid state.)
+
+A field type that renders its own control reads the same state through
+`useFieldControl` and spreads the ARIA it returns:
+
+```tsx
+import { useFieldControl } from 'astromech/ui/fields';
+
+function StarRatingField({ value, onChange }: BaseFieldProps) {
+    const { hasError, ariaProps } = useFieldControl();
+    return (
+        <div
+            role="slider"
+            tabIndex={0}
+            aria-valuenow={Number(value ?? 0)}
+            className={hasError ? 'is-invalid' : undefined}
+            {...ariaProps}
+        />
+    );
+}
+```
+
+`ariaProps` is `aria-invalid` plus `aria-describedby` pointing at the message
+`FieldWrapper` rendered, and is empty when the field has no error — so the same
+component is safe to render outside a field wrapper.
