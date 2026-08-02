@@ -27,7 +27,20 @@ import {
     validateJson,
     coerceKeyValue,
     validateKeyValue,
+    validateChoice,
+    validateMultiChoice,
+    coerceNumber,
+    validateNumber,
+    validateBoolean,
+    coerceDate,
+    validateDate,
+    validateReference,
+    validateText,
+    validateLink,
+    validateGroup,
+    validateItemList,
 } from './built-in-rules.js';
+import { coerceRichText, validateRichText } from './rich-text/validate.js';
 import {
     boolean,
     checkboxGroup,
@@ -167,7 +180,7 @@ function treeChildren(
  * container's own path instead of letting it through silently.
  */
 const validateBlockTypes: FieldValidator = async (ctx) => {
-    if (!Array.isArray(ctx.value)) return true;
+    if (!Array.isArray(ctx.value)) return 'Must be a list of items';
     const declared = new Set((ctx.field.blocks ?? []).map((block) => block.type));
     const unknownTypes: string[] = [];
     for (const item of ctx.value) {
@@ -188,18 +201,22 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         type: 'text',
         build: text,
         component: '@/admin/components/fields/text-field',
+        validate: validateText,
         tsType: () => 'string',
     },
     {
         type: 'textarea',
         build: textarea,
         component: '@/admin/components/fields/textarea-field',
+        validate: validateText,
         tsType: () => 'string',
     },
     {
         type: 'richtext',
         build: richtext,
         component: '@/admin/components/fields/richtext-field',
+        coerce: coerceRichText,
+        validate: validateRichText,
         tsType: (_field, shape) =>
             shape === 'public' ? 'string' : "import('astromech').JsonValue",
     },
@@ -207,12 +224,15 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         type: 'number',
         build: number,
         component: '@/admin/components/fields/number-field',
+        coerce: coerceNumber,
+        validate: validateNumber,
         tsType: () => 'number',
     },
     {
         type: 'boolean',
         build: boolean,
         component: '@/admin/components/fields/boolean-field',
+        validate: validateBoolean,
         tsType: () => 'boolean',
         defaultValue: false,
     },
@@ -220,24 +240,30 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         type: 'date',
         build: date,
         component: '@/admin/components/fields/date-field',
+        coerce: coerceDate,
+        validate: validateDate,
         tsType: () => 'string',
     },
     {
         type: 'datetime',
         build: datetime,
         component: '@/admin/components/fields/datetime-field',
+        coerce: coerceDate,
+        validate: validateDate,
         tsType: () => 'string',
     },
     {
         type: 'select',
         build: select,
         component: '@/admin/components/fields/select-field',
+        validate: validateChoice,
         tsType: () => 'string',
     },
     {
         type: 'multiselect',
         build: multiselect,
         component: '@/admin/components/fields/multiselect-field',
+        validate: validateMultiChoice,
         tsType: () => 'string[]',
         defaultValue: [],
     },
@@ -245,6 +271,7 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         type: 'media',
         build: media,
         component: '@/admin/components/fields/media-field',
+        validate: validateReference,
         tsType: (field) => (field.multiple === true ? 'string[]' : 'string'),
         isRelation: true,
     },
@@ -252,6 +279,7 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         type: 'relationship',
         build: relationship,
         component: '@/admin/components/fields/relationship-field',
+        validate: validateReference,
         tsType: (field) => (field.multiple === true ? 'string[]' : 'string'),
         isRelation: true,
     },
@@ -266,6 +294,7 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         type: 'group',
         build: (name, options) => group(name, options as Parameters<typeof group>[1]),
         component: '@/admin/components/fields/group-field',
+        validate: validateGroup,
         tsType: () => null,
         isContainer: true,
         children: (field, value) => {
@@ -287,6 +316,7 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         build: (name, options) =>
             repeater(name, options as Parameters<typeof repeater>[1]),
         component: '@/admin/components/fields/repeater-field',
+        validate: validateItemList,
         tsType: () => null,
         defaultValue: [],
         reservedKeys: [RESERVED_KEY.id, RESERVED_KEY.disabled, RESERVED_KEY.title],
@@ -319,6 +349,7 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         type: 'tree',
         build: (name, options) => tree(name, options as Parameters<typeof tree>[1]),
         component: '@/admin/components/fields/tree-field',
+        validate: validateItemList,
         tsType: () => null,
         defaultValue: [],
         reservedKeys: [RESERVED_KEY.id, RESERVED_KEY.disabled],
@@ -345,12 +376,14 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         type: 'color',
         build: color,
         component: '@/admin/components/fields/color-field',
+        validate: validateText,
         tsType: () => 'string',
     },
     {
         type: 'slug',
         build: slug,
         component: '@/admin/components/fields/slug-field',
+        validate: validateText,
         tsType: () => 'string',
         coerce: coerceSlug,
     },
@@ -358,12 +391,15 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         type: 'range',
         build: range,
         component: '@/admin/components/fields/range-field',
+        coerce: coerceNumber,
+        validate: validateNumber,
         tsType: () => 'number',
     },
     {
         type: 'checkbox-group',
         build: checkboxGroup,
         component: '@/admin/components/fields/checkbox-group-field',
+        validate: validateMultiChoice,
         tsType: () => 'string[]',
         defaultValue: [],
     },
@@ -371,12 +407,14 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         type: 'radio-group',
         build: radioGroup,
         component: '@/admin/components/fields/radio-group-field',
+        validate: validateChoice,
         tsType: () => 'string',
     },
     {
         type: 'link',
         build: link,
         component: '@/admin/components/fields/link-field',
+        validate: validateLink,
         tsType: () => '{ url: string; label: string; target?: string }',
     },
     {

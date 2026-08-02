@@ -288,3 +288,21 @@ describe('core field-type descriptors', () => {
         });
     });
 });
+
+// ---------------------------------------------------------------------------
+// Validator coverage
+// ---------------------------------------------------------------------------
+
+// `validate` is required on the descriptor type, so this only bites a
+// descriptor registered through a cast. It is the property that lets the
+// declarative rules assume a well-typed value.
+describe('validator coverage', () => {
+    it('every data type brings its own validator', () => {
+        for (const type of DATA_TYPES) {
+            const descriptor = getFieldTypeDescriptor(type);
+            expect(descriptor?.validate, `${type} has no validator`).toBeTypeOf(
+                'function'
+            );
+        }
+    });
+});
