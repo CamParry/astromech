@@ -59,7 +59,7 @@ nothing has to reach back into `index.ts`.
 my-plugin/
   index.ts               definePlugin() — identity + composing the surfaces below
   types.ts                domain constants (and a <X>_PACKAGE literal, if you have tables)
-  schema/widgets.ts      one file per database table (definePluginTable)
+  tables/widgets.ts      one file per database table (definePluginTable)
   migrations/            generated — never hand-edited
   fields/                custom field-type registrations
   pages/                 admin page registrations
@@ -415,7 +415,7 @@ name, and it prefixes both the table and any index names with
 `plugin_<namespace>_` so two plugins can never collide.
 
 ```ts
-// schema/widgets.ts
+// tables/widgets.ts
 import { definePluginTable, type TableSelect } from 'astromech';
 import { MY_PLUGIN_PACKAGE } from '../types.js';
 
@@ -440,7 +440,7 @@ not read off the plugin's definition — because the prefix has to exist as a
 _literal type_ for `PluginDB` to key on, and a value declared inside
 `definePlugin` can't reach a module-scope descriptor. So a plugin with tables
 keeps its package name in a dependency-free leaf both `index.ts` and its
-schema modules can import:
+table modules can import:
 
 ```ts
 // types.ts
@@ -451,7 +451,7 @@ export const MY_PLUGIN_PACKAGE = '@acme/my-plugin';
 // index.ts
 export const myPlugin = definePlugin({
     package: MY_PLUGIN_PACKAGE,
-    schema: [widgetsTable],
+    tables: [widgetsTable],
     migrations: migrationProvider,
     // ...
 });
@@ -473,12 +473,12 @@ npx astromech plugin:generate --name baseline   # → migrations/0000_baseline.t
 
 ```ts
 import { migrationProvider } from '../migrations/index.js';
-import { widgetsTable } from './schema/widgets.js';
+import { widgetsTable } from './tables/widgets.js';
 
 export const myPlugin = definePlugin({
     package: MY_PLUGIN_PACKAGE,
     // ...
-    schema: [widgetsTable],
+    tables: [widgetsTable],
     migrations: migrationProvider,
 });
 ```
@@ -511,7 +511,7 @@ plugin is _handed_ its database on `ctx.db`.
 // storage.ts
 import { createStorage } from 'astromech';
 import type { PluginContext } from 'astromech';
-import { widgetsTable, type WidgetRow } from './schema/widgets.js';
+import { widgetsTable, type WidgetRow } from './tables/widgets.js';
 
 export function createWidgetsStorage(db: PluginContext['db']) {
     const storage = createStorage(widgetsTable, db);
@@ -669,7 +669,7 @@ import type { RedirectsOptions } from './types.js';
 import { REDIRECTS_PACKAGE } from './types.js';
 import { migrationProvider } from '../migrations/index.js';
 import { redirectEntryType } from './entries/redirect.js';
-import { redirectsTable } from './schema/redirects.js';
+import { redirectsTable } from './tables/redirects.js';
 import { redirectsService } from './service/redirects.js';
 import { slugChangeHook } from './hooks/slug-change.js';
 
@@ -685,7 +685,7 @@ export const redirects = definePlugin((options?: RedirectsOptions) => {
         version: '0.1.0',
         label: 'Redirects',
         icon: 'Signpost',
-        schema: [redirectsTable],
+        tables: [redirectsTable],
         migrations: migrationProvider,
         entries: [redirectEntryType],
         service: redirectsService,

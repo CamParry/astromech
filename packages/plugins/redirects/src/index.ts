@@ -39,7 +39,7 @@ export const redirects = definePlugin((options?: RedirectsOptions) => {
         // No `permissions` declaration: the only service method is public, and
         // the redirect entry type's permissions are derived by core. A site
         // grants them with `entryPermissions('redirects/redirect', …)`.
-        schema: [redirectsTable],
+        tables: [redirectsTable],
         migrations: migrationProvider,
         entries: [redirectEntryType],
         service: redirectsService,

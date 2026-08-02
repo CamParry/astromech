@@ -53,7 +53,7 @@ export const forms = definePlugin((options?: FormsOptions) => {
         label: 'Forms',
         icon: 'ClipboardList',
         root: import.meta.url,
-        schema: [submissionsTable],
+        tables: [submissionsTable],
         migrations: migrationProvider,
         entries: [formEntryType, submissionEntryType],
         service: buildFormsService({ storeMeta, spam }),

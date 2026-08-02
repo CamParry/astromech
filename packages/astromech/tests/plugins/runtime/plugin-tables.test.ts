@@ -3,8 +3,8 @@ import type { PluginDefinition } from '@/types/index.js';
 import { defineTable, type TableDescriptor } from '@/database/define-table.js';
 import {
     assertPluginTablePrefixes,
-    collectPluginSchemas,
-} from '@/plugins/runtime/plugin-schema.js';
+    collectPluginTables,
+} from '@/plugins/runtime/plugin-tables.js';
 
 const def = (
     partial: Partial<PluginDefinition> & { package: string }
@@ -18,12 +18,12 @@ const table = (name: string): TableDescriptor =>
         count: col.integer(),
     }));
 
-describe('collectPluginSchemas', () => {
+describe('collectPluginTables', () => {
     it('flattens tables and tags them with the plugin alias', () => {
-        const collected = collectPluginSchemas([
+        const collected = collectPluginTables([
             def({
                 package: '@astromech/analytics',
-                schema: [table('plugin_analytics_events')],
+                tables: [table('plugin_analytics_events')],
             }),
         ]);
         expect(collected).toHaveLength(1);
@@ -34,10 +34,10 @@ describe('collectPluginSchemas', () => {
     });
 
     it('ignores non-descriptor entries', () => {
-        const collected = collectPluginSchemas([
+        const collected = collectPluginTables([
             def({
                 package: '@astromech/x',
-                schema: [{ foo: 'bar' } as unknown as TableDescriptor],
+                tables: [{ foo: 'bar' } as unknown as TableDescriptor],
             }),
         ]);
         expect(collected).toEqual([]);
@@ -48,7 +48,7 @@ describe('assertPluginTablePrefixes', () => {
     it('passes when tables use the plugin_{alias}_ prefix', () => {
         expect(() =>
             assertPluginTablePrefixes([
-                def({ package: '@astromech/audit', schema: [table('plugin_audit_log')] }),
+                def({ package: '@astromech/audit', tables: [table('plugin_audit_log')] }),
             ])
         ).not.toThrow();
     });
@@ -56,7 +56,7 @@ describe('assertPluginTablePrefixes', () => {
     it('throws when a table is missing the prefix', () => {
         expect(() =>
             assertPluginTablePrefixes([
-                def({ package: '@astromech/audit', schema: [table('audit_log')] }),
+                def({ package: '@astromech/audit', tables: [table('audit_log')] }),
             ])
         ).toThrow(/plugin_audit_/);
     });
@@ -66,7 +66,7 @@ describe('assertPluginTablePrefixes', () => {
             assertPluginTablePrefixes([
                 def({
                     package: '@acme/redirects',
-                    schema: [table('plugin_acme_redirects_hits')],
+                    tables: [table('plugin_acme_redirects_hits')],
                 }),
             ])
         ).not.toThrow();

@@ -44,7 +44,7 @@ export const backups = definePlugin((options?: BackupsOptions) => {
         version: '0.1.0',
         label: 'Backups',
         icon: 'DatabaseBackup',
-        schema: [backupRunsTable],
+        tables: [backupRunsTable],
         migrations: migrationProvider,
         permissions: backupsPermissions,
         i18n: ['en'],

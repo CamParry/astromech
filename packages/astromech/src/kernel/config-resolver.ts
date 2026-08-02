@@ -24,7 +24,7 @@ import {
     pluginEntryTypes,
     resolvePluginIdentity,
 } from '@/plugins/runtime/plugin-identity.js';
-import { assertPluginTablePrefixes } from '@/plugins/runtime/plugin-schema.js';
+import { assertPluginTablePrefixes } from '@/plugins/runtime/plugin-tables.js';
 import { assertNoFieldTypeCollisions } from '@/plugins/runtime/plugin-fields.js';
 import {
     BUILT_IN_SUPPORTS,
