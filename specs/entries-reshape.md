@@ -121,7 +121,7 @@ database/
 
 **Layer 2 — Split.** Hoist the table kit entirely out of `entries/`; migrate the redirects plugin onto it; collapse entries to one storage (delete `table.ts` divergence, `registry.ts` simplifies); `capabilities` → `supports` as behaviour/UI flags; build the composable admin contract `{ data methods + column shape + supports }` and refactor admin pages to consume it for both entries and tables. Connects to `roadmap/completed/unified-admin-pages.md`.
 
-**Layer 3 — Adapter.** Design `getStorage()` + the adapter granularity; add Postgres. **Opens with research** (see §7). Connects to `roadmap/planned/additional-database-drivers.md`.
+**Layer 3 — Adapter.** ~~Design `getStorage()` + the adapter granularity; add Postgres. **Opens with research** (see §7).~~ **DROPPED 2026-08-03** — superseded by the table-definition-system work; see §7 and `roadmap/planned/additional-database-drivers.md`.
 
 ---
 
@@ -159,6 +159,13 @@ This is the verification checklist for Layer 1: `grep -rn "getDb\|drizzle\|entri
 
 ## 7. Deferred decisions (Layer 3 — research first)
 
+> **SUPERSEDED 2026-08-03 — answered, not open.** The table-definition-system
+> work picked reading **(b)** and built it (Kysely + `createStorage` +
+> `defineTable` with per-dialect DDL emit), and drizzle — the source of the
+> leakiness that made (b) look risky — is gone. Layer 3 is dropped from
+> `roadmap/in-progress/entries-module-reshape.md`; Postgres lives in
+> `roadmap/planned/additional-database-drivers.md`. Kept below as design history.
+
 The hard one: **"storage is the adapter" has two readings, costing very differently for Postgres.**
 
 - **(a) Per-entity adapters** (Payload model): each storage module gets a per-DB impl. Reliable, but every storage module is rewritten per database, and the duplication tax extends to _plugin authors_ (each plugin table must support each adapter).
@@ -175,6 +182,14 @@ Research to open Layer 3:
 ---
 
 ## 8. The admin UI contract (Layer 2 — sketch)
+
+> **SATISFIED 2026-08-03 by a different route.** There is no separate "tables"
+> admin surface to de-dup against: a table-backed type _is_ an entry type, so
+> `EntryTypeConfig` is the conforming source and `admin/definitions/derive.ts` +
+> `adminColumns` + `capabilities` are the one CRUD surface. `tableStorage`
+> supplies the data side as an `EntryStorage` adapter and already declares
+> `supports: []`, exactly as sketched. `AdminDataSource` was never built and is
+> not needed. Kept below as design history.
 
 The de-dup point between entries and tables. A data source conforms to:
 

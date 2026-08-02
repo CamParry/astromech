@@ -15,16 +15,51 @@ Reorganise `entries/` as the **template** for all domains: one storage seam, no 
 - [x] Verify: `grep -rn "getDb\|drizzle\|entriesTable" entries/` hits only `entries/storage/**` + `entries/schema.ts`; full suite (816) + lint + typecheck + dep-cruiser green
 - [x] Reviewed, committed (`fa87a57`) and merged to `main`
 
-**Layer 2 — Split** (connects to `unified-admin-pages.md`)
+**Layer 2 — Split** (connects to `completed/unified-admin-pages.md`)
 
-- [ ] Hoist the table kit out of `entries/` (own module); migrate the redirects plugin onto it
-- [ ] Collapse entries to one storage — delete `table.ts` divergence, simplify `storage/registry.ts`
-- [ ] `capabilities` → `supports`: per-type behaviour/UI flags, no schema effect
-- [ ] Composable admin CRUD contract `{ data methods + column shape + supports }`; refactor admin pages to consume it for entries + tables
-- [ ] Rename `storage/built-in.ts` → `storage/entries.ts`
+Re-audited against the codebase 2026-08-03. Two bullets turned out to be already
+satisfied — by the data-layer and plugin work rather than by this layer — and the
+two that remain need re-deciding rather than executing, because the ground they
+stood on moved.
 
-**Layer 3 — Adapter** (connects to `planned/additional-database-drivers.md`)
+- [x] Migrate the redirects plugin onto the table kit — done elsewhere:
+      `packages/plugins/redirects/src/entries/redirect.ts` declares
+      `storage: tableStorage(redirectsTable)` and manages the type through the
+      standard entry UI with no bespoke admin surface
+- [x] Composable admin CRUD contract `{ data methods + column shape + supports }`
+      for entries + tables — satisfied by a different route, so nothing further
+      is owed. There is no separate "tables" admin surface to unify: a
+      table-backed type _is_ an entry type. `admin/definitions/derive.ts` plus
+      `adminColumns` and `capabilities` already drive one set of pages for both,
+      which is what redirects renders through
+- [ ] **Decide, then act: is `table.ts` still divergence?** The original bullet
+      was "collapse entries to one storage — delete `table.ts` divergence,
+      simplify `storage/registry.ts`". The premise has inverted. `tableStorage`
+      is now a documented _adapter_ over `createStorage` that declares
+      `supports: []` — a legitimate second implementation of one contract, not a
+      fork. Deleting it is no longer obviously right; re-decide before building
+- [ ] Hoist the table kit out of `entries/` into its own module. The migration
+      half is done (above); only the file move is open, and it is worth less now
+      that `tableStorage` reads as an `EntryStorage` adapter sitting next to the
+      other one
+- [ ] **`capabilities` → `supports` — blocked on a name collision.** The storage
+      layer already uses `supports` for its own axis (`BUILT_IN_SUPPORTS`,
+      `entries/storage/capabilities.ts`, `supports: []` on `tableStorage`), while
+      `EntryTypeConfig.capabilities` is the config axis. The rename as written
+      would give one word two meanings. Needs a third name, or dropping
+- [ ] Rename `storage/built-in.ts` → `storage/entries.ts` (cosmetic)
 
-- [ ] Research: cross-dialect ORM landscape; Laravel query-builder teardown; per-entity adapters vs one low-level adapter (see spec §7)
-- [ ] `getStorage()` resolver in `database/`, adapter chosen by userland config
-- [ ] Postgres adapter
+**Layer 3 — Adapter: DROPPED 2026-08-03, superseded.**
+
+The spec's §7 framed this as open research (per-entity adapters vs one low-level
+adapter) under constraints that no longer exist — "drizzle's dialect differences
+make the abstraction leaky" and "drizzle table defs in `schema.ts` are
+dialect-specific". Drizzle is gone. `completed/table-definition-system.md`
+answered §7 by choosing the one-low-level-adapter reading and building it:
+Kysely + `createStorage` + `defineTable` descriptors with per-dialect DDL emit in
+`@astromech/schema-engine`. The `getStorage()` resolver shipped as two seams —
+`getEntryStorage(type)` (`entries/storage/registry.ts`) and
+`DatabaseDriver.createDialect()`, chosen from userland config. The Postgres
+adapter is tracked in `planned/additional-database-drivers.md`, which already
+covers the driver, the descriptor/DDL dialect variants and the per-dialect
+migration pipeline. Nothing is left here.

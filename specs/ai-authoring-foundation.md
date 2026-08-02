@@ -395,6 +395,14 @@ that method is explicitly included.
 
 ### P4 — Read-shape contract across the wire
 
+> **SUPERSEDED 2026-08-02 by the research recorded in
+> `roadmap/in-progress/ai-integration.md`.** The payload-marker approach below
+> was investigated and rejected — no one solves this with a marker; two
+> structural levers do. P4 split accordingly: **P4a** (validation on the way in)
+> shipped 2026-08-03, and **P4b** (`update` becomes PATCH-only) is the open item.
+> The `_shape` key survives as a diagnostic only and must not enforce. Read the
+> roadmap file, not this section, before building. Kept as design history.
+
 The `Symbol` brand cannot cross a serialization boundary, so the guard needs a
 wire-safe counterpart for the agent path:
 

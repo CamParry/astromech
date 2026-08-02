@@ -27,9 +27,9 @@ the rest; nothing is deployed, so this is the cheapest moment. Full detail with
 file references in the spec.
 
 **P0a, P0, P1, P2 and P3 landed.** The audit's counts were stale: the manifest
-was 83 methods at P0, not 71, and is 145 after P1. **P4 is parked** behind the
-across-the-board field-validation work — most of it turns out to be ordinary
-input validation, so the sequence continues at P5.
+was 83 methods at P0, not 71, and is 145 after P1. **P4 is unparked and half
+shipped** — its validation half rode along with the field-validation work that
+was blocking it (`221989a`); one item remains, PATCH-only `update`.
 
 - [x] **P0a — normalise every service method to a parameter object.** Shipped
       2026-07-31 (`934f1d0`). `update` takes a nested `data` (`update({id, data})`)
@@ -139,8 +139,7 @@ input validation, so the sequence continues at P5.
       data actually handle this. A stateless gate cannot tell a human's approval
       from a caller fabricating one, so it is a runaway-loop brake, not a
       boundary — and the axis is not stateless vs stateful but which channel the
-      approval arrives on, which the access point decides.
-    - **Layer 1, highest value: a reduced tool surface.** `--read-only`,
+      approval arrives on, which the access point decides. - **Layer 1, highest value: a reduced tool surface.** `--read-only`,
       `--include`, `--exclude` in `policies/tool-surface.ts`, applied by both
       `methods` and `mcp`. `readOnly` overrides an explicit include (GitHub's
       semantics, copied deliberately including the part that looks like a bug).
@@ -148,72 +147,85 @@ input validation, so the sequence continues at P5.
       method gets no dispatch entry at all. Verified over live stdio, not only
       in unit tests — `entries_post_publish` reaches the service on the full
       surface and returns `Unknown tool` under `--read-only`. Demo: 145 methods
-      / 100 mutating → 45 / **0**; `--read-only --include users.create` → 0.
-    - **Layer 2: the stateless MRTR gate** (`policies/confirm-gate.ts`), pure and
+      / 100 mutating → 45 / **0**; `--read-only --include users.create` → 0. - **Layer 2: the stateless MRTR gate** (`policies/confirm-gate.ts`), pure and
       dispatch-level, keeping no state anywhere. Trigger is a predicate with
       `mutating`/`destructive` presets. **Off by default** — an MCP client
       already prompts before running a tool, so gating by default double-prompts
       for no added safety; `--confirm` is for callers that aren't a prompting
       client, chiefly P7's tool-loop. Live stdio: no `_confirm` →
       `input_required`, `decline` → `declined`, `cancel` → `cancelled`, garbage
-      → `input_required` (fails closed), `accept` → reaches the service.
-    - Two things the gate had to get right. The manifest emits
+      → `input_required` (fails closed), `accept` → reaches the service. - Two things the gate had to get right. The manifest emits
       `additionalProperties: false`, so a gated tool must **advertise `_confirm`
       in its published schema** or it publishes one forbidding the only argument
       that can unblock it. And the invoke is wrapped even when the gate is OFF,
       purely so `_confirm` is always stripped — a stray one must never reach a
       Zod schema that rejects unknown keys, or a method with a loose `fields`
-      record that would store it.
-    - **Layer 3: no new mechanism.** Staged entries + preview tokens already ARE
+      record that would store it. - **Layer 3: no new mechanism.** Staged entries + preview tokens already ARE
       MCP's URL mode — stage server-side, human opens the preview in admin, merge
       runs as an authenticated admin action. Content ops route through it at P5;
-      the admin chat drawer gets its human from the session, not the protocol.
-    - A signed nonce was considered and REJECTED: it proves a round-trip
+      the admin chat drawer gets its human from the session, not the protocol. - A signed nonce was considered and REJECTED: it proves a round-trip
       happened, not that anyone saw it, while carrying the state cost of the
-      thing that would.
-    - Bug found and fixed in passing: **preview tokens never expired.** `isValid`
+      thing that would. - Bug found and fixed in passing: **preview tokens never expired.** `isValid`
       treats a null `expiresAt` as "forever" and the operation passed null
       whenever the caller said nothing, so every token ever issued was still
       valid. Defaults to 7 days now; an explicit `null` still means forever, but
       has to be asked for rather than being what everyone silently got.
-- [ ] **P4 — wire-safe read-shape contract. PARKED 2026-08-02**, pending the
-      across-the-board field-validation work, then re-scope against whatever gaps
-      remain. Design settled and the substrate surveyed; nothing built.
-    - **The guard has never worked anywhere**, which is a bigger finding than the
-      audit's "it cannot cross the wire". `markPublic` brands the **Entry**;
-      `create`/`update` check `isPublicBranded(params.fields)` — a different
-      object, since `applyVisibility` returns `{...entry, fields: cleanFields}`.
-      So `update({data: {fields: entry.fields}})` sails through in-process. The
-      existing tests brand a bare object and pass it directly, exercising the
-      helper and never the path.
+      **P4 — wire-safe read-shape contract.** Split in two once the field-validation
+      work it was parked behind landed and carried half of it along. **Research
+      conclusion — no one solves this with a payload marker.** Two structural levers
+      converge instead, and P4a/P4b are one each. (1) _The write shape differs from the
+      read shape_: WordPress returns `content.rendered` in `context=view` and makes only
+      `content.raw` writable, so writing back a view response is a type error, not
+      silent corruption; GraphQL separates input from output types; Contentful splits
+      CDA and CMA into different products. (2) _Writes merge by declared intent rather
+      than replace_: Kubernetes hit this exact bug — client-side apply deleted fields
+      the client never knew about — and fixed it with Server-Side Apply +
+      `managedFields`, not with markers. `FieldMask` and JSON:API PATCH are the same
+      lever.
+
+- [x] **P4a — validation on the way in (lever 1).** Shipped 2026-08-03
+      (`221989a`), riding the field-validation work that parked P4 rather than
+      waiting behind it. Closes the cases where the public shape is
+      _distinguishable_ from the full one.
+    - `fields/rich-text/validate.ts` — `validateRichText` is the `richtext`
+      descriptor's validator: `Node.fromJSON(schemaFor(allow), value)` **then**
+      `.check()`. Both halves are load-bearing; `fromJSON` does NOT validate
+      nested content rules on its own. Schemas cache by `allow` list, since
+      building one configures the whole StarterKit.
+    - A string is rejected outright ("Must be a rich text document, not an HTML
+      string") — that is precisely what a public read hands back, so the
+      write-back lands as a validation error rather than as corruption.
+    - `coerceRichText` maps `''` → `null`. A public read renders an empty
+      document to `''`, which the pipeline treats as absent — the one bad value
+      validation would never have seen.
+    - Fixes the stored-content gap the audit found separately: the `allow` list
+      used to be enforced only at RENDER (`renderRichText` sanitizes on the way
+      out), so any node type could be stored and a `full` read returned it raw.
+    - Lever 1 also exists at the type level: the generator emits `string` for a
+      public-shape richtext field and `JsonValue` for the full one, plus a
+      `readonly __shape?: 'public'` brand, so writing a public read-back into a
+      `full` write is a compile error.
+    - The `_shape` key stays a diagnostic and must not do the enforcing — that
+      was the direction, and it held.
+- [ ] **P4b — `update` becomes PATCH-only (lever 2).** DECIDED 2026-08-02, still
+      not built; verified against `entries/operations/update.ts` on 2026-08-03,
+      which still forwards `fields` to `storage.update` whole-blob. This is the
+      half that catches the _indistinguishable_ cases: a dropped `private: true`
+      **text** field is simply absent from a patch, so it survives. P4a and P4b
+      were always a pair — P4a alone leaves the class open.
     - **The damage is real.** `fields` is a whole-blob column replacement —
       `updateOne` forwards it to `storage.update` with no merge against
       `currentEntry.fields`. A public-shape write-back permanently drops every
       `private: true` field and every `_disabled` item.
-    - **Separate stored-content gap, independent of the shape question:** the
-      rich-text `allow` list is enforced only at RENDER (`renderRichText`
-      sanitizes on the way out). `richtext` is `{name, type, ...options}` with no
-      validator, so any node type can be stored and a `full` read returns it raw.
-    - **Research conclusion — no one solves this with a payload marker.** Two
-      structural levers converge instead. (1) _The write shape differs from the
-      read shape_: WordPress returns `content.rendered` in `context=view` and
-      makes only `content.raw` writable, so writing back a view response is a
-      type error, not silent corruption; GraphQL separates input from output
-      types; Contentful splits CDA and CMA into different products. (2) _Writes
-      merge by declared intent rather than replace_: Kubernetes hit this exact
-      bug — client-side apply deleted fields the client never knew about — and
-      fixed it with Server-Side Apply + `managedFields`, not with markers.
-      `FieldMask` and JSON:API PATCH are the same lever. Astromech has neither.
-    - **Direction agreed:** validation on the way in carries the load; an
-      entry-level `_shape` key is a diagnostic only and must not do the
-      enforcing. Rich text should accept only a valid ProseMirror document for
-      its `allow` list and reject a string outright.
-    - **Trap for whoever builds it:** `Node.fromJSON` does NOT validate nested
-      content rules — it deserializes unsupported content happily. Validation is
-      `Node.fromJSON(schema, doc)` followed by `.check()`. `@tiptap/pm` and
-      `getSchema` are already dependencies; no new packages needed.
-    - **`update` becomes PATCH-only — DECIDED 2026-08-02, not yet built.** The
-      API already claims patch semantics and fails to honour them one level down:
+    - **The runtime guard has never worked anywhere** (re-verified 2026-08-03),
+      which is a bigger finding than the audit's "it cannot cross the wire".
+      `markPublic` brands the **Entry** (`operations/get.ts`); `create`/`update`
+      check `isPublicBranded(params.data.fields)` — a different object. So
+      `update({data: {fields: entry.fields}})` sails through in-process. The
+      existing tests brand a bare object and pass it directly, exercising the
+      helper and never the path. Merge is what makes this near-vestigial; fixing
+      the brand in isolation would be defending a door in a wall that isn't there.
+    - The API already claims patch semantics and fails to honour them one level down:
       top-level columns treat `undefined` as "leave alone", but `fields` is a
       single JSON column, so `update({data: {fields: {a: 1}}})` deletes every
       other field while `update({data: {title: 'x'}})` leaves them be. That
@@ -221,11 +233,6 @@ input validation, so the sequence continues at P5.
       case that makes it visible. It also fixes the precondition — PUT requires
       the caller to know the complete current state, which is unreasonable for
       any caller and impossible for one holding a projection.
-    - Together with input validation this closes the whole class. Validation
-      catches fields whose public shape is distinguishable (rich text: string vs
-      ProseMirror JSON); merge catches the ones that are not — a dropped
-      `private: true` **text** field is simply absent from the patch, so it
-      survives. This is why the `_shape` key ends up nearly vestigial.
     - The four semantics, settled:
         1. **Patch at the root field level and the root table level only.** No
            deeply nested patching — it gets complex fast and becomes a pain when
