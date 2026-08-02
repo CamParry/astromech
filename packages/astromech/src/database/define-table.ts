@@ -456,18 +456,36 @@ export type IndexFactory = typeof index;
 export type TableDescriptor<C extends AnyCols = AnyCols, N extends string = string> = {
     name: N;
     columns: C;
+    /** Table-level composite primary key, in key order (descriptor keys, not
+     *  snake_case column names). A single-column key stays `col.x({ primaryKey:
+     *  true })` — this is only for keys spanning more than one column. */
+    primaryKey?: string[];
     indexes: IndexSpec[];
+};
+
+type IndexesFn = (helpers: { index: IndexFactory }) => IndexSpec[];
+
+/** The third `defineTable` argument in its object form — the indexes callback
+ *  plus anything that needs naming, which a bare callback has no room for. */
+export type TableOptions<C extends AnyCols> = {
+    indexes?: IndexesFn;
+    primaryKey?: (keyof C & string)[];
 };
 
 export function defineTable<const C extends AnyCols, const N extends string>(
     name: N,
     cols: (helpers: { col: ColFactory }) => C,
-    indexes?: (helpers: { index: IndexFactory }) => IndexSpec[]
+    indexesOrOptions?: IndexesFn | TableOptions<C>
 ): TableDescriptor<C, N> {
+    const options: TableOptions<C> =
+        typeof indexesOrOptions === 'function'
+            ? { indexes: indexesOrOptions }
+            : (indexesOrOptions ?? {});
     return {
         name,
         columns: cols({ col }),
-        indexes: indexes ? indexes({ index }) : [],
+        ...(options.primaryKey !== undefined && { primaryKey: options.primaryKey }),
+        indexes: options.indexes ? options.indexes({ index }) : [],
     };
 }
 

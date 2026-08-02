@@ -453,7 +453,6 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
                 title: snapshot.title,
                 slug: snapshot.slug,
                 fields: snapshot.fields,
-                relations: snapshot.relations,
                 createdBy: snapshot.createdBy,
             });
         },

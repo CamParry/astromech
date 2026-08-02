@@ -263,8 +263,6 @@ export type FieldTypeDescriptor = {
     component: string;
     /** TS type emitted by codegen for this field, or `null` to omit. */
     tsType: (field: FieldDefinition, shape: 'full' | 'public') => string | null;
-    /** TS type for the relation-expanded form, when the field is a relation. */
-    tsRelationType?: (field: FieldDefinition) => string | null;
     defaultValue?: unknown;
     /** Storage normalization applied before validation. */
     coerce?: (value: unknown) => unknown;

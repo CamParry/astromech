@@ -8,11 +8,7 @@ import {
     isVersioningEnabled,
     getNonTranslatableFieldNames,
 } from '../internal/type-config.js';
-import {
-    saveRelationships,
-    buildRelationsSnapshot,
-    buildIncomingRelations,
-} from '../internal/relationships.js';
+import { indexEntryRelationships } from '../internal/relationships.js';
 import { asEntry, loadAndAssertType } from '../internal/records.js';
 import { deepEqual } from '../internal/diff.js';
 import { runBulk } from '../internal/bulk.js';
@@ -113,11 +109,6 @@ export async function updateOne(
     }
 
     if (isVersioningEnabled(type) && storage.versions) {
-        const currentRelations = await buildRelationsSnapshot(id, db);
-        const incomingRelations = validatedData.fields
-            ? buildIncomingRelations(type, validatedData.fields as JsonObject)
-            : currentRelations;
-
         const titleChanged =
             validatedData.title !== undefined &&
             validatedData.title !== currentEntry.title;
@@ -126,11 +117,8 @@ export async function updateOne(
         const fieldsChanged =
             validatedData.fields !== undefined &&
             !deepEqual(currentEntry.fields, validatedData.fields);
-        const relationsChanged =
-            validatedData.fields !== undefined &&
-            !deepEqual(currentRelations, incomingRelations);
 
-        if (titleChanged || slugChanged || fieldsChanged || relationsChanged) {
+        if (titleChanged || slugChanged || fieldsChanged) {
             const latestNumber = await storage.versions.latestNumber(id);
             await storage.versions.create({
                 entryId: id,
@@ -138,7 +126,6 @@ export async function updateOne(
                 title: currentEntry.title,
                 slug: currentEntry.slug,
                 fields: currentEntry.fields,
-                relations: currentRelations,
                 createdBy: null,
             });
         }
@@ -163,7 +150,12 @@ export async function updateOne(
     });
 
     if (validatedData.fields) {
-        await saveRelationships(updated.id, validatedData.fields as JsonObject, type, db);
+        await indexEntryRelationships(
+            updated,
+            validatedData.fields as JsonObject,
+            type,
+            db
+        );
     }
 
     if (validatedData.fields && storage.translatable) {

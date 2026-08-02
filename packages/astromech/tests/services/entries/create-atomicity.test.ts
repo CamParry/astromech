@@ -14,9 +14,9 @@ import { Astromech } from '@/transport/local/index.js';
 import { getDb } from '@/database/registry.js';
 import type * as RelationshipStorageModule from '@/database/storage/relationships.js';
 
-// `create` persists the row and its relationships inside a storage transaction.
-// Fail `replaceAll` so the transaction rolls back; everything else delegates to
-// the real storage.
+// `create` persists the row and its index rows inside a storage transaction.
+// Fail `replaceForSource` so the transaction rolls back; everything else
+// delegates to the real storage.
 vi.mock('@/database/storage/relationships.js', async (importOriginal) => {
     const actual = await importOriginal<typeof RelationshipStorageModule>();
     return {
@@ -25,7 +25,7 @@ vi.mock('@/database/storage/relationships.js', async (importOriginal) => {
             ...args: Parameters<typeof actual.createRelationshipStorage>
         ) => ({
             ...actual.createRelationshipStorage(...args),
-            replaceAll: (): Promise<void> => Promise.reject(new Error('boom')),
+            replaceForSource: (): Promise<void> => Promise.reject(new Error('boom')),
         }),
     };
 });

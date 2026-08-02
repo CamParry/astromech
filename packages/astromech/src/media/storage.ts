@@ -116,7 +116,7 @@ export function createMediaStorage(db?: Db) {
 
     /** Drops the row and every relationship pointing at (or from) it. */
     async function del(id: string): Promise<void> {
-        await createRelationshipStorage(db ?? getDb()).deleteByMedia(id);
+        await createRelationshipStorage(db ?? getDb()).deleteByResource(id, 'media');
         await storage.delete(id);
     }
 

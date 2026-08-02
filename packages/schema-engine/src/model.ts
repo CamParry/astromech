@@ -50,6 +50,10 @@ export type SnapshotIndex = {
 export type SnapshotTable = {
     name: string;
     columns: SnapshotColumn[];
+    /** Table-level composite primary key, in key order. Omitted for a
+     *  single-column PK, which stays an inline column clause — so snapshots
+     *  written before composite keys existed parse and re-serialize unchanged. */
+    primaryKey?: string[];
     fks: SnapshotForeignKey[];
     indexes: SnapshotIndex[];
 };

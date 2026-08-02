@@ -86,6 +86,13 @@ export function resolveReferenceTarget(target: ReferenceTarget): {
     column: string;
 } {
     if (typeof target === 'string') return { table: target, column: 'id' };
+    if (target.primaryKey !== undefined) {
+        throw new Error(
+            `[Astromech] reference target "${target.name}" has a composite primary key ` +
+                `(${target.primaryKey.join(', ')}); a single-column reference cannot ` +
+                `address it. Reference a table with a single-column key instead.`
+        );
+    }
     const pkKey = Object.entries(target.columns).find(([, col]) => col.primaryKey)?.[0];
     if (pkKey === undefined) {
         throw new Error(
@@ -168,7 +175,18 @@ export function descriptorToSnapshotTable(
         ...(idx.where !== undefined && { where: idx.where }),
     }));
 
-    return { name: table.name, columns, fks, indexes };
+    // Key position is fixed so a snapshot re-serializes byte-identically, and
+    // omitted entirely without a composite key so pre-existing snapshots and
+    // their DDL are untouched.
+    return {
+        name: table.name,
+        columns,
+        ...(table.primaryKey !== undefined && {
+            primaryKey: table.primaryKey.map(toSnakeCase),
+        }),
+        fks,
+        indexes,
+    };
 }
 
 /** Build a deterministic snapshot of the given descriptors' DDL-affecting state. */

@@ -9,7 +9,7 @@ import {
     getNonTranslatableFieldNames,
     getTitleField,
 } from '../internal/type-config.js';
-import { saveRelationships } from '../internal/relationships.js';
+import { indexEntryRelationships } from '../internal/relationships.js';
 import { asEntry } from '../internal/records.js';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility.js';
 import { UnknownEntryTypeError } from '../errors.js';
@@ -156,9 +156,7 @@ export async function create(params: {
                 publishedAt,
             })
         );
-        if (Object.keys(processedFields).length > 0) {
-            await saveRelationships(row.id, processedFields, type, txDb);
-        }
+        await indexEntryRelationships(row, processedFields, type, txDb);
         return row;
     };
     const created = storage.transaction

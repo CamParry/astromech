@@ -10,8 +10,10 @@ export async function incomingRelations(params: {
     const storage = getEntryStorage(params.type);
     await loadAndAssertType(storage, params.type, params.id);
     const relRepo = createRelationshipStorage();
-    const rels = await relRepo.getByTarget(params.id, 'entry');
-    const entryRels = rels.filter((r) => r.sourceType === 'entry');
+    // Staged sources count: a pending merge that references this entry is a
+    // reason not to delete it.
+    const rels = await relRepo.findByTarget(params.id, 'entry', { includeStaged: true });
+    const entryRels = rels.filter((r) => r.sourceKind === 'entry');
     if (entryRels.length === 0) return [];
 
     const sourceIds = Array.from(new Set(entryRels.map((r) => r.sourceId)));
@@ -30,7 +32,7 @@ export async function incomingRelations(params: {
                 sourceId: src.id,
                 sourceTitle: src.title,
                 sourceType: src.type,
-                name: rel.name,
+                name: rel.schemaPath,
             } satisfies IncomingRelation;
         })
         .filter((x): x is IncomingRelation => x !== null);

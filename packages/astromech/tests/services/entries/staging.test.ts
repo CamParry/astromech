@@ -56,8 +56,15 @@ afterEach(() => {
 
 function relationTargets(entryId: string): Promise<string[]> {
     return createRelationshipStorage(getDb())
-        .getBySource(entryId, 'entry')
+        .findBySource(entryId, 'entry')
         .then((rels) => rels.map((r) => r.targetId).sort());
+}
+
+/** `sourceStaged` on every index row for a source (a boolean per row). */
+function relationStagedFlags(entryId: string): Promise<boolean[]> {
+    return createRelationshipStorage(getDb())
+        .findBySource(entryId, 'entry')
+        .then((rels) => rels.map((r) => r.sourceStaged));
 }
 
 // ============================================================================
@@ -91,8 +98,9 @@ describe('createStaged', () => {
         expect(staged.slug).toBe('live');
         // …but gets a fresh locale group (does not join the canonical's group).
         expect(staged.localeGroup).not.toBe(canonical.localeGroup);
-        // Relations are copied onto the staged row.
+        // The staged row's own field data is indexed, marked as staged.
         expect(await relationTargets(staged.id)).toEqual([target.id]);
+        expect(await relationStagedFlags(staged.id)).toEqual([true]);
     });
 
     it('throws StagedEntryExistsError (carrying the existing id) when one exists', async () => {
@@ -168,9 +176,12 @@ describe('mergeStaged', () => {
         expect(merged.slug).toBe('orig'); // slug NOT copied
         expect(merged.status).toBe('published'); // status preserved, not forced
 
-        // Staged entry is gone; canonical now carries the staged relations.
+        // Staged entry is gone; canonical now carries the staged relations, and
+        // its index rows are no longer flagged staged.
         expect(await api.getStaged({ type: 'post', id: canonical.id })).toBeNull();
         expect(await relationTargets(canonical.id)).toEqual([target.id]);
+        expect(await relationStagedFlags(canonical.id)).toEqual([false]);
+        expect(await relationTargets(staged.id)).toEqual([]);
     });
 
     it('leaves an unpublished canonical unpublished (merge is content-only)', async () => {

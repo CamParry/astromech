@@ -9,7 +9,6 @@ import config from 'virtual:astromech/config';
 import { flattenEntryFields } from '@/fields/helpers.js';
 import { resolveEntryType } from '../../type-registry.js';
 import { getEntryStorage } from '../../storage/registry.js';
-import { populateEntries } from '../../internal/populate.js';
 import { getDefaultLocale } from '../../internal/type-config.js';
 import { asEntry } from '../../internal/records.js';
 import { verifyPreviewToken, projectPreview } from '../../internal/preview.js';
@@ -57,13 +56,7 @@ export async function runPreviewQuery(
             target = asEntry(staged);
         }
 
-        let result = target;
-        if (params.populate && params.populate.length > 0 && entryTypeCfg) {
-            const populated = await populateEntries([result], fields, params.populate);
-            result = populated[0] ?? result;
-        }
-
-        const projected = projectPreview(result, fields);
+        const projected = projectPreview(target, fields);
         if (projected !== null) out.push(projected);
     }
 
@@ -83,7 +76,7 @@ export async function runPreviewQuery(
 export async function runPreviewGet(
     type: string,
     id: string,
-    params: { populate?: string[]; previewToken?: string; staged?: boolean }
+    params: { previewToken?: string; staged?: boolean }
 ): Promise<Entry | null> {
     const token = params.previewToken;
     if (!token) return null;
@@ -106,11 +99,5 @@ export async function runPreviewGet(
     const entryTypeCfg = resolveEntryType(config, type);
     const fields = entryTypeCfg ? flattenEntryFields(entryTypeCfg.fields) : [];
 
-    let result = target;
-    if (params.populate && params.populate.length > 0 && entryTypeCfg) {
-        const populated = await populateEntries([result], fields, params.populate);
-        result = populated[0] ?? result;
-    }
-
-    return projectPreview(result, fields);
+    return projectPreview(target, fields);
 }

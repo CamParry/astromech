@@ -80,6 +80,12 @@ describe('renderColumnClause', () => {
             "`status` text CHECK (`status` IN ('a', 'b''c'))"
         );
     });
+
+    it('suppresses the inline PRIMARY KEY when the table declares one', () => {
+        expect(renderColumnClause(col.id(), { tableLevelPrimaryKey: true })).toBe(
+            '`id` text NOT NULL'
+        );
+    });
 });
 
 describe('renderCreateTable', () => {
@@ -121,6 +127,33 @@ describe('renderCreateTable', () => {
 
         expect(constraint).toBe(foreignKeyName(longName, 'parent_id'));
         expect(constraint).toHaveLength(63);
+    });
+
+    it('renders a composite PRIMARY KEY between the columns and the FKs', () => {
+        const edge = table(
+            'edge',
+            [
+                col.text('source_id', { notNull: true }),
+                col.text('target_id', { notNull: true }),
+                col.text('label'),
+            ],
+            {
+                primaryKey: ['source_id', 'target_id'],
+                fks: [fk('source_id', 'parent', 'cascade')],
+            }
+        );
+
+        expect(renderCreateTable(edge)).toBe(
+            [
+                'CREATE TABLE `edge` (',
+                '    `source_id` text NOT NULL,',
+                '    `target_id` text NOT NULL,',
+                '    `label` text,',
+                '    PRIMARY KEY (`source_id`, `target_id`),',
+                '    CONSTRAINT `edge_source_id_fkey` FOREIGN KEY (`source_id`) REFERENCES `parent`(`id`) ON UPDATE no action ON DELETE cascade',
+                ')',
+            ].join('\n')
+        );
     });
 
     it('omits the FK block entirely when a table has no foreign keys', () => {

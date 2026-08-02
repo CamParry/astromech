@@ -1,15 +1,14 @@
 /**
- * Unit tests for applyVisibility / applyVisibilityWithRelations.
+ * Unit tests for applyVisibility.
  *
  * All tests call the functions directly with hand-built Entry + FieldDefinition[]
  * — no client, no virtual:astromech/config, no getDb().
  */
 
 import { describe, expect, it } from 'vitest';
-import type { Entry, FieldDefinition, JsonValue } from '@/types/index.js';
+import type { Entry, FieldDefinition } from '@/types/index.js';
 import {
     applyVisibility,
-    applyVisibilityWithRelations,
     isPublicBranded,
     markPublic,
     PublicShapeWriteError,
@@ -294,79 +293,34 @@ describe('nested blocks-in-repeater strip', () => {
 });
 
 // ============================================================================
-// (e) Populated relation to an unpublished entry is dropped
+// (e) A relation value is a raw id and passes through untouched
 // ============================================================================
 
-describe('populated relation filtering', () => {
-    const relatedFields: FieldDefinition[] = [
-        { name: 'bio', type: 'textarea' },
-        { name: 'internal_notes', type: 'text', private: true },
-    ];
-
-    const publishedRelated: Entry = publishedEntry({
-        id: 'author-1',
-        type: 'authors',
-        fields: { bio: 'Author bio', internal_notes: 'secret' },
-    });
-
-    const unpublishedRelated: Entry = publishedEntry({
-        id: 'author-2',
-        type: 'authors',
-        status: 'unpublished',
-        fields: { bio: 'Draft author' },
-    });
-
+describe('relation values', () => {
     const fields: FieldDefinition[] = [
         { name: 'author', type: 'relationship', target: 'authors' },
+        { name: 'tags', type: 'relationship', target: 'tags', multiple: true },
     ];
 
-    it('drops a related entry that is unpublished (not published)', () => {
-        const entry = publishedEntry({
-            fields: { author: unpublishedRelated as unknown as JsonValue },
-        });
-        const result = applyVisibilityWithRelations(
-            entry,
-            publicOpts(fields),
-            (_related) => relatedFields
-        );
-        expect(result).not.toBeNull();
-        if (!result) return;
-        expect(result.fields['author']).toBeNull();
+    it('passes a single relation id through the public projection', () => {
+        const entry = publishedEntry({ fields: { author: 'author-1' } });
+        const result = applyVisibility(entry, publicOpts(fields));
+        expect(result?.fields['author']).toBe('author-1');
     });
 
-    it('strips private fields from a published related entry', () => {
-        const entry = publishedEntry({
-            fields: { author: publishedRelated as unknown as JsonValue },
-        });
-        const result = applyVisibilityWithRelations(
-            entry,
-            publicOpts(fields),
-            (_related) => relatedFields
-        );
-        expect(result).not.toBeNull();
-        if (!result) return;
-        // The related entry is a full Entry object; its data is under .fields
-        const author = result.fields['author'] as Record<string, unknown>;
-        const authorFields = author['fields'] as Record<string, unknown>;
-        expect(authorFields).toHaveProperty('bio', 'Author bio');
-        expect(authorFields).not.toHaveProperty('internal_notes');
+    it('passes a multi-relation id list through the public projection', () => {
+        const entry = publishedEntry({ fields: { tags: ['t1', 't2'] } });
+        const result = applyVisibility(entry, publicOpts(fields));
+        expect(result?.fields['tags']).toEqual(['t1', 't2']);
     });
 
-    it('keeps all fields on populated related entry in full shape', () => {
-        const entry = publishedEntry({
-            fields: { author: publishedRelated as unknown as JsonValue },
-        });
-        const result = applyVisibilityWithRelations(
-            entry,
-            fullOpts(fields),
-            (_related) => relatedFields
-        );
-        expect(result).not.toBeNull();
-        if (!result) return;
-        // full shape: no field stripping — related entry passed through unchanged
-        const author = result.fields['author'] as Record<string, unknown>;
-        const authorFields = author['fields'] as Record<string, unknown>;
-        expect(authorFields).toHaveProperty('internal_notes', 'secret');
+    it('strips a private relation field', () => {
+        const privateRel: FieldDefinition[] = [
+            { name: 'author', type: 'relationship', target: 'authors', private: true },
+        ];
+        const entry = publishedEntry({ fields: { author: 'author-1' } });
+        const result = applyVisibility(entry, publicOpts(privateRel));
+        expect(result?.fields).not.toHaveProperty('author');
     });
 });
 

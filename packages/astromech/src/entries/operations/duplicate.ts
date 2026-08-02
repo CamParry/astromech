@@ -1,6 +1,6 @@
-import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import { getEntryStorage } from '../storage/registry.js';
 import { asEntry, loadAndAssertType } from '../internal/records.js';
+import { indexEntryRelationships } from '../internal/relationships.js';
 import type { Entry, EntryDuplicateOverrides, JsonObject } from '@/types/index.js';
 
 export async function duplicate(params: {
@@ -36,19 +36,7 @@ export async function duplicate(params: {
         publishedAt: status === 'published' ? new Date() : null,
     });
 
-    const relationshipsRepo = createRelationshipStorage();
-    const originalRels = await relationshipsRepo.getBySource(id, 'entry');
-
-    for (const rel of originalRels) {
-        await relationshipsRepo.create({
-            sourceId: created.id,
-            sourceType: 'entry',
-            name: rel.name,
-            targetId: rel.targetId,
-            targetType: rel.targetType,
-            position: rel.position,
-        });
-    }
+    await indexEntryRelationships(created, mergedFields, type);
 
     return asEntry(created);
 }

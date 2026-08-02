@@ -32,7 +32,6 @@ describe('deleteExcess', () => {
                 title: `V${n}`,
                 slug: 'v',
                 fields: {},
-                relations: {},
                 createdBy: null,
             });
         }
@@ -51,7 +50,6 @@ describe('deleteExcess', () => {
             title: 'V1',
             slug: 'v',
             fields: {},
-            relations: {},
             createdBy: null,
         });
 

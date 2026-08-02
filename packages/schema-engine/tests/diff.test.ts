@@ -202,6 +202,59 @@ describe('diffSnapshots', () => {
         expect(result.ops[0]?.kind).toBe('rebuildTable');
     });
 
+    it('a composite primary key added, dropped or reordered → rebuildTable', () => {
+        const cols = [
+            col.text('source_id', { notNull: true }),
+            col.text('target_id', { notNull: true }),
+        ];
+        const none = table('edges', cols);
+        const forward = table('edges', cols, { primaryKey: ['source_id', 'target_id'] });
+        const reversed = table('edges', cols, {
+            primaryKey: ['target_id', 'source_id'],
+        });
+
+        for (const { prev, next } of [
+            { prev: none, next: forward },
+            { prev: forward, next: none },
+            { prev: forward, next: reversed },
+        ]) {
+            const result = diffSnapshots(snap(prev), snap(next));
+            expect(result.ops).toHaveLength(1);
+            expect(result.ops[0]?.kind).toBe('rebuildTable');
+            expect(result.errors).toEqual([]);
+        }
+    });
+
+    it('a composite primary key naming an unknown column → error', () => {
+        const edges = table('edges', [col.text('source_id', { notNull: true })], {
+            primaryKey: ['source_id', 'bogus'],
+        });
+        const result = diffSnapshots(null, snap(edges));
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toMatch(/bogus/);
+    });
+
+    it('a nullable composite primary-key column → error', () => {
+        const edges = table(
+            'edges',
+            [col.text('source_id', { notNull: true }), col.text('target_id')],
+            { primaryKey: ['source_id', 'target_id'] }
+        );
+        const result = diffSnapshots(null, snap(edges));
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toMatch(/target_id/);
+        expect(result.errors[0]).toMatch(/NOT NULL/);
+    });
+
+    it('an empty composite primary key → error', () => {
+        const edges = table('edges', [col.text('source_id', { notNull: true })], {
+            primaryKey: [],
+        });
+        const result = diffSnapshots(null, snap(edges));
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toMatch(/empty composite primary key/);
+    });
+
     it('an index naming an unknown column → error', () => {
         const widgets = table('widgets', [col.id()], {
             indexes: [index('idx_widgets_bogus', ['bogus'])],

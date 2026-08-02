@@ -34,10 +34,15 @@ export function renderLiteral(value: string | number | boolean): string {
 
 /** Render one column's clause: `` `name` type [PRIMARY KEY] [DEFAULT lit]
  *  [NOT NULL] [CHECK …] ``. Shared by `renderCreateTable` and the migration
- *  generator's `ADD COLUMN` rendering (`render.ts`). */
-export function renderColumnClause(col: SnapshotColumn): string {
+ *  generator's `ADD COLUMN` rendering (`render.ts`). `tableLevelPrimaryKey`
+ *  suppresses the inline `PRIMARY KEY`, which SQLite rejects alongside a
+ *  table-level one. */
+export function renderColumnClause(
+    col: SnapshotColumn,
+    opts: { tableLevelPrimaryKey?: boolean } = {}
+): string {
     const parts = [`\`${col.name}\``, col.type];
-    if (col.primaryKey) parts.push('PRIMARY KEY');
+    if (col.primaryKey && !opts.tableLevelPrimaryKey) parts.push('PRIMARY KEY');
     if (col.default !== undefined) parts.push(`DEFAULT ${renderLiteral(col.default)}`);
     if (col.notNull) parts.push('NOT NULL');
     if (col.enumValues !== undefined) {
@@ -66,8 +71,9 @@ function renderForeignKeyClause(tableName: string, fk: SnapshotForeignKey): stri
 }
 
 /**
- * Render a table's `CREATE TABLE` statement — columns then table-level FKs, in
- * column declaration order.
+ * Render a table's `CREATE TABLE` statement — columns, then a table-level
+ * `PRIMARY KEY` if the table declares a composite one, then table-level FKs,
+ * in column declaration order.
  *
  * `constraintsFor` names the table the FK constraint names should be derived
  * from, when that differs from the table being created. Only the rebuild path
@@ -79,9 +85,16 @@ export function renderCreateTable(
     table: SnapshotTable,
     constraintsFor: string = table.name
 ): string {
-    const columnLines = table.columns.map(renderColumnClause);
+    const tableLevelPrimaryKey = table.primaryKey !== undefined;
+    const columnLines = table.columns.map((col) =>
+        renderColumnClause(col, { tableLevelPrimaryKey })
+    );
+    const pkLines =
+        table.primaryKey !== undefined
+            ? [`PRIMARY KEY (${table.primaryKey.map((c) => `\`${c}\``).join(', ')})`]
+            : [];
     const fkLines = table.fks.map((fk) => renderForeignKeyClause(constraintsFor, fk));
-    const lines = [...columnLines, ...fkLines].map((line) => `    ${line}`);
+    const lines = [...columnLines, ...pkLines, ...fkLines].map((line) => `    ${line}`);
     return `CREATE TABLE \`${table.name}\` (\n${lines.join(',\n')}\n)`;
 }
 

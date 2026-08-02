@@ -419,14 +419,6 @@
                     "primaryKey": false
                 },
                 {
-                    "key": "relations",
-                    "name": "relations",
-                    "kind": "json",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
                     "key": "status",
                     "name": "status",
                     "kind": "enum",
@@ -675,14 +667,6 @@
             "name": "relationships",
             "columns": [
                 {
-                    "key": "id",
-                    "name": "id",
-                    "kind": "id",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": true
-                },
-                {
                     "key": "sourceId",
                     "name": "source_id",
                     "kind": "text",
@@ -691,8 +675,8 @@
                     "primaryKey": false
                 },
                 {
-                    "key": "sourceType",
-                    "name": "source_type",
+                    "key": "sourceKind",
+                    "name": "source_kind",
                     "kind": "enum",
                     "type": "text",
                     "notNull": true,
@@ -700,8 +684,24 @@
                     "enumValues": ["entry", "user", "media"]
                 },
                 {
-                    "key": "name",
-                    "name": "name",
+                    "key": "sourceType",
+                    "name": "source_type",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "schemaPath",
+                    "name": "schema_path",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "instancePath",
+                    "name": "instance_path",
                     "kind": "text",
                     "type": "text",
                     "notNull": true,
@@ -716,8 +716,8 @@
                     "primaryKey": false
                 },
                 {
-                    "key": "targetType",
-                    "name": "target_type",
+                    "key": "targetKind",
+                    "name": "target_kind",
                     "kind": "enum",
                     "type": "text",
                     "notNull": true,
@@ -725,33 +725,32 @@
                     "enumValues": ["entry", "user", "media"]
                 },
                 {
-                    "key": "position",
-                    "name": "position",
-                    "kind": "integer",
+                    "key": "sourceStaged",
+                    "name": "source_staged",
+                    "kind": "boolean",
                     "type": "integer",
                     "notNull": true,
                     "primaryKey": false,
                     "default": 0
-                },
-                {
-                    "key": "createdAt",
-                    "name": "created_at",
-                    "kind": "timestamp",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
                 }
+            ],
+            "primaryKey": [
+                "source_id",
+                "source_kind",
+                "instance_path",
+                "target_id",
+                "target_kind"
             ],
             "fks": [],
             "indexes": [
                 {
-                    "name": "idx_rel_source",
-                    "columns": ["source_id", "source_type", "name"],
+                    "name": "idx_rel_target",
+                    "columns": ["target_id", "target_kind"],
                     "unique": false
                 },
                 {
-                    "name": "idx_rel_target",
-                    "columns": ["target_id", "target_type"],
+                    "name": "idx_rel_filter",
+                    "columns": ["source_type", "schema_path", "target_id"],
                     "unique": false
                 }
             ]

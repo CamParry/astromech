@@ -5,7 +5,7 @@ Rethink of how content relationships are stored, read and reverse-queried. Absor
 are recorded below).
 
 **Status:** design LOCKED by grilling 2026-08-03. Full design of record:
-`specs/relationships-model.md`. Implementation not started.
+`specs/relationships-model.md`. WS0 and WS1 built on `feat/relationships-model`.
 
 Filtering/sorting entries by their own scalar field values (the `meta_query` equivalent) was
 considered alongside this and **split out** to `planned/field-value-query-indexing.md`: it shares
@@ -27,19 +27,31 @@ persisted `_id`, never by array index. `name`, `position` and `createdAt` are de
 
 One branch, a commit per workstream. Details and rationale in the spec.
 
-- [ ] **WS0 — composite PK in `schema-engine`.** Optional `primaryKey?: string[]` on `SnapshotTable`
+- [x] **WS0 — composite PK in `schema-engine`.** Optional `primaryKey?: string[]` on `SnapshotTable`
       (existing snapshots parse unchanged; no rebaseline), `PRIMARY KEY (…)` in `renderCreateTable`,
-      PK equality check in `diffTable`, `resolveReferenceTarget` guard.
-- [ ] **WS1 — the index.** New table shape; one traversal over post-`processFields` data across
+      PK equality check in `diffTable`, `resolveReferenceTarget` guard. Also rejects an empty key, a
+      key naming an unknown column, and a **nullable** key column — SQLite's rowid tables permit
+      NULLs in a PRIMARY KEY, which would silently defeat the uniqueness.
+- [x] **WS1 — the index.** New table shape; one traversal over post-`processFields` data across
       entries/users/media; delete `saveRelationships`/`replaceAll`; staging stops copying rows;
-      drop `entry_versions.relations`.
+      drop `entry_versions.relations`. Absorbed two items §9 left unscheduled: **`populate` is
+      deleted** (it read the index by `name`, so WS1 forced the issue) and the seeds move their
+      relation ids into field data. The schema oracle now normalizes identifier quoting — `ALTER
+  TABLE … RENAME TO` re-quotes the stored DDL, so every rebuilt table would otherwise sit
+      permanently out of parity with a freshly emitted one.
 - [ ] **WS2 — the query.** `where: { references: { path, id } }` with query-time path validation;
       rebuild `incomingRelations` on it; delete modal and media "used by".
 - [ ] **WS3 — repair.** `astromech index:rebuild` + `--check` + the parity test.
 - [ ] **WS4 — cleanup.** Remove `inverse`/`ordered`/`onDelete` from the field API; opportunistic
       dangling-id cleanup on write; fix the `trash-purge` orphan and its wrong comment.
 
-Migration is drop-and-rebuild — the index is derived, so there is no data migration.
+Migration is drop-and-rebuild — the index is derived, so there is no data migration. It is
+hand-authored (`apps/demo/migrations/ops/0003-relationships-index.ts`): the new NOT NULL columns
+have no source in the old shape, so the differ correctly refuses to invent one.
+
+Still deferred to WS3, and worth knowing before then: nothing repopulates the index after a config
+change. `astromech index:rebuild` is the repair path, and until it lands the seeds derive their own
+edges inline.
 
 Rationale and the roads not taken — no `populate`, no `onDelete`, no declared reverse field, no
 filtering into a target's own fields, taxonomies as entry types, hierarchy, symmetric relations and

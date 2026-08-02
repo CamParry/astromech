@@ -218,7 +218,6 @@ export function createEntriesApi(
             type: string;
             id: string;
             locale?: string;
-            populate?: string[];
             full?: boolean;
             previewToken?: string;
             staged?: boolean;
@@ -228,7 +227,6 @@ export function createEntriesApi(
                 `${basePath}/${typeSeg(params.type)}/${params.id}`,
                 {
                     params: {
-                        populate: params.populate?.join(','),
                         locale: params.locale,
                         ...(full !== undefined ? { full } : {}),
                         ...(params.previewToken !== undefined
