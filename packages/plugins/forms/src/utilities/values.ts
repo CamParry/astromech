@@ -1,0 +1,38 @@
+/** Submitted values rendered for display — in an email table or a list column. */
+
+/** One submitted value, resolved to its human label and a display string. */
+export type ValueRow = { label: string; value: string };
+
+/**
+ * Pair submitted data with the field labels it was collected under.
+ * `fields` is intentionally a minimal structural type so this module does not
+ * depend on the field compiler.
+ */
+export function toValueRows(
+    fields: readonly { name: string; label?: unknown }[],
+    data: Record<string, unknown>
+): ValueRow[] {
+    // Ordered by `fields`, not `data`, and a field missing from `data` still
+    // appears as the em-dash fallback.
+    return fields.map((field) => ({
+        label: typeof field.label === 'string' ? field.label : field.name,
+        value: displayValue(data[field.name]),
+    }));
+}
+
+/**
+ * Stringify a submitted value for display. Shared by the merge-tag module
+ * (subject/body tokens) and the table of values an email renders.
+ */
+export function displayValue(value: unknown): string {
+    if (value === null || value === undefined) return '—';
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (Array.isArray(value)) {
+        // Multiselect/checkboxGroup fields submit an array of options.
+        return value.length === 0 ? '—' : value.map((item) => String(item)).join(', ');
+    }
+    if (value instanceof Date) return value.toISOString();
+    if (typeof value === 'object') return JSON.stringify(value);
+    if (value === '') return '—';
+    return String(value);
+}

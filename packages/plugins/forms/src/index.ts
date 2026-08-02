@@ -6,14 +6,14 @@
 
 import { definePlugin, withDefaults } from 'astromech';
 import type { ServiceInterface } from 'astromech';
-import { FORMS_PACKAGE } from './types.js';
-import type { FormsOptions } from './types.js';
 import { migrationProvider } from '../migrations/index.js';
 import { formEntryType } from './entries/form.js';
 import { submissionEntryType } from './entries/submission.js';
-import { submissionsTable } from './tables/submissions.js';
 import { buildFormsService } from './service/forms.js';
 import { spamHook } from './spam/hook.js';
+import { submissionsTable } from './tables/submissions.js';
+import { FORMS_PACKAGE } from './types.js';
+import type { FormsOptions } from './types.js';
 
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
@@ -22,12 +22,7 @@ declare module 'astromech' {
     }
 }
 
-export type {
-    FormFieldKind,
-    FormsOptions,
-    SpamOptions,
-    SubmissionMeta,
-} from './types.js';
+export type { FormFieldKind, FormsOptions, SubmissionMeta } from './types.js';
 export { FORM_FIELD_KINDS } from './types.js';
 export type {
     FormsAfterSubmitPayload,
@@ -35,6 +30,16 @@ export type {
 } from './hooks/events.js';
 export { FORM_ERROR_KEY } from './service/forms.js';
 export type { PublicForm, SubmitInput, SubmitResult } from './service/forms.js';
+export type { SpamContext, SpamProvider, SpamVerdict } from './spam/types.js';
+export { turnstile } from './spam/providers/turnstile.js';
+export type { TurnstileOptions } from './spam/providers/turnstile.js';
+export { recaptcha } from './spam/providers/recaptcha.js';
+export type { RecaptchaOptions } from './spam/providers/recaptcha.js';
+export type {
+    NotificationContext,
+    NotificationProvider,
+    StoredNotification,
+} from './notifications/types.js';
 
 const DEFAULT_OPTIONS: Required<Pick<FormsOptions, 'storeMeta'>> = {
     storeMeta: true,

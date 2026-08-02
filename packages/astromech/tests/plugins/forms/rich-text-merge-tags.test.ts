@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { applyMergeTagsInRichText } from '../../../../plugins/forms/src/emails/merge-tags.js';
+import { applyMergeTagsInRichText } from '../../../../plugins/forms/src/notifications/merge-tags.js';
 import { renderRichText } from '@/fields/rich-text/index.js';
 
 type Json = Parameters<typeof renderRichText>[0];

@@ -1,10 +1,11 @@
 /**
  * Unit tests for the forms plugin's spam gate:
- * - `verifySpamToken` — the Turnstile/reCAPTCHA network client. `fetch` is
- *   stubbed at the boundary; this is a network client, so stubbing HTTP here
- *   is correct and is NOT the "never mock the DB" rule.
+ * - `turnstile`/`recaptcha` — the built-in `SpamProvider` factories, both
+ *   built on the shared `siteverify` POST client. `fetch` is stubbed at the
+ *   boundary; this is a network client, so stubbing HTTP here is correct and
+ *   is NOT the "never mock the DB" rule.
  * - `spamHook` — the `forms:beforeSubmit` subscriber that turns a bad verdict
- *   into a throw (the gate).
+ *   into a throw (the gate), tested against a hand-written `SpamProvider` stub.
  *
  * These are plain unit tests with no plugin registration or DB, so they
  * import the source files directly rather than through the (not yet built)
@@ -12,24 +13,13 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { verifySpamToken } from '../../../../plugins/forms/src/spam/verify.js';
+import { turnstile } from '../../../../plugins/forms/src/spam/providers/turnstile.js';
+import { recaptcha } from '../../../../plugins/forms/src/spam/providers/recaptcha.js';
 import { spamHook } from '../../../../plugins/forms/src/spam/hook.js';
 import { BEFORE_SUBMIT } from '../../../../plugins/forms/src/hooks/events.js';
 import type { FormsBeforeSubmitPayload } from '../../../../plugins/forms/src/hooks/events.js';
-import type { SpamOptions } from '../../../../plugins/forms/src/types.js';
+import type { SpamProvider } from '../../../../plugins/forms/src/spam/types.js';
 import type { PluginContext } from 'astromech';
-
-const turnstile: SpamOptions = {
-    provider: 'turnstile',
-    siteKey: 'site-key',
-    secretKey: 'super-secret',
-};
-
-const recaptcha: SpamOptions = {
-    provider: 'recaptcha',
-    siteKey: 'site-key',
-    secretKey: 'super-secret',
-};
 
 function jsonResponse(body: unknown, status = 200): Response {
     return new Response(JSON.stringify(body), {
@@ -42,12 +32,14 @@ afterEach(() => {
     vi.unstubAllGlobals();
 });
 
-describe('verifySpamToken', () => {
+describe('turnstile', () => {
+    const provider = turnstile({ siteKey: 'site-key', secretKey: 'super-secret' });
+
     it('short-circuits on a missing token without calling fetch', async () => {
         const fetchMock = vi.fn();
         vi.stubGlobal('fetch', fetchMock);
 
-        const verdict = await verifySpamToken(turnstile, undefined);
+        const verdict = await provider.verify(undefined, {});
 
         expect(verdict).toEqual({ ok: false, reason: 'Missing verification token' });
         expect(fetchMock).not.toHaveBeenCalled();
@@ -57,17 +49,17 @@ describe('verifySpamToken', () => {
         const fetchMock = vi.fn();
         vi.stubGlobal('fetch', fetchMock);
 
-        const verdict = await verifySpamToken(turnstile, '   ');
+        const verdict = await provider.verify('   ', {});
 
         expect(verdict.ok).toBe(false);
         expect(fetchMock).not.toHaveBeenCalled();
     });
 
-    it('accepts a successful turnstile verification', async () => {
+    it('accepts a successful verification', async () => {
         const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ success: true }));
         vi.stubGlobal('fetch', fetchMock);
 
-        const verdict = await verifySpamToken(turnstile, 'a-token');
+        const verdict = await provider.verify('a-token', {});
 
         expect(verdict).toEqual({ ok: true });
         expect(fetchMock).toHaveBeenCalledWith(
@@ -76,7 +68,7 @@ describe('verifySpamToken', () => {
         );
     });
 
-    it('surfaces turnstile error-codes on failure', async () => {
+    it('surfaces error-codes on failure', async () => {
         const fetchMock = vi.fn().mockResolvedValue(
             jsonResponse({
                 success: false,
@@ -85,7 +77,7 @@ describe('verifySpamToken', () => {
         );
         vi.stubGlobal('fetch', fetchMock);
 
-        const verdict = await verifySpamToken(turnstile, 'a-token');
+        const verdict = await provider.verify('a-token', {});
 
         expect(verdict.ok).toBe(false);
         expect(verdict.ok === false && verdict.reason).toContain(
@@ -93,31 +85,11 @@ describe('verifySpamToken', () => {
         );
     });
 
-    it('rejects a reCAPTCHA v3 score below minScore', async () => {
-        const fetchMock = vi
-            .fn()
-            .mockResolvedValue(jsonResponse({ success: true, score: 0.2 }));
-        vi.stubGlobal('fetch', fetchMock);
-
-        const verdict = await verifySpamToken({ ...recaptcha, minScore: 0.5 }, 'a-token');
-
-        expect(verdict.ok).toBe(false);
-    });
-
-    it('accepts a reCAPTCHA v2 response with no score, on success alone', async () => {
-        const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ success: true }));
-        vi.stubGlobal('fetch', fetchMock);
-
-        const verdict = await verifySpamToken(recaptcha, 'a-token');
-
-        expect(verdict).toEqual({ ok: true });
-    });
-
     it('fails closed on a non-200 response', async () => {
         const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ success: true }, 500));
         vi.stubGlobal('fetch', fetchMock);
 
-        const verdict = await verifySpamToken(turnstile, 'a-token');
+        const verdict = await provider.verify('a-token', {});
 
         expect(verdict.ok).toBe(false);
     });
@@ -131,7 +103,7 @@ describe('verifySpamToken', () => {
         );
         vi.stubGlobal('fetch', fetchMock);
 
-        const verdict = await verifySpamToken(turnstile, 'a-token');
+        const verdict = await provider.verify('a-token', {});
 
         expect(verdict.ok).toBe(false);
     });
@@ -140,7 +112,7 @@ describe('verifySpamToken', () => {
         const fetchMock = vi.fn().mockRejectedValue(new Error('network down'));
         vi.stubGlobal('fetch', fetchMock);
 
-        const verdict = await verifySpamToken(turnstile, 'a-token');
+        const verdict = await provider.verify('a-token', {});
 
         expect(verdict.ok).toBe(false);
     });
@@ -153,10 +125,73 @@ describe('verifySpamToken', () => {
             );
         vi.stubGlobal('fetch', fetchMock);
 
-        const verdict = await verifySpamToken(turnstile, 'a-token');
+        const verdict = await provider.verify('a-token', {});
 
         expect(verdict.ok).toBe(false);
-        expect(verdict.ok === false && verdict.reason).not.toContain(turnstile.secretKey);
+        expect(verdict.ok === false && verdict.reason).not.toContain('super-secret');
+    });
+});
+
+describe('recaptcha', () => {
+    it('rejects a v3 score below minScore', async () => {
+        const fetchMock = vi
+            .fn()
+            .mockResolvedValue(jsonResponse({ success: true, score: 0.2 }));
+        vi.stubGlobal('fetch', fetchMock);
+        const provider = recaptcha({
+            siteKey: 'site-key',
+            secretKey: 'super-secret',
+            minScore: 0.5,
+        });
+
+        const verdict = await provider.verify('a-token', {});
+
+        expect(verdict.ok).toBe(false);
+        expect(verdict.ok === false && verdict.reason).toContain('below minimum');
+    });
+
+    it('accepts a v3 score at or above minScore', async () => {
+        const fetchMock = vi
+            .fn()
+            .mockResolvedValue(jsonResponse({ success: true, score: 0.9 }));
+        vi.stubGlobal('fetch', fetchMock);
+        const provider = recaptcha({ siteKey: 'site-key', secretKey: 'super-secret' });
+
+        const verdict = await provider.verify('a-token', {});
+
+        expect(verdict).toEqual({ ok: true });
+    });
+
+    it('accepts a v2 response with no score, on success alone', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ success: true }));
+        vi.stubGlobal('fetch', fetchMock);
+        const provider = recaptcha({ siteKey: 'site-key', secretKey: 'super-secret' });
+
+        const verdict = await provider.verify('a-token', {});
+
+        expect(verdict).toEqual({ ok: true });
+    });
+
+    it('defaults minScore to 0.5 when not given', async () => {
+        const fetchMock = vi
+            .fn()
+            .mockResolvedValue(jsonResponse({ success: true, score: 0.4 }));
+        vi.stubGlobal('fetch', fetchMock);
+        const provider = recaptcha({ siteKey: 'site-key', secretKey: 'super-secret' });
+
+        const verdict = await provider.verify('a-token', {});
+
+        expect(verdict.ok).toBe(false);
+    });
+
+    it('fails closed on a non-200 response', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ success: true }, 500));
+        vi.stubGlobal('fetch', fetchMock);
+        const provider = recaptcha({ siteKey: 'site-key', secretKey: 'super-secret' });
+
+        const verdict = await provider.verify('a-token', {});
+
+        expect(verdict.ok).toBe(false);
     });
 });
 
@@ -173,6 +208,10 @@ type SpamHandler = (
 describe('spamHook', () => {
     const ctx = {} as PluginContext;
 
+    function stubProvider(verify: SpamProvider['verify']): SpamProvider {
+        return { name: 'test', siteKey: 'k', verify };
+    }
+
     function payloadWith(
         overrides: Partial<FormsBeforeSubmitPayload> = {}
     ): FormsBeforeSubmitPayload {
@@ -185,36 +224,29 @@ describe('spamHook', () => {
     }
 
     it('is registered against forms:beforeSubmit', () => {
-        const hook = spamHook(turnstile);
+        const hook = spamHook(stubProvider(vi.fn()));
         expect(hook.event).toBe(BEFORE_SUBMIT);
     });
 
     it('throws when the verdict is a failure', async () => {
-        vi.stubGlobal(
-            'fetch',
-            vi.fn().mockResolvedValue(jsonResponse({ success: false }))
+        const hook = spamHook(
+            stubProvider(vi.fn().mockResolvedValue({ ok: false, reason: 'nope' }))
         );
-        const hook = spamHook(turnstile);
         const handler = hook.handler as SpamHandler;
 
         await expect(handler(payloadWith(), ctx)).rejects.toThrow(/Spam check failed/);
     });
 
     it('returns quietly when the verdict succeeds', async () => {
-        vi.stubGlobal(
-            'fetch',
-            vi.fn().mockResolvedValue(jsonResponse({ success: true }))
-        );
-        const hook = spamHook(turnstile);
+        const hook = spamHook(stubProvider(vi.fn().mockResolvedValue({ ok: true })));
         const handler = hook.handler as SpamHandler;
 
         await expect(handler(payloadWith(), ctx)).resolves.toBeUndefined();
     });
 
     it('skips verification entirely when spamProtection is false', async () => {
-        const fetchMock = vi.fn();
-        vi.stubGlobal('fetch', fetchMock);
-        const hook = spamHook(turnstile);
+        const verify = vi.fn();
+        const hook = spamHook(stubProvider(verify));
         const handler = hook.handler as SpamHandler;
 
         await expect(
@@ -230,6 +262,16 @@ describe('spamHook', () => {
                 ctx
             )
         ).resolves.toBeUndefined();
-        expect(fetchMock).not.toHaveBeenCalled();
+        expect(verify).not.toHaveBeenCalled();
+    });
+
+    it('passes the token and ip through to verify', async () => {
+        const verify = vi.fn().mockResolvedValue({ ok: true });
+        const hook = spamHook(stubProvider(verify));
+        const handler = hook.handler as SpamHandler;
+
+        await handler(payloadWith({ meta: { ip: '1.2.3.4' } }), ctx);
+
+        expect(verify).toHaveBeenCalledWith('a-token', { ip: '1.2.3.4' });
     });
 });

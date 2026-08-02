@@ -4,10 +4,82 @@
  * `../fields/compile.ts` reads the stored instances back.
  */
 
-import type { EntryTypeConfig, FieldDefinition } from 'astromech';
-import { FORM_FIELD_KINDS, FORM_TYPE } from '../types.js';
-import * as fields from 'astromech/fields';
+import type { BlockDefinition, EntryTypeConfig, FieldDefinition } from 'astromech';
 import * as columns from 'astromech/columns';
+import * as fields from 'astromech/fields';
+import { NOTIFICATIONS_FIELD } from '../notifications/dispatch.js';
+import { notificationBlocks } from '../notifications/registry.js';
+import { FORM_FIELD_KINDS, FORM_TYPE } from '../types.js';
+
+const BLOCK_LABELS: Record<(typeof FORM_FIELD_KINDS)[number], string> = {
+    text: 'Text',
+    textarea: 'Text area',
+    email: 'Email',
+    tel: 'Phone',
+    url: 'URL',
+    number: 'Number',
+    select: 'Select',
+    radio: 'Radio group',
+    checkbox: 'Checkbox',
+    checkboxGroup: 'Checkbox group',
+    date: 'Date',
+    hidden: 'Hidden',
+};
+
+export const formEntryType: EntryTypeConfig = {
+    type: FORM_TYPE,
+    single: 'Form',
+    plural: 'Forms',
+    // Built-in storage defaults slug on, which is how a form is addressed.
+    adminColumns: [
+        columns.text('title', { label: 'Title' }),
+        columns.slug('slug', { label: 'Slug' }),
+        columns.boolean('enabled', { label: 'Enabled' }),
+    ],
+    fields: [
+        fields.tabs({
+            fields: [
+                fields.tab('fields', {
+                    label: 'Fields',
+                    fields: [
+                        fields.boolean('enabled', {
+                            label: 'Accept submissions',
+                            defaultValue: true,
+                        }),
+                        fields.blocks('fields', {
+                            label: 'Fields',
+                            blocks: fieldBlocks(),
+                        }),
+                    ],
+                }),
+                fields.tab('notifications', {
+                    label: 'Notifications',
+                    fields: [
+                        // `private: true` keeps recipients and copy off public
+                        // reads — these entries are readable through the public
+                        // entries API. Disabling one instance is `_disabled`.
+                        fields.blocks(NOTIFICATIONS_FIELD, {
+                            label: 'Notifications',
+                            private: true,
+                            blocks: notificationBlocks,
+                        }),
+                    ],
+                }),
+                fields.tab('spam', {
+                    label: 'Spam',
+                    fields: [
+                        fields.boolean('spamProtection', {
+                            label: 'Spam protection',
+                            defaultValue: true,
+                            description:
+                                'Only applies when the site configures a spam provider.',
+                        }),
+                    ],
+                }),
+            ],
+        }),
+    ],
+};
 
 /**
  * The four fields every block starts with. The `name` pattern is enforced
@@ -44,24 +116,6 @@ function optionsRepeater(): FieldDefinition {
         ],
     });
 }
-
-const MERGE_TAG_MESSAGE =
-    'Supports {{fieldName}}, {{formTitle}} and {{submittedAt}} merge tags.';
-
-const BLOCK_LABELS: Record<(typeof FORM_FIELD_KINDS)[number], string> = {
-    text: 'Text',
-    textarea: 'Text area',
-    email: 'Email',
-    tel: 'Phone',
-    url: 'URL',
-    number: 'Number',
-    select: 'Select',
-    radio: 'Radio group',
-    checkbox: 'Checkbox',
-    checkboxGroup: 'Checkbox group',
-    date: 'Date',
-    hidden: 'Hidden',
-};
 
 /** The per-kind config fields a block adds on top of `commonFields`. */
 function extraFields(kind: (typeof FORM_FIELD_KINDS)[number]): FieldDefinition[] {
@@ -103,101 +157,12 @@ function extraFields(kind: (typeof FORM_FIELD_KINDS)[number]): FieldDefinition[]
     }
 }
 
-const fieldBlocks = FORM_FIELD_KINDS.map((kind) =>
-    fields.block(kind, {
-        label: BLOCK_LABELS[kind],
-        fields: [...commonFields(), ...extraFields(kind)],
-    })
-);
-
-export const formEntryType: EntryTypeConfig = {
-    type: FORM_TYPE,
-    single: 'Form',
-    plural: 'Forms',
-    // Built-in storage defaults slug on, which is how a form is addressed.
-    adminColumns: [
-        columns.text('title', { label: 'Title' }),
-        columns.slug('slug', { label: 'Slug' }),
-        columns.boolean('enabled', { label: 'Enabled' }),
-    ],
-    fields: [
-        fields.tabs({
-            fields: [
-                fields.tab('fields', {
-                    label: 'Fields',
-                    fields: [
-                        fields.boolean('enabled', {
-                            label: 'Accept submissions',
-                            defaultValue: true,
-                        }),
-                        fields.blocks('fields', { label: 'Fields', blocks: fieldBlocks }),
-                    ],
-                }),
-                fields.tab('notifications', {
-                    label: 'Notifications',
-                    // Every field in this tab must be `private: true` — these
-                    // entries are readable through the public entries API.
-                    fields: [
-                        fields.boolean('notifyEnabled', {
-                            label: 'Send notification email',
-                            defaultValue: false,
-                            private: true,
-                        }),
-                        fields.repeater('notifyTo', {
-                            label: 'Notify recipients',
-                            private: true,
-                            fields: [
-                                fields.email('address', {
-                                    label: 'Email',
-                                    required: true,
-                                }),
-                            ],
-                        }),
-                        fields.text('notifySubject', {
-                            label: 'Subject',
-                            private: true,
-                            description: MERGE_TAG_MESSAGE,
-                        }),
-                        fields.richtext('notifyBody', {
-                            label: 'Body',
-                            private: true,
-                            description: `${MERGE_TAG_MESSAGE} Leave empty to send the default table of submitted values.`,
-                        }),
-                        fields.boolean('confirmEnabled', {
-                            label: 'Send confirmation email',
-                            defaultValue: false,
-                            private: true,
-                        }),
-                        fields.text('confirmSubject', {
-                            label: 'Subject',
-                            private: true,
-                            description: MERGE_TAG_MESSAGE,
-                        }),
-                        fields.richtext('confirmBody', {
-                            label: 'Body',
-                            private: true,
-                            description: MERGE_TAG_MESSAGE,
-                        }),
-                        fields.text('confirmToField', {
-                            label: 'Send to field',
-                            private: true,
-                            description:
-                                "Name of the field holding the submitter's email address. Empty means the first email field on the form.",
-                        }),
-                    ],
-                }),
-                fields.tab('spam', {
-                    label: 'Spam',
-                    fields: [
-                        fields.boolean('spamProtection', {
-                            label: 'Spam protection',
-                            defaultValue: true,
-                            description:
-                                'Only applies when the site configures a spam provider.',
-                        }),
-                    ],
-                }),
-            ],
-        }),
-    ],
-};
+/** One block per field kind, each composing the common and per-kind fields. */
+function fieldBlocks(): BlockDefinition[] {
+    return FORM_FIELD_KINDS.map((kind) =>
+        fields.block(kind, {
+            label: BLOCK_LABELS[kind],
+            fields: [...commonFields(), ...extraFields(kind)],
+        })
+    );
+}

@@ -9,78 +9,18 @@ import * as fields from 'astromech/fields';
 import type { FormFieldKind, StoredFormField } from '../types.js';
 
 /**
- * True for an enabled block instance whose `name` fits the field-path grammar.
- * A name holding `.`, `[` or `]` cannot be an error key, so skipping it costs
- * one field rather than 500-ing every submission.
+ * A form's stored blocks as a flat list of leaf fields — a submission is a flat
+ * map of values. Anything unusable is skipped rather than thrown.
  */
-function isUsable(instance: unknown): instance is StoredFormField {
-    if (typeof instance !== 'object' || instance === null) return false;
-    const stored = instance as StoredFormField;
-    if (stored._disabled === true) return false;
-    return typeof stored.name === 'string' && fields.isValidFieldName(stored.name);
-}
-
-/** The value if it is a number, else `undefined`. */
-function asNumber(value: unknown): number | undefined {
-    return typeof value === 'number' ? value : undefined;
-}
-
-/** `{ label, value }` rows from the `options` repeater, skipping malformed ones. */
-function asOptions(value: unknown): SelectOption[] {
-    if (!Array.isArray(value)) return [];
-    const options: SelectOption[] = [];
-    for (const row of value) {
-        if (typeof row !== 'object' || row === null) continue;
-        const { label, value: optionValue } = row as { label?: unknown; value?: unknown };
-        if (typeof optionValue !== 'string') continue;
-        options.push({
-            value: optionValue,
-            label: typeof label === 'string' ? label : optionValue,
-        });
+export function compileFormFields(stored: unknown): FieldDefinition[] {
+    if (!Array.isArray(stored)) return [];
+    const compiled: FieldDefinition[] = [];
+    for (const instance of stored) {
+        if (!isUsable(instance)) continue;
+        const field = compileOne(instance);
+        if (field !== null) compiled.push(field);
     }
-    return options;
-}
-
-/** An `enum` rule constraining a choice field to its declared options. */
-function choiceRules(options: SelectOption[]): ValidationRule[] {
-    return options.length > 0 ? [{ enum: options.map((option) => option.value) }] : [];
-}
-
-/** `minLength` / `maxLength` rules, for whichever the author set. */
-function lengthRules(stored: StoredFormField): ValidationRule[] {
-    const rules: ValidationRule[] = [];
-    const minLength = asNumber(stored.minLength);
-    const maxLength = asNumber(stored.maxLength);
-    if (minLength !== undefined) rules.push({ minLength });
-    if (maxLength !== undefined) rules.push({ maxLength });
-    return rules;
-}
-
-/** `min` / `max` rules, for whichever the author set. */
-function rangeRules(stored: StoredFormField): ValidationRule[] {
-    const rules: ValidationRule[] = [];
-    const min = asNumber(stored.min);
-    const max = asNumber(stored.max);
-    if (min !== undefined) rules.push({ min });
-    if (max !== undefined) rules.push({ max });
-    return rules;
-}
-
-type CommonOptions = { label?: Label; required: boolean; description?: Label };
-
-/**
- * The label / required / description every kind shares. Unusable values are
- * omitted rather than set to `undefined`, per `exactOptionalPropertyTypes`.
- */
-function baseOptions(stored: StoredFormField): CommonOptions {
-    const label = typeof stored.label === 'string' ? stored.label : undefined;
-    const description =
-        typeof stored.description === 'string' ? stored.description : undefined;
-    return {
-        required: stored.required === true,
-        ...(label !== undefined ? { label } : {}),
-        ...(description !== undefined ? { description } : {}),
-    };
+    return compiled;
 }
 
 /** One block instance as a leaf field, or `null` for an unknown `_type`. */
@@ -141,29 +81,76 @@ function compileOne(stored: StoredFormField): FieldDefinition | null {
 }
 
 /**
- * A form's stored blocks as a flat list of leaf fields — a submission is a flat
- * map of values. Anything unusable is skipped rather than thrown.
+ * True for an enabled block instance whose `name` fits the field-path grammar.
+ * A name holding `.`, `[` or `]` cannot be an error key, so skipping it costs
+ * one field rather than 500-ing every submission.
  */
-export function compileFormFields(stored: unknown): FieldDefinition[] {
-    if (!Array.isArray(stored)) return [];
-    const compiled: FieldDefinition[] = [];
-    for (const instance of stored) {
-        if (!isUsable(instance)) continue;
-        const field = compileOne(instance);
-        if (field !== null) compiled.push(field);
-    }
-    return compiled;
+function isUsable(instance: unknown): instance is StoredFormField {
+    if (typeof instance !== 'object' || instance === null) return false;
+    const stored = instance as StoredFormField;
+    if (stored._disabled === true) return false;
+    return typeof stored.name === 'string' && fields.isValidFieldName(stored.name);
 }
 
+type CommonOptions = { label?: Label; required: boolean; description?: Label };
+
 /**
- * The `name` of the first enabled `email` block, used as the confirmation
- * recipient when the form declares no explicit `confirmToField`.
+ * The label / required / description every kind shares. Unusable values are
+ * omitted rather than set to `undefined`, per `exactOptionalPropertyTypes`.
  */
-export function firstEmailFieldName(stored: unknown): string | undefined {
-    if (!Array.isArray(stored)) return undefined;
-    for (const instance of stored) {
-        if (!isUsable(instance)) continue;
-        if (instance._type === 'email') return instance.name as string;
+function baseOptions(stored: StoredFormField): CommonOptions {
+    const label = typeof stored.label === 'string' ? stored.label : undefined;
+    const description =
+        typeof stored.description === 'string' ? stored.description : undefined;
+    return {
+        required: stored.required === true,
+        ...(label !== undefined ? { label } : {}),
+        ...(description !== undefined ? { description } : {}),
+    };
+}
+
+/** `{ label, value }` rows from the `options` repeater, skipping malformed ones. */
+function asOptions(value: unknown): SelectOption[] {
+    if (!Array.isArray(value)) return [];
+    const options: SelectOption[] = [];
+    for (const row of value) {
+        if (typeof row !== 'object' || row === null) continue;
+        const { label, value: optionValue } = row as { label?: unknown; value?: unknown };
+        if (typeof optionValue !== 'string') continue;
+        options.push({
+            value: optionValue,
+            label: typeof label === 'string' ? label : optionValue,
+        });
     }
-    return undefined;
+    return options;
+}
+
+/** An `enum` rule constraining a choice field to its declared options. */
+function choiceRules(options: SelectOption[]): ValidationRule[] {
+    return options.length > 0 ? [{ enum: options.map((option) => option.value) }] : [];
+}
+
+/** `minLength` / `maxLength` rules, for whichever the author set. */
+function lengthRules(stored: StoredFormField): ValidationRule[] {
+    const rules: ValidationRule[] = [];
+    const minLength = asNumber(stored.minLength);
+    const maxLength = asNumber(stored.maxLength);
+    if (minLength !== undefined) rules.push({ minLength });
+    if (maxLength !== undefined) rules.push({ maxLength });
+    return rules;
+}
+
+/** `min` / `max` rules, for whichever the author set. */
+function rangeRules(stored: StoredFormField): ValidationRule[] {
+    const rules: ValidationRule[] = [];
+    const min = asNumber(stored.min);
+    const max = asNumber(stored.max);
+    if (min !== undefined) rules.push({ min });
+    if (max !== undefined) rules.push({ max });
+    return rules;
+}
+
+/** The value if it is a number, else `undefined`. */
+function asNumber(value: unknown): number | undefined {
+    return typeof value === 'number' ? value : undefined;
 }

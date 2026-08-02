@@ -2219,16 +2219,25 @@ async function seed(): Promise<void> {
                             label: 'I agree to be contacted',
                         },
                     ],
-                    notifyEnabled: true,
-                    notifyTo: [{ address: 'ops@astromech.dev' }],
-                    notifySubject: 'New enquiry from {{name}}',
-                    // notifyBody left unset — exercises the documented default
-                    // (a table of the submitted answers).
-                    confirmEnabled: true,
-                    confirmSubject: 'Thanks, {{name}}',
-                    confirmToField: 'email',
-                    // confirmBody left unset — exercises the documented default
-                    // (the neutral thank-you).
+                    notifications: [
+                        {
+                            _id: bid(),
+                            _type: 'email',
+                            to: 'ops@astromech.dev',
+                            subject: 'New enquiry from {{name}}',
+                            // body left unset — exercises the documented
+                            // default (a table of the submitted answers).
+                        },
+                        {
+                            _id: bid(),
+                            _type: 'email',
+                            to: '{{email}}',
+                            subject: 'Thanks for getting in touch — {{formTitle}}',
+                            // body left unset — exercises the documented
+                            // default (just the values table, sent straight
+                            // back to the submitter).
+                        },
+                    ],
                     // No spam provider is configured in the demo (see
                     // astromech.config.ts), so the gate is left off explicitly
                     // rather than relying on it being skipped.

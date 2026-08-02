@@ -3,6 +3,9 @@
  * a *type* to derive `plugin_forms_*` names. Identity itself is declared in
  * `index.ts`; keep this the only other place naming it.
  */
+
+import type { SpamProvider } from './spam/types.js';
+
 export const FORMS_PACKAGE = '@astromech/forms';
 
 export const FORM_TYPE = 'form';
@@ -10,18 +13,10 @@ export const FORM_TYPE = 'form';
 export const SUBMISSION_TYPE = 'submission';
 
 export type FormsOptions = {
-    spam?: SpamOptions;
+    /** A spam provider such as `turnstile(...)`, or your own. */
+    spam?: SpamProvider;
     /** Store ip / userAgent / referer on each submission. Default true. */
     storeMeta?: boolean;
-};
-
-export type SpamOptions = {
-    provider: 'turnstile' | 'recaptcha';
-    siteKey: string;
-    /** Read from `import.meta.env` in the site's config — never stored in content. */
-    secretKey: string;
-    /** reCAPTCHA v3 only. Default 0.5. */
-    minScore?: number;
 };
 
 /** The twelve field kinds a form's `fields` blocks compose from. */

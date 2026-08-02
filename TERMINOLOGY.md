@@ -154,9 +154,15 @@ After each successful backup, the plugin prunes the oldest artifacts so that at 
 
 ## Merge tag vs Placeholder (forms)
 
-**Merge tag** — a `{{token}}` an author writes into a form's email subject or body, substituted with that submission's values at send time (`emails/merge-tags.ts` in `@astromech/forms`). `{{fieldName}}`, plus `{{formTitle}}` and `{{submittedAt}}`. Unknown tags are left visible rather than silently deleted. The term is the form world's own — Gravity Forms, Mailchimp.
+**Merge tag** — a `{{token}}` an author writes into a form notification's recipient, subject or body, substituted with that submission's values at send time (`notifications/merge-tags.ts` in `@astromech/forms`). `{{fieldName}}`, plus `{{formTitle}}` and `{{submittedAt}}`. Unknown tags are left visible rather than silently deleted. The term is the form world's own — Gravity Forms, Mailchimp.
 
 **Placeholder** — a form field's greyed-out input hint, stored as the `placeholder` key on a field block. Never means `{{token}}`; the two were both called "placeholder" until the vocabulary was split.
+
+---
+
+## Notification (forms)
+
+One message an editor configures to be sent when a submission is accepted, stored as a block instance on the form's `notifications` field. The block's kind (`_type`) selects the **notification provider** that delivers it — `email` is the only built-in. There is no separate "confirmation": an email notification addressed to a literal address is a site notification, one addressed to a merge tag such as `{{email}}` is a confirmation to the submitter, and nothing in the code distinguishes them.
 
 ---
 

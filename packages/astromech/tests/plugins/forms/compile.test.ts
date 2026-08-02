@@ -10,10 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { processFields } from '@/fields/pipeline.js';
-import {
-    compileFormFields,
-    firstEmailFieldName,
-} from '../../../../plugins/forms/src/fields/compile.js';
+import { compileFormFields } from '../../../../plugins/forms/src/fields/compile.js';
 
 describe('compileFormFields', () => {
     it('compiles a text block', () => {
@@ -225,36 +222,5 @@ describe('compileFormFields', () => {
         expect(compileFormFields(null)).toEqual([]);
         expect(compileFormFields('not an array')).toEqual([]);
         expect(compileFormFields({ not: 'an array' })).toEqual([]);
-    });
-});
-
-describe('firstEmailFieldName', () => {
-    it('returns the name of the first enabled email block', () => {
-        const name = firstEmailFieldName([
-            { _type: 'text', name: 'firstName', label: 'First name' },
-            { _type: 'email', name: 'workEmail', label: 'Work email' },
-            { _type: 'email', name: 'personalEmail', label: 'Personal email' },
-        ]);
-        expect(name).toBe('workEmail');
-    });
-
-    it('skips a disabled email block', () => {
-        const name = firstEmailFieldName([
-            { _type: 'email', name: 'workEmail', label: 'Work email', _disabled: true },
-            { _type: 'email', name: 'personalEmail', label: 'Personal email' },
-        ]);
-        expect(name).toBe('personalEmail');
-    });
-
-    it('returns undefined when there is no email block', () => {
-        expect(
-            firstEmailFieldName([
-                { _type: 'text', name: 'firstName', label: 'First name' },
-            ])
-        ).toBeUndefined();
-    });
-
-    it('returns undefined for non-array input', () => {
-        expect(firstEmailFieldName(undefined)).toBeUndefined();
     });
 });

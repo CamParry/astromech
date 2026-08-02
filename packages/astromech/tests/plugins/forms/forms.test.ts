@@ -33,7 +33,7 @@ import {
 import '@/transport/local/index.js'; // registers the plugin client (setPluginClient)
 import { localPlugins } from '@/transport/local/plugins.js';
 import { entries as localEntries } from '@/entries/service.js';
-import { forms } from '@astromech/forms';
+import { forms, turnstile } from '@astromech/forms';
 import type { FormsOptions, PublicForm, SubmitResult } from '@astromech/forms';
 import type { DB } from '@/database/types.js';
 import type {
@@ -46,11 +46,12 @@ import type {
 
 const FORM = 'forms/form';
 
-const SPAM: NonNullable<FormsOptions['spam']> = {
-    provider: 'turnstile',
+const SPAM_SECRET_KEY = 'secret-key-never-leaves-the-server';
+
+const SPAM: NonNullable<FormsOptions['spam']> = turnstile({
     siteKey: 'site-key-public',
-    secretKey: 'secret-key-never-leaves-the-server',
-};
+    secretKey: SPAM_SECRET_KEY,
+});
 
 /** The one entries service, typed to the wide API for these round-trips. */
 const entriesApi = (): EntriesApi => localEntries as unknown as EntriesApi;
@@ -157,24 +158,41 @@ describe('forms.get', () => {
     it('leaks neither the notification settings nor the spam secret', async () => {
         const created = await createContactForm({
             spamProtection: true,
-            notifyEnabled: true,
-            notifyTo: [{ address: 'ops@example.com' }],
-            notifySubject: 'New enquiry from {{name}}',
-            confirmEnabled: true,
-            confirmSubject: 'Thanks for getting in touch',
-            confirmToField: 'email',
+            notifications: [
+                {
+                    _type: 'email',
+                    to: 'ops@example.com',
+                    subject: 'New enquiry from {{name}}',
+                },
+                {
+                    _type: 'email',
+                    to: '{{email}}',
+                    subject: 'Thanks for getting in touch',
+                },
+            ],
         });
 
         // The read `get` performs is `full`-shaped, so all of the above IS on
         // the entry it holds. Prove that first — otherwise the assertions below
         // would pass for the wrong reason.
         const stored = await entriesApi().get({ type: FORM, id: created.id, full: true });
-        // `notifyTo` is a repeater, so the field pipeline mints an `_id` on each
-        // stored item — assert the authored data, not the normalized item shape.
-        expect(stored?.fields['notifyTo']).toEqual([
-            expect.objectContaining({ address: 'ops@example.com' }),
+        // `notifications` is a blocks field, so the field pipeline mints an
+        // `_id` on each stored instance — assert the authored data, not the
+        // normalized item shape.
+        expect(stored?.fields['notifications']).toEqual([
+            expect.objectContaining({
+                _type: 'email',
+                _id: expect.any(String),
+                to: 'ops@example.com',
+                subject: 'New enquiry from {{name}}',
+            }),
+            expect.objectContaining({
+                _type: 'email',
+                _id: expect.any(String),
+                to: '{{email}}',
+                subject: 'Thanks for getting in touch',
+            }),
         ]);
-        expect(stored?.fields['confirmToField']).toBe('email');
 
         const form = await getForm('contact');
         expect(Object.keys(form ?? {}).sort()).toEqual([
@@ -184,14 +202,14 @@ describe('forms.get', () => {
             'spam',
             'title',
         ]);
+        expect(form).not.toHaveProperty('notifications');
 
         const serialized = JSON.stringify(form);
         expect(serialized).not.toContain('ops@example.com');
         expect(serialized).not.toContain('New enquiry from');
         expect(serialized).not.toContain('Thanks for getting in touch');
-        expect(serialized).not.toContain(SPAM.secretKey);
-        expect(serialized).not.toContain('notify');
-        expect(serialized).not.toContain('confirm');
+        expect(serialized).not.toContain(SPAM_SECRET_KEY);
+        expect(serialized).not.toContain('notifications');
     });
 
     it('returns null for an unknown slug', async () => {
@@ -339,9 +357,13 @@ describe('forms.submit — the beforeSubmit gate', () => {
 
 describe('forms.submit — emails', () => {
     const NOTIFYING = {
-        notifyEnabled: true,
-        notifyTo: [{ address: 'ops@example.com' }],
-        notifySubject: 'New enquiry from {{name}}',
+        notifications: [
+            {
+                _type: 'email',
+                to: 'ops@example.com',
+                subject: 'New enquiry from {{name}}',
+            },
+        ],
     };
 
     it('sends the notification with its placeholders substituted', async () => {
@@ -373,5 +395,88 @@ describe('forms.submit — emails', () => {
 
         expect(result.ok).toBe(true);
         expect(await submissionRows()).toHaveLength(1);
+    });
+
+    // A merge tag in `to` is the whole confirmation mechanism — there is no
+    // separate confirmation notification, only this address.
+    it('resolves a merge tag in `to` to the submitter’s address', async () => {
+        await setup();
+        await createContactForm({
+            notifications: [
+                { _type: 'email', to: '{{email}}', subject: 'Thanks, {{name}}' },
+            ],
+        });
+
+        await submit({
+            slug: 'contact',
+            data: { name: 'Ada', email: 'ada@example.com' },
+        });
+
+        expect(sent).toHaveLength(1);
+        expect(sent[0]?.to).toBe('ada@example.com');
+        expect(sent[0]?.subject).toBe('Thanks, Ada');
+    });
+
+    it('sends one email per comma-separated recipient', async () => {
+        await setup();
+        await createContactForm({
+            notifications: [{ _type: 'email', to: 'ops@example.com, sales@example.com' }],
+        });
+
+        await submit({
+            slug: 'contact',
+            data: { name: 'Ada', email: 'ada@example.com' },
+        });
+
+        expect(sent.map((message) => message.to)).toEqual([
+            'ops@example.com',
+            'sales@example.com',
+        ]);
+    });
+
+    it('drops a recipient whose merge tag did not resolve', async () => {
+        await setup();
+        await createContactForm({
+            notifications: [{ _type: 'email', to: '{{noSuchField}}' }],
+        });
+
+        const result = await submit({
+            slug: 'contact',
+            data: { name: 'Ada', email: 'ada@example.com' },
+        });
+
+        expect(result.ok).toBe(true);
+        expect(sent).toHaveLength(0);
+    });
+
+    it('skips a notification the editor disabled', async () => {
+        await setup();
+        await createContactForm({
+            notifications: [
+                { _type: 'email', to: 'ops@example.com', _disabled: true },
+                { _type: 'email', to: 'sales@example.com' },
+            ],
+        });
+
+        await submit({
+            slug: 'contact',
+            data: { name: 'Ada', email: 'ada@example.com' },
+        });
+
+        expect(sent.map((message) => message.to)).toEqual(['sales@example.com']);
+    });
+
+    it('falls back to the default subject when the editor left it empty', async () => {
+        await setup();
+        await createContactForm({
+            notifications: [{ _type: 'email', to: 'ops@example.com' }],
+        });
+
+        await submit({
+            slug: 'contact',
+            data: { name: 'Ada', email: 'ada@example.com' },
+        });
+
+        expect(sent[0]?.subject).toBe('New submission — Contact');
     });
 });
