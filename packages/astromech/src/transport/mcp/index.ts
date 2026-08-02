@@ -11,8 +11,12 @@ import { loadConfig, loadRawConfig } from '@/transport/cli/config.js';
 import { generateMethodManifest } from '@/codegen/method-manifest.js';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime.js';
 import { wireEntryAccess } from '@/entries/plugin-access.js';
+import { reduceSurface, type SurfaceOptions } from '@/policies/tool-surface.js';
 import { createMcpServer } from './server.js';
 import type { AstromechConfig, MethodManifest, ResolvedConfig } from '@/types/index.js';
+
+/** Above this many exclusions, the per-method lines stop being readable. */
+const EXCLUSION_DETAIL_LIMIT = 20;
 
 /**
  * Make plugin service methods reachable.
@@ -42,7 +46,41 @@ async function registerPluginRuntime(
     registerPlugins(raw.plugins ?? [], resolved);
 }
 
-export async function runMcpServer(configPath?: string): Promise<void> {
+/**
+ * Report what the surface policy removed, on stderr.
+ *
+ * A long exclusion list is the NORMAL case for `--read-only` (most of a CMS's
+ * manifest mutates), so past a threshold the per-method lines are replaced by a
+ * count per reason. Losing which ids went is acceptable; `astromech methods
+ * --json` answers that precisely, and the reason breakdown is what a human
+ * scanning startup output actually needs.
+ */
+function reportExclusions(excluded: readonly { id: string; reason: string }[]): void {
+    if (excluded.length <= EXCLUSION_DETAIL_LIMIT) {
+        for (const { id, reason } of excluded) {
+            console.error(`[astromech mcp] excluded ${id}: ${reason}`);
+        }
+        return;
+    }
+
+    const counts = new Map<string, number>();
+    for (const { reason } of excluded) {
+        counts.set(reason, (counts.get(reason) ?? 0) + 1);
+    }
+    for (const [reason, count] of counts) {
+        console.error(`[astromech mcp] excluded ${count} methods: ${reason}`);
+    }
+}
+
+/**
+ * @param surface Capability reduction applied BEFORE the tool list is built, so
+ * an excluded method never becomes a tool and never enters the dispatch map.
+ * Filtering the tool list alone would leave the method callable by name.
+ */
+export async function runMcpServer(
+    configPath?: string,
+    surface: SurfaceOptions = {}
+): Promise<void> {
     const raw = await loadRawConfig(configPath);
     const resolved = await loadConfig(configPath);
     await registerPluginRuntime(raw, resolved);
@@ -51,18 +89,22 @@ export async function runMcpServer(configPath?: string): Promise<void> {
         generateMethodManifest(resolved, raw.plugins ?? [])
     ) as MethodManifest;
 
-    const { server, tools, skipped } = createMcpServer(manifest);
+    const { methods, excluded } = reduceSurface(manifest.methods, surface);
+    const { server, tools, skipped } = createMcpServer({ ...manifest, methods });
 
     console.error(
-        `[astromech mcp] ready: ${tools.length} tools, ${skipped.length} skipped`
+        `[astromech mcp] ready: ${tools.length} tools, ${skipped.length} skipped, ` +
+            `${excluded.length} excluded by surface`
     );
 
-    // One line per skip, with its reason: a deliberate omission (a `File` input)
-    // and a missing descriptor look identical in a bare list of ids, and the
-    // point of the generic dispatcher is that the difference is now knowable.
+    // Skipped and excluded stay distinct: a skip is a method that could not be
+    // projected (binary input, no schema), an exclusion is a deliberate policy
+    // choice. Collapsing them would make a misconfigured `--include` look like a
+    // codegen gap.
     for (const { id, reason } of skipped) {
         console.error(`[astromech mcp] skipped ${id}: ${reason}`);
     }
+    reportExclusions(excluded);
 
     const transport = new StdioServerTransport();
     await server.connect(transport);
