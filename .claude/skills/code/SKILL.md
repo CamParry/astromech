@@ -17,9 +17,18 @@ user-invocable: false
 - No `enum` — use union types: `type Status = 'draft' | 'published'`
 - Optional presence: `!== undefined`, not truthiness (`false`/`0`/`''` are valid)
 - Ignored promises: prefix with `void` (e.g. `void navigate(...)`)
-- Comments only when logic is non-obvious
+- Comments: see below
 - No `style={{...}}` — use a BEM modifier class
 - Imports: `@/` aliases only, UI components from `@/components/ui/index.js`
+
+## Comments
+
+- **One short block above every function.** This is open-source — a reader needs to know what each one does.
+- **Three lines of text maximum**, file headers included. More only for genuinely complex logic.
+- Say what it does and where it fits. **Why only when the code would otherwise read as wrong.**
+- Inline comments only for non-obvious behaviour. Never restate the code.
+- **No flair, no rhetorical emphasis** ("this is the whole point", "THIS IS THE ONLY…").
+- **No history, no rejected alternatives, no naming justifications.** Established naming needs no defence in a comment — put the record in `decisions/`.
 
 ## Data access (storage pattern)
 
