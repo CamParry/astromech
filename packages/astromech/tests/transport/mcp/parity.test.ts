@@ -27,6 +27,7 @@ vi.mock('@/entries/service.js', () => ({
     },
 }));
 import { resolveConfig } from '@/kernel/config-resolver.js';
+import { reduceSurface } from '@/policies/tool-surface.js';
 import { buildDispatch } from '@/transport/mcp/dispatch.js';
 import { buildTools } from '@/transport/mcp/tools.js';
 import type {
@@ -314,5 +315,63 @@ describe('manifest ↔ MCP tool coverage', () => {
 
         const passed = (await invoke?.({ id: 'abc' })) as { type: string };
         expect(passed.type).toBe('test_my_plugin/widget');
+    });
+});
+
+// ============================================================================
+// Surface reduction — the DISPATCH map is what actually lets a call through
+// ============================================================================
+
+describe('reduced surface ↔ MCP tools', () => {
+    /** Reduce the real manifest, then build tools from it exactly as the transport does. */
+    function build(options: Parameters<typeof reduceSurface>[1]) {
+        const { methods, excluded } = reduceSurface(manifest.methods, options);
+        return { ...buildTools({ ...manifest, methods }), excluded };
+    }
+
+    it('an excluded method has no tool AND no dispatch entry', () => {
+        // Proving the tool LIST shrank is not enough: `CallToolRequest` looks the
+        // name up in the dispatch map, so a method left in the map is callable
+        // by a client that simply remembers its name from a previous session.
+        const { tools, dispatch } = build({ exclude: ['entries.posts.publish'] });
+
+        expect(tools.map((t) => t.name)).not.toContain('entries_posts_publish');
+        expect(dispatch.has('entries_posts_publish')).toBe(false);
+        // Its sibling is untouched, so this is reduction, not a broken build.
+        expect(dispatch.has('entries_posts_unpublish')).toBe(true);
+    });
+
+    it('a read-only surface leaves no mutating method dispatchable', () => {
+        const full = buildTools(manifest);
+        const { tools, dispatch } = build({ readOnly: true });
+
+        expect(tools.length).toBeLessThan(full.tools.length);
+        expect(dispatch.size).toBe(tools.length);
+
+        const mutatingToolNames = new Set(
+            manifest.methods
+                .filter((m) => m.mutates)
+                .flatMap((m) => {
+                    const result = buildDispatch(m);
+                    return result.ok ? [result.tool.toolName] : [];
+                })
+        );
+        expect(mutatingToolNames.size).toBeGreaterThan(0);
+        for (const name of mutatingToolNames) {
+            expect(dispatch.has(name), `${name} is still dispatchable`).toBe(false);
+        }
+    });
+
+    it('read-only wins over an explicit include, end to end', () => {
+        const { tools, dispatch, excluded } = build({
+            readOnly: true,
+            include: ['users.create'],
+        });
+
+        expect(tools).toHaveLength(0);
+        expect(dispatch.size).toBe(0);
+        expect(excluded.find((e) => e.id === 'users.create')?.reason).toContain(
+            'read-only'
+        );
     });
 });

@@ -6,8 +6,10 @@ import {
     type AnnotatedManifestMethod,
 } from '@/policies/annotate-manifest.js';
 import { resolveRoles } from '@/permissions/index.js';
+import { reduceSurface, type ExcludedMethod } from '@/policies/tool-surface.js';
 import type { ManifestMethod, MethodManifest, ResolvedConfig } from '@/types/index.js';
 import { printError } from '../output.js';
+import { surfaceArgs, toSurfaceOptions } from '../surface-args.js';
 
 /**
  * Resolve a role slug, rejecting one that is not configured.
@@ -25,6 +27,27 @@ function requireRole(config: ResolvedConfig, slug: string) {
         );
     }
     return role;
+}
+
+/**
+ * The trailing "n excluded" summary, one line per reason.
+ *
+ * Printed rather than left implicit because the alternative — a listing that is
+ * simply shorter — reads as "that method does not exist" to whoever runs this to
+ * find out why an MCP tool is missing, which is the exact question this command
+ * answers.
+ */
+function printExclusionSummary(excluded: ExcludedMethod[]): void {
+    if (excluded.length === 0) return;
+
+    const counts = new Map<string, number>();
+    for (const { reason } of excluded) {
+        counts.set(reason, (counts.get(reason) ?? 0) + 1);
+    }
+    const breakdown = [...counts]
+        .map(([reason, count]) => `${count} ${reason}`)
+        .join('; ');
+    console.log(`\n${excluded.length} excluded by surface policy: ${breakdown}`);
 }
 
 /** `allowed` rendered for a human: absent when the flag was not passed. */
@@ -51,6 +74,7 @@ export default defineCommand({
         },
         json: { type: 'boolean', default: false, description: 'Output as JSON' },
         config: { type: 'string', description: 'Path to astromech.config.ts' },
+        ...surfaceArgs,
     },
     async run({ args }) {
         try {
@@ -61,25 +85,45 @@ export default defineCommand({
                 generateMethodManifest(resolved, plugins)
             ) as MethodManifest;
 
-            let methods: (ManifestMethod | AnnotatedManifestMethod)[] = manifest.methods;
+            let listed: ManifestMethod[] = manifest.methods;
 
             if (args.source !== undefined) {
-                methods = methods.filter((m) => m.source === args.source);
+                listed = listed.filter((m) => m.source === args.source);
             }
             if (args.filter !== undefined) {
                 const f = args.filter.toLowerCase();
-                methods = methods.filter((m) => m.name.toLowerCase().includes(f));
+                listed = listed.filter((m) => m.name.toLowerCase().includes(f));
             }
+
+            // Surface reduction runs after the view filters, so `excluded` is
+            // scoped to what was being listed rather than reporting the whole
+            // manifest. The kept set is the same either way — both are
+            // conjunctive — so `astromech methods --read-only` still names
+            // exactly what `astromech mcp --read-only` serves.
+            const surface = reduceSurface(listed, toSurfaceOptions(args));
+
+            let methods: (ManifestMethod | AnnotatedManifestMethod)[] = surface.methods;
             if (args.role !== undefined) {
                 methods = annotateManifest(
-                    methods as ManifestMethod[],
+                    surface.methods,
                     requireRole(resolved, args.role)
                 );
             }
 
             if (args.json) {
+                // `excluded` travels alongside rather than being dropped: a JSON
+                // consumer that cannot see what was removed cannot tell a
+                // reduced surface from a missing method.
                 console.log(
-                    JSON.stringify({ version: manifest.version, methods }, null, 2)
+                    JSON.stringify(
+                        {
+                            version: manifest.version,
+                            methods,
+                            excluded: surface.excluded,
+                        },
+                        null,
+                        2
+                    )
                 );
                 return;
             }
@@ -107,6 +151,8 @@ export default defineCommand({
 
                 console.log(`${m.name}${effectPart}  (permission: ${permission})`);
             }
+
+            printExclusionSummary(surface.excluded);
         } catch (e) {
             printError(e, { json: args.json });
         }
