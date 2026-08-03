@@ -1,7 +1,7 @@
 /**
  * @astromech/authoring — an AI authoring assistant for the Astromech admin.
- * Identity, options, the permission it grants and the streaming chat route.
- * The admin drawer that talks to that route lands in a later change.
+ * Identity, options, the permission it grants, the streaming chat route and
+ * the admin drawer that talks to it.
  */
 
 import { definePlugin, withDefaults } from 'astromech';
@@ -38,6 +38,15 @@ export const authoring = definePlugin((options?: AuthoringOptions) => {
         permissions: authoringPermissions,
         // Streaming only — the chat response is server-sent events.
         rawRoutes: chatRoutes(resolved),
+        admin: {
+            slots: [
+                {
+                    slot: 'right-drawer',
+                    component: './admin/slots/chat-drawer.tsx',
+                    permission: 'use',
+                },
+            ],
+        },
     };
 });
 
