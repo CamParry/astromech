@@ -32,7 +32,9 @@
         "react": "^19.0.0"
     },
     "dependencies": {
-        "@anthropic-ai/sdk": "^0.115.0"
+        "@anthropic-ai/sdk": "^0.115.0",
+        "react-markdown": "^10.1.0",
+        "remark-gfm": "^4.0.1"
     },
     "devDependencies": {
         "astromech": "*"

@@ -117,6 +117,138 @@
     border-radius: var(--am-radius-lg);
 }
 
+.am-authoring-markdown {
+    max-width: 100%;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--am-color-text-default);
+    overflow-wrap: anywhere;
+
+    & > :first-child {
+        margin-top: 0;
+    }
+
+    & > :last-child {
+        margin-bottom: 0;
+    }
+}
+
+.am-authoring-markdown h1 {
+    margin: 1em 0 0.5em;
+    font-size: 1.25em;
+    font-weight: 700;
+}
+
+.am-authoring-markdown h2 {
+    margin: 1em 0 0.5em;
+    font-size: 1.125em;
+    font-weight: 600;
+}
+
+.am-authoring-markdown h3,
+.am-authoring-markdown h4,
+.am-authoring-markdown h5,
+.am-authoring-markdown h6 {
+    margin: 1em 0 0.5em;
+    font-size: 1em;
+    font-weight: 600;
+}
+
+.am-authoring-markdown p {
+    margin: 0.5em 0;
+}
+
+.am-authoring-markdown ul,
+.am-authoring-markdown ol {
+    padding-left: 1.5em;
+    margin: 0.5em 0;
+}
+
+.am-authoring-markdown ul ul,
+.am-authoring-markdown ul ol,
+.am-authoring-markdown ol ul,
+.am-authoring-markdown ol ol {
+    margin: 0.25em 0;
+}
+
+.am-authoring-markdown li {
+    margin: 0.25em 0;
+}
+
+.am-authoring-markdown strong {
+    font-weight: 600;
+}
+
+.am-authoring-markdown em {
+    font-style: italic;
+}
+
+.am-authoring-markdown s {
+    text-decoration: line-through;
+}
+
+.am-authoring-markdown code {
+    padding: 0.125rem 0.25rem;
+    font-family: var(--am-font-mono, monospace);
+    font-size: 0.875em;
+    background-color: var(--am-color-bg-subtle);
+    border-radius: 0.25rem;
+}
+
+.am-authoring-markdown pre {
+    padding: 0.75rem 1rem;
+    margin: 0.5em 0;
+    overflow-x: auto;
+    background-color: var(--am-color-bg-subtle);
+    border-radius: var(--am-radius-sm);
+}
+
+.am-authoring-markdown pre code {
+    padding: 0;
+    font-size: 0.875em;
+    background-color: transparent;
+    border-radius: 0;
+}
+
+.am-authoring-markdown blockquote {
+    padding-left: 1rem;
+    margin: 0.5em 0;
+    font-style: italic;
+    color: var(--am-color-text-muted);
+    border-left: 4px solid var(--am-color-border);
+}
+
+.am-authoring-markdown hr {
+    margin: 1rem 0;
+    border: none;
+    border-top: 1px solid var(--am-color-border);
+}
+
+.am-authoring-markdown a {
+    color: var(--am-richtext-link-color);
+    text-decoration: underline;
+}
+
+.am-authoring-markdown table {
+    display: block;
+    max-width: 100%;
+    margin: 0.5em 0;
+    overflow-x: auto;
+    font-size: 0.8125rem;
+    border-collapse: collapse;
+}
+
+.am-authoring-markdown th,
+.am-authoring-markdown td {
+    padding: 0.25rem 0.5rem;
+    text-align: left;
+    border: 1px solid var(--am-color-border);
+}
+
+.am-authoring-markdown th {
+    font-weight: 600;
+}
+
 .am-authoring-tool {
     padding: calc(var(--am-space) * 1) calc(var(--am-space) * 2);
     font-size: 0.75rem;
