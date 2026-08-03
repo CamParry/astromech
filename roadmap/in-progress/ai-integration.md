@@ -343,9 +343,27 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       intersection rather than on `AstromechClient` (which the fetch Client also
       implements), so the browser admin reaches these operations over HTTP, not
       through the typed client — the decision to revisit when P7's drawer lands.
-- [ ] **P6 — context bus** — ambient-context contributors; routes publish a typed
-      reference for deixis ("this page"). Must live in a `role: 'system'` message,
-      not the system prompt, or every navigation invalidates the prompt cache.
+- [ ] **P6 — AI context** — admin routes declare a typed `AIContextReference`
+      (`{ kind, type?, id?, label }`) for what the user is looking at, so a model
+      can resolve deixis ("this page", "this field"). Assembled into a
+      `role: 'system'` message inside `messages[]`, **not** the system prompt, or
+      every navigation invalidates the prompt cache — the same reasoning that
+      already fixes the manifest's sort order in `codegen/method-manifest.ts`.
+      Contributions are an ordered list, not a flat set: a layout, its route and
+      a focused field editor can contribute at once, and order decides what
+      "this" refers to.
+    - Renamed from **context bus** on 2026-08-03, before any code was written.
+      "Bus" means _event bus_ to a web developer — `emit`/`subscribe`,
+      many-to-many, subscribers reacting — and this has one consumer, no events,
+      and is pulled at send time. `publish` went with it (same pub/sub family;
+      a route states what it is about, it does not broadcast). "Ambient" names a
+      quality rather than the thing; "UI context" collides with React's
+      `useContext` and points the wrong way; "awareness" is a state, not a value;
+      "insight" is model output, not model input. Full rationale and the general
+      naming rule it produced: `decisions/0005-ai-context-naming.md`.
+    - The `AI` prefix is load-bearing, not decoration: `src/context/` is already
+      the server-side `AsyncLocalStorage` request context, and it is on admin's
+      forbidden-import list in `.dependency-cruiser.cjs`.
 - [ ] **P7 — authoring plugin** — Claude adapter + tool-loop over the manifest +
       chat drawer.
 

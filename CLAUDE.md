@@ -26,6 +26,19 @@ Nothing in this project is live yet — it's in active development. Optimise for
 - **Clarify before acting:** If a task is ambiguous or the right approach depends on an unclear requirement, ask first — don't assume and proceed.
 - **Reflect on focus shifts:** When the focus of work changes significantly, pause to consider: are there lessons learned that belong in a skill? Anything worth saving to memory? Does the `roadmap/` directory need updating (a feature's status changed → move its file between `planned/`, `in-progress/`, `completed/`; or add a new feature file)?
 
+## Naming
+
+Astromech should read as if written by someone fluent in the existing web ecosystem — not as a private dialect a contributor has to be taught. **Use the established, commonly understood word wherever one exists.** Almost everything here has a well-worn name in the Astro / TanStack / Hono / Payload / Strapi / Drizzle world already; reach for that name before inventing one.
+
+Before adopting a term, check what it already means to a web developer:
+
+- **Don't reuse a word that's taken in-domain.** "Bus" means _event bus_ (`emit`/`subscribe`); bare "context" means React context; "adapter", "middleware", "hook", "store", "provider", "signal" all carry specific expectations. A colliding name costs the reader more than a plain one — they arrive with the wrong mental model and have to unlearn it.
+- **Don't name a quality, a vibe, or an outcome.** "Ambient", "awareness", "insight", "smart", "unified", "orchestrator" sound technical while carrying no information. These are the names most likely to get reached for when the thing isn't yet clearly understood — treat wanting one as a signal to go and understand the thing.
+- **Don't coin unless nothing fits.** Every coinage is vocabulary every future reader must be taught. When one is genuinely unavoidable, it gets a `TERMINOLOGY.md` entry stating what it means and what it was chosen over.
+- **Prefer boring and literal to clever.** A name that a stranger guesses correctly on first read has done its job.
+
+Where a name was contested, record the comparison rather than just the winner — `TERMINOLOGY.md` for what a term means today, `decisions/` for why it beat the alternatives. `decisions/0005-ai-context-naming.md` is the worked example.
+
 ## CSS Conventions
 
 - All sizing values (widths, heights, padding, gap, margin, etc.) must be multiples of `0.25rem`. No arbitrary values like `2.2rem` or `7.1rem`.

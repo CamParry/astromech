@@ -2,6 +2,12 @@
 
 Terms that are ambiguous, easily confused, or have meaningful design decisions behind their naming.
 
+Names here are chosen from established web-ecosystem vocabulary wherever one
+fits, and a term that already means something specific to a web developer is not
+reused for something else — see `decisions/0005-ai-context-naming.md`. An entry
+below exists to record which common word was picked and what it was picked over,
+not to introduce a private one.
+
 ---
 
 ## Driver
@@ -183,3 +189,15 @@ One message an editor configures to be sent when a submission is accepted, store
 **Tables** — a directory of `defineTable` / `definePluginTable` descriptors and nothing else. Every table-bearing plugin keeps its descriptors in `src/tables/`, publishes them (where a consumer needs them) as a `./tables` subpath, and `astromech plugin:generate --tables` reads that module to diff against the package's migration snapshot.
 
 **Schema** — the aggregate shape, or a module that mixes descriptors with validation. Core's `<domain>/schema.ts` holds both table descriptors and the domain's Zod request schemas, so it keeps the wider word; likewise `astromech/db/schema` (every table plus the codec and driver) and `@astromech/schema-engine` (diffing and rendering DDL). A `schema` that means "just these tables" is the one usage that has been retired.
+
+---
+
+## AI context
+
+What an admin route declares about the thing the user is currently looking at, so a model can resolve "this page" or "this field". A route contributes an `AIContextReference` (`{ kind, type?, id?, label }`) via `useAIContext`; the chat drawer assembles the current ordered set into a `role: 'system'` message inside `messages[]` — never into the system prompt, which would invalidate the prompt cache on every navigation.
+
+Contributions are ordered, not a flat set: a layout, its route and a focused field editor can all contribute at once, and order is what decides which one "this" refers to.
+
+> **Why not "context bus"?** In web development "bus" means _event bus_ — `emit`/`subscribe`, many-to-many, subscribers reacting. This has one consumer, no events, and is pulled at send time. "Ambient context", "UI context", "AI awareness" and "AI insight" were also rejected; `decisions/0005-ai-context-naming.md` records why.
+
+Distinct from **React context**, which is a rendering mechanism and unrelated. The `AI` prefix is load-bearing — bare "context" in this codebase means React's.
