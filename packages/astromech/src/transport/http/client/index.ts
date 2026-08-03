@@ -540,7 +540,7 @@ const mediaApi: MediaApi = {
         const formData = new FormData();
         formData.append('file', params.file);
 
-        const response = await fetch(`${apiBase}/media`, {
+        const response = await fetch(`${apiBase}/media/upload`, {
             method: 'POST',
             credentials: 'include',
             body: formData,
