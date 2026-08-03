@@ -7,7 +7,7 @@
 
 import React, { useEffect } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useForm } from '@tanstack/react-form';
+import { useForm, useStore } from '@tanstack/react-form';
 import { useTranslation } from 'react-i18next';
 import {
     Button,
@@ -70,6 +70,10 @@ function UserCreatePage(): React.ReactElement {
             });
         },
     });
+
+    // `form.state` is a plain getter — reading it in render never re-renders on
+    // change, so the button would never reflect the submitting state.
+    const isSubmitting = useStore(form.store, (state) => state.isSubmitting);
 
     function handleSave() {
         void form.handleSubmit();
@@ -204,7 +208,7 @@ function UserCreatePage(): React.ReactElement {
                             <Button
                                 onClick={handleSave}
                                 loading={createMutation.isPending}
-                                disabled={form.state.isSubmitting}
+                                disabled={isSubmitting}
                             >
                                 {t('common.create')}
                             </Button>

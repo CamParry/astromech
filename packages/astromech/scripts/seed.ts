@@ -946,7 +946,7 @@ async function seed(): Promise<void> {
                             priority: 'high',
                             tags: ['frontend', 'backend'],
                             cta_link: {
-                                href: 'https://astromech.dev/docs',
+                                url: 'https://astromech.dev/docs',
                                 label: 'Read the Docs',
                                 target: '_blank',
                             },
@@ -987,7 +987,7 @@ async function seed(): Promise<void> {
                             features: ['Dark Mode'],
                             priority: 'low',
                             cta_link: {
-                                href: 'https://example.com',
+                                url: 'https://example.com',
                                 label: 'Example',
                                 target: '_self',
                             },
