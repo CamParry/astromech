@@ -114,12 +114,18 @@ module-level singleton — tsup emits several entry chunks and a value set in
 Astro's `config:setup` is invisible to the Vite SSR context at request time
 unless it lives on `globalThis`.
 
-**The registry must be populated lazily, not only at boot.** `initRuntime` runs
-inside `config:setup`, which is build/config time; in a deployed Worker it does
-not re-run per request. So the content service resolves its provider on first
-use — registry first, live config second — the same shape `getDocumentValidator`
-uses and the same trap the Astro lifecycle seeding note already records. A plugin
-registering through `setup()` at boot is the fast path, not the only path.
+**The registry is the only path — there is no config fallback, and there cannot
+be one.** A provider is a function and `virtual:astromech/config` is
+`JSON.stringify`'d, so it can never arrive through config; the escape hatch that
+works for authored validators does not work here. (An earlier draft of this
+section said "registry first, live config second". That was wrong.)
+
+What the registry must therefore survive is the lifecycle: `initRuntime` runs
+inside `config:setup`, which is build/config time and does not re-run per request
+in a deployed Worker — the same trap the Astro lifecycle seeding note records. So
+registration must be idempotent and safe to call again from a request-time boot
+path. A plugin registering through `setup()` at boot is the fast path, not the
+only one, and `set` being a plain slot assignment is what makes that free.
 
 The Claude adapter lives in the authoring plugin with a BYO key via
 `requiredEnv`, read from `ctx.env`. Secrets do not go near
