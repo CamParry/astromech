@@ -110,6 +110,51 @@ export class PublicTrashedReadError extends Error {
 }
 
 /**
+ * Thrown when `where: { references }` is malformed or names a schema path that
+ * no queried type declares a relationship field at.
+ *
+ * A typo'd path would otherwise compile to a predicate matching nothing and
+ * return an empty page with a confident total — the same silent-drop class the
+ * `where` allow-list has.
+ */
+export class InvalidReferencesFilterError extends Error {
+    public readonly entryTypes: string[];
+    public readonly knownPaths: string[];
+
+    constructor(args: { detail: string; entryTypes: string[]; knownPaths: string[] }) {
+        const known =
+            args.knownPaths.length > 0 ? args.knownPaths.join(', ') : '(none declared)';
+        super(
+            `[astromech] entries.query: ${args.detail} ` +
+                `Queried types: ${args.entryTypes.join(', ')}. ` +
+                `Known relationship paths: ${known}.`
+        );
+        this.name = 'InvalidReferencesFilterError';
+        this.entryTypes = args.entryTypes;
+        this.knownPaths = args.knownPaths;
+    }
+}
+
+/**
+ * Thrown when `where: { references }` reaches a `tableStorage`-backed entry
+ * type. That storage lists an arbitrary table and cannot compile the index
+ * subquery, so the filter is refused rather than returning unfiltered rows.
+ */
+export class RelationshipFilterUnsupportedError extends Error {
+    public readonly entryType: string;
+
+    constructor(entryType: string) {
+        super(
+            `Entry type '${entryType}' is backed by tableStorage, which cannot ` +
+                `filter on the relationships index. \`where: { references }\` ` +
+                `requires the built-in entry storage.`
+        );
+        this.name = 'RelationshipFilterUnsupportedError';
+        this.entryType = entryType;
+    }
+}
+
+/**
  * Thrown when a route or entries-service operation is attempted on an entry type
  * that does not support the required capability.
  */

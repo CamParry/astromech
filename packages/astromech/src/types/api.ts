@@ -36,6 +36,20 @@ export type SortDirection = 'asc' | 'desc';
 // Drizzle-style: { createdAt: 'desc' } or [{ status: 'asc' }, { createdAt: 'desc' }]
 export type SortOption = Record<string, SortDirection>;
 
+/**
+ * `where: { references: { path, id } }` — sources holding a relationship to
+ * `id` at schema path `path` (`author`, `sections[].gallery`). Id-only: the
+ * path is checked against the queried types' schemas and throws when unknown.
+ */
+export type ReferencesFilter = {
+    path: string;
+    id: string;
+};
+
+/**
+ * Flat `where` DSL. Left open because callers pass column filters of every
+ * shape; the one non-column key is `references`, a {@link ReferencesFilter}.
+ */
 export type WhereFilters = Record<string, unknown>;
 
 export type QueryOptions = {
@@ -95,7 +109,7 @@ export type IncomingRelation = {
     /** Type of the source entry (only `'entry'`-source rows are returned). */
     sourceType: string;
     /** Schema path of the relationship field on the source (`sections[].author`). */
-    name: string;
+    schemaPath: string;
 };
 
 /** Update payload fragment — fields that can be modified after creation. */

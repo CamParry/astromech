@@ -1,10 +1,14 @@
 /**
- * Unit tests for `collectRelationshipEdges` — the pure traversal that derives
- * the relationships index from field data. No db, no config.
+ * Unit tests for the pure relationship traversals: `collectRelationshipEdges`
+ * (schema + data → index rows) and `collectRelationshipSchemaPaths` (schema
+ * alone → the query allow-list). No db, no config.
  */
 
 import { describe, expect, it } from 'vitest';
-import { collectRelationshipEdges } from '@/fields/relationship-edges.js';
+import {
+    collectRelationshipEdges,
+    collectRelationshipSchemaPaths,
+} from '@/fields/relationship-edges.js';
 import type { FieldDefinition } from '@/types/index.js';
 
 describe('collectRelationshipEdges — top-level fields', () => {
@@ -223,5 +227,143 @@ describe('collectRelationshipEdges — determinism', () => {
         expect(collectRelationshipEdges(defs, stored)).toEqual(
             collectRelationshipEdges(defs, stored)
         );
+    });
+});
+
+// ============================================================================
+// collectRelationshipSchemaPaths — definitions only, no values
+// ============================================================================
+
+describe('collectRelationshipSchemaPaths', () => {
+    it('returns an empty list for a schema declaring no relations', () => {
+        const defs: FieldDefinition[] = [
+            { name: 'body', type: 'text' },
+            { name: 'seo', type: 'group', fields: [{ name: 'title', type: 'text' }] },
+        ];
+        expect(collectRelationshipSchemaPaths(defs)).toEqual([]);
+    });
+
+    it('reports a flat relationship and a media field', () => {
+        const defs: FieldDefinition[] = [
+            { name: 'author', type: 'relationship', target: 'people' },
+            { name: 'hero', type: 'media' },
+        ];
+        expect(collectRelationshipSchemaPaths(defs)).toEqual(['author', 'hero']);
+    });
+
+    it('walks into a group', () => {
+        const defs: FieldDefinition[] = [
+            {
+                name: 'seo',
+                type: 'group',
+                fields: [{ name: 'image', type: 'media' }],
+            },
+        ];
+        expect(collectRelationshipSchemaPaths(defs)).toEqual(['seo.image']);
+    });
+
+    it('collapses repeater items to the `[]` form', () => {
+        const defs: FieldDefinition[] = [
+            {
+                name: 'items',
+                type: 'repeater',
+                fields: [
+                    { name: 'author', type: 'relationship', target: 'people' },
+                    { name: 'gallery', type: 'media', multiple: true },
+                ],
+            },
+        ];
+        expect(collectRelationshipSchemaPaths(defs)).toEqual([
+            'items[].author',
+            'items[].gallery',
+        ]);
+    });
+
+    it('walks into a tree', () => {
+        const defs: FieldDefinition[] = [
+            {
+                name: 'nav',
+                type: 'tree',
+                fields: [{ name: 'link', type: 'relationship', target: 'page' }],
+            },
+        ];
+        expect(collectRelationshipSchemaPaths(defs)).toEqual(['nav[].link']);
+    });
+
+    // The probe carries one item per declared block type; without it `blocks`
+    // yields no scope at all and every nested relation would go unreported.
+    it('reports a path inside each declared block type', () => {
+        const defs: FieldDefinition[] = [
+            {
+                name: 'content',
+                type: 'blocks',
+                blocks: [
+                    {
+                        type: 'hero',
+                        fields: [{ name: 'image', type: 'media' }],
+                    },
+                    {
+                        type: 'quote',
+                        fields: [
+                            { name: 'source', type: 'relationship', target: 'people' },
+                        ],
+                    },
+                ],
+            },
+        ];
+        expect(collectRelationshipSchemaPaths(defs)).toEqual([
+            'content[].image',
+            'content[].source',
+        ]);
+    });
+
+    it('de-duplicates a path two block types both declare', () => {
+        const defs: FieldDefinition[] = [
+            {
+                name: 'content',
+                type: 'blocks',
+                blocks: [
+                    {
+                        type: 'hero',
+                        fields: [{ name: 'image', type: 'media' }],
+                    },
+                    {
+                        type: 'banner',
+                        fields: [{ name: 'image', type: 'media' }],
+                    },
+                ],
+            },
+        ];
+        expect(collectRelationshipSchemaPaths(defs)).toEqual(['content[].image']);
+    });
+
+    it('accumulates segments through nested containers', () => {
+        const defs: FieldDefinition[] = [
+            {
+                name: 'sections',
+                type: 'repeater',
+                fields: [
+                    {
+                        name: 'meta',
+                        type: 'group',
+                        fields: [
+                            { name: 'author', type: 'relationship', target: 'people' },
+                        ],
+                    },
+                ],
+            },
+        ];
+        expect(collectRelationshipSchemaPaths(defs)).toEqual(['sections[].meta.author']);
+    });
+
+    it('unwraps layout containers, which hold no data key', () => {
+        const defs: FieldDefinition[] = [
+            {
+                name: 'main',
+                type: 'section',
+                fields: [{ name: 'author', type: 'relationship', target: 'people' }],
+            },
+        ];
+        expect(collectRelationshipSchemaPaths(defs)).toEqual(['author']);
     });
 });
