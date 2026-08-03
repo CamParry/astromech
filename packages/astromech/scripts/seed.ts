@@ -302,7 +302,7 @@ async function seed(): Promise<void> {
                         _type: 'hero',
                         heading: 'Every field type, once',
                         subheading: 'A dev fixture, not the marketing site.',
-                        cta: { href: '/about', label: 'About', target: '_self' },
+                        cta: { url: '/about', label: 'About', target: '_self' },
                         image: mediaHeroId,
                     },
                     {
@@ -565,7 +565,7 @@ async function seed(): Promise<void> {
                         _type: 'hero',
                         heading: 'Chaque type de champ, une fois',
                         subheading: "Un jeu d'essai, pas le site marketing.",
-                        cta: { href: '/about', label: 'À propos', target: '_self' },
+                        cta: { url: '/about', label: 'À propos', target: '_self' },
                         image: mediaHeroId,
                     },
                 ],

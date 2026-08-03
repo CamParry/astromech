@@ -13,6 +13,7 @@
 
 import React from 'react';
 import { useNavigate, Link as RouterLink } from '@tanstack/react-router';
+import { useStore } from '@tanstack/react-form';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui/react/menu';
 import {
@@ -198,6 +199,10 @@ export function EntryEditPage({
         },
     });
 
+    // `form.state` is a plain getter — reading it in render never re-renders on
+    // change, so the unsaved-changes indicator would miss most edits.
+    const isDirty = useStore(form.store, (state) => state.isDirty);
+
     // ── Forward versioning (staged entries) ─────────────────────────────────
     const confirm = useConfirm();
     const hasStaging = capabilities?.staging === true;
@@ -322,7 +327,7 @@ export function EntryEditPage({
                         />
                     </PageTitle>
                     <PageHeaderActions>
-                        {!isReadOnly && form.state.isDirty && (
+                        {!isReadOnly && isDirty && (
                             <span className="am-form-layout-dirty-indicator">
                                 {t('common.unsavedChanges')}
                             </span>

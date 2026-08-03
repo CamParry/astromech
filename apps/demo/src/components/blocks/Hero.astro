@@ -2,12 +2,12 @@
 interface Props {
     heading: string;
     subheading?: string | null;
-    cta?: { label?: string; href?: string; url?: string } | null;
+    cta?: { label?: string; url?: string } | null;
     image?: { url?: string; alt?: string } | null;
 }
 
 const { heading, subheading, cta, image } = Astro.props;
-const ctaHref = cta?.href ?? cta?.url ?? null;
+const ctaHref = cta?.url ?? null;
 const ctaLabel = cta?.label ?? null;
 ---
 

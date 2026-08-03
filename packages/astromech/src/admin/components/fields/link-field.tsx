@@ -3,22 +3,28 @@ import { Input } from '@/admin/components/ui/input';
 import { useFieldControl } from './field-control-context';
 import './link-field.css';
 
+/** The three keys this control edits. A link value may carry others. */
 type LinkValue = {
-    href: string;
+    url: string;
     label: string;
     target: '_self' | '_blank';
 };
 
+/** Read the edited keys off a stored value, tolerating a missing or odd one. */
 function toLinkValue(v: unknown): LinkValue {
-    if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
-        const obj = v as Record<string, unknown>;
-        return {
-            href: typeof obj['href'] === 'string' ? obj['href'] : '',
-            label: typeof obj['label'] === 'string' ? obj['label'] : '',
-            target: obj['target'] === '_blank' ? '_blank' : '_self',
-        };
-    }
-    return { href: '', label: '', target: '_self' };
+    const obj = toObject(v);
+    return {
+        url: typeof obj['url'] === 'string' ? obj['url'] : '',
+        label: typeof obj['label'] === 'string' ? obj['label'] : '',
+        target: obj['target'] === '_blank' ? '_blank' : '_self',
+    };
+}
+
+/** The stored object itself, so keys this control does not edit survive a change. */
+function toObject(v: unknown): Record<string, unknown> {
+    return typeof v === 'object' && v !== null && !Array.isArray(v)
+        ? (v as Record<string, unknown>)
+        : {};
 }
 
 export function LinkField({ name, value, onChange, disabled }: BaseFieldProps) {
@@ -28,23 +34,23 @@ export function LinkField({ name, value, onChange, disabled }: BaseFieldProps) {
     const { ariaProps } = useFieldControl();
 
     function handleChange(key: keyof LinkValue, val: string) {
-        onChange(name, { ...link, [key]: val });
+        onChange(name, { ...toObject(value), ...link, [key]: val });
     }
 
     return (
         <div className="am-link-field">
             <div className="am-link-field-row">
-                <label className="am-link-field-label" htmlFor={`${name}--href`}>
+                <label className="am-link-field-label" htmlFor={`${name}--url`}>
                     URL
                 </label>
                 <Input
-                    id={`${name}--href`}
+                    id={`${name}--url`}
                     type="url"
-                    name={`${name}[href]`}
-                    value={link.href}
+                    name={`${name}[url]`}
+                    value={link.url}
                     placeholder="https://"
                     disabled={disabled}
-                    onChange={(e) => handleChange('href', e.target.value)}
+                    onChange={(e) => handleChange('url', e.target.value)}
                 />
             </div>
             <div className="am-link-field-row">

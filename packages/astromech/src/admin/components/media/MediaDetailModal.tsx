@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { useForm } from '@tanstack/react-form';
+import { useForm, useStore } from '@tanstack/react-form';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Modal, Spinner, useConfirm } from '../ui/index.js';
 import { useMediaItem, useUpdateMedia, useDeleteMedia } from '../../hooks/media.js';
@@ -57,6 +57,10 @@ export function MediaDetailModal({
         onSuccess: onDeleted,
     });
 
+    // `form.state` is a plain getter — reading it in render never re-renders on
+    // change, which left Save permanently disabled. Subscribe to the store.
+    const isDirty = useStore(form.store, (state) => state.isDirty);
+
     const open = mediaId !== null;
 
     const headerActions =
@@ -89,7 +93,7 @@ export function MediaDetailModal({
                         variant="primary"
                         size="sm"
                         onClick={() => void form.handleSubmit()}
-                        disabled={!form.state.isDirty}
+                        disabled={!isDirty}
                         loading={updateMutation.isPending}
                     >
                         {t('common.save')}
