@@ -9,11 +9,11 @@ import type { AIContextEntry } from 'astromech';
 import type { ChatMessage } from '../types.js';
 
 /**
- * The system prompt and turns to send. AI context goes immediately before the
- * final user turn, which keeps it after the last cache breakpoint so navigating
- * does not invalidate the cached prefix. A system message may not be
- * `messages[0]`, so on the opening turn it rides in the system prompt instead —
- * there is no cached prefix yet for it to cost anything.
+ * The system prompt and turns to send. AI context goes after the final user
+ * turn: the API requires a `role: 'system'` message to follow a user turn and
+ * to be last or followed by an assistant turn. That also keeps it past the last
+ * cache breakpoint, so navigating does not invalidate the cached prefix. With
+ * no user turn to follow, it rides in the system prompt instead.
  */
 export function buildRequest(
     messages: ChatMessage[],
@@ -26,12 +26,11 @@ export function buildRequest(
     const context = formatAIContextMessage(aiContext);
     if (context === null) return { system: SYSTEM_PROMPT, messages: turns };
 
-    const last = turns.length - 1;
-    if (last < 1 || turns[last]?.role !== 'user') {
+    if (turns[turns.length - 1]?.role !== 'user') {
         return { system: `${SYSTEM_PROMPT}\n\n${context.content}`, messages: turns };
     }
 
-    turns.splice(last, 0, context);
+    turns.push(context);
     return { system: SYSTEM_PROMPT, messages: turns };
 }
 

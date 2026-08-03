@@ -1,7 +1,8 @@
 /**
- * Where the AI context message lands in a request. The API rejects a
- * `role: 'system'` message at `messages[0]`, so a first turn in a fresh chat
- * must carry the context in the system prompt instead.
+ * Where the AI context message lands in a request. The API requires a
+ * `role: 'system'` message to follow a user turn and to be last or followed by
+ * an assistant turn, so with no user turn to follow it rides in the system
+ * prompt instead.
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -33,24 +34,22 @@ beforeEach(() => {
 });
 
 describe('buildRequest', () => {
-    it('puts the context in the system prompt on a single user turn', () => {
+    it('appends the context after a lone user turn', () => {
         const { system, messages } = buildRequest(
             [{ role: 'user', content: 'hi' }],
             entries
         );
 
-        expect(messages).toHaveLength(1);
-        expect(messages[0]?.role).toBe('user');
-        expect(system).toContain('<<context>>');
-        expect(system.startsWith(SYSTEM_PROMPT)).toBe(true);
+        expect(messages).toEqual([{ role: 'user', content: 'hi' }, CONTEXT]);
+        expect(system).toBe(SYSTEM_PROMPT);
     });
 
-    it('splices the context immediately before the final user turn', () => {
+    it('appends the context after the final user turn', () => {
         const { system, messages } = buildRequest(conversation, entries);
 
         expect(messages).toHaveLength(4);
-        expect(messages[2]).toEqual(CONTEXT);
-        expect(messages[3]).toEqual({ role: 'user', content: 'latest' });
+        expect(messages[2]).toEqual({ role: 'user', content: 'latest' });
+        expect(messages[3]).toEqual(CONTEXT);
         expect(system).toBe(SYSTEM_PROMPT);
     });
 
