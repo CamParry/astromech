@@ -404,7 +404,7 @@ f(x)`), so re-coercion is only observable when the STORED value is not
 - [ ] **P7 — authoring plugin** — Claude adapter + tool-loop over the manifest +
       chat drawer. **Built and merged 2026-08-03**; unticked because the
       assistant is read-only and no model round-trip has ever run.
-    - **BLOCKED 2026-08-04: the drawer 500s on every send.** With a real key set,
+    - **The drawer 500s on every send** (found 2026-08-04, with a real key set).
       `POST /api/plugins/authoring/chat` dies on
       `ERR_UNSUPPORTED_ESM_URL_SCHEME … 'virtual:'`. Astro loads a site's config
       — and so every plugin factory and the `rawRoutes` closures hanging off it
@@ -412,11 +412,23 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       where `astromech/methods` → `scopedService` → the domain services →
       `virtual:astromech/config` cannot resolve. Core escapes this only because
       its runtime is Vite-compiled from `src`. `ctx` has always been the bridge
-      and nothing wrote that down. `ssr.noExternal` was tried and cannot work —
-      the closure was never in Vite's graph. Needs the seams on `PluginContext`;
-      the design decision and the full write-up are in
-      `specs/plugin-runtime-boundary.md`, and the invariant is now in
-      `ARCHITECTURE.md`.
+      and nothing wrote that down.
+        - **Resolved by decision 2026-08-04, implementing.** Capability
+          injection: `ctx.methods.tools({ readOnly })` hands back the manifest
+          methods the acting role may call, already scoped, built by core inside
+          its own graph. `decisions/0007` fixes the mechanism (and records that
+          `ssr.noExternal` was tried and cannot work, that Node loader hooks
+          would resolve to a second config module, and that VS Code's
+          inject-at-require trick needs a host that loads the plugin — Astro's
+          config does that before core exists). `decisions/0008` fixes the
+          port's shape and name. Build order in
+          `specs/plugin-runtime-boundary.md`.
+        - Deferred with its own file: `PluginRawRoute.handler` is a closure
+          where Astro's `injectRoute` takes an `entrypoint`, which is the reason
+          plugin route code is outside Vite's graph at all. Changing the
+          contract would remove the need for a port on routes, but cannot help
+          hooks, service methods or cron. See
+          `roadmap/planned/plugin-route-entrypoints.md`.
     - `@astromech/authoring` ships the package, a streaming chat route, the
       model loop and the drawer. Browser-verified against the demo: the drawer
       opens, the transcript is a live region, focus returns to its toggle on

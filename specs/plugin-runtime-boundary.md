@@ -1,188 +1,182 @@
-# Plugin runtime boundary — handoff
+# Plugin runtime boundary — implementation plan
 
-**Status:** blocked, needs a design decision before implementation
-**Found:** 2026-08-04, while sending the first real message through the P7 chat drawer
-**Blocks:** `@astromech/authoring` — the drawer 500s on every send
+**Status:** decided, implementing
+**Rationale:** `decisions/0007-plugin-core-boundary.md` (the mechanism) and
+`decisions/0008-plugin-methods-port.md` (the port's shape). Do not re-derive
+either here; this file is the build order and gets deleted when it ships.
+**Unblocks:** P7 in `roadmap/in-progress/ai-integration.md` — the chat drawer
+500s on every send with `ERR_UNSUPPORTED_ESM_URL_SCHEME`.
 
-## The symptom
+## What is being built
 
-`POST /api/plugins/authoring/chat` returns 500. The server logs:
+`ctx.methods.tools({ readOnly })`, returning the manifest methods the current
+request's role may call, each dispatched through `scopedService`.
+`@astromech/authoring` drops every value import of `astromech/methods` and
+builds its tools from the port.
 
-```
-[Astromech API] Error [ERR_UNSUPPORTED_ESM_URL_SCHEME]: Only URLs with a scheme in:
-file, data, and node are supported by the default ESM loader. Received protocol 'virtual:'
-    at throwIfUnsupportedURLScheme (node:internal/modules/esm/load:187:11)
-```
+## Where the injection happens, and why not at boot
 
-Everything else in the plugin works. The drawer renders, the slot loads, the
-route is mounted, auth and permissions pass, the body validates, the missing-key
-503 path works. It fails at the first line that needs core's services.
+The port's implementation must be a **Vite-graph closure**, and `initRuntime`
+cannot supply one: `kernel/astro.ts` calls it inside `astro:config:setup`, which
+runs in plain Node. A port wired there would inject exactly the closure that
+cannot resolve `virtual:`.
 
-## The cause
+The precedent to copy is `setPluginClient`. `transport/local/index.ts` calls it
+at **module top level** (side effect on import), so whichever graph evaluates
+that module is the graph the plugin's `ctx.entries` runs in. On every server
+path that reaches a plugin raw route, that is Vite. The methods port is wired
+the same way, on the same line.
 
-Astro loads `astro.config.mjs` — and therefore `astromech.config.ts`, and
-therefore every `plugin()` factory — in **plain Node at config time**. The
-`PluginDefinition` a site registers, and every closure hanging off it including
-`rawRoutes[].handler`, belongs to that Node-loaded copy of the plugin package.
+This is also why `ctx.methods.tools()` is **synchronous**. An injected
+implementation needs no `await import(...)` at the call site.
 
-So when a request reaches the handler, its imports resolve through **Node's ESM
-loader**, not Vite's. `astromech/methods` pulls in
-`policies/scoped-service.ts`, which eagerly imports all five domain services,
-each of which imports `virtual:astromech/config`. Node cannot resolve a
-`virtual:` specifier. It throws.
+## Dependency-cruiser constraints that shape the layout
 
-Core does not have this problem because **core's runtime code is never loaded
-from `dist`**. The integration injects routes pointing at package _source_
-(`pkgSrc`, `kernel/astro.ts`), so Vite compiles them and the `virtual:` plugin
-resolves. The asymmetry is the whole bug:
+Two rules decide where things live. Neither may be relaxed.
 
-|                | how it is loaded         | can it resolve `virtual:`? |
-| -------------- | ------------------------ | -------------------------- |
-| core runtime   | Vite-compiled from `src` | yes                        |
-| plugin runtime | Node-loaded from `dist`  | **no**                     |
+- **`plugins-runtime-is-a-capability`** forbids `src/plugins/runtime/` from
+  importing `policies/`, `transport/` or `codegen/`. So `plugin-runtime.ts`
+  cannot import the surface builder at all, dynamically or otherwise. It holds
+  an injected implementation, exactly as it holds the client.
+- **`leaves-are-pure`** forbids `src/types/` from importing anything outside
+  `types|utilities|errors`. So `types/plugins.ts` cannot name `ToolDispatch`
+  while it lives under `transport/`. The type moves down; the value stays put.
+- **`policies-no-upward`** forbids `policies/` from importing `transport/`,
+  which is where `buildScopedDispatch` lives. The surface builder therefore
+  sits beside the dispatch it composes rather than in `policies/`.
 
-Every other first-party plugin works because it never imports core services at
-all — it reaches them through `ctx`, which core constructs inside its own
-Vite-compiled graph and hands over. **`ctx` has always been the bridge.** That
-was not written down anywhere, so `@astromech/authoring` walked straight past
-it.
+## Build order
 
-## What was tried and did not work
+**1. Move the dispatch types down.** `ToolDispatch` and `ToolAnnotations` move
+from `src/transport/mcp/dispatch.ts` into `src/types/services.ts`, beside
+`ManifestMethod` and `MethodManifest`. `dispatch.ts` re-exports both so
+`astromech/methods` and every existing import are unchanged.
 
-**`ssr.noExternal` for plugin packages** (`kernel/astro.ts`). The reasoning was
-that plugin packages live in `node_modules`, Astro externalises those for SSR,
-and pulling them into Vite's graph would make `virtual:` resolvable. It was
-implemented, built, and tested against a running demo: **the error was
-unchanged**.
-
-It cannot work, and the reason is worth keeping so nobody tries it twice. The
-handler closure was created by the config-time Node import. `ssr.noExternal`
-governs which modules Vite's SSR graph compiles; it has no effect on a closure
-that was never in that graph. Vite would compile a _second_ copy of the plugin
-that nothing calls. The change was reverted rather than left in as inert config.
-
-## What this invalidates
-
-`astromech/methods` is **unusable from a plugin package at runtime**, and it
-fails at _import_ time rather than at call time, because `exports/methods.ts`
-statically re-exports `scopedService`. Merely importing the subpath loads the
-whole domain-service graph.
-
-That makes this, in `apps/docs/plugins/authoring.md` ("Calling as the caller,
-not as the plugin"), **broken advice** that will fail for anyone who follows it:
+**2. `src/transport/mcp/scoped-tools.ts`** — new.
 
 ```ts
-import { scopedService } from 'astromech/methods'; // dies under Node
-
-const scoped = scopedService(ctx.role ?? undefined);
+buildScopedTools(
+    principal: Role | undefined,
+    options?: { readOnly?: boolean }
+): ToolDispatch[]
 ```
 
-The advice is right about intent — an untrusted call path should use the scoped
-handle — and wrong about the mechanism. Corrected in place with a pointer here;
-it needs a real replacement once this is decided.
+Composes, in this order: read the manifest from `getMethodManifest()` (throw if
+absent — it is populated at boot, so a missing one is a wiring bug), drop
+`source === 'plugin'` methods, `reduceSurface`, `annotateManifest` filtered to
+`allowed !== false`, then `buildScopedDispatch` per method, skipping any that
+returns `ok: false`.
 
-Note the blast radius is limited today: `@astromech/authoring` is the only
-package that imports `astromech/methods`. Nothing else is broken by this.
+This is `buildAuthoringTools` from `packages/plugins/authoring/src/loop/tools.ts`
+with the `betaTool` wrapping removed. Move its three explanatory comments with
+it — the plugin-source refusal, the advisory-vs-enforcing note, and why
+`allowed === null` is kept. It lives under `transport/mcp/` because
+`policies-no-upward` forbids the alternative and because it composes
+`dispatch.ts`; say so in the docblock, since the file serves the AI loop and not
+only MCP.
 
-## Options
+Export it from `src/exports/methods.ts`.
 
-### A. Surface the seams on `PluginContext` (recommended)
-
-Add something like `ctx.methods` alongside `ctx.storage` and `ctx.database` —
-the existing, documented pattern for "a platform resource a plugin may not
-construct itself" (`ARCHITECTURE.md`, "Plugin capability ports"). Core builds
-`ctx` inside its Vite-compiled graph, so the functions execute where `virtual:`
-resolves, and the plugin imports nothing.
-
-The narrow shape is better than a faithful re-export. Rather than five loose
-functions, expose the one thing a tool-loop actually wants:
+**3. `src/types/plugins.ts`** — the port type and the context field.
 
 ```ts
-ctx.methods.tools({ readOnly?: boolean }): ToolDispatch[]
+export type PluginMethods = {
+    /**
+     * Every manifest method the acting role may call, dispatch-ready and
+     * already scoped. Plugin-source methods are absent: they carry an `access`
+     * the HTTP RPC route enforces separately, so there is nothing to scope
+     * them with.
+     */
+    tools(options?: { readOnly?: boolean }): ToolDispatch[];
+};
 ```
 
-already scoped to `ctx.role`. Every security decision — the plugin-source
-refusal, the scoped dispatch, the advisory-vs-enforcing distinction between
-`annotateManifest` and `buildScopedDispatch` — then stays in core where it is
-tested, and the plugin's job shrinks to wrapping each dispatch in `betaTool`.
-`buildAuthoringTools` in `src/loop/tools.ts` mostly moves into core.
+Added to `PluginContext` next to `storage` and `database`, documented as a
+capability port. `ToolDispatch` is a type-only import from `types/services.js`
+after step 1.
 
-`formatAIContextMessage` needs a home too. It is pure and imports nothing, so
-either give it a service-free subpath or hang it off `ctx.methods` as well —
-today it is unreachable only because it shares a barrel with `scopedService`.
+**4. `src/plugins/runtime/plugin-runtime.ts`** — hold and expose it.
 
-Cost: a public API addition on `PluginContext`, which is a type every plugin
-sees. Needs a name that is not a coinage — `methods` is already the established
-word here (method manifest, `astromech/methods`), so it is probably right, but
-worth five minutes.
+Add `methods: PluginMethodsAccess | null` to `PluginRuntimeState`, where the
+injected shape takes the principal explicitly:
 
-### B. A `globalThis` registry populated at runtime boot
+```ts
+type PluginMethodsAccess = {
+    tools(principal: Role | undefined, options?: { readOnly?: boolean }): ToolDispatch[];
+};
+export function setPluginMethods(access: PluginMethodsAccess): void;
+```
 
-Core stashes the seam functions on a `globalThis` registry during `initRuntime`;
-the Node-loaded plugin reads them without importing anything, and calling them
-runs core's Vite-loaded closures. Consistent with `defineRegistry` and with how
-`getMethodManifest` already crosses this exact boundary
-(`codegen/manifest-registry.ts`), and it touches no public type.
+On the context, a `get methods()` returning `{ tools: (options) => require(...)
+.tools(getCurrentRole() ?? undefined, options) }`. The role is read **at call
+time**, like `get role()` and the domain getters above it. Unwired is
+crash-loud, worded like `requireClient()`.
 
-Cost: a grab-bag on `globalThis` is a worse public API than `ctx`, it is
-untyped at the boundary, and it gives plugin authors a second way to reach core
-that competes with `ctx` rather than reinforcing it.
+**5. `src/transport/local/index.ts`** — wire it, on the line after
+`setPluginClient(Astromech)`:
 
-### C. Make plugin runtime code Vite-compiled
+```ts
+setPluginMethods({ tools: buildScopedTools });
+```
 
-Ship plugin server code as source and have the integration alias it, the way
-`astromech/ui` and plugin admin components already work. Most faithful to how
-the client half is solved.
+**6. `src/index.ts`** — export `formatAIContextMessage` and the `AIContextEntry`
+type from the main barrel. It stays on `astromech/methods` as well.
 
-Cost: much larger. It changes what a plugin package publishes, affects all five
-existing plugins, and does not obviously survive `astro build` for a
-third-party package installed from npm.
+**7. `@astromech/authoring`** — drop every value import of `astromech/methods`.
 
-**Recommendation: A.** It reinforces the rule that already governs every working
-plugin, keeps the security-relevant code in core, and shrinks the plugin. B is a
-reasonable fallback if the `PluginContext` addition feels too heavy.
+- `loop/tools.ts` keeps only `toRunnableTool` and `errorMessage`, taking
+  `ToolDispatch[]`. `buildAuthoringTools` is gone; core builds the surface.
+- `loop/run.ts` takes the dispatches (or the `ctx.methods` port) from the route
+  rather than building them, and imports `Role` as a type only.
+- `loop/request.ts` imports `formatAIContextMessage` from `astromech`.
+- `routes/chat.ts` calls `ctx.methods.tools({ readOnly: options.readOnly })` and
+  passes the result into the loop.
+- The request-time `await import('../loop/run.js')` **stays**, but its comment is
+  now wrong and must be rewritten: the reason is no longer module resolution, it
+  is that a static import would pull `@anthropic-ai/sdk` into every config load.
+- Its tests mock `astromech/methods`; they mock the port instead. Keep the
+  existing coverage of the request assembler and SSE framing untouched.
 
-## If A is chosen — where to work
+**8. `apps/docs/plugins/authoring.md`** — replace the "not reachable yet"
+warning with the real pattern. The intent the old snippet described (call as the
+caller, not as the plugin) is what `ctx.methods` does, so the section keeps its
+point and changes its mechanism. Add the import rule from `0007`: a plugin
+imports `astromech` and `astromech/ui`, and reaches everything else through
+`ctx`.
 
-- `src/types/plugins.ts` — `PluginContext`, add the port and its type.
-- `src/plugins/runtime/plugin-runtime.ts` — `createPluginContext`. **The imports
-  must be lazy** (`await import(...)` inside the accessor). This module is also
-  loaded at config time, and a static import of `policies/scoped-service.js`
-  here would break `astro dev` at integration load — the same trap that
-  `context/request-context.ts` exists to avoid. `npm run check:config` catches
-  it.
-- Move the surface-building logic out of
-  `packages/plugins/authoring/src/loop/tools.ts` into core, with its tests.
-- `packages/plugins/authoring/src/loop/{tools,run,request}.ts` — drop every
-  `astromech/methods` import. Type-only imports are fine; they erase.
-- `apps/docs/plugins/authoring.md` — replace the corrected warning with the real
-  pattern.
-- `ARCHITECTURE.md` — the invariant is already recorded under "Plugin runtime
-  boundary"; update it if the answer changes.
+**9. `npm run check:node-imports`** — new gate step, because nothing catches
+this class today and a unit test never will (vitest aliases core to `src` and
+shims `virtual:`, so the failing import passes there).
 
-## How to verify
+A script that spawns plain `node` against built `dist` and imports each subpath
+a plugin or an Astro config is entitled to load: `astromech`, `astromech/astro`,
+`astromech/fields`, `astromech/columns`. Non-zero exit naming the subpath and
+the error code. It asserts the allow-list loads; it does not assert that
+anything fails, so narrowing a subpath later is not a test change.
 
-A unit test will not catch this. It only appears when the plugin is loaded the
-way Astro loads it, so it has to be a running demo.
+Needs `dist`, so it runs after `npm run build`. Add a row to the gate table in
+`ARCHITECTURE.md`.
 
-1. Worktree needs its own resolution: full `npm install` in the worktree, then
-   `NODE_OPTIONS=--max-old-space-size=8192 npm run build`, then `npm run db:init`
-   followed by `npm run db:seed`. A partial install leaves `@astrojs/react`
-   missing and Vite 403s serving it from the parent checkout, which looks like a
-   blank admin page. See `project_worktree_browser_verify_trap` in memory.
-2. `apps/demo/.env` needs `BETTER_AUTH_URL` matching the port you run on, or
-   sign-in 403s on the origin check.
-3. **Use a deliberately invalid `ANTHROPIC_API_KEY`.** The module-resolution
-   failure happens before any network call, so a fake key still proves the fix:
-   success looks like an auth error from the API surfacing in the transcript,
-   not `ERR_UNSUPPORTED_ESM_URL_SCHEME` in the server log. No real key, nothing
-   billed.
-4. The missing-key 503 short-circuits before the loop imports anything, so
-   testing without a key set proves nothing about this bug.
+## Verification
+
+The gate, then a running demo. A unit test cannot catch the original bug.
+
+1. Merge to `main` and verify there. A worktree resolves `node_modules` and
+   `dist` to the main checkout, so `apps/demo` runs main's code rather than the
+   branch's (`project_worktree_browser_verify_trap`).
+2. `apps/demo/.env` needs `BETTER_AUTH_URL` matching the port, or sign-in 403s
+   on the origin check.
+3. **Use a deliberately invalid `ANTHROPIC_API_KEY`.** Module resolution fails
+   long before any network call, so a fake key proves the fix and bills nobody.
+   Success looks like an authentication error from the API surfacing in the
+   transcript; failure looks like `ERR_UNSUPPORTED_ESM_URL_SCHEME` in the server
+   log. Testing with no key set proves nothing: the missing-key 503
+   short-circuits before the loop imports anything.
 
 ## Out of scope
 
-Not blockers for this, tracked in the P7 roadmap entry: the assistant is
-`readOnly: true` until there is a confirm UI, the drawer has no markdown
-rendering or i18n, the API base is `/api` hardcoded, and the 147-tool surface
-still needs `defer_loading` plus tool search.
+Tracked in the P7 roadmap entry, not blockers: the assistant is `readOnly: true`
+until there is a confirm UI, the drawer has no markdown rendering or i18n, the
+API base is `/api` hardcoded, and the 147-tool surface still needs
+`defer_loading` plus tool search. Also deferred, with its own file:
+`roadmap/planned/plugin-route-entrypoints.md`.

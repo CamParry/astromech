@@ -167,13 +167,15 @@ Astro loads `astro.config.mjs`, and therefore `astromech.config.ts` and every `p
 | core runtime   | Vite-compiled from `src` | yes                        |
 | plugin runtime | Node-loaded from `dist`  | **no**                     |
 
-So a plugin that imports a core module reaching `virtual:astromech/config` — which every domain service does — dies with `ERR_UNSUPPORTED_ESM_URL_SCHEME` under Node's ESM loader. **`astromech/methods` is currently unreachable from a plugin package for exactly this reason**, and it fails at _import_ time rather than at call time, because `exports/methods.ts` statically re-exports `scopedService` and so loads the whole service graph.
+So a plugin that imports a core module reaching `virtual:astromech/config` — which every domain service does — dies with `ERR_UNSUPPORTED_ESM_URL_SCHEME` under Node's ESM loader. **`astromech/methods` is unreachable from a plugin package for exactly this reason**, and it fails at _import_ time rather than at call time, because `exports/methods.ts` statically re-exports `scopedService` and so loads the whole service graph.
 
-Every working plugin already respects this: none of them import core services, they receive them on `PluginContext`. New platform capabilities therefore belong on `ctx` as a capability port (above), not on a published subpath a plugin is expected to import.
+**The rule this produces: a plugin package imports `astromech` and `astromech/ui`, and nothing else from core.** Both load under plain Node; type-only imports from any subpath are fine, because they erase. Everything else arrives on `ctx`. New platform capabilities are therefore added as a capability port (above), never as a published subpath a plugin is expected to import — `ctx.methods.tools()` is the worked example, and `decisions/0007-plugin-core-boundary.md` holds the mechanism with the rejected alternatives.
 
-`ssr.noExternal` does **not** fix this and has been tried. It governs which modules Vite's SSR graph compiles; the handler closure was never in that graph, so Vite would compile a second copy that nothing calls.
+A port's implementation must be a **Vite-graph closure**, which rules out wiring it in `initRuntime` — `kernel/astro.ts` calls that inside `astro:config:setup`, in plain Node. The precedent is `setPluginClient`: `transport/local/index.ts` calls it at module top level, so whichever graph evaluates that module is the graph the plugin's `ctx.entries` runs in. `setPluginMethods` is wired on the same line.
 
-Two consequences for anything loaded at config time — `plugin-runtime.ts`, the integration itself: imports must stay lazy where they reach a service (`context/request-context.ts` exists for this), and `npm run check:config` loads the demo config the way Astro does to catch a regression before a plugin is wired up.
+`ssr.noExternal` does **not** fix this and has been tried. It governs which modules Vite's SSR graph compiles; the handler closure was never in that graph, so Vite would compile a second copy that nothing calls. Teaching Node to resolve `virtual:` with module customization hooks is likewise the wrong tool — it would resolve to a _second_ config module rather than the one Vite built.
+
+Two consequences for anything loaded at config time — `plugin-runtime.ts`, the integration itself: imports must stay lazy where they reach a service (`context/request-context.ts` exists for this), and `npm run check:config` loads the demo config the way Astro does to catch a regression before a plugin is wired up. `npm run check:node-imports` covers the other half, asserting the plugin-facing subpaths still load under plain Node.
 
 ## App-owned migration model
 
@@ -219,12 +221,14 @@ Before a change lands, all of these pass. The husky pre-commit hook runs
 lint-staged (eslint --fix + prettier) on touched files; `--no-verify` is not
 used.
 
-| Command             | Checks                                                                                                                                          |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run typecheck` | `tsc -p tsconfig.test.json` (delegates to `packages/astromech`)                                                                                 |
-| `npm run test:run`  | vitest; tests live in `packages/astromech/tests/` mirroring `src/`                                                                              |
-| `npm run build`     | tsup (explicit entries, dts). DTS worker can OOM — bump `NODE_OPTIONS=--max-old-space-size`.                                                    |
-| `npm run lint:deps` | dependency-cruiser — enforces the modular DAG invariants within `packages/astromech/src` (no upward edges, no peer-domain imports, pure leaves) |
+| Command                      | Checks                                                                                                                                                 |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `npm run typecheck`          | `tsc -p tsconfig.test.json` (delegates to `packages/astromech`)                                                                                        |
+| `npm run test:run`           | vitest; tests live in `packages/astromech/tests/` mirroring `src/`                                                                                     |
+| `npm run build`              | tsup (explicit entries, dts). DTS worker can OOM — bump `NODE_OPTIONS=--max-old-space-size`.                                                           |
+| `npm run lint:deps`          | dependency-cruiser — enforces the modular DAG invariants within `packages/astromech/src` (no upward edges, no peer-domain imports, pure leaves)        |
+| `npm run check:config`       | `tsx astromech.config.ts` in the demo — loads the site config the way Astro does, catching a config-time import that reaches a domain service          |
+| `npm run check:node-imports` | spawns plain `node` against built `dist` and imports each plugin-facing subpath. Needs `dist`, so it runs after `build`. See "Plugin runtime boundary" |
 
 For refactors that move tables, `npm run db:generate` must also report "No
 schema changes" (migration-neutrality).
