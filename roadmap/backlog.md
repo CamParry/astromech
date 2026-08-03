@@ -20,6 +20,13 @@ Loose tasks pulled from otherwise-shipped features.
 
 - [ ] A plugin can't type its own declared hook-event payloads. `AstromechPluginHookEvents` is codegen-augmented per **site**, so inside a plugin package `defineHook`'s handler parameter resolves to `unknown` and every handler needs an in-body cast (see `@astromech/forms`' spam hook). Annotating the parameter directly is a contravariance error. Some way for a plugin to declare the payload type alongside the event name would remove the cast
 - [ ] The root `/entries/<type>` admin route renders for a **qualified** plugin type (`forms/form`) but generates unencoded links (`/admin/entries/forms/form/<id>`) that 404, and shows the raw type as its heading. Plugin entry types have their own working `/plugin/<ns>/entries/<type>` route and nothing links to the root one with a qualified type — so this is a latent trap rather than a live bug. Either encode the segment or reject a qualified type on that route
+- [ ] `npm run format:check` is red on `main` — 7 files from the media admin UI work
+      (`media-browser.tsx`, `media-thumb.tsx`, `MediaDetailModal.tsx`, `drop-zone.tsx`,
+      `media/index.tsx`, `media/storage.ts`, `drop-zone-accept.test.tsx`). Deliberately left
+      unformatted while the `feat/media-admin-ui` worktree is still live, because reformatting files
+      someone is mid-edit on hands them conflicts. Run `npm run format` once that work is settled.
+      Note the pre-commit hook formats only STAGED files, so a red `format:check` survives commits
+      that don't touch the offending files.
 - [ ] Admin hooks and components have no render-level test coverage. The `useBlocksField`/`useTreeField` seeding bug (entry blocks rendering permanently empty) survived precisely because nothing renders a hook in the suite; `tests/admin/hooks/container-field-seeding.test.tsx` hand-rolls a React root because there is no `@testing-library/react`. Consider adding it and covering the field components
 
 ### Admin form defects (found browser-verifying the P4b patch merge, 2026-08-03)
@@ -61,6 +68,43 @@ today: two of them stop a save completing at all.
 - [ ] **`key-value` rebuilds its value from the prop** like `group`
       (`key-value-field.tsx:7-15`) — same exposure if the seed race is confirmed.
 
+### Relationships follow-ups (from `completed/relationships-model.md`)
+
+The model shipped whole; these are the deliberate deferrals and the sharp edges found building it.
+The rationale for the first two is in `decisions/0004-relationships-as-a-derived-index.md` and should
+not be re-derived.
+
+- [ ] **A declared reverse field** — deferred, not refused (`decisions/0004`). Reverse lookup needs no
+      declaration: it is an indexed read, and `where: { references }` already covers the delete modal,
+      media "used by" and filter-by-relation. A declared virtual field would be sugar compiling to
+      that same query and can be added without touching storage. **If it comes back it must be keyed
+      on the forward field PATH, never on a relation name** — Payload, Keystone and Directus all key
+      on path and cannot desync; Strapi requires two independently-written names and that produced
+      duplicate join tables and silent relation-data loss.
+- [ ] **`WITHOUT ROWID` on the relationships table.** On a rowid table a composite primary key is a
+      unique index plus a hidden rowid, so the storage win only arrives with `WITHOUT ROWID`, and the
+      row sits right at SQLite's recommended size boundary once an instance path carries nested ids.
+      A pure storage decision, takeable later without touching the logical schema.
+- [ ] **A `tableStorage`-backed target accumulates dangling ids forever.** The write-time cleanup
+      keeps any id whose target type is table-backed, because those rows are not in the `entries`
+      table and an existence check there reports every one of them absent — pruning would delete live
+      references. Correct, but it means those paths never self-clean. Fixing it properly means a
+      per-storage existence hook on `EntryStorage` rather than a table query. Same guard, same
+      reason, applies to a target naming no configured entry type.
+- [ ] **An unscoped `index:rebuild` deletes rows for any source it did not enumerate.** That is
+      correct by definition — the index is derived — but it makes enumeration a safety property, not
+      just a completeness one. The CLI guards it by registering the plugin runtime (`loadConfig` does
+      NOT, and without it a table-backed plugin type reads as zero sources and loses its whole edge
+      set). A programmatic caller of `rebuildRelationshipIndex` has no such guard. Consider making
+      the kernel function refuse to run unless the runtime is registered.
+- [ ] **`index:rebuild --check` is not wired into CI.** It exits non-zero on drift and was built to
+      be gate-runnable, but nothing runs it. The vitest parity test covers write-path/rebuild-path
+      agreement; what `--check` would add is drift detection against a real seeded database.
+- [ ] **`entryAdminPath` has a second, hand-rolled copy.** `admin/utilities/entry-admin-path.ts` was
+      extracted for the media "used by" panel, but `admin/components/ui/command-palette.tsx:406`
+      still builds the same plugin-aware path inline. Two copies of the rule that a plugin entry type
+      lives at `/plugin/<ns>/entries/<bare-type>` is exactly the drift the helper exists to prevent.
+
 ### Storage-layer follow-ups (from `completed/storage-layer-follow-ups.md`)
 
 - [ ] `buildListWhere`'s silent drop of unknown `where` keys has its own file —
@@ -76,7 +120,10 @@ today: two of them stop a save completing at all.
       Needs the column vocabulary to express better-auth's format —
       seconds-INTEGER timestamps and uuid ids — and better-auth still owns the
       DDL, so the baseline's hand-authored `users` table would have to agree with
-      a descriptor it does not generate. Would let `LEGACY_CODECS` shrink.
+      a descriptor it does not generate. Would let `LEGACY_CODECS` shrink. This
+      is the "own the `users` table" question, and it is no longer blocked on
+      editorial columns: `planned/profile-entry-type.md` keeps editorial data off
+      `users` entirely, so what remains is purely about who controls the DDL.
 - [ ] Derive `encodeWith`'s return type from the descriptor. It returns a bare
       `Record<string, unknown>`, so every call site still needs
       `as unknown as Insertable<DB[…]>` — the codec collapse removed zero casts
@@ -90,10 +137,11 @@ today: two of them stop a save completing at all.
       table through `deleteMany`, if its sibling raw DDL and `kysely_migration`
       statements in the same command ever move too. Left raw because converting
       one of a cluster reads worse than leaving all of them.
-- [ ] `entries/storage/related-records.ts` keeps a raw `selectFrom('users')`:
-      `domain-no-peer-imports` bars entries from importing `users/storage.ts`, and
-      that storage has no `byIds` anyway. Needs either a dep-rule decision or a
-      shared seam.
+- [x] `entries/storage/related-records.ts` keeps a raw `selectFrom('users')` —
+      moot twice over: the file was deleted with `populate` (relationships WS1),
+      and the dep-rule decision it was waiting on has been made —
+      `domain-no-peer-imports` is gone, so a domain may import a peer's storage
+      directly. `users/storage.ts` still has no `byIds` if anything wants one.
 - [ ] `performBackup`'s status transitions are `updateMany` + `findOne` (two
       round-trips) rather than one `UPDATE … RETURNING`, because `storage.update`
       throws on a missing row and that would have turned the catch block's

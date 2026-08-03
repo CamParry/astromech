@@ -97,13 +97,19 @@ the profile model — are recorded permanently in
 
 ## Split out of this work
 
+Everything below has a home; nothing is tracked here, because a completed file is a bad place to
+watch work that has not started.
+
 - **Scalar field filtering/sorting** → `planned/field-value-query-indexing.md`.
-- **Profile as a first-party entry type**, and the **row-level permission** shape it needs ("a user
-  may edit the profile entry that points at them, and no other") — a separate feature this one
-  unblocks rather than contains. One-user-one-profile is a write-time validation that reads the
-  index, never a DB constraint on it.
-- **Pushing visibility predicates into SQL.** Real and pre-existing (`query.ts:41-45` documents the
-  wrong `total`), not made structurally worse by this work.
-- **`WITHOUT ROWID`** on the index table — a pure storage decision, takeable later.
-- **Owning the `users` table** instead of better-auth owning it. The profile model removes the reason
-  it was blocking.
+- **Pushing visibility predicates into SQL** → the same file. Real and pre-existing
+  (`query.ts:41-45` documents the wrong `total`), not made structurally worse by this work.
+- **Profile as a first-party entry type**, and the **row-level permission** shape it needs →
+  `planned/profile-entry-type.md`. A separate feature this one unblocks rather than contains.
+- **Owning the `users` table** instead of better-auth owning it → `backlog.md`, storage-layer
+  follow-ups. The profile model removes the reason it was blocking.
+- **`WITHOUT ROWID`** on the index table, and **a declared reverse field** → `backlog.md`,
+  relationships follow-ups.
+
+The sharp edges found while building — table-backed targets never self-cleaning their dangling ids,
+an unscoped rebuild deleting rows for sources it did not enumerate, and `--check` not being wired
+into CI — are in `backlog.md` under the same heading.
