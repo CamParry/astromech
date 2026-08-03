@@ -42,7 +42,9 @@ describe('selectDroppedFiles', () => {
     });
 
     it('takes only the first matching file when multiple is false', () => {
-        expect(names(selectDroppedFiles([png, pdf], undefined, false))).toEqual(['a.png']);
+        expect(names(selectDroppedFiles([png, pdf], undefined, false))).toEqual([
+            'a.png',
+        ]);
     });
 
     it('caps to the first file that matches, not the first file dropped', () => {

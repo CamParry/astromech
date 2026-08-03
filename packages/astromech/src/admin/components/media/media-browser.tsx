@@ -120,7 +120,8 @@ export function MediaBrowser({
     const totalItems = data?.pagination?.total;
     const totalPages = Math.max(1, data?.pagination?.pages ?? 1);
 
-    const activeView: ViewMode = selection.mode === 'pick' ? 'grid' : (viewMode ?? 'grid');
+    const activeView: ViewMode =
+        selection.mode === 'pick' ? 'grid' : (viewMode ?? 'grid');
     const uploadMultiple = selection.mode === 'pick' ? selection.multiple : true;
     const currentSort = sort ? { key: sort, direction: dir ?? 'asc' } : null;
     const isFiltered = q !== '' || typeFilter !== 'all';
@@ -277,7 +278,11 @@ type GridProps = {
 };
 
 /** Tiles. In `pick` mode a tile is the select action and carries no checkbox. */
-function MediaBrowserGrid({ items, selection, onOpenItem }: GridProps): React.ReactElement {
+function MediaBrowserGrid({
+    items,
+    selection,
+    onOpenItem,
+}: GridProps): React.ReactElement {
     const { t } = useTranslation();
 
     if (selection.mode === 'pick') {
@@ -362,7 +367,11 @@ function MediaBrowserList({
                     >
                         {t('media.metaType')}
                     </Table.SortTh>
-                    <Table.SortTh sortKey="size" currentSort={currentSort} onSort={onSort}>
+                    <Table.SortTh
+                        sortKey="size"
+                        currentSort={currentSort}
+                        onSort={onSort}
+                    >
                         {t('media.metaSize')}
                     </Table.SortTh>
                     <Table.SortTh
