@@ -10,6 +10,7 @@ export type {
 export { useViewMode } from './use-view-mode.js';
 export { useSelection } from './use-selection.js';
 export type { SelectionResult } from './use-selection.js';
+export { useDebounce } from './use-debounce.js';
 export { useUploadMedia } from './use-upload-media.js';
 export type { UseUploadMediaResult } from './use-upload-media.js';
 export { usePermissions, hasPermission } from './use-permissions.js';

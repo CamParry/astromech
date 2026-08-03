@@ -28,6 +28,7 @@ import adminConfig from 'virtual:astromech/admin-config';
 import { Astromech } from '@/transport/http/client/index.js';
 import { parseEntryTypeId } from '@/entries/type-registry.js';
 import { usePermissions } from '../../hooks/index.js';
+import { useDebounce } from '../../hooks/use-debounce.js';
 import { EntryTypeIcon } from './entry-type-icon.js';
 import type { AdminEntryTypeConfig, Entry, Media, User } from '@/types/index.js';
 
@@ -141,19 +142,6 @@ export function CommandPaletteProvider({
             {children}
         </CommandPaletteContext.Provider>
     );
-}
-
-// ============================================================================
-// Debounce hook
-// ============================================================================
-
-function useDebounce<T>(value: T, delay: number): T {
-    const [debounced, setDebounced] = useState(value);
-    useEffect(() => {
-        const id = setTimeout(() => setDebounced(value), delay);
-        return () => clearTimeout(id);
-    }, [value, delay]);
-    return debounced;
 }
 
 // ============================================================================

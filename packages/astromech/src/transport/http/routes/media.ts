@@ -29,6 +29,9 @@ type Env = { Variables: AuthVariables };
 
 const router = new OpenAPIHono<Env>();
 
+/** Sort fields accepted off the wire. Mirrors the storage allowlist. */
+const SORTABLE_FIELDS = new Set(['filename', 'mimeType', 'size', 'createdAt']);
+
 // ============================================================================
 // GET /media
 // ============================================================================
@@ -51,6 +54,10 @@ router.get('/', async (c) => {
         mimeType === 'other'
     ) {
         params.where = { mimeType };
+    }
+    const sortField = q['sort'];
+    if (sortField && SORTABLE_FIELDS.has(sortField)) {
+        params.sort = { [sortField]: q['dir'] === 'asc' ? 'asc' : 'desc' };
     }
     return c.json(await Astromech.media.query(params));
 });

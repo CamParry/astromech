@@ -527,6 +527,14 @@ const mediaApi: MediaApi = {
                 mimeType: params?.where?.mimeType,
                 page: params?.page,
                 limit: params?.limit,
+                sort:
+                    params?.sort && !Array.isArray(params.sort)
+                        ? Object.keys(params.sort)[0]
+                        : undefined,
+                dir:
+                    params?.sort && !Array.isArray(params.sort)
+                        ? Object.values(params.sort)[0]
+                        : undefined,
             },
         });
     },

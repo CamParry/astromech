@@ -1,8 +1,8 @@
 import React from 'react';
-import { Checkbox } from '../ui/index.js';
-import { FileTypeIcon } from '../../utilities/media.js';
-import { formatBytes } from '@/utilities/bytes.js';
-import type { Media } from '../../../types/index.js';
+import { useTranslation } from 'react-i18next';
+import { Checkbox } from '@/admin/components/ui/index.js';
+import { MediaThumb } from './media-thumb.js';
+import type { Media } from '@/types/index.js';
 
 export type MediaCardProps = {
     item: Media;
@@ -11,42 +11,40 @@ export type MediaCardProps = {
     onClick: (id: string) => void;
 };
 
+/** Grid tile. The checkbox is a sibling of the open button, never nested inside it. */
 export function MediaCard({
     item,
     checked,
     onToggleCheck,
     onClick,
 }: MediaCardProps): React.ReactElement {
+    const { t } = useTranslation();
+
     return (
-        <div
-            className="am-media-card"
-            onClick={() => onClick(item.id)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') onClick(item.id);
-            }}
-        >
-            <div className="am-media-card-checkbox" onClick={(e) => e.stopPropagation()}>
-                <Checkbox checked={checked} onChange={() => onToggleCheck(item.id)} />
-            </div>
-
-            {item.mimeType.startsWith('image/') ? (
-                <img
-                    src={item.url}
-                    alt={item.alt ?? item.filename}
-                    className="am-media-card-thumb"
+        <div className="am-media-card">
+            <div className="am-media-card-checkbox">
+                <Checkbox
+                    checked={checked}
+                    onChange={() => onToggleCheck(item.id)}
+                    aria-label={t('media.selectFile', { filename: item.filename })}
                 />
-            ) : (
-                <div className="am-media-card-thumb am-media-card-thumb-placeholder">
-                    <FileTypeIcon mimeType={item.mimeType} />
-                </div>
-            )}
-
-            <div className="am-media-card-meta">
-                <p className="am-media-card-filename">{item.filename}</p>
-                <p className="am-media-card-size">{formatBytes(item.size)}</p>
             </div>
+
+            <button
+                type="button"
+                className="am-media-card-open"
+                onClick={() => onClick(item.id)}
+            >
+                <MediaThumb
+                    item={item}
+                    width={220}
+                    className="am-media-card-thumb"
+                    iconSize={32}
+                />
+                <span className="am-media-card-meta">
+                    <span className="am-media-card-filename">{item.filename}</span>
+                </span>
+            </button>
         </div>
     );
 }
