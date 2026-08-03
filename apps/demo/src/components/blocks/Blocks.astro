@@ -38,9 +38,7 @@ const activeBlocks = blocks ?? [];
                 <Hero
                     heading={(block.heading as string) ?? ''}
                     subheading={block.subheading as string | null | undefined}
-                    cta={
-                        block.cta as { label?: string; href?: string } | null | undefined
-                    }
+                    cta={block.cta as { label?: string; url?: string } | null | undefined}
                     image={
                         block.image as { url?: string; alt?: string } | null | undefined
                     }
@@ -80,7 +78,7 @@ const activeBlocks = blocks ?? [];
                     text={block.text as string | null | undefined}
                     button={
                         block.button as
-                            | { label?: string; href?: string }
+                            | { label?: string; url?: string }
                             | null
                             | undefined
                     }

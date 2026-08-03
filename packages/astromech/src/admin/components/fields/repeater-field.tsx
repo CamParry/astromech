@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
 import {
@@ -261,6 +261,17 @@ export function RepeaterField({
     const [items, setItems] = useState<ItemWithId[]>(
         (arrayValue.length > 0 ? arrayValue : [{}]).map(withId)
     );
+
+    // Same seeding problem as `useBlocksField`: the initializer runs on the
+    // first render only, and an entry edit route fetches its entry rather than
+    // preloading it, so a repeater on an entry would render one blank row
+    // forever. Seed once when real data arrives; never resync after, or an
+    // in-progress edit would be clobbered by the last-saved value.
+    const seeded = useRef(arrayValue.length > 0);
+    if (!seeded.current && arrayValue.length > 0) {
+        seeded.current = true;
+        setItems(arrayValue.map(withId));
+    }
 
     // `_id` is a persisted UUID (stable item identity for diffs/versioning), so
     // items commit as-is — no key stripping.

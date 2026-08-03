@@ -748,7 +748,7 @@ async function seed(): Promise<void> {
                         subheading:
                             'Astromech runs on Cloudflare Workers, stores content in D1, and ships a zero-JS admin panel — so you can focus on shipping your product.',
                         cta: {
-                            href: '/features',
+                            url: '/features',
                             label: 'See the features',
                             target: '_self',
                         },
@@ -815,7 +815,7 @@ async function seed(): Promise<void> {
                         heading: 'Ready to simplify your stack?',
                         text: 'Astromech is open source. Star us on GitHub or get started in under five minutes.',
                         button: {
-                            href: '/pricing',
+                            url: '/pricing',
                             label: 'Get started free',
                             target: '_self',
                         },
@@ -848,7 +848,7 @@ async function seed(): Promise<void> {
                         subheading:
                             'Flexible content modelling, a beautiful admin UI, and a server SDK that reads like plain TypeScript.',
                         cta: {
-                            href: '/pricing',
+                            url: '/pricing',
                             label: 'Start free',
                             target: '_self',
                         },
@@ -956,7 +956,7 @@ async function seed(): Promise<void> {
                         subheading:
                             'Astromech is open source. Host it yourself for free, or let us run it for you on managed infrastructure.',
                         cta: {
-                            href: 'https://github.com/astromech',
+                            url: 'https://github.com/astromech',
                             label: 'View on GitHub',
                             target: '_blank',
                         },
@@ -985,7 +985,7 @@ async function seed(): Promise<void> {
                         heading: 'Get started today',
                         text: 'Read the docs and have your first Astromech project running in under five minutes.',
                         button: {
-                            href: 'https://docs.astromech.dev',
+                            url: 'https://docs.astromech.dev',
                             label: 'Read the docs',
                             target: '_blank',
                         },
@@ -1067,7 +1067,7 @@ async function seed(): Promise<void> {
                         heading: 'Come build with us',
                         text: 'Astromech is open source and we welcome contributions of all sizes.',
                         button: {
-                            href: 'https://github.com/astromech/astromech',
+                            url: 'https://github.com/astromech/astromech',
                             label: 'Star on GitHub',
                             target: '_blank',
                         },
@@ -1658,7 +1658,7 @@ async function seed(): Promise<void> {
                         subheading:
                             "Astromech tourne sur Cloudflare Workers, stocke le contenu dans D1, et livre un panneau d'administration sans JavaScript — pour que vous puissiez vous concentrer sur votre produit.",
                         cta: {
-                            href: '/features',
+                            url: '/features',
                             label: 'Voir les fonctionnalités',
                             target: '_self',
                         },
@@ -1701,7 +1701,7 @@ async function seed(): Promise<void> {
                         heading: 'Prêt à simplifier votre stack ?',
                         text: 'Astromech est open source. Donnez-nous une étoile sur GitHub ou démarrez en moins de cinq minutes.',
                         button: {
-                            href: '/pricing',
+                            url: '/pricing',
                             label: 'Commencer gratuitement',
                             target: '_self',
                         },

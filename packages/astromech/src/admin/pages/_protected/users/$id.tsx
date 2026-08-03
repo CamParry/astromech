@@ -7,7 +7,7 @@
 
 import React, { useEffect } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useForm } from '@tanstack/react-form';
+import { useForm, useStore } from '@tanstack/react-form';
 import { useTranslation } from 'react-i18next';
 import {
     Button,
@@ -97,6 +97,11 @@ function UserEditPage(): React.ReactElement {
     });
 
     const canSave = canUpdateUsers() || isSelf;
+
+    // `form.state` is a plain getter — reading it in render never re-renders on
+    // change, which left Save permanently disabled. Subscribe to the store.
+    const isDirty = useStore(form.store, (state) => state.isDirty);
+    const isSubmitting = useStore(form.store, (state) => state.isSubmitting);
 
     function handleSave() {
         void form.handleSubmit();
@@ -221,9 +226,7 @@ function UserEditPage(): React.ReactElement {
                                 <Button
                                     onClick={handleSave}
                                     loading={updateMutation.isPending}
-                                    disabled={
-                                        !form.state.isDirty || form.state.isSubmitting
-                                    }
+                                    disabled={!isDirty || isSubmitting}
                                 >
                                     {t('common.save')}
                                 </Button>

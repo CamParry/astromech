@@ -2,11 +2,11 @@
 interface Props {
     heading?: string | null;
     text?: string | null;
-    button?: { label?: string; href?: string; url?: string } | null;
+    button?: { label?: string; url?: string } | null;
 }
 
 const { heading, text, button } = Astro.props;
-const btnHref = button?.href ?? button?.url ?? null;
+const btnHref = button?.url ?? null;
 const btnLabel = button?.label ?? null;
 ---
 

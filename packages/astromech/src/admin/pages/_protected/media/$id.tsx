@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useForm } from '@tanstack/react-form';
+import { useForm, useStore } from '@tanstack/react-form';
 import { FileImage } from 'lucide-react';
 import { formatDatetime } from '@/utilities/dates.js';
 import {
@@ -79,6 +79,10 @@ function MediaEditPage(): React.ReactElement {
         id,
         onSuccess: () => void navigate({ to: '/media' }),
     });
+
+    // `form.state` is a plain getter — reading it in render never re-renders on
+    // change, which left Save permanently disabled. Subscribe to the store.
+    const isDirty = useStore(form.store, (state) => state.isDirty);
 
     function handleSave() {
         void form.handleSubmit();
@@ -163,7 +167,7 @@ function MediaEditPage(): React.ReactElement {
                                     <Button
                                         onClick={handleSave}
                                         loading={updateMutation.isPending}
-                                        disabled={!form.state.isDirty}
+                                        disabled={!isDirty}
                                     >
                                         Save
                                     </Button>
