@@ -377,6 +377,7 @@
         "bulkDeleteDescription": "This action cannot be undone.",
         "deletedToast_one": "{{count}} file deleted.",
         "deletedToast_other": "{{count}} files deleted.",
+        "deletedPartialToast": "Deleted {{deleted}} of {{total}} files.",
         "altLabel": "Alt text",
         "altPlaceholder": "Describe this image…",
         "altHint": "Used for accessibility and SEO.",
