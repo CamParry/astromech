@@ -12,6 +12,7 @@
 import config from 'virtual:astromech/config';
 import type {
     AstromechClient,
+    ContentApi,
     NotificationsApi,
     TypedEntriesApi,
 } from '@/types/index.js';
@@ -19,6 +20,7 @@ import { usersApi } from '@/users/index.js';
 import { entries } from '@/entries/index.js';
 import { mediaApi } from '@/media/index.js';
 import { settingsApi } from '@/settings/index.js';
+import { contentApi } from '@/content/index.js';
 import { runWithContext } from '@/context/index.js';
 import { setPluginClient } from '@/plugins/runtime/plugin-runtime.js';
 import { localPlugins } from '@/transport/local/plugins.js';
@@ -42,11 +44,17 @@ const localNotificationsApi: NotificationsApi = {
     dismissAll: notImplemented,
 };
 
-export const Astromech: AstromechClient = {
+/**
+ * The local client carries `content` on top of the shared contract: the content
+ * operations run in-process only, so the fetch Client has nothing to offer for
+ * them and `AstromechClient` must not claim they are there.
+ */
+export const Astromech: AstromechClient & { content: ContentApi } = {
     entries: entries as unknown as TypedEntriesApi,
     media: mediaApi,
     settings: settingsApi,
     users: usersApi,
+    content: contentApi,
     notifications: localNotificationsApi,
     config,
     plugins: localPlugins,

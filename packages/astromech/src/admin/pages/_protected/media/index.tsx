@@ -1,32 +1,18 @@
 import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { LayoutGrid, LayoutList, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import {
-    Checkbox,
-    ContentGrid,
     Dropdown,
-    DropZone,
-    EmptyState,
     Page,
     PageContent,
     PageHeader,
-    PageLoading,
     PageTitle,
-    Pagination,
-    SearchInput,
-    Select,
-    Table,
-    Toolbar,
-    ToolbarStart,
-    ToolbarEnd,
-    ToggleGroup,
     UploadButton,
-    UploadZone,
     useConfirm,
 } from '@/admin/components/ui/index.js';
-import { MediaCard } from '@/admin/components/media/MediaCard.js';
-import { MediaRow } from '@/admin/components/media/MediaRow.js';
+import { MediaBrowser } from '@/admin/components/media/media-browser.js';
+import type { MediaBrowserQuery } from '@/admin/components/media/media-browser.js';
 import { MediaDetailModal } from '@/admin/components/media/MediaDetailModal.js';
 import { useViewMode } from '@/admin/hooks/use-view-mode.js';
 import { useSelection } from '@/admin/hooks/use-selection.js';
@@ -36,16 +22,17 @@ import {
     useMediaQuery,
     useBulkDeleteMedia,
 } from '@/admin/hooks/index.js';
-import { TYPE_FILTER_OPTIONS, MEDIA_ACCEPT } from '@/admin/types/media.js';
-import type { TypeFilter } from '@/admin/types/media.js';
+import { MEDIA_SORT_KEYS, TYPE_FILTER_VALUES } from '@/admin/types/media.js';
+import type { MediaSortKey, TypeFilter } from '@/admin/types/media.js';
 
 const PER_PAGE = 20;
-const TYPE_FILTER_VALUES: readonly TypeFilter[] = TYPE_FILTER_OPTIONS.map((o) => o.value);
 
 type MediaSearch = {
     q?: string;
     type?: TypeFilter;
     page?: number;
+    sort?: MediaSortKey;
+    dir?: 'asc' | 'desc';
 };
 
 function MediaIndexPage(): React.ReactElement {
@@ -53,65 +40,107 @@ function MediaIndexPage(): React.ReactElement {
     const confirm = useConfirm();
     const navigate = Route.useNavigate();
 
-    const { q = '', type: typeFilter = 'all', page: pageParam = 1 } = Route.useSearch();
+    const {
+        q = '',
+        type: typeFilter = 'all',
+        page: pageParam = 1,
+        sort,
+        dir,
+    } = Route.useSearch();
     const [viewMode, setViewMode] = useViewMode('media');
     const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
 
-    function setQ(value: string): void {
-        void navigate({
-            search: (prev) => {
-                const next: MediaSearch = { ...prev };
-                if (value) next.q = value;
-                else delete next.q;
-                return next;
-            },
-        });
-    }
-    function setTypeFilter(value: TypeFilter): void {
-        void navigate({
-            search: (prev) => {
-                const next: MediaSearch = { ...prev };
-                if (value === 'all') delete next.type;
-                else next.type = value;
-                delete next.page;
-                return next;
-            },
-        });
-    }
-    function setPage(value: number): void {
-        void navigate({
-            search: (prev) => {
-                const next: MediaSearch = { ...prev };
-                if (value === 1) delete next.page;
-                else next.page = value;
-                return next;
-            },
-        });
-    }
-
     const { canUploadMedia, canDeleteMedia } = usePermissions();
-
     const { upload, isUploading } = useUploadMedia();
 
     const currentPage = Math.max(1, pageParam);
-    const queryParams = {
+
+    // The URL is the query owner here, so the library stays deep-linkable. A
+    // search change replaces rather than pushes: one search, one history entry.
+    function handleQueryChange(next: Partial<MediaBrowserQuery>): void {
+        void navigate({
+            replace: next.q !== undefined,
+            search: (prev) => {
+                const out: MediaSearch = { ...prev };
+                if (next.q !== undefined) {
+                    if (next.q) out.q = next.q;
+                    else delete out.q;
+                }
+                if (next.type !== undefined) {
+                    if (next.type === 'all') delete out.type;
+                    else out.type = next.type;
+                }
+                if ('sort' in next) {
+                    if (next.sort) {
+                        out.sort = next.sort;
+                        out.dir = next.dir ?? 'asc';
+                    } else {
+                        delete out.sort;
+                        delete out.dir;
+                    }
+                }
+                if (next.page !== undefined) {
+                    if (next.page <= 1) delete out.page;
+                    else out.page = next.page;
+                }
+                return out;
+            },
+        });
+    }
+
+    // Mirrors the browser's own request so selection and bulk delete operate on
+    // the rows actually on screen.
+    const { data } = useMediaQuery({
         ...(q ? { search: q } : {}),
         ...(typeFilter !== 'all' ? { where: { mimeType: typeFilter } } : {}),
+        ...(sort ? { sort: { [sort]: dir ?? 'asc' } } : {}),
         page: currentPage,
         limit: PER_PAGE,
-    };
-
-    const { data, isLoading } = useMediaQuery(queryParams);
-
+    });
     const items = data?.data ?? [];
-    const totalPages = Math.max(1, data?.pagination?.pages ?? 1);
 
-    const { checkedIds, toggle, toggleAll, allChecked, someChecked, reset } =
-        useSelection(items);
+    // Selection is scoped to the active query: narrowing the list must not leave
+    // a bulk action pointed at rows the user can no longer see.
+    const selectionScope = `${q}|${typeFilter}|${currentPage}|${sort ?? ''}|${dir ?? ''}`;
+    const { checkedIds, toggle, toggleAll, allChecked, someChecked, reset } = useSelection(
+        items,
+        selectionScope
+    );
 
-    const bulkDeleteMutation = useBulkDeleteMedia({ onSuccess: reset });
+    const bulkDeleteMutation = useBulkDeleteMedia({
+        onSuccess: () => {
+            reset();
+            // The last page can empty out entirely; step back rather than
+            // stranding the user on a page past the end.
+            if (items.length === checkedIds.size && currentPage > 1) {
+                handleQueryChange({ page: currentPage - 1 });
+            }
+        },
+    });
 
-    const isEmpty = items.length === 0;
+    const bulkActions = someChecked && canDeleteMedia() && (
+        <Dropdown
+            label={`${t('media.bulkActions')} (${checkedIds.size})`}
+            variant="secondary"
+            align="start"
+            items={[
+                {
+                    label: t('media.bulkDeleteButton'),
+                    icon: <Trash2 size={14} />,
+                    variant: 'danger',
+                    onClick: () => {
+                        const ids = Array.from(checkedIds);
+                        confirm({
+                            title: t('media.bulkDeleteTitle', { count: ids.length }),
+                            description: t('media.bulkDeleteDescription'),
+                            confirmLabel: t('common.delete'),
+                            onConfirm: () => bulkDeleteMutation.mutate(ids),
+                        });
+                    },
+                },
+            ]}
+        />
+    );
 
     return (
         <>
@@ -129,168 +158,23 @@ function MediaIndexPage(): React.ReactElement {
                 </PageHeader>
 
                 <PageContent>
-                    <Toolbar>
-                        <ToolbarStart>
-                            {someChecked && canDeleteMedia() && (
-                                <Dropdown
-                                    label={`${t('media.bulkActions')} (${checkedIds.size})`}
-                                    variant="secondary"
-                                    align="start"
-                                    items={[
-                                        {
-                                            label: t('media.bulkDeleteButton'),
-                                            icon: <Trash2 size={14} />,
-                                            variant: 'danger',
-                                            onClick: () => {
-                                                const ids = Array.from(checkedIds);
-                                                confirm({
-                                                    title: t('media.bulkDeleteTitle', {
-                                                        count: ids.length,
-                                                    }),
-                                                    description: t(
-                                                        'media.bulkDeleteDescription'
-                                                    ),
-                                                    confirmLabel: t('common.delete'),
-                                                    onConfirm: () =>
-                                                        bulkDeleteMutation.mutate(ids),
-                                                });
-                                            },
-                                        },
-                                    ]}
-                                />
-                            )}
-                            <SearchInput
-                                placeholder={t('media.searchPlaceholder')}
-                                value={q}
-                                onChange={(e) => setQ(e.target.value)}
-                            />
-                            <Select
-                                value={typeFilter}
-                                onValueChange={(v) => {
-                                    setTypeFilter((v ?? 'all') as TypeFilter);
-                                }}
-                                options={TYPE_FILTER_OPTIONS}
-                                triggerPrefix={t('media.typeFilterPrefix')}
-                                className="am-select-trigger-auto"
-                            />
-                        </ToolbarStart>
-
-                        <ToolbarEnd>
-                            <ToggleGroup
-                                value={viewMode}
-                                onValueChange={setViewMode}
-                                items={[
-                                    {
-                                        value: 'grid',
-                                        icon: <LayoutGrid size={15} />,
-                                        label: t('common.gridView'),
-                                    },
-                                    {
-                                        value: 'list',
-                                        icon: <LayoutList size={15} />,
-                                        label: t('common.listView'),
-                                    },
-                                ]}
-                            />
-                        </ToolbarEnd>
-                    </Toolbar>
-
-                    {isLoading ? (
-                        <PageLoading />
-                    ) : (
-                        <DropZone
-                            onUpload={upload}
-                            accept={MEDIA_ACCEPT}
-                            multiple
-                            disabled={isUploading || !canUploadMedia()}
-                        >
-                            {isEmpty ? (
-                                q || typeFilter !== 'all' ? (
-                                    <EmptyState
-                                        title={t('media.noResults')}
-                                        description={
-                                            q
-                                                ? t('media.noSearchResults', { query: q })
-                                                : t('media.noTypeResults', {
-                                                      type: t(
-                                                          `media.filter${typeFilter.charAt(0).toUpperCase() + typeFilter.slice(1)}`
-                                                      ),
-                                                  }).toLowerCase()
-                                        }
-                                    />
-                                ) : canUploadMedia() ? (
-                                    <UploadZone
-                                        className="am-media-upload-zone-wrap"
-                                        onUpload={upload}
-                                        disabled={isUploading}
-                                        label={t('media.uploadLabel')}
-                                    />
-                                ) : (
-                                    <EmptyState title={t('media.noResults')} />
-                                )
-                            ) : (
-                                <>
-                                    {viewMode === 'grid' && (
-                                        <div className="am-media-select-bar">
-                                            <Checkbox
-                                                checked={allChecked}
-                                                onChange={toggleAll}
-                                                label={t('common.selectAll')}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {viewMode === 'grid' ? (
-                                        <ContentGrid.Root>
-                                            {items.map((item) => (
-                                                <MediaCard
-                                                    key={item.id}
-                                                    item={item}
-                                                    checked={checkedIds.has(item.id)}
-                                                    onToggleCheck={toggle}
-                                                    onClick={setSelectedMediaId}
-                                                />
-                                            ))}
-                                        </ContentGrid.Root>
-                                    ) : (
-                                        <Table.Root>
-                                            <Table.Head>
-                                                <Table.Row>
-                                                    <Table.Th className="am-table-checkbox-col">
-                                                        <Checkbox
-                                                            checked={allChecked}
-                                                            onChange={toggleAll}
-                                                        />
-                                                    </Table.Th>
-                                                    <Table.Th>File</Table.Th>
-                                                    <Table.Th>Type</Table.Th>
-                                                    <Table.Th>Size</Table.Th>
-                                                    <Table.Th>Uploaded</Table.Th>
-                                                </Table.Row>
-                                            </Table.Head>
-                                            <Table.Body>
-                                                {items.map((item) => (
-                                                    <MediaRow
-                                                        key={item.id}
-                                                        item={item}
-                                                        checked={checkedIds.has(item.id)}
-                                                        onToggleCheck={toggle}
-                                                        onClick={setSelectedMediaId}
-                                                    />
-                                                ))}
-                                            </Table.Body>
-                                        </Table.Root>
-                                    )}
-
-                                    <Pagination
-                                        currentPage={currentPage}
-                                        totalPages={totalPages}
-                                        onPage={setPage}
-                                    />
-                                </>
-                            )}
-                        </DropZone>
-                    )}
+                    <MediaBrowser
+                        query={{ q, type: typeFilter, sort, dir, page: currentPage }}
+                        onQueryChange={handleQueryChange}
+                        selection={{
+                            mode: 'bulk',
+                            checkedIds,
+                            onToggle: toggle,
+                            onToggleAll: toggleAll,
+                            allChecked,
+                        }}
+                        onOpenItem={setSelectedMediaId}
+                        viewMode={viewMode}
+                        onViewModeChange={setViewMode}
+                        canUpload={canUploadMedia()}
+                        perPage={PER_PAGE}
+                        toolbarExtra={bulkActions}
+                    />
                 </PageContent>
             </Page>
 
@@ -307,13 +191,18 @@ function MediaIndexPage(): React.ReactElement {
     );
 }
 
+/** Narrow an arbitrary sort key off the URL to one the API accepts. */
+function isSortKey(key: string): key is MediaSortKey {
+    return (MEDIA_SORT_KEYS as readonly string[]).includes(key);
+}
+
 export const Route = createFileRoute('/_protected/media/')({
     validateSearch: (search: Record<string, unknown>): MediaSearch => {
         const out: MediaSearch = {};
         if (typeof search['q'] === 'string' && search['q']) out.q = search['q'];
         if (
             typeof search['type'] === 'string' &&
-            TYPE_FILTER_VALUES.includes(search['type'] as TypeFilter)
+            (TYPE_FILTER_VALUES as readonly string[]).includes(search['type'])
         ) {
             out.type = search['type'] as TypeFilter;
         }
@@ -325,6 +214,12 @@ export const Route = createFileRoute('/_protected/media/')({
                   ? Number(pageRaw)
                   : NaN;
         if (Number.isFinite(pageNum) && pageNum > 1) out.page = pageNum;
+
+        const sortRaw = search['sort'];
+        if (typeof sortRaw === 'string' && isSortKey(sortRaw)) {
+            out.sort = sortRaw;
+            out.dir = search['dir'] === 'desc' ? 'desc' : 'asc';
+        }
         return out;
     },
     component: MediaIndexPage,

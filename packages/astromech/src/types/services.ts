@@ -124,7 +124,7 @@ type ManifestMethodBase = {
     binaryInput?: true;
 };
 
-/** A core domain method (`users`, `media`, `settings`). */
+/** A core domain method (`users`, `media`, `settings`, `content`). */
 export type CoreManifestMethod = ManifestMethodBase & {
     source: 'core';
     /** Domain the catalogue belongs to — `id` is `<domain>.<method>`. */

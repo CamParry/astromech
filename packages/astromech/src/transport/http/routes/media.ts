@@ -30,6 +30,9 @@ type Env = { Variables: AuthVariables };
 
 const router = new OpenAPIHono<Env>();
 
+/** Sort fields accepted off the wire. Mirrors the storage allowlist. */
+const SORTABLE_FIELDS = new Set(['filename', 'mimeType', 'size', 'createdAt']);
+
 // ============================================================================
 // GET /media
 // ============================================================================
@@ -52,6 +55,10 @@ router.get('/', async (c) => {
         mimeType === 'other'
     ) {
         params.where = { mimeType };
+    }
+    const sortField = q['sort'];
+    if (sortField && SORTABLE_FIELDS.has(sortField)) {
+        params.sort = { [sortField]: q['dir'] === 'asc' ? 'asc' : 'desc' };
     }
     return c.json(await Astromech.media.query(params));
 });
@@ -118,12 +125,13 @@ router.put('/:id', async (c) => {
     const parsed = updateMediaSchema.safeParse(raw);
     if (!parsed.success) return fromZodError(c, parsed.error);
 
-    const { alt, title, fields } = parsed.data;
+    const { alt, title, caption, fields } = parsed.data;
     const media = await Astromech.media.update({
         id,
         data: {
             ...(alt !== undefined && { alt }),
             ...(title !== undefined && { title }),
+            ...(caption !== undefined && { caption }),
             ...(fields !== undefined && { fields: fields as JsonObject }),
         },
     });

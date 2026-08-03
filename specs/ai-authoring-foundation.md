@@ -425,12 +425,13 @@ path — an in-process test passes today and proves nothing.
 `translate`, `transform`, `generate`. Server-side, schema-aware, staged output.
 Reuse the field descriptors and the validation pipeline.
 
-**Designed out in `specs/ai-content-operations.md` (2026-08-03) — read that, not
-this.** Two findings there that this section does not know: HTML cannot be parsed
-back to ProseMirror server-side (tiptap's parser needs a DOM), so `translate`
-never serializes the document at all and works block by block; and the provider
-registry has to resolve lazily, because `config:setup` is build time and does not
-re-run per request in a Worker.
+**SHIPPED 2026-08-03. The as-built record is the P5 entry in
+`roadmap/in-progress/ai-integration.md` — read that, not this.** Two things this
+section assumed and got wrong: HTML cannot be parsed back to ProseMirror
+server-side (tiptap's parser needs a DOM), so `translate` never serializes the
+document at all and works block by block; and there is no config fallback for the
+provider, because a provider is a function and the virtual config is
+`JSON.stringify`'d.
 
 ### P6 — Context bus
 

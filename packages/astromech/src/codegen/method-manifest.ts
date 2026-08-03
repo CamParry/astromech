@@ -2,9 +2,9 @@
  * Method Manifest Generator
  *
  * Produces a JSON catalogue of every service-method descriptor: core domain
- * methods (users, media, settings), per-type entry methods, and plugin service
- * methods. Pure function — callers are responsible for writing the result to
- * disk or injecting it into a virtual module.
+ * methods (users, media, settings, content), per-type entry methods, and plugin
+ * service methods. Pure function — callers are responsible for writing the
+ * result to disk or injecting it into a virtual module.
  *
  * Every schema is authored in the domain that owns the method; this file only
  * projects descriptors into the manifest shape (`ManifestMethod`, declared in
@@ -32,6 +32,7 @@ import type { ResolvedConfig } from '@/types/index.js';
 import { usersDescriptors } from '@/users/descriptors.js';
 import { mediaDescriptors } from '@/media/descriptors.js';
 import { settingsDescriptors } from '@/settings/descriptors.js';
+import { contentDescriptors } from '@/content/descriptors.js';
 import {
     entryMethodDescriptors,
     type EntryMethodDescriptor,
@@ -109,6 +110,7 @@ function buildCoreMethods(): CoreManifestMethod[] {
         ['users', usersDescriptors],
         ['media', mediaDescriptors],
         ['settings', settingsDescriptors],
+        ['content', contentDescriptors],
     ];
     const methods: CoreManifestMethod[] = [];
 

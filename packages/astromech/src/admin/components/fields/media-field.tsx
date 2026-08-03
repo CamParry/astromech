@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useFieldControl } from '@/admin/components/fields/field-control-context';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
     ChevronDown,
@@ -14,11 +13,10 @@ import {
 } from 'lucide-react';
 import type { BaseFieldProps } from '@/types/index.js';
 import { Astromech } from '@/transport/http/client/index.js';
-import { queryKeys } from '../../hooks/use-query-keys.js';
 import { Modal } from '@/admin/components/ui/modal';
 import { Spinner } from '@/admin/components/ui/spinner';
-import { UploadZone } from '@/admin/components/ui/upload-zone';
-import { useToast } from '@/admin/components/ui/toast';
+import { MediaBrowser } from '@/admin/components/media/media-browser.js';
+import type { MediaBrowserQuery } from '@/admin/components/media/media-browser.js';
 import './media-field.css';
 
 type MediaItem = {
@@ -69,8 +67,6 @@ export function MediaField({
     const { t } = useTranslation();
     const multiple = field.multiple === true;
     const accept = typeof field.accept === 'string' ? field.accept : undefined;
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
 
     // For single: value is a string id or null
     // For multiple: value is an array of string ids
@@ -86,7 +82,6 @@ export function MediaField({
     const [selectedItems, setSelectedItems] = useState<MediaItem[]>([]);
     const [isLoadingItems, setIsLoadingItems] = useState(initialIds.length > 0);
     const [pickerOpen, setPickerOpen] = useState(false);
-    const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     // Load existing selected items
@@ -116,10 +111,10 @@ export function MediaField({
             .finally(() => setIsLoadingItems(false));
     }, [JSON.stringify(value)]);
 
-    const { data: libraryResult, isLoading: libraryLoading } = useQuery({
-        queryKey: queryKeys.media.list({}),
-        queryFn: () => Astromech.media.query({ limit: 200 }),
-        enabled: pickerOpen,
+    const [pickerQuery, setPickerQuery] = useState<MediaBrowserQuery>({
+        q: '',
+        type: 'all',
+        page: 1,
     });
 
     function handleSelect(item: MediaItem) {
@@ -204,21 +199,6 @@ export function MediaField({
         onChange(name, newIds);
     }
 
-    async function handleUpload(files: File[]) {
-        setIsUploading(true);
-        setError(null);
-        for (const file of files) {
-            try {
-                await Astromech.media.upload({ file });
-                queryClient.invalidateQueries({ queryKey: queryKeys.media.list({}) });
-                toast({ message: `${file.name} uploaded.`, variant: 'success' });
-            } catch {
-                toast({ message: `Failed to upload ${file.name}`, variant: 'error' });
-            }
-        }
-        setIsUploading(false);
-    }
-
     const hasSelection = selectedIds.length > 0;
 
     return (
@@ -280,9 +260,9 @@ export function MediaField({
                             </button>
                         )}
                     </div>
-                ) : (
+                ) : selectedItems[0] === undefined ? null : (
                     <div className="am-media-picker-preview">
-                        <MediaThumb item={selectedItems[0] as MediaItem} />
+                        <MediaThumb item={selectedItems[0]} />
                         {!disabled && (
                             <div className="am-media-picker-overlay">
                                 <button
@@ -331,13 +311,7 @@ export function MediaField({
                 size="lg"
                 footer={
                     multiple ? (
-                        <div
-                            style={{
-                                display: 'flex',
-                                justifyContent: 'flex-end',
-                                gap: '0.5rem',
-                            }}
-                        >
+                        <div className="am-media-picker-modal-footer">
                             <button
                                 type="button"
                                 className="am-btn am-btn-secondary am-btn-sm"
@@ -358,62 +332,20 @@ export function MediaField({
                     ) : undefined
                 }
             >
-                <div className="am-media-picker-modal-upload">
-                    <UploadZone
-                        onUpload={handleUpload}
-                        disabled={isUploading}
-                        label={
-                            isUploading
-                                ? t('fields.mediaUploading')
-                                : t('fields.mediaUploadLabel')
-                        }
-                        {...(accept !== undefined ? { accept } : {})}
-                        multiple
-                    />
-                </div>
-                {libraryLoading ? (
-                    <div className="am-media-picker-modal-loading">
-                        <Spinner />
-                    </div>
-                ) : !libraryResult?.data || libraryResult?.data.length === 0 ? (
-                    <p className="am-media-picker-modal-empty">
-                        {t('fields.mediaNoItems')}
-                    </p>
-                ) : (
-                    <div className="am-media-picker-modal-grid">
-                        {libraryResult?.data.map((item) => (
-                            <button
-                                key={item.id}
-                                type="button"
-                                className={
-                                    'am-media-picker-modal-item' +
-                                    (selectedIds.includes(item.id)
-                                        ? ' am-media-picker-modal-item-selected'
-                                        : '')
-                                }
-                                onClick={() => handleSelect(item)}
-                            >
-                                {item.mimeType.startsWith('image/') ? (
-                                    <img
-                                        src={item.url}
-                                        alt={item.alt ?? item.filename}
-                                        className="am-media-picker-modal-thumb"
-                                    />
-                                ) : (
-                                    <div className="am-media-picker-modal-thumb am-media-picker-modal-thumb-placeholder">
-                                        <FileTypeIcon
-                                            mimeType={item.mimeType}
-                                            size={24}
-                                        />
-                                    </div>
-                                )}
-                                <span className="am-media-picker-modal-name">
-                                    {item.filename}
-                                </span>
-                            </button>
-                        ))}
-                    </div>
-                )}
+                <MediaBrowser
+                    query={pickerQuery}
+                    onQueryChange={(next) =>
+                        setPickerQuery((prev) => ({ ...prev, ...next }))
+                    }
+                    selection={{
+                        mode: 'pick',
+                        selectedIds,
+                        onPick: handleSelect,
+                        multiple,
+                    }}
+                    perPage={24}
+                    {...(accept !== undefined ? { accept } : {})}
+                />
             </Modal>
         </div>
     );

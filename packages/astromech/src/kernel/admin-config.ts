@@ -11,6 +11,8 @@ import type {
     ResolvedEntryTypeConfig,
 } from '@/types/config.js';
 import { resolveRoles } from '@/permissions/index.js';
+import { normaliseWidths } from '@/media/serving/image/url.js';
+import { defaultImageWidths } from '@/media/serving/image/defaults.js';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity.js';
 import {
     derivePluginNav,
@@ -74,6 +76,13 @@ export function buildAdminConfig(
         }),
         adminRoute: resolvedConfig.adminRoute,
         apiRoute: resolvedConfig.apiRoute,
+        mediaRoute: resolvedConfig.mediaRoute,
+        // No driver means no variants exist to request — the admin falls back
+        // to the original rather than asking for a width that would 404.
+        imageWidths: config.image
+            ? normaliseWidths(config.image.widths ?? defaultImageWidths)
+            : [],
+        imageAvif: config.image?.avif ?? true,
         locales: resolvedConfig.locales ?? [],
         defaultLocale: resolvedConfig.defaultLocale ?? 'en',
         roles: Object.entries(resolvedRoles).map(([slug, r]) => ({ slug, name: r.name })),

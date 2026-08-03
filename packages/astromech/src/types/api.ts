@@ -303,7 +303,12 @@ export type MediaApi = {
     upload(params: { file: File }): Promise<Media>;
     update(params: {
         id: string;
-        data: Partial<{ alt: string; fields: JsonObject }>;
+        data: Partial<{
+            alt: string;
+            title: string;
+            caption: string;
+            fields: JsonObject;
+        }>;
     }): Promise<Media>;
     delete(params: { id: string }): Promise<void>;
     usedBy(params: { id: string }): Promise<MediaUsage[]>;
@@ -326,6 +331,54 @@ export type SettingsApi = {
         full?: boolean;
     }): Promise<JsonValue | null>;
     set(params: { key: string; value: JsonValue }): Promise<Setting>;
+};
+
+// ============================================================================
+// Content API (model-driven translate / transform / generate)
+// ============================================================================
+
+/** What a content operation did to one field. */
+export type ContentFieldSummary = {
+    /** Instance path of the rewritten field, e.g. `sections[a1].title`. */
+    path: string;
+    fieldType: string;
+    /** How many strings were sent to the provider for this field. */
+    inputs: number;
+    /** False when the provider handed back exactly what it was given. */
+    changed: boolean;
+};
+
+export type ContentOperationResult = {
+    /** The entry the rewrite landed on: the staged row, or the new sibling. */
+    id: string;
+    type: string;
+    /** `staged` needs a human merge; `created` is an unpublished translation. */
+    outcome: 'staged' | 'created';
+    /** Where a reviewer opens the change. Null when the type declares no `url`. */
+    previewUrl: string | null;
+    /** Present on `staged` — the token the preview URL carries. */
+    previewToken?: string;
+    fields: ContentFieldSummary[];
+};
+
+/** The entry a content operation targets, optionally narrowed to some paths. */
+export type ContentTarget = {
+    type: string;
+    id: string;
+    /** Instance paths to restrict to; a container path selects its subtree. */
+    paths?: string[];
+};
+
+export type ContentApi = {
+    translate(
+        params: ContentTarget & { locale: string; instruction?: string }
+    ): Promise<ContentOperationResult>;
+    transform(
+        params: ContentTarget & { instruction: string }
+    ): Promise<ContentOperationResult>;
+    generate(
+        params: ContentTarget & { instruction: string }
+    ): Promise<ContentOperationResult>;
 };
 
 export type UsersApi = {

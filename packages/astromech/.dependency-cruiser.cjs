@@ -9,6 +9,7 @@
  *     · http/client = the fetch Client (consumes the HTTP API over the wire;
  *       client half of the transport, nested but kept a distinct DAG node)
  *   policies                                       permission / confirmation wrappers
+ *   content                                        downstream domain — may import entries
  *   entries · media · users · settings             domains — siblings, may read each other
  *   plugins/runtime · database · storage · email ·  capabilities
  *     cron · context · fields · permissions
@@ -47,12 +48,20 @@ module.exports = {
         {
             name: 'domain-no-upward',
             comment:
-                'A domain knows nothing about delivery or composition. It must not import routes, admin, a transport (which now houses the fetch client under transport/http/client), policies, the kernel, codegen, or a first-party plugin. Importing the plugins/runtime hook engine IS allowed — that is a capability the domain fires hooks through.',
+                'A domain knows nothing about delivery or composition. It must not import routes, admin, a transport (which now houses the fetch client under transport/http/client), policies, the kernel, codegen, or a first-party plugin. Importing the plugins/runtime hook engine IS allowed — that is a capability the domain fires hooks through. `content` is included: it is a DOWNSTREAM domain (it orchestrates entries + a model provider), but it knows nothing about delivery either.',
             severity: 'error',
-            from: { path: '^src/(entries|media|users|settings)/' },
+            from: { path: '^src/(entries|media|users|settings|content)/' },
             to: {
                 path: '^src/(routes|admin|transport|policies|kernel|codegen)/',
             },
+        },
+        {
+            name: 'content-is-downstream-of-the-domains',
+            comment:
+                'content/ sits ABOVE entries/ in the DAG: it reads an entry, rewrites its text through a provider and writes it back, so importing entries/ is a legitimate edge. The half worth enforcing is the reverse one — a domain must never import content/, or the cycle is back. This is the ONE direction still policed between domain-ish modules: the peer siblings may read each other freely (see the header), but content is downstream of them, not beside them.',
+            severity: 'error',
+            from: { path: '^src/(entries|media|users|settings)/' },
+            to: { path: '^src/content/' },
         },
         {
             name: 'capability-no-upward',
@@ -100,13 +109,13 @@ module.exports = {
         {
             name: 'admin-only-client-and-pure-leaves',
             comment:
-                'The admin SPA holds the Client and may use shared pure leaves (fields, types, utilities, errors). It must not reach into domains, capabilities, transports, policies, or the kernel — EXCEPT (a) the fetch Client at transport/http/client/, which the admin is built around, and (b) a short allowlist of pure domain leaves it renders with: entries/utils/url, entries/type-registry, entries/validation-stage (the browser runs the server pipeline before a submit and must pick the same stage the server will), settings/page-values. Those deep-imports avoid pulling a domain service (and its virtual:config) into the browser bundle.',
+                'The admin SPA holds the Client and may use shared pure leaves (fields, types, utilities, errors). It must not reach into domains, capabilities, transports, policies, or the kernel — EXCEPT (a) the fetch Client at transport/http/client/, which the admin is built around, and (b) a short allowlist of pure domain leaves it renders with: entries/utils/url, entries/type-registry, entries/validation-stage (the browser runs the server pipeline before a submit and must pick the same stage the server will), settings/page-values, media/serving/image/url (URL string-building with zero imports — the admin thumb builds the same variant URL the server route parses, and a second copy could only drift). Those deep-imports avoid pulling a domain service (and its virtual:config) into the browser bundle.',
             severity: 'error',
             from: { path: '^src/admin/' },
             to: {
                 path: '^src/(entries|media|users|settings)/|^src/(storage|email|cron|context|database|permissions|policies|transport|kernel)/|^src/plugins/runtime/',
                 pathNot:
-                    '^src/entries/(utils/url|type-registry|validation-stage)\\.(ts|js)$|^src/settings/page-values\\.(ts|js)$|^src/transport/http/client/',
+                    '^src/entries/(utils/url|type-registry|validation-stage)\\.(ts|js)$|^src/settings/page-values\\.(ts|js)$|^src/media/serving/image/url\\.(ts|js)$|^src/transport/http/client/',
             },
         },
         {

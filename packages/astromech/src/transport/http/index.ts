@@ -16,6 +16,7 @@ import { entriesRouter } from './routes/entries.js';
 import { usersRouter } from './routes/users.js';
 import { mediaRouter } from './routes/media.js';
 import { settingsRouter } from './routes/settings.js';
+import { contentRouter } from './routes/content.js';
 import { entryTypesRouter } from './routes/entry-types.js';
 import { cronRouter } from './routes/cron.js';
 import { pluginsRouter } from './routes/plugins.js';
@@ -111,6 +112,7 @@ app.route('/entries', entriesRouter);
 app.route('/users', usersRouter);
 app.route('/media', mediaRouter);
 app.route('/settings', settingsRouter);
+app.route('/content', contentRouter);
 app.route('/entry-types', entryTypesRouter);
 app.route('/notifications', notificationsRouter);
 

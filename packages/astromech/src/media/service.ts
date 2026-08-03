@@ -181,7 +181,12 @@ export const mediaApi = {
 
     async update(params: {
         id: string;
-        data: Partial<{ alt: string; title: string; fields: JsonObject }>;
+        data: Partial<{
+            alt: string;
+            title: string;
+            caption: string;
+            fields: JsonObject;
+        }>;
     }): Promise<Media> {
         const { id } = params;
         const validatedData = validate(updateMediaSchema, params.data);
@@ -232,6 +237,8 @@ export const mediaApi = {
         // `onUpdate`); an explicitly-`undefined` key means "leave this column alone".
         const updated = await createMediaStorage().update(id, {
             alt: validatedData.alt,
+            title: validatedData.title,
+            caption: validatedData.caption,
             fields: validatedData.fields as JsonObject | undefined,
         });
         // An update that never touched `fields` must leave the index alone.
