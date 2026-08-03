@@ -74,7 +74,8 @@ every editable column through the HTTP layer.
 - [x] `media:upload` no longer gates metadata saves — `media:update` was split out. The trigger was
       not the admin UI but the method manifest: it publishes `media.update` with its declared
       permission, so the conflation had become an API that mis-states itself. `users` already split
-      read/create/update/delete; media was the odd one out.
+      read/create/update/delete; media was the odd one out. Rationale and the rejected alternative:
+      `decisions/0006-media-update-permission.md`.
 - [ ] `mediaApi.replace` exists with full variant cleanup but is exposed by no route, no client
       method and no UI
 - [x] `@testing-library/react` + `user-event` added (on `packages/astromech`, where `vitest` and
