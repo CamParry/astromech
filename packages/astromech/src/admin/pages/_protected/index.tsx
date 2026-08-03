@@ -20,6 +20,7 @@ import {
     PageContent,
 } from '@/admin/components/ui/index.js';
 import { Astromech } from '@/transport/http/client/index.js';
+import { useAIContext } from '@/admin/context/ai-context.js';
 import type { Entry } from '@/types/index.js';
 import { formatDate } from '@/utilities/dates.js';
 
@@ -126,6 +127,11 @@ function DashboardPage(): React.ReactElement {
     const collections = adminConfig.entries;
     const collectionEntries = Object.entries(collections);
     const { data: recentEntries, isLoading: recentLoading } = useRecentEntries();
+
+    useAIContext(
+        { kind: 'pages', id: 'dashboard', label: t('dashboard.title') },
+        { depth: 0 }
+    );
 
     return (
         <Page>

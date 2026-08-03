@@ -31,6 +31,7 @@ import {
     useDeleteMedia,
 } from '@/admin/hooks/index.js';
 import { mediaItemQueryOptions } from '@/admin/hooks/media.js';
+import { useAIContext } from '@/admin/context/ai-context.js';
 
 // ============================================================================
 // Helpers
@@ -61,6 +62,11 @@ function MediaEditPage(): React.ReactElement {
     const navigate = useNavigate();
 
     const { data: item, isLoading } = useMediaItem(id);
+
+    // Declare the media item in view; `null` until it loads.
+    useAIContext(item != null ? { kind: 'media', id, label: item.filename } : null, {
+        depth: 1,
+    });
 
     const form = useForm({
         defaultValues: {

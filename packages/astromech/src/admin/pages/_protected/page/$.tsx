@@ -18,6 +18,7 @@ import { ComponentPageView } from '@/admin/components/pages/ComponentPageView.js
 import { SettingsPageForm } from '@/admin/components/pages/SettingsPageForm.js';
 import { EmptyState, Page, PageContent } from '@/admin/components/ui/index.js';
 import { resolveLabel } from '@/admin/i18n/labels.js';
+import { useAIContext } from '@/admin/context/ai-context.js';
 
 // ============================================================================
 // Route component
@@ -30,6 +31,18 @@ function AppPage(): React.ReactElement {
     const { hasPermission, canUpdateSettings } = usePermissions();
 
     const page = adminConfig.pages.find((p) => p.path === splat);
+
+    // Identify the page by its route key (the splat), which every mode carries.
+    useAIContext(
+        page !== undefined
+            ? {
+                  kind: 'pages',
+                  id: page.key,
+                  label: resolveLabel(page.label, page.path, t, 'translation'),
+              }
+            : null,
+        { depth: 0 }
+    );
 
     if (!page) {
         return (

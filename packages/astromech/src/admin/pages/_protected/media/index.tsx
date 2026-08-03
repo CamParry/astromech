@@ -22,6 +22,7 @@ import {
     useMediaQuery,
     useBulkDeleteMedia,
 } from '@/admin/hooks/index.js';
+import { useAIContext } from '@/admin/context/ai-context.js';
 import { MEDIA_SORT_KEYS, TYPE_FILTER_VALUES } from '@/admin/types/media.js';
 import type { MediaSortKey, TypeFilter } from '@/admin/types/media.js';
 
@@ -52,6 +53,8 @@ function MediaIndexPage(): React.ReactElement {
 
     const { canUploadMedia, canDeleteMedia } = usePermissions();
     const { upload, isUploading } = useUploadMedia();
+
+    useAIContext({ kind: 'media', label: t('media.title') }, { depth: 0 });
 
     const currentPage = Math.max(1, pageParam);
 
@@ -102,10 +105,8 @@ function MediaIndexPage(): React.ReactElement {
     // Selection is scoped to the active query: narrowing the list must not leave
     // a bulk action pointed at rows the user can no longer see.
     const selectionScope = `${q}|${typeFilter}|${currentPage}|${sort ?? ''}|${dir ?? ''}`;
-    const { checkedIds, toggle, toggleAll, allChecked, someChecked, reset } = useSelection(
-        items,
-        selectionScope
-    );
+    const { checkedIds, toggle, toggleAll, allChecked, someChecked, reset } =
+        useSelection(items, selectionScope);
 
     const bulkDeleteMutation = useBulkDeleteMedia({
         onSuccess: () => {
