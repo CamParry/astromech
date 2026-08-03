@@ -21,6 +21,7 @@ import {
     Toolbar,
     ToolbarEnd,
     ToolbarStart,
+    UploadButton,
     UploadZone,
 } from '@/admin/components/ui/index.js';
 import type { SortDirection } from '@/admin/components/ui/table.js';
@@ -76,6 +77,8 @@ export type MediaBrowserProps = {
     onViewModeChange?: (value: ViewMode) => void;
     accept?: string;
     canUpload?: boolean;
+    /** Show an upload button in the toolbar. The media page opts out — it has one in its page header. */
+    showUploadButton?: boolean;
     perPage?: number;
     toolbarExtra?: React.ReactNode;
 };
@@ -89,6 +92,7 @@ export function MediaBrowser({
     onViewModeChange,
     accept = MEDIA_ACCEPT,
     canUpload = true,
+    showUploadButton = false,
     perPage = DEFAULT_PER_PAGE,
     toolbarExtra,
 }: MediaBrowserProps): React.ReactElement {
@@ -123,6 +127,8 @@ export function MediaBrowser({
     const activeView: ViewMode =
         selection.mode === 'pick' ? 'grid' : (viewMode ?? 'grid');
     const uploadMultiple = selection.mode === 'pick' ? selection.multiple : true;
+    const hasViewSwitch = viewMode !== undefined && onViewModeChange !== undefined;
+    const hasUploadButton = showUploadButton && canUpload;
     const currentSort = sort ? { key: sort, direction: dir ?? 'asc' } : null;
     const isFiltered = q !== '' || typeFilter !== 'all';
 
@@ -148,7 +154,7 @@ export function MediaBrowser({
     }
 
     return (
-        <>
+        <div className="am-media-browser">
             <Toolbar>
                 <ToolbarStart>
                     {toolbarExtra}
@@ -179,24 +185,36 @@ export function MediaBrowser({
                     )}
                 </ToolbarStart>
 
-                {viewMode !== undefined && onViewModeChange !== undefined && (
+                {(hasViewSwitch || hasUploadButton) && (
                     <ToolbarEnd>
-                        <ToggleGroup
-                            value={viewMode}
-                            onValueChange={onViewModeChange}
-                            items={[
-                                {
-                                    value: 'grid',
-                                    icon: <LayoutGrid size={15} />,
-                                    label: t('common.gridView'),
-                                },
-                                {
-                                    value: 'list',
-                                    icon: <LayoutList size={15} />,
-                                    label: t('common.listView'),
-                                },
-                            ]}
-                        />
+                        {hasViewSwitch && (
+                            <ToggleGroup
+                                value={viewMode}
+                                onValueChange={onViewModeChange}
+                                items={[
+                                    {
+                                        value: 'grid',
+                                        icon: <LayoutGrid size={15} />,
+                                        label: t('common.gridView'),
+                                    },
+                                    {
+                                        value: 'list',
+                                        icon: <LayoutList size={15} />,
+                                        label: t('common.listView'),
+                                    },
+                                ]}
+                            />
+                        )}
+                        {hasUploadButton && (
+                            <UploadButton
+                                onUpload={upload}
+                                accept={accept}
+                                multiple={uploadMultiple}
+                                disabled={isUploading}
+                                loading={isUploading}
+                                size="sm"
+                            />
+                        )}
                     </ToolbarEnd>
                 )}
             </Toolbar>
@@ -267,7 +285,7 @@ export function MediaBrowser({
                     )}
                 </DropZone>
             )}
-        </>
+        </div>
     );
 }
 

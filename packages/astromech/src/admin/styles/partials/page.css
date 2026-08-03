@@ -453,6 +453,14 @@
    Media page utilities
    ============================================================================ */
 
+/* The browser owns its vertical rhythm: it renders both in a page and in the
+   media field's modal, which has no layout gap of its own. */
+.am-media-browser {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--am-space) * 3);
+}
+
 .am-media-upload-zone-wrap {
     padding: 2rem 0;
 }

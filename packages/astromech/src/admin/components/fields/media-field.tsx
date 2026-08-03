@@ -17,6 +17,7 @@ import { Modal } from '@/admin/components/ui/modal';
 import { Spinner } from '@/admin/components/ui/spinner';
 import { MediaBrowser } from '@/admin/components/media/media-browser.js';
 import type { MediaBrowserQuery } from '@/admin/components/media/media-browser.js';
+import { usePermissions } from '@/admin/hooks/index.js';
 import './media-field.css';
 
 type MediaItem = {
@@ -65,6 +66,7 @@ export function MediaField({
 }: BaseFieldProps) {
     const { hasError } = useFieldControl();
     const { t } = useTranslation();
+    const { canUploadMedia } = usePermissions();
     const multiple = field.multiple === true;
     const accept = typeof field.accept === 'string' ? field.accept : undefined;
 
@@ -311,7 +313,7 @@ export function MediaField({
                 size="lg"
                 footer={
                     multiple ? (
-                        <div className="am-media-picker-modal-footer">
+                        <>
                             <button
                                 type="button"
                                 className="am-btn am-btn-secondary am-btn-sm"
@@ -328,7 +330,7 @@ export function MediaField({
                                     ? t('common.select', { count: selectedIds.length })
                                     : t('common.done')}
                             </button>
-                        </div>
+                        </>
                     ) : undefined
                 }
             >
@@ -344,6 +346,8 @@ export function MediaField({
                         multiple,
                     }}
                     perPage={24}
+                    canUpload={canUploadMedia()}
+                    showUploadButton
                     {...(accept !== undefined ? { accept } : {})}
                 />
             </Modal>
