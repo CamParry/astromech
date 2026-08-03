@@ -404,31 +404,56 @@ f(x)`), so re-coercion is only observable when the STORED value is not
 - [ ] **P7 — authoring plugin** — Claude adapter + tool-loop over the manifest +
       chat drawer. **Built and merged 2026-08-03**; unticked because the
       assistant is read-only and no model round-trip has ever run.
-    - **The drawer 500s on every send** (found 2026-08-04, with a real key set).
-      `POST /api/plugins/authoring/chat` dies on
+    - **The drawer 500s on every send — found and FIXED 2026-08-04.**
+      `POST /api/plugins/authoring/chat` died on
       `ERR_UNSUPPORTED_ESM_URL_SCHEME … 'virtual:'`. Astro loads a site's config
       — and so every plugin factory and the `rawRoutes` closures hanging off it
-      — in plain Node, so the handler's imports resolve through Node's loader,
+      — in plain Node, so the handler's imports resolved through Node's loader,
       where `astromech/methods` → `scopedService` → the domain services →
       `virtual:astromech/config` cannot resolve. Core escapes this only because
       its runtime is Vite-compiled from `src`. `ctx` has always been the bridge
-      and nothing wrote that down.
-        - **Resolved by decision 2026-08-04, implementing.** Capability
-          injection: `ctx.methods.tools({ readOnly })` hands back the manifest
-          methods the acting role may call, already scoped, built by core inside
-          its own graph. `decisions/0007` fixes the mechanism (and records that
-          `ssr.noExternal` was tried and cannot work, that Node loader hooks
-          would resolve to a second config module, and that VS Code's
-          inject-at-require trick needs a host that loads the plugin — Astro's
-          config does that before core exists). `decisions/0008` fixes the
-          port's shape and name. Build order in
-          `specs/plugin-runtime-boundary.md`.
+      and nothing wrote that down, which is how this package walked past it.
+        - **`ctx.methods.tools({ readOnly })`** returns the manifest methods the
+          acting role may call, already resolved through `scopedService`. Core
+          owns the whole composition, because three of its four steps look
+          optional and are not, and their order is load-bearing.
+          `decisions/0007` holds the mechanism and the rejected alternatives
+          (`ssr.noExternal` was tried and is inert; Node loader hooks would
+          resolve to a _second_ config module; VS Code's inject-at-require needs
+          a host that loads the plugin, and Astro's config loads ours before
+          core exists). `decisions/0008` holds the port's shape and name.
+        - Three constraints shaped it, none optional: the implementation must be
+          a Vite-graph closure, so it is wired at module top level in
+          `transport/local` and NOT in `initRuntime` (which runs in plain Node
+          inside `config:setup`); `plugins/runtime` may not import `policies`,
+          `transport` or `codegen`, so it holds an injected implementation; and
+          `types/` may import only leaves, so `ToolDispatch` moved down into
+          `types/services.ts`.
+        - `formatAIContextMessage` joined the main barrel. It is pure and was
+          unreachable only because it shared a barrel with `scopedService` —
+          `apps/docs/ai-context.md` was telling readers to import it from the
+          subpath that throws.
+        - **`npm run check:node-imports`** is the regression guard: a unit test
+          cannot catch this class, because vitest aliases core to `src` and
+          shims `virtual:`, so the failing import passes there. It spawns plain
+          `node` against `dist` and imports each server-side subpath a plugin or
+          an Astro config may load.
+        - **Browser-verified 2026-08-04** against the demo on 4323 with a
+          deliberately invalid `ANTHROPIC_API_KEY` (nothing billed): the log
+          reads `Chat request running against 38 tools`, the route returns
+          `[200]`, and the transcript shows the API's own
+          `401 authentication_error`. The dispatch table is built and the
+          round-trip reaches Anthropic; only the key is fake.
         - Deferred with its own file: `PluginRawRoute.handler` is a closure
           where Astro's `injectRoute` takes an `entrypoint`, which is the reason
           plugin route code is outside Vite's graph at all. Changing the
           contract would remove the need for a port on routes, but cannot help
           hooks, service methods or cron. See
           `roadmap/planned/plugin-route-entrypoints.md`.
+        - Behaviour change worth knowing: the dispatches are built in the route
+          rather than inside the loop's `try`, so a missing manifest is a 500
+          rather than an error event in the transcript. Both are boot wiring
+          bugs, not reachable user states.
     - `@astromech/authoring` ships the package, a streaming chat route, the
       model loop and the drawer. Browser-verified against the demo: the drawer
       opens, the transcript is a live region, focus returns to its toggle on
