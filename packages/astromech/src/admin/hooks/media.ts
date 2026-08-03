@@ -38,6 +38,18 @@ export function useMediaItem(id: string, enabled = true) {
     return useQuery({ ...mediaItemQueryOptions(id), enabled });
 }
 
+/**
+ * Read-only: the index edges pointing at this media item. Rows are
+ * index-shaped, so the caller resolves display titles itself.
+ */
+export function useMediaUsage(id: string, enabled = true) {
+    return useQuery({
+        queryKey: [...queryKeys.media.detail(id), 'usage'] as const,
+        queryFn: () => Astromech.media.usedBy({ id }),
+        enabled,
+    });
+}
+
 // ============================================================================
 // Mutation hooks
 // ============================================================================

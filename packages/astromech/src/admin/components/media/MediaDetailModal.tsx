@@ -10,6 +10,7 @@ import { useForm, useStore } from '@tanstack/react-form';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Modal, Spinner, useConfirm } from '../ui/index.js';
 import { useMediaItem, useUpdateMedia, useDeleteMedia } from '../../hooks/media.js';
+import { MediaUsagePanel } from './media-usage-panel.js';
 import { formatBytes } from '@/utilities/bytes.js';
 import { formatDatetime } from '@/utilities/dates.js';
 import { FileTypeIcon } from '@/admin/utilities/media.js';
@@ -159,6 +160,8 @@ export function MediaDetailModal({
                                 )}
                             </dl>
                         </div>
+
+                        <MediaUsagePanel mediaId={item.id} />
                     </div>
 
                     {/* Right panel — edit form */}

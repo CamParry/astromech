@@ -112,6 +112,29 @@ export type IncomingRelation = {
     schemaPath: string;
 };
 
+/**
+ * One relationships-index edge pointing at a media item — a row of the media
+ * "used by" panel. Index-shaped: no source title, because the media domain may
+ * not import entries or users, so it cannot resolve one.
+ */
+export type MediaUsage = {
+    sourceId: string;
+    /**
+     * entry | user | media — what holds the reference. Duplicated from
+     * `fields/relationship-edges.ts`'s `TargetKind` because a pure leaf may not
+     * import a capability.
+     */
+    sourceKind: 'entry' | 'user' | 'media';
+    /** The source's entry type, qualified for a plugin type. Null for user and media sources. */
+    sourceType: string | null;
+    /** Schema path of the field holding the reference (`sections[].gallery`). */
+    schemaPath: string;
+    /** Instance path — deep-links to the exact item. Never pattern-matched. */
+    instancePath: string;
+    /** True when the source is a staged (pending-merge) copy. */
+    sourceStaged: boolean;
+};
+
 /** Update payload fragment — fields that can be modified after creation. */
 export type EntryUpdateData = Partial<{
     title: string;
@@ -280,6 +303,7 @@ export type MediaApi = {
         data: Partial<{ alt: string; fields: JsonObject }>;
     }): Promise<Media>;
     delete(params: { id: string }): Promise<void>;
+    usedBy(params: { id: string }): Promise<MediaUsage[]>;
 };
 
 export type SettingsApi = {

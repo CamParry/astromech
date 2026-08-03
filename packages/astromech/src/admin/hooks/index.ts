@@ -45,6 +45,7 @@ export type { EntryHookScope } from './entries.js';
 export {
     useMediaQuery,
     useMediaItem,
+    useMediaUsage,
     useUpdateMedia,
     useDeleteMedia,
     useBulkDeleteMedia,

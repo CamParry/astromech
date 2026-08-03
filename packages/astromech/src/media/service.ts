@@ -12,6 +12,7 @@ import type {
     QueryResult,
     MediaQueryParams,
     MediaMetadata,
+    MediaUsage,
     StorageDriver,
 } from '@/types/index.js';
 import { ValidationError } from '@/errors/validation.js';
@@ -279,7 +280,51 @@ export const mediaApi = {
             })
         );
     },
+
+    /**
+     * Every relationships-index edge pointing at this media item — one row per
+     * edge, so a source using the same file at two paths yields two rows.
+     *
+     * Index-shaped rows only: the media domain may not import entries or users
+     * (dep-cruiser `domain-no-peer-imports`), so a source's title lives in a
+     * domain it cannot reach. The admin resolves display titles instead.
+     */
+    async usedBy(params: { id: string }): Promise<MediaUsage[]> {
+        const { id } = params;
+        const row = await createMediaStorage().get(id);
+        if (!row) throw new Error(`Media '${id}' not found`);
+
+        // Staged sources count: a pending merge that uses this file is a reason
+        // not to delete it.
+        const rows = await createRelationshipStorage().findByTarget(id, 'media', {
+            includeStaged: true,
+        });
+
+        return rows
+            .map(
+                (edge): MediaUsage => ({
+                    sourceId: edge.sourceId,
+                    sourceKind: edge.sourceKind,
+                    sourceType: edge.sourceType,
+                    schemaPath: edge.schemaPath,
+                    instancePath: edge.instancePath,
+                    sourceStaged: edge.sourceStaged,
+                })
+            )
+            .sort(compareUsage);
+    },
 };
+
+/** Stable panel order: the index itself has none, so reads would reshuffle. */
+function compareUsage(a: MediaUsage, b: MediaUsage): number {
+    return (
+        a.sourceKind.localeCompare(b.sourceKind) ||
+        (a.sourceType ?? '').localeCompare(b.sourceType ?? '') ||
+        a.sourceId.localeCompare(b.sourceId) ||
+        a.schemaPath.localeCompare(b.schemaPath) ||
+        a.instancePath.localeCompare(b.instancePath)
+    );
+}
 
 /**
  * Re-index a media record's relationship fields. `fields` must be

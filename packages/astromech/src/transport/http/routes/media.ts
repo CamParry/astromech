@@ -4,11 +4,12 @@
  * File upload, listing, update, and delete.
  *
  * Routes:
- *   GET    /media         → all()
- *   GET    /media/:id     → get()
- *   POST   /media/upload  → upload()
- *   PUT    /media/:id     → update()
- *   DELETE /media/:id     → delete()
+ *   GET    /media            → all()
+ *   GET    /media/:id        → get()
+ *   GET    /media/:id/usage  → usedBy()
+ *   POST   /media/upload     → upload()
+ *   PUT    /media/:id        → update()
+ *   DELETE /media/:id        → delete()
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
@@ -67,6 +68,22 @@ router.get('/:id', async (c) => {
     const item = await Astromech.media.get({ id });
     if (!item) return notFound(c, `Media '${id}' not found`);
     return c.json({ data: item });
+});
+
+// ============================================================================
+// GET /media/:id/usage
+// ============================================================================
+
+router.get('/:id/usage', async (c) => {
+    const { id } = c.req.param();
+    const permissions = withPermissions(c.var.role);
+    if (!permissions.allowsMethod(mediaDescriptors.usedBy)) return forbidden(c);
+
+    const item = await Astromech.media.get({ id });
+    if (!item) return notFound(c, `Media '${id}' not found`);
+
+    const data = await Astromech.media.usedBy({ id });
+    return c.json({ data });
 });
 
 // ============================================================================

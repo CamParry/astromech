@@ -21,6 +21,7 @@ import type {
     Media,
     MediaApi,
     MediaQueryParams,
+    MediaUsage,
     Notification,
     NotificationsApi,
     PluginServiceNamespace,
@@ -591,6 +592,11 @@ const mediaApi: MediaApi = {
         await apiFetch<unknown>(`/media/${params.id}`, {
             method: 'DELETE',
         });
+    },
+
+    async usedBy(params: { id: string }): Promise<MediaUsage[]> {
+        const res = await apiFetch<{ data: MediaUsage[] }>(`/media/${params.id}/usage`);
+        return res.data;
     },
 };
 
