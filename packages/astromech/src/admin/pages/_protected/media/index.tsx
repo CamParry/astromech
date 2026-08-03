@@ -1,30 +1,45 @@
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { Trash2 } from 'lucide-react';
+import { LayoutGrid, LayoutList, Trash2 } from 'lucide-react';
 import {
     Dropdown,
+    DropZone,
+    EmptyState,
     Page,
     PageContent,
     PageHeader,
+    PageLoading,
     PageTitle,
+    Pagination,
+    ToggleGroup,
+    Toolbar,
+    ToolbarEnd,
+    ToolbarStart,
     UploadButton,
     useConfirm,
 } from '@/admin/components/ui/index.js';
-import { MediaBrowser } from '@/admin/components/media/media-browser.js';
-import type { MediaBrowserQuery } from '@/admin/components/media/media-browser.js';
+import type { SortDirection } from '@/admin/components/ui/table.js';
 import { MediaDetailModal } from '@/admin/components/media/MediaDetailModal.js';
+import { MediaEmpty } from '@/admin/components/media/media-empty.js';
+import { MediaFilters } from '@/admin/components/media/media-filters.js';
+import { MediaGrid } from '@/admin/components/media/media-grid.js';
+import {
+    MediaSortSelect,
+    sortPatch,
+} from '@/admin/components/media/media-sort-select.js';
+import { MediaTable } from '@/admin/components/media/media-table.js';
 import { useViewMode } from '@/admin/hooks/use-view-mode.js';
 import { useSelection } from '@/admin/hooks/use-selection.js';
 import {
     useUploadMedia,
     usePermissions,
-    useMediaQuery,
+    useMediaBrowser,
     useBulkDeleteMedia,
 } from '@/admin/hooks/index.js';
 import { useAIContext } from '@/admin/context/ai-context.js';
-import { MEDIA_SORT_KEYS, TYPE_FILTER_VALUES } from '@/admin/types/media.js';
-import type { MediaSortKey, TypeFilter } from '@/admin/types/media.js';
+import { MEDIA_ACCEPT, TYPE_FILTER_VALUES, isSortKey } from '@/admin/types/media.js';
+import type { MediaBrowserQuery, MediaSortKey, TypeFilter } from '@/admin/types/media.js';
 
 const PER_PAGE = 20;
 
@@ -57,7 +72,18 @@ function MediaIndexPage(): React.ReactElement {
 
     useAIContext({ kind: 'media', label: t('media.title') }, { depth: 0 });
 
-    const currentPage = Math.max(1, pageParam);
+    const query: MediaBrowserQuery = {
+        q,
+        type: typeFilter,
+        sort,
+        dir,
+        page: Math.max(1, pageParam),
+    };
+    const { items, totalItems, totalPages, currentPage, isLoading, isError } =
+        useMediaBrowser(query, PER_PAGE);
+
+    const canUpload = canUploadMedia();
+    const currentSort = sort ? { key: sort, direction: dir ?? 'asc' } : null;
 
     // The URL is the query owner here, so the library stays deep-linkable. A
     // search change replaces rather than pushes: one search, one history entry.
@@ -92,6 +118,10 @@ function MediaIndexPage(): React.ReactElement {
         });
     }
 
+    function handleSort(key: string, direction: SortDirection): void {
+        handleQueryChange(sortPatch(key, direction));
+    }
+
     // The open detail item lives in the URL too. Opening pushes so Back closes
     // the modal; closing replaces so there's no dead forward entry.
     function openItem(id: string): void {
@@ -108,17 +138,6 @@ function MediaIndexPage(): React.ReactElement {
             },
         });
     }
-
-    // Mirrors the browser's own request so selection and bulk delete operate on
-    // the rows actually on screen.
-    const { data } = useMediaQuery({
-        ...(q ? { search: q } : {}),
-        ...(typeFilter !== 'all' ? { where: { mimeType: typeFilter } } : {}),
-        ...(sort ? { sort: { [sort]: dir ?? 'asc' } } : {}),
-        page: currentPage,
-        limit: PER_PAGE,
-    });
-    const items = data?.data ?? [];
 
     // Selection is scoped to the active query: narrowing the list must not leave
     // a bulk action pointed at rows the user can no longer see.
@@ -166,7 +185,7 @@ function MediaIndexPage(): React.ReactElement {
             <Page>
                 <PageHeader>
                     <PageTitle>{t('media.title')}</PageTitle>
-                    {canUploadMedia() && (
+                    {canUpload && (
                         <UploadButton
                             multiple
                             disabled={isUploading}
@@ -177,23 +196,100 @@ function MediaIndexPage(): React.ReactElement {
                 </PageHeader>
 
                 <PageContent>
-                    <MediaBrowser
-                        query={{ q, type: typeFilter, sort, dir, page: currentPage }}
-                        onQueryChange={handleQueryChange}
-                        selection={{
-                            mode: 'bulk',
-                            checkedIds,
-                            onToggle: toggle,
-                            onToggleAll: toggleAll,
-                            allChecked,
-                        }}
-                        onOpenItem={openItem}
-                        viewMode={viewMode}
-                        onViewModeChange={setViewMode}
-                        canUpload={canUploadMedia()}
-                        perPage={PER_PAGE}
-                        toolbarExtra={bulkActions}
-                    />
+                    <div className="am-media-browser">
+                        <Toolbar>
+                            <ToolbarStart>
+                                {bulkActions}
+                                <MediaFilters
+                                    query={query}
+                                    onQueryChange={handleQueryChange}
+                                />
+                                {viewMode === 'grid' && (
+                                    <MediaSortSelect
+                                        query={query}
+                                        onQueryChange={handleQueryChange}
+                                    />
+                                )}
+                            </ToolbarStart>
+
+                            <ToolbarEnd>
+                                <ToggleGroup
+                                    value={viewMode}
+                                    onValueChange={setViewMode}
+                                    items={[
+                                        {
+                                            value: 'grid',
+                                            icon: <LayoutGrid size={15} />,
+                                            label: t('common.gridView'),
+                                        },
+                                        {
+                                            value: 'list',
+                                            icon: <LayoutList size={15} />,
+                                            label: t('common.listView'),
+                                        },
+                                    ]}
+                                />
+                            </ToolbarEnd>
+                        </Toolbar>
+
+                        {isError ? (
+                            <EmptyState title={t('media.listFailed')} />
+                        ) : isLoading ? (
+                            <PageLoading />
+                        ) : (
+                            <DropZone
+                                onUpload={upload}
+                                accept={MEDIA_ACCEPT}
+                                multiple
+                                overlayLabel={t('media.dropOverlayLabel')}
+                                disabled={isUploading || !canUpload}
+                            >
+                                {items.length === 0 ? (
+                                    <MediaEmpty
+                                        query={query}
+                                        canUpload={canUpload}
+                                        isUploading={isUploading}
+                                        onUpload={upload}
+                                        accept={MEDIA_ACCEPT}
+                                        multiple
+                                    />
+                                ) : (
+                                    <div aria-busy={isUploading}>
+                                        {viewMode === 'list' ? (
+                                            <MediaTable
+                                                items={items}
+                                                checkedIds={checkedIds}
+                                                onToggle={toggle}
+                                                onToggleAll={toggleAll}
+                                                allChecked={allChecked}
+                                                currentSort={currentSort}
+                                                onSort={handleSort}
+                                                onOpenItem={openItem}
+                                            />
+                                        ) : (
+                                            <MediaGrid
+                                                items={items}
+                                                checkedIds={checkedIds}
+                                                onToggle={toggle}
+                                                onToggleAll={toggleAll}
+                                                allChecked={allChecked}
+                                                onOpenItem={openItem}
+                                            />
+                                        )}
+
+                                        <Pagination
+                                            currentPage={currentPage}
+                                            totalPages={totalPages}
+                                            onPage={(page) => handleQueryChange({ page })}
+                                            {...(totalItems !== undefined
+                                                ? { totalItems }
+                                                : {})}
+                                        />
+                                    </div>
+                                )}
+                            </DropZone>
+                        )}
+                    </div>
                 </PageContent>
             </Page>
 
@@ -206,11 +302,6 @@ function MediaIndexPage(): React.ReactElement {
             />
         </>
     );
-}
-
-/** Narrow an arbitrary sort key off the URL to one the API accepts. */
-function isSortKey(key: string): key is MediaSortKey {
-    return (MEDIA_SORT_KEYS as readonly string[]).includes(key);
 }
 
 export const Route = createFileRoute('/_protected/media/')({
