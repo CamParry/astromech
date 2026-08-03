@@ -30,6 +30,7 @@ export function usePermissions() {
             hasPermission(permissions, `entry:${collection}:publish`),
         canReadMedia: () => hasPermission(permissions, 'media:read'),
         canUploadMedia: () => hasPermission(permissions, 'media:upload'),
+        canUpdateMedia: () => hasPermission(permissions, 'media:update'),
         canDeleteMedia: () => hasPermission(permissions, 'media:delete'),
         canReadUsers: () => hasPermission(permissions, 'users:read'),
         canCreateUsers: () => hasPermission(permissions, 'users:create'),

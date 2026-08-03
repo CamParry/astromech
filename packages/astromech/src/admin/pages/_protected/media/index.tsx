@@ -52,7 +52,7 @@ function MediaIndexPage(): React.ReactElement {
     } = Route.useSearch();
     const [viewMode, setViewMode] = useViewMode('media');
 
-    const { canUploadMedia, canDeleteMedia } = usePermissions();
+    const { canUploadMedia, canUpdateMedia, canDeleteMedia } = usePermissions();
     const { upload, isUploading } = useUploadMedia();
 
     useAIContext({ kind: 'media', label: t('media.title') }, { depth: 0 });
@@ -202,7 +202,7 @@ function MediaIndexPage(): React.ReactElement {
                 onClose={closeItem}
                 onDeleted={closeItem}
                 canDelete={canDeleteMedia()}
-                canUpload={canUploadMedia()}
+                canUpdate={canUpdateMedia()}
             />
         </>
     );

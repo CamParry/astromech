@@ -120,6 +120,10 @@ describe('can — built-in roles', () => {
             expect(can(editorRole, 'media:upload')).toBe(true);
         });
 
+        it('can update media metadata', () => {
+            expect(can(editorRole, 'media:update')).toBe(true);
+        });
+
         it('cannot read users', () => {
             expect(can(editorRole, 'users:read')).toBe(false);
         });
@@ -155,6 +159,7 @@ describe('BUILT_IN_ROLES', () => {
         expect(permissions).toContain('entry:*');
         expect(permissions).toContain('media:read');
         expect(permissions).toContain('media:upload');
+        expect(permissions).toContain('media:update');
         expect(permissions).toContain('media:delete');
         expect(permissions).not.toContain('users:read');
         expect(permissions).not.toContain('settings:read');
@@ -360,6 +365,8 @@ describe('buildPermissionCatalogue', () => {
         );
         expect(find('media:upload')?.label).toBe(CORE_PERMISSIONS['media:upload'].label);
         expect(find('media:upload')?.owner).toBeUndefined();
+        expect(find('media:update')?.label).toBe(CORE_PERMISSIONS['media:update'].label);
+        expect(find('media:update')?.owner).toBeUndefined();
     });
 
     it('derives entry permissions for a root type', () => {
