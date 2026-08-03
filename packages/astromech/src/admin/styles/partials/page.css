@@ -453,8 +453,8 @@
    Media page utilities
    ============================================================================ */
 
-/* The browser owns its vertical rhythm: it renders both in a page and in the
-   media field's modal, which has no layout gap of its own. */
+/* Vertical rhythm for a media browsing surface. Shared by the media page and
+   the media field's modal, which has no layout gap of its own. */
 .am-media-browser {
     display: flex;
     flex-direction: column;

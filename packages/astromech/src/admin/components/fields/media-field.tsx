@@ -15,9 +15,8 @@ import type { BaseFieldProps } from '@/types/index.js';
 import { Astromech } from '@/transport/http/client/index.js';
 import { Modal } from '@/admin/components/ui/modal';
 import { Spinner } from '@/admin/components/ui/spinner';
-import { MediaBrowser } from '@/admin/components/media/media-browser.js';
-import type { MediaBrowserQuery } from '@/admin/components/media/media-browser.js';
-import { usePermissions } from '@/admin/hooks/index.js';
+import { MediaPicker } from '@/admin/components/media/media-picker.js';
+import type { MediaBrowserQuery } from '@/admin/types/media.js';
 import './media-field.css';
 
 type MediaItem = {
@@ -66,7 +65,6 @@ export function MediaField({
 }: BaseFieldProps) {
     const { hasError } = useFieldControl();
     const { t } = useTranslation();
-    const { canUploadMedia } = usePermissions();
     const multiple = field.multiple === true;
     const accept = typeof field.accept === 'string' ? field.accept : undefined;
 
@@ -334,20 +332,14 @@ export function MediaField({
                     ) : undefined
                 }
             >
-                <MediaBrowser
+                <MediaPicker
                     query={pickerQuery}
                     onQueryChange={(next) =>
                         setPickerQuery((prev) => ({ ...prev, ...next }))
                     }
-                    selection={{
-                        mode: 'pick',
-                        selectedIds,
-                        onPick: handleSelect,
-                        multiple,
-                    }}
-                    perPage={24}
-                    canUpload={canUploadMedia()}
-                    showUploadButton
+                    selectedIds={selectedIds}
+                    onPick={handleSelect}
+                    multiple={multiple}
                     {...(accept !== undefined ? { accept } : {})}
                 />
             </Modal>

@@ -13,6 +13,8 @@ export type { SelectionResult } from './use-selection.js';
 export { useDebounce } from './use-debounce.js';
 export { useUploadMedia } from './use-upload-media.js';
 export type { UseUploadMediaResult } from './use-upload-media.js';
+export { useMediaBrowser } from './use-media-browser.js';
+export type { MediaBrowserResult } from './use-media-browser.js';
 export { usePermissions, hasPermission } from './use-permissions.js';
 export {
     useEntriesQuery,

@@ -33,3 +33,18 @@ export const MEDIA_SORT_KEYS = [
     'size',
     'createdAt',
 ] as const satisfies readonly MediaSortKey[];
+
+/** The browsing state a media surface reads from: search, filter, sort, page. */
+export type MediaBrowserQuery = {
+    q: string;
+    type: TypeFilter;
+    /** Explicitly `| undefined`: clearing a sort passes it, under exactOptionalPropertyTypes. */
+    sort?: MediaSortKey | undefined;
+    dir?: 'asc' | 'desc' | undefined;
+    page: number;
+};
+
+/** Narrow an arbitrary sort key to one the media API accepts. */
+export function isSortKey(key: string): key is MediaSortKey {
+    return (MEDIA_SORT_KEYS as readonly string[]).includes(key);
+}
