@@ -22,6 +22,45 @@ Loose tasks pulled from otherwise-shipped features.
 - [ ] The root `/entries/<type>` admin route renders for a **qualified** plugin type (`forms/form`) but generates unencoded links (`/admin/entries/forms/form/<id>`) that 404, and shows the raw type as its heading. Plugin entry types have their own working `/plugin/<ns>/entries/<type>` route and nothing links to the root one with a qualified type — so this is a latent trap rather than a live bug. Either encode the segment or reject a qualified type on that route
 - [ ] Admin hooks and components have no render-level test coverage. The `useBlocksField`/`useTreeField` seeding bug (entry blocks rendering permanently empty) survived precisely because nothing renders a hook in the suite; `tests/admin/hooks/container-field-seeding.test.tsx` hand-rolls a React root because there is no `@testing-library/react`. Consider adding it and covering the field components
 
+### Admin form defects (found browser-verifying the P4b patch merge, 2026-08-03)
+
+All four predate the patch-merge change and are unaffected by it — verified against
+the payload on the wire and against `996ce11^`. The admin is substantially broken
+today: two of them stop a save completing at all.
+
+- [ ] **`link` field writes `href`; its validator requires `url`.** `link-field.tsx:12-22`
+      rebuilds the value from `href`/`label`/`target` only, discarding every other key,
+      while `fields/built-in-rules.ts:210-216` and the descriptor (`core-descriptors.ts:418`)
+      both require a `url` key. `descriptor.validate` runs at every stage on any non-empty
+      value, so **every Page save in the demo fails client-side validation** ("A link needs
+      a url") with the URL visibly populated. `apps/demo/seed.ts:746-750` seeds `href` too.
+      Wrong shape, not a wrong path — decide which key is canonical, then fix the component,
+      the seed and the rule together. Nothing is deployed, so no data migration is needed.
+- [ ] **Media and user forms never enable Save.** `media/$id.tsx:166`,
+      `MediaDetailModal.tsx:92` and `users/$id.tsx:225` read `form.state.isDirty`, but
+      `form.state` is a non-reactive getter and none of the three subscribes to the store,
+      so they never re-render on change and the button stays `disabled`. No request ever
+      fires; there is no server error to find. The entry form gets away with it via
+      `useStore` (`use-entry-form.ts:171`) and settings via real React state
+      (`SettingsPageForm.tsx:97,168`) — copy either.
+- [ ] **A `group()` field submits only its touched sub-key, destroying its siblings.**
+      Reproduced end-to-end: a Post's `seo` group held `{title, description}`; editing only
+      Meta title sent `fields.seo = {"title": "…"}` and `description` was gone after the save.
+      Every `group()`-composed field is exposed, not just SEO. `group-field.tsx:16` is
+      textually correct and holds no local state, so `form.state.values.fields.seo` was
+      already partial at keystroke time — the suspected mechanism is the TanStack
+      `defaultValues` layout-effect copy being blocked by an earlier write
+      (`FormApi` gates it on `!isTouched`), the same shape as the fixed
+      `useBlocksField`/`useTreeField` seeding bug. **The pre-seed writer was not identified
+      by reading alone — this one needs a runtime diagnosis, not more static tracing.**
+      Note that a partial group is not something the update merge can rescue: a group's
+      object value is atomic by design, exactly like an array.
+- [ ] **`repeater` seeds `useState` with no re-seed guard** (`repeater-field.tsx:261-263`) —
+      the guard `use-blocks-field.ts:43-47` and `use-tree-field.ts:119-123` already got.
+      Latent today, same class as the bug above.
+- [ ] **`key-value` rebuilds its value from the prop** like `group`
+      (`key-value-field.tsx:7-15`) — same exposure if the seed race is confirmed.
+
 ### Storage-layer follow-ups (from `completed/storage-layer-follow-ups.md`)
 
 - [ ] `buildListWhere`'s silent drop of unknown `where` keys has its own file —
