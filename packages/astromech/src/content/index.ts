@@ -1,13 +1,6 @@
 /** `content` domain module — model-driven translate / transform / generate. */
-export {
-    contentApi,
-    translate,
-    transform,
-    generate,
-    type ContentFieldSummary,
-    type ContentOperationResult,
-    type ContentTarget,
-} from './service.js';
+export { contentApi, translate, transform, generate } from './service.js';
+export { contentDescriptors } from './descriptors.js';
 export {
     setContentProvider,
     getContentProvider,

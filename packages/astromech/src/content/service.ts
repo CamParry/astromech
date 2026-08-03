@@ -37,42 +37,19 @@ import { collectRewriteTargets, type RewriteTarget } from './internal/eligibilit
 import { mapWithConcurrency } from './internal/batch.js';
 import type { JSONContent } from '@tiptap/core';
 import type { ContentProvider } from './provider.js';
-import type { Entry, JsonObject, ResolvedEntryTypeConfig } from '@/types/index.js';
+import type {
+    ContentApi,
+    ContentFieldSummary,
+    ContentOperationResult,
+    ContentTarget,
+    Entry,
+    JsonObject,
+    ResolvedEntryTypeConfig,
+} from '@/types/index.js';
 import type { FieldDefinition } from '@/types/fields.js';
 
 /** How many fields may be in flight with the provider at once. */
 const CONCURRENCY = 4;
-
-/** What an operation did to one field. */
-export type ContentFieldSummary = {
-    /** Instance path of the rewritten field, e.g. `sections[a1].title`. */
-    path: string;
-    fieldType: string;
-    /** How many strings were sent to the provider for this field. */
-    inputs: number;
-    /** False when the provider handed back exactly what it was given. */
-    changed: boolean;
-};
-
-export type ContentOperationResult = {
-    /** The entry the rewrite landed on: the staged row, or the new sibling. */
-    id: string;
-    type: string;
-    /** `staged` needs a human merge; `created` is an unpublished translation. */
-    outcome: 'staged' | 'created';
-    /** Where a reviewer opens the change. Null when the type declares no `url`. */
-    previewUrl: string | null;
-    /** Present on `staged` — the token the preview URL carries. */
-    previewToken?: string;
-    fields: ContentFieldSummary[];
-};
-
-export type ContentTarget = {
-    type: string;
-    id: string;
-    /** Instance paths to restrict to; a container path selects its subtree. */
-    paths?: string[];
-};
 
 /**
  * Same meaning, different locale. Structure is never changed: a rich-text field
@@ -105,7 +82,7 @@ export async function generate(
     return runOperation('generate', params);
 }
 
-export const contentApi = { translate, transform, generate };
+export const contentApi: ContentApi = { translate, transform, generate };
 
 // ============================================================================
 // Orchestration
