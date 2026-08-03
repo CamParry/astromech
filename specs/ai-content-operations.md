@@ -156,10 +156,20 @@ Markdown converters. Registered in the local client and given an HTTP router.
 
 Consequences to get right, none of them optional:
 
-- `.dependency-cruiser.cjs` rules name domains explicitly. A new domain path must
-  be added to `domain-no-peer-imports` and `domain-no-upward` or it gets no
-  enforcement at all. `content/` cannot import `entries/` directly — it goes
-  through the same seam any other consumer does.
+- **`content` is a DOWNSTREAM domain, not a peer.** It orchestrates entries and a
+  provider, so it sits above `entries/` in the DAG and may import it. That is a
+  legitimate edge, not an exception to smuggle past the linter — the half worth
+  enforcing is the reverse one: `entries/` must never import `content/`, or the
+  cycle is back. An earlier draft of this section said content should route
+  through "the same seam any other consumer does"; there is no such seam. The
+  plugin entry-access port (`entries/plugin-access.ts`) is deliberately
+  service-free — it carries `qualifyEntryType` and the storage setters, not reads
+  and writes — so it cannot serve these operations at all.
+- `.dependency-cruiser.cjs` names domains explicitly in `domain-no-peer-imports`
+  and `domain-no-upward`, so `content/` gets NO enforcement until it is added.
+  Add it to `domain-no-upward` (it knows nothing about delivery either) and add
+  the one-way rule above, rather than adding it to the peer list — which would
+  forbid the very edge the design depends on.
 - The permission keys must be added to `CORE_PERMISSIONS` in `permissions/index.ts`.
   A key used only in a descriptor enforces but is ungrantable and invisible to
   the roles UI and the `permissions` CLI. Decide whether `editor` gets them;
@@ -182,6 +192,15 @@ Consequences to get right, none of them optional:
 - Translating into an existing locale produces a staged entry and a preview
   token; translating into a new one produces an unpublished sibling in the same
   `localeGroup`.
-- A model reply that maps to a node type outside the field's `allow` list fails
-  validation on the staged entry, and the live entry is unchanged.
+- A model reply naming a node type outside the field's `allow` list is CLAMPED,
+  not rejected — a forbidden heading becomes a paragraph, a forbidden mark
+  degrades to plain text. (An earlier draft expected this to fail validation on
+  the staged entry. It cannot: the converters take `allow` and clamp by
+  construction, so the validator never sees an out-of-allow node. Producing that
+  failure would mean withholding `allow` from the converter, which is a worse
+  design.) The property is covered from both sides instead: that the clamp
+  happens, and that the clamp is load-bearing rather than incidental.
+- A reply that fails validation for a reason the converter cannot clamp — a
+  `maxLength` rule, say — leaves no staged row behind and the live entry
+  unchanged.
 - Nothing in the suite makes a network call.
