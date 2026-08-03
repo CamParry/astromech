@@ -47,7 +47,11 @@ export const CORE_PERMISSIONS = defineAbsolutePermissions({
     'media:read': { label: 'View media' },
     'media:upload': {
         label: 'Upload media',
-        description: 'Upload new files and update existing media metadata.',
+        description: 'Add new files to the media library.',
+    },
+    'media:update': {
+        label: 'Update media',
+        description: "Edit an existing item's alt text, title and caption.",
     },
     'media:delete': { label: 'Delete media' },
     'settings:read': { label: 'View settings' },
@@ -106,6 +110,7 @@ const EDITOR_PERMISSIONS: Permission[] = [
         'admin:access',
         'media:read',
         'media:upload',
+        'media:update',
         'media:delete',
         'content:translate',
         'content:transform',

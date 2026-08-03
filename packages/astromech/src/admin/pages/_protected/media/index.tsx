@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Trash2 } from 'lucide-react';
@@ -34,6 +34,7 @@ type MediaSearch = {
     page?: number;
     sort?: MediaSortKey;
     dir?: 'asc' | 'desc';
+    item?: string;
 };
 
 function MediaIndexPage(): React.ReactElement {
@@ -47,11 +48,11 @@ function MediaIndexPage(): React.ReactElement {
         page: pageParam = 1,
         sort,
         dir,
+        item,
     } = Route.useSearch();
     const [viewMode, setViewMode] = useViewMode('media');
-    const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
 
-    const { canUploadMedia, canDeleteMedia } = usePermissions();
+    const { canUploadMedia, canUpdateMedia, canDeleteMedia } = usePermissions();
     const { upload, isUploading } = useUploadMedia();
 
     useAIContext({ kind: 'media', label: t('media.title') }, { depth: 0 });
@@ -91,6 +92,23 @@ function MediaIndexPage(): React.ReactElement {
         });
     }
 
+    // The open detail item lives in the URL too. Opening pushes so Back closes
+    // the modal; closing replaces so there's no dead forward entry.
+    function openItem(id: string): void {
+        void navigate({ search: (prev) => ({ ...prev, item: id }) });
+    }
+
+    function closeItem(): void {
+        void navigate({
+            replace: true,
+            search: (prev) => {
+                const out: MediaSearch = { ...prev };
+                delete out.item;
+                return out;
+            },
+        });
+    }
+
     // Mirrors the browser's own request so selection and bulk delete operate on
     // the rows actually on screen.
     const { data } = useMediaQuery({
@@ -109,11 +127,11 @@ function MediaIndexPage(): React.ReactElement {
         useSelection(items, selectionScope);
 
     const bulkDeleteMutation = useBulkDeleteMedia({
-        onSuccess: () => {
+        onSuccess: (deletedIds) => {
             reset();
             // The last page can empty out entirely; step back rather than
             // stranding the user on a page past the end.
-            if (items.length === checkedIds.size && currentPage > 1) {
+            if (deletedIds.length === items.length && currentPage > 1) {
                 handleQueryChange({ page: currentPage - 1 });
             }
         },
@@ -169,7 +187,7 @@ function MediaIndexPage(): React.ReactElement {
                             onToggleAll: toggleAll,
                             allChecked,
                         }}
-                        onOpenItem={setSelectedMediaId}
+                        onOpenItem={openItem}
                         viewMode={viewMode}
                         onViewModeChange={setViewMode}
                         canUpload={canUploadMedia()}
@@ -180,13 +198,11 @@ function MediaIndexPage(): React.ReactElement {
             </Page>
 
             <MediaDetailModal
-                mediaId={selectedMediaId}
-                onClose={() => setSelectedMediaId(null)}
-                onDeleted={() => {
-                    setSelectedMediaId(null);
-                }}
+                mediaId={item ?? null}
+                onClose={closeItem}
+                onDeleted={closeItem}
                 canDelete={canDeleteMedia()}
-                canUpload={canUploadMedia()}
+                canUpdate={canUpdateMedia()}
             />
         </>
     );
@@ -220,6 +236,9 @@ export const Route = createFileRoute('/_protected/media/')({
         if (typeof sortRaw === 'string' && isSortKey(sortRaw)) {
             out.sort = sortRaw;
             out.dir = search['dir'] === 'desc' ? 'desc' : 'asc';
+        }
+        if (typeof search['item'] === 'string' && search['item']) {
+            out.item = search['item'];
         }
         return out;
     },

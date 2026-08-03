@@ -104,25 +104,47 @@ export function useDeleteMedia(options?: { id?: string; onSuccess?: () => void }
     });
 }
 
-export function useBulkDeleteMedia(options?: { onSuccess?: (ids: string[]) => void }) {
+/**
+ * Deletes each id independently so one failure doesn't abandon the rest, and
+ * reports the shortfall instead of claiming a clean run.
+ */
+export function useBulkDeleteMedia(options?: {
+    onSuccess?: (deletedIds: string[]) => void;
+}) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
 
     return useMutation({
         mutationFn: async (ids: string[]) => {
+            const deletedIds: string[] = [];
             for (const id of ids) {
-                await Astromech.media.delete({ id });
+                try {
+                    await Astromech.media.delete({ id });
+                    deletedIds.push(id);
+                } catch {
+                    // Keep going: the remaining ids are still deletable.
+                }
             }
-            return ids;
+            return { deletedIds, total: ids.length };
         },
-        onSuccess: (ids) => {
+        onSuccess: ({ deletedIds, total }) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.media.all() });
-            toast({
-                message: t('media.deletedToast', { count: ids.length }),
-                variant: 'success',
-            });
-            options?.onSuccess?.(ids);
+            if (deletedIds.length === total) {
+                toast({
+                    message: t('media.deletedToast', { count: total }),
+                    variant: 'success',
+                });
+            } else {
+                toast({
+                    message: t('media.deletedPartialToast', {
+                        deleted: deletedIds.length,
+                        total,
+                    }),
+                    variant: 'warning',
+                });
+            }
+            options?.onSuccess?.(deletedIds);
         },
         onError: (err) => {
             toast({

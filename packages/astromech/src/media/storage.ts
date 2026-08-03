@@ -24,11 +24,7 @@ import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import { media } from '@/database/schema.js';
 import { getDb } from '@/database/registry.js';
 import type { Db } from '@/database/types.js';
-import type {
-    MediaMimeTypeFilter,
-    MediaQueryParams,
-    SortOption,
-} from '@/types/index.js';
+import type { MediaMimeTypeFilter, MediaQueryParams, SortOption } from '@/types/index.js';
 import type { MediaRow, NewMediaRow } from './schema.js';
 
 type Predicate = ReturnType<QueryHandle<typeof media>['where']>;

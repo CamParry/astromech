@@ -20,14 +20,17 @@ Loose tasks pulled from otherwise-shipped features.
 
 - [ ] A plugin can't type its own declared hook-event payloads. `AstromechPluginHookEvents` is codegen-augmented per **site**, so inside a plugin package `defineHook`'s handler parameter resolves to `unknown` and every handler needs an in-body cast (see `@astromech/forms`' spam hook). Annotating the parameter directly is a contravariance error. Some way for a plugin to declare the payload type alongside the event name would remove the cast
 - [ ] The root `/entries/<type>` admin route renders for a **qualified** plugin type (`forms/form`) but generates unencoded links (`/admin/entries/forms/form/<id>`) that 404, and shows the raw type as its heading. Plugin entry types have their own working `/plugin/<ns>/entries/<type>` route and nothing links to the root one with a qualified type — so this is a latent trap rather than a live bug. Either encode the segment or reject a qualified type on that route
-- [ ] `npm run format:check` is red on `main` — 7 files from the media admin UI work
-      (`media-browser.tsx`, `media-thumb.tsx`, `MediaDetailModal.tsx`, `drop-zone.tsx`,
-      `media/index.tsx`, `media/storage.ts`, `drop-zone-accept.test.tsx`). Deliberately left
-      unformatted while the `feat/media-admin-ui` worktree is still live, because reformatting files
-      someone is mid-edit on hands them conflicts. Run `npm run format` once that work is settled.
+- [ ] `npm run format:check` is red — **the 7 media files are done** (`feat/media-admin-follow-ups`,
+      2026-08-03), leaving 5: `ai-context.tsx`, `ai-context.test.tsx`,
+      `roadmap/completed/plugin-authoring-experience.md`, `specs/ai-authoring-p0-handoff.md` and
+      `apps/demo/migrations/snapshot.json`. The first four were left for the same reason the media
+      ones were: `feat/authoring-plugin` is live with uncommitted changes in exactly that area, and
+      reformatting files someone is mid-edit on hands them conflicts. Format them once that branch
+      lands. `snapshot.json` is generator output — check that prettier's shape matches what
+      `db:generate` emits before touching it, or the DDL parity test will start failing.
       Note the pre-commit hook formats only STAGED files, so a red `format:check` survives commits
       that don't touch the offending files.
-- [ ] Admin hooks and components have no render-level test coverage. The `useBlocksField`/`useTreeField` seeding bug (entry blocks rendering permanently empty) survived precisely because nothing renders a hook in the suite; `tests/admin/hooks/container-field-seeding.test.tsx` hand-rolls a React root because there is no `@testing-library/react`. Consider adding it and covering the field components
+- [ ] Extend render-level coverage to the **field** components. `@testing-library/react` and `user-event` are in as of `feat/media-admin-follow-ups` (2026-08-03) and the media surface is covered, but the field components that motivated this are not: the `useBlocksField`/`useTreeField` seeding bug (entry blocks rendering permanently empty) survived precisely because nothing renders a hook in the suite, and `tests/admin/hooks/container-field-seeding.test.tsx` still hand-rolls a React root that testing-library could now replace. The live admin-form defects above (`group()` losing siblings, `repeater` re-seeding) are the obvious first targets — the `group()` one explicitly needs a runtime diagnosis rather than more static tracing, which is exactly what a render test provides
 
 ### Admin form defects (found browser-verifying the P4b patch merge, 2026-08-03)
 
@@ -43,13 +46,13 @@ today: two of them stop a save completing at all.
       a url") with the URL visibly populated. `apps/demo/seed.ts:746-750` seeds `href` too.
       Wrong shape, not a wrong path — decide which key is canonical, then fix the component,
       the seed and the rule together. Nothing is deployed, so no data migration is needed.
-- [ ] **Media and user forms never enable Save.** `media/$id.tsx:166`,
-      `MediaDetailModal.tsx:92` and `users/$id.tsx:225` read `form.state.isDirty`, but
-      `form.state` is a non-reactive getter and none of the three subscribes to the store,
-      so they never re-render on change and the button stays `disabled`. No request ever
-      fires; there is no server error to find. The entry form gets away with it via
-      `useStore` (`use-entry-form.ts:171`) and settings via real React state
-      (`SettingsPageForm.tsx:97,168`) — copy either.
+- [x] **Media and user forms never enable Save** — already fixed when this was re-checked on
+      2026-08-03. All three sites now subscribe via `useStore(form.store, …)`
+      (`MediaDetailModal.tsx:111`, `users/$id.tsx:113`, and `media/$id.tsx:91` before that page
+      was deleted), so the non-reactive `form.state.isDirty` read is gone. Kept as a record
+      because the bug class is live: `form.state` is a getter, and reading it in render silently
+      produces a control that never updates. `feat/media-admin-follow-ups` pins the media half
+      with a render test.
 - [ ] **A `group()` field submits only its touched sub-key, destroying its siblings.**
       Reproduced end-to-end: a Post's `seo` group held `{title, description}`; editing only
       Meta title sent `fields.seo = {"title": "…"}` and `description` was gone after the save.

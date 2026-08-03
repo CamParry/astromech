@@ -39,7 +39,11 @@ export function DropZone({
         e.preventDefault();
         setIsDragging(false);
         if (disabled) return;
-        const files = selectDroppedFiles(Array.from(e.dataTransfer.files), accept, multiple);
+        const files = selectDroppedFiles(
+            Array.from(e.dataTransfer.files),
+            accept,
+            multiple
+        );
         if (files.length > 0) onUpload(files);
     }
 

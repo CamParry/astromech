@@ -64,6 +64,8 @@ type LiveCommandItem = {
     label: string;
     sublabel?: string;
     to: string;
+    /** Search params appended on activation, e.g. the media modal's `?item=`. */
+    search?: Record<string, string>;
     group: 'LiveEntries' | 'LiveUsers' | 'LiveMedia';
     /** For entry results: the entry type id + its plural label, used to split
      * live entries into one group per entry type. */
@@ -424,7 +426,8 @@ export function CommandPalette(): React.ReactElement {
                 id: `live-media-${m.id}`,
                 label,
                 ...(showSub ? { sublabel: m.filename } : {}),
-                to: `/media/${m.id}`,
+                to: '/media',
+                search: { item: m.id },
                 group: 'LiveMedia',
                 Icon: () => <Image size={15} />,
             };
@@ -530,7 +533,8 @@ export function CommandPalette(): React.ReactElement {
     const activate = useCallback(
         (item: CommandItem) => {
             setOpen(false);
-            void navigate({ to: item.to });
+            const search = item.kind === 'live' ? item.search : undefined;
+            void navigate({ to: item.to, ...(search ? { search } : {}) });
         },
         [navigate, setOpen]
     );

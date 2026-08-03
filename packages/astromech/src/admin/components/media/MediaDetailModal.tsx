@@ -23,7 +23,7 @@ export type MediaDetailModalProps = {
     onClose: () => void;
     onDeleted: () => void;
     canDelete?: boolean;
-    canUpload?: boolean;
+    canUpdate?: boolean;
 };
 
 export function MediaDetailModal({
@@ -31,7 +31,7 @@ export function MediaDetailModal({
     onClose,
     onDeleted,
     canDelete = true,
-    canUpload = true,
+    canUpdate = true,
 }: MediaDetailModalProps): React.ReactElement {
     const {
         data: item,
@@ -63,7 +63,7 @@ export function MediaDetailModal({
                     onClose={onClose}
                     onDeleted={onDeleted}
                     canDelete={canDelete}
-                    canUpload={canUpload}
+                    canUpdate={canUpdate}
                 />
             )}
         </Modal>
@@ -75,7 +75,7 @@ type MediaDetailBodyProps = {
     onClose: () => void;
     onDeleted: () => void;
     canDelete: boolean;
-    canUpload: boolean;
+    canUpdate: boolean;
 };
 
 /** The loaded modal. Split out so `key` can remount it per media record. */
@@ -84,7 +84,7 @@ function MediaDetailBody({
     onClose,
     onDeleted,
     canDelete,
-    canUpload,
+    canUpdate,
 }: MediaDetailBodyProps): React.ReactElement {
     const { t } = useTranslation();
     const confirm = useConfirm();
@@ -228,7 +228,7 @@ function MediaDetailBody({
                     <Button variant="secondary" size="sm" onClick={onClose}>
                         {t('common.cancel')}
                     </Button>
-                    {canUpload && (
+                    {canUpdate && (
                         <Button
                             variant="primary"
                             size="sm"

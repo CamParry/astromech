@@ -61,18 +61,28 @@ tests passed because they call the Local API and never touch the route — the s
 hid the upload 404. Fixed, with `tests/transport/http/routes/media-update-fields.test.ts` asserting
 every editable column through the HTTP layer.
 
-## Still open
+## Follow-ups (branch `feat/media-admin-follow-ups`, 2026-08-03)
 
-- [ ] Resolve `$id.tsx` vs `MediaDetailModal` — delete the page and point the command palette at the
-      modal, or delete the modal. Not both.
+- [x] `$id.tsx` vs `MediaDetailModal` resolved in the modal's favour. The page is deleted and the
+      modal is now addressed by `?item=<id>` on the library route, so a media item finally has a
+      URL — opening pushes a history entry (Back closes it), closing replaces. The command palette
+      was the page's only inbound link and now points at the modal.
+- [x] Bulk delete catches per id, so one failure no longer abandons the rest, and the cache is
+      invalidated either way. A shortfall is reported rather than toasted as a clean run, and
+      `onSuccess` receives only the ids that actually succeeded — a partial failure used to step the
+      pager back off a page that still had rows.
+- [x] `media:upload` no longer gates metadata saves — `media:update` was split out. The trigger was
+      not the admin UI but the method manifest: it publishes `media.update` with its declared
+      permission, so the conflation had become an API that mis-states itself. `users` already split
+      read/create/update/delete; media was the odd one out.
 - [ ] `mediaApi.replace` exists with full variant cleanup but is exposed by no route, no client
       method and no UI
-- [ ] Bulk delete is a sequential loop with no per-item catch: the first failure aborts the rest and
-      the cache is never invalidated, so already-deleted files stay on screen
-- [ ] `media:upload` gates metadata saves. Consistent with `permissions/index.ts` as designed, but
-      worth revisiting — saving alt text is an update, not an upload.
-- [ ] Admin components have no render-level test coverage; there is no `@testing-library/react` in
-      the repo, which is why the drop-zone filter was tested through an extracted pure helper
+- [x] `@testing-library/react` + `user-event` added (on `packages/astromech`, where `vitest` and
+      `happy-dom` already live), and the media surface has its first render-level coverage: 16 tests
+      across `MediaDetailModal`, `useBulkDeleteMedia` and `useSelection`. Every one was checked by
+      deliberately reintroducing the bug it pins and confirming it goes red. Note `globals` is off
+      in `vitest.config.ts`, so testing-library's auto-cleanup does not register — each file needs
+      an explicit `afterEach(cleanup)` and a `@vitest-environment happy-dom` docblock.
 
 ## Notes for whoever picks this up
 

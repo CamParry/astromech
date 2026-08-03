@@ -116,6 +116,7 @@ export type Permission =
     | `entry:${string}:*`
     | 'media:read'
     | 'media:upload'
+    | 'media:update'
     | 'media:delete'
     | 'settings:read'
     | 'settings:update'

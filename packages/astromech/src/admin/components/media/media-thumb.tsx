@@ -71,10 +71,7 @@ export function MediaThumb({
 }
 
 /** avif/webp `srcset` pairs at 1x and 2x, or [] when no variant can be built. */
-function thumbSources(
-    item: Media,
-    width: number
-): { type: string; srcset: string }[] {
+function thumbSources(item: Media, width: number): { type: string; srcset: string }[] {
     const version = item.metadata?.version;
     const widths = adminConfig.imageWidths ?? [];
     if (version == null || widths.length === 0) return [];
