@@ -86,6 +86,24 @@ astromech permissions --json          # full catalogue entries (description, sou
 | `db:init` / `db:status` / `db:generate`                      | Initialise, inspect, and generate migrations |
 | `generate:types`                                             | Emit `.d.ts` type definitions                |
 | `generate:manifest`                                          | Write `.astro/astromech.methods.json`        |
+| `index:rebuild`                                              | Rebuild the relationships index              |
+
+## Relationships index
+
+The `relationships` table is a derived index over your field data, so it can be
+regenerated at any time. Rebuild it after a config change that adds or moves a
+relationship field — nothing repopulates it automatically, and there is
+deliberately no repair at startup.
+
+```sh
+astromech index:rebuild                    # rebuild every source
+astromech index:rebuild --type post        # limit to one entry type
+astromech index:rebuild --check            # report drift, write nothing, exit 1 if any
+```
+
+`--check` is the form to run in CI. Without `--type`, a rebuild deletes rows for
+any source it did not enumerate — correct for a full pass, but the reason to
+scope a partial one.
 
 ## MCP server (dev-only)
 

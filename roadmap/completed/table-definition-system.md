@@ -98,4 +98,4 @@ Follow-ups from step 6's judgment calls.
 
 - Baseline regeneration (`db:rebaseline`) → `planned/migration-baseline-regeneration.md`. Until it lands, a change to the DDL **renderer** still needs a hand-edit of `apps/demo/migrations/0000_baseline.ts`
 - Postgres driver → `additional-database-drivers.md`
-- Relationships / content-field data model → `in-progress/relationships-model.md` (supersedes spec §8's sketch)
+- Relationships / content-field data model → `completed/relationships-model.md` (supersedes spec §8's sketch)
