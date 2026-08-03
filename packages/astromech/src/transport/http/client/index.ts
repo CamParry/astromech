@@ -527,6 +527,14 @@ const mediaApi: MediaApi = {
                 mimeType: params?.where?.mimeType,
                 page: params?.page,
                 limit: params?.limit,
+                sort:
+                    params?.sort && !Array.isArray(params.sort)
+                        ? Object.keys(params.sort)[0]
+                        : undefined,
+                dir:
+                    params?.sort && !Array.isArray(params.sort)
+                        ? Object.values(params.sort)[0]
+                        : undefined,
             },
         });
     },
@@ -540,7 +548,7 @@ const mediaApi: MediaApi = {
         const formData = new FormData();
         formData.append('file', params.file);
 
-        const response = await fetch(`${apiBase}/media`, {
+        const response = await fetch(`${apiBase}/media/upload`, {
             method: 'POST',
             credentials: 'include',
             body: formData,
@@ -578,7 +586,12 @@ const mediaApi: MediaApi = {
 
     async update(params: {
         id: string;
-        data: Partial<{ alt: string; fields: JsonObject }>;
+        data: Partial<{
+            alt: string;
+            title: string;
+            caption: string;
+            fields: JsonObject;
+        }>;
     }): Promise<Media> {
         const res = await apiFetch<{ data: Media }>(`/media/${params.id}`, {
             method: 'PUT',

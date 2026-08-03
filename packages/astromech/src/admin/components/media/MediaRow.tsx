@@ -1,9 +1,10 @@
 import React from 'react';
-import { Checkbox, Table } from '../ui/index.js';
-import { FileTypeIcon } from '../../utilities/media.js';
+import { useTranslation } from 'react-i18next';
+import { Checkbox, Table } from '@/admin/components/ui/index.js';
+import { MediaThumb } from './media-thumb.js';
 import { formatBytes } from '@/utilities/bytes.js';
 import { formatDatetime } from '@/utilities/dates.js';
-import type { Media } from '../../../types/index.js';
+import type { Media } from '@/types/index.js';
 
 export type MediaRowProps = {
     item: Media;
@@ -12,39 +13,38 @@ export type MediaRowProps = {
     onClick: (id: string) => void;
 };
 
+/** List row. The filename is a real button so the row is reachable by keyboard. */
 export function MediaRow({
     item,
     checked,
     onToggleCheck,
     onClick,
 }: MediaRowProps): React.ReactElement {
+    const { t } = useTranslation();
+
     return (
-        <Table.Row
-            selected={checked}
-            onClick={() => onClick(item.id)}
-            className="am-table-row-clickable"
-        >
-            <Table.Td
-                onClick={(e) => e.stopPropagation()}
-                className="am-table-checkbox-cell"
-            >
-                <Checkbox checked={checked} onChange={() => onToggleCheck(item.id)} />
+        <Table.Row selected={checked} className="am-table-row-clickable">
+            <Table.Td className="am-table-checkbox-cell">
+                <Checkbox
+                    checked={checked}
+                    onChange={() => onToggleCheck(item.id)}
+                    aria-label={t('media.selectFile', { filename: item.filename })}
+                />
             </Table.Td>
             <Table.Td>
-                <div className="am-media-list-row-name">
-                    {item.mimeType.startsWith('image/') ? (
-                        <img
-                            src={item.url}
-                            alt={item.alt ?? item.filename}
-                            className="am-media-list-row-thumb"
-                        />
-                    ) : (
-                        <span className="am-media-list-row-icon">
-                            <FileTypeIcon mimeType={item.mimeType} size={20} />
-                        </span>
-                    )}
+                <button
+                    type="button"
+                    className="am-media-list-row-name"
+                    onClick={() => onClick(item.id)}
+                >
+                    <MediaThumb
+                        item={item}
+                        width={40}
+                        className="am-media-list-row-thumb"
+                        iconSize={20}
+                    />
                     <span className="am-media-list-row-filename">{item.filename}</span>
-                </div>
+                </button>
             </Table.Td>
             <Table.Td className="am-text-mono am-text-xs am-text-muted">
                 {item.mimeType}

@@ -4,6 +4,7 @@ import * as m0000 from './0000_baseline.js';
 import * as m0001 from './0001_plugins-tracking.js';
 import * as m0002 from './0002_plugins-tracking-package.js';
 import * as m0003 from './0003_relationships-index.js';
+import * as m0004 from './0004_media-title-caption.js';
 
 export const migrationProvider: MigrationProvider = {
     async getMigrations() {
@@ -12,6 +13,7 @@ export const migrationProvider: MigrationProvider = {
             '0001_plugins-tracking': m0001,
             '0002_plugins-tracking-package': m0002,
             '0003_relationships-index': m0003,
+            '0004_media-title-caption': m0004,
         };
     },
 };

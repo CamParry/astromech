@@ -98,7 +98,9 @@
             "indexes": [
                 {
                     "name": "_astromech_plugins_namespace_unique",
-                    "columns": ["namespace"],
+                    "columns": [
+                        "namespace"
+                    ],
                     "unique": true
                 }
             ]
@@ -170,7 +172,11 @@
                     "notNull": true,
                     "primaryKey": false,
                     "default": "unpublished",
-                    "enumValues": ["unpublished", "published", "scheduled"]
+                    "enumValues": [
+                        "unpublished",
+                        "published",
+                        "scheduled"
+                    ]
                 },
                 {
                     "key": "stagedFor",
@@ -252,42 +258,64 @@
             "indexes": [
                 {
                     "name": "idx_entries_type",
-                    "columns": ["type"],
+                    "columns": [
+                        "type"
+                    ],
                     "unique": false
                 },
                 {
                     "name": "idx_entries_status",
-                    "columns": ["type", "status"],
+                    "columns": [
+                        "type",
+                        "status"
+                    ],
                     "unique": false
                 },
                 {
                     "name": "idx_entries_locale",
-                    "columns": ["type", "locale", "status"],
+                    "columns": [
+                        "type",
+                        "locale",
+                        "status"
+                    ],
                     "unique": false
                 },
                 {
                     "name": "idx_entries_deleted",
-                    "columns": ["deleted_at"],
+                    "columns": [
+                        "deleted_at"
+                    ],
                     "unique": false
                 },
                 {
                     "name": "idx_entries_locale_group",
-                    "columns": ["locale_group"],
+                    "columns": [
+                        "locale_group"
+                    ],
                     "unique": false
                 },
                 {
                     "name": "idx_entries_staged_for",
-                    "columns": ["staged_for"],
+                    "columns": [
+                        "staged_for"
+                    ],
                     "unique": false
                 },
                 {
                     "name": "entries_locale_group_locale_unique",
-                    "columns": ["locale_group", "locale"],
+                    "columns": [
+                        "locale_group",
+                        "locale"
+                    ],
                     "unique": true
                 },
                 {
                     "name": "entries_type_locale_slug_unique",
-                    "columns": ["type", "locale", "slug"],
+                    "columns": [
+                        "type",
+                        "locale",
+                        "slug"
+                    ],
                     "unique": true,
                     "where": "staged_for IS NULL"
                 }
@@ -362,7 +390,9 @@
             "indexes": [
                 {
                     "name": "entry_preview_tokens_token_unique",
-                    "columns": ["token"],
+                    "columns": [
+                        "token"
+                    ],
                     "unique": true
                 }
             ]
@@ -425,7 +455,11 @@
                     "type": "text",
                     "notNull": false,
                     "primaryKey": false,
-                    "enumValues": ["unpublished", "published", "scheduled"]
+                    "enumValues": [
+                        "unpublished",
+                        "published",
+                        "scheduled"
+                    ]
                 },
                 {
                     "key": "createdAt",
@@ -461,7 +495,10 @@
             "indexes": [
                 {
                     "name": "idx_versions_entry",
-                    "columns": ["entry_id", "version_number"],
+                    "columns": [
+                        "entry_id",
+                        "version_number"
+                    ],
                     "unique": false
                 }
             ]
@@ -564,6 +601,22 @@
                     "type": "text",
                     "notNull": false,
                     "primaryKey": false
+                },
+                {
+                    "key": "title",
+                    "name": "title",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "caption",
+                    "name": "caption",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
                 }
             ],
             "fks": [
@@ -577,12 +630,16 @@
             "indexes": [
                 {
                     "name": "idx_media_mime",
-                    "columns": ["mime_type"],
+                    "columns": [
+                        "mime_type"
+                    ],
                     "unique": false
                 },
                 {
                     "name": "idx_media_created",
-                    "columns": ["created_at"],
+                    "columns": [
+                        "created_at"
+                    ],
                     "unique": false
                 }
             ]
@@ -658,7 +715,10 @@
             "indexes": [
                 {
                     "name": "notifications_user_created_idx",
-                    "columns": ["user_id", "created_at"],
+                    "columns": [
+                        "user_id",
+                        "created_at"
+                    ],
                     "unique": false
                 }
             ]
@@ -681,7 +741,11 @@
                     "type": "text",
                     "notNull": true,
                     "primaryKey": false,
-                    "enumValues": ["entry", "user", "media"]
+                    "enumValues": [
+                        "entry",
+                        "user",
+                        "media"
+                    ]
                 },
                 {
                     "key": "sourceType",
@@ -722,7 +786,11 @@
                     "type": "text",
                     "notNull": true,
                     "primaryKey": false,
-                    "enumValues": ["entry", "user", "media"]
+                    "enumValues": [
+                        "entry",
+                        "user",
+                        "media"
+                    ]
                 },
                 {
                     "key": "sourceStaged",
@@ -745,12 +813,19 @@
             "indexes": [
                 {
                     "name": "idx_rel_target",
-                    "columns": ["target_id", "target_kind"],
+                    "columns": [
+                        "target_id",
+                        "target_kind"
+                    ],
                     "unique": false
                 },
                 {
                     "name": "idx_rel_filter",
-                    "columns": ["source_type", "schema_path", "target_id"],
+                    "columns": [
+                        "source_type",
+                        "schema_path",
+                        "target_id"
+                    ],
                     "unique": false
                 }
             ]

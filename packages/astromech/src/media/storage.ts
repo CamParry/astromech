@@ -24,7 +24,11 @@ import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import { media } from '@/database/schema.js';
 import { getDb } from '@/database/registry.js';
 import type { Db } from '@/database/types.js';
-import type { MediaMimeTypeFilter, MediaQueryParams } from '@/types/index.js';
+import type {
+    MediaMimeTypeFilter,
+    MediaQueryParams,
+    SortOption,
+} from '@/types/index.js';
 import type { MediaRow, NewMediaRow } from './schema.js';
 
 type Predicate = ReturnType<QueryHandle<typeof media>['where']>;
@@ -32,6 +36,10 @@ type MediaEb = Parameters<Predicate>[0];
 
 /** Page slice for `list`; omit it for an unpaginated read. */
 export type MediaPage = { limit: number; offset: number };
+
+/** Columns a caller may order by. Anything else is ignored, not an error. */
+const SORTABLE_COLS = ['filename', 'mimeType', 'size', 'createdAt'] as const;
+type SortableCol = (typeof SORTABLE_COLS)[number];
 
 export type MediaStorage = ReturnType<typeof createMediaStorage>;
 
@@ -59,6 +67,25 @@ function mimeBucket(
     return null;
 }
 
+/** Order-by clauses for a sort option, falling back to newest-first. */
+function buildOrderBy(
+    sort?: SortOption | SortOption[]
+): { col: SortableCol; dir: 'asc' | 'desc' }[] {
+    const fallback: { col: SortableCol; dir: 'asc' | 'desc' }[] = [
+        { col: 'createdAt', dir: 'desc' },
+    ];
+    if (!sort) return fallback;
+    const sorts = Array.isArray(sort) ? sort : [sort];
+    const clauses = sorts.flatMap((s) =>
+        Object.entries(s).flatMap(([field, dir]) => {
+            if (!(SORTABLE_COLS as readonly string[]).includes(field)) return [];
+            if (dir !== 'asc' && dir !== 'desc') return [];
+            return [{ col: field as SortableCol, dir }];
+        })
+    );
+    return clauses.length > 0 ? clauses : fallback;
+}
+
 /** Defaults to the registered db; pass a tx handle to scope it to a transaction. */
 export function createMediaStorage(db?: Db) {
     const storage = createStorage(media, db);
@@ -75,17 +102,16 @@ export function createMediaStorage(db?: Db) {
         };
     }
 
-    /** Newest first. Omit `page` for every match. */
+    /** Newest first unless `params.sort` says otherwise. Omit `page` for every match. */
     async function list(
         params?: MediaQueryParams,
         page?: MediaPage
     ): Promise<MediaRow[]> {
         const { db: handle, table } = storage.query();
-        let q = handle
-            .selectFrom(table)
-            .selectAll()
-            .where(filter(params))
-            .orderBy('createdAt', 'desc');
+        let q = handle.selectFrom(table).selectAll().where(filter(params));
+        for (const { col, dir } of buildOrderBy(params?.sort)) {
+            q = q.orderBy(col, dir);
+        }
         if (page) q = q.limit(page.limit).offset(page.offset);
         const rows = await q.execute();
         return rows.map((row) => decodeWith(media, row) as unknown as MediaRow);

@@ -496,6 +496,15 @@ export type ResolvedConfig = Omit<AstromechConfig, 'plugins' | 'db' | 'scheduler
 export type AdminConfig = {
     adminRoute: string;
     apiRoute: string;
+    /** Where `/_media` variants are served from, so the admin can build thumbnail URLs. */
+    mediaRoute: string;
+    /**
+     * The image variant allowlist. Empty when no image driver is configured —
+     * the admin then falls back to the original file rather than requesting a
+     * width the media route would 404.
+     */
+    imageWidths: number[];
+    imageAvif: boolean;
     locales: string[];
     defaultLocale: string;
     roles: { slug: string; name: string }[];

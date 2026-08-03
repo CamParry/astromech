@@ -4,14 +4,32 @@ export type ViewMode = 'grid' | 'list';
 
 export type TypeFilter = 'all' | 'images' | 'videos' | 'documents' | 'other';
 
-export const TYPE_FILTER_OPTIONS = [
-    { value: 'all', label: 'All' },
-    { value: 'images', label: 'Images' },
-    { value: 'videos', label: 'Videos' },
-    { value: 'documents', label: 'Documents' },
-    { value: 'other', label: 'Other' },
-] as const satisfies { value: TypeFilter; label: string }[];
+export const TYPE_FILTER_VALUES = [
+    'all',
+    'images',
+    'videos',
+    'documents',
+    'other',
+] as const satisfies readonly TypeFilter[];
 
-export const TYPE_FILTER_LABELS: Record<TypeFilter, string> = Object.fromEntries(
-    TYPE_FILTER_OPTIONS.map((o) => [o.value, o.label])
-) as Record<TypeFilter, string>;
+/**
+ * i18n key per filter value. A lookup rather than key concatenation so a new
+ * filter value is a type error here instead of a missing key at runtime.
+ */
+export const TYPE_FILTER_KEYS: Record<TypeFilter, string> = {
+    all: 'media.filterAll',
+    images: 'media.filterImages',
+    videos: 'media.filterVideos',
+    documents: 'media.filterDocuments',
+    other: 'media.filterOther',
+};
+
+/** Columns the media list can be ordered by; must match the storage allowlist. */
+export type MediaSortKey = 'filename' | 'mimeType' | 'size' | 'createdAt';
+
+export const MEDIA_SORT_KEYS = [
+    'filename',
+    'mimeType',
+    'size',
+    'createdAt',
+] as const satisfies readonly MediaSortKey[];
