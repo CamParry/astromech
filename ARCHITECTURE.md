@@ -17,8 +17,9 @@ type-safe client for reading content in templates.
 **Infrastructure target:** Cloudflare — Workers runtime, D1 (SQLite) database, R2
 (S3-compatible) storage. Other drivers exist (libsql, filesystem, s3) but
 Cloudflare is the shape decisions are made for. **SSR only** for now. The D1
-driver is not built yet (`roadmap/planned/additional-database-drivers.md`), and
-nothing has been run on Workers.
+driver exists (`database/drivers/d1.ts`) but nothing has been run on Workers;
+Postgres and MySQL are a future major
+(`roadmap/planned/additional-database-drivers.md`).
 
 ## The layer model
 

@@ -6,7 +6,14 @@ user-invocable: false
 
 ## Naming
 
-- Files: kebab-case · Types: PascalCase · Functions/variables: camelCase
+Names are not a place to be creative. Before naming anything, find what this exact thing is already called in TypeScript, in a CMS (Payload, Strapi, Sanity, Directus), in an open-source web library, or in the Astro / TanStack / Hono / Drizzle stack, and use that. If you can't recall a convention, look one up. Concept and terminology naming is in `CLAUDE.md`.
+
+- **Casing:** `camelCase` values and functions · `PascalCase` types and React components · `SCREAMING_SNAKE_CASE` true constants and env vars · `kebab-case` files and directories · whatever the wire format already uses for API fields and DB columns.
+- **Follow the conventions of the world the code lives in.** Server code reads like Node/Hono: `createX`, `getX`, `listX`, `handler`, `middleware`, `options`, `req`/`res`. React code reads like React: `useX` hooks, `onX` handler props, `isX`/`hasX` booleans, `XProvider`, `children`. Don't carry server idiom into a component or React idiom into a service.
+- **A function name says what it does, in a verb.** `resolveContentLocale`, `renderRichText`, `createStaged` — not `handleData`, `processStuff`, `contentHelper`. If the verb is hard to pick, the function is doing more than one thing.
+- **Be consistent across the codebase before being clever in one file.** If neighbouring code says `entry`, don't introduce `record`, `doc`, or `item` for the same concept. One concept, one word, everywhere.
+- **Spell it out.** `config` and `id` are fine because everyone reads them; `cfg`, `mgr`, `svc`, `tmp2` are not. Length costs nothing next to a name a reader has to decode.
+- **Watch the generic suffixes, don't ban them.** `handler`, `engine`, `service`, `util`, `helper`, `manager` are real ecosystem words and this codebase already uses several — `handler` for a request handler, `@astromech/schema-engine` for a body of core machinery, `utilities/` and `support/` for genuinely miscellaneous small functions. Use them where they carry their normal meaning. Be wary only of reaching for one because the thing resists a more specific name; when a `Manager` or `Helper` would sit next to a name that actually describes the work, prefer the specific one.
 
 ## File ordering
 

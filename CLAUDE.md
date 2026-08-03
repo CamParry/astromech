@@ -1,19 +1,51 @@
 # CLAUDE.md
 
-Astromech is a lightweight TypeScript CMS. Built to work well across runtimes but designed for Astro + Cloudflare. Build on TanStack Router and Hono.
+Astromech is a lightweight TypeScript CMS — a framework-agnostic core plus an Astro integration, built on TanStack Router and Hono. Read `ARCHITECTURE.md` before changing anything structural: it holds the layer model, the directory map, and the invariants. When it disagrees with the code, the code wins — fix the file.
 
-## Sub-agents
+## Where things live
 
-Use sub-agents wherever the task is clear enough to delegate. Always include a full implementation plan in the prompt — file paths, exact code changes, and expected outcomes — so the agent can execute without re-researching the codebase.
+`packages/*` is published to npm, `apps/*` is deployed and never published.
 
-**Before launching a worktree agent:** ensure all in-progress changes in the main working tree are committed or stashed. Worktrees are forked from the last commit — copying their output back will silently overwrite any uncommitted work.
+- **`packages/astromech`** — the published core. **`packages/schema-engine`**, **`packages/plugins/*`** (backups, forms, menus, redirects, seo) — the rest of the published surface.
+- **`apps/demo`** — the app to run and browser-verify against. **`apps/docs`** — user-facing guides.
+- **`ARCHITECTURE.md`** — where code lives and what it may import. **`TERMINOLOGY.md`** — what a term means today. **`decisions/`** — why it beat the alternatives.
+- **`roadmap/`** — one file per feature, status by directory (`planned/` → `in-progress/` → `completed/`).
+- **`specs/`** — in-flight designs only. Delete a spec once its work ships; never link to one from durable docs or code.
+
+## Commands and the gate
+
+`ARCHITECTURE.md` has the gate table. What it doesn't say:
+
+- **Root `lint` only covers `astromech` and `@astromech/schema-engine`.** Plugin packages have no lint script, but the pre-commit hook lints their files anyway — so a plugin change can pass `npm run lint` and then fail on commit.
+- **`apps/demo` has no typecheck.** Nothing in the gate type-checks it.
+- **Never `--no-verify`.** If the hook fails, fix the cause.
+- Common commands: `npm run build`, `typecheck`, `test:run`, `lint`, `lint:deps`, `format`, `db:generate`, `db:init`.
+
+## Workflow
+
+**Clarify → delegate → verify.**
+
+- **Clarify before acting.** If a task is ambiguous, or the right approach depends on an unclear requirement, ask — don't assume and proceed.
+- **Delegate coding implementation to sub-agents.** The main thread plans, decides, and reviews; the edits are written by a `coder` sub-agent. Make edits directly only for trivial one-liners, or when correcting a delegated agent.
+- **Give the agent the whole plan** — file paths, exact code changes, expected outcomes — so it can execute without re-researching the codebase.
+- **Verify what comes back.** Re-run the gate yourself; a sub-agent's report of a clean typecheck is not evidence, and one that contradicts a known test baseline is a red flag.
+- **Don't commit while sub-agents are still writing in the same worktree.** The pre-commit hook stashes repo-wide and can clobber their in-flight edits.
+- **Reflect on focus shifts.** When the focus of work changes significantly, pause: are there lessons that belong in a skill? Anything worth saving to memory? Does a `roadmap/` file need to move between `planned/`, `in-progress/` and `completed/`, or a new one to be added?
+- **No time estimates.**
 
 ## Branches and worktrees
+
+**Implement on a branch, in a worktree.** Anything beyond a trivial edit gets its own branch checked out in its own worktree — never build a feature directly in the main checkout. Only `main` may be worked on in the main checkout.
+
+Create the worktree by hand from a verified base, and run a non-isolated agent scoped to that path. The Agent tool's `isolation: worktree` forks from an unpredictable base and has landed work on the wrong one.
+
+**A worktree can't verify its own work.** Worktrees under `.claude/worktrees/*` resolve `node_modules` and `dist` to the main checkout, so a build there passes without deps and `apps/demo` runs main's code rather than the branch's. Expect breakage in a worktree build, flag it rather than chasing it, and verify by merging to main and testing there.
 
 Nothing in this project is live yet — it's in active development. Optimise for a small, current, honest set of branches, not for isolating half-built work.
 
 - **One branch per active workstream, and no more than two active at once.** Multi-workstream features (WS1, WS2, WS3…) get _one_ branch with a commit per workstream — never a branch per workstream. Stacked branch-per-workstream is what produced four labels pointing at the same three commits.
 - **Land on main early.** Prefer merging partial work to main behind an unticked `roadmap/` checkbox over holding a long-lived feature branch. A branch more than ~10 commits behind main is a liability: the rebase cost grows faster than the isolation is worth, and nothing is deployed, so there's no release to protect.
+- **Commit or stash the main working tree before launching work in a worktree.** Worktrees fork from the last commit — copying their output back will silently overwrite anything uncommitted.
 - **A worktree's directory name must match its branch name.** A mismatch is how branches get lost and how the wrong one gets merged.
 - **Remove a worktree as soon as its work is merged or parked.** Don't leave clean worktrees lying around.
 - **Never leave uncommitted work in a worktree at the end of a session.** Commit it as `wip(scope): …` with a body saying what's unfinished and what it depends on, rather than leaving it loose.
@@ -21,14 +53,9 @@ Nothing in this project is live yet — it's in active development. Optimise for
 - **Delete a branch once its commits are contained elsewhere** — verify with `git merge-base --is-ancestor <branch> <keeper>` before deleting, never by eye.
 - **Keep `roadmap/` status on `main`.** A roadmap file that only exists on a feature branch can't report that branch's status. If a branch is building something, its roadmap file belongs on main and moves between `planned/`, `in-progress/`, and `completed/` as the branch progresses.
 
-## Workflow
-
-- **Clarify before acting:** If a task is ambiguous or the right approach depends on an unclear requirement, ask first — don't assume and proceed.
-- **Reflect on focus shifts:** When the focus of work changes significantly, pause to consider: are there lessons learned that belong in a skill? Anything worth saving to memory? Does the `roadmap/` directory need updating (a feature's status changed → move its file between `planned/`, `in-progress/`, `completed/`; or add a new feature file)?
-
 ## Naming
 
-Astromech should read as if written by someone fluent in the existing web ecosystem — not as a private dialect a contributor has to be taught. **Use the established, commonly understood word wherever one exists.** Almost everything here has a well-worn name in the Astro / TanStack / Hono / Payload / Strapi / Drizzle world already; reach for that name before inventing one.
+Astromech should read as if written by someone fluent in the existing web ecosystem — not as a private dialect a contributor has to be taught. **Use the established, commonly understood word wherever one exists.** Almost everything here has a well-worn name in the Astro / TanStack / Hono / Payload / Strapi / Drizzle world already; reach for that name before inventing one. If you can't recall the convention, look it up rather than picking whatever reads best in the moment.
 
 Before adopting a term, check what it already means to a web developer:
 
@@ -37,12 +64,10 @@ Before adopting a term, check what it already means to a web developer:
 - **Don't coin unless nothing fits.** Every coinage is vocabulary every future reader must be taught. When one is genuinely unavoidable, it gets a `TERMINOLOGY.md` entry stating what it means and what it was chosen over.
 - **Prefer boring and literal to clever.** A name that a stranger guesses correctly on first read has done its job.
 
+The same thinking governs every identifier — functions, variables, files, types, config keys. The `code` skill has the conventions.
+
 Where a name was contested, record the comparison rather than just the winner — `TERMINOLOGY.md` for what a term means today, `decisions/` for why it beat the alternatives. `decisions/0005-ai-context-naming.md` is the worked example.
 
-## CSS Conventions
+## Conventions
 
-- All sizing values (widths, heights, padding, gap, margin, etc.) must be multiples of `0.25rem`. No arbitrary values like `2.2rem` or `7.1rem`.
-
-## Communication
-
-- Don't give time estimates for tasks
+TypeScript, React and CSS rules live in the skills — `code`, `ui`, `api`, `css` — which load automatically for the files they cover. Don't duplicate them here.
