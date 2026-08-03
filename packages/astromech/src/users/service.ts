@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { UserRow } from './schema.js';
 import { createUserStorage } from './storage.js';
 import { createRelationshipStorage } from '@/database/storage/relationships.js';
+import type { RelationshipIndexSource } from '@/database/storage/relationships.js';
 import { collectRelationshipEdges } from '@/fields/relationship-edges.js';
 import type { JsonObject, User, QueryResult, UserQueryParams } from '@/types/index.js';
 import { ValidationError } from '@/errors/validation.js';
@@ -192,6 +193,25 @@ export const usersApi = {
         await createUserStorage().delete(params.id);
     },
 };
+
+/**
+ * Every user as a relationship source, with the edges its STORED field data
+ * holds. The rebuild side of `indexUserRelationships`. Stored data has already
+ * been through `processFields`, so the traversal mints no ids here.
+ */
+export async function collectUserRelationshipSources(): Promise<
+    RelationshipIndexSource[]
+> {
+    const definitions = flattenFieldNodes(config.users?.fields ?? []);
+    const rows = await createUserStorage().list();
+    return rows.map((row) => ({
+        source: { id: row.id, kind: 'user' as const },
+        edges: collectRelationshipEdges(
+            definitions,
+            (row.fields ?? {}) as unknown as JsonObject
+        ),
+    }));
+}
 
 /**
  * Re-index a user's relationship fields. `fields` must be post-`processFields`

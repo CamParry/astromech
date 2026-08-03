@@ -3,6 +3,7 @@ import { ulid } from 'ulidx';
 import type { MediaRow } from './schema.js';
 import { createMediaStorage } from './storage.js';
 import { createRelationshipStorage } from '@/database/storage/relationships.js';
+import type { RelationshipIndexSource } from '@/database/storage/relationships.js';
 import { collectRelationshipEdges } from '@/fields/relationship-edges.js';
 import { getStorageDriver } from '@/storage/registry.js';
 import { deletePrefix } from '@/storage/prefix.js';
@@ -324,6 +325,22 @@ function compareUsage(a: MediaUsage, b: MediaUsage): number {
         a.schemaPath.localeCompare(b.schemaPath) ||
         a.instancePath.localeCompare(b.instancePath)
     );
+}
+
+/**
+ * Every media record as a relationship source, with the edges its STORED field
+ * data holds. The rebuild side of `indexMediaRelationships`. Stored data has
+ * already been through `processFields`, so the traversal mints no ids here.
+ */
+export async function collectMediaRelationshipSources(): Promise<
+    RelationshipIndexSource[]
+> {
+    const definitions = flattenFieldNodes(config.media?.fields ?? []);
+    const rows = await createMediaStorage().list();
+    return rows.map((row) => ({
+        source: { id: row.id, kind: 'media' as const },
+        edges: collectRelationshipEdges(definitions, (row.fields ?? {}) as JsonObject),
+    }));
 }
 
 /**

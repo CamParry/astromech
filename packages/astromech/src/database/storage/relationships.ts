@@ -31,6 +31,17 @@ export type RelationshipSource = {
 };
 
 /**
+ * One source and the edges its stored field data holds. What a domain's rebuild
+ * collector yields; lives here so the domains and the kernel that composes them
+ * share one shape. A source with no edges is still a source — it is how the
+ * drift check sees rows left behind by data that no longer references anything.
+ */
+export type RelationshipIndexSource = {
+    source: RelationshipSource;
+    edges: RelationshipEdge[];
+};
+
+/**
  * Rows per INSERT. D1 caps a query at 100 bound parameters and each row binds
  * eight columns, so twelve rows is the largest statement that always fits.
  */
@@ -100,6 +111,18 @@ export function createRelationshipStorage(db: Db = getDb()) {
         });
     }
 
+    /**
+     * Every stored edge, optionally narrowed to one entry type. The rebuild and
+     * drift reads use it: they must see rows whose source no longer exists, so
+     * they cannot enumerate by source.
+     */
+    async function findAll(filter?: { sourceType?: string }): Promise<RelationshipRow[]> {
+        return storage.findMany({
+            where:
+                filter?.sourceType !== undefined ? { sourceType: filter.sourceType } : {},
+        });
+    }
+
     /** Drop one source's edges — its row is gone, so its edges are meaningless. */
     async function deleteBySource(
         sourceId: string,
@@ -126,6 +149,7 @@ export function createRelationshipStorage(db: Db = getDb()) {
 
     return {
         replaceForSource,
+        findAll,
         findBySource,
         findByTarget,
         deleteBySource,
