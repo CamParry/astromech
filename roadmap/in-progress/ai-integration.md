@@ -343,7 +343,7 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       intersection rather than on `AstromechClient` (which the fetch Client also
       implements), so the browser admin reaches these operations over HTTP, not
       through the typed client — the decision to revisit when P7's drawer lands.
-- [ ] **P6 — AI context** — admin routes declare a typed `AIContextReference`
+- [x] **P6 — AI context** — admin routes declare a typed `AIContextReference`
       (`{ kind, type?, id?, label }`) for what the user is looking at, so a model
       can resolve deixis ("this page", "this field"). Assembled into a
       `role: 'system'` message inside `messages[]`, **not** the system prompt, or
@@ -364,6 +364,43 @@ f(x)`), so re-coercion is only observable when the STORED value is not
     - The `AI` prefix is load-bearing, not decoration: `src/context/` is already
       the server-side `AsyncLocalStorage` request context, and it is on admin's
       forbidden-import list in `.dependency-cruiser.cjs`.
+    - **Built 2026-08-03** on `feat/ai-context`, four commits, 2299/158 → 2330/161.
+      `types/ai-context.ts` (reference) and `utilities/ai-context.ts`
+      (`formatAIContextMessage`) sit in pure leaves so P7's server-side loop can
+      import them — everything below admin is forbidden from importing
+      `^src/admin/`. `admin/context/ai-context.tsx` holds the store,
+      `AIContextProvider` (mounted on the `_protected` layout, which does not
+      remount on navigation) and `useAIContext` / `useAIContextEntries`. Ten
+      screens declare: lists at depth 0, single items at depth 1.
+    - **`defineRegistry` was rejected** for the store: single-value,
+      non-reactive, globalThis-backed for a server chunking problem the SPA does
+      not have, and it has no use anywhere under `admin/`. The admin's own
+      precedent is `admin/definitions/field-registry.ts` — module-level state,
+      no globalThis — plus `useSyncExternalStore`.
+    - **Three invariants that are silent bugs if broken.** `order` is assigned
+      once per key, so re-registering cannot reshuffle a route against its
+      siblings. `getSnapshot` returns a cached array reference, or
+      `useSyncExternalStore` re-renders forever. The store does not sort —
+      sorting by depth then order belongs to `formatAIContextMessage` alone,
+      and duplicating it would give one fact two sources of truth.
+    - **Depth is explicit, not insertion order.** React runs effects child-first,
+      so a focused field editor registers _before_ its own route and insertion
+      order silently inverts.
+    - `kind` is `entries | media | users | settings | pages`, taken verbatim from
+      the method manifest's catalogue list rather than coined. Plural throughout
+      even though a reference usually names one item: the alternative is a second
+      singular vocabulary for domains already named in the plural everywhere else.
+    - The **dev-only readout** (`admin/components/dev/`, gated on
+      `import.meta.env.DEV`) renders `formatAIContextMessage`'s own output rather
+      than its own view of the entries, so the assembly path stays exercised
+      until P7 consumes it for real. Its CSS is co-located, not in
+      `styles/main.css` — `main.tsx` imports that unconditionally, so a partial
+      there would ship dev-only rules into production despite the gate.
+    - Open, and logged in `roadmap/backlog.md`: creation (`new.tsx`) and version
+      -history routes declare nothing, and modal-driven detail views (media
+      library) still report only the list. All three need a new `kind` or an
+      extra wording branch in the formatter first — declaring them today would
+      describe a creation screen as an entry list.
 - [ ] **P7 — authoring plugin** — Claude adapter + tool-loop over the manifest +
       chat drawer.
 
