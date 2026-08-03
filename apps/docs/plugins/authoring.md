@@ -626,6 +626,16 @@ context — a cron tick, a boot-time `setup()`. It is the principal
 `scopedService` takes, so hand it over to reach the same domains under the
 **caller's** permissions instead of unscoped:
 
+> **This is not reachable from a plugin package yet.** The intent below is
+> right; the mechanism is not available. `scopedService` ships on
+> `astromech/methods`, and a plugin cannot import that subpath — Astro loads
+> your config, and so your plugin, in plain Node, where the
+> `virtual:astromech/config` that every domain service reaches cannot resolve.
+> Importing it throws `ERR_UNSUPPORTED_ESM_URL_SCHEME` on the first request.
+> Until it is exposed on `ctx`, `ctx.entries` and its siblings are the only way
+> to reach a domain, and they run as the **plugin**, not as the caller. Treat
+> the snippet below as the shape to expect, not code to copy.
+
 ```ts
 import { scopedService } from 'astromech/methods';
 

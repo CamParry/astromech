@@ -404,6 +404,19 @@ f(x)`), so re-coercion is only observable when the STORED value is not
 - [ ] **P7 — authoring plugin** — Claude adapter + tool-loop over the manifest +
       chat drawer. **Built and merged 2026-08-03**; unticked because the
       assistant is read-only and no model round-trip has ever run.
+    - **BLOCKED 2026-08-04: the drawer 500s on every send.** With a real key set,
+      `POST /api/plugins/authoring/chat` dies on
+      `ERR_UNSUPPORTED_ESM_URL_SCHEME … 'virtual:'`. Astro loads a site's config
+      — and so every plugin factory and the `rawRoutes` closures hanging off it
+      — in plain Node, so the handler's imports resolve through Node's loader,
+      where `astromech/methods` → `scopedService` → the domain services →
+      `virtual:astromech/config` cannot resolve. Core escapes this only because
+      its runtime is Vite-compiled from `src`. `ctx` has always been the bridge
+      and nothing wrote that down. `ssr.noExternal` was tried and cannot work —
+      the closure was never in Vite's graph. Needs the seams on `PluginContext`;
+      the design decision and the full write-up are in
+      `specs/plugin-runtime-boundary.md`, and the invariant is now in
+      `ARCHITECTURE.md`.
     - `@astromech/authoring` ships the package, a streaming chat route, the
       model loop and the drawer. Browser-verified against the demo: the drawer
       opens, the transcript is a live region, focus returns to its toggle on

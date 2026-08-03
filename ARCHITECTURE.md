@@ -156,6 +156,25 @@ Plugins access platform resources through two sanctioned, plugin-scoped handles 
 
 **`DatabaseDriver` capability seam:** `dump?()` and `restore?()` are optional fields on `DatabaseDriver` (`src/types/config.ts`). Implemented for libsql (local `file:` connections only — `VACUUM INTO` requires a local path); unimplemented on D1/Postgres drivers (feature-detects off). A driver may implement `dump` without `restore`.
 
+## Plugin runtime boundary
+
+**A plugin's server code runs in a different module graph from core's, and `ctx` is the only bridge across it.** This is an invariant, not a convention — the alternative does not merely violate a rule, it throws.
+
+Astro loads `astro.config.mjs`, and therefore `astromech.config.ts` and every `plugin()` factory, in **plain Node at config time**. A `PluginDefinition` and every closure hanging off it — `rawRoutes[].handler`, service methods, hooks — belongs to that Node-loaded copy of the plugin package, whenever it later runs. Core's runtime code is the opposite: the integration injects routes pointing at package **source** (`pkgSrc` in `kernel/astro.ts`), so Vite compiles it.
+
+|                | how it is loaded         | can it resolve `virtual:`? |
+| -------------- | ------------------------ | -------------------------- |
+| core runtime   | Vite-compiled from `src` | yes                        |
+| plugin runtime | Node-loaded from `dist`  | **no**                     |
+
+So a plugin that imports a core module reaching `virtual:astromech/config` — which every domain service does — dies with `ERR_UNSUPPORTED_ESM_URL_SCHEME` under Node's ESM loader. **`astromech/methods` is currently unreachable from a plugin package for exactly this reason**, and it fails at _import_ time rather than at call time, because `exports/methods.ts` statically re-exports `scopedService` and so loads the whole service graph.
+
+Every working plugin already respects this: none of them import core services, they receive them on `PluginContext`. New platform capabilities therefore belong on `ctx` as a capability port (above), not on a published subpath a plugin is expected to import.
+
+`ssr.noExternal` does **not** fix this and has been tried. It governs which modules Vite's SSR graph compiles; the handler closure was never in that graph, so Vite would compile a second copy that nothing calls.
+
+Two consequences for anything loaded at config time — `plugin-runtime.ts`, the integration itself: imports must stay lazy where they reach a service (`context/request-context.ts` exists for this), and `npm run check:config` loads the demo config the way Astro does to catch a regression before a plugin is wired up.
+
 ## App-owned migration model
 
 Migrations are an **app artifact**, not a core artifact. Core ships schema definitions and types; it does not ship migration files.
@@ -185,9 +204,10 @@ defined by `exports` in `package.json` — that's canonical. The ones to know:
 separate `plugin-kit` subpath), `astromech/astro` (integration),
 `astromech/local` & `astromech/fetch` (the two API consumers), `astromech/middleware`,
 `astromech/methods` (the server-side seam surface — the boot-generated method
-manifest via `getMethodManifest`, plus `buildDispatch`, `reduceSurface`,
-`annotateManifest`, `scopedService`, the confirm-gate helpers and
-`formatAIContextMessage`),
+manifest via `getMethodManifest`, plus `buildDispatch`, `buildScopedDispatch`,
+`reduceSurface`, `annotateManifest`, `scopedService`, the confirm-gate helpers
+and `formatAIContextMessage`; **core-internal in practice — a plugin package
+cannot import it, see "Plugin runtime boundary"**),
 `astromech/fields`, `astromech/db/schema`, `astromech/storage/{filesystem,r2,s3}`
 (storage drivers), `astromech/cloudflare` (binding-name resolution), and the
 `astromech` CLI bin. The first-party plugins are their own packages —
