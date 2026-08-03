@@ -24,7 +24,9 @@ import type {
     ManifestMethod,
     PluginContext,
     PluginManifestMethod,
+    Role,
 } from '@/types/index.js';
+import type { ScopedService } from '@/policies/scoped-service.js';
 
 // ============================================================================
 // Types
@@ -74,6 +76,12 @@ type ServiceObject = Record<string, unknown>;
 
 /** The shape `invoke` takes once a method has been resolved to a call. */
 type Invoke = (args: Record<string, unknown>) => Promise<unknown>;
+
+/** What a resolution strategy answers with: the call, or why there isn't one. */
+type ResolvedInvoke = { ok: true; invoke: Invoke } | { ok: false; reason: string };
+
+/** A strategy for turning a manifest method into the call it maps to. */
+type ResolveStrategy = (manifest: ManifestMethod) => ResolvedInvoke;
 
 // ============================================================================
 // Service resolution
@@ -183,17 +191,36 @@ function toolNameFor(manifest: ManifestMethod): string {
 }
 
 // ============================================================================
-// Public builder
+// Public builders
 // ============================================================================
 
 /**
  * Build a ToolDispatch from a ManifestMethod, or explain why the method is not
- * callable over JSON-RPC.
- *
- * The manifest carries `source`, `domain`, `method`, `typeId` and `serviceKey`
- * as fields, so nothing here re-derives them by splitting a name apart.
+ * callable over JSON-RPC. `invoke` calls the raw domain services, so this is for
+ * a trusted caller with no principal — the dev-only MCP server and the CLI.
  */
 export function buildDispatch(manifest: ManifestMethod): DispatchResult {
+    return buildDispatchWith(manifest, resolveInvoke);
+}
+
+/**
+ * The same dispatch, resolved through `scopedService(principal)` so every call
+ * is checked against what the principal holds. `undefined` means no principal —
+ * allowed nothing — never a trusted caller; that is what `buildDispatch` is for.
+ */
+export function buildScopedDispatch(
+    manifest: ManifestMethod,
+    principal: Role | undefined
+): DispatchResult {
+    const handle = scopedHandle(principal);
+    return buildDispatchWith(manifest, (method) => resolveScopedInvoke(method, handle));
+}
+
+/** Project a manifest method into a tool, with `resolve` supplying the call. */
+function buildDispatchWith(
+    manifest: ManifestMethod,
+    resolve: ResolveStrategy
+): DispatchResult {
     // Declared uncallable by the method itself (a `File` input). Checked before
     // the schema, because such a method HAS a schema — one that degrades to `{}`
     // and would otherwise look perfectly callable.
@@ -209,12 +236,9 @@ export function buildDispatch(manifest: ManifestMethod): DispatchResult {
         return { ok: false, reason: 'no input schema declared on the descriptor' };
     }
 
-    const invoke = resolveInvoke(manifest);
-    if (invoke === null) {
-        return {
-            ok: false,
-            reason: `no service registered for domain "${manifest.name}"`,
-        };
+    const resolved = resolve(manifest);
+    if (!resolved.ok) {
+        return { ok: false, reason: resolved.reason };
     }
 
     return {
@@ -233,37 +257,125 @@ export function buildDispatch(manifest: ManifestMethod): DispatchResult {
             },
             permission: manifest.permission,
             permissionDynamic: manifest.permissionDynamic === true,
-            invoke,
+            invoke: resolved.invoke,
         },
     };
 }
 
-/** The call this method maps to, or null when its domain names no service. */
-function resolveInvoke(manifest: ManifestMethod): Invoke | null {
+// ============================================================================
+// Resolution — raw services
+// ============================================================================
+
+/** The raw-service call this method maps to. */
+function resolveInvoke(manifest: ManifestMethod): ResolvedInvoke {
     switch (manifest.source) {
         case 'core':
             return resolveCoreInvoke(manifest);
         case 'entries':
-            return resolveEntriesInvoke(manifest);
+            return {
+                ok: true,
+                invoke: async (args) =>
+                    callServiceMethod(
+                        await getEntriesService(),
+                        manifest.method,
+                        entriesArgs(manifest, args)
+                    ),
+            };
         case 'plugin':
-            return (args) => invokePluginMethod(manifest, args);
+            return { ok: true, invoke: (args) => invokePluginMethod(manifest, args) };
     }
 }
 
-function resolveCoreInvoke(manifest: CoreManifestMethod): Invoke | null {
+function resolveCoreInvoke(manifest: CoreManifestMethod): ResolvedInvoke {
     const load = CORE_SERVICES[manifest.domain];
-    if (!load) return null;
-    return async (args) => callServiceMethod(await load(), manifest.method, args);
+    if (!load) return { ok: false, reason: noServiceReason(manifest) };
+    return {
+        ok: true,
+        invoke: async (args) => callServiceMethod(await load(), manifest.method, args),
+    };
 }
 
-function resolveEntriesInvoke(manifest: EntriesManifestMethod): Invoke {
-    return async (args) =>
-        callServiceMethod(await getEntriesService(), manifest.method, {
-            ...args,
-            // Every entries tool pins its own type id — the id the SERVICE is
-            // called with, qualified (`redirects/redirect`) for a plugin-mounted
-            // type. Pinned LAST so a client cannot redirect the call at another
-            // type by passing one of its own.
-            type: manifest.typeId,
-        });
+/**
+ * The arguments an entries tool calls its service with. The type id is pinned
+ * LAST — qualified (`redirects/redirect`) for a plugin-mounted type — so a
+ * client cannot redirect the call at another type by passing one of its own.
+ */
+function entriesArgs(
+    manifest: EntriesManifestMethod,
+    args: Record<string, unknown>
+): Record<string, unknown> {
+    return { ...args, type: manifest.typeId };
+}
+
+/** The refusal for a manifest domain that names no registered service. */
+function noServiceReason(manifest: ManifestMethod): string {
+    return `no service registered for domain "${manifest.name}"`;
+}
+
+// ============================================================================
+// Resolution — scoped to a principal
+// ============================================================================
+
+/** The principal's scoped handle, built on first use and reused after it. */
+type ScopedHandle = () => Promise<ScopedService>;
+
+/**
+ * A handle factory for one dispatch. `scopedService` is imported lazily for the
+ * same reason `CORE_SERVICES` is: building the tool list must pull in no service
+ * code, and that module imports every domain service eagerly.
+ */
+function scopedHandle(principal: Role | undefined): ScopedHandle {
+    let handle: Promise<ScopedService> | null = null;
+    return () => {
+        handle ??= import('@/policies/scoped-service.js').then(({ scopedService }) =>
+            scopedService(principal)
+        );
+        return handle;
+    };
+}
+
+/** The scoped call this method maps to, or why the principal gets none. */
+function resolveScopedInvoke(
+    manifest: ManifestMethod,
+    handle: ScopedHandle
+): ResolvedInvoke {
+    switch (manifest.source) {
+        case 'core':
+            return resolveScopedCoreInvoke(manifest, handle);
+        case 'entries':
+            return {
+                ok: true,
+                invoke: async (args) =>
+                    callServiceMethod(
+                        (await handle()).entries as unknown as ServiceObject,
+                        manifest.method,
+                        entriesArgs(manifest, args)
+                    ),
+            };
+        case 'plugin':
+            // `invokePluginMethod` does not enforce the method's declared
+            // `access` — the HTTP RPC route does that separately — so there is
+            // nothing here to scope it with, and it is refused rather than run.
+            return { ok: false, reason: 'plugin method — not scoped to a principal yet' };
+    }
+}
+
+function resolveScopedCoreInvoke(
+    manifest: CoreManifestMethod,
+    handle: ScopedHandle
+): ResolvedInvoke {
+    if (CORE_SERVICES[manifest.domain] === undefined) {
+        return { ok: false, reason: noServiceReason(manifest) };
+    }
+    // The handle's core keys are exactly `CORE_SERVICES`' keys, checked above.
+    const domain = manifest.domain as Exclude<keyof ScopedService, 'entries'>;
+    return {
+        ok: true,
+        invoke: async (args) =>
+            callServiceMethod(
+                (await handle())[domain] as unknown as ServiceObject,
+                manifest.method,
+                args
+            ),
+    };
 }
