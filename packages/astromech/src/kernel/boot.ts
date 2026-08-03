@@ -6,7 +6,14 @@
  * tests) without pulling in Astro types.
  */
 
-import type { AstromechConfig, PluginDefinition, ResolvedConfig } from '@/types/index.js';
+import type {
+    AstromechConfig,
+    MethodManifest,
+    PluginDefinition,
+    ResolvedConfig,
+} from '@/types/index.js';
+import { generateMethodManifest } from '@/codegen/method-manifest.js';
+import { setMethodManifest } from '@/codegen/manifest-registry.js';
 import { setDb, getDb } from '@/database/registry.js';
 import { migrateToLatest, mergeMigrationProviders } from '@astromech/schema-engine';
 import { collectPluginMigrations } from '@/database/plugin-migrations.js';
@@ -63,6 +70,14 @@ export async function initRuntime(
     wireEntryAccess();
     registerDocumentValidators(resolvedConfig);
     registerPlugins(config.plugins ?? [], resolvedConfig);
+    // Generated here because this is the only runtime site holding both the
+    // resolved config and the RAW plugin definitions, whose Zod input schemas
+    // cannot survive the JSON the virtual config is stringified into.
+    setMethodManifest(
+        JSON.parse(
+            generateMethodManifest(resolvedConfig, config.plugins ?? [])
+        ) as MethodManifest
+    );
     await bootPlugins(config.plugins ?? []);
 
     process.env.ASTROMECH_API_ROUTE = resolvedConfig.apiRoute;

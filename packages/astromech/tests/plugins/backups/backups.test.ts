@@ -99,6 +99,7 @@ function makeCtx(
         },
         config: null as unknown as PluginContext['config'],
         user: null,
+        role: null,
         entries: null as unknown as PluginContext['entries'],
         media: null as unknown as PluginContext['media'],
         settings: null as unknown as PluginContext['settings'],

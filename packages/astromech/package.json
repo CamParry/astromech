@@ -26,6 +26,10 @@
             "types": "./dist/columns.d.ts",
             "default": "./dist/columns.js"
         },
+        "./methods": {
+            "types": "./dist/methods.d.ts",
+            "default": "./dist/methods.js"
+        },
         "./astro": {
             "types": "./dist/kernel/astro.d.ts",
             "default": "./dist/kernel/astro.js"

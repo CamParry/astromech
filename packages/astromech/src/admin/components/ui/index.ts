@@ -147,3 +147,7 @@ export { useAstromechPlugin } from '../../context/plugin.js';
 
 // Sibling-value access for custom field renderers (e.g. computed/preview fields).
 export { useFieldValue } from '../fields/field-context.js';
+
+// AI context: declare what a surface is showing, or read what every surface declared.
+export { useAIContext, useAIContextEntries } from '../../context/ai-context.js';
+export type { AIContextEntry } from '@/utilities/ai-context.js';

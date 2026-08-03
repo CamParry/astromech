@@ -10,6 +10,7 @@ export default defineConfig([
             index: 'src/exports/index.ts',
             fields: 'src/exports/fields.ts',
             columns: 'src/exports/columns.ts',
+            methods: 'src/exports/methods.ts',
             'kernel/astro': 'src/exports/astro.ts',
             'local/index': 'src/exports/local.ts',
             'fetch/index': 'src/exports/fetch.ts',

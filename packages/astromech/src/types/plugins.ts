@@ -20,7 +20,7 @@ import type {
     StorageObject,
 } from './config.js';
 import type { FieldDefinition, FieldValidator } from './fields.js';
-import type { User, NotifyInput, Permission } from './domain.js';
+import type { Role, User, NotifyInput, Permission } from './domain.js';
 import type { PluginHooks } from './hooks.js';
 import type { PluginServiceNamespace, TypedEntriesApi } from './client.js';
 import type { MediaApi, NotificationsApi, SettingsApi, UsersApi } from './api.js';
@@ -91,6 +91,11 @@ export type PluginContext = {
     config: PluginConfigView;
     /** The acting user, or null for unauthenticated / system contexts. */
     user: User | null;
+    /**
+     * The acting user's role, or null outside a request context. Read from the
+     * request-scoped store, so it is the principal `scopedService` expects.
+     */
+    role: Role | null;
     /**
      * The GLOBAL entries service — not scoped, not qualified. A plugin addresses
      * its own types explicitly, built from context rather than an import:
