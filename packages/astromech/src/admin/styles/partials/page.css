@@ -27,7 +27,11 @@
     justify-content: space-between;
     padding: 2rem 2rem 0;
     background-color: var(--am-color-bg-muted);
-    transition: padding var(--am-duration-base) var(--am-easing);
+    /* Transparent until stuck so the border never changes the header's height. */
+    border-bottom: 1px solid transparent;
+    transition:
+        padding var(--am-duration-base) var(--am-easing),
+        border-color var(--am-duration-base) var(--am-easing);
 }
 
 /* Stuck: lift the row by half the top padding and give it that much below, so
@@ -35,6 +39,7 @@
 .am-page-header[data-stuck] {
     padding-top: 1rem;
     padding-bottom: 1rem;
+    border-bottom-color: var(--am-color-border);
 }
 
 .am-page-header-actions {
