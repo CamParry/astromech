@@ -20,7 +20,7 @@
         "format:check": "prettier --check .",
         "lint:css": "npm run lint:css -w astromech",
         "test": "npm run test -w astromech",
-        "test:run": "npm run test:run -w @astromech/schema-engine && npm run test:run -w astromech",
+        "test:run": "npm run test:run -w @astromech/schema-engine && npm run test:run -w astromech && npm run test:run -w @astromech/authoring",
         "db:generate": "npm run db:generate -w astromech-demo",
         "db:init": "npm run db:init -w astromech-demo",
         "db:seed": "npm run db:seed -w astromech",

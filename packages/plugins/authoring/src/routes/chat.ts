@@ -71,7 +71,7 @@ async function handleChat(
  * `aiContext` items stay unchecked past being an array: `formatAIContextMessage`
  * sanitises every value it interpolates.
  */
-async function readChatRequest(request: Request): Promise<ChatRequest | null> {
+export async function readChatRequest(request: Request): Promise<ChatRequest | null> {
     let parsed: unknown;
     try {
         parsed = await request.json();
