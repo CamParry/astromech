@@ -586,7 +586,12 @@ const mediaApi: MediaApi = {
 
     async update(params: {
         id: string;
-        data: Partial<{ alt: string; fields: JsonObject }>;
+        data: Partial<{
+            alt: string;
+            title: string;
+            caption: string;
+            fields: JsonObject;
+        }>;
     }): Promise<Media> {
         const res = await apiFetch<{ data: Media }>(`/media/${params.id}`, {
             method: 'PUT',

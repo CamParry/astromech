@@ -21,6 +21,11 @@ export const media = defineTable(
         createdAt: col.timestamp({ notNull: true, defaultNow: true }),
         updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
         createdBy: col.reference('users'),
+        // Appended, not grouped with `alt`: SQLite's ADD COLUMN can only append,
+        // and the descriptor order has to match the migrated table or the
+        // chain ↔ descriptor DDL parity gate fails.
+        title: col.text(),
+        caption: col.text(),
     }),
     ({ index }) => [
         index('idx_media_mime', ['mimeType']),
@@ -39,6 +44,7 @@ export const updateMediaSchema = z
     .object({
         alt: z.string().optional(),
         title: z.string().optional(),
+        caption: z.string().optional(),
         fields: z.record(z.string(), z.unknown()).optional(),
     })
     .openapi('UpdateMedia');

@@ -87,6 +87,8 @@ export type Media = {
     width?: number | null;
     height?: number | null;
     alt?: string | null;
+    title?: string | null;
+    caption?: string | null;
     fields: JsonObject | null;
     metadata?: MediaMetadata | null;
     createdAt: Date;

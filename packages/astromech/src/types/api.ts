@@ -263,7 +263,12 @@ export type MediaApi = {
     upload(params: { file: File }): Promise<Media>;
     update(params: {
         id: string;
-        data: Partial<{ alt: string; fields: JsonObject }>;
+        data: Partial<{
+            alt: string;
+            title: string;
+            caption: string;
+            fields: JsonObject;
+        }>;
     }): Promise<Media>;
     delete(params: { id: string }): Promise<void>;
 };
