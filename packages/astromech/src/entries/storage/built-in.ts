@@ -44,6 +44,7 @@ import type {
     EntryStatus,
     EntryVersion,
     JsonObject,
+    ReferencesFilter,
     SortOption,
 } from '@/types/index.js';
 import { BUILT_IN_SUPPORTS } from './capabilities.js';
@@ -165,12 +166,51 @@ function buildListWhere(params: ListParams, defaultLocale: string, types: string
                     } else {
                         conditions.push(eb('id', '=', value as string));
                     }
+                } else if (key === 'references') {
+                    // Shape guard only: `entries.query` validates the filter and
+                    // its schema path and throws before storage sees a malformed
+                    // one, so there is nothing to report from here.
+                    if (!isReferencesFilter(value)) continue;
+                    conditions.push(referencesExists(eb, value));
                 }
             }
         }
 
         return eb.and(conditions);
     };
+}
+
+/**
+ * `EXISTS` against the relationships index for one source row.
+ *
+ * No `sourceStaged` condition: the outer query already constrains
+ * `entries.stagedFor IS NULL` and this correlates on `sourceId = entries.id`,
+ * so a staged source can never be the matched row. No `targetKind` either — a
+ * target id is a ULID unique across resources, and constraining it would force
+ * the caller to say which kind they meant. `schemaPath`/`targetId` are plain
+ * TEXT and `sourceKind` is an enum the descriptor passes through, so all three
+ * bind as-is with no `encodeWith`.
+ */
+function referencesExists(
+    eb: ExpressionBuilder<DB, 'entries'>,
+    filter: ReferencesFilter
+) {
+    return eb.exists(
+        eb
+            .selectFrom('relationships')
+            .select('relationships.sourceId')
+            .whereRef('relationships.sourceId', '=', 'entries.id')
+            .where('relationships.sourceKind', '=', 'entry')
+            .where('relationships.schemaPath', '=', filter.path)
+            .where('relationships.targetId', '=', filter.id)
+    );
+}
+
+/** A `references` value carrying both strings; anything else filters nothing. */
+function isReferencesFilter(value: unknown): value is ReferencesFilter {
+    if (typeof value !== 'object' || value === null) return false;
+    const { path, id } = value as Partial<ReferencesFilter>;
+    return typeof path === 'string' && path !== '' && typeof id === 'string' && id !== '';
 }
 
 // ============================================================================

@@ -123,7 +123,7 @@ core service. Cut for three independent reasons:
 2. **Name collision.** `populate` already means something else here:
    `entries/internal/populate.ts` populates content _relationship fields_ via the
    `relationships` table, which is itself mid-redesign into a derived index
-   (`roadmap/in-progress/relationships-model.md`).
+   (`roadmap/completed/relationships-model.md`).
 3. **The cross-scope seam is undesigned.** "A plugin's `createdBy → users` is
    resolved by core" states a policy, not a mechanism: a plugin needs a handle to
    core's resolver while remaining unable to address core tables.

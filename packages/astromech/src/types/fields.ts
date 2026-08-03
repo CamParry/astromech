@@ -323,9 +323,6 @@ export type FieldDefinition = {
     options?: SelectOption[] | string[];
     target?: string;
     multiple?: boolean;
-    inverse?: string;
-    ordered?: boolean;
-    onDelete?: 'cascade' | 'set-null' | 'restrict';
     /** Children for layout containers and `group`/`repeater`/`tree`. */
     fields?: FieldDefinition[];
     min?: number;

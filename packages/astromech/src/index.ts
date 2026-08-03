@@ -116,7 +116,10 @@ export { renderRichText } from '@/fields/rich-text/index.js';
 // The relationships index is derived from field data, so anything writing
 // entries outside the normal operations (a seed, a rebuild) needs the same pure
 // traversal core uses rather than a second, drifting copy of it.
-export { collectRelationshipEdges } from '@/fields/relationship-edges.js';
+export {
+    collectRelationshipEdges,
+    collectRelationshipSchemaPaths,
+} from '@/fields/relationship-edges.js';
 export type { RelationshipEdge, TargetKind } from '@/fields/relationship-edges.js';
 
 // ============================================================================

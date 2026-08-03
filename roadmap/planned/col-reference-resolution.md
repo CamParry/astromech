@@ -11,10 +11,14 @@ same one.
 
 ## Two constraints for whoever picks this up
 
-- **Do not call it `populate`.** That name already means content-relationship
-  population (`entries/internal/populate.ts`), which is a different mechanism over
-  a table that is itself being redesigned into a derived index (see
-  `in-progress/relationships-model.md`). Use `resolveRefs` / `withRefs`.
+- **Still do not call it `populate`, but the reason changed.** The collision is
+  gone — `entries/internal/populate.ts` was deleted by
+  `completed/relationships-model.md`, which made field data the source of truth
+  and left nothing to populate _from_. What remains is that the word now means
+  something specific and negative here: a **populated record** is the shape
+  `relationship`/`media` validation _rejects_ (see `TERMINOLOGY.md`). Reusing it
+  for a working feature would teach the opposite of what the error message says.
+  Use `resolveRefs` / `withRefs`.
 - The **cross-scope case is the actual design problem**: a plugin needs a handle
   to core's resolver while remaining unable to address core tables. "Core resolves
   it" is a policy, not a mechanism.

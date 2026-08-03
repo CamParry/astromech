@@ -68,13 +68,11 @@ These are distinct operations on the entries service:
 
 ---
 
-## Populate
+## Populated record
 
-The mechanism for resolving relationship fields when fetching entries. Pass `populate: ['fieldName']` in query options to include related entries inline on the response rather than returning bare IDs.
+**There is no populate mechanism.** A relationship field reads back as the IDs stored in the field data; resolving those into whole entries is the caller's job, in a second read. The `populate` query option and `entries/internal/populate.ts` were deleted with the relationships rework — field data is the source of truth, so there is nothing to resolve _from_ the index.
 
-Not to be confused with database-level joins — populate is resolved at the application layer.
-
-> **As built:** only top-level `relationship` fields on single-type queries are populated, resolved via the `relationships` table one entry-field pair at a time. Media fields are **not** populated, and the populated value _replaces_ the ID in `fields`, so the read shape varies by call. All three are known problems — see `roadmap/in-progress/relationships-model.md`, which moves resolution onto the IDs already present in the field data.
+The term survives only in a validation message: a **populated record** is an entry object sent where an ID belongs, which is what a caller writing back an expanded read produces. `relationship` and `media` reject it — `Must be an id, not a populated record`, or `Must be a list of ids, …` on a `multiple` field — rather than accept it silently.
 
 ---
 
@@ -138,13 +136,18 @@ An **admin slot** is distinct from an admin page: a named mount point in the adm
 
 **Relation** — a field type (`'relationship'`) on an entry type that links an entry to one or more entries (or users) in another type. Authored with `fields.relationship(name, { target, multiple })`.
 
-**Relationship** — the row in the `relationships` table recording one source→target edge. Stores source, target, field name, and position.
+**Relationship** — the row in the `relationships` table recording one source→target edge, keyed on a composite primary key over `(sourceId, sourceKind, instancePath, targetId, targetKind)`. There is no `name` and no `position` column: ordering lives in field data and nowhere else.
 
 A single relation field definition can produce many relationship rows.
 
-> **Direction of travel:** today the same fact is stored twice — the IDs live in the entry's `fields` data _and_ are copied into the `relationships` table on write, with nothing reconciling the two. The agreed direction is that **field data is the source of truth and the `relationships` table becomes a derived, rebuildable index** used only for reverse lookup, filter-by-relation and delete-time integrity. See `roadmap/in-progress/relationships-model.md`.
->
-> Note also that `col.reference()` in the descriptor layer means a real foreign key and is a **different** thing from a content relationship. Don't conflate them.
+**Field data is the source of truth; the `relationships` table is a derived, rebuildable index.** It is read for exactly three things — reverse lookup, filter-by-relation (`where: { references: … }`), and delete-time information — and never for a forward read. `astromech index:rebuild` regenerates it from field data; `--check` reports drift without writing. Why it is built this way, and the alternatives rejected, are in `decisions/0004-relationships-as-a-derived-index.md`.
+
+Each row carries two paths, and the distinction matters:
+
+- **Schema path** — the shape a query matches against (`sections[].gallery`). Indexed, derived from the type definitions.
+- **Instance path** — where the edge actually sits in one entry's data (`sections[a1].gallery`, addressing items by their persisted `_id`). Stored, never pattern-matched.
+
+Note also that `col.reference()` in the descriptor layer means a real foreign key and is a **different** thing from a content relationship. Don't conflate them.
 
 ---
 

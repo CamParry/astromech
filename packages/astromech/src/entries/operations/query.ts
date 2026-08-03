@@ -1,14 +1,20 @@
 import config from 'virtual:astromech/config';
 import { flattenEntryFields } from '@/fields/helpers.js';
+import { collectRelationshipSchemaPaths } from '@/fields/relationship-edges.js';
 import { getCurrentUser } from '@/context/index.js';
 import { resolveEntryType } from '../type-registry.js';
 import { getEntryStorage } from '../storage/registry.js';
 import { getDefaultLocale } from '../internal/type-config.js';
 import { asEntry } from '../internal/records.js';
 import { runPreviewQuery } from './preview/read.js';
-import { PublicTrashedReadError } from '../errors.js';
+import { InvalidReferencesFilterError, PublicTrashedReadError } from '../errors.js';
 import { applyVisibility, markPublic, type VisibilityShape } from '../visibility.js';
-import type { Entry, EntryQueryParams, QueryResult } from '@/types/index.js';
+import type {
+    Entry,
+    EntryQueryParams,
+    QueryResult,
+    ReferencesFilter,
+} from '@/types/index.js';
 
 export async function query(
     params: EntryQueryParams & { type: string | readonly string[] }
@@ -54,6 +60,9 @@ export async function query(
         shape === 'public' && hasStatuses
             ? { ...params.where, status: 'published' }
             : params.where;
+
+    const references = params.where?.['references'];
+    if (references !== undefined) assertReferencesFilter(references, types);
 
     const { data: rows, total } = await storage.list({
         type: singleType ?? types,
@@ -106,4 +115,44 @@ export async function query(
         data: visibleData,
         pagination: { page, limit: perPage, total, pages },
     };
+}
+
+/**
+ * Check `where: { references }` against the queried types' schemas before it
+ * reaches storage. One type declaring the path is enough — a cross-type query
+ * is legal and requiring every type to declare it would reject valid reads.
+ */
+function assertReferencesFilter(value: unknown, types: string[]): void {
+    const filter = value as Partial<ReferencesFilter> | null;
+    const path = typeof filter?.path === 'string' ? filter.path : '';
+    const id = typeof filter?.id === 'string' ? filter.id : '';
+
+    const knownPaths = Array.from(
+        new Set(
+            types.flatMap((type) => {
+                const typeConfig = resolveEntryType(config, type);
+                return typeConfig
+                    ? collectRelationshipSchemaPaths(
+                          flattenEntryFields(typeConfig.fields)
+                      )
+                    : [];
+            })
+        )
+    );
+
+    if (path === '' || id === '') {
+        throw new InvalidReferencesFilterError({
+            detail: `where.references needs a non-empty 'path' and 'id'.`,
+            entryTypes: types,
+            knownPaths,
+        });
+    }
+
+    if (!knownPaths.includes(path)) {
+        throw new InvalidReferencesFilterError({
+            detail: `where.references.path '${path}' is not a relationship field on any queried type.`,
+            entryTypes: types,
+            knownPaths,
+        });
+    }
 }

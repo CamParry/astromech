@@ -16,6 +16,10 @@ This is a living reference; it grows as the project does.
 - [content/entry-types.md](content/entry-types.md) — declaring entry types: the
   `entries` record, and `defineEntryType` for splitting a type into its own
   module.
+- [content/relationships.md](content/relationships.md) — linking content to
+  content: declaring a relation, why the value is ids rather than expanded
+  records, querying the reverse direction with `where: { references }`, and
+  keeping the derived index in sync with `index:rebuild`.
 - [content/field-validation.md](content/field-validation.md) — declaring rules
   on fields, why `required` only fires at publish while correctness checks run on
   every write, custom validators, and what does and does not run in the browser.
@@ -28,8 +32,8 @@ This is a living reference; it grows as the project does.
 - [plugins/authoring.md](plugins/authoring.md) — write a plugin: the file-layout
   convention, identity, and every surface (custom fields, admin pages, admin
   slots, permissions, service methods, hooks, entry types, database tables, and i18n).
-- [cli.md](cli.md) — the `astromech` CLI: entry CRUD + publish, JSON output, and
-  method-manifest discovery.
+- [cli.md](cli.md) — the `astromech` CLI: entry CRUD + publish, JSON output,
+  method-manifest discovery, and rebuilding the relationships index.
 
 ## Learning from the bundled plugins
 

@@ -47,6 +47,7 @@ import {
 import { decodeWith } from '@/database/codec.js';
 import type { Column, TableDescriptor } from '@/database/define-table.js';
 import type { Db } from '@/database/types.js';
+import { RelationshipFilterUnsupportedError } from '../errors.js';
 import type { JsonObject } from '@/types/index.js';
 import type {
     EntryRecord,
@@ -283,12 +284,19 @@ class TableStorage implements EntryStorage<EntryRecord> {
      * `params.where` → the shared `where` DSL. `locale` is dropped because a
      * table-backed entry type has no locale concept; the shared builder throws
      * on any key that is not a column, so the knowledge that this key is not
-     * columnar has to live here.
+     * columnar has to live here. `references` is refused outright rather than
+     * dropped — silently ignoring it would return every row.
      */
     private whereFilters(params: ListParams): Record<string, unknown> {
         const out: Record<string, unknown> = {};
         for (const [key, value] of Object.entries(params.where ?? {})) {
             if (key === 'locale') continue; // no locale concept
+            if (key === 'references') {
+                const type = params.type;
+                throw new RelationshipFilterUnsupportedError(
+                    Array.isArray(type) ? type.join(', ') : String(type)
+                );
+            }
             out[key] = value;
         }
         return out;
