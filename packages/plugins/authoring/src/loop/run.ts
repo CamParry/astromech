@@ -4,10 +4,9 @@
  */
 
 import { Anthropic } from '@anthropic-ai/sdk';
-import type { AIContextEntry } from 'astromech/methods';
-import type { PluginLogger, Role } from 'astromech';
+import type { AIContextEntry, PluginLogger, ToolDispatch } from 'astromech';
 import { buildRequest } from './request.js';
-import { buildAuthoringTools } from './tools.js';
+import { toRunnableTools } from './tools.js';
 import type { ChatEvent, ChatMessage, ResolvedAuthoringOptions } from '../types.js';
 
 const MAX_TOKENS = 4096;
@@ -19,13 +18,13 @@ const MAX_ITERATIONS = 12;
 export async function* runAuthoringLoop(input: {
     apiKey: string;
     options: ResolvedAuthoringOptions;
-    role: Role | null;
+    dispatches: ToolDispatch[];
     messages: ChatMessage[];
     aiContext: AIContextEntry[];
     logger: PluginLogger;
 }): AsyncGenerator<ChatEvent> {
     try {
-        const tools = buildAuthoringTools(input.role, input.options);
+        const tools = toRunnableTools(input.dispatches);
         input.logger.info(`Chat request running against ${tools.length} tools`);
 
         const { system, messages } = buildRequest(input.messages, input.aiContext);

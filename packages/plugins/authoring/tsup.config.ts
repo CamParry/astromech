@@ -11,6 +11,6 @@ export default defineConfig({
     dts: true,
     sourcemap: true,
     clean: true,
-    external: ['astromech', 'astromech/fields', 'astromech/methods', '@anthropic-ai/sdk'],
+    external: ['astromech', 'astromech/fields', '@anthropic-ai/sdk'],
     treeshake: true,
 });

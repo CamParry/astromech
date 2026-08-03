@@ -17,6 +17,7 @@
         "lint": "npm run lint -w @astromech/schema-engine && npm run lint -w astromech",
         "lint:deps": "npm run lint:deps -w astromech",
         "check:config": "npm run check:config -w astromech-demo",
+        "check:node-imports": "npm run check:node-imports -w astromech",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "lint:css": "npm run lint:css -w astromech",

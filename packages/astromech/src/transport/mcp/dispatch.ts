@@ -20,11 +20,11 @@
 import type {
     CoreManifestMethod,
     EntriesManifestMethod,
-    JsonSchemaObject,
     ManifestMethod,
     PluginContext,
     PluginManifestMethod,
     Role,
+    ToolDispatch,
 } from '@/types/index.js';
 import type { ScopedService } from '@/policies/scoped-service.js';
 
@@ -32,36 +32,8 @@ import type { ScopedService } from '@/policies/scoped-service.js';
 // Types
 // ============================================================================
 
-/** Annotations carried on a tool definition. */
-export type ToolAnnotations = {
-    title?: string;
-    readOnlyHint: boolean;
-    destructiveHint: boolean;
-    idempotentHint: boolean;
-};
-
-/** A fully-resolved dispatch descriptor for a single MCP tool. */
-export type ToolDispatch = {
-    toolName: string;
-    description: string;
-    inputSchema: JsonSchemaObject;
-    annotations: ToolAnnotations;
-    /**
-     * The permission this tool's method declares — null when it is ungated, or
-     * when it is input-derived (see `permissionDynamic`).
-     *
-     * Carried, NOT enforced, and deliberately unread today: this MCP server is
-     * dev-only and trusted, runs with no principal, and enforces a method's
-     * permission no more than the CLI does. It exists so the seam is already in
-     * place when a remote transport — which does have a principal — dispatches
-     * through here; that transport enforces via `policies/scoped-service.ts`,
-     * and reads this only to say up front what it would refuse.
-     */
-    permission: string | null;
-    /** True when `permission` is null because the method derives it from the input. */
-    permissionDynamic: boolean;
-    invoke: (args: Record<string, unknown>) => Promise<unknown>;
-};
+// The dispatch shapes live in the pure leaf so `types/plugins.ts` can name them.
+export type { ToolAnnotations, ToolDispatch } from '@/types/index.js';
 
 /**
  * Either a dispatchable tool or the reason there isn't one. A bare `null` told

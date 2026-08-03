@@ -22,8 +22,9 @@ import { mediaApi } from '@/media/index.js';
 import { settingsApi } from '@/settings/index.js';
 import { contentApi } from '@/content/index.js';
 import { runWithContext } from '@/context/index.js';
-import { setPluginClient } from '@/plugins/runtime/plugin-runtime.js';
+import { setPluginClient, setPluginMethods } from '@/plugins/runtime/plugin-runtime.js';
 import { localPlugins } from '@/transport/local/plugins.js';
+import { buildScopedTools } from '@/transport/mcp/scoped-tools.js';
 
 export { runWithContext };
 
@@ -67,5 +68,9 @@ export const Astromech: AstromechClient & { content: ContentApi } = {
 // (`ctx.entries`, `ctx.media`, …) without a static import cycle
 // (plugin-runtime → transport/local → plugin-runtime).
 setPluginClient(Astromech);
+
+// Wired here, not at boot: the port's implementation must belong to the module
+// graph that can resolve `virtual:`, and this module is evaluated in it.
+setPluginMethods({ tools: buildScopedTools });
 
 export default Astromech;

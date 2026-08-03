@@ -621,38 +621,33 @@ write rather than silently stored.
 
 #### Calling as the caller, not as the plugin
 
-`ctx.role` is the current request's resolved role, or `null` outside a request
-context — a cron tick, a boot-time `setup()`. It is the principal
-`scopedService` takes, so hand it over to reach the same domains under the
-**caller's** permissions instead of unscoped:
-
-> **This is not reachable from a plugin package yet.** The intent below is
-> right; the mechanism is not available. `scopedService` ships on
-> `astromech/methods`, and a plugin cannot import that subpath — Astro loads
-> your config, and so your plugin, in plain Node, where the
-> `virtual:astromech/config` that every domain service reaches cannot resolve.
-> Importing it throws `ERR_UNSUPPORTED_ESM_URL_SCHEME` on the first request.
-> Until it is exposed on `ctx`, `ctx.entries` and its siblings are the only way
-> to reach a domain, and they run as the **plugin**, not as the caller. Treat
-> the snippet below as the shape to expect, not code to copy.
+`ctx.entries` and its siblings run as the **plugin**: no permission checks, and
+`full`-wrapped by default. For a model-driven or otherwise untrusted call path —
+anything acting on behalf of a caller rather than as the plugin itself — you
+want the caller's permissions instead. `ctx.methods.tools()` is that surface:
 
 ```ts
-import { scopedService } from 'astromech/methods';
-
-const scoped = scopedService(ctx.role ?? undefined);
-const { data } = await scoped.entries.query({ type: 'post' });
+const tools = ctx.methods.tools({ readOnly: true });
 ```
 
-(`scopedService` takes `Role | undefined` and a missing principal is allowed
-nothing, so `?? undefined` is the conversion, not a shrug at the null.)
+It returns every method the current request's role may call, each already
+resolved into a dispatch that runs under that role — `{ toolName, description,
+inputSchema, annotations, invoke }`. `invoke` refuses what the role does not
+hold, and `readOnly` drops every mutating method structurally rather than
+advising against it. Wrap each one in whatever your model SDK's tool shape is
+and call `invoke` from its handler. `ctx.role` is the principal all of this
+runs against — the current request's resolved role, or `null` outside a request
+context (a cron tick, a boot-time `setup()`).
 
-The distinction that matters is not only that permissions are checked.
-`ctx.entries` and its siblings are `full`-wrapped by default; the scoped
-entries handle gates `{ full: true }` behind `entry:read:full`, and every
-handle refuses a method whose descriptor it cannot resolve rather than letting
-it through. For a model-driven or otherwise untrusted call path — anything
-acting on behalf of a caller rather than as the plugin itself — the scoped
-handle is the one that should win.
+Plugin-declared methods are absent from the list: their `access` is enforced by
+the HTTP RPC route, so there is nothing to scope them with.
+
+> **A plugin imports `astromech` and `astromech/ui`, and nothing else from
+> core.** Everything else arrives on `ctx`. Astro loads your config — and so
+> your plugin — in plain Node, where the `virtual:astromech/config` that every
+> domain service reaches cannot resolve; importing a subpath like
+> `astromech/methods` throws `ERR_UNSUPPORTED_ESM_URL_SCHEME` at import time.
+> Type-only imports from any subpath are fine, because they erase.
 
 ### Raw HTTP routes
 

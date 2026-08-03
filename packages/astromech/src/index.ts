@@ -121,6 +121,11 @@ export {
     collectRelationshipSchemaPaths,
 } from '@/fields/relationship-edges.js';
 export type { RelationshipEdge, TargetKind } from '@/fields/relationship-edges.js';
+// The AI context formatter ships from the plugin-authoring surface as well as
+// `astromech/methods`: a plugin building a chat request needs it, and this is
+// the only barrel it may import.
+export { formatAIContextMessage } from '@/utilities/ai-context.js';
+export type { AIContextEntry } from '@/utilities/ai-context.js';
 
 // ============================================================================
 // Config / Collection / Plugin Helpers

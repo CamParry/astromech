@@ -117,6 +117,7 @@
         "typecheck": "tsc -p tsconfig.test.json",
         "lint": "eslint src",
         "lint:deps": "depcruise src --config .dependency-cruiser.cjs",
+        "check:node-imports": "node scripts/check-node-imports.mjs",
         "format": "prettier --write src",
         "format:check": "prettier --check src",
         "test": "vitest",

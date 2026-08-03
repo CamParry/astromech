@@ -4,8 +4,8 @@
  */
 
 import type { BetaMessageParam } from '@anthropic-ai/sdk/resources/beta';
-import { formatAIContextMessage } from 'astromech/methods';
-import type { AIContextEntry } from 'astromech/methods';
+import { formatAIContextMessage } from 'astromech';
+import type { AIContextEntry } from 'astromech';
 import type { ChatMessage } from '../types.js';
 
 /**

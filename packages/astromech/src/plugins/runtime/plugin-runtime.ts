@@ -26,12 +26,14 @@ import type {
     PluginDatabase,
     PluginDefinition,
     PluginLogger,
+    PluginMethods,
     PluginRawRoute,
     PluginServiceNamespace,
     ResolvedConfig,
     ResolvedPluginIdentity,
     Role,
     SettingsApi,
+    ToolDispatch,
     TypedEntriesApi,
     User,
     UsersApi,
@@ -72,6 +74,11 @@ type HookCallback = (eventCtx: unknown, ctx: PluginContext) => Promise<void> | v
 type RegisteredHook = { identity: ResolvedPluginIdentity; handler: HookCallback };
 type RegisteredRawRoute = { identity: ResolvedPluginIdentity; route: PluginRawRoute };
 
+/** The dispatch-table builder `ctx.methods` runs, injected by the Local API. */
+export type PluginMethodsAccess = {
+    tools(principal: Role | undefined, options?: { readOnly?: boolean }): ToolDispatch[];
+};
+
 type PluginRuntimeState = {
     config: ResolvedConfig | null;
     identities: ResolvedPluginIdentity[];
@@ -79,6 +86,7 @@ type PluginRuntimeState = {
     service: Map<string, Record<string, AnyPluginServiceMethod>>;
     rawRoutes: RegisteredRawRoute[];
     client: AstromechClient | null;
+    methods: PluginMethodsAccess | null;
 };
 
 declare global {
@@ -94,6 +102,7 @@ function state(): PluginRuntimeState {
             service: new Map(),
             rawRoutes: [],
             client: null,
+            methods: null,
         };
     }
     return globalThis.__astromechPluginRuntime;
@@ -297,6 +306,20 @@ function requireClient(): AstromechClient {
     return client;
 }
 
+/** Set by the Local API at module load, for the same reason as the client. */
+export function setPluginMethods(access: PluginMethodsAccess): void {
+    state().methods = access;
+}
+
+/** The registered methods access, or crash-loud if a context reaches for it too early. */
+function requireMethods(): PluginMethodsAccess {
+    const methods = state().methods;
+    if (!methods) {
+        throw new Error('[Astromech] Plugin methods are not available in this context.');
+    }
+    return methods;
+}
+
 // ============================================================================
 // Context construction
 // ============================================================================
@@ -422,6 +445,14 @@ export function createPluginContext(
                 (await listAll(getStorageDriver(), PREFIX + prefix)).map((k) =>
                     k.slice(PREFIX.length)
                 ),
+        },
+        get methods(): PluginMethods {
+            // Lazy like `get role()` above: the principal is read per call, from
+            // the request-scoped store rather than from construction time.
+            return {
+                tools: (options) =>
+                    requireMethods().tools(getCurrentRole() ?? undefined, options),
+            };
         },
         get database(): PluginDatabase {
             // Probes rather than throws: plugin unit tests build a context
