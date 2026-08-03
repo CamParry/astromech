@@ -19,6 +19,9 @@ This is a living reference; it grows as the project does.
 - [content/field-validation.md](content/field-validation.md) — declaring rules
   on fields, why `required` only fires at publish while correctness checks run on
   every write, custom validators, and what does and does not run in the browser.
+- [ai-context.md](ai-context.md) — how an admin route declares what the user is
+  looking at so a model can resolve "this page", the reference shape, and why it
+  is sent as a `role: 'system'` message rather than in the system prompt.
 - [data/migrations.md](data/migrations.md) — how migrations are generated from
   your table descriptors, what the generator refuses and why, and the
   hand-authored-ops escape hatch for reshapes it can't derive.

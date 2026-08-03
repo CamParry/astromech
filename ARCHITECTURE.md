@@ -90,8 +90,8 @@ packages/
 │   │   │   ── entrypoints & composition root ──────────────────────────────────
 │   │   ├── kernel/         # composition root — boots & wires all layers; Astro integration (astromech/astro)
 │   │   ├── routes/         # 3 Astro APIRoute entrypoints injected by the integration (api / auth / media)
-│   │   ├── admin/          # React admin SPA (TanStack Router; deep-imports a few pure domain leaves)
-│   │   ├── codegen/        # type generator + plugin-client manifest + method manifest (.astro/astromech.methods.json)
+│   │   ├── admin/          # React admin SPA (TanStack Router; deep-imports a few pure domain leaves) — components/dev/ is import.meta.env.DEV-gated
+│   │   ├── codegen/        # type generator + plugin-client manifest + method manifest (.astro/astromech.methods.json, plus manifest-registry.ts — the boot-generated copy)
 │   │   │
 │   │   │   ── over-the-wire client ─────────────────────────────────────────
 │   │   ├── client/         # fetch Client (astromech/fetch) — talks HTTP, no server imports
@@ -100,16 +100,18 @@ packages/
 │   │   ├── transport/      # local/ (astromech/local) · http/ (Hono routes+middleware) · cli/ · mcp/
 │   │   │
 │   │   │   ── policies ───────────────────────────────────────────────────
-│   │   ├── policies/       # withPermissions wrapper only — no domain logic here
+│   │   ├── policies/       # permission/confirmation wrappers over the manifest — no domain logic here
 │   │   │
 │   │   │   ── plugin runtime (capability) ──────────────────────────────────
 │   │   ├── plugins/        # plugins/runtime (hook engine) only — first-party plugins live in packages/plugins/
 │   │   │
 │   │   │   ── domains ────────────────────────────────────────────────────
+│   │   ├── content/        # content operations (translate/transform/generate) — a DOWNSTREAM domain: it may import entries/, never the reverse
 │   │   ├── entries/        # entries domain: service · schema · descriptors · visibility · url · type-registry
 │   │   ├── media/          # media domain: service · schema · serving/image/
 │   │   ├── users/          # users domain: service · schema · auth (Better Auth integration)
 │   │   ├── settings/       # settings domain: service · schema · page-values
+│   │   ├── notifications/  # notifications domain: service · schema · user-scoped storage
 │   │   │
 │   │   │   ── capabilities ───────────────────────────────────────────────
 │   │   ├── database/       # Kysely client/drivers + schema.ts aggregator (was db/; public subpath unchanged)
@@ -117,7 +119,7 @@ packages/
 │   │   ├── cloudflare/     # binding-name resolution across Workers and Node
 │   │   ├── permissions/    # permission model: roles, grammar, BUILT_IN_ROLES, can()
 │   │   ├── fields/         # field/column builder, formatters, rich-text, helpers
-│   │   ├── context/        # shared server request-context (was services/_shared/)
+│   │   ├── context/        # shared server request-context: index.ts, plus request-context.ts (the service-free AsyncLocalStorage store)
 │   │   ├── email/          # email drivers
 │   │   ├── cron/           # scheduled-job infrastructure
 │   │   │
@@ -181,6 +183,10 @@ defined by `exports` in `package.json` — that's canonical. The ones to know:
 `astromech` (core helpers + types, incl. the plugin-authoring API — there is no
 separate `plugin-kit` subpath), `astromech/astro` (integration),
 `astromech/local` & `astromech/fetch` (the two API consumers), `astromech/middleware`,
+`astromech/methods` (the server-side seam surface — the boot-generated method
+manifest via `getMethodManifest`, plus `buildDispatch`, `reduceSurface`,
+`annotateManifest`, `scopedService`, the confirm-gate helpers and
+`formatAIContextMessage`),
 `astromech/fields`, `astromech/db/schema`, `astromech/storage/{filesystem,r2,s3}`
 (storage drivers), `astromech/cloudflare` (binding-name resolution), and the
 `astromech` CLI bin. The first-party plugins are their own packages —

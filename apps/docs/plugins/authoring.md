@@ -619,6 +619,31 @@ The same id is what the HTTP API and `Astromech.entries` use, so there is one
 way to name an entry type everywhere. An unregistered type is rejected on
 write rather than silently stored.
 
+#### Calling as the caller, not as the plugin
+
+`ctx.role` is the current request's resolved role, or `null` outside a request
+context — a cron tick, a boot-time `setup()`. It is the principal
+`scopedService` takes, so hand it over to reach the same domains under the
+**caller's** permissions instead of unscoped:
+
+```ts
+import { scopedService } from 'astromech/methods';
+
+const scoped = scopedService(ctx.role ?? undefined);
+const { data } = await scoped.entries.query({ type: 'post' });
+```
+
+(`scopedService` takes `Role | undefined` and a missing principal is allowed
+nothing, so `?? undefined` is the conversion, not a shrug at the null.)
+
+The distinction that matters is not only that permissions are checked.
+`ctx.entries` and its siblings are `full`-wrapped by default; the scoped
+entries handle gates `{ full: true }` behind `entry:read:full`, and every
+handle refuses a method whose descriptor it cannot resolve rather than letting
+it through. For a model-driven or otherwise untrusted call path — anything
+acting on behalf of a caller rather than as the plugin itself — the scoped
+handle is the one that should win.
+
 ### Raw HTTP routes
 
 `defineServiceMethod` is JSON-in / JSON-out over `POST`, which covers almost
