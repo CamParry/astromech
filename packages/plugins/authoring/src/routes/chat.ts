@@ -3,8 +3,7 @@
  * model loop back as server-sent events, which RPC-JSON cannot carry.
  */
 
-import type { AIContextEntry } from 'astromech/methods';
-import type { PluginContext, PluginRawRoute } from 'astromech';
+import type { AIContextEntry, PluginContext, PluginRawRoute } from 'astromech';
 import type {
     ChatEvent,
     ChatMessage,
@@ -47,16 +46,15 @@ async function handleChat(
         );
     }
 
-    // Imported at request time, never at module load: the loop's value import
-    // of `astromech/methods` reaches domain services that read
-    // `virtual:astromech/config`, and a site's config is loaded in plain Node
-    // at Astro config time, where `virtual:` specifiers cannot resolve.
+    // Imported at request time, never at module load: a static import would pull
+    // `@anthropic-ai/sdk` into every load of a site's config, which Astro does
+    // in plain Node before anything has asked for a chat.
     const { runAuthoringLoop } = await import('../loop/run.js');
 
     const events = runAuthoringLoop({
         apiKey,
         options,
-        role: ctx.role,
+        dispatches: ctx.methods.tools({ readOnly: options.readOnly }),
         messages: body.messages,
         aiContext: body.aiContext ?? [],
         logger: ctx.logger,

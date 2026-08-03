@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import * as methods from '@/exports/methods.js';
 import { buildDispatch, buildScopedDispatch } from '@/transport/mcp/dispatch.js';
+import { buildScopedTools } from '@/transport/mcp/scoped-tools.js';
 import { reduceSurface } from '@/policies/tool-surface.js';
 import { annotateManifest } from '@/policies/annotate-manifest.js';
 import { scopedService } from '@/policies/scoped-service.js';
@@ -45,6 +46,7 @@ describe('astromech/methods', () => {
         expect(methods.getMethodManifest).toBe(getMethodManifest);
         expect(methods.buildDispatch).toBe(buildDispatch);
         expect(methods.buildScopedDispatch).toBe(buildScopedDispatch);
+        expect(methods.buildScopedTools).toBe(buildScopedTools);
         expect(methods.reduceSurface).toBe(reduceSurface);
         expect(methods.annotateManifest).toBe(annotateManifest);
         expect(methods.scopedService).toBe(scopedService);
@@ -60,6 +62,7 @@ describe('astromech/methods', () => {
             'annotateManifest',
             'buildDispatch',
             'buildScopedDispatch',
+            'buildScopedTools',
             'evaluateConfirmation',
             'formatAIContextMessage',
             'getMethodManifest',

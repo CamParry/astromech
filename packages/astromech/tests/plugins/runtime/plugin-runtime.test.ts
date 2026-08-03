@@ -17,6 +17,7 @@ import {
     registerPlugins,
     runAfterHooks,
     runBeforeHooks,
+    setPluginMethods,
 } from '@/plugins/runtime/plugin-runtime.js';
 import { defineHook } from '@/index.js';
 // This test drives registerPlugins directly (no harness), so wire the
@@ -203,6 +204,37 @@ describe('createPluginContext', () => {
         });
 
         expect(ctx.role).toBeNull();
+    });
+
+    // The port is injected by the Local API at module load, so a context that
+    // reaches it in a graph that never loaded one must say so rather than
+    // returning an empty tool list.
+    it('crashes loud when the methods port is unwired', () => {
+        registerPlugins([def({ package: '@astromech/seo' })], config);
+        const ctx = createPluginContext(
+            resolvePluginIdentity(def({ package: '@astromech/seo' })),
+            user
+        );
+
+        expect(() => ctx.methods.tools()).toThrow(
+            '[Astromech] Plugin methods are not available in this context.'
+        );
+    });
+
+    it('calls the injected port with the current role and the given options', () => {
+        registerPlugins([def({ package: '@astromech/seo' })], config);
+        const tools = vi.fn(() => []);
+        setPluginMethods({ tools });
+        const ctx = createPluginContext(
+            resolvePluginIdentity(def({ package: '@astromech/seo' })),
+            user
+        );
+
+        runWithContext({ user, role: adminRole }, () => {
+            expect(ctx.methods.tools({ readOnly: true })).toEqual([]);
+        });
+
+        expect(tools).toHaveBeenCalledWith(adminRole, { readOnly: true });
     });
 });
 

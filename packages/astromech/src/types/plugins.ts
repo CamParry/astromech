@@ -24,7 +24,7 @@ import type { Role, User, NotifyInput, Permission } from './domain.js';
 import type { PluginHooks } from './hooks.js';
 import type { PluginServiceNamespace, TypedEntriesApi } from './client.js';
 import type { MediaApi, NotificationsApi, SettingsApi, UsersApi } from './api.js';
-import type { ServiceMethodEffect } from './services.js';
+import type { ServiceMethodEffect, ToolDispatch } from './services.js';
 import type { PermissionDeclarations } from '@/permissions/define.js';
 
 // ============================================================================
@@ -60,6 +60,16 @@ export type PluginDatabase = {
         source: ReadableStream<Uint8Array>,
         opts: { preserve: string[] }
     ): Promise<void>;
+};
+
+/** The method manifest as a plugin reaches it: a dispatch table, already scoped. */
+export type PluginMethods = {
+    /**
+     * Every manifest method the acting role may call, dispatch-ready and already
+     * scoped. Plugin-source methods are absent: their declared `access` is
+     * enforced by the HTTP RPC route, so there is nothing to scope them with.
+     */
+    tools(options?: { readOnly?: boolean }): ToolDispatch[];
 };
 
 /** Logger that attributes lines to the originating plugin. */
@@ -131,6 +141,11 @@ export type PluginContext = {
     storage: PluginStorage;
     /** Database maintenance capabilities (feature-detected per driver). Distinct from `db` (the query instance). */
     database: PluginDatabase;
+    /**
+     * Capability port onto the method manifest. A plugin cannot import
+     * `astromech/methods`, so the dispatch surface arrives here instead.
+     */
+    methods: PluginMethods;
 };
 
 // ============================================================================

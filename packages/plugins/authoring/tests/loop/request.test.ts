@@ -7,12 +7,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Only placement is under test, so the formatter returns a fixed marker.
-vi.mock('astromech/methods', () => ({
+vi.mock('astromech', () => ({
     formatAIContextMessage: vi.fn(),
 }));
 
-import { formatAIContextMessage } from 'astromech/methods';
-import type { AIContextEntry } from 'astromech/methods';
+import { formatAIContextMessage } from 'astromech';
+import type { AIContextEntry } from 'astromech';
 import { buildRequest, SYSTEM_PROMPT } from '../../src/loop/request.js';
 import type { ChatMessage } from '../../src/types.js';
 

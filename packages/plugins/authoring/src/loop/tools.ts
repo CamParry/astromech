@@ -1,53 +1,15 @@
 /**
- * The tool surface one chat request runs against: every manifest method the
- * signed-in role may call, each dispatched through `buildScopedDispatch`.
+ * The Anthropic side of the tool surface: core hands over scoped dispatches,
+ * and this wraps each one in the shape the SDK's tool runner takes.
  */
 
 import { betaTool } from '@anthropic-ai/sdk/helpers/beta/json-schema';
 import type { BetaRunnableTool } from '@anthropic-ai/sdk/lib/tools/BetaRunnableTool';
-import {
-    annotateManifest,
-    buildScopedDispatch,
-    getMethodManifest,
-    reduceSurface,
-} from 'astromech/methods';
-import type { ToolDispatch } from 'astromech/methods';
-import type { Role } from 'astromech';
-import type { ResolvedAuthoringOptions } from '../types.js';
+import type { ToolDispatch } from 'astromech';
 
-/** Build the runnable tools this role reaches, narrowed by the surface options. */
-export function buildAuthoringTools(
-    role: Role | null,
-    options: ResolvedAuthoringOptions
-): BetaRunnableTool[] {
-    const manifest = getMethodManifest();
-    if (manifest === undefined) {
-        throw new Error(
-            'The method manifest is only populated at runtime boot, so a missing one is a wiring bug rather than an empty tool list.'
-        );
-    }
-
-    // `buildScopedDispatch` refuses every plugin method — a plugin's declared
-    // `access` is enforced by the HTTP RPC route, not by dispatch — so they are
-    // dropped here rather than built into a list of refusals.
-    const dispatchable = manifest.methods.filter((method) => method.source !== 'plugin');
-
-    const surface = reduceSurface(dispatchable, { readOnly: options.readOnly });
-
-    // A size reduction, NOT a security measure: the annotation is advisory and
-    // `buildScopedDispatch` is what actually refuses. `allowed === null` is an
-    // input-derived permission only the scoped handle can decide, so it stays.
-    const permitted = annotateManifest(surface.methods, role ?? undefined).filter(
-        (method) => method.allowed !== false
-    );
-
-    const tools: BetaRunnableTool[] = [];
-    for (const method of permitted) {
-        const dispatch = buildScopedDispatch(method, role ?? undefined);
-        if (!dispatch.ok) continue;
-        tools.push(toRunnableTool(dispatch.tool));
-    }
-    return tools;
+/** Wrap the dispatches `ctx.methods.tools()` returned as runnable tools. */
+export function toRunnableTools(dispatches: ToolDispatch[]): BetaRunnableTool[] {
+    return dispatches.map(toRunnableTool);
 }
 
 /**

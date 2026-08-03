@@ -116,6 +116,7 @@ function makeCtx(
         notify: async () => undefined,
         storage,
         database,
+        methods: { tools: () => [] },
     };
 }
 

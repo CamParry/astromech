@@ -4,16 +4,7 @@
  * interpolates, and a second check here would drift from it.
  */
 
-import { describe, expect, it, vi } from 'vitest';
-
-// The route module reaches core through the loop; nothing here calls it.
-vi.mock('astromech/methods', () => ({
-    formatAIContextMessage: vi.fn(),
-    getMethodManifest: vi.fn(),
-    reduceSurface: vi.fn(),
-    annotateManifest: vi.fn(),
-    buildScopedDispatch: vi.fn(),
-}));
+import { describe, expect, it } from 'vitest';
 
 import { readChatRequest } from '../../src/routes/chat.js';
 

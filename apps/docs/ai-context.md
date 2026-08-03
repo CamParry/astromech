@@ -90,10 +90,10 @@ not remount on navigation, and they throw outside it.
 
 `useAIContextEntries`, also from `astromech/ui`, returns the current entries —
 each an `{ reference, depth, order }` — in registration order.
-`formatAIContextMessage` from `astromech/methods` turns them into the message:
+`formatAIContextMessage` from `astromech` turns them into the message:
 
 ```ts
-import { formatAIContextMessage } from 'astromech/methods';
+import { formatAIContextMessage } from 'astromech';
 
 const message = formatAIContextMessage(entries);
 // { role: 'system', content: 'The user is currently viewing, from least to most specific:\n1. …' }

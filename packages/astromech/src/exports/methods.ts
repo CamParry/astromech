@@ -11,6 +11,7 @@ export type { AIContextEntry } from '@/utilities/ai-context.js';
 
 export { buildDispatch, buildScopedDispatch } from '@/transport/mcp/dispatch.js';
 export type { DispatchResult, ToolDispatch } from '@/transport/mcp/dispatch.js';
+export { buildScopedTools } from '@/transport/mcp/scoped-tools.js';
 
 export { reduceSurface } from '@/policies/tool-surface.js';
 export { annotateManifest } from '@/policies/annotate-manifest.js';

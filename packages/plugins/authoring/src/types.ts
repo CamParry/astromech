@@ -1,6 +1,6 @@
 /** Public options for the authoring plugin, and the chat wire types. */
 
-import type { AIContextEntry } from 'astromech/methods';
+import type { AIContextEntry } from 'astromech';
 
 /**
  * Models the assistant may run on. Restricted rather than a free string:
