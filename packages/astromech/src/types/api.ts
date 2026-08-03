@@ -36,6 +36,20 @@ export type SortDirection = 'asc' | 'desc';
 // Drizzle-style: { createdAt: 'desc' } or [{ status: 'asc' }, { createdAt: 'desc' }]
 export type SortOption = Record<string, SortDirection>;
 
+/**
+ * `where: { references: { path, id } }` — sources holding a relationship to
+ * `id` at schema path `path` (`author`, `sections[].gallery`). Id-only: the
+ * path is checked against the queried types' schemas and throws when unknown.
+ */
+export type ReferencesFilter = {
+    path: string;
+    id: string;
+};
+
+/**
+ * Flat `where` DSL. Left open because callers pass column filters of every
+ * shape; the one non-column key is `references`, a {@link ReferencesFilter}.
+ */
 export type WhereFilters = Record<string, unknown>;
 
 export type QueryOptions = {
@@ -95,7 +109,33 @@ export type IncomingRelation = {
     /** Type of the source entry (only `'entry'`-source rows are returned). */
     sourceType: string;
     /** Schema path of the relationship field on the source (`sections[].author`). */
-    name: string;
+    schemaPath: string;
+};
+
+/**
+ * One relationships-index edge pointing at a media item — a row of the media
+ * "used by" panel. The media mirror of {@link IncomingRelation}, widened to
+ * carry the source kind because a media file can be referenced by an entry, a
+ * user or another media record.
+ */
+export type MediaUsage = {
+    sourceId: string;
+    /** Display name of the source; empty when it could not be loaded. */
+    sourceTitle: string;
+    /**
+     * entry | user | media — what holds the reference. Duplicated from
+     * `fields/relationship-edges.ts`'s `TargetKind` because a pure leaf may not
+     * import a capability.
+     */
+    sourceKind: 'entry' | 'user' | 'media';
+    /** The source's entry type, qualified for a plugin type. Null for user and media sources. */
+    sourceType: string | null;
+    /** Schema path of the field holding the reference (`sections[].gallery`). */
+    schemaPath: string;
+    /** Instance path — deep-links to the exact item. Never pattern-matched. */
+    instancePath: string;
+    /** True when the source is a staged (pending-merge) copy. */
+    sourceStaged: boolean;
 };
 
 /** Update payload fragment — fields that can be modified after creation. */
@@ -271,6 +311,7 @@ export type MediaApi = {
         }>;
     }): Promise<Media>;
     delete(params: { id: string }): Promise<void>;
+    usedBy(params: { id: string }): Promise<MediaUsage[]>;
 };
 
 export type SettingsApi = {

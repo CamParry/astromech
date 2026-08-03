@@ -10,6 +10,7 @@ import {
     getTitleField,
 } from '../internal/type-config.js';
 import { indexEntryRelationships } from '../internal/relationships.js';
+import { pruneDanglingRelations } from '../internal/dangling-relations.js';
 import { asEntry } from '../internal/records.js';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility.js';
 import { UnknownEntryTypeError } from '../errors.js';
@@ -113,7 +114,13 @@ export async function create(params: {
     if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
         throw ValidationError.fromFieldErrors(processed.errors, processed.form);
     }
-    const processedFields = processed.values as JsonObject;
+    // After `processFields` (its minted item ids are what the traversal needs)
+    // and before the row is written, so the index derives from the pruned values.
+    const pruned = await pruneDanglingRelations(
+        fieldDefs,
+        processed.values as JsonObject
+    );
+    const processedFields = pruned.values;
 
     let slug: string | null;
     if (validated.slug) {

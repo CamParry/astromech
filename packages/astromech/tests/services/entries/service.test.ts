@@ -650,7 +650,7 @@ describe('relationships', () => {
                 sourceId: src.id,
                 sourceTitle: 'Source',
                 sourceType: 'post',
-                name: 'related',
+                schemaPath: 'related',
             },
         ]);
     });

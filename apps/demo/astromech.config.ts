@@ -258,19 +258,12 @@ export default defineConfig({
                                 label: 'Featured Image',
                                 translatable: false,
                             }),
-                            fields.relationship('category', {
-                                target: 'category',
-                                inverse: 'post',
-                            }),
+                            fields.relationship('category', { target: 'category' }),
                             fields.relationship('tags', {
                                 target: 'tag',
                                 multiple: true,
-                                inverse: 'post',
                             }),
-                            fields.relationship('author', {
-                                target: 'author',
-                                inverse: 'post',
-                            }),
+                            fields.relationship('author', { target: 'author' }),
                         ],
                     }),
                 ],

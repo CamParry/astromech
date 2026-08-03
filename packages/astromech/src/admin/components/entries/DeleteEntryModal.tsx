@@ -134,10 +134,10 @@ export function DeleteEntryModal({
                                 {(incoming ?? [])
                                     .slice(0, 10)
                                     .map((r: IncomingRelation) => (
-                                        <li key={`${r.sourceId}-${r.name}`}>
+                                        <li key={`${r.sourceId}-${r.schemaPath}`}>
                                             {r.sourceTitle || r.sourceId}{' '}
                                             <span className="am-text-mono">
-                                                ({r.sourceType}.{r.name})
+                                                ({r.sourceType}.{r.schemaPath})
                                             </span>
                                         </li>
                                     ))}

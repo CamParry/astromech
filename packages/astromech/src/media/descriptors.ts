@@ -52,4 +52,10 @@ export const mediaDescriptors = {
         mutates: true,
         destructive: true,
     },
+    usedBy: {
+        summary: 'List the entries, users and media items that reference a media item.',
+        input: z.object({ id: z.string() }),
+        permission: 'media:read',
+        mutates: false,
+    },
 } satisfies Record<string, ServiceMethodDescriptor>;

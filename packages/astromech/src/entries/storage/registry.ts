@@ -51,6 +51,15 @@ export function setEntryStorage(type: string, storage: EntryStorage): void {
 }
 
 /**
+ * True when a type has a storage of its own rather than the shared built-in one.
+ * Callers that read the `entries` table directly (the relationships rebuild) use
+ * it to tell which types have rows there at all.
+ */
+export function hasEntryStorageOverride(type: string): boolean {
+    return registry().overrides.has(type);
+}
+
+/**
  * Clear all per-type storage overrides. Called at the start of `registerPlugins`
  * so repeated registrations (notably in tests) don't leak stale plugin storages.
  */

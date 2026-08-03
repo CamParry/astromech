@@ -3,6 +3,12 @@ import { ulid } from 'ulidx';
 import type { MediaRow } from './schema.js';
 import { createMediaStorage } from './storage.js';
 import { createRelationshipStorage } from '@/database/storage/relationships.js';
+import type { RelationshipIndexSource } from '@/database/storage/relationships.js';
+import type { RelationshipRow } from '@/database/schema.js';
+// Peer domains, read only to name a source row. See the `usedBy` docstring.
+import { getEntryStorage } from '@/entries/storage/registry.js';
+import { pruneDanglingRelations } from '@/entries/internal/dangling-relations.js';
+import { createUserStorage } from '@/users/storage.js';
 import { collectRelationshipEdges } from '@/fields/relationship-edges.js';
 import { getStorageDriver } from '@/storage/registry.js';
 import { deletePrefix } from '@/storage/prefix.js';
@@ -12,6 +18,7 @@ import type {
     QueryResult,
     MediaQueryParams,
     MediaMetadata,
+    MediaUsage,
     StorageDriver,
 } from '@/types/index.js';
 import { ValidationError } from '@/errors/validation.js';
@@ -216,10 +223,14 @@ export const mediaApi = {
             if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
                 throw ValidationError.fromFieldErrors(processed.errors, processed.form);
             }
-            validatedData.fields = projectToSchema(
-                processed.values,
-                fieldDefs
-            ) as JsonObject;
+            // After `processFields` (its minted item ids are what the traversal
+            // needs) and before the write, so the index derives from the pruned
+            // values.
+            const pruned = await pruneDanglingRelations(
+                fieldDefs,
+                projectToSchema(processed.values, fieldDefs) as JsonObject
+            );
+            validatedData.fields = pruned.values;
         }
 
         // `updatedAt` is stamped by the storage wrapper (the column declares
@@ -286,7 +297,130 @@ export const mediaApi = {
             })
         );
     },
+
+    /**
+     * Every relationships-index edge pointing at this media item — one row per
+     * edge, so a source using the same file at two paths yields two rows.
+     *
+     * Titles resolve here rather than in the admin, so this returns the same
+     * shape as `entries.incomingRelations`. Two wire shapes for "what
+     * references this" is the split worth avoiding; reading a peer domain to
+     * name a row is not.
+     */
+    async usedBy(params: { id: string }): Promise<MediaUsage[]> {
+        const { id } = params;
+        const row = await createMediaStorage().get(id);
+        if (!row) throw new Error(`Media '${id}' not found`);
+
+        // Staged sources count: a pending merge that uses this file is a reason
+        // not to delete it.
+        const rows = await createRelationshipStorage().findByTarget(id, 'media', {
+            includeStaged: true,
+        });
+
+        const titles = await resolveSourceTitles(rows);
+        return rows
+            .map(
+                (edge): MediaUsage => ({
+                    sourceId: edge.sourceId,
+                    sourceKind: edge.sourceKind,
+                    sourceType: edge.sourceType,
+                    sourceTitle: titles.get(sourceTitleKey(edge)) ?? '',
+                    schemaPath: edge.schemaPath,
+                    instancePath: edge.instancePath,
+                    sourceStaged: edge.sourceStaged,
+                })
+            )
+            .sort(compareUsage);
+    },
 };
+
+/**
+ * Display name per source, keyed by kind+id. Entry sources load through their
+ * OWN type's storage — the target's storage would silently miss every source of
+ * another type. A source that will not load keeps an empty title and the caller
+ * falls back to its id.
+ */
+async function resolveSourceTitles(
+    rows: readonly RelationshipRow[]
+): Promise<Map<string, string>> {
+    const titles = new Map<string, string>();
+
+    const entryIdsByType = new Map<string, Set<string>>();
+    const userIds = new Set<string>();
+    const mediaIds = new Set<string>();
+    for (const row of rows) {
+        if (row.sourceKind === 'user') userIds.add(row.sourceId);
+        else if (row.sourceKind === 'media') mediaIds.add(row.sourceId);
+        else if (row.sourceType !== null) {
+            const ids = entryIdsByType.get(row.sourceType) ?? new Set<string>();
+            ids.add(row.sourceId);
+            entryIdsByType.set(row.sourceType, ids);
+        }
+    }
+
+    for (const [type, ids] of entryIdsByType) {
+        // A type dropped from config since its rows were written has no storage.
+        let storage;
+        try {
+            storage = getEntryStorage(type);
+        } catch {
+            continue;
+        }
+        const records = await Promise.all(
+            Array.from(ids, (entryId) => storage.get(entryId, { includeTrashed: true }))
+        );
+        for (const record of records) {
+            if (record !== null) titles.set(`entry ${record.id}`, record.title ?? '');
+        }
+    }
+
+    const userStorage = createUserStorage();
+    for (const userId of userIds) {
+        const user = await userStorage.get(userId);
+        if (user !== null) titles.set(`user ${userId}`, user.name || user.email);
+    }
+
+    const mediaStorage = createMediaStorage();
+    for (const mediaId of mediaIds) {
+        const item = await mediaStorage.get(mediaId);
+        if (item !== null) titles.set(`media ${mediaId}`, item.filename);
+    }
+
+    return titles;
+}
+
+/** Kind+id, NUL-joined so no id can spell another kind's key. */
+function sourceTitleKey(row: { sourceKind: string; sourceId: string }): string {
+    return `${row.sourceKind} ${row.sourceId}`;
+}
+
+/** Stable panel order: the index itself has none, so reads would reshuffle. */
+function compareUsage(a: MediaUsage, b: MediaUsage): number {
+    return (
+        a.sourceKind.localeCompare(b.sourceKind) ||
+        (a.sourceType ?? '').localeCompare(b.sourceType ?? '') ||
+        a.sourceId.localeCompare(b.sourceId) ||
+        a.schemaPath.localeCompare(b.schemaPath) ||
+        a.instancePath.localeCompare(b.instancePath)
+    );
+}
+
+/**
+ * Every media record as a relationship source, with the edges its STORED field
+ * data holds. The rebuild side of `indexMediaRelationships`. Stored data has
+ * already been through `processFields`, so the traversal mints no ids here.
+ */
+export async function collectMediaRelationshipSources(): Promise<
+    RelationshipIndexSource[]
+> {
+    const definitions = flattenFieldNodes(config.media?.fields ?? []);
+    const rows = await createMediaStorage().list();
+    return rows.map((row) => ({
+        source: { id: row.id, kind: 'media' as const },
+        edges: collectRelationshipEdges(definitions, (row.fields ?? {}) as JsonObject),
+    }));
+}
 
 /**
  * Re-index a media record's relationship fields. `fields` must be

@@ -9,6 +9,7 @@ import {
     getNonTranslatableFieldNames,
 } from '../internal/type-config.js';
 import { indexEntryRelationships } from '../internal/relationships.js';
+import { pruneDanglingRelations } from '../internal/dangling-relations.js';
 import { asEntry, loadAndAssertType } from '../internal/records.js';
 import { deepEqual } from '../internal/diff.js';
 import { runBulk } from '../internal/bulk.js';
@@ -105,7 +106,14 @@ export async function updateOne(
         if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
             throw ValidationError.fromFieldErrors(processed.errors, processed.form);
         }
-        validatedData.fields = projectToSchema(processed.values, fieldDefs) as JsonObject;
+        // After `processFields` (its minted item ids are what the traversal
+        // needs) and before the write, so the index derives from pruned values.
+        const pruned = await pruneDanglingRelations(
+            fieldDefs,
+            projectToSchema(processed.values, fieldDefs) as JsonObject,
+            db
+        );
+        validatedData.fields = pruned.values;
     }
 
     if (isVersioningEnabled(type) && storage.versions) {

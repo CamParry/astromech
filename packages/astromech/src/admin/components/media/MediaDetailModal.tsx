@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, EmptyState, Input, Modal, Spinner, useConfirm } from '../ui/index.js';
 import { useMediaItem, useUpdateMedia, useDeleteMedia } from '../../hooks/media.js';
 import { formatBytes } from '@/utilities/bytes.js';
+import { MediaUsagePanel } from './media-usage-panel.js';
 import { formatDatetime } from '@/utilities/dates.js';
 import { FileTypeIcon } from '@/admin/utilities/media.js';
 import type { Media } from '@/types/index.js';
@@ -32,7 +33,11 @@ export function MediaDetailModal({
     canDelete = true,
     canUpload = true,
 }: MediaDetailModalProps): React.ReactElement {
-    const { data: item, isLoading, isError } = useMediaItem(mediaId ?? '', mediaId !== null);
+    const {
+        data: item,
+        isLoading,
+        isError,
+    } = useMediaItem(mediaId ?? '', mediaId !== null);
     const { t } = useTranslation();
 
     return (
@@ -156,6 +161,8 @@ function MediaDetailBody({
                             </div>
                         )}
                     </dl>
+
+                    <MediaUsagePanel mediaId={item.id} />
                 </div>
 
                 <div className="am-media-modal-form-panel">
