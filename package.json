@@ -16,6 +16,7 @@
         "typecheck": "npm run typecheck -w @astromech/schema-engine && npm run typecheck -w astromech && npm run typecheck -w @astromech/menus -w @astromech/redirects -w @astromech/seo -w @astromech/backups -w @astromech/forms -w @astromech/authoring",
         "lint": "npm run lint -w @astromech/schema-engine && npm run lint -w astromech",
         "lint:deps": "npm run lint:deps -w astromech",
+        "check:config": "npm run check:config -w astromech-demo",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "lint:css": "npm run lint:css -w astromech",

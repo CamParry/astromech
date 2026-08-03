@@ -5,7 +5,6 @@
 
 import type { AIContextEntry } from 'astromech/methods';
 import type { PluginContext, PluginRawRoute } from 'astromech';
-import { runAuthoringLoop } from '../loop/run.js';
 import type {
     ChatEvent,
     ChatMessage,
@@ -47,6 +46,12 @@ async function handleChat(
             { status: 400 }
         );
     }
+
+    // Imported at request time, never at module load: the loop's value import
+    // of `astromech/methods` reaches domain services that read
+    // `virtual:astromech/config`, and a site's config is loaded in plain Node
+    // at Astro config time, where `virtual:` specifiers cannot resolve.
+    const { runAuthoringLoop } = await import('../loop/run.js');
 
     const events = runAuthoringLoop({
         apiKey,
