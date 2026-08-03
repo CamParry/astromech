@@ -1,4 +1,6 @@
-/** Public options for the authoring plugin. */
+/** Public options for the authoring plugin, and the chat wire types. */
+
+import type { AIContextEntry } from 'astromech/methods';
 
 /**
  * Models the assistant may run on. Restricted rather than a free string:
@@ -19,7 +21,29 @@ export type AuthoringOptions = {
     apiKeyEnv?: string;
     /** Reasoning effort for the loop. Defaults to `medium`. */
     effort?: 'low' | 'medium' | 'high';
+    /**
+     * Restrict the assistant to methods that do not mutate. Defaults to `true`:
+     * writes wait for the confirm UI, which does not exist yet.
+     */
+    readOnly?: boolean;
 };
 
 /** Options with every default applied — what the plugin's own code sees. */
 export type ResolvedAuthoringOptions = Required<AuthoringOptions>;
+
+/** One turn of the conversation as the browser sends it. */
+export type ChatMessage = { role: 'user' | 'assistant'; content: string };
+
+/** The body posted to the chat route. */
+export type ChatRequest = {
+    messages: ChatMessage[];
+    /** What the admin route the user is on declared, from `useAIContextEntries()`. */
+    aiContext?: AIContextEntry[];
+};
+
+/** One server-sent event from the chat route. */
+export type ChatEvent =
+    | { type: 'text'; text: string }
+    | { type: 'tool'; name: string }
+    | { type: 'error'; message: string }
+    | { type: 'done' };
