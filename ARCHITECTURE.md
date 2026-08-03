@@ -156,6 +156,27 @@ Plugins access platform resources through two sanctioned, plugin-scoped handles 
 
 **`DatabaseDriver` capability seam:** `dump?()` and `restore?()` are optional fields on `DatabaseDriver` (`src/types/config.ts`). Implemented for libsql (local `file:` connections only — `VACUUM INTO` requires a local path); unimplemented on D1/Postgres drivers (feature-detects off). A driver may implement `dump` without `restore`.
 
+## Plugin runtime boundary
+
+**A plugin's server code runs in a different module graph from core's, and `ctx` is the only bridge across it.** This is an invariant, not a convention — the alternative does not merely violate a rule, it throws.
+
+Astro loads `astro.config.mjs`, and therefore `astromech.config.ts` and every `plugin()` factory, in **plain Node at config time**. A `PluginDefinition` and every closure hanging off it — `rawRoutes[].handler`, service methods, hooks — belongs to that Node-loaded copy of the plugin package, whenever it later runs. Core's runtime code is the opposite: the integration injects routes pointing at package **source** (`pkgSrc` in `kernel/astro.ts`), so Vite compiles it.
+
+|                | how it is loaded         | can it resolve `virtual:`? |
+| -------------- | ------------------------ | -------------------------- |
+| core runtime   | Vite-compiled from `src` | yes                        |
+| plugin runtime | Node-loaded from `dist`  | **no**                     |
+
+So a plugin that imports a core module reaching `virtual:astromech/config` — which every domain service does — dies with `ERR_UNSUPPORTED_ESM_URL_SCHEME` under Node's ESM loader. **`astromech/methods` is unreachable from a plugin package for exactly this reason**, and it fails at _import_ time rather than at call time, because `exports/methods.ts` statically re-exports `scopedService` and so loads the whole service graph.
+
+**The rule this produces: a plugin package imports `astromech` and `astromech/ui`, and nothing else from core.** Both load under plain Node; type-only imports from any subpath are fine, because they erase. Everything else arrives on `ctx`. New platform capabilities are therefore added as a capability port (above), never as a published subpath a plugin is expected to import — `ctx.methods.tools()` is the worked example, and `decisions/0007-plugin-core-boundary.md` holds the mechanism with the rejected alternatives.
+
+A port's implementation must be a **Vite-graph closure**, which rules out wiring it in `initRuntime` — `kernel/astro.ts` calls that inside `astro:config:setup`, in plain Node. The precedent is `setPluginClient`: `transport/local/index.ts` calls it at module top level, so whichever graph evaluates that module is the graph the plugin's `ctx.entries` runs in. `setPluginMethods` is wired on the same line.
+
+`ssr.noExternal` does **not** fix this and has been tried. It governs which modules Vite's SSR graph compiles; the handler closure was never in that graph, so Vite would compile a second copy that nothing calls. Teaching Node to resolve `virtual:` with module customization hooks is likewise the wrong tool — it would resolve to a _second_ config module rather than the one Vite built.
+
+Two consequences for anything loaded at config time — `plugin-runtime.ts`, the integration itself: imports must stay lazy where they reach a service (`context/request-context.ts` exists for this), and `npm run check:config` loads the demo config the way Astro does to catch a regression before a plugin is wired up. `npm run check:node-imports` covers the other half, asserting the plugin-facing subpaths still load under plain Node.
+
 ## App-owned migration model
 
 Migrations are an **app artifact**, not a core artifact. Core ships schema definitions and types; it does not ship migration files.
@@ -185,9 +206,10 @@ defined by `exports` in `package.json` — that's canonical. The ones to know:
 separate `plugin-kit` subpath), `astromech/astro` (integration),
 `astromech/local` & `astromech/fetch` (the two API consumers), `astromech/middleware`,
 `astromech/methods` (the server-side seam surface — the boot-generated method
-manifest via `getMethodManifest`, plus `buildDispatch`, `reduceSurface`,
-`annotateManifest`, `scopedService`, the confirm-gate helpers and
-`formatAIContextMessage`),
+manifest via `getMethodManifest`, plus `buildDispatch`, `buildScopedDispatch`,
+`reduceSurface`, `annotateManifest`, `scopedService`, the confirm-gate helpers
+and `formatAIContextMessage`; **core-internal in practice — a plugin package
+cannot import it, see "Plugin runtime boundary"**),
 `astromech/fields`, `astromech/db/schema`, `astromech/storage/{filesystem,r2,s3}`
 (storage drivers), `astromech/cloudflare` (binding-name resolution), and the
 `astromech` CLI bin. The first-party plugins are their own packages —
@@ -199,12 +221,14 @@ Before a change lands, all of these pass. The husky pre-commit hook runs
 lint-staged (eslint --fix + prettier) on touched files; `--no-verify` is not
 used.
 
-| Command             | Checks                                                                                                                                          |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run typecheck` | `tsc -p tsconfig.test.json` (delegates to `packages/astromech`)                                                                                 |
-| `npm run test:run`  | vitest; tests live in `packages/astromech/tests/` mirroring `src/`                                                                              |
-| `npm run build`     | tsup (explicit entries, dts). DTS worker can OOM — bump `NODE_OPTIONS=--max-old-space-size`.                                                    |
-| `npm run lint:deps` | dependency-cruiser — enforces the modular DAG invariants within `packages/astromech/src` (no upward edges, no peer-domain imports, pure leaves) |
+| Command                      | Checks                                                                                                                                                 |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `npm run typecheck`          | `tsc -p tsconfig.test.json` (delegates to `packages/astromech`)                                                                                        |
+| `npm run test:run`           | vitest; tests live in `packages/astromech/tests/` mirroring `src/`                                                                                     |
+| `npm run build`              | tsup (explicit entries, dts). DTS worker can OOM — bump `NODE_OPTIONS=--max-old-space-size`.                                                           |
+| `npm run lint:deps`          | dependency-cruiser — enforces the modular DAG invariants within `packages/astromech/src` (no upward edges, no peer-domain imports, pure leaves)        |
+| `npm run check:config`       | `tsx astromech.config.ts` in the demo — loads the site config the way Astro does, catching a config-time import that reaches a domain service          |
+| `npm run check:node-imports` | spawns plain `node` against built `dist` and imports each plugin-facing subpath. Needs `dist`, so it runs after `build`. See "Plugin runtime boundary" |
 
 For refactors that move tables, `npm run db:generate` must also report "No
 schema changes" (migration-neutrality).
