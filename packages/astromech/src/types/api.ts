@@ -114,11 +114,14 @@ export type IncomingRelation = {
 
 /**
  * One relationships-index edge pointing at a media item — a row of the media
- * "used by" panel. Index-shaped: no source title, because the media domain may
- * not import entries or users, so it cannot resolve one.
+ * "used by" panel. The media mirror of {@link IncomingRelation}, widened to
+ * carry the source kind because a media file can be referenced by an entry, a
+ * user or another media record.
  */
 export type MediaUsage = {
     sourceId: string;
+    /** Display name of the source; empty when it could not be loaded. */
+    sourceTitle: string;
     /**
      * entry | user | media — what holds the reference. Duplicated from
      * `fields/relationship-edges.ts`'s `TargetKind` because a pure leaf may not

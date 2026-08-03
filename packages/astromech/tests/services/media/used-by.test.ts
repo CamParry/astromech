@@ -98,6 +98,7 @@ describe('mediaApi.usedBy', () => {
                 sourceId: article.id,
                 sourceKind: 'entry',
                 sourceType: 'article',
+                sourceTitle: 'Article',
                 schemaPath: 'cover',
                 instancePath: 'cover',
                 sourceStaged: false,
@@ -159,6 +160,11 @@ describe('mediaApi.usedBy', () => {
         expect(usage.find((row) => row.sourceId === canonical.id)?.sourceStaged).toBe(
             false
         );
+        // A staged row is excluded from `list()`, so its title only resolves
+        // because sources are loaded by id rather than through a list query.
+        expect(usage.find((row) => row.sourceId === staged.id)?.sourceTitle).toBe(
+            'Canonical'
+        );
     });
 
     it('returns a user source with a null sourceType', async () => {
@@ -174,6 +180,7 @@ describe('mediaApi.usedBy', () => {
                 sourceId: user.id,
                 sourceKind: 'user',
                 sourceType: null,
+                sourceTitle: 'Avatar Owner',
                 schemaPath: 'avatar',
                 instancePath: 'avatar',
                 sourceStaged: false,

@@ -1,15 +1,15 @@
 /**
  * Dependency-direction guardrail — modular (screaming-architecture) DAG.
  *
- * Imports may only point DOWN this list; upward edges are forbidden, and peer
- * domains may never import one another.
+ * Imports may only point DOWN this list; upward edges are forbidden. Peer
+ * domains may read one another.
  *
  *   routes · admin · kernel · codegen · cli        entrypoints & composition root
  *   transport (http · local · mcp · cli)           delivery
  *     · http/client = the fetch Client (consumes the HTTP API over the wire;
  *       client half of the transport, nested but kept a distinct DAG node)
  *   policies                                       permission / confirmation wrappers
- *   entries · media · users · settings             domains — siblings, never import each other
+ *   entries · media · users · settings             domains — siblings, may read each other
  *   plugins/runtime · database · storage · email ·  capabilities
  *     cron · context · fields · permissions
  *   types · utilities · errors                     pure leaves
@@ -24,6 +24,16 @@
  * the only remaining leaf→domain edges (config.ts's two contract types) are
  * type-only and carved out explicitly.
  *
+ * Domains may read one another. The module split is for organisation, not
+ * isolation: a reverse lookup that needs an entry's title and a user's name is
+ * one clean call each, and forbidding it only pushed the same work somewhere
+ * worse — a second wire shape for the same concept, resolved in the browser.
+ * What the split defends against is functionality smeared across the codebase,
+ * which no dependency rule can detect; `domain-no-upward` still holds the shape
+ * that matters. The domains sit outside `no-circular` because they have
+ * pre-existing internal cycles — worth bringing into scope once those are
+ * cleaned up, since a cycle IS the entanglement worth catching.
+ *
  * The former `plugins/runtime ↔ entries` entanglement is GONE: the runtime is a
  * pure capability again. It declares the slice of entries it needs as a port
  * (`plugins/runtime/entry-access.ts`, typed only from leaves) and the entries
@@ -34,17 +44,6 @@
  */
 module.exports = {
     forbidden: [
-        {
-            name: 'domain-no-peer-imports',
-            comment:
-                'Domains are siblings in a DAG: entries/media/users/settings must never import one another. The ONLY exception is a schema.ts FK cross-reference (e.g. a createdBy column referencing usersTable) — schema files are excluded as sources. Everything else routes through the @/database/schema aggregate or a shared capability.',
-            severity: 'error',
-            from: {
-                path: '^src/(entries|media|users|settings)/',
-                pathNot: '/schema\\.ts$',
-            },
-            to: { path: '^src/(entries|media|users|settings)/', pathNot: '^src/$1/' },
-        },
         {
             name: 'domain-no-upward',
             comment:
