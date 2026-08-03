@@ -4,7 +4,8 @@ Dissolve the shared `MediaBrowser` component into composed pieces, so the `/admi
 the media-field picker each own their own layout while still sharing the request, the filter
 controls and the empty states.
 
-**Status:** planned, to be built on `feat/media-browser-split`.
+**Status:** done. Built on `feat/media-browser-split` and merged to `main`; browser-verified against
+the demo. Rationale and the rejected alternatives: `decisions/0007-media-browser-composition.md`.
 
 Follows on from `roadmap/in-progress/media-admin-ui.md`, which introduced the shared component. The
 merge was right about what to share and wrong about where to draw the line: it shares the layout and
@@ -68,15 +69,27 @@ Plumbing and controls, with no host flags anywhere:
 
 ## Checklist
 
-- [ ] `useMediaBrowser` extracted; the page's duplicate `useMediaQuery` call removed
-- [ ] `MediaFilters`, `MediaSortSelect`, `MediaEmpty` extracted with no host-selector props
-- [ ] `MediaLibrary` and `MediaPicker` composed; `MediaBrowser` deleted
-- [ ] Each surface owns its own vertical rhythm rather than inheriting a host's `gap`
-- [ ] Render-level coverage for both surfaces, following the `@testing-library/react` setup notes in
-      `media-admin-ui.md` (explicit `afterEach(cleanup)`, `@vitest-environment happy-dom` docblock)
-- [ ] Browser-verified against the demo: page grid, page list, and the picker in both single and
-      multiple mode
-- [ ] `decisions/0007-media-browser-composition.md` recording the seam and what it beat
+- [x] `useMediaBrowser` extracted; the page's duplicate `useMediaQuery` call removed. Verified in the
+      browser: one `/api/media` request per query, where there were two calls before.
+- [x] `MediaFilters`, `MediaSortSelect`, `MediaEmpty` extracted with no host-selector props
+- [x] `MediaPicker` composed and `MediaBrowser` deleted. No `MediaLibrary` component — the route
+      composes its own body from `MediaGrid` and `MediaTable`, because a wrapper would have needed
+      roughly eighteen props to drill URL state, selection and bulk delete through it.
+- [x] Each surface owns its own vertical rhythm rather than inheriting a host's `gap`
+- [x] Render-level coverage for the picker and the shared pieces — 35 tests across `useMediaBrowser`,
+      `MediaPicker`, `MediaEmpty` and `sortPatch`, each checked by reintroducing the bug it pins.
+      Baseline moved 2421 → 2456.
+- [x] Browser-verified against the demo: page grid, page list, table-header sorting, and the picker
+      in both single and multiple mode
+- [x] `decisions/0007-media-browser-composition.md` recording the seam and what it beat
+
+## Follow-ups
+
+- [ ] The page body has no render coverage at all — bulk-actions toolbar, select-all bar, the
+      grid/table switch, the detail-modal wiring. That gap predates this work; the split just makes
+      it addressable, since `MediaGrid` and `MediaTable` are now mountable on their own.
+- [ ] `MediaFilters`' debounce is untested. Pinning it honestly needs fake timers plus a
+      controlled-prop rerender loop, which is its own file rather than a bolt-on.
 
 ## Notes
 
