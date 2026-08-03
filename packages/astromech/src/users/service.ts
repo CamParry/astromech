@@ -4,6 +4,7 @@ import { createUserStorage } from './storage.js';
 import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import type { RelationshipIndexSource } from '@/database/storage/relationships.js';
 import { collectRelationshipEdges } from '@/fields/relationship-edges.js';
+import { pruneDanglingRelations } from '@/entries/internal/dangling-relations.js';
 import type { JsonObject, User, QueryResult, UserQueryParams } from '@/types/index.js';
 import { ValidationError } from '@/errors/validation.js';
 import { createUserSchema, updateUserSchema } from './schema.js';
@@ -112,7 +113,12 @@ export const usersApi = {
                 processedFields.form
             );
         }
-        const fields = processedFields.values as JsonObject;
+        // After `processFields` (its minted item ids are what the traversal
+        // needs) and before the write, so the index derives from pruned values.
+        const { values: fields } = await pruneDanglingRelations(
+            fieldDefs,
+            processedFields.values as JsonObject
+        );
 
         const created = await createUserStorage().create({
             email: validated.email,
@@ -168,10 +174,12 @@ export const usersApi = {
             if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
                 throw ValidationError.fromFieldErrors(processed.errors, processed.form);
             }
-            validatedData.fields = projectToSchema(
-                processed.values,
-                fieldDefs
-            ) as JsonObject;
+            // After `processFields`, before the write — same ordering as create.
+            const pruned = await pruneDanglingRelations(
+                fieldDefs,
+                projectToSchema(processed.values, fieldDefs) as JsonObject
+            );
+            validatedData.fields = pruned.values;
         }
 
         // An explicitly-`undefined` key means "leave this column alone"; storage

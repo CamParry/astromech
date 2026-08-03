@@ -123,6 +123,14 @@ export function collectRelationshipEdges(
     });
 }
 
+/** A relationship field as DECLARED: where it sits and what it points at. */
+export type RelationshipDeclaration = {
+    schemaPath: string;
+    targetKind: TargetKind;
+    /** The declared `target`, when the field names one. */
+    target: string | undefined;
+};
+
 /**
  * Every schema path at which a relationship field is DECLARED, in declaration
  * order and de-duplicated (two block types can declare the same field name).
@@ -130,9 +138,24 @@ export function collectRelationshipEdges(
  * predicate validates a requested path against.
  */
 export function collectRelationshipSchemaPaths(definitions: FieldDefinition[]): string[] {
-    const collected: string[] = [];
+    return Array.from(
+        new Set(
+            collectRelationshipDeclarations(definitions).map((entry) => entry.schemaPath)
+        )
+    );
+}
+
+/**
+ * Every declared relationship field, in declaration order. Two declarations can
+ * share a schema path (two block types declaring the same field name), so this
+ * is a list rather than a map.
+ */
+export function collectRelationshipDeclarations(
+    definitions: FieldDefinition[]
+): RelationshipDeclaration[] {
+    const collected: RelationshipDeclaration[] = [];
     walkSchema(definitions, [], collected);
-    return Array.from(new Set(collected));
+    return collected;
 }
 
 /**
@@ -144,7 +167,7 @@ export function collectRelationshipSchemaPaths(definitions: FieldDefinition[]): 
 function walkSchema(
     definitions: FieldDefinition[],
     parentSegments: readonly FieldPathSegment[],
-    out: string[]
+    out: RelationshipDeclaration[]
 ): void {
     for (const field of flattenFieldNodes(definitions)) {
         const descriptor = getFieldTypeDescriptor(field.type);
@@ -154,7 +177,11 @@ function walkSchema(
         ];
 
         if (descriptor?.isRelation === true) {
-            out.push(formatSchemaPath(segments));
+            out.push({
+                schemaPath: formatSchemaPath(segments),
+                targetKind: targetKindOf(field),
+                target: field.target,
+            });
             continue;
         }
 

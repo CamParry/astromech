@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
 import { entries as api } from '@/entries/service.js';
+import { createMediaStorage } from '@/media/storage.js';
 import { tableStorage } from '@/entries/storage/table.js';
 import { defineTable } from '@/database/define-table.js';
 import {
@@ -105,6 +106,16 @@ beforeEach(async () => {
         )`.execute(db);
 });
 
+/** A media row, inserted through storage so no driver or real bytes are needed. */
+async function createMedia(filename: string): Promise<string> {
+    const row = await createMediaStorage().create({
+        filename,
+        mimeType: 'image/png',
+        size: 1,
+    });
+    return row.id;
+}
+
 // ============================================================================
 // The predicate
 // ============================================================================
@@ -158,16 +169,19 @@ describe('where.references', () => {
     });
 
     it('matches a media relation nested in a repeater', async () => {
+        // Real media rows: the write path prunes an id nothing exists behind.
+        const one = await createMedia('one.png');
+        const two = await createMedia('two.png');
         const hit = await api.create({
             type: 'article',
             title: 'Gallery',
-            fields: { sections: [{ gallery: ['m1', 'm2'] }] },
+            fields: { sections: [{ gallery: [one, two] }] },
         });
 
         const result = await api.query({
             type: 'article',
             full: true,
-            where: { references: { path: 'sections[].gallery', id: 'm2' } },
+            where: { references: { path: 'sections[].gallery', id: two } },
         });
 
         expect(result.data.map((e) => e.id)).toEqual([hit.id]);

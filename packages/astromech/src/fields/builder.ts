@@ -43,9 +43,6 @@ type MediaOptions = BaseOptions & { multiple?: boolean; accept?: string };
 type RelationshipOptions = BaseOptions & {
     target?: string;
     multiple?: boolean;
-    inverse?: string;
-    ordered?: boolean;
-    onDelete?: 'cascade' | 'set-null' | 'restrict';
 };
 
 type GroupOptions = BaseOptions & { container?: boolean; fields: FieldDefinition[] };

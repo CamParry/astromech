@@ -7,6 +7,7 @@ import type { RelationshipIndexSource } from '@/database/storage/relationships.j
 import type { RelationshipRow } from '@/database/schema.js';
 // Peer domains, read only to name a source row. See the `usedBy` docstring.
 import { getEntryStorage } from '@/entries/storage/registry.js';
+import { pruneDanglingRelations } from '@/entries/internal/dangling-relations.js';
 import { createUserStorage } from '@/users/storage.js';
 import { collectRelationshipEdges } from '@/fields/relationship-edges.js';
 import { getStorageDriver } from '@/storage/registry.js';
@@ -217,10 +218,14 @@ export const mediaApi = {
             if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
                 throw ValidationError.fromFieldErrors(processed.errors, processed.form);
             }
-            validatedData.fields = projectToSchema(
-                processed.values,
-                fieldDefs
-            ) as JsonObject;
+            // After `processFields` (its minted item ids are what the traversal
+            // needs) and before the write, so the index derives from the pruned
+            // values.
+            const pruned = await pruneDanglingRelations(
+                fieldDefs,
+                projectToSchema(processed.values, fieldDefs) as JsonObject
+            );
+            validatedData.fields = pruned.values;
         }
 
         // `updatedAt` is stamped by the storage wrapper (the column declares

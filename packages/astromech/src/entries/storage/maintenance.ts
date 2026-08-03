@@ -4,9 +4,9 @@
  * entry regardless of type, so they sit outside the per-type storage contract;
  * keeping their queries here preserves the "no raw DB in jobs" boundary.
  *
- * Both operations are single batch statements on `createStorage`'s
- * `updateMany`/`deleteMany` — the wrapper owns value serialization (a `Date`
- * passed to `where` is compared as ISO-TEXT) and the `updatedAt` stamp.
+ * Both stay batch operations on `createStorage`'s `updateMany`/`deleteMany` —
+ * the wrapper owns value serialization (a `Date` passed to `where` is compared
+ * as ISO-TEXT) and the `updatedAt` stamp.
  */
 
 import { getDb } from '@/database/registry.js';
@@ -31,14 +31,18 @@ export function createEntryMaintenanceStorage(db: Db = getDb()) {
     }
 
     /**
-     * Hard-delete every trashed entry deleted on or before `cutoff`. Returns
-     * the number of entries deleted.
+     * Hard-delete every trashed entry deleted on or before `cutoff`. Returns the
+     * purged ids so the caller can clean up what has no FK to cascade on.
      *
      * No explicit `deletedAt IS NOT NULL` guard is needed — SQL `deletedAt <=
      * cutoff` is already false for a NULL `deletedAt`.
      */
-    async function purgeTrashedBefore(cutoff: Date): Promise<number> {
-        return storage.deleteMany({ deletedAt: { lte: cutoff } });
+    async function purgeTrashedBefore(cutoff: Date): Promise<string[]> {
+        const where = { deletedAt: { lte: cutoff } };
+        const doomed = await storage.findMany({ where });
+        if (doomed.length === 0) return [];
+        await storage.deleteMany(where);
+        return doomed.map((row) => row.id);
     }
 
     return { publishDueScheduled, purgeTrashedBefore };
