@@ -7,3 +7,7 @@
 
 # Lockfile: npm owns the formatting.
 package-lock.json
+
+# Migration snapshot: db:generate owns the formatting. Prettier collapses its
+# expanded arrays and the next generate expands them again.
+apps/demo/migrations/snapshot.json

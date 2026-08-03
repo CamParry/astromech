@@ -1,7 +1,7 @@
 # Handoff — AI authoring P0a + P0
 
-For a fresh coding agent. Read `specs/ai-authoring-foundation.md` first for *why*;
-this document is *what to do*. Scope is **P0a and P0 only** — stop at the end of
+For a fresh coding agent. Read `specs/ai-authoring-foundation.md` first for _why_;
+this document is _what to do_. Scope is **P0a and P0 only** — stop at the end of
 P0 and hand back. Do not start P1.
 
 **Branch:** create `feat/service-descriptor-normalisation` in its own worktree
@@ -51,21 +51,21 @@ nothing else in it.** If you find yourself changing logic, you have gone too far
 
 In `packages/astromech/src/types/api.ts` and the matching `*/service.ts`:
 
-| Domain | Now | Becomes |
-|---|---|---|
-| users | `query(params?)` | unchanged |
-| users | `get(id)` | `get({ id })` |
-| users | `create(data)` | `create({ ...data })` |
-| users | `update(id, data)` | `update({ id, ...data })` |
-| users | `delete(id)` | `delete({ id })` |
-| media | `query(params?)` | unchanged |
-| media | `get(id)` | `get({ id })` |
-| media | `upload(file)` | `upload({ file })` |
-| media | `update(id, data)` | `update({ id, ...data })` |
-| media | `delete(id)` | `delete({ id })` |
-| settings | `all(opts?)` | unchanged |
-| settings | `get(key, opts?)` | `get({ key, ...opts })` |
-| settings | `set(key, value)` | `set({ key, value })` |
+| Domain   | Now                | Becomes                   |
+| -------- | ------------------ | ------------------------- |
+| users    | `query(params?)`   | unchanged                 |
+| users    | `get(id)`          | `get({ id })`             |
+| users    | `create(data)`     | `create({ ...data })`     |
+| users    | `update(id, data)` | `update({ id, ...data })` |
+| users    | `delete(id)`       | `delete({ id })`          |
+| media    | `query(params?)`   | unchanged                 |
+| media    | `get(id)`          | `get({ id })`             |
+| media    | `upload(file)`     | `upload({ file })`        |
+| media    | `update(id, data)` | `update({ id, ...data })` |
+| media    | `delete(id)`       | `delete({ id })`          |
+| settings | `all(opts?)`       | unchanged                 |
+| settings | `get(key, opts?)`  | `get({ key, ...opts })`   |
+| settings | `set(key, value)`  | `set({ key, value })`     |
 
 Confirm this table against the code before editing — read
 `types/api.ts` plus `users/service.ts`, `media/service.ts`, `settings/service.ts`.
@@ -115,7 +115,7 @@ Commit: `refactor(services): normalise every service method to a parameter objec
 ## P0 — the descriptor describes the method, not the HTTP body
 
 **The defect.** `ServiceMethodDescriptor.input` is populated with the route's
-*body* schema, so it omits path params. `settingsDescriptors.set.input =
+_body_ schema, so it omits path params. `settingsDescriptors.set.input =
 setSettingSchema` = `{value}`, but the method is `set(key, value)`. `media.update`
 and `users.update` both omit `id`. Result: 67 of 71 manifest methods carry no
 usable schema, and MCP's `users.update` tool has hand-written schema that already
@@ -157,7 +157,7 @@ and shared with the routes; do not duplicate it.
 
 ### 3. Stable unique ids
 
-`name` is not an identifier — `entries.create` is the name for *every* entry type,
+`name` is not an identifier — `entries.create` is the name for _every_ entry type,
 and identity is currently `name` + `entryType` + `mount`, recovered by
 `manifest.name.split('.')` in `transport/mcp/dispatch.ts:565,570`.
 
@@ -175,9 +175,9 @@ Export it, discriminate on `source`, and delete all four copies:
 
 ```ts
 export type ManifestMethod =
-    | { source: 'core'; /* ... */ }
-    | { source: 'entries'; entryType: string; mount: string; /* ... */ }
-    | { source: 'plugin'; plugin: string; access: PluginAccess; /* ... */ };
+    | { source: 'core' /* ... */ }
+    | { source: 'entries'; entryType: string; mount: string /* ... */ }
+    | { source: 'plugin'; plugin: string; access: PluginAccess /* ... */ };
 ```
 
 Note `codegen/` importing into `transport/` may cross a dep-cruiser boundary —

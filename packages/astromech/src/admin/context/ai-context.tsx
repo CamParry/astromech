@@ -103,7 +103,9 @@ export function AIContextProvider({ children }: AIContextProviderProps) {
     const [store] = useState(() => createAIContextStore());
 
     return (
-        <AIContextStoreContext.Provider value={store}>{children}</AIContextStoreContext.Provider>
+        <AIContextStoreContext.Provider value={store}>
+            {children}
+        </AIContextStoreContext.Provider>
     );
 }
 

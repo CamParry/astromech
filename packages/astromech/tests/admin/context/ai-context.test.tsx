@@ -175,7 +175,11 @@ function mountAdmin(initial: AIContextReference | null): Mounted {
 
     type AppState = { reference: AIContextReference | null; visible: boolean };
 
-    function DeclaringRoute({ reference }: { reference: AIContextReference | null }): null {
+    function DeclaringRoute({
+        reference,
+    }: {
+        reference: AIContextReference | null;
+    }): null {
         useAIContext(reference);
         return null;
     }
@@ -186,7 +190,10 @@ function mountAdmin(initial: AIContextReference | null): Mounted {
     }
 
     function App(): React.ReactElement {
-        const [state, set] = React.useState<AppState>({ reference: initial, visible: true });
+        const [state, set] = React.useState<AppState>({
+            reference: initial,
+            visible: true,
+        });
         setState = set;
         return (
             <AIContextProvider>
