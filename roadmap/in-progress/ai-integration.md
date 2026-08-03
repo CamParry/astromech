@@ -403,6 +403,49 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       describe a creation screen as an entry list.
 - [ ] **P7 — authoring plugin** — Claude adapter + tool-loop over the manifest +
       chat drawer.
+    - **Foundation merged 2026-08-03** (`2b947da`, `610d131`), 2330/161 → 2340/164.
+      `@astromech/authoring` was unwritable before it: the manifest generator,
+      `buildDispatch`, `reduceSurface`, `annotateManifest`, `scopedService` and
+      the confirm gate were all internal, and `PluginContext` carried no `Role`
+      for `scopedService` to take. All now reachable on a new `astromech/methods`
+      subpath, with `role` on the context.
+    - The manifest is generated **once in `initRuntime`** into a registry, not
+      read from `.astro/astromech.methods.json`: generating it needs the raw
+      `PluginDefinition[]`, whose Zod `input` schemas cannot survive JSON — the
+      same reason MCP regenerates in-process. Both sites call the one pure
+      function, so the file and the registry cannot drift.
+    - `context/request-context.ts` exists because sourcing `role` from
+      `context/index.ts` would pull `virtual:astromech/config` into the Astro
+      integration's config-load graph, which runs in plain Node where `virtual:`
+      cannot resolve — `astro dev` would fail at integration load.
+    - `formatAIContextMessage` now ships on `astromech/methods`. P6 put it in a
+      pure leaf so a server-side loop could import it; it was on no published
+      subpath, so that rationale was untrue as shipped.
+    - `useAIContextEntries` reaches `astromech/ui`. The vitest shim for
+      `virtual:astromech/plugins/components` never exported `slots`, so any test
+      rendering `PluginSlot` crashed on `slots[name]`; fixed, and `PluginSlot`
+      has its first coverage. Also fixed: `virtual-modules.d.ts` imported types
+      from a path resolving outside the package, hidden by `skipLibCheck`.
+    - **Decided from the SDK docs, not recall** (`@anthropic-ai/sdk@0.115.0`):
+      `role: 'system'` inside `messages[]` is GA and correct for AI context —
+      but only on Opus 5 / 4.8 / Fable 5 / Mythos 5, and it silently falls back
+      to top-level `system` on Sonnet 5, so the model option cannot be a free
+      string. Tool selection degrades past **30–50** tools and we publish 147, so
+      the loop needs `defer_loading` + the tool-search tool, not just permission
+      reduction (~45). The approval gate belongs in the **loop body** —
+      `toolRunner` yields the assistant message before executing tools and
+      `pushMessages()` marks state user-managed so they never run — not in the
+      tool handler. `betaTool` does **no** runtime validation despite its own
+      doc comment; validate inside `run`. A streaming iteration aborts its
+      stream when the body returns, so `await stream.finalMessage()` is
+      mandatory every turn.
+    - **Open, and a real gap:** `formatAIContextMessage` interpolates `label`,
+      which for an entry is its author-controlled title, into a system-role
+      message — the docs are explicit that system content carries operator
+      authority and must not hold text from outside the conversation. It needs
+      sanitizing (strip newlines and control characters, clamp length, phrase as
+      fact) before the loop sends one. Same trust boundary as the write-back
+      guard.
 
 ## Decisions worth not re-deriving
 
