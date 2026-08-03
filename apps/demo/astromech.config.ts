@@ -10,6 +10,7 @@ import {
 import { sharp } from 'astromech/images/sharp';
 import { filesystem } from 'astromech/storage/filesystem';
 import * as fields from 'astromech/fields';
+import { authoring } from '@astromech/authoring';
 import { redirects } from '@astromech/redirects';
 import { seo, seoSection } from '@astromech/seo';
 import { menus } from '@astromech/menus';
@@ -131,6 +132,7 @@ export default defineConfig({
         redirects(),
         seo(),
         backups(),
+        authoring(),
         menus({
             menus: [
                 { key: 'main', label: 'Main Navigation' },
@@ -167,6 +169,7 @@ export default defineConfig({
                 // `read` alone — a content editor has no business downloading,
                 // restoring or deleting the database.
                 ...backups.permissions('read'),
+                ...authoring.permissions('use'),
             ],
         },
     },

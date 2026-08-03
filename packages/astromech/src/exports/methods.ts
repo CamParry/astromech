@@ -9,7 +9,7 @@ export { getMethodManifest } from '@/codegen/manifest-registry.js';
 export { formatAIContextMessage } from '@/utilities/ai-context.js';
 export type { AIContextEntry } from '@/utilities/ai-context.js';
 
-export { buildDispatch } from '@/transport/mcp/dispatch.js';
+export { buildDispatch, buildScopedDispatch } from '@/transport/mcp/dispatch.js';
 export type { DispatchResult, ToolDispatch } from '@/transport/mcp/dispatch.js';
 
 export { reduceSurface } from '@/policies/tool-surface.js';
