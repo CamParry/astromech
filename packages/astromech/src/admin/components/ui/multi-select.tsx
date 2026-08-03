@@ -101,6 +101,9 @@ export function MultiSelect<T = MultiSelectOption>({
                         id={id}
                         placeholder={placeholderText}
                         className="am-multiselect-single-input"
+                        onFocus={(event) => {
+                            event.currentTarget.select();
+                        }}
                         {...ariaProps}
                     />
                     <Combobox.Clear
