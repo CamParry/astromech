@@ -265,9 +265,84 @@ f(x)`), so re-coercion is only observable when the STORED value is not
 
 ## Then
 
-- [ ] **P5 — content operations** (`translate`/`transform`/`generate`).
-      Server-side and schema-aware, so entry field data never round-trips through
-      the model's context as a payload it has to reconstruct.
+- [x] **P5 — content operations** (`translate`/`transform`/`generate`). Shipped
+      2026-08-03. Server-side and schema-aware, so entry field data never
+      round-trips through the model's context as a payload it has to reconstruct
+      — the operation owns the read, the placement and the write. Five commits:
+      the provider seam, the rich-text leaves, the operations, the transport
+      wiring, the permission handle.
+    - **`translate` never serializes the document.** `@tiptap/core`'s
+      `generateJSON` needs a DOM and throws server-side, so HTML-in was never
+      available and a shim would have been a dependency bought to parse model
+      output. Instead the operation walks the stored tree, sends each BLOCK's
+      inline content as Markdown, and puts the reply back in the same block.
+      Structure is preserved by construction: the model never sees it, so it
+      cannot merge two paragraphs or invent a heading level. `transform` and
+      `generate` do restructure, so they get block-level Markdown, both
+      directions clamped by the field's `allow` list.
+    - Three findings from the converters, none obvious. **`code` excludes every
+      other mark in the schema** — `Node.check()` rejects `marks: [bold, code]`,
+      so a naive converter emits documents P4a rejects. **Empty things are
+      invalid**: an empty text node, doc or blockquote all fail `check()`, and a
+      `listItem` must start with a paragraph. And **Markdown carries only a
+      link's href**, so writing parsed nodes back verbatim silently drops
+      `target`/`rel`/`class` from every link — apply restores the original attrs
+      by href, which is what makes an unchanged-text round trip deep-equal on a
+      real editor document rather than only on a trimmed fixture.
+    - **Eligibility is an allow-list, not a deny-list**, so an unrecognised or
+      plugin-registered field type is never sent. Only `text`, `textarea`,
+      `richtext`. `slug`/`url`/`email` are text-shaped but they are IDENTIFIERS —
+      rewriting a slug breaks every inbound link. Option sets fail their own
+      `validateChoice` if rewritten. Containers are descended into via the
+      descriptor's `children()`, which is also how `_id` paths are minted, so
+      eligibility and the validation pipeline agree on addressing by construction.
+      `paths` never widens any of this.
+    - **`private: true` is never sent to a model and `paths` cannot override it.**
+      A private field is content the CMS already refuses an unauthenticated
+      reader; handing it to a third party is a wider disclosure than the author
+      declared, with nobody to ask at call time. Excluding is reversible, a leak
+      is not. The price: `generate` cannot fill a private field. Private values
+      are still COPIED into a translation sibling — a database copy, not a model
+      call.
+    - `getNonTranslatableFieldNames` could NOT be used as the design assumed: it
+      walks `flattenEntryFields`, so it sees top-level names only and a
+      `translatable: false` field inside a repeater would have been translated.
+      Eligibility checks the flag at every depth and does not descend into a
+      non-translatable container at all.
+    - **There is no config fallback for the provider and there cannot be one** —
+      a provider is a function and `virtual:astromech/config` is
+      `JSON.stringify`'d. The registry is the only path, so what it must survive
+      is the lifecycle: `config:setup` is build time and does not re-run per
+      request in a Worker, which makes idempotent registration the requirement.
+      Core ships no provider; the suite makes no network call.
+    - All-or-nothing has two halves — every rewrite completes before any write,
+      and the pipeline runs over the merged document before it (the `mergeStaged`
+      ordering). `createStaged` → `update` is wrapped so a rejected update deletes
+      the staged row, which would otherwise block the next attempt with
+      `StagedEntryExistsError`.
+    - `content` joins the DAG as a **downstream domain**, not a peer: it may
+      import `entries/`, and the enforced rule is the reverse one. The plugin
+      entry-access port cannot serve it — that port is deliberately service-free
+      (`qualifyEntryType` plus storage setters, no reads or writes).
+    - **Double permission gate**: holding `content:translate` must not let a
+      caller rewrite a type they cannot update, so both the HTTP route and
+      `scopeContent` check the descriptor permission AND the target type's
+      `update`, derived through `entryPermission` so a plugin type gets the
+      plugin form free. `editor` holds all three content keys — it already holds
+      `entry:*`, so they widen its reach by zero types and only decide whether it
+      may reach them via a model.
+    - An out-of-allow model reply is **clamped, not rejected** — the converters
+      take `allow` by construction, so the validator never sees it. The original
+      acceptance criterion ("fails validation on the staged entry") was
+      unreachable; the property is covered from both sides instead.
+    - Open, and inherited rather than introduced: `scopedService` still has **no
+      non-test consumer for any domain**, so MCP applies no permission check to
+      anything today. Content is now complete in the handle, so it is covered the
+      moment that seam is used. Wiring it into a transport is a system-wide
+      change. Also open: the typed local client carries `content` as an
+      intersection rather than on `AstromechClient` (which the fetch Client also
+      implements), so the browser admin reaches these operations over HTTP, not
+      through the typed client — the decision to revisit when P7's drawer lands.
 - [ ] **P6 — context bus** — ambient-context contributors; routes publish a typed
       reference for deixis ("this page"). Must live in a `role: 'system'` message,
       not the system prompt, or every navigation invalidates the prompt cache.

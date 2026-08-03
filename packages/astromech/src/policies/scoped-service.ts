@@ -21,6 +21,7 @@
  */
 
 import type {
+    ContentApi,
     EntriesApi,
     MediaApi,
     Role,
@@ -40,6 +41,8 @@ import { settingsApi } from '@/settings/service.js';
 import { settingsDescriptors } from '@/settings/descriptors.js';
 import { entries } from '@/entries/service.js';
 import { ENTRY_METHOD_ACTIONS, type EntryMethodName } from '@/entries/descriptors.js';
+import { contentApi } from '@/content/service.js';
+import { contentDescriptors } from '@/content/descriptors.js';
 
 /**
  * A domain's descriptor catalogue, keyed by service method name.
@@ -210,18 +213,84 @@ export function scopeEntries(
     return scoped as unknown as EntriesApi;
 }
 
-/** The four content domains, each scoped to one principal. */
+/**
+ * The single entry type one content call targets, or null when it names none.
+ *
+ * A content operation rewrites ONE entry, so a `type` that is missing, empty or
+ * not a string is ill-formed rather than a wildcard.
+ */
+function targetedContentType(input: unknown): string | null {
+    if (typeof input !== 'object' || input === null) return null;
+    const type = (input as { type?: unknown }).type;
+    return typeof type === 'string' && type.length > 0 ? type : null;
+}
+
+/**
+ * Scope the content service. Content is double-gated: the descriptor's
+ * `content:*` permission AND `update` on the entry type the call names, because
+ * holding "may use a model" must not rewrite a type the principal cannot edit
+ * by hand.
+ *
+ * The first half comes from a fixed catalogue like `scopeMethods`; the second is
+ * derived from the call like `scopeEntries`, through the same
+ * `entryPermission` helper the entries wrapper and the HTTP route use. A method
+ * with no descriptor, or a call naming no usable type, is refused.
+ */
+export function scopeContent(api: ContentApi, permissions: Permissions): ContentApi {
+    const scoped: ServiceRecord = {};
+    const descriptors: DescriptorCatalogue = contentDescriptors;
+
+    for (const [key, value] of Object.entries(api as unknown as ServiceRecord)) {
+        if (typeof value !== 'function') {
+            scoped[key] = value;
+            continue;
+        }
+        const fn = value as ServiceFn;
+        const id = `content.${key}`;
+
+        scoped[key] = (...args: unknown[]): unknown => {
+            const descriptor = descriptors[key];
+            if (descriptor === undefined) throw new PermissionDeniedError(id, null);
+
+            const input = args[0];
+            if (!permissions.allowsMethod(descriptor, input)) {
+                throw new PermissionDeniedError(id, resolvePermission(descriptor, input));
+            }
+
+            const type = targetedContentType(input);
+            if (type === null) {
+                throw new PermissionDeniedError(
+                    id,
+                    null,
+                    'was called without an entry type, so the permission it needs cannot be derived.'
+                );
+            }
+
+            const permission = entryPermission(type, 'update');
+            if (!permissions.allows(permission)) {
+                throw new PermissionDeniedError(id, permission);
+            }
+
+            return fn.apply(api, args);
+        };
+    }
+
+    return scoped as unknown as ContentApi;
+}
+
+/** The five content domains, each scoped to one principal. */
 export type ScopedService = {
     users: UsersApi;
     media: MediaApi;
     settings: SettingsApi;
     entries: EntriesApi;
+    content: ContentApi;
 };
 
 /**
  * Compose one principal into a handle over every content domain.
  *
- * One `withPermissions` guard backs all four, so a principal is resolved once
+ * One `withPermissions` guard backs all five, so a principal is resolved once
  * per handle rather than once per call.
  */
 export function scopedService(principal: Role | undefined): ScopedService {
@@ -231,5 +300,6 @@ export function scopedService(principal: Role | undefined): ScopedService {
         media: scopeMethods(mediaApi, mediaDescriptors, permissions, 'media'),
         settings: scopeMethods(settingsApi, settingsDescriptors, permissions, 'settings'),
         entries: scopeEntries(entries, permissions),
+        content: scopeContent(contentApi, permissions),
     };
 }

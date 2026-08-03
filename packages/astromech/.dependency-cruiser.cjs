@@ -9,6 +9,7 @@
  *     · http/client = the fetch Client (consumes the HTTP API over the wire;
  *       client half of the transport, nested but kept a distinct DAG node)
  *   policies                                       permission / confirmation wrappers
+ *   content                                        downstream domain — may import entries
  *   entries · media · users · settings             domains — siblings, never import each other
  *   plugins/runtime · database · storage · email ·  capabilities
  *     cron · context · fields · permissions
@@ -48,12 +49,20 @@ module.exports = {
         {
             name: 'domain-no-upward',
             comment:
-                'A domain knows nothing about delivery or composition. It must not import routes, admin, a transport (which now houses the fetch client under transport/http/client), policies, the kernel, codegen, or a first-party plugin. Importing the plugins/runtime hook engine IS allowed — that is a capability the domain fires hooks through.',
+                'A domain knows nothing about delivery or composition. It must not import routes, admin, a transport (which now houses the fetch client under transport/http/client), policies, the kernel, codegen, or a first-party plugin. Importing the plugins/runtime hook engine IS allowed — that is a capability the domain fires hooks through. `content` is included: it is a DOWNSTREAM domain (it orchestrates entries + a model provider), but it knows nothing about delivery either.',
             severity: 'error',
-            from: { path: '^src/(entries|media|users|settings)/' },
+            from: { path: '^src/(entries|media|users|settings|content)/' },
             to: {
                 path: '^src/(routes|admin|transport|policies|kernel|codegen)/',
             },
+        },
+        {
+            name: 'content-is-downstream-of-the-domains',
+            comment:
+                'content/ sits ABOVE entries/ in the DAG: it reads an entry, rewrites its text through a provider and writes it back, so importing entries/ is a legitimate edge (which is why content is NOT in domain-no-peer-imports). The half worth enforcing is the reverse one — a domain must never import content/, or the cycle is back.',
+            severity: 'error',
+            from: { path: '^src/(entries|media|users|settings)/' },
+            to: { path: '^src/content/' },
         },
         {
             name: 'capability-no-upward',

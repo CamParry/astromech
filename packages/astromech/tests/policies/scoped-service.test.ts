@@ -11,9 +11,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { setupTestConfig } from '@tests/harness.js';
 import { PermissionDeniedError } from '@/errors/index.js';
 import { annotateManifest } from '@/policies/annotate-manifest.js';
-import { scopeEntries, scopeMethods, scopedService } from '@/policies/scoped-service.js';
+import {
+    scopeContent,
+    scopeEntries,
+    scopeMethods,
+    scopedService,
+} from '@/policies/scoped-service.js';
 import { withPermissions } from '@/policies/with-permissions.js';
 import type {
+    ContentApi,
     CoreManifestMethod,
     EntriesApi,
     ManifestMethod,
@@ -270,6 +276,129 @@ describe('scopeEntries', () => {
             PermissionDeniedError
         );
         expect(stub.mystery).not.toHaveBeenCalled();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// scopeContent
+// ---------------------------------------------------------------------------
+
+function makeContentStub() {
+    return {
+        translate: vi.fn(() => Promise.resolve('translated')),
+        transform: vi.fn(() => Promise.resolve('transformed')),
+    };
+}
+
+/** The stub is a slice of `ContentApi`; the wrapper only reads its keys. */
+function scopeContentStub(
+    stub: object,
+    principal: Role | undefined
+): Record<string, never> {
+    return scopeContent(
+        stub as unknown as ContentApi,
+        withPermissions(principal)
+    ) as unknown as Record<string, never>;
+}
+
+describe('scopeContent', () => {
+    it('calls through when both halves of the gate are held', async () => {
+        const stub = makeContentStub();
+        const scoped = scopeContentStub(
+            stub,
+            role('content:translate', 'entry:posts:update')
+        );
+
+        await expect(
+            call(scoped, 'translate', { type: 'posts', id: '1', locale: 'de' })
+        ).resolves.toBe('translated');
+        expect(stub.translate).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses the content permission alone — the target type must be editable', () => {
+        const stub = makeContentStub();
+        const scoped = scopeContentStub(stub, role('content:translate'));
+
+        try {
+            call(scoped, 'translate', { type: 'posts', id: '1', locale: 'de' });
+            expect.unreachable('a model grant must not rewrite an uneditable type');
+        } catch (e) {
+            expect(e).toBeInstanceOf(PermissionDeniedError);
+            expect((e as PermissionDeniedError).method).toBe('content.translate');
+            expect((e as PermissionDeniedError).permission).toBe('entry:posts:update');
+        }
+        expect(stub.translate).not.toHaveBeenCalled();
+    });
+
+    it('refuses the entry permission alone — editing by hand is not editing by model', () => {
+        const stub = makeContentStub();
+        const scoped = scopeContentStub(stub, role('entry:posts:update'));
+
+        try {
+            call(scoped, 'translate', { type: 'posts', id: '1', locale: 'de' });
+            expect.unreachable('an entry grant must not reach a content operation');
+        } catch (e) {
+            expect((e as PermissionDeniedError).permission).toBe('content:translate');
+        }
+        expect(stub.translate).not.toHaveBeenCalled();
+    });
+
+    it('derives the entry half per type and per operation', () => {
+        const stub = makeContentStub();
+        const scoped = scopeContentStub(
+            stub,
+            role('content:translate', 'entry:posts:update')
+        );
+
+        // Another type is not covered by the grant on `posts`...
+        expect(() =>
+            call(scoped, 'translate', { type: 'pages', id: '1', locale: 'de' })
+        ).toThrow(PermissionDeniedError);
+        // ...and a second operation is not covered by `content:translate`.
+        expect(() =>
+            call(scoped, 'transform', { type: 'posts', id: '1', instruction: 'x' })
+        ).toThrow(PermissionDeniedError);
+        expect(stub.transform).not.toHaveBeenCalled();
+    });
+
+    it('refuses a call whose type is missing, blank or not a string', () => {
+        const stub = makeContentStub();
+        const scoped = scopeContentStub(stub, role('*'));
+
+        expect(() => call(scoped, 'translate', { id: '1', locale: 'de' })).toThrow(
+            PermissionDeniedError
+        );
+        expect(() => call(scoped, 'translate', { type: '', id: '1' })).toThrow(
+            PermissionDeniedError
+        );
+        expect(() => call(scoped, 'translate', { type: ['posts'], id: '1' })).toThrow(
+            PermissionDeniedError
+        );
+        expect(() => call(scoped, 'translate', undefined)).toThrow(PermissionDeniedError);
+        expect(stub.translate).not.toHaveBeenCalled();
+    });
+
+    it('fails closed on a method with no descriptor, even for a wildcard principal', () => {
+        const stub = { mystery: vi.fn(() => Promise.resolve('x')) };
+        const scoped = scopeContentStub(stub, role('*'));
+
+        try {
+            call(scoped, 'mystery', { type: 'posts', id: '1' });
+            expect.unreachable('an undescribed content method must be refused');
+        } catch (e) {
+            expect((e as PermissionDeniedError).permission).toBeNull();
+        }
+        expect(stub.mystery).not.toHaveBeenCalled();
+    });
+
+    it('lets a wildcard principal through', async () => {
+        const stub = makeContentStub();
+        const scoped = scopeContentStub(stub, role('*'));
+
+        await expect(
+            call(scoped, 'translate', { type: 'posts', id: '1', locale: 'de' })
+        ).resolves.toBe('translated');
+        expect(stub.translate).toHaveBeenCalledTimes(1);
     });
 });
 
