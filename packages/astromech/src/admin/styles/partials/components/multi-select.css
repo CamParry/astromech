@@ -13,14 +13,14 @@
     align-items: center;
     width: 100%;
     min-height: var(--am-input-height);
-    padding: 0 0.25rem;
+    padding: 0.25rem;
     background-color: var(--am-input-background-color);
     border: 1px solid var(--am-input-border-color);
     border-radius: var(--am-input-border-radius);
 
     &:focus-within {
-        outline: 2px solid var(--am-color-primary);
-        outline-offset: -1px;
+        outline: 2px solid var(--am-focus-color);
+        outline-offset: var(--am-focus-offset);
     }
 }
 
@@ -28,32 +28,40 @@
     display: flex;
     gap: 0.25rem;
     align-items: center;
-    padding: 0.25rem 0.25rem 0.25rem 0.5rem;
+    max-width: 100%;
+    height: 1.5rem;
+    padding: 0 0.25rem 0 0.5rem;
     overflow: hidden;
-    font-size: 1rem;
+    font-size: var(--am-input-font-size);
+    line-height: 1;
     color: var(--am-color-text-default);
     cursor: default;
     outline: 0;
     background-color: var(--am-color-bg-subtle);
+    border: 1px solid var(--am-color-border-strong);
     border-radius: var(--am-radius-sm);
 
-    &:focus-within {
-        color: var(--am-color-neutral-50);
-        background-color: var(--am-color-primary);
-    }
-
+    &:focus-within,
     &[data-highlighted] {
         color: var(--am-color-neutral-50);
         background-color: var(--am-color-primary);
+        border-color: var(--am-color-primary);
     }
+}
+
+.am-multiselect-chip-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .am-multiselect-chip-remove {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 1rem;
+    height: 1rem;
     color: inherit;
     cursor: pointer;
     background: none;
@@ -70,16 +78,20 @@
 .am-multiselect-input {
     box-sizing: border-box;
     flex: 1;
-    min-width: 3rem;
-    height: 2rem;
+    min-width: 2rem;
+    height: 1.5rem;
     padding-left: 0.5rem;
     margin: 0;
     font-family: inherit;
-    font-size: 1rem;
+    font-size: var(--am-input-font-size);
     color: var(--am-color-text-default);
     background-color: transparent;
     border: none;
     border-radius: var(--am-radius-sm);
+
+    &::placeholder {
+        color: var(--am-input-placeholder-color);
+    }
 
     &:focus {
         outline: none;
@@ -96,7 +108,7 @@
     width: var(--anchor-width);
     max-width: var(--available-width);
     max-height: min(var(--available-height), 24rem);
-    padding-block: var(--am-popup-padding);
+    padding: var(--am-popup-padding);
     overflow-y: auto;
     overscroll-behavior: contain;
     color: var(--am-color-text-default);
@@ -123,10 +135,8 @@
     grid-template-columns: 0.75rem 1fr;
     gap: 0.5rem;
     align-items: center;
-    padding-block: 0.5rem;
-    padding-right: 2rem;
-    padding-left: 1rem;
-    font-size: 1rem;
+    padding: calc(var(--am-space) * 2) calc(var(--am-space) * 3);
+    font-size: var(--am-input-font-size);
     line-height: 1rem;
     cursor: default;
     user-select: none;
@@ -134,7 +144,7 @@
     border-radius: calc(var(--am-popup-border-radius) - var(--am-popup-padding));
 
     &[data-highlighted] {
-        background-color: var(--am-color-bg-subtle);
+        background-color: var(--am-menu-item-highlighted-background-color);
     }
 
     &[data-selected] {
@@ -145,6 +155,9 @@
 
 .am-multiselect-item-text {
     grid-column-start: 2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .am-multiselect-item-indicator {
@@ -161,8 +174,8 @@
 
 .am-multiselect-empty:not(:empty) {
     box-sizing: border-box;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
+    padding: calc(var(--am-space) * 2) calc(var(--am-space) * 3);
+    font-size: var(--am-input-font-size);
     line-height: 1rem;
     color: var(--am-color-text-muted);
 }

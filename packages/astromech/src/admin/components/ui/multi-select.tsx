@@ -69,12 +69,14 @@ export function MultiSelect<T = MultiSelectOption>({
                                             className="am-multiselect-chip"
                                             aria-label={label}
                                         >
-                                            {label}
+                                            <span className="am-multiselect-chip-label">
+                                                {label}
+                                            </span>
                                             <Combobox.ChipRemove
                                                 className="am-multiselect-chip-remove"
                                                 aria-label="Remove"
                                             >
-                                                <XIcon size={16} />
+                                                <XIcon size={12} />
                                             </Combobox.ChipRemove>
                                         </Combobox.Chip>
                                     );
