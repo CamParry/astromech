@@ -33,6 +33,7 @@ import {
     useDeleteUser,
 } from '@/admin/hooks/index.js';
 import { userQueryOptions } from '@/admin/hooks/users.js';
+import { useAIContext } from '@/admin/context/ai-context.js';
 import { useAuth } from '@/admin/context/auth.js';
 import adminConfig from 'virtual:astromech/admin-config';
 
@@ -64,6 +65,15 @@ function UserEditPage(): React.ReactElement {
     const isSelf = currentUser?.id === id;
 
     const { data: user, isLoading } = useUser(id);
+
+    // Declare the user in view; `null` until they load. A blank name falls back
+    // to the email, which every user has.
+    useAIContext(
+        user != null
+            ? { kind: 'users', id, label: user.name !== '' ? user.name : user.email }
+            : null,
+        { depth: 1 }
+    );
 
     const form = useForm({
         defaultValues: {

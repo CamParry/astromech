@@ -47,6 +47,7 @@ import {
     useConfirm,
 } from '@/admin/components/ui/index.js';
 import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal.js';
+import { entryLabel } from '@/admin/components/entries/entry-label.js';
 import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer.js';
 import {
     FieldErrorsProvider,
@@ -81,6 +82,7 @@ import {
     resolveConfigForDerive,
 } from '@/admin/definitions/derive.js';
 import { resolveContentLocale } from '@/utilities/locale.js';
+import { useAIContext } from '@/admin/context/ai-context.js';
 import type { EntriesMount } from './mount.js';
 
 // Surface link bases are runtime strings; address `Link` by string `to`.
@@ -140,6 +142,15 @@ export function EntryEditPage({
     const isReadOnly = !hasPermission(mount.permissionFor('update'));
 
     const { data: entry, isLoading } = useEntry(type, id, scope);
+
+    // Declare the entry in view; `null` until it loads, so no placeholder label
+    // is ever published. Serves the root and plugin routes alike.
+    useAIContext(
+        entry != null
+            ? { kind: 'entries', type, id, label: entryLabel(entry, entryTypeConfig) }
+            : null,
+        { depth: 1 }
+    );
 
     // Versioning. Staged rows don't surface version history (their action set is
     // Save/Merge/Discard/Preview) — skip the fetch so a post-merge stale refetch

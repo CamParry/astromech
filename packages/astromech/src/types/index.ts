@@ -11,3 +11,4 @@ export * from './services.js';
 export * from './api.js';
 export * from './client.js';
 export * from './definitions.js';
+export * from './ai-context.js';

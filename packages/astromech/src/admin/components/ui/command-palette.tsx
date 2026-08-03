@@ -27,6 +27,7 @@ import { useQuery } from '@tanstack/react-query';
 import adminConfig from 'virtual:astromech/admin-config';
 import { Astromech } from '@/transport/http/client/index.js';
 import { parseEntryTypeId } from '@/entries/type-registry.js';
+import { entryLabel } from '@/admin/components/entries/entry-label.js';
 import { usePermissions } from '../../hooks/index.js';
 import { useDebounce } from '../../hooks/use-debounce.js';
 import { EntryTypeIcon } from './entry-type-icon.js';
@@ -39,24 +40,6 @@ import type { AdminEntryTypeConfig, Entry, Media, User } from '@/types/index.js'
 function lucideIcon(name: string | undefined, Fallback: LucideIcon): LucideIcon {
     if (name === undefined) return Fallback;
     return (icons[name as keyof typeof icons] ?? Fallback) as LucideIcon;
-}
-
-/**
- * Pick a human label for a live entry result. Entry types with
- * `titleField: false` (e.g. redirects) carry no `title`, so fall back to the
- * first non-empty searchable / column field value, then slug, then id.
- */
-function entryLabel(entry: Entry, cfg: AdminEntryTypeConfig | undefined): string {
-    if (typeof entry.title === 'string' && entry.title.trim() !== '') return entry.title;
-    const keys = [
-        ...(cfg?.search ?? []),
-        ...(cfg?.adminColumns ?? []).map((c) => c.field),
-    ];
-    for (const key of keys) {
-        const value = entry.fields?.[key];
-        if (typeof value === 'string' && value.trim() !== '') return value;
-    }
-    return entry.slug ?? entry.id;
 }
 
 // ============================================================================

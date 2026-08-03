@@ -24,6 +24,7 @@ import { SettingsPageForm } from '@/admin/components/pages/SettingsPageForm.js';
 import { PluginUiProvider } from '@/admin/context/plugin.js';
 import { EmptyState, Page, PageContent } from '@/admin/components/ui/index.js';
 import { resolveLabel } from '@/admin/i18n/labels.js';
+import { useAIContext } from '@/admin/context/ai-context.js';
 
 function PluginPage(): React.ReactElement {
     const params = Route.useParams();
@@ -36,6 +37,30 @@ function PluginPage(): React.ReactElement {
         plugin.pages.some((page) => page.key === splat)
     );
     const settingsPage = settingsPlugin?.pages.find((page) => page.key === splat);
+
+    // Component-mode registration from the codegen registry.
+    const registration = pages[splat];
+
+    // Identify the page by its route key (the splat), which both modes carry. A
+    // page label matching its plugin's stands alone, as the page header does.
+    const pageLabel =
+        settingsPage !== undefined
+            ? resolveLabel(settingsPage.label, settingsPage.path, t, 'translation')
+            : (registration?.label ?? null);
+    const ownerLabel = settingsPlugin?.label;
+    useAIContext(
+        pageLabel !== null
+            ? {
+                  kind: 'pages',
+                  id: splat,
+                  label:
+                      ownerLabel !== undefined && ownerLabel !== pageLabel
+                          ? `${ownerLabel} ${pageLabel}`
+                          : pageLabel,
+              }
+            : null,
+        { depth: 0 }
+    );
 
     // Settings-mode page (fields not null, no componentKey): render SettingsPageForm.
     if (
@@ -86,9 +111,6 @@ function PluginPage(): React.ReactElement {
             </PluginUiProvider>
         );
     }
-
-    // Component-mode page: look up in the codegen registry.
-    const registration = pages[splat];
 
     if (!registration) {
         return (

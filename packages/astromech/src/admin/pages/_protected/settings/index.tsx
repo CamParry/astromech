@@ -14,11 +14,14 @@ import {
     PageContent,
 } from '@/admin/components/ui/index.js';
 import { usePermissions } from '@/admin/hooks/index.js';
+import { useAIContext } from '@/admin/context/ai-context.js';
 
 function SettingsPage(): React.ReactElement {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { canReadSettings } = usePermissions();
+
+    useAIContext({ kind: 'settings', label: t('settings.title') }, { depth: 0 });
 
     useEffect(() => {
         if (!canReadSettings()) {

@@ -28,6 +28,7 @@ import {
     Pagination,
 } from '@/admin/components/ui/index.js';
 import { usePermissions, useUsersQuery, useDeleteUser } from '@/admin/hooks/index.js';
+import { useAIContext } from '@/admin/context/ai-context.js';
 import { formatDate } from '@/utilities/dates.js';
 
 const PER_PAGE = 20;
@@ -48,6 +49,8 @@ function UsersIndexPage(): React.ReactElement {
     const { canReadUsers, canCreateUsers, canDeleteUsers } = usePermissions();
 
     const { q = '', page: pageParam = 1 } = Route.useSearch();
+
+    useAIContext({ kind: 'users', label: t('users.title') }, { depth: 0 });
 
     useEffect(() => {
         if (!canReadUsers()) {

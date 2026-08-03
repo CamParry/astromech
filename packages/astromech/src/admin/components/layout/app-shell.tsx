@@ -14,6 +14,7 @@ import { Sidebar } from './sidebar.js';
 import { Topbar } from './topbar.js';
 import { useHotkeys } from '../../hooks/index.js';
 import { PluginSlot } from '../plugins/PluginSlot.js';
+import { AIContextReadout } from '../dev/ai-context-readout.js';
 
 export function AppShell() {
     const { sidebarOpen, setSidebarOpen, shortcutsOpen, setShortcutsOpen } = useUI();
@@ -47,6 +48,7 @@ export function AppShell() {
             </div>
             <CommandPalette />
             <PluginSlot name="global-overlay" />
+            {import.meta.env.DEV ? <AIContextReadout /> : null}
 
             <Dialog.Root open={shortcutsOpen} onOpenChange={setShortcutsOpen}>
                 <Dialog.Portal>

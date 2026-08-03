@@ -1,0 +1,63 @@
+/* ============================================================================
+   am-ai-readout — dev-only AI context readout, anchored bottom-left clear of
+   the sidebar, the right drawer and the toast region.
+   ============================================================================ */
+
+.am-ai-readout {
+    position: fixed;
+    bottom: calc(var(--am-space) * 4);
+    left: calc(var(--am-sidebar-width) + var(--am-space) * 4);
+    z-index: var(--am-popup-z-index);
+    display: flex;
+    flex-direction: column-reverse;
+    gap: calc(var(--am-space) * 2);
+    align-items: flex-start;
+}
+
+.am-ai-readout-toggle {
+    padding: calc(var(--am-space) * 1) calc(var(--am-space) * 2);
+    font-size: 0.75rem;
+    color: var(--am-color-text-muted);
+    cursor: pointer;
+    background-color: var(--am-color-bg-base);
+    border: 1px solid var(--am-color-border);
+    border-radius: var(--am-radius-md);
+    box-shadow: var(--am-popup-shadow);
+}
+
+@media (hover: hover) {
+    .am-ai-readout-toggle:hover {
+        color: var(--am-color-text-default);
+        background-color: var(--am-color-bg-subtle);
+    }
+}
+
+.am-ai-readout-panel {
+    width: 24rem;
+    max-width: 100%;
+    max-height: 20rem;
+    padding: calc(var(--am-space) * 3);
+    overflow: auto;
+    background-color: var(--am-color-bg-base);
+    border: 1px solid var(--am-color-border);
+    border-radius: var(--am-radius-md);
+    box-shadow: var(--am-popup-shadow);
+}
+
+.am-ai-readout-role,
+.am-ai-readout-empty {
+    font-size: 0.75rem;
+    color: var(--am-color-text-muted);
+}
+
+.am-ai-readout-role {
+    margin-bottom: calc(var(--am-space) * 2);
+}
+
+.am-ai-readout-content {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--am-color-text-default);
+    white-space: pre-wrap;
+}

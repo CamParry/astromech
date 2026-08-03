@@ -16,9 +16,14 @@ import {
     validateEntriesListSearch,
     type EntriesMount,
 } from '@/admin/components/entries/mount.js';
+import { useAIContext } from '@/admin/context/ai-context.js';
 
 function EntryIndexPage(): React.ReactElement {
     const { type } = Route.useParams();
+    useAIContext(
+        { kind: 'entries', type, label: adminConfig.entries[type]?.plural ?? type },
+        { depth: 0 }
+    );
     const mount: EntriesMount = {
         api: Astromech.entries as unknown as EntriesApi,
         type,
