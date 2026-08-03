@@ -5,8 +5,8 @@
 
 Supersedes the relationship sketch in `specs/data-layer.md` §8 (deleted in 0003),
 which proposed an authoritative polymorphic table keyed on `instanceId` and
-carrying `position`. The build design lives in `specs/relationships-model.md`
-until it ships; this file holds only the _why_, and mostly the roads not taken.
+carrying `position`. The build spec is gone now that it has shipped; this file
+holds only the _why_, and mostly the roads not taken.
 
 ## The table is derived, not storage
 
