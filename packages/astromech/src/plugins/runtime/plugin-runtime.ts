@@ -30,12 +30,17 @@ import type {
     PluginServiceNamespace,
     ResolvedConfig,
     ResolvedPluginIdentity,
+    Role,
     SettingsApi,
     TypedEntriesApi,
     User,
     UsersApi,
 } from '@/types/index.js';
 import { getDb } from '@/database/registry.js';
+// The request-context LEAF, not `@/context/index.js`: that barrel imports
+// `virtual:astromech/config`, which cannot resolve during Astro's plain-Node
+// config load — the path this module is on.
+import { getCurrentRole } from '@/context/request-context.js';
 import { kyselyTableKey, registerDescriptorCodec } from '@/database/codec.js';
 import { peekDatabaseDriver } from '@/database/driver-registry.js';
 import { getStorageDriver } from '@/storage/registry.js';
@@ -370,6 +375,11 @@ export function createPluginContext(
         plugin: identity,
         config: configView,
         user,
+        // Lazy like the domains below: read at access time from the
+        // request-scoped store, which is where `getCurrentUser()` comes from.
+        get role(): Role | null {
+            return getCurrentRole();
+        },
         // The domains, flattened onto the context. These are the global services
         // — a plugin addresses its own entry types explicitly by their qualified
         // id (`` `${ctx.plugin.namespace}/redirect` ``) rather than through a

@@ -16,54 +16,22 @@
  * `getCurrentUser()` returns `null`. There is deliberately no setter: a setter
  * is what made identity leak across requests.
  *
- * The database instance is accessed via getDb() from the registry. Config is
- * accessed via the virtual module import.
+ * The store itself lives in `context/request-context.ts`, which imports no
+ * config: this barrel reads `virtual:astromech/config`, and anything loaded
+ * during Astro's plain-Node config load must reach the store without it.
  */
 
-import { AsyncLocalStorage } from 'node:async_hooks';
 import config from 'virtual:astromech/config';
 import { getDb } from '@/database/registry.js';
-import type { Role, User } from '@/types/index.js';
+import { getCurrentUser } from '@/context/request-context.js';
 
-export type RequestContext = {
-    user: User | null;
-    role: Role | null;
-};
-
-declare global {
-    var __astromechRequestContext: AsyncLocalStorage<RequestContext> | undefined;
-}
-
-/**
- * The store lives on globalThis (mirrors the db/entry-storage registries): the
- * package has multiple bundle entry points, so a second copy of this module in
- * another chunk would otherwise be a second, EMPTY store — the middleware would
- * write into one while the services read the other and saw no user at all.
- */
-function store(): AsyncLocalStorage<RequestContext> {
-    if (!globalThis.__astromechRequestContext) {
-        globalThis.__astromechRequestContext = new AsyncLocalStorage<RequestContext>();
-    }
-    return globalThis.__astromechRequestContext;
-}
-
-/** Run `fn` with `ctx` as the request context, for `fn` and everything it awaits. */
-export function runWithContext<T>(ctx: RequestContext, fn: () => T): T {
-    return store().run(ctx, fn);
-}
-
-/** The active request context, or undefined when no context is established. */
-export function getRequestContext(): RequestContext | undefined {
-    return store().getStore();
-}
-
-export function getCurrentUser(): User | null {
-    return store().getStore()?.user ?? null;
-}
-
-export function getCurrentRole(): Role | null {
-    return store().getStore()?.role ?? null;
-}
+export type { RequestContext } from '@/context/request-context.js';
+export {
+    getCurrentRole,
+    getCurrentUser,
+    getRequestContext,
+    runWithContext,
+} from '@/context/request-context.js';
 
 export function getServerContext() {
     return {

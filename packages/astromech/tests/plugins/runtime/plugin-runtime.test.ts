@@ -3,8 +3,10 @@ import type {
     PluginContext,
     PluginDefinition,
     ResolvedConfig,
+    Role,
     User,
 } from '@/types/index.js';
+import { runWithContext } from '@/context/request-context.js';
 import {
     bootPlugins,
     createPluginContext,
@@ -102,6 +104,13 @@ const user: User = {
     updatedAt: new Date(),
 };
 
+const adminRole: Role = {
+    slug: 'admin',
+    name: 'Administrator',
+    permissions: ['*'],
+    isBuiltIn: true,
+};
+
 beforeEach(() => {
     globalThis.__astromechPluginRuntime = undefined;
     delete globalThis.__astromech?.cronJobs;
@@ -168,6 +177,32 @@ describe('createPluginContext', () => {
         expect(ctx.config.entryTypesWithField('seo-meta')).toEqual(['posts']);
         expect(ctx.config.entryTypesWithField('body')).toEqual(['posts', 'pages']);
         expect(ctx.config.entryTypesWithField('nope')).toEqual([]);
+    });
+
+    it('has a null role outside a request context', () => {
+        registerPlugins([def({ package: '@astromech/seo' })], config);
+        const ctx = createPluginContext(
+            resolvePluginIdentity(def({ package: '@astromech/seo' })),
+            user
+        );
+
+        expect(ctx.role).toBeNull();
+    });
+
+    // Lazy, so a context built before the store is established still reads the
+    // role — and drops back to null once the request is over.
+    it('reads the role from the request-scoped store', () => {
+        registerPlugins([def({ package: '@astromech/seo' })], config);
+        const ctx = createPluginContext(
+            resolvePluginIdentity(def({ package: '@astromech/seo' })),
+            user
+        );
+
+        runWithContext({ user, role: adminRole }, () => {
+            expect(ctx.role).toBe(adminRole);
+        });
+
+        expect(ctx.role).toBeNull();
     });
 });
 
