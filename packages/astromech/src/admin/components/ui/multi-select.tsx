@@ -1,6 +1,7 @@
 import { Combobox } from '@base-ui/react/combobox';
 import React, { useRef, useId } from 'react';
-import { CheckIcon, XIcon } from 'lucide-react';
+import { CheckIcon, ChevronDownIcon, XIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useFieldControl } from '@/admin/components/fields/field-control-context';
 
 export type MultiSelectOption = { label: string; value: string };
@@ -18,6 +19,8 @@ export type MultiSelectProps<T = MultiSelectOption> = {
     multiple?: boolean;
 };
 
+// Single-select renders a plain combobox input; multi-select renders chips.
+// The two need literal `multiple` values, so they get their own roots.
 export function MultiSelect<T = MultiSelectOption>({
     options,
     value,
@@ -27,63 +30,131 @@ export function MultiSelect<T = MultiSelectOption>({
     name,
     required,
     disabled,
-    placeholder = 'Select...',
+    placeholder,
     multiple = true,
 }: MultiSelectProps<T>): React.ReactElement {
+    const { t } = useTranslation();
     const { ariaProps } = useFieldControl();
-    const containerRef = useRef<HTMLDivElement | null>(null);
+    const anchorRef = useRef<HTMLDivElement | null>(null);
     const id = useId();
 
     const selectedValues = value ?? [];
+    const placeholderText = placeholder ?? t('fields.multiSelectPlaceholder');
+    const labelOf = (item: T) =>
+        itemToStringLabel ? itemToStringLabel(item) : (item as MultiSelectOption).label;
+    const valueOf = (item: T) =>
+        itemToStringValue ? itemToStringValue(item) : (item as MultiSelectOption).value;
+
+    const rootProps = {
+        items: options,
+        name,
+        required: !!required,
+        disabled,
+        itemToStringValue,
+        itemToStringLabel,
+    };
+
+    const popup = (
+        <Combobox.Portal>
+            <Combobox.Positioner
+                className="am-multiselect-positioner"
+                sideOffset={4}
+                anchor={anchorRef}
+            >
+                <Combobox.Popup className="am-multiselect-popup">
+                    <Combobox.Empty className="am-multiselect-empty">
+                        {t('fields.multiSelectNoResults')}
+                    </Combobox.Empty>
+                    <Combobox.List>
+                        {(option: T) => (
+                            <Combobox.Item
+                                key={valueOf(option)}
+                                className="am-multiselect-item"
+                                value={option}
+                            >
+                                <Combobox.ItemIndicator className="am-multiselect-item-indicator">
+                                    <CheckIcon className="am-multiselect-item-indicator-icon" />
+                                </Combobox.ItemIndicator>
+                                <div className="am-multiselect-item-text">
+                                    {labelOf(option)}
+                                </div>
+                            </Combobox.Item>
+                        )}
+                    </Combobox.List>
+                </Combobox.Popup>
+            </Combobox.Positioner>
+        </Combobox.Portal>
+    );
+
+    if (!multiple) {
+        return (
+            <Combobox.Root
+                {...rootProps}
+                multiple={false}
+                value={selectedValues[0] ?? null}
+                onValueChange={(val: T | null) => {
+                    onValueChange?.(val == null ? [] : [val]);
+                }}
+            >
+                <Combobox.InputGroup className="am-multiselect-single" ref={anchorRef}>
+                    <Combobox.Input
+                        id={id}
+                        placeholder={placeholderText}
+                        className="am-multiselect-single-input"
+                        {...ariaProps}
+                    />
+                    <Combobox.Clear
+                        className="am-multiselect-button"
+                        aria-label={t('fields.multiSelectClear')}
+                    >
+                        <XIcon size={12} />
+                    </Combobox.Clear>
+                    <Combobox.Trigger
+                        className="am-multiselect-button"
+                        aria-label={t('fields.multiSelectOpen')}
+                    >
+                        <ChevronDownIcon size={12} />
+                    </Combobox.Trigger>
+                </Combobox.InputGroup>
+                {popup}
+            </Combobox.Root>
+        );
+    }
 
     return (
         <Combobox.Root
-            items={options}
-            multiple={multiple}
-            name={name}
+            {...rootProps}
+            multiple
             value={selectedValues}
-            onValueChange={(val: T | T[] | null) => {
-                const arr = val == null ? [] : Array.isArray(val) ? val : [val];
-                onValueChange?.(arr);
+            onValueChange={(val: T[]) => {
+                onValueChange?.(val);
             }}
-            required={!!required}
-            disabled={disabled}
-            itemToStringValue={itemToStringValue}
-            itemToStringLabel={itemToStringLabel}
         >
             <div className="am-multiselect">
-                <Combobox.Chips className="am-multiselect-chips" ref={containerRef}>
+                <Combobox.Chips className="am-multiselect-chips" ref={anchorRef}>
                     <Combobox.Value>
                         {(val: T[]) => (
                             <React.Fragment>
-                                {val.map((v) => {
-                                    const label = itemToStringLabel
-                                        ? itemToStringLabel(v)
-                                        : (v as MultiSelectOption).label;
-                                    const key = itemToStringValue
-                                        ? itemToStringValue(v)
-                                        : (v as MultiSelectOption).value;
-                                    return (
-                                        <Combobox.Chip
-                                            key={key}
-                                            className="am-multiselect-chip"
-                                            aria-label={label}
+                                {val.map((v) => (
+                                    <Combobox.Chip
+                                        key={valueOf(v)}
+                                        className="am-multiselect-chip"
+                                        aria-label={labelOf(v)}
+                                    >
+                                        <span className="am-multiselect-chip-label">
+                                            {labelOf(v)}
+                                        </span>
+                                        <Combobox.ChipRemove
+                                            className="am-multiselect-chip-remove"
+                                            aria-label={t('fields.multiSelectRemove')}
                                         >
-                                            <span className="am-multiselect-chip-label">
-                                                {label}
-                                            </span>
-                                            <Combobox.ChipRemove
-                                                className="am-multiselect-chip-remove"
-                                                aria-label="Remove"
-                                            >
-                                                <XIcon size={12} />
-                                            </Combobox.ChipRemove>
-                                        </Combobox.Chip>
-                                    );
-                                })}
+                                            <XIcon size={12} />
+                                        </Combobox.ChipRemove>
+                                    </Combobox.Chip>
+                                ))}
                                 <Combobox.Input
                                     id={id}
-                                    placeholder={val.length > 0 ? '' : placeholder}
+                                    placeholder={val.length > 0 ? '' : placeholderText}
                                     className="am-multiselect-input"
                                     {...ariaProps}
                                 />
@@ -92,43 +163,7 @@ export function MultiSelect<T = MultiSelectOption>({
                     </Combobox.Value>
                 </Combobox.Chips>
             </div>
-            <Combobox.Portal>
-                <Combobox.Positioner
-                    className="am-multiselect-positioner"
-                    sideOffset={4}
-                    anchor={containerRef}
-                >
-                    <Combobox.Popup className="am-multiselect-popup">
-                        <Combobox.Empty className="am-multiselect-empty">
-                            No results.
-                        </Combobox.Empty>
-                        <Combobox.List>
-                            {(option: T) => {
-                                const label = itemToStringLabel
-                                    ? itemToStringLabel(option)
-                                    : (option as MultiSelectOption).label;
-                                const key = itemToStringValue
-                                    ? itemToStringValue(option)
-                                    : (option as MultiSelectOption).value;
-                                return (
-                                    <Combobox.Item
-                                        key={key}
-                                        className="am-multiselect-item"
-                                        value={option}
-                                    >
-                                        <Combobox.ItemIndicator className="am-multiselect-item-indicator">
-                                            <CheckIcon className="am-multiselect-item-indicator-icon" />
-                                        </Combobox.ItemIndicator>
-                                        <div className="am-multiselect-item-text">
-                                            {label}
-                                        </div>
-                                    </Combobox.Item>
-                                );
-                            }}
-                        </Combobox.List>
-                    </Combobox.Popup>
-                </Combobox.Positioner>
-            </Combobox.Portal>
+            {popup}
         </Combobox.Root>
     );
 }

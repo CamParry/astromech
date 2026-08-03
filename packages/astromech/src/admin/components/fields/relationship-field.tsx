@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import type { BaseFieldProps } from '@/types/index.js';
 import { Astromech } from '@/transport/http/client/index.js';
@@ -19,7 +18,6 @@ export function RelationshipField({
     onChange,
     disabled,
 }: BaseFieldProps) {
-    const { t } = useTranslation();
     const target = field.target || '';
     const multiple = field.multiple || false;
     // When the target is a titleless entry type, never fall back to a field
@@ -56,7 +54,6 @@ export function RelationshipField({
             name={name}
             required={!!required}
             {...(disabled !== undefined && { disabled })}
-            placeholder={t('fields.relationshipSelect')}
             onValueChange={(val) => {
                 if (!multiple) {
                     onChange(name, val[0]?.id ?? null);
