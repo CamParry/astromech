@@ -402,7 +402,67 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       extra wording branch in the formatter first — declaring them today would
       describe a creation screen as an entry list.
 - [ ] **P7 — authoring plugin** — Claude adapter + tool-loop over the manifest +
-      chat drawer.
+      chat drawer. **Built and merged 2026-08-03**; unticked because the
+      assistant is read-only and no model round-trip has ever run.
+    - `@astromech/authoring` ships the package, a streaming chat route, the
+      model loop and the drawer. Browser-verified against the demo: the drawer
+      opens, the transcript is a live region, focus returns to its toggle on
+      Escape, and the entries-list route's declared AI context arrives in the
+      request body. **Not verified:** an actual call to the API — that needs a
+      real key. Nor the scroll-disengage path, IME composition, the
+      Firefox/Safari textarea fallback, dark mode or a narrow viewport.
+    - **`readOnly: true` by default**, so the surface is non-mutating methods
+      only. Writes wait for a confirm UI in the drawer; there is nowhere to
+      approve one from today.
+    - `buildScopedDispatch(manifest, principal)` was the missing seam.
+      `buildDispatch` resolves the RAW services — deliberate, and stated in its
+      docblock, because the MCP transport is dev-only and trusted. A loop acting
+      for a signed-in user is not, so it gets a sibling that resolves through
+      `scopedService`. A separate function rather than an option: an options bag
+      would make an omitted key and an explicit `undefined` mean trusted and
+      allowed-nothing, which is the one distinction a caller must not get wrong.
+    - **Plugin-source methods are refused when scoped.** They dispatch through a
+      path that builds a `PluginContext` without enforcing the method's declared
+      `access` — the HTTP RPC route does that separately — so there is nothing
+      to scope them with. The loop drops them before dispatch.
+    - The `annotateManifest` filter in the loop is a **size** reduction, not a
+      check. `allowed` is advisory; `buildScopedDispatch` is what refuses.
+      `allowed === null` is kept — an input-derived permission only the scoped
+      handle can decide.
+    - **The route imports the loop at request time, not module load.** A site's
+      config is loaded in plain Node at Astro config time, and the loop's value
+      import of `astromech/methods` reaches domain services that read
+      `virtual:astromech/config`. Registering the plugin broke the demo
+      instantly. `npm run check:config` now loads the demo config the way Astro
+      does, so the trap is caught before a plugin is wired up rather than after.
+    - AI context rides in a `role: 'system'` message immediately before the
+      final user turn, keeping it after the last cache breakpoint. On the
+      opening turn there is no earlier turn to follow and a system message may
+      not be `messages[0]`, so it goes in the system prompt instead — free,
+      since no prefix is cached yet. That case shipped broken and was caught by
+      reading; it is now the package's regression test.
+    - **Declared values are sanitized** before they reach the system message:
+      control characters stripped, backticks neutralised so a value cannot close
+      its own code span, length clamped, and a closing line stating the quoted
+      values are data rather than instructions. This closes the gap P6 left.
+    - `@astromech/authoring` is the **first plugin package here with tests** —
+      21→27 across the request assembler, the tool surface and SSE framing. They
+      mock `astromech/methods` rather than importing it, so they cover this
+      package's glue and not core's seams, and need no built core dist.
+    - The drawer is the **slot system's first consumer**. Hand-written
+      throughout — the admin has no Radix, no markdown renderer, no animation
+      library. Borrowed from shadcn/`ai-elements` as behaviour, not code: the
+      scroll pin held on a ref (in state it re-renders the transcript on every
+      scroll tick), `aria-relevant="additions"` so a screen reader stops
+      re-announcing a garbled partial word per chunk, and the
+      `nativeEvent.isComposing` guard against Enter sending half a word of IME
+      input.
+    - **Still open:** no markdown rendering, no i18n, no component tests, and
+      the API base is `/api` hardcoded — `apiRoute` lives only on a virtual
+      module no hook re-exports, so a site that moves it breaks the drawer. And
+      the tool count is unaddressed: selection degrades past 30–50, permission
+      reduction bottoms out near 45, so `defer_loading` plus tool search is
+      still required.
     - **Foundation merged 2026-08-03** (`2b947da`, `610d131`), 2330/161 → 2340/164.
       `@astromech/authoring` was unwritable before it: the manifest generator,
       `buildDispatch`, `reduceSurface`, `annotateManifest`, `scopedService` and
