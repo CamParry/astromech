@@ -42,8 +42,8 @@ export type EligibilityOptions = {
 };
 
 /**
- * Collect the eligible fields inside `values`, descending into data containers.
- * Containers are normalized in place (the descriptor's `children` mints missing
+ * Collect the eligible fields inside `values`, descending into nested fields.
+ * They are normalized in place (the descriptor's `children` mints missing
  * item `_id`s), so `values` is the working copy a caller writes back.
  */
 export function collectRewriteTargets(

@@ -85,7 +85,7 @@ describe('field factories — leaves', () => {
     });
 });
 
-describe('field factories — data containers (name-first, nested)', () => {
+describe('field factories — nested fields (name-first, own data key)', () => {
     it('group(name, { fields })', () => {
         const result = group('address', { fields: [text('street'), text('city')] });
         expect(result).toEqual({
@@ -136,7 +136,7 @@ describe('field factories — data containers (name-first, nested)', () => {
     });
 });
 
-describe('field factories — layout containers (name-first, flat, chrome)', () => {
+describe('field factories — layout fields (name-first, flat, presentational)', () => {
     it('section(name, { fields }) — label omitted, derived by the renderer', () => {
         const result = section('content', { fields: [richtextStub()] });
         expect(result).toMatchObject({ name: 'content', type: 'section' });
@@ -191,7 +191,7 @@ describe('t() label descriptor', () => {
         expect(t('seo.section')).toEqual({ $t: 'seo.section' });
     });
 
-    it('a chrome container carries a `t()` label descriptor in options', () => {
+    it('a layout field carries a `t()` label descriptor in options', () => {
         const node = section('seo', {
             label: t('seo.section'),
             fields: [text('metaTitle')],

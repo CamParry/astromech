@@ -224,7 +224,7 @@ export const validateLink: FieldValidator = async (ctx) => {
 };
 
 // ---------------------------------------------------------------------------
-// containers — group, repeater, blocks, tree
+// nested fields — group, repeater, blocks, tree
 // ---------------------------------------------------------------------------
 
 /** A group holds one object of child values. */

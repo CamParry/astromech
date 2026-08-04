@@ -8,7 +8,7 @@
  * only consumer: any plugin that composes `FieldDefinition[]` at runtime can
  * validate through the same coerce → default → validate path as core.
  *
- * Data containers (group/repeater/blocks/tree) are recursed into: a descriptor
+ * Nested fields (group/repeater/blocks/tree) are recursed into: a descriptor
  * with a `children` slot reports its nested value scopes, each of which is run
  * through the same coerce → default → validate pass. Errors are keyed by the
  * `_id`-based path grammar (`fields/field-path.ts`), so a nested error lands on

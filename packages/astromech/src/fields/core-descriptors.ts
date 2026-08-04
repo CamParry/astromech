@@ -1,13 +1,11 @@
 /**
- * Core field-type descriptors — one entry per data field type.
+ * Core field-type descriptors — one entry per data-bearing field type.
  *
- * Layout containers (section/tabs/tab/accordion) are intentionally excluded:
- * they emit no data and need no descriptor.
- *
- * The four data containers (group/repeater/blocks/tree) additionally fill the
- * `children` slot: it normalizes the stored container value and reports the
- * nested value scopes inside it, which is how the pipeline recurses without
- * switching on field type.
+ * Layout fields are intentionally excluded: they emit no data and need no
+ * descriptor. The nested fields additionally fill the `children` slot, which
+ * normalizes the stored value and reports the nested value scopes inside it —
+ * how the pipeline recurses without switching on field type. `TERMINOLOGY.md`
+ * states the two categories and their membership.
  */
 
 import type {

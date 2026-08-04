@@ -78,7 +78,7 @@ const ALL_FIELDS = [
         fields: [{ name: 'tLabel', type: 'text' }],
     },
     { name: 'fBlocks', type: 'blocks' },
-    // Layout container wrapping data fields — flattened, children keep top-level keys.
+    // Layout field wrapping data fields — flattened, children keep top-level keys.
     {
         name: 'fSection',
         type: 'section',

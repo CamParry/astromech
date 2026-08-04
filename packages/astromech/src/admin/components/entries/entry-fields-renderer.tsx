@@ -1,15 +1,15 @@
 /**
  * Recursive entry field renderer.
  *
- * Renders a column (`main`/`sidebar`) of the entry field tree. Layout
- * containers are pure chrome over a FLAT data model — `section` (Panel),
- * `accordion` (Collapsible), `tabs`/`tab` (tab strip) — so their children read
- * and write top-level data keys via the same flat `values`/`onChange`. Data
- * containers (`group`/`repeater`/`blocks`) and leaf fields render through
- * `FormField`, which owns their own (possibly nested) value.
+ * Renders a column (`main`/`sidebar`) of the entry field tree. Layout fields
+ * are presentational over a FLAT data model — `section` (Panel), `accordion`
+ * (Collapsible), `tabs`/`tab` (tab strip) — so their children read and write
+ * top-level data keys via the same flat `values`/`onChange`. Nested fields
+ * (`group`/`repeater`/`blocks`) and leaf fields render through `FormField`,
+ * which owns their own (possibly nested) value.
  *
  * At the column root, a run of consecutive non-layout fields is wrapped in an
- * implicit `Panel`; layout containers render as standalone blocks.
+ * implicit `Panel`; layout fields render as standalone blocks.
  */
 
 import React from 'react';
@@ -167,7 +167,7 @@ function TabsContainer({
 }
 
 /**
- * Render a column of fields. Layout containers render standalone; a run of
+ * Render a column of fields. Layout fields render standalone; a run of
  * consecutive non-layout fields is grouped into an implicit Panel — unless
  * `surface` is false (tab bodies), where loose fields render bare and the author
  * nests a `section` when a surface is wanted.
@@ -223,6 +223,6 @@ export function EntryFieldColumn({
 
     // Expose the root values to any descendant that reads sibling fields
     // (e.g. a computed/preview field) via `useFieldValue`. The same root object
-    // flows to both columns and through layout containers (flat data model).
+    // flows to both columns and through layout fields (flat data model).
     return <FieldValuesProvider values={values}>{blocks}</FieldValuesProvider>;
 }

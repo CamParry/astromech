@@ -15,7 +15,7 @@ const REGISTERED_FIELD_TYPES = CORE_FIELD_TYPES.filter(
 );
 
 describe('register-fields', () => {
-    it('registers a component for every core field type except layout containers', () => {
+    it('registers a component for every core field type except layout fields', () => {
         for (const type of REGISTERED_FIELD_TYPES) {
             expect(
                 getFieldComponent(type),
@@ -24,7 +24,7 @@ describe('register-fields', () => {
         }
     });
 
-    it('does not register accordion or tab (layout containers handled by page renderer)', () => {
+    it('does not register accordion or tab (layout fields handled by page renderer)', () => {
         expect(getFieldComponent('accordion')).toBeUndefined();
         expect(getFieldComponent('tab')).toBeUndefined();
     });

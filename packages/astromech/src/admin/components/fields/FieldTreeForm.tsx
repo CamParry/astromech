@@ -2,9 +2,9 @@
  * Reusable field-tree form body.
  *
  * Renders a `ResolvedEntryFields` tree (main + optional sidebar) using the
- * same `EntryFieldColumn` renderer the entry-edit page uses, so layout
- * containers (section, accordion, tabs), groups, repeaters, and blocks all
- * work out of the box.
+ * same `EntryFieldColumn` renderer the entry-edit page uses, so layout fields
+ * (section, accordion, tabs), groups, repeaters, and blocks all work out of
+ * the box.
  *
  * Callers own state (`values` / `onChange`) and disabled logic.
  */

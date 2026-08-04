@@ -40,9 +40,9 @@ export function getFieldLabel(field: { name: string; label?: string }): string {
  * Entry field-tree helpers.
  *
  * The resolved schema is a tree of `FieldDefinition` nodes split across two
- * columns (`main`/`sidebar`). Layout containers (`section`/`tabs`/`tab`/
- * `accordion`) hold no data — their children keep top-level data keys. Data
- * containers (`group`/`repeater`/`blocks`) own a single top-level key and nest
+ * columns (`main`/`sidebar`). Layout fields (`section`/`tabs`/`tab`/
+ * `accordion`) hold no data — their children keep top-level data keys. Nested
+ * fields (`group`/`repeater`/`blocks`) own a single top-level key and nest
  * their children, so they are treated as opaque leaves here.
  */
 
@@ -58,7 +58,7 @@ function collect(nodes: FieldDefinition[], out: FieldDefinition[]): void {
     }
 }
 
-/** Flatten a node list into its top-level data fields (layout containers unwrapped). */
+/** Flatten a node list into its top-level data fields (layout fields unwrapped). */
 export function flattenFieldNodes(nodes: FieldDefinition[]): FieldDefinition[] {
     const out: FieldDefinition[] = [];
     collect(nodes, out);

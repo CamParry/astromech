@@ -958,10 +958,10 @@ describe('layout flattening', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Data containers — keyed by path, never by bare child name
+// Nested fields — keyed by path, never by bare child name
 // ---------------------------------------------------------------------------
 
-describe('data containers', () => {
+describe('nested fields', () => {
     /**
      * Containers ARE recursed (see pipeline-nested.test.ts for the full matrix).
      * What matters here is that recursion never leaks a child's bare name into

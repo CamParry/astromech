@@ -71,7 +71,7 @@ export function FormField({
     const error = useFieldError(path);
     const warning = useFieldWarning(path);
 
-    // A container-less group is invisible chrome — pure data nesting. It renders
+    // A group with no box draws nothing itself — pure data nesting. It renders
     // its sub-fields inline with no label or box; pair it with a `section` for a
     // heading/surface. No wrapper here means no blur reporter either — its
     // children each carry their own.

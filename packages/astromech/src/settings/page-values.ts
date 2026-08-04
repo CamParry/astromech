@@ -7,8 +7,8 @@
  *   `<path>`           → shared (non-translatable top-level) fields
  *   `<path>:<locale>`  → per-locale (translatable) fields
  *
- * "Top-level data field" = walk the tree; layout containers are transparent;
- * data containers (group/repeater/blocks) and leaves are a single key whose
+ * "Top-level data field" = walk the tree; layout fields are transparent;
+ * nested fields (group/repeater/blocks) and leaves are a single key whose
  * own `translatable` flag governs.
  */
 

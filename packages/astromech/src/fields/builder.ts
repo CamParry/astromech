@@ -1,11 +1,11 @@
 /**
  * Field factories — pure functions returning plain `FieldDefinition` POJOs (no
  * builder class, chaining, or overloads). Uniform shape `type(name, options?)`,
- * with container children in `options.fields` (or `options.blocks`).
+ * with nested children in `options.fields` (or `options.blocks`).
  *
- * For chrome containers (`section`/`accordion`/`tab`) the name is inert — never a
+ * For a layout field (`section`/`accordion`/`tab`) the name is inert — never a
  * data key — and `label` is optional: when omitted the renderer derives the title
- * from the name, like an unlabelled leaf.
+ * from the name, like an unlabelled leaf. `TERMINOLOGY.md` states the categories.
  */
 
 import type {

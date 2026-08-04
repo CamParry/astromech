@@ -96,7 +96,7 @@ describe('partitionGlobalValues', () => {
         });
     });
 
-    describe('data containers (group/repeater/blocks) treated as single top-level key', () => {
+    describe('nested fields (group/repeater/blocks) treated as single top-level key', () => {
         it('group partitioned by its own translatable flag (false → shared)', () => {
             const schema = fields([
                 {
@@ -158,7 +158,7 @@ describe('partitionGlobalValues', () => {
         });
     });
 
-    describe('layout containers (section/tabs/accordion) are transparent — children partition individually', () => {
+    describe('layout fields (section/tabs/accordion) are transparent — children partition individually', () => {
         it('fields inside a section partition by their own flag', () => {
             const schema = fields([
                 {
@@ -219,7 +219,7 @@ describe('partitionGlobalValues', () => {
             expect(result.perLocale).toEqual({ bio: 'About us' });
         });
 
-        it('nested layout containers are fully unwrapped', () => {
+        it('nested layout fields are fully unwrapped', () => {
             const schema = fields([
                 {
                     name: 'outer',

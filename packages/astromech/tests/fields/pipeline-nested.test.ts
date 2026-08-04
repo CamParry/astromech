@@ -1,5 +1,5 @@
 /**
- * Nested field validation — the pipeline recursing into data containers
+ * Nested field validation — the pipeline recursing into nested fields
  * (group / repeater / blocks / tree) and keying errors by the `_id`-based path
  * grammar from `fields/field-path.ts`.
  *
@@ -139,7 +139,7 @@ describe('group', () => {
         expect(errors['outer.inner.deep']).toEqual(['This field is required']);
     });
 
-    it('a layout container inside a group stays flat', async () => {
+    it('a layout field inside a group stays flat', async () => {
         const { errors } = await processFields(
             {},
             [

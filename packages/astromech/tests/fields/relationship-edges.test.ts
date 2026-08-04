@@ -356,7 +356,7 @@ describe('collectRelationshipSchemaPaths', () => {
         expect(collectRelationshipSchemaPaths(defs)).toEqual(['sections[].meta.author']);
     });
 
-    it('unwraps layout containers, which hold no data key', () => {
+    it('unwraps layout fields, which hold no data key', () => {
         const defs: FieldDefinition[] = [
             {
                 name: 'main',

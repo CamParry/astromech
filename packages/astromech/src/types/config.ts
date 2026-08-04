@@ -189,7 +189,7 @@ export type EntryTypeConfig = {
     type?: string;
     /**
      * Field tree for this entry type. Either a flat list (single column) or an
-     * explicit `{ main, sidebar }` two-column split. Layout containers
+     * explicit `{ main, sidebar }` two-column split. Layout fields
      * (`section`/`tabs`/`tab`/`accordion`) are field types within the tree.
      */
     fields?: EntryFields;

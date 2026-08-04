@@ -1,10 +1,9 @@
 /**
- * Field system types — field definitions, validation, layout containers.
+ * Field system types — field definitions, validation, field categories.
  *
- * An entry's schema is a tree of `FieldDefinition` nodes. Layout containers
- * (`section`/`tabs`/`tab`/`accordion`) are field *types*, not a separate
- * hierarchy — their children keep top-level data keys (flat). Only data
- * containers (`group`/`repeater`/`blocks`) introduce a nested data key.
+ * An entry's schema is a tree of `FieldDefinition` nodes. Layout fields are
+ * field *types* rather than a separate hierarchy; `TERMINOLOGY.md` states the
+ * two categories and their membership.
  */
 
 import type { User } from './domain.js';
@@ -39,7 +38,7 @@ export const CORE_FIELD_TYPES = [
     'radio-group',
     'link',
     'key-value',
-    // Layout containers — flat data, pure chrome.
+    // Layout fields — presentational, flat data.
     'section',
     'tabs',
     'tab',
@@ -323,15 +322,15 @@ export type FieldDefinition = {
     options?: SelectOption[] | string[];
     target?: string;
     multiple?: boolean;
-    /** Children for layout containers and `group`/`repeater`/`tree`. */
+    /** Children for layout fields and `group`/`repeater`/`tree`. */
     fields?: FieldDefinition[];
     min?: number;
     max?: number;
     /** Maximum nesting depth for `tree` fields. Unlimited when omitted. */
     maxDepth?: number;
     /**
-     * `group` only. When `false` the group becomes invisible chrome: box AND
-     * label are dropped and the sub-fields render inline, keeping only the nested
+     * `group` only. When `false` the group draws nothing itself: box AND label
+     * are dropped and the sub-fields render inline, keeping only the nested
      * data key. Wrap it in a `section` when a heading/surface is wanted. Defaults
      * to `true`.
      */
@@ -370,8 +369,8 @@ export type FieldDefinition = {
 };
 
 /**
- * Top-level entry field declaration. Either a flat list (chrome-less, single
- * column) or an explicit two-column split. The *shape* signals the layout —
+ * Top-level entry field declaration. Either a flat list (no layout fields,
+ * single column) or an explicit two-column split. The *shape* signals the layout —
  * there is no `layout()` helper.
  */
 export type EntryFields =
