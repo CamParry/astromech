@@ -82,7 +82,27 @@ export function fakeApprovals(seed: ApprovalRow[] = []): FakeApprovals {
                 row.arguments = null;
             }
         }),
+        findPending: vi.fn(async (userId) =>
+            rows.filter((row) => answerable(row, userId))
+        ),
+        rejectPending: vi.fn(async (userId) => {
+            for (const row of rows) {
+                if (!answerable(row, userId)) continue;
+                row.status = 'rejected';
+                row.resolvedAt = new Date();
+                row.arguments = null;
+            }
+        }),
     };
 
     return { storage, rows };
+}
+
+/** The SQL predicate the storage matches on: this user's, pending, unexpired. */
+function answerable(row: ApprovalRow, userId: string): boolean {
+    return (
+        row.userId === userId &&
+        row.status === 'pending' &&
+        row.expiresAt.getTime() > Date.now()
+    );
 }

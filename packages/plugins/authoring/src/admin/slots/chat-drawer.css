@@ -32,6 +32,13 @@
     color: var(--am-color-text-default);
 }
 
+.am-authoring-panel-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: calc(var(--am-space) * 2);
+    align-items: center;
+}
+
 .am-authoring-close {
     display: flex;
     flex-shrink: 0;

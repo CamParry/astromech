@@ -5,6 +5,7 @@
 
 import type { AIContextItem, PluginContext, PluginRawRoute } from 'astromech';
 import { createApprovalsStorage } from '../approvals/storage.js';
+import { createSessionsStorage } from '../sessions/storage.js';
 import type {
     ApprovalDecision,
     ChatEvent,
@@ -70,6 +71,7 @@ async function handleChat(
         aiContext: body.aiContext ?? [],
         logger: ctx.logger,
         approvals: createApprovalsStorage(ctx.db),
+        sessions: createSessionsStorage(ctx.db),
         userId: user.id,
         decisions: body.decisions ?? [],
     });

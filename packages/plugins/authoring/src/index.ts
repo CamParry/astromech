@@ -7,8 +7,10 @@
 import { definePlugin, withDefaults } from 'astromech';
 import { authoringPermissions } from './permissions/authoring.js';
 import { chatRoutes } from './routes/chat.js';
+import { buildSessionsService } from './service/sessions.js';
 import { migrationProvider } from '../migrations/index.js';
 import { approvalsTable } from './tables/approvals.js';
+import { sessionsTable } from './tables/sessions.js';
 import { AUTHORING_PACKAGE } from './types.js';
 import type {
     AuthoringModel,
@@ -38,9 +40,10 @@ export const authoring = definePlugin((options?: AuthoringOptions) => {
         version: '0.1.0',
         label: 'Authoring',
         icon: 'Sparkles',
-        tables: [approvalsTable],
+        tables: [approvalsTable, sessionsTable],
         migrations: migrationProvider,
         permissions: authoringPermissions,
+        service: buildSessionsService(resolved),
         // Streaming only — the chat response is server-sent events.
         rawRoutes: chatRoutes(resolved),
         admin: {

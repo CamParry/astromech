@@ -15,6 +15,7 @@ import { buildRequest } from './request.js';
 import { TOOL_SEARCH, toRunnableTools } from './tools.js';
 import { errorMessage } from '../error-message.js';
 import type { ApprovalsStorage } from '../approvals/storage.js';
+import type { SessionsStorage } from '../sessions/storage.js';
 import type {
     ApprovalDecision,
     ChatEvent,
@@ -36,9 +37,28 @@ export async function* runAuthoringLoop(input: {
     aiContext: AIContextItem[];
     logger: PluginLogger;
     approvals: ApprovalsStorage;
+    sessions: SessionsStorage;
     userId: string;
     decisions: ApprovalDecision[];
 }): AsyncGenerator<ChatEvent> {
+    // Every completed turn is appended here and the whole thing is stored, so
+    // what comes back on a reload is what the drawer would have posted.
+    const turns = [...input.messages];
+
+    /** Store the transcript as it stands. A failed write must not kill the turn. */
+    async function persist(): Promise<void> {
+        try {
+            const stored = await input.sessions.save(input.userId, turns);
+            if (!stored) {
+                input.logger.warn(
+                    'Chat session past its size cap — this conversation will not survive a reload.'
+                );
+            }
+        } catch (error) {
+            input.logger.error('Could not store the chat session.', error);
+        }
+    }
+
     try {
         const runnableTools = toRunnableTools(input.tools);
         input.logger.info(
@@ -47,7 +67,6 @@ export async function* runAuthoringLoop(input: {
 
         // A transcript ending on unanswered calls is a paused turn, and every
         // one of them is answered before a new request is built.
-        const turns = [...input.messages];
         const resumed = await resumePausedTurn({
             messages: turns,
             tools: input.tools,
@@ -57,6 +76,7 @@ export async function* runAuthoringLoop(input: {
         });
         if (resumed !== null) {
             turns.push(resumed);
+            await persist();
             yield { type: 'message', message: resumed };
         }
 
@@ -88,10 +108,10 @@ export async function* runAuthoringLoop(input: {
             // Mandatory every turn: returning from the loop body without
             // awaiting the final message aborts the stream.
             const message = await stream.finalMessage();
-            yield {
-                type: 'message',
-                message: { role: 'assistant', content: message.content },
-            };
+            const turn: ChatMessage = { role: 'assistant', content: message.content };
+            turns.push(turn);
+            await persist();
+            yield { type: 'message', message: turn };
 
             // Stop before anything executes when the turn reached a mutating
             // call: `generateToolResponse` is what runs the tools, so the gate
@@ -112,8 +132,12 @@ export async function* runAuthoringLoop(input: {
             // top of the next one, so each tool runs exactly once whether it is
             // called here or by the runner.
             const toolResult = await runner.generateToolResponse();
-            if (toolResult !== null)
-                yield { type: 'message', message: toChatMessage(toolResult) };
+            if (toolResult !== null) {
+                const answered = toChatMessage(toolResult);
+                turns.push(answered);
+                await persist();
+                yield { type: 'message', message: answered };
+            }
         }
     } catch (error) {
         yield { type: 'error', error: errorMessage(error) };

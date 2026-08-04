@@ -11,9 +11,22 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useChat } from '../../src/admin/use-chat.js';
 import type { UseChat } from '../../src/admin/use-chat.js';
+import type { ChatSession } from '../../src/service/sessions.js';
 import type { ApprovalRequest, ChatEvent, ChatMessage } from '../../src/types.js';
 
-vi.mock('astromech/ui', () => ({ useAIContextItems: () => [] }));
+const { sessionsService } = vi.hoisted(() => ({
+    sessionsService: {
+        getSession: vi.fn(
+            async (): Promise<ChatSession> => ({ messages: [], pending: [] })
+        ),
+        clearSession: vi.fn(async (): Promise<null> => null),
+    },
+}));
+
+vi.mock('astromech/ui', () => ({
+    useAIContextItems: () => [],
+    useAstromechPlugin: () => ({ serviceKey: 'authoring', service: sessionsService }),
+}));
 
 // `act` only batches and flushes once React is told it is under test.
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -145,6 +158,93 @@ describe('useChat approvals', () => {
     });
 });
 
+describe('useChat session', () => {
+    beforeEach(() => {
+        fetchMock = vi.fn();
+        vi.stubGlobal('fetch', fetchMock);
+        sessionsService.getSession.mockClear();
+        sessionsService.clearSession.mockClear();
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it('restores the stored transcript and the calls still held', async () => {
+        sessionsService.getSession.mockResolvedValueOnce({
+            messages: [PAUSED_TURN],
+            pending: [REQUEST],
+        });
+        const mounted = mountChat();
+
+        await settle();
+
+        expect(mounted.chat().entries).toEqual([
+            { kind: 'message', message: PAUSED_TURN },
+        ]);
+        expect(mounted.chat().pending).toEqual([REQUEST]);
+        expect(mounted.chat().isRestoring).toBe(false);
+        mounted.unmount();
+    });
+
+    it('starts empty when the stored session cannot be read', async () => {
+        sessionsService.getSession.mockRejectedValueOnce(new Error('offline'));
+        const mounted = mountChat();
+
+        await settle();
+
+        expect(mounted.chat().entries).toEqual([]);
+        expect(mounted.chat().isRestoring).toBe(false);
+        mounted.unmount();
+    });
+
+    it('leaves a message sent before the restore landed alone', async () => {
+        let land: (session: ChatSession) => void = () => undefined;
+        sessionsService.getSession.mockReturnValueOnce(
+            new Promise<ChatSession>((resolve) => {
+                land = resolve;
+            })
+        );
+        answerWith([{ type: 'done' }]);
+        const mounted = mountChat();
+
+        await drain(() => {
+            mounted.chat().send('update home');
+            land({ messages: [PAUSED_TURN], pending: [REQUEST] });
+        });
+
+        expect(mounted.chat().entries).toEqual([
+            {
+                kind: 'message',
+                message: {
+                    role: 'user',
+                    content: [{ type: 'text', text: 'update home' }],
+                },
+            },
+        ]);
+        expect(mounted.chat().pending).toEqual([]);
+        mounted.unmount();
+    });
+
+    it('drops the conversation on both sides when a new one starts', async () => {
+        sessionsService.getSession.mockResolvedValueOnce({
+            messages: [PAUSED_TURN],
+            pending: [REQUEST],
+        });
+        const mounted = mountChat();
+        await settle();
+
+        await drain(() => {
+            mounted.chat().newChat();
+        });
+
+        expect(sessionsService.clearSession).toHaveBeenCalled();
+        expect(mounted.chat().entries).toEqual([]);
+        expect(mounted.chat().pending).toEqual([]);
+        mounted.unmount();
+    });
+});
+
 type Mounted = { chat: () => UseChat; unmount: () => void };
 
 /** Mount a component that does nothing but hold the hook. */
@@ -152,7 +252,7 @@ function mountChat(): Mounted {
     let latest: UseChat | null = null;
 
     function Probe(): null {
-        latest = useChat('authoring');
+        latest = useChat();
         return null;
     }
 
@@ -183,6 +283,11 @@ async function drain(action: () => void): Promise<void> {
         action();
         await new Promise((resolve) => setTimeout(resolve, 0));
     });
+}
+
+/** Let the mount's session request land before asserting. */
+async function settle(): Promise<void> {
+    await drain(() => undefined);
 }
 
 /** Make the next request answer with these events, one SSE frame each. */

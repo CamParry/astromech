@@ -17,7 +17,6 @@ import type { ChatEntry, UseChat } from '../../src/admin/use-chat.js';
 let chat: UseChat;
 
 vi.mock('astromech/ui', () => ({
-    useAstromechPlugin: () => ({ serviceKey: 'authoring' }),
     useAIContextItems: () => [],
     Button: ({
         variant: _variant,
@@ -70,11 +69,13 @@ describe('ChatDrawer approvals', () => {
             entries: [],
             tail: '',
             isStreaming: false,
+            isRestoring: false,
             pending: [],
             rejected: {},
             send: vi.fn(),
             respond: vi.fn(),
             stop: vi.fn(),
+            newChat: vi.fn(),
         };
         closeDrawer();
         toggleDrawer();
@@ -177,11 +178,13 @@ describe('ChatDrawer transcript', () => {
             entries: [],
             tail: '',
             isStreaming: false,
+            isRestoring: false,
             pending: [],
             rejected: {},
             send: vi.fn(),
             respond: vi.fn(),
             stop: vi.fn(),
+            newChat: vi.fn(),
         };
         closeDrawer();
         toggleDrawer();
@@ -216,11 +219,58 @@ describe('ChatDrawer transcript', () => {
     });
 });
 
+describe('ChatDrawer session', () => {
+    beforeEach(() => {
+        chat = {
+            entries: [],
+            tail: '',
+            isStreaming: false,
+            isRestoring: false,
+            pending: [],
+            rejected: {},
+            send: vi.fn(),
+            respond: vi.fn(),
+            stop: vi.fn(),
+            newChat: vi.fn(),
+        };
+        closeDrawer();
+        toggleDrawer();
+    });
+
+    it('says so while the stored conversation is still being read', () => {
+        chat.isRestoring = true;
+        const mounted = mountDrawer();
+
+        expect(mounted.hints()).toEqual(['Loading your conversation…']);
+        mounted.unmount();
+    });
+
+    it('starts a new conversation from the header', () => {
+        chat.entries = [calling('toolu_1', 'entries_page_query')];
+        const mounted = mountDrawer();
+
+        mounted.click('New chat');
+
+        expect(chat.newChat).toHaveBeenCalled();
+        mounted.unmount();
+    });
+
+    it('holds the control back while a turn is streaming', () => {
+        chat.isStreaming = true;
+        const mounted = mountDrawer();
+
+        expect(mounted.button('New chat')?.disabled).toBe(true);
+        mounted.unmount();
+    });
+});
+
 type Mounted = {
     panel: () => HTMLElement | null;
     prompt: () => HTMLElement | null;
     messages: () => string[];
     toolMarkers: () => string[];
+    hints: () => string[];
+    button: (label: string) => HTMLButtonElement | undefined;
     click: (label: string) => void;
     rerender: () => void;
     unmount: () => void;
@@ -241,16 +291,21 @@ function mountDrawer(): Mounted {
     const textOf = (selector: string): string[] =>
         [...host.querySelectorAll(selector)].map((element) => element.textContent ?? '');
 
+    const buttonOf = (label: string): HTMLButtonElement | undefined =>
+        [...host.querySelectorAll('button')].find(
+            (candidate) => candidate.textContent === label
+        );
+
     return {
         panel: () => host.querySelector<HTMLElement>('.am-authoring-approvals'),
         prompt: () => host.querySelector<HTMLElement>('.am-authoring-prompt'),
         rerender: render,
         messages: () => textOf('.am-authoring-approval-message'),
         toolMarkers: () => textOf('.am-authoring-tool'),
+        hints: () => textOf('.am-authoring-hint'),
+        button: buttonOf,
         click: (label) => {
-            const button = [...host.querySelectorAll('button')].find(
-                (candidate) => candidate.textContent === label
-            );
+            const button = buttonOf(label);
             if (button === undefined) throw new Error(`no "${label}" button`);
             act(() => {
                 button.click();

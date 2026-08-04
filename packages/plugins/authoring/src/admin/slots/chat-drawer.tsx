@@ -9,7 +9,7 @@ import type { ComponentProps, KeyboardEvent, ReactElement } from 'react';
 import type { BetaContentBlockParam } from '@anthropic-ai/sdk/resources/beta';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Button, useAstromechPlugin } from 'astromech/ui';
+import { Button } from 'astromech/ui';
 import { closeDrawer, focusToggleButton, useDrawerOpen } from '../drawer-state.js';
 import { useChat } from '../use-chat.js';
 import type { ChatEntry, RejectedCalls } from '../use-chat.js';
@@ -33,9 +33,18 @@ const MARKDOWN_COMPONENTS = {
 };
 
 export default function ChatDrawer(): ReactElement {
-    const { serviceKey } = useAstromechPlugin();
-    const { entries, tail, isStreaming, pending, rejected, send, respond, stop } =
-        useChat(serviceKey);
+    const {
+        entries,
+        tail,
+        isStreaming,
+        isRestoring,
+        pending,
+        rejected,
+        send,
+        respond,
+        stop,
+        newChat,
+    } = useChat();
     const open = useDrawerOpen();
     const [prompt, setPrompt] = useState('');
     const [showJump, setShowJump] = useState(false);
@@ -101,6 +110,13 @@ export default function ChatDrawer(): ReactElement {
         followLatest();
     }
 
+    function handleNewChat(): void {
+        newChat();
+        setPrompt('');
+        followLatest();
+        promptRef.current?.focus();
+    }
+
     function handlePromptKeyDown(event: KeyboardEvent<HTMLTextAreaElement>): void {
         if (event.key !== 'Enter' || event.shiftKey) return;
         // React's composition state lags the native flag by a tick on some
@@ -120,14 +136,25 @@ export default function ChatDrawer(): ReactElement {
         <div className="am-authoring-panel" hidden={!open} onKeyDown={handlePanelKeyDown}>
             <div className="am-authoring-panel-header">
                 <h2 className="am-authoring-panel-title">Assistant</h2>
-                <button
-                    type="button"
-                    className="am-authoring-close"
-                    aria-label="Close the authoring assistant"
-                    onClick={handleClose}
-                >
-                    <CloseIcon />
-                </button>
+                <div className="am-authoring-panel-actions">
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        disabled={isStreaming}
+                        onClick={handleNewChat}
+                    >
+                        New chat
+                    </Button>
+                    <button
+                        type="button"
+                        className="am-authoring-close"
+                        aria-label="Close the authoring assistant"
+                        onClick={handleClose}
+                    >
+                        <CloseIcon />
+                    </button>
+                </div>
             </div>
 
             <div className="am-authoring-body">
@@ -141,7 +168,12 @@ export default function ChatDrawer(): ReactElement {
                     aria-relevant="additions"
                     onScroll={handleScroll}
                 >
-                    {entries.length === 0 ? (
+                    {isRestoring ? (
+                        <p className="am-authoring-hint" aria-busy="true">
+                            Loading your conversation…
+                        </p>
+                    ) : null}
+                    {!isRestoring && entries.length === 0 ? (
                         <p className="am-authoring-hint">
                             Ask about the content you are looking at. The assistant
                             reaches only what your role can already reach.

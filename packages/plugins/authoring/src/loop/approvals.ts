@@ -10,8 +10,8 @@ import type {
 } from '@anthropic-ai/sdk/resources/beta';
 import type { ToolDefinition } from 'astromech';
 import { invokeTool } from './tools.js';
+import { toApprovalRequest } from '../approvals/request.js';
 import type { ApprovalsStorage, ClaimedApproval } from '../approvals/storage.js';
-import type { ApprovalRow } from '../tables/approvals.js';
 import type { ApprovalDecision, ApprovalRequest, ChatMessage } from '../types.js';
 
 /** A mutating call the model made, paired with the tool it named. */
@@ -53,7 +53,7 @@ export async function pauseForApproval(input: {
         }))
     );
 
-    return rows.map((row) => toRequest(row, calls));
+    return rows.map((row) => toApprovalRequest(row, input.tools));
 }
 
 /** The calls in `content` that name a tool declaring it changes stored data. */
@@ -69,21 +69,6 @@ export function mutatingCalls(
         calls.push({ block, tool });
     }
     return calls;
-}
-
-/** The wire request for one minted row, worded by the tool core built it from. */
-function toRequest(row: ApprovalRow, calls: MutatingCall[]): ApprovalRequest {
-    const call = calls.find(({ block }) => block.id === row.toolUseId);
-    const args = row.arguments ?? {};
-    return {
-        approvalId: row.id,
-        toolUseId: row.toolUseId,
-        method: row.method,
-        toolName: row.toolName,
-        message: call?.tool.confirmMessage(args) ?? `Run "${row.method}"?`,
-        destructive: row.destructive,
-        arguments: args,
-    };
 }
 
 // ============================================================================
