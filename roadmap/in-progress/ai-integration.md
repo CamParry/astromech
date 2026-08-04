@@ -633,6 +633,65 @@ f(x)`), so re-coercion is only observable when the STORED value is not
     - Worth deciding first: whether the staged-entry + preview-token path
       (layer 3) makes the drawer gate redundant for the destructive cases, since
       that channel already exists and is reviewed under a real session.
+- [ ] **P9 — persisted chat sessions, per user.** The transcript lives in
+      `useChat`'s React state. It survives closing the drawer and navigating the
+      SPA now that the panel stays mounted, but a reload loses the lot. Give a
+      user a list of their past conversations to reopen, rename and delete.
+    - **Sequence it after P8**, which turns the wire transcript into content
+      blocks so a paused `tool_use` can round-trip. Whatever P9 stores has to be
+      that shape; storing today's `{role, content: string}` first means migrating
+      rows for a format already known to be changing.
+    - A plugin table via `defineTable`, keyed by user. A session belongs to the
+      user who had it — decide explicitly whether an admin may read someone
+      else's, because "an admin can read everything" is the default that ships if
+      nobody decides. P10 is the answer for oversight; a readable transcript is a
+      different and wider thing.
+    - **A stored transcript is a copy of content sitting outside the permission
+      system.** It can quote a `private: true` field its author could read at the
+      time, and it outlives the entry being trashed. Reopening an old session has
+      to re-check what the reader may see today rather than replaying what was
+      visible then, and retention needs a policy rather than growing forever.
+    - The drawer gains a session list — the first thing in it that is not the
+      current conversation. Whether that is a header control or a second panel
+      state is worth settling before either is built.
+- [ ] **P10 — audit trail for what the assistant did.** Which method ran, with
+      which arguments, for which user, with what outcome — and, once P8 lands,
+      who approved it. Nothing records any of this today.
+    - **It belongs in core, not the plugin.** The CLI, the MCP server and the
+      admin's own routes raise the same question, and logging it in the drawer
+      leaves every other transport silent. Dispatch through `scopedServices` is
+      the choke point they already share and where the acting identity is known.
+      AI is the forcing function here the same way the chat drawer was for UI
+      slots.
+    - **Arguments carry content.** A translate call names a field, an update
+      carries its new value, and either can be `private: true`. Decide what a row
+      holds: method id, target ids and outcome are cheap and answer most
+      questions, while full payloads make the log a second uncontrolled copy of
+      the content with P9's disclosure problem attached.
+    - Without P8's decision recorded beside the call, the log cannot answer the
+      question it exists for — whether a human agreed to the write.
+    - Adjacent, not the same: `@astromech/backups` already keeps versions of an
+      entry. A version answers what the row used to look like; an audit trail
+      answers who changed it and through what.
+- [ ] **P11 — keep the assistant on the site's content.** The system prompt
+      describes the tools and nothing else; nothing tells the model to decline
+      "write my cover letter". A CMS assistant that answers general questions is
+      an uncapped bill on the site owner's API key, and it is not what the drawer
+      is for.
+    - **A system prompt shapes the default, it is not a boundary.** Write that
+      into the work rather than discovering it later. The enforcing limits are
+      already built — the tool surface, `readOnly`, the permission scope — and the
+      missing one is a spend or rate cap, which belongs with this item but is a
+      different mechanism.
+    - Make the refusal useful: decline and name what it can do instead. An
+      assistant that only says it can't help reads as broken.
+    - **This cannot be unit-tested.** The tool-search work set the precedent — a
+      live run is the evidence, and it is what proved a single prompt paragraph
+      was load-bearing. Budget a cheap recorded check against a set of off-topic
+      prompts, not a mock.
+    - A site should be able to add its own house rules by appending to the
+      prompt, never replacing it: a replaced prompt drops the tool-naming
+      paragraph the tool search depends on.
 
 ## Decisions worth not re-deriving
 
