@@ -7,7 +7,7 @@ You are planning: **$ARGUMENTS**
 
 This command is for thinking, not building. The output is a clear direction and (where warranted) a written plan — **no implementation**. When the plan is settled, it hands off to `/feature` or `/refactor`. Use this to open a session and drive focus.
 
-Per CLAUDE.md, this is a conversation first: for architecture decisions, talk it through back-and-forth before producing any plan or option menu — don't assume and proceed. Don't rush to a document.
+Per `AGENTS.md`, this is a conversation first: for architecture decisions, talk it through back-and-forth before producing any plan or option menu — don't assume and proceed. Don't rush to a document.
 
 ## 1. Frame the problem
 

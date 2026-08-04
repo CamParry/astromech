@@ -1,4 +1,4 @@
-# 0007 — the media browser shares plumbing, not layout
+# 0010 — the media browser shares plumbing, not layout
 
 **Date:** 2026-08-04
 **Status:** accepted

@@ -18,7 +18,7 @@ findings.
 
 Groups 1–3 below are one branch. The `definePermissions` work the audit also
 triggered is **not** part of it — that is Phase 3 of
-`roadmap/in-progress/plugin-authoring-experience.md`, lands separately, and
+`roadmap/completed/plugin-authoring-experience.md`, lands separately, and
 touches core.
 
 ## Compliance at time of audit

@@ -10,7 +10,7 @@ only precondition.
 were migrated onto it. Test baseline 1211 → 1256.
 
 **Everything deliberately left behind is tracked in
-`roadmap/planned/storage-layer-follow-ups.md`** — the raw-Kysely sites above
+`roadmap/completed/storage-layer-follow-ups.md`** — the raw-Kysely sites above
 `storage/`, the gated codec collapse, four pre-existing defects the migration
 surfaced, and `col.reference` resolution.
 
@@ -60,7 +60,7 @@ Three findings from reading the code rather than the spec:
 
 Four pre-existing defects surfaced, each verified to sit outside this
 workstream's diff. All are filed in
-`roadmap/planned/storage-layer-follow-ups.md` §3: the empty `trashed: true`
+`roadmap/completed/storage-layer-follow-ups.md` §3: the empty `trashed: true`
 read, `localeGroup` minting a UUID against a `defaultUlid` descriptor, a
 tx-bound `transaction()` calling `getDb()`, and `built-in.ts`'s private `where`
 builder still reading bare `null` as "no filter".
@@ -73,7 +73,7 @@ builder still reading bare `null` as "no filter".
 - Bare `null` in `where` means `IS NULL`. This **changes** `tableStorage`'s
   current behaviour (it reads null as "no filter"); audit its callers.
 
-## Out of scope (deliberate) — now tracked in `planned/storage-layer-follow-ups.md`
+## Out of scope (deliberate) — now tracked in `completed/storage-layer-follow-ups.md`
 
 - **Raw Kysely above `storage/`** (§1 there). Four services (`media`,
   `notifications`, `settings`, `users`), three transport files, `cron/runner.ts`
@@ -97,5 +97,5 @@ builder still reading bare `null` as "no filter".
     This never applied to `col.reference` columns, which are a different
     mechanism from content relationships — and whose resolution was cut from
     this workstream entirely. It is tracked in
-    `planned/storage-layer-follow-ups.md` §4, with the naming constraint that
+    `completed/storage-layer-follow-ups.md` §4, with the naming constraint that
     matters: it must **not** be called `populate`.

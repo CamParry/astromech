@@ -2,8 +2,11 @@
 
 A development-orientation map for working **on the CMS** — where things live and
 the invariants to hold. It is deliberately thin: the canonical detail lives in
-the code, the types (`packages/astromech/src/types/`), and the design docs (`specs/`). When this
-file and the code disagree, the code wins — fix this file.
+the code and the types (`packages/astromech/src/types/`). When this file and the
+code disagree, the code wins — fix this file.
+
+It describes the present only. Why something is the way it is, and what it used
+to be, are in `decisions/`.
 
 > User-facing guides (configuring a project, modelling content, writing plugins)
 > belong in `apps/docs/`, not here.
@@ -31,21 +34,21 @@ one another:
 routes · admin · boot · codegen · cli          entrypoints & composition root
 transport (http · local · mcp · cli · tools)   delivery — http/client/ is the fetch Client (astromech/fetch), over the wire
 policies                                       permission/confirmation wrappers over the manifest
-entries · media · users · settings             domains — siblings, never import each other
+content · entries · media · users ·            domains — siblings, never import each other
+  settings · notifications                       (content is downstream: it may import entries)
 plugins/runtime · database · storage ·         capabilities
   email · cron · request-context · fields · permissions
 types · utilities · errors                     pure leaves
 ```
 
-The four first-party plugins (`@astromech/{seo,redirects,menus,backups}`) live
-OUTSIDE this `src/` graph, in `packages/plugins/` — each a separately published
+The six first-party plugins (`@astromech/{authoring,backups,forms,menus,redirects,seo}`)
+live OUTSIDE this `src/` graph, in `packages/plugins/` — each a separately published
 npm package that consumes core only through the public `astromech` surface. The
 plugin-authoring API (`definePluginTable`, `createStorage`, codec helpers,
 descriptor type vocabulary, …) is part of the root `astromech` export, not a
-separate subpath — the standalone `astromech/plugin-kit` package was dissolved. They
-prove the public surface can build a real plugin; cross-package isolation is
-enforced by each package's `exports` boundary at publish time. The plugin
-**runtime** (hook engine) stays a core capability.
+separate subpath. They prove the public surface can build a real plugin;
+cross-package isolation is enforced by each package's `exports` boundary at
+publish time. The plugin **runtime** (hook engine) stays a core capability.
 
 Key invariants:
 
@@ -67,9 +70,6 @@ Key invariants:
 - **Leaves are pure.** `types/`, `utilities/`, and `errors/` import only other
   leaves or third-party packages.
 - **Enforced** by `packages/astromech/.dependency-cruiser.cjs` (`npm run lint:deps`), which scans `packages/astromech/src` only — core's internal DAG. Cross-package isolation is enforced by `exports` boundaries at publish, not a repo-wide scan.
-
-(`core/`, `sdk/`, `api/` no longer exist; they were dissolved in the 2026-06
-refactor. Published subpaths were unchanged.)
 
 ## Directory map
 
@@ -111,7 +111,7 @@ packages/
 │   │   ├── notifications/  # notifications domain: service · schema · user-scoped storage
 │   │   │
 │   │   │   ── capabilities ───────────────────────────────────────────────
-│   │   ├── database/       # Kysely client/drivers + schema.ts aggregator (was db/; public subpath unchanged)
+│   │   ├── database/       # Kysely client/drivers + schema.ts aggregator (public subpath: astromech/db/schema)
 │   │   ├── storage/        # blob-storage registry + drivers/ (filesystem, r2, s3)
 │   │   ├── cloudflare/     # binding-name resolution across Workers and Node
 │   │   ├── permissions/    # permission model: roles, grammar, BUILT_IN_ROLES, can()
@@ -132,6 +132,7 @@ packages/
 │   └── (tsup|vitest).config.ts · tsconfig*.json · .dependency-cruiser.cjs
 │
 └── plugins/         # first-party plugins as separate published packages
+    ├── authoring/   # @astromech/authoring  (the AI authoring surface: admin route, tool loop, chat drawer)
     ├── backups/     # @astromech/backups     (ships a ./tables subpath of plain table descriptors)
     ├── forms/       # @astromech/forms      (notification + spam provider seams a site can extend)
     ├── menus/       # @astromech/menus
@@ -139,8 +140,8 @@ packages/
     └── seo/         # @astromech/seo        (admin React components ship as source via ./admin/*)
 
 apps/
-├── demo/            # demo Astro site (was demo/ at root) — deployed, not published
-└── docs/            # documentation markdown (was docs/ at root) — will become an Astro site
+├── demo/            # demo Astro site — deployed, not published
+└── docs/            # user-facing documentation markdown
 ```
 
 ## Plugin capability ports
@@ -169,7 +170,7 @@ So a plugin that imports a core module reaching `virtual:astromech/config` — w
 
 A port's implementation must be a **Vite-graph closure**, which rules out wiring it in `initRuntime` — `boot/astro.ts` calls that inside `astro:config:setup`, in plain Node. The precedent is `setPluginClient`: `transport/local/index.ts` calls it at module top level, so whichever graph evaluates that module is the graph the plugin's `ctx.entries` runs in. `setPluginMethods` is wired on the same line.
 
-`ssr.noExternal` does **not** fix this and has been tried. It governs which modules Vite's SSR graph compiles; the handler closure was never in that graph, so Vite would compile a second copy that nothing calls. Teaching Node to resolve `virtual:` with module customization hooks is likewise the wrong tool — it would resolve to a _second_ config module rather than the one Vite built.
+`ssr.noExternal` does **not** fix this, and neither does teaching Node to resolve `virtual:` with module customization hooks. `decisions/0007-plugin-core-boundary.md` records why each fails.
 
 Two consequences for anything loaded at config time — `plugin-runtime.ts`, the integration itself: imports must stay lazy where they reach a service (`request-context/request-context.ts` exists for this), and `npm run check:config` loads the demo config the way Astro does to catch a regression before a plugin is wired up. `npm run check:node-imports` covers the other half, asserting the plugin-facing subpaths still load under plain Node.
 
@@ -225,16 +226,18 @@ used.
 | `npm run lint:deps`          | dependency-cruiser — enforces the modular DAG invariants within `packages/astromech/src` (no upward edges, no peer-domain imports, pure leaves)        |
 | `npm run check:config`       | `tsx astromech.config.ts` in the demo — loads the site config the way Astro does, catching a config-time import that reaches a domain service          |
 | `npm run check:node-imports` | spawns plain `node` against built `dist` and imports each plugin-facing subpath. Needs `dist`, so it runs after `build`. See "Plugin runtime boundary" |
+| `npm run check:docs`         | resolves every repo-relative link and backticked path in markdown. Skips `specs/` and `roadmap/planned/`, which name files that do not exist yet       |
 
 For refactors that move tables, `npm run db:generate` must also report "No
 schema changes" (migration-neutrality).
 
 ## Further reading
 
-- **`apps/docs/`** — user-facing guides (currently plugin authoring); grows over time.
+- **`apps/docs/`** — user-facing guides: configuration, content modelling, data, plugin authoring, the CLI. `apps/docs/README.md` indexes them.
 - **`packages/astromech/src/types/`** — the data model, config shape, field/permission/hook types.
   If you want the precise contract, read these rather than prose.
-- **`.claude/skills/code`** — coding conventions (naming, TS rules, imports).
+- **`decisions/`** — why the code is shaped this way, and what it used to be.
+- **`.claude/skills/code`** — coding conventions (naming, TS rules, imports). **`.claude/skills/docs`** — which file a fact belongs in.
 
 > `specs/` holds in-flight design notes for unbuilt work; they're deleted once a
 > feature ships, so treat them as scratch — never link to them as a reference.

@@ -20,6 +20,11 @@ export default tseslint.config(
         rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
     },
     {
+        // Repo tooling: plain Node, run by npm scripts rather than bundled.
+        files: ['scripts/**/*.mjs'],
+        languageOptions: { globals: { console: 'readonly', process: 'readonly' } },
+    },
+    {
         ignores: [
             'dist/',
             'node_modules/',

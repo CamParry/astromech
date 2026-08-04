@@ -1,6 +1,6 @@
 # Entries Module Reshape
 
-Reorganise `entries/` as the **template** for all domains: one storage seam, no repository pattern, operations-per-file, entry/table split. Design rationale: `decisions/0003-data-layer-locks-and-rejected-options.md`; the storage pattern itself is in the `code` skill. (`specs/entries-reshape.md` was deleted once Layer 1 shipped and Layers 2–3 were re-scoped below.)
+Reorganise `entries/` as the **template** for all domains: one storage seam, no repository pattern, operations-per-file, entry/table split. Design rationale: `decisions/0003-data-layer-locks-and-rejected-options.md`; the storage pattern itself is in the `code` skill. The in-flight spec was deleted once Layer 1 shipped and Layers 2–3 were re-scoped below.
 
 **Layer 1 — Reshape** (relocation + decomposition + de-repository; zero behaviour change)
 
@@ -52,7 +52,7 @@ stood on moved.
       `storage/capabilities.ts` exports `BUILT_IN_SUPPORTS`,
       `internal/supports.ts` exports `assertCapability`. §G1 dissolves
       `internal/supports.ts` into `internal/type-config.ts` +
-      `storage/registry.ts`; tracked on `roadmap/planned/naming-pass.md`
+      `storage/registry.ts`; tracked on `roadmap/in-progress/naming-pass.md`
 - [x] **`storage/built-in.ts` → `storage/entries.ts` — WON'T DO 2026-08-04.**
       `entries.ts` inside `entries/storage/` collides with the `entries` table
       descriptor (`entries/schema.ts:17`), and "built-in storage" is already the

@@ -5,7 +5,7 @@ argument-hint: <feature name or short description>
 
 You are starting a new feature: **$ARGUMENTS**
 
-Follow this process. Don't skip phases. Stop and ask before acting whenever a requirement is unclear — per CLAUDE.md, clarify before acting; for architecture decisions, talk it through first (no plans or option menus until the direction feels settled).
+Follow this process. Don't skip phases. Stop and ask before acting whenever a requirement is unclear — per `AGENTS.md`, clarify before acting; for architecture decisions, talk it through first (no plans or option menus until the direction feels settled).
 
 **Scale to the feature.** The phases below are the full process for a substantial feature. For a small, contained change, scale them down — skip the worktree (work directly on the feature branch), keep verification proportionate (still typecheck/lint/test, but a full browser-verify + `/review` + `/verify` pass may be overkill) — but never skip phase 5: roadmap, spec, and doc upkeep apply at every size. If you're unsure which mode fits, say which you're assuming and why.
 

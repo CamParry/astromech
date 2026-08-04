@@ -7,7 +7,7 @@ You are refactoring: **$ARGUMENTS**
 
 A refactor improves the **structure** of existing code without changing its **behaviour**. If behaviour needs to change, that's a `/feature` — say so and stop. Don't skip phases; scale them to the size of the change (a small rename needs no worktree; never skip phase 5).
 
-Per CLAUDE.md, clarify before acting; for structural decisions, discuss the direction first rather than assuming.
+Per `AGENTS.md`, clarify before acting; for structural decisions, discuss the direction first rather than assuming.
 
 ## 1. Frame the refactor
 
