@@ -21,7 +21,7 @@ export {
     useEntry,
     useEntryVersions,
     useEntriesByIds,
-    useIncomingRelations,
+    useIncomingRelationships,
     useCreateEntry,
     useUpdateEntry,
     useTrashEntry,

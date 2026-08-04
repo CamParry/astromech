@@ -3,7 +3,7 @@
  * item, grouped by source kind and entry type.
  *
  * `media.usedBy` resolves display titles server-side, the same shape
- * `entries.incomingRelations` returns, so this only groups and links.
+ * `entries.incomingRelationships` returns, so this only groups and links.
  */
 
 import React, { useMemo } from 'react';

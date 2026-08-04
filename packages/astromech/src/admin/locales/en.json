@@ -169,7 +169,7 @@
         "pickSourceEntry": "Pick the source entry",
         "pickGroupToJoin": "Pick the translation group to join",
         "cascadeLocalesLabel": "Also delete all {{count}} locale siblings",
-        "incomingRelationsHeader": "{{count}} other entries reference this one and will lose those references:"
+        "incomingRelationshipsHeader": "{{count}} other entries reference this one and will lose those references:"
     },
     "staging": {
         "stageChange": "Stage a change",

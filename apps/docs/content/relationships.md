@@ -62,7 +62,7 @@ this filter.
 For the delete-confirmation case there is a direct call:
 
 ```ts
-await Astromech.entries.incomingRelations({ type: 'post', id });
+await Astromech.entries.incomingRelationships({ type: 'post', id });
 // → [{ sourceId, sourceTitle, sourceType, schemaPath }]
 ```
 

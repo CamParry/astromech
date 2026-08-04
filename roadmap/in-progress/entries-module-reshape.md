@@ -4,7 +4,7 @@ Reorganise `entries/` as the **template** for all domains: one storage seam, no 
 
 **Layer 1 — Reshape** (relocation + decomposition + de-repository; zero behaviour change)
 
-- [x] Decompose `service.ts` → `operations/**` (file per op, grouped: `staging/ preview/ versions/`) + `internal/**` (validation, slug, relationships, supports, populate, + records/type-config/hooks/bulk/diff/preview); `service.ts` is now a thin assembler. _(No `bulk/` dir — per §6 bulk dispatch stays inline in each op; status wrappers live in `operations/status.ts`, `incomingRelations` in `operations/relations.ts`.)_
+- [x] Decompose `service.ts` → `operations/**` (file per op, grouped: `staging/ preview/ versions/`) + `internal/**` (validation, slug, relationships, supports, populate, + records/type-config/hooks/bulk/diff/preview); `service.ts` is now a thin assembler. _(No `bulk/` dir — per §6 bulk dispatch stays inline in each op; status wrappers live in `operations/status.ts`, `incomingRelationships` in `operations/relationships.ts`.)_
 - [x] Dissolve `entries/data/` — `populate.ts` → `internal/`, `versions.ts` → `storage/versions.ts`
 - [x] Drop the repository pattern: `*Repository` classes → `createXStorage(db)` factories (versions, preview-tokens, relationships); document the storage pattern (done in `code` skill)
 - [x] Move `database/repositories/preview-tokens.ts` → `entries/storage/preview-tokens.ts` (entries-specific)

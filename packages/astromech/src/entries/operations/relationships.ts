@@ -8,13 +8,13 @@ import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import { getEntryStorage } from '../storage/registry.js';
 import { loadAndAssertType } from '../internal/records.js';
 import type { EntryRecord, EntryStorage } from '../storage/types.js';
-import type { IncomingRelation } from '@/types/index.js';
+import type { IncomingRelationship } from '@/types/index.js';
 
 /** One row per index edge: a source referencing the target twice is two rows. */
-export async function incomingRelations(params: {
+export async function incomingRelationships(params: {
     type: string;
     id: string;
-}): Promise<IncomingRelation[]> {
+}): Promise<IncomingRelationship[]> {
     const storage = getEntryStorage(params.type);
     await loadAndAssertType(storage, params.type, params.id);
 
@@ -43,7 +43,7 @@ export async function incomingRelations(params: {
                 sourceTitle: source.title ?? '',
                 sourceType: row.sourceType,
                 schemaPath: row.schemaPath,
-            } satisfies IncomingRelation,
+            } satisfies IncomingRelationship,
         ];
     });
 }

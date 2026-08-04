@@ -637,14 +637,14 @@ describe('relationships', () => {
         expect(rels).toHaveLength(0);
     });
 
-    it('incomingRelations lists the source with its title', async () => {
+    it('incomingRelationships lists the source with its title', async () => {
         const target = await api.create({ type: 'post', title: 'Target' });
         const src = await api.create({
             type: 'post',
             title: 'Source',
             fields: { related: [target.id] },
         });
-        const incoming = await api.incomingRelations({ type: 'post', id: target.id });
+        const incoming = await api.incomingRelationships({ type: 'post', id: target.id });
         expect(incoming).toEqual([
             {
                 sourceId: src.id,

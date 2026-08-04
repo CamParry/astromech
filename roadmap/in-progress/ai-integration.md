@@ -72,9 +72,9 @@ followed on 2026-08-03. Next is P5.
       runtime — local client → `wireEntryAccess` → `registerPlugins`, the order
       `boot/boot.ts` uses; `bootPlugins` deliberately NOT called), and the
       entries long tail (duplicate/trash/restore/emptyTrash/versions/
-      restoreVersion/unpublish/schedule/incomingRelations gained descriptors, and
-      the staged-entry/preview methods that had descriptors but no adapter lit
-      up).
+      restoreVersion/unpublish/schedule/incomingRelationships gained descriptors,
+      and the staged-entry/preview methods that had descriptors but no adapter
+      lit up).
     - One defect fixed in passing: `publish` was gated on the `versioning`
       capability while `operations/status.ts` asserts `statuses`, so the manifest
       hid publish/unpublish/schedule from every unversioned type — nine of eleven

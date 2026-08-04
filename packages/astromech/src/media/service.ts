@@ -303,7 +303,7 @@ export const mediaService = {
      * edge, so a source using the same file at two paths yields two rows.
      *
      * Titles resolve here rather than in the admin, so this returns the same
-     * shape as `entries.incomingRelations`. Two wire shapes for "what
+     * shape as `entries.incomingRelationships`. Two wire shapes for "what
      * references this" is the split worth avoiding; reading a peer domain to
      * name a row is not.
      */

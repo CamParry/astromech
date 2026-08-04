@@ -102,7 +102,7 @@ export type EntryQueryResult<T = Entry> = QueryResult<T>;
  * Lightweight summary of an inbound relationship row — used by the delete
  * confirmation modal to surface entries that reference the one being deleted.
  */
-export type IncomingRelation = {
+export type IncomingRelationship = {
     /** Source entry id (the entry that contains the relationship). */
     sourceId: string;
     /** Title of the source entry. */
@@ -115,7 +115,7 @@ export type IncomingRelation = {
 
 /**
  * One relationships-index edge pointing at a media item — a row of the media
- * "used by" panel. The media mirror of {@link IncomingRelation}, widened to
+ * "used by" panel. The media mirror of {@link IncomingRelationship}, widened to
  * carry the source kind because a media file can be referenced by an entry, a
  * user or another media record.
  */
@@ -246,7 +246,10 @@ export type EntriesService = {
         publishAt: Date;
     }): Promise<Entry[]>;
 
-    incomingRelations(params: { type: string; id: string }): Promise<IncomingRelation[]>;
+    incomingRelationships(params: {
+        type: string;
+        id: string;
+    }): Promise<IncomingRelationship[]>;
 
     // ── Forward versioning (staged entries) ────────────────────────────────
     // All take the *canonical* entry id. Require the `staging` capability

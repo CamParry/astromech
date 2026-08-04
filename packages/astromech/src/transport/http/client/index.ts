@@ -15,7 +15,7 @@ import type {
     QueryResult,
     EntryStatus,
     EntryVersion,
-    IncomingRelation,
+    IncomingRelationship,
     JsonObject,
     JsonValue,
     Media,
@@ -385,12 +385,12 @@ export function createEntriesService(
             return res.data;
         },
 
-        async incomingRelations(params: {
+        async incomingRelationships(params: {
             type: string;
             id: string;
-        }): Promise<IncomingRelation[]> {
-            const res = await apiFetch<{ data: IncomingRelation[] }>(
-                `${basePath}/${typeSeg(params.type)}/${params.id}/incoming-relations`
+        }): Promise<IncomingRelationship[]> {
+            const res = await apiFetch<{ data: IncomingRelationship[] }>(
+                `${basePath}/${typeSeg(params.type)}/${params.id}/incoming-relationships`
             );
             return res.data;
         },

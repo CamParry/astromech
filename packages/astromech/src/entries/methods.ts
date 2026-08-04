@@ -74,7 +74,7 @@ function entryMethodSummary(method: string, action: EntryAction, type: string): 
             return `List the version history of a "${type}" entry.`;
         case 'restoreVersion':
             return `Roll a "${type}" entry back to an earlier version.`;
-        case 'incomingRelations':
+        case 'incomingRelationships':
             return `List the entries that reference a "${type}" entry.`;
         case 'createStaged':
             return `Stage a change to a "${type}" entry.`;
@@ -120,7 +120,7 @@ export const ENTRY_METHOD_ACTIONS = {
     publish: 'publish',
     unpublish: 'publish',
     schedule: 'publish',
-    incomingRelations: 'read',
+    incomingRelationships: 'read',
     createStaged: 'update',
     getStaged: 'read',
     // Merging a staged change is what makes it live — enforced as a publish even
@@ -297,7 +297,7 @@ export function entryMethodDescriptors(params: {
             idempotent: true,
             input: z.object({ type, id: ids }).extend(scheduleEntrySchema.shape),
         },
-        { ...base('incomingRelations'), input: canonical },
+        { ...base('incomingRelationships'), input: canonical },
         { ...base('createStaged'), requires: 'staging', input: canonical },
         { ...base('getStaged'), requires: 'staging', input: canonical },
         { ...base('mergeStaged'), requires: 'staging', input: canonical },

@@ -159,7 +159,7 @@ describe('relationships targeting a titleless type', () => {
             fields: { snippet: snippet.id },
         });
 
-        const incoming = await api.incomingRelations({
+        const incoming = await api.incomingRelationships({
             type: 'snippet',
             id: snippet.id,
         });

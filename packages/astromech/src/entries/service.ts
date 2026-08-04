@@ -18,7 +18,7 @@ import { trash, emptyTrash } from './operations/trash.js';
 import { restore } from './operations/restore.js';
 import { deleteEntry } from './operations/delete.js';
 import { publish, unpublish, schedule } from './operations/status.js';
-import { incomingRelations } from './operations/relations.js';
+import { incomingRelationships } from './operations/relationships.js';
 import { listVersions } from './operations/versions/list.js';
 import { restoreVersion } from './operations/versions/restore.js';
 import { createStaged } from './operations/staging/create.js';
@@ -45,7 +45,7 @@ export const entriesService: EntriesService = {
     publish: publish as EntriesService['publish'],
     unpublish: unpublish as EntriesService['unpublish'],
     schedule: schedule as EntriesService['schedule'],
-    incomingRelations,
+    incomingRelationships,
     createStaged,
     getStaged,
     mergeStaged,

@@ -110,10 +110,10 @@ export function useEntryVersions(
  * Read-only: fetch entries that reference `id` via a relationship row.
  * Used by the delete-confirmation modal to warn about dangling references.
  */
-export function useIncomingRelations(type: string, id: string, enabled = true) {
+export function useIncomingRelationships(type: string, id: string, enabled = true) {
     return useQuery({
-        queryKey: ['entries', type, 'incoming-relations', id] as const,
-        queryFn: () => Astromech.entries.incomingRelations({ type, id }),
+        queryKey: ['entries', type, 'incoming-relationships', id] as const,
+        queryFn: () => Astromech.entries.incomingRelationships({ type, id }),
         enabled,
     });
 }

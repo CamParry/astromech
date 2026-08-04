@@ -266,7 +266,7 @@ describe('manifest ↔ MCP tool coverage', () => {
                 'emptyTrash',
                 'get',
                 'getStaged',
-                'incomingRelations',
+                'incomingRelationships',
                 'issuePreviewToken',
                 'mergeStaged',
                 'publish',

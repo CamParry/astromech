@@ -980,17 +980,17 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
     });
 
     // ============================================================================
-    // GET /entries/:type/:id/incoming-relations
+    // GET /entries/:type/:id/incoming-relationships
     // ============================================================================
 
-    router.get('/:type/:id/incoming-relations', async (c) => {
+    router.get('/:type/:id/incoming-relationships', async (c) => {
         const { type, id } = c.req.param();
         const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'read'))) return forbidden(c);
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
-        const relations = await Astromech.entries.incomingRelations({
+        const relations = await Astromech.entries.incomingRelationships({
             type: type,
             id,
         });

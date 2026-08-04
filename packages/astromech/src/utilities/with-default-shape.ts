@@ -58,7 +58,7 @@ export function withDefaultShape(
             entries.unpublish(params)) as EntriesService['unpublish'],
         schedule: ((params: Parameters<EntriesService['schedule']>[0]) =>
             entries.schedule(params)) as EntriesService['schedule'],
-        incomingRelations: (params) => entries.incomingRelations(params),
+        incomingRelationships: (params) => entries.incomingRelationships(params),
         createStaged: (params) => entries.createStaged(params),
         getStaged: (params) => entries.getStaged(params),
         mergeStaged: (params) => entries.mergeStaged(params),
