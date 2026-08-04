@@ -3,14 +3,7 @@
  * `role: 'system'` message a chat request carries inside `messages[]`.
  */
 
-import type { AIContextReference } from '@/types/ai-context.js';
-
-/** A declared reference with its position: lower `depth` is less specific. */
-export type AIContextEntry = {
-    reference: AIContextReference;
-    depth: number;
-    order: number;
-};
+import type { AIContextItem, AIContextReference } from '@/types/ai-context.js';
 
 /**
  * Build the context message from the current references, ordered least to most
@@ -18,12 +11,12 @@ export type AIContextEntry = {
  * the message rather than sending an empty one.
  */
 export function formatAIContextMessage(
-    entries: readonly AIContextEntry[]
+    items: readonly AIContextItem[]
 ): { role: 'system'; content: string } | null {
-    if (entries.length === 0) return null;
-    const sorted = [...entries].sort((a, b) => a.depth - b.depth || a.order - b.order);
+    if (items.length === 0) return null;
+    const sorted = [...items].sort((a, b) => a.depth - b.depth || a.order - b.order);
     const lines = sorted.map(
-        (entry, index) => `${index + 1}. ${describeReference(entry.reference)}`
+        (item, index) => `${index + 1}. ${describeReference(item.reference)}`
     );
     return {
         role: 'system',
@@ -36,31 +29,31 @@ export function formatAIContextMessage(
 /** Render one reference as a single line. */
 function describeReference(reference: AIContextReference): string {
     const { kind, type, id, label } = reference;
-    const safeLabel = safe(label);
-    const safeType = type === undefined ? undefined : safe(type);
-    const safeId = id === undefined ? undefined : safe(id);
+    const sanitizedLabel = sanitize(label);
+    const sanitizedType = type === undefined ? undefined : sanitize(type);
+    const sanitizedId = id === undefined ? undefined : sanitize(id);
     switch (kind) {
         case 'entries':
-            if (safeType === undefined) break;
-            return safeId === undefined
-                ? `Entry list for type \`${safeType}\` (\`${safeLabel}\`)`
-                : `Entry \`${safeLabel}\` (type \`${safeType}\`, id \`${safeId}\`)`;
+            if (sanitizedType === undefined) break;
+            return sanitizedId === undefined
+                ? `Entry list for type \`${sanitizedType}\` (\`${sanitizedLabel}\`)`
+                : `Entry \`${sanitizedLabel}\` (type \`${sanitizedType}\`, id \`${sanitizedId}\`)`;
         case 'media':
-            return safeId === undefined
-                ? `Media library (\`${safeLabel}\`)`
-                : `Media item \`${safeLabel}\` (id \`${safeId}\`)`;
+            return sanitizedId === undefined
+                ? `Media library (\`${sanitizedLabel}\`)`
+                : `Media item \`${sanitizedLabel}\` (id \`${sanitizedId}\`)`;
         case 'users':
-            return safeId === undefined
-                ? `User list (\`${safeLabel}\`)`
-                : `User \`${safeLabel}\` (id \`${safeId}\`)`;
+            return sanitizedId === undefined
+                ? `User list (\`${sanitizedLabel}\`)`
+                : `User \`${sanitizedLabel}\` (id \`${sanitizedId}\`)`;
         case 'settings':
-            return withId(`Settings screen \`${safeLabel}\``, safeId);
+            return withId(`Settings screen \`${sanitizedLabel}\``, sanitizedId);
         case 'pages':
-            return withId(`Admin page \`${safeLabel}\``, safeId);
+            return withId(`Admin page \`${sanitizedLabel}\``, sanitizedId);
         default:
             break;
     }
-    return `${safe(kind)} \`${safeLabel}\``;
+    return `${sanitize(kind)} \`${sanitizedLabel}\``;
 }
 
 /** Append an id suffix to a line when the reference carries one. */
@@ -72,7 +65,7 @@ function withId(line: string, id: string | undefined): string {
  * Neutralise an author-controlled value before it lands in a system-role
  * message: control characters, backticks and length are all injection surface.
  */
-function safe(value: string): string {
+function sanitize(value: string): string {
     const stripped = value
         .replace(/\p{C}/gu, ' ')
         .replace(/`/g, "'")

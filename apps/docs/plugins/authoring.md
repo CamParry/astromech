@@ -638,7 +638,7 @@ const tools = ctx.methods.tools({ readOnly: true });
 ```
 
 It returns every method the current request's role may call, each already
-resolved into a dispatch that runs under that role — `{ toolName, description,
+resolved into a tool definition that runs under that role — `{ name, description,
 inputSchema, annotations, invoke }`. `invoke` refuses what the role does not
 hold, and `readOnly` drops every mutating method structurally rather than
 advising against it. Wrap each one in whatever your model SDK's tool shape is

@@ -88,19 +88,19 @@ not remount on navigation, and they throw outside it.
 
 ## Reading it
 
-`useAIContextEntries`, also from `astromech/ui`, returns the current entries —
-each an `{ reference, depth, order }` — in registration order.
+`useAIContextItems`, also from `astromech/ui`, returns the current items —
+each an `AIContextItem`, `{ reference, depth, order }` — in registration order.
 `formatAIContextMessage` from `astromech` turns them into the message:
 
 ```ts
 import { formatAIContextMessage } from 'astromech';
 
-const message = formatAIContextMessage(entries);
+const message = formatAIContextMessage(items);
 // { role: 'system', content: 'The user is currently viewing, from least to most specific:\n1. …' }
 ```
 
 It returns `null` when nothing is declared, so the caller omits the message
-entirely rather than sending an empty one. A single entry renders as:
+entirely rather than sending an empty one. A single item renders as:
 
 ```
 The user is currently viewing, from least to most specific:
@@ -157,6 +157,6 @@ Two constraints come with that placement, and both are on the sender:
 The admin ships a panel, gated on `import.meta.env.DEV`, that shows the
 assembled message: the role, the content, and a count of the declared
 references. It renders `formatAIContextMessage`'s own output rather than its
-own view of the entries, so the whole assembly path stays exercised while there
+own view of the items, so the whole assembly path stays exercised while there
 is no other consumer — and so what you read there is exactly what would be
 sent.

@@ -9,9 +9,9 @@ import type { ComponentProps, KeyboardEvent, ReactElement } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button, useAstromechPlugin } from 'astromech/ui';
-import { closeDrawer, focusToggleButton, useDrawerOpen } from './drawer-state.js';
-import { useChat } from './use-chat.js';
-import type { ChatPart, ChatTurn } from './use-chat.js';
+import { closeDrawer, focusToggleButton, useDrawerOpen } from '../drawer-state.js';
+import { useChat } from '../use-chat.js';
+import type { ChatPart, ChatTurn } from '../use-chat.js';
 import './chat-drawer.css';
 
 /** How far off the tail still counts as following it. */

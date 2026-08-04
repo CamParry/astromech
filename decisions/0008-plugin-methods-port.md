@@ -12,7 +12,7 @@ faithful re-export of what `astromech/methods` publishes) is the wrong one.
 One port, one method:
 
 ```ts
-ctx.methods.tools(options?: { readOnly?: boolean }): Promise<ToolDispatch[]>
+ctx.methods.tools(options?: { readOnly?: boolean }): ToolDefinition[]
 ```
 
 It returns the manifest methods the **current request's role** may call, each
@@ -62,7 +62,7 @@ thing, and would be wrong the moment a non-AI caller wants a dispatch table;
 back the manifest.
 
 **`tools`** is the ecosystem's word for a model-callable function, fixed by MCP
-and by every model SDK. `ToolDispatch` already carries that vocabulary through
+and by every model SDK. `ToolDefinition` already carries that vocabulary through
 core. The alternative was to call them methods too and let the caller do the
 projection, which is a second name for a thing the manifest already projects.
 

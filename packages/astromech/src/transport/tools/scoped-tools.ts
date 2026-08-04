@@ -1,21 +1,20 @@
 /**
  * The tool surface one role reaches: every manifest method it may call, each
- * dispatched through `buildScopedDispatch`. Lives beside
- * `dispatch.ts` because it composes it, and serves the AI tool-loop as well as
- * MCP.
+ * dispatched through `buildScopedDispatch`. Lives beside `dispatch.ts` because
+ * it composes it, and serves the AI tool-loop as well as MCP.
  */
 
-import type { Role, ToolDispatch } from '@/types/index.js';
+import type { Role, ToolDefinition } from '@/types/index.js';
 import { getMethodManifest } from '@/codegen/manifest-registry.js';
 import { filterMethods } from '@/policies/method-filter.js';
 import { annotateManifest } from '@/policies/annotate-manifest.js';
-import { buildScopedDispatch } from '@/transport/mcp/dispatch.js';
+import { buildScopedDispatch } from '@/transport/tools/dispatch.js';
 
-/** Build the dispatches this role reaches, narrowed by the method filter. */
+/** Build the tool definitions this role reaches, narrowed by the method filter. */
 export function buildScopedTools(
     role: Role | undefined,
     options?: { readOnly?: boolean }
-): ToolDispatch[] {
+): ToolDefinition[] {
     const manifest = getMethodManifest();
     if (manifest === undefined) {
         throw new Error(
@@ -37,7 +36,7 @@ export function buildScopedTools(
         (method) => method.allowed !== false
     );
 
-    const tools: ToolDispatch[] = [];
+    const tools: ToolDefinition[] = [];
     for (const method of permitted) {
         const dispatch = buildScopedDispatch(method, role);
         if (!dispatch.ok) continue;

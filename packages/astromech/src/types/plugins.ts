@@ -29,7 +29,7 @@ import type {
     SettingsService,
     UsersService,
 } from './services.js';
-import type { ServiceMethodEffect, ToolDispatch } from './methods.js';
+import type { ServiceMethodEffect, ToolDefinition } from './methods.js';
 import type { PermissionDeclarations } from '@/permissions/define.js';
 
 // ============================================================================
@@ -74,7 +74,7 @@ export type PluginMethods = {
      * scoped. Plugin-source methods are absent: their declared `access` is
      * enforced by the HTTP RPC route, so there is nothing to scope them with.
      */
-    tools(options?: { readOnly?: boolean }): ToolDispatch[];
+    tools(options?: { readOnly?: boolean }): ToolDefinition[];
 };
 
 /** Logger that attributes lines to the originating plugin. */

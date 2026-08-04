@@ -4,9 +4,9 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useAIContextEntries } from 'astromech/ui';
+import { useAIContextItems } from 'astromech/ui';
 import { parseChatEvent, splitSseFrames } from './sse.js';
-import type { ChatEvent, ChatMessage } from '../../types.js';
+import type { ChatEvent, ChatMessage } from '../types.js';
 
 /** One piece of a turn, in the order it arrived. */
 export type ChatPart =
@@ -34,7 +34,7 @@ const API_ROUTE = '/api';
 export function useChat(serviceKey: string): UseChat {
     const [turns, setTurns] = useState<ChatTurn[]>([]);
     const [isStreaming, setIsStreaming] = useState(false);
-    const aiContext = useAIContextEntries();
+    const aiContext = useAIContextItems();
     const turnsRef = useRef<ChatTurn[]>([]);
     const abortRef = useRef<AbortController | null>(null);
 

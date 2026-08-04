@@ -29,7 +29,7 @@ one another:
 
 ```
 routes · admin · boot · codegen · cli          entrypoints & composition root
-transport (http · local · mcp · cli)           delivery — http/client/ is the fetch Client (astromech/fetch), over the wire
+transport (http · local · mcp · cli · tools)   delivery — http/client/ is the fetch Client (astromech/fetch), over the wire
 policies                                       permission/confirmation wrappers over the manifest
 entries · media · users · settings             domains — siblings, never import each other
 plugins/runtime · database · storage ·         capabilities
@@ -94,7 +94,7 @@ packages/
 │   │   ├── codegen/        # type generator + plugin-client manifest + method manifest (.astro/astromech.methods.json, plus manifest-registry.ts — the boot-generated copy)
 │   │   │
 │   │   │   ── delivery ────────────────────────────────────────────────────
-│   │   ├── transport/      # local/ (astromech/local) · http/ (Hono routes+middleware, plus client/ — the fetch Client, astromech/fetch) · cli/ · mcp/
+│   │   ├── transport/      # local/ (astromech/local) · http/ (Hono routes+middleware, plus client/ — the fetch Client, astromech/fetch) · cli/ · mcp/ · tools/ (tool dispatch + scoped tool surface, shared by MCP and the AI tool-loop)
 │   │   │
 │   │   │   ── policies ───────────────────────────────────────────────────
 │   │   ├── policies/       # permission/confirmation wrappers over the manifest — no domain logic here

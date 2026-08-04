@@ -12,7 +12,11 @@ import {
     triggersConfirmation,
     type ConfirmOptions,
 } from '@/policies/confirmation.js';
-import { buildDispatch, type DispatchResult, type ToolAnnotations } from './dispatch.js';
+import {
+    buildDispatch,
+    type DispatchResult,
+    type ToolAnnotations,
+} from '@/transport/tools/dispatch.js';
 
 // ============================================================================
 // Types
@@ -148,11 +152,11 @@ export function buildTools(
             continue;
         }
 
-        const { toolName, description, inputSchema, annotations, invoke } = result.tool;
+        const { name, description, inputSchema, annotations, invoke } = result.tool;
 
         // Sanitize: names must match ^[a-zA-Z0-9_-]{1,128}$. A plugin's service
         // key is author-supplied, so this is not merely belt-and-braces.
-        const safeName = toolName.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const safeName = name.replace(/[^a-zA-Z0-9_-]/g, '_');
 
         if (seenToolNames.has(safeName)) {
             skipped.push({ id: method.id, reason: `duplicate tool name: ${safeName}` });

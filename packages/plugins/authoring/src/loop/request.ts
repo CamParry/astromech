@@ -5,7 +5,7 @@
 
 import type { BetaMessageParam } from '@anthropic-ai/sdk/resources/beta';
 import { formatAIContextMessage } from 'astromech';
-import type { AIContextEntry } from 'astromech';
+import type { AIContextItem } from 'astromech';
 import type { ChatMessage } from '../types.js';
 
 /**
@@ -17,7 +17,7 @@ import type { ChatMessage } from '../types.js';
  */
 export function buildRequest(
     messages: ChatMessage[],
-    aiContext: AIContextEntry[]
+    aiContext: AIContextItem[]
 ): { system: string; messages: BetaMessageParam[] } {
     const turns: BetaMessageParam[] = messages.map((message) => ({
         role: message.role,

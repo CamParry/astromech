@@ -7,11 +7,11 @@
 export { getMethodManifest } from '@/codegen/manifest-registry.js';
 
 export { formatAIContextMessage } from '@/utilities/ai-context.js';
-export type { AIContextEntry } from '@/utilities/ai-context.js';
+export type { AIContextItem } from '@/types/ai-context.js';
 
-export { buildDispatch, buildScopedDispatch } from '@/transport/mcp/dispatch.js';
-export type { DispatchResult, ToolDispatch } from '@/transport/mcp/dispatch.js';
-export { buildScopedTools } from '@/transport/mcp/scoped-tools.js';
+export { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch.js';
+export type { DispatchResult, ToolDefinition } from '@/transport/tools/dispatch.js';
+export { buildScopedTools } from '@/transport/tools/scoped-tools.js';
 
 export { filterMethods } from '@/policies/method-filter.js';
 export { annotateManifest } from '@/policies/annotate-manifest.js';

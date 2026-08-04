@@ -189,9 +189,9 @@ export type ToolAnnotations = {
     idempotentHint: boolean;
 };
 
-/** A fully-resolved dispatch descriptor for a single MCP tool. */
-export type ToolDispatch = {
-    toolName: string;
+/** A single tool: its declaration, plus the handler that runs it. */
+export type ToolDefinition = {
+    name: string;
     description: string;
     inputSchema: JsonSchemaObject;
     annotations: ToolAnnotations;

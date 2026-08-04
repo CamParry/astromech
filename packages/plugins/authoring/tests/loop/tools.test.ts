@@ -6,13 +6,13 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { ToolDispatch } from 'astromech';
+import type { ToolDefinition } from 'astromech';
 import { TOOL_SEARCH_TOOL, toRunnableTools } from '../../src/loop/tools.js';
 
 /** A dispatch whose `invoke` resolves to `result`. */
-function dispatchFor(name: string, result: unknown = { ok: true }): ToolDispatch {
+function dispatchFor(name: string, result: unknown = { ok: true }): ToolDefinition {
     return {
-        toolName: name,
+        name,
         description: `Calls ${name}.`,
         inputSchema: { type: 'object', properties: {}, additionalProperties: false },
         annotations: {
@@ -61,7 +61,7 @@ describe('toRunnableTools', () => {
         const error = new Error('Permission denied');
         error.stack =
             'Error: Permission denied\n    at RECOGNISABLE_FRAME (/internal/secret.ts:1:1)';
-        const dispatch: ToolDispatch = {
+        const dispatch: ToolDefinition = {
             ...dispatchFor('users_query'),
             invoke: () => Promise.reject(error),
         };

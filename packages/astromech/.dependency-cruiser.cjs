@@ -148,9 +148,9 @@ module.exports = {
         {
             name: 'transport-no-reach-boot',
             comment:
-                'The http/local/mcp transports are projected BY the boot layer and must not import it. transport/cli is exempt — it is a standalone entrypoint that performs its own config resolution + boot.',
+                'The http/local/mcp transports and the shared tool surface are projected BY the boot layer and must not import it. transport/cli is exempt — it is a standalone entrypoint that performs its own config resolution + boot.',
             severity: 'error',
-            from: { path: '^src/transport/(http|local|mcp)/' },
+            from: { path: '^src/transport/(http|local|mcp|tools)/' },
             to: { path: '^src/boot/' },
         },
         {

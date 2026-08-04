@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { AIContextEntry } from '@/utilities/ai-context.js';
+import type { AIContextItem } from '@/types/ai-context.js';
 import { formatAIContextMessage } from '@/utilities/ai-context.js';
 
 /** Build a single-reference list so a line can be asserted in isolation. */
-function lineFor(reference: AIContextEntry['reference']): string {
+function lineFor(reference: AIContextItem['reference']): string {
     const message = formatAIContextMessage([{ reference, depth: 0, order: 0 }]);
     return (message?.content.split('\n')[1] ?? '').replace('1. ', '');
 }
@@ -39,12 +39,12 @@ describe('formatAIContextMessage', () => {
         });
 
         it('does not mutate the input array', () => {
-            const entries: AIContextEntry[] = [
+            const items: AIContextItem[] = [
                 { reference: { kind: 'pages', label: 'B' }, depth: 2, order: 0 },
                 { reference: { kind: 'pages', label: 'A' }, depth: 0, order: 0 },
             ];
-            formatAIContextMessage(entries);
-            expect(entries.map((entry) => entry.reference.label)).toEqual(['B', 'A']);
+            formatAIContextMessage(items);
+            expect(items.map((item) => item.reference.label)).toEqual(['B', 'A']);
         });
     });
 
@@ -130,7 +130,7 @@ describe('formatAIContextMessage', () => {
     });
 
     describe('message shape', () => {
-        it('pins the exact content of a two-entry list', () => {
+        it('pins the exact content of a two-item list', () => {
             const message = formatAIContextMessage([
                 {
                     reference: {
@@ -207,7 +207,7 @@ describe('formatAIContextMessage', () => {
             ).toBe('Entry `Hello` (type `posts DROP TABLE`, id `abc def`)');
         });
 
-        it('appends the trust line when there is at least one entry', () => {
+        it('appends the trust line when there is at least one item', () => {
             const message = formatAIContextMessage([
                 { reference: { kind: 'pages', label: 'Dashboard' }, depth: 0, order: 0 },
             ]);

@@ -33,7 +33,7 @@ import type {
     ResolvedPluginIdentity,
     Role,
     SettingsService,
-    ToolDispatch,
+    ToolDefinition,
     TypedEntriesService,
     User,
     UsersService,
@@ -76,7 +76,7 @@ type RegisteredRawRoute = { identity: ResolvedPluginIdentity; route: PluginRawRo
 
 /** The dispatch-table builder `ctx.methods` runs, injected by the Local API. */
 export type PluginMethodsAccess = {
-    tools(role: Role | undefined, options?: { readOnly?: boolean }): ToolDispatch[];
+    tools(role: Role | undefined, options?: { readOnly?: boolean }): ToolDefinition[];
 };
 
 type PluginRuntimeState = {

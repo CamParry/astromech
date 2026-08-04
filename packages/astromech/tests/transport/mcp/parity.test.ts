@@ -28,7 +28,7 @@ vi.mock('@/entries/service.js', () => ({
 }));
 import { resolveConfig } from '@/boot/config-resolver.js';
 import { filterMethods } from '@/policies/method-filter.js';
-import { buildDispatch } from '@/transport/mcp/dispatch.js';
+import { buildDispatch } from '@/transport/tools/dispatch.js';
 import { buildTools } from '@/transport/mcp/tools.js';
 import type {
     AstromechConfig,
@@ -353,7 +353,7 @@ describe('filtered methods ↔ MCP tools', () => {
                 .filter((m) => m.mutates)
                 .flatMap((m) => {
                     const result = buildDispatch(m);
-                    return result.ok ? [result.tool.toolName] : [];
+                    return result.ok ? [result.tool.name] : [];
                 })
         );
         expect(mutatingToolNames.size).toBeGreaterThan(0);

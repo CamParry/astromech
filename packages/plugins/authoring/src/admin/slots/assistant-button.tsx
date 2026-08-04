@@ -4,7 +4,7 @@
  */
 
 import type { ReactElement } from 'react';
-import { registerToggleButton, toggleDrawer, useDrawerOpen } from './drawer-state.js';
+import { registerToggleButton, toggleDrawer, useDrawerOpen } from '../drawer-state.js';
 import './assistant-button.css';
 
 export default function AssistantButton(): ReactElement {

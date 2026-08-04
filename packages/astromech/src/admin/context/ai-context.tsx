@@ -2,7 +2,7 @@
  * AI context for the Astromech admin SPA.
  *
  * Routes declare what the user is looking at via `useAIContext`; the chat
- * drawer reads the collected references with `useAIContextEntries`. The store
+ * drawer reads the collected references with `useAIContextItems`. The store
  * lives on the `_protected` layout, so references survive navigation.
  */
 
@@ -14,8 +14,7 @@ import React, {
     useState,
     useSyncExternalStore,
 } from 'react';
-import type { AIContextReference } from '@/types/ai-context.js';
-import type { AIContextEntry } from '@/utilities/ai-context.js';
+import type { AIContextItem, AIContextReference } from '@/types/ai-context.js';
 
 // ============================================================================
 // Types
@@ -25,7 +24,7 @@ export type AIContextStore = {
     register(key: string, reference: AIContextReference, depth: number): void;
     unregister(key: string): void;
     subscribe(listener: () => void): () => void;
-    getSnapshot(): readonly AIContextEntry[];
+    getSnapshot(): readonly AIContextItem[];
 };
 
 // ============================================================================
@@ -44,19 +43,19 @@ const AIContextStoreContext = createContext<AIContextStore | null>(null);
  * `useSyncExternalStore` re-renders forever on a fresh array every read.
  */
 export function createAIContextStore(): AIContextStore {
-    const entries = new Map<string, AIContextEntry>();
+    const items = new Map<string, AIContextItem>();
     const listeners = new Set<() => void>();
-    let snapshot: readonly AIContextEntry[] = [];
+    let snapshot: readonly AIContextItem[] = [];
     let nextOrder = 0;
 
     function publish(): void {
-        snapshot = [...entries.values()];
+        snapshot = [...items.values()];
         for (const listener of listeners) listener();
     }
 
     return {
         register(key, reference, depth) {
-            const existing = entries.get(key);
+            const existing = items.get(key);
             if (
                 existing !== undefined &&
                 existing.depth === depth &&
@@ -67,11 +66,11 @@ export function createAIContextStore(): AIContextStore {
             // `order` is minted once per key: a re-register must not reshuffle
             // a route against its siblings.
             const order = existing?.order ?? nextOrder++;
-            entries.set(key, { reference, depth, order });
+            items.set(key, { reference, depth, order });
             publish();
         },
         unregister(key) {
-            if (!entries.delete(key)) return;
+            if (!items.delete(key)) return;
             publish();
         },
         subscribe(listener) {
@@ -148,7 +147,7 @@ export function useAIContext(
 }
 
 /** The references declared by every mounted route, in registration order. */
-export function useAIContextEntries(): readonly AIContextEntry[] {
+export function useAIContextItems(): readonly AIContextItem[] {
     const store = useAIContextStore();
     return useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
 }

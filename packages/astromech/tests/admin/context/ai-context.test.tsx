@@ -14,12 +14,12 @@ import { describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import React, { act } from 'react';
 import type { AIContextReference } from '@/types/ai-context.js';
-import type { AIContextEntry } from '@/utilities/ai-context.js';
+import type { AIContextItem } from '@/types/ai-context.js';
 import {
     AIContextProvider,
     createAIContextStore,
     useAIContext,
-    useAIContextEntries,
+    useAIContextItems,
 } from '@/admin/context/ai-context.js';
 
 const postsList: AIContextReference = { kind: 'entries', type: 'posts', label: 'Posts' };
@@ -43,7 +43,7 @@ describe('createAIContextStore', () => {
         store.register('a', { ...postsList, label: 'All posts' }, 0);
 
         const snapshot = store.getSnapshot();
-        expect(snapshot.map((entry) => entry.order)).toEqual([0, 1]);
+        expect(snapshot.map((item) => item.order)).toEqual([0, 1]);
         expect(snapshot[0]!.reference.label).toBe('All posts');
     });
 
@@ -74,7 +74,7 @@ describe('createAIContextStore', () => {
         expect(store.getSnapshot()[0]!.reference.label).toBe('All posts');
     });
 
-    it('should notify and drop the entry on unregister, and stay quiet for an unknown key', () => {
+    it('should notify and drop the item on unregister, and stay quiet for an unknown key', () => {
         const store = createAIContextStore();
         store.register('a', postsList, 0);
         let notified = 0;
@@ -104,7 +104,7 @@ describe('createAIContextStore', () => {
         store.register('deep', postEntry, 5);
         store.register('shallow', postsList, 0);
 
-        expect(store.getSnapshot().map((entry) => entry.depth)).toEqual([5, 0]);
+        expect(store.getSnapshot().map((item) => item.depth)).toEqual([5, 0]);
     });
 });
 
@@ -116,25 +116,25 @@ describe('useAIContext', () => {
     it('should publish the reference the route declares', () => {
         const mounted = mountAdmin(postsList);
 
-        expect(mounted.entries()).toEqual([{ reference: postsList, depth: 0, order: 0 }]);
+        expect(mounted.items()).toEqual([{ reference: postsList, depth: 0, order: 0 }]);
         mounted.unmount();
     });
 
     it('should publish nothing while the reference is null', () => {
         const mounted = mountAdmin(null);
 
-        expect(mounted.entries()).toEqual([]);
+        expect(mounted.items()).toEqual([]);
         mounted.unmount();
     });
 
     it('should not re-register when the caller passes an equal object literal', () => {
         const mounted = mountAdmin(postsList);
-        const before = mounted.entries();
+        const before = mounted.items();
 
         mounted.setReference({ ...postsList });
 
         // A re-register would rebuild the snapshot, so identity is the proof.
-        expect(mounted.entries()).toBe(before);
+        expect(mounted.items()).toBe(before);
         mounted.unmount();
     });
 
@@ -143,7 +143,7 @@ describe('useAIContext', () => {
 
         mounted.setReference({ ...postsList, label: 'All posts' });
 
-        expect(mounted.entries()[0]!.reference.label).toBe('All posts');
+        expect(mounted.items()[0]!.reference.label).toBe('All posts');
         mounted.unmount();
     });
 
@@ -151,18 +151,18 @@ describe('useAIContext', () => {
         const mounted = mountAdmin(postsList);
 
         mounted.setReference(null);
-        expect(mounted.entries()).toEqual([]);
+        expect(mounted.items()).toEqual([]);
 
         mounted.setReference(postEntry);
         mounted.hideRoute();
-        expect(mounted.entries()).toEqual([]);
+        expect(mounted.items()).toEqual([]);
         mounted.unmount();
     });
 });
 
 type Mounted = {
-    /** What a consumer of `useAIContextEntries` sees right now. */
-    entries: () => readonly AIContextEntry[];
+    /** What a consumer of `useAIContextItems` sees right now. */
+    items: () => readonly AIContextItem[];
     setReference: (reference: AIContextReference | null) => void;
     hideRoute: () => void;
     unmount: () => void;
@@ -170,7 +170,7 @@ type Mounted = {
 
 /** Mount a provider with one declaring route and one reading consumer. */
 function mountAdmin(initial: AIContextReference | null): Mounted {
-    let entries: readonly AIContextEntry[] = [];
+    let items: readonly AIContextItem[] = [];
     let setState: React.Dispatch<React.SetStateAction<AppState>> | undefined;
 
     type AppState = { reference: AIContextReference | null; visible: boolean };
@@ -185,7 +185,7 @@ function mountAdmin(initial: AIContextReference | null): Mounted {
     }
 
     function Consumer(): null {
-        entries = useAIContextEntries();
+        items = useAIContextItems();
         return null;
     }
 
@@ -217,7 +217,7 @@ function mountAdmin(initial: AIContextReference | null): Mounted {
     };
 
     return {
-        entries: () => entries,
+        items: () => items,
         setReference: (reference) => update({ reference }),
         hideRoute: () => update({ visible: false }),
         unmount: () => {

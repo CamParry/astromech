@@ -1,10 +1,11 @@
 /**
- * MCP Tool Dispatch
+ * Tool Dispatch
  *
- * ONE dispatcher for every manifest method. A tool's name, description, schema
- * and annotations are all projections of manifest fields, and `invoke` resolves
- * the service method by key at call time. There is no per-domain adapter, and no
- * `switch` over method names.
+ * ONE dispatcher for every manifest method, shared by every consumer of the tool
+ * surface — the MCP server and the AI tool-loop alike. A tool's name,
+ * description, schema and annotations are all projections of manifest fields,
+ * and `invoke` resolves the service method by key at call time. There is no
+ * per-domain adapter, and no `switch` over method names.
  *
  * Every adapter this replaced was a second declaration of a method that already
  * described itself, and the second declaration is what drifted: `users_update`
@@ -24,7 +25,7 @@ import type {
     PluginContext,
     PluginManifestMethod,
     Role,
-    ToolDispatch,
+    ToolDefinition,
 } from '@/types/index.js';
 import type { ScopedServices } from '@/policies/scoped-services.js';
 
@@ -33,14 +34,14 @@ import type { ScopedServices } from '@/policies/scoped-services.js';
 // ============================================================================
 
 // The dispatch shapes live in the pure leaf so `types/plugins.ts` can name them.
-export type { ToolAnnotations, ToolDispatch } from '@/types/index.js';
+export type { ToolAnnotations, ToolDefinition } from '@/types/index.js';
 
 /**
  * Either a dispatchable tool or the reason there isn't one. A bare `null` told
  * the caller nothing, so every omission looked the same as a bug.
  */
 export type DispatchResult =
-    | { ok: true; tool: ToolDispatch }
+    | { ok: true; tool: ToolDefinition }
     | { ok: false; reason: string };
 
 /** Anything callable by string key — a domain service or a plugin's service record. */
@@ -168,7 +169,7 @@ function toolNameFor(manifest: ManifestMethod): string {
 // ============================================================================
 
 /**
- * Build a ToolDispatch from a ManifestMethod, or explain why the method is not
+ * Build a ToolDefinition from a ManifestMethod, or explain why the method is not
  * callable over JSON-RPC. `invoke` calls the raw domain services, so this is for
  * a trusted caller with no role — the dev-only MCP server and the CLI.
  */
@@ -217,7 +218,7 @@ function buildDispatchWith(
     return {
         ok: true,
         tool: {
-            toolName: toolNameFor(manifest),
+            name: toolNameFor(manifest),
             description: manifest.summary ?? manifest.name,
             inputSchema,
             annotations: {

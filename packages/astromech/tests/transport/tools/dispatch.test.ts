@@ -20,8 +20,8 @@ import { usersService } from '@/users/service.js';
 import {
     buildDispatch,
     buildScopedDispatch,
-    type ToolDispatch,
-} from '@/transport/mcp/dispatch.js';
+    type ToolDefinition,
+} from '@/transport/tools/dispatch.js';
 import type {
     CoreManifestMethod,
     JsonSchemaObject,
@@ -95,7 +95,7 @@ function role(...permissions: Permission[]): Role {
 function scopedTool(
     manifest: ManifestMethod,
     actingRole: Role | undefined
-): ToolDispatch {
+): ToolDefinition {
     const result = buildScopedDispatch(manifest, actingRole);
     if (!result.ok) expect.unreachable(`expected a tool, got: ${result.reason}`);
     return result.tool;
