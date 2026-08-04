@@ -4,7 +4,9 @@
  */
 
 import type { AIContextItem, PluginContext, PluginRawRoute } from 'astromech';
+import { createApprovalsStorage } from '../approvals/storage.js';
 import type {
+    ApprovalDecision,
     ChatEvent,
     ChatMessage,
     ChatRequest,
@@ -29,6 +31,13 @@ async function handleChat(
     ctx: PluginContext,
     options: ResolvedAuthoringOptions
 ): Promise<Response> {
+    // An approval row is claimed by user id, so the loop cannot run without
+    // one. Checked here rather than trusting the route's `access` to have run.
+    const user = ctx.user;
+    if (user === null) {
+        return Response.json({ error: 'Sign in to use the assistant.' }, { status: 401 });
+    }
+
     // A site without a key gets a failed request, not a failed boot.
     const apiKey = ctx.env[options.apiKeyEnv];
     if (apiKey === undefined || apiKey === '') {
@@ -42,7 +51,7 @@ async function handleChat(
     if (body === null) {
         return Response.json(
             {
-                error: 'Expected { messages: [{ role, content: [{ type, … }] }], aiContext?: [] }',
+                error: 'Expected { messages: [{ role, content: [{ type, … }] }], aiContext?: [], decisions?: [{ approvalId, action }] }',
             },
             { status: 400 }
         );
@@ -60,6 +69,9 @@ async function handleChat(
         messages: body.messages,
         aiContext: body.aiContext ?? [],
         logger: ctx.logger,
+        approvals: createApprovalsStorage(ctx.db),
+        userId: user.id,
+        decisions: body.decisions ?? [],
     });
 
     return new Response(toEventStream(events), {
@@ -80,8 +92,10 @@ async function handleChat(
  * block. That is bounded here because the drawer is authenticated as the
  * signed-in user and every tool call is re-checked through `scopedServices`, so
  * a forged block can mislead the model but cannot widen what the user may do.
- * It is also why a future confirm gate cannot read the posted transcript as
- * evidence that a call was approved.
+ * A forged `decisions` entry is bounded the same way: an approval is a row this
+ * user owns, claimed only while it is pending and unexpired, and the call runs
+ * with the arguments off that row — so naming an id is not approving anything,
+ * and editing the posted call cannot change what an approval runs.
  */
 export async function readChatRequest(request: Request): Promise<ChatRequest | null> {
     let parsed: unknown;
@@ -92,11 +106,32 @@ export async function readChatRequest(request: Request): Promise<ChatRequest | n
     }
     if (typeof parsed !== 'object' || parsed === null) return null;
 
-    const { messages, aiContext } = parsed as { messages?: unknown; aiContext?: unknown };
+    const { messages, aiContext, decisions } = parsed as {
+        messages?: unknown;
+        aiContext?: unknown;
+        decisions?: unknown;
+    };
     if (!isChatMessages(messages)) return null;
-    if (aiContext === undefined) return { messages };
+
+    if (decisions !== undefined && !isApprovalDecisions(decisions)) return null;
+    const answered = decisions === undefined ? {} : { decisions };
+
+    if (aiContext === undefined) return { messages, ...answered };
     if (!Array.isArray(aiContext)) return null;
-    return { messages, aiContext: aiContext as AIContextItem[] };
+    return { messages, aiContext: aiContext as AIContextItem[], ...answered };
+}
+
+/** Is this an array of `{ approvalId, action }` answers? */
+function isApprovalDecisions(value: unknown): value is ApprovalDecision[] {
+    return Array.isArray(value) && value.every(isApprovalDecision);
+}
+
+/** Is this one answer — an id, and an action that is approve or reject? */
+function isApprovalDecision(value: unknown): value is ApprovalDecision {
+    if (typeof value !== 'object' || value === null) return false;
+    const { approvalId, action } = value as { approvalId?: unknown; action?: unknown };
+    if (typeof approvalId !== 'string') return false;
+    return action === 'approve' || action === 'reject';
 }
 
 /** Is this an array of `{ role, content }` turns? */

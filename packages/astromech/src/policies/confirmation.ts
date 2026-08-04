@@ -162,7 +162,10 @@ function describeTarget(args: Record<string, unknown>): string {
  * — they cannot tell a draft being saved from a site being emptied — and the
  * whole value of confirming is in that sentence.
  */
-function confirmMessage(method: ManifestMethod, args: Record<string, unknown>): string {
+export function confirmMessage(
+    method: ManifestMethod,
+    args: Record<string, unknown>
+): string {
     const target = describeTarget(args);
     const subject = target.length > 0 ? `"${method.id}" on ${target}` : `"${method.id}"`;
     const effect = method.destructive

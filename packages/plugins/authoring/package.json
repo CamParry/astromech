@@ -12,6 +12,10 @@
             "types": "./dist/index.d.ts",
             "default": "./dist/index.js"
         },
+        "./tables": {
+            "types": "./dist/tables.d.ts",
+            "default": "./dist/tables.js"
+        },
         "./admin/*": "./src/admin/*"
     },
     "main": "./dist/index.js",
@@ -19,6 +23,7 @@
     "files": [
         "dist",
         "src",
+        "migrations",
         "README.md"
     ],
     "scripts": {

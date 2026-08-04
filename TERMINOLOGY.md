@@ -228,3 +228,15 @@ A **`ToolDefinition`** is one manifest method projected into a model-callable to
 **`McpToolDef`** in `packages/astromech/src/transport/mcp/tools.ts` is the MCP wire shape, built from a `ToolDefinition` when that transport serves one. The two are deliberately separate types: one is what a tool is here, the other is what a particular protocol expects to receive.
 
 `decisions/0014-naming-the-ai-tool-surface.md` records why the definition is not called a dispatch, and `decisions/0008-plugin-methods-port.md` why the scoped builder is a separate function.
+
+---
+
+## Approval vs Confirmation
+
+Both stop a mutating call to put it to a human, and they are different mechanisms at different altitudes.
+
+An **approval** is a stored decision. `@astromech/authoring` writes a row per mutating call into `plugin_authoring_approvals`, stops the turn before anything executes, and asks the user. The answer arrives on a later request naming the row's id; claiming and answering the row are one conditional UPDATE, so a row is won once, by one request, and only while it is that user's and still pending. The call then runs with the arguments stored on the row. Because the arguments live server-side, a client that edits the conversation it posts back changes what the model sees, not what runs.
+
+A **confirmation** is a stateless brake at dispatch level — `evaluateConfirmation` in `packages/astromech/src/policies/confirmation.ts`. A mutating call arriving without an answer is turned back with `input_required` and the question to ask; the caller re-issues the call carrying `_confirm: { action }`. It buys one turn between an agent deciding to do something and it happening, which is enough to break a runaway loop, and it is explicitly not a security boundary: the caller supplies the answer, so a caller that wants to proceed can write one itself.
+
+The types stay apart for the same reason: `ConfirmRequest` carries the arguments a caller may re-post, `ApprovalRequest` names a row the arguments are read back from.
