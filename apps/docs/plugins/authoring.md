@@ -635,9 +635,9 @@ resolved into a dispatch that runs under that role — `{ toolName, description,
 inputSchema, annotations, invoke }`. `invoke` refuses what the role does not
 hold, and `readOnly` drops every mutating method structurally rather than
 advising against it. Wrap each one in whatever your model SDK's tool shape is
-and call `invoke` from its handler. `ctx.role` is the principal all of this
-runs against — the current request's resolved role, or `null` outside a request
-context (a cron tick, a boot-time `setup()`).
+and call `invoke` from its handler. `ctx.role` is the role all of this is
+checked against — the current request's resolved role, or `null` outside a
+request context (a cron tick, a boot-time `setup()`).
 
 Plugin-declared methods are absent from the list: their `access` is enforced by
 the HTTP RPC route, so there is nothing to scope them with.

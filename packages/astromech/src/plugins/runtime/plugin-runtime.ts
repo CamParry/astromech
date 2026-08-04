@@ -76,7 +76,7 @@ type RegisteredRawRoute = { identity: ResolvedPluginIdentity; route: PluginRawRo
 
 /** The dispatch-table builder `ctx.methods` runs, injected by the Local API. */
 export type PluginMethodsAccess = {
-    tools(principal: Role | undefined, options?: { readOnly?: boolean }): ToolDispatch[];
+    tools(role: Role | undefined, options?: { readOnly?: boolean }): ToolDispatch[];
 };
 
 type PluginRuntimeState = {
@@ -447,8 +447,8 @@ export function createPluginContext(
                 ),
         },
         get methods(): PluginMethods {
-            // Lazy like `get role()` above: the principal is read per call, from
-            // the request-scoped store rather than from construction time.
+            // Lazy like `get role()` above: the role is read per call, from the
+            // request-scoped store rather than from construction time.
             return {
                 tools: (options) =>
                     requireMethods().tools(getCurrentRole() ?? undefined, options),

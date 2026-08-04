@@ -20,7 +20,7 @@ import {
     type EntryAction,
     entryPermission,
 } from '@/permissions/index.js';
-import { withPermissions } from '@/policies/with-permissions.js';
+import { permissionsFor } from '@/permissions/permissions-for.js';
 import type {
     EntryDuplicateOverrides,
     EntryQueryParams,
@@ -71,7 +71,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     /**
      * Wrap the per-(type, action) permission as a method descriptor, so entries
-     * are enforced through the same `withPermissions(...).allowsMethod` seam as
+     * are enforced through the same `permissionsFor(...).allowsMethod` seam as
      * every other service.
      */
     const entryGate = (type: string, action: EntryAction): ServiceMethodDescriptor => ({
@@ -258,7 +258,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
     // ============================================================================
 
     router.post('/query', async (c) => {
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         const body = await c.req.json<EntryQueryParams & Record<string, unknown>>();
         const typeParam = body.type;
         const types = Array.isArray(typeParam)
@@ -325,7 +325,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.openapi(listEntriesRoute, async (c) => {
         const { type } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'read'))) return forbidden(c);
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -368,7 +368,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.openapi(getEntryRoute, async (c) => {
         const { type, id } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'read'))) return forbidden(c);
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
@@ -420,7 +420,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.openapi(createEntryRoute, async (c) => {
         const { type } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'create'))) return forbidden(c);
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
@@ -465,7 +465,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.post('/:type/query', async (c) => {
         const { type } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'read'))) return forbidden(c);
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
@@ -493,7 +493,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.post('/:type/bulk-update', async (c) => {
         const { type } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'update'))) return forbidden(c);
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -534,7 +534,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.post('/:type/bulk-trash', async (c) => {
         const { type } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'delete'))) return forbidden(c);
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -559,7 +559,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.post('/:type/bulk-delete', async (c) => {
         const { type } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'delete'))) return forbidden(c);
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -581,7 +581,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.post('/:type/bulk-restore', async (c) => {
         const { type } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'update'))) return forbidden(c);
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -605,7 +605,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.post('/:type/bulk-publish', async (c) => {
         const { type } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'publish'))) return forbidden(c);
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -629,7 +629,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.post('/:type/bulk-unpublish', async (c) => {
         const { type } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'publish'))) return forbidden(c);
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -653,7 +653,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.post('/:type/bulk-schedule', async (c) => {
         const { type } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'publish'))) return forbidden(c);
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
 
@@ -678,7 +678,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.post('/:type/:id/restore', async (c) => {
         const { type, id } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'update'))) return forbidden(c);
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
@@ -699,7 +699,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.post('/:type/:id/duplicate', async (c) => {
         const { type, id } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'create'))) return forbidden(c);
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
@@ -748,7 +748,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.openapi(updateEntryRoute, async (c) => {
         const { type, id } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'update'))) return forbidden(c);
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
@@ -798,7 +798,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.delete('/:type/trash', async (c) => {
         const { type } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'delete'))) return forbidden(c);
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
@@ -816,7 +816,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.delete('/:type/:id/force', async (c) => {
         const { type, id } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'delete'))) return forbidden(c);
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
@@ -850,7 +850,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.openapi(trashEntryRoute, async (c) => {
         const { type, id } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'delete'))) return forbidden(c);
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
@@ -881,7 +881,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.post('/:type/:id/publish', async (c) => {
         const { type, id } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'publish'))) return forbidden(c);
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
@@ -902,7 +902,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.post('/:type/:id/unpublish', async (c) => {
         const { type, id } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'publish'))) return forbidden(c);
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
@@ -923,7 +923,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.post('/:type/:id/schedule', async (c) => {
         const { type, id } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'publish'))) return forbidden(c);
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
@@ -948,7 +948,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.get('/:type/:id/versions', async (c) => {
         const { type, id } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'read'))) return forbidden(c);
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
@@ -966,7 +966,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.post('/:type/:id/versions/:versionId/restore', async (c) => {
         const { type, id, versionId } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'update'))) return forbidden(c);
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
@@ -985,7 +985,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
 
     router.get('/:type/:id/incoming-relations', async (c) => {
         const { type, id } = c.req.param();
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, 'read'))) return forbidden(c);
 
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
@@ -1016,7 +1016,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         type: string,
         action: EntryAction
     ): Response | null {
-        const permissions = withPermissions(c.var.role);
+        const permissions = permissionsFor(c.var.role);
         if (!permissions.allowsMethod(entryGate(type, action))) return forbidden(c);
         if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
         const caps = getTypeCapabilities(type);

@@ -103,7 +103,7 @@ export type PluginContext = {
     user: User | null;
     /**
      * The acting user's role, or null outside a request context. Read from the
-     * request-scoped store, so it is the principal `scopedService` expects.
+     * request-scoped store, so it is the role `scopedService` expects.
      */
     role: Role | null;
     /**

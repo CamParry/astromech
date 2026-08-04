@@ -1,5 +1,5 @@
 /**
- * buildScopedDispatch — the dispatch a caller acting on behalf of a principal
+ * buildScopedDispatch — the dispatch a caller acting on behalf of a role
  * gets. Everything buildDispatch decides is unchanged; what differs is that
  * `invoke` goes through `scopedService`, so a refusal comes from the handle.
  */
@@ -92,8 +92,11 @@ function role(...permissions: Permission[]): Role {
 }
 
 /** Build a scoped dispatch, failing the test if it produced no tool. */
-function scopedTool(manifest: ManifestMethod, principal: Role | undefined): ToolDispatch {
-    const result = buildScopedDispatch(manifest, principal);
+function scopedTool(
+    manifest: ManifestMethod,
+    actingRole: Role | undefined
+): ToolDispatch {
+    const result = buildScopedDispatch(manifest, actingRole);
     if (!result.ok) expect.unreachable(`expected a tool, got: ${result.reason}`);
     return result.tool;
 }
@@ -104,14 +107,14 @@ beforeEach(() => {
 });
 
 describe('buildScopedDispatch', () => {
-    it('refuses a method the principal does not hold, from the scoped handle', async () => {
+    it('refuses a method the role does not hold, from the scoped handle', async () => {
         const tool = scopedTool(usersQuery, role('users:create'));
 
         await expect(tool.invoke({})).rejects.toThrow(PermissionDeniedError);
         expect(usersApi.query).not.toHaveBeenCalled();
     });
 
-    it('calls through when the principal holds the permission', async () => {
+    it('calls through when the role holds the permission', async () => {
         const tool = scopedTool(usersQuery, role('users:read'));
 
         await expect(tool.invoke({ limit: 10 })).resolves.toEqual({
@@ -121,7 +124,7 @@ describe('buildScopedDispatch', () => {
         expect(usersApi.query).toHaveBeenCalledWith({ limit: 10 });
     });
 
-    it('refuses when there is no principal — allowed nothing, not trusted', async () => {
+    it('refuses when there is no role — allowed nothing, not trusted', async () => {
         const tool = scopedTool(usersQuery, undefined);
 
         await expect(tool.invoke({})).rejects.toThrow(PermissionDeniedError);

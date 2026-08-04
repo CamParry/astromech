@@ -21,7 +21,7 @@ import {
     notFound,
 } from '@/transport/http/middleware/errors.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
-import { withPermissions } from '@/policies/with-permissions.js';
+import { permissionsFor } from '@/permissions/permissions-for.js';
 import { updateMediaSchema } from '@/media/schema.js';
 import { mediaDescriptors } from '@/media/descriptors.js';
 import type { MediaQueryParams, JsonObject } from '@/types/index.js';
@@ -38,7 +38,7 @@ const SORTABLE_FIELDS = new Set(['filename', 'mimeType', 'size', 'createdAt']);
 // ============================================================================
 
 router.get('/', async (c) => {
-    const permissions = withPermissions(c.var.role);
+    const permissions = permissionsFor(c.var.role);
     if (!permissions.allowsMethod(mediaDescriptors.query)) return forbidden(c);
 
     const q = c.req.query();
@@ -69,7 +69,7 @@ router.get('/', async (c) => {
 
 router.get('/:id', async (c) => {
     const { id } = c.req.param();
-    const permissions = withPermissions(c.var.role);
+    const permissions = permissionsFor(c.var.role);
     if (!permissions.allowsMethod(mediaDescriptors.get)) return forbidden(c);
 
     const item = await Astromech.media.get({ id });
@@ -83,7 +83,7 @@ router.get('/:id', async (c) => {
 
 router.get('/:id/usage', async (c) => {
     const { id } = c.req.param();
-    const permissions = withPermissions(c.var.role);
+    const permissions = permissionsFor(c.var.role);
     if (!permissions.allowsMethod(mediaDescriptors.usedBy)) return forbidden(c);
 
     const item = await Astromech.media.get({ id });
@@ -98,7 +98,7 @@ router.get('/:id/usage', async (c) => {
 // ============================================================================
 
 router.post('/upload', async (c) => {
-    const permissions = withPermissions(c.var.role);
+    const permissions = permissionsFor(c.var.role);
     if (!permissions.allowsMethod(mediaDescriptors.upload)) return forbidden(c);
 
     const formData = await c.req.formData();
@@ -118,7 +118,7 @@ router.post('/upload', async (c) => {
 
 router.put('/:id', async (c) => {
     const { id } = c.req.param();
-    const permissions = withPermissions(c.var.role);
+    const permissions = permissionsFor(c.var.role);
     if (!permissions.allowsMethod(mediaDescriptors.update)) return forbidden(c);
 
     const raw = await c.req.json();
@@ -144,7 +144,7 @@ router.put('/:id', async (c) => {
 
 router.delete('/:id', async (c) => {
     const { id } = c.req.param();
-    const permissions = withPermissions(c.var.role);
+    const permissions = permissionsFor(c.var.role);
     if (!permissions.allowsMethod(mediaDescriptors.delete)) return forbidden(c);
 
     await Astromech.media.delete({ id });

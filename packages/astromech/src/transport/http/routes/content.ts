@@ -23,7 +23,7 @@ import {
 } from '@/transport/http/middleware/errors.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import { entryPermission } from '@/permissions/index.js';
-import { withPermissions } from '@/policies/with-permissions.js';
+import { permissionsFor } from '@/permissions/permissions-for.js';
 import { contentDescriptors } from '@/content/index.js';
 import { ContentOperationError } from '@/content/errors.js';
 import { CapabilityError } from '@/entries/errors.js';
@@ -135,7 +135,7 @@ function guard(
     type: string,
     descriptor: ServiceMethodDescriptor
 ): Response | null {
-    const permissions = withPermissions(c.var.role);
+    const permissions = permissionsFor(c.var.role);
     if (!permissions.allowsMethod(descriptor)) return forbidden(c);
     if (!permissions.allowsMethod(entryUpdateGate(type))) return forbidden(c);
     if (!resolveEntryType(Astromech.config, type)) {

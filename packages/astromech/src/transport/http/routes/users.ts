@@ -20,7 +20,7 @@ import {
     notFound,
 } from '@/transport/http/middleware/errors.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
-import { withPermissions } from '@/policies/with-permissions.js';
+import { permissionsFor } from '@/permissions/permissions-for.js';
 import { createUserSchema, updateUserSchema, usersDescriptors } from '@/users/index.js';
 import { createUserStorage } from '@/users/storage.js';
 import type { JsonObject, UserQueryParams } from '@/types/index.js';
@@ -36,7 +36,7 @@ const router = new OpenAPIHono<Env>();
 const SORTABLE_FIELDS = new Set(['name', 'email', 'createdAt', 'updatedAt', 'roleSlug']);
 
 router.get('/', async (c) => {
-    const permissions = withPermissions(c.var.role);
+    const permissions = permissionsFor(c.var.role);
     if (!permissions.allowsMethod(usersDescriptors.query)) return forbidden(c);
 
     const q = c.req.query();
@@ -59,7 +59,7 @@ router.get('/', async (c) => {
 
 router.get('/:id', async (c) => {
     const { id } = c.req.param();
-    const permissions = withPermissions(c.var.role);
+    const permissions = permissionsFor(c.var.role);
     const currentUser = c.var.user;
     if (!permissions.allowsMethod(usersDescriptors.get) && currentUser.id !== id)
         return forbidden(c);
@@ -74,7 +74,7 @@ router.get('/:id', async (c) => {
 // ============================================================================
 
 router.post('/', async (c) => {
-    const permissions = withPermissions(c.var.role);
+    const permissions = permissionsFor(c.var.role);
     if (!permissions.allowsMethod(usersDescriptors.create)) return forbidden(c);
 
     const raw = await c.req.json();
@@ -97,7 +97,7 @@ router.post('/', async (c) => {
 
 router.put('/:id', async (c) => {
     const { id } = c.req.param();
-    const permissions = withPermissions(c.var.role);
+    const permissions = permissionsFor(c.var.role);
     const currentUser = c.var.user;
     const canUpdateUsers = permissions.allowsMethod(usersDescriptors.update);
     const isSelf = currentUser.id === id;
@@ -142,7 +142,7 @@ router.put('/:id', async (c) => {
 
 router.delete('/:id', async (c) => {
     const { id } = c.req.param();
-    const permissions = withPermissions(c.var.role);
+    const permissions = permissionsFor(c.var.role);
     if (!permissions.allowsMethod(usersDescriptors.delete)) return forbidden(c);
 
     // Last-admin check

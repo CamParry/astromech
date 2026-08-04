@@ -1,7 +1,7 @@
 /**
  * The refusal a scoped service handle throws. Distinct from a validation
- * failure: nothing was wrong with the call — the principal simply was not handed
- * the method.
+ * failure: nothing was wrong with the call — the caller's role simply was not
+ * handed the method.
  */
 export class PermissionDeniedError extends Error {
     /** Dotted method id, e.g. `users.create` or `entries.publish`. */

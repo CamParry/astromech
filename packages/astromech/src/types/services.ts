@@ -35,7 +35,7 @@ export type PermissionRule<Input = unknown> = Permission | ((input: Input) => Pe
 /**
  * A service method's descriptor. Authored once (via `defineServiceMethod` for
  * plugin methods, or a service's descriptor catalogue for core methods); the
- * single declaration the `withPermissions` policy enforces and the manifest reads.
+ * single declaration the `permissionsFor` guard enforces and the manifest reads.
  *
  * There is no `name`: a method's dotted id is its position in the catalogue
  * (`<domain>.<key>`), derived by the manifest generator. Restating it by hand
@@ -200,9 +200,9 @@ export type ToolDispatch = {
      * when it is input-derived (see `permissionDynamic`).
      *
      * Carried, NOT enforced, and deliberately unread today: this MCP server is
-     * dev-only and trusted, runs with no principal, and enforces a method's
+     * dev-only and trusted, runs with no role, and enforces a method's
      * permission no more than the CLI does. It exists so the seam is already in
-     * place when a remote transport — which does have a principal — dispatches
+     * place when a remote transport — which does carry a role — dispatches
      * through here; that transport enforces via `policies/scoped-service.ts`,
      * and reads this only to say up front what it would refuse.
      */

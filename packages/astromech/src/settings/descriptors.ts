@@ -1,7 +1,7 @@
 /**
  * Settings service method descriptors — the declared shape + permission + effect
  * for each settings verb. The single source the HTTP transport enforces against
- * (via withPermissions) and the method manifest reads.
+ * (via permissionsFor) and the method manifest reads.
  *
  * `input` is the METHOD's argument object, not the HTTP body: `settings.set` is
  * called `set({ key, value })` — the key is a path parameter on the wire, so the

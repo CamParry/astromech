@@ -1,6 +1,6 @@
 /**
- * The tool surface one principal reaches: every manifest method that role may
- * call, each dispatched through `buildScopedDispatch`. Lives beside
+ * The tool surface one role reaches: every manifest method it may call, each
+ * dispatched through `buildScopedDispatch`. Lives beside
  * `dispatch.ts` because it composes it, and serves the AI tool-loop as well as
  * MCP.
  */
@@ -11,9 +11,9 @@ import { reduceSurface } from '@/policies/tool-surface.js';
 import { annotateManifest } from '@/policies/annotate-manifest.js';
 import { buildScopedDispatch } from '@/transport/mcp/dispatch.js';
 
-/** Build the dispatches this principal reaches, narrowed by the surface options. */
+/** Build the dispatches this role reaches, narrowed by the surface options. */
 export function buildScopedTools(
-    principal: Role | undefined,
+    role: Role | undefined,
     options?: { readOnly?: boolean }
 ): ToolDispatch[] {
     const manifest = getMethodManifest();
@@ -33,13 +33,13 @@ export function buildScopedTools(
     // A size reduction, NOT a security measure: the annotation is advisory and
     // `buildScopedDispatch` is what actually refuses. `allowed === null` is an
     // input-derived permission only the scoped handle can decide, so it stays.
-    const permitted = annotateManifest(surface.methods, principal).filter(
+    const permitted = annotateManifest(surface.methods, role).filter(
         (method) => method.allowed !== false
     );
 
     const tools: ToolDispatch[] = [];
     for (const method of permitted) {
-        const dispatch = buildScopedDispatch(method, principal);
+        const dispatch = buildScopedDispatch(method, role);
         if (!dispatch.ok) continue;
         tools.push(dispatch.tool);
     }

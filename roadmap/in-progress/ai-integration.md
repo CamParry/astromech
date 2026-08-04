@@ -97,7 +97,7 @@ followed on 2026-08-03. Next is P5.
       is deleted rather than deprecated, because a setter is the defect. Outside
       `runWithContext` there is no identity and `getCurrentUser()` is null —
       previously a cron tick in a warm process saw whoever last hit the server.
-      `scopedService(principal)` wraps every domain against its descriptor and
+      `scopedService(role)` wraps every domain against its descriptor and
       fails CLOSED. The audit's chunk-duplication worry does NOT bite: the two
       copies of `currentUser` were the library build and the CLI build, one copy
       each, in separate processes. Don't re-derive it as a bug.
@@ -464,7 +464,7 @@ f(x)`), so re-coercion is only observable when the STORED value is not
     - **`readOnly: true` by default**, so the surface is non-mutating methods
       only. Writes wait for a confirm UI in the drawer; there is nowhere to
       approve one from today.
-    - `buildScopedDispatch(manifest, principal)` was the missing seam.
+    - `buildScopedDispatch(manifest, role)` was the missing seam.
       `buildDispatch` resolves the RAW services — deliberate, and stated in its
       docblock, because the MCP transport is dev-only and trusted. A loop acting
       for a signed-in user is not, so it gets a sibling that resolves through

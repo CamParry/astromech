@@ -32,7 +32,7 @@ import {
     getPluginRawRoutes,
     getPluginServiceMethods,
 } from '@/plugins/runtime/plugin-runtime.js';
-import { withPermissions } from '@/policies/with-permissions.js';
+import { permissionsFor } from '@/permissions/permissions-for.js';
 import { resolvePluginPermission } from '@/plugins/runtime/plugin-identity.js';
 import type { Context } from 'hono';
 import type {
@@ -60,7 +60,7 @@ function enforceAccess(
     if (!user) return unauthorized(c);
     if (access === 'authenticated') return null;
 
-    const permissions = withPermissions(c.var.role);
+    const permissions = permissionsFor(c.var.role);
     const permission = resolvePluginPermission(
         identity.permissionNamespace,
         access.permission

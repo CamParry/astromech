@@ -1,5 +1,5 @@
 /**
- * buildScopedTools — the composition a caller acting for a principal gets:
+ * buildScopedTools — the composition a caller acting for a role gets:
  * which manifest methods survive to become dispatches, and in what order the
  * four seams are applied. Each seam's own behaviour is tested beside it.
  */
@@ -167,7 +167,7 @@ describe('buildScopedTools', () => {
         expect(tools).toHaveLength(2);
     });
 
-    it('annotates and dispatches against the principal it was given', () => {
+    it('annotates and dispatches against the role it was given', () => {
         buildScopedTools(role);
 
         expect(vi.mocked(annotateManifest).mock.calls[0]?.[1]).toBe(role);

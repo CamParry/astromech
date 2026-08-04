@@ -14,7 +14,7 @@ import { Astromech } from '@/transport/local/index.js';
 import { forbidden, fromZodError, notFound } from '@/transport/http/middleware/errors.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import type { JsonValue } from '@/types/index.js';
-import { withPermissions } from '@/policies/with-permissions.js';
+import { permissionsFor } from '@/permissions/permissions-for.js';
 import { setSettingSchema, settingsDescriptors } from '@/settings/index.js';
 
 type Env = { Variables: AuthVariables };
@@ -26,7 +26,7 @@ const router = new OpenAPIHono<Env>();
 // ============================================================================
 
 router.get('/', async (c) => {
-    const permissions = withPermissions(c.var.role);
+    const permissions = permissionsFor(c.var.role);
     if (!permissions.allowsMethod(settingsDescriptors.all)) return forbidden(c);
 
     // Authenticated admin endpoint (guarded by settings:read): return the
@@ -41,7 +41,7 @@ router.get('/', async (c) => {
 
 router.get('/:key', async (c) => {
     const { key } = c.req.param();
-    const permissions = withPermissions(c.var.role);
+    const permissions = permissionsFor(c.var.role);
     if (!permissions.allowsMethod(settingsDescriptors.get)) return forbidden(c);
 
     // Authenticated admin endpoint (guarded by settings:read): return the
@@ -59,7 +59,7 @@ router.get('/:key', async (c) => {
 
 router.put('/:key', async (c) => {
     const { key } = c.req.param();
-    const permissions = withPermissions(c.var.role);
+    const permissions = permissionsFor(c.var.role);
     if (!permissions.allowsMethod(settingsDescriptors.set)) return forbidden(c);
 
     const raw = await c.req.json();

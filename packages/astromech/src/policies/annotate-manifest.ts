@@ -1,5 +1,5 @@
 /**
- * Annotate a method manifest for one principal — "which of these may I call?"
+ * Annotate a method manifest for one role — "which of these may I call?"
  *
  * ADVISORY UX ONLY. The annotation exists so a caller can be told up front that
  * it cannot publish, instead of discovering it by spending a turn on a call that
@@ -15,29 +15,29 @@ import type { ManifestMethod, Permission, Role } from '@/types/index.js';
 import { can } from '@/permissions/index.js';
 
 export type AnnotatedManifestMethod = ManifestMethod & {
-    /** true = the principal holds it; false = denied; null = input-derived, decidable only at call time. */
+    /** true = the role holds it; false = denied; null = input-derived, decidable only at call time. */
     allowed: boolean | null;
 };
 
 /**
- * Decide one method for one principal.
+ * Whether one role may call one method — `null` where only a call can tell.
  *
  * A dynamic permission is `null` rather than a guess: it resolves from the call
  * input (which entry type, in practice), and answering it here would mean
- * inventing an input. A missing principal holds nothing, so every gated method
- * is denied — the same rule `withPermissions` applies.
+ * inventing an input. A missing role holds nothing, so every gated method is
+ * denied — the same rule `permissionsFor` applies.
  */
-function decide(method: ManifestMethod, principal: Role | undefined): boolean | null {
+function allowedFor(method: ManifestMethod, role: Role | undefined): boolean | null {
     if (method.permissionDynamic === true) return null;
     if (method.permission === null) return true; // ungated
-    if (!principal) return false;
-    return can(principal, method.permission as Permission);
+    if (!role) return false;
+    return can(role, method.permission as Permission);
 }
 
-/** Annotate every method with whether `principal` may call it. */
+/** Annotate every method with whether `role` may call it. */
 export function annotateManifest(
     methods: ManifestMethod[],
-    principal: Role | undefined
+    role: Role | undefined
 ): AnnotatedManifestMethod[] {
-    return methods.map((method) => ({ ...method, allowed: decide(method, principal) }));
+    return methods.map((method) => ({ ...method, allowed: allowedFor(method, role) }));
 }

@@ -2,7 +2,7 @@
  * Scoped service handles — the structural half of permission enforcement.
  *
  * The point being tested is not "the check returns false" (that is
- * `withPermissions`' job, covered in tests/permissions) but that a caller
+ * `permissionsFor`'s job, covered in tests/permissions) but that a caller
  * holding a scoped handle CANNOT reach the underlying service: the refusal
  * happens before the service function is entered.
  */
@@ -17,7 +17,7 @@ import {
     scopeMethods,
     scopedService,
 } from '@/policies/scoped-service.js';
-import { withPermissions } from '@/policies/with-permissions.js';
+import { permissionsFor } from '@/permissions/permissions-for.js';
 import type {
     ContentApi,
     CoreManifestMethod,
@@ -56,12 +56,12 @@ const descriptors = {
 } satisfies Record<string, ServiceMethodDescriptor>;
 
 describe('scopeMethods', () => {
-    it('refuses a method the principal lacks, without entering the service', () => {
+    it('refuses a method the role lacks, without entering the service', () => {
         const service = makeService();
         const scoped = scopeMethods(
             service,
             descriptors,
-            withPermissions(role('settings:read')),
+            permissionsFor(role('settings:read')),
             'settings'
         );
 
@@ -73,7 +73,7 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             makeService(),
             descriptors,
-            withPermissions(role('settings:read')),
+            permissionsFor(role('settings:read')),
             'settings'
         );
 
@@ -88,12 +88,12 @@ describe('scopeMethods', () => {
         }
     });
 
-    it('calls through and returns the service result when the principal holds it', async () => {
+    it('calls through and returns the service result when the role holds it', async () => {
         const service = makeService();
         const scoped = scopeMethods(
             service,
             descriptors,
-            withPermissions(role('settings:read', 'settings:update')),
+            permissionsFor(role('settings:read', 'settings:update')),
             'settings'
         );
 
@@ -106,7 +106,7 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             service,
             descriptors,
-            withPermissions(role('settings:read')),
+            permissionsFor(role('settings:read')),
             'settings'
         );
 
@@ -114,12 +114,12 @@ describe('scopeMethods', () => {
         expect(service.read).toHaveBeenCalledWith({ key: 'site.title' });
     });
 
-    it('fails closed on a method with no descriptor, even for a wildcard principal', () => {
+    it('fails closed on a method with no descriptor, even for a wildcard role', () => {
         const service = makeService();
         const scoped = scopeMethods(
             service,
             descriptors,
-            withPermissions(role('*')),
+            permissionsFor(role('*')),
             'settings'
         );
 
@@ -133,11 +133,11 @@ describe('scopeMethods', () => {
         expect(service.undescribed).not.toHaveBeenCalled();
     });
 
-    it('refuses every gated method when there is no principal', () => {
+    it('refuses every gated method when there is no role', () => {
         const scoped = scopeMethods(
             makeService(),
             descriptors,
-            withPermissions(undefined),
+            permissionsFor(undefined),
             'settings'
         );
 
@@ -148,7 +148,7 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             makeService(),
             descriptors,
-            withPermissions(role('*')),
+            permissionsFor(role('*')),
             'settings'
         );
 
@@ -169,10 +169,10 @@ function makeEntriesStub() {
 }
 
 /** The stub is a slice of `EntriesApi`; the wrapper only reads its keys. */
-function scopeStub(stub: object, principal: Role | undefined): Record<string, never> {
+function scopeStub(stub: object, actingRole: Role | undefined): Record<string, never> {
     return scopeEntries(
         stub as unknown as EntriesApi,
-        withPermissions(principal)
+        permissionsFor(actingRole)
     ) as unknown as Record<string, never>;
 }
 
@@ -293,11 +293,11 @@ function makeContentStub() {
 /** The stub is a slice of `ContentApi`; the wrapper only reads its keys. */
 function scopeContentStub(
     stub: object,
-    principal: Role | undefined
+    actingRole: Role | undefined
 ): Record<string, never> {
     return scopeContent(
         stub as unknown as ContentApi,
-        withPermissions(principal)
+        permissionsFor(actingRole)
     ) as unknown as Record<string, never>;
 }
 
@@ -378,7 +378,7 @@ describe('scopeContent', () => {
         expect(stub.translate).not.toHaveBeenCalled();
     });
 
-    it('fails closed on a method with no descriptor, even for a wildcard principal', () => {
+    it('fails closed on a method with no descriptor, even for a wildcard role', () => {
         const stub = { mystery: vi.fn(() => Promise.resolve('x')) };
         const scoped = scopeContentStub(stub, role('*'));
 
@@ -391,7 +391,7 @@ describe('scopeContent', () => {
         expect(stub.mystery).not.toHaveBeenCalled();
     });
 
-    it('lets a wildcard principal through', async () => {
+    it('lets a wildcard role through', async () => {
         const stub = makeContentStub();
         const scoped = scopeContentStub(stub, role('*'));
 
@@ -407,12 +407,12 @@ describe('scopeContent', () => {
 // ---------------------------------------------------------------------------
 
 describe('scopedService', () => {
-    it('refuses a real core method the principal lacks', () => {
+    it('refuses a real core method the role lacks', () => {
         const scoped = scopedService(role('users:read'));
 
         try {
             void scoped.users.create({ email: 'a@b.dev', name: 'A' });
-            expect.unreachable('users.create must be refused for a read-only principal');
+            expect.unreachable('users.create must be refused for a read-only role');
         } catch (e) {
             expect(e).toBeInstanceOf(PermissionDeniedError);
             expect((e as PermissionDeniedError).method).toBe('users.create');
@@ -464,7 +464,7 @@ const manifestMethods: ManifestMethod[] = [
 ];
 
 describe('annotateManifest', () => {
-    it('decides each method for the principal', () => {
+    it('decides each method for the role', () => {
         const annotated = annotateManifest(manifestMethods, role('users:read'));
 
         expect(annotated.map((m) => m.allowed)).toEqual([true, false, true, null]);
@@ -476,7 +476,7 @@ describe('annotateManifest', () => {
         expect(first).toMatchObject({ id: 'users.query', name: 'users.query' });
     });
 
-    it('denies every gated method when there is no principal', () => {
+    it('denies every gated method when there is no role', () => {
         const annotated = annotateManifest(manifestMethods, undefined);
 
         expect(annotated.map((m) => m.allowed)).toEqual([false, false, true, null]);

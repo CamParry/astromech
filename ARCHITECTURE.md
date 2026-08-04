@@ -30,7 +30,7 @@ one another:
 ```
 routes · admin · boot · codegen · cli          entrypoints & composition root
 transport (http · local · mcp · cli)           delivery — http/client/ is the fetch Client (astromech/fetch), over the wire
-policies                                       permission/confirmation wrappers (withPermissions)
+policies                                       permission/confirmation wrappers over the manifest
 entries · media · users · settings             domains — siblings, never import each other
 plugins/runtime · database · storage ·         capabilities
   email · cron · request-context · fields · permissions

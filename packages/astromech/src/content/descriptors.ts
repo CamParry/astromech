@@ -1,7 +1,7 @@
 /**
  * Content service method descriptors — the declared shape + permission + effect
  * for each content operation. The single source the HTTP transport enforces
- * against (via withPermissions) and the method manifest reads.
+ * against (via permissionsFor) and the method manifest reads.
  *
  * `input` is the METHOD's argument object, not the HTTP body: `type` and `id`
  * are path parameters on the wire, so the body schema alone would describe half

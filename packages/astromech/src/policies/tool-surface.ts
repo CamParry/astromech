@@ -20,8 +20,8 @@
  * cannot classify. There is no "unknown effect" bucket to fail closed into.
  *
  * This is NOT the permission boundary — `policies/scoped-service.ts` is. A
- * surface decides what a transport OFFERS; permissions decide what a principal
- * may do with what it was offered. Reducing the surface of a handle that was
+ * surface decides what a transport OFFERS; permissions decide what a role may
+ * do with what it was offered. Reducing the surface of a handle that was
  * never scoped grants nothing.
  */
 
