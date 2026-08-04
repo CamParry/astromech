@@ -1,24 +1,26 @@
 /**
- * Transport for the chat drawer: posts a turn to the plugin's streaming route
- * and folds the server-sent events back into a transcript.
+ * Transport for the chat drawer: posts the transcript to the plugin's streaming
+ * route and folds the server-sent events back into it.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAIContextItems } from 'astromech/ui';
 import { parseChatEvent, splitSseFrames } from './sse.js';
+import { errorMessage } from '../error-message.js';
 import type { ChatEvent, ChatMessage } from '../types.js';
 
-/** One piece of a turn, in the order it arrived. */
-export type ChatPart =
-    | { kind: 'text'; text: string }
-    | { kind: 'tool'; name: string }
-    | { kind: 'error'; message: string };
-
-/** One side of the conversation as the drawer renders it. */
-export type ChatTurn = { role: 'user' | 'assistant'; parts: ChatPart[] };
+/**
+ * One row of the transcript. An error is not a content block and must never
+ * reach the model, so it sits alongside the turns rather than inside one.
+ */
+export type ChatEntry =
+    | { kind: 'message'; message: ChatMessage }
+    | { kind: 'error'; error: string };
 
 export type UseChat = {
-    turns: ChatTurn[];
+    entries: ChatEntry[];
+    /** The in-flight assistant text; `''` whenever nothing is streaming. */
+    tail: string;
     isStreaming: boolean;
     send: (text: string) => void;
     stop: () => void;
@@ -28,22 +30,23 @@ export type UseChat = {
  * A site can move the API mount, but the admin exposes no route base to plugin
  * components — only the plugin's own `/plugins/<serviceKey>` segment.
  */
-const API_ROUTE = '/api';
+const API_BASE_PATH = '/api';
 
 /** Hold the transcript and drive one in-flight request against the chat route. */
 export function useChat(serviceKey: string): UseChat {
-    const [turns, setTurns] = useState<ChatTurn[]>([]);
+    const [entries, setEntries] = useState<ChatEntry[]>([]);
+    const [tail, setTail] = useState('');
     const [isStreaming, setIsStreaming] = useState(false);
     const aiContext = useAIContextItems();
-    const turnsRef = useRef<ChatTurn[]>([]);
+    const entriesRef = useRef<ChatEntry[]>([]);
     const abortRef = useRef<AbortController | null>(null);
 
     // A request outlives the component that started it; unmount must cancel it.
     useEffect(() => () => abortRef.current?.abort(), []);
 
-    const commit = useCallback((next: ChatTurn[]) => {
-        turnsRef.current = next;
-        setTurns(next);
+    const updateEntries = useCallback((next: ChatEntry[]) => {
+        entriesRef.current = next;
+        setEntries(next);
     }, []);
 
     const stop = useCallback(() => {
@@ -52,36 +55,64 @@ export function useChat(serviceKey: string): UseChat {
 
     const send = useCallback(
         (text: string) => {
-            const content = text.trim();
-            if (content === '' || abortRef.current !== null) return;
+            const asked = text.trim();
+            if (asked === '' || abortRef.current !== null) return;
 
-            const asked: ChatTurn = {
-                role: 'user',
-                parts: [{ kind: 'text', text: content }],
-            };
-            const messages = toChatMessages([...turnsRef.current, asked]);
-            commit([...turnsRef.current, asked, { role: 'assistant', parts: [] }]);
+            const next: ChatEntry[] = [
+                ...entriesRef.current,
+                {
+                    kind: 'message',
+                    message: { role: 'user', content: [{ type: 'text', text: asked }] },
+                },
+            ];
+            updateEntries(next);
+            setTail('');
 
             const controller = new AbortController();
             abortRef.current = controller;
             setIsStreaming(true);
 
             void runStream({
-                url: `${API_ROUTE}/plugins/${serviceKey}/chat`,
-                body: { messages, aiContext: [...aiContext] },
+                url: `${API_BASE_PATH}/plugins/${serviceKey}/chat`,
+                body: { messages: toMessages(next), aiContext: [...aiContext] },
                 signal: controller.signal,
                 onEvent: (event) => {
-                    commit(applyEvent(turnsRef.current, event));
+                    if (event.type === 'text-delta') {
+                        setTail((current) => current + event.text);
+                        return;
+                    }
+                    if (event.type === 'message') {
+                        updateEntries([
+                            ...entriesRef.current,
+                            { kind: 'message', message: event.message },
+                        ]);
+                        setTail('');
+                        return;
+                    }
+                    if (event.type === 'error') {
+                        updateEntries([
+                            ...entriesRef.current,
+                            { kind: 'error', error: event.error },
+                        ]);
+                        setTail('');
+                    }
                 },
             }).finally(() => {
                 abortRef.current = null;
                 setIsStreaming(false);
+                // A stopped stream leaves a tail no `message` event ever closed.
+                setTail('');
             });
         },
-        [aiContext, commit, serviceKey]
+        [aiContext, updateEntries, serviceKey]
     );
 
-    return { turns, isStreaming, send, stop };
+    return { entries, tail, isStreaming, send, stop };
+}
+
+/** The wire shape: the turns only, since an error was never part of the conversation. */
+function toMessages(entries: ChatEntry[]): ChatMessage[] {
+    return entries.flatMap((entry) => (entry.kind === 'message' ? [entry.message] : []));
 }
 
 /** POST the turn and feed every parsed event to `onEvent`. Never throws. */
@@ -99,13 +130,13 @@ async function runStream(input: {
             signal: input.signal,
         });
         if (!response.ok) {
-            input.onEvent({ type: 'error', message: await readErrorMessage(response) });
+            input.onEvent({ type: 'error', error: await readErrorMessage(response) });
             return;
         }
         if (response.body === null) {
             input.onEvent({
                 type: 'error',
-                message: 'The assistant returned no response body.',
+                error: 'The assistant returned no response body.',
             });
             return;
         }
@@ -113,7 +144,7 @@ async function runStream(input: {
     } catch (error) {
         // An abort is the stop button or an unmount, not a failure to report.
         if (error instanceof Error && error.name === 'AbortError') return;
-        input.onEvent({ type: 'error', message: describeError(error) });
+        input.onEvent({ type: 'error', error: errorMessage(error) });
     }
 }
 
@@ -161,54 +192,4 @@ async function readErrorMessage(response: Response): Promise<string> {
         return `The assistant request failed (${String(response.status)}).`;
     }
     return `The assistant request failed (${String(response.status)}).`;
-}
-
-/** Append an event to the assistant turn that is currently streaming. */
-function applyEvent(turns: ChatTurn[], event: ChatEvent): ChatTurn[] {
-    if (event.type === 'done') return turns;
-    const last = turns[turns.length - 1];
-    if (last === undefined || last.role !== 'assistant') return turns;
-    return [
-        ...turns.slice(0, -1),
-        { role: 'assistant', parts: appendPart(last.parts, event) },
-    ];
-}
-
-/** Grow the trailing text part for a text event; a tool or error starts a new one. */
-function appendPart(
-    parts: ChatPart[],
-    event: Exclude<ChatEvent, { type: 'done' }>
-): ChatPart[] {
-    if (event.type === 'tool') return [...parts, { kind: 'tool', name: event.name }];
-    if (event.type === 'error')
-        return [...parts, { kind: 'error', message: event.message }];
-
-    const last = parts[parts.length - 1];
-    if (last !== undefined && last.kind === 'text') {
-        return [...parts.slice(0, -1), { kind: 'text', text: last.text + event.text }];
-    }
-    return [...parts, { kind: 'text', text: event.text }];
-}
-
-/** The wire shape: each turn's text joined, dropping turns that said nothing. */
-function toChatMessages(turns: ChatTurn[]): ChatMessage[] {
-    return turns
-        .map((turn) => ({
-            role: turn.role,
-            content: turn.parts
-                .filter(isTextPart)
-                .map((part) => part.text)
-                .join(''),
-        }))
-        .filter((message) => message.content !== '');
-}
-
-/** Narrowing predicate so `filter` keeps the text part's `text` field. */
-function isTextPart(part: ChatPart): part is Extract<ChatPart, { kind: 'text' }> {
-    return part.kind === 'text';
-}
-
-/** The message of a thrown value, and nothing else about it. */
-function describeError(error: unknown): string {
-    return error instanceof Error ? error.message : String(error);
 }

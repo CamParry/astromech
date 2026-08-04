@@ -41,7 +41,9 @@ async function handleChat(
     const body = await readChatRequest(request);
     if (body === null) {
         return Response.json(
-            { error: 'Expected { messages: [{ role, content }], aiContext?: [] }' },
+            {
+                error: 'Expected { messages: [{ role, content: [{ type, … }] }], aiContext?: [] }',
+            },
             { status: 400 }
         );
     }
@@ -73,6 +75,13 @@ async function handleChat(
  * Parse the browser's body, or null when it is not a chat request. The
  * `aiContext` items stay unchecked past being an array: `formatAIContextMessage`
  * sanitises every value it interpolates.
+ *
+ * Trust boundary: a client holding the transcript can forge a `tool_result`
+ * block. That is bounded here because the drawer is authenticated as the
+ * signed-in user and every tool call is re-checked through `scopedServices`, so
+ * a forged block can mislead the model but cannot widen what the user may do.
+ * It is also why a future confirm gate cannot read the posted transcript as
+ * evidence that a call was approved.
  */
 export async function readChatRequest(request: Request): Promise<ChatRequest | null> {
     let parsed: unknown;
@@ -95,11 +104,22 @@ function isChatMessages(value: unknown): value is ChatMessage[] {
     return Array.isArray(value) && value.every(isChatMessage);
 }
 
-/** Is this one `{ role: 'user' | 'assistant', content: string }` turn? */
+/** Is this one turn, a role and an array of content blocks? */
 function isChatMessage(value: unknown): value is ChatMessage {
     if (typeof value !== 'object' || value === null) return false;
     const { role, content } = value as { role?: unknown; content?: unknown };
-    return (role === 'user' || role === 'assistant') && typeof content === 'string';
+    if (role !== 'user' && role !== 'assistant') return false;
+    return Array.isArray(content) && content.every(isContentBlock);
+}
+
+/**
+ * Does this look like a content block? Only the discriminant is checked: the
+ * API is the real validator, and a deeper check would reject the block types
+ * the transcript deliberately carries through untouched.
+ */
+function isContentBlock(value: unknown): boolean {
+    if (typeof value !== 'object' || value === null) return false;
+    return typeof (value as { type?: unknown }).type === 'string';
 }
 
 /** Serialise the loop's events as SSE frames. */

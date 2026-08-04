@@ -4,9 +4,11 @@
  */
 
 import { Anthropic } from '@anthropic-ai/sdk';
+import type { BetaMessageParam } from '@anthropic-ai/sdk/resources/beta';
 import type { AIContextItem, PluginLogger, ToolDefinition } from 'astromech';
 import { buildRequest } from './request.js';
-import { TOOL_SEARCH_TOOL, toRunnableTools } from './tools.js';
+import { TOOL_SEARCH, toRunnableTools } from './tools.js';
+import { errorMessage } from '../error-message.js';
 import type { ChatEvent, ChatMessage, ResolvedAuthoringOptions } from '../types.js';
 
 const MAX_TOKENS = 4096;
@@ -37,7 +39,7 @@ export async function* runAuthoringLoop(input: {
             system,
             output_config: { effort: input.options.effort },
             messages,
-            tools: [TOOL_SEARCH_TOOL, ...runnableTools],
+            tools: [TOOL_SEARCH, ...runnableTools],
             stream: true,
             max_iterations: MAX_ITERATIONS,
         });
@@ -48,25 +50,39 @@ export async function* runAuthoringLoop(input: {
                     event.type === 'content_block_delta' &&
                     event.delta.type === 'text_delta'
                 ) {
-                    yield { type: 'text', text: event.delta.text };
+                    yield { type: 'text-delta', text: event.delta.text };
                 }
             }
             // Mandatory every turn: returning from the loop body without
             // awaiting the final message aborts the stream.
             const message = await stream.finalMessage();
-            for (const block of message.content) {
-                if (block.type === 'tool_use') {
-                    yield { type: 'tool', name: block.name };
-                }
-            }
+            yield {
+                type: 'message',
+                message: { role: 'assistant', content: message.content },
+            };
+
+            // The runner memoises this per iteration and clears the memo at the
+            // top of the next one, so each tool runs exactly once whether it is
+            // called here or by the runner. This is where a confirm gate for a
+            // mutating call will intercept.
+            const toolResult = await runner.generateToolResponse();
+            if (toolResult !== null)
+                yield { type: 'message', message: toChatMessage(toolResult) };
         }
     } catch (error) {
-        yield { type: 'error', message: errorMessage(error) };
+        yield { type: 'error', error: errorMessage(error) };
     }
     yield { type: 'done' };
 }
 
-/** The message of a thrown value, and nothing else about it. */
-function errorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : String(error);
+/** Narrow a runner message to a chat message, spelling string content out as a block. */
+function toChatMessage(param: BetaMessageParam): ChatMessage {
+    return {
+        // `BetaMessageParam` also allows `system`; a tool response is a user turn.
+        role: param.role === 'assistant' ? 'assistant' : 'user',
+        content:
+            typeof param.content === 'string'
+                ? [{ type: 'text', text: param.content }]
+                : param.content,
+    };
 }

@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ToolDefinition } from 'astromech';
-import { TOOL_SEARCH_TOOL, toRunnableTools } from '../../src/loop/tools.js';
+import { TOOL_SEARCH, toRunnableTools } from '../../src/loop/tools.js';
 
 /** A dispatch whose `invoke` resolves to `result`. */
 function dispatchFor(name: string, result: unknown = { ok: true }): ToolDefinition {
@@ -74,8 +74,8 @@ describe('toRunnableTools', () => {
     });
 });
 
-describe('TOOL_SEARCH_TOOL', () => {
+describe('TOOL_SEARCH', () => {
     it('is not deferred, which is what keeps the request valid', () => {
-        expect(TOOL_SEARCH_TOOL.defer_loading).toBeUndefined();
+        expect(TOOL_SEARCH.defer_loading).toBeUndefined();
     });
 });

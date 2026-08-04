@@ -7,12 +7,13 @@ import { betaTool } from '@anthropic-ai/sdk/helpers/beta/json-schema';
 import type { BetaToolSearchToolRegex20251119 } from '@anthropic-ai/sdk/resources/beta';
 import type { BetaRunnableTool } from '@anthropic-ai/sdk/lib/tools/BetaRunnableTool';
 import type { ToolDefinition } from 'astromech';
+import { errorMessage } from '../error-message.js';
 
 /**
  * The tool the model searches the catalogue with. It runs server-side and stays
  * loaded: the request is rejected if every tool in it is deferred.
  */
-export const TOOL_SEARCH_TOOL: BetaToolSearchToolRegex20251119 = {
+export const TOOL_SEARCH: BetaToolSearchToolRegex20251119 = {
     type: 'tool_search_tool_regex_20251119',
     name: 'tool_search_tool_regex',
 };
@@ -51,9 +52,4 @@ function toRunnableTool(tool: ToolDefinition): BetaRunnableTool {
         }),
         defer_loading: true,
     };
-}
-
-/** The message of a thrown value, and nothing else about it. */
-function errorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : String(error);
 }
