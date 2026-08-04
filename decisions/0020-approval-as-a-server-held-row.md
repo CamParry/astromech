@@ -1,4 +1,4 @@
-# 0015 — An approval is a row the server holds, not a value in the transcript
+# 0020 — An approval is a row the server holds, not a value in the transcript
 
 **Date:** 2026-08-04
 **Status:** accepted

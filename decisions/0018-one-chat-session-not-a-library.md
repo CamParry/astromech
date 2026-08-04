@@ -83,7 +83,7 @@ another one.
 
 ## See also
 
-- `decisions/0015-approval-as-a-server-held-row.md` — the approvals table this
+- `decisions/0020-approval-as-a-server-held-row.md` — the approvals table this
   reuses, and why an approval is a row rather than a value in the transcript.
 - `roadmap/in-progress/ai-integration.md` — P9 as built, and P10 for the audit
   trail this deliberately defers to.

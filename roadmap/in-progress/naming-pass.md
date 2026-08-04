@@ -231,12 +231,15 @@ descriptor` (asserted in `tests/transport/mcp/tools.test.ts`) and
 - [x] **`decisions/` had two `0007` files** — fixed by the documentation pass:
       the media-browser record became `0010`, and `decisions/README.md` now
       carries an index so a collision is visible when the next entry is written
-- [ ] **`decisions/` now has two `0015` files** — the index guard above was not
-      applied when `0015-approval-as-a-server-held-row.md` landed 50 minutes
-      after `0015-public-subpaths-mirror-the-source.md`. Both are now in the
-      index with the collision marked. The approval record is the later of the
-      two and has zero inbound references, so renumbering it is free — needs a
-      decision, not a guess
+- [x] **`decisions/` had two `0015` files** — the index guard above was not
+      applied when the approval record landed 50 minutes after
+      `0015-public-subpaths-mirror-the-source.md`. The approval record was the
+      later of the two and became `0020`. It was not free: by the time it was
+      renumbered, `0018-one-chat-session-not-a-library.md` cited it, so an
+      append-only record had a dead backticked path that `check:docs` fails on.
+      Correcting a path is not revising a rationale, so it was fixed in place —
+      but the coupling is the point. Records cite each other by filename, and a
+      filename that carries an allocated number is not stable
 - [ ] **The index guard does not prevent collisions, it only records them.**
       Two concurrent branches both claimed `0018` in this session — the chat
       session record and the naming record — and nothing caught it until the
