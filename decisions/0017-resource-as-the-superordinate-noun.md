@@ -100,11 +100,30 @@ keys — boot writes them and six call sites read them — so changing them is a
 behaviour change, not a rename, and it is out of scope for a naming pass. It is
 recorded here so the next reader knows it is known.
 
-## What this does not decide
+## "Document" is gone entirely, including the prose
 
-`ctx.documentValidate` on the field pipeline keeps its name. It is a property
-of `FieldPipelineContext` with call sites in six services, assertions in the
-pipeline tests, and prose in `apps/docs/content/field-validation.md` describing
-the document-level `validate` hook and its `details.form` wire shape. Renaming
-it reaches into user-facing documentation of a hook's behaviour, which is a
-larger question than the registry's name.
+`ctx.documentValidate` on the field pipeline is `ctx.resourceValidate`. It is a
+`FieldPipelineContext` property with call sites in six services and assertions
+in the pipeline tests — 32 sites, all inside `packages/astromech`. Nothing in
+`apps/docs`, `apps/demo` or `packages/plugins` names it.
+
+Leaving it would have left `documentValidate?: ResourceValidator` on one line,
+which is the half-rename this record exists to avoid. The argument against
+"document" — undefined vocabulary that reads as a ProseMirror doc first — does
+not weaken when the word appears in a property name instead of a type name.
+
+The prose followed for the same reason. `apps/docs/content/field-validation.md`
+had a `## Whole-document validation` heading and described "the document-level
+`validate`"; both now say resource. A reader who meets `resourceValidate` in a
+stack trace and `## Whole-document validation` in the guide has to work out that
+they are the same feature.
+
+**The authored config key is untouched.** An author still writes plain
+`validate` on an entry type, on `media`, on `users` or on a settings page. This
+pass renamed no config key and no wire field: `details.form` still carries the
+form-level message, because that is a wire shape rather than vocabulary.
+
+What survives the rename is "document" where it means a ProseMirror document —
+`docToMarkdown`, `markdownToDoc`, and the `richtext` row in the docs' rule
+table. That was always the word's real owner here, which is the whole reason it
+could not also mean this.

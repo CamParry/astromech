@@ -125,7 +125,7 @@ five assertions read the deleted `isContainer` flag and went with it, and the
 `tests/utilities/values-equal.test.ts` when the function moved. Authoring (32)
 and schema-engine (86) unchanged.
 
-### `resource` (§J) — `8759d0a`, `52ef1fe`, `6f9b0b9`
+### `resource` (§J) — `8759d0a`, `52ef1fe`, `6f9b0b9`, `c024df3`
 
 - [x] `ResourceType` gains `'setting'` and stops living under "Relationships":
       it now names anything that carries fields and runs the field pipeline
@@ -140,8 +140,18 @@ and schema-engine (86) unchanged.
       exhaustive `switch` in `database/storage/resource-existence.ts` stands
 - [x] `fields/document-validators.ts` → `fields/resource-validators.ts`; the
       four registry functions and the three public types follow
+- [x] `ctx.documentValidate` → `ctx.resourceValidate`, 32 sites, all inside
+      `packages/astromech`. The prose went with it, in the source comments and
+      in `apps/docs/content/field-validation.md`, whose "Whole-document
+      validation" heading is now "Whole-resource validation". "Document"
+      survives only where it means a ProseMirror document
+- [x] `tests/fields/pipeline-document.test.ts` → `pipeline-resource.test.ts`,
+      `tests/services/entries/document-validation.test.ts` →
+      `resource-validation.test.ts`
 - [x] Registry keys untouched — they are runtime keys, so the `media` singular
-      / `users` plural inconsistency is recorded rather than fixed
+      / `users` plural inconsistency is recorded rather than fixed. The
+      authored config key stays plain `validate`, and `details.form` stays: a
+      wire shape, not vocabulary
 - [x] `decisions/0017-resource-as-the-superordinate-noun.md`, and a
       `TERMINOLOGY.md` entry
 
@@ -179,11 +189,6 @@ Added after the order table was written, so it has no place in it:
       `DELETE /entries/:type/:id/force` and an admin prop chain through
       `DeleteEntryModal`. `TERMINOLOGY.md` disowns the word. The CLI's
       `--force` flag is a genuinely different concept and keeps its name
-- [ ] **`ctx.documentValidate` survives §J.** The pipeline-context property, its
-      six call sites and the two tests named for it keep "document", because the
-      hook is documented user-facing in `apps/docs/content/field-validation.md`
-      alongside its `details.form` wire shape. Renaming it is a docs question,
-      not a rename
 - [ ] **`MediaUsage` is documented as "the media mirror of
       `IncomingRelationship`" while sharing no name with it.** Belongs to a
       media pass
