@@ -111,6 +111,6 @@ Scoped out of this run, in the plan's own order:
 - [ ] **`MediaUsage` is documented as "the media mirror of
       `IncomingRelationship`" while sharing no name with it.** Belongs to a
       media pass
-- [ ] **`decisions/` has two `0007` files** (`0007-media-browser-composition.md`
-      and `0007-plugin-core-boundary.md`) — pre-existing, unrelated to this
-      work, but it means the numbering can't be trusted for the next entry
+- [x] **`decisions/` had two `0007` files** — fixed by the documentation pass:
+      the media-browser record became `0010`, and `decisions/README.md` now
+      carries an index so a collision is visible when the next entry is written

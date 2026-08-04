@@ -1,7 +1,7 @@
 # 0009 — One noun per role: service, method, client, API
 
 **Date:** 2026-08-04
-**Status:** adopted, shipped
+**Status:** accepted
 
 ## Context
 

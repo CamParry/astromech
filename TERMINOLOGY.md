@@ -4,9 +4,10 @@ Terms that are ambiguous, easily confused, or have meaningful design decisions b
 
 Names here are chosen from established web-ecosystem vocabulary wherever one
 fits, and a term that already means something specific to a web developer is not
-reused for something else — see `decisions/0005-ai-context-naming.md`. An entry
-below exists to record which common word was picked and what it was picked over,
-not to introduce a private one.
+reused for something else — see `decisions/0005-ai-context-naming.md`.
+
+Each entry says what a term means today. Why it beat the alternative is in
+`decisions/`, linked from the entry.
 
 ---
 
@@ -23,7 +24,7 @@ Current drivers:
 Storage drivers are factories on their own subpaths (`astromech/storage/r2`),
 never classes on the root barrel — see `apps/docs/configuration/storage.md`.
 
-> **Why "driver" and not "adapter"?** Both terms are used in the ecosystem (Payload uses "adapter", AdonisJS uses "driver"). We chose "driver" for consistency with `DatabaseDriver`, which was already established, and because it better conveys the idea of a low-level connector to a specific technology — not just a compatibility shim.
+An **adapter** is a different thing: it reshapes one internal interface into another, as `tableStorage` reshapes a plugin table into `EntryStorage`. A driver reaches an external system. `decisions/0012-driver-not-adapter.md` records why the two words are kept apart.
 
 ---
 
@@ -70,7 +71,7 @@ These are distinct operations on the entries service:
 
 ## Populated record
 
-**There is no populate mechanism.** A relationship field reads back as the IDs stored in the field data; resolving those into whole entries is the caller's job, in a second read. The `populate` query option and `entries/internal/populate.ts` were deleted with the relationships rework — field data is the source of truth, so there is nothing to resolve _from_ the index.
+**There is no populate mechanism.** A relationship field reads back as the IDs stored in the field data; resolving those into whole entries is the caller's job, in a second read. Field data is the source of truth, so there is nothing to resolve _from_ the index — `decisions/0004-relationships-as-a-derived-index.md` has the reasoning.
 
 The term survives only in a validation message: a **populated record** is an entry object sent where an ID belongs, which is what a caller writing back an expanded read produces. `relationship` and `media` reject it — `Must be an id, not a populated record`, or `Must be a list of ids, …` on a `multiple` field — rather than accept it silently.
 
@@ -80,11 +81,12 @@ The term survives only in a validation message: a **populated record** is an ent
 
 The three values of `EntryStatus`:
 
-- `unpublished` — not publicly visible (was `draft`)
+- `unpublished` — not publicly visible
 - `published` — live
-- `scheduled` — will transition to published at `publishAt` time (scheduling system not yet implemented — Phase 14)
+- `scheduled` — will transition to published at `publishAt` time
 
-`scheduled` currently exists as a status value but has no enforcement mechanism.
+`scheduled` is a status value with no enforcement behind it: nothing performs the
+transition. See `roadmap/completed/versioning-publishing-scheduling.md`.
 
 ---
 
@@ -177,7 +179,7 @@ After each successful backup, the plugin prunes the oldest artifacts so that at 
 
 **Merge tag** — a `{{token}}` an author writes into a form notification's recipient, subject or body, substituted with that submission's values at send time (`notifications/merge-tags.ts` in `@astromech/forms`). `{{fieldName}}`, plus `{{formTitle}}` and `{{submittedAt}}`. Unknown tags are left visible rather than silently deleted. The term is the form world's own — Gravity Forms, Mailchimp.
 
-**Placeholder** — a form field's greyed-out input hint, stored as the `placeholder` key on a field block. Never means `{{token}}`; the two were both called "placeholder" until the vocabulary was split.
+**Placeholder** — a form field's greyed-out input hint, stored as the `placeholder` key on a field block. Never means `{{token}}`; `decisions/0001-forms-vocabulary-and-table-directories.md` records the split.
 
 ---
 
@@ -191,7 +193,7 @@ One message an editor configures to be sent when a submission is accepted, store
 
 **Tables** — a directory of `defineTable` / `definePluginTable` descriptors and nothing else. Every table-bearing plugin keeps its descriptors in `src/tables/`, publishes them (where a consumer needs them) as a `./tables` subpath, and `astromech plugin:generate --tables` reads that module to diff against the package's migration snapshot. A descriptor export is named `<noun>Table` (`entriesTable`, `cronTable`, `submissionsTable`) — the noun matching its SQL table name, the suffix separating it from the domain word and the domain's service.
 
-**Schema** — the aggregate shape, or a module that mixes descriptors with validation. Core's `<domain>/schema.ts` holds both table descriptors and the domain's Zod request schemas, so it keeps the wider word; likewise `astromech/db/schema` (every table plus the codec and driver) and `@astromech/schema-engine` (diffing and rendering DDL). A `schema` that means "just these tables" is the one usage that has been retired.
+**Schema** — the aggregate shape, or a module that mixes descriptors with validation. Core's `<domain>/schema.ts` holds both table descriptors and the domain's Zod request schemas, so it keeps the wider word; likewise `astromech/db/schema` (every table plus the codec and driver) and `@astromech/schema-engine` (diffing and rendering DDL). A `schema` that means "just these tables" is the one usage this vocabulary rules out — `decisions/0001-forms-vocabulary-and-table-directories.md` has the reasoning.
 
 ---
 
@@ -201,6 +203,4 @@ What an admin route declares about the thing the user is currently looking at, s
 
 Contributions are ordered, not a flat set: a layout, its route and a focused field editor can all contribute at once, and order is what decides which one "this" refers to.
 
-> **Why not "context bus"?** In web development "bus" means _event bus_ — `emit`/`subscribe`, many-to-many, subscribers reacting. This has one consumer, no events, and is pulled at send time. "Ambient context", "UI context", "AI awareness" and "AI insight" were also rejected; `decisions/0005-ai-context-naming.md` records why.
-
-Distinct from **React context**, which is a rendering mechanism and unrelated. The `AI` prefix is load-bearing — bare "context" in this codebase means React's.
+Distinct from **React context**, which is a rendering mechanism and unrelated. The `AI` prefix is load-bearing — bare "context" in this codebase means React's, and "context bus" would mean an `emit`/`subscribe` event bus, which this is not. `decisions/0005-ai-context-naming.md` records the names rejected.
