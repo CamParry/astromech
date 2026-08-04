@@ -327,12 +327,12 @@ export type FieldDefinition = {
     /** Maximum nesting depth for `tree` fields. Unlimited when omitted. */
     maxDepth?: number;
     /**
-     * `group` only. When `false` the group draws nothing itself: box AND label
-     * are dropped and the sub-fields render inline, keeping only the nested
-     * data key. Wrap it in a `section` when a heading/surface is wanted. Defaults
-     * to `true`.
+     * `group` only. Whether the group draws a box. When `false` the box AND the
+     * label are dropped and the sub-fields render inline, keeping only the
+     * nested data key; wrap it in a `section` when a heading or surface is
+     * wanted. Defaults to `true`.
      */
-    container?: boolean;
+    boxed?: boolean;
     step?: number;
     collapsed?: boolean;
     accept?: string;

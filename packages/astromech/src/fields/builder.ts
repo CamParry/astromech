@@ -45,7 +45,7 @@ type RelationshipOptions = BaseOptions & {
     multiple?: boolean;
 };
 
-type GroupOptions = BaseOptions & { container?: boolean; fields: FieldDefinition[] };
+type GroupOptions = BaseOptions & { boxed?: boolean; fields: FieldDefinition[] };
 type RepeaterOptions = BaseOptions & {
     min?: number;
     max?: number;
