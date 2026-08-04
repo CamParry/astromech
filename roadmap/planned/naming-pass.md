@@ -111,6 +111,86 @@ fix assigns one noun per role and lets "API" mean only the HTTP API.
       `internal/diff.ts` → `internal/deep-equal.ts`,
       `internal/validation.ts` → `internal/parse.ts` (`validate` → `parseWith`).
 - [ ] Fix `entries/service.ts:6` — "supports gating" means capability gating.
+- [ ] **Consistency, not naming (§G8):** the three plugin entry types
+      (`forms/form.ts:29`, `forms/submission.ts:14`, `redirects/redirect.ts:15`)
+      declare `: EntryTypeConfig` while the demo and both doc examples use
+      `defineEntryType(…)`. Adopt the helper in the plugins and say so in
+      `apps/docs/content/entry-types.md`. `defineEntryType` itself **stays** —
+      `defineEntry` was considered and rejected (see §G "don't churn").
+
+### `fields/` (§H)
+
+- [ ] **Settle the two categories: `layout field` (presentational) vs a plain
+      field.** Stated three times today with two names ("layout container",
+      "chrome container") and three memberships — three data containers in
+      `types/fields.ts:4-7`, four in `core-descriptors.ts:4-9`, `tabs` missing
+      from `builder.ts:6-8`. Payload's term is Layout Fields, on the same rule.
+      One `TERMINOLOGY.md` entry; the three docstrings point at it.
+- [ ] **Drop "chrome"** (10 sites) — "presentational" for the field sense, "shell"
+      for the admin sense, which the admin already uses.
+- [ ] **Retire "container" as the category word** — it means a visual box in
+      Bootstrap, Tailwind, CSS container queries and Filament, so "data
+      container" reads backwards. Use "nested field" in prose where needed.
+- [ ] **Delete `isLayout`** (declared at `types/fields.ts:287`, never set, never
+      read) **and `isContainer`** (redundant: `descriptor.children !== undefined`
+      already answers it).
+- [ ] **`FieldDefinition.container` → `boxed`** — it controls whether a box is
+      drawn, not containment. Public.
+- [ ] **`formatFieldPath` → `formatInstancePath`, `parseFieldPath` →
+      `parseInstancePath`** — both docstrings already say "instance path",
+      `TERMINOLOGY.md` defines the pair, the DB column is `instancePath`, and
+      `relationship-edges.ts:79` assigns `instancePath` from the wrong-named
+      function.
+- [ ] **Split `helpers.ts`** into `flatten.ts` + `count.ts`, labels into the
+      existing `utilities/labels.ts`. Its header is a three-way merge changelog.
+      `lengthStatus` → `countStatus` (matches the public `count` option).
+- [ ] **`scoped-reads.ts` → `field-reads.ts`**, `ScopedReads` → `FieldReads` —
+      "scoped" already means permission-, plugin- and request-scoped. Move
+      `valuesEqual` to `utilities/`.
+- [ ] **`projectToSchema` out of `patch.ts`** — it isn't a patch operation.
+- [ ] **`columns` plural everywhere** — file, subpath, and the header's
+      `import * as column` alias. Matches `fields`.
+- [ ] Recorded, not fixed: **`tabs()` is the only factory taking no name** and
+      hardcodes `name: 'tabs'`, so two in one entry type collide.
+
+### Definitions are objects (§I)
+
+- [ ] **`defineX` returns an `X`; the runtime form takes the qualifier.**
+      `TableDescriptor` → `Table`, `ServiceMethodDescriptor` → `ServiceMethod`,
+      `FieldTypeDescriptor` → `FieldType`, `EntryTypeConfig` → `EntryType`,
+      `DefinedHook` → `Hook`, `FieldDefinition` → `Field`, `BlockDefinition` →
+      `Block`. Both `Descriptor` and `Definition` disappear as suffixes.
+      `Resolved*` / `Registered*` / `Collected*` already carry the other side
+      (130-odd uses).
+- [ ] **Clear the collision first:** admin `TableDefinition` / `FormDefinition` →
+      `ResolvedTable` / `ResolvedForm`, `types/definitions.ts` →
+      `types/resolved.ts`, `admin/definitions/` → `admin/rendering/`. They are
+      derived by `admin/definitions/derive.ts`, so they were never definitions.
+- [ ] **Free `FieldType`:** the incumbent `type FieldType = AnyFieldType` is a
+      union of string literals and is really `FieldTypeName`. Add
+      `defineFieldType`; `fields/descriptors.ts` → `field-type-registry.ts`,
+      `core-descriptors.ts` → `core-field-types.ts`.
+- [ ] **`defineRegistry` → `createRegistry`** (24 uses) — it creates a runtime
+      slot, it defines nothing. Found by the rule, not by inspection.
+- [ ] **`PluginServiceMethod` → `ServiceMethodFn`** — otherwise it reads as a
+      sibling of `ServiceMethod` and isn't (§I1).
+- [ ] `MessageDescriptor` → `MessageRef` — borrows FormatJS's name without its
+      shape. Optional.
+- [ ] Unchanged: `AstromechConfig` (the `defineConfig` → config convention) and
+      `definePlugin` returning a factory (recorded decision, now the documented
+      exception).
+
+### A word for entries + media + users + settings (§J)
+
+- [ ] **Adopt `resource`.** `ResourceType` (`types/domain.ts:63`) and
+      `TargetKind` (`relationship-edges.ts:35`) are the same three-member union
+      under two names. `ResourceType` gains `'setting'`; `TargetKind` keeps its
+      name as the relation-eligible subset and says so in its docstring.
+- [ ] **`document-validators.ts` → `resource-validators.ts`**,
+      `DocumentValidator` → `ResourceValidator`. "Document" is undefined
+      vocabulary that reads as a ProseMirror doc, two directories from
+      `docToMarkdown`. The new name explains the key space it already has
+      (`entry:<type>`, `media`, `users`, `setting:<path>`).
 
 ### Docs (§E)
 
@@ -123,6 +203,15 @@ fix assigns one noun per role and lets "API" mean only the HTTP API.
       `orchestrator` there from the quality list).
 - [ ] **`decisions/0008-service-method-client-vocabulary.md`** — record §A's
       four-role model and the revisions it replaces. Most re-litigable item here.
+- [ ] **`decisions/0009-definitions-are-objects.md`** — record §I's rule and, in
+      particular, why "definition" failed: it implies information without
+      behaviour, and `FieldTypeDescriptor` holds `build`/`coerce`/`validate`/
+      `children`. Also records overturning `TERMINOLOGY.md`'s `EntryTypeConfig`
+      decision (§I3), which was made explicitly "to avoid ambiguity".
+- [ ] **`TERMINOLOGY.md`** — new entries for layout field vs field (§H1),
+      `resource` (§J), and the `EntryType`/`Entry` + `Field`/field-values
+      asymmetry (§I). Reword "Entry vs Table (as data worlds)" so its prose
+      doesn't drift from the new `Table` type (§I2).
 
 ### Verify
 
@@ -131,7 +220,11 @@ fix assigns one noun per role and lets "API" mean only the HTTP API.
       `db:generate` must report "No schema changes".
 - [ ] `tests/policies/methods-export.test.ts` asserts the `astromech/methods`
       export list by name — it changes in the same commit or it fails. That's the
-      intended tripwire.
+      intended tripwire. `tests/db/descriptor-snapshot.test.ts` is the same
+      tripwire for §F, and `tests/transport/mcp/parity.test.ts` for §G3.
+- [ ] `db:generate` must still report "No schema changes" after §F — the rename
+      touches descriptor identifiers, never the SQL table names inside
+      `defineTable`.
 
 ## Notes / caveats
 
@@ -145,8 +238,21 @@ fix assigns one noun per role and lets "API" mean only the HTTP API.
   live at once, which is worse than one wrong one.
 - Items touching `astromech/methods` and the root export are pre-1.0 with no
   external consumers. Cheap now, expensive later.
-- Every replacement is an existing ecosystem word, so no `TERMINOLOGY.md` entry
-  is needed.
+- **§I has an ordering dependency.** The admin `TableDefinition` must become
+  `ResolvedTable` before `TableDescriptor` can become `Table`. Everything else in
+  §I is independent. `FieldDefinition` → `Field` goes last: widest diff, no
+  dependents.
+- Most replacements are existing ecosystem words, but §H1, §I and §J each need a
+  `TERMINOLOGY.md` entry, and §I overturns an existing one.
+- **Deferred, not scheduled:** layout fields optionally taking a name that groups
+  their content, and the `group`-vs-`section` collapse it implies (one type, two
+  toggles: does the name nest child keys, is a box drawn).
+  `group({container: false})` already occupies one corner of that 2×2, so the
+  toggles are real. Behaviour change plus a stored-data migration, not a rename;
+  needs its own session. ⚠️ An earlier draft of §H proposed _dropping_ the name
+  param from `section`/`accordion`/`tab` to make the signature signal the data
+  key. **Reversed 2026-08-04** — the intended direction is the opposite. Don't
+  re-derive it.
 - **Deferred, not scheduled:** `content/` → ? (most overloaded word in a CMS on
   the domain that needs it least, but `@astromech/authoring` shipped 2026-08-03
   and took the best candidate name); `dispatch` living under `transport/mcp/`

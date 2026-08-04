@@ -42,12 +42,23 @@ stood on moved.
       half is done (above); only the file move is open, and it is worth less now
       that `tableStorage` reads as an `EntryStorage` adapter sitting next to the
       other one
-- [ ] **`capabilities` → `supports` — blocked on a name collision.** The storage
-      layer already uses `supports` for its own axis (`BUILT_IN_SUPPORTS`,
-      `entries/storage/capabilities.ts`, `supports: []` on `tableStorage`), while
-      `EntryTypeConfig.capabilities` is the config axis. The rename as written
-      would give one word two meanings. Needs a third name, or dropping
-- [ ] Rename `storage/built-in.ts` → `storage/entries.ts` (cosmetic)
+- [x] **`capabilities` → `supports` — DROPPED 2026-08-04.** The naming review
+      (`specs/naming-pass.md` §G1) resolved it: the collision was the code
+      reporting that there are two axes, not drift. `supports` is what a storage
+      backend _can_ do; `capabilities` is what a type has _turned on_;
+      `resolveEntryCapabilities(cfg, storageSupports)` converts one to the other,
+      so merging them loses information. Both names stay. What was actually wrong
+      is that each of the two files is named for the other's axis —
+      `storage/capabilities.ts` exports `BUILT_IN_SUPPORTS`,
+      `internal/supports.ts` exports `assertCapability`. §G1 dissolves
+      `internal/supports.ts` into `internal/type-config.ts` +
+      `storage/registry.ts`; tracked on `roadmap/planned/naming-pass.md`
+- [x] **`storage/built-in.ts` → `storage/entries.ts` — WON'T DO 2026-08-04.**
+      `entries.ts` inside `entries/storage/` collides with the `entries` table
+      descriptor (`entries/schema.ts:17`), and "built-in storage" is already the
+      consistent term across `TERMINOLOGY.md`, `BUILT_IN_SUPPORTS` and
+      `createBuiltInEntryStorage`. Recorded in `specs/naming-pass.md` §G so a
+      later pass doesn't reopen it
 
 **Layer 3 — Adapter: DROPPED 2026-08-03, superseded.**
 
