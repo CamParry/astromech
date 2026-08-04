@@ -1,8 +1,9 @@
 # Layout fields taking a name, and `group` vs `section`
 
-**Status:** planned, not designed. Split out of `specs/naming-pass.md` §H on
-2026-08-04 so it survives that spec's deletion. It is a behaviour change with a
-stored-data migration, not a rename, and it needs its own session.
+**Status:** planned, not designed. Split out of the naming pass so it survives
+that spec's deletion; the vocabulary it builds on is
+`decisions/0016-the-fields-module-vocabulary.md`. It is a behaviour change with
+a stored-data migration, not a rename, and it needs its own session.
 
 Today `section`, `accordion` and `tab` take a name that is inert — never a data
 key. The direction worth exploring is the opposite of dropping that parameter:

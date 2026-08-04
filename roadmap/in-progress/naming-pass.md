@@ -15,10 +15,16 @@ of 2465 core / 32 authoring / 86 schema-engine — the authoring figure moved
 because the content-block work landed in between, not because this pass touched
 a test.
 
-**Plan:** `specs/naming-pass.md`, now trimmed to the unshipped sections only.
+§I, the last section, landed on `refactor/definitions-are-objects` at a baseline
+of 2460 core / 79 authoring / 86 schema-engine. **The pass is complete** — the
+spec is deleted.
+
 The headline decisions are recorded in
-`decisions/0009-service-method-client-vocabulary.md` and
-`decisions/0015-public-subpaths-mirror-the-source.md`.
+`decisions/0009-service-method-client-vocabulary.md`,
+`decisions/0015-public-subpaths-mirror-the-source.md`,
+`decisions/0016-the-fields-module-vocabulary.md`,
+`decisions/0017-resource-as-the-superordinate-noun.md` and
+`decisions/0018-a-define-returns-the-thing.md`.
 
 ## Shipped
 
@@ -169,13 +175,33 @@ authoring at 79 and schema-engine at 86.
 - [x] Project `CLAUDE.md` matched to the global naming rules' 2026-08-04 split
 - [x] `decisions/0009-service-method-client-vocabulary.md`
 
-## Not done
+### Definitions are objects (§I) — `0a1bce6`, `c70f573`, `161aa3a`, `56ee7a7`, `044a16c`
 
-Added after the order table was written, so it has no place in it:
+`defineX` returns an `X`; `Descriptor` and `Definition` stop being suffixes, and
+the derived form takes the `Resolved*`/`Registered*`/`Collected*` prefix.
+Rationale, rejected names and the exceptions are in
+`decisions/0018-a-define-returns-the-thing.md`.
 
-- [ ] **§I definitions are objects** — `defineX` returns an `X`;
-      `TableDescriptor` → `Table`, `FieldDefinition` → `Field` and the rest.
-      Never in the order table, and it has an internal ordering dependency
+- [x] Admin `TableDefinition`/`FormDefinition` → `ResolvedTable`/`ResolvedForm`,
+      `types/definitions.ts` → `types/resolved.ts`, `admin/definitions/` →
+      `admin/rendering/`, `derive.ts` → `resolve.ts`. Cleared the name `Table`
+- [x] `TableDescriptor` → `Table`, `descriptor-snapshot.ts` →
+      `table-snapshot.ts`, and the word off every identifier that carried it
+- [x] `PluginServiceMethod` → `ServiceMethod`, `ServiceMethodDescriptor` →
+      `ServiceMethodContract`. **The plan had these two backwards** — the
+      object with the handler is what `defineServiceMethod` returns
+- [x] `FieldTypeDescriptor` → `FieldType`, `FieldType` → `FieldTypeName`,
+      `FieldDefinition` → `Field`, `BlockDefinition` → `Block`,
+      `MessageDescriptor` → `MessageRef`
+- [x] `EntryTypeConfig` → `EntryType` (+ `ResolvedEntryType`, `AdminEntryType`),
+      `DefinedHook` → `Hook`, `defineRegistry` → `createRegistry`
+- [x] Four rows of the plan's rename table were wrong against the code and were
+      dropped: `defineCommand` is citty's, `definePluginTable` already returns a
+      `Table`, `defineAdminPage` was already compliant, and `defineFieldType`
+      has no authoring path to justify it
+
+Baseline held at **2460 core / 179 files** throughout, authoring 79,
+schema-engine 86, with `db:generate` reporting no changes.
 
 ## Follow-ups this pass surfaced
 
@@ -192,6 +218,22 @@ Added after the order table was written, so it has no place in it:
 - [ ] **`MediaUsage` is documented as "the media mirror of
       `IncomingRelationship`" while sharing no name with it.** Belongs to a
       media pass
+- [ ] **"Descriptor" survives in two runtime strings.**
+      `transport/tools/dispatch.ts` returns `no input schema declared on the
+    descriptor` (asserted in `tests/transport/mcp/tools.test.ts`) and
+      `errors/permission.ts` says `carries no method descriptor`. Both are
+      asserted or user-facing output, so changing them is a behaviour change —
+      the same line drawn for "surface" above
+- [ ] **`@astromech/schema-engine` keeps "descriptor"** in ~8 places including
+      an asserted error string. Deliberate: it never holds a `Table`, it
+      consumes snapshots, and there the word means the caller's source-of-truth
+      definitions generically. Revisit only if the engine grows a `Table` import
 - [x] **`decisions/` had two `0007` files** — fixed by the documentation pass:
       the media-browser record became `0010`, and `decisions/README.md` now
       carries an index so a collision is visible when the next entry is written
+- [ ] **`decisions/` now has two `0015` files** — the index guard above was not
+      applied when `0015-approval-as-a-server-held-row.md` landed 50 minutes
+      after `0015-public-subpaths-mirror-the-source.md`. Both are now in the
+      index with the collision marked. The approval record is the later of the
+      two and has zero inbound references, so renumbering it to `0019` is free —
+      needs a decision, not a guess

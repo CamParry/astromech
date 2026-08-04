@@ -43,7 +43,7 @@ stood on moved.
       that `tableStorage` reads as an `EntryStorage` adapter sitting next to the
       other one
 - [x] **`capabilities` → `supports` — DROPPED 2026-08-04.** The naming review
-      (`specs/naming-pass.md` §G1) resolved it: the collision was the code
+      (`roadmap/in-progress/naming-pass.md` §G) resolved it: the collision was the code
       reporting that there are two axes, not drift. `supports` is what a storage
       backend _can_ do; `capabilities` is what a type has _turned on_;
       `resolveEntryCapabilities(cfg, storageSupports)` converts one to the other,
@@ -57,8 +57,8 @@ stood on moved.
       `entries.ts` inside `entries/storage/` collides with the `entries` table
       descriptor (`entries/schema.ts:17`), and "built-in storage" is already the
       consistent term across `TERMINOLOGY.md`, `BUILT_IN_SUPPORTS` and
-      `createBuiltInEntryStorage`. Recorded in `specs/naming-pass.md` §G so a
-      later pass doesn't reopen it
+      `createBuiltInEntryStorage`. Recorded in
+      `roadmap/in-progress/naming-pass.md` §G so a later pass doesn't reopen it
 
 **Layer 3 — Adapter: DROPPED 2026-08-03, superseded.**
 
