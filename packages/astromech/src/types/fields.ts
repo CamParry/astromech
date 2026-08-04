@@ -6,7 +6,7 @@
  * two categories and their membership.
  */
 
-import type { User } from './domain.js';
+import type { ResourceType, User } from './domain.js';
 
 // ============================================================================
 // Field Types
@@ -177,7 +177,7 @@ export type FieldValidationContext = {
      * may leave it out and take the `'publish'` default.
      */
     stage: ValidationStage;
-    host: { kind: 'entry' | 'media' | 'user' | 'setting'; record: unknown };
+    host: { kind: ResourceType; record: unknown };
     user: User | null;
     /** Read access for async checks. */
     reads: FieldReads;
@@ -213,7 +213,7 @@ export type DocumentValidationContext = {
     definitions: FieldDefinition[];
     operation: 'create' | 'update';
     stage: ValidationStage;
-    host: { kind: 'entry' | 'media' | 'user' | 'setting'; record: unknown };
+    host: { kind: ResourceType; record: unknown };
     user: User | null;
     reads: FieldReads;
 };

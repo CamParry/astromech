@@ -12,6 +12,7 @@ import type {
     FieldDefinition,
     ValidationStage,
 } from '@/types/fields.js';
+import type { ResourceType } from '@/types/domain.js';
 import { processFields } from '@/fields/pipeline.js';
 
 // ---------------------------------------------------------------------------
@@ -22,7 +23,7 @@ type CtxOverrides = Partial<{
     operation: 'create' | 'update';
     stage: ValidationStage;
     documentValidate: DocumentValidator;
-    host: { kind: 'entry' | 'media' | 'user' | 'setting'; record: unknown };
+    host: { kind: ResourceType; record: unknown };
     user: null;
     reads: { isUnique: (field: FieldDefinition, value: unknown) => Promise<boolean> };
 }>;
