@@ -12,7 +12,7 @@
  * package's multiple bundle entry points.
  */
 
-import type { EntryTypeConfig } from '@/types/index.js';
+import type { EntryType } from '@/types/index.js';
 
 export type EntryAccess = {
     /**
@@ -24,7 +24,7 @@ export type EntryAccess = {
     /** Mount a per-type storage override under its qualified id. */
     setEntryStorage(
         qualifiedId: string,
-        storage: NonNullable<EntryTypeConfig['storage']>
+        storage: NonNullable<EntryType['storage']>
     ): void;
     /** Drop all per-type storage overrides (re-run safe). */
     resetEntryStorageOverrides(): void;

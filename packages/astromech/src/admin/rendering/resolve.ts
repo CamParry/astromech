@@ -1,5 +1,5 @@
 import type {
-    AdminEntryTypeConfig,
+    AdminEntryType,
     ResolvedForm,
     ResolvedTable,
     TableColumn,
@@ -8,12 +8,12 @@ import { flattenEntryFields } from '@/fields/flatten.js';
 import { defaultCellKind } from './cell-kind-map.js';
 
 /** Resolve a field's declared type by scanning the config's field tree. */
-export function fieldTypeOf(config: AdminEntryTypeConfig, fieldName: string): string {
+export function fieldTypeOf(config: AdminEntryType, fieldName: string): string {
     const f = flattenEntryFields(config.fields).find((x) => x.name === fieldName);
     return f ? f.type : 'text';
 }
 
-export function resolveTable(config: AdminEntryTypeConfig): ResolvedTable {
+export function resolveTable(config: AdminEntryType): ResolvedTable {
     const columns: TableColumn[] = [];
     const caps = config.capabilities;
 
@@ -99,7 +99,7 @@ export function resolveTable(config: AdminEntryTypeConfig): ResolvedTable {
     return { type: config.single, columns };
 }
 
-export function resolveForm(config: AdminEntryTypeConfig): ResolvedForm {
+export function resolveForm(config: AdminEntryType): ResolvedForm {
     return {
         type: config.single,
         hasTitle: config.titleField !== false,
@@ -111,14 +111,14 @@ export function resolveForm(config: AdminEntryTypeConfig): ResolvedForm {
 }
 
 /**
- * Resolve a full AdminEntryTypeConfig for an entry type, defaulting an absent
+ * Resolve a full AdminEntryType for an entry type, defaulting an absent
  * config to the current built-in behaviour (title on, statuses on, slug off
  * since slug config is null, no i18n, no admin columns).
  */
 export function resolveAdminEntryType(
-    config: AdminEntryTypeConfig | undefined,
+    config: AdminEntryType | undefined,
     type: string
-): AdminEntryTypeConfig {
+): AdminEntryType {
     return (
         config ?? {
             single: type,

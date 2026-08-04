@@ -120,7 +120,7 @@ export function EntryEditPage({
     mount: EntriesMount;
     id: string;
 }): React.ReactElement {
-    const { type, api, cacheScope, config: entryTypeConfig, basePath } = mount;
+    const { type, api, cacheScope, config: entryType, basePath } = mount;
     const scope = { api, cacheScope };
     const { toast } = useToast();
     const { t } = useTranslation();
@@ -128,10 +128,10 @@ export function EntryEditPage({
     const [deleteOpen, setDeleteOpen] = React.useState(false);
 
     const { hasPermission } = usePermissions();
-    const single = entryTypeConfig?.single ?? type;
-    const plural = entryTypeConfig?.plural ?? type;
-    const capabilities = entryTypeConfig?.capabilities;
-    const resolvedForm = resolveForm(resolveAdminEntryType(entryTypeConfig, type));
+    const single = entryType?.single ?? type;
+    const plural = entryType?.plural ?? type;
+    const capabilities = entryType?.capabilities;
+    const resolvedForm = resolveForm(resolveAdminEntryType(entryType, type));
     const { hasTitle, hasSlug, hasStatuses, main, sidebar } = resolvedForm;
     // The two columns together ARE the full field tree the client validates.
     const fieldDefinitions = React.useMemo(() => [...main, ...sidebar], [main, sidebar]);
@@ -144,7 +144,7 @@ export function EntryEditPage({
     // is ever published. Serves the root and plugin routes alike.
     useAIContext(
         entry != null
-            ? { kind: 'entries', type, id, label: entryLabel(entry, entryTypeConfig) }
+            ? { kind: 'entries', type, id, label: entryLabel(entry, entryType) }
             : null,
         { depth: 1 }
     );
@@ -249,9 +249,7 @@ export function EntryEditPage({
     const revokeToken = useRevokePreviewToken(type, stagingTargetId, scope);
 
     const previewUrl =
-        entryTypeConfig?.url && entry != null
-            ? resolveEntryUrl(entryTypeConfig.url, entry)
-            : null;
+        entryType?.url && entry != null ? resolveEntryUrl(entryType.url, entry) : null;
 
     // One surface control, not two. A published entry links straight to its live
     // page; anything else opens a tokenised preview of the last saved state.

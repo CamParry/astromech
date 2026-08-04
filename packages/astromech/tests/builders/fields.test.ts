@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { EntryTypeConfig } from '@/types/index.js';
+import type { EntryType } from '@/types/index.js';
 import type { Field } from '@/types/fields.js';
 import {
     accordion,
@@ -18,15 +18,15 @@ import {
     textarea,
 } from '@/fields/index.js';
 
-// Compile-proof: factory output assignable to EntryTypeConfig['fields'].
-const _flat: EntryTypeConfig['fields'] = [
+// Compile-proof: factory output assignable to EntryType['fields'].
+const _flat: EntryType['fields'] = [
     text('from', { required: true, searchable: true }),
     select('status', { options: ['301', '302'], defaultValue: '301' }),
     boolean('enabled', { defaultValue: true }),
 ];
 void _flat;
 
-const _twoColumn: EntryTypeConfig['fields'] = {
+const _twoColumn: EntryType['fields'] = {
     main: [text('title')],
     sidebar: [boolean('featured')],
 };

@@ -15,7 +15,7 @@ import type {
     AdminPage,
     AdminSlotContribution,
     DbDump,
-    EntryTypeConfig,
+    EntryType,
     ResolvedConfig,
     StorageObject,
 } from './config.js';
@@ -353,7 +353,7 @@ export type PluginDefinition = PluginIdentity & {
      */
     permissions?: PermissionDeclarations;
     /** Entry types contributed by the plugin. Each self-declares its `type`. */
-    entries?: EntryTypeConfig[];
+    entries?: EntryType[];
     fields?: PluginFieldTypeRegistration[];
     /**
      * Tables shipped by the plugin (create via

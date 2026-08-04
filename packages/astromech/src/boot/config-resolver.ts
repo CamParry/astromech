@@ -6,11 +6,11 @@
 import type {
     AdminPage,
     AstromechConfig,
-    EntryTypeConfig,
+    EntryType,
     MediaAccess,
     ResolvedAdminPage,
     ResolvedConfig,
-    ResolvedEntryTypeConfig,
+    ResolvedEntryType,
 } from '@/types/index.js';
 import { CLOUDFLARE_IMAGES_DRIVER } from '@/media/serving/image/drivers/cloudflare.js';
 import type { EntryFields, Field, ResolvedEntryFields } from '@/types/fields.js';
@@ -91,11 +91,11 @@ function collectSearchable(nodes: Field[], out: string[]): void {
  * into the virtual config module). `typeKey` is used in error messages — the
  * qualified `{plugin}/{type}` key for plugin types.
  */
-function resolveEntryTypeConfig(
+function toResolvedEntryType(
     typeKey: string,
-    cfg: EntryTypeConfig,
+    cfg: EntryType,
     storageSupports: readonly Capability[]
-): ResolvedEntryTypeConfig {
+): ResolvedEntryType {
     const capabilities = resolveEntryCapabilities(cfg, storageSupports);
     assertEntryTypeValid(typeKey, cfg, capabilities, storageSupports);
 
@@ -251,9 +251,9 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     assertNoFieldTypeCollisions(plugins);
 
     // Step 2: Resolve root entry capabilities and titleField (crash-loud).
-    const resolvedEntries: Record<string, ResolvedEntryTypeConfig> = {};
+    const resolvedEntries: Record<string, ResolvedEntryType> = {};
     for (const [typeKey, cfg] of Object.entries(config.entries)) {
-        resolvedEntries[typeKey] = resolveEntryTypeConfig(
+        resolvedEntries[typeKey] = toResolvedEntryType(
             typeKey,
             cfg,
             cfg.storage?.supports ?? BUILT_IN_SUPPORTS
@@ -264,13 +264,13 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     // are not flat-merged into root `entries` — they live under their plugin
     // name. The live `storage` instance is stripped here and registered into
     // the storage registry at boot (`registerPlugins`).
-    const pluginEntries: Record<string, Record<string, ResolvedEntryTypeConfig>> = {};
+    const pluginEntries: Record<string, Record<string, ResolvedEntryType>> = {};
     for (const plugin of plugins) {
         if (!plugin.entries) continue;
         const name = resolvePluginIdentity(plugin).namespace;
-        const types: Record<string, ResolvedEntryTypeConfig> = {};
+        const types: Record<string, ResolvedEntryType> = {};
         for (const [type, cfg] of pluginEntryTypes(plugin)) {
-            types[type] = resolveEntryTypeConfig(
+            types[type] = toResolvedEntryType(
                 `${name}/${type}`,
                 cfg,
                 cfg.storage?.supports ?? BUILT_IN_SUPPORTS

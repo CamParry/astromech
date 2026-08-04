@@ -27,7 +27,7 @@ import type {
     EntryUpdateData,
     JsonObject,
     Permission,
-    ResolvedEntryTypeConfig,
+    ResolvedEntryType,
     ServiceMethodContract,
     SortOption,
 } from '@/types/index.js';
@@ -81,7 +81,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
     });
 
     /** Resolve a type id against root entries (bare) or pluginEntries (qualified). */
-    const lookup = (type: string): ResolvedEntryTypeConfig | undefined =>
+    const lookup = (type: string): ResolvedEntryType | undefined =>
         resolveEntryType(Astromech.config, type);
 
     // ============================================================================

@@ -180,7 +180,7 @@ export type VersioningConfig = {
     maxVersions?: number;
 };
 
-export type EntryTypeConfig = {
+export type EntryType = {
     /**
      * Type key. Plugin entry types self-declare this so they can be listed in
      * the plugin `entries` array; root config entry types are keyed by the
@@ -264,7 +264,7 @@ export type ResolvedEntryCapabilities = {
     trash: boolean;
 };
 
-export type ResolvedEntryTypeConfig = Omit<EntryTypeConfig, 'storage' | 'fields'> & {
+export type ResolvedEntryType = Omit<EntryType, 'storage' | 'fields'> & {
     capabilities: ResolvedEntryCapabilities;
     titleField: 'title' | false;
     fields: ResolvedEntryFields;
@@ -416,7 +416,7 @@ export type AstromechConfig = {
     apiRoute?: string;
     mediaRoute?: string;
     image?: ImageConfig;
-    entries: Record<string, EntryTypeConfig>;
+    entries: Record<string, EntryType>;
     admin?: {
         pages?: AdminPage[];
     };
@@ -468,14 +468,14 @@ export type ResolvedConfig = Omit<AstromechConfig, 'plugins' | 'db' | 'scheduler
     adminRoute: string;
     apiRoute: string;
     mediaRoute: string;
-    entries: Record<string, ResolvedEntryTypeConfig>;
+    entries: Record<string, ResolvedEntryType>;
     /** Always present — `access` defaults to `'public'`. */
     media: ResolvedMediaConfig;
     /**
      * Plugin-contributed entry types, namespaced by plugin name → bare type →
      * resolved config. Always present (empty when no plugins contribute types).
      */
-    pluginEntries: Record<string, Record<string, ResolvedEntryTypeConfig>>;
+    pluginEntries: Record<string, Record<string, ResolvedEntryType>>;
     adminPages: ResolvedAdminPage[];
     trash: Required<TrashConfig>;
     /**
@@ -508,7 +508,7 @@ export type AdminConfig = {
     locales: string[];
     defaultLocale: string;
     roles: { slug: string; name: string }[];
-    entries: Record<string, AdminEntryTypeConfig>;
+    entries: Record<string, AdminEntryType>;
     /** Host-defined admin pages (settings form or custom component). */
     pages: ResolvedAdminPage[];
     /** Static plugin metadata for the admin shell (serializable only). */
@@ -533,14 +533,14 @@ export type AdminConfig = {
          * shape as root `entries`, so the shared entry page components consume
          * either without divergence.
          */
-        entries: Record<string, AdminEntryTypeConfig>;
+        entries: Record<string, AdminEntryType>;
         /** Page metadata: unified ResolvedAdminPage (origin-erased). */
         pages: ResolvedAdminPage[];
     }[];
 };
 
 /** Single entry-type admin config, shared by root and plugin entry types. */
-export type AdminEntryTypeConfig = {
+export type AdminEntryType = {
     single: string;
     plural: string;
     /** Lucide icon name for sidebar / quick-create; absent falls back to a database icon. */

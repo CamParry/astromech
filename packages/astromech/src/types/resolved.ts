@@ -1,7 +1,7 @@
 /**
  * Resolved rendering contracts — JSON-serializable shapes for admin entry pages.
  *
- * They are resolved (client-side) from AdminEntryTypeConfig and reference
+ * They are resolved (client-side) from AdminEntryType and reference
  * renderers by STRING KEY (cell kind, field type), never by component reference,
  * so they stay serializable. The admin registries resolve those keys to React
  * components. See src/admin/rendering/.

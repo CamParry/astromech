@@ -31,7 +31,7 @@ import { entryLabel } from '@/admin/components/entries/entry-label.js';
 import { usePermissions } from '../../hooks/index.js';
 import { useDebounce } from '../../hooks/use-debounce.js';
 import { EntryTypeIcon } from './entry-type-icon.js';
-import type { AdminEntryTypeConfig, Entry, Media, User } from '@/types/index.js';
+import type { AdminEntryType, Entry, Media, User } from '@/types/index.js';
 
 // ============================================================================
 // Lucide icon helper
@@ -364,7 +364,7 @@ export function CommandPalette(): React.ReactElement {
             // (keyed directly in `adminConfig.entries`). Plugin entries arrive
             // with a qualified id (`{plugin}/{type}`) but `plugin.entries` is
             // keyed by the BARE type — so parse the id before looking it up.
-            let cfg: AdminEntryTypeConfig | undefined =
+            let cfg: AdminEntryType | undefined =
                 typeof entry.type === 'string'
                     ? adminConfig.entries[entry.type]
                     : undefined;

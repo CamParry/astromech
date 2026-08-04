@@ -6,8 +6,8 @@
 import type {
     AdminPage,
     AstromechConfig,
-    DefinedHook,
-    EntryTypeConfig,
+    EntryType,
+    Hook,
     HookEvent,
     HookHandlerFor,
     Permission,
@@ -165,7 +165,7 @@ export function defineConfig(config: AstromechConfig): AstromechConfig {
  * unset; a plugin's entry types self-declare `type` so they can be listed in
  * the plugin's `entries` array.
  */
-export function defineEntryType(config: EntryTypeConfig): EntryTypeConfig {
+export function defineEntryType(config: EntryType): EntryType {
     return config;
 }
 
@@ -308,6 +308,6 @@ export function defineServiceMethod<Input = unknown, Output = unknown>(
 export function defineHook<E extends HookEvent>(
     event: E,
     handler: HookHandlerFor<E>
-): DefinedHook {
-    return { event, handler: handler as DefinedHook['handler'] };
+): Hook {
+    return { event, handler: handler as Hook['handler'] };
 }

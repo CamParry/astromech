@@ -463,7 +463,7 @@ function parseSortParam(
 }
 
 export function EntriesListPage({ mount }: { mount: EntriesMount }): React.ReactElement {
-    const { type, api, cacheScope, config: entryTypeConfig, basePath } = mount;
+    const { type, api, cacheScope, config: entryType, basePath } = mount;
     const scope = { api, cacheScope };
     const navigate = useNavigate();
     const { toast } = useToast();
@@ -481,34 +481,33 @@ export function EntriesListPage({ mount }: { mount: EntriesMount }): React.React
     const canCreate = hasPermission(mount.permissionFor('create'));
     const canDelete = hasPermission(mount.permissionFor('delete'));
 
-    const single = entryTypeConfig?.single ?? type;
-    const plural = entryTypeConfig?.plural ?? type;
-    const adminColumns = entryTypeConfig?.adminColumns ?? [];
-    const gridFields = entryTypeConfig?.gridFields ?? [];
-    const capabilities = entryTypeConfig?.capabilities;
+    const single = entryType?.single ?? type;
+    const plural = entryType?.plural ?? type;
+    const adminColumns = entryType?.adminColumns ?? [];
+    const gridFields = entryType?.gridFields ?? [];
+    const capabilities = entryType?.capabilities;
     const hasStatuses = capabilities?.statuses !== false;
     const hasTrash = capabilities?.trash !== false;
     const hasSlugCap = capabilities?.slug !== false;
-    const hasTitle = entryTypeConfig?.titleField !== false;
+    const hasTitle = entryType?.titleField !== false;
     const showSearch =
-        entryTypeConfig?.titleField !== false ||
-        (entryTypeConfig?.search?.length ?? 0) > 0;
+        entryType?.titleField !== false || (entryType?.search?.length ?? 0) > 0;
 
-    // `resolveTable` needs a full AdminEntryTypeConfig. When the mount config is
+    // `resolveTable` needs a full AdminEntryType. When the mount config is
     // undefined (unknown root type), resolveAdminEntryType synthesizes a default
     // reproducing the historical undefined-config behaviour.
     const resolvedConfig = React.useMemo(
-        () => resolveAdminEntryType(entryTypeConfig, type),
-        [entryTypeConfig, type]
+        () => resolveAdminEntryType(entryType, type),
+        [entryType, type]
     );
     const resolvedTable = React.useMemo(
         () => resolveTable(resolvedConfig),
         [resolvedConfig]
     );
 
-    const availableViews = entryTypeConfig?.views ?? ['list'];
+    const availableViews = entryType?.views ?? ['list'];
     const defaultView: ViewMode =
-        (entryTypeConfig?.defaultView as ViewMode | undefined) ?? 'list';
+        (entryType?.defaultView as ViewMode | undefined) ?? 'list';
     const showViewToggle =
         availableViews.includes('list') && availableViews.includes('grid');
 

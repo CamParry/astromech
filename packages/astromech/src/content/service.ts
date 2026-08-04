@@ -45,7 +45,7 @@ import type {
     ContentTarget,
     Entry,
     JsonObject,
-    ResolvedEntryTypeConfig,
+    ResolvedEntryType,
 } from '@/types/index.js';
 import type { Field } from '@/types/fields.js';
 
@@ -262,7 +262,7 @@ function buildJob(mode: Mode, target: RewriteTarget): RewriteJob | null {
  */
 async function writeStaged(
     type: string,
-    typeConfig: ResolvedEntryTypeConfig,
+    typeConfig: ResolvedEntryType,
     canonical: Entry,
     working: Record<string, unknown>,
     jobs: RewriteJob[],
@@ -311,7 +311,7 @@ async function writeStaged(
  */
 async function writeTranslation(
     type: string,
-    typeConfig: ResolvedEntryTypeConfig,
+    typeConfig: ResolvedEntryType,
     destination: { locale: string; source: Entry },
     working: Record<string, unknown>,
     fields: ContentFieldSummary[]
@@ -353,7 +353,7 @@ async function writeTranslation(
  */
 async function assertValid(params: {
     type: string;
-    typeConfig: ResolvedEntryTypeConfig;
+    typeConfig: ResolvedEntryType;
     values: Record<string, unknown>;
     operation: 'create' | 'update';
     record: Entry | null;

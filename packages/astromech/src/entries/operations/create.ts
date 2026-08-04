@@ -43,8 +43,8 @@ export async function create(params: {
     // Reject an unresolvable type up front. There are no field definitions to
     // validate against, so proceeding would write a ghost row stamped with a
     // type nothing can render or query.
-    const entryTypeConfig = resolveEntryType(config, type);
-    if (!entryTypeConfig) throw new UnknownEntryTypeError(type);
+    const entryType = resolveEntryType(config, type);
+    if (!entryType) throw new UnknownEntryTypeError(type);
     const titleField = getTitleField(type);
     const validated = parseWith(createEntrySchemaFor(titleField), {
         title: params.title,
@@ -67,7 +67,7 @@ export async function create(params: {
     const locale = params.locale ?? getDefaultLocale();
 
     const user = getCurrentUser();
-    const fieldDefs = flattenEntryFields(entryTypeConfig.fields);
+    const fieldDefs = flattenEntryFields(entryType.fields);
 
     // Non-translatable fields belong to the locale group, not to this row, so a
     // new translation inherits them from an existing sibling rather than taking
@@ -97,14 +97,13 @@ export async function create(params: {
     // Registry first: the Astro config is JSON, so an authored `validate` only
     // survives boot's registration. The config value is the fallback for the
     // live-config paths (CLI, tests).
-    const resourceValidate =
-        getResourceValidator(`entry:${type}`) ?? entryTypeConfig.validate;
+    const resourceValidate = getResourceValidator(`entry:${type}`) ?? entryType.validate;
 
     const processed = await processFields(incomingFields, fieldDefs, {
         operation: 'create',
         stage: entryValidationStage({
             status,
-            hasStatuses: entryTypeConfig.capabilities.statuses !== false,
+            hasStatuses: entryType.capabilities.statuses !== false,
         }),
         host: { kind: 'entry', record: null },
         user,

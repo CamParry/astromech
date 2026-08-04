@@ -28,13 +28,13 @@ An **adapter** is a different thing: it reshapes one internal interface into ano
 
 ---
 
-## Entry type vs EntryTypeConfig
+## Entry type vs EntryType
 
 **Entry type** refers to the concept — a named content type (e.g. "posts", "products"). It is identified by its string name throughout the API.
 
-**`EntryTypeConfig`** is the configuration object that defines an entry type: its field groups, slug rules, admin columns, etc. (`packages/astromech/src/types/config.ts`).
+**`EntryType`** is the object that defines an entry type: its field groups, slug rules, admin columns, etc. (`packages/astromech/src/types/config.ts`). It is what `defineEntryType` takes and returns.
 
-Prefer "entry type config" when referring to the config object in conversation, to avoid ambiguity.
+The derived forms carry the qualifier: **`ResolvedEntryType`** is the boot-time shape, **`AdminEntryType`** the browser-safe subset the admin SPA receives.
 
 ---
 
@@ -124,7 +124,7 @@ transition. See `roadmap/completed/versioning-publishing-scheduling.md`.
 
 ## Versioning
 
-Per-entry-type opt-in via `EntryTypeConfig.versioning: true`. When enabled, a snapshot of the entry's fields and status is saved to the `entry_versions` table on each update.
+Per-entry-type opt-in via `EntryType.versioning: true`. When enabled, a snapshot of the entry's fields and status is saved to the `entry_versions` table on each update.
 
 The table always exists in the schema regardless of whether any entry type enables versioning.
 

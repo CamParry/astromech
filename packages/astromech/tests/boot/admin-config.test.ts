@@ -4,7 +4,7 @@ import { resolveConfig } from '@/boot/config-resolver.js';
 import type {
     AstromechConfig,
     DatabaseDriver,
-    EntryTypeConfig,
+    EntryType,
     PluginDefinition,
     StorageDriver,
 } from '@/types/index.js';
@@ -38,7 +38,7 @@ const storageDriver: StorageDriver = {
     },
 };
 
-const entryType = (single: string): EntryTypeConfig => ({
+const entryType = (single: string): EntryType => ({
     single,
     plural: `${single}s`,
     fields: [{ name: 'body', type: 'text' }],

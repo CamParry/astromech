@@ -32,15 +32,15 @@ export type OptionalRegistry<T> = {
     clear(): void;
 };
 
-export function defineRegistry<T>(
+export function createRegistry<T>(
     name: string,
     opts: { required: false; hint?: string }
 ): OptionalRegistry<T>;
-export function defineRegistry<T>(
+export function createRegistry<T>(
     name: string,
     opts?: { required?: true; hint?: string }
 ): RequiredRegistry<T>;
-export function defineRegistry<T>(
+export function createRegistry<T>(
     name: string,
     opts?: { required?: boolean; hint?: string }
 ): RequiredRegistry<T> {

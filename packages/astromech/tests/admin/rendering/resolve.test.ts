@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AdminEntryTypeConfig, ResolvedEntryCapabilities } from '@/types/index.js';
+import type { AdminEntryType, ResolvedEntryCapabilities } from '@/types/index.js';
 import { resolveForm, resolveTable } from '@/admin/rendering/resolve.js';
 
 function caps(
@@ -16,7 +16,7 @@ function caps(
     };
 }
 
-const fullConfig: AdminEntryTypeConfig = {
+const fullConfig: AdminEntryType = {
     single: 'Post',
     plural: 'Posts',
     versioning: true,
@@ -36,7 +36,7 @@ const fullConfig: AdminEntryTypeConfig = {
     titleField: 'title',
 };
 
-const titlelessConfig: AdminEntryTypeConfig = {
+const titlelessConfig: AdminEntryType = {
     single: 'Redirect',
     plural: 'Redirects',
     versioning: false,
@@ -155,7 +155,7 @@ describe('resolveTable', () => {
     });
 
     it('lets an explicit kind override the field-type default', () => {
-        const config: AdminEntryTypeConfig = {
+        const config: AdminEntryType = {
             ...fullConfig,
             adminColumns: [{ field: 'featured', kind: 'badge' }],
         };
@@ -165,7 +165,7 @@ describe('resolveTable', () => {
     });
 
     it('defaults to text for an admin column not in the field tree (no throw)', () => {
-        const config: AdminEntryTypeConfig = {
+        const config: AdminEntryType = {
             ...fullConfig,
             adminColumns: [{ field: 'orphan' }],
         };
@@ -196,7 +196,7 @@ describe('resolveForm', () => {
     });
 
     it('hasSlug is false when slug capability is on but slug config is null', () => {
-        const config: AdminEntryTypeConfig = { ...fullConfig, slug: null };
+        const config: AdminEntryType = { ...fullConfig, slug: null };
         expect(resolveForm(config).hasSlug).toBe(false);
     });
 
@@ -204,7 +204,7 @@ describe('resolveForm', () => {
         const config = {
             ...fullConfig,
             slug: undefined,
-        } as unknown as AdminEntryTypeConfig;
+        } as unknown as AdminEntryType;
         expect(resolveForm(config).hasSlug).toBe(false);
     });
 

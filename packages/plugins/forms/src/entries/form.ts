@@ -4,7 +4,7 @@
  * `../fields/compile.ts` reads the stored instances back.
  */
 
-import type { Block, EntryTypeConfig, Field } from 'astromech';
+import type { Block, EntryType, Field } from 'astromech';
 import * as columns from 'astromech/columns';
 import * as fields from 'astromech/fields';
 import { NOTIFICATIONS_FIELD } from '../notifications/dispatch.js';
@@ -26,7 +26,7 @@ const BLOCK_LABELS: Record<(typeof FORM_FIELD_KINDS)[number], string> = {
     hidden: 'Hidden',
 };
 
-export const formEntryType: EntryTypeConfig = {
+export const formEntryType: EntryType = {
     type: FORM_TYPE,
     single: 'Form',
     plural: 'Forms',

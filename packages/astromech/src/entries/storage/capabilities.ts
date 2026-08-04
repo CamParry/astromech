@@ -2,7 +2,7 @@
  * Entry capability resolution and boot-time validation.
  */
 
-import type { EntryTypeConfig, ResolvedEntryCapabilities } from '@/types/index.js';
+import type { EntryType, ResolvedEntryCapabilities } from '@/types/index.js';
 
 export type Capability =
     | 'statuses'
@@ -30,7 +30,7 @@ export const BUILT_IN_SUPPORTS: readonly Capability[] = [
  * requested it, the capability defaults to false (Phase 3: narrower sets).
  */
 export function resolveEntryCapabilities(
-    cfg: EntryTypeConfig,
+    cfg: EntryType,
     storageSupports: readonly Capability[]
 ): ResolvedEntryCapabilities {
     const supports = (cap: Capability): boolean => storageSupports.includes(cap);
@@ -55,7 +55,7 @@ export function resolveEntryCapabilities(
  */
 export function assertEntryTypeValid(
     typeKey: string,
-    cfg: EntryTypeConfig,
+    cfg: EntryType,
     capabilities: ResolvedEntryCapabilities,
     storageSupports: readonly Capability[]
 ): void {

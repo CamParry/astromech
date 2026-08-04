@@ -225,14 +225,14 @@ export function EntryNewPage({
     /** Requested locale from the route search params; defaults to default locale. */
     requestedLocale: string | undefined;
 }): React.ReactElement {
-    const { type, api, cacheScope, config: entryTypeConfig, basePath } = mount;
+    const { type, api, cacheScope, config: entryType, basePath } = mount;
     const navigate = useNavigate();
     const { toast } = useToast();
     const { t } = useTranslation();
     const { hasPermission } = usePermissions();
     const canCreate = hasPermission(mount.permissionFor('create'));
 
-    const capabilities = entryTypeConfig?.capabilities;
+    const capabilities = entryType?.capabilities;
     const hasI18n = capabilities?.translatable === true;
     const defaultContentLocale =
         resolveContentLocale(adminConfig.defaultLocale, adminConfig.locales) ??
@@ -246,7 +246,7 @@ export function EntryNewPage({
     const [chosenLocaleGroup, setChosenLocaleGroup] = useState<string | null>(null);
     const [modalOpen, setModalOpen] = useState<boolean>(isNonDefaultLocale);
 
-    const resolvedForm = resolveForm(resolveAdminEntryType(entryTypeConfig, type));
+    const resolvedForm = resolveForm(resolveAdminEntryType(entryType, type));
     const { hasTitle, hasSlug, hasStatuses, main, sidebar } = resolvedForm;
     // The two columns together ARE the full field tree the client validates.
     // Derived above the permission bail-out so the memo keeps its hook slot.
@@ -260,8 +260,8 @@ export function EntryNewPage({
         void navigate({ to: basePath });
         return <></>;
     }
-    const single = entryTypeConfig?.single ?? type;
-    const plural = entryTypeConfig?.plural ?? type;
+    const single = entryType?.single ?? type;
+    const plural = entryType?.plural ?? type;
 
     const {
         form,

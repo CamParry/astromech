@@ -6,12 +6,12 @@
  * (which also makes the redirect type itself a no-op, avoiding recursion).
  */
 
-import type { DefinedHook, JsonObject } from 'astromech';
+import type { Hook, JsonObject } from 'astromech';
 import { defineHook } from 'astromech';
 import { resolveEntryPath } from 'astromech';
 import { REDIRECT_TYPE } from '../types.js';
 
-export const slugChangeHook: DefinedHook = defineHook(
+export const slugChangeHook: Hook = defineHook(
     'entry:afterUpdate',
     async (event, ctx) => {
         const template = ctx.config.entries[event.type]?.url;

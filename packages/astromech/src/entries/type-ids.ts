@@ -7,7 +7,7 @@
  * and resolve a type id against the right map.
  */
 
-import type { ResolvedConfig, ResolvedEntryTypeConfig } from '@/types/index.js';
+import type { ResolvedConfig, ResolvedEntryType } from '@/types/index.js';
 
 export const QUALIFIED_SEPARATOR = '/';
 
@@ -34,7 +34,7 @@ export function qualifyEntryType(plugin: string, type: string): string {
 export function resolveEntryType(
     config: Pick<ResolvedConfig, 'entries' | 'pluginEntries'>,
     typeId: string
-): ResolvedEntryTypeConfig | undefined {
+): ResolvedEntryType | undefined {
     const parsed = parseEntryTypeId(typeId);
     if (!parsed) return config.entries[typeId];
     return config.pluginEntries[parsed.plugin]?.[parsed.type];

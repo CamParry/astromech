@@ -6,7 +6,7 @@
  * in a deployed Worker — so registration must be safe to repeat from a boot path.
  */
 
-import { defineRegistry } from '@/utilities/registry.js';
+import { createRegistry } from '@/utilities/registry.js';
 
 export type ContentRewriteRequest = {
     instruction: string;
@@ -24,7 +24,7 @@ export type ContentProvider = {
     rewrite(request: ContentRewriteRequest): Promise<string[]>;
 };
 
-const provider = defineRegistry<ContentProvider>('contentProvider', {
+const provider = createRegistry<ContentProvider>('contentProvider', {
     hint: "Core ships no provider — call setContentProvider() from a plugin's setup() hook.",
 });
 

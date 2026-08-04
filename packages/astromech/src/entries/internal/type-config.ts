@@ -40,10 +40,10 @@ export function getNonTranslatableFieldNames(
     typeName: string,
     fieldNames: string[]
 ): string[] {
-    const entryTypeConfig = resolveEntryType(config, typeName);
-    if (!entryTypeConfig?.translatable) return [];
+    const entryType = resolveEntryType(config, typeName);
+    if (!entryType?.translatable) return [];
     const nonTranslatable: string[] = [];
-    for (const field of flattenEntryFields(entryTypeConfig.fields)) {
+    for (const field of flattenEntryFields(entryType.fields)) {
         if (fieldNames.includes(field.name) && field.translatable === false) {
             nonTranslatable.push(field.name);
         }

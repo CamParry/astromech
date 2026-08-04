@@ -195,7 +195,7 @@ describe('recaptcha', () => {
     });
 });
 
-// `DefinedHook.handler` is typed as a union of every core handler signature
+// `Hook.handler` is typed as a union of every core handler signature
 // plus the generic custom-event one, so it has no single call signature.
 // `forms:beforeSubmit` isn't in `AstromechPluginHookEvents` at this package's
 // build time (see `spam/hook.ts`), so narrow it back to the shape it's

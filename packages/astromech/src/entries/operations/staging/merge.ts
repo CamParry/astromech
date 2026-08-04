@@ -25,13 +25,12 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
     // draft stage (it is unpublished), so this is the first write where the
     // canonical's own status decides whether completeness is enforced. Run it
     // BEFORE the transaction opens so a rejection costs no backup version.
-    const entryTypeConfig = resolveEntryType(config, type);
-    const fieldDefs = entryTypeConfig ? flattenEntryFields(entryTypeConfig.fields) : [];
+    const entryType = resolveEntryType(config, type);
+    const fieldDefs = entryType ? flattenEntryFields(entryType.fields) : [];
     // The canonical's type governs: the staged row is a copy of it. Registry
     // first (the Astro config is JSON, so an authored `validate` only survives
     // boot's registration), config value second for the live-config paths.
-    const resourceValidate =
-        getResourceValidator(`entry:${type}`) ?? entryTypeConfig?.validate;
+    const resourceValidate = getResourceValidator(`entry:${type}`) ?? entryType?.validate;
     const processed = await processFields(
         (staged.fields ?? {}) as Record<string, unknown>,
         fieldDefs,
@@ -39,9 +38,7 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
             operation: 'update',
             stage: entryValidationStage({
                 status: canonical.status,
-                hasStatuses: entryTypeConfig
-                    ? entryTypeConfig.capabilities.statuses !== false
-                    : true,
+                hasStatuses: entryType ? entryType.capabilities.statuses !== false : true,
             }),
             host: { kind: 'entry', record: canonical },
             user: getCurrentUser(),

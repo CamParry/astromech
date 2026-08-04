@@ -175,11 +175,11 @@ export type HookHandlerFor<E extends HookEvent> = E extends keyof CoreHookHandle
       ? HookHandler<AstromechPluginHookEvents[E]>
       : HookHandler;
 
-/** One defined hook: an event key bound to its handler. */
-export type DefinedHook = {
+/** One hook: an event key bound to its handler. */
+export type Hook = {
     event: HookEvent;
     handler: AnyCoreHookHandler | HookHandler;
 };
 
 /** A plugin's hooks: an array of `defineHook(...)` results. Multiple handlers per event are allowed. */
-export type PluginHooks = DefinedHook[];
+export type PluginHooks = Hook[];
