@@ -16,7 +16,7 @@ import type { SettingRow } from './schema.js';
 import { mergeLocaleSetting } from './page-values.js';
 import { isPublicSettingKey } from './visibility.js';
 import { processFields } from '@/fields/pipeline.js';
-import { getDocumentValidator } from '@/fields/document-validators.js';
+import { getResourceValidator } from '@/fields/resource-validators.js';
 import { flattenEntryFields } from '@/fields/flatten.js';
 import { fieldReadsFromRecords } from '@/fields/field-reads.js';
 import { getCurrentUser } from '@/request-context/index.js';
@@ -105,7 +105,7 @@ export const settingsService: SettingsService = {
             // the AUTHORED page — `ResolvedAdminPage` drops `validate` along
             // with everything else it does not project.
             const documentValidate =
-                getDocumentValidator(`setting:${page.path}`) ??
+                getResourceValidator(`setting:${page.path}`) ??
                 (config as ResolvedConfig).admin?.pages?.find((p) => p.path === page.path)
                     ?.validate;
             const processed = await processFields(

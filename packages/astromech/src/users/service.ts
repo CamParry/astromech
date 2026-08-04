@@ -11,7 +11,7 @@ import { createUserSchema, updateUserSchema } from './schema.js';
 import config from 'virtual:astromech/config';
 import { processFields } from '@/fields/pipeline.js';
 import { mergePatch, projectToSchema } from '@/fields/values.js';
-import { getDocumentValidator } from '@/fields/document-validators.js';
+import { getResourceValidator } from '@/fields/resource-validators.js';
 import { flattenFieldNodes } from '@/fields/flatten.js';
 import { fieldReadsFromRecords } from '@/fields/field-reads.js';
 import { getCurrentUser } from '@/request-context/index.js';
@@ -88,7 +88,7 @@ export const usersService = {
         // Registry first: the Astro config is JSON, so an authored `validate`
         // only survives boot's registration. The config value is the fallback
         // for the live-config paths (CLI, tests).
-        const documentValidate = getDocumentValidator('users') ?? config.users?.validate;
+        const documentValidate = getResourceValidator('users') ?? config.users?.validate;
         const processedFields = await processFields(
             (validated.fields ?? {}) as Record<string, unknown>,
             fieldDefs,
@@ -149,7 +149,7 @@ export const usersService = {
             // `validate` only survives boot's registration. The config value is
             // the fallback for the live-config paths (CLI, tests).
             const documentValidate =
-                getDocumentValidator('users') ?? config.users?.validate;
+                getResourceValidator('users') ?? config.users?.validate;
             // `fields` is a patch: an omitted field keeps its stored value, an
             // explicit `null` stores null, and a container replaces wholesale.
             const patch = validatedData.fields as Record<string, unknown>;

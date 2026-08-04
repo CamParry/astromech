@@ -8,8 +8,8 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import type {
-    DocumentValidator,
     FieldDefinition,
+    ResourceValidator,
     ValidationStage,
 } from '@/types/fields.js';
 import type { ResourceType } from '@/types/domain.js';
@@ -22,7 +22,7 @@ import { processFields } from '@/fields/pipeline.js';
 type CtxOverrides = Partial<{
     operation: 'create' | 'update';
     stage: ValidationStage;
-    documentValidate: DocumentValidator;
+    documentValidate: ResourceValidator;
     host: { kind: ResourceType; record: unknown };
     user: null;
     reads: { isUnique: (field: FieldDefinition, value: unknown) => Promise<boolean> };
@@ -75,11 +75,11 @@ describe('document validator results', () => {
         expect(form).toEqual([]);
     });
 
-    // `DocumentValidationResult` has no `void` member, so a valid document must
+    // `ResourceValidationResult` has no `void` member, so a valid document must
     // return `undefined` explicitly; a body that falls off the end infers
-    // `Promise<void>` and does not type-check as a `DocumentValidator`.
+    // `Promise<void>` and does not type-check as a `ResourceValidator`.
     it('an explicit undefined reports nothing', async () => {
-        const valid: DocumentValidator = async () => undefined;
+        const valid: ResourceValidator = async () => undefined;
         const { errors, form } = await processFields(
             { title: 'hello' },
             [title],
@@ -90,7 +90,7 @@ describe('document validator results', () => {
     });
 
     it('null reports nothing', async () => {
-        const valid: DocumentValidator = async () => null;
+        const valid: ResourceValidator = async () => null;
         const { errors, form } = await processFields(
             { title: 'hello' },
             [title],

@@ -1,5 +1,5 @@
 /**
- * Document-validator registry.
+ * Resource-validator registry.
  *
  * A `validate` function authored on an entry type (or media/users/a settings
  * page) cannot travel through `virtual:astromech/config`: the Astro integration
@@ -17,29 +17,29 @@
  * `media`, `users`, `setting:<page path>`.
  */
 
-import type { DocumentValidator } from '@/types/fields.js';
+import type { ResourceValidator } from '@/types/fields.js';
 import type { ResolvedConfig } from '@/types/config.js';
 
 declare global {
-    var __astromechDocumentValidators: Map<string, DocumentValidator> | undefined;
+    var __astromechResourceValidators: Map<string, ResourceValidator> | undefined;
 }
 
-function registry(): Map<string, DocumentValidator> {
-    if (!globalThis.__astromechDocumentValidators) {
-        globalThis.__astromechDocumentValidators = new Map<string, DocumentValidator>();
+function registry(): Map<string, ResourceValidator> {
+    if (!globalThis.__astromechResourceValidators) {
+        globalThis.__astromechResourceValidators = new Map<string, ResourceValidator>();
     }
-    return globalThis.__astromechDocumentValidators;
+    return globalThis.__astromechResourceValidators;
 }
 
-export function setDocumentValidator(key: string, validator: DocumentValidator): void {
+export function setResourceValidator(key: string, validator: ResourceValidator): void {
     registry().set(key, validator);
 }
 
-export function getDocumentValidator(key: string): DocumentValidator | undefined {
+export function getResourceValidator(key: string): ResourceValidator | undefined {
     return registry().get(key);
 }
 
-export function resetDocumentValidators(): void {
+export function resetResourceValidators(): void {
     registry().clear();
 }
 
@@ -49,21 +49,21 @@ export function resetDocumentValidators(): void {
  * The plugin-entry key matches `qualifyEntryType` — `<plugin>/<type>`, inlined
  * because a capability may not import the entries domain.
  */
-export function registerDocumentValidators(resolved: ResolvedConfig): void {
-    resetDocumentValidators();
+export function registerResourceValidators(resolved: ResolvedConfig): void {
+    resetResourceValidators();
 
     for (const [type, cfg] of Object.entries(resolved.entries)) {
-        if (cfg.validate) setDocumentValidator(`entry:${type}`, cfg.validate);
+        if (cfg.validate) setResourceValidator(`entry:${type}`, cfg.validate);
     }
     for (const [plugin, types] of Object.entries(resolved.pluginEntries)) {
         for (const [type, cfg] of Object.entries(types)) {
             if (cfg.validate)
-                setDocumentValidator(`entry:${plugin}/${type}`, cfg.validate);
+                setResourceValidator(`entry:${plugin}/${type}`, cfg.validate);
         }
     }
-    if (resolved.media?.validate) setDocumentValidator('media', resolved.media.validate);
-    if (resolved.users?.validate) setDocumentValidator('users', resolved.users.validate);
+    if (resolved.media?.validate) setResourceValidator('media', resolved.media.validate);
+    if (resolved.users?.validate) setResourceValidator('users', resolved.users.validate);
     for (const page of resolved.admin?.pages ?? []) {
-        if (page.validate) setDocumentValidator(`setting:${page.path}`, page.validate);
+        if (page.validate) setResourceValidator(`setting:${page.path}`, page.validate);
     }
 }

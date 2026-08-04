@@ -51,11 +51,11 @@
  */
 
 import type {
-    DocumentValidator,
     FieldDefinition,
     FieldErrors,
     FieldPathSegment,
     FieldValidationContext,
+    ResourceValidator,
     ValidationRule,
     ValidationStage,
 } from '@/types/fields.js';
@@ -218,7 +218,7 @@ type PipelineContext = Omit<
     /** Evaluate warning-severity rules. Default `false`. */
     collectWarnings?: boolean;
     /** Whole-document validator, run after every field. */
-    documentValidate?: DocumentValidator;
+    documentValidate?: ResourceValidator;
     /**
      * Root field names whose value is new in this write. Absent ⇒ coerce
      * everything; present ⇒ coerce only these fields and their subtrees.

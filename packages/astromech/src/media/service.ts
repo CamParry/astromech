@@ -25,7 +25,7 @@ import { ValidationError } from '@/errors/validation.js';
 import { updateMediaSchema } from './schema.js';
 import { processFields } from '@/fields/pipeline.js';
 import { mergePatch, projectToSchema } from '@/fields/values.js';
-import { getDocumentValidator } from '@/fields/document-validators.js';
+import { getResourceValidator } from '@/fields/resource-validators.js';
 import { flattenFieldNodes } from '@/fields/flatten.js';
 import { fieldReadsFromRecords } from '@/fields/field-reads.js';
 import { getCurrentUser } from '@/request-context/index.js';
@@ -198,7 +198,7 @@ export const mediaService = {
             // `validate` only survives boot's registration. The config value is
             // the fallback for the live-config paths (CLI, tests).
             const documentValidate =
-                getDocumentValidator('media') ?? config.media?.validate;
+                getResourceValidator('media') ?? config.media?.validate;
             // `fields` is a patch: an omitted field keeps its stored value, an
             // explicit `null` stores null, and a container replaces wholesale.
             const patch = validatedData.fields as Record<string, unknown>;

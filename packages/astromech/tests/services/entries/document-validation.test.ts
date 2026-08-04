@@ -10,7 +10,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
 import { Astromech } from '@/transport/local/index.js';
-import type { AstromechConfig, DocumentValidator } from '@/types/index.js';
+import type { AstromechConfig, ResourceValidator } from '@/types/index.js';
 
 const api = Astromech.entries;
 
@@ -18,7 +18,7 @@ const api = Astromech.entries;
  * `event` cross-checks two dates no single field can see. `flyer` reports on a
  * field that also has a rule of its own, so the two can be raced.
  */
-function makeConfig(validate: DocumentValidator): AstromechConfig {
+function makeConfig(validate: ResourceValidator): AstromechConfig {
     const base = makeTestConfig();
     return {
         ...base,
@@ -43,7 +43,7 @@ function makeConfig(validate: DocumentValidator): AstromechConfig {
     };
 }
 
-const endsBeforeStart: DocumentValidator = async ({ values }) => {
+const endsBeforeStart: ResourceValidator = async ({ values }) => {
     const { starts, ends } = values;
     if (typeof starts === 'string' && typeof ends === 'string' && ends < starts) {
         return { ends: 'Must not be before the start' };

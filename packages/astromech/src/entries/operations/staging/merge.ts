@@ -8,7 +8,7 @@ import { resolveEntryType } from '../../type-ids.js';
 import { entryValidationStage } from '../../validation-stage.js';
 import { flattenEntryFields } from '@/fields/flatten.js';
 import { processFields } from '@/fields/pipeline.js';
-import { getDocumentValidator } from '@/fields/document-validators.js';
+import { getResourceValidator } from '@/fields/resource-validators.js';
 import { ValidationError } from '@/errors/index.js';
 import config from 'virtual:astromech/config';
 import type { EntryStorage, StorageDb } from '../../storage/types.js';
@@ -31,7 +31,7 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
     // first (the Astro config is JSON, so an authored `validate` only survives
     // boot's registration), config value second for the live-config paths.
     const documentValidate =
-        getDocumentValidator(`entry:${type}`) ?? entryTypeConfig?.validate;
+        getResourceValidator(`entry:${type}`) ?? entryTypeConfig?.validate;
     const processed = await processFields(
         (staged.fields ?? {}) as Record<string, unknown>,
         fieldDefs,

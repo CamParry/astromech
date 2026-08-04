@@ -4,8 +4,8 @@ Any function an author writes in `astromech.config.ts` is silently dropped befor
 running server sees it. Found 2026-08-02 while building the document-level `validate`
 hook, which would have shipped inert for exactly this reason.
 
-**Status:** filed, not started. The document-validator work routed around it with a
-boot-time registry (`fields/document-validators.ts`); this item is about closing the
+**Status:** filed, not started. The resource-validator work routed around it with a
+boot-time registry (`fields/resource-validators.ts`); this item is about closing the
 hole generally.
 
 ## The mechanism
@@ -47,7 +47,7 @@ runs in.
 
 ## Directions (none locked)
 
-1. **Registry per function-valued slot**, as the document validator now does — boot walks
+1. **Registry per function-valued slot**, as the resource validator now does — boot walks
    the live `resolvedConfig` (`initRuntime` gets it before serialisation) and registers
    functions under a stable key. Proven, but it is one registry per slot and each new
    slot is a chance to forget.

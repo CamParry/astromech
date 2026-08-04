@@ -10,7 +10,7 @@
 import config from 'virtual:astromech/config';
 import { getCurrentUser } from '@/request-context/index.js';
 import { ValidationError } from '@/errors/index.js';
-import { getDocumentValidator } from '@/fields/document-validators.js';
+import { getResourceValidator } from '@/fields/resource-validators.js';
 import { flattenEntryFields } from '@/fields/flatten.js';
 import { fieldNameToLabel } from '@/utilities/labels.js';
 import { processFields } from '@/fields/pipeline.js';
@@ -361,7 +361,7 @@ async function assertValid(params: {
     excludeId?: string[];
 }): Promise<void> {
     const { type, typeConfig } = params;
-    const documentValidate = getDocumentValidator(`entry:${type}`) ?? typeConfig.validate;
+    const documentValidate = getResourceValidator(`entry:${type}`) ?? typeConfig.validate;
     const processed = await processFields(
         structuredClone(params.values),
         flattenEntryFields(typeConfig.fields),

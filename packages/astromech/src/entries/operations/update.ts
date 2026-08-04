@@ -21,7 +21,7 @@ import { entryValidationStage } from '../validation-stage.js';
 import { flattenEntryFields } from '@/fields/flatten.js';
 import { processFields } from '@/fields/pipeline.js';
 import { mergePatch, projectToSchema } from '@/fields/values.js';
-import { getDocumentValidator } from '@/fields/document-validators.js';
+import { getResourceValidator } from '@/fields/resource-validators.js';
 import { ValidationError } from '@/errors/index.js';
 import config from 'virtual:astromech/config';
 import type { EntryStorage, StorageDb } from '../storage/types.js';
@@ -70,7 +70,7 @@ export async function updateOne(
         // only survives boot's registration. The config value is the fallback
         // for the live-config paths (CLI, tests).
         const documentValidate =
-            getDocumentValidator(`entry:${type}`) ?? entryTypeConfig?.validate;
+            getResourceValidator(`entry:${type}`) ?? entryTypeConfig?.validate;
 
         // `fields` is a patch, not a replacement: an omitted field keeps its
         // stored value, an explicit `null` stores null, and an array or
