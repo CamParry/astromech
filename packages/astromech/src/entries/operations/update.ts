@@ -167,7 +167,7 @@ export async function updateOne(
     }
 
     if (validatedData.fields && storage.translatable) {
-        // Only what the caller sent: the merged document holds every field, and
+        // Only what the caller sent: the merged resource holds every field, and
         // propagating an untouched one would overwrite its sibling locales.
         const nonTranslatableNames = getNonTranslatableFieldNames(
             type,

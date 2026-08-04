@@ -347,7 +347,7 @@ async function writeTranslation(
 }
 
 /**
- * Run the field pipeline over the rewritten document before anything is
+ * Run the field pipeline over the rewritten entry before anything is
  * written, so a rejected reply costs no staged row — the same ordering
  * `mergeStaged` uses. Both destinations land on an unpublished row.
  */
