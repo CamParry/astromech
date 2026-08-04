@@ -10,7 +10,7 @@
 
 import type {
     Entry,
-    FieldDefinition,
+    Field,
     JsonObject,
     JsonValue,
     RichTextAllow,
@@ -41,7 +41,7 @@ export type VisibilityOptions = {
      * Flattened top-level field definitions for the entry's type.
      * Used to identify private fields and recurse into nested fields.
      */
-    fields: FieldDefinition[];
+    fields: Field[];
     audience: AudienceContext;
     /**
      * Preview mode (forward versioning): the caller has already authorized this
@@ -164,11 +164,11 @@ function structuralStrip(value: JsonValue): JsonValue {
 // ============================================================================
 
 /**
- * Build a map from field name → FieldDefinition for quick lookup.
+ * Build a map from field name → Field for quick lookup.
  * Only includes data-bearing top-level fields (not layout fields).
  */
-function fieldMap(fields: FieldDefinition[]): Map<string, FieldDefinition> {
-    const map = new Map<string, FieldDefinition>();
+function fieldMap(fields: Field[]): Map<string, Field> {
+    const map = new Map<string, Field>();
     for (const f of fields) {
         map.set(f.name, f);
     }
@@ -179,10 +179,7 @@ function fieldMap(fields: FieldDefinition[]): Map<string, FieldDefinition> {
  * Strip private fields from a cloned `fields` object using the field definitions.
  * Recurses into group/repeater/blocks/tree child definitions.
  */
-function stripPrivateFields(
-    fields: JsonObject,
-    fieldDefs: FieldDefinition[]
-): JsonObject {
+function stripPrivateFields(fields: JsonObject, fieldDefs: Field[]): JsonObject {
     const defs = fieldMap(fieldDefs);
     const result: JsonObject = {};
 
@@ -285,7 +282,7 @@ function stripPrivateFields(
  * Recursively strip private fields from tree items.
  * Tree items are objects with child field data + a `_children` array of more tree items.
  */
-function stripTreeItems(value: JsonValue, childFields: FieldDefinition[]): JsonValue {
+function stripTreeItems(value: JsonValue, childFields: Field[]): JsonValue {
     if (Array.isArray(value)) {
         return (value as JsonValue[]).map((item) => stripTreeItems(item, childFields));
     }

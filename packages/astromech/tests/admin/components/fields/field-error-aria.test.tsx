@@ -21,7 +21,7 @@
 import { describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
-import type { FieldDefinition } from '@/types/index.js';
+import type { Field } from '@/types/index.js';
 import '@/admin/rendering/register-fields.js';
 import { FormField } from '@/admin/components/fields/form-field';
 import { FieldErrorsProvider } from '@/admin/components/fields/field-errors-context';
@@ -29,7 +29,7 @@ import { FieldErrorsProvider } from '@/admin/components/fields/field-errors-cont
 type Mounted = { host: HTMLElement; unmount: () => void };
 
 /** Mount one `FormField` whose only field is in error. */
-function mountWithError(field: FieldDefinition, value: unknown): Mounted {
+function mountWithError(field: Field, value: unknown): Mounted {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -89,7 +89,7 @@ describe('field error markup', () => {
  * `richtext` is excluded because its control is ProseMirror's contenteditable,
  * which needs a real layout engine to mount.
  */
-const CASES: { field: FieldDefinition; value: unknown }[] = [
+const CASES: { field: Field; value: unknown }[] = [
     { field: { name: 'f', type: 'text' }, value: '' },
     { field: { name: 'f', type: 'textarea' }, value: '' },
     { field: { name: 'f', type: 'number' }, value: null },

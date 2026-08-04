@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import type { FieldDefinition, ValidationStage } from '@/types/fields.js';
+import type { Field, ValidationStage } from '@/types/fields.js';
 import type { ResourceType } from '@/types/domain.js';
 import { processFields } from '@/fields/pipeline.js';
 
@@ -21,7 +21,7 @@ type CtxOverrides = Partial<{
     collectWarnings: boolean;
     host: { kind: ResourceType; record: unknown };
     user: null;
-    reads: { isUnique: (field: FieldDefinition, value: unknown) => Promise<boolean> };
+    reads: { isUnique: (field: Field, value: unknown) => Promise<boolean> };
 }>;
 
 function fakeCtx(overrides: CtxOverrides = {}) {
@@ -34,10 +34,8 @@ function fakeCtx(overrides: CtxOverrides = {}) {
     };
 }
 
-function field(
-    def: Partial<FieldDefinition> & { name: string; type: string }
-): FieldDefinition {
-    return def as FieldDefinition;
+function field(def: Partial<Field> & { name: string; type: string }): Field {
+    return def as Field;
 }
 
 // ---------------------------------------------------------------------------

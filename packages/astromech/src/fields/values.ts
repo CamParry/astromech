@@ -6,7 +6,7 @@
  * drop any key the schema no longer declares.
  */
 
-import type { FieldDefinition } from '@/types/fields.js';
+import type { Field } from '@/types/fields.js';
 
 /**
  * Merge `patch` onto `current` at the root level only. An absent or `undefined`
@@ -34,7 +34,7 @@ export function mergePatch(
  */
 export function projectToSchema(
     values: Record<string, unknown>,
-    definitions: FieldDefinition[]
+    definitions: Field[]
 ): Record<string, unknown> {
     if (definitions.length === 0) return values;
     const names = new Set(definitions.map((field) => field.name));

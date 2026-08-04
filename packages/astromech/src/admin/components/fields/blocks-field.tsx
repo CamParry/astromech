@@ -28,7 +28,7 @@ import {
     Eye,
     Plus,
 } from 'lucide-react';
-import type { BaseFieldProps, BlockDefinition, FieldDefinition } from '@/types/index.js';
+import type { BaseFieldProps, Block, Field } from '@/types/index.js';
 import { FormField } from '@/admin/components/fields/form-field';
 import { InlineTitle } from '@/admin/components/fields/inline-title';
 import { useBlocksField } from '@/admin/hooks/use-blocks-field';
@@ -69,7 +69,7 @@ function useClickOutside(
 // ============================================================================
 
 type BlockPickerProps = {
-    blocks: BlockDefinition[];
+    blocks: Block[];
     onSelect: (type: string) => void;
     onClose: () => void;
 };
@@ -113,7 +113,7 @@ function BlockPicker({
 
 type SortableBlockProps = {
     block: BlockWithId;
-    blockDef: BlockDefinition | undefined;
+    blockDef: Block | undefined;
     name: string;
     disabled?: boolean;
     onRemove: (id: string) => void;
@@ -264,7 +264,7 @@ function SortableBlock({
                             block._disabled === true && 'am-blocks-block-content-disabled'
                         )}
                     >
-                        {(blockDef?.fields ?? []).map((subField: FieldDefinition) => (
+                        {(blockDef?.fields ?? []).map((subField: Field) => (
                             <FormField
                                 key={subField.name}
                                 field={subField}
@@ -330,9 +330,7 @@ export function BlocksField({
         }
     }
 
-    const blockDefMap = new Map<string, BlockDefinition>(
-        blockDefs.map((bd) => [bd.type, bd])
-    );
+    const blockDefMap = new Map<string, Block>(blockDefs.map((bd) => [bd.type, bd]));
     const sortableIds = blocks.map((b) => b._id);
 
     return (

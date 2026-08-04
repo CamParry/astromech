@@ -8,11 +8,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type {
-    FieldDefinition,
-    FieldValidationContext,
-    ValidationStage,
-} from '@/types/fields.js';
+import type { Field, FieldValidationContext, ValidationStage } from '@/types/fields.js';
 import { processFields } from '@/fields/pipeline.js';
 
 // ---------------------------------------------------------------------------
@@ -31,10 +27,8 @@ function fakeCtx(operation: 'create' | 'update' = 'create', stage?: ValidationSt
     };
 }
 
-function field(
-    def: Partial<FieldDefinition> & { name: string; type: string }
-): FieldDefinition {
-    return def as FieldDefinition;
+function field(def: Partial<Field> & { name: string; type: string }): Field {
+    return def as Field;
 }
 
 /** The single error key produced, for tests that expect exactly one. */

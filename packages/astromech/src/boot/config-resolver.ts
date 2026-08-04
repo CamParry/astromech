@@ -13,11 +13,7 @@ import type {
     ResolvedEntryTypeConfig,
 } from '@/types/index.js';
 import { CLOUDFLARE_IMAGES_DRIVER } from '@/media/serving/image/drivers/cloudflare.js';
-import type {
-    EntryFields,
-    FieldDefinition,
-    ResolvedEntryFields,
-} from '@/types/fields.js';
+import type { EntryFields, Field, ResolvedEntryFields } from '@/types/fields.js';
 import {
     assertNoPluginCollisions,
     checkPluginDependencies,
@@ -49,11 +45,7 @@ function toResolvedFields(fields: EntryFields | undefined): ResolvedEntryFields 
  * `tab` is only valid as a direct child of `tabs`, and `tabs` may only contain
  * `tab` children.
  */
-function validateFieldTree(
-    typeKey: string,
-    nodes: FieldDefinition[],
-    insideTabs: boolean
-): void {
+function validateFieldTree(typeKey: string, nodes: Field[], insideTabs: boolean): void {
     for (const node of nodes) {
         if (node.type === 'tab' && !insideTabs) {
             throw new Error(
@@ -83,7 +75,7 @@ function validateFieldTree(
  * fields (their children are top-level data) but not nested fields
  * (`group`/`repeater`/`blocks`), whose child names are not top-level keys.
  */
-function collectSearchable(nodes: FieldDefinition[], out: string[]): void {
+function collectSearchable(nodes: Field[], out: string[]): void {
     for (const node of nodes) {
         if (LAYOUT_TYPES.has(node.type)) {
             collectSearchable(node.fields ?? [], out);
@@ -191,7 +183,7 @@ function resolveAdminPage(page: AdminPage): ResolvedAdminPage {
 function assertQualifiedRelationshipTargets(
     config: Pick<ResolvedConfig, 'entries' | 'pluginEntries'>
 ): void {
-    const checkNodes = (ownerKey: string, nodes: FieldDefinition[]): void => {
+    const checkNodes = (ownerKey: string, nodes: Field[]): void => {
         for (const field of nodes) {
             if (field.type === 'relationship') {
                 const target = field.target;

@@ -24,7 +24,7 @@
 import { describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import React, { act } from 'react';
-import type { FieldDefinition, FieldErrors, ValidationRule } from '@/types/index.js';
+import type { Field, FieldErrors, ValidationRule } from '@/types/index.js';
 import { useFieldValidation } from '@/admin/hooks/use-field-validation.js';
 import type { FieldValidationHandle } from '@/admin/hooks/use-field-validation.js';
 
@@ -40,7 +40,7 @@ type Mounted = {
 };
 
 function mountValidation(
-    definitions: FieldDefinition[],
+    definitions: Field[],
     initialValues: Record<string, unknown>,
     operation: 'create' | 'update' = 'update'
 ): Mounted {
@@ -105,7 +105,7 @@ async function validateAll(
 // string with no scheme at all to be genuinely invalid.
 const INVALID_URL = 'not a url';
 
-const linkField: FieldDefinition = { name: 'link', type: 'url' };
+const linkField: Field = { name: 'link', type: 'url' };
 
 // ============================================================================
 // Blur — gated on dirty
@@ -190,7 +190,7 @@ describe('re-validation while showing an error', () => {
 // ============================================================================
 
 describe('required', () => {
-    const titleField: FieldDefinition = { name: 'title', type: 'text', required: true };
+    const titleField: Field = { name: 'title', type: 'text', required: true };
 
     it('should reveal nothing on blur, even when the field is dirty', async () => {
         const m = mountValidation([titleField], { title: '' });
@@ -229,7 +229,7 @@ describe('required', () => {
 
 describe('server-only rules', () => {
     it('should never produce a client error for a `unique` rule', async () => {
-        const slug: FieldDefinition = {
+        const slug: Field = {
             name: 'slug',
             type: 'text',
             validation: [{ unique: true }],
@@ -249,7 +249,7 @@ describe('server-only rules', () => {
         ) as ValidationRule;
         expect(flattened).toEqual({});
 
-        const code: FieldDefinition = {
+        const code: Field = {
             name: 'code',
             type: 'text',
             validation: [flattened],
@@ -266,7 +266,7 @@ describe('server-only rules', () => {
 // ============================================================================
 
 describe('nested fields', () => {
-    const items: FieldDefinition = {
+    const items: Field = {
         name: 'items',
         type: 'repeater',
         fields: [{ name: 'link', type: 'url' }],
@@ -312,7 +312,7 @@ describe('nested fields', () => {
 
 describe('warnings', () => {
     /** A length cap the author is nudged about but never stopped by. */
-    const summary: FieldDefinition = {
+    const summary: Field = {
         name: 'summary',
         type: 'text',
         validation: [{ maxLength: 10, severity: 'warning' }],
@@ -360,7 +360,7 @@ describe('warnings', () => {
     });
 
     it('should file both messages under one path when a field has each', async () => {
-        const both: FieldDefinition = {
+        const both: Field = {
             name: 'summary',
             type: 'text',
             validation: [{ minLength: 20 }, { maxLength: 10, severity: 'warning' }],
@@ -443,7 +443,7 @@ describe('server errors', () => {
 
 describe('form state', () => {
     it('should not seed defaults into the values it was handed', async () => {
-        const withDefault: FieldDefinition = {
+        const withDefault: Field = {
             name: 'kind',
             type: 'text',
             defaultValue: 'article',

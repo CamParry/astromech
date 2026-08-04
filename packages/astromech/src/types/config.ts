@@ -8,7 +8,7 @@ import type { CellKind } from './resolved.js';
 import type { Permission } from './domain.js';
 import type {
     EntryFields,
-    FieldDefinition,
+    Field,
     Label,
     ResolvedEntryFields,
     ResourceValidator,
@@ -296,7 +296,7 @@ export type RoleConfig = {
 export type MediaAccess = 'public' | 'private';
 
 export type MediaConfig = {
-    fields?: FieldDefinition[];
+    fields?: Field[];
     /** How media is delivered. Default: `'public'`. */
     access?: MediaAccess;
     /**
@@ -313,7 +313,7 @@ export type ResolvedMediaConfig = Omit<MediaConfig, 'access'> & {
 };
 
 export type UsersConfig = {
-    fields?: FieldDefinition[];
+    fields?: Field[];
     /**
      * Cross-field validator for a user record, run after every field has been
      * processed. Server-side only — it is a function, so it cannot cross into

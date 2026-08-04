@@ -17,11 +17,11 @@
 import { describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
-import type { FieldDefinition } from '@/types/index.js';
+import type { Field } from '@/types/index.js';
 import '@/admin/rendering/register-fields.js';
 import { FormField } from '@/admin/components/fields/form-field';
 
-const socials: FieldDefinition = {
+const socials: Field = {
     name: 'socials',
     type: 'repeater',
     fields: [{ name: 'url', type: 'text' }],

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { EntryTypeConfig } from '@/types/index.js';
-import type { FieldDefinition } from '@/types/fields.js';
+import type { Field } from '@/types/fields.js';
 import {
     accordion,
     block,
@@ -202,14 +202,14 @@ describe('t() label descriptor', () => {
 });
 
 describe('type assignability', () => {
-    it('factory output is FieldDefinition', () => {
-        const f: FieldDefinition = text('x');
-        const arr: FieldDefinition[] = [text('a'), select('s', { options: ['x'] })];
+    it('factory output is Field', () => {
+        const f: Field = text('x');
+        const arr: Field[] = [text('a'), select('s', { options: ['x'] })];
         expect(f.name).toBe('x');
         expect(arr).toHaveLength(2);
     });
 });
 
-function richtextStub(): FieldDefinition {
+function richtextStub(): Field {
     return text('body');
 }

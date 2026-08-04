@@ -1,7 +1,7 @@
 /**
  * A link value is keyed by `url`, and every side of the contract must say so.
  *
- * The admin's `LinkField` used to write `href`, so the descriptor's generated
+ * The admin's `LinkField` used to write `href`, so the field type's generated
  * type and the validator described a shape the editor could never produce and
  * every save failed on "A link needs a url". These assertions pin the key on
  * the two halves that can be checked without rendering; the editor half is
@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { FieldValidationContext } from '@/types/fields.js';
-import { getFieldTypeDescriptor } from '@/fields/descriptors.js';
+import { getFieldType } from '@/fields/field-type-registry.js';
 import { validateLink } from '@/fields/built-in-rules.js';
 
 function ctx(value: unknown): FieldValidationContext {
@@ -31,7 +31,7 @@ describe('link value shape', () => {
     const field = { name: 'cta', type: 'link' } as const;
 
     it('the generated type names `url` and never `href`', () => {
-        const d = getFieldTypeDescriptor('link');
+        const d = getFieldType('link');
         for (const shape of ['full', 'public'] as const) {
             const tsType = d?.tsType(field, shape);
             expect(tsType).toContain('url:');

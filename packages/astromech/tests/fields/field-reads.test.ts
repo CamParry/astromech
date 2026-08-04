@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { fieldReadsFromRecords } from '@/fields/field-reads.js';
-import type { FieldDefinition } from '@/types/fields.js';
+import type { Field } from '@/types/fields.js';
 
 type TestRecord = { id: string; fields: Record<string, unknown> };
 
-function makeField(name: string): FieldDefinition {
+function makeField(name: string): Field {
     return { name, type: 'text' };
 }
 

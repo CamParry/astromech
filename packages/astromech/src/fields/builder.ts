@@ -1,5 +1,5 @@
 /**
- * Field factories — pure functions returning plain `FieldDefinition` POJOs (no
+ * Field factories — pure functions returning plain `Field` POJOs (no
  * builder class, chaining, or overloads). Uniform shape `type(name, options?)`,
  * with nested children in `options.fields` (or `options.blocks`).
  *
@@ -9,8 +9,8 @@
  */
 
 import type {
-    BlockDefinition,
-    FieldDefinition,
+    Block,
+    Field,
     Label,
     RichTextAllow,
     SelectOption,
@@ -45,47 +45,47 @@ type RelationshipOptions = BaseOptions & {
     multiple?: boolean;
 };
 
-type GroupOptions = BaseOptions & { boxed?: boolean; fields: FieldDefinition[] };
+type GroupOptions = BaseOptions & { boxed?: boolean; fields: Field[] };
 type RepeaterOptions = BaseOptions & {
     min?: number;
     max?: number;
-    fields: FieldDefinition[];
+    fields: Field[];
 };
 type TreeOptions = BaseOptions & {
     min?: number;
     max?: number;
     maxDepth?: number;
-    fields: FieldDefinition[];
+    fields: Field[];
 };
-type BlocksOptions = BaseOptions & { blocks: BlockDefinition[] };
-type BlockOptions = { label?: Label; fields: FieldDefinition[] };
+type BlocksOptions = BaseOptions & { blocks: Block[] };
+type BlockOptions = { label?: Label; fields: Field[] };
 
 type SectionOptions = {
     label?: Label;
     description?: Label;
     private?: boolean;
-    fields: FieldDefinition[];
+    fields: Field[];
 };
 type AccordionOptions = {
     label?: Label;
     description?: Label;
     collapsed?: boolean;
     private?: boolean;
-    fields: FieldDefinition[];
+    fields: Field[];
 };
 type TabOptions = {
     label?: Label;
     description?: Label;
     private?: boolean;
-    fields: FieldDefinition[];
+    fields: Field[];
 };
-type TabsOptions = { private?: boolean; fields: FieldDefinition[] };
+type TabsOptions = { private?: boolean; fields: Field[] };
 
-export function text(name: string, options?: TextOptions): FieldDefinition {
+export function text(name: string, options?: TextOptions): Field {
     return { name, type: 'text', ...options };
 }
 
-export function textarea(name: string, options?: TextOptions): FieldDefinition {
+export function textarea(name: string, options?: TextOptions): Field {
     return { name, type: 'textarea', ...options };
 }
 
@@ -94,124 +94,121 @@ type RichTextOptions = BaseOptions & {
     allow?: RichTextAllow;
 };
 
-export function richtext(name: string, options?: RichTextOptions): FieldDefinition {
+export function richtext(name: string, options?: RichTextOptions): Field {
     return { name, type: 'richtext', ...options };
 }
 
-export function email(name: string, options?: BaseOptions): FieldDefinition {
+export function email(name: string, options?: BaseOptions): Field {
     return { name, type: 'email', ...options };
 }
 
-export function url(name: string, options?: BaseOptions): FieldDefinition {
+export function url(name: string, options?: BaseOptions): Field {
     return { name, type: 'url', ...options };
 }
 
-export function slug(name: string, options?: BaseOptions): FieldDefinition {
+export function slug(name: string, options?: BaseOptions): Field {
     return { name, type: 'slug', ...options };
 }
 
-export function color(name: string, options?: BaseOptions): FieldDefinition {
+export function color(name: string, options?: BaseOptions): Field {
     return { name, type: 'color', ...options };
 }
 
-export function date(name: string, options?: BaseOptions): FieldDefinition {
+export function date(name: string, options?: BaseOptions): Field {
     return { name, type: 'date', ...options };
 }
 
-export function datetime(name: string, options?: BaseOptions): FieldDefinition {
+export function datetime(name: string, options?: BaseOptions): Field {
     return { name, type: 'datetime', ...options };
 }
 
-export function json(name: string, options?: BaseOptions): FieldDefinition {
+export function json(name: string, options?: BaseOptions): Field {
     return { name, type: 'json', ...options };
 }
 
-export function link(name: string, options?: BaseOptions): FieldDefinition {
+export function link(name: string, options?: BaseOptions): Field {
     return { name, type: 'link', ...options };
 }
 
-export function keyValue(name: string, options?: BaseOptions): FieldDefinition {
+export function keyValue(name: string, options?: BaseOptions): Field {
     return { name, type: 'key-value', ...options };
 }
 
-export function number(name: string, options?: NumericOptions): FieldDefinition {
+export function number(name: string, options?: NumericOptions): Field {
     return { name, type: 'number', ...options };
 }
 
-export function range(name: string, options?: NumericOptions): FieldDefinition {
+export function range(name: string, options?: NumericOptions): Field {
     return { name, type: 'range', ...options };
 }
 
-export function boolean(name: string, options?: BaseOptions): FieldDefinition {
+export function boolean(name: string, options?: BaseOptions): Field {
     return { name, type: 'boolean', ...options };
 }
 
-export function select(name: string, options?: ChoiceOptions): FieldDefinition {
+export function select(name: string, options?: ChoiceOptions): Field {
     return { name, type: 'select', ...options };
 }
 
-export function multiselect(name: string, options?: ChoiceOptions): FieldDefinition {
+export function multiselect(name: string, options?: ChoiceOptions): Field {
     return { name, type: 'multiselect', ...options };
 }
 
-export function radioGroup(name: string, options?: ChoiceOptions): FieldDefinition {
+export function radioGroup(name: string, options?: ChoiceOptions): Field {
     return { name, type: 'radio-group', ...options };
 }
 
-export function checkboxGroup(name: string, options?: ChoiceOptions): FieldDefinition {
+export function checkboxGroup(name: string, options?: ChoiceOptions): Field {
     return { name, type: 'checkbox-group', ...options };
 }
 
-export function media(name: string, options?: MediaOptions): FieldDefinition {
+export function media(name: string, options?: MediaOptions): Field {
     return { name, type: 'media', ...options };
 }
 
-export function relationship(
-    name: string,
-    options?: RelationshipOptions
-): FieldDefinition {
+export function relationship(name: string, options?: RelationshipOptions): Field {
     return { name, type: 'relationship', ...options };
 }
 
-export function group(name: string, options: GroupOptions): FieldDefinition {
+export function group(name: string, options: GroupOptions): Field {
     const { fields, ...rest } = options;
     return { name, type: 'group', ...rest, fields };
 }
 
-export function repeater(name: string, options: RepeaterOptions): FieldDefinition {
+export function repeater(name: string, options: RepeaterOptions): Field {
     const { fields, ...rest } = options;
     return { name, type: 'repeater', ...rest, fields };
 }
 
-export function tree(name: string, options: TreeOptions): FieldDefinition {
+export function tree(name: string, options: TreeOptions): Field {
     const { fields, ...rest } = options;
     return { name, type: 'tree', ...rest, fields };
 }
 
-export function blocks(name: string, options: BlocksOptions): FieldDefinition {
+export function blocks(name: string, options: BlocksOptions): Field {
     const { blocks: blockDefs, ...rest } = options;
     return { name, type: 'blocks', ...rest, blocks: blockDefs };
 }
 
-export function block(type: string, options: BlockOptions): BlockDefinition {
+export function block(type: string, options: BlockOptions): Block {
     return { type, ...options };
 }
 
-export function section(name: string, options: SectionOptions): FieldDefinition {
+export function section(name: string, options: SectionOptions): Field {
     const { fields, ...rest } = options;
     return { name, type: 'section', ...rest, fields };
 }
 
-export function accordion(name: string, options: AccordionOptions): FieldDefinition {
+export function accordion(name: string, options: AccordionOptions): Field {
     const { fields, ...rest } = options;
     return { name, type: 'accordion', ...rest, fields };
 }
 
-export function tab(name: string, options: TabOptions): FieldDefinition {
+export function tab(name: string, options: TabOptions): Field {
     const { fields, ...rest } = options;
     return { name, type: 'tab', ...rest, fields };
 }
 
-export function tabs(options: TabsOptions): FieldDefinition {
+export function tabs(options: TabsOptions): Field {
     return { name: 'tabs', type: 'tabs', fields: options.fields };
 }

@@ -22,7 +22,7 @@
 import { describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
-import type { FieldDefinition } from '@/types/index.js';
+import type { Field } from '@/types/index.js';
 import '@/admin/rendering/register-fields.js';
 import { FormField } from '@/admin/components/fields/form-field';
 
@@ -41,7 +41,7 @@ type Mounted = {
 };
 
 /** Mount one container `FormField` and capture what it commits. */
-function mountField(field: FieldDefinition, value: unknown): Mounted {
+function mountField(field: Field, value: unknown): Mounted {
     const commits: Commit[] = [];
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -109,7 +109,7 @@ function pathShapedKeys(obj: Record<string, unknown>): string[] {
 // ============================================================================
 
 describe('repeater sub-field editing', () => {
-    const socials: FieldDefinition = {
+    const socials: Field = {
         name: 'socials',
         type: 'repeater',
         fields: [
@@ -181,7 +181,7 @@ describe('repeater sub-field editing', () => {
 // ============================================================================
 
 describe('group sub-field editing', () => {
-    const quote: FieldDefinition = {
+    const quote: Field = {
         name: 'quote',
         type: 'group',
         fields: [
@@ -224,7 +224,7 @@ describe('group sub-field editing', () => {
 // ============================================================================
 
 describe('blocks sub-field editing', () => {
-    const content: FieldDefinition = {
+    const content: Field = {
         name: 'content',
         type: 'blocks',
         blocks: [
@@ -286,7 +286,7 @@ describe('blocks sub-field editing', () => {
 // ============================================================================
 
 describe('tree sub-field editing', () => {
-    const nav: FieldDefinition = {
+    const nav: Field = {
         name: 'nav',
         type: 'tree',
         fields: [
@@ -352,7 +352,7 @@ describe('tree sub-field editing', () => {
 // ============================================================================
 
 describe('group nested in a repeater item', () => {
-    const people: FieldDefinition = {
+    const people: Field = {
         name: 'people',
         type: 'repeater',
         fields: [
@@ -401,7 +401,7 @@ describe('group nested in a repeater item', () => {
 });
 
 describe('repeater nested in a repeater item', () => {
-    const sections: FieldDefinition = {
+    const sections: Field = {
         name: 'sections',
         type: 'repeater',
         fields: [

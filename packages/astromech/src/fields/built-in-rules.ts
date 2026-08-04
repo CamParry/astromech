@@ -1,10 +1,10 @@
 /**
- * Type-intrinsic coerce/validate helpers for core field descriptors.
+ * Type-intrinsic coerce/validate helpers for the core field types.
  *
- * Pure functions — no DB imports. Consumed by core-descriptors.ts.
+ * Pure functions — no DB imports. Consumed by core-field-types.ts.
  */
 
-import type { FieldDefinition, FieldValidator } from '@/types/fields.js';
+import type { Field, FieldValidator } from '@/types/fields.js';
 import { slugify } from '@/utilities/strings.js';
 
 // ---------------------------------------------------------------------------
@@ -88,7 +88,7 @@ export const validateKeyValue: FieldValidator = async (ctx) => {
 // ---------------------------------------------------------------------------
 
 /** The field's declared option values, as a set. */
-function optionValues(field: FieldDefinition): Set<string> {
+function optionValues(field: Field): Set<string> {
     const options = field.options ?? [];
     return new Set(options.map((o) => (typeof o === 'string' ? o : o.value)));
 }

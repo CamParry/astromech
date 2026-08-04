@@ -47,7 +47,7 @@ import type {
     JsonObject,
     ResolvedEntryTypeConfig,
 } from '@/types/index.js';
-import type { FieldDefinition } from '@/types/fields.js';
+import type { Field } from '@/types/fields.js';
 
 /** How many fields may be in flight with the provider at once. */
 const CONCURRENCY = 4;
@@ -411,7 +411,7 @@ function previewUrl(
 }
 
 /** A plain-string label for the provider's context; i18n keys fall back. */
-function labelOf(field: FieldDefinition): string {
+function labelOf(field: Field): string {
     return typeof field.label === 'string' ? field.label : fieldNameToLabel(field.name);
 }
 

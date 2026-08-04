@@ -22,7 +22,7 @@ import type { StorageDb } from '@/entries/storage/types.js';
 import type {
     AstromechConfig,
     Entry,
-    FieldDefinition,
+    Field,
     JsonObject,
     PluginDefinition,
 } from '@/types/index.js';
@@ -55,7 +55,7 @@ function linksPlugin(): PluginDefinition {
 }
 
 /** One relation per target kind, plus one nested inside a repeater. */
-const docFields: FieldDefinition[] = [
+const docFields: Field[] = [
     { name: 'plain', type: 'text', label: 'Plain' },
     { name: 'author', type: 'relationship', label: 'Author', target: 'post' },
     {

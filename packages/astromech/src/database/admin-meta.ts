@@ -1,6 +1,6 @@
 /**
  * Admin metadata — a `Table` projected into the admin's existing
- * table-column/field vocabulary (`CellKind`, `FieldDefinition['type']`).
+ * table-column/field vocabulary (`CellKind`, `Field['type']`).
  *
  * Pure, serializable — no db imports. Lets a table-backed admin surface (e.g.
  * step 5's `tableStorage` replacement) describe itself for the shell's list/
@@ -10,20 +10,20 @@
 import { resolveReferenceTarget } from '@/database/table-snapshot.js';
 import type { ColumnKind, Table } from '@/database/define-table.js';
 import type { CellKind } from '@/types/resolved.js';
-import type { FieldType } from '@/types/fields.js';
+import type { FieldTypeName } from '@/types/fields.js';
 
 export type ColumnAdminMeta = {
     /** camelCase column key — the data key the admin reads. */
     name: string;
     cellKind: CellKind;
-    fieldType: FieldType;
+    fieldType: FieldTypeName;
     nullable: boolean;
     enumValues?: readonly string[];
     /** Resolved target table name, `reference` columns only. */
     referenceTable?: string;
 };
 
-const KIND_META: Record<ColumnKind, { cellKind: CellKind; fieldType: FieldType }> = {
+const KIND_META: Record<ColumnKind, { cellKind: CellKind; fieldType: FieldTypeName }> = {
     id: { cellKind: 'text', fieldType: 'text' },
     text: { cellKind: 'text', fieldType: 'text' },
     integer: { cellKind: 'number', fieldType: 'number' },

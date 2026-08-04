@@ -30,7 +30,7 @@ import {
     IndentIncrease,
     IndentDecrease,
 } from 'lucide-react';
-import type { BaseFieldProps, FieldDefinition } from '@/types/index.js';
+import type { BaseFieldProps, Field } from '@/types/index.js';
 import { FormField } from '@/admin/components/fields/form-field';
 import type { TreeNode } from '@/admin/hooks/use-tree-field.js';
 import { useTreeField } from '@/admin/hooks/use-tree-field.js';
@@ -55,7 +55,7 @@ type SortableSiblingListProps = {
     parentId: string | null;
     depth: number;
     maxDepth?: number | undefined;
-    fields: FieldDefinition[];
+    fields: Field[];
     fieldName: string;
     disabled?: boolean | undefined;
     onReorder: (activeId: string, overId: string) => void;
@@ -146,7 +146,7 @@ type SortableTreeNodeProps = {
     parentId: string | null;
     depth: number;
     maxDepth?: number | undefined;
-    fields: FieldDefinition[];
+    fields: Field[];
     fieldName: string;
     disabled?: boolean | undefined;
     onAddChild: (parentId: string) => void;

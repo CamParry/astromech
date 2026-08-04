@@ -4,7 +4,7 @@
  * so neither may assume a session, and both report failure as a result shape.
  */
 
-import type { FieldDefinition, FieldErrors, FieldReads } from 'astromech';
+import type { Field, FieldErrors, FieldReads } from 'astromech';
 import { defineServiceMethod, z } from 'astromech';
 import { processFields } from 'astromech/fields';
 import { compileFormFields } from '../fields/compile.js';
@@ -27,7 +27,7 @@ export type PublicForm = {
     slug: string;
     title: string;
     /** Exactly the fields `submit` will validate against. */
-    fields: FieldDefinition[];
+    fields: Field[];
     /** Present only when the site configured a provider AND the form uses it. Never carries the secret key. */
     spam?: { provider: string; siteKey: string };
 };

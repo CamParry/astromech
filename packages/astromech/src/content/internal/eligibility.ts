@@ -5,10 +5,10 @@
  * never sent. Pure: it walks definitions + stored values and reports targets.
  */
 
-import { getFieldTypeDescriptor } from '@/fields/descriptors.js';
+import { getFieldType } from '@/fields/field-type-registry.js';
 import { formatInstancePath, parseInstancePath } from '@/fields/field-path.js';
 import { flattenFieldNodes } from '@/fields/flatten.js';
-import type { FieldDefinition, FieldPathSegment } from '@/types/fields.js';
+import type { Field, FieldPathSegment } from '@/types/fields.js';
 
 /**
  * Field types whose entire value is prose an author wrote. Everything else —
@@ -26,7 +26,7 @@ export const TEXT_BEARING_FIELD_TYPES: ReadonlySet<string> = new Set([
 export type RewriteTarget = {
     /** Instance path, e.g. `sections[a1].title`. */
     path: string;
-    field: FieldDefinition;
+    field: Field;
     /** Root field name this target sits under — the key a patch has to carry. */
     root: string;
     /** The object holding the value; assign `scope[field.name]` to write back. */
@@ -43,12 +43,12 @@ export type EligibilityOptions = {
 
 /**
  * Collect the eligible fields inside `values`, descending into nested fields.
- * They are normalized in place (the descriptor's `children` mints missing
+ * They are normalized in place (the field type's `children` mints missing
  * item `_id`s), so `values` is the working copy a caller writes back.
  */
 export function collectRewriteTargets(
     values: Record<string, unknown>,
-    definitions: FieldDefinition[],
+    definitions: Field[],
     options: EligibilityOptions
 ): RewriteTarget[] {
     // Parsed for the side effect: a malformed path is a caller bug, and matching
@@ -63,7 +63,7 @@ export function collectRewriteTargets(
 /** Walk one value scope — the record root, or a container item / group object. */
 function walkScope(
     values: Record<string, unknown>,
-    definitions: FieldDefinition[],
+    definitions: Field[],
     parentSegments: readonly FieldPathSegment[],
     options: EligibilityOptions,
     targets: RewriteTarget[]
@@ -76,10 +76,10 @@ function walkScope(
             ...parentSegments,
             { kind: 'field', name: field.name },
         ];
-        const descriptor = getFieldTypeDescriptor(field.type);
+        const fieldType = getFieldType(field.type);
 
-        if (descriptor?.children !== undefined) {
-            const { next, scopes } = descriptor.children(field, values[field.name]);
+        if (fieldType?.children !== undefined) {
+            const { next, scopes } = fieldType.children(field, values[field.name]);
             values[field.name] = next;
             for (const scope of scopes) {
                 walkScope(

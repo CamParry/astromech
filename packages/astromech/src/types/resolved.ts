@@ -11,7 +11,7 @@
  */
 import type * as React from 'react';
 import type { Entry } from './domain.js';
-import type { FieldDefinition, Label } from './fields.js';
+import type { Field, Label } from './fields.js';
 
 export const CELL_KINDS = [
     'text',
@@ -56,9 +56,9 @@ export type ResolvedForm = {
     hasSlug: boolean;
     hasStatuses: boolean;
     /** Recursive field tree for the main (left) column. */
-    main: FieldDefinition[];
+    main: Field[];
     /** Recursive field tree for the sidebar (right) column. */
-    sidebar: FieldDefinition[];
+    sidebar: Field[];
 };
 
 export type CellRenderContext = {

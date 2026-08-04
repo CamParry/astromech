@@ -51,7 +51,7 @@ forms/
   src/entries/submission.ts          the `submission` entry type — table-backed, API-written
   src/tables/submissions.ts          definePluginTable — the `submissions` table
   migrations/                        generated — never hand-edited
-  src/fields/compile.ts              stored blocks -> core FieldDefinition[]
+  src/fields/compile.ts              stored blocks -> core Field[]
   src/service/forms.ts               the public `get` and `submit` methods
   src/hooks/events.ts                forms:beforeSubmit / forms:afterSubmit payloads
   src/notifications/                 one provider per notification kind (see below)
@@ -69,7 +69,7 @@ A `form` entry has three tabs.
 under), a `label`, whether it is `required`, and optional help text; choice kinds
 add an options repeater, and text/number kinds add length and range limits.
 
-Those blocks are compiled into real `FieldDefinition`s at submit time, so a
+Those blocks are compiled into real `Field`s at submit time, so a
 submission is validated and coerced by the same pipeline that validates an
 entry — no second validation implementation.
 

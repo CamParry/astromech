@@ -12,7 +12,7 @@ import { getEntryStorage } from '../storage/registry.js';
 import { CapabilityError } from '../errors.js';
 import type { Capability } from '../storage/capabilities.js';
 import type { EntryStorage } from '../storage/types.js';
-import type { FieldDefinition } from '@/types/index.js';
+import type { Field } from '@/types/index.js';
 
 export function getDefaultLocale(): string {
     // `defaultLocale` is a DISPLAY tag (e.g. `en-GB`) and may not be a content
@@ -52,7 +52,7 @@ export function getNonTranslatableFieldNames(
 }
 
 /** Flattened field definitions for an entry type (`[]` if the type is unknown). */
-export function resolveTypeFields(typeName: string): FieldDefinition[] {
+export function resolveTypeFields(typeName: string): Field[] {
     const cfg = resolveEntryType(config, typeName);
     return cfg ? flattenEntryFields(cfg.fields) : [];
 }

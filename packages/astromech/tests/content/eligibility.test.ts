@@ -5,9 +5,9 @@
 
 import { describe, expect, it } from 'vitest';
 import { collectRewriteTargets } from '@/content/internal/eligibility.js';
-import type { FieldDefinition } from '@/types/fields.js';
+import type { Field } from '@/types/fields.js';
 
-const definitions: FieldDefinition[] = [
+const definitions: Field[] = [
     { name: 'summary', type: 'text' },
     { name: 'notes', type: 'textarea' },
     { name: 'body', type: 'richtext' },
@@ -50,7 +50,7 @@ function values(): Record<string, unknown> {
 }
 
 function paths(
-    definitions: FieldDefinition[],
+    definitions: Field[],
     data: Record<string, unknown>,
     options?: { paths?: string[]; skipNonTranslatable?: boolean }
 ): string[] {
@@ -86,13 +86,13 @@ describe('collectRewriteTargets', () => {
     });
 
     it('never sends a field type it does not recognise', () => {
-        const custom: FieldDefinition[] = [{ name: 'widget', type: 'plugin-widget' }];
+        const custom: Field[] = [{ name: 'widget', type: 'plugin-widget' }];
         expect(paths(custom, { widget: 'some prose' })).toEqual([]);
     });
 });
 
 describe('collectRewriteTargets — containers', () => {
-    const nested: FieldDefinition[] = [
+    const nested: Field[] = [
         { name: 'summary', type: 'text' },
         {
             name: 'seo',

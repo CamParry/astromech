@@ -1,9 +1,9 @@
 /**
  * Field system types — field definitions, validation, field categories.
  *
- * An entry's schema is a tree of `FieldDefinition` nodes. Layout fields are
- * field *types* rather than a separate hierarchy; `TERMINOLOGY.md` states the
- * two categories and their membership.
+ * An entry's schema is a tree of `Field` nodes. Layout fields are field *types*
+ * rather than a separate hierarchy; `TERMINOLOGY.md` states the two categories
+ * and their membership.
  */
 
 import type { ResourceType, User } from './domain.js';
@@ -45,33 +45,33 @@ export const CORE_FIELD_TYPES = [
     'accordion',
 ] as const;
 
-export type FieldType = (typeof CORE_FIELD_TYPES)[number];
+export type FieldTypeName = (typeof CORE_FIELD_TYPES)[number];
 
 /**
  * A field's `type` — a core type (autocompleted) or a plugin-registered
  * custom type. The intersection keeps literal autocomplete working.
  */
-export type AnyFieldType = FieldType | (string & Record<never, never>);
+export type AnyFieldType = FieldTypeName | (string & Record<never, never>);
 
 /**
- * Config-time i18n key descriptor. `t(key)` returns one of these; it survives
- * JSON serialization into the virtual config module and is resolved to a
- * translated string by the admin renderer (`resolveLabel`).
+ * Config-time reference to a message in the i18n catalogue. `t(key)` returns one
+ * of these; it survives JSON serialization into the virtual config module and is
+ * resolved to a translated string by the admin renderer (`resolveLabel`).
  */
-export type MessageDescriptor = { $t: string };
+export type MessageRef = { $t: string };
 
 /** A user-facing label — a literal string or a captured i18n key. */
-export type Label = string | MessageDescriptor;
+export type Label = string | MessageRef;
 
 export type SelectOption = {
     value: string;
     label: Label;
 };
 
-export type BlockDefinition = {
+export type Block = {
     type: string;
     label?: Label;
-    fields: FieldDefinition[];
+    fields: Field[];
 };
 
 /**
@@ -88,7 +88,7 @@ export type ValidationSeverity = 'error' | 'warning';
  *
  * Rules are serializable (so they can be mirrored client-side later) — except
  * `custom`, which is an imperative server-only validator. `{ required: true }`
- * is intentionally absent: required-ness is the `FieldDefinition.required` flag,
+ * is intentionally absent: required-ness is the `Field.required` flag,
  * declared in exactly one place. `{ unique: true }` resolves to
  * `ctx.reads.isUnique(field, value)` in the pipeline.
  */
@@ -113,8 +113,8 @@ export type ValidationRule = (
  * One step of a field path: a declared field, or one item of a container.
  *
  * The *contract* lives here with the other field types (pure leaf layer) so that
- * `FieldTypeDescriptor` and `FieldValidationContext` can reference it; the
- * formatters and parser that render and read it live in `fields/field-path.ts`,
+ * `FieldType` and `FieldValidationContext` can reference it; the formatters
+ * and parser that render and read it live in `fields/field-path.ts`,
  * which re-exports this type. Items are addressed by their persisted `_id`,
  * never by array index — see that module's header for the full grammar.
  */
@@ -125,7 +125,7 @@ export type FieldPathSegment =
 // ============================================================================
 // Validation contract (server-side field pipeline)
 //
-// The descriptor + pipeline implementation lives in `fields/`; these are the
+// The field-type + pipeline implementation lives in `fields/`; these are the
 // shared types. See specs/field-system-and-validation.md §4.
 // ============================================================================
 
@@ -148,7 +148,7 @@ export type ValidationStage = 'save' | 'publish';
  */
 export type FieldReads = {
     /** True when no other record in the host scope holds `value` for `field`. */
-    isUnique: (field: FieldDefinition, value: unknown) => Promise<boolean>;
+    isUnique: (field: Field, value: unknown) => Promise<boolean>;
 };
 
 /**
@@ -161,7 +161,7 @@ export type FieldValidationContext = {
     value: unknown;
     /** Sibling field values, for cross-field rules. */
     values: Record<string, unknown>;
-    field: FieldDefinition;
+    field: Field;
     /**
      * Path to the field, as segments — one `field` segment per declared field
      * plus an `item` segment per container item traversed, e.g.
@@ -210,7 +210,7 @@ export type ResourceValidationResult = string | Record<string, string> | null | 
  */
 export type ResourceValidationContext = {
     values: Record<string, unknown>;
-    definitions: FieldDefinition[];
+    definitions: Field[];
     operation: 'create' | 'update';
     stage: ValidationStage;
     host: { kind: ResourceType; record: unknown };
@@ -238,7 +238,7 @@ export type ContainerScope = {
      */
     segments: FieldPathSegment[];
     /** The field definitions that apply to this scope's values. */
-    definitions: FieldDefinition[];
+    definitions: Field[];
     /**
      * LIVE reference to this scope's value object inside the normalized
      * container value returned as `next`. The pipeline mutates it in place.
@@ -248,20 +248,20 @@ export type ContainerScope = {
 
 /**
  * The single source of truth for a field type. Core and plugin field types
- * register the same descriptor shape; the pipeline dispatches to it. Replaces
- * the ~6 drifting surfaces (union, builder, component registry, type-gen switch,
- * defaults, coercion) with one record per type. Populated in P1.
+ * register the same shape; the pipeline dispatches to it. Replaces the ~6
+ * drifting surfaces (union, builder, component registry, type-gen switch,
+ * defaults, coercion) with one record per type.
  */
-export type FieldTypeDescriptor = {
+export type FieldType = {
     type: string;
-    /** The builder factory — `type(name, options?)` returning a `FieldDefinition`. */
+    /** The builder factory — `type(name, options?)` returning a `Field`. */
     // `any` — heterogeneous factory option types; a registry can't hold a single precise signature.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    build: (name: string, options?: any) => FieldDefinition;
+    build: (name: string, options?: any) => Field;
     /** Import specifier for the admin (browser) component. */
     component: string;
     /** TS type emitted by codegen for this field, or `null` to omit. */
-    tsType: (field: FieldDefinition, shape: 'full' | 'public') => string | null;
+    tsType: (field: Field, shape: 'full' | 'public') => string | null;
     defaultValue?: unknown;
     /** Storage normalization applied before validation. */
     coerce?: (value: unknown) => unknown;
@@ -278,7 +278,7 @@ export type FieldTypeDescriptor = {
      * minted) plus a flat list of scopes holding live references into it.
      */
     children?: (
-        field: FieldDefinition,
+        field: Field,
         value: unknown
     ) => { next: unknown; scopes: ContainerScope[] };
     /** Reserved instance keys this type owns, e.g. `['_id', '_disabled', '_title']`. */
@@ -307,7 +307,7 @@ export type RichTextAllow = {
     textAlign?: boolean;
 };
 
-export type FieldDefinition = {
+export type Field = {
     name: string;
     type: AnyFieldType;
     label?: Label;
@@ -321,7 +321,7 @@ export type FieldDefinition = {
     target?: string;
     multiple?: boolean;
     /** Children for layout fields and `group`/`repeater`/`tree`. */
-    fields?: FieldDefinition[];
+    fields?: Field[];
     min?: number;
     max?: number;
     /** Maximum nesting depth for `tree` fields. Unlimited when omitted. */
@@ -336,7 +336,7 @@ export type FieldDefinition = {
     step?: number;
     collapsed?: boolean;
     accept?: string;
-    blocks?: BlockDefinition[];
+    blocks?: Block[];
 
     /**
      * Advisory character counter for `text`/`textarea`. `true` shows the length
@@ -371,14 +371,12 @@ export type FieldDefinition = {
  * single column) or an explicit two-column split. The *shape* signals the layout —
  * there is no `layout()` helper.
  */
-export type EntryFields =
-    | FieldDefinition[]
-    | { main: FieldDefinition[]; sidebar?: FieldDefinition[] };
+export type EntryFields = Field[] | { main: Field[]; sidebar?: Field[] };
 
 /** Resolved two-column field layout consumed by the renderer + type-gen. */
 export type ResolvedEntryFields = {
-    main: FieldDefinition[];
-    sidebar: FieldDefinition[];
+    main: Field[];
+    sidebar: Field[];
 };
 
 /**
@@ -387,7 +385,7 @@ export type ResolvedEntryFields = {
 export type BaseFieldProps = {
     name: string;
     value: unknown;
-    field: FieldDefinition;
+    field: Field;
     required?: boolean;
     onChange: (name: string, value: unknown) => void;
     disabled?: boolean;

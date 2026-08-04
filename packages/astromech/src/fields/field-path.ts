@@ -55,7 +55,7 @@
  * plugin composing fields from stored JSON can check a name it did not author.
  *
  * `FieldPathSegment` itself is declared with the other field contracts in
- * `types/fields.ts` — the field-type descriptor and the validation context both
+ * `types/fields.ts` — the field type and the validation context both
  * reference it, and the pure leaf layer may not import a capability. It is
  * re-exported here so this module stays the one place to reach for the grammar.
  */
@@ -72,7 +72,7 @@ const RESERVED_NAME_CHARS = ['.', '[', ']'] as const;
  * `.`, `[` and `]`.
  *
  * Exported because a field name doesn't always come from a schema an author
- * wrote by hand — a plugin can compose `FieldDefinition`s from stored JSON — and
+ * wrote by hand — a plugin can compose `Field`s from stored JSON — and
  * such a caller needs to reject an unusable name before it reaches a formatter.
  * This is the one place the character rules are stated.
  */

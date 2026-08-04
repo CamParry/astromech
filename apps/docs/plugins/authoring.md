@@ -222,13 +222,13 @@ also export `validate(value, field)`:
 
 ```tsx
 // admin/fields/rating-field.tsx
-import type { BaseFieldProps, FieldDefinition } from 'astromech';
+import type { BaseFieldProps, Field } from 'astromech';
 
 export default function RatingField({ name, value, onChange, disabled }: BaseFieldProps) {
     /* ... */
 }
 
-export function validate(value: unknown, field: FieldDefinition): string | undefined {
+export function validate(value: unknown, field: Field): string | undefined {
     /* ... */
 }
 ```

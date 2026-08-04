@@ -15,12 +15,12 @@
 import { describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
-import type { FieldDefinition, FieldValidationContext } from '@/types/index.js';
+import type { Field, FieldValidationContext } from '@/types/index.js';
 import '@/admin/rendering/register-fields.js';
 import { FormField } from '@/admin/components/fields/form-field';
 import { validateLink } from '@/fields/built-in-rules.js';
 
-const cta: FieldDefinition = { name: 'cta', type: 'link' };
+const cta: Field = { name: 'cta', type: 'link' };
 
 type Mounted = {
     /** Type into the input rendered for the given control name. */

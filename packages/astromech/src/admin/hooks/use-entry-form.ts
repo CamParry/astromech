@@ -24,7 +24,7 @@ import { resolveLabel } from '@/admin/i18n/labels.js';
 import type {
     Entry,
     EntryStatus,
-    FieldDefinition,
+    Field,
     FieldErrors,
     JsonObject,
 } from '../../types/index.js';
@@ -59,7 +59,7 @@ type UseEntryFormOptions = {
      * The type's full field tree (`[...main, ...sidebar]`), which the browser
      * runs the server's own pipeline over before letting a submit through.
      */
-    fieldDefinitions: FieldDefinition[];
+    fieldDefinitions: Field[];
     /** Which pipeline operation a submit performs — `'create'` seeds defaults. */
     operation: 'create' | 'update';
     /**

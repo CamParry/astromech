@@ -2,14 +2,14 @@
  * Client-side field validation for the entry form.
  *
  * This is not a second rule engine. It runs the SAME `processFields` the server
- * runs, over the same `FieldDefinition[]` the server was given — the admin
+ * runs, over the same `Field[]` the server was given — the admin
  * config is built from the very same definitions and shipped to the browser.
  * There is therefore nothing to keep in sync: a new rule, a new field type or a
  * changed message appears here the moment it appears on the server.
  *
  * What the browser skips is decided by DATA-DEPENDENCE, not by
  * declarative-vs-imperative. A check that needs a database read cannot run here;
- * everything else can, including the type-intrinsic descriptor validators
+ * everything else can, including the type-intrinsic field-type validators
  * (`url`, `email`, `json`, `key-value`), which are pure core code already in
  * this bundle.
  *
@@ -23,12 +23,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type {
-    FieldDefinition,
-    FieldErrors,
-    FieldReads,
-    ValidationStage,
-} from '@/types/index.js';
+import type { Field, FieldErrors, FieldReads, ValidationStage } from '@/types/index.js';
 // Deep import: the `fields/` barrel reaches server code (virtual config / DB).
 import { processFields } from '@/fields/pipeline.js';
 
@@ -60,7 +55,7 @@ export type FieldValidationHandle = {
 
 export type UseFieldValidationOptions = {
     /** The full field tree — `[...main, ...sidebar]` from the admin config. */
-    definitions: FieldDefinition[];
+    definitions: Field[];
     values: Record<string, unknown>;
     operation: 'create' | 'update';
 };

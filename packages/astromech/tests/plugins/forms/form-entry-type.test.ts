@@ -13,12 +13,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { FieldDefinition } from '@/types/fields.js';
+import type { Field } from '@/types/fields.js';
 import { processFields } from '@/fields/pipeline.js';
 import { formEntryType } from '../../../../plugins/forms/src/entries/form.js';
 
 /** The `form` type declares a plain array; narrow the `EntryFields` union to it. */
-function definitions(): FieldDefinition[] {
+function definitions(): Field[] {
     const { fields } = formEntryType;
     if (fields === undefined) return [];
     return Array.isArray(fields) ? fields : fields.main;

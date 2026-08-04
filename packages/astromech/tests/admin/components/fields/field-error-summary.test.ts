@@ -13,7 +13,7 @@
 import { describe, expect, it, beforeAll } from 'vitest';
 import i18next from 'i18next';
 import type { TFunction } from 'i18next';
-import type { FieldDefinition } from '@/types/index.js';
+import type { Field } from '@/types/index.js';
 import {
     fieldErrorNames,
     fieldLabelPathForError,
@@ -25,7 +25,7 @@ import en from '@/admin/locales/en.json' with { type: 'json' };
 // Path → label chain
 // ============================================================================
 
-const definitions: FieldDefinition[] = [
+const definitions: Field[] = [
     { name: 'title', type: 'text', label: 'Headline' },
     // No label — resolves to the same fallback the field's own label renders.
     { name: 'meta_description', type: 'text' },

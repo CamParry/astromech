@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { FieldDefinition, FieldValidationContext } from '@/types/fields.js';
+import type { Field, FieldValidationContext } from '@/types/fields.js';
 import {
     checkRichTextDocument,
     coerceRichText,
@@ -24,7 +24,7 @@ const heading = {
     ],
 };
 
-function ctx(value: unknown, field: FieldDefinition): FieldValidationContext {
+function ctx(value: unknown, field: Field): FieldValidationContext {
     return {
         value,
         values: {},
@@ -128,7 +128,7 @@ describe('validateRichText', () => {
     });
 
     it('reads the allow list off the field definition', async () => {
-        const field: FieldDefinition = {
+        const field: Field = {
             name: 'body',
             type: 'richtext',
             allow: { heading: false },
@@ -159,7 +159,7 @@ describe('coerceRichText', () => {
 // ---------------------------------------------------------------------------
 
 describe('rich text through processFields', () => {
-    const fields: FieldDefinition[] = [{ name: 'body', type: 'richtext' }];
+    const fields: Field[] = [{ name: 'body', type: 'richtext' }];
 
     it('accepts a valid document', async () => {
         const result = await processFields({ body: doc }, fields, fakeCtx());
@@ -180,7 +180,7 @@ describe('rich text through processFields', () => {
     });
 
     it('rejects a node the field forbids', async () => {
-        const restricted: FieldDefinition[] = [
+        const restricted: Field[] = [
             { name: 'body', type: 'richtext', allow: { heading: false } },
         ];
         const result = await processFields({ body: heading }, restricted, fakeCtx());

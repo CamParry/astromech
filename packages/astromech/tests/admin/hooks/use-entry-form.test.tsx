@@ -22,7 +22,7 @@ import { initReactI18next } from 'react-i18next';
 import { ToastProvider } from '@/admin/components/ui/toast';
 import { useEntryForm } from '@/admin/hooks/use-entry-form.js';
 import type { UseEntryFormReturn } from '@/admin/hooks/use-entry-form.js';
-import type { Entry, FieldDefinition } from '@/types/index.js';
+import type { Entry, Field } from '@/types/index.js';
 
 beforeAll(async () => {
     // The hook reads labels through `useTranslation`; the SPA's own i18n module
@@ -33,9 +33,7 @@ beforeAll(async () => {
     });
 });
 
-const FIELDS: FieldDefinition[] = [
-    { name: 'body', type: 'text', label: 'Body', required: true },
-];
+const FIELDS: Field[] = [{ name: 'body', type: 'text', label: 'Body', required: true }];
 
 function entry(id: string): Entry {
     return { id } as Entry;
