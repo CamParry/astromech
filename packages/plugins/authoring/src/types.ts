@@ -1,6 +1,6 @@
 /** Public options for the authoring plugin, and the chat wire types. */
 
-import type { AIContextEntry } from 'astromech';
+import type { AIContextItem } from 'astromech';
 
 /**
  * Models the assistant may run on. Restricted rather than a free string:
@@ -37,8 +37,8 @@ export type ChatMessage = { role: 'user' | 'assistant'; content: string };
 /** The body posted to the chat route. */
 export type ChatRequest = {
     messages: ChatMessage[];
-    /** What the admin route the user is on declared, from `useAIContextEntries()`. */
-    aiContext?: AIContextEntry[];
+    /** What the admin route the user is on declared, from `useAIContextItems()`. */
+    aiContext?: AIContextItem[];
 };
 
 /** One server-sent event from the chat route. */

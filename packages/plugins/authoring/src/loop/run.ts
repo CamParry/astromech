@@ -4,7 +4,7 @@
  */
 
 import { Anthropic } from '@anthropic-ai/sdk';
-import type { AIContextEntry, PluginLogger, ToolDispatch } from 'astromech';
+import type { AIContextItem, PluginLogger, ToolDefinition } from 'astromech';
 import { buildRequest } from './request.js';
 import { TOOL_SEARCH_TOOL, toRunnableTools } from './tools.js';
 import type { ChatEvent, ChatMessage, ResolvedAuthoringOptions } from '../types.js';
@@ -18,15 +18,15 @@ const MAX_ITERATIONS = 12;
 export async function* runAuthoringLoop(input: {
     apiKey: string;
     options: ResolvedAuthoringOptions;
-    dispatches: ToolDispatch[];
+    tools: ToolDefinition[];
     messages: ChatMessage[];
-    aiContext: AIContextEntry[];
+    aiContext: AIContextItem[];
     logger: PluginLogger;
 }): AsyncGenerator<ChatEvent> {
     try {
-        const tools = toRunnableTools(input.dispatches);
+        const runnableTools = toRunnableTools(input.tools);
         input.logger.info(
-            `Chat request running against ${tools.length} tools, found by search`
+            `Chat request running against ${runnableTools.length} tools, found by search`
         );
 
         const { system, messages } = buildRequest(input.messages, input.aiContext);
@@ -37,7 +37,7 @@ export async function* runAuthoringLoop(input: {
             system,
             output_config: { effort: input.options.effort },
             messages,
-            tools: [TOOL_SEARCH_TOOL, ...tools],
+            tools: [TOOL_SEARCH_TOOL, ...runnableTools],
             stream: true,
             max_iterations: MAX_ITERATIONS,
         });

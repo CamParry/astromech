@@ -13,13 +13,13 @@ vi.mock('astromech', () => ({
 }));
 
 import { formatAIContextMessage } from 'astromech';
-import type { AIContextEntry } from 'astromech';
+import type { AIContextItem } from 'astromech';
 import { buildRequest, SYSTEM_PROMPT } from '../../src/loop/request.js';
 import type { ChatMessage } from '../../src/types.js';
 
 const CONTEXT = { role: 'system' as const, content: '<<context>>' };
 
-const entries: AIContextEntry[] = [
+const items: AIContextItem[] = [
     { reference: { kind: 'pages', label: 'Dashboard' }, depth: 0, order: 0 },
 ];
 
@@ -37,7 +37,7 @@ describe('buildRequest', () => {
     it('appends the context after a lone user turn', () => {
         const { system, messages } = buildRequest(
             [{ role: 'user', content: 'hi' }],
-            entries
+            items
         );
 
         expect(messages).toEqual([{ role: 'user', content: 'hi' }, CONTEXT]);
@@ -45,7 +45,7 @@ describe('buildRequest', () => {
     });
 
     it('appends the context after the final user turn', () => {
-        const { system, messages } = buildRequest(conversation, entries);
+        const { system, messages } = buildRequest(conversation, items);
 
         expect(messages).toHaveLength(4);
         expect(messages[2]).toEqual({ role: 'user', content: 'latest' });
@@ -68,7 +68,7 @@ describe('buildRequest', () => {
                 { role: 'user', content: 'first' },
                 { role: 'assistant', content: 'reply' },
             ],
-            entries
+            items
         );
 
         expect(messages).toHaveLength(2);
@@ -77,7 +77,7 @@ describe('buildRequest', () => {
     });
 
     it('does not throw on an empty conversation', () => {
-        const { system, messages } = buildRequest([], entries);
+        const { system, messages } = buildRequest([], items);
 
         expect(messages).toEqual([]);
         expect(system).toContain('<<context>>');

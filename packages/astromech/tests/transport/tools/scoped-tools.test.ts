@@ -9,14 +9,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@/codegen/manifest-registry.js', () => ({ getMethodManifest: vi.fn() }));
 vi.mock('@/policies/method-filter.js', () => ({ filterMethods: vi.fn() }));
 vi.mock('@/policies/annotate-manifest.js', () => ({ annotateManifest: vi.fn() }));
-vi.mock('@/transport/mcp/dispatch.js', () => ({ buildScopedDispatch: vi.fn() }));
+vi.mock('@/transport/tools/dispatch.js', () => ({ buildScopedDispatch: vi.fn() }));
 
 import { getMethodManifest } from '@/codegen/manifest-registry.js';
 import { filterMethods } from '@/policies/method-filter.js';
 import { annotateManifest } from '@/policies/annotate-manifest.js';
-import { buildScopedDispatch } from '@/transport/mcp/dispatch.js';
-import { buildScopedTools } from '@/transport/mcp/scoped-tools.js';
-import type { ManifestMethod, Role, ToolDispatch } from '@/types/index.js';
+import { buildScopedDispatch } from '@/transport/tools/dispatch.js';
+import { buildScopedTools } from '@/transport/tools/scoped-tools.js';
+import type { ManifestMethod, Role, ToolDefinition } from '@/types/index.js';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -57,9 +57,9 @@ function pluginMethod(id: string): ManifestMethod {
 }
 
 /** A dispatch for one method, named after it. */
-function dispatchFor(method: ManifestMethod): ToolDispatch {
+function dispatchFor(method: ManifestMethod): ToolDefinition {
     return {
-        toolName: method.id.replace('.', '_'),
+        name: method.id.replace('.', '_'),
         description: `Calls ${method.id}.`,
         inputSchema: { type: 'object', properties: {}, additionalProperties: false },
         annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
@@ -115,10 +115,7 @@ describe('buildScopedTools', () => {
             'users.query',
             'media.query',
         ]);
-        expect(tools.map((tool) => tool.toolName)).toEqual([
-            'users_query',
-            'media_query',
-        ]);
+        expect(tools.map((tool) => tool.name)).toEqual(['users_query', 'media_query']);
     });
 
     it('passes readOnly through to the method filter', () => {
@@ -183,6 +180,6 @@ describe('buildScopedTools', () => {
 
         const tools = buildScopedTools(role);
 
-        expect(tools.map((tool) => tool.toolName)).toEqual(['media_query']);
+        expect(tools.map((tool) => tool.name)).toEqual(['media_query']);
     });
 });

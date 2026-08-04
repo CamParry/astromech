@@ -3,7 +3,7 @@
  * model loop back as server-sent events, which RPC-JSON cannot carry.
  */
 
-import type { AIContextEntry, PluginContext, PluginRawRoute } from 'astromech';
+import type { AIContextItem, PluginContext, PluginRawRoute } from 'astromech';
 import type {
     ChatEvent,
     ChatMessage,
@@ -54,7 +54,7 @@ async function handleChat(
     const events = runAuthoringLoop({
         apiKey,
         options,
-        dispatches: ctx.methods.tools({ readOnly: options.readOnly }),
+        tools: ctx.methods.tools({ readOnly: options.readOnly }),
         messages: body.messages,
         aiContext: body.aiContext ?? [],
         logger: ctx.logger,
@@ -87,7 +87,7 @@ export async function readChatRequest(request: Request): Promise<ChatRequest | n
     if (!isChatMessages(messages)) return null;
     if (aiContext === undefined) return { messages };
     if (!Array.isArray(aiContext)) return null;
-    return { messages, aiContext: aiContext as AIContextEntry[] };
+    return { messages, aiContext: aiContext as AIContextItem[] };
 }
 
 /** Is this an array of `{ role, content }` turns? */

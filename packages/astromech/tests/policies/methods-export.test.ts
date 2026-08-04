@@ -7,8 +7,8 @@
 
 import { describe, expect, it } from 'vitest';
 import * as methods from '@/exports/methods.js';
-import { buildDispatch, buildScopedDispatch } from '@/transport/mcp/dispatch.js';
-import { buildScopedTools } from '@/transport/mcp/scoped-tools.js';
+import { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch.js';
+import { buildScopedTools } from '@/transport/tools/scoped-tools.js';
 import { filterMethods } from '@/policies/method-filter.js';
 import { annotateManifest } from '@/policies/annotate-manifest.js';
 import { scopedServices } from '@/policies/scoped-services.js';
@@ -28,7 +28,7 @@ import type {
     ConfirmRequest,
     DispatchResult,
     ScopedServices,
-    ToolDispatch,
+    ToolDefinition,
 } from '@/exports/methods.js';
 
 export type Exported = [
@@ -38,7 +38,7 @@ export type Exported = [
     ConfirmRequest,
     DispatchResult,
     ScopedServices,
-    ToolDispatch,
+    ToolDefinition,
 ];
 
 describe('astromech/methods', () => {

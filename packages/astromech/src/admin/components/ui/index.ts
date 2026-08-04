@@ -149,5 +149,5 @@ export { useAstromechPlugin } from '../../context/plugin.js';
 export { useFieldValue } from '../fields/field-context.js';
 
 // AI context: declare what a surface is showing, or read what every surface declared.
-export { useAIContext, useAIContextEntries } from '../../context/ai-context.js';
-export type { AIContextEntry } from '@/utilities/ai-context.js';
+export { useAIContext, useAIContextItems } from '../../context/ai-context.js';
+export type { AIContextItem } from '@/types/ai-context.js';

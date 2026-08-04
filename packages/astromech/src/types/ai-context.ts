@@ -11,3 +11,10 @@ export type AIContextReference = {
     /** Human label for the subject, already resolved by the route. */
     label: string;
 };
+
+/** A declared reference with its position: lower `depth` is less specific. */
+export type AIContextItem = {
+    reference: AIContextReference;
+    depth: number;
+    order: number;
+};

@@ -3,7 +3,7 @@
  * `use-chat.ts` so it can be tested in the package's node-environment run.
  */
 
-import type { ChatEvent } from '../../types.js';
+import type { ChatEvent } from '../types.js';
 
 /**
  * Split a buffer into complete `\n\n`-delimited frames plus the remainder. A

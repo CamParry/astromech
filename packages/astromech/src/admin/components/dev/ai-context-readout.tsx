@@ -4,7 +4,7 @@
  * exercised until the chat drawer consumes it.
  */
 
-import { useAIContextEntries } from '@/admin/context/ai-context.js';
+import { useAIContextItems } from '@/admin/context/ai-context.js';
 import { useLocalState } from '@/admin/hooks/use-local-state.js';
 import { formatAIContextMessage } from '@/utilities/ai-context.js';
 import './ai-context-readout.css';
@@ -15,8 +15,8 @@ const READOUT_STATES: ReadoutState[] = ['open', 'closed'];
 
 /** Floating toggle plus a panel showing the assembled `system` message. */
 export function AIContextReadout() {
-    const entries = useAIContextEntries();
-    const message = formatAIContextMessage(entries);
+    const items = useAIContextItems();
+    const message = formatAIContextMessage(items);
     const [state, setState] = useLocalState<ReadoutState>(
         'ai-context-readout',
         'closed',
@@ -32,7 +32,7 @@ export function AIContextReadout() {
                 aria-expanded={open}
                 onClick={() => setState(open ? 'closed' : 'open')}
             >
-                {`AI context (${entries.length})`}
+                {`AI context (${items.length})`}
             </button>
             {open && (
                 <div className="am-ai-readout-panel">
