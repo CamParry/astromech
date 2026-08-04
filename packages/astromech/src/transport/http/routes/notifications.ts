@@ -2,7 +2,7 @@
  * Notifications Routes
  *
  * Session-scoped — all operations use the authenticated user's id.
- * No permission descriptors; ownership enforced via userId in every query.
+ * No permission contracts; ownership enforced via userId in every query.
  *
  * Routes:
  *   GET    /notifications        → list

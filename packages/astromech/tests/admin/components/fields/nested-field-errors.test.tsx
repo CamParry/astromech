@@ -16,14 +16,14 @@
 import { describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
-import type { FieldDefinition } from '@/types/index.js';
-import '@/admin/definitions/register-fields.js';
+import type { Field } from '@/types/index.js';
+import '@/admin/rendering/register-fields.js';
 import { FormField } from '@/admin/components/fields/form-field';
 import { FieldErrorsProvider } from '@/admin/components/fields/field-errors-context';
 
 /** Render one FormField under an error map and return the resulting HTML. */
 function renderField(
-    field: FieldDefinition,
+    field: Field,
     value: unknown,
     errors: Record<string, string[]>
 ): string {
@@ -75,7 +75,7 @@ describe('FormField error lookup', () => {
 // ============================================================================
 
 describe('group field errors', () => {
-    const seo: FieldDefinition = {
+    const seo: Field = {
         name: 'seo',
         type: 'group',
         fields: [
@@ -101,7 +101,7 @@ describe('group field errors', () => {
     });
 
     it('nests through a group inside a group', () => {
-        const outer: FieldDefinition = {
+        const outer: Field = {
             name: 'meta',
             type: 'group',
             fields: [seo],
@@ -122,7 +122,7 @@ describe('group field errors', () => {
 // ============================================================================
 
 describe('repeater field errors', () => {
-    const links: FieldDefinition = {
+    const links: Field = {
         name: 'links',
         type: 'repeater',
         fields: [{ name: 'label', type: 'text' }],
@@ -149,7 +149,7 @@ describe('repeater field errors', () => {
 });
 
 describe('blocks field errors', () => {
-    const content: FieldDefinition = {
+    const content: Field = {
         name: 'content',
         type: 'blocks',
         blocks: [{ type: 'hero', fields: [{ name: 'heading', type: 'text' }] }],
@@ -176,7 +176,7 @@ describe('blocks field errors', () => {
 });
 
 describe('tree field errors', () => {
-    const nav: FieldDefinition = {
+    const nav: Field = {
         name: 'nav',
         type: 'tree',
         fields: [{ name: 'label', type: 'text' }],

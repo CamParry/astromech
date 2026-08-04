@@ -10,5 +10,5 @@ export * from './plugins.js';
 export * from './methods.js';
 export * from './services.js';
 export * from './client.js';
-export * from './definitions.js';
+export * from './resolved.js';
 export * from './ai-context.js';

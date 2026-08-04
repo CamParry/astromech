@@ -5,10 +5,10 @@
  * injection point for any async checks (uniqueness, references).
  *
  * Public API via `astromech/fields` (`processFields`). Entries is not its
- * only consumer: any plugin that composes `FieldDefinition[]` at runtime can
+ * only consumer: any plugin that composes `Field[]` at runtime can
  * validate through the same coerce → default → validate path as core.
  *
- * Nested fields (group/repeater/blocks/tree) are recursed into: a descriptor
+ * Nested fields (group/repeater/blocks/tree) are recursed into: a field type
  * with a `children` slot reports its nested value scopes, each of which is run
  * through the same coerce → default → validate pass. Errors are keyed by the
  * `_id`-based path grammar (`fields/field-path.ts`), so a nested error lands on
@@ -23,7 +23,7 @@
  * data-integrity problem rather than an incomplete one.
  *
  * A field reports at most ONE message. The checks short-circuit in the order
- * `required` → container item counts → the type's own descriptor validator →
+ * `required` → container item counts → the type's own `validate` →
  * the author's declarative `field.validation` rules (in declaration order). The
  * type's validator precedes the author's rules because an author rule ("must be
  * on example.com") is unevaluable against a value that is not even a URL.
@@ -51,7 +51,7 @@
  */
 
 import type {
-    FieldDefinition,
+    Field,
     FieldErrors,
     FieldPathSegment,
     FieldValidationContext,
@@ -59,7 +59,7 @@ import type {
     ValidationRule,
     ValidationStage,
 } from '@/types/fields.js';
-import { getFieldTypeDescriptor } from './descriptors.js';
+import { getFieldType } from './field-type-registry.js';
 import { formatInstancePath, isValidFieldName } from './field-path.js';
 import { flattenFieldNodes } from './flatten.js';
 
@@ -79,10 +79,7 @@ function isEmpty(v: unknown): boolean {
  * left to the formatter, so the message names the offending field instead of
  * surfacing as a bare path error from deep in the stack.
  */
-function fieldErrorPath(
-    segments: readonly FieldPathSegment[],
-    field: FieldDefinition
-): string {
+function fieldErrorPath(segments: readonly FieldPathSegment[], field: Field): string {
     if (!isValidFieldName(field.name)) {
         const reason =
             field.name === ''
@@ -242,7 +239,7 @@ type ScopeContext = Omit<
  */
 async function processScope(
     values: Record<string, unknown>,
-    definitions: FieldDefinition[],
+    definitions: Field[],
     parentSegments: readonly FieldPathSegment[],
     ctx: ScopeContext,
     errors: FieldErrors,
@@ -250,7 +247,7 @@ async function processScope(
     inheritedCoercible?: boolean
 ): Promise<void> {
     for (const field of flattenFieldNodes(definitions)) {
-        const descriptor = getFieldTypeDescriptor(field.type);
+        const fieldType = getFieldType(field.type);
         const segments: FieldPathSegment[] = [
             ...parentSegments,
             { kind: 'field', name: field.name },
@@ -265,16 +262,16 @@ async function processScope(
 
         // Step a: coerce
         let v =
-            coercible && descriptor?.coerce
-                ? descriptor.coerce(values[field.name])
+            coercible && fieldType?.coerce
+                ? fieldType.coerce(values[field.name])
                 : values[field.name];
 
         // Step b: default (create only, when value is absent)
         if (ctx.operation === 'create' && (v === undefined || v === null)) {
             if (field.defaultValue !== undefined) {
                 v = field.defaultValue;
-            } else if (descriptor?.defaultValue !== undefined) {
-                v = descriptor.defaultValue;
+            } else if (fieldType?.defaultValue !== undefined) {
+                v = fieldType.defaultValue;
             }
         }
 
@@ -288,8 +285,8 @@ async function processScope(
         // missing item `_id`s), and the container's own rules should see that
         // normalized form. A scope's segments are relative to its container, so
         // this scope's parents are prepended; deeper containers accumulate.
-        if (descriptor?.children !== undefined) {
-            const { next, scopes } = descriptor.children(field, v);
+        if (fieldType?.children !== undefined) {
+            const { next, scopes } = fieldType.children(field, v);
             v = next;
             values[field.name] = next;
             for (const scope of scopes) {
@@ -323,7 +320,7 @@ async function processScope(
             // `min` is completeness (publish only); `max` is correctness, so it
             // runs on a draft save too — no write should store more items than
             // the type permits.
-            if (descriptor?.children !== undefined && Array.isArray(v)) {
+            if (fieldType?.children !== undefined && Array.isArray(v)) {
                 if (
                     ctx.stage === 'publish' &&
                     field.min !== undefined &&
@@ -354,8 +351,8 @@ async function processScope(
                 // author rule ("must be on example.com") cannot be evaluated
                 // against a value that is not even a URL, so reporting it first
                 // sends the author chasing the wrong problem.
-                if (descriptor?.validate) {
-                    const r = await descriptor.validate(fieldCtx);
+                if (fieldType?.validate) {
+                    const r = await fieldType.validate(fieldCtx);
                     if (r !== true) error = r;
                 }
 
@@ -399,7 +396,7 @@ async function processScope(
  */
 export async function processFields(
     values: Record<string, unknown>,
-    definitions: FieldDefinition[],
+    definitions: Field[],
     ctx: PipelineContext
 ): Promise<{
     values: Record<string, unknown>;

@@ -65,9 +65,9 @@ export async function collectEntryRelationshipSources(opts?: {
  * them as a source holding nothing so their stale rows read as drift.
  */
 function entryEdges(typeName: string, fields: JsonObject): RelationshipEdge[] | null {
-    const entryTypeConfig = resolveEntryType(config, typeName);
-    if (!entryTypeConfig) return null;
-    return collectRelationshipEdges(flattenEntryFields(entryTypeConfig.fields), fields);
+    const entryType = resolveEntryType(config, typeName);
+    if (!entryType) return null;
+    return collectRelationshipEdges(flattenEntryFields(entryType.fields), fields);
 }
 
 /**

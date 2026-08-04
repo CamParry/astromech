@@ -1,11 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import type {
-    FieldDefinition,
-    FieldValidationContext,
-    ValidationStage,
-} from '@/types/fields.js';
+import type { Field, FieldValidationContext, ValidationStage } from '@/types/fields.js';
 import type { ResourceType } from '@/types/domain.js';
-import { registerFieldTypeDescriptor } from '@/fields/descriptors.js';
+import { registerFieldType } from '@/fields/field-type-registry.js';
 import { processFields } from '@/fields/pipeline.js';
 
 // ---------------------------------------------------------------------------
@@ -17,7 +13,7 @@ type CtxOverrides = Partial<{
     stage: ValidationStage;
     host: { kind: ResourceType; record: unknown };
     user: null;
-    reads: { isUnique: (field: FieldDefinition, value: unknown) => Promise<boolean> };
+    reads: { isUnique: (field: Field, value: unknown) => Promise<boolean> };
 }>;
 
 function fakeCtx(overrides: CtxOverrides = {}) {
@@ -30,10 +26,8 @@ function fakeCtx(overrides: CtxOverrides = {}) {
     };
 }
 
-function field(
-    def: Partial<FieldDefinition> & { name: string; type: string }
-): FieldDefinition {
-    return def as FieldDefinition;
+function field(def: Partial<Field> & { name: string; type: string }): Field {
+    return def as Field;
 }
 
 // ---------------------------------------------------------------------------
@@ -290,8 +284,8 @@ describe('default', () => {
         expect(values.active).toBe(false);
     });
 
-    it('field.defaultValue wins over descriptor.defaultValue', async () => {
-        // boolean descriptor.defaultValue is false; override with true
+    it('field.defaultValue wins over the field type defaultValue', async () => {
+        // the boolean field type's defaultValue is false; override with true
         const { values } = await processFields(
             {},
             [field({ name: 'active', type: 'boolean', defaultValue: true })],
@@ -324,8 +318,8 @@ describe('default', () => {
 // ---------------------------------------------------------------------------
 
 describe('coerce', () => {
-    // Register a throwaway descriptor with a trim coerce fn.
-    registerFieldTypeDescriptor({
+    // Register a throwaway field type with a trim coerce fn.
+    registerFieldType({
         type: 't-coerce',
         build: (() => ({})) as never,
         component: '',
@@ -334,7 +328,7 @@ describe('coerce', () => {
         validate: async () => true,
     });
 
-    it('trims value via descriptor coerce', async () => {
+    it('trims value via the field type coerce', async () => {
         const { values } = await processFields(
             { name: '  hello  ' },
             [field({ name: 'name', type: 't-coerce' })],

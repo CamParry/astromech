@@ -8,7 +8,7 @@ import {
     hashPreviewToken,
 } from '../storage/preview-tokens.js';
 import { applyVisibility, markPublic, type AudienceContext } from '../visibility.js';
-import type { Entry, FieldDefinition } from '@/types/index.js';
+import type { Entry, Field } from '@/types/index.js';
 
 /** Generate a high-entropy preview token secret (32 random bytes, hex). */
 export function generatePreviewSecret(): string {
@@ -33,7 +33,7 @@ export const previewAudience = (): AudienceContext => ({
 });
 
 /** Apply the preview projection (public shape, publish-gate bypassed). */
-export function projectPreview(entry: Entry, fields: FieldDefinition[]): Entry | null {
+export function projectPreview(entry: Entry, fields: Field[]): Entry | null {
     const filtered = applyVisibility(entry, {
         shape: 'public',
         preview: true,

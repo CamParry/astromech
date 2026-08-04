@@ -1,6 +1,6 @@
 /** `content` domain module — model-driven translate / transform / generate. */
 export { contentService, translate, transform, generate } from './service.js';
-export { contentDescriptors } from './methods.js';
+export { contentContract } from './methods.js';
 export {
     setContentProvider,
     getContentProvider,

@@ -3,10 +3,10 @@
  *
  * Parameterized by a single `EntriesMount` so it serves both root entry
  * types and plugin-namespaced entry types. Columns render through the
- * definition layer: `deriveTableDefinition(config)` builds the ordered column
- * set and each cell is resolved from the cell registry by kind (Phase 4). The
- * page shell — toolbar, filters, bulk actions, view toggle, context menus —
- * stays hand-written and consumes the derived definition.
+ * rendering layer: `resolveTable(config)` builds the ordered column set and each
+ * cell is resolved from the cell registry by kind (Phase 4). The page shell —
+ * toolbar, filters, bulk actions, view toggle, context menus — stays
+ * hand-written and consumes the resolved table.
  *
  * Shows a searchable, filterable, paginated table or grid of entries. Supports
  * bulk selection and row-level actions (edit, duplicate, trash/restore).
@@ -33,16 +33,16 @@ import adminConfig from 'virtual:astromech/admin-config';
 import type { CellRenderContext, Entry, TableColumn } from '@/types/index.js';
 import type { DropdownItem } from '@/admin/components/ui/dropdown.js';
 import {
-    deriveTableDefinition,
     fieldTypeOf,
-    resolveConfigForDerive,
-} from '@/admin/definitions/derive.js';
-import { defaultCellKind } from '@/admin/definitions/cell-kind-map.js';
-import { getCellRenderer } from '@/admin/definitions/cell-registry.js';
+    resolveAdminEntryType,
+    resolveTable,
+} from '@/admin/rendering/resolve.js';
+import { defaultCellKind } from '@/admin/rendering/cell-kind-map.js';
+import { getCellRenderer } from '@/admin/rendering/cell-registry.js';
 import { resolveLabel } from '@/admin/i18n/labels.js';
 import { namespaceForScope } from '@/admin/i18n/entry-namespace.js';
-import { statusVariant } from '@/admin/definitions/cells/status-variant.js';
-import { Link } from '@/admin/definitions/cells/link.js';
+import { statusVariant } from '@/admin/rendering/cells/status-variant.js';
+import { Link } from '@/admin/rendering/cells/link.js';
 import {
     Badge,
     Button,
@@ -463,7 +463,7 @@ function parseSortParam(
 }
 
 export function EntriesListPage({ mount }: { mount: EntriesMount }): React.ReactElement {
-    const { type, api, cacheScope, config: entryTypeConfig, basePath } = mount;
+    const { type, api, cacheScope, config: entryType, basePath } = mount;
     const scope = { api, cacheScope };
     const navigate = useNavigate();
     const { toast } = useToast();
@@ -481,34 +481,33 @@ export function EntriesListPage({ mount }: { mount: EntriesMount }): React.React
     const canCreate = hasPermission(mount.permissionFor('create'));
     const canDelete = hasPermission(mount.permissionFor('delete'));
 
-    const single = entryTypeConfig?.single ?? type;
-    const plural = entryTypeConfig?.plural ?? type;
-    const adminColumns = entryTypeConfig?.adminColumns ?? [];
-    const gridFields = entryTypeConfig?.gridFields ?? [];
-    const capabilities = entryTypeConfig?.capabilities;
+    const single = entryType?.single ?? type;
+    const plural = entryType?.plural ?? type;
+    const adminColumns = entryType?.adminColumns ?? [];
+    const gridFields = entryType?.gridFields ?? [];
+    const capabilities = entryType?.capabilities;
     const hasStatuses = capabilities?.statuses !== false;
     const hasTrash = capabilities?.trash !== false;
     const hasSlugCap = capabilities?.slug !== false;
-    const hasTitle = entryTypeConfig?.titleField !== false;
+    const hasTitle = entryType?.titleField !== false;
     const showSearch =
-        entryTypeConfig?.titleField !== false ||
-        (entryTypeConfig?.search?.length ?? 0) > 0;
+        entryType?.titleField !== false || (entryType?.search?.length ?? 0) > 0;
 
-    // `deriveTableDefinition` needs a full AdminEntryTypeConfig. When the mount
-    // config is undefined (unknown root type), resolveConfigForDerive synthesizes
-    // a default reproducing the historical undefined-config behaviour.
-    const resolvedConfigForDerive = React.useMemo(
-        () => resolveConfigForDerive(entryTypeConfig, type),
-        [entryTypeConfig, type]
+    // `resolveTable` needs a full AdminEntryType. When the mount config is
+    // undefined (unknown root type), resolveAdminEntryType synthesizes a default
+    // reproducing the historical undefined-config behaviour.
+    const resolvedConfig = React.useMemo(
+        () => resolveAdminEntryType(entryType, type),
+        [entryType, type]
     );
-    const tableDef = React.useMemo(
-        () => deriveTableDefinition(resolvedConfigForDerive),
-        [resolvedConfigForDerive]
+    const resolvedTable = React.useMemo(
+        () => resolveTable(resolvedConfig),
+        [resolvedConfig]
     );
 
-    const availableViews = entryTypeConfig?.views ?? ['list'];
+    const availableViews = entryType?.views ?? ['list'];
     const defaultView: ViewMode =
-        (entryTypeConfig?.defaultView as ViewMode | undefined) ?? 'list';
+        (entryType?.defaultView as ViewMode | undefined) ?? 'list';
     const showViewToggle =
         availableViews.includes('list') && availableViews.includes('grid');
 
@@ -638,17 +637,17 @@ export function EntriesListPage({ mount }: { mount: EntriesMount }): React.React
                 return true;
         }
     }
-    const visibleColumnDefs = tableDef.columns.filter(
+    const visibleColumnDefs = resolvedTable.columns.filter(
         (col) => capabilityGate(col) && visibleColumns.has(col.key)
     );
-    const menuColumnDefs = tableDef.columns.filter((col) => capabilityGate(col));
+    const menuColumnDefs = resolvedTable.columns.filter((col) => capabilityGate(col));
 
     // Grid card field columns, routed through the cell registry so booleans
     // render consistently with the list view.
     const gridColumnDefs: TableColumn[] = gridFields.map((gf) => ({
         key: gf.field,
         label: gf.label ?? gf.field,
-        kind: defaultCellKind(fieldTypeOf(resolvedConfigForDerive, gf.field)),
+        kind: defaultCellKind(fieldTypeOf(resolvedConfig, gf.field)),
         source: 'field' as const,
         sortable: false,
         system: false,

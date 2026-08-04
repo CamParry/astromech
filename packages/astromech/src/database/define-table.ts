@@ -1,7 +1,7 @@
 /**
- * `defineTable` — the descriptor-driven table definition primitive.
+ * `defineTable` — the table definition primitive.
  *
- * One descriptor is the single source of truth for a table, yielding BOTH:
+ * One `Table` is the single source of truth for a table, yielding BOTH:
  *
  *   1. **Domain Row types** (`TableSelect`/`TableInsert`/`TableUpdate`) — the
  *      rich shapes storage callers see: `Date` for timestamps, parsed objects
@@ -16,7 +16,7 @@
  *      Insert/update values are encoded + cast through, so the Kysely cell's
  *      insert precision is intentionally loose.
  *
- * The runtime descriptor also carries the per-column codec (`serialize`/`parse`/
+ * The runtime object also carries the per-column codec (`serialize`/`parse`/
  * `default`) that `database/codec.ts` drives, replacing the hand-written CODECS
  * map for our tables. DDL emit / snapshot diffing are later steps; this module
  * is types + codec only, so `indexes`/`reference` metadata is stored but unused.
@@ -29,7 +29,7 @@ import { ulid } from 'ulidx';
 import type { ColumnType, Generated } from 'kysely';
 
 // ============================================================================
-// Runtime descriptor shapes
+// Runtime shapes
 // ============================================================================
 
 export type ColumnKind =
@@ -45,10 +45,10 @@ export type ColumnKind =
 
 export type OnDelete = 'cascade' | 'no action';
 
-/** A reference target: another descriptor, or a string name for a hand-typed
+/** A reference target: another `Table`, or a string name for a hand-typed
  *  (non-`defineTable`) table such as `users`. Lazy so self/forward references
  *  resolve after the referencing table is assigned. */
-export type ReferenceTarget = TableDescriptor | string;
+export type ReferenceTarget = Table | string;
 
 export type ReferenceSpec = {
     target: () => ReferenceTarget;
@@ -100,7 +100,7 @@ type ColConfig = {
     hasDefault: boolean;
 };
 
-/** A column descriptor: the runtime shape plus a phantom config for inference. */
+/** A column: the runtime shape plus a phantom config for inference. */
 export type Column<C extends ColConfig = ColConfig> = ColumnRuntime & {
     readonly __config?: C;
 };
@@ -450,13 +450,13 @@ export type IndexFactory = typeof index;
 /**
  * `N` carries the SQL table name as a literal so downstream types can derive
  * the Kysely (CamelCasePlugin) key from it — see `PluginDB` in
- * `define-plugin.ts`. It defaults to `string`, so `TableDescriptor` and
- * `TableDescriptor<Cols>` keep working unchanged as loose annotations.
+ * `define-plugin.ts`. It defaults to `string`, so `Table` and
+ * `Table<Cols>` keep working unchanged as loose annotations.
  */
-export type TableDescriptor<C extends AnyCols = AnyCols, N extends string = string> = {
+export type Table<C extends AnyCols = AnyCols, N extends string = string> = {
     name: N;
     columns: C;
-    /** Table-level composite primary key, in key order (descriptor keys, not
+    /** Table-level composite primary key, in key order (column keys, not
      *  snake_case column names). A single-column key stays `col.x({ primaryKey:
      *  true })` — this is only for keys spanning more than one column. */
     primaryKey?: string[];
@@ -476,7 +476,7 @@ export function defineTable<const C extends AnyCols, const N extends string>(
     name: N,
     cols: (helpers: { col: ColFactory }) => C,
     indexesOrOptions?: IndexesFn | TableOptions<C>
-): TableDescriptor<C, N> {
+): Table<C, N> {
     const options: TableOptions<C> =
         typeof indexesOrOptions === 'function'
             ? { indexes: indexesOrOptions }
@@ -490,7 +490,7 @@ export function defineTable<const C extends AnyCols, const N extends string>(
 }
 
 // ============================================================================
-// Type inference — derive row + Kysely table types from a descriptor
+// Type inference — derive row + Kysely table types from a `Table`
 // ============================================================================
 
 type ConfigOf<T> = T extends Column<infer C> ? C : never;
@@ -517,7 +517,7 @@ type KyselyCell<T> =
         ? Generated<StorageCellBase<T>>
         : StorageCellBase<T>;
 
-type ColsOf<D> = D extends TableDescriptor<infer C, string> ? C : never;
+type ColsOf<D> = D extends Table<infer C, string> ? C : never;
 
 /** Domain row as selected — `Date`/parsed-object/`boolean` shapes. */
 export type TableSelect<D> = Prettify<{

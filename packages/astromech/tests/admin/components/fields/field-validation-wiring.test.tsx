@@ -20,8 +20,8 @@
 import { describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
-import type { FieldDefinition } from '@/types/index.js';
-import '@/admin/definitions/register-fields.js';
+import type { Field } from '@/types/index.js';
+import '@/admin/rendering/register-fields.js';
 import { FormField } from '@/admin/components/fields/form-field';
 import { FieldValidationProvider } from '@/admin/components/fields/field-validation-context';
 
@@ -35,7 +35,7 @@ type Mounted = {
     unmount: () => void;
 };
 
-function mountField(field: FieldDefinition, value: unknown): Mounted {
+function mountField(field: Field, value: unknown): Mounted {
     const changed: string[] = [];
     const blurred: string[] = [];
     const host = document.createElement('div');
@@ -113,7 +113,7 @@ describe('change reporting', () => {
     });
 
     it('should report a group sub-field change under its dotted path', () => {
-        const quote: FieldDefinition = {
+        const quote: Field = {
             name: 'quote',
             type: 'group',
             fields: [{ name: 'text', type: 'text' }],
@@ -130,7 +130,7 @@ describe('change reporting', () => {
     });
 
     it('should report a repeater sub-field change keyed by the item id', () => {
-        const items: FieldDefinition = {
+        const items: Field = {
             name: 'items',
             type: 'repeater',
             fields: [{ name: 'link', type: 'text' }],
@@ -162,7 +162,7 @@ describe('blur reporting', () => {
     });
 
     it('should report only the innermost path when a nested field blurs', () => {
-        const items: FieldDefinition = {
+        const items: Field = {
             name: 'items',
             type: 'repeater',
             fields: [{ name: 'link', type: 'text' }],
@@ -178,7 +178,7 @@ describe('blur reporting', () => {
     });
 
     it('should report only the innermost path through two levels of nesting', () => {
-        const sections: FieldDefinition = {
+        const sections: Field = {
             name: 'sections',
             type: 'repeater',
             fields: [

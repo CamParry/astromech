@@ -3,7 +3,7 @@
  * Centralized logic for converting values between database and input formats
  */
 
-import type { FieldType } from '@/types/index.js';
+import type { FieldTypeName } from '@/types/index.js';
 
 /**
  * Format a date value for date input (YYYY-MM-DD)
@@ -42,7 +42,7 @@ export function formatDatetimeForInput(value: unknown): string {
 /**
  * Format a value for display in an input field
  */
-export function formatValueForInput(value: unknown, fieldType: FieldType): string {
+export function formatValueForInput(value: unknown, fieldType: FieldTypeName): string {
     if (value == null) return '';
 
     switch (fieldType) {
@@ -64,7 +64,7 @@ export function formatValueForInput(value: unknown, fieldType: FieldType): strin
 /**
  * Parse a value from form input to proper type
  */
-export function parseValueFromInput(value: unknown, fieldType: FieldType): unknown {
+export function parseValueFromInput(value: unknown, fieldType: FieldTypeName): unknown {
     if (value === null || value === '') {
         if (fieldType === 'boolean') return false;
         return null;

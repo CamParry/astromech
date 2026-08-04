@@ -3,18 +3,18 @@
  *
  * This is what an untrusted transport (a remote/agent tool-loop, anything acting
  * under a role) is handed INSTEAD of the raw domain services. Every
- * method on the handle checks its own descriptor before calling through, so the
+ * method on the handle checks its own contract before calling through, so the
  * caller's authority is a property of the object it holds rather than of the
  * checks it remembered to write: pass a handle scoped to an editor and there is
  * no reachable path to `users.delete`.
  *
- * It fails CLOSED. A method with no descriptor is refused, not allowed — a
+ * It fails CLOSED. A method with no contract is refused, not allowed — a
  * method that cannot say what it requires cannot be granted, and "undescribed
  * therefore ungated" is exactly how a privileged method reaches a caller that
  * was never meant to have it.
  *
  * This does NOT replace `permissionsFor`. Its `allows`/`allowsMethod` remain
- * the seam for route checks that carry custom logic the descriptor cannot state
+ * the seam for route checks that carry custom logic the contract cannot state
  * — `users.get` allowing self-access without `users:read`, the last-admin guard.
  * Those routes keep asking; this handle is for callers that should not be asked
  * to.
@@ -25,7 +25,7 @@ import type {
     EntriesService,
     MediaService,
     Role,
-    ServiceMethodDescriptor,
+    ServiceMethodContract,
     SettingsService,
     UsersService,
 } from '@/types/index.js';
@@ -34,24 +34,24 @@ import { entryPermission, type EntryAction } from '@/permissions/entry-permissio
 import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/index.js';
 import { permissionsFor, type Permissions } from '@/permissions/permissions-for.js';
 import { usersService } from '@/users/service.js';
-import { usersDescriptors } from '@/users/methods.js';
+import { usersContract } from '@/users/methods.js';
 import { mediaService } from '@/media/service.js';
-import { mediaDescriptors } from '@/media/methods.js';
+import { mediaContract } from '@/media/methods.js';
 import { settingsService } from '@/settings/service.js';
-import { settingsDescriptors } from '@/settings/methods.js';
+import { settingsContract } from '@/settings/methods.js';
 import { entriesService } from '@/entries/service.js';
 import { ENTRY_METHOD_ACTIONS, type EntryMethodName } from '@/entries/methods.js';
 import { contentService } from '@/content/service.js';
-import { contentDescriptors } from '@/content/methods.js';
+import { contentContract } from '@/content/methods.js';
 
 /**
- * A domain's descriptor catalogue, keyed by service method name.
+ * A domain's contract catalogue, keyed by service method name.
  *
  * Read at `Input = unknown` — the same generality `codegen/method-manifest.ts`
  * reads the catalogues at. Nothing here inspects an input type; it only resolves
  * the declared permission, so the input side stays unknown.
  */
-type DescriptorCatalogue = Record<string, ServiceMethodDescriptor>;
+type ContractCatalogue = Record<string, ServiceMethodContract>;
 
 /** Anything callable through a string key. */
 type ServiceRecord = Record<string, unknown>;
@@ -59,12 +59,12 @@ type ServiceRecord = Record<string, unknown>;
 /** A method as this wrapper calls it: one parameter object, any return. */
 type ServiceFn = (...args: unknown[]) => unknown;
 
-/** The permission a descriptor demands for `input`, or null if it demands none. */
+/** The permission a contract demands for `input`, or null if it demands none. */
 function resolvePermission(
-    descriptor: ServiceMethodDescriptor,
+    contract: ServiceMethodContract,
     input: unknown
 ): string | null {
-    const rule = descriptor.permission;
+    const rule = contract.permission;
     if (rule === undefined) return null;
     return typeof rule === 'function' ? rule(input) : rule;
 }
@@ -84,7 +84,7 @@ function resolvePermission(
  */
 export function scopeMethods<S extends object>(
     service: S,
-    descriptors: DescriptorCatalogue,
+    contracts: ContractCatalogue,
     permissions: Permissions,
     domain: string
 ): S {
@@ -99,12 +99,12 @@ export function scopeMethods<S extends object>(
         const id = `${domain}.${key}`;
 
         scoped[key] = (...args: unknown[]): unknown => {
-            const descriptor = descriptors[key];
-            if (descriptor === undefined) throw new PermissionDeniedError(id, null);
+            const contract = contracts[key];
+            if (contract === undefined) throw new PermissionDeniedError(id, null);
 
             const input = args[0];
-            if (!permissions.allowsMethod(descriptor, input)) {
-                throw new PermissionDeniedError(id, resolvePermission(descriptor, input));
+            if (!permissions.allowsMethod(contract, input)) {
+                throw new PermissionDeniedError(id, resolvePermission(contract, input));
             }
             // Called on the service so a method reaching for a sibling through
             // `this` keeps working.
@@ -151,11 +151,11 @@ function wantsFullShape(input: unknown): boolean {
 /**
  * Scope the entries service. Entries needs its own wrapper because its
  * permission is per (type, action) — `entry:posts:update` is not
- * `entry:pages:update` — so the check cannot come from a fixed descriptor, only
+ * `entry:pages:update` — so the check cannot come from a fixed contract, only
  * from the type the call actually names.
  *
  * The (method → action) pairing is read from `ENTRY_METHOD_ACTIONS`, the same
- * declaration the per-type descriptors and the manifest are built from. A method
+ * declaration the per-type contracts and the manifest are built from. A method
  * missing from it, or a call that names no usable type, is refused: a permission
  * this wrapper had to guess at would be a permission it could guess wrong.
  *
@@ -226,7 +226,7 @@ function targetedContentType(input: unknown): string | null {
 }
 
 /**
- * Scope the content service. Content is double-gated: the descriptor's
+ * Scope the content service. Content is double-gated: the contract's
  * `content:*` permission AND `update` on the entry type the call names, because
  * holding "may use a model" must not rewrite a type the role cannot edit by
  * hand.
@@ -234,14 +234,14 @@ function targetedContentType(input: unknown): string | null {
  * The first half comes from a fixed catalogue like `scopeMethods`; the second is
  * derived from the call like `scopeEntries`, through the same
  * `entryPermission` helper the entries wrapper and the HTTP route use. A method
- * with no descriptor, or a call naming no usable type, is refused.
+ * with no contract, or a call naming no usable type, is refused.
  */
 export function scopeContent(
     service: ContentService,
     permissions: Permissions
 ): ContentService {
     const scoped: ServiceRecord = {};
-    const descriptors: DescriptorCatalogue = contentDescriptors;
+    const contracts: ContractCatalogue = contentContract;
 
     for (const [key, value] of Object.entries(service as unknown as ServiceRecord)) {
         if (typeof value !== 'function') {
@@ -252,12 +252,12 @@ export function scopeContent(
         const id = `content.${key}`;
 
         scoped[key] = (...args: unknown[]): unknown => {
-            const descriptor = descriptors[key];
-            if (descriptor === undefined) throw new PermissionDeniedError(id, null);
+            const contract = contracts[key];
+            if (contract === undefined) throw new PermissionDeniedError(id, null);
 
             const input = args[0];
-            if (!permissions.allowsMethod(descriptor, input)) {
-                throw new PermissionDeniedError(id, resolvePermission(descriptor, input));
+            if (!permissions.allowsMethod(contract, input)) {
+                throw new PermissionDeniedError(id, resolvePermission(contract, input));
             }
 
             const type = targetedContentType(input);
@@ -299,11 +299,11 @@ export type ScopedServices = {
 export function scopedServices(role: Role | undefined): ScopedServices {
     const permissions = permissionsFor(role);
     return {
-        users: scopeMethods(usersService, usersDescriptors, permissions, 'users'),
-        media: scopeMethods(mediaService, mediaDescriptors, permissions, 'media'),
+        users: scopeMethods(usersService, usersContract, permissions, 'users'),
+        media: scopeMethods(mediaService, mediaContract, permissions, 'media'),
         settings: scopeMethods(
             settingsService,
-            settingsDescriptors,
+            settingsContract,
             permissions,
             'settings'
         ),

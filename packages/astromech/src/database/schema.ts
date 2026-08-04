@@ -1,25 +1,25 @@
 /**
  * Aggregate schema surface for Astromech.
  *
- * Re-exports every table's `defineTable` descriptor and row types from its domain
+ * Re-exports every table's `defineTable` table and row types from its domain
  * module. The 4 better-auth tables (`users`, `sessions`, `accounts`,
- * `verifications`) have no descriptor — they stay seconds-INTEGER and are owned
- * by better-auth's adapter — so only their domain-side row types appear here.
- * `relationships` and `cron` are defined here as they have no dedicated domain
- * module. Consumed by `database/types.ts` (assembles the Kysely `DB`) and
- * `astromech/database/schema`. NOT by `database/codec.ts` — the codec is keyed by
- * descriptor, so every caller passes the one it already holds.
+ * `verifications`) are not defined with `defineTable` — they stay seconds-INTEGER
+ * and are owned by better-auth's adapter — so only their domain-side row types
+ * appear here. `relationships` and `cron` are defined here as they have no
+ * dedicated domain module. Consumed by `database/types.ts` (assembles the Kysely
+ * `DB`) and `astromech/database/schema`. NOT by `database/codec.ts` — the codec
+ * is keyed by `Table`, so every caller passes the one it already holds.
  */
 
 import {
     defineTable,
-    type TableDescriptor,
+    type Table,
     type TableSelect,
     type TableInsert,
 } from '@/database/define-table.js';
 // `export { x } from '...'` (below) re-exports without binding `x` locally —
 // these value imports are ONLY so `CORE_TABLES` (bottom of file) can
-// reference the descriptors; the `export {...} from` blocks stay the public
+// reference the tables; the `export {...} from` blocks stay the public
 // re-export surface.
 import { rolesTable } from '@/users/schema.js';
 import {
@@ -32,7 +32,7 @@ import { settingsTable } from '@/settings/schema.js';
 import { notificationsTable } from '@/notifications/schema.js';
 
 // ============================================================================
-// Users / RBAC — roles descriptor (ours) + the better-auth `users` row type
+// Users / RBAC — the roles table (ours) + the better-auth `users` row type
 // ============================================================================
 
 export {
@@ -166,18 +166,18 @@ export type PluginTrackingRow = TableSelect<typeof pluginsTable>;
 export type NewPluginTrackingRow = TableInsert<typeof pluginsTable>;
 
 // ============================================================================
-// Core descriptor list — every `defineTable`-backed table we own
+// Core table list — every `defineTable`-backed table we own
 // ============================================================================
 
 /**
- * The 10 descriptor-backed tables the CMS itself owns, in one place. Consumed
+ * The 10 `defineTable`-backed tables the CMS itself owns, in one place. Consumed
  * by the DDL-parity test, the migration generator and `db:generate` — anywhere
  * that needs "every core table `defineTable` owns" without re-listing the
  * imports by hand. Does NOT include the 4 better-auth tables (hand-authored in
  * the app baseline — see `codec.ts`) nor any plugin's tables: plugins own their
- * own descriptors and generate their own migrations via `plugin:generate`.
+ * own tables and generate their own migrations via `plugin:generate`.
  */
-export const CORE_TABLES: TableDescriptor[] = [
+export const CORE_TABLES: Table[] = [
     rolesTable,
     entriesTable,
     entryVersionsTable,

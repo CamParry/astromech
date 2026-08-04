@@ -3,7 +3,7 @@
  * of one notification kind: the block an editor fills in, and its delivery.
  */
 
-import type { BlockDefinition, Entry, FieldDefinition, PluginContext } from 'astromech';
+import type { Block, Entry, Field, PluginContext } from 'astromech';
 import type { ValueRow } from '../utilities/values.js';
 
 /**
@@ -20,7 +20,7 @@ export type StoredNotification = {
 /** Everything a provider needs about the submission it is reporting. */
 export type NotificationContext = {
     form: Entry;
-    definitions: FieldDefinition[];
+    definitions: Field[];
     values: Record<string, unknown>;
     /** Submitted values paired with their field labels, in field order. */
     rows: ValueRow[];
@@ -35,6 +35,6 @@ export type NotificationProvider = {
     /** Matches the stored block's `_type`. */
     type: string;
     /** The `fields.block(...)` definition shown in the form's Notifications tab. */
-    block: BlockDefinition;
+    block: Block;
     deliver(config: StoredNotification, context: NotificationContext): Promise<void>;
 };

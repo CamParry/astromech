@@ -3,7 +3,7 @@
  * over the real Local API + DB, with the in-memory provider — no network call.
  *
  * The double gate is what these tests own: a content operation mutates an ENTRY,
- * so the descriptor's `content:*` permission alone must not rewrite a type the
+ * so the contract's `content:*` permission alone must not rewrite a type the
  * caller cannot update, and entry update alone must not buy access to a model.
  */
 
@@ -111,7 +111,7 @@ describe('content routes — the two-permission gate', () => {
     });
 
     it('403s a caller whose update is for a DIFFERENT type', async () => {
-        // The half the descriptor cannot state: `content:transform` is one
+        // The half the contract cannot state: `content:transform` is one
         // permission for every type, so the entry half has to name the target.
         const article = await makeArticle();
         const app = mountedApp(roleWith(['content:transform', 'entry:post:update']));

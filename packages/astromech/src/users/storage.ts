@@ -4,11 +4,11 @@
  * **Why this one is hand-rolled rather than composed on `createStorage`:**
  * `users` is one of the four better-auth tables. better-auth's adapter owns the
  * table and its column format (seconds-INTEGER timestamps, uuid ids, INTEGER
- * booleans, json TEXT), so it deliberately has no `defineTable` descriptor — and
- * `createStorage` is descriptor-driven, so there is nothing for it to wrap. The
- * method vocabulary matches the descriptor-backed factories and every value still
+ * booleans, json TEXT), so it is deliberately not defined with `defineTable` —
+ * and `createStorage` takes a `Table`, so there is nothing for it to wrap. The
+ * method vocabulary matches the `Table`-backed factories and every value still
  * crosses the boundary through the string-keyed `users` codec (`LEGACY_CODECS` in
- * `database/codec.ts`). Do not "fix" this by giving `users` a descriptor: that
+ * `database/codec.ts`). Do not "fix" this by giving `users` a `Table`: that
  * would enrol a better-auth-owned table in our DDL/migration pipeline.
  *
  * The goal being served is "no raw Kysely above `storage/`", not "everything goes
@@ -178,7 +178,7 @@ export function createUserStorage(db?: Db) {
 
     /** By primary key. Throws when no row matched. */
     async function update(id: string, patch: UserPatch): Promise<UserRow> {
-        // No descriptor means no `onUpdate` column to drive the stamp, so it is
+        // No `Table` means no `onUpdate` column to drive the stamp, so it is
         // this factory's job — the same thing `createStorage` does for the tables
         // that do have one.
         const row = await handle()

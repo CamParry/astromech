@@ -13,8 +13,8 @@ through the standard entry admin UI as a titleless entry type.
 redirects/
   src/index.ts                definePlugin() — identity + composing the surfaces below
   src/types.ts                RedirectsOptions + REDIRECTS_PACKAGE
-  src/tables/redirects.ts     definePluginTable — the `redirects` table descriptor
-  src/tables/index.ts         the ./tables subpath entry (descriptors only)
+  src/tables/redirects.ts     definePluginTable — the `redirects` table
+  src/tables/index.ts         the ./tables subpath entry (tables only)
   migrations/                 generated — never hand-edited
   src/entries/redirect.ts     defineEntryType — the table-backed entry type
   src/service/redirects.ts    the public `lookup` method
@@ -36,7 +36,7 @@ word, so both derived forms come out identical:
 | service key | `redirects` | `Astromech.plugins.redirects`, `/api/plugins/redirects/…` |
 
 The table is `plugin_redirects_redirects` — `definePluginTable` owns that
-prefix, so the descriptor declares the bare name `redirects`.
+prefix, so the table declares the bare name `redirects`.
 
 ## Install
 

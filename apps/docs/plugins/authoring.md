@@ -80,7 +80,7 @@ my-plugin/
 Only include what you use.
 
 Each directory holds the thing it is named after and nothing else — `tables/`
-holds table descriptors, `service/` holds service-method definitions. When a
+holds `definePluginTable` tables, `service/` holds service-method definitions. When a
 method grows a loader or a formatter, that helper belongs in `utilities/`, not
 beside the definition. A trivial single-use guard can stay inline; the rule is
 about what a directory is _for_.
@@ -222,13 +222,13 @@ also export `validate(value, field)`:
 
 ```tsx
 // admin/fields/rating-field.tsx
-import type { BaseFieldProps, FieldDefinition } from 'astromech';
+import type { BaseFieldProps, Field } from 'astromech';
 
 export default function RatingField({ name, value, onChange, disabled }: BaseFieldProps) {
     /* ... */
 }
 
-export function validate(value: unknown, field: FieldDefinition): string | undefined {
+export function validate(value: unknown, field: Field): string | undefined {
     /* ... */
 }
 ```
@@ -451,7 +451,7 @@ export type WidgetRow = TableSelect<typeof widgetsTable>;
 ```
 
 Name the export `<noun>Table` — `widgetsTable`, not `widgets`. The noun matches
-the bare table name you passed, and the suffix keeps the descriptor distinct
+the bare table name you passed, and the suffix keeps the table distinct
 from the domain word and from anything at service altitude. Every table in
 Astromech follows it: core's `entriesTable`, `mediaTable`, `cronTable`, and the
 first-party plugins' `backupRunsTable`, `submissionsTable` and `redirectsTable`.
@@ -460,7 +460,7 @@ Row types keep their own convention (`WidgetRow`, `NewWidgetRow`).
 `definePluginTable`'s first argument takes the package name as a **value** —
 not read off the plugin's definition — because the prefix has to exist as a
 _literal type_ for `PluginDB` to key on, and a value declared inside
-`definePlugin` can't reach a module-scope descriptor. So a plugin with tables
+`definePlugin` can't reach a module-scope table. So a plugin with tables
 keeps its package name in a dependency-free leaf both `index.ts` and its
 table modules can import:
 
@@ -484,7 +484,7 @@ other sub-module either declares a relative fact or reads `ctx.plugin` at
 runtime.
 
 `id` columns are ULIDs and timestamps are ISO-8601 TEXT, both filled from the
-descriptor — you never mint them yourself.
+table — you never mint them yourself.
 
 Your plugin owns its migrations. Generate them into the package, commit them,
 and list the provider on the definition:
@@ -506,7 +506,7 @@ export const myPlugin = definePlugin({
 ```
 
 Migrations are generated, never hand-written: if the output is wrong, fix the
-descriptor and regenerate. The app merges every installed plugin's chain into
+table and regenerate. The app merges every installed plugin's chain into
 its own at apply time (under `plugin_<namespace>_`-prefixed names, in one shared
 `kysely_migration` table), so `db:init` is all a consumer runs.
 
@@ -520,7 +520,7 @@ identifier is the unambiguous one.
 #### Reading and writing the table
 
 Don't query the table from your handlers. Give it a storage module —
-`createStorage` from `astromech` turns a descriptor into typed
+`createStorage` from `astromech` turns a `Table` into typed
 `findOne`/`findMany`/`count`/`create`/`update`/`delete`/`updateMany`/`deleteMany`/`upsert`,
 and owns encoding, `where`-value serialization and row decoding, so nothing above
 it spells the table name or touches a codec.

@@ -7,7 +7,7 @@
 import { fileURLToPath } from 'node:url';
 import { hashPassword } from 'better-auth/crypto';
 import { collectRelationshipEdges } from 'astromech';
-import type { FieldDefinition } from 'astromech';
+import type { Field } from 'astromech';
 import * as schema from 'astromech/database/schema';
 import config from '../../../apps/demo/astromech.config.js';
 
@@ -697,7 +697,7 @@ async function insertEntries(rows: Record<string, unknown>[]): Promise<void> {
 /** Derive the relationships index from every seeded entry's field data. */
 async function indexRelationships(): Promise<void> {
     const rows = seededEntries.flatMap((entry) =>
-        collectRelationshipEdges(entryFieldDefinitions(entry.type), entry.fields).map(
+        collectRelationshipEdges(entryFields(entry.type), entry.fields).map(
             (edge) =>
                 schema.encodeWith(schema.relationshipsTable, {
                     sourceId: entry.id,
@@ -721,8 +721,8 @@ async function indexRelationships(): Promise<void> {
     console.log(`  Indexed ${rows.length} relationships\n`);
 }
 
-/** An entry type's top-level field definitions, as authored in the demo config. */
-function entryFieldDefinitions(type: string): FieldDefinition[] {
+/** An entry type's top-level fields, as authored in the demo config. */
+function entryFields(type: string): Field[] {
     const fields = config.entries?.[type]?.fields;
     if (fields === undefined) return [];
     return Array.isArray(fields) ? fields : [...fields.main, ...(fields.sidebar ?? [])];

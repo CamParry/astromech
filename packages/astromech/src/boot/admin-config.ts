@@ -6,9 +6,9 @@
 import type { AstromechConfig, ResolvedConfig } from '@/types/index.js';
 import type {
     AdminConfig,
-    AdminEntryTypeConfig,
+    AdminEntryType,
     ResolvedAdminPage,
-    ResolvedEntryTypeConfig,
+    ResolvedEntryType,
 } from '@/types/config.js';
 import { resolveRoles } from '@/permissions/index.js';
 import { normaliseWidths } from '@/media/serving/image/url.js';
@@ -24,9 +24,7 @@ import {
  * Project a resolved entry type into the serializable admin shape. Shared by
  * root entries and plugin-namespaced entries so the two never drift.
  */
-export function toAdminEntryType(
-    entryType: ResolvedEntryTypeConfig
-): AdminEntryTypeConfig {
+export function toAdminEntryType(entryType: ResolvedEntryType): AdminEntryType {
     return {
         single: entryType.single,
         plural: entryType.plural,

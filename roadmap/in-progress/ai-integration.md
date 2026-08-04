@@ -378,7 +378,7 @@ f(x)`), so re-coercion is only observable when the STORED value is not
     - **`defineRegistry` was rejected** for the store: single-value,
       non-reactive, globalThis-backed for a server chunking problem the SPA does
       not have, and it has no use anywhere under `admin/`. The admin's own
-      precedent is `admin/definitions/field-registry.ts` — module-level state,
+      precedent is `admin/rendering/field-registry.ts` — module-level state,
       no globalThis — plus `useSyncExternalStore`.
     - **Three invariants that are silent bugs if broken.** `order` is assigned
       once per key, so re-registering cannot reshuffle a route against its

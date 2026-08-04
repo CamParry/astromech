@@ -3,13 +3,13 @@
  * site configured a spam provider.
  */
 
-import type { DefinedHook } from 'astromech';
+import type { Hook } from 'astromech';
 import { defineHook } from 'astromech';
 import { BEFORE_SUBMIT, type FormsBeforeSubmitPayload } from '../hooks/events.js';
 import type { SpamProvider } from './types.js';
 
 /** Reject a submission whose spam token fails verification. */
-export function spamHook(spam: SpamProvider): DefinedHook {
+export function spamHook(spam: SpamProvider): Hook {
     // The event has no `AstromechPluginHookEvents` entry at this package's build
     // time, so the payload arrives as `unknown`. Narrow in the body — annotating
     // the parameter makes the handler unassignable.

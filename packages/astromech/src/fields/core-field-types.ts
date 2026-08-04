@@ -1,8 +1,8 @@
 /**
- * Core field-type descriptors — one entry per data-bearing field type.
+ * Core field types — one entry per data-bearing field type.
  *
  * Layout fields are intentionally excluded: they emit no data and need no
- * descriptor. The nested fields additionally fill the `children` slot, which
+ * entry. The nested fields additionally fill the `children` slot, which
  * normalizes the stored value and reports the nested value scopes inside it —
  * how the pipeline recurses without switching on field type. `TERMINOLOGY.md`
  * states the two categories and their membership.
@@ -10,9 +10,9 @@
 
 import type {
     ContainerScope,
-    FieldDefinition,
+    Field,
     FieldPathSegment,
-    FieldTypeDescriptor,
+    FieldType,
     FieldValidator,
 } from '@/types/fields.js';
 import { RESERVED_KEY } from './reserved-keys.js';
@@ -101,9 +101,9 @@ function cloneWithId(item: Record<string, unknown>): {
  * is still normalized into `next`, it just gets no scope.
  */
 function arrayChildren(
-    field: FieldDefinition,
+    field: Field,
     value: unknown,
-    definitionsFor: (item: Record<string, unknown>) => FieldDefinition[] | null
+    definitionsFor: (item: Record<string, unknown>) => Field[] | null
 ): { next: unknown; scopes: ContainerScope[] } {
     if (!Array.isArray(value)) return { next: [], scopes: [] };
 
@@ -139,7 +139,7 @@ function arrayChildren(
  * a path.
  */
 function treeChildren(
-    field: FieldDefinition,
+    field: Field,
     value: unknown
 ): { next: unknown; scopes: ContainerScope[] } {
     if (!Array.isArray(value)) return { next: [], scopes: [] };
@@ -194,7 +194,7 @@ const validateBlockTypes: FieldValidator = async (ctx) => {
         : `Unknown block type: ${unknownTypes.join(', ')}`;
 };
 
-export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
+export const coreFieldTypes: FieldType[] = [
     {
         type: 'text',
         build: text,

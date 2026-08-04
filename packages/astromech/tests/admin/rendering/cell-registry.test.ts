@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CellRenderer } from '@/types/index.js';
-import { getCellRenderer, registerCell } from '@/admin/definitions/cell-registry.js';
+import { getCellRenderer, registerCell } from '@/admin/rendering/cell-registry.js';
 
 describe('cell-registry', () => {
     it('returns a registered renderer', () => {

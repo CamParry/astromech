@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultCellKind } from '@/admin/definitions/cell-kind-map.js';
+import { defaultCellKind } from '@/admin/rendering/cell-kind-map.js';
 
 describe('defaultCellKind', () => {
     it('maps known field types to their cell kind', () => {

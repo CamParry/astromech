@@ -1,4 +1,4 @@
-import type { FieldDefinition, FieldReads } from '@/types/fields.js';
+import type { Field, FieldReads } from '@/types/fields.js';
 import { valuesEqual } from '@/utilities/values-equal.js';
 
 /**
@@ -24,7 +24,7 @@ export function fieldReadsFromRecords<R>(opts: {
               ? [opts.excludeId]
               : opts.excludeId;
     return {
-        async isUnique(field: FieldDefinition, value: unknown): Promise<boolean> {
+        async isUnique(field: Field, value: unknown): Promise<boolean> {
             const records = await opts.load();
             for (const record of records) {
                 const id = opts.getId(record);

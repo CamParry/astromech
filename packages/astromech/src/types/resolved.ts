@@ -1,17 +1,17 @@
 /**
- * Definition layer — JSON-serializable rendering contract for admin entry pages.
+ * Resolved rendering contracts — JSON-serializable shapes for admin entry pages.
  *
- * Definitions are derived (client-side) from AdminEntryTypeConfig and reference
+ * They are resolved (client-side) from AdminEntryType and reference
  * renderers by STRING KEY (cell kind, field type), never by component reference,
  * so they stay serializable. The admin registries resolve those keys to React
- * components. See src/admin/definitions/.
+ * components. See src/admin/rendering/.
  *
  * Dependency rule: this module imports only ./fields.js and ./domain.js — never
  * ./config.js (config.ts imports CellKind from here; the dependency is one-way).
  */
 import type * as React from 'react';
 import type { Entry } from './domain.js';
-import type { FieldDefinition, Label } from './fields.js';
+import type { Field, Label } from './fields.js';
 
 export const CELL_KINDS = [
     'text',
@@ -45,20 +45,20 @@ export type TableColumn = {
     requires?: 'statuses' | 'slug' | 'translatable' | 'title' | 'locale' | null;
 };
 
-export type TableDefinition = {
+export type ResolvedTable = {
     type: string;
     columns: TableColumn[];
 };
 
-export type FormDefinition = {
+export type ResolvedForm = {
     type: string;
     hasTitle: boolean;
     hasSlug: boolean;
     hasStatuses: boolean;
     /** Recursive field tree for the main (left) column. */
-    main: FieldDefinition[];
+    main: Field[];
     /** Recursive field tree for the sidebar (right) column. */
-    sidebar: FieldDefinition[];
+    sidebar: Field[];
 };
 
 export type CellRenderContext = {

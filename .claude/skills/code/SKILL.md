@@ -47,7 +47,7 @@ Names are not a place to be creative. Before naming anything, find what this exa
 ## Data access (storage pattern)
 
 - **No repository pattern.** Every DB-touching unit is _storage_. Name `createXStorage`, never `XRepository`.
-- **A `defineTable` / `definePluginTable` export is named `<noun>Table`** — `entriesTable`, `cronTable`, `submissionsTable`. The noun matches the SQL table name; the suffix keeps the descriptor distinct from the domain and its service. Row types stay `EntryRow` / `NewEntryRow`.
+- **A `defineTable` / `definePluginTable` export is named `<noun>Table`** — `entriesTable`, `cronTable`, `submissionsTable`. The noun matches the SQL table name; the suffix keeps the table distinct from the domain and its service. Row types stay `EntryRow` / `NewEntryRow`.
 - **Storage is the only place `getDb` or a Kysely query appears.** Services, operations, jobs, and helpers call storage — never raw queries.
 - Storage modules are **factory functions** closing over the db handle: `createEntryStorage(db) => ({ … })`. No storage classes.
 - Domain logic is split **operations-per-file** (`operations/create.ts`, …) wrapping storage; shared per-domain helpers live in `<domain>/internal/`.

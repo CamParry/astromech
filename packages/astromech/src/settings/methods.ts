@@ -1,5 +1,5 @@
 /**
- * Settings service method descriptors — the declared shape + permission + effect
+ * Settings service method contracts — the declared shape + permission + effect
  * for each settings verb. The single source the HTTP transport enforces against
  * (via permissionsFor) and the method manifest reads.
  *
@@ -9,10 +9,10 @@
  */
 
 import { z } from 'zod';
-import type { ServiceMethodDescriptor } from '@/types/index.js';
+import type { ServiceMethodContract } from '@/types/index.js';
 import { setSettingSchema } from './schema.js';
 
-export const settingsDescriptors = {
+export const settingsContract = {
     all: {
         summary: 'List all settings (full shape, for an authenticated admin).',
         input: z.object({ full: z.boolean().optional() }),
@@ -36,4 +36,4 @@ export const settingsDescriptors = {
         mutates: true,
         idempotent: true,
     },
-} satisfies Record<string, ServiceMethodDescriptor>;
+} satisfies Record<string, ServiceMethodContract>;

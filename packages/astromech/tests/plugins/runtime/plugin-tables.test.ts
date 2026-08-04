@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PluginDefinition } from '@/types/index.js';
-import { defineTable, type TableDescriptor } from '@/database/define-table.js';
+import { defineTable, type Table } from '@/database/define-table.js';
 import {
     assertPluginTablePrefixes,
     collectPluginTables,
@@ -12,7 +12,7 @@ const def = (
     ...partial,
 });
 
-const table = (name: string): TableDescriptor =>
+const table = (name: string): Table =>
     defineTable(name, ({ col }) => ({
         id: col.id(),
         count: col.integer(),
@@ -33,11 +33,11 @@ describe('collectPluginTables', () => {
         });
     });
 
-    it('ignores non-descriptor entries', () => {
+    it('ignores entries that are not tables', () => {
         const collected = collectPluginTables([
             def({
                 package: '@astromech/x',
-                tables: [{ foo: 'bar' } as unknown as TableDescriptor],
+                tables: [{ foo: 'bar' } as unknown as Table],
             }),
         ]);
         expect(collected).toEqual([]);

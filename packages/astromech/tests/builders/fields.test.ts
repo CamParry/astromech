@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { EntryTypeConfig } from '@/types/index.js';
-import type { FieldDefinition } from '@/types/fields.js';
+import type { EntryType } from '@/types/index.js';
+import type { Field } from '@/types/fields.js';
 import {
     accordion,
     block,
@@ -18,15 +18,15 @@ import {
     textarea,
 } from '@/fields/index.js';
 
-// Compile-proof: factory output assignable to EntryTypeConfig['fields'].
-const _flat: EntryTypeConfig['fields'] = [
+// Compile-proof: factory output assignable to EntryType['fields'].
+const _flat: EntryType['fields'] = [
     text('from', { required: true, searchable: true }),
     select('status', { options: ['301', '302'], defaultValue: '301' }),
     boolean('enabled', { defaultValue: true }),
 ];
 void _flat;
 
-const _twoColumn: EntryTypeConfig['fields'] = {
+const _twoColumn: EntryType['fields'] = {
     main: [text('title')],
     sidebar: [boolean('featured')],
 };
@@ -202,14 +202,14 @@ describe('t() label descriptor', () => {
 });
 
 describe('type assignability', () => {
-    it('factory output is FieldDefinition', () => {
-        const f: FieldDefinition = text('x');
-        const arr: FieldDefinition[] = [text('a'), select('s', { options: ['x'] })];
+    it('factory output is Field', () => {
+        const f: Field = text('x');
+        const arr: Field[] = [text('a'), select('s', { options: ['x'] })];
         expect(f.name).toBe('x');
         expect(arr).toHaveLength(2);
     });
 });
 
-function richtextStub(): FieldDefinition {
+function richtextStub(): Field {
     return text('body');
 }

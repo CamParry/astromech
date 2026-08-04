@@ -11,7 +11,7 @@
  *
  * The package is passed here as a value — rather than read from the plugin's
  * definition — because the prefix has to exist as a literal *type* for
- * `PluginDB` to key on, and a descriptor declared at module scope cannot reach
+ * `PluginDB` to key on, and a table declared at module scope cannot reach
  * a value that lives inside `definePlugin`. Keep that literal in a
  * dependency-free module the definition also imports, so the package name is
  * still written exactly once.
@@ -40,7 +40,7 @@ import {
     type IndexFactory,
     type IndexSpec,
     type KyselyOf,
-    type TableDescriptor,
+    type Table,
 } from '@/database/define-table.js';
 import { pluginNamespace, type PluginNamespace } from '@/utilities/plugin-namespace.js';
 import type { PluginIdentity } from '@/types/plugins.js';
@@ -58,7 +58,7 @@ type PackageOf<S extends PackageSource> = S extends string
 const TABLE_NAME_PATTERN = /^[a-z0-9_]+$/;
 
 /**
- * Declare one of a plugin's tables. Returns a `defineTable` descriptor whose
+ * Declare one of a plugin's tables. Returns a `Table` whose
  * name (and every declared index name) carries the plugin's prefix, so the
  * plugin exports it directly and feeds it to `PluginDefinition.schema`.
  *
@@ -74,7 +74,7 @@ export function definePluginTable<
     name: N,
     cols: (helpers: { col: ColFactory }) => C,
     indexes?: (helpers: { index: IndexFactory }) => IndexSpec[]
-): TableDescriptor<C, `plugin_${PluginNamespace<PackageOf<S>>}_${N}`> {
+): Table<C, `plugin_${PluginNamespace<PackageOf<S>>}_${N}`> {
     const pkg = typeof source === 'string' ? source : source.package;
     const namespace = pluginNamespace(pkg);
     // Same shape as `pluginTablePrefix(namespace)` in
@@ -112,7 +112,7 @@ export function definePluginTable<
 // `PluginDB` — the Kysely interface for a plugin's own tables
 // ============================================================================
 
-type NameOf<D> = D extends TableDescriptor<AnyCols, infer N> ? N : never;
+type NameOf<D> = D extends Table<AnyCols, infer N> ? N : never;
 
 /** snake_case → camelCase, the inverse of Kysely's snake-case identifier mapper. */
 type Camelize<S extends string> = S extends `${infer Head}_${infer Rest}`
@@ -137,6 +137,6 @@ export type KyselyTableKey<S extends string> = S extends `_${string}` ? S : Came
  * await db.selectFrom('pluginBackupsRuns').selectAll().execute();
  * ```
  */
-export type PluginDB<T extends Record<string, TableDescriptor>> = {
+export type PluginDB<T extends Record<string, Table>> = {
     [K in keyof T as KyselyTableKey<NameOf<T[K]>>]: KyselyOf<T[K]>;
 };

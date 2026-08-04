@@ -1,5 +1,5 @@
 /**
- * Service-method descriptors — the self-description a service method carries so
+ * Service-method contracts — the self-description a service method carries so
  * the manifest, MCP projection, CLI and authoring AI can all deal in one unit.
  * Identical shape for core and plugin methods.
  *
@@ -33,15 +33,15 @@ export type ServiceMethodEffect = {
 export type PermissionRule<Input = unknown> = Permission | ((input: Input) => Permission);
 
 /**
- * A service method's descriptor. Authored once (via `defineServiceMethod` for
- * plugin methods, or a service's descriptor catalogue for core methods); the
- * single declaration the `permissionsFor` guard enforces and the manifest reads.
+ * A core service method's declared contract, authored in its domain's catalogue
+ * — the single declaration the `permissionsFor` guard enforces and the manifest
+ * reads. Plugin methods declare the same facts on their `ServiceMethod` object.
  *
  * There is no `name`: a method's dotted id is its position in the catalogue
  * (`<domain>.<key>`), derived by the manifest generator. Restating it by hand
  * meant a typo produced a mis-named manifest entry with no build failure.
  */
-export type ServiceMethodDescriptor<Input = unknown, Output = unknown> = {
+export type ServiceMethodContract<Input = unknown, Output = unknown> = {
     /** One-line summary for humans / the AI tool-loop. */
     summary?: string;
     /**
@@ -69,7 +69,7 @@ export type ServiceMethodDescriptor<Input = unknown, Output = unknown> = {
 } & ServiceMethodEffect;
 
 // ============================================================================
-// Method manifest — the serialised projection of the descriptors
+// Method manifest — the serialised projection of the contracts
 // ============================================================================
 
 /**
@@ -118,7 +118,7 @@ type ManifestMethodBase = {
     output?: JsonSchemaObject | null;
     /**
      * The input carries a value JSON cannot express, so a JSON-RPC transport
-     * cannot call this method — see `ServiceMethodDescriptor['binaryInput']`.
+     * cannot call this method — see `ServiceMethodContract['binaryInput']`.
      * Emitted only when true, so absence means "callable".
      */
     binaryInput?: true;

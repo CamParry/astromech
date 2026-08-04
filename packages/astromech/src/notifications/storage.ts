@@ -29,7 +29,7 @@ export function createNotificationStorage(db?: Db) {
         const { db: handle, table } = storage.query();
         await handle
             .insertInto(table)
-            .values(rows.map((row) => encodeWith(storage.descriptor, row)))
+            .values(rows.map((row) => encodeWith(storage.table, row)))
             .execute();
     }
 

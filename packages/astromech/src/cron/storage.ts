@@ -7,7 +7,7 @@
  * cannot express: the due test and the claim test are both ORs, and the seed is
  * an insert-or-IGNORE, which `upsert` — always an update on conflict — is the
  * wrong tool for. Every value crossing the boundary still goes through the
- * descriptor, so `enabled: true` becomes INTEGER 1 and a `Date` becomes the
+ * table, so `enabled: true` becomes INTEGER 1 and a `Date` becomes the
  * ISO-TEXT these columns store.
  */
 

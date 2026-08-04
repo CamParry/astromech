@@ -7,10 +7,10 @@
  * process.
  */
 
-import { defineRegistry } from '@/utilities/registry.js';
+import { createRegistry } from '@/utilities/registry.js';
 import type { StorageDriver } from '@/types/index.js';
 
-const storage = defineRegistry<StorageDriver>('storage', {
+const storage = createRegistry<StorageDriver>('storage', {
     hint: 'Set `storage` in your Astromech config.',
 });
 

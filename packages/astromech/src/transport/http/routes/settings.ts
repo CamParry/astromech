@@ -15,7 +15,7 @@ import { forbidden, fromZodError, notFound } from '@/transport/http/middleware/e
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import type { JsonValue } from '@/types/index.js';
 import { permissionsFor } from '@/permissions/permissions-for.js';
-import { setSettingSchema, settingsDescriptors } from '@/settings/index.js';
+import { setSettingSchema, settingsContract } from '@/settings/index.js';
 
 type Env = { Variables: AuthVariables };
 
@@ -27,7 +27,7 @@ const router = new OpenAPIHono<Env>();
 
 router.get('/', async (c) => {
     const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(settingsDescriptors.all)) return forbidden(c);
+    if (!permissions.allowsMethod(settingsContract.all)) return forbidden(c);
 
     // Authenticated admin endpoint (guarded by settings:read): return the
     // full set, not just public keys.
@@ -42,7 +42,7 @@ router.get('/', async (c) => {
 router.get('/:key', async (c) => {
     const { key } = c.req.param();
     const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(settingsDescriptors.get)) return forbidden(c);
+    if (!permissions.allowsMethod(settingsContract.get)) return forbidden(c);
 
     // Authenticated admin endpoint (guarded by settings:read): return the
     // full shape so private settings (e.g. plugin pages) are editable. The
@@ -60,7 +60,7 @@ router.get('/:key', async (c) => {
 router.put('/:key', async (c) => {
     const { key } = c.req.param();
     const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(settingsDescriptors.set)) return forbidden(c);
+    if (!permissions.allowsMethod(settingsContract.set)) return forbidden(c);
 
     const raw = await c.req.json();
     const parsed = setSettingSchema.safeParse(raw);

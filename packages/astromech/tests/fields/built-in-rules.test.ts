@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { FieldDefinition, FieldValidationContext } from '@/types/fields.js';
+import type { Field, FieldValidationContext } from '@/types/fields.js';
 import {
     coerceEmail,
     validateEmail,
@@ -262,7 +262,7 @@ describe('processFields integration', () => {
 // ---------------------------------------------------------------------------
 
 describe('validateChoice', () => {
-    const field: FieldDefinition = {
+    const field: Field = {
         name: 'f',
         type: 'select',
         options: [
@@ -286,7 +286,7 @@ describe('validateChoice', () => {
     });
 
     it('accepts a plain string option list', async () => {
-        const plain: FieldDefinition = { name: 'f', type: 'select', options: ['x', 'y'] };
+        const plain: Field = { name: 'f', type: 'select', options: ['x', 'y'] };
         expect(await validateChoice({ ...ctx('x'), field: plain })).toBe(true);
         expect(await validateChoice({ ...ctx('z'), field: plain })).toBe(
             'Must be one of the available options'
@@ -301,7 +301,7 @@ describe('validateChoice', () => {
 });
 
 describe('validateMultiChoice', () => {
-    const field: FieldDefinition = {
+    const field: Field = {
         name: 'f',
         type: 'multiselect',
         options: ['a', 'b'],
@@ -415,8 +415,8 @@ describe('validateDate', () => {
 // ---------------------------------------------------------------------------
 
 describe('validateReference', () => {
-    const single: FieldDefinition = { name: 'f', type: 'relationship', target: 'post' };
-    const many: FieldDefinition = {
+    const single: Field = { name: 'f', type: 'relationship', target: 'post' };
+    const many: Field = {
         name: 'f',
         type: 'relationship',
         target: 'post',

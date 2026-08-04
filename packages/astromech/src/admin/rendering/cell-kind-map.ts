@@ -1,6 +1,6 @@
-import type { CellKind, FieldType } from '@/types/index.js';
+import type { CellKind, FieldTypeName } from '@/types/index.js';
 
-const FIELD_TYPE_TO_CELL_KIND: Partial<Record<FieldType, CellKind>> = {
+const FIELD_TYPE_TO_CELL_KIND: Partial<Record<FieldTypeName, CellKind>> = {
     boolean: 'boolean',
     number: 'number',
     range: 'number',
@@ -13,5 +13,5 @@ const FIELD_TYPE_TO_CELL_KIND: Partial<Record<FieldType, CellKind>> = {
 
 /** Default display cell kind for a column over a field of the given type. */
 export function defaultCellKind(fieldType: string): CellKind {
-    return FIELD_TYPE_TO_CELL_KIND[fieldType as FieldType] ?? 'text';
+    return FIELD_TYPE_TO_CELL_KIND[fieldType as FieldTypeName] ?? 'text';
 }

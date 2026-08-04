@@ -22,7 +22,7 @@
  * Workers build never bundles `wrangler`.
  */
 
-import { defineRegistry } from '@/utilities/registry.js';
+import { createRegistry } from '@/utilities/registry.js';
 
 type BindingEnv = Record<string, unknown>;
 
@@ -41,12 +41,12 @@ type WranglerModule = {
  * boot-wired slot is — tsup emits several entry chunks and a module-level
  * variable would be duplicated across them.
  */
-const bindingEnv = defineRegistry<Promise<BindingEnv>>('cloudflareEnv', {
+const bindingEnv = createRegistry<Promise<BindingEnv>>('cloudflareEnv', {
     required: false,
 });
 
 /** Held only so `disposeBindings()` can shut the wrangler proxy down. */
-const platformProxy = defineRegistry<PlatformProxy>('cloudflareProxy', {
+const platformProxy = createRegistry<PlatformProxy>('cloudflareProxy', {
     required: false,
 });
 

@@ -45,7 +45,7 @@ The six first-party plugins (`@astromech/{authoring,backups,forms,menus,redirect
 live OUTSIDE this `src/` graph, in `packages/plugins/` — each a separately published
 npm package that consumes core only through the public `astromech` surface. The
 plugin-authoring API (`definePluginTable`, `createStorage`, codec helpers,
-descriptor type vocabulary, …) is part of the root `astromech` export, not a
+`Table` type vocabulary, …) is part of the root `astromech` export, not a
 separate subpath. They prove the public surface can build a real plugin;
 cross-package isolation is enforced by each package's `exports` boundary at
 publish time. The plugin **runtime** (hook engine) stays a core capability.
@@ -53,7 +53,7 @@ publish time. The plugin **runtime** (hook engine) stays a core capability.
 Key invariants:
 
 - **Domains are deep modules named for the business, not the tech.** Each owns its
-  `service.ts`, `schema.ts` (`defineTable` table descriptor + Zod validation), `methods.ts`,
+  `service.ts`, `schema.ts` (`defineTable` table + Zod validation), `methods.ts`,
   and `visibility.ts`. Cross-domain data goes through `@/database/schema` (the
   table aggregator) or a shared capability — never via a direct peer import. The
   only permitted exception is a `schema.ts` foreign-key cross-reference.
@@ -104,7 +104,7 @@ packages/
 │   │   │
 │   │   │   ── domains ────────────────────────────────────────────────────
 │   │   ├── content/        # content operations (translate/transform/generate) — a DOWNSTREAM domain: it may import entries/, never the reverse
-│   │   ├── entries/        # entries domain: service · schema · descriptors · visibility · url · type-ids
+│   │   ├── entries/        # entries domain: service · schema · methods · visibility · url · type-ids
 │   │   ├── media/          # media domain: service · schema · serving/image/
 │   │   ├── users/          # users domain: service · schema · auth (Better Auth integration)
 │   │   ├── settings/       # settings domain: service · schema · page-values
@@ -133,10 +133,10 @@ packages/
 │
 └── plugins/         # first-party plugins as separate published packages
     ├── authoring/   # @astromech/authoring  (the AI authoring surface: admin route, tool loop, chat drawer)
-    ├── backups/     # @astromech/backups     (ships a ./tables subpath of plain table descriptors)
+    ├── backups/     # @astromech/backups     (ships a ./tables subpath of plain tables)
     ├── forms/       # @astromech/forms      (notification + spam provider seams a site can extend)
     ├── menus/       # @astromech/menus
-    ├── redirects/   # @astromech/redirects  (ships a ./tables subpath of plain table descriptors)
+    ├── redirects/   # @astromech/redirects  (ships a ./tables subpath of plain tables)
     └── seo/         # @astromech/seo        (admin React components ship as source via ./admin/*)
 
 apps/
@@ -178,9 +178,9 @@ Two consequences for anything loaded at config time — `plugin-runtime.ts`, the
 
 Migrations are an **app artifact**, not a core artifact. Core ships schema definitions and types; it does not ship migration files.
 
-- `astromech db:generate` — diffs the core `defineTable` descriptors (`CORE_TABLES`) against the app's `migrations/snapshot.json` (a homegrown snapshot/diff generator, not drizzle-kit — see `@astromech/schema-engine` for the engine and `src/database/generate.ts` for the descriptor-facing wrapper) and, if anything changed, writes a new `NNNN_<name>.ts` migration + regenerates `migrations/index.ts`'s static `MigrationProvider`. Output lands in the **app's** `migrations/` folder (e.g. `apps/demo/migrations/`). No-op prints "no changes" — this doubles as a CI drift gate.
+- `astromech db:generate` — diffs the core `defineTable` tables (`CORE_TABLES`) against the app's `migrations/snapshot.json` (a homegrown snapshot/diff generator, not drizzle-kit — see `@astromech/schema-engine` for the engine and `src/database/generate.ts` for the `Table`-facing wrapper) and, if anything changed, writes a new `NNNN_<name>.ts` migration + regenerates `migrations/index.ts`'s static `MigrationProvider`. Output lands in the **app's** `migrations/` folder (e.g. `apps/demo/migrations/`). No-op prints "no changes" — this doubles as a CI drift gate.
 - `astromech db:init` / `runMigrations` — resolve migrations from the **app cwd's** `./migrations/index.ts`, not the core package folder, and apply them via Kysely's `Migrator`.
-- `astromech plugin:generate` — run from inside a **plugin package**: diffs that plugin's `definePluginTable` descriptors against its own `migrations/snapshot.json` and writes into the plugin's own `migrations/` directory. `db:generate` covers `CORE_TABLES` only; the app merges the two chains via `mergeMigrationProviders`.
+- `astromech plugin:generate` — run from inside a **plugin package**: diffs that plugin's `definePluginTable` tables against its own `migrations/snapshot.json` and writes into the plugin's own `migrations/` directory. `db:generate` covers `CORE_TABLES` only; the app merges the two chains via `mergeMigrationProviders`.
 
 The app owns its migration history. Adding a plugin, running `db:generate`, and committing the new migration files is the full workflow.
 

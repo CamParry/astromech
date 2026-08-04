@@ -17,10 +17,10 @@ that stream.
 backups/
   src/index.ts                  definePlugin() — identity + composing the surfaces below
   src/types.ts                  BackupsOptions + BACKUPS_PACKAGE
-  src/tables/runs.ts             definePluginTable — the `runs` table descriptor
-  src/tables/index.ts            the ./tables subpath entry (descriptors only)
+  src/tables/runs.ts             definePluginTable — the `runs` table
+  src/tables/index.ts            the ./tables subpath entry (tables only)
   migrations/                   generated — never hand-edited
-  src/storage.ts                createStorage over the descriptor — the only DB access
+  src/storage.ts                createStorage over the table — the only DB access
   src/backup.ts                 performBackup / rotate / resolveKeep — the core work
   src/service/backups.ts        listRuns, triggerRun, deleteRun (JSON, over RPC)
   src/routes/backups.ts         download + restore (raw routes — they stream)
@@ -67,7 +67,7 @@ so both derived forms come out identical:
 | service key | `backups` | `Astromech.plugins.backups`, `/api/plugins/backups/…`      |
 
 The table is `plugin_backups_runs` — `definePluginTable` owns that prefix, so
-the descriptor declares the bare name `runs`.
+the table declares the bare name `runs`.
 
 ## Permissions
 

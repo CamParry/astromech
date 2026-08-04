@@ -1,5 +1,5 @@
 /**
- * Content service method descriptors — the declared shape + permission + effect
+ * Content service method contracts — the declared shape + permission + effect
  * for each content operation. The single source the HTTP transport enforces
  * against (via permissionsFor) and the method manifest reads.
  *
@@ -9,7 +9,7 @@
  */
 
 import { z } from 'zod';
-import type { ServiceMethodDescriptor } from '@/types/index.js';
+import type { ServiceMethodContract } from '@/types/index.js';
 
 /**
  * The target every operation shares. Declared above the catalogue because the
@@ -28,7 +28,7 @@ const contentTarget = z.object({
         ),
 });
 
-export const contentDescriptors = {
+export const contentContract = {
     translate: {
         summary:
             'Translate one entry into another locale. Structure is preserved — rich ' +
@@ -80,4 +80,4 @@ export const contentDescriptors = {
         permission: 'content:generate',
         mutates: true,
     },
-} satisfies Record<string, ServiceMethodDescriptor>;
+} satisfies Record<string, ServiceMethodContract>;

@@ -12,7 +12,7 @@ import { getEntryStorage } from '../storage/registry.js';
 import { CapabilityError } from '../errors.js';
 import type { Capability } from '../storage/capabilities.js';
 import type { EntryStorage } from '../storage/types.js';
-import type { FieldDefinition } from '@/types/index.js';
+import type { Field } from '@/types/index.js';
 
 export function getDefaultLocale(): string {
     // `defaultLocale` is a DISPLAY tag (e.g. `en-GB`) and may not be a content
@@ -40,10 +40,10 @@ export function getNonTranslatableFieldNames(
     typeName: string,
     fieldNames: string[]
 ): string[] {
-    const entryTypeConfig = resolveEntryType(config, typeName);
-    if (!entryTypeConfig?.translatable) return [];
+    const entryType = resolveEntryType(config, typeName);
+    if (!entryType?.translatable) return [];
     const nonTranslatable: string[] = [];
-    for (const field of flattenEntryFields(entryTypeConfig.fields)) {
+    for (const field of flattenEntryFields(entryType.fields)) {
         if (fieldNames.includes(field.name) && field.translatable === false) {
             nonTranslatable.push(field.name);
         }
@@ -52,7 +52,7 @@ export function getNonTranslatableFieldNames(
 }
 
 /** Flattened field definitions for an entry type (`[]` if the type is unknown). */
-export function resolveTypeFields(typeName: string): FieldDefinition[] {
+export function resolveTypeFields(typeName: string): Field[] {
     const cfg = resolveEntryType(config, typeName);
     return cfg ? flattenEntryFields(cfg.fields) : [];
 }

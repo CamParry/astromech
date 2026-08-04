@@ -6,16 +6,15 @@
  * listed in `journal.json`, imported statically by `index.ts`. This file is
  * `0000`, the one entry the generator did not write.
  *
- * The 9 descriptor-backed tables (`roles`, `entries`, `entry_versions`,
+ * The 9 `defineTable`-backed tables (`roles`, `entries`, `entry_versions`,
  * `entry_preview_tokens`, `media`, `settings`, `notifications`,
  * `relationships`, `_astromech_cron`) are **emitter-generated**: their
- * statements are `emitTableStatements()` output for each table's `defineTable`
- * descriptor — the renderers live in `packages/schema-engine/src/ddl.ts`,
- * driven from descriptors via
- * `packages/astromech/src/database/descriptor-snapshot.ts` — pasted verbatim; a
+ * statements are `emitTableStatements()` output for each table's `Table` — the
+ * renderers live in `packages/schema-engine/src/ddl.ts`, driven from those via
+ * `packages/astromech/src/database/table-snapshot.ts` — pasted verbatim; a
  * parity test asserts the two never drift. The 4 better-auth tables (`users`,
- * `sessions`, `accounts`, `verifications`) have no descriptor and are the
- * hand-authored "foreign tables" section the generator passes through
+ * `sessions`, `accounts`, `verifications`) are not defined with `defineTable`
+ * and are the hand-authored "foreign tables" section the generator passes through
  * untouched: snake_case DDL, INTEGER unix-seconds timestamps, TEXT json,
  * INTEGER 0/1 booleans, identical SQL DEFAULTs, indexes and foreign keys.
  *

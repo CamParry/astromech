@@ -10,7 +10,7 @@ import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { Spinner } from '../ui/index.js';
-import { Link } from '@/admin/definitions/cells/link.js';
+import { Link } from '@/admin/rendering/cells/link.js';
 import { useMediaUsage } from '@/admin/hooks/media.js';
 import { entryAdminPath } from '@/admin/utilities/entry-admin-path.js';
 import { parseEntryTypeId } from '@/entries/type-ids.js';

@@ -4,7 +4,7 @@
  * `url` template, and returns a clean tree.
  */
 
-import type { AnyPluginServiceMethod, Entry, PluginContext } from 'astromech';
+import type { AnyServiceMethod, Entry, PluginContext } from 'astromech';
 import { defineServiceMethod, z } from 'astromech';
 import { resolveEntryUrl } from 'astromech';
 import type { MenuConfig, MenuItem } from '../types.js';
@@ -90,7 +90,7 @@ async function walkNodes(
 
 export function buildMenusService(
     configs: MenuConfig[]
-): Record<string, AnyPluginServiceMethod> {
+): Record<string, AnyServiceMethod> {
     const configuredKeys = new Set(configs.map((c) => c.key));
 
     return {

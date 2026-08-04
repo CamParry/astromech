@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { Entry, FieldDefinition, JsonObject, JsonValue } from '@/types/index.js';
+import type { Entry, Field, JsonObject, JsonValue } from '@/types/index.js';
 import {
     applyVisibility,
     type AudienceContext,
@@ -37,11 +37,11 @@ function publishedEntry(fields: JsonObject): Entry {
     };
 }
 
-function opts(shape: 'public' | 'full', fields: FieldDefinition[]): VisibilityOptions {
+function opts(shape: 'public' | 'full', fields: Field[]): VisibilityOptions {
     return { shape, fields, audience: audience() };
 }
 
-const richtextFields: FieldDefinition[] = [{ name: 'body', type: 'richtext' }];
+const richtextFields: Field[] = [{ name: 'body', type: 'richtext' }];
 
 const richtextJson: JsonValue = {
     type: 'doc',

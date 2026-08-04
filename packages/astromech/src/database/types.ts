@@ -1,12 +1,12 @@
 /**
  * The Kysely `DB` interface — the storage-shaped type surface for the query layer.
  *
- * The 10 tables we own are derived from their `defineTable` descriptors via
+ * The 10 tables we own are derived from their `defineTable` objects via
  * `KyselyOf<>`: timestamps are ISO-8601 **TEXT** (`string`), JSON columns are
  * `string`, booleans are `number` (0/1), and `Generated<>` marks any column an
  * app/SQL default fills. These are the *storage* shapes Kysely sees before the
  * row codec (`decode`) turns them into the rich domain Row types (`EntryRow`, …,
- * now also descriptor-derived), so storage methods keep returning identical
+ * now also `defineTable`-derived), so storage methods keep returning identical
  * shapes to their callers.
  *
  * The 4 better-auth tables (`users`, `sessions`, `accounts`, `verifications`)
@@ -22,7 +22,7 @@
 
 import type { Generated, Kysely, Transaction } from 'kysely';
 import type { KyselyOf } from '@/database/define-table.js';
-// Every descriptor comes through the `database/schema.ts` aggregator rather than
+// Every table comes through the `database/schema.ts` aggregator rather than
 // from each domain directly — that indirection is the whole reason the
 // aggregator exists, and it keeps the rest of `database/` below the domains in
 // the dependency graph (see the `database-no-upward-except-aggregate` rule).
@@ -40,7 +40,7 @@ import type {
 } from '@/database/schema.js';
 
 export type DB = {
-    // ── 10 ours — derived from defineTable descriptors (ISO-TEXT timestamps) ─
+    // ── 10 ours — derived from defineTable tables (ISO-TEXT timestamps) ──────
     roles: KyselyOf<typeof rolesTable>;
     entries: KyselyOf<typeof entriesTable>;
     entryVersions: KyselyOf<typeof entryVersionsTable>;

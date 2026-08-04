@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { EntryTypeConfig } from '@/types/index.js';
+import type { EntryType } from '@/types/index.js';
 import {
     BUILT_IN_SUPPORTS,
     resolveEntryCapabilities,
@@ -11,7 +11,7 @@ import {
 // ============================================================================
 
 describe('resolveEntryCapabilities — defaults', () => {
-    const emptyCfg: EntryTypeConfig = {
+    const emptyCfg: EntryType = {
         single: 'Item',
         plural: 'Items',
     };
@@ -53,7 +53,7 @@ describe('resolveEntryCapabilities — defaults', () => {
 
 describe('resolveEntryCapabilities — explicit opt-outs', () => {
     it('statuses:false resolves off', () => {
-        const cfg: EntryTypeConfig = {
+        const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             statuses: false,
@@ -62,7 +62,7 @@ describe('resolveEntryCapabilities — explicit opt-outs', () => {
     });
 
     it('slug:false resolves off', () => {
-        const cfg: EntryTypeConfig = {
+        const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             slug: false,
@@ -71,7 +71,7 @@ describe('resolveEntryCapabilities — explicit opt-outs', () => {
     });
 
     it('trash:false resolves off', () => {
-        const cfg: EntryTypeConfig = {
+        const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             trash: false,
@@ -86,7 +86,7 @@ describe('resolveEntryCapabilities — explicit opt-outs', () => {
 
 describe('resolveEntryCapabilities — versioning', () => {
     it('versioning:true resolves on', () => {
-        const cfg: EntryTypeConfig = {
+        const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             versioning: true,
@@ -95,7 +95,7 @@ describe('resolveEntryCapabilities — versioning', () => {
     });
 
     it('versioning:false resolves off', () => {
-        const cfg: EntryTypeConfig = {
+        const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             versioning: false,
@@ -104,7 +104,7 @@ describe('resolveEntryCapabilities — versioning', () => {
     });
 
     it('versioning object resolves on', () => {
-        const cfg: EntryTypeConfig = {
+        const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             versioning: { maxVersions: 10 },
@@ -119,7 +119,7 @@ describe('resolveEntryCapabilities — versioning', () => {
 
 describe('resolveEntryCapabilities — staging', () => {
     it('staging:true resolves on with built-in storage', () => {
-        const cfg: EntryTypeConfig = {
+        const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             staging: true,
@@ -128,7 +128,7 @@ describe('resolveEntryCapabilities — staging', () => {
     });
 
     it('staging:false resolves off', () => {
-        const cfg: EntryTypeConfig = {
+        const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             staging: false,
@@ -137,7 +137,7 @@ describe('resolveEntryCapabilities — staging', () => {
     });
 
     it('staging is independent of versioning (on without versioning)', () => {
-        const cfg: EntryTypeConfig = {
+        const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             staging: true,
@@ -149,7 +149,7 @@ describe('resolveEntryCapabilities — staging', () => {
     });
 
     it('staging resolves off when storage does not support it', () => {
-        const cfg: EntryTypeConfig = {
+        const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             staging: true,
@@ -158,7 +158,7 @@ describe('resolveEntryCapabilities — staging', () => {
     });
 
     it('assertEntryTypeValid throws when staging is requested but unsupported', () => {
-        const cfg: EntryTypeConfig = {
+        const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             staging: true,
@@ -173,7 +173,7 @@ describe('resolveEntryCapabilities — staging', () => {
 // ============================================================================
 
 describe('resolveEntryCapabilities — narrower storageSupports', () => {
-    const emptyCfg: EntryTypeConfig = {
+    const emptyCfg: EntryType = {
         single: 'Item',
         plural: 'Items',
     };
@@ -201,7 +201,7 @@ describe('resolveEntryCapabilities — narrower storageSupports', () => {
 
 describe('assertEntryTypeValid — capability mismatch', () => {
     it('throws when explicitly-requested capability is unsupported', () => {
-        const cfg: EntryTypeConfig = {
+        const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             versioning: true,
@@ -214,7 +214,7 @@ describe('assertEntryTypeValid — capability mismatch', () => {
     });
 
     it('includes the storage support list in the message when non-empty', () => {
-        const cfg: EntryTypeConfig = {
+        const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             versioning: true,
@@ -227,7 +227,7 @@ describe('assertEntryTypeValid — capability mismatch', () => {
     });
 
     it('does not throw when all requested capabilities are supported', () => {
-        const cfg: EntryTypeConfig = {
+        const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             versioning: true,
@@ -251,7 +251,7 @@ describe('assertEntryTypeValid — titleField', () => {
     );
 
     it("'title' is valid", () => {
-        const cfg: EntryTypeConfig = {
+        const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             titleField: 'title',
@@ -262,7 +262,7 @@ describe('assertEntryTypeValid — titleField', () => {
     });
 
     it('false is valid', () => {
-        const cfg: EntryTypeConfig = {
+        const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             titleField: false,
@@ -273,7 +273,7 @@ describe('assertEntryTypeValid — titleField', () => {
     });
 
     it('undefined is valid (defaults to title)', () => {
-        const cfg: EntryTypeConfig = {
+        const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
         };
@@ -288,7 +288,7 @@ describe('assertEntryTypeValid — titleField', () => {
             single: 'Item',
             plural: 'Items',
             titleField: 'name',
-        } as unknown as EntryTypeConfig;
+        } as unknown as EntryType;
         expect(() =>
             assertEntryTypeValid('widget', cfg, caps, BUILT_IN_SUPPORTS)
         ).toThrow(

@@ -24,7 +24,7 @@ import {
     type PluginNamespace,
 } from '@/utilities/plugin-namespace.js';
 import type {
-    EntryTypeConfig,
+    EntryType,
     PluginDefinition,
     ResolvedPluginIdentity,
 } from '@/types/index.js';
@@ -70,7 +70,7 @@ export function titleCaseNamespace(namespace: string): string {
  * self-declare their `type`; this validates presence and adapts to the keyed
  * shape the resolver, nav, and storage registry consume.
  */
-export function pluginEntryTypes(def: PluginDefinition): [string, EntryTypeConfig][] {
+export function pluginEntryTypes(def: PluginDefinition): [string, EntryType][] {
     return (def.entries ?? []).map((cfg) => {
         if (!cfg.type) {
             throw new Error(

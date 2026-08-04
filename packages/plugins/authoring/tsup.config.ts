@@ -6,7 +6,7 @@ export default defineConfig({
     // export — the host app's Vite compiles them so they share its
     // React/context instance (the integration aliases `astromech/ui` to the
     // library src for exactly this reason).
-    // The `./tables` subpath ships only the table descriptors, so a consuming
+    // The `./tables` subpath ships only the tables, so a consuming
     // app (or `plugin:generate`) can load them without the plugin definition.
     entry: { index: 'src/index.ts', tables: 'src/tables/index.ts' },
     format: ['esm'],

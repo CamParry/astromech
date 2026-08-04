@@ -71,7 +71,7 @@ export type EntryVersion = {
 // ============================================================================
 
 // A relationship row has no hand-written type: it is a derived index whose
-// shape comes from the descriptor, so `RelationshipRow` in `database/schema.ts`
+// shape comes from its `Table`, so `RelationshipRow` in `database/schema.ts`
 // is the one definition. A second copy here could only drift out of date.
 
 // ============================================================================

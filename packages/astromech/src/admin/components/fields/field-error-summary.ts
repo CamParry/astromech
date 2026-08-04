@@ -13,7 +13,7 @@
  */
 
 import type { TFunction } from 'i18next';
-import type { FieldDefinition, FieldErrors, Label } from '@/types/index.js';
+import type { Field, FieldErrors, Label } from '@/types/index.js';
 // Deep imports: the `fields/` barrel reaches server code (virtual config / DB).
 import { parseInstancePath } from '@/fields/field-path.js';
 import { flattenFieldNodes } from '@/fields/flatten.js';
@@ -33,7 +33,7 @@ const LIST_SEPARATOR = ', ';
 // ============================================================================
 
 /** The declared label of a field, or the same fallback its own label renders. */
-function labelOf(field: FieldDefinition): Label {
+function labelOf(field: Field): Label {
     return field.label ?? titleCase(field.name);
 }
 
@@ -46,7 +46,7 @@ function labelOf(field: FieldDefinition): Label {
  * carry, so every block definition is a candidate — the step is only safe when
  * they agree on what the next name means.
  */
-function childrenOf(field: FieldDefinition): FieldDefinition[] | null {
+function childrenOf(field: Field): Field[] | null {
     if (field.fields !== undefined) return flattenFieldNodes(field.fields);
     if (field.blocks !== undefined) {
         return field.blocks.flatMap((block) => flattenFieldNodes(block.fields));
@@ -69,7 +69,7 @@ function childrenOf(field: FieldDefinition): FieldDefinition[] | null {
  * itself rather than print a guess.
  */
 export function fieldLabelPathForError(
-    definitions: FieldDefinition[],
+    definitions: Field[],
     path: string
 ): Label[] | null {
     let segments;
@@ -80,7 +80,7 @@ export function fieldLabelPathForError(
     }
 
     const labels: Label[] = [];
-    let candidates: FieldDefinition[] | null = flattenFieldNodes(definitions);
+    let candidates: Field[] | null = flattenFieldNodes(definitions);
 
     for (const segment of segments) {
         // An item id names a row, not a definition; the definition is the same
@@ -136,7 +136,7 @@ export function validationSummaryMessage(names: string[], t: TFunction): string 
  */
 export function fieldErrorNames(
     errors: FieldErrors,
-    definitions: FieldDefinition[],
+    definitions: Field[],
     resolve: (label: Label) => string
 ): string[] {
     return Object.keys(errors).map((path) => {

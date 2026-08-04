@@ -1,17 +1,17 @@
 /**
- * Descriptor ↔ MCP tool-schema parity.
+ * Contract ↔ MCP tool-schema parity.
  *
  * Every MCP tool's `inputSchema` must be exactly the manifest method's `input`.
  *
  * The absence of this test is why MCP's `users.update` tool drifted from its
- * descriptor and shipped: the adapter carried a hand-written schema literal that
+ * contract and shipped: the adapter carried a hand-written schema literal that
  * dropped `fields` and the email format, and declared `additionalProperties:
  * false`, so setting a custom user field through MCP was rejected outright. The
  * correct schema sat in the manifest, unread, with nothing asserting the two
  * agreed.
  *
  * This runs against a REAL generated manifest rather than a fixture, so a
- * descriptor change that an adapter fails to follow fails here.
+ * contract change that an adapter fails to follow fails here.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -129,7 +129,7 @@ const manifest = JSON.parse(
 // Tests
 // ============================================================================
 
-describe('descriptor ↔ MCP tool schema parity', () => {
+describe('contract ↔ MCP tool schema parity', () => {
     it('the fixture manifest is non-trivial', () => {
         // Guards the assertions below against silently passing on an empty list.
         expect(manifest.methods.length).toBeGreaterThan(20);
@@ -147,7 +147,7 @@ describe('descriptor ↔ MCP tool schema parity', () => {
             // schema through, never restate or "improve" it.
             expect(
                 result.tool.inputSchema,
-                `${method.id} tool schema diverges from its descriptor input`
+                `${method.id} tool schema diverges from its contract input`
             ).toEqual(method.input);
             checked.push(method.id);
         }
@@ -166,15 +166,13 @@ describe('descriptor ↔ MCP tool schema parity', () => {
             const matches = [...inputsById.values()].some(
                 (input) => JSON.stringify(input) === JSON.stringify(tool.inputSchema)
             );
-            expect(matches, `${tool.name} has a schema no descriptor declares`).toBe(
-                true
-            );
+            expect(matches, `${tool.name} has a schema no contract declares`).toBe(true);
         }
     });
 
     it('a method whose input the manifest omits is skipped, never synthesised', () => {
         // The failure mode this whole test exists to prevent: an adapter filling
-        // in a schema of its own when the descriptor did not declare one.
+        // in a schema of its own when the contract did not declare one.
         const stripped: MethodManifest = {
             ...manifest,
             methods: manifest.methods.map((m) => {
@@ -222,7 +220,7 @@ describe('manifest ↔ MCP tool coverage', () => {
     it('skips only methods that declared themselves uncallable', () => {
         // The P1 acceptance condition: with one generic dispatcher, "no adapter
         // written yet" is no longer a reason anything is missing. What is left
-        // out is left out because the DESCRIPTOR said so.
+        // out is left out because the CONTRACT said so.
         expect(skipped.map((s) => s.id).sort()).toEqual([
             'media.upload',
             'plugins.testMyPlugin.undescribed',
@@ -248,7 +246,7 @@ describe('manifest ↔ MCP tool coverage', () => {
 
     it('projects the entries long tail, not just CRUD', () => {
         // duplicate/trash/restore/versions/staging/preview/schedule all had
-        // descriptors or service methods and no adapter. `posts` declares every
+        // contracts or service methods and no adapter. `posts` declares every
         // capability, so it should carry the full catalogue.
         const posts = tools
             .map((t) => t.name)
@@ -287,7 +285,7 @@ describe('manifest ↔ MCP tool coverage', () => {
         // `pages` declares no versioning and no staging, so it has no version
         // history and no staged-entry methods — but it DOES have statuses, and
         // `operations/status.ts` gates publish on statuses. Gating publish on
-        // versioning (as the descriptor did before P1) hid it from every
+        // versioning (as the contract did before P1) hid it from every
         // unversioned type while the service happily accepted the call.
         const pages = tools.map((t) => t.name);
         expect(pages).toContain('entries_pages_publish');

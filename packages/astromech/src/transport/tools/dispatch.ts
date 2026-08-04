@@ -11,7 +11,7 @@
  * described itself, and the second declaration is what drifted: `users_update`
  * advertised a hand-written schema that rejected custom user fields for months.
  * A dispatcher that cannot restate a method cannot disagree with it, and adding
- * a descriptor is now all it takes to get a tool.
+ * a contract is now all it takes to get a tool.
  *
  * A method is skipped only for a reason it declares — no input schema, or a
  * `binaryInput` a JSON-RPC transport cannot carry. Each skip carries that reason

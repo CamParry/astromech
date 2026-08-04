@@ -1,7 +1,7 @@
 import React from 'react';
-import type { FieldDefinition } from '@/types/index.js';
+import type { Field } from '@/types/index.js';
 import { Input } from '@/admin/components/ui/input';
-import { getFieldComponent } from '@/admin/definitions/field-registry.js';
+import { getFieldComponent } from '@/admin/rendering/field-registry.js';
 import { useLabel } from '@/admin/i18n/entry-namespace.js';
 import { hasPluginFieldType, PluginField } from './plugin-field';
 import { FieldPathProvider } from './field-context';
@@ -10,7 +10,7 @@ import { useFieldError, useFieldWarning } from './field-errors-context';
 import { useFieldValidationHandlers } from './field-validation-context';
 
 export type FormFieldProps = {
-    field: FieldDefinition;
+    field: Field;
     value: unknown;
     name?: string;
     onChange: (name: string, value: unknown) => void;

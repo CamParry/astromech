@@ -7,14 +7,14 @@
  */
 
 import type {
-    FieldDefinition,
-    FieldTypeDescriptor,
+    Field,
+    FieldType,
     PluginDefinition,
     PluginFieldTypeRegistration,
     ResolvedConfig,
     ResolvedEntryFields,
 } from '@/types/index.js';
-import { getFieldTypeDescriptor } from '@/fields/descriptors.js';
+import { getFieldType } from '@/fields/field-type-registry.js';
 import { RESERVED_KEY_META } from '@/fields/reserved-keys.js';
 
 // ============================================================================
@@ -51,16 +51,13 @@ const RELATION_TYPES = new Set(['relationship', 'media']);
  * `RESERVED_KEY_META` (`fields/reserved-keys.ts`) — the single source shared with
  * the runtime public-read strip. `_id`/`_type` are identity keys (present in both
  * shapes); `_disabled`/`_title` are editorial metadata (full shape only). Which
- * keys a container owns comes from its descriptor's `reservedKeys`.
+ * keys a container owns comes from its field type's `reservedKeys`.
  */
 
 /** Reserved-key type lines a container emits for the given shape, in declared order. */
-function reservedKeyLines(
-    descriptor: FieldTypeDescriptor,
-    shape: 'full' | 'public'
-): string[] {
+function reservedKeyLines(fieldType: FieldType, shape: 'full' | 'public'): string[] {
     const lines: string[] = [];
-    for (const key of descriptor.reservedKeys ?? []) {
+    for (const key of fieldType.reservedKeys ?? []) {
         const emit = RESERVED_KEY_META[key];
         if (emit === undefined) continue;
         if (shape === 'public' && !emit.inPublic) continue;
@@ -75,18 +72,15 @@ function propertyKey(name: string): string {
 }
 
 /**
- * Walk a FieldDefinition[] and return all data-bearing nodes, with layout
+ * Walk a Field[] and return all data-bearing nodes, with layout
  * fields (section/tabs/tab/accordion) transparently flattened in-place.
  * Nested fields (group/repeater/blocks) and leaf fields are returned as-is —
  * they each become a single property on the containing object.
  *
  * When `shape === 'public'`, fields marked `private: true` are excluded.
  */
-function collectDataFields(
-    fields: FieldDefinition[],
-    shape: 'full' | 'public' = 'full'
-): FieldDefinition[] {
-    const result: FieldDefinition[] = [];
+function collectDataFields(fields: Field[], shape: 'full' | 'public' = 'full'): Field[] {
+    const result: Field[] = [];
     for (const field of fields) {
         if (LAYOUT_TYPES.has(field.type)) {
             // Flatten layout field children at the same level.
@@ -100,7 +94,7 @@ function collectDataFields(
 }
 
 /**
- * Build the body lines of an object type from a FieldDefinition[].
+ * Build the body lines of an object type from a Field[].
  * Used for top-level collections and recursively for group/repeater children.
  * Each line is indented by `indent` spaces.
  *
@@ -108,7 +102,7 @@ function collectDataFields(
  * cannot be expressed inline (e.g. self-referential tree node types).
  */
 function buildObjectLines(
-    fields: FieldDefinition[],
+    fields: Field[],
     pluginFieldTypes: Map<string, PluginFieldTypeRegistration>,
     indent: string,
     hoisted?: string[],
@@ -126,7 +120,7 @@ function buildObjectLines(
 }
 
 /**
- * Map a FieldDefinition to its TypeScript type string for the Fields interface.
+ * Map a Field to its TypeScript type string for the Fields interface.
  * Plugin-registered types use their `typeGen` (default `JsonValue`). Returns
  * null for layout field types (they never appear as a field line —
  * collectDataFields flattens them away before this is called) and for
@@ -139,7 +133,7 @@ function buildObjectLines(
  * from block/repeater/tree element types and skips `private` child fields.
  */
 function fieldToTsType(
-    field: FieldDefinition,
+    field: Field,
     pluginFieldTypes: Map<string, PluginFieldTypeRegistration>,
     hoisted?: string[],
     shape: 'full' | 'public' = 'full'
@@ -155,14 +149,14 @@ function fieldToTsType(
         return pluginType.typeGen(field);
     }
 
-    const descriptor = getFieldTypeDescriptor(field.type);
-    if (descriptor === undefined) return null;
+    const fieldType = getFieldType(field.type);
+    if (fieldType === undefined) return null;
 
     // A `children` slot marks a nested field. Those need the recursion + hoisting
-    // context that the descriptor's pure `tsType(field, shape)` signature can't
+    // context that the field type's pure `tsType(field, shape)` signature can't
     // carry, so they're emitted here. Their reserved instance keys come from
-    // `descriptor.reservedKeys`; this code owns only the recursion structure.
-    if (descriptor.children !== undefined) {
+    // `fieldType.reservedKeys`; this code owns only the recursion structure.
+    if (fieldType.children !== undefined) {
         switch (field.type) {
             case 'group': {
                 // Nested object: children are recursively typed.
@@ -188,7 +182,7 @@ function fieldToTsType(
                     hoisted,
                     shape
                 );
-                const reserved = reservedKeyLines(descriptor, shape).map((l) => `  ${l}`);
+                const reserved = reservedKeyLines(fieldType, shape).map((l) => `  ${l}`);
                 const lines = [...reserved, ...childLines];
                 return `Array<{\n${lines.join('\n')}\n}>`;
             }
@@ -206,7 +200,7 @@ function fieldToTsType(
                     hoisted,
                     shape
                 );
-                const reserved = reservedKeyLines(descriptor, shape).map((l) => `  ${l}`);
+                const reserved = reservedKeyLines(fieldType, shape).map((l) => `  ${l}`);
                 const lines = [
                     ...reserved,
                     ...childLines,
@@ -222,17 +216,17 @@ function fieldToTsType(
             case 'blocks': {
                 // Heterogeneous array; `_type` discriminates the block variant and
                 // the index signature carries arbitrary block data.
-                const reserved = reservedKeyLines(descriptor, shape);
+                const reserved = reservedKeyLines(fieldType, shape);
                 return `Array<{ ${reserved.join(' ')} [key: string]: import('astromech').JsonValue | undefined }>`;
             }
         }
     }
 
-    return descriptor.tsType(field, shape);
+    return fieldType.tsType(field, shape);
 }
 
 /**
- * Map a FieldDefinition to its populated TypeScript type string for the Relations type.
+ * Map a Field to its populated TypeScript type string for the Relations type.
  * Returns null if the field is not a relation/media field.
  *
  * `knownCollections` — bare root collection keys.
@@ -240,7 +234,7 @@ function fieldToTsType(
  * `shape` — 'public' references `…FieldsPublic`; 'full' references `…Fields`.
  */
 function fieldToRelationType(
-    field: FieldDefinition,
+    field: Field,
     knownCollections: Set<string>,
     qualifiedTargetMap: Map<string, string> = new Map<string, string>(),
     shape: 'full' | 'public' = 'full'

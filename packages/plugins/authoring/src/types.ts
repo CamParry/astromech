@@ -6,7 +6,7 @@ import type { AIContextItem } from 'astromech';
 /**
  * The package name, as a literal. `definePluginTable` needs the package as a
  * *type* to derive `plugin_authoring_*` table names, and a value inside the
- * definition cannot reach a module-scope descriptor.
+ * definition cannot reach a module-scope table.
  */
 export const AUTHORING_PACKAGE = '@astromech/authoring';
 

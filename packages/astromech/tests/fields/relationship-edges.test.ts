@@ -9,11 +9,11 @@ import {
     collectRelationshipEdges,
     collectRelationshipSchemaPaths,
 } from '@/fields/relationship-edges.js';
-import type { FieldDefinition } from '@/types/index.js';
+import type { Field } from '@/types/index.js';
 
 describe('collectRelationshipEdges — top-level fields', () => {
     it('yields one edge for a single relationship', () => {
-        const defs: FieldDefinition[] = [
+        const defs: Field[] = [
             { name: 'author', type: 'relationship', target: 'people' },
         ];
         expect(collectRelationshipEdges(defs, { author: 'p1' })).toEqual([
@@ -29,7 +29,7 @@ describe('collectRelationshipEdges — top-level fields', () => {
     // The old subsystem only looked at `relationship`, so no media row was ever
     // written.
     it('treats a media field as a relation targeting media', () => {
-        const defs: FieldDefinition[] = [{ name: 'hero', type: 'media' }];
+        const defs: Field[] = [{ name: 'hero', type: 'media' }];
         expect(collectRelationshipEdges(defs, { hero: 'm1' })).toEqual([
             {
                 schemaPath: 'hero',
@@ -41,16 +41,14 @@ describe('collectRelationshipEdges — top-level fields', () => {
     });
 
     it("maps target: 'users' to the user kind", () => {
-        const defs: FieldDefinition[] = [
-            { name: 'owner', type: 'relationship', target: 'users' },
-        ];
+        const defs: Field[] = [{ name: 'owner', type: 'relationship', target: 'users' }];
         expect(collectRelationshipEdges(defs, { owner: 'u1' })[0]?.targetKind).toBe(
             'user'
         );
     });
 
     it('yields one edge per id in a multi-relation', () => {
-        const defs: FieldDefinition[] = [
+        const defs: Field[] = [
             { name: 'tags', type: 'relationship', target: 'tag', multiple: true },
         ];
         const edges = collectRelationshipEdges(defs, { tags: ['t1', 't2', 't3'] });
@@ -59,7 +57,7 @@ describe('collectRelationshipEdges — top-level fields', () => {
     });
 
     it('collapses a duplicated id in one multi-relation to a single edge', () => {
-        const defs: FieldDefinition[] = [
+        const defs: Field[] = [
             { name: 'tags', type: 'relationship', target: 'tag', multiple: true },
         ];
         const edges = collectRelationshipEdges(defs, { tags: ['t1', 't1'] });
@@ -68,7 +66,7 @@ describe('collectRelationshipEdges — top-level fields', () => {
     });
 
     it('yields nothing for a null, empty or non-string value', () => {
-        const defs: FieldDefinition[] = [
+        const defs: Field[] = [
             { name: 'a', type: 'relationship', target: 'post' },
             { name: 'b', type: 'relationship', target: 'post' },
             { name: 'c', type: 'relationship', target: 'post' },
@@ -84,7 +82,7 @@ describe('collectRelationshipEdges — top-level fields', () => {
     });
 
     it('yields nothing for a field with no value at all', () => {
-        const defs: FieldDefinition[] = [
+        const defs: Field[] = [
             { name: 'author', type: 'relationship', target: 'people' },
         ];
         expect(collectRelationshipEdges(defs, {})).toEqual([]);
@@ -93,7 +91,7 @@ describe('collectRelationshipEdges — top-level fields', () => {
 
 describe('collectRelationshipEdges — nested containers', () => {
     it('walks into a group', () => {
-        const defs: FieldDefinition[] = [
+        const defs: Field[] = [
             {
                 name: 'seo',
                 type: 'group',
@@ -111,7 +109,7 @@ describe('collectRelationshipEdges — nested containers', () => {
     });
 
     it('addresses a repeater item by its persisted `_id`', () => {
-        const defs: FieldDefinition[] = [
+        const defs: Field[] = [
             {
                 name: 'items',
                 type: 'repeater',
@@ -141,7 +139,7 @@ describe('collectRelationshipEdges — nested containers', () => {
     });
 
     it('accumulates segments two containers deep', () => {
-        const defs: FieldDefinition[] = [
+        const defs: Field[] = [
             {
                 name: 'sections',
                 type: 'repeater',
@@ -172,7 +170,7 @@ describe('collectRelationshipEdges — nested containers', () => {
 
     // Tree node ids are unique tree-wide, so depth never appears in a path.
     it('never renders `_children` as a path segment', () => {
-        const defs: FieldDefinition[] = [
+        const defs: Field[] = [
             {
                 name: 'nav',
                 type: 'tree',
@@ -211,7 +209,7 @@ describe('collectRelationshipEdges — determinism', () => {
     // data is safe to traverse. Stored data already carries its ids, which is
     // what makes a rebuild reproduce the same rows.
     it('produces identical instance paths on a second run over stored data', () => {
-        const defs: FieldDefinition[] = [
+        const defs: Field[] = [
             {
                 name: 'items',
                 type: 'repeater',
@@ -236,7 +234,7 @@ describe('collectRelationshipEdges — determinism', () => {
 
 describe('collectRelationshipSchemaPaths', () => {
     it('returns an empty list for a schema declaring no relations', () => {
-        const defs: FieldDefinition[] = [
+        const defs: Field[] = [
             { name: 'body', type: 'text' },
             { name: 'seo', type: 'group', fields: [{ name: 'title', type: 'text' }] },
         ];
@@ -244,7 +242,7 @@ describe('collectRelationshipSchemaPaths', () => {
     });
 
     it('reports a flat relationship and a media field', () => {
-        const defs: FieldDefinition[] = [
+        const defs: Field[] = [
             { name: 'author', type: 'relationship', target: 'people' },
             { name: 'hero', type: 'media' },
         ];
@@ -252,7 +250,7 @@ describe('collectRelationshipSchemaPaths', () => {
     });
 
     it('walks into a group', () => {
-        const defs: FieldDefinition[] = [
+        const defs: Field[] = [
             {
                 name: 'seo',
                 type: 'group',
@@ -263,7 +261,7 @@ describe('collectRelationshipSchemaPaths', () => {
     });
 
     it('collapses repeater items to the `[]` form', () => {
-        const defs: FieldDefinition[] = [
+        const defs: Field[] = [
             {
                 name: 'items',
                 type: 'repeater',
@@ -280,7 +278,7 @@ describe('collectRelationshipSchemaPaths', () => {
     });
 
     it('walks into a tree', () => {
-        const defs: FieldDefinition[] = [
+        const defs: Field[] = [
             {
                 name: 'nav',
                 type: 'tree',
@@ -293,7 +291,7 @@ describe('collectRelationshipSchemaPaths', () => {
     // The probe carries one item per declared block type; without it `blocks`
     // yields no scope at all and every nested relation would go unreported.
     it('reports a path inside each declared block type', () => {
-        const defs: FieldDefinition[] = [
+        const defs: Field[] = [
             {
                 name: 'content',
                 type: 'blocks',
@@ -318,7 +316,7 @@ describe('collectRelationshipSchemaPaths', () => {
     });
 
     it('de-duplicates a path two block types both declare', () => {
-        const defs: FieldDefinition[] = [
+        const defs: Field[] = [
             {
                 name: 'content',
                 type: 'blocks',
@@ -338,7 +336,7 @@ describe('collectRelationshipSchemaPaths', () => {
     });
 
     it('accumulates segments through nested containers', () => {
-        const defs: FieldDefinition[] = [
+        const defs: Field[] = [
             {
                 name: 'sections',
                 type: 'repeater',
@@ -357,7 +355,7 @@ describe('collectRelationshipSchemaPaths', () => {
     });
 
     it('unwraps layout fields, which hold no data key', () => {
-        const defs: FieldDefinition[] = [
+        const defs: Field[] = [
             {
                 name: 'main',
                 type: 'section',

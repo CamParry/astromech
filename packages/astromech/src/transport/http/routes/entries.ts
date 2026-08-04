@@ -27,8 +27,8 @@ import type {
     EntryUpdateData,
     JsonObject,
     Permission,
-    ResolvedEntryTypeConfig,
-    ServiceMethodDescriptor,
+    ResolvedEntryType,
+    ServiceMethodContract,
     SortOption,
 } from '@/types/index.js';
 import {
@@ -70,18 +70,18 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
     const router = new OpenAPIHono<Env>();
 
     /**
-     * Wrap the per-(type, action) permission as a method descriptor, so entries
+     * Wrap the per-(type, action) permission as a method contract, so entries
      * are enforced through the same `permissionsFor(...).allowsMethod` seam as
      * every other service.
      */
-    const entryGate = (type: string, action: EntryAction): ServiceMethodDescriptor => ({
+    const entryGate = (type: string, action: EntryAction): ServiceMethodContract => ({
         permission: entryPermission(type, action) as Permission,
         mutates: action !== 'read',
         destructive: action === 'delete',
     });
 
     /** Resolve a type id against root entries (bare) or pluginEntries (qualified). */
-    const lookup = (type: string): ResolvedEntryTypeConfig | undefined =>
+    const lookup = (type: string): ResolvedEntryType | undefined =>
         resolveEntryType(Astromech.config, type);
 
     // ============================================================================

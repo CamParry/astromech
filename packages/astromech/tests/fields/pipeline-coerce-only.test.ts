@@ -6,8 +6,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { FieldDefinition, ValidationStage } from '@/types/fields.js';
-import { registerFieldTypeDescriptor } from '@/fields/descriptors.js';
+import type { Field, ValidationStage } from '@/types/fields.js';
+import { registerFieldType } from '@/fields/field-type-registry.js';
 import { processFields } from '@/fields/pipeline.js';
 
 // ---------------------------------------------------------------------------
@@ -30,14 +30,12 @@ function fakeCtx(overrides: CtxOverrides = {}) {
     };
 }
 
-function field(
-    def: Partial<FieldDefinition> & { name: string; type: string }
-): FieldDefinition {
-    return def as FieldDefinition;
+function field(def: Partial<Field> & { name: string; type: string }): Field {
+    return def as Field;
 }
 
 // Appends a marker on every pass, so `f(f(x)) !== f(x)`.
-registerFieldTypeDescriptor({
+registerFieldType({
     type: 'stamped',
     build: (() => ({})) as never,
     component: '',

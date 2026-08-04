@@ -56,7 +56,7 @@ describe('base CRUD', () => {
     });
 
     it('mints a ULID localeGroup, not a UUID, when none is supplied', async () => {
-        // The `entries` descriptor declares `defaultUlid` on localeGroup, so
+        // The `entries` table declares `defaultUlid` on localeGroup, so
         // storage must leave the key absent rather than minting its own id.
         const created = await storage.create({ type: 'post', title: 'L', slug: 'l' });
         expect(created.localeGroup).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);

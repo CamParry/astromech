@@ -1,12 +1,12 @@
 /**
  * Unit tests for applyVisibility.
  *
- * All tests call the functions directly with hand-built Entry + FieldDefinition[]
+ * All tests call the functions directly with hand-built Entry + Field[]
  * — no client, no virtual:astromech/config, no getDb().
  */
 
 import { describe, expect, it } from 'vitest';
-import type { Entry, FieldDefinition } from '@/types/index.js';
+import type { Entry, Field } from '@/types/index.js';
 import {
     applyVisibility,
     isPublicBranded,
@@ -45,11 +45,11 @@ function publishedEntry(overrides: Partial<Entry> = {}): Entry {
     };
 }
 
-function publicOpts(fields: FieldDefinition[] = []): VisibilityOptions {
+function publicOpts(fields: Field[] = []): VisibilityOptions {
     return { shape: 'public', fields, audience: audience() };
 }
 
-function fullOpts(fields: FieldDefinition[] = []): VisibilityOptions {
+function fullOpts(fields: Field[] = []): VisibilityOptions {
     return { shape: 'full', fields, audience: audience() };
 }
 
@@ -58,7 +58,7 @@ function fullOpts(fields: FieldDefinition[] = []): VisibilityOptions {
 // ============================================================================
 
 describe('private field projection', () => {
-    const fields: FieldDefinition[] = [
+    const fields: Field[] = [
         { name: 'title', type: 'text' },
         { name: 'secret', type: 'text', private: true },
         { name: 'public_body', type: 'textarea' },
@@ -98,7 +98,7 @@ describe('private field projection', () => {
 // ============================================================================
 
 describe('structural strip (_disabled items)', () => {
-    const fields: FieldDefinition[] = [
+    const fields: Field[] = [
         {
             name: 'blocks',
             type: 'blocks',
@@ -222,7 +222,7 @@ describe('row filter (audience)', () => {
 // ============================================================================
 
 describe('nested blocks-in-repeater strip', () => {
-    const fields: FieldDefinition[] = [
+    const fields: Field[] = [
         {
             name: 'sections',
             type: 'repeater',
@@ -297,7 +297,7 @@ describe('nested blocks-in-repeater strip', () => {
 // ============================================================================
 
 describe('relation values', () => {
-    const fields: FieldDefinition[] = [
+    const fields: Field[] = [
         { name: 'author', type: 'relationship', target: 'authors' },
         { name: 'tags', type: 'relationship', target: 'tags', multiple: true },
     ];
@@ -315,7 +315,7 @@ describe('relation values', () => {
     });
 
     it('strips a private relation field', () => {
-        const privateRel: FieldDefinition[] = [
+        const privateRel: Field[] = [
             { name: 'author', type: 'relationship', target: 'authors', private: true },
         ];
         const entry = publishedEntry({ fields: { author: 'author-1' } });

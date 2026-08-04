@@ -6,14 +6,14 @@
 import type {
     AdminPage,
     AstromechConfig,
-    DefinedHook,
-    EntryTypeConfig,
+    EntryType,
+    Hook,
     HookEvent,
     HookHandlerFor,
     Permission,
     PluginDefinition,
     PluginFactory,
-    PluginServiceMethod,
+    ServiceMethod,
 } from '@/types/index.js';
 import { pluginNamespace } from '@/utilities/plugin-namespace.js';
 import * as zod from 'zod';
@@ -65,7 +65,7 @@ export type {
 
 export { definePluginTable } from '@/database/define-plugin-table.js';
 export type { KyselyTableKey, PluginDB } from '@/database/define-plugin-table.js';
-// The whole descriptor type vocabulary, not just the headline types: a plugin's
+// The whole `Table` type vocabulary, not just the headline types: a plugin's
 // emitted `.d.ts` has to be able to *name* the type `definePluginTable` infers,
 // and that mentions `Column`/`IndexSpec` structurally. Without them on this
 // public surface, a plugin build fails with TS2742 ("inferred type cannot be
@@ -82,16 +82,16 @@ export type {
     OnDelete,
     ReferenceSpec,
     ReferenceTarget,
-    TableDescriptor,
+    Table,
     TableInsert,
     TableOptions,
     TableSelect,
     TableUpdate,
 } from '@/database/define-table.js';
 export { decodeWith, encodeWith, encodePatchWith } from '@/database/codec.js';
-// The descriptor-backed CRUD wrapper, on the same surface as the descriptor
+// The `Table`-backed CRUD wrapper, on the same surface as the `Table`
 // vocabulary and the codec it is built on: a plugin holding a `definePluginTable`
-// descriptor composes `createStorage` inside its own `createXStorage(db)` factory
+// table composes `createStorage` inside its own `createXStorage(db)` factory
 // exactly as core's domains do, and then never spells the table name or reaches
 // for a codec again. Its public types ship with it for the TS2742 reason above —
 // a plugin's `.d.ts` has to be able to *name* what the factory returns.
@@ -165,7 +165,7 @@ export function defineConfig(config: AstromechConfig): AstromechConfig {
  * unset; a plugin's entry types self-declare `type` so they can be listed in
  * the plugin's `entries` array.
  */
-export function defineEntryType(config: EntryTypeConfig): EntryTypeConfig {
+export function defineEntryType(config: EntryType): EntryType {
     return config;
 }
 
@@ -292,13 +292,12 @@ export function noInput(): zod.ZodType<undefined> {
 /**
  * Define a typed service method (a plugin's contribution to the unified services
  * layer). The Input/Output generics flow into the plugin's self-augmentation of
- * `AstromechPluginServices` so callers see real signatures. The method may carry
- * descriptor metadata (`summary`, `input`, `mutates`, `destructive`, …) for the
- * method manifest.
+ * `AstromechPluginServices` so callers see real signatures. The returned
+ * `ServiceMethod` carries its manifest metadata (`summary`, `input`, …) too.
  */
 export function defineServiceMethod<Input = unknown, Output = unknown>(
-    method: PluginServiceMethod<Input, Output>
-): PluginServiceMethod<Input, Output> {
+    method: ServiceMethod<Input, Output>
+): ServiceMethod<Input, Output> {
     return method;
 }
 
@@ -309,6 +308,6 @@ export function defineServiceMethod<Input = unknown, Output = unknown>(
 export function defineHook<E extends HookEvent>(
     event: E,
     handler: HookHandlerFor<E>
-): DefinedHook {
-    return { event, handler: handler as DefinedHook['handler'] };
+): Hook {
+    return { event, handler: handler as Hook['handler'] };
 }

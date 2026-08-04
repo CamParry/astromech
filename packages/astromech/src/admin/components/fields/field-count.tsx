@@ -1,8 +1,8 @@
 import { clsx } from 'clsx';
-import type { FieldDefinition } from '@/types/index.js';
+import type { Field } from '@/types/index.js';
 import { countStatus } from '@/fields/count.js';
 
-type CountSetting = NonNullable<FieldDefinition['count']>;
+type CountSetting = NonNullable<Field['count']>;
 
 /**
  * Advisory character counter rendered beneath `text`/`textarea` controls when

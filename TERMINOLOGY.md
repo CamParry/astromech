@@ -28,13 +28,21 @@ An **adapter** is a different thing: it reshapes one internal interface into ano
 
 ---
 
-## Entry type vs EntryTypeConfig
+## Entry type vs EntryType
 
 **Entry type** refers to the concept — a named content type (e.g. "posts", "products"). It is identified by its string name throughout the API.
 
-**`EntryTypeConfig`** is the configuration object that defines an entry type: its field groups, slug rules, admin columns, etc. (`packages/astromech/src/types/config.ts`).
+**`EntryType`** is the object that defines an entry type: its field groups, slug rules, admin columns, etc. (`packages/astromech/src/types/config.ts`). It is what `defineEntryType` takes and returns.
 
-Prefer "entry type config" when referring to the config object in conversation, to avoid ambiguity.
+The derived forms carry the qualifier: **`ResolvedEntryType`** is the boot-time shape, **`AdminEntryType`** the browser-safe subset the admin SPA receives.
+
+---
+
+## Field vs FieldType
+
+**`Field`** (`packages/astromech/src/types/fields.ts`) is one field's spec — its name, type, label and options. **`FieldType`** is the registry entry behind a `Field.type`, carrying that type's `build`, `coerce`, `validate`, `tsType` and `children`; **`FieldTypeName`** is the union of the core type names.
+
+`Field` names a spec while `Entry` names a stored row, and that asymmetry is deliberate: an `Entry`'s spec is its `EntryType`, so `EntryType`/`Entry` and `Field`/field values are the same shape one level down.
 
 ---
 
@@ -42,9 +50,9 @@ Prefer "entry type config" when referring to the config object in conversation, 
 
 Field types split on one rule: **a field whose `name` is a data key stores data; a field whose name is inert does not.**
 
-**Layout field** — `section`, `tabs`, `tab`, `accordion`. Four types, and the only presentational ones: they draw structure and store nothing. Their children keep top-level data keys, so data stays flat underneath them, and a layout field's own name never appears in a field path. They have no field-type descriptor at all (`packages/astromech/src/fields/core-descriptors.ts`) — there is no value to coerce or validate.
+**Layout field** — `section`, `tabs`, `tab`, `accordion`. Four types, and the only presentational ones: they draw structure and store nothing. Their children keep top-level data keys, so data stays flat underneath them, and a layout field's own name never appears in a field path. They have no `FieldType` at all (`packages/astromech/src/fields/core-field-types.ts`) — there is no value to coerce or validate.
 
-**Nested field** — `group`, `repeater`, `blocks`, `tree`. Four types that own one data key each and nest their children's values under it. Each fills the `children` slot on its descriptor, which is how the validation pipeline recurses without switching on field type.
+**Nested field** — `group`, `repeater`, `blocks`, `tree`. Four types that own one data key each and nest their children's values under it. Each fills the `children` slot on its `FieldType`, which is how the validation pipeline recurses without switching on field type.
 
 Every other field type is a leaf: one data key, no children.
 
@@ -68,11 +76,11 @@ A **resource validator** is the whole-resource `validate` an author declares on 
 
 ---
 
-## Entry vs Table (as data worlds)
+## Entry vs table-backed type (as data worlds)
 
 **Entry** — the built-in content unit, on the fixed core schema, with the full feature set available to it (statuses, slug, versions, staging, trash, translation, preview, relationships).
 
-**Table** — a plugin-defined custom table (redirects, logs) on its own schema and its own storage. A table-backed type reaches the admin through `tableStorage`, an `EntryStorage` adapter that declares `supports: []`, so all entry chrome switches off.
+**Table-backed type** — a plugin-defined custom table (redirects, logs) on its own schema and its own storage. A table-backed type reaches the admin through `tableStorage`, an `EntryStorage` adapter that declares `supports: []`, so all entry chrome switches off. `Table` (the type `defineTable` returns) is a table's schema object, not a data world.
 
 The two are separate internally and share only the admin surface. `supports` gates behaviour and UI, **never** schema — toggling one needs no migration, and storage is always full.
 
@@ -116,7 +124,7 @@ transition. See `roadmap/completed/versioning-publishing-scheduling.md`.
 
 ## Versioning
 
-Per-entry-type opt-in via `EntryTypeConfig.versioning: true`. When enabled, a snapshot of the entry's fields and status is saved to the `entry_versions` table on each update.
+Per-entry-type opt-in via `EntryType.versioning: true`. When enabled, a snapshot of the entry's fields and status is saved to the `entry_versions` table on each update.
 
 The table always exists in the schema regardless of whether any entry type enables versioning.
 
@@ -173,7 +181,7 @@ Each row carries two paths, and the distinction matters:
 - **Schema path** — the shape a query matches against (`sections[].gallery`). Indexed, derived from the type definitions.
 - **Instance path** — where the edge actually sits in one entry's data (`sections[a1].gallery`, addressing items by their persisted `_id`). Stored, never pattern-matched.
 
-Note also that `col.reference()` in the descriptor layer means a real foreign key and is a **different** thing from a content relationship. Don't conflate them.
+Note also that `col.reference()` in the `defineTable` layer means a real foreign key and is a **different** thing from a content relationship. Don't conflate them.
 
 ---
 
@@ -215,9 +223,9 @@ One message an editor configures to be sent when a submission is accepted, store
 
 ## Schema vs Tables
 
-**Tables** — a directory of `defineTable` / `definePluginTable` descriptors and nothing else. Every table-bearing plugin keeps its descriptors in `src/tables/`, publishes them (where a consumer needs them) as a `./tables` subpath, and `astromech plugin:generate --tables` reads that module to diff against the package's migration snapshot. A descriptor export is named `<noun>Table` (`entriesTable`, `cronTable`, `submissionsTable`) — the noun matching its SQL table name, the suffix separating it from the domain word and the domain's service.
+**Tables** — a directory of `defineTable` / `definePluginTable` calls and nothing else. Every table-bearing plugin keeps its tables in `src/tables/`, publishes them (where a consumer needs them) as a `./tables` subpath, and `astromech plugin:generate --tables` reads that module to diff against the package's migration snapshot. A table export is named `<noun>Table` (`entriesTable`, `cronTable`, `submissionsTable`) — the noun matching its SQL table name, the suffix separating it from the domain word and the domain's service.
 
-**Schema** — the aggregate shape, or a module that mixes descriptors with validation. Core's `<domain>/schema.ts` holds both table descriptors and the domain's Zod request schemas, so it keeps the wider word; likewise `astromech/database/schema` (every table plus the codec and driver) and `@astromech/schema-engine` (diffing and rendering DDL). A `schema` that means "just these tables" is the one usage this vocabulary rules out — `decisions/0001-forms-vocabulary-and-table-directories.md` has the reasoning.
+**Schema** — the aggregate shape, or a module that mixes tables with validation. Core's `<domain>/schema.ts` holds both `defineTable` tables and the domain's Zod request schemas, so it keeps the wider word; likewise `astromech/database/schema` (every table plus the codec and driver) and `@astromech/schema-engine` (diffing and rendering DDL). A `schema` that means "just these tables" is the one usage this vocabulary rules out — `decisions/0001-forms-vocabulary-and-table-directories.md` has the reasoning.
 
 ---
 

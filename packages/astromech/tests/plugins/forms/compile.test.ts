@@ -1,5 +1,5 @@
 /**
- * Unit tests for the forms plugin's block → `FieldDefinition` compiler.
+ * Unit tests for the forms plugin's block → `Field` compiler.
  *
  * `@astromech/forms` has no test setup of its own (unlike `redirects`/
  * `menus`/`backups`, which are aliased for the astromech vitest instance) and

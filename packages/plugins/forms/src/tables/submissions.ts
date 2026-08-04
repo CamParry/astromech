@@ -1,5 +1,5 @@
 /**
- * Table descriptor for submissions. `definePluginTable` adds the
+ * The submissions table. `definePluginTable` adds the
  * `plugin_<namespace>_` prefix, so this declares the bare name.
  */
 

@@ -22,7 +22,7 @@ import { parseInstancePath } from '@/fields/field-path.js';
 import { RESERVED_KEY } from '@/fields/reserved-keys.js';
 import { hasEntryStorageOverride } from '../storage/registry.js';
 import { resolveEntryType } from '../type-ids.js';
-import type { FieldDefinition } from '@/types/fields.js';
+import type { Field } from '@/types/fields.js';
 import type { JsonObject } from '@/types/index.js';
 import type { StorageDb } from '../storage/types.js';
 
@@ -35,7 +35,7 @@ const TARGET_KINDS = ['entry', 'user', 'media'] as const satisfies readonly Targ
  * caller's to report.
  */
 export async function pruneDanglingRelations(
-    definitions: FieldDefinition[],
+    definitions: Field[],
     values: JsonObject,
     db?: StorageDb
 ): Promise<{ values: JsonObject; dropped: number }> {
@@ -69,7 +69,7 @@ export async function pruneDanglingRelations(
  * unless every declaration sharing it is prunable, because two block types can
  * declare the same field name against different targets.
  */
-function prunableSchemaPaths(definitions: FieldDefinition[]): Set<string> {
+function prunableSchemaPaths(definitions: Field[]): Set<string> {
     const verdicts = new Map<string, boolean>();
     for (const declaration of collectRelationshipDeclarations(definitions)) {
         const current = verdicts.get(declaration.schemaPath) ?? true;

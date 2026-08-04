@@ -4,14 +4,14 @@
  * hand; a site withholds create and update permission to keep it that way.
  */
 
-import type { EntryTypeConfig } from 'astromech';
+import type { EntryType } from 'astromech';
 import { tableStorage } from 'astromech';
 import { submissionsTable } from '../tables/submissions.js';
 import { SUBMISSION_TYPE } from '../types.js';
 import * as fields from 'astromech/fields';
 import * as columns from 'astromech/columns';
 
-export const submissionEntryType: EntryTypeConfig = {
+export const submissionEntryType: EntryType = {
     type: SUBMISSION_TYPE,
     single: 'Submission',
     plural: 'Submissions',

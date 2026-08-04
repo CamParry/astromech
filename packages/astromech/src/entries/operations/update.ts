@@ -43,10 +43,8 @@ export async function updateOne(
     let patchedFieldNames: string[] = [];
 
     if (validatedData.fields !== undefined) {
-        const entryTypeConfig = resolveEntryType(config, type);
-        const fieldDefs = entryTypeConfig
-            ? flattenEntryFields(entryTypeConfig.fields)
-            : [];
+        const entryType = resolveEntryType(config, type);
+        const fieldDefs = entryType ? flattenEntryFields(entryType.fields) : [];
 
         // A canonical and its staged copy are one logical entry as far as
         // uniqueness is concerned, so each has to be invisible to the other's
@@ -56,7 +54,7 @@ export async function updateOne(
         // `list`, so today only the staged-row side changes any outcome; the
         // canonical side holds the invariant for a storage that doesn't.)
         const excludeIds = [id];
-        const canStage = entryTypeConfig?.capabilities.staging === true;
+        const canStage = entryType?.capabilities.staging === true;
         const hasUniqueField = fieldDefs.some((field) =>
             field.validation?.some((rule) => 'unique' in rule)
         );
@@ -70,7 +68,7 @@ export async function updateOne(
         // only survives boot's registration. The config value is the fallback
         // for the live-config paths (CLI, tests).
         const resourceValidate =
-            getResourceValidator(`entry:${type}`) ?? entryTypeConfig?.validate;
+            getResourceValidator(`entry:${type}`) ?? entryType?.validate;
 
         // `fields` is a patch, not a replacement: an omitted field keeps its
         // stored value, an explicit `null` stores null, and an array or
@@ -89,9 +87,7 @@ export async function updateOne(
             // editing an already-published entry still enforces completeness.
             stage: entryValidationStage({
                 status: validatedData.status ?? currentEntry.status,
-                hasStatuses: entryTypeConfig
-                    ? entryTypeConfig.capabilities.statuses !== false
-                    : true,
+                hasStatuses: entryType ? entryType.capabilities.statuses !== false : true,
             }),
             host: { kind: 'entry', record: currentEntry },
             user: getCurrentUser(),

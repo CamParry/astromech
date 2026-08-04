@@ -7,7 +7,7 @@
  * shared by every resource that can hold a relationship field (entries, users,
  * media) so no resource can silently index nothing.
  *
- * It recurses through `descriptor.children()` — the same descriptor-driven
+ * It recurses through `fieldType.children()` — the same field-type-driven
  * recursion the validation pipeline uses — so a relationship nested inside a
  * `group`/`repeater`/`blocks`/`tree` yields edges at any depth, and paths are
  * rendered by `field-path.ts` so they match the addresses the validation
@@ -27,9 +27,9 @@
 
 import { formatInstancePath, formatSchemaPath } from '@/fields/field-path.js';
 import { flattenFieldNodes } from '@/fields/flatten.js';
-import { getFieldTypeDescriptor } from '@/fields/descriptors.js';
+import { getFieldType } from '@/fields/field-type-registry.js';
 import { RESERVED_KEY } from '@/fields/reserved-keys.js';
-import type { FieldDefinition, FieldPathSegment } from '@/types/fields.js';
+import type { Field, FieldPathSegment } from '@/types/fields.js';
 
 /**
  * What a relation points at — the relation-eligible subset of `ResourceType`
@@ -52,7 +52,7 @@ export type RelationshipEdge = {
  * What a relation field points at. `media` fields are relations too — the old
  * subsystem ignored them, which is why no media row was ever written.
  */
-function targetKindOf(field: FieldDefinition): TargetKind {
+function targetKindOf(field: Field): TargetKind {
     if (field.type === 'media') return 'media';
     return field.target === 'users' ? 'user' : 'entry';
 }
@@ -64,20 +64,20 @@ function targetIdsOf(value: unknown): string[] {
 }
 
 function walk(
-    definitions: FieldDefinition[],
+    definitions: Field[],
     values: Record<string, unknown>,
     parentSegments: readonly FieldPathSegment[],
     out: RelationshipEdge[]
 ): void {
     for (const field of flattenFieldNodes(definitions)) {
-        const descriptor = getFieldTypeDescriptor(field.type);
+        const fieldType = getFieldType(field.type);
         const segments: FieldPathSegment[] = [
             ...parentSegments,
             { kind: 'field', name: field.name },
         ];
         const value = values[field.name];
 
-        if (descriptor?.isRelation === true) {
+        if (fieldType?.isRelation === true) {
             const targetKind = targetKindOf(field);
             const schemaPath = formatSchemaPath(segments);
             const instancePath = formatInstancePath(segments);
@@ -90,8 +90,8 @@ function walk(
         // Containers hand back scopes whose segments are relative to
         // themselves, so this scope's parents are prepended and deeper
         // containers accumulate — the same accumulation `processScope` does.
-        if (descriptor?.children !== undefined) {
-            const { scopes } = descriptor.children(field, value);
+        if (fieldType?.children !== undefined) {
+            const { scopes } = fieldType.children(field, value);
             for (const scope of scopes) {
                 walk(
                     scope.definitions,
@@ -112,7 +112,7 @@ function walk(
  * multi-relation is one edge, not a primary-key violation.
  */
 export function collectRelationshipEdges(
-    definitions: FieldDefinition[],
+    definitions: Field[],
     values: Record<string, unknown>
 ): RelationshipEdge[] {
     const collected: RelationshipEdge[] = [];
@@ -141,7 +141,7 @@ export type RelationshipDeclaration = {
  * Derived from definitions alone — the allow-list the `references` query
  * predicate validates a requested path against.
  */
-export function collectRelationshipSchemaPaths(definitions: FieldDefinition[]): string[] {
+export function collectRelationshipSchemaPaths(definitions: Field[]): string[] {
     return Array.from(
         new Set(
             collectRelationshipDeclarations(definitions).map((entry) => entry.schemaPath)
@@ -155,7 +155,7 @@ export function collectRelationshipSchemaPaths(definitions: FieldDefinition[]): 
  * is a list rather than a map.
  */
 export function collectRelationshipDeclarations(
-    definitions: FieldDefinition[]
+    definitions: Field[]
 ): RelationshipDeclaration[] {
     const collected: RelationshipDeclaration[] = [];
     walkSchema(definitions, [], collected);
@@ -163,24 +163,24 @@ export function collectRelationshipDeclarations(
 }
 
 /**
- * Definitions-only twin of `walk`. Container shape comes from the descriptor
+ * Definitions-only twin of `walk`. Container shape comes from the field type
  * rather than a list of container type names, so a plugin container recurses for
  * free. Terminates because definitions are finite and statically declared — a
  * `tree`'s recursion lives in its data, not in its schema.
  */
 function walkSchema(
-    definitions: FieldDefinition[],
+    definitions: Field[],
     parentSegments: readonly FieldPathSegment[],
     out: RelationshipDeclaration[]
 ): void {
     for (const field of flattenFieldNodes(definitions)) {
-        const descriptor = getFieldTypeDescriptor(field.type);
+        const fieldType = getFieldType(field.type);
         const segments: FieldPathSegment[] = [
             ...parentSegments,
             { kind: 'field', name: field.name },
         ];
 
-        if (descriptor?.isRelation === true) {
+        if (fieldType?.isRelation === true) {
             out.push({
                 schemaPath: formatSchemaPath(segments),
                 targetKind: targetKindOf(field),
@@ -189,8 +189,8 @@ function walkSchema(
             continue;
         }
 
-        if (descriptor?.children !== undefined) {
-            const { scopes } = descriptor.children(field, probeValue(field));
+        if (fieldType?.children !== undefined) {
+            const { scopes } = fieldType.children(field, probeValue(field));
             for (const scope of scopes) {
                 walkSchema(
                     scope.definitions,
@@ -209,7 +209,7 @@ function walkSchema(
  * The ids `children()` mints are discarded — `formatSchemaPath` collapses an
  * item segment to `[]`.
  */
-function probeValue(field: FieldDefinition): unknown {
+function probeValue(field: Field): unknown {
     return field.blocks !== undefined
         ? field.blocks.map((block) => ({ [RESERVED_KEY.type]: block.type }))
         : [{}];

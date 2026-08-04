@@ -3,8 +3,8 @@
  * CI gets it for free.
  *
  * Reads the COMMITTED `apps/demo/migrations/snapshot.json` and diffs it
- * against a fresh snapshot built from the live `CORE_TABLES` descriptors. If
- * this ever produces ops, someone changed a descriptor without running
+ * against a fresh snapshot built from the live `CORE_TABLES`. If
+ * this ever produces ops, someone changed a table without running
  * `db:generate` (or committing its output) — the fix is to run
  * `npm run db:generate` and commit the result, not to edit this test.
  */
@@ -12,11 +12,11 @@
 import { describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { diffSnapshots } from '@astromech/schema-engine';
-import { createSnapshot, type Snapshot } from '@/database/descriptor-snapshot.js';
+import { createSnapshot, type Snapshot } from '@/database/table-snapshot.js';
 import { CORE_TABLES } from '@/database/schema.js';
 
 describe('migrations/snapshot.json drift gate', () => {
-    it('the committed snapshot matches the live descriptors — db:generate would produce nothing', async () => {
+    it('the committed snapshot matches the live tables — db:generate would produce nothing', async () => {
         const snapshotUrl = new URL(
             '../../../../apps/demo/migrations/snapshot.json',
             import.meta.url

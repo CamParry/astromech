@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { AdminEntryTypeConfig, ResolvedEntryCapabilities } from '@/types/index.js';
-import {
-    deriveFormDefinition,
-    deriveTableDefinition,
-} from '@/admin/definitions/derive.js';
+import type { AdminEntryType, ResolvedEntryCapabilities } from '@/types/index.js';
+import { resolveForm, resolveTable } from '@/admin/rendering/resolve.js';
 
 function caps(
     overrides: Partial<ResolvedEntryCapabilities> = {}
@@ -19,7 +16,7 @@ function caps(
     };
 }
 
-const fullConfig: AdminEntryTypeConfig = {
+const fullConfig: AdminEntryType = {
     single: 'Post',
     plural: 'Posts',
     versioning: true,
@@ -39,7 +36,7 @@ const fullConfig: AdminEntryTypeConfig = {
     titleField: 'title',
 };
 
-const titlelessConfig: AdminEntryTypeConfig = {
+const titlelessConfig: AdminEntryType = {
     single: 'Redirect',
     plural: 'Redirects',
     versioning: false,
@@ -70,11 +67,11 @@ const titlelessConfig: AdminEntryTypeConfig = {
     titleField: false,
 };
 
-describe('deriveTableDefinition', () => {
+describe('resolveTable', () => {
     it('orders columns: title, status, slug, locale, translations, ...adminColumns, updatedAt', () => {
-        const def = deriveTableDefinition(fullConfig);
-        expect(def.type).toBe('Post');
-        expect(def.columns.map((c) => c.key)).toEqual([
+        const table = resolveTable(fullConfig);
+        expect(table.type).toBe('Post');
+        expect(table.columns.map((c) => c.key)).toEqual([
             'title',
             'status',
             'slug',
@@ -87,8 +84,8 @@ describe('deriveTableDefinition', () => {
     });
 
     it('derives system column kind/requires/sortable correctly', () => {
-        const def = deriveTableDefinition(fullConfig);
-        const byKey = Object.fromEntries(def.columns.map((c) => [c.key, c]));
+        const table = resolveTable(fullConfig);
+        const byKey = Object.fromEntries(table.columns.map((c) => [c.key, c]));
 
         expect(byKey.title).toMatchObject({
             kind: 'title',
@@ -130,8 +127,8 @@ describe('deriveTableDefinition', () => {
     });
 
     it('derives admin column kinds from field type', () => {
-        const def = deriveTableDefinition(fullConfig);
-        const byKey = Object.fromEntries(def.columns.map((c) => [c.key, c]));
+        const table = resolveTable(fullConfig);
+        const byKey = Object.fromEntries(table.columns.map((c) => [c.key, c]));
 
         expect(byKey.featured).toMatchObject({
             kind: 'boolean',
@@ -145,81 +142,81 @@ describe('deriveTableDefinition', () => {
     });
 
     it('omits all system columns when titleless and capabilities off', () => {
-        const def = deriveTableDefinition(titlelessConfig);
-        expect(def.columns.map((c) => c.key)).toEqual([
+        const table = resolveTable(titlelessConfig);
+        expect(table.columns.map((c) => c.key)).toEqual([
             'from',
             'to',
             'status',
             'enabled',
             'updatedAt',
         ]);
-        const enabled = def.columns.find((c) => c.key === 'enabled');
+        const enabled = table.columns.find((c) => c.key === 'enabled');
         expect(enabled?.kind).toBe('boolean');
     });
 
     it('lets an explicit kind override the field-type default', () => {
-        const config: AdminEntryTypeConfig = {
+        const config: AdminEntryType = {
             ...fullConfig,
             adminColumns: [{ field: 'featured', kind: 'badge' }],
         };
-        const def = deriveTableDefinition(config);
-        const featured = def.columns.find((c) => c.key === 'featured');
+        const table = resolveTable(config);
+        const featured = table.columns.find((c) => c.key === 'featured');
         expect(featured?.kind).toBe('badge');
     });
 
     it('defaults to text for an admin column not in the field tree (no throw)', () => {
-        const config: AdminEntryTypeConfig = {
+        const config: AdminEntryType = {
             ...fullConfig,
             adminColumns: [{ field: 'orphan' }],
         };
-        const def = deriveTableDefinition(config);
-        const orphan = def.columns.find((c) => c.key === 'orphan');
+        const table = resolveTable(config);
+        const orphan = table.columns.find((c) => c.key === 'orphan');
         expect(orphan?.kind).toBe('text');
     });
 
-    it('produces a JSON-serializable definition', () => {
-        const def = deriveTableDefinition(fullConfig);
-        expect(JSON.parse(JSON.stringify(def))).toEqual(def);
+    it('produces a JSON-serializable table', () => {
+        const table = resolveTable(fullConfig);
+        expect(JSON.parse(JSON.stringify(table))).toEqual(table);
     });
 });
 
-describe('deriveFormDefinition', () => {
+describe('resolveForm', () => {
     it('returns main and sidebar from the fields shape', () => {
-        const def = deriveFormDefinition(fullConfig);
-        expect(def.type).toBe('Post');
-        expect(def.main.map((f) => f.name)).toEqual(['body', 'featured', 'category']);
-        expect(def.sidebar.map((f) => f.name)).toEqual(['author']);
+        const form = resolveForm(fullConfig);
+        expect(form.type).toBe('Post');
+        expect(form.main.map((f) => f.name)).toEqual(['body', 'featured', 'category']);
+        expect(form.sidebar.map((f) => f.name)).toEqual(['author']);
     });
 
     it('reflects title/slug/statuses flags from config', () => {
-        const def = deriveFormDefinition(fullConfig);
-        expect(def.hasTitle).toBe(true);
-        expect(def.hasSlug).toBe(true);
-        expect(def.hasStatuses).toBe(true);
+        const form = resolveForm(fullConfig);
+        expect(form.hasTitle).toBe(true);
+        expect(form.hasSlug).toBe(true);
+        expect(form.hasStatuses).toBe(true);
     });
 
     it('hasSlug is false when slug capability is on but slug config is null', () => {
-        const config: AdminEntryTypeConfig = { ...fullConfig, slug: null };
-        expect(deriveFormDefinition(config).hasSlug).toBe(false);
+        const config: AdminEntryType = { ...fullConfig, slug: null };
+        expect(resolveForm(config).hasSlug).toBe(false);
     });
 
     it('hasSlug is false when slug config is undefined (nullish parity)', () => {
         const config = {
             ...fullConfig,
             slug: undefined,
-        } as unknown as AdminEntryTypeConfig;
-        expect(deriveFormDefinition(config).hasSlug).toBe(false);
+        } as unknown as AdminEntryType;
+        expect(resolveForm(config).hasSlug).toBe(false);
     });
 
     it('reflects titleless / disabled-capabilities config', () => {
-        const def = deriveFormDefinition(titlelessConfig);
-        expect(def.hasTitle).toBe(false);
-        expect(def.hasSlug).toBe(false);
-        expect(def.hasStatuses).toBe(false);
+        const form = resolveForm(titlelessConfig);
+        expect(form.hasTitle).toBe(false);
+        expect(form.hasSlug).toBe(false);
+        expect(form.hasStatuses).toBe(false);
     });
 
     it('sidebar is empty array for a main-only config', () => {
-        const def = deriveFormDefinition(titlelessConfig);
-        expect(def.sidebar).toEqual([]);
+        const form = resolveForm(titlelessConfig);
+        expect(form.sidebar).toEqual([]);
     });
 });

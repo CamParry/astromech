@@ -1,10 +1,10 @@
 /**
  * Compiles a form's stored `fields` block instances into core
- * `FieldDefinition`s, so submissions validate through core's own pipeline.
+ * `Field`s, so submissions validate through core's own pipeline.
  * Input is untrusted stored JSON, so every step here is defensive.
  */
 
-import type { FieldDefinition, Label, SelectOption, ValidationRule } from 'astromech';
+import type { Field, Label, SelectOption, ValidationRule } from 'astromech';
 import * as fields from 'astromech/fields';
 import type { FormFieldKind, StoredFormField } from '../types.js';
 
@@ -12,9 +12,9 @@ import type { FormFieldKind, StoredFormField } from '../types.js';
  * A form's stored blocks as a flat list of leaf fields — a submission is a flat
  * map of values. Anything unusable is skipped rather than thrown.
  */
-export function compileFormFields(stored: unknown): FieldDefinition[] {
+export function compileFormFields(stored: unknown): Field[] {
     if (!Array.isArray(stored)) return [];
-    const compiled: FieldDefinition[] = [];
+    const compiled: Field[] = [];
     for (const instance of stored) {
         if (!isUsable(instance)) continue;
         const field = compileOne(instance);
@@ -24,7 +24,7 @@ export function compileFormFields(stored: unknown): FieldDefinition[] {
 }
 
 /** One block instance as a leaf field, or `null` for an unknown `_type`. */
-function compileOne(stored: StoredFormField): FieldDefinition | null {
+function compileOne(stored: StoredFormField): Field | null {
     const name = stored.name as string;
     const kind = stored._type as FormFieldKind;
     const base = baseOptions(stored);

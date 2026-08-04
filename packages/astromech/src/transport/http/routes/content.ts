@@ -2,7 +2,7 @@
  * Content Routes
  *
  * Model-driven rewrites of one entry. Every route is double-gated: the
- * descriptor's `content:*` permission AND `update` on the target entry type,
+ * contract's `content:*` permission AND `update` on the target entry type,
  * because holding "may use a model" must not rewrite a type the caller cannot
  * edit by hand.
  *
@@ -24,14 +24,14 @@ import {
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import { entryPermission } from '@/permissions/index.js';
 import { permissionsFor } from '@/permissions/permissions-for.js';
-import { contentDescriptors } from '@/content/index.js';
+import { contentContract } from '@/content/index.js';
 import { ContentOperationError } from '@/content/errors.js';
 import { CapabilityError } from '@/entries/errors.js';
 import { resolveEntryType } from '@/entries/type-ids.js';
 import type {
     ContentOperationResult,
     Permission,
-    ServiceMethodDescriptor,
+    ServiceMethodContract,
 } from '@/types/index.js';
 
 type Env = { Variables: AuthVariables };
@@ -44,10 +44,10 @@ const router = new OpenAPIHono<Env>();
 
 router.post('/:type/:id/translate', async (c) => {
     const { type, id } = c.req.param();
-    const denied = guard(c, type, contentDescriptors.translate);
+    const denied = guard(c, type, contentContract.translate);
     if (denied) return denied;
 
-    const parsed = contentDescriptors.translate.input.safeParse({
+    const parsed = contentContract.translate.input.safeParse({
         ...((await readJson(c)) as object),
         type,
         id,
@@ -72,10 +72,10 @@ router.post('/:type/:id/translate', async (c) => {
 
 router.post('/:type/:id/transform', async (c) => {
     const { type, id } = c.req.param();
-    const denied = guard(c, type, contentDescriptors.transform);
+    const denied = guard(c, type, contentContract.transform);
     if (denied) return denied;
 
-    const parsed = contentDescriptors.transform.input.safeParse({
+    const parsed = contentContract.transform.input.safeParse({
         ...((await readJson(c)) as object),
         type,
         id,
@@ -99,10 +99,10 @@ router.post('/:type/:id/transform', async (c) => {
 
 router.post('/:type/:id/generate', async (c) => {
     const { type, id } = c.req.param();
-    const denied = guard(c, type, contentDescriptors.generate);
+    const denied = guard(c, type, contentContract.generate);
     if (denied) return denied;
 
-    const parsed = contentDescriptors.generate.input.safeParse({
+    const parsed = contentContract.generate.input.safeParse({
         ...((await readJson(c)) as object),
         type,
         id,
@@ -126,17 +126,17 @@ router.post('/:type/:id/generate', async (c) => {
 
 /**
  * Both halves of the gate, plus the type's existence. A content operation
- * mutates an entry, so the `content:*` permission the descriptor declares is
+ * mutates an entry, so the `content:*` permission the contract declares is
  * only half of what the caller needs — the other half is the same
  * `entryPermission(type, 'update')` the entries routes check.
  */
 function guard(
     c: Context<Env>,
     type: string,
-    descriptor: ServiceMethodDescriptor
+    contract: ServiceMethodContract
 ): Response | null {
     const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(descriptor)) return forbidden(c);
+    if (!permissions.allowsMethod(contract)) return forbidden(c);
     if (!permissions.allowsMethod(entryUpdateGate(type))) return forbidden(c);
     if (!resolveEntryType(Astromech.config, type)) {
         return notFound(c, `Entry type '${type}' not found`);
@@ -144,8 +144,8 @@ function guard(
     return null;
 }
 
-/** The target type's update permission, as a descriptor `allowsMethod` reads. */
-function entryUpdateGate(type: string): ServiceMethodDescriptor {
+/** The target type's update permission, as a contract `allowsMethod` reads. */
+function entryUpdateGate(type: string): ServiceMethodContract {
     return {
         permission: entryPermission(type, 'update') as Permission,
         mutates: true,

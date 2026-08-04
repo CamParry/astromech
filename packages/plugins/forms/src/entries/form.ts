@@ -4,7 +4,7 @@
  * `../fields/compile.ts` reads the stored instances back.
  */
 
-import type { BlockDefinition, EntryTypeConfig, FieldDefinition } from 'astromech';
+import type { Block, EntryType, Field } from 'astromech';
 import * as columns from 'astromech/columns';
 import * as fields from 'astromech/fields';
 import { NOTIFICATIONS_FIELD } from '../notifications/dispatch.js';
@@ -26,7 +26,7 @@ const BLOCK_LABELS: Record<(typeof FORM_FIELD_KINDS)[number], string> = {
     hidden: 'Hidden',
 };
 
-export const formEntryType: EntryTypeConfig = {
+export const formEntryType: EntryType = {
     type: FORM_TYPE,
     single: 'Form',
     plural: 'Forms',
@@ -86,7 +86,7 @@ export const formEntryType: EntryTypeConfig = {
  * because a stored name becomes a compiled field's name at submit time, and
  * error keys use a path grammar that spends `.`, `[` and `]`.
  */
-function commonFields(): FieldDefinition[] {
+function commonFields(): Field[] {
     return [
         fields.text('name', {
             label: 'Name',
@@ -107,7 +107,7 @@ function commonFields(): FieldDefinition[] {
 }
 
 /** Choice options for `select`/`radio`/`checkboxGroup` blocks. */
-function optionsRepeater(): FieldDefinition {
+function optionsRepeater(): Field {
     return fields.repeater('options', {
         label: 'Options',
         fields: [
@@ -118,7 +118,7 @@ function optionsRepeater(): FieldDefinition {
 }
 
 /** The per-kind config fields a block adds on top of `commonFields`. */
-function extraFields(kind: (typeof FORM_FIELD_KINDS)[number]): FieldDefinition[] {
+function extraFields(kind: (typeof FORM_FIELD_KINDS)[number]): Field[] {
     switch (kind) {
         case 'text':
             return [
@@ -158,7 +158,7 @@ function extraFields(kind: (typeof FORM_FIELD_KINDS)[number]): FieldDefinition[]
 }
 
 /** One block per field kind, each composing the common and per-kind fields. */
-function fieldBlocks(): BlockDefinition[] {
+function fieldBlocks(): Block[] {
     return FORM_FIELD_KINDS.map((kind) =>
         fields.block(kind, {
             label: BLOCK_LABELS[kind],

@@ -6,7 +6,7 @@
  * event time.
  */
 
-import { defineRegistry } from '@/utilities/registry.js';
+import { createRegistry } from '@/utilities/registry.js';
 import type { Kysely } from 'kysely';
 import type { DB } from '@/database/types.js';
 import type { ResolvedConfig, SchedulerDriver } from '@/types/index.js';
@@ -27,7 +27,7 @@ export type CronJob = {
     handler: (ctx: CronContext) => Promise<void>;
 };
 
-const jobs = defineRegistry<CronJob[]>('cronJobs', { required: false });
+const jobs = createRegistry<CronJob[]>('cronJobs', { required: false });
 
 export function registerCronJob(job: CronJob): void {
     const list = jobs.peek() ?? [];
@@ -39,7 +39,7 @@ export function getCronJobs(): CronJob[] {
     return jobs.peek() ?? [];
 }
 
-const scheduler = defineRegistry<SchedulerDriver>('scheduler', { required: false });
+const scheduler = createRegistry<SchedulerDriver>('scheduler', { required: false });
 
 export const setSchedulerDriver = scheduler.set;
 export const getSchedulerDriver = scheduler.peek;
@@ -52,7 +52,7 @@ export const getSchedulerDriver = scheduler.peek;
  * the integration's plain-Node boot is visible to the SSR module graph and the
  * detached timer alike.
  */
-const runtimeConfig = defineRegistry<ResolvedConfig>('runtimeConfig', {
+const runtimeConfig = createRegistry<ResolvedConfig>('runtimeConfig', {
     hint: 'initRuntime() must run before the scheduler ticks.',
 });
 

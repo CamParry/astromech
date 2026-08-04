@@ -10,16 +10,16 @@ import type { ComponentType, ReactElement } from 'react';
 import type { z } from '@hono/zod-openapi';
 import type { Kysely, MigrationProvider } from 'kysely';
 import type { DB } from '@/database/types.js';
-import type { TableDescriptor } from '@/database/define-table.js';
+import type { Table } from '@/database/define-table.js';
 import type {
     AdminPage,
     AdminSlotContribution,
     DbDump,
-    EntryTypeConfig,
+    EntryType,
     ResolvedConfig,
     StorageObject,
 } from './config.js';
-import type { FieldDefinition, FieldValidator } from './fields.js';
+import type { Field, FieldValidator } from './fields.js';
 import type { Role, User, NotifyInput, Permission } from './domain.js';
 import type { PluginHooks } from './hooks.js';
 import type { PluginServiceNamespace, TypedEntriesService } from './client.js';
@@ -163,7 +163,7 @@ export type PluginContext = {
  */
 export type PluginAccess = 'public' | 'authenticated' | { permission: string };
 
-export type PluginServiceMethod<Input = unknown, Output = unknown> = {
+export type ServiceMethod<Input = unknown, Output = unknown> = {
     access: PluginAccess;
     handler: (input: Input, ctx: PluginContext) => Promise<Output> | Output;
     /** One-line summary for the method manifest (discovery / MCP / AI tool-loop). */
@@ -188,10 +188,7 @@ export type PluginServiceMethod<Input = unknown, Output = unknown> = {
  * covariant in `input`, so the schema position is widened separately — a single
  * type argument cannot satisfy both.
  */
-export type AnyPluginServiceMethod = Omit<
-    PluginServiceMethod<never, unknown>,
-    'input'
-> & {
+export type AnyServiceMethod = Omit<ServiceMethod<never, unknown>, 'input'> & {
     input?: z.ZodType;
 };
 
@@ -267,7 +264,7 @@ export type PluginFieldTypeRegistration = {
      * Return `null` for a presentational field that persists no data (e.g. a
      * preview) so it is omitted from the generated type entirely.
      */
-    typeGen?: (field: FieldDefinition) => string | null;
+    typeGen?: (field: Field) => string | null;
     /**
      * Server-side validator — the type-intrinsic rule for this custom field,
      * enforced by the field pipeline on every mutation (not just the browser).
@@ -303,7 +300,7 @@ export type PluginFieldTypeRegistration = {
  *
  * `definePluginTable` still takes a package name directly, because it needs
  * that string as a *literal type* to derive a table name for `PluginDB` — a
- * value declared inside the definition can't reach a module-scope descriptor.
+ * value declared inside the definition can't reach a module-scope table.
  */
 export type PluginIdentity = {
     /** Canonical package name, e.g. `@astromech/redirects`. */
@@ -356,13 +353,13 @@ export type PluginDefinition = PluginIdentity & {
      */
     permissions?: PermissionDeclarations;
     /** Entry types contributed by the plugin. Each self-declares its `type`. */
-    entries?: EntryTypeConfig[];
+    entries?: EntryType[];
     fields?: PluginFieldTypeRegistration[];
     /**
-     * `defineTable` descriptors shipped by the plugin (create via
+     * Tables shipped by the plugin (create via
      * `definePluginTable`; names are `plugin_<namespace>_` prefixed).
      */
-    tables?: TableDescriptor[];
+    tables?: Table[];
     /**
      * The plugin's own migration provider — the `migrations/index.ts` generated
      * by `astromech plugin:generate`. Merged into the app's migration chain at
@@ -370,7 +367,7 @@ export type PluginDefinition = PluginIdentity & {
      * files keep their bare `NNNN_<tag>` names.
      */
     migrations?: MigrationProvider;
-    service?: Record<string, AnyPluginServiceMethod>;
+    service?: Record<string, AnyServiceMethod>;
     rawRoutes?: PluginRawRoute[];
     hooks?: PluginHooks;
     /**

@@ -2,11 +2,11 @@
  * Storage-level tests for tableStorage plus entries-service integration.
  *
  * Uses a scratch table created via raw DDL — no migration dependency. The
- * scratch table's columns mirror the descriptor below: id (ULID text), from,
+ * scratch table's columns mirror the table below: id (ULID text), from,
  * to, status, enabled (boolean integer), created_at/updated_at (ISO-8601 text).
  * The DDL uses snake_case identifiers because the shared handle runs
  * `CamelCasePlugin`, which snake_cases every identifier it emits; selects still
- * come back camelCased, so the descriptor's keys line up.
+ * come back camelCased, so the table's keys line up.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';

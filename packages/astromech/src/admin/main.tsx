@@ -11,8 +11,8 @@ import { astromechClient } from '@/transport/http/client/index.js';
 import { setDateLocale } from '../utilities/dates.js';
 import { resolveContentLocale } from '../utilities/locale.js';
 import { createAppRouter } from './router.js';
-import './definitions/cells/register-cells.js';
-import './definitions/register-fields.js';
+import './rendering/cells/register-cells.js';
+import './rendering/register-fields.js';
 import './i18n.js';
 import './styles/main.css';
 

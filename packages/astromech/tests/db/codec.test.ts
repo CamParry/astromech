@@ -1,12 +1,12 @@
 /**
  * Row codec — the table-name-keyed tier.
  *
- * Since the descriptor-keyed `*With` functions became the only path for the
+ * Since the `Table`-keyed `*With` functions became the only path for the
  * tables we own, `decode`/`encode`/`encodePatch` exist for exactly two things:
- * the 4 better-auth tables (no descriptor, ever) and plugin tables reached by
+ * the 4 better-auth tables (no `Table`, ever) and plugin tables reached by
  * name. `users` is the one with a non-trivial column mix, so it stands in for
  * the four here — and better-auth's format is the point: seconds-INTEGER
- * timestamps, not the ISO-TEXT our descriptors emit. Getting that wrong breaks
+ * timestamps, not the ISO-TEXT our tables emit. Getting that wrong breaks
  * login, so the assertions go down to the stored cells rather than stopping at
  * the round trip.
  *

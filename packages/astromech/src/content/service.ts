@@ -45,9 +45,9 @@ import type {
     ContentTarget,
     Entry,
     JsonObject,
-    ResolvedEntryTypeConfig,
+    ResolvedEntryType,
 } from '@/types/index.js';
-import type { FieldDefinition } from '@/types/fields.js';
+import type { Field } from '@/types/fields.js';
 
 /** How many fields may be in flight with the provider at once. */
 const CONCURRENCY = 4;
@@ -262,7 +262,7 @@ function buildJob(mode: Mode, target: RewriteTarget): RewriteJob | null {
  */
 async function writeStaged(
     type: string,
-    typeConfig: ResolvedEntryTypeConfig,
+    typeConfig: ResolvedEntryType,
     canonical: Entry,
     working: Record<string, unknown>,
     jobs: RewriteJob[],
@@ -311,7 +311,7 @@ async function writeStaged(
  */
 async function writeTranslation(
     type: string,
-    typeConfig: ResolvedEntryTypeConfig,
+    typeConfig: ResolvedEntryType,
     destination: { locale: string; source: Entry },
     working: Record<string, unknown>,
     fields: ContentFieldSummary[]
@@ -353,7 +353,7 @@ async function writeTranslation(
  */
 async function assertValid(params: {
     type: string;
-    typeConfig: ResolvedEntryTypeConfig;
+    typeConfig: ResolvedEntryType;
     values: Record<string, unknown>;
     operation: 'create' | 'update';
     record: Entry | null;
@@ -411,7 +411,7 @@ function previewUrl(
 }
 
 /** A plain-string label for the provider's context; i18n keys fall back. */
-function labelOf(field: FieldDefinition): string {
+function labelOf(field: Field): string {
     return typeof field.label === 'string' ? field.label : fieldNameToLabel(field.name);
 }
 

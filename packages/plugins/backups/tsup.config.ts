@@ -2,8 +2,8 @@ import { defineConfig } from 'tsup';
 
 export default defineConfig({
     // Two entries: the plugin itself, and a `./tables` subpath that ships only
-    // the table descriptors, so a consuming app (or `plugin:generate`) can load
-    // the descriptors standalone without pulling in the plugin definition.
+    // the tables, so a consuming app (or `plugin:generate`) can load
+    // them standalone without pulling in the plugin definition.
     entry: { index: 'src/index.ts', tables: 'src/tables/index.ts' },
     format: ['esm'],
     dts: true,

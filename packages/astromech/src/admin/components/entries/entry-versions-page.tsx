@@ -220,14 +220,14 @@ export function EntryVersionsPage({
     mount: EntriesMount;
     id: string;
 }): React.ReactElement {
-    const { type, api, cacheScope, config: entryTypeConfig, basePath } = mount;
+    const { type, api, cacheScope, config: entryType, basePath } = mount;
     const scope = { api, cacheScope };
     const confirm = useConfirm();
     const { t } = useTranslation();
     const navigate = useNavigate();
 
-    const plural = entryTypeConfig?.plural ?? type;
-    const hasTitle = entryTypeConfig?.titleField !== false;
+    const plural = entryType?.plural ?? type;
+    const hasTitle = entryType?.titleField !== false;
 
     const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
 

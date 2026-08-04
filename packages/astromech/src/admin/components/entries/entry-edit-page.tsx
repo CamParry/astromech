@@ -2,8 +2,8 @@
  * Shared entry edit page body.
  *
  * Parameterized by an `EntriesMount`; serves root and plugin-namespaced
- * entry types. Field layout comes from the definition layer:
- * `deriveFormDefinition(config)` splits field groups into main/sidebar/tab and
+ * entry types. Field layout comes from the rendering layer:
+ * `resolveForm(config)` splits field groups into main/sidebar/tab and
  * resolves the title/slug/status capability flags; each field input is
  * resolved from the field registry by type (Phase 4).
  *
@@ -77,10 +77,7 @@ import {
 } from '@/admin/hooks/index.js';
 import type { EntryStatus } from '@/types/index.js';
 import { resolveEntryUrl } from '@/entries/utils/url.js';
-import {
-    deriveFormDefinition,
-    resolveConfigForDerive,
-} from '@/admin/definitions/derive.js';
+import { resolveAdminEntryType, resolveForm } from '@/admin/rendering/resolve.js';
 import { resolveContentLocale } from '@/utilities/locale.js';
 import { useAIContext } from '@/admin/context/ai-context.js';
 import type { EntriesMount } from './mount.js';
@@ -123,7 +120,7 @@ export function EntryEditPage({
     mount: EntriesMount;
     id: string;
 }): React.ReactElement {
-    const { type, api, cacheScope, config: entryTypeConfig, basePath } = mount;
+    const { type, api, cacheScope, config: entryType, basePath } = mount;
     const scope = { api, cacheScope };
     const { toast } = useToast();
     const { t } = useTranslation();
@@ -131,11 +128,11 @@ export function EntryEditPage({
     const [deleteOpen, setDeleteOpen] = React.useState(false);
 
     const { hasPermission } = usePermissions();
-    const single = entryTypeConfig?.single ?? type;
-    const plural = entryTypeConfig?.plural ?? type;
-    const capabilities = entryTypeConfig?.capabilities;
-    const formDef = deriveFormDefinition(resolveConfigForDerive(entryTypeConfig, type));
-    const { hasTitle, hasSlug, hasStatuses, main, sidebar } = formDef;
+    const single = entryType?.single ?? type;
+    const plural = entryType?.plural ?? type;
+    const capabilities = entryType?.capabilities;
+    const resolvedForm = resolveForm(resolveAdminEntryType(entryType, type));
+    const { hasTitle, hasSlug, hasStatuses, main, sidebar } = resolvedForm;
     // The two columns together ARE the full field tree the client validates.
     const fieldDefinitions = React.useMemo(() => [...main, ...sidebar], [main, sidebar]);
 
@@ -147,7 +144,7 @@ export function EntryEditPage({
     // is ever published. Serves the root and plugin routes alike.
     useAIContext(
         entry != null
-            ? { kind: 'entries', type, id, label: entryLabel(entry, entryTypeConfig) }
+            ? { kind: 'entries', type, id, label: entryLabel(entry, entryType) }
             : null,
         { depth: 1 }
     );
@@ -252,9 +249,7 @@ export function EntryEditPage({
     const revokeToken = useRevokePreviewToken(type, stagingTargetId, scope);
 
     const previewUrl =
-        entryTypeConfig?.url && entry != null
-            ? resolveEntryUrl(entryTypeConfig.url, entry)
-            : null;
+        entryType?.url && entry != null ? resolveEntryUrl(entryType.url, entry) : null;
 
     // One surface control, not two. A published entry links straight to its live
     // page; anything else opens a tokenised preview of the last saved state.

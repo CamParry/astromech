@@ -28,7 +28,7 @@ import {
     Eye,
     Plus,
 } from 'lucide-react';
-import type { BaseFieldProps, FieldDefinition } from '@/types/index.js';
+import type { BaseFieldProps, Field } from '@/types/index.js';
 import { FormField } from '@/admin/components/fields/form-field';
 import { InlineTitle } from '@/admin/components/fields/inline-title';
 // Deep import: the `fields/` barrel reaches server code (virtual config / DB).
@@ -63,7 +63,7 @@ type SortableRepeaterItemProps = {
     index: number;
     itemsLength: number;
     required: boolean;
-    fields: FieldDefinition[];
+    fields: Field[];
     name: string;
     disabled?: boolean;
     onRemove: (index: number) => void;

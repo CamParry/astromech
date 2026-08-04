@@ -4,7 +4,7 @@
  * rather than thrown back to the caller.
  */
 
-import type { Entry, FieldDefinition, PluginContext } from 'astromech';
+import type { Entry, Field, PluginContext } from 'astromech';
 import { entryFields } from '../utilities/form-entry.js';
 import { toValueRows } from '../utilities/values.js';
 import { mergeTagValues } from './merge-tags.js';
@@ -16,7 +16,7 @@ export const NOTIFICATIONS_FIELD = 'notifications';
 /** Deliver every enabled notification on the form for one submission. */
 export async function sendNotifications(
     form: Entry,
-    definitions: FieldDefinition[],
+    definitions: Field[],
     values: Record<string, unknown>,
     ctx: PluginContext
 ): Promise<void> {

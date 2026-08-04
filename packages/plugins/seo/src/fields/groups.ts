@@ -1,5 +1,5 @@
 /**
- * Composition helper: returns a `group(...)` FieldDefinition the user composes
+ * Composition helper: returns a `group(...)` Field the user composes
  * into an entry type's `fields` array. The group namespaces its data under
  * `SEO_FIELD_NAME` (preserving the `{ title, description }` stored shape) and is
  * built from core `text`/`textarea` fields plus a presentational preview.
@@ -7,7 +7,7 @@
 
 import { group, section, text, textarea } from 'astromech/fields';
 import { t } from 'astromech';
-import type { FieldDefinition, Label, MessageDescriptor } from 'astromech';
+import type { Field, Label, MessageRef } from 'astromech';
 import { SEO_FIELD_NAME } from '../types.js';
 import { SEO_DESCRIPTION_RANGE, SEO_TITLE_RANGE } from '../utilities/length.js';
 
@@ -31,7 +31,7 @@ export type SeoSectionOptions = { label?: Label };
  */
 const NAMESPACE = 'seo';
 
-function tKey(key: string): MessageDescriptor {
+function tKey(key: string): MessageRef {
     return t(`${NAMESPACE}:${key}`);
 }
 
@@ -41,7 +41,7 @@ function tKey(key: string): MessageDescriptor {
  * namespaces the data under `SEO_FIELD_NAME` (the `{ title, description }`
  * stored shape). The group carries the data key; the section is presentational.
  */
-export function seoSection(options?: SeoSectionOptions): FieldDefinition {
+export function seoSection(options?: SeoSectionOptions): Field {
     return section('seoSection', {
         label: options?.label ?? tKey('seo.sectionTitle'),
         fields: [

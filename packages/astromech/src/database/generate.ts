@@ -1,8 +1,8 @@
 /**
- * Migration generation — the descriptor-facing wrapper over
+ * Migration generation — the `Table`-facing wrapper over
  * `@astromech/schema-engine/generate`.
  *
- * Converts the live `TableDescriptor`s to a snapshot, hands that to the engine,
+ * Converts the live `Table`s to a snapshot, hands that to the engine,
  * and prints the warnings the engine returns (the engine itself never prints).
  *
  * Node-only (the engine's `./generate` subpath uses `node:fs/promises`) —
@@ -16,8 +16,8 @@ import {
     generateMigrations as engineGenerate,
     generateMigrationFromOps as engineGenerateFromOps,
 } from '@astromech/schema-engine/generate';
-import { createSnapshot, type SqlDialect } from '@/database/descriptor-snapshot.js';
-import type { TableDescriptor } from '@/database/define-table.js';
+import { createSnapshot, type SqlDialect } from '@/database/table-snapshot.js';
+import type { Table } from '@/database/define-table.js';
 import type {
     GenerateResult,
     MigrationOpsAuthor,
@@ -36,7 +36,7 @@ function reportWarnings(result: GenerateResult): GenerateResult {
 
 export async function generateMigrations(opts: {
     dir: string;
-    tables: TableDescriptor[];
+    tables: Table[];
     dialect: SqlDialect;
     name: string;
 }): Promise<GenerateResult> {
@@ -47,12 +47,12 @@ export async function generateMigrations(opts: {
 /**
  * Write a migration whose ops the author supplied, for the transitions the
  * differ refuses (see the engine's `generateMigrationFromOps`). The snapshot
- * still comes from the live descriptors, so the destination is not negotiable —
+ * still comes from the live tables, so the destination is not negotiable —
  * only the route is.
  */
 export async function generateMigrationsFromOps(opts: {
     dir: string;
-    tables: TableDescriptor[];
+    tables: Table[];
     dialect: SqlDialect;
     name: string;
     author: MigrationOpsAuthor;

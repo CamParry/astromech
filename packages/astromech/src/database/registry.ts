@@ -5,13 +5,13 @@
  * Astromech integration. Mirrors the storage registry pattern.
  */
 
-import { defineRegistry } from '@/utilities/registry.js';
+import { createRegistry } from '@/utilities/registry.js';
 import type { Kysely } from 'kysely';
 import type { DB } from '@/database/types.js';
 
 type AnyDb = Kysely<DB>;
 
-const db = defineRegistry<AnyDb>('db', {
+const db = createRegistry<AnyDb>('db', {
     hint: 'Ensure the Astromech integration is configured with a db driver.',
 });
 

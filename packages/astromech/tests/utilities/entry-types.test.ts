@@ -4,9 +4,9 @@ import {
     qualifyEntryType,
     resolveEntryType,
 } from '@/entries/type-ids.js';
-import type { ResolvedConfig, ResolvedEntryTypeConfig } from '@/types/index.js';
+import type { ResolvedConfig, ResolvedEntryType } from '@/types/index.js';
 
-const entryType = (single: string): ResolvedEntryTypeConfig => ({
+const entryType = (single: string): ResolvedEntryType => ({
     single,
     plural: `${single}s`,
     fields: { main: [], sidebar: [] },

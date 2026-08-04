@@ -1,13 +1,13 @@
 /** Shared human label for an entry, used by the command palette and AI context. */
 
-import type { AdminEntryTypeConfig, Entry } from '@/types/index.js';
+import type { AdminEntryType, Entry } from '@/types/index.js';
 
 /**
  * Pick a human label for a live entry result. Entry types with
  * `titleField: false` (e.g. redirects) carry no `title`, so fall back to the
  * first non-empty searchable / column field value, then slug, then id.
  */
-export function entryLabel(entry: Entry, cfg: AdminEntryTypeConfig | undefined): string {
+export function entryLabel(entry: Entry, cfg: AdminEntryType | undefined): string {
     if (typeof entry.title === 'string' && entry.title.trim() !== '') return entry.title;
     const keys = [
         ...(cfg?.search ?? []),

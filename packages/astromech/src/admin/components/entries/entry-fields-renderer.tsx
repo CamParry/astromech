@@ -13,7 +13,7 @@
  */
 
 import React from 'react';
-import type { FieldDefinition } from '@/types/index.js';
+import type { Field } from '@/types/index.js';
 import { Panel, Tabs, Collapsible, Stack } from '@/admin/components/ui/index.js';
 import { FormField } from '@/admin/components/fields/form-field.js';
 import { FieldValuesProvider } from '@/admin/components/fields/field-context.js';
@@ -31,7 +31,7 @@ type RenderProps = {
 function FieldList({
     nodes,
     ...props
-}: { nodes: FieldDefinition[] } & RenderProps): React.ReactElement {
+}: { nodes: Field[] } & RenderProps): React.ReactElement {
     return (
         <Stack gap={5}>
             {nodes.map((node, i) => (
@@ -50,7 +50,7 @@ function FieldNode({
     values,
     onChange,
     disabled,
-}: { node: FieldDefinition } & RenderProps): React.ReactElement {
+}: { node: Field } & RenderProps): React.ReactElement {
     const label = useLabel();
 
     if (node.type === 'section') {
@@ -125,7 +125,7 @@ function TabsContainer({
     values,
     onChange,
     disabled,
-}: { node: FieldDefinition } & RenderProps): React.ReactElement | null {
+}: { node: Field } & RenderProps): React.ReactElement | null {
     const label = useLabel();
     const tabNodes = node.fields ?? [];
     const [active, setActive] = React.useState(tabNodes[0]?.name ?? '');
@@ -178,9 +178,9 @@ export function EntryFieldColumn({
     onChange,
     disabled,
     surface = true,
-}: { nodes: FieldDefinition[]; surface?: boolean } & RenderProps): React.ReactElement {
+}: { nodes: Field[]; surface?: boolean } & RenderProps): React.ReactElement {
     const blocks: React.ReactNode[] = [];
-    let buffer: FieldDefinition[] = [];
+    let buffer: Field[] = [];
 
     const flush = (key: string): void => {
         if (buffer.length === 0) return;

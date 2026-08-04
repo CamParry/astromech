@@ -1,5 +1,5 @@
 import React from 'react';
-import type { BaseFieldProps, FieldDefinition } from 'astromech';
+import type { BaseFieldProps, Field } from 'astromech';
 
 export default function RatingField({
     name,
@@ -33,7 +33,7 @@ export default function RatingField({
     );
 }
 
-export function validate(value: unknown, _field: FieldDefinition): string | undefined {
+export function validate(value: unknown, _field: Field): string | undefined {
     if (typeof value === 'number' && (value < 0 || value > 5)) {
         return 'Rating must be between 0 and 5';
     }
