@@ -4,10 +4,24 @@
  */
 
 import { betaTool } from '@anthropic-ai/sdk/helpers/beta/json-schema';
+import type { BetaToolSearchToolRegex20251119 } from '@anthropic-ai/sdk/resources/beta';
 import type { BetaRunnableTool } from '@anthropic-ai/sdk/lib/tools/BetaRunnableTool';
 import type { ToolDispatch } from 'astromech';
 
-/** Wrap the dispatches `ctx.methods.tools()` returned as runnable tools. */
+/**
+ * The tool the model searches the catalogue with. It runs server-side and stays
+ * loaded: the request is rejected if every tool in it is deferred.
+ */
+export const TOOL_SEARCH_TOOL: BetaToolSearchToolRegex20251119 = {
+    type: 'tool_search_tool_regex_20251119',
+    name: 'tool_search_tool_regex',
+};
+
+/**
+ * Wrap the dispatches `ctx.methods.tools()` returned as runnable tools. Every
+ * one is deferred — a site publishes a method set per entry type, so the
+ * catalogue passes the 30–50 tools where selection accuracy starts to fall.
+ */
 export function toRunnableTools(dispatches: ToolDispatch[]): BetaRunnableTool[] {
     return dispatches.map(toRunnableTool);
 }
@@ -18,21 +32,25 @@ export function toRunnableTools(dispatches: ToolDispatch[]): BetaRunnableTool[] 
  * pipeline runs on the way in and is what rejects a malformed argument.
  */
 function toRunnableTool(tool: ToolDispatch): BetaRunnableTool {
-    return betaTool({
-        name: tool.toolName,
-        description: tool.description,
-        inputSchema: tool.inputSchema as { type: 'object' },
-        run: async (input) => {
-            try {
-                const result = await tool.invoke(input as Record<string, unknown>);
-                return JSON.stringify(result);
-            } catch (error) {
-                // A refused call is normal control flow the model should adapt
-                // to, so the message goes back as a result — never a stack.
-                return `Error: ${errorMessage(error)}`;
-            }
-        },
-    });
+    return {
+        ...betaTool({
+            name: tool.toolName,
+            description: tool.description,
+            inputSchema: tool.inputSchema as { type: 'object' },
+            run: async (input) => {
+                try {
+                    const result = await tool.invoke(input as Record<string, unknown>);
+                    return JSON.stringify(result);
+                } catch (error) {
+                    // A refused call is normal control flow the model should
+                    // adapt to, so the message goes back as a result — never a
+                    // stack.
+                    return `Error: ${errorMessage(error)}`;
+                }
+            },
+        }),
+        defer_loading: true,
+    };
 }
 
 /** The message of a thrown value, and nothing else about it. */
