@@ -25,7 +25,7 @@
  * Pure: no db, no config, no `virtual:` import.
  */
 
-import { formatFieldPath, formatSchemaPath } from '@/fields/field-path.js';
+import { formatInstancePath, formatSchemaPath } from '@/fields/field-path.js';
 import { flattenFieldNodes } from '@/fields/helpers.js';
 import { getFieldTypeDescriptor } from '@/fields/descriptors.js';
 import { RESERVED_KEY } from '@/fields/reserved-keys.js';
@@ -76,7 +76,7 @@ function walk(
         if (descriptor?.isRelation === true) {
             const targetKind = targetKindOf(field);
             const schemaPath = formatSchemaPath(segments);
-            const instancePath = formatFieldPath(segments);
+            const instancePath = formatInstancePath(segments);
             for (const targetId of targetIdsOf(value)) {
                 out.push({ schemaPath, instancePath, targetId, targetKind });
             }

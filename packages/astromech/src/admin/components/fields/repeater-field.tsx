@@ -32,7 +32,7 @@ import type { BaseFieldProps, FieldDefinition } from '@/types/index.js';
 import { FormField } from '@/admin/components/fields/form-field';
 import { InlineTitle } from '@/admin/components/fields/inline-title';
 // Deep import: the `fields/` barrel reaches server code (virtual config / DB).
-import { formatFieldPath, parseFieldPath } from '@/fields/field-path.js';
+import { formatInstancePath, parseInstancePath } from '@/fields/field-path.js';
 import './repeater-field.css';
 
 // Lock dragging to the vertical axis — verticalListSortingStrategy only governs
@@ -94,7 +94,7 @@ function SortableRepeaterItem({
     // Sub-field paths select the item by its persisted `_id`, never by index —
     // an index shifts if the editor reorders between form load and save.
     const itemSegments = [
-        ...parseFieldPath(name),
+        ...parseInstancePath(name),
         { kind: 'item' as const, id: item._id },
     ];
 
@@ -223,7 +223,7 @@ function SortableRepeaterItem({
                                 key={subField.name}
                                 field={subField}
                                 value={item[subField.name]}
-                                name={formatFieldPath([
+                                name={formatInstancePath([
                                     ...itemSegments,
                                     { kind: 'field', name: subField.name },
                                 ])}

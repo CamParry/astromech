@@ -15,7 +15,7 @@
 import type { TFunction } from 'i18next';
 import type { FieldDefinition, FieldErrors, Label } from '@/types/index.js';
 // Deep imports: the `fields/` barrel reaches server code (virtual config / DB).
-import { parseFieldPath } from '@/fields/field-path.js';
+import { parseInstancePath } from '@/fields/field-path.js';
 import { flattenFieldNodes } from '@/fields/helpers.js';
 import { titleCase } from '@/admin/i18n/labels.js';
 
@@ -74,7 +74,7 @@ export function fieldLabelPathForError(
 ): Label[] | null {
     let segments;
     try {
-        segments = parseFieldPath(path);
+        segments = parseInstancePath(path);
     } catch {
         return null;
     }

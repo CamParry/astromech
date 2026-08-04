@@ -18,7 +18,7 @@ import type {
     RelationshipEdge,
     TargetKind,
 } from '@/fields/relationship-edges.js';
-import { parseFieldPath } from '@/fields/field-path.js';
+import { parseInstancePath } from '@/fields/field-path.js';
 import { RESERVED_KEY } from '@/fields/reserved-keys.js';
 import { hasEntryStorageOverride } from '../storage/registry.js';
 import { resolveEntryType } from '../type-ids.js';
@@ -108,7 +108,7 @@ function isPrunable(declaration: RelationshipDeclaration): boolean {
  * Item ids and array order are never rewritten.
  */
 function dropId(root: JsonObject, instancePath: string, targetId: string): void {
-    const segments = parseFieldPath(instancePath);
+    const segments = parseInstancePath(instancePath);
     let cursor: unknown = root;
 
     for (const [i, segment] of segments.entries()) {

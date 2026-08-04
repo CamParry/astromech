@@ -60,7 +60,7 @@ import type {
     ValidationStage,
 } from '@/types/fields.js';
 import { getFieldTypeDescriptor } from './descriptors.js';
-import { formatFieldPath, isValidFieldName } from './field-path.js';
+import { formatInstancePath, isValidFieldName } from './field-path.js';
 import { flattenFieldNodes } from './helpers.js';
 
 // ---------------------------------------------------------------------------
@@ -92,7 +92,7 @@ function fieldErrorPath(
             `Field name '${field.name}' (type '${field.type}') cannot be used: ${reason}`
         );
     }
-    return formatFieldPath(segments);
+    return formatInstancePath(segments);
 }
 
 // ---------------------------------------------------------------------------

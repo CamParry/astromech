@@ -6,7 +6,7 @@
  */
 
 import { getFieldTypeDescriptor } from '@/fields/descriptors.js';
-import { formatFieldPath, parseFieldPath } from '@/fields/field-path.js';
+import { formatInstancePath, parseInstancePath } from '@/fields/field-path.js';
 import { flattenFieldNodes } from '@/fields/helpers.js';
 import type { FieldDefinition, FieldPathSegment } from '@/types/fields.js';
 
@@ -53,7 +53,7 @@ export function collectRewriteTargets(
 ): RewriteTarget[] {
     // Parsed for the side effect: a malformed path is a caller bug, and matching
     // nothing silently is how it would otherwise surface.
-    for (const path of options.paths ?? []) parseFieldPath(path);
+    for (const path of options.paths ?? []) parseInstancePath(path);
 
     const targets: RewriteTarget[] = [];
     walkScope(values, definitions, [], options, targets);
@@ -95,7 +95,7 @@ function walkScope(
 
         if (!TEXT_BEARING_FIELD_TYPES.has(field.type)) continue;
 
-        const path = formatFieldPath(segments);
+        const path = formatInstancePath(segments);
         if (!pathSelected(path, options.paths)) continue;
 
         const root = segments[0];

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { FieldPathSegment } from '@/fields/field-path.js';
 import {
-    formatFieldPath,
+    formatInstancePath,
     formatSchemaPath,
     isValidFieldName,
-    parseFieldPath,
+    parseInstancePath,
 } from '@/fields/field-path.js';
 
 // ---------------------------------------------------------------------------
@@ -51,42 +51,42 @@ describe('isValidFieldName', () => {
         });
     }
 
-    it('agrees with formatFieldPath on every case', () => {
+    it('agrees with formatInstancePath on every case', () => {
         for (const name of valid) {
-            expect(() => formatFieldPath([f(name)])).not.toThrow();
+            expect(() => formatInstancePath([f(name)])).not.toThrow();
         }
         for (const name of invalid) {
-            expect(() => formatFieldPath([f(name)])).toThrow();
+            expect(() => formatInstancePath([f(name)])).toThrow();
         }
     });
 });
 
 // ---------------------------------------------------------------------------
-// formatFieldPath — happy paths
+// formatInstancePath — happy paths
 // ---------------------------------------------------------------------------
 
-describe('formatFieldPath', () => {
+describe('formatInstancePath', () => {
     it('single field', () => {
-        expect(formatFieldPath([f('title')])).toBe('title');
+        expect(formatInstancePath([f('title')])).toBe('title');
     });
 
     it('group child: dot-joined fields', () => {
-        expect(formatFieldPath([f('seo'), f('title')])).toBe('seo.title');
+        expect(formatInstancePath([f('seo'), f('title')])).toBe('seo.title');
     });
 
     it('deeply nested groups', () => {
-        expect(formatFieldPath([f('a'), f('b'), f('c'), f('d')])).toBe('a.b.c.d');
+        expect(formatInstancePath([f('a'), f('b'), f('c'), f('d')])).toBe('a.b.c.d');
     });
 
     it('blocks child: item selector attaches with no dot', () => {
-        expect(formatFieldPath([f('blocks'), item('6f1e2a'), f('heading')])).toBe(
+        expect(formatInstancePath([f('blocks'), item('6f1e2a'), f('heading')])).toBe(
             'blocks[6f1e2a].heading'
         );
     });
 
     it('repeater nested in a repeater', () => {
         expect(
-            formatFieldPath([
+            formatInstancePath([
                 f('sections'),
                 item('a1'),
                 f('items'),
@@ -97,82 +97,82 @@ describe('formatFieldPath', () => {
     });
 
     it('tree node: depth never appears, ids are tree-unique', () => {
-        expect(formatFieldPath([f('nav'), item('9bb'), f('label')])).toBe(
+        expect(formatInstancePath([f('nav'), item('9bb'), f('label')])).toBe(
             'nav[9bb].label'
         );
     });
 
     it('item selector may be the last segment (the item itself)', () => {
-        expect(formatFieldPath([f('blocks'), item('c3')])).toBe('blocks[c3]');
+        expect(formatInstancePath([f('blocks'), item('c3')])).toBe('blocks[c3]');
     });
 
     it('consecutive item selectors chain without dots', () => {
-        expect(formatFieldPath([f('matrix'), item('x'), item('y')])).toBe('matrix[x][y]');
+        expect(formatInstancePath([f('matrix'), item('x'), item('y')])).toBe('matrix[x][y]');
     });
 
     it('uuid ids (containing dashes) are preserved verbatim', () => {
         const id = '3f2504e0-4f89-11d3-9a0c-0305e82c3301';
-        expect(formatFieldPath([f('blocks'), item(id), f('body')])).toBe(
+        expect(formatInstancePath([f('blocks'), item(id), f('body')])).toBe(
             `blocks[${id}].body`
         );
     });
 
     it('an id containing a dot is still a single segment', () => {
-        expect(formatFieldPath([f('blocks'), item('a.b'), f('title')])).toBe(
+        expect(formatInstancePath([f('blocks'), item('a.b'), f('title')])).toBe(
             'blocks[a.b].title'
         );
     });
 });
 
 // ---------------------------------------------------------------------------
-// formatFieldPath — throw cases
+// formatInstancePath — throw cases
 // ---------------------------------------------------------------------------
 
-describe('formatFieldPath validation', () => {
+describe('formatInstancePath validation', () => {
     it('throws on an empty segment array', () => {
-        expect(() => formatFieldPath([])).toThrow(/at least one segment/);
+        expect(() => formatInstancePath([])).toThrow(/at least one segment/);
     });
 
     it('throws when the first segment is an item selector', () => {
-        expect(() => formatFieldPath([item('a1'), f('title')])).toThrow(
+        expect(() => formatInstancePath([item('a1'), f('title')])).toThrow(
             /must start with a field segment/
         );
     });
 
     it('throws on an empty field name', () => {
-        expect(() => formatFieldPath([f('')])).toThrow(/name must not be empty/);
+        expect(() => formatInstancePath([f('')])).toThrow(/name must not be empty/);
     });
 
     it('throws on a field name containing a dot', () => {
-        expect(() => formatFieldPath([f('a.b')])).toThrow(/must not contain/);
+        expect(() => formatInstancePath([f('a.b')])).toThrow(/must not contain/);
     });
 
     it('throws on a field name containing an opening bracket', () => {
-        expect(() => formatFieldPath([f('a[')])).toThrow(/must not contain/);
+        expect(() => formatInstancePath([f('a[')])).toThrow(/must not contain/);
     });
 
     it('throws on a field name containing a closing bracket', () => {
-        expect(() => formatFieldPath([f('a]')])).toThrow(/must not contain/);
+        expect(() => formatInstancePath([f('a]')])).toThrow(/must not contain/);
     });
 
     it('throws on a nested field name containing a dot', () => {
-        expect(() => formatFieldPath([f('seo'), f('a.b')])).toThrow(/must not contain/);
+        expect(() => formatInstancePath([f('seo'), f('a.b')])).toThrow(/must not contain/);
     });
 
     it('throws on an empty item id', () => {
-        expect(() => formatFieldPath([f('blocks'), item('')])).toThrow(
+        expect(() => formatInstancePath([f('blocks'), item('')])).toThrow(
             /item id must not be empty/
         );
     });
 
     it('throws on an item id containing an opening bracket', () => {
-        expect(() => formatFieldPath([f('blocks'), item('a[b')])).toThrow(
+        expect(() => formatInstancePath([f('blocks'), item('a[b')])).toThrow(
             /item id must not contain/
         );
     });
 
     it('throws on an item id containing a closing bracket', () => {
-        expect(() => formatFieldPath([f('blocks'), item('a]b')])).toThrow(
+        expect(() => formatInstancePath([f('blocks'), item('a]b')])).toThrow(
             /item id must not contain/
         );
     });
@@ -216,7 +216,7 @@ describe('formatSchemaPath', () => {
         expect(formatSchemaPath([f('blocks'), item('c3')])).toBe('blocks[]');
     });
 
-    it('applies the same validation rules as formatFieldPath', () => {
+    it('applies the same validation rules as formatInstancePath', () => {
         expect(() => formatSchemaPath([])).toThrow(/at least one segment/);
         expect(() => formatSchemaPath([item('a1')])).toThrow(
             /must start with a field segment/
@@ -229,20 +229,20 @@ describe('formatSchemaPath', () => {
 });
 
 // ---------------------------------------------------------------------------
-// parseFieldPath — happy paths
+// parseInstancePath — happy paths
 // ---------------------------------------------------------------------------
 
-describe('parseFieldPath', () => {
+describe('parseInstancePath', () => {
     it('single field', () => {
-        expect(parseFieldPath('title')).toEqual([f('title')]);
+        expect(parseInstancePath('title')).toEqual([f('title')]);
     });
 
     it('dot-joined fields', () => {
-        expect(parseFieldPath('seo.title')).toEqual([f('seo'), f('title')]);
+        expect(parseInstancePath('seo.title')).toEqual([f('seo'), f('title')]);
     });
 
     it('item selector', () => {
-        expect(parseFieldPath('blocks[6f1e2a].heading')).toEqual([
+        expect(parseInstancePath('blocks[6f1e2a].heading')).toEqual([
             f('blocks'),
             item('6f1e2a'),
             f('heading'),
@@ -250,7 +250,7 @@ describe('parseFieldPath', () => {
     });
 
     it('nested item selectors', () => {
-        expect(parseFieldPath('sections[a1].items[b2].title')).toEqual([
+        expect(parseInstancePath('sections[a1].items[b2].title')).toEqual([
             f('sections'),
             item('a1'),
             f('items'),
@@ -260,11 +260,11 @@ describe('parseFieldPath', () => {
     });
 
     it('trailing item selector', () => {
-        expect(parseFieldPath('blocks[c3]')).toEqual([f('blocks'), item('c3')]);
+        expect(parseInstancePath('blocks[c3]')).toEqual([f('blocks'), item('c3')]);
     });
 
     it('consecutive item selectors', () => {
-        expect(parseFieldPath('matrix[x][y]')).toEqual([
+        expect(parseInstancePath('matrix[x][y]')).toEqual([
             f('matrix'),
             item('x'),
             item('y'),
@@ -273,12 +273,12 @@ describe('parseFieldPath', () => {
 
     it('uuid id', () => {
         expect(
-            parseFieldPath('blocks[3f2504e0-4f89-11d3-9a0c-0305e82c3301].body')
+            parseInstancePath('blocks[3f2504e0-4f89-11d3-9a0c-0305e82c3301].body')
         ).toEqual([f('blocks'), item('3f2504e0-4f89-11d3-9a0c-0305e82c3301'), f('body')]);
     });
 
     it('an id containing a dot is not split on the dot', () => {
-        expect(parseFieldPath('blocks[a.b].title')).toEqual([
+        expect(parseInstancePath('blocks[a.b].title')).toEqual([
             f('blocks'),
             item('a.b'),
             f('title'),
@@ -287,68 +287,68 @@ describe('parseFieldPath', () => {
 });
 
 // ---------------------------------------------------------------------------
-// parseFieldPath — throw cases
+// parseInstancePath — throw cases
 // ---------------------------------------------------------------------------
 
-describe('parseFieldPath validation', () => {
+describe('parseInstancePath validation', () => {
     it('throws on an empty string', () => {
-        expect(() => parseFieldPath('')).toThrow(/must not be empty/);
+        expect(() => parseInstancePath('')).toThrow(/must not be empty/);
     });
 
     it('throws on a path starting with an item selector', () => {
-        expect(() => parseFieldPath('[a1].title')).toThrow(
+        expect(() => parseInstancePath('[a1].title')).toThrow(
             /must start with a field name/
         );
     });
 
     it('throws on an unterminated opening bracket', () => {
-        expect(() => parseFieldPath('foo[')).toThrow(/unterminated item selector/);
+        expect(() => parseInstancePath('foo[')).toThrow(/unterminated item selector/);
     });
 
     it('throws on an unterminated opening bracket with an id', () => {
-        expect(() => parseFieldPath('foo[a1')).toThrow(/unterminated item selector/);
+        expect(() => parseInstancePath('foo[a1')).toThrow(/unterminated item selector/);
     });
 
     it('throws on a nested opening bracket inside a selector', () => {
-        expect(() => parseFieldPath('foo[a[b]')).toThrow(/unterminated item selector/);
+        expect(() => parseInstancePath('foo[a[b]')).toThrow(/unterminated item selector/);
     });
 
     it('throws on an unmatched closing bracket', () => {
-        expect(() => parseFieldPath('foo]')).toThrow(/unmatched/);
+        expect(() => parseInstancePath('foo]')).toThrow(/unmatched/);
     });
 
     it('throws on a stray closing bracket after a selector', () => {
-        expect(() => parseFieldPath('foo[a1]]')).toThrow(/unexpected/);
+        expect(() => parseInstancePath('foo[a1]]')).toThrow(/unexpected/);
     });
 
     it('throws on an empty selector (a schema path is not an instance path)', () => {
-        expect(() => parseFieldPath('foo[]')).toThrow(/empty item selector/);
+        expect(() => parseInstancePath('foo[]')).toThrow(/empty item selector/);
     });
 
     it('throws on an empty selector mid-path', () => {
-        expect(() => parseFieldPath('sections[].items[b2].title')).toThrow(
+        expect(() => parseInstancePath('sections[].items[b2].title')).toThrow(
             /empty item selector/
         );
     });
 
     it('throws on a doubled dot', () => {
-        expect(() => parseFieldPath('foo..bar')).toThrow(/empty component/);
+        expect(() => parseInstancePath('foo..bar')).toThrow(/empty component/);
     });
 
     it('throws on a leading dot', () => {
-        expect(() => parseFieldPath('.foo')).toThrow(/empty component/);
+        expect(() => parseInstancePath('.foo')).toThrow(/empty component/);
     });
 
     it('throws on a trailing dot', () => {
-        expect(() => parseFieldPath('foo.')).toThrow(/must not end with/);
+        expect(() => parseInstancePath('foo.')).toThrow(/must not end with/);
     });
 
     it('throws on a lone dot', () => {
-        expect(() => parseFieldPath('.')).toThrow(/empty component/);
+        expect(() => parseInstancePath('.')).toThrow(/empty component/);
     });
 
     it('throws on a dot immediately after a selector', () => {
-        expect(() => parseFieldPath('foo[a1]..bar')).toThrow(/empty component/);
+        expect(() => parseInstancePath('foo[a1]..bar')).toThrow(/empty component/);
     });
 });
 
@@ -392,7 +392,7 @@ describe('round trip', () => {
 
     for (const { label, segments } of cases) {
         it(`${label} survives format → parse`, () => {
-            expect(parseFieldPath(formatFieldPath(segments))).toEqual(segments);
+            expect(parseInstancePath(formatInstancePath(segments))).toEqual(segments);
         });
     }
 });

@@ -167,7 +167,7 @@ export type FieldValidationContext = {
      * Path to the field, as segments — one `field` segment per declared field
      * plus an `item` segment per container item traversed, e.g.
      * `[{kind:'field',name:'sections'},{kind:'item',id:'a1'},{kind:'field',name:'title'}]`.
-     * Render it with `formatFieldPath` (`fields/field-path.ts`) to get the key
+     * Render it with `formatInstancePath` (`fields/field-path.ts`) to get the key
      * the pipeline files this field's errors under.
      */
     path: FieldPathSegment[];
