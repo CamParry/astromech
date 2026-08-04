@@ -201,7 +201,9 @@ Consumers import from subpaths, never deep into `src/`. The published surface is
 defined by `exports` in `package.json` — that's canonical. The ones to know:
 `astromech` (core helpers + types, incl. the plugin-authoring API — there is no
 separate `plugin-kit` subpath), `astromech/astro` (integration),
-`astromech/local` & `astromech/fetch` (the two API consumers), `astromech/middleware`,
+`astromech/local` & `astromech/fetch` (the two API consumers — local exports
+`Astromech`, fetch exports `astromechClient`; both also default-export it),
+`astromech/middleware`,
 `astromech/methods` (the server-side seam surface — the boot-generated method
 manifest via `getMethodManifest`, plus `buildDispatch`, `buildScopedDispatch`,
 `filterMethods`, `annotateManifest`, `scopedServices`, the confirmation helpers

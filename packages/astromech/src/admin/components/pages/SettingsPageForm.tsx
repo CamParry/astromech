@@ -14,7 +14,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import type { Label, ResolvedEntryFields } from '@/types/index.js';
-import { Astromech } from '@/transport/http/client/index.js';
+import { astromechClient } from '@/transport/http/client/index.js';
 import { saveSettingsPage } from '@/admin/lib/settings-page-save.js';
 import { FieldTreeForm } from '@/admin/components/fields/FieldTreeForm.js';
 import {
@@ -81,7 +81,7 @@ export function SettingsPageForm({
     const { data: loadedValues, isLoading } = useQuery({
         queryKey: settingsPageKey(baseKey, effectiveLocale),
         queryFn: async () => {
-            const val = await Astromech.settings.get({
+            const val = await astromechClient.settings.get({
                 key: baseKey,
                 ...(effectiveLocale ? { locale: effectiveLocale } : {}),
             });

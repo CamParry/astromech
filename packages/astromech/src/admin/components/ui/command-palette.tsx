@@ -25,7 +25,7 @@ import { Image, LayoutDashboard, Settings, Users, Puzzle, icons } from 'lucide-r
 import type { LucideIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import adminConfig from 'virtual:astromech/admin-config';
-import { Astromech } from '@/transport/http/client/index.js';
+import { astromechClient } from '@/transport/http/client/index.js';
 import { parseEntryTypeId } from '@/entries/type-ids.js';
 import { entryLabel } from '@/admin/components/entries/entry-label.js';
 import { usePermissions } from '../../hooks/index.js';
@@ -303,7 +303,7 @@ export function CommandPalette(): React.ReactElement {
 
             const rootEntriesPromise: Promise<Entry[]> =
                 readableRootTypes.length > 0
-                    ? Astromech.entries
+                    ? astromechClient.entries
                           .query({ type: readableRootTypes, search: q2, limit: 5 })
                           .then((r) => r.data)
                           .catch(() => [])
@@ -311,10 +311,10 @@ export function CommandPalette(): React.ReactElement {
 
             const pluginEntriesPromises: Promise<Entry[]>[] = readablePluginTypes.map(
                 (p) => {
-                    const pluginNs = Astromech.plugins;
+                    const pluginNs = astromechClient.plugins;
                     if (!pluginNs) return Promise.resolve([]);
                     const pluginApi = pluginNs[p.namespace] as
-                        | { entries: typeof Astromech.entries }
+                        | { entries: typeof astromechClient.entries }
                         | undefined;
                     if (!pluginApi) return Promise.resolve([]);
                     return pluginApi.entries
@@ -325,14 +325,14 @@ export function CommandPalette(): React.ReactElement {
             );
 
             const usersPromise: Promise<User[]> = canReadUsers()
-                ? Astromech.users
+                ? astromechClient.users
                       .query({ search: q2, limit: 5 })
                       .then((r) => r.data)
                       .catch(() => [])
                 : Promise.resolve([]);
 
             const mediaPromise: Promise<Media[]> = canReadMedia()
-                ? Astromech.media
+                ? astromechClient.media
                       .query({ search: q2, limit: 5 })
                       .then((r) => r.data)
                       .catch(() => [])

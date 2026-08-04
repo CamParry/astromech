@@ -8,7 +8,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Astromech } from '@/transport/http/client/index.js';
+import { astromechClient } from '@/transport/http/client/index.js';
 
 let calls: { url: string; method: string | undefined }[] = [];
 
@@ -32,7 +32,7 @@ afterEach(() => {
 describe('media upload path', () => {
     it('posts to the registered /media/upload route, not /media', async () => {
         const file = new File(['x'], 'a.png', { type: 'image/png' });
-        await Astromech.media.upload({ file });
+        await astromechClient.media.upload({ file });
 
         expect(calls).toHaveLength(1);
         expect(calls[0]?.method).toBe('POST');

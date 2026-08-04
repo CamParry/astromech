@@ -11,7 +11,7 @@
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { Astromech } from '@/transport/http/client/index.js';
+import { astromechClient } from '@/transport/http/client/index.js';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntriesListPage } from '@/admin/components/entries/entries-list-page.js';
 import {
@@ -25,7 +25,7 @@ import type { EntriesService } from '@/types/index.js';
 function PluginEntryListPage(): React.ReactElement {
     const { name, type } = Route.useParams();
     const { t } = useTranslation();
-    const api = Astromech.entries as unknown as EntriesService;
+    const api = astromechClient.entries as unknown as EntriesService;
     const mount = buildPluginEntriesMount(adminConfig.plugins, name, type, api);
     // The mount carries the qualified type id the entries service addresses.
     useAIContext(

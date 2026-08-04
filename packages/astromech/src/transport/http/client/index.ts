@@ -1,8 +1,7 @@
 /**
- * Astromech Client
- *
- * Fetch-based client for use in client-side JavaScript (React admin, etc.)
- * Import from 'astromech/fetch'
+ * `astromechClient` — the fetch-based client for client-side JavaScript (the
+ * React admin, a browser app). Public as the named and default export of
+ * `astromech/fetch`.
  */
 
 import type {
@@ -807,7 +806,7 @@ const pluginsApi: PluginServiceNamespace = new Proxy({} as PluginServiceNamespac
 // Export Client
 // ============================================================================
 
-export const Astromech: AstromechClient = {
+export const astromechClient: AstromechClient = {
     entries: entriesService as unknown as TypedEntriesService,
     media: mediaService,
     settings: settingsService,
@@ -820,4 +819,4 @@ export const Astromech: AstromechClient = {
     },
 };
 
-export default Astromech;
+export default astromechClient;

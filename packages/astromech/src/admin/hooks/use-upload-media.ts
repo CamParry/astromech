@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Astromech } from '@/transport/http/client/index.js';
+import { astromechClient } from '@/transport/http/client/index.js';
 import { queryKeys } from './use-query-keys.js';
 import { useToast } from '../components/ui/index.js';
 import type { Media } from '../../types/index.js';
@@ -18,7 +18,7 @@ export function useUploadMedia(): UseUploadMediaResult {
         mutationFn: async (files: File[]) => {
             const results: Media[] = [];
             for (const file of files) {
-                const uploaded = await Astromech.media.upload({ file });
+                const uploaded = await astromechClient.media.upload({ file });
                 results.push(uploaded);
             }
             return results;
