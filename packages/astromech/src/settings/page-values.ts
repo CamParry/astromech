@@ -7,12 +7,12 @@
  *   `<path>`           → shared (non-translatable top-level) fields
  *   `<path>:<locale>`  → per-locale (translatable) fields
  *
- * "Top-level data field" = walk the tree; layout containers are transparent;
- * data containers (group/repeater/blocks) and leaves are a single key whose
+ * "Top-level data field" = walk the tree; layout fields are transparent;
+ * nested fields (group/repeater/blocks) and leaves are a single key whose
  * own `translatable` flag governs.
  */
 
-import { flattenEntryFields } from '@/fields/helpers.js';
+import { flattenEntryFields } from '@/fields/flatten.js';
 import type { ResolvedEntryFields } from '@/types/fields.js';
 import type { JsonObject, JsonValue } from '@/types/index.js';
 

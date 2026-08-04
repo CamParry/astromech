@@ -17,8 +17,8 @@ import { mergeLocaleSetting } from './page-values.js';
 import { isPublicSettingKey } from './visibility.js';
 import { processFields } from '@/fields/pipeline.js';
 import { getDocumentValidator } from '@/fields/document-validators.js';
-import { flattenEntryFields } from '@/fields/helpers.js';
-import { scopedReadsFromRecords } from '@/fields/scoped-reads.js';
+import { flattenEntryFields } from '@/fields/flatten.js';
+import { fieldReadsFromRecords } from '@/fields/field-reads.js';
 import { getCurrentUser } from '@/request-context/index.js';
 import { ValidationError } from '@/errors/validation.js';
 
@@ -115,7 +115,7 @@ export const settingsService: SettingsService = {
                     operation: 'update',
                     host: { kind: 'setting', record: null },
                     user: getCurrentUser(),
-                    reads: scopedReadsFromRecords({
+                    reads: fieldReadsFromRecords({
                         load: async () =>
                             (await settingsService.all({ full: true })).filter(
                                 (s) =>

@@ -34,7 +34,7 @@ import {
 } from '@/entries/storage/capabilities.js';
 import { parseEntryTypeId, resolveEntryType } from '@/entries/type-ids.js';
 
-/** Layout containers — flat data, pure chrome. Their children stay top-level. */
+/** Layout fields — presentational, flat data. Their children stay top-level. */
 const LAYOUT_TYPES = new Set(['section', 'tabs', 'tab', 'accordion']);
 
 /** Normalize the authored `fields` shape into the resolved two-column layout. */
@@ -80,7 +80,7 @@ function validateFieldTree(
 
 /**
  * Collect names of fields flagged `searchable`. Recurses through layout
- * containers (their children are top-level data) but not data containers
+ * fields (their children are top-level data) but not nested fields
  * (`group`/`repeater`/`blocks`), whose child names are not top-level keys.
  */
 function collectSearchable(nodes: FieldDefinition[], out: string[]): void {

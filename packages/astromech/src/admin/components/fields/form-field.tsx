@@ -71,11 +71,11 @@ export function FormField({
     const error = useFieldError(path);
     const warning = useFieldWarning(path);
 
-    // A container-less group is invisible chrome — pure data nesting. It renders
+    // An unboxed group draws nothing itself — pure data nesting. It renders
     // its sub-fields inline with no label or box; pair it with a `section` for a
     // heading/surface. No wrapper here means no blur reporter either — its
     // children each carry their own.
-    if (field.type === 'group' && field.container === false) {
+    if (field.type === 'group' && field.boxed === false) {
         return <FieldPathProvider path={path}>{control}</FieldPathProvider>;
     }
 

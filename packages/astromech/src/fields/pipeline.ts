@@ -8,7 +8,7 @@
  * only consumer: any plugin that composes `FieldDefinition[]` at runtime can
  * validate through the same coerce → default → validate path as core.
  *
- * Data containers (group/repeater/blocks/tree) are recursed into: a descriptor
+ * Nested fields (group/repeater/blocks/tree) are recursed into: a descriptor
  * with a `children` slot reports its nested value scopes, each of which is run
  * through the same coerce → default → validate pass. Errors are keyed by the
  * `_id`-based path grammar (`fields/field-path.ts`), so a nested error lands on
@@ -60,8 +60,8 @@ import type {
     ValidationStage,
 } from '@/types/fields.js';
 import { getFieldTypeDescriptor } from './descriptors.js';
-import { formatFieldPath, isValidFieldName } from './field-path.js';
-import { flattenFieldNodes } from './helpers.js';
+import { formatInstancePath, isValidFieldName } from './field-path.js';
+import { flattenFieldNodes } from './flatten.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -92,7 +92,7 @@ function fieldErrorPath(
             `Field name '${field.name}' (type '${field.type}') cannot be used: ${reason}`
         );
     }
-    return formatFieldPath(segments);
+    return formatInstancePath(segments);
 }
 
 // ---------------------------------------------------------------------------
@@ -323,7 +323,7 @@ async function processScope(
             // `min` is completeness (publish only); `max` is correctness, so it
             // runs on a draft save too — no write should store more items than
             // the type permits.
-            if (descriptor?.isContainer === true && Array.isArray(v)) {
+            if (descriptor?.children !== undefined && Array.isArray(v)) {
                 if (
                     ctx.stage === 'publish' &&
                     field.min !== undefined &&

@@ -1,6 +1,6 @@
 import { clsx } from 'clsx';
 import type { FieldDefinition } from '@/types/index.js';
-import { lengthStatus } from '@/fields/helpers.js';
+import { countStatus } from '@/fields/count.js';
 
 type CountSetting = NonNullable<FieldDefinition['count']>;
 
@@ -12,7 +12,7 @@ type CountSetting = NonNullable<FieldDefinition['count']>;
 export function FieldCount({ value, count }: { value: string; count: CountSetting }) {
     const length = value.length;
     const range = typeof count === 'object' ? count : undefined;
-    const status = range ? lengthStatus(length, range) : undefined;
+    const status = range ? countStatus(length, range) : undefined;
 
     return (
         <span

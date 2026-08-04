@@ -1,12 +1,12 @@
 import type { BaseFieldProps } from '@/types/index.js';
 import { FormField } from '@/admin/components/fields/form-field';
 // Deep import: the `fields/` barrel reaches server code (virtual config / DB).
-import { formatFieldPath, parseFieldPath } from '@/fields/field-path.js';
+import { formatInstancePath, parseInstancePath } from '@/fields/field-path.js';
 import './group-field.css';
 
 export function GroupField({ name, value, field, onChange }: BaseFieldProps) {
     const fields = field.fields ?? [];
-    const parentSegments = parseFieldPath(name);
+    const parentSegments = parseInstancePath(name);
     const groupValue =
         typeof value === 'object' && value !== null && !Array.isArray(value)
             ? (value as Record<string, unknown>)
@@ -17,9 +17,7 @@ export function GroupField({ name, value, field, onChange }: BaseFieldProps) {
     }
 
     const className =
-        field.container === false
-            ? 'am-group-field'
-            : 'am-group-field am-group-field--boxed';
+        field.boxed === false ? 'am-group-field' : 'am-group-field am-group-field--boxed';
 
     return (
         <div className={className}>
@@ -28,7 +26,7 @@ export function GroupField({ name, value, field, onChange }: BaseFieldProps) {
                     key={subField.name}
                     field={subField}
                     value={groupValue[subField.name]}
-                    name={formatFieldPath([
+                    name={formatInstancePath([
                         ...parentSegments,
                         { kind: 'field', name: subField.name },
                     ])}

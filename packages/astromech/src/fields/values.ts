@@ -1,8 +1,9 @@
 /**
- * Root-level patch helpers for field values.
+ * Root-level operations on a record of field values.
  *
  * Pure: no domain/DB imports. Used by the update paths of entries, users and
- * media, which patch a stored `fields` object rather than replacing it.
+ * media, which patch a stored `fields` object rather than replacing it, then
+ * drop any key the schema no longer declares.
  */
 
 import type { FieldDefinition } from '@/types/fields.js';

@@ -76,7 +76,7 @@ database, so a silent slow success is materially worse than an error.
 
 ## Also waiting on this
 
-- [ ] **Indexed field uniqueness.** `{ unique: true }` resolves to `ScopedReads.isUnique`, which
+- [ ] **Indexed field uniqueness.** `{ unique: true }` resolves to `FieldReads.isUnique`, which
       today scans candidate rows in memory (`entries/reads.ts`). It wants exactly the mechanism
       above — a promoted column with an index — so it moved here from the field-validation
       roadmap rather than committing to a second, bespoke JSON-index strategy first. Note the

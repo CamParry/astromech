@@ -38,6 +38,20 @@ Prefer "entry type config" when referring to the config object in conversation, 
 
 ---
 
+## Layout field vs nested field
+
+Field types split on one rule: **a field whose `name` is a data key stores data; a field whose name is inert does not.**
+
+**Layout field** — `section`, `tabs`, `tab`, `accordion`. Four types, and the only presentational ones: they draw structure and store nothing. Their children keep top-level data keys, so data stays flat underneath them, and a layout field's own name never appears in a field path. They have no field-type descriptor at all (`packages/astromech/src/fields/core-descriptors.ts`) — there is no value to coerce or validate.
+
+**Nested field** — `group`, `repeater`, `blocks`, `tree`. Four types that own one data key each and nest their children's values under it. Each fills the `children` slot on its descriptor, which is how the validation pipeline recurses without switching on field type.
+
+Every other field type is a leaf: one data key, no children.
+
+**Presentational** is the adjective for the layout half. Distinct from the admin **shell** (`packages/astromech/src/admin/shell.astro`), which is the furniture around a page rather than inside a form. `decisions/0016-the-fields-module-vocabulary.md` records what both names beat.
+
+---
+
 ## Entry vs Record
 
 **Entry** is the Astromech term for a single content item stored in a collection. Avoid saying "record" — it conflates CMS content with raw database rows.

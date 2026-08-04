@@ -8,7 +8,7 @@ const _cols: AdminColumn[] = [text('from'), badge('status'), boolean('enabled')]
 void _cols;
 
 describe('column factories', () => {
-    it('text(field, options) sets kind + chrome', () => {
+    it('text(field, options) sets kind + label + sortable', () => {
         expect(text('from', { label: 'From', sortable: true })).toEqual({
             field: 'from',
             kind: 'text',

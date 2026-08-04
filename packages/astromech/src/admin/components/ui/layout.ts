@@ -1,6 +1,6 @@
 /**
  * Public layout surface (`astromech/ui/layout`, spec §8) — the pieces plugin
- * pages compose: page chrome, breadcrumbs, toolbars, and form layout.
+ * pages compose: the page shell, breadcrumbs, toolbars, and form layout.
  */
 
 export {

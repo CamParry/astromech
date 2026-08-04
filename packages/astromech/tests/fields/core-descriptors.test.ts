@@ -120,32 +120,7 @@ describe('core field-type descriptors', () => {
         });
     });
 
-    describe('isContainer / isRelation flags', () => {
-        it('repeater isContainer === true', () => {
-            const d = getFieldTypeDescriptor('repeater');
-            expect(d?.isContainer).toBe(true);
-        });
-
-        it('group isContainer === true', () => {
-            const d = getFieldTypeDescriptor('group');
-            expect(d?.isContainer).toBe(true);
-        });
-
-        it('blocks isContainer === true', () => {
-            const d = getFieldTypeDescriptor('blocks');
-            expect(d?.isContainer).toBe(true);
-        });
-
-        it('tree isContainer === true', () => {
-            const d = getFieldTypeDescriptor('tree');
-            expect(d?.isContainer).toBe(true);
-        });
-
-        it('text has no isContainer', () => {
-            const d = getFieldTypeDescriptor('text');
-            expect(d?.isContainer).toBeUndefined();
-        });
-
+    describe('isRelation flag', () => {
         it('media isRelation === true', () => {
             const d = getFieldTypeDescriptor('media');
             expect(d?.isRelation).toBe(true);
@@ -163,7 +138,7 @@ describe('core field-type descriptors', () => {
     });
 
     describe('children', () => {
-        it('every container type exposes children', () => {
+        it('every nested field type exposes children', () => {
             for (const type of ['group', 'repeater', 'blocks', 'tree']) {
                 expect(
                     getFieldTypeDescriptor(type)?.children,
@@ -172,7 +147,7 @@ describe('core field-type descriptors', () => {
             }
         });
 
-        it('non-container types expose no children', () => {
+        it('leaf types expose no children', () => {
             for (const type of ['text', 'json', 'multiselect', 'key-value']) {
                 expect(
                     getFieldTypeDescriptor(type)?.children,

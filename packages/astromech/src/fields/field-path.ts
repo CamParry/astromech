@@ -123,7 +123,7 @@ function assertValidSegments(segments: readonly FieldPathSegment[]): void {
  * Render segments as an instance path — the address of a concrete stored value,
  * e.g. `sections[a1].items[b2].title`.
  */
-export function formatFieldPath(segments: readonly FieldPathSegment[]): string {
+export function formatInstancePath(segments: readonly FieldPathSegment[]): string {
     assertValidSegments(segments);
 
     let out = '';
@@ -162,7 +162,7 @@ export function formatSchemaPath(segments: readonly FieldPathSegment[]): string 
  * item id is allowed to contain a dot. Schema paths (`sections[].title`) are not
  * accepted — an empty selector has no item to resolve.
  */
-export function parseFieldPath(path: string): FieldPathSegment[] {
+export function parseInstancePath(path: string): FieldPathSegment[] {
     if (path === '') {
         throw new Error('Field path must not be empty');
     }

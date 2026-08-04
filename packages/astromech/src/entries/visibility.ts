@@ -39,7 +39,7 @@ export type VisibilityOptions = {
     shape: VisibilityShape;
     /**
      * Flattened top-level field definitions for the entry's type.
-     * Used to identify private fields and recurse into data containers.
+     * Used to identify private fields and recurse into nested fields.
      */
     fields: FieldDefinition[];
     audience: AudienceContext;
@@ -165,7 +165,7 @@ function structuralStrip(value: JsonValue): JsonValue {
 
 /**
  * Build a map from field name → FieldDefinition for quick lookup.
- * Only includes data-bearing top-level fields (not layout containers).
+ * Only includes data-bearing top-level fields (not layout fields).
  */
 function fieldMap(fields: FieldDefinition[]): Map<string, FieldDefinition> {
     const map = new Map<string, FieldDefinition>();

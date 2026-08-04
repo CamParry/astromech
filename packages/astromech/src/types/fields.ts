@@ -1,10 +1,9 @@
 /**
- * Field system types — field definitions, validation, layout containers.
+ * Field system types — field definitions, validation, field categories.
  *
- * An entry's schema is a tree of `FieldDefinition` nodes. Layout containers
- * (`section`/`tabs`/`tab`/`accordion`) are field *types*, not a separate
- * hierarchy — their children keep top-level data keys (flat). Only data
- * containers (`group`/`repeater`/`blocks`) introduce a nested data key.
+ * An entry's schema is a tree of `FieldDefinition` nodes. Layout fields are
+ * field *types* rather than a separate hierarchy; `TERMINOLOGY.md` states the
+ * two categories and their membership.
  */
 
 import type { User } from './domain.js';
@@ -39,7 +38,7 @@ export const CORE_FIELD_TYPES = [
     'radio-group',
     'link',
     'key-value',
-    // Layout containers — flat data, pure chrome.
+    // Layout fields — presentational, flat data.
     'section',
     'tabs',
     'tab',
@@ -142,13 +141,12 @@ export type FieldErrors = Record<string, string[]>;
 export type ValidationStage = 'save' | 'publish';
 
 /**
- * Scoped read access handed to a field validator for async checks (uniqueness,
+ * Read access handed to a field validator for async checks (uniqueness,
  * references). Exposes the sanctioned read paths for the field's host domain
  * (built on the entry-access port for entries; per-domain reads elsewhere). The
- * common uniqueness case is the one-line `isUnique` helper. Concrete read paths
- * are added in P2 alongside the pipeline.
+ * common uniqueness case is the one-line `isUnique` helper.
  */
-export type ScopedReads = {
+export type FieldReads = {
     /** True when no other record in the host scope holds `value` for `field`. */
     isUnique: (field: FieldDefinition, value: unknown) => Promise<boolean>;
 };
@@ -168,7 +166,7 @@ export type FieldValidationContext = {
      * Path to the field, as segments — one `field` segment per declared field
      * plus an `item` segment per container item traversed, e.g.
      * `[{kind:'field',name:'sections'},{kind:'item',id:'a1'},{kind:'field',name:'title'}]`.
-     * Render it with `formatFieldPath` (`fields/field-path.ts`) to get the key
+     * Render it with `formatInstancePath` (`fields/field-path.ts`) to get the key
      * the pipeline files this field's errors under.
      */
     path: FieldPathSegment[];
@@ -181,8 +179,8 @@ export type FieldValidationContext = {
     stage: ValidationStage;
     host: { kind: 'entry' | 'media' | 'user' | 'setting'; record: unknown };
     user: User | null;
-    /** Scoped read access for async checks. */
-    reads: ScopedReads;
+    /** Read access for async checks. */
+    reads: FieldReads;
 };
 
 /**
@@ -217,7 +215,7 @@ export type DocumentValidationContext = {
     stage: ValidationStage;
     host: { kind: 'entry' | 'media' | 'user' | 'setting'; record: unknown };
     user: User | null;
-    reads: ScopedReads;
+    reads: FieldReads;
 };
 
 /**
@@ -284,8 +282,6 @@ export type FieldTypeDescriptor = {
     ) => { next: unknown; scopes: ContainerScope[] };
     /** Reserved instance keys this type owns, e.g. `['_id', '_disabled', '_title']`. */
     reservedKeys?: string[];
-    isLayout?: boolean;
-    isContainer?: boolean;
     isRelation?: boolean;
 };
 
@@ -323,19 +319,19 @@ export type FieldDefinition = {
     options?: SelectOption[] | string[];
     target?: string;
     multiple?: boolean;
-    /** Children for layout containers and `group`/`repeater`/`tree`. */
+    /** Children for layout fields and `group`/`repeater`/`tree`. */
     fields?: FieldDefinition[];
     min?: number;
     max?: number;
     /** Maximum nesting depth for `tree` fields. Unlimited when omitted. */
     maxDepth?: number;
     /**
-     * `group` only. When `false` the group becomes invisible chrome: box AND
-     * label are dropped and the sub-fields render inline, keeping only the nested
-     * data key. Wrap it in a `section` when a heading/surface is wanted. Defaults
-     * to `true`.
+     * `group` only. Whether the group draws a box. When `false` the box AND the
+     * label are dropped and the sub-fields render inline, keeping only the
+     * nested data key; wrap it in a `section` when a heading or surface is
+     * wanted. Defaults to `true`.
      */
-    container?: boolean;
+    boxed?: boolean;
     step?: number;
     collapsed?: boolean;
     accept?: string;
@@ -370,8 +366,8 @@ export type FieldDefinition = {
 };
 
 /**
- * Top-level entry field declaration. Either a flat list (chrome-less, single
- * column) or an explicit two-column split. The *shape* signals the layout —
+ * Top-level entry field declaration. Either a flat list (no layout fields,
+ * single column) or an explicit two-column split. The *shape* signals the layout —
  * there is no `layout()` helper.
  */
 export type EntryFields =

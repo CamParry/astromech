@@ -34,7 +34,7 @@ import { InlineTitle } from '@/admin/components/fields/inline-title';
 import { useBlocksField } from '@/admin/hooks/use-blocks-field';
 import { useLabel } from '@/admin/i18n/entry-namespace.js';
 // Deep import: the `fields/` barrel reaches server code (virtual config / DB).
-import { formatFieldPath, parseFieldPath } from '@/fields/field-path.js';
+import { formatInstancePath, parseInstancePath } from '@/fields/field-path.js';
 import type { BlockWithId } from '@/admin/hooks/use-blocks-field';
 import './blocks-field.css';
 
@@ -151,7 +151,7 @@ function SortableBlock({
     // Sub-field paths select the block by its persisted `_id`, never by index —
     // an index shifts if the editor reorders between form load and save.
     const blockSegments = [
-        ...parseFieldPath(name),
+        ...parseInstancePath(name),
         { kind: 'item' as const, id: block._id },
     ];
 
@@ -269,7 +269,7 @@ function SortableBlock({
                                 key={subField.name}
                                 field={subField}
                                 value={block[subField.name]}
-                                name={formatFieldPath([
+                                name={formatInstancePath([
                                     ...blockSegments,
                                     { kind: 'field', name: subField.name },
                                 ])}

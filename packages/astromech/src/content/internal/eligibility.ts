@@ -6,8 +6,8 @@
  */
 
 import { getFieldTypeDescriptor } from '@/fields/descriptors.js';
-import { formatFieldPath, parseFieldPath } from '@/fields/field-path.js';
-import { flattenFieldNodes } from '@/fields/helpers.js';
+import { formatInstancePath, parseInstancePath } from '@/fields/field-path.js';
+import { flattenFieldNodes } from '@/fields/flatten.js';
 import type { FieldDefinition, FieldPathSegment } from '@/types/fields.js';
 
 /**
@@ -42,8 +42,8 @@ export type EligibilityOptions = {
 };
 
 /**
- * Collect the eligible fields inside `values`, descending into data containers.
- * Containers are normalized in place (the descriptor's `children` mints missing
+ * Collect the eligible fields inside `values`, descending into nested fields.
+ * They are normalized in place (the descriptor's `children` mints missing
  * item `_id`s), so `values` is the working copy a caller writes back.
  */
 export function collectRewriteTargets(
@@ -53,7 +53,7 @@ export function collectRewriteTargets(
 ): RewriteTarget[] {
     // Parsed for the side effect: a malformed path is a caller bug, and matching
     // nothing silently is how it would otherwise surface.
-    for (const path of options.paths ?? []) parseFieldPath(path);
+    for (const path of options.paths ?? []) parseInstancePath(path);
 
     const targets: RewriteTarget[] = [];
     walkScope(values, definitions, [], options, targets);
@@ -95,7 +95,7 @@ function walkScope(
 
         if (!TEXT_BEARING_FIELD_TYPES.has(field.type)) continue;
 
-        const path = formatFieldPath(segments);
+        const path = formatInstancePath(segments);
         if (!pathSelected(path, options.paths)) continue;
 
         const root = segments[0];

@@ -37,16 +37,16 @@ function tKey(key: string): MessageDescriptor {
 
 /**
  * Field-section factory — compose into an entry type's `fields`. Renders a
- * titled `section` (the visible panel) wrapping a container-less `group` that
+ * titled `section` (the visible panel) wrapping an unboxed `group` that
  * namespaces the data under `SEO_FIELD_NAME` (the `{ title, description }`
- * stored shape). The group carries the data key; the section carries the chrome.
+ * stored shape). The group carries the data key; the section is presentational.
  */
 export function seoSection(options?: SeoSectionOptions): FieldDefinition {
     return section('seoSection', {
         label: options?.label ?? tKey('seo.sectionTitle'),
         fields: [
             group(SEO_FIELD_NAME, {
-                container: false,
+                boxed: false,
                 fields: [
                     text('title', {
                         label: tKey('field.titleLabel'),

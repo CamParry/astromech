@@ -36,7 +36,7 @@ function toPascalCase(name: string): string {
 // ============================================================================
 
 /**
- * Layout container field types — pure chrome, no stored value. Their children
+ * Layout field types — presentational, no stored value. Their children
  * are flattened into the parent data level (no key nesting).
  */
 const LAYOUT_TYPES = new Set(['section', 'tabs', 'tab', 'accordion']);
@@ -76,8 +76,8 @@ function propertyKey(name: string): string {
 
 /**
  * Walk a FieldDefinition[] and return all data-bearing nodes, with layout
- * containers (section/tabs/tab/accordion) transparently flattened in-place.
- * Data containers (group/repeater/blocks) and leaf fields are returned as-is —
+ * fields (section/tabs/tab/accordion) transparently flattened in-place.
+ * Nested fields (group/repeater/blocks) and leaf fields are returned as-is —
  * they each become a single property on the containing object.
  *
  * When `shape === 'public'`, fields marked `private: true` are excluded.
@@ -89,7 +89,7 @@ function collectDataFields(
     const result: FieldDefinition[] = [];
     for (const field of fields) {
         if (LAYOUT_TYPES.has(field.type)) {
-            // Flatten layout container children at the same level.
+            // Flatten layout field children at the same level.
             result.push(...collectDataFields(field.fields ?? [], shape));
         } else {
             if (shape === 'public' && field.private === true) continue;
@@ -128,7 +128,7 @@ function buildObjectLines(
 /**
  * Map a FieldDefinition to its TypeScript type string for the Fields interface.
  * Plugin-registered types use their `typeGen` (default `JsonValue`). Returns
- * null for layout container types (they never appear as a field line —
+ * null for layout field types (they never appear as a field line —
  * collectDataFields flattens them away before this is called) and for
  * unrecognised types.
  *
@@ -144,7 +144,7 @@ function fieldToTsType(
     hoisted?: string[],
     shape: 'full' | 'public' = 'full'
 ): string | null {
-    // Layout containers are flattened by collectDataFields before we reach here.
+    // Layout fields are flattened by collectDataFields before we reach here.
     if (LAYOUT_TYPES.has(field.type)) return null;
 
     const pluginType = pluginFieldTypes.get(field.type);
@@ -158,15 +158,15 @@ function fieldToTsType(
     const descriptor = getFieldTypeDescriptor(field.type);
     if (descriptor === undefined) return null;
 
-    // Container types need the recursion + hoisting context that the descriptor's
-    // pure `tsType(field, shape)` signature can't carry, so they're emitted here.
-    // Their reserved instance keys come from `descriptor.reservedKeys` (the single
-    // source); this code owns only the recursion/hoisting structure.
-    if (descriptor.isContainer === true) {
+    // A `children` slot marks a nested field. Those need the recursion + hoisting
+    // context that the descriptor's pure `tsType(field, shape)` signature can't
+    // carry, so they're emitted here. Their reserved instance keys come from
+    // `descriptor.reservedKeys`; this code owns only the recursion structure.
+    if (descriptor.children !== undefined) {
         switch (field.type) {
             case 'group': {
                 // Nested object: children are recursively typed.
-                // Layout containers within the children are flattened.
+                // Layout fields within the children are flattened.
                 const childLines = buildObjectLines(
                     field.fields ?? [],
                     pluginFieldTypes,
@@ -301,7 +301,7 @@ function generateCollectionTypes(
     const fieldsPublicName = `${pascal}FieldsPublic`;
     const relationsName = `${pascal}Relations`;
 
-    // Collect all data-bearing fields from both columns, layout containers flattened.
+    // Collect all data-bearing fields from both columns, layout fields flattened.
     const allFields = collectDataFields([...fields.main, ...fields.sidebar]);
     const allFieldsPublic = collectDataFields(
         [...fields.main, ...fields.sidebar],

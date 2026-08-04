@@ -29,7 +29,7 @@ const definitions: FieldDefinition[] = [
     { name: 'title', type: 'text', label: 'Headline' },
     // No label — resolves to the same fallback the field's own label renders.
     { name: 'meta_description', type: 'text' },
-    // A layout container holds no data, so it never appears in a path.
+    // A layout field holds no data, so it never appears in a path.
     {
         name: 'main',
         type: 'tabs',
@@ -90,7 +90,7 @@ describe('fieldLabelPathForError', () => {
         ]);
     });
 
-    it('descends into a group, unwrapping the layout container above it', () => {
+    it('descends into a group, unwrapping the layout field above it', () => {
         expect(fieldLabelPathForError(definitions, 'seo.title')).toEqual([
             'Search',
             'SEO title',
