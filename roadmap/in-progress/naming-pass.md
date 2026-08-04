@@ -6,12 +6,14 @@ the public subpaths, and the docs that describe all of it.
 
 **Landed 2026-08-04** — items 1–20 of the plan's order table, merged to `main` as
 seven commits on `refactor/naming-pass`. Every batch was verified at the full
-gate and at the exact test baseline (2465 core / 32 authoring / 86
+gate and at the exact test baseline (2465 core / 24 authoring / 86
 schema-engine); the merge was verified again on `main` with `build`,
 `check:config`, `check:node-imports`, `db:generate` and a demo boot.
 
-Items 21–22 (§D and §A5) followed on `refactor/public-subpaths`, at the same
-baseline.
+Items 21–22 (§D and §A5) followed on `refactor/public-subpaths`, at a baseline
+of 2465 core / 32 authoring / 86 schema-engine — the authoring figure moved
+because the content-block work landed in between, not because this pass touched
+a test.
 
 **Plan:** `specs/naming-pass.md`, now trimmed to the unshipped sections only.
 The headline decisions are recorded in
