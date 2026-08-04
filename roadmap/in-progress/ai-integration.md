@@ -28,12 +28,14 @@ the rest; nothing is deployed, so this is the cheapest moment. Full detail with
 file references in the spec.
 
 **The foundation is complete, and so is the assistant that stands on it — P0a
-through P8 have all landed.** The audit's counts were stale: the manifest was 83
+through P9 have all landed.** The audit's counts were stale: the manifest was 83
 methods at P0, not 71, and is 145 after P1. P4 was unparked when the
 field-validation work that blocked it carried its validation half along
 (`221989a`); the PATCH-only half followed on 2026-08-03. P8 closed on 2026-08-04
-and took `readOnly` to `false` with it, which is what finally ticked P7. Next is
-P9, whose storage shape P8 has already part-decided.
+and took `readOnly` to `false` with it, which is what finally ticked P7. P9
+followed the same day, reusing P8's approval rows rather than storing what they
+already hold. Next is P10, which P9 deliberately deferred the "what did the
+assistant do" question to.
 
 - [x] **P0a — normalise every service method to a parameter object.** Shipped
       2026-07-31 (`934f1d0`). `update` takes a nested `data` (`update({id, data})`)

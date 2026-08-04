@@ -1,5 +1,5 @@
 /**
- * Table descriptor for the authoring plugin's chat sessions. `definePluginTable`
+ * The authoring plugin's chat sessions table. `definePluginTable`
  * owns the `plugin_<namespace>_` prefix, so the table is declared with its bare
  * name and comes out as `plugin_authoring_sessions`.
  */
