@@ -5,10 +5,10 @@ import {
     hashPreviewToken,
 } from '../../storage/preview-tokens.js';
 import { loadAndAssertType } from '../../internal/records.js';
-import { assertCapability } from '../../internal/supports.js';
+import { assertCapability } from '../../internal/type-config.js';
 import { generatePreviewSecret } from '../../internal/preview.js';
 import { previewTokenSchema } from '../../schema.js';
-import { validate } from '../../internal/validation.js';
+import { parseWith } from '../../internal/parse.js';
 
 /**
  * How long a preview token lives when the caller names no expiry: 7 days.
@@ -45,7 +45,7 @@ export async function issuePreviewToken(params: {
     // Coerced, not trusted: a JSON transport (MCP, the AI tool-loop) sends an
     // ISO string, and this column is a date. `schedule` validates `publishAt`
     // the same way for the same reason.
-    const { expiresAt } = validate(previewTokenSchema, { expiresAt: params.expiresAt });
+    const { expiresAt } = parseWith(previewTokenSchema, { expiresAt: params.expiresAt });
     // Three cases, and `null` is not the same as absent: an omitted `expiresAt`
     // takes the default TTL, while an explicit `null` still means "never
     // expires". `previewTokenSchema` permits null (it shares `publishAtField`,

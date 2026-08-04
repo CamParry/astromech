@@ -13,7 +13,7 @@ import type { RelationshipEdge } from '@/fields/relationship-edges.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
 import { entries as entriesTable } from '../schema.js';
 import { getEntryStorage, hasEntryStorageOverride } from '../storage/registry.js';
-import { qualifyEntryType, resolveEntryType } from '../type-registry.js';
+import { qualifyEntryType, resolveEntryType } from '../type-ids.js';
 import type { JsonObject } from '@/types/index.js';
 import type { StorageDb } from '../storage/types.js';
 

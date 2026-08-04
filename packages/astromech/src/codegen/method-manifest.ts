@@ -39,7 +39,7 @@ import {
 } from '@/entries/descriptors.js';
 import type { Capability } from '@/entries/storage/capabilities.js';
 import type { ResolvedEntryCapabilities } from '@/types/index.js';
-import { qualifyEntryType } from '@/entries/type-registry.js';
+import { qualifyEntryType } from '@/entries/type-ids.js';
 import {
     resolvePluginIdentity,
     resolvePluginPermission,

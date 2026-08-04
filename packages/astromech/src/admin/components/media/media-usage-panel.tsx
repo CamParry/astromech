@@ -13,7 +13,7 @@ import { Spinner } from '../ui/index.js';
 import { Link } from '@/admin/definitions/cells/link.js';
 import { useMediaUsage } from '@/admin/hooks/media.js';
 import { entryAdminPath } from '@/admin/utilities/entry-admin-path.js';
-import { parseEntryTypeId } from '@/entries/type-registry.js';
+import { parseEntryTypeId } from '@/entries/type-ids.js';
 import type { MediaUsage } from '@/types/index.js';
 
 export type MediaUsagePanelProps = {

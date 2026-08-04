@@ -1,11 +1,10 @@
 import { getCurrentUser } from '@/request-context/index.js';
 import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import { asEntry, loadAndAssertType } from '../../internal/records.js';
-import { getStagingStorage } from '../../internal/supports.js';
-import { isVersioningEnabled } from '../../internal/type-config.js';
+import { getStagingStorage, isVersioningEnabled } from '../../internal/type-config.js';
 import { indexEntryRelationships } from '../../internal/relationships.js';
 import { createEntryScopedReads } from '../../reads.js';
-import { resolveEntryType } from '../../type-registry.js';
+import { resolveEntryType } from '../../type-ids.js';
 import { entryValidationStage } from '../../validation-stage.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
 import { processFields } from '@/fields/pipeline.js';

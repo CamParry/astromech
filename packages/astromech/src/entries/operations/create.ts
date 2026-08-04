@@ -3,7 +3,7 @@ import { runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime.
 import { slugify } from '@/utilities/strings.js';
 import { createEntrySchemaFor } from '../schema.js';
 import { getEntryStorage } from '../storage/registry.js';
-import { validate } from '../internal/validation.js';
+import { parseWith } from '../internal/parse.js';
 import {
     getDefaultLocale,
     getNonTranslatableFieldNames,
@@ -15,7 +15,7 @@ import { asEntry } from '../internal/records.js';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility.js';
 import { UnknownEntryTypeError } from '../errors.js';
 import { createEntryScopedReads } from '../reads.js';
-import { resolveEntryType } from '../type-registry.js';
+import { resolveEntryType } from '../type-ids.js';
 import { entryValidationStage } from '../validation-stage.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
 import { processFields } from '@/fields/pipeline.js';
@@ -46,7 +46,7 @@ export async function create(params: {
     const entryTypeConfig = resolveEntryType(config, type);
     if (!entryTypeConfig) throw new UnknownEntryTypeError(type);
     const titleField = getTitleField(type);
-    const validated = validate(createEntrySchemaFor(titleField), {
+    const validated = parseWith(createEntrySchemaFor(titleField), {
         title: params.title,
         slug: params.slug,
         fields: params.fields,

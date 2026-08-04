@@ -1,14 +1,17 @@
 /**
  * Config-derived helpers shared across entry operations: locale defaulting,
- * title-field + capability lookups, and field-definition resolution. All read
- * the resolved `virtual:astromech/config`.
+ * title-field + capability lookups, capability assertions, and field-definition
+ * resolution. All read the resolved `virtual:astromech/config`.
  */
 
 import config from 'virtual:astromech/config';
 import { resolveContentLocale } from '@/utilities/locale.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
-import { resolveEntryType } from '../type-registry.js';
+import { resolveEntryType } from '../type-ids.js';
 import { getEntryStorage } from '../storage/registry.js';
+import { CapabilityError } from '../errors.js';
+import type { Capability } from '../storage/capabilities.js';
+import type { EntryStorage } from '../storage/types.js';
 import type { FieldDefinition } from '@/types/index.js';
 
 export function getDefaultLocale(): string {
@@ -52,4 +55,32 @@ export function getNonTranslatableFieldNames(
 export function resolveTypeFields(typeName: string): FieldDefinition[] {
     const cfg = resolveEntryType(config, typeName);
     return cfg ? flattenEntryFields(cfg.fields) : [];
+}
+
+/** Enforce a type's configured capability set. */
+export function assertCapability(typeName: string, capability: Capability): void {
+    const caps = resolveEntryType(config, typeName)?.capabilities;
+    if (caps && !caps[capability]) {
+        throw new CapabilityError(typeName, capability);
+    }
+}
+
+/**
+ * Assert the type supports staging (capability + built-in storage, the only
+ * backend that carries `stagedFor` in v1) and return both the storage and its
+ * (now-narrowed) staging sub-surface.
+ */
+export function getStagingStorage(typeName: string): {
+    storage: EntryStorage;
+    staging: NonNullable<EntryStorage['staging']>;
+} {
+    assertCapability(typeName, 'staging');
+    const storage = getEntryStorage(typeName);
+    const staging = storage.staging;
+    if (!staging) {
+        throw new Error(
+            `Entry type "${typeName}" does not support staging (built-in storage required).`
+        );
+    }
+    return { storage, staging };
 }

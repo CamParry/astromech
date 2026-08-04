@@ -1,7 +1,7 @@
 import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import { getEntryStorage } from '../storage/registry.js';
 import { loadAndAssertType } from '../internal/records.js';
-import { assertCapability } from '../internal/supports.js';
+import { assertCapability } from '../internal/type-config.js';
 import { runBulkVoid } from '../internal/bulk.js';
 import { runDeleteWithHooks } from '../internal/hooks.js';
 import type { EntryStorage } from '../storage/types.js';
@@ -54,9 +54,9 @@ export async function emptyTrash(params: { type: string }): Promise<void> {
         trashed: true,
         limit: 'all',
     });
-    const relationshipsRepo = createRelationshipStorage();
+    const relationships = createRelationshipStorage();
     for (const entry of trashed) {
-        await relationshipsRepo.deleteByResource(entry.id, 'entry');
+        await relationships.deleteByResource(entry.id, 'entry');
     }
 
     await storage.trash.emptyTrash(type);

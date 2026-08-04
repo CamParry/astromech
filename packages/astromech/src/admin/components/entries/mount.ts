@@ -19,7 +19,7 @@
 
 import type { AdminConfig } from '@/types/index.js';
 import type { EntriesApi } from '@/types/index.js';
-import { qualifyEntryType } from '@/entries/type-registry.js';
+import { qualifyEntryType } from '@/entries/type-ids.js';
 
 export type EntryAction = 'read' | 'create' | 'update' | 'delete' | 'publish';
 

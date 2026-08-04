@@ -1,5 +1,5 @@
 import { asEntry, loadAndAssertType } from '../../internal/records.js';
-import { getStagingStorage } from '../../internal/supports.js';
+import { getStagingStorage } from '../../internal/type-config.js';
 import { indexEntryRelationships } from '../../internal/relationships.js';
 import { StagedEntryExistsError } from '../../errors.js';
 import type { Entry, JsonObject } from '@/types/index.js';

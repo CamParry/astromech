@@ -24,7 +24,7 @@ export function pluginEntryPermission(
 
 /**
  * Separator between a plugin's namespace and its bare type in a qualified entry
- * type id (`redirects/redirect`). Duplicated from `entries/type-registry.ts`
+ * type id (`redirects/redirect`). Duplicated from `entries/type-ids.ts`
  * deliberately: `permissions` is a capability and must not import a domain.
  */
 const QUALIFIED_SEPARATOR = '/';

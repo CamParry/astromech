@@ -104,7 +104,7 @@ packages/
 │   │   │
 │   │   │   ── domains ────────────────────────────────────────────────────
 │   │   ├── content/        # content operations (translate/transform/generate) — a DOWNSTREAM domain: it may import entries/, never the reverse
-│   │   ├── entries/        # entries domain: service · schema · descriptors · visibility · url · type-registry
+│   │   ├── entries/        # entries domain: service · schema · descriptors · visibility · url · type-ids
 │   │   ├── media/          # media domain: service · schema · serving/image/
 │   │   ├── users/          # users domain: service · schema · auth (Better Auth integration)
 │   │   ├── settings/       # settings domain: service · schema · page-values

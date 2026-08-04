@@ -3,7 +3,7 @@
  *
  * Thin assembler: wires the per-operation functions in `operations/**` into the
  * public `EntriesApi` object. All policy (validation, hooks, relationships,
- * versioning/staging, slug, supports gating, bulk dispatch) lives in
+ * versioning/staging, slug, capability gating, bulk dispatch) lives in
  * `operations/**` + `internal/**`; persistence flows through the storage seam.
  * Import from 'astromech/local'.
  */

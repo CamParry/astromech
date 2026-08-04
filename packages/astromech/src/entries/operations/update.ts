@@ -2,7 +2,7 @@ import { getCurrentUser } from '@/request-context/index.js';
 import { runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime.js';
 import { updateEntrySchemaFor } from '../schema.js';
 import { getEntryStorage } from '../storage/registry.js';
-import { validate } from '../internal/validation.js';
+import { parseWith } from '../internal/parse.js';
 import {
     getTitleField,
     isVersioningEnabled,
@@ -11,12 +11,12 @@ import {
 import { indexEntryRelationships } from '../internal/relationships.js';
 import { pruneDanglingRelations } from '../internal/dangling-relations.js';
 import { asEntry, loadAndAssertType } from '../internal/records.js';
-import { deepEqual } from '../internal/diff.js';
+import { deepEqual } from '../internal/deep-equal.js';
 import { runBulk } from '../internal/bulk.js';
-import { entryHooksActive, entrySnapshot } from '../internal/hooks.js';
+import { hasEntryHooks, loadEntrySnapshot } from '../internal/hooks.js';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility.js';
 import { createEntryScopedReads } from '../reads.js';
-import { resolveEntryType } from '../type-registry.js';
+import { resolveEntryType } from '../type-ids.js';
 import { entryValidationStage } from '../validation-stage.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
 import { processFields } from '@/fields/pipeline.js';
@@ -35,7 +35,7 @@ export async function updateOne(
     id: string,
     data: EntryUpdateData
 ): Promise<Entry> {
-    const validatedData = validate(updateEntrySchemaFor(getTitleField(type)), data);
+    const validatedData = parseWith(updateEntrySchemaFor(getTitleField(type)), data);
     const currentEntry = await loadAndAssertType(storage, type, id);
 
     // Root field names the caller actually sent — needed after the block too,
@@ -201,7 +201,7 @@ export async function update(params: {
         throw new PublicShapeWriteError();
     }
     const user = getCurrentUser();
-    const hooksActive = entryHooksActive('entry:beforeUpdate', 'entry:afterUpdate');
+    const hooksActive = hasEntryHooks('entry:beforeUpdate', 'entry:afterUpdate');
     const storage = getEntryStorage(params.type);
 
     if (Array.isArray(params.id)) {
@@ -212,7 +212,7 @@ export async function update(params: {
             );
         }
         const before = hooksActive
-            ? await Promise.all(params.id.map((id) => entrySnapshot(params.type, id)))
+            ? await Promise.all(params.id.map((id) => loadEntrySnapshot(params.type, id)))
             : [];
         for (const entry of before) {
             await runBeforeHooks(
@@ -235,7 +235,7 @@ export async function update(params: {
     }
 
     const id = params.id as string;
-    const before = hooksActive ? await entrySnapshot(params.type, id) : null;
+    const before = hooksActive ? await loadEntrySnapshot(params.type, id) : null;
     if (before) {
         await runBeforeHooks(
             'entry:beforeUpdate',

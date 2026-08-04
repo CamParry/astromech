@@ -18,11 +18,11 @@ import {
     extractRichTextSegments,
 } from '@/fields/rich-text/segments.js';
 import { docToMarkdown, markdownToDoc } from '@/fields/rich-text/markdown.js';
-import { assertCapability } from '@/entries/internal/supports.js';
+import { assertCapability } from '@/entries/internal/type-config.js';
 import { UnknownEntryTypeError } from '@/entries/errors.js';
 import { createEntryScopedReads } from '@/entries/reads.js';
 import { getEntryStorage } from '@/entries/storage/registry.js';
-import { resolveEntryType } from '@/entries/type-registry.js';
+import { resolveEntryType } from '@/entries/type-ids.js';
 import { entryValidationStage } from '@/entries/validation-stage.js';
 import { resolveEntryUrl } from '@/entries/utils/url.js';
 import { create } from '@/entries/operations/create.js';

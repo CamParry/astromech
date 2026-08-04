@@ -27,7 +27,7 @@ import { permissionsFor } from '@/permissions/permissions-for.js';
 import { contentDescriptors } from '@/content/index.js';
 import { ContentOperationError } from '@/content/errors.js';
 import { CapabilityError } from '@/entries/errors.js';
-import { resolveEntryType } from '@/entries/type-registry.js';
+import { resolveEntryType } from '@/entries/type-ids.js';
 import type {
     ContentOperationResult,
     Permission,
