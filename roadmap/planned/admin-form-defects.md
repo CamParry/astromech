@@ -40,6 +40,14 @@ skill; these are the outstanding fixes.
       above.
 - [ ] **`key-value` rebuilds its value from the prop** like `group`
       (`key-value-field.tsx:7-15`) — same exposure if the seed race is confirmed.
+- [ ] **`tabs()` takes no name and hardcodes one.** Every other factory is
+      `type(name, options?)`; `fields/builder.ts:215-217` is
+      `tabs(options)` returning `{ name: 'tabs', … }`. Two `tabs()` in one entry
+      type therefore produce two fields both named `tabs` — harmless while a
+      layout field's name is inert, and a duplicate-key bug the moment anything
+      keys off it. Don't fix it in isolation: it is the accidental prototype for
+      `roadmap/planned/named-layout-fields.md`, which decides what a layout
+      field's name means.
 - [ ] Extend render-level coverage to the **field** components.
       `@testing-library/react` and `user-event` are in and the media surface is
       covered, but the field components that motivated this are not: the

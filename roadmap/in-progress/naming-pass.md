@@ -92,6 +92,39 @@ The headline decisions are recorded in
 - [x] 21 admin import sites plus 4 test files, including three `vi.mock` factory
       keys that would have returned `undefined` silently
 
+### `fields/` (§H) — `83deaca`, `93b25ef`, `02b3c48`, `e5d5e81`, `225211f`
+
+- [x] **Layout field / presentational.** Four layout fields (`section`, `tabs`,
+      `tab`, `accordion`) and four nested fields (`group`, `repeater`, `blocks`,
+      `tree`), stated once in `TERMINOLOGY.md`; three docstrings that each
+      restated a different version now point at it
+- [x] "Chrome" dropped everywhere in the module and its consumers. It meant
+      _presentational_ in one half of its sites and the admin _shell_ in the
+      other. "Container" retired as the category word; **nested field** carries
+      the distinction in prose
+- [x] `isLayout` and `isContainer` deleted. `isLayout` had one occurrence — its
+      own declaration; `isContainer` was set on exactly the four types that fill
+      the `children` slot, so `descriptor.children !== undefined` replaced its
+      two readers. `isRelation` kept
+- [x] `FieldDefinition.container` → `boxed` (default `true`), one consumer
+      outside core. The admin already said `am-group-field--boxed`
+- [x] `formatFieldPath` → `formatInstancePath`, `parseFieldPath` →
+      `parseInstancePath`. 83 references, none outside `packages/astromech`
+- [x] `helpers.ts` split into `flatten.ts` and `count.ts` (`lengthStatus` →
+      `countStatus`), with the label pair folded into the existing
+      `utilities/labels.ts`
+- [x] `scoped-reads.ts` → `field-reads.ts`, `ScopedReads` → `FieldReads`;
+      `valuesEqual` moved to `utilities/values-equal.ts`. `patch.ts` →
+      `values.ts` rather than moving `projectToSchema` out of it
+- [x] `columns.ts`'s suggested alias went plural, matching every real consumer
+- [x] `decisions/0016-the-fields-module-vocabulary.md`
+
+Baseline moved for the first time in this pass, to **2460 core / 179 files**:
+five assertions read the deleted `isContainer` flag and went with it, and the
+`valuesEqual` tests split out of the renamed reads test into
+`tests/utilities/values-equal.test.ts` when the function moved. Authoring (32)
+and schema-engine (86) unchanged.
+
 ### Docs (§E)
 
 - [x] `ARCHITECTURE.md`: the layer model and directory map both listed a
@@ -102,12 +135,8 @@ The headline decisions are recorded in
 
 ## Not done
 
-All three were added after the order table was written, so none has a place in
-it:
+Both were added after the order table was written, so neither has a place in it:
 
-- [ ] **§H `fields/`** — the layout-field/presentational vocabulary, dropping
-      "chrome", `formatFieldPath` → `formatInstancePath`, splitting
-      `helpers.ts`. Never in the order table
 - [ ] **§I definitions are objects** — `defineX` returns an `X`;
       `TableDescriptor` → `Table`, `FieldDefinition` → `Field` and the rest.
       Never in the order table, and it has an internal ordering dependency

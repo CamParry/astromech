@@ -48,7 +48,7 @@ Field types split on one rule: **a field whose `name` is a data key stores data;
 
 Every other field type is a leaf: one data key, no children.
 
-**Presentational** is the adjective for the layout half. Distinct from the admin **shell** (`packages/astromech/src/admin/shell.astro`), which is the furniture around a page rather than inside a form.
+**Presentational** is the adjective for the layout half. Distinct from the admin **shell** (`packages/astromech/src/admin/shell.astro`), which is the furniture around a page rather than inside a form. `decisions/0016-the-fields-module-vocabulary.md` records what both names beat.
 
 ---
 
