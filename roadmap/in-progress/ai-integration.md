@@ -70,7 +70,7 @@ followed on 2026-08-03. Next is P5.
       `plugins_demoRating_describe` called over the wire.
     - Closed with it: plugin methods dispatch (`runMcpServer` registers the plugin
       runtime — local client → `wireEntryAccess` → `registerPlugins`, the order
-      `kernel/boot.ts` uses; `bootPlugins` deliberately NOT called), and the
+      `boot/boot.ts` uses; `bootPlugins` deliberately NOT called), and the
       entries long tail (duplicate/trash/restore/emptyTrash/versions/
       restoreVersion/unpublish/schedule/incomingRelations gained descriptors, and
       the staged-entry/preview methods that had descriptors but no adapter lit
@@ -92,7 +92,7 @@ followed on 2026-08-03. Next is P5.
     - **Open, and worth deciding before P7:** 144 tools is a large fixed prompt
       prefix and there is no filtering mechanism. Tracked in `backlog.md`.
 - [x] **P2 — request-scoped context + a real permission wrapper.** Shipped
-      2026-08-01 (`7d3e7eb`, `99b35ab`). `context/index.ts` holds the request
+      2026-08-01 (`7d3e7eb`, `99b35ab`). `request-context/index.ts` holds the request
       identity in an `AsyncLocalStorage` store on `globalThis`; `setCurrentUser`
       is deleted rather than deprecated, because a setter is the defect. Outside
       `runWithContext` there is no identity and `getCurrentUser()` is null —
@@ -361,7 +361,7 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       `useContext` and points the wrong way; "awareness" is a state, not a value;
       "insight" is model output, not model input. Full rationale and the general
       naming rule it produced: `decisions/0005-ai-context-naming.md`.
-    - The `AI` prefix is load-bearing, not decoration: `src/context/` is already
+    - The `AI` prefix is load-bearing, not decoration: `src/request-context/` is already
       the server-side `AsyncLocalStorage` request context, and it is on admin's
       forbidden-import list in `.dependency-cruiser.cjs`.
     - **Built 2026-08-03** on `feat/ai-context`, four commits, 2299/158 → 2330/161.
@@ -536,8 +536,8 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       `PluginDefinition[]`, whose Zod `input` schemas cannot survive JSON — the
       same reason MCP regenerates in-process. Both sites call the one pure
       function, so the file and the registry cannot drift.
-    - `context/request-context.ts` exists because sourcing `role` from
-      `context/index.ts` would pull `virtual:astromech/config` into the Astro
+    - `request-context/request-context.ts` exists because sourcing `role` from
+      `request-context/index.ts` would pull `virtual:astromech/config` into the Astro
       integration's config-load graph, which runs in plain Node where `virtual:`
       cannot resolve — `astro dev` would fail at integration load.
     - `formatAIContextMessage` now ships on `astromech/methods`. P6 put it in a

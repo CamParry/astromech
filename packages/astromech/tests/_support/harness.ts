@@ -42,12 +42,12 @@ import { mergeMigrationProviders, migrateToLatest } from '@astromech/schema-engi
 import { encode, decode } from '@/database/codec.js';
 import type { DB } from '@/database/types.js';
 import type { UserRow } from '@/database/schema.js';
-import { resolveConfig } from '@/kernel/config-resolver.js';
+import { resolveConfig } from '@/boot/config-resolver.js';
 import { setCliConfig } from '@/transport/cli/virtual-config-shim.js';
 import { setRuntimeConfig } from '@/cron/registry.js';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime.js';
 import { wireEntryAccess } from '@/entries/plugin-access.js';
-import { runWithContext } from '@/context/index.js';
+import { runWithContext } from '@/request-context/index.js';
 import type {
     AstromechConfig,
     DatabaseDriver,
@@ -94,7 +94,7 @@ async function buildTestDb(url: string): Promise<Db> {
     );
     // The first-party plugins own their tables now, so the app chain alone no
     // longer creates them. Apply exactly what a real boot applies: the merged
-    // provider. `allowUnorderedMigrations` mirrors `kernel/boot.ts` — plugin
+    // provider. `allowUnorderedMigrations` mirrors `boot/boot.ts` — plugin
     // migrations interleave with the app's in one `kysely_migration` table.
     const plugins = await Promise.all(
         FIRST_PARTY_PLUGIN_MIGRATIONS.map(async (alias) => {

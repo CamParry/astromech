@@ -222,7 +222,7 @@ test assert that explicitly with a comment saying why — do not add a blanket s
 
 ## Rules
 
-- **Do not** touch `packages/astromech/src/context/index.ts`,
+- **Do not** touch `packages/astromech/src/request-context/index.ts`,
   `policies/with-permissions.ts`, or anything in `entries/operations/preview/`.
   Those are P2–P4 and are deliberately out of scope.
 - **Do not** build the confirm gate, content operations, context bus or chat

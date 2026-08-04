@@ -1,4 +1,4 @@
-import { getCurrentUser } from '@/context/index.js';
+import { getCurrentUser } from '@/request-context/index.js';
 import { runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime.js';
 import { slugify } from '@/utilities/strings.js';
 import { createEntrySchemaFor } from '../schema.js';

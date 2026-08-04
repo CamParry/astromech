@@ -25,7 +25,7 @@ const EXCLUSION_DETAIL_LIMIT = 20;
  * `loadConfig` sets up the database and the virtual-config shim but never
  * touches the plugin runtime, so until now the plugin registry was empty and
  * any plugin tool would have thrown at call time. Three things are needed, in
- * this order — the same order `kernel/boot.ts` uses:
+ * this order — the same order `boot/boot.ts` uses:
  *
  * - Importing the local transport registers the client that backs `ctx.entries`,
  *   `ctx.media` and friends. It is a module side effect, hence the bare import.

@@ -28,7 +28,7 @@ import { mergePatch, projectToSchema } from '@/fields/patch.js';
 import { getDocumentValidator } from '@/fields/document-validators.js';
 import { flattenFieldNodes } from '@/fields/helpers.js';
 import { scopedReadsFromRecords } from '@/fields/scoped-reads.js';
-import { getCurrentUser } from '@/context/index.js';
+import { getCurrentUser } from '@/request-context/index.js';
 import { buildMediaUrl, variantPrefix } from './serving/image/url.js';
 import { isOptimisableImage, readImageDimensions } from './serving/image/dimensions.js';
 import { contentVersion } from './serving/image/version.js';

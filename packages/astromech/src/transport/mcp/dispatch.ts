@@ -113,7 +113,7 @@ async function invokePluginMethod(
     args: Record<string, unknown>
 ): Promise<unknown> {
     const [{ getCurrentUser }, runtime] = await Promise.all([
-        import('@/context/index.js'),
+        import('@/request-context/index.js'),
         import('@/plugins/runtime/plugin-runtime.js'),
     ]);
 

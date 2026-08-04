@@ -1,6 +1,6 @@
 import config from 'virtual:astromech/config';
 import { flattenEntryFields } from '@/fields/helpers.js';
-import { getCurrentUser } from '@/context/index.js';
+import { getCurrentUser } from '@/request-context/index.js';
 import { resolveEntryType } from '../type-registry.js';
 import { getEntryStorage } from '../storage/registry.js';
 import { runPreviewGet } from './preview/read.js';

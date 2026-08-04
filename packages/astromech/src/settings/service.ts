@@ -19,7 +19,7 @@ import { processFields } from '@/fields/pipeline.js';
 import { getDocumentValidator } from '@/fields/document-validators.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
 import { scopedReadsFromRecords } from '@/fields/scoped-reads.js';
-import { getCurrentUser } from '@/context/index.js';
+import { getCurrentUser } from '@/request-context/index.js';
 import { ValidationError } from '@/errors/validation.js';
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>

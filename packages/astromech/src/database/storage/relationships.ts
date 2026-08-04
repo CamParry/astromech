@@ -32,7 +32,7 @@ export type RelationshipSource = {
 
 /**
  * One source and the edges its stored field data holds. What a domain's rebuild
- * collector yields; lives here so the domains and the kernel that composes them
+ * collector yields; lives here so the domains and boot (which composes them)
  * share one shape. A source with no edges is still a source — it is how the
  * drift check sees rows left behind by data that no longer references anything.
  */

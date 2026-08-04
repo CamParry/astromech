@@ -39,10 +39,10 @@ import type {
     UsersApi,
 } from '@/types/index.js';
 import { getDb } from '@/database/registry.js';
-// The request-context LEAF, not `@/context/index.js`: that barrel imports
+// The request-context LEAF, not `@/request-context/index.js`: that barrel imports
 // `virtual:astromech/config`, which cannot resolve during Astro's plain-Node
 // config load — the path this module is on.
-import { getCurrentRole } from '@/context/request-context.js';
+import { getCurrentRole } from '@/request-context/request-context.js';
 import { kyselyTableKey, registerDescriptorCodec } from '@/database/codec.js';
 import { peekDatabaseDriver } from '@/database/driver-registry.js';
 import { getStorageDriver } from '@/storage/registry.js';

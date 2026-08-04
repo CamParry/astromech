@@ -11,7 +11,7 @@
 
 import { createMiddleware } from 'hono/factory';
 import { resolveSessionUser } from '@/users/index.js';
-import { getRequestContext, runWithContext } from '@/context/index.js';
+import { getRequestContext, runWithContext } from '@/request-context/index.js';
 import { unauthorized } from './errors.js';
 import type { User, Role } from '@/types/index.js';
 

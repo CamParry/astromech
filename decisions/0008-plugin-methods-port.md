@@ -24,7 +24,7 @@ whatever its model SDK wants and does nothing else.
 It is async because `plugin-runtime.ts` is itself loaded at config time, so the
 accessor's imports must be lazy (`await import(...)`). A static import of
 `policies/scoped-service.js` there would break `astro dev` at integration load,
-which is the trap `context/request-context.ts` already exists to avoid.
+which is the trap `request-context/request-context.ts` already exists to avoid.
 
 ## Why core owns the surface policy
 

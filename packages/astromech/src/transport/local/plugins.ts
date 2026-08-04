@@ -13,7 +13,7 @@
  */
 
 import type { PluginContext, PluginServiceNamespace } from '@/types/index.js';
-import { getCurrentUser } from '@/context/index.js';
+import { getCurrentUser } from '@/request-context/index.js';
 import {
     createPluginContext,
     getPluginIdentity,

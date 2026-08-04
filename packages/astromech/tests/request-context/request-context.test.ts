@@ -12,7 +12,7 @@ import {
     getCurrentUser,
     getRequestContext,
     runWithContext,
-} from '@/context/index.js';
+} from '@/request-context/index.js';
 import type { Role, User } from '@/types/index.js';
 
 function makeUser(id: string): User {

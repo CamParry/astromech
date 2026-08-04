@@ -99,7 +99,7 @@ not be re-derived.
       just a completeness one. The CLI guards it by registering the plugin runtime (`loadConfig` does
       NOT, and without it a table-backed plugin type reads as zero sources and loses its whole edge
       set). A programmatic caller of `rebuildRelationshipIndex` has no such guard. Consider making
-      the kernel function refuse to run unless the runtime is registered.
+      the boot-layer function refuse to run unless the runtime is registered.
 - [ ] **`index:rebuild --check` is not wired into CI.** It exits non-zero on drift and was built to
       be gate-runnable, but nothing runs it. The vitest parity test covers write-path/rebuild-path
       agreement; what `--check` would add is drift detection against a real seeded database.

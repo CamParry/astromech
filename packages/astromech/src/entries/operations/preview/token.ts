@@ -1,4 +1,4 @@
-import { getCurrentUser } from '@/context/index.js';
+import { getCurrentUser } from '@/request-context/index.js';
 import { getEntryStorage } from '../../storage/registry.js';
 import {
     createPreviewTokenStorage,

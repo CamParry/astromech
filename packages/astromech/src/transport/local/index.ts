@@ -21,7 +21,7 @@ import { entries } from '@/entries/index.js';
 import { mediaApi } from '@/media/index.js';
 import { settingsApi } from '@/settings/index.js';
 import { contentApi } from '@/content/index.js';
-import { runWithContext } from '@/context/index.js';
+import { runWithContext } from '@/request-context/index.js';
 import { setPluginClient, setPluginMethods } from '@/plugins/runtime/plugin-runtime.js';
 import { localPlugins } from '@/transport/local/plugins.js';
 import { buildScopedTools } from '@/transport/mcp/scoped-tools.js';

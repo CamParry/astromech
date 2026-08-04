@@ -4,7 +4,7 @@
  * Imports may only point DOWN this list; upward edges are forbidden. Peer
  * domains may read one another.
  *
- *   routes · admin · kernel · codegen · cli        entrypoints & composition root
+ *   routes · admin · boot · codegen · cli        entrypoints & composition root
  *   transport (http · local · mcp · cli)           delivery
  *     · http/client = the fetch Client (consumes the HTTP API over the wire;
  *       client half of the transport, nested but kept a distinct DAG node)
@@ -12,13 +12,13 @@
  *   content                                        downstream domain — may import entries
  *   entries · media · users · settings             domains — siblings, may read each other
  *   plugins/runtime · database · storage · email ·  capabilities
- *     cron · context · fields · permissions
+ *     cron · request-context · fields · permissions
  *   types · utilities · errors                     pure leaves
  *
  * This config scans CORE ONLY (`src/`). Cross-package isolation is enforced by
  * package `exports` boundaries, not this scan.
  *
- * The kernel is the composition root and may import from any layer below it.
+ * The boot layer is the composition root and may import from any layer below it.
  *
  * The leaves (types/utilities/errors) are now pure and enforced by
  * `leaves-are-pure` — errors' entry-specific subclasses moved into entries/, and
@@ -48,11 +48,11 @@ module.exports = {
         {
             name: 'domain-no-upward',
             comment:
-                'A domain knows nothing about delivery or composition. It must not import routes, admin, a transport (which now houses the fetch client under transport/http/client), policies, the kernel, codegen, or a first-party plugin. Importing the plugins/runtime hook engine IS allowed — that is a capability the domain fires hooks through. `content` is included: it is a DOWNSTREAM domain (it orchestrates entries + a model provider), but it knows nothing about delivery either.',
+                'A domain knows nothing about delivery or composition. It must not import routes, admin, a transport (which now houses the fetch client under transport/http/client), policies, boot, codegen, or a first-party plugin. Importing the plugins/runtime hook engine IS allowed — that is a capability the domain fires hooks through. `content` is included: it is a DOWNSTREAM domain (it orchestrates entries + a model provider), but it knows nothing about delivery either.',
             severity: 'error',
             from: { path: '^src/(entries|media|users|settings|content)/' },
             to: {
-                path: '^src/(routes|admin|transport|policies|kernel|codegen)/',
+                path: '^src/(routes|admin|transport|policies|boot|codegen)/',
             },
         },
         {
@@ -66,13 +66,13 @@ module.exports = {
         {
             name: 'capability-no-upward',
             comment:
-                'Capabilities (storage, email, cron, context, fields, cloudflare) sit below the domains: they expose primitives, they do not orchestrate. They must not import a domain, an upper layer, or a first-party plugin.',
+                'Capabilities (storage, email, cron, request-context, fields, cloudflare) sit below the domains: they expose primitives, they do not orchestrate. They must not import a domain, an upper layer, or a first-party plugin.',
             severity: 'error',
             from: {
-                path: '^src/(storage|email|cron|context|fields|permissions|cloudflare)/',
+                path: '^src/(storage|email|cron|request-context|fields|permissions|cloudflare)/',
             },
             to: {
-                path: '^src/(entries|media|users|settings|routes|admin|transport|policies|kernel|codegen)/',
+                path: '^src/(entries|media|users|settings|routes|admin|transport|policies|boot|codegen)/',
             },
         },
         {
@@ -82,7 +82,7 @@ module.exports = {
             severity: 'error',
             from: { path: '^src/plugins/runtime/' },
             to: {
-                path: '^src/(entries|media|users|settings|routes|admin|transport|policies|kernel|codegen)/',
+                path: '^src/(entries|media|users|settings|routes|admin|transport|policies|boot|codegen)/',
             },
         },
         {
@@ -92,7 +92,7 @@ module.exports = {
             severity: 'error',
             from: { path: '^src/database/', pathNot: '^src/database/schema\\.ts$' },
             to: {
-                path: '^src/(entries|media|users|settings|routes|admin|transport|policies|kernel|codegen)/',
+                path: '^src/(entries|media|users|settings|routes|admin|transport|policies|boot|codegen)/',
             },
         },
         {
@@ -109,11 +109,11 @@ module.exports = {
         {
             name: 'admin-only-client-and-pure-leaves',
             comment:
-                'The admin SPA holds the Client and may use shared pure leaves (fields, types, utilities, errors). It must not reach into domains, capabilities, transports, policies, or the kernel — EXCEPT (a) the fetch Client at transport/http/client/, which the admin is built around, and (b) a short allowlist of pure domain leaves it renders with: entries/utils/url, entries/type-registry, entries/validation-stage (the browser runs the server pipeline before a submit and must pick the same stage the server will), settings/page-values, media/serving/image/url (URL string-building with zero imports — the admin thumb builds the same variant URL the server route parses, and a second copy could only drift). Those deep-imports avoid pulling a domain service (and its virtual:config) into the browser bundle.',
+                'The admin SPA holds the Client and may use shared pure leaves (fields, types, utilities, errors). It must not reach into domains, capabilities, transports, policies, or boot — EXCEPT (a) the fetch Client at transport/http/client/, which the admin is built around, and (b) a short allowlist of pure domain leaves it renders with: entries/utils/url, entries/type-registry, entries/validation-stage (the browser runs the server pipeline before a submit and must pick the same stage the server will), settings/page-values, media/serving/image/url (URL string-building with zero imports — the admin thumb builds the same variant URL the server route parses, and a second copy could only drift). Those deep-imports avoid pulling a domain service (and its virtual:config) into the browser bundle.',
             severity: 'error',
             from: { path: '^src/admin/' },
             to: {
-                path: '^src/(entries|media|users|settings)/|^src/(storage|email|cron|context|database|permissions|policies|transport|kernel)/|^src/plugins/runtime/',
+                path: '^src/(entries|media|users|settings)/|^src/(storage|email|cron|request-context|database|permissions|policies|transport|boot)/|^src/plugins/runtime/',
                 pathNot:
                     '^src/entries/(utils/url|type-registry|validation-stage)\\.(ts|js)$|^src/settings/page-values\\.(ts|js)$|^src/media/serving/image/url\\.(ts|js)$|^src/transport/http/client/',
             },
@@ -121,21 +121,21 @@ module.exports = {
         {
             name: 'client-is-over-the-wire',
             comment:
-                'The fetch Client (astromech/fetch) lives at transport/http/client/ but talks to the HTTP API over the wire — it is the client *half* of the http transport, not part of the server. It must not reach into domains, capabilities, policies, the rest of transport (the server), the kernel, or admin — only shared pure leaves (types/utilities/errors). Its own subtree is exempt so it may have internal imports.',
+                'The fetch Client (astromech/fetch) lives at transport/http/client/ but talks to the HTTP API over the wire — it is the client *half* of the http transport, not part of the server. It must not reach into domains, capabilities, policies, the rest of transport (the server), boot, or admin — only shared pure leaves (types/utilities/errors). Its own subtree is exempt so it may have internal imports.',
             severity: 'error',
             from: { path: '^src/transport/http/client/' },
             to: {
-                path: '^src/(entries|media|users|settings|storage|email|cron|context|database|permissions|policies|transport|kernel|admin)/',
+                path: '^src/(entries|media|users|settings|storage|email|cron|request-context|database|permissions|policies|transport|boot|admin)/',
                 pathNot: '^src/transport/http/client/',
             },
         },
         {
             name: 'policies-no-upward',
             comment:
-                'Policies wrap domain services with permission/confirmation logic. They must not import a transport (which houses the fetch client), admin, or the kernel.',
+                'Policies wrap domain services with permission/confirmation logic. They must not import a transport (which houses the fetch client), admin, or boot.',
             severity: 'error',
             from: { path: '^src/policies/' },
-            to: { path: '^src/(transport|admin|kernel)/' },
+            to: { path: '^src/(transport|admin|boot)/' },
         },
         {
             name: 'transport-server-no-reach-client-or-admin',
@@ -146,12 +146,12 @@ module.exports = {
             to: { path: '^src/transport/http/client/|^src/admin/' },
         },
         {
-            name: 'transport-no-reach-kernel',
+            name: 'transport-no-reach-boot',
             comment:
-                'The http/local/mcp transports are projected BY the kernel and must not import it. transport/cli is exempt — it is a standalone entrypoint that performs its own config resolution + boot.',
+                'The http/local/mcp transports are projected BY the boot layer and must not import it. transport/cli is exempt — it is a standalone entrypoint that performs its own config resolution + boot.',
             severity: 'error',
             from: { path: '^src/transport/(http|local|mcp)/' },
-            to: { path: '^src/kernel/' },
+            to: { path: '^src/boot/' },
         },
         {
             name: 'no-circular',
@@ -159,7 +159,7 @@ module.exports = {
                 'Cyclic dependencies break the acyclic layer graph and tree-shaking. Scoped to the clean capability/delivery spine, now including plugins/runtime (its entries entanglement was untangled via the entry-access port). The four domains stay out of scope for now (their own internal cycles are a separate cleanup).',
             severity: 'warn',
             from: {
-                path: '^src/(storage|email|cron|context|fields|permissions|database|policies|transport|kernel|plugins/runtime)/',
+                path: '^src/(storage|email|cron|request-context|fields|permissions|database|policies|transport|boot|plugins/runtime)/',
             },
             to: { circular: true },
         },

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { generateMethodManifest } from '@/codegen/method-manifest.js';
-import { resolveConfig } from '@/kernel/config-resolver.js';
+import { resolveConfig } from '@/boot/config-resolver.js';
 import type {
     AstromechConfig,
     DatabaseDriver,

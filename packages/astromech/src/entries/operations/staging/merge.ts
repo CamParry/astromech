@@ -1,4 +1,4 @@
-import { getCurrentUser } from '@/context/index.js';
+import { getCurrentUser } from '@/request-context/index.js';
 import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import { asEntry, loadAndAssertType } from '../../internal/records.js';
 import { getStagingStorage } from '../../internal/supports.js';

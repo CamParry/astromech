@@ -13,7 +13,7 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js
 import {
     checkRelationshipIndex,
     rebuildRelationshipIndex,
-} from '@/kernel/relationship-index.js';
+} from '@/boot/relationship-index.js';
 import { createStorage } from '@/database/storage/create-storage.js';
 import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import { relationships, type RelationshipRow } from '@/database/schema.js';

@@ -1,7 +1,7 @@
 import config from 'virtual:astromech/config';
 import { flattenEntryFields } from '@/fields/helpers.js';
 import { collectRelationshipSchemaPaths } from '@/fields/relationship-edges.js';
-import { getCurrentUser } from '@/context/index.js';
+import { getCurrentUser } from '@/request-context/index.js';
 import { resolveEntryType } from '../type-registry.js';
 import { getEntryStorage } from '../storage/registry.js';
 import { getDefaultLocale } from '../internal/type-config.js';

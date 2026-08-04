@@ -11,7 +11,7 @@ import {
     runAfterHooks,
     runBeforeHooks,
 } from '@/plugins/runtime/plugin-runtime.js';
-import { getCurrentUser } from '@/context/index.js';
+import { getCurrentUser } from '@/request-context/index.js';
 import { getEntryStorage } from '../storage/registry.js';
 import { loadAndAssertType } from './records.js';
 import type { Entry } from '@/types/index.js';

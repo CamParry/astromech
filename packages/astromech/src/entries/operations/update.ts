@@ -1,4 +1,4 @@
-import { getCurrentUser } from '@/context/index.js';
+import { getCurrentUser } from '@/request-context/index.js';
 import { runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime.js';
 import { updateEntrySchemaFor } from '../schema.js';
 import { getEntryStorage } from '../storage/registry.js';

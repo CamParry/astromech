@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { resolveConfig } from '@/kernel/config-resolver.js';
+import { resolveConfig } from '@/boot/config-resolver.js';
 import { cloudflareImages } from '@/media/serving/image/drivers/cloudflare.js';
 import type {
     AstromechConfig,

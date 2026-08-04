@@ -16,7 +16,7 @@ Astro loads `astro.config.mjs`, and therefore `astromech.config.ts` and every
 every closure hanging off it — `rawRoutes[].handler`, service methods, hooks,
 cron handlers — belongs to that Node-loaded copy of the plugin package, whenever
 it later runs. Core's runtime is the opposite: the integration injects routes
-pointing at package **source** (`pkgSrc` in `kernel/astro.ts`), so Vite compiles
+pointing at package **source** (`pkgSrc` in `boot/astro.ts`), so Vite compiles
 it and the `virtual:` plugin resolves.
 
 |                | how it is loaded         | can it resolve `virtual:`? |
@@ -55,7 +55,7 @@ specifier at all. Type-only imports from any subpath stay fine, because they
 erase. Everything else arrives on `ctx`.
 
 `astromech/methods` is therefore **core-internal in practice**, consumed by the
-CLI, the MCP transport and the kernel. It stays published because those live
+CLI, the MCP transport and boot. It stays published because those live
 outside the package, but no plugin may import it. `0008` covers the port that
 replaces it for plugins.
 

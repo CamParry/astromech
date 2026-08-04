@@ -19,7 +19,7 @@ vi.mock('@/content/service.js', () => ({
 }));
 
 import { generateMethodManifest } from '@/codegen/method-manifest.js';
-import { resolveConfig } from '@/kernel/config-resolver.js';
+import { resolveConfig } from '@/boot/config-resolver.js';
 import { contentDescriptors } from '@/content/descriptors.js';
 import { evaluateConfirmation, triggersConfirmation } from '@/policies/confirm-gate.js';
 import { buildDispatch } from '@/transport/mcp/dispatch.js';

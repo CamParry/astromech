@@ -14,7 +14,7 @@ import { mergePatch, projectToSchema } from '@/fields/patch.js';
 import { getDocumentValidator } from '@/fields/document-validators.js';
 import { flattenFieldNodes } from '@/fields/helpers.js';
 import { scopedReadsFromRecords } from '@/fields/scoped-reads.js';
-import { getCurrentUser } from '@/context/index.js';
+import { getCurrentUser } from '@/request-context/index.js';
 
 function validate<T>(schema: z.ZodType<T>, data: unknown): T {
     try {

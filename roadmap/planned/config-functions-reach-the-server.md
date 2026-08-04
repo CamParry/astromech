@@ -10,7 +10,7 @@ hole generally.
 
 ## The mechanism
 
-`kernel/astro.ts` serves the server's config as a JSON literal:
+`boot/astro.ts` serves the server's config as a JSON literal:
 
 ```js
 load(id) {

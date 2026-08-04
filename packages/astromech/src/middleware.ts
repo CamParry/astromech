@@ -8,7 +8,7 @@
 
 import type { MiddlewareHandler } from 'astro';
 import { resolveSessionUser } from '@/users/index.js';
-import { runWithContext } from '@/context/index.js';
+import { runWithContext } from '@/request-context/index.js';
 
 export const onRequest: MiddlewareHandler = async (context, next) => {
     const { request } = context;

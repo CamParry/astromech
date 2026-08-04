@@ -26,7 +26,7 @@ vi.mock('@/entries/service.js', () => ({
         get: async (params: unknown) => params,
     },
 }));
-import { resolveConfig } from '@/kernel/config-resolver.js';
+import { resolveConfig } from '@/boot/config-resolver.js';
 import { reduceSurface } from '@/policies/tool-surface.js';
 import { buildDispatch } from '@/transport/mcp/dispatch.js';
 import { buildTools } from '@/transport/mcp/tools.js';

@@ -8,7 +8,7 @@
  */
 
 import config from 'virtual:astromech/config';
-import { getCurrentUser } from '@/context/index.js';
+import { getCurrentUser } from '@/request-context/index.js';
 import { ValidationError } from '@/errors/index.js';
 import { getDocumentValidator } from '@/fields/document-validators.js';
 import { fieldNameToLabel, flattenEntryFields } from '@/fields/helpers.js';
