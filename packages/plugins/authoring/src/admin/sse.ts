@@ -37,6 +37,7 @@ export function parseChatEvent(frame: string): ChatEvent | null {
     if (
         type === 'text-delta' ||
         type === 'message' ||
+        type === 'approval-required' ||
         type === 'error' ||
         type === 'done'
     ) {

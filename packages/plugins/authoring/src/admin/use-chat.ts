@@ -7,7 +7,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAIContextItems } from 'astromech/ui';
 import { parseChatEvent, splitSseFrames } from './sse.js';
 import { errorMessage } from '../error-message.js';
-import type { ChatEvent, ChatMessage } from '../types.js';
+import type {
+    ApprovalDecision,
+    ApprovalRequest,
+    ChatEvent,
+    ChatMessage,
+} from '../types.js';
 
 /**
  * One row of the transcript. An error is not a content block and must never
@@ -17,12 +22,23 @@ export type ChatEntry =
     | { kind: 'message'; message: ChatMessage }
     | { kind: 'error'; error: string };
 
+/**
+ * The calls the user turned down, by `tool_use` id. Interface state rather than
+ * conversation: the model learns of a decline through its `tool_result`.
+ */
+export type RejectedCalls = Record<string, 'rejected'>;
+
 export type UseChat = {
     entries: ChatEntry[];
     /** The in-flight assistant text; `''` whenever nothing is streaming. */
     tail: string;
     isStreaming: boolean;
+    /** The calls waiting on a decision; `[]` when none are. */
+    pending: ApprovalRequest[];
+    rejected: RejectedCalls;
     send: (text: string) => void;
+    /** Answer every held call and resume the turn they paused. */
+    respond: (decisions: ApprovalDecision[]) => void;
     stop: () => void;
 };
 
@@ -37,8 +53,11 @@ export function useChat(serviceKey: string): UseChat {
     const [entries, setEntries] = useState<ChatEntry[]>([]);
     const [tail, setTail] = useState('');
     const [isStreaming, setIsStreaming] = useState(false);
+    const [pending, setPending] = useState<ApprovalRequest[]>([]);
+    const [rejected, setRejected] = useState<RejectedCalls>({});
     const aiContext = useAIContextItems();
     const entriesRef = useRef<ChatEntry[]>([]);
+    const pendingRef = useRef<ApprovalRequest[]>([]);
     const abortRef = useRef<AbortController | null>(null);
 
     // A request outlives the component that started it; unmount must cancel it.
@@ -49,32 +68,38 @@ export function useChat(serviceKey: string): UseChat {
         setEntries(next);
     }, []);
 
+    const updatePending = useCallback((next: ApprovalRequest[]) => {
+        pendingRef.current = next;
+        setPending(next);
+    }, []);
+
+    const decline = useCallback((requests: ApprovalRequest[]) => {
+        if (requests.length === 0) return;
+        setRejected((current) => {
+            const next = { ...current };
+            for (const request of requests) next[request.toolUseId] = 'rejected';
+            return next;
+        });
+    }, []);
+
     const stop = useCallback(() => {
         abortRef.current?.abort();
     }, []);
 
-    const send = useCallback(
-        (text: string) => {
-            const asked = text.trim();
-            if (asked === '' || abortRef.current !== null) return;
-
-            const next: ChatEntry[] = [
-                ...entriesRef.current,
-                {
-                    kind: 'message',
-                    message: { role: 'user', content: [{ type: 'text', text: asked }] },
-                },
-            ];
-            updateEntries(next);
+    const startTurn = useCallback(
+        (next: ChatEntry[], decisions: ApprovalDecision[]) => {
             setTail('');
-
             const controller = new AbortController();
             abortRef.current = controller;
             setIsStreaming(true);
 
             void runStream({
                 url: `${API_BASE_PATH}/plugins/${serviceKey}/chat`,
-                body: { messages: toMessages(next), aiContext: [...aiContext] },
+                body: {
+                    messages: toMessages(next),
+                    aiContext: [...aiContext],
+                    decisions,
+                },
                 signal: controller.signal,
                 onEvent: (event) => {
                     if (event.type === 'text-delta') {
@@ -87,6 +112,10 @@ export function useChat(serviceKey: string): UseChat {
                             { kind: 'message', message: event.message },
                         ]);
                         setTail('');
+                        return;
+                    }
+                    if (event.type === 'approval-required') {
+                        updatePending(event.requests);
                         return;
                     }
                     if (event.type === 'error') {
@@ -104,10 +133,52 @@ export function useChat(serviceKey: string): UseChat {
                 setTail('');
             });
         },
-        [aiContext, updateEntries, serviceKey]
+        [aiContext, serviceKey, updateEntries, updatePending]
     );
 
-    return { entries, tail, isStreaming, send, stop };
+    const send = useCallback(
+        (text: string) => {
+            const asked = text.trim();
+            if (asked === '' || abortRef.current !== null) return;
+
+            // The server declines every held call the next message leaves
+            // unanswered, so the transcript has to say the same about them.
+            decline(pendingRef.current);
+            updatePending([]);
+
+            const next: ChatEntry[] = [
+                ...entriesRef.current,
+                {
+                    kind: 'message',
+                    message: { role: 'user', content: [{ type: 'text', text: asked }] },
+                },
+            ];
+            updateEntries(next);
+            startTurn(next, []);
+        },
+        [decline, startTurn, updateEntries, updatePending]
+    );
+
+    const respond = useCallback(
+        (decisions: ApprovalDecision[]) => {
+            const requests = pendingRef.current;
+            if (requests.length === 0 || abortRef.current !== null) return;
+
+            const turnedDown = new Set(
+                decisions
+                    .filter((decision) => decision.action === 'reject')
+                    .map((decision) => decision.approvalId)
+            );
+            decline(requests.filter((request) => turnedDown.has(request.approvalId)));
+            updatePending([]);
+            // The transcript goes back exactly as it stands: the server builds
+            // the `tool_result` turn and streams it back as a `message` event.
+            startTurn(entriesRef.current, decisions);
+        },
+        [decline, startTurn, updatePending]
+    );
+
+    return { entries, tail, isStreaming, pending, rejected, send, respond, stop };
 }
 
 /** The wire shape: the turns only, since an error was never part of the conversation. */

@@ -30,10 +30,9 @@ export type AuthoringOptions = {
     /** Reasoning effort for the loop. Defaults to `medium`. */
     effort?: 'low' | 'medium' | 'high';
     /**
-     * Restrict the assistant to methods that do not mutate. Defaults to `true`
-     * while the drawer has no way to answer an approval; set to `false`, a
-     * mutating call is held for the user's decision rather than kept off the
-     * tool surface.
+     * Keep every mutating method off the tool surface. Defaults to `false`: a
+     * mutating call is held for the user's decision in the drawer rather than
+     * hidden from the assistant. Set it to `true` to drop them entirely.
      */
     readOnly?: boolean;
 };
