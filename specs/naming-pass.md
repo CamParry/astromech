@@ -1,12 +1,12 @@
 # Naming pass — what is still open
 
-**Items 1–20 of this plan shipped on 2026-08-04** and have been removed from
+**Items 1–22 of this plan shipped on 2026-08-04** and have been removed from
 this file. What landed, and where, is in `roadmap/in-progress/naming-pass.md`;
-the headline decision is `decisions/0009-service-method-client-vocabulary.md`.
+the headline decisions are `decisions/0009-service-method-client-vocabulary.md`
+and `decisions/0015-public-subpaths-mirror-the-source.md`.
 
-What remains is below: the two order-table items that were scoped out (§D and
-§A5), the three sections that were never in the order table (§H, §I, §J), and
-four questions parked for a later conversation.
+What remains is below: the three sections that were never in the order table (§H,
+§I, §J), and four questions parked for a later conversation.
 
 Everything here is still a rename with no behaviour change, so the same
 constraint applies: land it when `roadmap/in-progress/` is quiet, because it
@@ -16,50 +16,10 @@ conflicts with anything mid-flight in the same files.
 
 §I has an internal dependency: the admin `TableDefinition` must become
 `ResolvedTable` before `TableDescriptor` can become `Table`. `FieldDefinition` →
-`Field` goes last — widest diff, no dependents. §D and §A5 are independent of
-everything.
+`Field` goes last — widest diff, no dependents.
 
 §H1, §I and §J each need a `TERMINOLOGY.md` entry, and §I overturns an existing
 one.
-
----
-
-# §D — public subpaths disagree with the source
-
-| Public subpath                             | Source                                | Mismatch                       |
-| ------------------------------------------ | ------------------------------------- | ------------------------------ |
-| `astromech/db/schema`, `astromech/db/d1`   | `src/database/`                       | `db` vs `database`             |
-| `astromech/images/{sharp,cloudflare}`      | `src/media/serving/image/`            | `images` vs `image` vs `media` |
-| `astromech/Image`                          | `src/media/serving/image/Image.astro` | only capitalised subpath of 20 |
-| `astromech/ui`, `/ui/fields`, `/ui/layout` | `src/admin/components/`               | `ui` vs `admin`                |
-
-`ARCHITECTURE.md:118` records the first as deliberate ("was db/; public subpath
-unchanged"), which made sense when there were consumers to avoid breaking. There
-aren't any. Pre-1.0 is the moment to make the public word and the internal word
-the same: `astromech/database/schema` costs nothing now and is unfixable later.
-
-`astromech/images/sharp` vs `astromech/storage/r2`: singular/plural mismatch
-between two otherwise parallel driver families. Pick one.
-
-`astromech/Image` is defensible (it's a component) but it's the one odd member of
-an import list. `astromech/media/image` would fold it in.
-
----
-
-# §A5 — give the two clients different names
-
-Both public clients export the same identifier. `astromech/local` exports
-`const Astromech: AstromechClient`; `astromech/fetch` exports
-`const Astromech: AstromechClient`. Same name, same type, different
-capabilities — local carries `content`, fetch can't.
-
-Proposal: `astromech/local` keeps `Astromech` (the ergonomic one used in Astro
-templates, and what the docs show); `astromech/fetch` exports `client` or
-`astromechClient`. Both keep their default export.
-
-**Open — needs a decision.** The alternative is renaming the local one and
-leaving `fetch` alone. Which is right depends on which appears more in
-`apps/docs/`; check before implementing.
 
 ---
 

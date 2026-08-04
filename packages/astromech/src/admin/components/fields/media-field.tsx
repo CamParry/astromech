@@ -12,7 +12,7 @@ import {
     X,
 } from 'lucide-react';
 import type { BaseFieldProps } from '@/types/index.js';
-import { Astromech } from '@/transport/http/client/index.js';
+import { astromechClient } from '@/transport/http/client/index.js';
 import { Modal } from '@/admin/components/ui/modal';
 import { Spinner } from '@/admin/components/ui/spinner';
 import { MediaPicker } from '@/admin/components/media/media-picker.js';
@@ -102,7 +102,7 @@ export function MediaField({
         }
 
         setIsLoadingItems(true);
-        Promise.all(ids.map((id) => Astromech.media.get({ id })))
+        Promise.all(ids.map((id) => astromechClient.media.get({ id })))
             .then((items) => {
                 setSelectedIds(ids);
                 setSelectedItems(items.filter(Boolean) as MediaItem[]);

@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { hashPassword } from 'better-auth/crypto';
 import { collectRelationshipEdges } from 'astromech';
 import type { FieldDefinition } from 'astromech';
-import * as schema from 'astromech/db/schema';
+import * as schema from 'astromech/database/schema';
 import config from '../../../apps/demo/astromech.config.js';
 
 // Resolved against this file, not the cwd: `npm run db:seed` delegates with

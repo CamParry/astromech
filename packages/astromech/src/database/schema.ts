@@ -7,7 +7,7 @@
  * by better-auth's adapter — so only their domain-side row types appear here.
  * `relationships` and `cron` are defined here as they have no dedicated domain
  * module. Consumed by `database/types.ts` (assembles the Kysely `DB`) and
- * `astromech/db/schema`. NOT by `database/codec.ts` — the codec is keyed by
+ * `astromech/database/schema`. NOT by `database/codec.ts` — the codec is keyed by
  * descriptor, so every caller passes the one it already holds.
  */
 

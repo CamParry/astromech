@@ -17,7 +17,7 @@ import type { Media, MediaQueryParams } from '@/types/index.js';
 const { mediaQuery } = vi.hoisted(() => ({ mediaQuery: vi.fn() }));
 
 vi.mock('@/transport/http/client/index.js', () => ({
-    Astromech: { media: { query: mediaQuery } },
+    astromechClient: { media: { query: mediaQuery } },
 }));
 
 const ITEM: Media = {

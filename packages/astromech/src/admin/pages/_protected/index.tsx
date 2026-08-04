@@ -19,7 +19,7 @@ import {
     PageHeader,
     PageContent,
 } from '@/admin/components/ui/index.js';
-import { Astromech } from '@/transport/http/client/index.js';
+import { astromechClient } from '@/transport/http/client/index.js';
 import { useAIContext } from '@/admin/context/ai-context.js';
 import type { Entry } from '@/types/index.js';
 import { formatDate } from '@/utilities/dates.js';
@@ -50,7 +50,7 @@ function StatCard({
 }): React.ReactElement {
     const { data, isLoading } = useQuery({
         queryKey: ['collection-count', collectionKey],
-        queryFn: () => Astromech.entries.query({ type: collectionKey, limit: 1 }),
+        queryFn: () => astromechClient.entries.query({ type: collectionKey, limit: 1 }),
     });
 
     const total = data?.pagination?.total ?? 0;
@@ -89,7 +89,7 @@ function useRecentEntries(): RecentActivityResult {
         queryFn: async () => {
             const results = await Promise.all(
                 collectionKeys.map(async (key) => {
-                    const result = await Astromech.entries.query({
+                    const result = await astromechClient.entries.query({
                         type: key,
                         limit: 5,
                         sort: { updatedAt: 'desc' },

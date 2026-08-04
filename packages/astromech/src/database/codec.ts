@@ -128,7 +128,7 @@ const LEGACY_CODECS: Record<string, LegacyCodec> = {
 // table a caller reaches by name. A name that matches neither passes through
 // untouched (only `undefined` keys are dropped), because there is nothing to
 // convert it by; if that name is one of ours, the caller wants `*With` below.
-// Exported from `astromech/db/schema` for seed scripts, which need the
+// Exported from `astromech/database/schema` for seed scripts, which need the
 // seconds-INTEGER format for `users`/`accounts`.
 // ============================================================================
 

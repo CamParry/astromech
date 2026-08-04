@@ -23,7 +23,7 @@ const { mediaQuery, uploadMedia, canUploadMedia } = vi.hoisted(() => ({
 }));
 
 vi.mock('@/transport/http/client/index.js', () => ({
-    Astromech: { media: { query: mediaQuery, upload: uploadMedia } },
+    astromechClient: { media: { query: mediaQuery, upload: uploadMedia } },
 }));
 
 // The picker reads one flag; the barrel re-exports `hasPermission` from here.

@@ -15,10 +15,10 @@ export default defineConfig({
 
 ## Choosing a driver
 
-| Driver           | Import            | For                                              | Runs on                    |
-| ---------------- | ----------------- | ------------------------------------------------ | -------------------------- |
-| `libsqlDriver()` | `astromech`       | local development, single-server Node, and Turso | Node                       |
-| `d1()`           | `astromech/db/d1` | Cloudflare Workers with a D1 database binding    | Workers; Node via wrangler |
+| Driver           | Import                  | For                                              | Runs on                    |
+| ---------------- | ----------------------- | ------------------------------------------------ | -------------------------- |
+| `libsqlDriver()` | `astromech`             | local development, single-server Node, and Turso | Node                       |
+| `d1()`           | `astromech/database/d1` | Cloudflare Workers with a D1 database binding    | Workers; Node via wrangler |
 
 v1 is SQLite-only. Postgres and MySQL are a future major, not a flag.
 
@@ -46,7 +46,7 @@ rather than silently producing a broken backup.
 ## `d1()`
 
 ```ts
-import { d1 } from 'astromech/db/d1';
+import { d1 } from 'astromech/database/d1';
 
 db: d1({ binding: 'DB' });
 ```

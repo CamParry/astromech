@@ -10,9 +10,15 @@ gate and at the exact test baseline (2465 core / 24 authoring / 86
 schema-engine); the merge was verified again on `main` with `build`,
 `check:config`, `check:node-imports`, `db:generate` and a demo boot.
 
+Items 21–22 (§D and §A5) followed on `refactor/public-subpaths`, at a baseline
+of 2465 core / 32 authoring / 86 schema-engine — the authoring figure moved
+because the content-block work landed in between, not because this pass touched
+a test.
+
 **Plan:** `specs/naming-pass.md`, now trimmed to the unshipped sections only.
-The headline decision is recorded in
-`decisions/0009-service-method-client-vocabulary.md`.
+The headline decisions are recorded in
+`decisions/0009-service-method-client-vocabulary.md` and
+`decisions/0015-public-subpaths-mirror-the-source.md`.
 
 ## Shipped
 
@@ -67,6 +73,25 @@ The headline decision is recorded in
 - [x] `force` → `permanent`, on the parameter **and** on `EntryDeleteContext`,
       the plugin-facing hook payload. Nothing subscribes yet
 
+### Public subpaths (§D) — `4502e51`
+
+- [x] `astromech/db/{schema,d1}` → `astromech/database/{schema,d1}`
+- [x] `astromech/images/{sharp,cloudflare}` →
+      `astromech/media/image/{sharp,cloudflare}`
+- [x] `astromech/Image` → `astromech/media/Image`. The capital stays — it names
+      an Astro component
+- [x] `astromech/ui` deliberately keeps its name against the rule; its source is
+      `src/admin/components/`
+- [x] The `src/exports/` barrels follow the subpath, `/` replaced by `-`
+
+### Client export names (§A5) — `5f1556d`
+
+- [x] `astromech/fetch` exports `astromechClient`; `astromech/local` keeps
+      `Astromech`. Both keep their default export, so
+      `import Astromech from 'astromech/fetch'` is unaffected
+- [x] 21 admin import sites plus 4 test files, including three `vi.mock` factory
+      keys that would have returned `undefined` silently
+
 ### Docs (§E)
 
 - [x] `ARCHITECTURE.md`: the layer model and directory map both listed a
@@ -77,15 +102,9 @@ The headline decision is recorded in
 
 ## Not done
 
-Scoped out of this run, in the plan's own order:
+All three were added after the order table was written, so none has a place in
+it:
 
-- [ ] **§D public subpaths** — `astromech/db/*` → `astromech/database/*`, the
-      `images`/`image`/`media` mismatch, and whether `astromech/Image` folds
-      into `astromech/media/image`. Item 21
-- [ ] **§A5 client export names** — both `astromech/local` and `astromech/fetch`
-      export `const Astromech: AstromechClient`. Needs a decision on which one
-      keeps the bare name; check which appears more in `apps/docs/` first.
-      Item 22
 - [ ] **§H `fields/`** — the layout-field/presentational vocabulary, dropping
       "chrome", `formatFieldPath` → `formatInstancePath`, splitting
       `helpers.ts`. Never in the order table

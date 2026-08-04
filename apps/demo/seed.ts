@@ -14,11 +14,11 @@
 import { hashPassword } from 'better-auth/crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import sharpLib from 'sharp';
-import * as schema from 'astromech/db/schema';
+import * as schema from 'astromech/database/schema';
 import { collectRelationshipEdges, encodeWith } from 'astromech';
 import type { FieldDefinition } from 'astromech';
 import { redirectsTable } from '@astromech/redirects/tables';
-import { readImageDimensions, contentVersion, sharp } from 'astromech/images/sharp';
+import { readImageDimensions, contentVersion, sharp } from 'astromech/media/image/sharp';
 import config from './astromech.config.js';
 
 // ProseMirror JSON builders for richtext seed content (StarterKit schema)

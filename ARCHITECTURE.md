@@ -111,7 +111,7 @@ packages/
 │   │   ├── notifications/  # notifications domain: service · schema · user-scoped storage
 │   │   │
 │   │   │   ── capabilities ───────────────────────────────────────────────
-│   │   ├── database/       # Kysely client/drivers + schema.ts aggregator (public subpath: astromech/db/schema)
+│   │   ├── database/       # Kysely client/drivers + schema.ts aggregator
 │   │   ├── storage/        # blob-storage registry + drivers/ (filesystem, r2, s3)
 │   │   ├── cloudflare/     # binding-name resolution across Workers and Node
 │   │   ├── permissions/    # permission model: roles, grammar, BUILT_IN_ROLES, can()
@@ -201,13 +201,15 @@ Consumers import from subpaths, never deep into `src/`. The published surface is
 defined by `exports` in `package.json` — that's canonical. The ones to know:
 `astromech` (core helpers + types, incl. the plugin-authoring API — there is no
 separate `plugin-kit` subpath), `astromech/astro` (integration),
-`astromech/local` & `astromech/fetch` (the two API consumers), `astromech/middleware`,
+`astromech/local` & `astromech/fetch` (the two API consumers — local exports
+`Astromech`, fetch exports `astromechClient`; both also default-export it),
+`astromech/middleware`,
 `astromech/methods` (the server-side seam surface — the boot-generated method
 manifest via `getMethodManifest`, plus `buildDispatch`, `buildScopedDispatch`,
 `filterMethods`, `annotateManifest`, `scopedServices`, the confirmation helpers
 and `formatAIContextMessage`; **core-internal in practice — a plugin package
 cannot import it, see "Plugin runtime boundary"**),
-`astromech/fields`, `astromech/db/schema`, `astromech/storage/{filesystem,r2,s3}`
+`astromech/fields`, `astromech/database/schema`, `astromech/storage/{filesystem,r2,s3}`
 (storage drivers), `astromech/cloudflare` (binding-name resolution), and the
 `astromech` CLI bin. The first-party plugins are their own packages —
 `@astromech/{seo,redirects,menus,backups}` (see `packages/`).

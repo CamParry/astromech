@@ -9,7 +9,7 @@
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { Astromech } from '@/transport/http/client/index.js';
+import { astromechClient } from '@/transport/http/client/index.js';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntryEditPage } from '@/admin/components/entries/entry-edit-page.js';
 import { buildPluginEntriesMount } from '@/admin/components/entries/mount.js';
@@ -19,7 +19,7 @@ import type { EntriesService } from '@/types/index.js';
 function PluginEntryEditPage(): React.ReactElement {
     const { name, type, id } = Route.useParams();
     const { t } = useTranslation();
-    const api = Astromech.entries as unknown as EntriesService;
+    const api = astromechClient.entries as unknown as EntriesService;
     const mount = buildPluginEntriesMount(adminConfig.plugins, name, type, api);
     if (!mount) {
         return (

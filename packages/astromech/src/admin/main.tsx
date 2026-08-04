@@ -7,7 +7,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import adminConfig from 'virtual:astromech/admin-config';
-import { Astromech } from '@/transport/http/client/index.js';
+import { astromechClient } from '@/transport/http/client/index.js';
 import { setDateLocale } from '../utilities/dates.js';
 import { resolveContentLocale } from '../utilities/locale.js';
 import { createAppRouter } from './router.js';
@@ -18,7 +18,7 @@ import './styles/main.css';
 
 declare const __ASTROMECH_API_ROUTE__: string;
 
-Astromech.configure({ baseUrl: __ASTROMECH_API_ROUTE__ });
+astromechClient.configure({ baseUrl: __ASTROMECH_API_ROUTE__ });
 
 // Dates render in the install's configured locale (e.g. en-GB → `14 Jun 2026`).
 setDateLocale(adminConfig.defaultLocale);

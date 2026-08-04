@@ -47,3 +47,4 @@ Distinct from the neighbouring directories:
 - [0012](0012-driver-not-adapter.md) — "driver" over "adapter" for pluggable backends
 - [0013](0013-chat-transcript-as-content-blocks.md) — the chat transcript crosses the wire as content blocks
 - [0014](0014-naming-the-ai-tool-surface.md) — naming the AI tool surface: `ToolDefinition`, `AIContextItem`, `transport/tools/`
+- [0015](0015-public-subpaths-mirror-the-source.md) — a public subpath mirrors its source directory, and the fetch client is `astromechClient`

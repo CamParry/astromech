@@ -8,7 +8,7 @@
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { Astromech } from '@/transport/http/client/index.js';
+import { astromechClient } from '@/transport/http/client/index.js';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntryNewPage } from '@/admin/components/entries/entry-new-page.js';
 import { buildPluginEntriesMount } from '@/admin/components/entries/mount.js';
@@ -23,7 +23,7 @@ function PluginEntryNewPage(): React.ReactElement {
     const { name, type } = Route.useParams();
     const search = Route.useSearch();
     const { t } = useTranslation();
-    const api = Astromech.entries as unknown as EntriesService;
+    const api = astromechClient.entries as unknown as EntriesService;
     const mount = buildPluginEntriesMount(adminConfig.plugins, name, type, api);
     if (!mount) {
         return (

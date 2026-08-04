@@ -16,7 +16,7 @@ import {
     queryOptions,
 } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Astromech, AstromechApiError } from '@/transport/http/client/index.js';
+import { astromechClient, AstromechApiError } from '@/transport/http/client/index.js';
 import { queryKeys, scopedEntryKeys } from './use-query-keys.js';
 import { useToast } from '../components/ui/index.js';
 import type {
@@ -34,18 +34,22 @@ import type {
 
 /**
  * Optional mount binding. Root callers omit both (defaults reproduce today's
- * behaviour exactly: the root `Astromech.entries` client and unprefixed keys).
- * Plugin callers pass the bound entries client and the plugin name as scope.
+ * behaviour exactly: the root `astromechClient.entries` client and unprefixed
+ * keys). Plugin callers pass the bound entries client and the plugin name as
+ * scope.
  */
 export type EntryHookScope = {
-    /** Entries client bound to a base path. Defaults to root `Astromech.entries`. */
+    /**
+     * Entries client bound to a base path. Defaults to root
+     * `astromechClient.entries`.
+     */
     api?: EntriesService;
     /** Cache-key scope. `''` (default) = root keys; plugin name = namespaced. */
     cacheScope?: string;
 };
 
 function resolveApi(scope?: EntryHookScope): EntriesService {
-    return scope?.api ?? (Astromech.entries as unknown as EntriesService);
+    return scope?.api ?? (astromechClient.entries as unknown as EntriesService);
 }
 
 function resolveKeys(scope?: EntryHookScope) {
@@ -113,7 +117,7 @@ export function useEntryVersions(
 export function useIncomingRelationships(type: string, id: string, enabled = true) {
     return useQuery({
         queryKey: ['entries', type, 'incoming-relationships', id] as const,
-        queryFn: () => Astromech.entries.incomingRelationships({ type, id }),
+        queryFn: () => astromechClient.entries.incomingRelationships({ type, id }),
         enabled,
     });
 }
@@ -126,7 +130,7 @@ export function useEntriesByIds(type: string, ids: string[], enabled = true) {
     return useQuery({
         queryKey: queryKeys.entries.list(type, { _byIds: ids, locale: 'all' }),
         queryFn: () =>
-            Astromech.entries.query({
+            astromechClient.entries.query({
                 type,
                 locale: 'all',
                 where: { id: { in: ids } },
@@ -151,7 +155,7 @@ export function useCreateEntry() {
             title: string;
             fields: JsonObject;
             status?: EntryStatus;
-        }) => Astromech.entries.create(payload),
+        }) => astromechClient.entries.create(payload),
         onSuccess: (entry) => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.all(entry.type),
@@ -179,7 +183,7 @@ export function useUpdateEntry(
 
     return useMutation({
         mutationFn: (payload: Record<string, unknown>) =>
-            Astromech.entries.update({
+            astromechClient.entries.update({
                 type,
                 id,
                 data: payload as EntryUpdateData,
@@ -341,7 +345,7 @@ export function usePublishEntry(
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: () => Astromech.entries.publish({ type, id }),
+        mutationFn: () => astromechClient.entries.publish({ type, id }),
         onSuccess: (entry) => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.get(type, id),
@@ -371,7 +375,7 @@ export function useUnpublishEntry(
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: () => Astromech.entries.unpublish({ type, id }),
+        mutationFn: () => astromechClient.entries.unpublish({ type, id }),
         onSuccess: (entry) => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.get(type, id),
@@ -403,7 +407,7 @@ export function useScheduleEntry(
 
     return useMutation({
         mutationFn: (publishAt: Date) =>
-            Astromech.entries.schedule({ type, id, publishAt }),
+            astromechClient.entries.schedule({ type, id, publishAt }),
         onSuccess: (entry) => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.get(type, id),
@@ -583,9 +587,9 @@ export function useRestoreEntryVersion(
  * Mutation: create a new entry that joins an existing locale group as a
  * translation of `sourceId`. Used by the LocaleSwitcher "Create translation" CTA.
  *
- * Implementation: reads the source via Astromech.entries.get, then calls
- * Astromech.entries.duplicate({ type, id: sourceId, overrides: { locale, localeGroup } })
- * so the new row inherits the source's localeGroup.
+ * Implementation: reads the source via astromechClient.entries.get, then calls
+ * astromechClient.entries.duplicate({ type, id: sourceId, overrides: { locale,
+ * localeGroup } }) so the new row inherits the source's localeGroup.
  */
 export function useCreateTranslation(
     type: string,
@@ -602,9 +606,9 @@ export function useCreateTranslation(
             sourceId: string;
             locale: string;
         }): Promise<Entry> => {
-            const source = await Astromech.entries.get({ type, id: sourceId });
+            const source = await astromechClient.entries.get({ type, id: sourceId });
             if (!source) throw new Error(`Entry ${sourceId} not found`);
-            return Astromech.entries.duplicate({
+            return astromechClient.entries.duplicate({
                 type,
                 id: sourceId,
                 overrides: { locale, localeGroup: source.localeGroup },

@@ -8,7 +8,7 @@
 
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Astromech } from '@/transport/http/client/index.js';
+import { astromechClient } from '@/transport/http/client/index.js';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntriesListPage } from '@/admin/components/entries/entries-list-page.js';
 import type { EntriesService } from '@/types/index.js';
@@ -25,7 +25,7 @@ function EntryIndexPage(): React.ReactElement {
         { depth: 0 }
     );
     const mount: EntriesMount = {
-        api: Astromech.entries as unknown as EntriesService,
+        api: astromechClient.entries as unknown as EntriesService,
         type,
         cacheScope: '',
         config: adminConfig.entries[type],

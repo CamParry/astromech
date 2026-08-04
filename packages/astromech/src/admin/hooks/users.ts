@@ -9,7 +9,7 @@ import {
     queryOptions,
 } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Astromech } from '@/transport/http/client/index.js';
+import { astromechClient } from '@/transport/http/client/index.js';
 import { queryKeys } from './use-query-keys.js';
 import { useToast } from '../components/ui/index.js';
 import type { User, UserQueryParams } from '@/types/index.js';
@@ -21,14 +21,14 @@ import type { User, UserQueryParams } from '@/types/index.js';
 export function useUsersQuery(params?: UserQueryParams) {
     return useQuery({
         queryKey: queryKeys.users.list(params as Record<string, unknown>),
-        queryFn: () => Astromech.users.query(params),
+        queryFn: () => astromechClient.users.query(params),
     });
 }
 
 export function userQueryOptions(id: string) {
     return queryOptions({
         queryKey: queryKeys.users.detail(id),
-        queryFn: () => Astromech.users.get({ id }),
+        queryFn: () => astromechClient.users.get({ id }),
     });
 }
 
@@ -47,7 +47,7 @@ export function useCreateUser(options?: { onSuccess?: (user: User) => void }) {
 
     return useMutation({
         mutationFn: (data: { name: string; email: string; roleSlug: string }) =>
-            Astromech.users.create(data),
+            astromechClient.users.create(data),
         onSuccess: (user) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.users.all() });
             toast({ message: t('users.updated'), variant: 'success' });
@@ -75,7 +75,7 @@ export function useUpdateUser(
 
     return useMutation({
         mutationFn: (data: Partial<{ name: string; roleSlug: string }>) =>
-            Astromech.users.update({ id, data }),
+            astromechClient.users.update({ id, data }),
         onSuccess: (user) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(id) });
             void queryClient.invalidateQueries({ queryKey: queryKeys.users.all() });
@@ -99,7 +99,7 @@ export function useDeleteUser(options?: { id?: string; onSuccess?: () => void })
 
     return useMutation({
         mutationFn: (id?: string) =>
-            Astromech.users.delete({ id: (options?.id ?? id) as string }),
+            astromechClient.users.delete({ id: (options?.id ?? id) as string }),
         onSuccess: () => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.users.all() });
             toast({ message: t('users.deleted'), variant: 'success' });

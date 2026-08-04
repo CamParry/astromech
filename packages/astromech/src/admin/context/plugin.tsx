@@ -10,7 +10,7 @@
 import React from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { Astromech } from '@/transport/http/client/index.js';
+import { astromechClient } from '@/transport/http/client/index.js';
 import { useToast } from '@/admin/components/ui/index.js';
 import { useConfirm } from '@/admin/components/ui/confirm.js';
 import { useAuth } from '@/admin/context/auth.js';
@@ -20,11 +20,11 @@ export type PluginUiIdentity = {
     namespace: string;
     /**
      * The plugin's derived service key, e.g. `acmeSeo` — the
-     * `Astromech.plugins.*` property. Supplied by whoever renders the surface
-     * rather than computed from `namespace` here: the namespace → service key
-     * derivation is lossy, so it cannot be run backwards, and running it
-     * forwards in the browser would be a second implementation of a rule the
-     * server already resolved.
+     * `astromechClient.plugins.*` property. Supplied by whoever renders the
+     * surface rather than computed from `namespace` here: the namespace →
+     * service key derivation is lossy, so it cannot be run backwards, and
+     * running it forwards in the browser would be a second implementation of a
+     * rule the server already resolved.
      */
     serviceKey: string;
     /** i18n namespace + permission anchor. Same string as `namespace`. */
@@ -69,7 +69,9 @@ export function useAstromechPlugin() {
          * namespace → service key mapping is lossy in that direction.
          */
         serviceKey: identity.serviceKey,
-        service: (Astromech.plugins as Record<string, unknown>)[identity.serviceKey],
+        service: (astromechClient.plugins as Record<string, unknown>)[
+            identity.serviceKey
+        ],
         toast,
         modal: confirm,
         currentUser: user,
