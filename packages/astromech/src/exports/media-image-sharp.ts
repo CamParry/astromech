@@ -1,5 +1,5 @@
 /**
- * `astromech/images/sharp` — the sharp image driver plus the server-side image
+ * `astromech/media/image/sharp` — the sharp image driver plus the server-side image
  * byte helpers (dimension/version probing) that go with it during upload &
  * seeding. Server-only.
  */

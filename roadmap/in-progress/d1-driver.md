@@ -32,7 +32,7 @@ wrangler's local emulation.** That last step is what keeps this in
 - [x] No `dump`/`restore`. `D1Database.dump()` only ever worked on alpha-era
       databases; export and PITR are control-plane only. `@astromech/backups`
       already feature-detects and reports `canDump: false`
-- [x] Exported from `astromech/db/d1`, its own subpath, so a Workers bundle
+- [x] Exported from `astromech/database/d1`, its own subpath, so a Workers bundle
       never pulls libsql in
 - [x] Migrations verified to apply without a transaction — Kysely's `Migrator`
       only opens one when the adapter reports transactional DDL support, and
@@ -58,5 +58,5 @@ wrangler's local emulation.** That last step is what keeps this in
 - `libsqlDriver` is exported from the **root** barrel, so `@libsql/client` is
   reachable from every consumer of `astromech` — including Workers bundles.
   The storage drivers avoid this with per-driver subpaths. Moving it to
-  `astromech/db/libsql` and dropping it from the root is a small breaking
+  `astromech/database/libsql` and dropping it from the root is a small breaking
   change worth making before release.

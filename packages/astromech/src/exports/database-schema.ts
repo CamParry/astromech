@@ -1,5 +1,5 @@
 /**
- * `astromech/db/schema` — the schema surface used for migrations and seeding.
+ * `astromech/database/schema` — the schema surface used for migrations and seeding.
  *
  * Exposes the table descriptors / row types plus the seed-facing helpers
  * (`libsqlDriver` for a `Kysely<DB>` handle, the row codec, and the `DB` type),

@@ -2,7 +2,7 @@
  * Cloudflare D1 Database Driver
  *
  * Usage:
- *   import { d1 } from 'astromech/db/d1';
+ *   import { d1 } from 'astromech/database/d1';
  *   db: d1({ binding: 'DB' })
  *
  * Two permanent caveats, both driven by what D1 actually exposes:

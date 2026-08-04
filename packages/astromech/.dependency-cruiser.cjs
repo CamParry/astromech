@@ -88,7 +88,7 @@ module.exports = {
         {
             name: 'database-no-upward-except-aggregate',
             comment:
-                'The database capability must not import domains or upper layers — EXCEPT database/schema.ts, the table aggregator that re-exports each domain schema to keep the `astromech/db/schema` public surface intact (the public subpath stays `db/`; only the source dir is `database/`). Every other database/ file stays below the domains.',
+                'The database capability must not import domains or upper layers — EXCEPT database/schema.ts, the table aggregator that re-exports each domain schema to form the `astromech/database/schema` public surface. Every other database/ file stays below the domains.',
             severity: 'error',
             from: { path: '^src/database/', pathNot: '^src/database/schema\\.ts$' },
             to: {

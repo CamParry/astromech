@@ -193,7 +193,7 @@ One message an editor configures to be sent when a submission is accepted, store
 
 **Tables** — a directory of `defineTable` / `definePluginTable` descriptors and nothing else. Every table-bearing plugin keeps its descriptors in `src/tables/`, publishes them (where a consumer needs them) as a `./tables` subpath, and `astromech plugin:generate --tables` reads that module to diff against the package's migration snapshot. A descriptor export is named `<noun>Table` (`entriesTable`, `cronTable`, `submissionsTable`) — the noun matching its SQL table name, the suffix separating it from the domain word and the domain's service.
 
-**Schema** — the aggregate shape, or a module that mixes descriptors with validation. Core's `<domain>/schema.ts` holds both table descriptors and the domain's Zod request schemas, so it keeps the wider word; likewise `astromech/db/schema` (every table plus the codec and driver) and `@astromech/schema-engine` (diffing and rendering DDL). A `schema` that means "just these tables" is the one usage this vocabulary rules out — `decisions/0001-forms-vocabulary-and-table-directories.md` has the reasoning.
+**Schema** — the aggregate shape, or a module that mixes descriptors with validation. Core's `<domain>/schema.ts` holds both table descriptors and the domain's Zod request schemas, so it keeps the wider word; likewise `astromech/database/schema` (every table plus the codec and driver) and `@astromech/schema-engine` (diffing and rendering DDL). A `schema` that means "just these tables" is the one usage this vocabulary rules out — `decisions/0001-forms-vocabulary-and-table-directories.md` has the reasoning.
 
 ---
 

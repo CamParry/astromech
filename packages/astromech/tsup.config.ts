@@ -3,9 +3,9 @@ import { defineConfig } from 'tsup';
 export default defineConfig([
     // Library build — virtual:astromech/config is injected by the Astro integration at runtime
     {
-        // Sources point ONLY at the curated `src/exports/` layer; output keys
-        // (and therefore dist paths + package.json subpaths) are unchanged, so
-        // the public contract is frozen while internals are free to move.
+        // Sources point ONLY at the curated `src/exports/` layer. Output keys
+        // mirror the source layout, and the package.json subpaths mirror them in
+        // turn, so a public import names the directory the code lives in.
         entry: {
             index: 'src/exports/index.ts',
             fields: 'src/exports/fields.ts',
@@ -15,17 +15,17 @@ export default defineConfig([
             'local/index': 'src/exports/local.ts',
             'fetch/index': 'src/exports/fetch.ts',
             middleware: 'src/exports/middleware.ts',
-            'db/schema': 'src/exports/schema.ts',
+            'database/schema': 'src/exports/database-schema.ts',
             'admin/components/ui/index': 'src/exports/admin/ui.ts',
             'admin/components/ui/layout': 'src/exports/admin/ui-layout.ts',
             'admin/components/fields/index': 'src/exports/admin/ui-fields.ts',
             'email/index': 'src/exports/email.ts',
-            'images/drivers/sharp': 'src/exports/image-sharp.ts',
-            'images/drivers/cloudflare': 'src/exports/image-cloudflare.ts',
+            'media/image/drivers/sharp': 'src/exports/media-image-sharp.ts',
+            'media/image/drivers/cloudflare': 'src/exports/media-image-cloudflare.ts',
             'storage/drivers/r2': 'src/exports/storage-r2.ts',
             'storage/drivers/filesystem': 'src/exports/storage-filesystem.ts',
             'storage/drivers/s3': 'src/exports/storage-s3.ts',
-            'database/drivers/d1': 'src/exports/db-d1.ts',
+            'database/drivers/d1': 'src/exports/database-d1.ts',
             'cloudflare/index': 'src/exports/cloudflare.ts',
         },
         format: ['esm'],

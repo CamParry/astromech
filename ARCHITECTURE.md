@@ -111,7 +111,7 @@ packages/
 │   │   ├── notifications/  # notifications domain: service · schema · user-scoped storage
 │   │   │
 │   │   │   ── capabilities ───────────────────────────────────────────────
-│   │   ├── database/       # Kysely client/drivers + schema.ts aggregator (public subpath: astromech/db/schema)
+│   │   ├── database/       # Kysely client/drivers + schema.ts aggregator
 │   │   ├── storage/        # blob-storage registry + drivers/ (filesystem, r2, s3)
 │   │   ├── cloudflare/     # binding-name resolution across Workers and Node
 │   │   ├── permissions/    # permission model: roles, grammar, BUILT_IN_ROLES, can()
@@ -207,7 +207,7 @@ manifest via `getMethodManifest`, plus `buildDispatch`, `buildScopedDispatch`,
 `filterMethods`, `annotateManifest`, `scopedServices`, the confirmation helpers
 and `formatAIContextMessage`; **core-internal in practice — a plugin package
 cannot import it, see "Plugin runtime boundary"**),
-`astromech/fields`, `astromech/db/schema`, `astromech/storage/{filesystem,r2,s3}`
+`astromech/fields`, `astromech/database/schema`, `astromech/storage/{filesystem,r2,s3}`
 (storage drivers), `astromech/cloudflare` (binding-name resolution), and the
 `astromech` CLI bin. The first-party plugins are their own packages —
 `@astromech/{seo,redirects,menus,backups}` (see `packages/`).

@@ -49,13 +49,13 @@
         "./routes/auth-handler.ts": "./src/routes/auth-handler.ts",
         "./routes/api.ts": "./src/routes/api.ts",
         "./routes/media-handler.ts": "./src/routes/media-handler.ts",
-        "./images/sharp": {
-            "types": "./dist/images/drivers/sharp.d.ts",
-            "default": "./dist/images/drivers/sharp.js"
+        "./media/image/sharp": {
+            "types": "./dist/media/image/drivers/sharp.d.ts",
+            "default": "./dist/media/image/drivers/sharp.js"
         },
-        "./images/cloudflare": {
-            "types": "./dist/images/drivers/cloudflare.d.ts",
-            "default": "./dist/images/drivers/cloudflare.js"
+        "./media/image/cloudflare": {
+            "types": "./dist/media/image/drivers/cloudflare.d.ts",
+            "default": "./dist/media/image/drivers/cloudflare.js"
         },
         "./storage/r2": {
             "types": "./dist/storage/drivers/r2.d.ts",
@@ -69,7 +69,7 @@
             "types": "./dist/storage/drivers/s3.d.ts",
             "default": "./dist/storage/drivers/s3.js"
         },
-        "./db/d1": {
+        "./database/d1": {
             "types": "./dist/database/drivers/d1.d.ts",
             "default": "./dist/database/drivers/d1.js"
         },
@@ -78,14 +78,14 @@
             "default": "./dist/cloudflare/index.js"
         },
         "./admin/shell.astro": "./src/admin/shell.astro",
-        "./Image": "./src/media/serving/image/Image.astro",
+        "./media/Image": "./src/media/serving/image/Image.astro",
         "./ui": {
             "types": "./dist/admin/components/ui/index.d.ts",
             "default": "./src/exports/admin/ui.ts"
         },
-        "./db/schema": {
-            "types": "./dist/db/schema.d.ts",
-            "default": "./dist/db/schema.js"
+        "./database/schema": {
+            "types": "./dist/database/schema.d.ts",
+            "default": "./dist/database/schema.js"
         },
         "./email": {
             "types": "./dist/email/index.d.ts",

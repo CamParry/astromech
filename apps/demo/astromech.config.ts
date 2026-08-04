@@ -7,7 +7,7 @@ import {
     entryPermissions,
     libsqlDriver,
 } from 'astromech';
-import { sharp } from 'astromech/images/sharp';
+import { sharp } from 'astromech/media/image/sharp';
 import { filesystem } from 'astromech/storage/filesystem';
 import * as fields from 'astromech/fields';
 import { authoring } from '@astromech/authoring';

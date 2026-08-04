@@ -8,7 +8,7 @@
  * Node-only (the engine's `./generate` subpath uses `node:fs/promises`) —
  * generation is a dev/CI-time step, never a runtime one. Do NOT re-export this
  * module from a barrel a browser bundle or a Worker runtime path might pull in
- * (`database/index.ts` / `exports/schema.ts` stay fs-free) — the CLI
+ * (`database/index.ts` / `exports/database-schema.ts` stay fs-free) — the CLI
  * (`transport/cli/commands/db-generate.ts`) is the only caller.
  */
 
