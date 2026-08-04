@@ -28,6 +28,7 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 - [ ] MCP tool-list size: P1 took the demo from 58 to 144 tools, which is a large fixed prompt prefix for the P7 authoring plugin and any MCP client. No filtering mechanism exists (by source, by entry type, by read-only). Decide the shape before P7 builds on the full list
 - [ ] Reconcile entry `destructive` semantics: `entries.publish` collapses publish+unpublish into one action, so "unpublish is destructive" can't be expressed. Revisit when the permission model gains an `unpublish` action
 - [ ] Nothing stops `astromech mcp` or the CLI being pointed at a production database. The D1-in-Node failure that currently prevents it is accidental, not a guard. Decide the shape: a warning, a `--force` flag, or a driver allowlist
+- [ ] No way for a plugin service method to opt out of the method manifest. Every method a plugin declares becomes a CLI/MCP/AI tool, but some exist only to serve the plugin's own admin UI — P9's authoring session read/clear are the first, and they surface as MCP tools that no model should be reaching for. The loop already refuses plugin-source methods when scoped and MCP is dev-only, so today it is noise rather than exposure. The precedent for a declaration that steers the transport is `binaryInput` on `media.upload`
 
 ### Plugins
 

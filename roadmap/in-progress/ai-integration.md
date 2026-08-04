@@ -726,30 +726,51 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       for calls that were never gated remains open and is bounded to the
       conversation it happens in.
 
-- [ ] **P9 — persisted chat sessions, per user.** The transcript lives in
+- [ ] **P9 — one resumable chat session, per user.** The transcript lives in
       `useChat`'s React state. It survives closing the drawer and navigating the
-      SPA now that the panel stays mounted, but a reload loses the lot. Give a
-      user a list of their past conversations to reopen, rename and delete.
+      SPA now that the panel stays mounted, but a reload loses the lot. Persist
+      the current conversation so it comes back; "New chat" replaces it.
+    - **Scoped down before building: no session library in v1.** Two things were
+      bundled under "persisted sessions" and only one earns its keep. Reload
+      survival is a real loss cheaply fixed. A browsable list of past
+      conversations to reopen, rename and delete is not, because in a CMS the
+      artefact is the entry, not the transcript — once a page is translated the
+      conversation is scaffolding. The one genuine reason to want an old thread
+      is "what did the assistant do", which is P10, in core, across every
+      transport, holding method/target/outcome rather than a copy of the content.
+    - **One row per user, replaced.** Storage is bounded by user count instead of
+      by usage, so there is no archive to grow and no retention policy to invent.
+      The cross-user question disappears with it: nothing is browsable, so nobody
+      has to decide whether an admin may read an editor's transcript — which was
+      the decision that defaults to "yes" if left unmade.
+    - It also holds the harness line. The tool loop, the approval gate and the
+      permission scope are load-bearing for CMS work. A session list is the first
+      step over into chat-product features, after which search, pinning,
+      branching and export are all reasonable asks. Multi-session, a retained
+      limit, or read-only history can be added later on the same table; deleting
+      a shipped library cannot.
     - **P8 settled the format and part of the shape.** The wire transcript is
       already content blocks, so that is what P9 stores; and
-      `plugin_authoring_approvals` is a worked example of a per-user plugin
-      table in this package, down to the lazy expiry sweep and the
-      drop-the-payload-on-resolve rule. An approval row references a
-      `tool_use` id but not yet a conversation — giving it a session id is the
-      join P9 adds.
-    - A plugin table via `definePluginTable`, keyed by user. A session belongs to
-      the user who had it — decide explicitly whether an admin may read someone
-      else's, because "an admin can read everything" is the default that ships if
-      nobody decides. P10 is the answer for oversight; a readable transcript is a
-      different and wider thing.
-    - **A stored transcript is a copy of content sitting outside the permission
-      system.** It can quote a `private: true` field its author could read at the
-      time, and it outlives the entry being trashed. Reopening an old session has
-      to re-check what the reader may see today rather than replaying what was
-      visible then, and retention needs a policy rather than growing forever.
-    - The drawer gains a session list — the first thing in it that is not the
-      current conversation. Whether that is a header control or a second panel
-      state is worth settling before either is built.
+      `plugin_authoring_approvals` is a worked example of a per-user plugin table
+      in this package.
+    - **Pending approvals are not stored — they are reconstructed.** The
+      approvals table already holds this user's pending, unexpired rows with
+      their arguments intact, and it was always the authority. Loading the
+      session queries them, so a reload mid-pause restores the approve/reject
+      buttons rather than silently dropping a write that was about to be
+      approved. That is the P8 join, and it costs one query.
+    - **No `roleSlug` on the row.** A stored role is a second source of truth for
+      something that has exactly one: `scopedServices` resolves the acting role
+      per request and fails closed, so execution is already live. Clearing a
+      transcript when its owner is demoted would hide a disclosure that already
+      happened — the reader is the person who had the conversation.
+    - A size backstop, not a retention policy: past a cap the write is skipped and
+      the live conversation carries on unrecoverable. The model's context window
+      binds long before the database cares.
+    - Known wart: every plugin service method lands in the manifest, so session
+      read/clear surface as MCP tools. The loop already refuses plugin-source
+      methods when scoped and MCP is dev-only and user-scoped, so this is noise,
+      not exposure. A manifest opt-out is its own core item.
 - [ ] **P10 — audit trail for what the assistant did.** Which method ran, with
       which arguments, for which user, with what outcome. P8 covers one slice of
       this already — an approval row survives its decision, so an approved or
