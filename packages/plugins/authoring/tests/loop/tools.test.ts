@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ToolDispatch } from 'astromech';
-import { toRunnableTools } from '../../src/loop/tools.js';
+import { TOOL_SEARCH_TOOL, toRunnableTools } from '../../src/loop/tools.js';
 
 /** A dispatch whose `invoke` resolves to `result`. */
 function dispatchFor(name: string, result: unknown = { ok: true }): ToolDispatch {
@@ -40,6 +40,15 @@ describe('toRunnableTools', () => {
         expect(toRunnableTools([])).toEqual([]);
     });
 
+    it('defers every tool, so the catalogue costs no context until searched', () => {
+        const tools = toRunnableTools([
+            dispatchFor('users_query'),
+            dispatchFor('media_query'),
+        ]);
+
+        expect(tools.every((tool) => tool.defer_loading === true)).toBe(true);
+    });
+
     it('returns the invoke result as JSON', async () => {
         const result = { items: [{ id: 'abc' }], total: 1 };
 
@@ -62,5 +71,11 @@ describe('toRunnableTools', () => {
 
         expect(output).toBe('Error: Permission denied');
         expect(output).not.toContain('RECOGNISABLE_FRAME');
+    });
+});
+
+describe('TOOL_SEARCH_TOOL', () => {
+    it('is not deferred, which is what keeps the request valid', () => {
+        expect(TOOL_SEARCH_TOOL.defer_loading).toBeUndefined();
     });
 });
