@@ -15,8 +15,8 @@ import {
     scopeContent,
     scopeEntries,
     scopeMethods,
-    scopedService,
-} from '@/policies/scoped-service.js';
+    scopedServices,
+} from '@/policies/scoped-services.js';
 import { permissionsFor } from '@/permissions/permissions-for.js';
 import type {
     ContentService,
@@ -403,12 +403,12 @@ describe('scopeContent', () => {
 });
 
 // ---------------------------------------------------------------------------
-// scopedService — the composed handle over the real services
+// scopedServices — the composed handle over the real services
 // ---------------------------------------------------------------------------
 
-describe('scopedService', () => {
+describe('scopedServices', () => {
     it('refuses a real core method the role lacks', () => {
-        const scoped = scopedService(role('users:read'));
+        const scoped = scopedServices(role('users:read'));
 
         try {
             void scoped.users.create({ email: 'a@b.dev', name: 'A' });
@@ -424,7 +424,7 @@ describe('scopedService', () => {
         // Known gap, asserted rather than papered over: `replace` has no entry in
         // `mediaDescriptors`, so it is invisible to the manifest AND unreachable
         // through a scoped handle — even for an admin.
-        const media = scopedService(role('*')).media as unknown as Record<string, never>;
+        const media = scopedServices(role('*')).media as unknown as Record<string, never>;
 
         expect(() => (media['replace'] as unknown as () => unknown)()).toThrow(
             PermissionDeniedError

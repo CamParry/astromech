@@ -8,10 +8,10 @@
  */
 
 import type { ArgsDef } from 'citty';
-import type { SurfaceOptions } from '@/policies/tool-surface.js';
+import type { MethodFilter } from '@/policies/method-filter.js';
 
 /** citty arg definitions. Spread into a command's `args`. */
-export const surfaceArgs = {
+export const filterArgs = {
     'read-only': {
         type: 'boolean',
         default: false,
@@ -37,11 +37,11 @@ function parseList(value: string | undefined): string[] {
 }
 
 /** Read the flag trio off parsed citty args. */
-export function toSurfaceOptions(args: {
+export function toMethodFilter(args: {
     'read-only'?: boolean | undefined;
     include?: string | undefined;
     exclude?: string | undefined;
-}): SurfaceOptions {
+}): MethodFilter {
     return {
         readOnly: args['read-only'] === true,
         include: parseList(args.include),

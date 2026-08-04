@@ -9,14 +9,14 @@ import { describe, expect, it } from 'vitest';
 import * as methods from '@/exports/methods.js';
 import { buildDispatch, buildScopedDispatch } from '@/transport/mcp/dispatch.js';
 import { buildScopedTools } from '@/transport/mcp/scoped-tools.js';
-import { reduceSurface } from '@/policies/tool-surface.js';
+import { filterMethods } from '@/policies/method-filter.js';
 import { annotateManifest } from '@/policies/annotate-manifest.js';
-import { scopedService } from '@/policies/scoped-service.js';
+import { scopedServices } from '@/policies/scoped-services.js';
 import {
     CONFIRM_KEY,
     evaluateConfirmation,
     triggersConfirmation,
-} from '@/policies/confirm-gate.js';
+} from '@/policies/confirmation.js';
 import { getMethodManifest } from '@/codegen/manifest-registry.js';
 import { formatAIContextMessage } from '@/utilities/ai-context.js';
 
@@ -24,20 +24,20 @@ import { formatAIContextMessage } from '@/utilities/ai-context.js';
 import type {
     ConfirmDecision,
     ConfirmOptions,
+    ConfirmOutcome,
     ConfirmRequest,
     DispatchResult,
-    GateOutcome,
-    ScopedService,
+    ScopedServices,
     ToolDispatch,
 } from '@/exports/methods.js';
 
 export type Exported = [
     ConfirmDecision,
     ConfirmOptions,
+    ConfirmOutcome,
     ConfirmRequest,
     DispatchResult,
-    GateOutcome,
-    ScopedService,
+    ScopedServices,
     ToolDispatch,
 ];
 
@@ -47,9 +47,9 @@ describe('astromech/methods', () => {
         expect(methods.buildDispatch).toBe(buildDispatch);
         expect(methods.buildScopedDispatch).toBe(buildScopedDispatch);
         expect(methods.buildScopedTools).toBe(buildScopedTools);
-        expect(methods.reduceSurface).toBe(reduceSurface);
+        expect(methods.filterMethods).toBe(filterMethods);
         expect(methods.annotateManifest).toBe(annotateManifest);
-        expect(methods.scopedService).toBe(scopedService);
+        expect(methods.scopedServices).toBe(scopedServices);
         expect(methods.evaluateConfirmation).toBe(evaluateConfirmation);
         expect(methods.triggersConfirmation).toBe(triggersConfirmation);
         expect(methods.CONFIRM_KEY).toBe(CONFIRM_KEY);
@@ -64,10 +64,10 @@ describe('astromech/methods', () => {
             'buildScopedDispatch',
             'buildScopedTools',
             'evaluateConfirmation',
+            'filterMethods',
             'formatAIContextMessage',
             'getMethodManifest',
-            'reduceSurface',
-            'scopedService',
+            'scopedServices',
             'triggersConfirmation',
         ]);
     });

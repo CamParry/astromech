@@ -1,12 +1,12 @@
 import { defineCommand } from 'citty';
-import { surfaceArgs, toSurfaceOptions } from '../surface-args.js';
+import { filterArgs, toMethodFilter } from '../filter-args.js';
 import { confirmArgs, toConfirmOptions } from '../confirm-args.js';
-import type { SurfaceOptions } from '@/policies/tool-surface.js';
-import type { ConfirmOptions } from '@/policies/confirm-gate.js';
+import type { MethodFilter } from '@/policies/method-filter.js';
+import type { ConfirmOptions } from '@/policies/confirmation.js';
 
 type RunMcpServer = (
     configPath?: string,
-    surface?: SurfaceOptions,
+    filter?: MethodFilter,
     confirm?: ConfirmOptions
 ) => Promise<void>;
 
@@ -17,7 +17,7 @@ export default defineCommand({
             type: 'string',
             description: 'Path to astromech.config.ts',
         },
-        ...surfaceArgs,
+        ...filterArgs,
         ...confirmArgs,
     },
     async run({ args }) {
@@ -45,7 +45,7 @@ export default defineCommand({
         }
         await mod.runMcpServer(
             args.config,
-            toSurfaceOptions(args),
+            toMethodFilter(args),
             toConfirmOptions(args.confirm)
         );
     },

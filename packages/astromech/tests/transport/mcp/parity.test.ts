@@ -27,7 +27,7 @@ vi.mock('@/entries/service.js', () => ({
     },
 }));
 import { resolveConfig } from '@/boot/config-resolver.js';
-import { reduceSurface } from '@/policies/tool-surface.js';
+import { filterMethods } from '@/policies/method-filter.js';
 import { buildDispatch } from '@/transport/mcp/dispatch.js';
 import { buildTools } from '@/transport/mcp/tools.js';
 import type {
@@ -319,13 +319,13 @@ describe('manifest ↔ MCP tool coverage', () => {
 });
 
 // ============================================================================
-// Surface reduction — the DISPATCH map is what actually lets a call through
+// Method filtering — the DISPATCH map is what actually lets a call through
 // ============================================================================
 
-describe('reduced surface ↔ MCP tools', () => {
-    /** Reduce the real manifest, then build tools from it exactly as the transport does. */
-    function build(options: Parameters<typeof reduceSurface>[1]) {
-        const { methods, excluded } = reduceSurface(manifest.methods, options);
+describe('filtered methods ↔ MCP tools', () => {
+    /** Filter the real manifest, then build tools from it exactly as the transport does. */
+    function build(filter: Parameters<typeof filterMethods>[1]) {
+        const { methods, excluded } = filterMethods(manifest.methods, filter);
         return { ...buildTools({ ...manifest, methods }), excluded };
     }
 
@@ -341,7 +341,7 @@ describe('reduced surface ↔ MCP tools', () => {
         expect(dispatch.has('entries_posts_unpublish')).toBe(true);
     });
 
-    it('a read-only surface leaves no mutating method dispatchable', () => {
+    it('a read-only filter leaves no mutating method dispatchable', () => {
         const full = buildTools(manifest);
         const { tools, dispatch } = build({ readOnly: true });
 

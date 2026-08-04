@@ -1,13 +1,13 @@
 /**
- * Tool-surface reduction — the structural half of capability limiting.
+ * Method filtering — the structural half of capability limiting.
  *
- * The point being tested is precedence, not filtering. `readOnly` beating an
+ * The point being tested is precedence, not matching. `readOnly` beating an
  * explicit `include` is what makes the flag a security filter rather than a
  * default, and it is the one rule a well-meaning refactor would "fix".
  */
 
 import { describe, expect, it } from 'vitest';
-import { reduceSurface } from '@/policies/tool-surface.js';
+import { filterMethods } from '@/policies/method-filter.js';
 import type {
     CoreManifestMethod,
     EntriesManifestMethod,
@@ -77,7 +77,7 @@ describe('readOnly', () => {
         // configuration, disabling write tools even when explicitly requested".
         // Those semantics are copied deliberately: a read-only flag a caller can
         // widen by naming a method is a comment, not a filter.
-        const result = reduceSurface(methods, {
+        const result = filterMethods(methods, {
             readOnly: true,
             include: ['users.create'],
         });
@@ -90,7 +90,7 @@ describe('readOnly', () => {
     });
 
     it('keeps every non-mutating method', () => {
-        const result = reduceSurface(methods, { readOnly: true });
+        const result = filterMethods(methods, { readOnly: true });
 
         expect(ids(result)).toEqual([
             'users.query',
@@ -108,7 +108,7 @@ describe('readOnly', () => {
 
 describe('exclude', () => {
     it('drops the named method, with a reason', () => {
-        const result = reduceSurface(methods, { exclude: ['settings.set'] });
+        const result = filterMethods(methods, { exclude: ['settings.set'] });
 
         expect(ids(result)).not.toContain('settings.set');
         expect(result.excluded).toEqual([
@@ -119,7 +119,7 @@ describe('exclude', () => {
 
 describe('include', () => {
     it('keeps only matches when non-empty', () => {
-        const result = reduceSurface(methods, {
+        const result = filterMethods(methods, {
             include: ['users.query', 'settings.set'],
         });
 
@@ -130,8 +130,8 @@ describe('include', () => {
     });
 
     it('keeps everything when empty or absent', () => {
-        expect(ids(reduceSurface(methods, { include: [] }))).toHaveLength(methods.length);
-        expect(ids(reduceSurface(methods, {}))).toHaveLength(methods.length);
+        expect(ids(filterMethods(methods, { include: [] }))).toHaveLength(methods.length);
+        expect(ids(filterMethods(methods, {}))).toHaveLength(methods.length);
     });
 });
 
@@ -141,7 +141,7 @@ describe('include', () => {
 
 describe('pattern matching', () => {
     it('prefix-matches on a trailing star', () => {
-        const result = reduceSurface(methods, { include: ['entries.*'] });
+        const result = filterMethods(methods, { include: ['entries.*'] });
 
         expect(ids(result)).toEqual([
             'entries.posts.get',
@@ -152,7 +152,7 @@ describe('pattern matching', () => {
     });
 
     it('addresses exactly one method by its full id', () => {
-        const result = reduceSurface(methods, { include: ['entries.posts.publish'] });
+        const result = filterMethods(methods, { include: ['entries.posts.publish'] });
 
         expect(ids(result)).toEqual(['entries.posts.publish']);
     });
@@ -160,7 +160,7 @@ describe('pattern matching', () => {
     it('matches on name as well as id, which is broad on purpose', () => {
         // `entries.get` is the NAME of every entry type's get, so a name pattern
         // reaches all of them.
-        const result = reduceSurface(methods, { exclude: ['entries.get'] });
+        const result = filterMethods(methods, { exclude: ['entries.get'] });
 
         expect(ids(result)).not.toContain('entries.posts.get');
         expect(ids(result)).not.toContain('entries.pages.get');
@@ -174,7 +174,7 @@ describe('pattern matching', () => {
 
 describe('accounting', () => {
     it('accounts for every dropped method exactly once', () => {
-        const result = reduceSurface(methods, {
+        const result = filterMethods(methods, {
             readOnly: true,
             exclude: ['settings.get'],
             include: ['users.*', 'settings.*'],
@@ -190,7 +190,7 @@ describe('accounting', () => {
     });
 
     it('is a no-op with no options', () => {
-        const result = reduceSurface(methods, {});
+        const result = filterMethods(methods, {});
 
         expect(result.methods).toEqual(methods);
         expect(result.excluded).toEqual([]);

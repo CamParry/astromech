@@ -11,7 +11,7 @@ import {
     CallToolRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { buildTools, type McpToolDef, type SkippedMethod } from './tools.js';
-import type { ConfirmOptions } from '@/policies/confirm-gate.js';
+import type { ConfirmOptions } from '@/policies/confirmation.js';
 import type { MethodManifest } from '@/types/index.js';
 
 // ============================================================================

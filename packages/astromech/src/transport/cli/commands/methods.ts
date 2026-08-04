@@ -6,10 +6,10 @@ import {
     type AnnotatedManifestMethod,
 } from '@/policies/annotate-manifest.js';
 import { resolveRoles } from '@/permissions/index.js';
-import { reduceSurface, type ExcludedMethod } from '@/policies/tool-surface.js';
+import { filterMethods, type ExcludedMethod } from '@/policies/method-filter.js';
 import type { ManifestMethod, MethodManifest, ResolvedConfig } from '@/types/index.js';
 import { printError } from '../output.js';
-import { surfaceArgs, toSurfaceOptions } from '../surface-args.js';
+import { filterArgs, toMethodFilter } from '../filter-args.js';
 
 /**
  * Resolve a role slug, rejecting one that is not configured.
@@ -74,7 +74,7 @@ export default defineCommand({
         },
         json: { type: 'boolean', default: false, description: 'Output as JSON' },
         config: { type: 'string', description: 'Path to astromech.config.ts' },
-        ...surfaceArgs,
+        ...filterArgs,
     },
     async run({ args }) {
         try {
@@ -95,17 +95,17 @@ export default defineCommand({
                 listed = listed.filter((m) => m.name.toLowerCase().includes(f));
             }
 
-            // Surface reduction runs after the view filters, so `excluded` is
+            // The method filter runs after the view filters, so `excluded` is
             // scoped to what was being listed rather than reporting the whole
             // manifest. The kept set is the same either way — both are
             // conjunctive — so `astromech methods --read-only` still names
             // exactly what `astromech mcp --read-only` serves.
-            const surface = reduceSurface(listed, toSurfaceOptions(args));
+            const filtered = filterMethods(listed, toMethodFilter(args));
 
-            let methods: (ManifestMethod | AnnotatedManifestMethod)[] = surface.methods;
+            let methods: (ManifestMethod | AnnotatedManifestMethod)[] = filtered.methods;
             if (args.role !== undefined) {
                 methods = annotateManifest(
-                    surface.methods,
+                    filtered.methods,
                     requireRole(resolved, args.role)
                 );
             }
@@ -113,13 +113,13 @@ export default defineCommand({
             if (args.json) {
                 // `excluded` travels alongside rather than being dropped: a JSON
                 // consumer that cannot see what was removed cannot tell a
-                // reduced surface from a missing method.
+                // filtered-out method from a missing one.
                 console.log(
                     JSON.stringify(
                         {
                             version: manifest.version,
                             methods,
-                            excluded: surface.excluded,
+                            excluded: filtered.excluded,
                         },
                         null,
                         2
@@ -152,7 +152,7 @@ export default defineCommand({
                 console.log(`${m.name}${effectPart}  (permission: ${permission})`);
             }
 
-            printExclusionSummary(surface.excluded);
+            printExclusionSummary(filtered.excluded);
         } catch (e) {
             printError(e, { json: args.json });
         }

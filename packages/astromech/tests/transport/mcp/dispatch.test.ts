@@ -1,7 +1,7 @@
 /**
  * buildScopedDispatch — the dispatch a caller acting on behalf of a role
  * gets. Everything buildDispatch decides is unchanged; what differs is that
- * `invoke` goes through `scopedService`, so a refusal comes from the handle.
+ * `invoke` goes through `scopedServices`, so a refusal comes from the handle.
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';

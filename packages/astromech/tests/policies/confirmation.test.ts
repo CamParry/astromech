@@ -1,15 +1,15 @@
 /**
- * The confirm gate — a brake, not a boundary.
+ * Confirmation — a brake, not a boundary.
  *
  * Two things are being pinned. First, that a refusal is legible: a caller must
  * be able to tell "you said no" from "you didn't answer", because one means move
  * on and the other means the question may be worth re-asking. Second, that
- * nothing leaks past the gate — a refused decision carries no arguments, and the
- * reserved key never reaches a service on any path.
+ * nothing leaks past a refusal — it carries no arguments, and the reserved
+ * key never reaches a service on any path.
  */
 
 import { describe, expect, it } from 'vitest';
-import { evaluateConfirmation, type ConfirmDecision } from '@/policies/confirm-gate.js';
+import { evaluateConfirmation, type ConfirmDecision } from '@/policies/confirmation.js';
 import type {
     CoreManifestMethod,
     EntriesManifestMethod,

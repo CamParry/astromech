@@ -6,14 +6,14 @@
  * same call carrying the answer. Three actions, borrowed from MCP elicitation:
  * `accept` / `decline` / `cancel`.
  *
- * This is NOT a security boundary and must never be described as one. The gate
- * is stateless, so the "human approved this" it acts on is just a value the
- * caller supplied — a caller that wants to proceed can write
+ * This is NOT a security boundary and must never be described as one. It is
+ * stateless, so the "human approved this" it acts on is just a value the caller
+ * supplied — a caller that wants to proceed can write
  * `_confirm: {action: 'accept'}` itself and nothing here can tell that apart
- * from a click. What the gate buys is a stop between an agent deciding to do
- * something and it happening: one extra turn, with the method and its concrete
- * target spelled out, which is enough to break a loop that has started deleting
- * things. `policies/scoped-service.ts` is the boundary; a gate over an unscoped
+ * from a click. What it buys is a stop between an agent deciding to do something
+ * and it happening: one extra turn, with the method and its concrete target
+ * spelled out, which is enough to break a loop that has started deleting things.
+ * `policies/scoped-services.ts` is the boundary; confirmation over an unscoped
  * handle protects nothing.
  *
  * Where real proof is needed, it has to arrive on a channel the requester does
@@ -26,6 +26,10 @@
  * a wrapper per service handle would be three wrappers over the same decision.
  * Keeping it pure also keeps the module free of domain imports — and free of the
  * process-global state that made CVE-2026-48529 out of GitHub's lockdown cache.
+ *
+ * Three result-ish nouns sit close together and are not interchangeable:
+ * `ConfirmAnswer` is the caller's reply, `ConfirmDecision` the verdict, and
+ * `ConfirmOutcome` why a call stopped.
  */
 
 import type { ManifestMethod } from '@/types/index.js';
@@ -40,7 +44,7 @@ export type ConfirmAction = 'accept' | 'decline' | 'cancel';
 /** What a caller sends back on the second invocation. */
 export type ConfirmAnswer = { action: ConfirmAction };
 
-/** What the gate asks for. MRTR-shaped, so a transport swap stays mechanical. */
+/** What confirmation asks for. MRTR-shaped, so a transport swap stays mechanical. */
 export type ConfirmRequest = {
     /** The manifest id of the method being asked about. */
     method: string;
@@ -58,19 +62,19 @@ export type ConfirmRequest = {
  * apart, and the difference is meaningful to whatever asked: a decline is an
  * answer ("no, don't do this") and the agent should move on; a cancel is the
  * absence of one ("abort, I'm not answering") and re-asking may be reasonable.
- * Both leave persisted state untouched — the gate runs before the service, so
+ * Both leave persisted state untouched — the check runs before the service, so
  * nothing has happened yet in either case.
  */
-export type GateOutcome =
+export type ConfirmOutcome =
     | { status: 'input_required'; requests: ConfirmRequest[] }
     | { status: 'declined'; method: string }
     | { status: 'cancelled'; method: string };
 
 /**
- * Which methods get gated. A predicate over the method, with two named presets,
- * rather than a hardcoded rule — the right threshold differs per caller, and a
- * transport that wants "everything that touches users" should not have to fork
- * the gate to get it.
+ * Which methods need confirming. A predicate over the method, with two named
+ * presets rather than a hardcoded rule — the right threshold differs per caller,
+ * and a transport that wants "everything that touches users" should not have to
+ * fork this module to get it.
  */
 export type ConfirmTrigger =
     | 'mutating'
@@ -86,7 +90,7 @@ export type ConfirmOptions = { trigger?: ConfirmTrigger | undefined };
  */
 export type ConfirmDecision =
     | { proceed: true; args: Record<string, unknown> }
-    | { proceed: false; outcome: GateOutcome };
+    | { proceed: false; outcome: ConfirmOutcome };
 
 // ============================================================================
 // The reserved key
@@ -156,7 +160,7 @@ function describeTarget(args: Record<string, unknown>): string {
  * It names the method id and, where the arguments carry one, the target. A
  * prompt reading "confirm this action?" is useless to the person it exists for
  * — they cannot tell a draft being saved from a site being emptied — and the
- * whole value of the gate is in that sentence.
+ * whole value of confirming is in that sentence.
  */
 function confirmMessage(method: ManifestMethod, args: Record<string, unknown>): string {
     const target = describeTarget(args);
@@ -174,10 +178,10 @@ function confirmMessage(method: ManifestMethod, args: Record<string, unknown>): 
 /**
  * Does this method need an answer before it runs?
  *
- * Exported because a transport has to know the same thing the gate does before
- * a call arrives — an MCP tool that will be gated must advertise the reserved
- * key in its schema, or it publishes a schema forbidding the one argument that
- * can unblock it.
+ * Exported because a transport has to know the same thing this module does
+ * before a call arrives — an MCP tool that will be confirmed must advertise the
+ * reserved key in its schema, or it publishes a schema forbidding the one
+ * argument that can unblock it.
  */
 export function triggersConfirmation(
     method: ManifestMethod,
@@ -190,16 +194,16 @@ export function triggersConfirmation(
 }
 
 // ============================================================================
-// The gate
+// The decision
 // ============================================================================
 
 /**
  * Decide whether `method` may run with `args`.
  *
- * `_confirm` is stripped on EVERY path, gated or not. A service must never see
- * it: an ungated method that got handed a stray one would pass it to a Zod
- * schema that rejects unknown keys, or — worse, on a method that takes a loose
- * `fields` record — store it.
+ * `_confirm` is stripped on EVERY path, confirmed or not. A service must never
+ * see it: a method that got handed a stray one would pass it to a Zod schema
+ * that rejects unknown keys, or — worse, on a method that takes a loose `fields`
+ * record — store it.
  */
 export function evaluateConfirmation(
     method: ManifestMethod,

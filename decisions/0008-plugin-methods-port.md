@@ -16,14 +16,14 @@ ctx.methods.tools(options?: { readOnly?: boolean }): Promise<ToolDispatch[]>
 ```
 
 It returns the manifest methods the **current request's role** may call, each
-already resolved into a dispatch that calls through `scopedService`. Core
-applies, in order: drop plugin-source methods, `reduceSurface`,
+already resolved into a dispatch that calls through `scopedServices`. Core
+applies, in order: drop plugin-source methods, `filterMethods`,
 `annotateManifest`, `buildScopedDispatch`. The caller wraps each result in
 whatever its model SDK wants and does nothing else.
 
 It is async because `plugin-runtime.ts` is itself loaded at config time, so the
 accessor's imports must be lazy (`await import(...)`). A static import of
-`policies/scoped-service.js` there would break `astro dev` at integration load,
+`policies/scoped-services.js` there would break `astro dev` at integration load,
 which is the trap `request-context/request-context.ts` already exists to avoid.
 
 ## Why core owns the surface policy
@@ -48,7 +48,7 @@ where the vocabulary changes.
 
 `readOnly` stays an argument rather than a policy core decides, because it is
 the plugin's option to expose. `include`/`exclude` are deliberately not
-plumbed through yet: `reduceSurface` supports them, no caller wants them, and an
+plumbed through yet: `filterMethods` supports them, no caller wants them, and an
 unused option is a contract to keep.
 
 ## Naming

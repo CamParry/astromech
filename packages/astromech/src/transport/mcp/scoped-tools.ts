@@ -7,11 +7,11 @@
 
 import type { Role, ToolDispatch } from '@/types/index.js';
 import { getMethodManifest } from '@/codegen/manifest-registry.js';
-import { reduceSurface } from '@/policies/tool-surface.js';
+import { filterMethods } from '@/policies/method-filter.js';
 import { annotateManifest } from '@/policies/annotate-manifest.js';
 import { buildScopedDispatch } from '@/transport/mcp/dispatch.js';
 
-/** Build the dispatches this role reaches, narrowed by the surface options. */
+/** Build the dispatches this role reaches, narrowed by the method filter. */
 export function buildScopedTools(
     role: Role | undefined,
     options?: { readOnly?: boolean }
@@ -28,12 +28,12 @@ export function buildScopedTools(
     // dropped here rather than built into a list of refusals.
     const dispatchable = manifest.methods.filter((method) => method.source !== 'plugin');
 
-    const surface = reduceSurface(dispatchable, { readOnly: options?.readOnly });
+    const filtered = filterMethods(dispatchable, { readOnly: options?.readOnly });
 
     // A size reduction, NOT a security measure: the annotation is advisory and
     // `buildScopedDispatch` is what actually refuses. `allowed === null` is an
     // input-derived permission only the scoped handle can decide, so it stays.
-    const permitted = annotateManifest(surface.methods, role).filter(
+    const permitted = annotateManifest(filtered.methods, role).filter(
         (method) => method.allowed !== false
     );
 

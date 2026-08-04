@@ -203,7 +203,7 @@ export type ToolDispatch = {
      * dev-only and trusted, runs with no role, and enforces a method's
      * permission no more than the CLI does. It exists so the seam is already in
      * place when a remote transport — which does carry a role — dispatches
-     * through here; that transport enforces via `policies/scoped-service.ts`,
+     * through here; that transport enforces via `policies/scoped-services.ts`,
      * and reads this only to say up front what it would refuse.
      */
     permission: string | null;

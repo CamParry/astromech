@@ -1,7 +1,7 @@
 # AI integration
 
 Builds on the services/transport seam. Method manifest (the discovery linchpin)
-shipped first — see `completed/method-manifest.md`; CLI/MCP/confirm-gate/authoring
+shipped first — see `completed/method-manifest.md`; CLI/MCP/confirmation/authoring
 all read it.
 
 **Plan:** `specs/ai-authoring-foundation.md` (2026-07-30). It supersedes the
@@ -97,7 +97,7 @@ followed on 2026-08-03. Next is P5.
       is deleted rather than deprecated, because a setter is the defect. Outside
       `runWithContext` there is no identity and `getCurrentUser()` is null —
       previously a cron tick in a warm process saw whoever last hit the server.
-      `scopedService(role)` wraps every domain against its descriptor and
+      `scopedServices(role)` wraps every domain against its descriptor and
       fails CLOSED. The audit's chunk-duplication worry does NOT bite: the two
       copies of `currentUser` were the library build and the CLI build, one copy
       each, in separate processes. Don't re-derive it as a bug.
@@ -127,7 +127,7 @@ followed on 2026-08-03. Next is P5.
       surface. The fail-closed handle refuses it even for `*`, and a test records
       that. Giving it one means deciding its permission and input schema —
       tracked in `backlog.md`, not fixed in passing.
-    - **`scopedService` has no production consumer yet.** It is the seam P3's
+    - **`scopedServices` has no production consumer yet.** It is the seam P3's
       confirm gate and any remote transport land on. The HTTP routes deliberately
       keep `allows`/`allowsMethod`, because several carry logic a descriptor
       cannot state (`users.get` allowing self-access, the last-admin guard).
@@ -141,14 +141,14 @@ followed on 2026-08-03. Next is P5.
       from a caller fabricating one, so it is a runaway-loop brake, not a
       boundary — and the axis is not stateless vs stateful but which channel the
       approval arrives on, which the access point decides. - **Layer 1, highest value: a reduced tool surface.** `--read-only`,
-      `--include`, `--exclude` in `policies/tool-surface.ts`, applied by both
+      `--include`, `--exclude` in `policies/method-filter.ts`, applied by both
       `methods` and `mcp`. `readOnly` overrides an explicit include (GitHub's
       semantics, copied deliberately including the part that looks like a bug).
       The reduction is STRUCTURAL where `readOnlyHint` is advisory: an excluded
       method gets no dispatch entry at all. Verified over live stdio, not only
       in unit tests — `entries_post_publish` reaches the service on the full
       surface and returns `Unknown tool` under `--read-only`. Demo: 145 methods
-      / 100 mutating → 45 / **0**; `--read-only --include users.create` → 0. - **Layer 2: the stateless MRTR gate** (`policies/confirm-gate.ts`), pure and
+      / 100 mutating → 45 / **0**; `--read-only --include users.create` → 0. - **Layer 2: the stateless MRTR gate** (`policies/confirmation.ts`), pure and
       dispatch-level, keeping no state anywhere. Trigger is a predicate with
       `mutating`/`destructive` presets. **Off by default** — an MCP client
       already prompts before running a tool, so gating by default double-prompts
@@ -335,7 +335,7 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       take `allow` by construction, so the validator never sees it. The original
       acceptance criterion ("fails validation on the staged entry") was
       unreachable; the property is covered from both sides instead.
-    - Open, and inherited rather than introduced: `scopedService` still has **no
+    - Open, and inherited rather than introduced: `scopedServices` still has **no
       non-test consumer for any domain**, so MCP applies no permission check to
       anything today. Content is now complete in the handle, so it is covered the
       moment that seam is used. Wiring it into a transport is a system-wide
@@ -409,12 +409,12 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       `ERR_UNSUPPORTED_ESM_URL_SCHEME … 'virtual:'`. Astro loads a site's config
       — and so every plugin factory and the `rawRoutes` closures hanging off it
       — in plain Node, so the handler's imports resolved through Node's loader,
-      where `astromech/methods` → `scopedService` → the domain services →
+      where `astromech/methods` → `scopedServices` → the domain services →
       `virtual:astromech/config` cannot resolve. Core escapes this only because
       its runtime is Vite-compiled from `src`. `ctx` has always been the bridge
       and nothing wrote that down, which is how this package walked past it.
         - **`ctx.methods.tools({ readOnly })`** returns the manifest methods the
-          acting role may call, already resolved through `scopedService`. Core
+          acting role may call, already resolved through `scopedServices`. Core
           owns the whole composition, because three of its four steps look
           optional and are not, and their order is load-bearing.
           `decisions/0007` holds the mechanism and the rejected alternatives
@@ -430,7 +430,7 @@ f(x)`), so re-coercion is only observable when the STORED value is not
           `types/` may import only leaves, so `ToolDispatch` moved down into
           `types/services.ts`.
         - `formatAIContextMessage` joined the main barrel. It is pure and was
-          unreachable only because it shared a barrel with `scopedService` —
+          unreachable only because it shared a barrel with `scopedServices` —
           `apps/docs/ai-context.md` was telling readers to import it from the
           subpath that throws.
         - **`npm run check:node-imports`** is the regression guard: a unit test
@@ -468,7 +468,7 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       `buildDispatch` resolves the RAW services — deliberate, and stated in its
       docblock, because the MCP transport is dev-only and trusted. A loop acting
       for a signed-in user is not, so it gets a sibling that resolves through
-      `scopedService`. A separate function rather than an option: an options bag
+      `scopedServices`. A separate function rather than an option: an options bag
       would make an omitted key and an explicit `undefined` mean trusted and
       allowed-nothing, which is the one distinction a caller must not get wrong.
     - **Plugin-source methods are refused when scoped.** They dispatch through a
@@ -527,9 +527,9 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       still required.
     - **Foundation merged 2026-08-03** (`2b947da`, `610d131`), 2330/161 → 2340/164.
       `@astromech/authoring` was unwritable before it: the manifest generator,
-      `buildDispatch`, `reduceSurface`, `annotateManifest`, `scopedService` and
+      `buildDispatch`, `filterMethods`, `annotateManifest`, `scopedServices` and
       the confirm gate were all internal, and `PluginContext` carried no `Role`
-      for `scopedService` to take. All now reachable on a new `astromech/methods`
+      for `scopedServices` to take. All now reachable on a new `astromech/methods`
       subpath, with `role` on the context.
     - The manifest is generated **once in `initRuntime`** into a registry, not
       read from `.astro/astromech.methods.json`: generating it needs the raw

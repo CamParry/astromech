@@ -26,7 +26,7 @@ import type {
     Role,
     ToolDispatch,
 } from '@/types/index.js';
-import type { ScopedService } from '@/policies/scoped-service.js';
+import type { ScopedServices } from '@/policies/scoped-services.js';
 
 // ============================================================================
 // Types
@@ -177,7 +177,7 @@ export function buildDispatch(manifest: ManifestMethod): DispatchResult {
 }
 
 /**
- * The same dispatch, resolved through `scopedService(role)` so every call is
+ * The same dispatch, resolved through `scopedServices(role)` so every call is
  * checked against what the role holds. `undefined` means no role — allowed
  * nothing — never a trusted caller; that is what `buildDispatch` is for.
  */
@@ -290,18 +290,18 @@ function noServiceReason(manifest: ManifestMethod): string {
 // ============================================================================
 
 /** The role's scoped handle, built on first use and reused after it. */
-type ScopedHandle = () => Promise<ScopedService>;
+type ScopedHandle = () => Promise<ScopedServices>;
 
 /**
- * A handle factory for one dispatch. `scopedService` is imported lazily for the
+ * A handle factory for one dispatch. `scopedServices` is imported lazily for the
  * same reason `CORE_SERVICES` is: building the tool list must pull in no service
  * code, and that module imports every domain service eagerly.
  */
 function scopedHandle(role: Role | undefined): ScopedHandle {
-    let handle: Promise<ScopedService> | null = null;
+    let handle: Promise<ScopedServices> | null = null;
     return () => {
-        handle ??= import('@/policies/scoped-service.js').then(({ scopedService }) =>
-            scopedService(role)
+        handle ??= import('@/policies/scoped-services.js').then(({ scopedServices }) =>
+            scopedServices(role)
         );
         return handle;
     };
@@ -341,7 +341,7 @@ function resolveScopedCoreInvoke(
         return { ok: false, reason: noServiceReason(manifest) };
     }
     // The handle's core keys are exactly `CORE_SERVICES`' keys, checked above.
-    const domain = manifest.domain as Exclude<keyof ScopedService, 'entries'>;
+    const domain = manifest.domain as Exclude<keyof ScopedServices, 'entries'>;
     return {
         ok: true,
         invoke: async (args) =>

@@ -163,7 +163,7 @@ Astro loads `astro.config.mjs`, and therefore `astromech.config.ts` and every `p
 | core runtime   | Vite-compiled from `src` | yes                        |
 | plugin runtime | Node-loaded from `dist`  | **no**                     |
 
-So a plugin that imports a core module reaching `virtual:astromech/config` — which every domain service does — dies with `ERR_UNSUPPORTED_ESM_URL_SCHEME` under Node's ESM loader. **`astromech/methods` is unreachable from a plugin package for exactly this reason**, and it fails at _import_ time rather than at call time, because `exports/methods.ts` statically re-exports `scopedService` and so loads the whole service graph.
+So a plugin that imports a core module reaching `virtual:astromech/config` — which every domain service does — dies with `ERR_UNSUPPORTED_ESM_URL_SCHEME` under Node's ESM loader. **`astromech/methods` is unreachable from a plugin package for exactly this reason**, and it fails at _import_ time rather than at call time, because `exports/methods.ts` statically re-exports `scopedServices` and so loads the whole service graph.
 
 **The rule this produces: a plugin package imports `astromech` and `astromech/ui`, and nothing else from core.** Both load under plain Node; type-only imports from any subpath are fine, because they erase. Everything else arrives on `ctx`. New platform capabilities are therefore added as a capability port (above), never as a published subpath a plugin is expected to import — `ctx.methods.tools()` is the worked example, and `decisions/0007-plugin-core-boundary.md` holds the mechanism with the rejected alternatives.
 
@@ -203,7 +203,7 @@ separate `plugin-kit` subpath), `astromech/astro` (integration),
 `astromech/local` & `astromech/fetch` (the two API consumers), `astromech/middleware`,
 `astromech/methods` (the server-side seam surface — the boot-generated method
 manifest via `getMethodManifest`, plus `buildDispatch`, `buildScopedDispatch`,
-`reduceSurface`, `annotateManifest`, `scopedService`, the confirm-gate helpers
+`filterMethods`, `annotateManifest`, `scopedServices`, the confirmation helpers
 and `formatAIContextMessage`; **core-internal in practice — a plugin package
 cannot import it, see "Plugin runtime boundary"**),
 `astromech/fields`, `astromech/db/schema`, `astromech/storage/{filesystem,r2,s3}`

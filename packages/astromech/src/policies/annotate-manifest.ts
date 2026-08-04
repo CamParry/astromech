@@ -5,7 +5,7 @@
  * it cannot publish, instead of discovering it by spending a turn on a call that
  * refuses; and so `astromech methods --role editor` can show a human what a role
  * actually reaches. It is NOT the security boundary — `scopeMethods`/
- * `scopeEntries` in `policies/scoped-service.ts` are, and they hold whether or
+ * `scopeEntries` in `policies/scoped-services.ts` are, and they hold whether or
  * not anything read this. Never trust a model to respect the annotation: a model
  * that ignores it and calls anyway gets a `PermissionDeniedError` and nothing
  * happens (ai-integration decision 11).

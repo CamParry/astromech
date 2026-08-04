@@ -1,5 +1,5 @@
 /**
- * `scopedService(role)` — the service handle a caller cannot exceed.
+ * `scopedServices(role)` — the service handles a caller cannot exceed.
  *
  * This is what an untrusted transport (a remote/agent tool-loop, anything acting
  * under a role) is handed INSTEAD of the raw domain services. Every
@@ -282,7 +282,7 @@ export function scopeContent(
 }
 
 /** The five content domains, each scoped to one role. */
-export type ScopedService = {
+export type ScopedServices = {
     users: UsersService;
     media: MediaService;
     settings: SettingsService;
@@ -296,7 +296,7 @@ export type ScopedService = {
  * One `permissionsFor` guard backs all five, so the role is resolved once per
  * handle rather than once per call.
  */
-export function scopedService(role: Role | undefined): ScopedService {
+export function scopedServices(role: Role | undefined): ScopedServices {
     const permissions = permissionsFor(role);
     return {
         users: scopeMethods(usersService, usersDescriptors, permissions, 'users'),
