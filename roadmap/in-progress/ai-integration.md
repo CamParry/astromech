@@ -370,7 +370,7 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       import them — everything below admin is forbidden from importing
       `^src/admin/`. `admin/context/ai-context.tsx` holds the store,
       `AIContextProvider` (mounted on the `_protected` layout, which does not
-      remount on navigation) and `useAIContext` / `useAIContextEntries`. Ten
+      remount on navigation) and `useAIContext` / `useAIContextItems`. Ten
       screens declare: lists at depth 0, single items at depth 1.
     - **`defineRegistry` was rejected** for the store: single-value,
       non-reactive, globalThis-backed for a server chunking problem the SPA does
@@ -462,7 +462,7 @@ f(x)`), so re-coercion is only observable when the STORED value is not
           `transport/local` and NOT in `initRuntime` (which runs in plain Node
           inside `config:setup`); `plugins/runtime` may not import `policies`,
           `transport` or `codegen`, so it holds an injected implementation; and
-          `types/` may import only leaves, so `ToolDispatch` moved down into
+          `types/` may import only leaves, so `ToolDefinition` moved down into
           `types/services.ts`.
         - `formatAIContextMessage` joined the main barrel. It is pure and was
           unreachable only because it shared a barrel with `scopedServices` —
@@ -576,7 +576,7 @@ f(x)`), so re-coercion is only observable when the STORED value is not
     - `formatAIContextMessage` now ships on `astromech/methods`. P6 put it in a
       pure leaf so a server-side loop could import it; it was on no published
       subpath, so that rationale was untrue as shipped.
-    - `useAIContextEntries` reaches `astromech/ui`. The vitest shim for
+    - `useAIContextItems` reaches `astromech/ui`. The vitest shim for
       `virtual:astromech/plugins/components` never exported `slots`, so any test
       rendering `PluginSlot` crashed on `slots[name]`; fixed, and `PluginSlot`
       has its first coverage. Also fixed: `virtual-modules.d.ts` imported types
@@ -633,6 +633,46 @@ f(x)`), so re-coercion is only observable when the STORED value is not
     - Worth deciding first: whether the staged-entry + preview-token path
       (layer 3) makes the drawer gate redundant for the destructive cases, since
       that channel already exists and is reviewed under a real session.
+    - **The wire-format half shipped** 2026-08-04, ahead of the gate itself:
+      `ChatMessage.content` is `BetaContentBlockParam[]` in both directions, the
+      loop emits each completed turn as a `message` event, and the drawer renders
+      `text` and `tool_use` off the blocks while carrying the rest untouched.
+      Browser-verified across four turns including multi-turn tool round trips.
+      Findings from the research pass behind it, which the gate must honour:
+    - **`thinking` blocks must round-trip byte-for-byte.** Opus 5 has thinking
+      on by default and `display` defaults to `omitted`, so blocks come back
+      with an empty `thinking` field and a real `signature`. When a `tool_use`
+      follows, the API requires every `thinking`/`redacted_thinking` block back
+      unmodified and in the order generated, or the resume 400s. A transcript
+      that keeps only what the drawer renders would break the moment the pause
+      resumes, which is the strongest argument for storing blocks opaquely and
+      re-posting them whole. At `xhigh`/`max` effort thinking cannot be turned
+      off at all, so this is not avoidable by configuration.
+    - **`tool_result` blocks must come first** in the immediately-following
+      user message's content array, with any text after them. `tool_use` ids are
+      server-minted and echoed verbatim, so a paused call keeps its id across the
+      pause and nothing needs reissuing.
+    - **The interception seam exists and is safe to use.**
+      `runner.generateToolResponse()` returns the `tool_result` message for the
+      turn, and `BetaToolRunner` resets its cache at the top of every iteration —
+      so calling it from the loop body runs each tool once, and the runner reuses
+      the result. Inspecting the `tool_use` blocks before that call, and ending
+      the turn instead of making it, is the whole gate.
+    - **Prior art agrees on the shape.** The AI SDK's `needsApproval` +
+      `addToolApprovalResponse`, the Claude Agent SDK's `canUseTool`, and MCP's
+      `elicitation/create` all put the decision behind a server-issued id that a
+      human action resolves, never inside model-visible content. MCP's spec goes
+      furthest and requires the elicitation be bound to a verified session rather
+      than anything the client asserts.
+    - **Decide how far to take server-side authority.** A client that holds the
+      transcript can forge a `tool_result`. Here that is weaker than it sounds:
+      the drawer is authenticated as the user, so a forged _approval_ only lets
+      them do what their own permissions already allow through the API directly.
+      The sharper risk is forged `tool_result` _content_ lying to the model about
+      what a read returned. Full mitigation is a server-side record of which
+      `tool_use` ids were approved and run, keyed by session — which is P9's
+      table, so either P8 pulls a slice of P9 forward or it accepts the weaker
+      boundary and says so.
 - [ ] **P9 — persisted chat sessions, per user.** The transcript lives in
       `useChat`'s React state. It survives closing the drawer and navigating the
       SPA now that the panel stays mounted, but a reload loses the lot. Give a
