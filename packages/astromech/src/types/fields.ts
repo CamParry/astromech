@@ -6,7 +6,7 @@
  * two categories and their membership.
  */
 
-import type { User } from './domain.js';
+import type { ResourceType, User } from './domain.js';
 
 // ============================================================================
 // Field Types
@@ -177,7 +177,7 @@ export type FieldValidationContext = {
      * may leave it out and take the `'publish'` default.
      */
     stage: ValidationStage;
-    host: { kind: 'entry' | 'media' | 'user' | 'setting'; record: unknown };
+    host: { kind: ResourceType; record: unknown };
     user: User | null;
     /** Read access for async checks. */
     reads: FieldReads;
@@ -191,41 +191,42 @@ export type FieldValidationContext = {
 export type FieldValidator = (ctx: FieldValidationContext) => Promise<true | string>;
 
 /**
- * What a document validator reports. A string is a form-level message (it
+ * What a resource validator reports. A string is a form-level message (it
  * belongs to no single field); an object maps field paths to messages, using
  * the same `_id` path grammar the field pipeline files errors under. A valid
- * document returns `undefined` or `null` — explicitly, since `void` is not in
+ * resource returns `undefined` or `null` — explicitly, since `void` is not in
  * the union, so a validator cannot just fall off the end of its body.
  */
-export type DocumentValidationResult = string | Record<string, string> | null | undefined;
+export type ResourceValidationResult = string | Record<string, string> | null | undefined;
 
 /**
- * Context handed to a document validator. The same shape as
+ * Context handed to a resource validator. The same shape as
  * `FieldValidationContext` minus the per-field members, plus the definitions
  * the values were validated against.
  *
  * `values` are the COERCED values the field pipeline produced, and they may
- * still hold field errors — a document validator runs regardless, so the author
+ * still hold field errors — a resource validator runs regardless, so the author
  * sees cross-field and per-field problems in one pass. Guard accordingly.
  */
-export type DocumentValidationContext = {
+export type ResourceValidationContext = {
     values: Record<string, unknown>;
     definitions: FieldDefinition[];
     operation: 'create' | 'update';
     stage: ValidationStage;
-    host: { kind: 'entry' | 'media' | 'user' | 'setting'; record: unknown };
+    host: { kind: ResourceType; record: unknown };
     user: User | null;
     reads: FieldReads;
 };
 
 /**
- * A whole-document validator — cross-field rules no single field owns. Async
- * only, matching `FieldValidator`. Server-side only: it is a function, so it
- * cannot survive the JSON round trip into the admin config.
+ * A whole-resource validator — cross-field rules no single field owns, for an
+ * entry, a media item, a user or a settings page. Async only, matching
+ * `FieldValidator`. Server-side only: it is a function, so it cannot survive
+ * the JSON round trip into the admin config.
  */
-export type DocumentValidator = (
-    ctx: DocumentValidationContext
-) => Promise<DocumentValidationResult>;
+export type ResourceValidator = (
+    ctx: ResourceValidationContext
+) => Promise<ResourceValidationResult>;
 
 /** One nested value scope inside a container field's value. */
 export type ContainerScope = {

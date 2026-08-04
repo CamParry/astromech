@@ -31,7 +31,11 @@ import { getFieldTypeDescriptor } from '@/fields/descriptors.js';
 import { RESERVED_KEY } from '@/fields/reserved-keys.js';
 import type { FieldDefinition, FieldPathSegment } from '@/types/fields.js';
 
-/** What a relation points at. Mirrors the index's `targetKind` column. */
+/**
+ * What a relation points at — the relation-eligible subset of `ResourceType`
+ * (`types/domain.ts`), which also covers settings pages. Mirrors the index's
+ * `targetKind` column.
+ */
 export type TargetKind = 'entry' | 'user' | 'media';
 
 /** One row of the index, minus the source columns the caller owns. */

@@ -33,7 +33,7 @@ import { registerBuiltInEntryJobs } from '@/entries/jobs/index.js';
 // port BEFORE registerPlugins runs. Like the jobs sub-barrel above, this module
 // is service-free, so the integration's plain-Node config load stays safe.
 import { wireEntryAccess } from '@/entries/plugin-access.js';
-import { registerDocumentValidators } from '@/fields/document-validators.js';
+import { registerResourceValidators } from '@/fields/resource-validators.js';
 import {
     setSchedulerDriver,
     getSchedulerDriver,
@@ -68,7 +68,7 @@ export async function initRuntime(
     // scheduler tick cannot resolve).
     setRuntimeConfig(resolvedConfig);
     wireEntryAccess();
-    registerDocumentValidators(resolvedConfig);
+    registerResourceValidators(resolvedConfig);
     registerPlugins(config.plugins ?? [], resolvedConfig);
     // Generated here because this is the only runtime site holding both the
     // resolved config and the RAW plugin definitions, whose Zod input schemas

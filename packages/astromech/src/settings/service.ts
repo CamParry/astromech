@@ -16,7 +16,7 @@ import type { SettingRow } from './schema.js';
 import { mergeLocaleSetting } from './page-values.js';
 import { isPublicSettingKey } from './visibility.js';
 import { processFields } from '@/fields/pipeline.js';
-import { getDocumentValidator } from '@/fields/document-validators.js';
+import { getResourceValidator } from '@/fields/resource-validators.js';
 import { flattenEntryFields } from '@/fields/flatten.js';
 import { fieldReadsFromRecords } from '@/fields/field-reads.js';
 import { getCurrentUser } from '@/request-context/index.js';
@@ -104,8 +104,8 @@ export const settingsService: SettingsService = {
             // `validate` only survives boot's registration. The fallback reads
             // the AUTHORED page — `ResolvedAdminPage` drops `validate` along
             // with everything else it does not project.
-            const documentValidate =
-                getDocumentValidator(`setting:${page.path}`) ??
+            const resourceValidate =
+                getResourceValidator(`setting:${page.path}`) ??
                 (config as ResolvedConfig).admin?.pages?.find((p) => p.path === page.path)
                     ?.validate;
             const processed = await processFields(
@@ -125,7 +125,7 @@ export const settingsService: SettingsService = {
                         getFields: (s) => (isPlainObject(s.value) ? s.value : {}),
                         excludeId: key,
                     }),
-                    ...(documentValidate ? { documentValidate } : {}),
+                    ...(resourceValidate ? { resourceValidate } : {}),
                 }
             );
             if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {

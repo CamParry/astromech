@@ -10,7 +10,7 @@
 import config from 'virtual:astromech/config';
 import { getCurrentUser } from '@/request-context/index.js';
 import { ValidationError } from '@/errors/index.js';
-import { getDocumentValidator } from '@/fields/document-validators.js';
+import { getResourceValidator } from '@/fields/resource-validators.js';
 import { flattenEntryFields } from '@/fields/flatten.js';
 import { fieldNameToLabel } from '@/utilities/labels.js';
 import { processFields } from '@/fields/pipeline.js';
@@ -347,7 +347,7 @@ async function writeTranslation(
 }
 
 /**
- * Run the field pipeline over the rewritten document before anything is
+ * Run the field pipeline over the rewritten entry before anything is
  * written, so a rejected reply costs no staged row — the same ordering
  * `mergeStaged` uses. Both destinations land on an unpublished row.
  */
@@ -361,7 +361,7 @@ async function assertValid(params: {
     excludeId?: string[];
 }): Promise<void> {
     const { type, typeConfig } = params;
-    const documentValidate = getDocumentValidator(`entry:${type}`) ?? typeConfig.validate;
+    const resourceValidate = getResourceValidator(`entry:${type}`) ?? typeConfig.validate;
     const processed = await processFields(
         structuredClone(params.values),
         flattenEntryFields(typeConfig.fields),
@@ -380,7 +380,7 @@ async function assertValid(params: {
                     ? {}
                     : { excludeId: params.excludeId }),
             }),
-            ...(documentValidate ? { documentValidate } : {}),
+            ...(resourceValidate ? { resourceValidate } : {}),
         }
     );
     if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {

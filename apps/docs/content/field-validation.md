@@ -202,7 +202,7 @@ on a field inside a repeater item sees that item's siblings.
 > does work through the CLI. Until that is fixed, do not rely on `custom` as a
 > data-integrity guarantee. See `roadmap/planned/config-functions-reach-the-server.md`.
 
-## Whole-document validation
+## Whole-resource validation
 
 Some rules belong to no single field — "an event's end date must follow its
 start", "supply at least one contact method". Declare a `validate` on the entry
@@ -229,7 +229,7 @@ entries: {
 
 Return an **object** to attach messages to fields by path — the same
 `_id`-segmented paths described below, so a nested field works too. Return a
-**string** for a form-level message that belongs to the document as a whole;
+**string** for a form-level message that belongs to the resource as a whole;
 those render in an alert above the form rather than against a field. Return
 `null` or `undefined` when there is nothing to report.
 
@@ -256,7 +256,7 @@ check is declarative:
 
 - **`unique`** needs a database read the browser cannot make. Skipped in
   silence — no "checking…" state. The server runs it on submit.
-- **`custom`** and the document-level **`validate`** are functions. The admin
+- **`custom`** and the resource-level **`validate`** are functions. The admin
   config is serialized as JSON to reach the browser, which strips them.
   Server-only, and not by choice.
 - **Everything else runs**, including the type-intrinsic validators like `url`
@@ -316,7 +316,7 @@ same map of path to messages:
 The map's values are arrays because that is the wire shape, but the pipeline
 short-circuits, so each one carries a single message.
 
-A document-level message travels alongside them as `details.form`, an array of
+A resource-level message travels alongside them as `details.form`, an array of
 strings. The key is omitted entirely when there are none, so a response with
 only field errors looks exactly as it always has.
 

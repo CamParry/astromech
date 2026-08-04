@@ -1,5 +1,5 @@
 /**
- * The document validator — cross-field rules no single field owns.
+ * The resource validator — cross-field rules no single field owns.
  *
  * It runs last, over the coerced values, whether or not the fields reported.
  * A string is a form-level message; an object maps field paths to messages, and
@@ -8,10 +8,11 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import type {
-    DocumentValidator,
     FieldDefinition,
+    ResourceValidator,
     ValidationStage,
 } from '@/types/fields.js';
+import type { ResourceType } from '@/types/domain.js';
 import { processFields } from '@/fields/pipeline.js';
 
 // ---------------------------------------------------------------------------
@@ -21,8 +22,8 @@ import { processFields } from '@/fields/pipeline.js';
 type CtxOverrides = Partial<{
     operation: 'create' | 'update';
     stage: ValidationStage;
-    documentValidate: DocumentValidator;
-    host: { kind: 'entry' | 'media' | 'user' | 'setting'; record: unknown };
+    resourceValidate: ResourceValidator;
+    host: { kind: ResourceType; record: unknown };
     user: null;
     reads: { isUnique: (field: FieldDefinition, value: unknown) => Promise<boolean> };
 }>;
@@ -49,13 +50,13 @@ const title = field({ name: 'title', type: 'text' });
 // What it reports
 // ---------------------------------------------------------------------------
 
-describe('document validator results', () => {
+describe('resource validator results', () => {
     it('a string becomes a form-level message and leaves errors empty', async () => {
         const { errors, form } = await processFields(
             { title: 'hello' },
             [title],
             fakeCtx({
-                documentValidate: async () => 'Pick a publish date or unpublish',
+                resourceValidate: async () => 'Pick a publish date or unpublish',
             })
         );
         expect(form).toEqual(['Pick a publish date or unpublish']);
@@ -67,33 +68,33 @@ describe('document validator results', () => {
             { title: 'hello' },
             [title],
             fakeCtx({
-                documentValidate: async () => ({ title: 'Clashes with the subtitle' }),
+                resourceValidate: async () => ({ title: 'Clashes with the subtitle' }),
             })
         );
         expect(errors.title).toEqual(['Clashes with the subtitle']);
         expect(form).toEqual([]);
     });
 
-    // `DocumentValidationResult` has no `void` member, so a valid document must
+    // `ResourceValidationResult` has no `void` member, so a valid resource must
     // return `undefined` explicitly; a body that falls off the end infers
-    // `Promise<void>` and does not type-check as a `DocumentValidator`.
+    // `Promise<void>` and does not type-check as a `ResourceValidator`.
     it('an explicit undefined reports nothing', async () => {
-        const valid: DocumentValidator = async () => undefined;
+        const valid: ResourceValidator = async () => undefined;
         const { errors, form } = await processFields(
             { title: 'hello' },
             [title],
-            fakeCtx({ documentValidate: valid })
+            fakeCtx({ resourceValidate: valid })
         );
         expect(errors).toEqual({});
         expect(form).toEqual([]);
     });
 
     it('null reports nothing', async () => {
-        const valid: DocumentValidator = async () => null;
+        const valid: ResourceValidator = async () => null;
         const { errors, form } = await processFields(
             { title: 'hello' },
             [title],
-            fakeCtx({ documentValidate: valid })
+            fakeCtx({ resourceValidate: valid })
         );
         expect(errors).toEqual({});
         expect(form).toEqual([]);
@@ -104,26 +105,26 @@ describe('document validator results', () => {
 // Interaction with field errors
 // ---------------------------------------------------------------------------
 
-describe('document validator and field errors', () => {
-    it("a field's own error keeps a key the document validator also claims", async () => {
+describe('resource validator and field errors', () => {
+    it("a field's own error keeps a key the resource validator also claims", async () => {
         const { errors } = await processFields(
             { title: 'ab' },
             [field({ name: 'title', type: 'text', validation: [{ minLength: 5 }] })],
             fakeCtx({
-                documentValidate: async () => ({ title: 'Document-level message' }),
+                resourceValidate: async () => ({ title: 'Resource-level message' }),
             })
         );
         expect(errors.title).toEqual(['Must be at least 5 characters']);
     });
 
     it('it still runs when a field failed', async () => {
-        const documentValidate = vi.fn(async () => 'Form-level problem');
+        const resourceValidate = vi.fn(async () => 'Form-level problem');
         const { errors, form } = await processFields(
             { title: 'ab' },
             [field({ name: 'title', type: 'text', validation: [{ minLength: 5 }] })],
-            fakeCtx({ documentValidate })
+            fakeCtx({ resourceValidate })
         );
-        expect(documentValidate).toHaveBeenCalledTimes(1);
+        expect(resourceValidate).toHaveBeenCalledTimes(1);
         expect(errors.title).toEqual(['Must be at least 5 characters']);
         expect(form).toEqual(['Form-level problem']);
     });
@@ -133,14 +134,14 @@ describe('document validator and field errors', () => {
 // What it receives
 // ---------------------------------------------------------------------------
 
-describe('document validation context', () => {
+describe('resource validation context', () => {
     it('receives the coerced values', async () => {
         let seen: Record<string, unknown> | undefined;
         const { values } = await processFields(
             { path: 'Hello World' },
             [field({ name: 'path', type: 'slug' })],
             fakeCtx({
-                documentValidate: async (ctx) => {
+                resourceValidate: async (ctx) => {
                     seen = ctx.values;
                     return undefined;
                 },
@@ -157,7 +158,7 @@ describe('document validation context', () => {
             [title],
             fakeCtx({
                 stage: 'save',
-                documentValidate: async (ctx) => {
+                resourceValidate: async (ctx) => {
                     seen = ctx.stage;
                     return undefined;
                 },
@@ -172,7 +173,7 @@ describe('document validation context', () => {
             { title: 'hello' },
             [title],
             fakeCtx({
-                documentValidate: async (ctx) => {
+                resourceValidate: async (ctx) => {
                     seen = ctx.stage;
                     return undefined;
                 },

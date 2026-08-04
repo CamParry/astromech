@@ -5,10 +5,12 @@ this file. What landed, and where, is in `roadmap/in-progress/naming-pass.md`;
 the headline decisions are `decisions/0009-service-method-client-vocabulary.md`
 and `decisions/0015-public-subpaths-mirror-the-source.md`.
 
-What remains is below: the two sections that were never in the order table (§I
-and §J), and four questions parked for a later conversation. §H, the `fields`
-module, shipped on 2026-08-04 — see `roadmap/in-progress/naming-pass.md` and
-`decisions/0016-the-fields-module-vocabulary.md`.
+What remains is below: §I, the one section that was never in the order table,
+and four questions parked for a later conversation. §H, the `fields` module, and
+§J, the `resource` vocabulary, both shipped on 2026-08-04 — see
+`roadmap/in-progress/naming-pass.md`,
+`decisions/0016-the-fields-module-vocabulary.md` and
+`decisions/0017-resource-as-the-superordinate-noun.md`.
 
 Everything here is still a rename with no behaviour change, so the same
 constraint applies: land it when `roadmap/in-progress/` is quiet, because it
@@ -20,7 +22,7 @@ conflicts with anything mid-flight in the same files.
 `ResolvedTable` before `TableDescriptor` can become `Table`. `FieldDefinition` →
 `Field` goes last — widest diff, no dependents.
 
-§I and §J each need a `TERMINOLOGY.md` entry, and §I overturns an existing one.
+§I needs a `TERMINOLOGY.md` entry, and it overturns an existing one.
 
 # §I — definitions are objects, so they take the bare noun
 
@@ -175,63 +177,6 @@ There is one collision to clear first.
    `defineFieldType`, independently.
 5. `FieldDefinition` → `Field`, `BlockDefinition` → `Block`, last: widest diff,
    no dependents.
-
----
-
-# §J — a superordinate noun for entries, media, users and settings
-
-Added 2026-08-04. Blocks the validator naming in the `fields` module.
-
-There is no word for "an entry, a media item, a user, or a settings page" — the
-four things that carry fields, run the field pipeline, and can hold a validator.
-There are, however, **two names for three of them**:
-
-```ts
-// types/domain.ts:63
-/** What can hold, or be pointed at by, a relation. */
-export type ResourceType = 'entry' | 'user' | 'media';
-
-// fields/relationship-edges.ts:35
-export type TargetKind = 'entry' | 'user' | 'media';
-```
-
-Identical unions, duplicated deliberately (`types/api.ts:127`: a pure leaf may
-not import a capability). The DB columns are `sourceKind` / `targetKind`. So the
-codebase already says both **resource** and **kind** for the same set.
-
-**Take `resource`.** Already present in `types/domain.ts`, REST vocabulary every
-web developer holds, no collision here, and it extends to a settings page.
-`record` stays too database-flavoured given `TERMINOLOGY.md` already refused it
-for entries; `document` collides with ProseMirror docs in `fields/rich-text/`.
-
-- `ResourceType` gains `'setting'`.
-- `TargetKind` keeps a separate name — once settings joins, the two sets differ:
-  everything is a resource, but only entries, users and media can be pointed at
-  by a relation. It earns its own type, not its own vocabulary. Reword its
-  docstring to say "the relation-eligible subset of `ResourceType`".
-- `TERMINOLOGY.md` gains the entry.
-
-## Consequence: the document validator names itself
-
-`fields/document-validators.ts` exports `setDocumentValidator`,
-`getDocumentValidator`, `resetDocumentValidators`, `registerDocumentValidators`,
-plus `DocumentValidator`, `DocumentValidationContext`,
-`DocumentValidationResult`.
-
-"Document" is undefined vocabulary and reads as a ProseMirror doc first, in a
-module that has `docToMarkdown` / `markdownToDoc` two directories over.
-`TERMINOLOGY.md` bans "record" for entries and says nothing about "document",
-which has the same problem plus a live homonym.
-
-With §J landed these become **resource validators**:
-`setResourceValidator`, `ResourceValidationContext`, `fields/resource-validators.ts`.
-The name then explains the key space it already has (`entry:<type>`, `media`,
-`users`, `setting:<page path>`) instead of contradicting it.
-
-_Rejected: "cross-field validation" — describes a technique rather than naming
-the thing, and reads broader than it is._
-
----
 
 ---
 

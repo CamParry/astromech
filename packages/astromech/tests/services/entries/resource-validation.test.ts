@@ -10,7 +10,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
 import { Astromech } from '@/transport/local/index.js';
-import type { AstromechConfig, DocumentValidator } from '@/types/index.js';
+import type { AstromechConfig, ResourceValidator } from '@/types/index.js';
 
 const api = Astromech.entries;
 
@@ -18,7 +18,7 @@ const api = Astromech.entries;
  * `event` cross-checks two dates no single field can see. `flyer` reports on a
  * field that also has a rule of its own, so the two can be raced.
  */
-function makeConfig(validate: DocumentValidator): AstromechConfig {
+function makeConfig(validate: ResourceValidator): AstromechConfig {
     const base = makeTestConfig();
     return {
         ...base,
@@ -43,7 +43,7 @@ function makeConfig(validate: DocumentValidator): AstromechConfig {
     };
 }
 
-const endsBeforeStart: DocumentValidator = async ({ values }) => {
+const endsBeforeStart: ResourceValidator = async ({ values }) => {
     const { starts, ends } = values;
     if (typeof starts === 'string' && typeof ends === 'string' && ends < starts) {
         return { ends: 'Must not be before the start' };
@@ -55,7 +55,7 @@ beforeEach(async () => {
     await createTestDb();
 });
 
-describe('a document validator returning a field map', () => {
+describe('a resource validator returning a field map', () => {
     beforeEach(() => setupTestConfig(makeConfig(endsBeforeStart)));
 
     it('rejects the create with the message on that field', async () => {
@@ -71,7 +71,7 @@ describe('a document validator returning a field map', () => {
         });
     });
 
-    it('lets a valid document through', async () => {
+    it('lets a valid resource through', async () => {
         const entry = await api.create({
             type: 'event',
             title: 'E2',
@@ -99,7 +99,7 @@ describe('a document validator returning a field map', () => {
     });
 });
 
-describe('a document validator returning a string', () => {
+describe('a resource validator returning a string', () => {
     beforeEach(() =>
         setupTestConfig(makeConfig(async () => 'Give the event a start or a title'))
     );
@@ -115,9 +115,9 @@ describe('a document validator returning a string', () => {
     });
 });
 
-describe('a field error and a document error on the same key', () => {
+describe('a field error and a resource error on the same key', () => {
     beforeEach(() =>
-        setupTestConfig(makeConfig(async () => ({ code: 'Document-level message' })))
+        setupTestConfig(makeConfig(async () => ({ code: 'Resource-level message' })))
     );
 
     it("keeps the field's own error, as the more specific one", async () => {

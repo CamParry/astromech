@@ -11,6 +11,17 @@ export type JsonObject = { [key: string]: JsonValue };
 export type JsonArray = JsonValue[];
 
 // ============================================================================
+// Resources
+// ============================================================================
+
+/**
+ * What carries fields and runs the field pipeline — an entry, a user, a media
+ * item or a settings page. `TargetKind` (`fields/relationship-edges.ts`) is the
+ * relation-eligible subset.
+ */
+export type ResourceType = 'entry' | 'user' | 'media' | 'setting';
+
+// ============================================================================
 // Entries
 // ============================================================================
 
@@ -58,9 +69,6 @@ export type EntryVersion = {
 // ============================================================================
 // Relationships
 // ============================================================================
-
-/** What can hold, or be pointed at by, a relation. */
-export type ResourceType = 'entry' | 'user' | 'media';
 
 // A relationship row has no hand-written type: it is a derived index whose
 // shape comes from the descriptor, so `RelationshipRow` in `database/schema.ts`

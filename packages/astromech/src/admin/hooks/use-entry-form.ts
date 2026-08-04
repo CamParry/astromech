@@ -113,7 +113,7 @@ export function useEntryForm({
     const { toast } = useToast();
     const { t } = useTranslation();
 
-    /** Document-level messages from a 422; they belong to no field. */
+    /** Form-level messages from a 422; they belong to no field. */
     const [formErrors, setFormErrors] = useState<string[]>([]);
 
     /**

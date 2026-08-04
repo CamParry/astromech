@@ -7,11 +7,11 @@ import type { DB } from '@/database/types.js';
 import type { CellKind } from './definitions.js';
 import type { Permission } from './domain.js';
 import type {
-    DocumentValidator,
     EntryFields,
     FieldDefinition,
     Label,
     ResolvedEntryFields,
+    ResourceValidator,
 } from './fields.js';
 import type { PluginDefinition, PluginNavItem } from './plugins.js';
 import type { EntryStorage } from '@/entries/storage/types.js';
@@ -252,7 +252,7 @@ export type EntryTypeConfig = {
      * processed. Server-side only — it is a function, so it cannot cross into
      * the admin's JSON config.
      */
-    validate?: DocumentValidator;
+    validate?: ResourceValidator;
 };
 
 export type ResolvedEntryCapabilities = {
@@ -304,7 +304,7 @@ export type MediaConfig = {
      * processed. Server-side only — it is a function, so it cannot cross into
      * the admin's JSON config.
      */
-    validate?: DocumentValidator;
+    validate?: ResourceValidator;
 };
 
 /** `MediaConfig` with its defaults applied. */
@@ -319,7 +319,7 @@ export type UsersConfig = {
      * processed. Server-side only — it is a function, so it cannot cross into
      * the admin's JSON config.
      */
-    validate?: DocumentValidator;
+    validate?: ResourceValidator;
 };
 
 // ============================================================================
@@ -349,7 +349,7 @@ export type AdminPage = {
      * after every field has been processed. Server-side only — it is a
      * function, so it cannot cross into the admin's JSON config.
      */
-    validate?: DocumentValidator;
+    validate?: ResourceValidator;
     /**
      * Permission override. Host default: `'settings:read'`. Plugin default:
      * `'settings:read'` for settings pages, null for component pages.
