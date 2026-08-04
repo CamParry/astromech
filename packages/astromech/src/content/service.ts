@@ -361,7 +361,7 @@ async function assertValid(params: {
     excludeId?: string[];
 }): Promise<void> {
     const { type, typeConfig } = params;
-    const documentValidate = getResourceValidator(`entry:${type}`) ?? typeConfig.validate;
+    const resourceValidate = getResourceValidator(`entry:${type}`) ?? typeConfig.validate;
     const processed = await processFields(
         structuredClone(params.values),
         flattenEntryFields(typeConfig.fields),
@@ -380,7 +380,7 @@ async function assertValid(params: {
                     ? {}
                     : { excludeId: params.excludeId }),
             }),
-            ...(documentValidate ? { documentValidate } : {}),
+            ...(resourceValidate ? { resourceValidate } : {}),
         }
     );
     if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {

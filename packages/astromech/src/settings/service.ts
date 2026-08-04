@@ -104,7 +104,7 @@ export const settingsService: SettingsService = {
             // `validate` only survives boot's registration. The fallback reads
             // the AUTHORED page — `ResolvedAdminPage` drops `validate` along
             // with everything else it does not project.
-            const documentValidate =
+            const resourceValidate =
                 getResourceValidator(`setting:${page.path}`) ??
                 (config as ResolvedConfig).admin?.pages?.find((p) => p.path === page.path)
                     ?.validate;
@@ -125,7 +125,7 @@ export const settingsService: SettingsService = {
                         getFields: (s) => (isPlainObject(s.value) ? s.value : {}),
                         excludeId: key,
                     }),
-                    ...(documentValidate ? { documentValidate } : {}),
+                    ...(resourceValidate ? { resourceValidate } : {}),
                 }
             );
             if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {

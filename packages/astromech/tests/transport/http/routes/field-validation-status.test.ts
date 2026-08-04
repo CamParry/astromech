@@ -16,7 +16,7 @@
  *  - a non-`ValidationError` failure must still be a 500 with a `console.error`,
  *    so removing the blanket catches is pinned as behaviour-preserving rather
  *    than "everything is 422 now";
- *  - a document validator's form-level message rides in `details.form`, which is
+ *  - a resource validator's form-level message rides in `details.form`, which is
  *    absent entirely when only fields reported — the per-field response body is
  *    unchanged.
  *
@@ -154,7 +154,7 @@ function makeConfig(): AstromechConfig {
                     },
                 ],
             },
-            // The document-validator testbed: a string result is form-level, a
+            // The resource-validator testbed: a string result is form-level, a
             // map result lands on a field.
             event: {
                 single: 'Event',
@@ -307,10 +307,10 @@ describe('POST /entries/:type — invalid field value', () => {
 });
 
 // ---------------------------------------------------------------------------
-// document validator
+// resource validator
 // ---------------------------------------------------------------------------
 
-describe('POST /entries/:type — document validator', () => {
+describe('POST /entries/:type — resource validator', () => {
     it('carries a form-level message in details.form', async () => {
         const app = mountedApp();
         const res = await app.request('/entries/event', {

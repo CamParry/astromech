@@ -197,7 +197,7 @@ export const mediaService = {
             // Registry first: the Astro config is JSON, so an authored
             // `validate` only survives boot's registration. The config value is
             // the fallback for the live-config paths (CLI, tests).
-            const documentValidate =
+            const resourceValidate =
                 getResourceValidator('media') ?? config.media?.validate;
             // `fields` is a patch: an omitted field keeps its stored value, an
             // explicit `null` stores null, and a container replaces wholesale.
@@ -218,7 +218,7 @@ export const mediaService = {
                     excludeId: id,
                 }),
                 coerceOnly: new Set(patchedNames),
-                ...(documentValidate ? { documentValidate } : {}),
+                ...(resourceValidate ? { resourceValidate } : {}),
             });
             if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
                 throw ValidationError.fromFieldErrors(processed.errors, processed.form);

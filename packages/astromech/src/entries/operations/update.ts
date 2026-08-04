@@ -69,7 +69,7 @@ export async function updateOne(
         // Registry first: the Astro config is JSON, so an authored `validate`
         // only survives boot's registration. The config value is the fallback
         // for the live-config paths (CLI, tests).
-        const documentValidate =
+        const resourceValidate =
             getResourceValidator(`entry:${type}`) ?? entryTypeConfig?.validate;
 
         // `fields` is a patch, not a replacement: an omitted field keeps its
@@ -101,7 +101,7 @@ export async function updateOne(
                 excludeId: excludeIds,
             }),
             coerceOnly: new Set(patchedFieldNames),
-            ...(documentValidate ? { documentValidate } : {}),
+            ...(resourceValidate ? { resourceValidate } : {}),
         });
         if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
             throw ValidationError.fromFieldErrors(processed.errors, processed.form);

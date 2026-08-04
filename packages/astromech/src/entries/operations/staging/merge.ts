@@ -30,7 +30,7 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
     // The canonical's type governs: the staged row is a copy of it. Registry
     // first (the Astro config is JSON, so an authored `validate` only survives
     // boot's registration), config value second for the live-config paths.
-    const documentValidate =
+    const resourceValidate =
         getResourceValidator(`entry:${type}`) ?? entryTypeConfig?.validate;
     const processed = await processFields(
         (staged.fields ?? {}) as Record<string, unknown>,
@@ -54,7 +54,7 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
                 locale: canonical.locale,
                 excludeId: [id, staged.id],
             }),
-            ...(documentValidate ? { documentValidate } : {}),
+            ...(resourceValidate ? { resourceValidate } : {}),
         }
     );
     if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {

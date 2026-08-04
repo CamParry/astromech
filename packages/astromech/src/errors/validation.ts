@@ -10,7 +10,7 @@ export class ValidationError extends Error {
      */
     public readonly fields?: FieldErrors | undefined;
     /**
-     * Form-level messages from the document validator — problems that belong to
+     * Form-level messages from the resource validator — problems that belong to
      * no single field. Surfaced as `422 details.form`.
      */
     public readonly form?: string[] | undefined;

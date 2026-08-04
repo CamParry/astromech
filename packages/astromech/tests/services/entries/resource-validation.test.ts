@@ -55,7 +55,7 @@ beforeEach(async () => {
     await createTestDb();
 });
 
-describe('a document validator returning a field map', () => {
+describe('a resource validator returning a field map', () => {
     beforeEach(() => setupTestConfig(makeConfig(endsBeforeStart)));
 
     it('rejects the create with the message on that field', async () => {
@@ -71,7 +71,7 @@ describe('a document validator returning a field map', () => {
         });
     });
 
-    it('lets a valid document through', async () => {
+    it('lets a valid resource through', async () => {
         const entry = await api.create({
             type: 'event',
             title: 'E2',
@@ -99,7 +99,7 @@ describe('a document validator returning a field map', () => {
     });
 });
 
-describe('a document validator returning a string', () => {
+describe('a resource validator returning a string', () => {
     beforeEach(() =>
         setupTestConfig(makeConfig(async () => 'Give the event a start or a title'))
     );
@@ -115,9 +115,9 @@ describe('a document validator returning a string', () => {
     });
 });
 
-describe('a field error and a document error on the same key', () => {
+describe('a field error and a resource error on the same key', () => {
     beforeEach(() =>
-        setupTestConfig(makeConfig(async () => ({ code: 'Document-level message' })))
+        setupTestConfig(makeConfig(async () => ({ code: 'Resource-level message' })))
     );
 
     it("keeps the field's own error, as the more specific one", async () => {

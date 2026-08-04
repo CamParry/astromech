@@ -97,7 +97,7 @@ export async function create(params: {
     // Registry first: the Astro config is JSON, so an authored `validate` only
     // survives boot's registration. The config value is the fallback for the
     // live-config paths (CLI, tests).
-    const documentValidate =
+    const resourceValidate =
         getResourceValidator(`entry:${type}`) ?? entryTypeConfig.validate;
 
     const processed = await processFields(incomingFields, fieldDefs, {
@@ -109,7 +109,7 @@ export async function create(params: {
         host: { kind: 'entry', record: null },
         user,
         reads: createEntryFieldReads(storage, { type, locale }),
-        ...(documentValidate ? { documentValidate } : {}),
+        ...(resourceValidate ? { resourceValidate } : {}),
     });
     if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
         throw ValidationError.fromFieldErrors(processed.errors, processed.form);

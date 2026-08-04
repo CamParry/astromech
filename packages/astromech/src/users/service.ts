@@ -88,7 +88,7 @@ export const usersService = {
         // Registry first: the Astro config is JSON, so an authored `validate`
         // only survives boot's registration. The config value is the fallback
         // for the live-config paths (CLI, tests).
-        const documentValidate = getResourceValidator('users') ?? config.users?.validate;
+        const resourceValidate = getResourceValidator('users') ?? config.users?.validate;
         const processedFields = await processFields(
             (validated.fields ?? {}) as Record<string, unknown>,
             fieldDefs,
@@ -101,7 +101,7 @@ export const usersService = {
                     getId: (r) => r.id,
                     getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
                 }),
-                ...(documentValidate ? { documentValidate } : {}),
+                ...(resourceValidate ? { resourceValidate } : {}),
             }
         );
         if (
@@ -148,7 +148,7 @@ export const usersService = {
             // Registry first: the Astro config is JSON, so an authored
             // `validate` only survives boot's registration. The config value is
             // the fallback for the live-config paths (CLI, tests).
-            const documentValidate =
+            const resourceValidate =
                 getResourceValidator('users') ?? config.users?.validate;
             // `fields` is a patch: an omitted field keeps its stored value, an
             // explicit `null` stores null, and a container replaces wholesale.
@@ -169,7 +169,7 @@ export const usersService = {
                     excludeId: id,
                 }),
                 coerceOnly: new Set(patchedNames),
-                ...(documentValidate ? { documentValidate } : {}),
+                ...(resourceValidate ? { resourceValidate } : {}),
             });
             if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
                 throw ValidationError.fromFieldErrors(processed.errors, processed.form);

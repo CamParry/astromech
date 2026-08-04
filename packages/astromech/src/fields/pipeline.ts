@@ -38,14 +38,14 @@
  * a `{ unique: true, severity: 'warning' }` rule costs a database read and the
  * server has no consumer for the result — only the editor does.
  *
- * `ctx.documentValidate` runs last, over the coerced values, whether or not the
+ * `ctx.resourceValidate` runs last, over the coerced values, whether or not the
  * fields reported. It returns a form-level string or a map of path → message;
  * on a key a field already claimed, the field's own error wins as the more
  * specific one.
  *
  * `ctx.coerceOnly` names the root fields a patch actually carries. Coercion then
  * runs for those fields and their subtrees only, while defaults, `children()`
- * normalization and validation still run over the whole merged document. A
+ * normalization and validation still run over the whole merged resource. A
  * coercer is not guaranteed idempotent, so re-running one over a value the
  * caller never mentioned would rewrite stored data behind their back.
  */
@@ -217,8 +217,8 @@ type PipelineContext = Omit<
     stage?: ValidationStage;
     /** Evaluate warning-severity rules. Default `false`. */
     collectWarnings?: boolean;
-    /** Whole-document validator, run after every field. */
-    documentValidate?: ResourceValidator;
+    /** Whole-resource validator, run after every field. */
+    resourceValidate?: ResourceValidator;
     /**
      * Root field names whose value is new in this write. Absent ⇒ coerce
      * everything; present ⇒ coerce only these fields and their subtrees.
@@ -393,7 +393,7 @@ async function processScope(
 }
 
 /**
- * Run every field definition over `values`, then the document validator.
+ * Run every field definition over `values`, then the resource validator.
  * Returns the coerced values plus blocking `errors`, advisory `warnings` and
  * form-level `form` messages.
  */
@@ -423,11 +423,11 @@ export async function processFields(
         warnings
     );
 
-    // The document validator runs whether or not the fields reported, so one
+    // The resource validator runs whether or not the fields reported, so one
     // pass surfaces cross-field and per-field problems together.
     const form: string[] = [];
-    if (ctx.documentValidate) {
-        const reported = await ctx.documentValidate({
+    if (ctx.resourceValidate) {
+        const reported = await ctx.resourceValidate({
             values: result,
             definitions,
             operation: ctx.operation,
