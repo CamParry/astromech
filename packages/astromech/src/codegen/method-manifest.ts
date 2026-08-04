@@ -1,13 +1,13 @@
 /**
  * Method Manifest Generator
  *
- * Produces a JSON catalogue of every service-method descriptor: core domain
+ * Produces a JSON catalogue of every service-method contract: core domain
  * methods (users, media, settings, content), per-type entry methods, and plugin
  * service methods. Pure function — callers are responsible for writing the
  * result to disk or injecting it into a virtual module.
  *
  * Every schema is authored in the domain that owns the method; this file only
- * projects descriptors into the manifest shape (`ManifestMethod`, declared in
+ * projects contracts into the manifest shape (`ManifestMethod`, declared in
  * `types/services.ts` so consumers share the emitter's declaration). A method's
  * `input` is its ARGUMENT object, not the HTTP body.
  *
@@ -17,9 +17,9 @@
 import { z } from '@hono/zod-openapi';
 import type {
     PluginDefinition,
-    AnyPluginServiceMethod,
+    AnyServiceMethod,
     PluginAccess,
-    ServiceMethodDescriptor,
+    ServiceMethodContract,
     CoreManifestMethod,
     EntriesManifestMethod,
     JsonSchemaObject,
@@ -29,11 +29,11 @@ import type {
     PluginManifestMethod,
 } from '@/types/index.js';
 import type { ResolvedConfig } from '@/types/index.js';
-import { usersDescriptors } from '@/users/methods.js';
-import { mediaDescriptors } from '@/media/methods.js';
-import { settingsDescriptors } from '@/settings/methods.js';
-import { contentDescriptors } from '@/content/methods.js';
-import { entryMethodDescriptors, type EntryMethodDescriptor } from '@/entries/methods.js';
+import { usersContract } from '@/users/methods.js';
+import { mediaContract } from '@/media/methods.js';
+import { settingsContract } from '@/settings/methods.js';
+import { contentContract } from '@/content/methods.js';
+import { entryMethodContracts, type EntryMethodContract } from '@/entries/methods.js';
 import type { Capability } from '@/entries/storage/capabilities.js';
 import type { ResolvedEntryCapabilities } from '@/types/index.js';
 import { qualifyEntryType } from '@/entries/type-ids.js';
@@ -58,7 +58,7 @@ export const METHOD_MANIFEST_FILENAME = 'astromech.methods.json';
  * a single broken schema does not abort the whole manifest.
  *
  * `io` must match which side of a transforming schema is being described. A
- * descriptor's `input` is what the caller passes IN, so a `z.string().datetime()`
+ * contract's `input` is what the caller passes IN, so a `z.string().datetime()`
  * that transforms to a `Date` has to render as the string — Zod's default
  * (`'output'`) renders the `Date`, which is unrepresentable and degrades to `{}`,
  * telling an AI consumer nothing about what to send.
@@ -75,12 +75,12 @@ function toJSONSchema(
 }
 
 /**
- * A descriptor's statically-serialisable permission. Function-form permissions
+ * A contract's statically-serialisable permission. Function-form permissions
  * resolve from the call input, so they cannot go in the manifest as a string —
  * `permissionDynamic` flags them instead.
  */
-function staticPermission(descriptor: ServiceMethodDescriptor): string | null {
-    return typeof descriptor.permission === 'string' ? descriptor.permission : null;
+function staticPermission(contract: ServiceMethodContract): string | null {
+    return typeof contract.permission === 'string' ? contract.permission : null;
 }
 
 /**
@@ -96,52 +96,52 @@ function methodCapabilityMet(
 }
 
 // ============================================================================
-// Core descriptors group
+// Core contracts group
 // ============================================================================
 
 function buildCoreMethods(): CoreManifestMethod[] {
     // The domain prefix is paired with the catalogue here, so a method's name is
     // its position (`users.query`) rather than a hand-written string that can
     // drift from the key it sits under.
-    const catalogues: [string, Record<string, ServiceMethodDescriptor>][] = [
-        ['users', usersDescriptors],
-        ['media', mediaDescriptors],
-        ['settings', settingsDescriptors],
-        ['content', contentDescriptors],
+    const catalogues: [string, Record<string, ServiceMethodContract>][] = [
+        ['users', usersContract],
+        ['media', mediaContract],
+        ['settings', settingsContract],
+        ['content', contentContract],
     ];
     const methods: CoreManifestMethod[] = [];
 
     for (const [domain, catalogue] of catalogues) {
-        for (const [key, descriptor] of Object.entries(catalogue)) {
+        for (const [key, contract] of Object.entries(catalogue)) {
             const method: CoreManifestMethod = {
                 // A core domain has one method per key, so the name is already
                 // unique — id and name coincide.
                 id: `${domain}.${key}`,
                 name: `${domain}.${key}`,
-                summary: descriptor.summary,
+                summary: contract.summary,
                 source: 'core',
                 domain,
                 method: key,
-                permission: staticPermission(descriptor),
-                mutates: descriptor.mutates,
-                destructive: descriptor.destructive ?? false,
-                idempotent: descriptor.idempotent ?? false,
+                permission: staticPermission(contract),
+                mutates: contract.mutates,
+                destructive: contract.destructive ?? false,
+                idempotent: contract.idempotent ?? false,
             };
 
             // Flag function-form permissions — they cannot be statically serialised.
-            if (typeof descriptor.permission === 'function') {
+            if (typeof contract.permission === 'function') {
                 method.permissionDynamic = true;
             }
 
-            if (descriptor.input) {
-                method.input = toJSONSchema(descriptor.input, 'input');
+            if (contract.input) {
+                method.input = toJSONSchema(contract.input, 'input');
             }
-            if (descriptor.output) {
-                method.output = toJSONSchema(descriptor.output, 'output');
+            if (contract.output) {
+                method.output = toJSONSchema(contract.output, 'output');
             }
             // Emitted only when true — a JSON-RPC transport reads this to skip a
             // method whose schema renders as callable but whose input is a File.
-            if (descriptor.binaryInput === true) {
+            if (contract.binaryInput === true) {
                 method.binaryInput = true;
             }
 
@@ -171,18 +171,18 @@ function buildEntriesMethods(
 
     // Root entry types — addressed by their bare id.
     for (const [type, cfg] of Object.entries(config.entries)) {
-        for (const descriptor of entryMethodDescriptors({
+        for (const contract of entryMethodContracts({
             typeId: type,
             titleField: cfg.titleField,
         })) {
             // Gate capability-bound methods: `publish` needs versioning; the
             // staged-entry/preview methods need the `staging` capability.
-            if (!methodCapabilityMet(descriptor.requires, cfg.capabilities)) {
+            if (!methodCapabilityMet(contract.requires, cfg.capabilities)) {
                 continue;
             }
 
             methods.push(
-                projectEntryMethod(descriptor, {
+                projectEntryMethod(contract, {
                     typeId: type,
                     entryType: type,
                     mount: 'root',
@@ -196,17 +196,17 @@ function buildEntriesMethods(
         const permissionNamespace = pluginNsMap.get(pluginName) ?? pluginName;
         for (const [type, cfg] of Object.entries(types)) {
             const typeId = qualifyEntryType(pluginName, type);
-            for (const descriptor of entryMethodDescriptors({
+            for (const contract of entryMethodContracts({
                 typeId,
                 titleField: cfg.titleField,
             })) {
                 // Same capability gating as root entry types.
-                if (!methodCapabilityMet(descriptor.requires, cfg.capabilities)) {
+                if (!methodCapabilityMet(contract.requires, cfg.capabilities)) {
                     continue;
                 }
 
                 methods.push(
-                    projectEntryMethod(descriptor, {
+                    projectEntryMethod(contract, {
                         typeId,
                         entryType: type,
                         mount: permissionNamespace,
@@ -225,7 +225,7 @@ function buildEntriesMethods(
  * dimension `name` lacks, since `entries.create` names every type's create.
  */
 function projectEntryMethod(
-    descriptor: EntryMethodDescriptor,
+    contract: EntryMethodContract,
     placement: {
         typeId: string;
         entryType: string;
@@ -234,24 +234,24 @@ function projectEntryMethod(
     }
 ): EntriesManifestMethod {
     const method: EntriesManifestMethod = {
-        id: `entries.${placement.typeId}.${descriptor.method}`,
-        name: `entries.${descriptor.method}`,
-        summary: descriptor.summary,
+        id: `entries.${placement.typeId}.${contract.method}`,
+        name: `entries.${contract.method}`,
+        summary: contract.summary,
         source: 'entries',
-        method: descriptor.method,
+        method: contract.method,
         typeId: placement.typeId,
         entryType: placement.entryType,
         mount: placement.mount,
-        permission: staticPermission(descriptor),
-        mutates: descriptor.mutates,
-        destructive: descriptor.destructive ?? false,
-        idempotent: descriptor.idempotent ?? false,
+        permission: staticPermission(contract),
+        mutates: contract.mutates,
+        destructive: contract.destructive ?? false,
+        idempotent: contract.idempotent ?? false,
     };
     if (placement.plugin !== undefined) {
         method.plugin = placement.plugin;
     }
-    if (descriptor.input) {
-        method.input = toJSONSchema(descriptor.input, 'input');
+    if (contract.input) {
+        method.input = toJSONSchema(contract.input, 'input');
     }
     return method;
 }
@@ -271,7 +271,7 @@ function buildPluginServiceMethods(plugins: PluginDefinition[]): PluginManifestM
     for (const def of plugins) {
         const identity = resolvePluginIdentity(def);
         for (const [key, m] of Object.entries(def.service ?? {})) {
-            const serviceMethod = m as AnyPluginServiceMethod;
+            const serviceMethod = m as AnyServiceMethod;
             const method: PluginManifestMethod = {
                 // Service keys are collision-checked at boot, so the name is
                 // already unique — id and name coincide.

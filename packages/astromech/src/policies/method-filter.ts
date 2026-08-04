@@ -16,7 +16,7 @@
  * read-only flag that documents an intention rather than enforcing one.
  *
  * `readOnly` keys off `mutates`, which is a REQUIRED field on every service
- * descriptor and therefore on every manifest method, so there is no method this
+ * method and therefore on every manifest method, so there is no method this
  * cannot classify. There is no "unknown effect" bucket to fail closed into.
  *
  * This is NOT the permission boundary — `policies/scoped-services.ts` is. A

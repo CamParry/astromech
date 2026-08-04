@@ -39,7 +39,7 @@ const objectSchema: JsonSchemaObject = {
 
 /**
  * `permission: null` deliberately: the manifest says this method is ungated, so
- * any refusal below can only have come from the descriptor the scoped handle
+ * any refusal below can only have come from the contract the scoped handle
  * reads, never from dispatch.ts consulting the manifest.
  */
 const usersQuery: CoreManifestMethod = {

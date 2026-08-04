@@ -16,7 +16,7 @@ import type { Kysely } from 'kysely';
 import type { DB } from '@/database/types.js';
 import type { ReactElement } from 'react';
 import type {
-    AnyPluginServiceMethod,
+    AnyServiceMethod,
     AstromechClient,
     EntriesService,
     MediaService,
@@ -83,7 +83,7 @@ type PluginRuntimeState = {
     config: ResolvedConfig | null;
     identities: ResolvedPluginIdentity[];
     hooks: Map<string, RegisteredHook[]>;
-    service: Map<string, Record<string, AnyPluginServiceMethod>>;
+    service: Map<string, Record<string, AnyServiceMethod>>;
     rawRoutes: RegisteredRawRoute[];
     client: AstromechClient | null;
     methods: PluginMethodsAccess | null;
@@ -281,10 +281,7 @@ export function getPluginIdentity(
     return state().identities.find((identity) => identity.serviceKey === serviceKey);
 }
 
-export function getPluginServiceMethods(): Map<
-    string,
-    Record<string, AnyPluginServiceMethod>
-> {
+export function getPluginServiceMethods(): Map<string, Record<string, AnyServiceMethod>> {
     return state().service;
 }
 

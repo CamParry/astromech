@@ -1,17 +1,17 @@
 /**
- * Media service method descriptors — declared permission + effect per media verb.
+ * Media service method contracts — declared permission + effect per media verb.
  * The single source the HTTP transport enforces against and the manifest reads.
  *
  * `input` is the METHOD's argument object, not the HTTP body: `media.update` is
- * called `update({ id, data })`, so the descriptor composes the body schema into
+ * called `update({ id, data })`, so the contract composes the body schema into
  * that shape rather than declaring the body alone.
  */
 
 import { z } from '@hono/zod-openapi';
-import type { ServiceMethodDescriptor } from '@/types/index.js';
+import type { ServiceMethodContract } from '@/types/index.js';
 import { mediaQuerySchema, updateMediaSchema } from './schema.js';
 
-export const mediaDescriptors = {
+export const mediaContract = {
     query: {
         summary: 'List media items.',
         input: mediaQuerySchema,
@@ -58,4 +58,4 @@ export const mediaDescriptors = {
         permission: 'media:read',
         mutates: false,
     },
-} satisfies Record<string, ServiceMethodDescriptor>;
+} satisfies Record<string, ServiceMethodContract>;

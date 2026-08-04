@@ -25,7 +25,7 @@ import type {
     ManifestMethod,
     Permission,
     Role,
-    ServiceMethodDescriptor,
+    ServiceMethodContract,
 } from '@/types/index.js';
 
 beforeEach(() => {
@@ -50,17 +50,17 @@ function makeService() {
     };
 }
 
-const descriptors = {
+const contracts = {
     read: { permission: 'settings:read', mutates: false },
     write: { permission: 'settings:update', mutates: true },
-} satisfies Record<string, ServiceMethodDescriptor>;
+} satisfies Record<string, ServiceMethodContract>;
 
 describe('scopeMethods', () => {
     it('refuses a method the role lacks, without entering the service', () => {
         const service = makeService();
         const scoped = scopeMethods(
             service,
-            descriptors,
+            contracts,
             permissionsFor(role('settings:read')),
             'settings'
         );
@@ -72,7 +72,7 @@ describe('scopeMethods', () => {
     it('names the method and the permission it needed', () => {
         const scoped = scopeMethods(
             makeService(),
-            descriptors,
+            contracts,
             permissionsFor(role('settings:read')),
             'settings'
         );
@@ -92,7 +92,7 @@ describe('scopeMethods', () => {
         const service = makeService();
         const scoped = scopeMethods(
             service,
-            descriptors,
+            contracts,
             permissionsFor(role('settings:read', 'settings:update')),
             'settings'
         );
@@ -105,7 +105,7 @@ describe('scopeMethods', () => {
         const service = makeService();
         const scoped = scopeMethods(
             service,
-            descriptors,
+            contracts,
             permissionsFor(role('settings:read')),
             'settings'
         );
@@ -114,11 +114,11 @@ describe('scopeMethods', () => {
         expect(service.read).toHaveBeenCalledWith({ key: 'site.title' });
     });
 
-    it('fails closed on a method with no descriptor, even for a wildcard role', () => {
+    it('fails closed on a method with no contract, even for a wildcard role', () => {
         const service = makeService();
         const scoped = scopeMethods(
             service,
-            descriptors,
+            contracts,
             permissionsFor(role('*')),
             'settings'
         );
@@ -136,7 +136,7 @@ describe('scopeMethods', () => {
     it('refuses every gated method when there is no role', () => {
         const scoped = scopeMethods(
             makeService(),
-            descriptors,
+            contracts,
             permissionsFor(undefined),
             'settings'
         );
@@ -147,7 +147,7 @@ describe('scopeMethods', () => {
     it('passes non-function values through unchanged', () => {
         const scoped = scopeMethods(
             makeService(),
-            descriptors,
+            contracts,
             permissionsFor(role('*')),
             'settings'
         );
@@ -378,7 +378,7 @@ describe('scopeContent', () => {
         expect(stub.translate).not.toHaveBeenCalled();
     });
 
-    it('fails closed on a method with no descriptor, even for a wildcard role', () => {
+    it('fails closed on a method with no contract, even for a wildcard role', () => {
         const stub = { mystery: vi.fn(() => Promise.resolve('x')) };
         const scoped = scopeContentStub(stub, role('*'));
 
@@ -420,9 +420,9 @@ describe('scopedServices', () => {
         }
     });
 
-    it('refuses mediaService.replace, which declares no descriptor', () => {
+    it('refuses mediaService.replace, which declares no contract', () => {
         // Known gap, asserted rather than papered over: `replace` has no entry in
-        // `mediaDescriptors`, so it is invisible to the manifest AND unreachable
+        // `mediaContract`, so it is invisible to the manifest AND unreachable
         // through a scoped handle — even for an admin.
         const media = scopedServices(role('*')).media as unknown as Record<string, never>;
 

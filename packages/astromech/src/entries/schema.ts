@@ -186,7 +186,7 @@ export const scheduleEntrySchema = z.object({
 
 /**
  * Overrides accepted by `duplicate`. Authored here, in the domain, rather than
- * inline in the route that first needed it: the method descriptor publishes the
+ * inline in the route that first needed it: the method contract publishes the
  * same payload to MCP and the AI tool-loop, and two copies of a schema is how
  * the transport and the manifest end up describing different things.
  */

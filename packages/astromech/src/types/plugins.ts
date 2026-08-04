@@ -163,7 +163,7 @@ export type PluginContext = {
  */
 export type PluginAccess = 'public' | 'authenticated' | { permission: string };
 
-export type PluginServiceMethod<Input = unknown, Output = unknown> = {
+export type ServiceMethod<Input = unknown, Output = unknown> = {
     access: PluginAccess;
     handler: (input: Input, ctx: PluginContext) => Promise<Output> | Output;
     /** One-line summary for the method manifest (discovery / MCP / AI tool-loop). */
@@ -188,10 +188,7 @@ export type PluginServiceMethod<Input = unknown, Output = unknown> = {
  * covariant in `input`, so the schema position is widened separately — a single
  * type argument cannot satisfy both.
  */
-export type AnyPluginServiceMethod = Omit<
-    PluginServiceMethod<never, unknown>,
-    'input'
-> & {
+export type AnyServiceMethod = Omit<ServiceMethod<never, unknown>, 'input'> & {
     input?: z.ZodType;
 };
 
@@ -370,7 +367,7 @@ export type PluginDefinition = PluginIdentity & {
      * files keep their bare `NNNN_<tag>` names.
      */
     migrations?: MigrationProvider;
-    service?: Record<string, AnyPluginServiceMethod>;
+    service?: Record<string, AnyServiceMethod>;
     rawRoutes?: PluginRawRoute[];
     hooks?: PluginHooks;
     /**

@@ -1,5 +1,5 @@
 /**
- * Users service method descriptors — declared permission + effect per users verb.
+ * Users service method contracts — declared permission + effect per users verb.
  *
  * These declare the PRIMARY method permission. Secondary authorization that isn't
  * a single method permission (self-access on read/update, the last-admin guard)
@@ -7,16 +7,16 @@
  * rules are identity/policy concerns, not the method's declared permission.
  *
  * `input` is the METHOD's argument object, not the HTTP body: `users.update` is
- * called `update({ id, data })`, so the descriptor composes the body schema into
+ * called `update({ id, data })`, so the contract composes the body schema into
  * that shape rather than declaring the body alone. The routes still parse the
  * body schemas directly — nothing here changes what the wire accepts.
  */
 
 import { z } from '@hono/zod-openapi';
-import type { ServiceMethodDescriptor } from '@/types/index.js';
+import type { ServiceMethodContract } from '@/types/index.js';
 import { createUserSchema, updateUserSchema, userQuerySchema } from './schema.js';
 
-export const usersDescriptors = {
+export const usersContract = {
     query: {
         summary: 'List CMS users.',
         input: userQuerySchema,
@@ -51,4 +51,4 @@ export const usersDescriptors = {
         mutates: true,
         destructive: true,
     },
-} satisfies Record<string, ServiceMethodDescriptor>;
+} satisfies Record<string, ServiceMethodContract>;

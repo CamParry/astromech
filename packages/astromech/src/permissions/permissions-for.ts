@@ -4,7 +4,7 @@
  * for SSR/hooks, the CLI) compose nothing and never check.
  */
 
-import type { Permission, Role, ServiceMethodDescriptor } from '@/types/index.js';
+import type { Permission, Role, ServiceMethodContract } from '@/types/index.js';
 import { can } from '@/permissions/index.js';
 
 export type Permissions = {
@@ -15,7 +15,7 @@ export type Permissions = {
      * declared `permission` (resolving an input-dependent rule); a method that
      * declares no permission is public and always allowed.
      */
-    allowsMethod<Input>(method: ServiceMethodDescriptor<Input>, input?: Input): boolean;
+    allowsMethod<Input>(method: ServiceMethodContract<Input>, input?: Input): boolean;
 };
 
 /**

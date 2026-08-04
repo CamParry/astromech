@@ -1,5 +1,5 @@
 /**
- * Entries service method descriptors.
+ * Entries service method contracts.
  *
  * Entries is the one domain whose catalogue is PER TYPE rather than a constant:
  * the permission, the create/update schemas (whether a title is required) and
@@ -8,12 +8,12 @@
  * authored here, in the domain, not in the generator.
  *
  * `input` is the METHOD's argument object: every `EntriesService` method takes
- * `{ type, ... }`, and `type` is fixed per descriptor because a descriptor
+ * `{ type, ... }`, and `type` is fixed per contract because a contract
  * describes one type's methods.
  */
 
 import { z } from '@hono/zod-openapi';
-import type { ServiceMethodDescriptor } from '@/types/index.js';
+import type { ServiceMethodContract } from '@/types/index.js';
 import { entryPermission, type EntryAction } from '@/permissions/entry-permission.js';
 import { parseEntryTypeId } from './type-ids.js';
 import type { Capability } from './storage/capabilities.js';
@@ -25,12 +25,12 @@ import {
 } from './schema.js';
 
 /**
- * A per-type entry method descriptor. Adds the two facts the manifest needs
- * which a plain descriptor has no field for: which `EntriesService` method it
+ * A per-type entry method contract. Adds the two facts the manifest needs
+ * which a plain contract has no field for: which `EntriesService` method it
  * describes, and the capability the entry type must declare for the method to
  * exist at all.
  */
-export type EntryMethodDescriptor = ServiceMethodDescriptor & {
+export type EntryMethodContract = ServiceMethodContract & {
     /** Key on `EntriesService` — the manifest name is `entries.<method>`. */
     method: string;
     /**
@@ -96,7 +96,7 @@ function entryMethodSummary(method: string, action: EntryAction, type: string): 
 /**
  * The permission action each `EntriesService` method enforces.
  *
- * Declared once and read by both consumers: the descriptors below (which project
+ * Declared once and read by both consumers: the contracts below (which project
  * it into the manifest's `permission`) and the scoped entries handle (which
  * resolves it at call time). Restating the pairs at the call site would be a
  * second declaration of the same fact, and the enforcement half is exactly the
@@ -152,10 +152,10 @@ const limitParam = z.union([z.number(), z.literal('all')]);
  * @param titleField The type's title requirement, which drives the create and
  *   update schemas.
  */
-export function entryMethodDescriptors(params: {
+export function entryMethodContracts(params: {
     typeId: string;
     titleField: 'title' | false;
-}): EntryMethodDescriptor[] {
+}): EntryMethodContract[] {
     const { typeId, titleField } = params;
 
     // Summaries name the BARE type: a plugin type's qualified id is an address,

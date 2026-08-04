@@ -290,7 +290,7 @@ describe('buildTools', () => {
 
     it('a method with no input schema is skipped, not given a synthesised one', () => {
         // The adapters used to carry hand-written `inputSchema` literals, which is
-        // how MCP's `users.update` tool drifted from the descriptor. A tool now
+        // how MCP's `users.update` tool drifted from the contract. A tool now
         // exists only if the manifest gave it a schema.
         const schemaless: MethodManifest = {
             version: 2,

@@ -21,7 +21,7 @@ import {
 } from '@/transport/http/middleware/errors.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import { permissionsFor } from '@/permissions/permissions-for.js';
-import { createUserSchema, updateUserSchema, usersDescriptors } from '@/users/index.js';
+import { createUserSchema, updateUserSchema, usersContract } from '@/users/index.js';
 import { createUserStorage } from '@/users/storage.js';
 import type { JsonObject, UserQueryParams } from '@/types/index.js';
 
@@ -37,7 +37,7 @@ const SORTABLE_FIELDS = new Set(['name', 'email', 'createdAt', 'updatedAt', 'rol
 
 router.get('/', async (c) => {
     const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(usersDescriptors.query)) return forbidden(c);
+    if (!permissions.allowsMethod(usersContract.query)) return forbidden(c);
 
     const q = c.req.query();
     const params: UserQueryParams = {};
@@ -61,7 +61,7 @@ router.get('/:id', async (c) => {
     const { id } = c.req.param();
     const permissions = permissionsFor(c.var.role);
     const currentUser = c.var.user;
-    if (!permissions.allowsMethod(usersDescriptors.get) && currentUser.id !== id)
+    if (!permissions.allowsMethod(usersContract.get) && currentUser.id !== id)
         return forbidden(c);
 
     const user = await Astromech.users.get({ id });
@@ -75,7 +75,7 @@ router.get('/:id', async (c) => {
 
 router.post('/', async (c) => {
     const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(usersDescriptors.create)) return forbidden(c);
+    if (!permissions.allowsMethod(usersContract.create)) return forbidden(c);
 
     const raw = await c.req.json();
     const parsed = createUserSchema.safeParse(raw);
@@ -99,7 +99,7 @@ router.put('/:id', async (c) => {
     const { id } = c.req.param();
     const permissions = permissionsFor(c.var.role);
     const currentUser = c.var.user;
-    const canUpdateUsers = permissions.allowsMethod(usersDescriptors.update);
+    const canUpdateUsers = permissions.allowsMethod(usersContract.update);
     const isSelf = currentUser.id === id;
 
     if (!canUpdateUsers && !isSelf) return forbidden(c);
@@ -143,7 +143,7 @@ router.put('/:id', async (c) => {
 router.delete('/:id', async (c) => {
     const { id } = c.req.param();
     const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(usersDescriptors.delete)) return forbidden(c);
+    if (!permissions.allowsMethod(usersContract.delete)) return forbidden(c);
 
     // Last-admin check
     const targetUser = await Astromech.users.get({ id });

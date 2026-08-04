@@ -19,7 +19,7 @@ import type {
     UsersService,
 } from './services.js';
 import type { ResolvedConfig } from './config.js';
-import type { PluginServiceMethod } from './plugins.js';
+import type { ServiceMethod } from './plugins.js';
 
 // ============================================================================
 // Typed Entry
@@ -281,7 +281,7 @@ export type TypedEntriesService = TypedEntriesServiceFor<AstromechEntryTypes>;
 
 /** Map a plugin's service object type to its caller-facing callable signatures. */
 export type ServiceInterface<T> = {
-    [K in keyof T]: T[K] extends PluginServiceMethod<infer I, infer O>
+    [K in keyof T]: T[K] extends ServiceMethod<infer I, infer O>
         ? (input: I) => Promise<O>
         : (input?: unknown) => Promise<unknown>;
 };

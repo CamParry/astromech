@@ -1,5 +1,5 @@
 /**
- * The content domain's reach: descriptors → manifest → MCP tools → confirm gate.
+ * The content domain's reach: contracts → manifest → MCP tools → confirm gate.
  *
  * Nothing here is content-specific machinery — the point is that registering the
  * catalogue and the service is the whole wiring, so these assertions are about
@@ -20,7 +20,7 @@ vi.mock('@/content/service.js', () => ({
 
 import { generateMethodManifest } from '@/codegen/method-manifest.js';
 import { resolveConfig } from '@/boot/config-resolver.js';
-import { contentDescriptors } from '@/content/methods.js';
+import { contentContract } from '@/content/methods.js';
 import { evaluateConfirmation, triggersConfirmation } from '@/policies/confirmation.js';
 import { buildDispatch } from '@/transport/tools/dispatch.js';
 import { buildTools } from '@/transport/mcp/tools.js';
@@ -116,7 +116,7 @@ describe('content methods in the method manifest', () => {
             };
             expect(input, operation).toBeDefined();
             expect(input.type).toBe('object');
-            // `type` and `id` are path params on the wire; the descriptor still
+            // `type` and `id` are path params on the wire; the contract still
             // declares the whole argument object.
             expect(Object.keys(input.properties ?? {})).toEqual(
                 expect.arrayContaining(['type', 'id', 'paths', 'instruction'])
@@ -224,11 +224,11 @@ describe('content methods under the confirm gate', () => {
 });
 
 // ============================================================================
-// Descriptors ↔ service
+// Contracts ↔ service
 // ============================================================================
 
-describe('content descriptors', () => {
-    it('names one descriptor per operation and nothing else', () => {
-        expect(Object.keys(contentDescriptors).sort()).toEqual([...OPERATIONS].sort());
+describe('content contracts', () => {
+    it('names one contract per operation and nothing else', () => {
+        expect(Object.keys(contentContract).sort()).toEqual([...OPERATIONS].sort());
     });
 });

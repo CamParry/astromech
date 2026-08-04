@@ -13,7 +13,7 @@ import type {
     Permission,
     PluginDefinition,
     PluginFactory,
-    PluginServiceMethod,
+    ServiceMethod,
 } from '@/types/index.js';
 import { pluginNamespace } from '@/utilities/plugin-namespace.js';
 import * as zod from 'zod';
@@ -292,13 +292,12 @@ export function noInput(): zod.ZodType<undefined> {
 /**
  * Define a typed service method (a plugin's contribution to the unified services
  * layer). The Input/Output generics flow into the plugin's self-augmentation of
- * `AstromechPluginServices` so callers see real signatures. The method may carry
- * descriptor metadata (`summary`, `input`, `mutates`, `destructive`, …) for the
- * method manifest.
+ * `AstromechPluginServices` so callers see real signatures. The returned
+ * `ServiceMethod` carries its manifest metadata (`summary`, `input`, …) too.
  */
 export function defineServiceMethod<Input = unknown, Output = unknown>(
-    method: PluginServiceMethod<Input, Output>
-): PluginServiceMethod<Input, Output> {
+    method: ServiceMethod<Input, Output>
+): ServiceMethod<Input, Output> {
     return method;
 }
 
