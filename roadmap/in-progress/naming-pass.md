@@ -125,6 +125,32 @@ five assertions read the deleted `isContainer` flag and went with it, and the
 `tests/utilities/values-equal.test.ts` when the function moved. Authoring (32)
 and schema-engine (86) unchanged.
 
+### `resource` (§J) — `8759d0a`, `52ef1fe`, `6f9b0b9`
+
+- [x] `ResourceType` gains `'setting'` and stops living under "Relationships":
+      it now names anything that carries fields and runs the field pipeline
+- [x] **Beyond the spec** — the real consumer of the concept was an anonymous
+      union written twice in `types/fields.ts`, on `FieldValidationContext` and
+      `DocumentValidationContext`, already carrying `'setting'`. Both now
+      reference `ResourceType`, as do the three pipeline test fixtures that
+      mirrored it. Without this `ResourceType` would still have had zero use
+      sites and the real thing would still have been anonymous
+- [x] `TargetKind` keeps its name and its three members, with a docstring
+      saying it is the relation-eligible subset. Membership unchanged, so the
+      exhaustive `switch` in `database/storage/resource-existence.ts` stands
+- [x] `fields/document-validators.ts` → `fields/resource-validators.ts`; the
+      four registry functions and the three public types follow
+- [x] Registry keys untouched — they are runtime keys, so the `media` singular
+      / `users` plural inconsistency is recorded rather than fixed
+- [x] `decisions/0017-resource-as-the-superordinate-noun.md`, and a
+      `TERMINOLOGY.md` entry
+
+No migration: the `sourceKind`/`targetKind` columns infer their own literal
+union from `col.enum` and were never linked to either named type.
+`MediaUsage.sourceKind` keeps its third hand-written copy, because a pure leaf
+may not import a capability. Baseline held at **2460 core / 179 files**, with
+authoring at 79 and schema-engine at 86.
+
 ### Docs (§E)
 
 - [x] `ARCHITECTURE.md`: the layer model and directory map both listed a
@@ -135,14 +161,11 @@ and schema-engine (86) unchanged.
 
 ## Not done
 
-Both were added after the order table was written, so neither has a place in it:
+Added after the order table was written, so it has no place in it:
 
 - [ ] **§I definitions are objects** — `defineX` returns an `X`;
       `TableDescriptor` → `Table`, `FieldDefinition` → `Field` and the rest.
       Never in the order table, and it has an internal ordering dependency
-- [ ] **§J `resource`** — a superordinate noun for entries/media/users/settings,
-      and the `document-validators.ts` → `resource-validators.ts` that follows.
-      Never in the order table
 
 ## Follow-ups this pass surfaced
 
@@ -156,6 +179,11 @@ Both were added after the order table was written, so neither has a place in it:
       `DELETE /entries/:type/:id/force` and an admin prop chain through
       `DeleteEntryModal`. `TERMINOLOGY.md` disowns the word. The CLI's
       `--force` flag is a genuinely different concept and keeps its name
+- [ ] **`ctx.documentValidate` survives §J.** The pipeline-context property, its
+      six call sites and the two tests named for it keep "document", because the
+      hook is documented user-facing in `apps/docs/content/field-validation.md`
+      alongside its `details.form` wire shape. Renaming it is a docs question,
+      not a rename
 - [ ] **`MediaUsage` is documented as "the media mirror of
       `IncomingRelationship`" while sharing no name with it.** Belongs to a
       media pass
