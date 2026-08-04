@@ -283,8 +283,6 @@ export type FieldTypeDescriptor = {
     ) => { next: unknown; scopes: ContainerScope[] };
     /** Reserved instance keys this type owns, e.g. `['_id', '_disabled', '_title']`. */
     reservedKeys?: string[];
-    isLayout?: boolean;
-    isContainer?: boolean;
     isRelation?: boolean;
 };
 

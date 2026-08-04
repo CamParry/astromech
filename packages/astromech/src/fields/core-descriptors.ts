@@ -294,7 +294,6 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         component: '@/admin/components/fields/group-field',
         validate: validateGroup,
         tsType: () => null,
-        isContainer: true,
         children: (field, value) => {
             const next = { ...(isPlainObject(value) ? value : {}) };
             return {
@@ -318,7 +317,6 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         tsType: () => null,
         defaultValue: [],
         reservedKeys: [RESERVED_KEY.id, RESERVED_KEY.disabled, RESERVED_KEY.title],
-        isContainer: true,
         children: (field, value) => arrayChildren(field, value, () => field.fields ?? []),
     },
     {
@@ -333,7 +331,6 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
             RESERVED_KEY.disabled,
             RESERVED_KEY.title,
         ],
-        isContainer: true,
         validate: validateBlockTypes,
         children: (field, value) =>
             arrayChildren(field, value, (item) => {
@@ -351,7 +348,6 @@ export const coreFieldTypeDescriptors: FieldTypeDescriptor[] = [
         tsType: () => null,
         defaultValue: [],
         reservedKeys: [RESERVED_KEY.id, RESERVED_KEY.disabled],
-        isContainer: true,
         children: treeChildren,
     },
     {

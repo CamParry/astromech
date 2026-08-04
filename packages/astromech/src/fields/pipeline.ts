@@ -323,7 +323,7 @@ async function processScope(
             // `min` is completeness (publish only); `max` is correctness, so it
             // runs on a draft save too — no write should store more items than
             // the type permits.
-            if (descriptor?.isContainer === true && Array.isArray(v)) {
+            if (descriptor?.children !== undefined && Array.isArray(v)) {
                 if (
                     ctx.stage === 'publish' &&
                     field.min !== undefined &&

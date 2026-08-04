@@ -158,11 +158,11 @@ function fieldToTsType(
     const descriptor = getFieldTypeDescriptor(field.type);
     if (descriptor === undefined) return null;
 
-    // Container types need the recursion + hoisting context that the descriptor's
-    // pure `tsType(field, shape)` signature can't carry, so they're emitted here.
-    // Their reserved instance keys come from `descriptor.reservedKeys` (the single
-    // source); this code owns only the recursion/hoisting structure.
-    if (descriptor.isContainer === true) {
+    // A `children` slot marks a nested field. Those need the recursion + hoisting
+    // context that the descriptor's pure `tsType(field, shape)` signature can't
+    // carry, so they're emitted here. Their reserved instance keys come from
+    // `descriptor.reservedKeys`; this code owns only the recursion structure.
+    if (descriptor.children !== undefined) {
         switch (field.type) {
             case 'group': {
                 // Nested object: children are recursively typed.
