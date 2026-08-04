@@ -16,7 +16,7 @@ import type { TFunction } from 'i18next';
 import type { FieldDefinition, FieldErrors, Label } from '@/types/index.js';
 // Deep imports: the `fields/` barrel reaches server code (virtual config / DB).
 import { parseInstancePath } from '@/fields/field-path.js';
-import { flattenFieldNodes } from '@/fields/helpers.js';
+import { flattenFieldNodes } from '@/fields/flatten.js';
 import { titleCase } from '@/admin/i18n/labels.js';
 
 /** How many fields the summary names before it starts counting. */

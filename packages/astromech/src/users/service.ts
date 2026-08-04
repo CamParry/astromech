@@ -10,10 +10,10 @@ import { ValidationError } from '@/errors/validation.js';
 import { createUserSchema, updateUserSchema } from './schema.js';
 import config from 'virtual:astromech/config';
 import { processFields } from '@/fields/pipeline.js';
-import { mergePatch, projectToSchema } from '@/fields/patch.js';
+import { mergePatch, projectToSchema } from '@/fields/values.js';
 import { getDocumentValidator } from '@/fields/document-validators.js';
-import { flattenFieldNodes } from '@/fields/helpers.js';
-import { scopedReadsFromRecords } from '@/fields/scoped-reads.js';
+import { flattenFieldNodes } from '@/fields/flatten.js';
+import { fieldReadsFromRecords } from '@/fields/field-reads.js';
 import { getCurrentUser } from '@/request-context/index.js';
 
 function validate<T>(schema: z.ZodType<T>, data: unknown): T {
@@ -96,7 +96,7 @@ export const usersService = {
                 operation: 'create',
                 host: { kind: 'user', record: null },
                 user: getCurrentUser(),
-                reads: scopedReadsFromRecords({
+                reads: fieldReadsFromRecords({
                     load: async () => (await usersService.query({ limit: 'all' })).data,
                     getId: (r) => r.id,
                     getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
@@ -162,7 +162,7 @@ export const usersService = {
                 operation: 'update',
                 host: { kind: 'user', record: current },
                 user: getCurrentUser(),
-                reads: scopedReadsFromRecords({
+                reads: fieldReadsFromRecords({
                     load: async () => (await usersService.query({ limit: 'all' })).data,
                     getId: (r) => r.id,
                     getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,

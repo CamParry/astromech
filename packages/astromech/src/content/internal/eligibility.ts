@@ -7,7 +7,7 @@
 
 import { getFieldTypeDescriptor } from '@/fields/descriptors.js';
 import { formatInstancePath, parseInstancePath } from '@/fields/field-path.js';
-import { flattenFieldNodes } from '@/fields/helpers.js';
+import { flattenFieldNodes } from '@/fields/flatten.js';
 import type { FieldDefinition, FieldPathSegment } from '@/types/fields.js';
 
 /**

@@ -141,13 +141,12 @@ export type FieldErrors = Record<string, string[]>;
 export type ValidationStage = 'save' | 'publish';
 
 /**
- * Scoped read access handed to a field validator for async checks (uniqueness,
+ * Read access handed to a field validator for async checks (uniqueness,
  * references). Exposes the sanctioned read paths for the field's host domain
  * (built on the entry-access port for entries; per-domain reads elsewhere). The
- * common uniqueness case is the one-line `isUnique` helper. Concrete read paths
- * are added in P2 alongside the pipeline.
+ * common uniqueness case is the one-line `isUnique` helper.
  */
-export type ScopedReads = {
+export type FieldReads = {
     /** True when no other record in the host scope holds `value` for `field`. */
     isUnique: (field: FieldDefinition, value: unknown) => Promise<boolean>;
 };
@@ -180,8 +179,8 @@ export type FieldValidationContext = {
     stage: ValidationStage;
     host: { kind: 'entry' | 'media' | 'user' | 'setting'; record: unknown };
     user: User | null;
-    /** Scoped read access for async checks. */
-    reads: ScopedReads;
+    /** Read access for async checks. */
+    reads: FieldReads;
 };
 
 /**
@@ -216,7 +215,7 @@ export type DocumentValidationContext = {
     stage: ValidationStage;
     host: { kind: 'entry' | 'media' | 'user' | 'setting'; record: unknown };
     user: User | null;
-    reads: ScopedReads;
+    reads: FieldReads;
 };
 
 /**

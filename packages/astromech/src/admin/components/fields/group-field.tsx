@@ -17,9 +17,7 @@ export function GroupField({ name, value, field, onChange }: BaseFieldProps) {
     }
 
     const className =
-        field.boxed === false
-            ? 'am-group-field'
-            : 'am-group-field am-group-field--boxed';
+        field.boxed === false ? 'am-group-field' : 'am-group-field am-group-field--boxed';
 
     return (
         <div className={className}>

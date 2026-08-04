@@ -11,7 +11,8 @@ import config from 'virtual:astromech/config';
 import { getCurrentUser } from '@/request-context/index.js';
 import { ValidationError } from '@/errors/index.js';
 import { getDocumentValidator } from '@/fields/document-validators.js';
-import { fieldNameToLabel, flattenEntryFields } from '@/fields/helpers.js';
+import { flattenEntryFields } from '@/fields/flatten.js';
+import { fieldNameToLabel } from '@/utilities/labels.js';
 import { processFields } from '@/fields/pipeline.js';
 import {
     applyRichTextSegments,
@@ -20,7 +21,7 @@ import {
 import { docToMarkdown, markdownToDoc } from '@/fields/rich-text/markdown.js';
 import { assertCapability } from '@/entries/internal/type-config.js';
 import { UnknownEntryTypeError } from '@/entries/errors.js';
-import { createEntryScopedReads } from '@/entries/reads.js';
+import { createEntryFieldReads } from '@/entries/reads.js';
 import { getEntryStorage } from '@/entries/storage/registry.js';
 import { resolveEntryType } from '@/entries/type-ids.js';
 import { entryValidationStage } from '@/entries/validation-stage.js';
@@ -372,7 +373,7 @@ async function assertValid(params: {
             }),
             host: { kind: 'entry', record: params.record },
             user: getCurrentUser(),
-            reads: createEntryScopedReads(getEntryStorage(type), {
+            reads: createEntryFieldReads(getEntryStorage(type), {
                 type,
                 locale: params.locale,
                 ...(params.excludeId === undefined

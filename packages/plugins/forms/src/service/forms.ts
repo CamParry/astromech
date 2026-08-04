@@ -4,7 +4,7 @@
  * so neither may assume a session, and both report failure as a result shape.
  */
 
-import type { FieldDefinition, FieldErrors, ScopedReads } from 'astromech';
+import type { FieldDefinition, FieldErrors, FieldReads } from 'astromech';
 import { defineServiceMethod, z } from 'astromech';
 import { processFields } from 'astromech/fields';
 import { compileFormFields } from '../fields/compile.js';
@@ -191,7 +191,7 @@ const NOT_ACCEPTING = 'This form is not accepting submissions';
  * compiler never emits. It throws rather than answering `true` so a compiler
  * change that does emit one fails loudly.
  */
-const noReads: ScopedReads = {
+const noReads: FieldReads = {
     isUnique: () => {
         throw new Error(
             '[@astromech/forms] a compiled form field emitted a read-backed validation rule, ' +

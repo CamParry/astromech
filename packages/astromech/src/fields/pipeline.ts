@@ -61,7 +61,7 @@ import type {
 } from '@/types/fields.js';
 import { getFieldTypeDescriptor } from './descriptors.js';
 import { formatInstancePath, isValidFieldName } from './field-path.js';
-import { flattenFieldNodes } from './helpers.js';
+import { flattenFieldNodes } from './flatten.js';
 
 // ---------------------------------------------------------------------------
 // Helpers

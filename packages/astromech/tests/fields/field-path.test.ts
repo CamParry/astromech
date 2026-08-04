@@ -107,7 +107,9 @@ describe('formatInstancePath', () => {
     });
 
     it('consecutive item selectors chain without dots', () => {
-        expect(formatInstancePath([f('matrix'), item('x'), item('y')])).toBe('matrix[x][y]');
+        expect(formatInstancePath([f('matrix'), item('x'), item('y')])).toBe(
+            'matrix[x][y]'
+        );
     });
 
     it('uuid ids (containing dashes) are preserved verbatim', () => {
@@ -156,7 +158,9 @@ describe('formatInstancePath validation', () => {
     });
 
     it('throws on a nested field name containing a dot', () => {
-        expect(() => formatInstancePath([f('seo'), f('a.b')])).toThrow(/must not contain/);
+        expect(() => formatInstancePath([f('seo'), f('a.b')])).toThrow(
+            /must not contain/
+        );
     });
 
     it('throws on an empty item id', () => {

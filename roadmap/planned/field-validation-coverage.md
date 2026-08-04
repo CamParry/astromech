@@ -35,7 +35,7 @@ never sees).
 - [ ] **Reference existence and target type.** `media`/`relationship` are checked
       for being an id, but nothing confirms the id resolves, or that the record
       is the declared `target` type. A dangling reference stores cleanly.
-      `ScopedReads` currently offers only `isUnique`, so this needs a second
+      `FieldReads` currently offers only `isUnique`, so this needs a second
       method on it and a matching change wherever the pipeline context is built
       (entries, media, users, settings).
 - [ ] **`color` and `link` are shape-checked, not format-checked.** `color` must

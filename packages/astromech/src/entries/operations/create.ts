@@ -14,10 +14,10 @@ import { pruneDanglingRelations } from '../internal/dangling-relations.js';
 import { asEntry } from '../internal/records.js';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility.js';
 import { UnknownEntryTypeError } from '../errors.js';
-import { createEntryScopedReads } from '../reads.js';
+import { createEntryFieldReads } from '../reads.js';
 import { resolveEntryType } from '../type-ids.js';
 import { entryValidationStage } from '../validation-stage.js';
-import { flattenEntryFields } from '@/fields/helpers.js';
+import { flattenEntryFields } from '@/fields/flatten.js';
 import { processFields } from '@/fields/pipeline.js';
 import { getDocumentValidator } from '@/fields/document-validators.js';
 import { ValidationError } from '@/errors/index.js';
@@ -108,7 +108,7 @@ export async function create(params: {
         }),
         host: { kind: 'entry', record: null },
         user,
-        reads: createEntryScopedReads(storage, { type, locale }),
+        reads: createEntryFieldReads(storage, { type, locale }),
         ...(documentValidate ? { documentValidate } : {}),
     });
     if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {

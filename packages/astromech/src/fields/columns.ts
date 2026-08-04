@@ -2,7 +2,7 @@
  * Admin list-view column factories — pure functions returning `AdminColumn`
  * POJOs. Columns are presentational only (they never touch storage); the
  * factory name picks the cell renderer (`kind`). First arg is the entry data key
- * the column reads. Designed for namespaced use: `import * as column`.
+ * the column reads. Designed for namespaced use: `import * as columns`.
  */
 
 import type { AdminColumn } from '@/types/config.js';

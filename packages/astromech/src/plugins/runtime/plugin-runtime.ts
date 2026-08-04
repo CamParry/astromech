@@ -59,7 +59,7 @@ import { entryAccess } from '@/plugins/runtime/entry-access.js';
 import { isTableDescriptor } from '@/plugins/runtime/plugin-tables.js';
 import { createPluginTrackingStorage } from '@/plugins/runtime/plugin-tracking-storage.js';
 import { registerCronJob } from '@/cron/registry.js';
-import { flattenEntryFields } from '@/fields/helpers.js';
+import { flattenEntryFields } from '@/fields/flatten.js';
 import {
     withDefaultShape,
     withDefaultSettingsShape,

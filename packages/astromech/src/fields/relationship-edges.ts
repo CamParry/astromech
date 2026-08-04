@@ -26,7 +26,7 @@
  */
 
 import { formatInstancePath, formatSchemaPath } from '@/fields/field-path.js';
-import { flattenFieldNodes } from '@/fields/helpers.js';
+import { flattenFieldNodes } from '@/fields/flatten.js';
 import { getFieldTypeDescriptor } from '@/fields/descriptors.js';
 import { RESERVED_KEY } from '@/fields/reserved-keys.js';
 import type { FieldDefinition, FieldPathSegment } from '@/types/fields.js';

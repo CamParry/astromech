@@ -15,12 +15,12 @@ import { deepEqual } from '../internal/deep-equal.js';
 import { runBulk } from '../internal/bulk.js';
 import { hasEntryHooks, loadEntrySnapshot } from '../internal/hooks.js';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility.js';
-import { createEntryScopedReads } from '../reads.js';
+import { createEntryFieldReads } from '../reads.js';
 import { resolveEntryType } from '../type-ids.js';
 import { entryValidationStage } from '../validation-stage.js';
-import { flattenEntryFields } from '@/fields/helpers.js';
+import { flattenEntryFields } from '@/fields/flatten.js';
 import { processFields } from '@/fields/pipeline.js';
-import { mergePatch, projectToSchema } from '@/fields/patch.js';
+import { mergePatch, projectToSchema } from '@/fields/values.js';
 import { getDocumentValidator } from '@/fields/document-validators.js';
 import { ValidationError } from '@/errors/index.js';
 import config from 'virtual:astromech/config';
@@ -95,7 +95,7 @@ export async function updateOne(
             }),
             host: { kind: 'entry', record: currentEntry },
             user: getCurrentUser(),
-            reads: createEntryScopedReads(storage, {
+            reads: createEntryFieldReads(storage, {
                 type,
                 locale: currentEntry.locale,
                 excludeId: excludeIds,

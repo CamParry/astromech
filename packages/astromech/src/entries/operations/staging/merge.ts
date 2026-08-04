@@ -3,10 +3,10 @@ import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import { asEntry, loadAndAssertType } from '../../internal/records.js';
 import { getStagingStorage, isVersioningEnabled } from '../../internal/type-config.js';
 import { indexEntryRelationships } from '../../internal/relationships.js';
-import { createEntryScopedReads } from '../../reads.js';
+import { createEntryFieldReads } from '../../reads.js';
 import { resolveEntryType } from '../../type-ids.js';
 import { entryValidationStage } from '../../validation-stage.js';
-import { flattenEntryFields } from '@/fields/helpers.js';
+import { flattenEntryFields } from '@/fields/flatten.js';
 import { processFields } from '@/fields/pipeline.js';
 import { getDocumentValidator } from '@/fields/document-validators.js';
 import { ValidationError } from '@/errors/index.js';
@@ -49,7 +49,7 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
             // the uniqueness scan: the canonical (about to be overwritten with
             // it) and the staged row (about to be deleted). Excluding only one
             // makes every `unique` field collide with its own other copy.
-            reads: createEntryScopedReads(storage, {
+            reads: createEntryFieldReads(storage, {
                 type,
                 locale: canonical.locale,
                 excludeId: [id, staged.id],

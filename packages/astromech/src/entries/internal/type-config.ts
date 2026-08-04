@@ -6,7 +6,7 @@
 
 import config from 'virtual:astromech/config';
 import { resolveContentLocale } from '@/utilities/locale.js';
-import { flattenEntryFields } from '@/fields/helpers.js';
+import { flattenEntryFields } from '@/fields/flatten.js';
 import { resolveEntryType } from '../type-ids.js';
 import { getEntryStorage } from '../storage/registry.js';
 import { CapabilityError } from '../errors.js';

@@ -10,7 +10,7 @@ import type { RelationshipIndexSource } from '@/database/storage/relationships.j
 import { createStorage } from '@/database/storage/create-storage.js';
 import { collectRelationshipEdges } from '@/fields/relationship-edges.js';
 import type { RelationshipEdge } from '@/fields/relationship-edges.js';
-import { flattenEntryFields } from '@/fields/helpers.js';
+import { flattenEntryFields } from '@/fields/flatten.js';
 import { entriesTable } from '../schema.js';
 import { getEntryStorage, hasEntryStorageOverride } from '../storage/registry.js';
 import { qualifyEntryType, resolveEntryType } from '../type-ids.js';

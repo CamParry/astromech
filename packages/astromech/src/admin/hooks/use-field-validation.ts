@@ -26,7 +26,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
     FieldDefinition,
     FieldErrors,
-    ScopedReads,
+    FieldReads,
     ValidationStage,
 } from '@/types/index.js';
 // Deep import: the `fields/` barrel reaches server code (virtual config / DB).
@@ -41,7 +41,7 @@ import { processFields } from '@/fields/pipeline.js';
  * accident, so don't rely on it silently. Neither is surfaced as a "pending"
  * state: the server runs both on submit and answers with a 422.
  */
-const CLIENT_READS: ScopedReads = { isUnique: () => Promise.resolve(true) };
+const CLIENT_READS: FieldReads = { isUnique: () => Promise.resolve(true) };
 
 export type FieldValidationHandle = {
     /** What the UI should render: server errors, overlaid by revealed client ones. */
