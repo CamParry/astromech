@@ -1,7 +1,7 @@
 /**
- * The authoring assistant, contributed to the admin shell's `right-drawer`.
- * The shell renders that aside whenever a plugin fills the slot, so the drawer
- * owns its own open state and sits as a collapsed rail until it is opened.
+ * The authoring assistant's panel, contributed to the admin shell's
+ * `right-drawer`. It stays mounted while closed so the transcript and any
+ * in-flight stream survive; the topbar button drives its open state.
  */
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -9,6 +9,7 @@ import type { ComponentProps, KeyboardEvent, ReactElement } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button, useAstromechPlugin } from 'astromech/ui';
+import { closeDrawer, focusToggleButton, useDrawerOpen } from './drawer-state.js';
 import { useChat } from './use-chat.js';
 import type { ChatPart, ChatTurn } from './use-chat.js';
 import './chat-drawer.css';
@@ -29,21 +30,19 @@ const MARKDOWN_COMPONENTS = {
 export default function ChatDrawer(): ReactElement {
     const { serviceKey } = useAstromechPlugin();
     const { turns, isStreaming, send, stop } = useChat(serviceKey);
-    const [open, setOpen] = useState(false);
+    const open = useDrawerOpen();
     const [prompt, setPrompt] = useState('');
     const [showJump, setShowJump] = useState(false);
 
-    const toggleRef = useRef<HTMLButtonElement | null>(null);
     const promptRef = useRef<HTMLTextAreaElement | null>(null);
     const transcriptRef = useRef<HTMLDivElement | null>(null);
     // Read on every scroll tick and every streamed chunk: in state it would
     // re-render the whole transcript on both.
     const followingRef = useRef(true);
-    const restoreFocusRef = useRef(false);
 
-    const closeDrawer = useCallback(() => {
-        restoreFocusRef.current = true;
-        setOpen(false);
+    const handleClose = useCallback(() => {
+        closeDrawer();
+        focusToggleButton();
     }, []);
 
     const followLatest = useCallback(() => {
@@ -53,15 +52,12 @@ export default function ChatDrawer(): ReactElement {
         if (transcript !== null) transcript.scrollTop = transcript.scrollHeight;
     }, []);
 
-    // Focus moves into the panel on open and back to the toggle on close.
+    // Opening starts at the tail of the transcript, with the composer focused.
     useEffect(() => {
-        if (open) {
-            promptRef.current?.focus();
-            return;
-        }
-        if (!restoreFocusRef.current) return;
-        restoreFocusRef.current = false;
-        toggleRef.current?.focus();
+        if (!open) return;
+        followingRef.current = true;
+        setShowJump(false);
+        promptRef.current?.focus();
     }, [open]);
 
     // Stay pinned to the tail while text streams in, unless the user scrolled off it.
@@ -78,16 +74,6 @@ export default function ChatDrawer(): ReactElement {
         textarea.style.height = 'auto';
         textarea.style.height = `${String(textarea.scrollHeight)}px`;
     }, [open, prompt]);
-
-    function handleToggle(): void {
-        if (open) {
-            closeDrawer();
-            return;
-        }
-        followingRef.current = true;
-        setShowJump(false);
-        setOpen(true);
-    }
 
     function handleScroll(): void {
         const transcript = transcriptRef.current;
@@ -118,33 +104,21 @@ export default function ChatDrawer(): ReactElement {
     function handlePanelKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
         if (event.key !== 'Escape') return;
         event.stopPropagation();
-        closeDrawer();
-    }
-
-    const toggle = (
-        <button
-            ref={toggleRef}
-            type="button"
-            className="am-authoring-toggle"
-            aria-expanded={open}
-            aria-label={
-                open ? 'Close the authoring assistant' : 'Open the authoring assistant'
-            }
-            onClick={handleToggle}
-        >
-            <AssistantIcon />
-        </button>
-    );
-
-    if (!open) {
-        return <div className="am-authoring-rail">{toggle}</div>;
+        handleClose();
     }
 
     return (
-        <div className="am-authoring-panel" onKeyDown={handlePanelKeyDown}>
+        <div className="am-authoring-panel" hidden={!open} onKeyDown={handlePanelKeyDown}>
             <div className="am-authoring-panel-header">
                 <h2 className="am-authoring-panel-title">Assistant</h2>
-                {toggle}
+                <button
+                    type="button"
+                    className="am-authoring-close"
+                    aria-label="Close the authoring assistant"
+                    onClick={handleClose}
+                >
+                    <CloseIcon />
+                </button>
             </div>
 
             <div className="am-authoring-body">
@@ -267,11 +241,11 @@ function supportsFieldSizing(): boolean {
     return typeof CSS !== 'undefined' && CSS.supports('field-sizing', 'content');
 }
 
-/** The drawer's glyph. Hand-drawn: this package takes no icon dependency. */
-function AssistantIcon(): ReactElement {
+/** The panel's close glyph. */
+function CloseIcon(): ReactElement {
     return (
         <svg
-            className="am-authoring-toggle-icon"
+            className="am-authoring-close-icon"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -280,7 +254,8 @@ function AssistantIcon(): ReactElement {
             strokeLinejoin="round"
             aria-hidden="true"
         >
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
         </svg>
     );
 }

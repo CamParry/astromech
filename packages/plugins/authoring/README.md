@@ -1,8 +1,8 @@
 # @astromech/authoring
 
-An AI authoring assistant for the Astromech admin: a chat drawer in the
-admin shell's `right-drawer` slot, backed by a server-side model loop that
-calls the site's own service methods.
+An AI authoring assistant for the Astromech admin: a topbar button in the
+admin shell's `toolbar` slot opening a chat panel in its `right-drawer` slot,
+backed by a server-side model loop that calls the site's own service methods.
 
 **Read-only for now.** The assistant is restricted to methods that do not
 mutate, because approving a write needs a UI that does not exist yet. See
