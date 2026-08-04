@@ -29,7 +29,7 @@ export async function duplicate(params: {
         slug,
         locale,
         // No override means the copy starts its own translation group; storage's
-        // descriptor mints the ULID.
+        // table mints the ULID.
         localeGroup: overrides?.localeGroup,
         fields: mergedFields,
         status,

@@ -65,7 +65,7 @@ export type {
 
 export { definePluginTable } from '@/database/define-plugin-table.js';
 export type { KyselyTableKey, PluginDB } from '@/database/define-plugin-table.js';
-// The whole descriptor type vocabulary, not just the headline types: a plugin's
+// The whole `Table` type vocabulary, not just the headline types: a plugin's
 // emitted `.d.ts` has to be able to *name* the type `definePluginTable` infers,
 // and that mentions `Column`/`IndexSpec` structurally. Without them on this
 // public surface, a plugin build fails with TS2742 ("inferred type cannot be
@@ -82,16 +82,16 @@ export type {
     OnDelete,
     ReferenceSpec,
     ReferenceTarget,
-    TableDescriptor,
+    Table,
     TableInsert,
     TableOptions,
     TableSelect,
     TableUpdate,
 } from '@/database/define-table.js';
 export { decodeWith, encodeWith, encodePatchWith } from '@/database/codec.js';
-// The descriptor-backed CRUD wrapper, on the same surface as the descriptor
+// The `Table`-backed CRUD wrapper, on the same surface as the `Table`
 // vocabulary and the codec it is built on: a plugin holding a `definePluginTable`
-// descriptor composes `createStorage` inside its own `createXStorage(db)` factory
+// table composes `createStorage` inside its own `createXStorage(db)` factory
 // exactly as core's domains do, and then never spells the table name or reaches
 // for a codec again. Its public types ship with it for the TS2742 reason above —
 // a plugin's `.d.ts` has to be able to *name* what the factory returns.

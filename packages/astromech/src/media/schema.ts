@@ -22,8 +22,8 @@ export const mediaTable = defineTable(
         updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
         createdBy: col.reference('users'),
         // Appended, not grouped with `alt`: SQLite's ADD COLUMN can only append,
-        // and the descriptor order has to match the migrated table or the
-        // chain ↔ descriptor DDL parity gate fails.
+        // and the column order has to match the migrated table or the
+        // chain ↔ table DDL parity gate fails.
         title: col.text(),
         caption: col.text(),
     }),

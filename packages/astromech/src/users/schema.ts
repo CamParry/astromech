@@ -8,16 +8,16 @@ import {
 // ============================================================================
 // better-auth tables — users, sessions, accounts, verifications
 //
-// These 4 have NO `defineTable` descriptor by design: better-auth's adapter
+// These 4 are NOT defined with `defineTable` by design: better-auth's adapter
 // owns their legacy seconds-INTEGER timestamp format, so they are excluded from
-// our descriptor-driven DDL/migration pipeline. They are hand-authored in the
+// our `defineTable`-driven DDL/migration pipeline. They are hand-authored in the
 // app's baseline migration (`apps/demo/migrations/0000_baseline.ts`) and
 // hand-typed in their storage shape in `@/database/types.ts` — that file is the
 // storage-shape authority. `UserRow` below is the *domain*-side view of the
 // same table (post-codec: `Date` timestamps, `boolean` flags, parsed json), and
 // must be kept in step with it by hand.
 //
-// `roles` is ours → `defineTable` descriptor below.
+// `roles` is ours → `defineTable` below.
 // ============================================================================
 
 /** Domain shape of a `users` row, as returned by `decode('users', …)`. */
@@ -35,7 +35,7 @@ export type UserRow = {
 };
 
 // ============================================================================
-// roles descriptor (defineTable) — RBAC is ours, not a better-auth model
+// roles table (defineTable) — RBAC is ours, not a better-auth model
 // ============================================================================
 
 export const rolesTable = defineTable('roles', ({ col }) => ({

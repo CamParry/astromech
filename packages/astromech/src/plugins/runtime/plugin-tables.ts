@@ -1,18 +1,18 @@
 /**
- * Plugin table-descriptor collection + convention enforcement.
+ * Plugin table collection + convention enforcement.
  *
  * Plugins may ship their own tables (an escape valve for data that doesn't fit
- * entries), declared as `defineTable` descriptors via `definePluginTable`.
+ * entries), declared with `definePluginTable`.
  * Table names must be prefixed `plugin_{namespace}_` to namespace them and
  * prevent collisions; there are no cross-plugin foreign keys (soft string refs only).
- * This module collects the descriptors and enforces the prefix at
+ * This module collects the tables and enforces the prefix at
  * config-resolution time (crash loud).
  *
  * Plugins generate their own migrations with `astromech plugin:generate`, which
- * reads their descriptors directly; core `db:generate` covers core tables only.
+ * reads their tables directly; core `db:generate` covers core tables only.
  */
 
-import type { TableDescriptor } from '@/database/define-table.js';
+import type { Table } from '@/database/define-table.js';
 import type { PluginDefinition } from '@/types/index.js';
 import {
     pluginTablePrefix,
@@ -22,17 +22,17 @@ import {
 export type CollectedPluginTable = {
     namespace: string;
     tableName: string;
-    table: TableDescriptor;
+    table: Table;
 };
 
-/** Flatten every table descriptor declared across the plugin set. */
+/** Flatten every table declared across the plugin set. */
 export function collectPluginTables(defs: PluginDefinition[]): CollectedPluginTable[] {
     const collected: CollectedPluginTable[] = [];
     for (const def of defs) {
         if (!def.tables) continue;
         const { namespace } = resolvePluginIdentity(def);
         for (const desc of def.tables) {
-            if (!isTableDescriptor(desc)) continue;
+            if (!isTable(desc)) continue;
             collected.push({ namespace, tableName: desc.name, table: desc });
         }
     }
@@ -44,7 +44,7 @@ export function collectPluginTables(defs: PluginDefinition[]): CollectedPluginTa
  * a plugin is third-party JS — a stale build can still hand us a Drizzle table
  * or a plain object, and that must be skipped rather than crash a read.
  */
-export function isTableDescriptor(value: unknown): value is TableDescriptor {
+export function isTable(value: unknown): value is Table {
     return (
         typeof value === 'object' &&
         value !== null &&

@@ -1,5 +1,5 @@
 /**
- * Table descriptor for the backups plugin. `definePluginTable` owns the
+ * The backups plugin's table. `definePluginTable` owns the
  * `plugin_<namespace>_` prefix, so the table is declared with its bare name and
  * comes out as `plugin_backups_runs`.
  */

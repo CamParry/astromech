@@ -155,10 +155,10 @@ export const mediaService = {
         const { file } = params;
         const driver = getStorageDriver();
 
-        // Minted here rather than left to the descriptor's `col.id()` default:
+        // Minted here rather than left to the column's `col.id()` default:
         // the storage key is derived from the id and the bytes are written
         // BEFORE the row is inserted, so the id has to exist first. `ulid()` is
-        // the same generator the descriptor default uses, so an explicit mint
+        // the same generator the column default uses, so an explicit mint
         // agrees with the column instead of fighting it.
         const id = ulid();
         const ext = extOf(file.name);

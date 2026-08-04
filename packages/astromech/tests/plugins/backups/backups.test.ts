@@ -57,7 +57,7 @@ async function makeFileDb(dbPath: string): Promise<{
     const db = driver.getInstance() as Kysely<DB>;
 
     // Create the backups table directly — no full migrations needed for these
-    // tests. Timestamps are TEXT: the table is a `definePlugin` descriptor now,
+    // tests. Timestamps are TEXT: the table is a `definePlugin` table now,
     // so its columns are ISO-8601 strings, not unix seconds.
     await sql
         .raw(

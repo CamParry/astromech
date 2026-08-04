@@ -114,7 +114,7 @@ transaction when the dialect reports transactional DDL support, and the SQLite
 adapter reports `false` — so the migration runner never asks D1 for a
 transaction it cannot give.
 
-Generation is unchanged too: `db:generate` diffs your table descriptors and
+Generation is unchanged too: `db:generate` diffs your tables and
 writes the migration files, and none of that touches the database.
 
 ## What a driver provides

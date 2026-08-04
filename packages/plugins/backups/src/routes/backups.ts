@@ -22,7 +22,7 @@ import { isBackupRunning, performBackup, resolveKeep } from '../backup.js';
 
 /**
  * The table's **SQL** name, for the restore driver's `preserve` list — that is a
- * list of real table names, not Kysely `DB` keys, so it stays the descriptor's
+ * list of real table names, not Kysely `DB` keys, so it stays the table's
  * `name` rather than anything the storage wrapper hands out. Row access goes
  * through `createBackupRunsStorage`; this is the one thing it cannot answer.
  */

@@ -27,7 +27,7 @@ This is a living reference; it grows as the project does.
   looking at so a model can resolve "this page", the reference shape, and why it
   is sent as a `role: 'system'` message rather than in the system prompt.
 - [data/migrations.md](data/migrations.md) — how migrations are generated from
-  your table descriptors, what the generator refuses and why, and the
+  your tables, what the generator refuses and why, and the
   hand-authored-ops escape hatch for reshapes it can't derive.
 - [plugins/authoring.md](plugins/authoring.md) — write a plugin: the file-layout
   convention, identity, and every surface (custom fields, admin pages, admin

@@ -41,7 +41,7 @@ describe('create', () => {
         expect(e.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/); // ULID
         expect(e.type).toBe('post');
         expect(e.locale).toBe('en'); // defaultLocale
-        // A ULID like every other generated id — the `entries` descriptor's
+        // A ULID like every other generated id — the `entries` table's
         // `defaultUlid` mints it, so nothing hands out a UUID here.
         expect(e.localeGroup).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
         expect(e.status).toBe('unpublished');

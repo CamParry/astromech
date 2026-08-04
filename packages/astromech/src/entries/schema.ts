@@ -3,11 +3,11 @@ import {
     defineTable,
     type TableSelect,
     type TableInsert,
-    type TableDescriptor,
+    type Table,
 } from '@/database/define-table.js';
 
 // ============================================================================
-// Table descriptors (defineTable) — source of truth for types + row codec
+// Tables (defineTable) — source of truth for types + row codec
 //
 // Preview tokens: per-canonical-entry secret authorizing front-end preview of
 // non-published content (current draft, staged change, or a historical
@@ -31,7 +31,7 @@ export const entriesTable = defineTable(
         }),
         // Self-reference (forward versioning). Annotated thunk breaks the
         // circular inference, mirroring drizzle's AnySQLiteColumn pattern.
-        stagedFor: col.reference((): TableDescriptor => entriesTable, {
+        stagedFor: col.reference((): Table => entriesTable, {
             onDelete: 'no action',
         }),
         publishedAt: col.timestamp(),

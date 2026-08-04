@@ -1,6 +1,6 @@
 # Migrations
 
-Astromech generates migrations from your table descriptors. You never write
+Astromech generates migrations from your tables. You never write
 schema SQL by hand, and you never edit a migration once it exists.
 
 ```bash
@@ -26,12 +26,12 @@ chain applies the same way on D1 as on libsql. See
 
 Every one of those except `ops/` is machine-written. Editing `snapshot.json` by
 hand is the one thing that genuinely breaks the system: the drift gate compares
-that file against your live descriptors, so a hand-edit doesn't fix a mismatch,
+that file against your live tables, so a hand-edit doesn't fix a mismatch,
 it hides one.
 
 ## How generation decides
 
-`db:generate` diffs `snapshot.json` against the descriptors and picks a plan:
+`db:generate` diffs `snapshot.json` against your tables and picks a plan:
 
 - **Fast path** — additive changes (a new table, a new nullable column, a new
   index) become `ALTER TABLE` / `CREATE`.
@@ -82,16 +82,16 @@ npm run db:generate -- --ops migrations/ops/0002-plugins-tracking-package.ts \
 ```
 
 The author receives `{ prev, next, dialect }`: `prev` is where the chain
-currently is, `next` is where your descriptors say it should end up. Build ops
+currently is, `next` is where your tables say it should end up. Build ops
 out of `next.tables` rather than writing table shapes literally — then the SQL
 that lands is the same SQL the generator emits everywhere else.
 
 **The generator owns the destination; you own the route.** `snapshot.json` is
-still written from your descriptors, not from your ops, so:
+still written from your tables, not from your ops, so:
 
 - a following `db:generate` must report **no changes** — if it doesn't, your
   ops didn't describe the state you actually asked for;
-- the chain ↔ descriptor parity test still applies the real SQL to a real
+- the chain ↔ table parity test still applies the real SQL to a real
   database and compares the result.
 
 Those two checks are what verify a hand-authored route arrives. Nothing

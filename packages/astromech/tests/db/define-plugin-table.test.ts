@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { definePluginTable } from '@/database/define-plugin-table.js';
-import type { TableDescriptor } from '@/database/define-table.js';
+import type { Table } from '@/database/define-table.js';
 
 const backups = { package: '@astromech/backups' } as const;
 const redirects = { package: '@astromech/redirects' } as const;
@@ -115,8 +115,8 @@ describe('definePluginTable – index naming', () => {
     });
 });
 
-describe('definePluginTable – descriptor passthrough', () => {
-    it('passes every column through to the descriptor with its keys intact', () => {
+describe('definePluginTable – table passthrough', () => {
+    it('passes every column through to the table with its keys intact', () => {
         const runs = definePluginTable(backups, 'runs', ({ col }) => ({
             id: col.id(),
             status: col.enum(['pending', 'done'], {
@@ -158,10 +158,10 @@ describe('definePluginTable – descriptor passthrough', () => {
         expect(id.sqlDefault).toBeUndefined();
     });
 
-    it('returns descriptors shaped exactly like defineTable output', () => {
+    it('returns a table shaped exactly like defineTable output', () => {
         const runs = definePluginTable(backups, 'runs', ({ col }) => ({ id: col.id() }));
 
-        const descriptor: TableDescriptor = runs;
-        expect(Object.keys(descriptor).sort()).toEqual(['columns', 'indexes', 'name']);
+        const table: Table = runs;
+        expect(Object.keys(table).sort()).toEqual(['columns', 'indexes', 'name']);
     });
 });

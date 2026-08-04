@@ -2,7 +2,7 @@
  * `astromech plugin:generate`
  *
  * Run from inside a plugin package: diffs the plugin's own `definePluginTable`
- * descriptors against its `migrations/snapshot.json` and writes a migration into
+ * tables against its `migrations/snapshot.json` and writes a migration into
  * the plugin package's own `migrations/` directory. There is no app and no
  * database here — the table module is loaded with jiti and nothing else is
  * touched, so this must never load `astromech.config.ts`.
@@ -14,10 +14,10 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { generateMigrations } from '@/database/generate.js';
 import { pluginNamespace, pluginTablePrefix } from '@/plugins/runtime/plugin-identity.js';
-import type { TableDescriptor } from '@/database/define-table.js';
+import type { Table } from '@/database/define-table.js';
 
-/** Structural check — a `defineTable` descriptor, without importing runtime code. */
-function isDescriptor(value: unknown): value is TableDescriptor {
+/** Structural check — a `Table`, without importing runtime code. */
+function isTable(value: unknown): value is Table {
     return (
         typeof value === 'object' &&
         value !== null &&
@@ -27,22 +27,22 @@ function isDescriptor(value: unknown): value is TableDescriptor {
 }
 
 /**
- * Every descriptor a table module exposes: top-level descriptor exports plus
- * the values of any exported record. Module export order first, then record key
- * order; duplicates collapse by identity.
+ * Every `Table` a table module exposes: top-level exports plus the values of
+ * any exported record. Module export order first, then record key order;
+ * duplicates collapse by identity.
  */
-function collectDescriptors(mod: Record<string, unknown>): TableDescriptor[] {
-    const seen = new Set<TableDescriptor>();
-    const tables: TableDescriptor[] = [];
+function collectTables(mod: Record<string, unknown>): Table[] {
+    const seen = new Set<Table>();
+    const tables: Table[] = [];
 
-    const add = (table: TableDescriptor): void => {
+    const add = (table: Table): void => {
         if (seen.has(table)) return;
         seen.add(table);
         tables.push(table);
     };
 
     for (const exported of Object.values(mod)) {
-        if (isDescriptor(exported)) {
+        if (isTable(exported)) {
             add(exported);
             continue;
         }
@@ -52,7 +52,7 @@ function collectDescriptors(mod: Record<string, unknown>): TableDescriptor[] {
             !Array.isArray(exported)
         ) {
             for (const value of Object.values(exported)) {
-                if (isDescriptor(value)) add(value);
+                if (isTable(value)) add(value);
             }
         }
     }
@@ -68,7 +68,7 @@ export default defineCommand({
     args: {
         tables: {
             type: 'string',
-            description: "Path to the module exporting the plugin's table descriptors",
+            description: "Path to the module exporting the plugin's tables",
             default: './src/tables/index.ts',
         },
         name: {
@@ -89,11 +89,11 @@ export default defineCommand({
         const tablesPath = resolve(process.cwd(), args.tables);
         const jiti = createJiti(import.meta.url);
         const mod = (await jiti.import(tablesPath)) as Record<string, unknown>;
-        const tables = collectDescriptors(mod);
+        const tables = collectTables(mod);
 
         if (tables.length === 0) {
             console.error(
-                `[astromech plugin:generate] no defineTable descriptors exported from ${tablesPath}. ` +
+                `[astromech plugin:generate] no tables exported from ${tablesPath}. ` +
                     'Export each table declared with `definePluginTable` from that module, ' +
                     'or point --tables at the module that does.'
             );

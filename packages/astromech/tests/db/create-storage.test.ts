@@ -1,5 +1,5 @@
 /**
- * `createStorage` — the generic descriptor-backed CRUD wrapper.
+ * `createStorage` — the generic `Table`-backed CRUD wrapper.
  *
  * The load-bearing behaviour here is value serialization: every `where`
  * comparison literal goes through the column's `col.serialize`, so a `Date`
@@ -374,7 +374,7 @@ describe('createStorage – update', () => {
         );
     });
 
-    it('throws when the descriptor has no single primary key', async () => {
+    it('throws when the table has no single primary key', async () => {
         const pkless = defineTable('pkless_probe', ({ col }) => ({
             label: col.text({ notNull: true }),
         }));
@@ -514,8 +514,8 @@ describe('createStorage – query escape hatch', () => {
         expect(rows).toHaveLength(1);
     });
 
-    it('exposes the descriptor', () => {
-        expect(entryStorage().descriptor.name).toBe('entries');
+    it('exposes the table', () => {
+        expect(entryStorage().table.name).toBe('entries');
     });
 
     it('composes the exposed where compiler with a raw or in one statement', async () => {

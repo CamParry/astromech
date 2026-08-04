@@ -19,8 +19,8 @@
  *
  * Note what is NOT hand-written: the SQL, `journal.json`, `snapshot.json` and
  * `index.ts` all still come from the engine's renderers. The snapshot is
- * written from the live descriptors either way, so `db:generate` reporting "no
- * changes" afterwards — plus the chain ↔ descriptor parity test, which executes
+ * written from the live tables either way, so `db:generate` reporting "no
+ * changes" afterwards — plus the chain ↔ table parity test, which executes
  * the real SQL — is what proves these ops actually reach the target state.
  *
  *     npm run db:generate -- --ops migrations/ops/0002-plugins-tracking-package.ts \
@@ -34,7 +34,7 @@ const TABLE = '_astromech_plugins';
 const author: MigrationOpsAuthor = ({ next }) => {
     const table = next.tables[TABLE];
     if (!table) {
-        throw new Error(`${TABLE} is absent from the descriptor snapshot`);
+        throw new Error(`${TABLE} is absent from the table snapshot`);
     }
     // Build the CREATE from `next`, never from a literal: the table that lands
     // is then the same one `renderCreateTable` emits everywhere else.

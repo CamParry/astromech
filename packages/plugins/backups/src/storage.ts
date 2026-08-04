@@ -47,7 +47,7 @@ export function createBackupRunsStorage(db: PluginContext['db']) {
     }
 
     /**
-     * Open a run. The descriptor fills `id` (a ULID) and `startedAt`, so the id
+     * Open a run. The table fills `id` (a ULID) and `startedAt`, so the id
      * is read back off the returned row rather than minted here.
      */
     async function start(trigger: BackupRunRow['trigger']): Promise<BackupRunRow> {

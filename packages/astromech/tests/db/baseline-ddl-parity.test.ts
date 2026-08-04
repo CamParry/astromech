@@ -1,12 +1,12 @@
 /**
- * Migration-chain ↔ descriptor DDL parity — the drift gate.
+ * Migration-chain ↔ table DDL parity — the drift gate.
  *
  * Builds two SQLite databases: one via `apps/demo/migrations`' full
  * `migrationProvider` chain (`migrateToLatest`, run by `createTestDb`), one by
- * executing `emitTableStatements()` for the same 9 `defineTable` descriptors
+ * executing `emitTableStatements()` for the same 9 `defineTable` tables
  * (`CORE_TABLES`) directly. Compares them through the engine's `dumpSchema`
  * oracle — one normalized `sqlite_master` dump everywhere — so the committed
- * migration chain and the descriptors it was generated from never silently
+ * migration chain and the tables it was generated from never silently
  * drift apart.
  */
 
@@ -16,7 +16,7 @@ import { Kysely, sql } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { dumpSchema, type SchemaRow } from '@astromech/schema-engine';
 import { createTestDb } from '@tests/harness.js';
-import { emitTableStatements } from '@/database/descriptor-snapshot.js';
+import { emitTableStatements } from '@/database/table-snapshot.js';
 import { CORE_TABLES } from '@/database/schema.js';
 
 const TABLE_NAMES = CORE_TABLES.map((table) => table.name);
@@ -38,15 +38,15 @@ function ofType(rows: SchemaRow[], type: 'table' | 'index'): SchemaRow[] {
     return rows.filter((row) => row.type === type);
 }
 
-describe('migration chain ↔ descriptor DDL parity', () => {
-    it('produces identical CREATE TABLE statements for the 9 descriptor-backed tables', async () => {
+describe('migration chain ↔ table DDL parity', () => {
+    it('produces identical CREATE TABLE statements for the 9 `defineTable`-backed tables', async () => {
         const migrated = await dumpSchema(await createTestDb(), { tables: TABLE_NAMES });
         const emitted = await dumpSchema(await buildEmitterDb(), { tables: TABLE_NAMES });
 
         expect(ofType(migrated, 'table')).toEqual(ofType(emitted, 'table'));
     });
 
-    it('produces identical index sets for the 9 descriptor-backed tables', async () => {
+    it('produces identical index sets for the 9 `defineTable`-backed tables', async () => {
         const migrated = await dumpSchema(await createTestDb(), { tables: TABLE_NAMES });
         const emitted = await dumpSchema(await buildEmitterDb(), { tables: TABLE_NAMES });
 

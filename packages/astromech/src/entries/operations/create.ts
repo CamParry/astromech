@@ -156,7 +156,7 @@ export async function create(params: {
                 slug,
                 locale,
                 // Absent means "start a fresh translation group"; storage's
-                // descriptor mints the ULID.
+                // table mints the ULID.
                 localeGroup: params.localeGroup,
                 fields: processedFields,
                 status,

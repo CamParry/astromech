@@ -20,7 +20,7 @@ export function createPluginTrackingStorage(db?: Db) {
     /**
      * Record the plugin, refreshing only `namespace` and `version` if it is
      * already tracked. `installedAt` is deliberately absent from both value sets:
-     * the descriptor gives it `defaultNow` (which fills the insert) and no
+     * the table gives it `defaultNow` (which fills the insert) and no
      * `onUpdate`, so nothing re-stamps the original install time on a later boot.
      */
     async function track(pkg: string, namespace: string, version: string): Promise<void> {

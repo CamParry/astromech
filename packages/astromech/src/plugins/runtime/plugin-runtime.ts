@@ -43,7 +43,7 @@ import { getDb } from '@/database/registry.js';
 // `virtual:astromech/config`, which cannot resolve during Astro's plain-Node
 // config load — the path this module is on.
 import { getCurrentRole } from '@/request-context/request-context.js';
-import { kyselyTableKey, registerDescriptorCodec } from '@/database/codec.js';
+import { kyselyTableKey, registerTableCodec } from '@/database/codec.js';
 import { peekDatabaseDriver } from '@/database/driver-registry.js';
 import { getStorageDriver } from '@/storage/registry.js';
 import { listAll } from '@/storage/prefix.js';
@@ -56,7 +56,7 @@ import {
     resolvePluginIdentity,
 } from '@/plugins/runtime/plugin-identity.js';
 import { entryAccess } from '@/plugins/runtime/entry-access.js';
-import { isTableDescriptor } from '@/plugins/runtime/plugin-tables.js';
+import { isTable } from '@/plugins/runtime/plugin-tables.js';
 import { createPluginTrackingStorage } from '@/plugins/runtime/plugin-tracking-storage.js';
 import { registerCronJob } from '@/cron/registry.js';
 import { flattenEntryFields } from '@/fields/flatten.js';
@@ -131,8 +131,8 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
         // decode like ours. Malformed entries are skipped here —
         // `assertPluginTablePrefixes` at config-resolution time is the loud gate.
         for (const desc of def.tables ?? []) {
-            if (!isTableDescriptor(desc)) continue;
-            registerDescriptorCodec(kyselyTableKey(desc.name), desc);
+            if (!isTable(desc)) continue;
+            registerTableCodec(kyselyTableKey(desc.name), desc);
         }
 
         for (const { event, handler } of def.hooks ?? []) {

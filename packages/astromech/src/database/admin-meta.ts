@@ -1,5 +1,5 @@
 /**
- * Admin metadata — a `TableDescriptor` projected into the admin's existing
+ * Admin metadata — a `Table` projected into the admin's existing
  * table-column/field vocabulary (`CellKind`, `FieldDefinition['type']`).
  *
  * Pure, serializable — no db imports. Lets a table-backed admin surface (e.g.
@@ -7,13 +7,13 @@
  * form renderers without hand-maintaining a parallel column list per table.
  */
 
-import { resolveReferenceTarget } from '@/database/descriptor-snapshot.js';
-import type { ColumnKind, TableDescriptor } from '@/database/define-table.js';
+import { resolveReferenceTarget } from '@/database/table-snapshot.js';
+import type { ColumnKind, Table } from '@/database/define-table.js';
 import type { CellKind } from '@/types/resolved.js';
 import type { FieldType } from '@/types/fields.js';
 
 export type ColumnAdminMeta = {
-    /** camelCase descriptor key — the data key the admin reads. */
+    /** camelCase column key — the data key the admin reads. */
     name: string;
     cellKind: CellKind;
     fieldType: FieldType;
@@ -37,9 +37,9 @@ const KIND_META: Record<ColumnKind, { cellKind: CellKind; fieldType: FieldType }
     reference: { cellKind: 'relationship', fieldType: 'relationship' },
 };
 
-/** Project a descriptor's columns into admin column/field metadata, in
+/** Project a table's columns into admin column/field metadata, in
  *  declaration order. */
-export function tableAdminMeta(table: TableDescriptor): ColumnAdminMeta[] {
+export function tableAdminMeta(table: Table): ColumnAdminMeta[] {
     return Object.entries(table.columns).map(([key, col]) => {
         const { cellKind, fieldType } = KIND_META[col.kind];
         return {

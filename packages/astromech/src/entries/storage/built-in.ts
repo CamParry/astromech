@@ -7,7 +7,7 @@
  * Policy (validation, hooks, relationships, versioning *decisions*, bulk
  * dispatch) stays in the entries service.
  *
- * Row access goes through `createStorage(entriesTable)` — the descriptor-backed CRUD
+ * Row access goes through `createStorage(entriesTable)` — the `Table`-backed CRUD
  * wrapper — which owns encoding, `updatedAt` stamping and result decoding. Four
  * things it cannot express stay on the raw Kysely handle:
  *
@@ -188,7 +188,7 @@ function buildListWhere(params: ListParams, defaultLocale: string, types: string
  * so a staged source can never be the matched row. No `targetKind` either — a
  * target id is a ULID unique across resources, and constraining it would force
  * the caller to say which kind they meant. `schemaPath`/`targetId` are plain
- * TEXT and `sourceKind` is an enum the descriptor passes through, so all three
+ * TEXT and `sourceKind` is an enum the table passes through, so all three
  * bind as-is with no `encodeWith`.
  */
 function referencesExists(
@@ -381,7 +381,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
             locale: data.locale ?? defaultLocale,
             // Omitted rather than passed as undefined when absent: `encodeWith`
             // only fills a column's app default for a key that isn't there, and
-            // the descriptor declares `defaultUlid` — so this is the one place a
+            // the table declares `defaultUlid` — so this is the one place a
             // localeGroup is minted, in the same id format as every other id.
             ...(data.localeGroup !== undefined && { localeGroup: data.localeGroup }),
             fields: data.fields ?? {},

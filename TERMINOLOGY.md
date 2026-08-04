@@ -68,11 +68,11 @@ A **resource validator** is the whole-resource `validate` an author declares on 
 
 ---
 
-## Entry vs Table (as data worlds)
+## Entry vs table-backed type (as data worlds)
 
 **Entry** — the built-in content unit, on the fixed core schema, with the full feature set available to it (statuses, slug, versions, staging, trash, translation, preview, relationships).
 
-**Table** — a plugin-defined custom table (redirects, logs) on its own schema and its own storage. A table-backed type reaches the admin through `tableStorage`, an `EntryStorage` adapter that declares `supports: []`, so all entry chrome switches off.
+**Table-backed type** — a plugin-defined custom table (redirects, logs) on its own schema and its own storage. A table-backed type reaches the admin through `tableStorage`, an `EntryStorage` adapter that declares `supports: []`, so all entry chrome switches off. `Table` (the type `defineTable` returns) is a table's schema object, not a data world.
 
 The two are separate internally and share only the admin surface. `supports` gates behaviour and UI, **never** schema — toggling one needs no migration, and storage is always full.
 
@@ -173,7 +173,7 @@ Each row carries two paths, and the distinction matters:
 - **Schema path** — the shape a query matches against (`sections[].gallery`). Indexed, derived from the type definitions.
 - **Instance path** — where the edge actually sits in one entry's data (`sections[a1].gallery`, addressing items by their persisted `_id`). Stored, never pattern-matched.
 
-Note also that `col.reference()` in the descriptor layer means a real foreign key and is a **different** thing from a content relationship. Don't conflate them.
+Note also that `col.reference()` in the `defineTable` layer means a real foreign key and is a **different** thing from a content relationship. Don't conflate them.
 
 ---
 
@@ -215,9 +215,9 @@ One message an editor configures to be sent when a submission is accepted, store
 
 ## Schema vs Tables
 
-**Tables** — a directory of `defineTable` / `definePluginTable` descriptors and nothing else. Every table-bearing plugin keeps its descriptors in `src/tables/`, publishes them (where a consumer needs them) as a `./tables` subpath, and `astromech plugin:generate --tables` reads that module to diff against the package's migration snapshot. A descriptor export is named `<noun>Table` (`entriesTable`, `cronTable`, `submissionsTable`) — the noun matching its SQL table name, the suffix separating it from the domain word and the domain's service.
+**Tables** — a directory of `defineTable` / `definePluginTable` calls and nothing else. Every table-bearing plugin keeps its tables in `src/tables/`, publishes them (where a consumer needs them) as a `./tables` subpath, and `astromech plugin:generate --tables` reads that module to diff against the package's migration snapshot. A table export is named `<noun>Table` (`entriesTable`, `cronTable`, `submissionsTable`) — the noun matching its SQL table name, the suffix separating it from the domain word and the domain's service.
 
-**Schema** — the aggregate shape, or a module that mixes descriptors with validation. Core's `<domain>/schema.ts` holds both table descriptors and the domain's Zod request schemas, so it keeps the wider word; likewise `astromech/database/schema` (every table plus the codec and driver) and `@astromech/schema-engine` (diffing and rendering DDL). A `schema` that means "just these tables" is the one usage this vocabulary rules out — `decisions/0001-forms-vocabulary-and-table-directories.md` has the reasoning.
+**Schema** — the aggregate shape, or a module that mixes tables with validation. Core's `<domain>/schema.ts` holds both `defineTable` tables and the domain's Zod request schemas, so it keeps the wider word; likewise `astromech/database/schema` (every table plus the codec and driver) and `@astromech/schema-engine` (diffing and rendering DDL). A `schema` that means "just these tables" is the one usage this vocabulary rules out — `decisions/0001-forms-vocabulary-and-table-directories.md` has the reasoning.
 
 ---
 

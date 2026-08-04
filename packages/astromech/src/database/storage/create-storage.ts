@@ -1,7 +1,7 @@
 /**
- * `createStorage` — the generic, descriptor-backed CRUD object.
+ * `createStorage` — the generic, `defineTable`-backed CRUD object.
  *
- * One `defineTable` descriptor in, a typed `findOne`/`findMany`/`count`/`create`/
+ * One `Table` in, a typed `findOne`/`findMany`/`count`/`create`/
  * `update`/`delete`/`updateMany`/`deleteMany`/`upsert` surface out. It composes
  * *inside* the existing `createXStorage` factories rather than replacing them:
  * those keep the transaction rebinding point and the domain vocabulary
@@ -16,7 +16,7 @@
  * ISO-8601 TEXT, so an unserialized `Date` handed to a `lte` predicate compares
  * against the string representation of a JS Date object: it silently returns
  * the wrong rows rather than failing. Drizzle did this implicitly via column
- * mode; Kysely does not, so the descriptor does it here, once, for everyone.
+ * mode; Kysely does not, so the column codec does it here, once, for everyone.
  *
  * Three consequences worth stating explicitly:
  *
@@ -32,7 +32,7 @@
  *
  * A per-column operator object (`{ gte: x }`) and a json column's *value* are
  * both plain objects, so "is this an operator object?" cannot be answered by
- * shape alone. It is answered by the descriptor: if the column's kind is
+ * shape alone. It is answered by the `Table`: if the column's kind is
  * `'json'`, an object is always a value. A json column that genuinely needs an
  * operator comparison drops to `query()`.
  *
@@ -57,7 +57,7 @@ import {
 } from '@/database/codec.js';
 import type {
     ColumnRuntime,
-    TableDescriptor,
+    Table,
     TableInsert,
     TableSelect,
     TableUpdate,
@@ -69,9 +69,9 @@ import type { Db } from '@/database/types.js';
 // ============================================================================
 
 /**
- * A descriptor's table may be any shape, so the wrapper queries through a fully
+ * A `Table` may be any shape, so the wrapper queries through a fully
  * generic `DB` interface rather than the typed core one. Correctness of the
- * values crossing the boundary comes from the descriptor codec, not from Kysely.
+ * values crossing the boundary comes from the column codec, not from Kysely.
  */
 type Schema = Record<string, Record<string, unknown>>;
 
@@ -146,7 +146,7 @@ export type Patch<D> = {
 };
 
 export type UpsertOptions<D> = {
-    /** Conflict target columns. Defaults to the descriptor's primary key. */
+    /** Conflict target columns. Defaults to the table's primary key. */
     target?: readonly string[];
     /** Columns to write on conflict. Defaults to all provided non-target columns. */
     set?: Patch<D>;
@@ -170,7 +170,7 @@ export type UpsertOptions<D> = {
  *     .where((eb) => eb.and([where(dslFilter)(eb), eb.or(searchClauses)]));
  * ```
  *
- * The caller still owns decoding (`decodeWith(storage.descriptor, row)`).
+ * The caller still owns decoding (`decodeWith(storage.table, row)`).
  */
 export type QueryHandle<D> = {
     db: GenericDb;
@@ -178,9 +178,9 @@ export type QueryHandle<D> = {
     where: (where?: Where<D>) => WhereFn;
 };
 
-export type Storage<D extends TableDescriptor> = {
-    /** The descriptor this storage is bound to. */
-    descriptor: D;
+export type Storage<D extends Table> = {
+    /** The `Table` this storage is bound to. */
+    table: D;
     findOne(where: Where<D>): Promise<TableSelect<D> | null>;
     findMany(params?: FindManyParams<D>): Promise<TableSelect<D>[]>;
     count(where?: Where<D>): Promise<number>;
@@ -214,16 +214,13 @@ const RANGE_SQL = { gt: '>', gte: '>=', lt: '<', lte: '<=' } as const;
 // Factory
 // ============================================================================
 
-export function createStorage<D extends TableDescriptor>(
-    descriptor: D,
-    db?: Db
-): Storage<D> {
-    const tableKey = kyselyTableKey(descriptor.name);
-    const columns: Record<string, ColumnRuntime> = descriptor.columns;
+export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
+    const tableKey = kyselyTableKey(table.name);
+    const columns: Record<string, ColumnRuntime> = table.columns;
     // A table-level composite key wins: no column carries the inline flag, so
     // deriving from flags alone would report the table as having no key at all.
     const primaryKey =
-        descriptor.primaryKey ??
+        table.primaryKey ??
         Object.keys(columns).filter((key) => columns[key]?.primaryKey);
 
     /** Resolved per call so an unbound storage follows `setDb` across a reload. */
@@ -231,12 +228,12 @@ export function createStorage<D extends TableDescriptor>(
         return (db ?? getDb()) as unknown as GenericDb;
     }
 
-    /** Column descriptor by key; throws for an unknown key (config bug). */
+    /** Column by key; throws for an unknown key (config bug). */
     function column(name: string): ColumnRuntime {
         const col = columns[name];
         if (!col) {
             throw new Error(
-                `[astromech] createStorage("${descriptor.name}"): unknown column "${name}"`
+                `[astromech] createStorage("${table.name}"): unknown column "${name}"`
             );
         }
         return col;
@@ -247,7 +244,7 @@ export function createStorage<D extends TableDescriptor>(
         const [only] = primaryKey;
         if (primaryKey.length !== 1 || only === undefined) {
             throw new Error(
-                `[astromech] createStorage("${descriptor.name}"): update/delete by id ` +
+                `[astromech] createStorage("${table.name}"): update/delete by id ` +
                     `needs exactly one primary-key column, found ${primaryKey.length}. ` +
                     `Use updateMany/deleteMany with an explicit where.`
             );
@@ -261,14 +258,14 @@ export function createStorage<D extends TableDescriptor>(
     }
 
     function decodeRow(row: Record<string, unknown>): TableSelect<D> {
-        return asSelect(decodeWith(descriptor, row));
+        return asSelect(decodeWith(table, row));
     }
 
     // ── where ───────────────────────────────────────────────────────────────
 
     /**
      * `true` when a plain object should be read as `{ gte: …, like: … }` rather
-     * than as the column's value. Descriptor-driven: a json column's domain
+     * than as the column's value. Column-kind-driven: a json column's domain
      * value IS an object, so operator detection never applies to one.
      */
     function isOperatorObject(col: ColumnRuntime, value: object): boolean {
@@ -319,7 +316,7 @@ export function createStorage<D extends TableDescriptor>(
                     break;
                 default:
                     throw new Error(
-                        `[astromech] createStorage("${descriptor.name}"): ` +
+                        `[astromech] createStorage("${table.name}"): ` +
                             `unknown operator "${op}" on column "${key}"`
                     );
             }
@@ -335,7 +332,7 @@ export function createStorage<D extends TableDescriptor>(
     ): unknown[] {
         if (!Array.isArray(operand)) {
             throw new Error(
-                `[astromech] createStorage("${descriptor.name}"): "${op}" on column ` +
+                `[astromech] createStorage("${table.name}"): "${op}" on column ` +
                     `"${key}" expects an array`
             );
         }
@@ -390,7 +387,7 @@ export function createStorage<D extends TableDescriptor>(
         for (const [key, col] of Object.entries(columns)) {
             if (col.onUpdate && values[key] === undefined) values[key] = now;
         }
-        return encodePatchWith(descriptor, values);
+        return encodePatchWith(table, values);
     }
 
     // ── surface ─────────────────────────────────────────────────────────────
@@ -437,12 +434,12 @@ export function createStorage<D extends TableDescriptor>(
         // `defaultNow` timestamps) before serializing.
         const row = await handle()
             .insertInto(tableKey)
-            .values(encodeWith(descriptor, asRecord(data)))
+            .values(encodeWith(table, asRecord(data)))
             .returningAll()
             .executeTakeFirst();
         if (!row) {
             throw new Error(
-                `[astromech] createStorage("${descriptor.name}"): insert returned no row`
+                `[astromech] createStorage("${table.name}"): insert returned no row`
             );
         }
         return decodeRow(row);
@@ -458,7 +455,7 @@ export function createStorage<D extends TableDescriptor>(
             .executeTakeFirst();
         if (!row) {
             throw new Error(
-                `[astromech] createStorage("${descriptor.name}"): no row found for ` +
+                `[astromech] createStorage("${table.name}"): no row found for ` +
                     `${idCol} "${id}"`
             );
         }
@@ -497,11 +494,11 @@ export function createStorage<D extends TableDescriptor>(
         const target = opts?.target ?? primaryKey;
         if (target.length === 0) {
             throw new Error(
-                `[astromech] createStorage("${descriptor.name}"): upsert needs a ` +
+                `[astromech] createStorage("${table.name}"): upsert needs a ` +
                     `conflict target — the table has no primary key, so pass \`target\`.`
             );
         }
-        const values = encodeWith(descriptor, asRecord(data));
+        const values = encodeWith(table, asRecord(data));
         // An explicit `set` is an update, so it goes through the same `onUpdate`
         // stamping as `update`. The default set reuses the already-encoded insert
         // values, which `encodeWith` has stamped via each column's app default.
@@ -511,7 +508,7 @@ export function createStorage<D extends TableDescriptor>(
                 : encodeUpdate(opts.set as object);
         if (Object.keys(setValues).length === 0) {
             throw new Error(
-                `[astromech] createStorage("${descriptor.name}"): upsert has nothing ` +
+                `[astromech] createStorage("${table.name}"): upsert has nothing ` +
                     `to set on conflict — pass \`set\`.`
             );
         }
@@ -523,7 +520,7 @@ export function createStorage<D extends TableDescriptor>(
             .executeTakeFirst();
         if (!row) {
             throw new Error(
-                `[astromech] createStorage("${descriptor.name}"): upsert returned no row`
+                `[astromech] createStorage("${table.name}"): upsert returned no row`
             );
         }
         return decodeRow(row);
@@ -534,7 +531,7 @@ export function createStorage<D extends TableDescriptor>(
     }
 
     return {
-        descriptor,
+        table,
         findOne,
         findMany,
         count,
@@ -553,7 +550,7 @@ export function createStorage<D extends TableDescriptor>(
 // ============================================================================
 
 /**
- * The descriptor row types are generic over `D`, so TypeScript cannot see that
+ * The `Table` row types are generic over `D`, so TypeScript cannot see that
  * they are plain records. These two helpers hold the single cast each way,
  * rather than scattering `as unknown as` through the query calls.
  */

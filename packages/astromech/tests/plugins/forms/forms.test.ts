@@ -16,7 +16,7 @@
  * `plugin_forms_submissions` is created by the plugin's own generated migration
  * chain, which the harness applies (forms is in `FIRST_PARTY_PLUGIN_MIGRATIONS`)
  * — so these tests run against the table a real install would get, not one
- * emitted from the descriptor alongside it.
+ * emitted from the table alongside it.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -107,7 +107,7 @@ function recordEmails(send?: () => never): void {
 async function setup(options?: FormsOptions): Promise<ResolvedConfig> {
     // `plugin_forms_submissions` comes from the plugin's own generated
     // migration chain, which the harness applies — forms is registered in
-    // `FIRST_PARTY_PLUGIN_MIGRATIONS`. Emitting the table from the descriptor
+    // `FIRST_PARTY_PLUGIN_MIGRATIONS`. Emitting the table from its `Table`
     // here instead would test a table the migrations might not actually
     // produce.
     db = await createTestDb();

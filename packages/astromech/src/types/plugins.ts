@@ -10,7 +10,7 @@ import type { ComponentType, ReactElement } from 'react';
 import type { z } from '@hono/zod-openapi';
 import type { Kysely, MigrationProvider } from 'kysely';
 import type { DB } from '@/database/types.js';
-import type { TableDescriptor } from '@/database/define-table.js';
+import type { Table } from '@/database/define-table.js';
 import type {
     AdminPage,
     AdminSlotContribution,
@@ -303,7 +303,7 @@ export type PluginFieldTypeRegistration = {
  *
  * `definePluginTable` still takes a package name directly, because it needs
  * that string as a *literal type* to derive a table name for `PluginDB` — a
- * value declared inside the definition can't reach a module-scope descriptor.
+ * value declared inside the definition can't reach a module-scope table.
  */
 export type PluginIdentity = {
     /** Canonical package name, e.g. `@astromech/redirects`. */
@@ -359,10 +359,10 @@ export type PluginDefinition = PluginIdentity & {
     entries?: EntryTypeConfig[];
     fields?: PluginFieldTypeRegistration[];
     /**
-     * `defineTable` descriptors shipped by the plugin (create via
+     * Tables shipped by the plugin (create via
      * `definePluginTable`; names are `plugin_<namespace>_` prefixed).
      */
-    tables?: TableDescriptor[];
+    tables?: Table[];
     /**
      * The plugin's own migration provider — the `migrations/index.ts` generated
      * by `astromech plugin:generate`. Merged into the app's migration chain at

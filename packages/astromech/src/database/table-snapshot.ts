@@ -1,10 +1,10 @@
 /**
- * Descriptor → snapshot conversion — the CMS half of the old `ddl.ts`.
+ * `Table` → snapshot conversion — the CMS half of the old `ddl.ts`.
  *
  * `@astromech/schema-engine` owns everything below this line: the `Snapshot`
  * model, the DDL renderers, the differ, the migration generator. This module is
- * the thin layer that turns a live `TableDescriptor` into the plain snapshot
- * data the engine consumes, and re-exposes the engine's descriptor-in
+ * the thin layer that turns a live `Table` into the plain snapshot
+ * data the engine consumes, and re-exposes the engine's table-in
  * convenience wrappers (`emitCreateTable`/`emitCreateIndexes`/
  * `emitTableStatements`).
  *
@@ -15,9 +15,9 @@
  * `serialize`/`parse`) are deliberately excluded — they never affect DDL, and
  * including them would trigger a migration diff on a purely app-side change.
  *
- * Deterministic: tables sorted by name, columns/indexes kept in each
- * descriptor's declaration order (the source of the migration generator's
- * rebuild column mapping).
+ * Deterministic: tables sorted by name, columns/indexes kept in each table's
+ * declaration order (the source of the migration generator's rebuild column
+ * mapping).
  *
  * Pure and browser-safe (no db imports). Every function takes a `SqlDialect`
  * tag rather than inspecting a driver — the seam a Postgres emitter slots into
@@ -40,7 +40,7 @@ import type {
     ColumnKind,
     IndexSpec,
     ReferenceTarget,
-    TableDescriptor,
+    Table,
 } from '@/database/define-table.js';
 
 export type {
@@ -52,7 +52,7 @@ export type {
     SqlDialect,
 };
 
-/** camelCase descriptor key → snake_case DDL identifier. */
+/** camelCase column key → snake_case DDL identifier. */
 export function toSnakeCase(key: string): string {
     return key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
 }
@@ -106,7 +106,7 @@ function normalizeDefault(value: string | number | boolean): string | number {
     return typeof value === 'boolean' ? (value ? 1 : 0) : value;
 }
 
-function synthesizedIndexes(table: TableDescriptor): IndexSpec[] {
+function synthesizedIndexes(table: Table): IndexSpec[] {
     return Object.entries(table.columns)
         .filter(([, col]) => col.unique)
         .map(([key]) => ({
@@ -117,14 +117,14 @@ function synthesizedIndexes(table: TableDescriptor): IndexSpec[] {
 }
 
 /**
- * Every index a table renders — explicit descriptor indexes first, then the
+ * Every index a table renders — explicitly declared indexes first, then the
  * ones synthesized from column-level `unique: true`.
  *
  * Names are capped here, where they enter the *snapshot*, never at render time:
  * the differ compares snapshots, so a capped render against an uncapped
  * snapshot would diff on every run and churn a migration each time.
  */
-export function allIndexes(table: TableDescriptor): IndexSpec[] {
+export function allIndexes(table: Table): IndexSpec[] {
     return [...table.indexes, ...synthesizedIndexes(table)].map((spec) => ({
         ...spec,
         name: capIdentifier(spec.name),
@@ -132,15 +132,12 @@ export function allIndexes(table: TableDescriptor): IndexSpec[] {
 }
 
 /**
- * Convert a descriptor into its DDL-affecting snapshot shape (column/FK/index
+ * Convert a `Table` into its DDL-affecting snapshot shape (column/FK/index
  * data only — no app-side codec facts). The shared input to both
  * `createSnapshot` (for diffing) and the emit wrappers below, so both never
  * define "a table's DDL shape" differently.
  */
-export function descriptorToSnapshotTable(
-    table: TableDescriptor,
-    dialect: SqlDialect
-): SnapshotTable {
+export function toSnapshotTable(table: Table, dialect: SqlDialect): SnapshotTable {
     const cols = Object.entries(table.columns);
 
     const columns: SnapshotColumn[] = cols.map(([key, col]) => ({
@@ -189,15 +186,12 @@ export function descriptorToSnapshotTable(
     };
 }
 
-/** Build a deterministic snapshot of the given descriptors' DDL-affecting state. */
-export function createSnapshot(
-    tables: TableDescriptor[],
-    opts: { dialect: SqlDialect }
-): Snapshot {
+/** Build a deterministic snapshot of the given tables' DDL-affecting state. */
+export function createSnapshot(tables: Table[], opts: { dialect: SqlDialect }): Snapshot {
     const entries = tables
         .map((table): [string, SnapshotTable] => [
             table.name,
-            descriptorToSnapshotTable(table, opts.dialect),
+            toSnapshotTable(table, opts.dialect),
         ])
         .sort(([a], [b]) => a.localeCompare(b));
     return {
@@ -209,21 +203,18 @@ export function createSnapshot(
 
 /** Render a table's `CREATE TABLE` statement (columns, then table-level FKs,
  *  in column declaration order). */
-export function emitCreateTable(table: TableDescriptor, dialect: SqlDialect): string {
-    return renderCreateTable(descriptorToSnapshotTable(table, dialect));
+export function emitCreateTable(table: Table, dialect: SqlDialect): string {
+    return renderCreateTable(toSnapshotTable(table, dialect));
 }
 
 /** Render a table's index statements — explicit indexes then synthesized
  *  column-unique indexes. */
-export function emitCreateIndexes(table: TableDescriptor, dialect: SqlDialect): string[] {
-    const snap = descriptorToSnapshotTable(table, dialect);
+export function emitCreateIndexes(table: Table, dialect: SqlDialect): string[] {
+    const snap = toSnapshotTable(table, dialect);
     return snap.indexes.map((idx) => renderCreateIndex(snap.name, idx));
 }
 
 /** Render a table's full statement set: `CREATE TABLE` first, then indexes. */
-export function emitTableStatements(
-    table: TableDescriptor,
-    dialect: SqlDialect
-): string[] {
-    return renderTableStatements(descriptorToSnapshotTable(table, dialect));
+export function emitTableStatements(table: Table, dialect: SqlDialect): string[] {
+    return renderTableStatements(toSnapshotTable(table, dialect));
 }

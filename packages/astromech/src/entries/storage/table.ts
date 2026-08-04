@@ -1,6 +1,5 @@
 /**
- * tableStorage — EntryStorage implementation over an arbitrary `defineTable`
- * descriptor.
+ * tableStorage — EntryStorage implementation over an arbitrary `Table`.
  *
  * This is an *adapter*, not a query layer: every read and write goes through
  * `createStorage` (`database/storage/create-storage.ts`), which owns the `where`
@@ -12,17 +11,17 @@
  *
  * What this adapter adds on top:
  *
- * Maps any descriptor to the EntryStorage contract by treating every column
+ * Maps any `Table` to the EntryStorage contract by treating every column
  * that is not the id/timestamp/actor-reserved set as a "field". Declares no
  * capabilities (supports: []) — statuses, slug, trash, versioning, and
  * translatable must all be disabled for any entry type using this storage.
  *
- * Column keys are the descriptor's camelCase keys throughout: `fields`, `where`,
+ * Column keys are the table's camelCase keys throughout: `fields`, `where`,
  * `sort` and `searchFields` are all keyed by them.
  *
  * When `timestamps: false`, createdAt/updatedAt return new Date(0) and are not
  * written by the adapter. createdBy/updatedBy are written only when those
- * columns are present on the descriptor.
+ * columns are present on the table.
  *
  * search + searchFields: OR-LIKE across the named columns — the one predicate
  * the flat `where` DSL cannot express, so `list` ANDs it onto the compiled DSL
@@ -45,7 +44,7 @@ import {
     type Storage,
 } from '@/database/storage/create-storage.js';
 import { decodeWith } from '@/database/codec.js';
-import type { Column, TableDescriptor } from '@/database/define-table.js';
+import type { Column, Table } from '@/database/define-table.js';
 import type { Db } from '@/database/types.js';
 import { RelationshipFilterUnsupportedError } from '../errors.js';
 import type { JsonObject } from '@/types/index.js';
@@ -60,7 +59,7 @@ import type {
 type OrderPair = [column: string, direction: 'asc' | 'desc'];
 
 /** The wrapper's compiled `where`, the shape a raw clause has to AND onto. */
-type Predicate = ReturnType<QueryHandle<TableDescriptor>['where']>;
+type Predicate = ReturnType<QueryHandle<Table>['where']>;
 
 export type TableStorageOptions = {
     /** Primary key column name. Default 'id'. */
@@ -87,13 +86,13 @@ class TableStorage implements EntryStorage<EntryRecord> {
         fn: (storage: EntryStorage<EntryRecord>, db: StorageDb) => Promise<T>
     ) => Promise<T>;
 
-    private readonly table: TableDescriptor;
-    private readonly storage: Storage<TableDescriptor>;
+    private readonly table: Table;
+    private readonly storage: Storage<Table>;
     private readonly idCol: string;
     private readonly createdAtCol: string | false;
     private readonly updatedAtCol: string | false;
 
-    constructor(table: TableDescriptor, options?: TableStorageOptions, db?: Db) {
+    constructor(table: Table, options?: TableStorageOptions, db?: Db) {
         this.table = table;
         this.storage = createStorage(table, db);
         this.idCol = options?.idColumn ?? 'id';
@@ -234,14 +233,14 @@ class TableStorage implements EntryStorage<EntryRecord> {
         const reserved = this.reservedNames();
         const setValues: Record<string, unknown> = {};
 
-        // `createStorage.update` stamps every column the descriptor marks
+        // `createStorage.update` stamps every column the table marks
         // `onUpdate`, so the ordinary case (`updatedAt` declared with
         // `onUpdate: true`) needs no explicit stamp. The explicit stamp survives
-        // for the case the descriptor cannot express: an updatedAt column this
+        // for the case the table cannot express: an updatedAt column this
         // adapter was *configured* onto that is not marked `onUpdate`.
         //
         // The two can also disagree the other way — `timestamps: false` against
-        // a descriptor column marked `onUpdate`, which is still stamped. That is
+        // a table column marked `onUpdate`, which is still stamped. That is
         // correct: `onUpdate` is the table's own declaration about its column,
         // while `timestamps: false` only says this adapter neither manages nor
         // reports entry timestamps.
@@ -261,7 +260,7 @@ class TableStorage implements EntryStorage<EntryRecord> {
 
         // By-id writes go through the where-based `updateMany`/`deleteMany`
         // rather than the wrapper's by-primary-key `update`/`delete`, because
-        // `idColumn` is configurable and need not be the descriptor's primary
+        // `idColumn` is configurable and need not be the table's primary
         // key — keying on the wrong column would silently write the wrong row.
         const affected = await this.storage.updateMany({ [this.idCol]: id }, setValues);
         if (affected === 0) throw new Error(`tableStorage: no row found for id "${id}"`);
@@ -398,16 +397,13 @@ class TableStorage implements EntryStorage<EntryRecord> {
 }
 
 /**
- * Create an EntryStorage backed by an arbitrary `defineTable` descriptor.
+ * Create an EntryStorage backed by an arbitrary `Table`.
  *
  * Every column that is not the id/timestamp/actor-reserved set is treated as a
  * field; `EntryRecord.fields` is `{ [columnKey]: value }` for all such columns.
  * Capabilities are all off (supports: []); the entry type config must disable
  * statuses, slug, trash, translatable, and versioning.
  */
-export function tableStorage(
-    table: TableDescriptor,
-    options?: TableStorageOptions
-): EntryStorage {
+export function tableStorage(table: Table, options?: TableStorageOptions): EntryStorage {
     return new TableStorage(table, options) as EntryStorage;
 }

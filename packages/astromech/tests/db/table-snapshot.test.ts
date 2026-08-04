@@ -1,27 +1,27 @@
 /**
- * Unit tests for descriptor → snapshot conversion
- * (`database/descriptor-snapshot.ts`).
+ * Unit tests for `Table` → snapshot conversion
+ * (`database/table-snapshot.ts`).
  *
- * Covers the descriptor-facing half: key/identifier casing, per-kind storage
- * types, FK target resolution (descriptor target, string target, self-ref
+ * Covers the `Table`-facing half: key/identifier casing, per-kind storage
+ * types, FK target resolution (`Table` target, string target, self-ref
  * thunk), synthesized column-unique indexes, and `createSnapshot`'s shape,
  * determinism, and exclusion of app-side-only facts. SQL rendering itself lives
  * in `@astromech/schema-engine` and is tested there — the emit wrappers are
- * checked only for the descriptor→statement wiring.
+ * checked only for the `Table`→statement wiring.
  */
 
 import { describe, expect, it } from 'vitest';
-import { defineTable, type TableDescriptor } from '@/database/define-table.js';
+import { defineTable, type Table } from '@/database/define-table.js';
 import {
     columnType,
     createSnapshot,
-    descriptorToSnapshotTable,
+    toSnapshotTable,
     emitCreateIndexes,
     emitCreateTable,
     emitTableStatements,
     resolveReferenceTarget,
     toSnakeCase,
-} from '@/database/descriptor-snapshot.js';
+} from '@/database/table-snapshot.js';
 import { serializeSnapshot } from '@astromech/schema-engine';
 import { rolesTable } from '@/users/schema.js';
 import { entriesTable, entryPreviewTokensTable } from '@/entries/schema.js';
@@ -68,7 +68,7 @@ const child = defineTable(
         id: col.id(),
         parentId: col.reference(() => parent, { notNull: true, onDelete: 'cascade' }),
         ownerId: col.reference('users'),
-        selfId: col.reference((): TableDescriptor => child, { onDelete: 'no action' }),
+        selfId: col.reference((): Table => child, { onDelete: 'no action' }),
         label: col.text({ unique: true }),
         count: col.integer({ default: 0 }),
         ratio: col.real({ default: 1.5 }),
@@ -104,7 +104,7 @@ describe('resolveReferenceTarget', () => {
         expect(resolveReferenceTarget('users')).toEqual({ table: 'users', column: 'id' });
     });
 
-    it('resolves a descriptor target to its name + primary-key column', () => {
+    it('resolves a `Table` target to its name + primary-key column', () => {
         expect(resolveReferenceTarget(parent)).toEqual({ table: 'parent', column: 'id' });
     });
 
@@ -117,18 +117,18 @@ describe('resolveReferenceTarget', () => {
         });
     });
 
-    it('throws for a descriptor target with no primary key', () => {
+    it('throws for a `Table` target with no primary key', () => {
         expect(() => resolveReferenceTarget(orphan)).toThrow();
     });
 
-    it('throws for a descriptor target with a composite primary key', () => {
+    it('throws for a `Table` target with a composite primary key', () => {
         expect(() => resolveReferenceTarget(edge)).toThrow(/composite primary key/);
     });
 });
 
-describe('descriptorToSnapshotTable', () => {
-    it('snake_cases column names while keeping the descriptor key, in declaration order', () => {
-        const snap = descriptorToSnapshotTable(child, 'sqlite');
+describe('toSnapshotTable', () => {
+    it('snake_cases column names while keeping the column key, in declaration order', () => {
+        const snap = toSnapshotTable(child, 'sqlite');
         expect(snap.name).toBe('child');
         expect(snap.columns.map((c) => [c.key, c.name])).toEqual([
             ['id', 'id'],
@@ -146,7 +146,7 @@ describe('descriptorToSnapshotTable', () => {
     });
 
     it('normalizes boolean defaults to 1/0 and carries enum values', () => {
-        const snap = descriptorToSnapshotTable(child, 'sqlite');
+        const snap = toSnapshotTable(child, 'sqlite');
         expect(snap.columns.find((c) => c.key === 'active')?.default).toBe(1);
         expect(snap.columns.find((c) => c.key === 'status')?.enumValues).toEqual([
             'a',
@@ -156,7 +156,7 @@ describe('descriptorToSnapshotTable', () => {
     });
 
     it('resolves every reference column to a foreign key', () => {
-        const snap = descriptorToSnapshotTable(child, 'sqlite');
+        const snap = toSnapshotTable(child, 'sqlite');
         expect(snap.fks).toEqual([
             {
                 column: 'parent_id',
@@ -180,13 +180,11 @@ describe('descriptorToSnapshotTable', () => {
     });
 
     it('omits primaryKey entirely for a table with a single-column key', () => {
-        expect(descriptorToSnapshotTable(parent, 'sqlite')).not.toHaveProperty(
-            'primaryKey'
-        );
+        expect(toSnapshotTable(parent, 'sqlite')).not.toHaveProperty('primaryKey');
     });
 
     it('snake_cases a composite primary key and keeps the options-form indexes', () => {
-        const snap = descriptorToSnapshotTable(edge, 'sqlite');
+        const snap = toSnapshotTable(edge, 'sqlite');
         expect(snap.primaryKey).toEqual(['source_id', 'target_kind']);
         expect(snap.indexes).toEqual([
             { name: 'idx_edge_label', columns: ['label'], unique: false },
@@ -194,7 +192,7 @@ describe('descriptorToSnapshotTable', () => {
     });
 
     it('lists explicit indexes first, then the synthesized column-unique ones', () => {
-        const snap = descriptorToSnapshotTable(child, 'sqlite');
+        const snap = toSnapshotTable(child, 'sqlite');
         expect(snap.indexes).toEqual([
             { name: 'idx_child_parent', columns: ['parent_id'], unique: false },
             {
