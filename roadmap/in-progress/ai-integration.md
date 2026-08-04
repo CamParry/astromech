@@ -4,9 +4,10 @@ Builds on the services/transport seam. Method manifest (the discovery linchpin)
 shipped first — see `completed/method-manifest.md`; CLI/MCP/confirmation/authoring
 all read it.
 
-**Plan:** `specs/ai-authoring-foundation.md` (2026-07-30). It supersedes the
-WS4–6 sections of `specs/ai-integration.md`, which that file already marks as
-design history.
+The 2026-07-30 replan that produced P0–P7 has shipped, and its spec is gone with
+it; what survived is recorded per-item below and in `decisions/`. The WS4–6
+sections of `specs/ai-integration.md` were superseded by it, which that file
+already marks as design history.
 
 ## Shipped (2026-07-28)
 
@@ -26,11 +27,12 @@ Fix before building on top. All four are refactors that _delete_ code and shrink
 the rest; nothing is deployed, so this is the cheapest moment. Full detail with
 file references in the spec.
 
-**The foundation is complete — P0a, P0, P1, P2, P3 and both halves of P4 have
-landed.** The audit's counts were stale: the manifest was 83 methods at P0, not
-71, and is 145 after P1. P4 was unparked when the field-validation work that
-blocked it carried its validation half along (`221989a`); the PATCH-only half
-followed on 2026-08-03. Next is P5.
+**The foundation is complete — P0a through P6 have all landed, and P7 is built
+and merged but stays unticked until the assistant can write.** The audit's
+counts were stale: the manifest was 83 methods at P0, not 71, and is 145 after
+P1. P4 was unparked when the field-validation work that blocked it carried its
+validation half along (`221989a`); the PATCH-only half followed on 2026-08-03.
+Next is P8's confirm gate, whose wire format shipped 2026-08-04.
 
 - [x] **P0a — normalise every service method to a parameter object.** Shipped
       2026-07-31 (`934f1d0`). `update` takes a nested `data` (`update({id, data})`)
@@ -594,13 +596,15 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       doc comment; validate inside `run`. A streaming iteration aborts its
       stream when the body returns, so `await stream.finalMessage()` is
       mandatory every turn.
-    - **Open, and a real gap:** `formatAIContextMessage` interpolates `label`,
-      which for an entry is its author-controlled title, into a system-role
-      message — the docs are explicit that system content carries operator
-      authority and must not hold text from outside the conversation. It needs
-      sanitizing (strip newlines and control characters, clamp length, phrase as
-      fact) before the loop sends one. Same trust boundary as the write-back
-      guard.
+    - **Closed.** `formatAIContextMessage` interpolates `label`, which for an
+      entry is its author-controlled title, into a system-role message — and the
+      docs are explicit that system content carries operator authority and must
+      not hold text from outside the conversation. `sanitize()` in
+      `packages/astromech/src/utilities/ai-context.ts` strips control characters
+      and newlines, replaces backticks, collapses whitespace and clamps to 120
+      characters, and the message closes by stating the quoted values are
+      user-supplied data rather than instructions. Same trust boundary as the
+      write-back guard.
 - [ ] **P8 — writes, approved out-of-band.** The assistant is read-only
       (`readOnly: true`) because a click had nowhere to arrive. Design settled
       2026-08-04; nothing built yet.

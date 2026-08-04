@@ -204,3 +204,13 @@ What an admin route declares about the thing the user is currently looking at, s
 Contributions are ordered, not a flat set: a layout, its route and a focused field editor can all contribute at once, and order is what decides which one "this" refers to.
 
 Distinct from **React context**, which is a rendering mechanism and unrelated. The `AI` prefix is load-bearing — bare "context" in this codebase means React's, and "context bus" would mean an `emit`/`subscribe` event bus, which this is not. `decisions/0005-ai-context-naming.md` records the names rejected.
+
+---
+
+## Tool definition vs MCP tool
+
+A **`ToolDefinition`** is one manifest method projected into a model-callable tool: its name, description, input schema, annotations, declared permission, and an `invoke` that resolves the service method at call time. It is transport-agnostic, which is why it lives in `packages/astromech/src/transport/tools/` and is shared by the MCP server and the AI tool-loop. `buildScopedDispatch` produces the one an untrusted caller must use, resolved through `scopedServices` so every call is checked against the caller's role.
+
+**`McpToolDef`** in `packages/astromech/src/transport/mcp/tools.ts` is the MCP wire shape, built from a `ToolDefinition` when that transport serves one. The two are deliberately separate types: one is what a tool is here, the other is what a particular protocol expects to receive.
+
+`decisions/0014-naming-the-ai-tool-surface.md` records why the definition is not called a dispatch, and `decisions/0008-plugin-methods-port.md` why the scoped builder is a separate function.

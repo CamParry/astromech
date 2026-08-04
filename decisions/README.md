@@ -45,3 +45,5 @@ Distinct from the neighbouring directories:
 - [0010](0010-media-browser-composition.md) — the media browser shares plumbing, not layout
 - [0011](0011-documentation-structure.md) — one question per document, and no history in the map
 - [0012](0012-driver-not-adapter.md) — "driver" over "adapter" for pluggable backends
+- [0013](0013-chat-transcript-as-content-blocks.md) — the chat transcript crosses the wire as content blocks
+- [0014](0014-naming-the-ai-tool-surface.md) — naming the AI tool surface: `ToolDefinition`, `AIContextItem`, `transport/tools/`

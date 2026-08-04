@@ -37,7 +37,7 @@ This is a living reference; it grows as the project does.
 
 ## Learning from the bundled plugins
 
-Astromech ships five plugins you can read as worked examples — install them,
+Astromech ships six plugins you can read as worked examples — install them,
 then look at how they're put together:
 
 - `@astromech/redirects` — a plugin with its own database table, an entry
@@ -52,6 +52,10 @@ then look at how they're put together:
   menu, and a public service method that resolves entry refs to URLs.
 - `@astromech/backups` — a database table, a cron job, plugin storage, and raw
   HTTP routes for the streaming endpoints.
+- `@astromech/authoring` — the AI assistant: the first plugin to contribute
+  admin slots (a topbar button and the chat drawer), a raw route streaming
+  server-sent events, and `ctx.methods.tools()` for the model-callable surface
+  the caller's role reaches.
 
 The demo app also carries `apps/demo/src/plugins/rating`, a deliberately small
 teaching plugin that shows the same conventions for an **in-tree** plugin (one
