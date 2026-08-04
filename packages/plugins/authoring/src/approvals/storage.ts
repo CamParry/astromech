@@ -70,16 +70,11 @@ export function createApprovalsStorage(db: PluginContext['db']) {
     ): Promise<ClaimedApproval[]> {
         if (decisions.length === 0) return [];
         const now = new Date();
-        const answerable = {
-            userId,
-            status: 'pending',
-            expiresAt: { gt: now },
-        } as const;
 
         const candidates = await storage.findMany({
             where: {
                 id: { in: decisions.map(({ approvalId }) => approvalId) },
-                ...answerable,
+                ...answerable(userId, now),
             },
         });
 
@@ -89,7 +84,7 @@ export function createApprovalsStorage(db: PluginContext['db']) {
                 decisions.find(({ approvalId }) => approvalId === row.id)?.action ??
                 'reject';
             const taken = await storage.updateMany(
-                { id: row.id, ...answerable },
+                { id: row.id, ...answerable(userId, now) },
                 {
                     status: action === 'approve' ? 'approved' : 'rejected',
                     resolvedAt: now,
@@ -119,5 +114,32 @@ export function createApprovalsStorage(db: PluginContext['db']) {
         );
     }
 
-    return { mint, claim, expireStale };
+    /**
+     * The rows this user could still answer. A reload rebuilds the drawer's
+     * held calls from these rather than from a copy in the transcript, so the
+     * arguments a click runs with stay the ones on the row.
+     */
+    async function findPending(userId: string): Promise<ApprovalRow[]> {
+        return storage.findMany({ where: answerable(userId, new Date()) });
+    }
+
+    /**
+     * Turn down every call this user still holds. Starting a new conversation
+     * abandons them, which is the rule a new message already follows.
+     */
+    async function rejectPending(userId: string): Promise<void> {
+        const now = new Date();
+        await storage.updateMany(answerable(userId, now), {
+            status: 'rejected',
+            resolvedAt: now,
+            arguments: null,
+        });
+    }
+
+    return { mint, claim, expireStale, findPending, rejectPending };
+}
+
+/** The rows a decision may still resolve: this user's, pending, unexpired. */
+function answerable(userId: string, now: Date) {
+    return { userId, status: 'pending', expiresAt: { gt: now } } as const;
 }

@@ -4,9 +4,10 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useAIContextItems } from 'astromech/ui';
+import { useAIContextItems, useAstromechPlugin } from 'astromech/ui';
 import { parseChatEvent, splitSseFrames } from './sse.js';
 import { errorMessage } from '../error-message.js';
+import type { ChatSession } from '../service/sessions.js';
 import type {
     ApprovalDecision,
     ApprovalRequest,
@@ -33,6 +34,8 @@ export type UseChat = {
     /** The in-flight assistant text; `''` whenever nothing is streaming. */
     tail: string;
     isStreaming: boolean;
+    /** True until the stored conversation has been asked for and answered. */
+    isRestoring: boolean;
     /** The calls waiting on a decision; `[]` when none are. */
     pending: ApprovalRequest[];
     rejected: RejectedCalls;
@@ -40,6 +43,14 @@ export type UseChat = {
     /** Answer every held call and resume the turn they paused. */
     respond: (decisions: ApprovalDecision[]) => void;
     stop: () => void;
+    /** Discard the conversation, on the server as well as here. */
+    newChat: () => void;
+};
+
+/** The plugin's own JSON methods, as `useAstromechPlugin().service` exposes them. */
+type SessionsService = {
+    getSession: () => Promise<ChatSession>;
+    clearSession: () => Promise<null>;
 };
 
 /**
@@ -49,16 +60,21 @@ export type UseChat = {
 const API_BASE_PATH = '/api';
 
 /** Hold the transcript and drive one in-flight request against the chat route. */
-export function useChat(serviceKey: string): UseChat {
+export function useChat(): UseChat {
+    const { serviceKey, service } = useAstromechPlugin();
     const [entries, setEntries] = useState<ChatEntry[]>([]);
     const [tail, setTail] = useState('');
     const [isStreaming, setIsStreaming] = useState(false);
+    const [isRestoring, setIsRestoring] = useState(true);
     const [pending, setPending] = useState<ApprovalRequest[]>([]);
     const [rejected, setRejected] = useState<RejectedCalls>({});
     const aiContext = useAIContextItems();
     const entriesRef = useRef<ChatEntry[]>([]);
     const pendingRef = useRef<ApprovalRequest[]>([]);
     const abortRef = useRef<AbortController | null>(null);
+    // `astromechClient.plugins` is a Proxy that synthesises a fresh object per
+    // access, so the binding is captured once rather than tracked as a dependency.
+    const sessionsRef = useRef(service as SessionsService);
 
     // A request outlives the component that started it; unmount must cancel it.
     useEffect(() => () => abortRef.current?.abort(), []);
@@ -72,6 +88,29 @@ export function useChat(serviceKey: string): UseChat {
         pendingRef.current = next;
         setPending(next);
     }, []);
+
+    // The server owns the transcript, so it is asked for once on mount. A load
+    // that lost a race with the user's first message is dropped rather than
+    // replacing what they have already started, and a failure starts empty.
+    useEffect(() => {
+        let live = true;
+        void sessionsRef.current
+            .getSession()
+            .then((session) => {
+                if (!live || entriesRef.current.length > 0) return;
+                updateEntries(
+                    session.messages.map((message) => ({ kind: 'message', message }))
+                );
+                updatePending(session.pending);
+            })
+            .catch(() => undefined)
+            .finally(() => {
+                if (live) setIsRestoring(false);
+            });
+        return () => {
+            live = false;
+        };
+    }, [updateEntries, updatePending]);
 
     const decline = useCallback((requests: ApprovalRequest[]) => {
         if (requests.length === 0) return;
@@ -178,7 +217,31 @@ export function useChat(serviceKey: string): UseChat {
         [decline, startTurn, updatePending]
     );
 
-    return { entries, tail, isStreaming, pending, rejected, send, respond, stop };
+    const newChat = useCallback(() => {
+        abortRef.current?.abort();
+        updateEntries([]);
+        updatePending([]);
+        setRejected({});
+        setTail('');
+        // The server drops the stored conversation and turns down anything still
+        // held, so a clear that failed has to be said out loud.
+        void sessionsRef.current.clearSession().catch((error: unknown) => {
+            updateEntries([{ kind: 'error', error: errorMessage(error) }]);
+        });
+    }, [updateEntries, updatePending]);
+
+    return {
+        entries,
+        tail,
+        isStreaming,
+        isRestoring,
+        pending,
+        rejected,
+        send,
+        respond,
+        stop,
+        newChat,
+    };
 }
 
 /** The wire shape: the turns only, since an error was never part of the conversation. */

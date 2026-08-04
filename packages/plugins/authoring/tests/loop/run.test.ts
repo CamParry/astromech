@@ -15,6 +15,8 @@ import type {
     ResolvedAuthoringOptions,
 } from '../../src/types.js';
 import { fakeApprovals } from './fake-approvals.js';
+import { fakeSessions } from '../sessions/fake-sessions.js';
+import type { FakeSessions } from '../sessions/fake-sessions.js';
 
 const generateToolResponse = vi.fn<() => Promise<null>>();
 const toolRunner = vi.fn();
@@ -77,7 +79,7 @@ function runnerOver(replies: BetaMessage[]) {
     };
 }
 
-/** Drain the loop into the events it yielded. */
+/** Drain the loop into the events it yielded, against `sessions`. */
 async function collect(
     tools: ToolDefinition[],
     messages: ChatMessage[] = [{ role: 'user', content: [{ type: 'text', text: 'go' }] }]
@@ -92,12 +94,18 @@ async function collect(
         aiContext: [],
         logger,
         approvals: approvals.storage,
+        sessions: sessions.storage,
         userId: 'user_1',
         decisions: [],
     })) {
         events.push(event);
     }
     return events;
+}
+
+/** The transcript stored for the acting user, or undefined when none is. */
+function stored(): ChatMessage[] | undefined {
+    return sessions.rows.get('user_1');
 }
 
 /** The turns the last request would have gone to the API with. */
@@ -123,9 +131,12 @@ function everyCallAnswered(turns: BetaMessageParam[]): boolean {
     });
 }
 
+let sessions: FakeSessions;
+
 beforeEach(() => {
     vi.clearAllMocks();
     generateToolResponse.mockResolvedValue(null);
+    sessions = fakeSessions();
 });
 
 describe('runAuthoringLoop', () => {
@@ -215,5 +226,96 @@ describe('runAuthoringLoop', () => {
             },
             { type: 'text', text: 'no, do this instead' },
         ]);
+    });
+});
+
+describe('runAuthoringLoop session storage', () => {
+    it('stores the posted turns plus the assistant turn that answered them', async () => {
+        toolRunner.mockReturnValue(
+            runnerOver([reply([{ type: 'text', text: 'hello' }])])
+        );
+
+        await collect([]);
+
+        expect(stored()).toEqual([
+            { role: 'user', content: [{ type: 'text', text: 'go' }] },
+            { role: 'assistant', content: [{ type: 'text', text: 'hello' }] },
+        ]);
+    });
+
+    it('stores a paused turn whole, so the pause has something to resume from', async () => {
+        const call = {
+            type: 'tool_use',
+            id: 'toolu_1',
+            name: 'entries_page_update',
+            input: { id: 'page_1' },
+        } as const;
+        toolRunner.mockReturnValue(
+            runnerOver([
+                reply([{ type: 'thinking', thinking: '', signature: 'sig' }, call]),
+            ])
+        );
+
+        await collect([toolFor('entries_page_update', false)]);
+
+        expect(stored()).toEqual([
+            { role: 'user', content: [{ type: 'text', text: 'go' }] },
+            {
+                role: 'assistant',
+                content: [{ type: 'thinking', thinking: '', signature: 'sig' }, call],
+            },
+        ]);
+    });
+
+    it('stores the tool results a completed call answered with', async () => {
+        toolRunner.mockReturnValue(
+            runnerOver([
+                reply([
+                    {
+                        type: 'tool_use',
+                        id: 'toolu_1',
+                        name: 'entries_page_query',
+                        input: {},
+                    },
+                ]),
+            ])
+        );
+        generateToolResponse.mockResolvedValue({
+            role: 'user',
+            content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: '{}' }],
+        } as never);
+
+        await collect([toolFor('entries_page_query', true)]);
+
+        expect(stored()?.at(-1)).toEqual({
+            role: 'user',
+            content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: '{}' }],
+        });
+    });
+
+    it('carries the turn on when the transcript is past the size cap', async () => {
+        sessions.storage.save = vi.fn(async () => false);
+        toolRunner.mockReturnValue(
+            runnerOver([reply([{ type: 'text', text: 'hello' }])])
+        );
+
+        const events = await collect([]);
+
+        expect(events.map((event) => event.type)).toEqual(['message', 'done']);
+        expect(logger.warn).toHaveBeenCalled();
+    });
+
+    it('carries the turn on when the write throws', async () => {
+        sessions.storage.save = vi.fn(async () => {
+            throw new Error('database is locked');
+        });
+        toolRunner.mockReturnValue(
+            runnerOver([reply([{ type: 'text', text: 'hello' }])])
+        );
+
+        const events = await collect([]);
+
+        expect(events.map((event) => event.type)).toEqual(['message', 'done']);
+        expect(logger.error).toHaveBeenCalled();
     });
 });
