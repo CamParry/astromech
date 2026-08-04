@@ -38,30 +38,52 @@ describe('splitSseFrames', () => {
 
 describe('reading a chunked stream', () => {
     it('rejoins a frame split mid-JSON', () => {
-        expect(readChunks(['data: {"type":"te', 'xt","text":"hi"}\n\n'])).toEqual([
-            { type: 'text', text: 'hi' },
+        expect(readChunks(['data: {"type":"text-de', 'lta","text":"hi"}\n\n'])).toEqual([
+            { type: 'text-delta', text: 'hi' },
         ]);
     });
 
     it('rejoins a frame split on its delimiter', () => {
         expect(
             readChunks([
-                'data: {"type":"text","text":"hi"}\n',
+                'data: {"type":"text-delta","text":"hi"}\n',
                 '\ndata: {"type":"done"}\n\n',
             ])
-        ).toEqual([{ type: 'text', text: 'hi' }, { type: 'done' }]);
+        ).toEqual([{ type: 'text-delta', text: 'hi' }, { type: 'done' }]);
     });
 
     it('reads several frames arriving in one chunk', () => {
         const chunk =
-            'data: {"type":"text","text":"a"}\n\n' +
-            'data: {"type":"tool","name":"entriesQuery"}\n\n' +
+            'data: {"type":"text-delta","text":"a"}\n\n' +
+            'data: {"type":"message","message":{"role":"assistant","content":[{"type":"text","text":"a"}]}}\n\n' +
             'data: {"type":"done"}\n\n';
         expect(readChunks([chunk])).toEqual([
-            { type: 'text', text: 'a' },
-            { type: 'tool', name: 'entriesQuery' },
+            { type: 'text-delta', text: 'a' },
+            {
+                type: 'message',
+                message: { role: 'assistant', content: [{ type: 'text', text: 'a' }] },
+            },
             { type: 'done' },
         ]);
+    });
+
+    it('carries a message event whose blocks it does not model', () => {
+        const message = {
+            role: 'assistant',
+            content: [
+                { type: 'thinking', thinking: '', signature: 'sig-1' },
+                {
+                    type: 'tool_use',
+                    id: 'toolu_1',
+                    name: 'entries_page_query',
+                    input: {},
+                },
+            ],
+        };
+
+        expect(
+            readChunks([`data: ${JSON.stringify({ type: 'message', message })}\n\n`])
+        ).toEqual([{ type: 'message', message }]);
     });
 
     it('drops a frame that is not a chat event', () => {

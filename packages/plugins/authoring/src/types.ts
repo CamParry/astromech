@@ -1,5 +1,6 @@
 /** Public options for the authoring plugin, and the chat wire types. */
 
+import type { BetaContentBlockParam } from '@anthropic-ai/sdk/resources/beta';
 import type { AIContextItem } from 'astromech';
 
 /**
@@ -31,8 +32,16 @@ export type AuthoringOptions = {
 /** Options with every default applied — what the plugin's own code sees. */
 export type ResolvedAuthoringOptions = Required<AuthoringOptions>;
 
-/** One turn of the conversation as the browser sends it. */
-export type ChatMessage = { role: 'user' | 'assistant'; content: string };
+/**
+ * One turn of the conversation, as Anthropic content blocks. Every block is
+ * kept and re-posted verbatim whether or not the client understands it:
+ * `tool_use` ids are server-minted, and `thinking` blocks are rejected by the
+ * API unless they come back unmodified and in the order they were generated.
+ */
+export type ChatMessage = {
+    role: 'user' | 'assistant';
+    content: BetaContentBlockParam[];
+};
 
 /** The body posted to the chat route. */
 export type ChatRequest = {
@@ -41,9 +50,13 @@ export type ChatRequest = {
     aiContext?: AIContextItem[];
 };
 
-/** One server-sent event from the chat route. */
+/**
+ * One server-sent event from the chat route. `text-delta` renders the in-flight
+ * tail and nothing more; `message` is the authoritative record of a finished
+ * turn and the only event that feeds the next request.
+ */
 export type ChatEvent =
-    | { type: 'text'; text: string }
-    | { type: 'tool'; name: string }
-    | { type: 'error'; message: string }
+    | { type: 'text-delta'; text: string }
+    | { type: 'message'; message: ChatMessage }
+    | { type: 'error'; error: string }
     | { type: 'done' };

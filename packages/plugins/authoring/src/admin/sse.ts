@@ -34,7 +34,12 @@ export function parseChatEvent(frame: string): ChatEvent | null {
     if (typeof parsed !== 'object' || parsed === null) return null;
 
     const { type } = parsed as { type?: unknown };
-    if (type === 'text' || type === 'tool' || type === 'error' || type === 'done') {
+    if (
+        type === 'text-delta' ||
+        type === 'message' ||
+        type === 'error' ||
+        type === 'done'
+    ) {
         return parsed as ChatEvent;
     }
     return null;

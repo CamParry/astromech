@@ -1,7 +1,7 @@
 /**
- * Body validation on the chat route. `aiContext` items stay unchecked past
- * being an array — `formatAIContextMessage` sanitises every value it
- * interpolates, and a second check here would drift from it.
+ * Body validation on the chat route. Content blocks are checked for a `type`
+ * and nothing more — deeper checks would reject the block types the transcript
+ * deliberately carries through, and the API is the real validator.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -21,11 +21,45 @@ function postJson(body: unknown): Request {
     return post(JSON.stringify(body));
 }
 
+/** One turn of plain text, the shape the drawer sends for a typed message. */
+function text(role: 'user' | 'assistant', value: string): unknown {
+    return { role, content: [{ type: 'text', text: value }] };
+}
+
 describe('readChatRequest', () => {
     it('parses a body of turns with no aiContext', async () => {
+        const messages = [text('user', 'hi'), text('assistant', 'hello')];
+
+        await expect(readChatRequest(postJson({ messages }))).resolves.toEqual({
+            messages,
+        });
+    });
+
+    it('parses a turn carrying blocks it does not model', async () => {
         const messages = [
-            { role: 'user', content: 'hi' },
-            { role: 'assistant', content: 'hello' },
+            text('user', 'find pages'),
+            {
+                role: 'assistant',
+                content: [
+                    { type: 'thinking', thinking: '', signature: 'sig-1' },
+                    {
+                        type: 'tool_use',
+                        id: 'toolu_01ABC',
+                        name: 'entries_page_query',
+                        input: { limit: 5 },
+                    },
+                ],
+            },
+            {
+                role: 'user',
+                content: [
+                    {
+                        type: 'tool_result',
+                        tool_use_id: 'toolu_01ABC',
+                        content: '{"items":[]}',
+                    },
+                ],
+            },
         ];
 
         await expect(readChatRequest(postJson({ messages }))).resolves.toEqual({
@@ -34,7 +68,7 @@ describe('readChatRequest', () => {
     });
 
     it('parses an aiContext of arbitrary objects', async () => {
-        const messages = [{ role: 'user', content: 'hi' }];
+        const messages = [text('user', 'hi')];
         const aiContext = [{ anything: 'at all' }, { depth: 2 }];
 
         await expect(readChatRequest(postJson({ messages, aiContext }))).resolves.toEqual(
@@ -56,19 +90,39 @@ describe('readChatRequest', () => {
 
     it('rejects messages that are not an array', async () => {
         await expect(
-            readChatRequest(postJson({ messages: { role: 'user', content: 'hi' } }))
+            readChatRequest(postJson({ messages: text('user', 'hi') }))
         ).resolves.toBeNull();
     });
 
     it('rejects a turn with an unknown role', async () => {
         await expect(
-            readChatRequest(postJson({ messages: [{ role: 'system', content: 'hi' }] }))
+            readChatRequest(
+                postJson({
+                    messages: [
+                        { role: 'system', content: [{ type: 'text', text: 'hi' }] },
+                    ],
+                })
+            )
         ).resolves.toBeNull();
     });
 
-    it('rejects a turn whose content is not a string', async () => {
+    it('rejects a turn whose content is a string', async () => {
         await expect(
-            readChatRequest(postJson({ messages: [{ role: 'user', content: 42 }] }))
+            readChatRequest(postJson({ messages: [{ role: 'user', content: 'hi' }] }))
+        ).resolves.toBeNull();
+    });
+
+    it('rejects a block that is not an object', async () => {
+        await expect(
+            readChatRequest(postJson({ messages: [{ role: 'user', content: ['hi'] }] }))
+        ).resolves.toBeNull();
+    });
+
+    it('rejects a block with no type', async () => {
+        await expect(
+            readChatRequest(
+                postJson({ messages: [{ role: 'user', content: [{ text: 'hi' }] }] })
+            )
         ).resolves.toBeNull();
     });
 
@@ -76,7 +130,7 @@ describe('readChatRequest', () => {
         await expect(
             readChatRequest(
                 postJson({
-                    messages: [{ role: 'user', content: 'hi' }],
+                    messages: [text('user', 'hi')],
                     aiContext: { kind: 'pages' },
                 })
             )

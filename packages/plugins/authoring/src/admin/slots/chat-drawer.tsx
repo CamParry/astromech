@@ -6,12 +6,14 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ComponentProps, KeyboardEvent, ReactElement } from 'react';
+import type { BetaContentBlockParam } from '@anthropic-ai/sdk/resources/beta';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button, useAstromechPlugin } from 'astromech/ui';
 import { closeDrawer, focusToggleButton, useDrawerOpen } from '../drawer-state.js';
 import { useChat } from '../use-chat.js';
-import type { ChatPart, ChatTurn } from '../use-chat.js';
+import type { ChatEntry } from '../use-chat.js';
+import type { ChatMessage } from '../../types.js';
 import './chat-drawer.css';
 
 /** How far off the tail still counts as following it. */
@@ -29,7 +31,7 @@ const MARKDOWN_COMPONENTS = {
 
 export default function ChatDrawer(): ReactElement {
     const { serviceKey } = useAstromechPlugin();
-    const { turns, isStreaming, send, stop } = useChat(serviceKey);
+    const { entries, tail, isStreaming, send, stop } = useChat(serviceKey);
     const open = useDrawerOpen();
     const [prompt, setPrompt] = useState('');
     const [showJump, setShowJump] = useState(false);
@@ -65,7 +67,7 @@ export default function ChatDrawer(): ReactElement {
         const transcript = transcriptRef.current;
         if (transcript === null || !followingRef.current) return;
         transcript.scrollTop = transcript.scrollHeight;
-    }, [open, turns, isStreaming]);
+    }, [open, entries, tail, isStreaming]);
 
     // `field-sizing: content` is Chromium-only, so measure the box elsewhere.
     useLayoutEffect(() => {
@@ -132,15 +134,23 @@ export default function ChatDrawer(): ReactElement {
                     aria-relevant="additions"
                     onScroll={handleScroll}
                 >
-                    {turns.length === 0 ? (
+                    {entries.length === 0 ? (
                         <p className="am-authoring-hint">
                             Ask about the content you are looking at. The assistant
                             reaches only what your role can already reach.
                         </p>
                     ) : null}
-                    {turns.map((turn, index) => (
-                        <Turn key={index} turn={turn} />
+                    {entries.map((entry, index) => (
+                        <Entry key={index} entry={entry} />
                     ))}
+                    {tail !== '' ? (
+                        <Turn
+                            message={{
+                                role: 'assistant',
+                                content: [{ type: 'text', text: tail }],
+                            }}
+                        />
+                    ) : null}
                     {isStreaming ? (
                         <p className="am-authoring-pending">Working…</p>
                     ) : null}
@@ -198,42 +208,63 @@ export default function ChatDrawer(): ReactElement {
     );
 }
 
-/** One side of the conversation. An assistant turn that said nothing renders nothing. */
-function Turn({ turn }: { turn: ChatTurn }): ReactElement | null {
-    if (turn.parts.length === 0) return null;
+/** One row of the transcript: a turn, or an error the model never saw. */
+function Entry({ entry }: { entry: ChatEntry }): ReactElement | null {
+    if (entry.kind === 'error') {
+        return <p className="am-authoring-error">{entry.error}</p>;
+    }
+    return <Turn message={entry.message} />;
+}
+
+/**
+ * One side of the conversation. A turn with nothing to show renders nothing —
+ * a user turn carrying only tool results is plumbing, not conversation.
+ */
+function Turn({ message }: { message: ChatMessage }): ReactElement | null {
+    const blocks = message.content.filter(isRenderedBlock);
+    if (blocks.length === 0) return null;
     return (
-        <div className={`am-authoring-turn am-authoring-turn--${turn.role}`}>
+        <div className={`am-authoring-turn am-authoring-turn--${message.role}`}>
             <span className="am-authoring-turn-role">
-                {turn.role === 'user' ? 'You' : 'Assistant'}
+                {message.role === 'user' ? 'You' : 'Assistant'}
             </span>
-            {turn.parts.map((part, index) => (
-                <Part key={index} part={part} role={turn.role} />
+            {blocks.map((block, index) => (
+                <Block key={index} block={block} role={message.role} />
             ))}
         </div>
     );
 }
 
 /**
- * Text, a marker naming a tool that ran, or an error. Only assistant text is
+ * Text, or a marker naming a tool the model called. Only assistant text is
  * rendered as Markdown; the user's text is shown literally.
  */
-function Part({ part, role }: { part: ChatPart; role: ChatTurn['role'] }): ReactElement {
-    if (part.kind === 'tool') {
-        return <p className="am-authoring-tool">Ran {part.name}</p>;
+function Block({
+    block,
+    role,
+}: {
+    block: BetaContentBlockParam;
+    role: ChatMessage['role'];
+}): ReactElement | null {
+    if (block.type === 'tool_use') {
+        return <p className="am-authoring-tool">Ran {block.name}</p>;
     }
-    if (part.kind === 'error') {
-        return <p className="am-authoring-error">{part.message}</p>;
-    }
+    if (block.type !== 'text') return null;
     if (role === 'user') {
-        return <p className="am-authoring-text">{part.text}</p>;
+        return <p className="am-authoring-text">{block.text}</p>;
     }
     return (
         <div className="am-authoring-markdown">
             <Markdown remarkPlugins={REMARK_PLUGINS} components={MARKDOWN_COMPONENTS}>
-                {part.text}
+                {block.text}
             </Markdown>
         </div>
     );
+}
+
+/** The block types the drawer shows. Everything else, `thinking` included, is carried but hidden. */
+function isRenderedBlock(block: BetaContentBlockParam): boolean {
+    return block.type === 'text' || block.type === 'tool_use';
 }
 
 /** Whether the browser grows a textarea from CSS alone. */
