@@ -726,10 +726,12 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       for calls that were never gated remains open and is bounded to the
       conversation it happens in.
 
-- [ ] **P9 — one resumable chat session, per user.** The transcript lives in
-      `useChat`'s React state. It survives closing the drawer and navigating the
-      SPA now that the panel stays mounted, but a reload loses the lot. Persist
-      the current conversation so it comes back; "New chat" replaces it.
+- [x] **P9 — one resumable chat session, per user.** Shipped 2026-08-04. The
+      transcript lived in `useChat`'s React state, so a reload lost the lot.
+      `plugin_authoring_sessions` holds one row per user, unique on `userId` and
+      replaced in place, written by the loop after every completed turn in the
+      shape the drawer posts back. "New chat" replaces it. `decisions/0018` holds
+      why there is no session library.
     - **Scoped down before building: no session library in v1.** Two things were
       bundled under "persisted sessions" and only one earns its keep. Reload
       survival is a real loss cheaply fixed. A browsable list of past
@@ -770,7 +772,33 @@ f(x)`), so re-coercion is only observable when the STORED value is not
     - Known wart: every plugin service method lands in the manifest, so session
       read/clear surface as MCP tools. The loop already refuses plugin-source
       methods when scoped and MCP is dev-only and user-scoped, so this is noise,
-      not exposure. A manifest opt-out is its own core item.
+      not exposure. A manifest opt-out is its own core item, in `backlog.md`.
+    - The `ApprovalRequest` builder moved to `src/approvals/request.ts` rather
+      than being reused from `loop/approvals.ts`, which the service could not
+      import: that module reaches `loop/tools.ts` and so a **value** import of
+      `@anthropic-ai/sdk`, which would pull the SDK into `src/index.ts`'s graph —
+      loaded by Astro in plain Node at config time. Same trap the chat route's
+      request-time dynamic import exists to dodge. One source of truth, new
+      address.
+    - `useChat` reads `{ serviceKey, service }` off `useAstromechPlugin()` itself
+      rather than taking `serviceKey` as a parameter; `PluginSlot` wraps every
+      contribution in `PluginUiProvider`, so a slot has it. **`astromechClient.plugins`
+      is a Proxy that synthesises a fresh object per property access**, so the
+      bound service is a new identity every render and cannot go in a dependency
+      array — it is captured in a ref.
+    - Mount hydration drops its own result if the user has already typed, or a
+      slow restore clobbers a message sent while it was in flight.
+    - **Browser-verified live 2026-08-04** against the demo on 4323 with a real
+      key, every path. A four-turn transcript survived a full page reload with
+      its tool-call blocks intact. A turn paused on `entries.page.create` was
+      reloaded **without being answered** and came back with its approve/reject
+      panel rebuilt from the approvals rows, then **resumed** on approve and
+      created the page — which is the part no unit test reaches, because it
+      proves the `thinking` blocks round-tripped byte-for-byte through SQLite and
+      back to the API. "New chat" on a held `entries.page.delete` left the row
+      `rejected` with `arguments` nulled, deleted the session row, and the page
+      survived. `updated_at` landing 3.7s after `created_at` on one row is the
+      `onUpdate` stamp firing on the upsert's conflict path.
 - [ ] **P10 — audit trail for what the assistant did.** Which method ran, with
       which arguments, for which user, with what outcome. P8 covers one slice of
       this already — an approval row survives its decision, so an approved or

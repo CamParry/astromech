@@ -50,3 +50,4 @@ Distinct from the neighbouring directories:
 - [0015](0015-public-subpaths-mirror-the-source.md) — a public subpath mirrors its source directory, and the fetch client is `astromechClient`
 - [0016](0016-the-fields-module-vocabulary.md) — the `fields` module's vocabulary: layout field, nested field, `boxed`, `formatInstancePath`
 - [0017](0017-resource-as-the-superordinate-noun.md) — `resource` for an entry, a media item, a user or a settings page, and the resource validators
+- [0018](0018-one-chat-session-not-a-library.md) — the assistant keeps one resumable chat session per user, not a browsable library of past ones
