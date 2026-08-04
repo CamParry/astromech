@@ -19,9 +19,9 @@ import {
 } from '@/policies/scoped-service.js';
 import { permissionsFor } from '@/permissions/permissions-for.js';
 import type {
-    ContentApi,
+    ContentService,
     CoreManifestMethod,
-    EntriesApi,
+    EntriesService,
     ManifestMethod,
     Permission,
     Role,
@@ -44,7 +44,7 @@ function makeService() {
     return {
         read: vi.fn((_input?: unknown) => Promise.resolve('read-result')),
         write: vi.fn((_input?: unknown) => Promise.resolve('write-result')),
-        // Deliberately absent from the catalogue below — the mediaApi.replace case.
+        // Deliberately absent from the catalogue below — the mediaService.replace case.
         undescribed: vi.fn(() => Promise.resolve('undescribed-result')),
         label: 'not-a-function',
     };
@@ -168,10 +168,10 @@ function makeEntriesStub() {
     };
 }
 
-/** The stub is a slice of `EntriesApi`; the wrapper only reads its keys. */
+/** The stub is a slice of `EntriesService`; the wrapper only reads its keys. */
 function scopeStub(stub: object, actingRole: Role | undefined): Record<string, never> {
     return scopeEntries(
-        stub as unknown as EntriesApi,
+        stub as unknown as EntriesService,
         permissionsFor(actingRole)
     ) as unknown as Record<string, never>;
 }
@@ -290,13 +290,13 @@ function makeContentStub() {
     };
 }
 
-/** The stub is a slice of `ContentApi`; the wrapper only reads its keys. */
+/** The stub is a slice of `ContentService`; the wrapper only reads its keys. */
 function scopeContentStub(
     stub: object,
     actingRole: Role | undefined
 ): Record<string, never> {
     return scopeContent(
-        stub as unknown as ContentApi,
+        stub as unknown as ContentService,
         permissionsFor(actingRole)
     ) as unknown as Record<string, never>;
 }
@@ -420,7 +420,7 @@ describe('scopedService', () => {
         }
     });
 
-    it('refuses mediaApi.replace, which declares no descriptor', () => {
+    it('refuses mediaService.replace, which declares no descriptor', () => {
         // Known gap, asserted rather than papered over: `replace` has no entry in
         // `mediaDescriptors`, so it is invisible to the manifest AND unreachable
         // through a scoped handle — even for an admin.

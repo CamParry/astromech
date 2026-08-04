@@ -32,14 +32,14 @@ import {
 } from '@tests/harness.js';
 import '@/transport/local/index.js'; // registers the plugin client (setPluginClient)
 import { localPlugins } from '@/transport/local/plugins.js';
-import { entries as localEntries } from '@/entries/service.js';
+import { entriesService as localEntries } from '@/entries/service.js';
 import { forms, turnstile } from '@astromech/forms';
 import type { FormsOptions, PublicForm, SubmitResult } from '@astromech/forms';
 import type { DB } from '@/database/types.js';
 import type {
     AstromechConfig,
     EmailMessage,
-    EntriesApi,
+    EntriesService,
     PluginDefinition,
     ResolvedConfig,
 } from '@/types/index.js';
@@ -54,7 +54,7 @@ const SPAM: NonNullable<FormsOptions['spam']> = turnstile({
 });
 
 /** The one entries service, typed to the wide API for these round-trips. */
-const entriesApi = (): EntriesApi => localEntries as unknown as EntriesApi;
+const entriesService = (): EntriesService => localEntries as unknown as EntriesService;
 
 type FormsService = Record<string, (input?: unknown) => Promise<unknown>>;
 
@@ -118,7 +118,7 @@ async function setup(options?: FormsOptions): Promise<ResolvedConfig> {
 async function createContactForm(
     fields: Record<string, unknown> = {}
 ): Promise<{ id: string }> {
-    return entriesApi().create({
+    return entriesService().create({
         type: FORM,
         title: 'Contact',
         slug: 'contact',
@@ -175,7 +175,11 @@ describe('forms.get', () => {
         // The read `get` performs is `full`-shaped, so all of the above IS on
         // the entry it holds. Prove that first — otherwise the assertions below
         // would pass for the wrong reason.
-        const stored = await entriesApi().get({ type: FORM, id: created.id, full: true });
+        const stored = await entriesService().get({
+            type: FORM,
+            id: created.id,
+            full: true,
+        });
         // `notifications` is a blocks field, so the field pipeline mints an
         // `_id` on each stored instance — assert the authored data, not the
         // normalized item shape.
@@ -223,7 +227,7 @@ describe('forms.get', () => {
     });
 
     it('returns null for an unpublished form', async () => {
-        await entriesApi().create({
+        await entriesService().create({
             type: FORM,
             title: 'Draft',
             slug: 'draft',

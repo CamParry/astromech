@@ -6,7 +6,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
 import { setStorageDriver } from '@/storage/registry.js';
-import { mediaApi } from '@/media/service.js';
+import { mediaService } from '@/media/service.js';
 import type { AstromechConfig, StorageDriver } from '@/types/index.js';
 
 // ---------------------------------------------------------------------------
@@ -103,11 +103,11 @@ beforeEach(async () => {
 // update: required field
 // ---------------------------------------------------------------------------
 
-describe('mediaApi.update — required field', () => {
+describe('mediaService.update — required field', () => {
     it('rejects when required field is absent', async () => {
-        const m = await mediaApi.upload({ file: textFile() });
+        const m = await mediaService.upload({ file: textFile() });
         await expect(
-            mediaApi.update({ id: m.id, data: { fields: {} } })
+            mediaService.update({ id: m.id, data: { fields: {} } })
         ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: { caption: ['This field is required'] },
@@ -115,9 +115,9 @@ describe('mediaApi.update — required field', () => {
     });
 
     it('rejects when required field is empty string', async () => {
-        const m = await mediaApi.upload({ file: textFile() });
+        const m = await mediaService.upload({ file: textFile() });
         await expect(
-            mediaApi.update({ id: m.id, data: { fields: { caption: '' } } })
+            mediaService.update({ id: m.id, data: { fields: { caption: '' } } })
         ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: { caption: ['This field is required'] },
@@ -129,10 +129,10 @@ describe('mediaApi.update — required field', () => {
 // update: coercion
 // ---------------------------------------------------------------------------
 
-describe('mediaApi.update — coercion', () => {
+describe('mediaService.update — coercion', () => {
     it('coerces a slug field to slugified form and persists it', async () => {
-        const m = await mediaApi.upload({ file: textFile() });
-        const updated = await mediaApi.update({
+        const m = await mediaService.upload({ file: textFile() });
+        const updated = await mediaService.update({
             id: m.id,
             data: {
                 fields: { caption: 'A photo', slug_field: 'My Image Title' },
@@ -146,17 +146,17 @@ describe('mediaApi.update — coercion', () => {
 // update: uniqueness
 // ---------------------------------------------------------------------------
 
-describe('mediaApi.update — uniqueness', () => {
+describe('mediaService.update — uniqueness', () => {
     it('rejects a duplicate tag across two media items', async () => {
-        const a = await mediaApi.upload({ file: textFile('a.txt') });
-        await mediaApi.update({
+        const a = await mediaService.upload({ file: textFile('a.txt') });
+        await mediaService.update({
             id: a.id,
             data: { fields: { caption: 'A', tag: 'alpha' } },
         });
 
-        const b = await mediaApi.upload({ file: textFile('b.txt') });
+        const b = await mediaService.upload({ file: textFile('b.txt') });
         await expect(
-            mediaApi.update({
+            mediaService.update({
                 id: b.id,
                 data: { fields: { caption: 'B', tag: 'alpha' } },
             })
@@ -167,13 +167,13 @@ describe('mediaApi.update — uniqueness', () => {
     });
 
     it('allows a media item to keep its own unique tag (self-exclusion)', async () => {
-        const m = await mediaApi.upload({ file: textFile() });
-        await mediaApi.update({
+        const m = await mediaService.upload({ file: textFile() });
+        await mediaService.update({
             id: m.id,
             data: { fields: { caption: 'First', tag: 'beta' } },
         });
 
-        const updated = await mediaApi.update({
+        const updated = await mediaService.update({
             id: m.id,
             data: {
                 fields: { caption: 'Updated', tag: 'beta' },
@@ -183,14 +183,14 @@ describe('mediaApi.update — uniqueness', () => {
     });
 
     it('accepts a different unique tag', async () => {
-        const a = await mediaApi.upload({ file: textFile('a.txt') });
-        await mediaApi.update({
+        const a = await mediaService.upload({ file: textFile('a.txt') });
+        await mediaService.update({
             id: a.id,
             data: { fields: { caption: 'A', tag: 'gamma' } },
         });
 
-        const b = await mediaApi.upload({ file: textFile('b.txt') });
-        const updated = await mediaApi.update({
+        const b = await mediaService.upload({ file: textFile('b.txt') });
+        const updated = await mediaService.update({
             id: b.id,
             data: {
                 fields: { caption: 'B', tag: 'delta' },
@@ -204,14 +204,14 @@ describe('mediaApi.update — uniqueness', () => {
 // update: fields merge
 // ---------------------------------------------------------------------------
 
-describe('mediaApi.update — fields merge', () => {
+describe('mediaService.update — fields merge', () => {
     it('keeps fields the patch omits', async () => {
-        const m = await mediaApi.upload({ file: textFile() });
-        await mediaApi.update({
+        const m = await mediaService.upload({ file: textFile() });
+        await mediaService.update({
             id: m.id,
             data: { fields: { caption: 'A photo', tag: 'omega' } },
         });
-        const updated = await mediaApi.update({
+        const updated = await mediaService.update({
             id: m.id,
             data: { fields: { slug_field: 'Second Pass' } },
         });
@@ -227,10 +227,13 @@ describe('mediaApi.update — fields merge', () => {
 // update: no fields → skips validation
 // ---------------------------------------------------------------------------
 
-describe('mediaApi.update — no fields key', () => {
+describe('mediaService.update — no fields key', () => {
     it('updates alt without triggering field validation', async () => {
-        const m = await mediaApi.upload({ file: textFile() });
-        const updated = await mediaApi.update({ id: m.id, data: { alt: 'A nice doc' } });
+        const m = await mediaService.upload({ file: textFile() });
+        const updated = await mediaService.update({
+            id: m.id,
+            data: { alt: 'A nice doc' },
+        });
         expect(updated.alt).toBe('A nice doc');
     });
 });

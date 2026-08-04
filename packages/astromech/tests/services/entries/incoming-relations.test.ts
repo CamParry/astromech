@@ -10,7 +10,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
-import { entries as api } from '@/entries/service.js';
+import { entriesService as api } from '@/entries/service.js';
 import { tableStorage } from '@/entries/storage/table.js';
 import { defineTable } from '@/database/define-table.js';
 import type { AstromechConfig, PluginDefinition } from '@/types/index.js';

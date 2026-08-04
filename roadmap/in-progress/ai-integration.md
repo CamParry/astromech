@@ -36,7 +36,7 @@ followed on 2026-08-03. Next is P5.
       2026-07-31 (`934f1d0`). `update` takes a nested `data` (`update({id, data})`)
       matching the entries precedent, not a flattened `{id, ...patch}`. The
       manifest was byte-identical before and after, which is what proved the
-      commit changed signatures and not semantics. `notificationsRepo` stays
+      commit changed signatures and not semantics. `notificationsService` stays
       positional deliberately — it is a userId-explicit internal repository at the
       storage layer, not a service API.
 - [x] **P0 — descriptor describes the method, not the HTTP body.** Shipped
@@ -53,8 +53,8 @@ followed on 2026-08-03. Next is P5.
       `io: 'output'` mode (the wrong side for a call-input schema — `publishAt`
       rendered as an empty `{}`), and a method with no declared `input` was given
       a synthesised one, which is the mechanism the original drift used.
-    - Left for later: `types/api.ts` is not the source of truth for three methods
-      — `UsersApi.create`/`update` omit `roleSlug` and `MediaApi.update` omits
+    - Left for later: `types/services.ts` is not the source of truth for three methods
+      — `UsersService.create`/`update` omit `roleSlug` and `MediaService.update` omits
       `title`, though the services and Zod schemas all accept them. The manifest
       composes from the schemas, so it is correct; the type declarations need
       reconciling on their own.
@@ -122,7 +122,7 @@ followed on 2026-08-03. Next is P5.
       `resolveRole` falls back to ADMIN on an unknown slug, so
       `methods --role typo` would have answered "you may call everything" — the
       CLI checks membership itself now.
-    - Gap this surfaced rather than hid: `mediaApi.replace` has no descriptor, so
+    - Gap this surfaced rather than hid: `mediaService.replace` has no descriptor, so
       it is absent from the manifest and invisible to the CLI, MCP and the AI
       surface. The fail-closed handle refuses it even for `*`, and a test records
       that. Giving it one means deciding its permission and input schema —

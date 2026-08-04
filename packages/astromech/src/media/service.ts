@@ -116,7 +116,7 @@ async function storeFile(
     return { width: null, height: null, metadata: {} };
 }
 
-export const mediaApi = {
+export const mediaService = {
     async query(params?: MediaQueryParams): Promise<QueryResult<Media>> {
         const storage = createMediaStorage();
         const page = params?.page ?? 1;
@@ -192,7 +192,7 @@ export const mediaApi = {
         const validatedData = validate(updateMediaSchema, params.data);
 
         if (validatedData.fields !== undefined) {
-            const current = await mediaApi.get({ id });
+            const current = await mediaService.get({ id });
             const fieldDefs = flattenFieldNodes(config.media?.fields ?? []);
             // Registry first: the Astro config is JSON, so an authored
             // `validate` only survives boot's registration. The config value is
@@ -212,7 +212,7 @@ export const mediaApi = {
                 host: { kind: 'media', record: current },
                 user: getCurrentUser(),
                 reads: scopedReadsFromRecords({
-                    load: async () => (await mediaApi.query({ limit: 'all' })).data,
+                    load: async () => (await mediaService.query({ limit: 'all' })).data,
                     getId: (r) => r.id,
                     getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
                     excludeId: id,

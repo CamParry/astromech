@@ -14,7 +14,7 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js
 import { setStorageDriver } from '@/storage/registry.js';
 import { mediaRouter } from '@/transport/http/routes/media.js';
 import { createMediaStorage } from '@/media/storage.js';
-import { mediaApi } from '@/media/service.js';
+import { mediaService } from '@/media/service.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import type { Role, StorageDriver, User } from '@/types/index.js';
 
@@ -85,23 +85,23 @@ async function put(body: Record<string, unknown>): Promise<Response> {
 describe('PUT /media/:id — editable columns', () => {
     it('persists alt through the route', async () => {
         expect((await put({ alt: 'an alt' })).status).toBe(200);
-        expect((await mediaApi.get({ id }))?.alt).toBe('an alt');
+        expect((await mediaService.get({ id }))?.alt).toBe('an alt');
     });
 
     it('persists title through the route', async () => {
         expect((await put({ title: 'a title' })).status).toBe(200);
-        expect((await mediaApi.get({ id }))?.title).toBe('a title');
+        expect((await mediaService.get({ id }))?.title).toBe('a title');
     });
 
     it('persists caption through the route', async () => {
         expect((await put({ caption: 'a caption' })).status).toBe(200);
-        expect((await mediaApi.get({ id }))?.caption).toBe('a caption');
+        expect((await mediaService.get({ id }))?.caption).toBe('a caption');
     });
 
     it('persists all three in one request', async () => {
         const res = await put({ alt: 'A', title: 'T', caption: 'C' });
         expect(res.status).toBe(200);
-        const found = await mediaApi.get({ id });
+        const found = await mediaService.get({ id });
         expect([found?.alt, found?.title, found?.caption]).toEqual(['A', 'T', 'C']);
     });
 
@@ -115,7 +115,7 @@ describe('PUT /media/:id — editable columns', () => {
     it('leaves an omitted column alone', async () => {
         await put({ title: 'kept', caption: 'kept too' });
         await put({ alt: 'changed' });
-        const found = await mediaApi.get({ id });
+        const found = await mediaService.get({ id });
         expect(found?.title).toBe('kept');
         expect(found?.caption).toBe('kept too');
     });

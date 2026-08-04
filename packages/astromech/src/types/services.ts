@@ -1,213 +1,405 @@
 /**
- * Service-method descriptors — the self-description a service method carries so
- * the manifest, MCP projection, CLI and authoring AI can all deal in one unit.
- * Identical shape for core and plugin methods.
+ * Service contract types — the operations each domain offers (entries, media,
+ * settings, users, content, notifications).
  *
- * The projected form (`ManifestMethod`) lives here too, in the pure leaf, rather
- * than in the generator that emits it: the generator, the MCP transport and the
- * CLI all deal in the same record, and every consumer that redeclared "the bit
- * it needed" drifted from the emitter within one change.
+ * Entry surface design:
+ *  - Every entry method takes a single options object.
+ *  - `type` is required on every method.
+ *  - Bulk-capable methods accept `id: string | string[]`; single id → single
+ *    return, array id → array return. Bulk is all-or-nothing transactional.
  */
 
-import type { z } from '@hono/zod-openapi';
-import type { Permission } from './domain.js';
-
-/**
- * MCP-aligned effect hints (ai-integration §3.6). `mutates` is the query/command
- * split; `destructive`/`idempotent` are the small editorial layer over it.
- */
-export type ServiceMethodEffect = {
-    /** Command (true) vs query (false): does the method change persisted state? */
-    mutates: boolean;
-    /** Irreversible or data-losing (delete entry/user, unpublish). MCP destructiveHint. */
-    destructive?: boolean;
-    /** Repeating the call lands the same end-state. MCP idempotentHint. */
-    idempotent?: boolean;
-};
-
-/**
- * A method's declared permission: either a fixed permission string, or one
- * resolved from the call input (e.g. entries, where the permission depends on
- * the target entry type). Absent ⇒ the method is not permission-gated.
- */
-export type PermissionRule<Input = unknown> = Permission | ((input: Input) => Permission);
-
-/**
- * A service method's descriptor. Authored once (via `defineServiceMethod` for
- * plugin methods, or a service's descriptor catalogue for core methods); the
- * single declaration the `permissionsFor` guard enforces and the manifest reads.
- *
- * There is no `name`: a method's dotted id is its position in the catalogue
- * (`<domain>.<key>`), derived by the manifest generator. Restating it by hand
- * meant a typo produced a mis-named manifest entry with no build failure.
- */
-export type ServiceMethodDescriptor<Input = unknown, Output = unknown> = {
-    /** One-line summary for humans / the AI tool-loop. */
-    summary?: string;
-    /**
-     * Zod schema for the call input — the METHOD schema (how the method is
-     * called), NOT the HTTP body. A method whose transport puts part of the
-     * input in the path (`settings.set({ key, value })`) still declares the
-     * whole argument object here.
-     */
-    input?: z.ZodType<Input>;
-    /** Zod schema for the result, where worth declaring. */
-    output?: z.ZodType<Output>;
-    /** The permission this method requires; absent ⇒ no permission gate. */
-    permission?: PermissionRule<Input>;
-    /**
-     * The input carries a value JSON cannot express — a `File`, a stream. Such a
-     * method is unreachable from a JSON-RPC transport however well it describes
-     * itself, so it declares that here rather than leaving each transport to keep
-     * its own list of exceptions.
-     *
-     * `unrepresentable: 'any'` degrades a `File` to `{}` instead of throwing, so
-     * the emitted schema LOOKS callable. Without this flag a generic dispatcher
-     * offers the method and fails at invoke time.
-     */
-    binaryInput?: boolean;
-} & ServiceMethodEffect;
+import type {
+    Entry,
+    EntryStatus,
+    EntryVersion,
+    JsonObject,
+    JsonValue,
+    Media,
+    Notification,
+    Setting,
+    User,
+} from './domain.js';
 
 // ============================================================================
-// Method manifest — the serialised projection of the descriptors
+// Locale Sentinels
 // ============================================================================
 
-/**
- * A serialised JSON Schema object. `null` records a schema that could not be
- * represented; `undefined` records one that was never declared.
- */
-export type JsonSchemaObject = Record<string, unknown>;
+/** Sentinel for query({ locale }) meaning "rows across all locales". */
+export type AllLocales = 'all';
+
+// ============================================================================
+// Query Types
+// ============================================================================
+
+export type SortDirection = 'asc' | 'desc';
+
+// Drizzle-style: { createdAt: 'desc' } or [{ status: 'asc' }, { createdAt: 'desc' }]
+export type SortOption = Record<string, SortDirection>;
 
 /**
- * A plugin service method's access level, flattened for serialisation.
- * `'permission'` is the object form — the concrete string travels in
- * `ManifestMethodBase['permission']`.
+ * `where: { references: { path, id } }` — sources holding a relationship to
+ * `id` at schema path `path` (`author`, `sections[].gallery`). Id-only: the
+ * path is checked against the queried types' schemas and throws when unknown.
  */
-export type ManifestAccess = 'public' | 'authenticated' | 'permission';
-
-/** The facts every manifest method carries, whatever its origin. */
-type ManifestMethodBase = {
-    /**
-     * Globally unique, stable, sortable address for this method.
-     *
-     * `name` is NOT an identifier — `entries.create` is the name of every entry
-     * type's create. The id adds the dimension the name lacks and is the only
-     * key a consumer may index or look a method up by.
-     */
+export type ReferencesFilter = {
+    path: string;
     id: string;
-    /** Dotted method name, e.g. `users.create`, `entries.get`. Not unique. */
-    name: string;
-    /** One-line human summary. */
-    summary?: string | undefined;
+};
+
+/**
+ * Flat `where` DSL. Left open because callers pass column filters of every
+ * shape; the one non-column key is `references`, a {@link ReferencesFilter}.
+ */
+export type WhereFilters = Record<string, unknown>;
+
+export type QueryOptions = {
+    locale?: string;
+};
+
+export type EntryQueryParams = {
+    /** Single type or array of types. Required at the runtime surface. */
+    type?: string | readonly string[];
+    search?: string;
+    where?: WhereFilters;
+    trashed?: boolean;
+    page?: number;
+    limit?: number | 'all';
+    sort?: SortOption | SortOption[];
+    /** Locale code, or `'all'` for rows across every locale. Defaults to configured `defaultLocale`. */
+    locale?: string | AllLocales;
+    /** Request the full (admin) shape instead of the default public shape. */
+    full?: boolean;
     /**
-     * Static permission string, or null when the permission is dynamic
-     * (resolved at call time from the input — see `permissionDynamic`).
+     * Preview token (forward versioning). When valid for the matched canonical
+     * entry, the publish/schedule gate is bypassed for it (public shape only),
+     * so an unpublished/scheduled entry — or its staged change — is returned.
+     * Invalid/absent → normal public behaviour (non-published → nothing).
      */
-    permission: string | null;
-    /** True when `permission` is null because it is input-derived, not absent. */
-    permissionDynamic?: true;
-    /** Does the method change persisted state? */
-    mutates: boolean;
-    /** Irreversible or data-losing? */
-    destructive: boolean;
-    /** Repeating the call lands the same end-state? */
-    idempotent: boolean;
-    /** JSON Schema for the ARGUMENT OBJECT the method is called with. */
-    input?: JsonSchemaObject | null;
-    /** JSON Schema for the call output. */
-    output?: JsonSchemaObject | null;
+    previewToken?: string;
+    /** With a valid `previewToken`, preview the staged change instead of the current entry. */
+    staged?: boolean;
+};
+
+export type QueryResult<T = Entry> = {
+    data: T[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        pages: number;
+    } | null; // null when limit is 'all'
+};
+
+/** @deprecated Use QueryResult instead */
+export type EntryQueryResult<T = Entry> = QueryResult<T>;
+
+// ============================================================================
+// Entry options
+// ============================================================================
+
+/**
+ * Lightweight summary of an inbound relationship row — used by the delete
+ * confirmation modal to surface entries that reference the one being deleted.
+ */
+export type IncomingRelation = {
+    /** Source entry id (the entry that contains the relationship). */
+    sourceId: string;
+    /** Title of the source entry. */
+    sourceTitle: string;
+    /** Type of the source entry (only `'entry'`-source rows are returned). */
+    sourceType: string;
+    /** Schema path of the relationship field on the source (`sections[].author`). */
+    schemaPath: string;
+};
+
+/**
+ * One relationships-index edge pointing at a media item — a row of the media
+ * "used by" panel. The media mirror of {@link IncomingRelation}, widened to
+ * carry the source kind because a media file can be referenced by an entry, a
+ * user or another media record.
+ */
+export type MediaUsage = {
+    sourceId: string;
+    /** Display name of the source; empty when it could not be loaded. */
+    sourceTitle: string;
     /**
-     * The input carries a value JSON cannot express, so a JSON-RPC transport
-     * cannot call this method — see `ServiceMethodDescriptor['binaryInput']`.
-     * Emitted only when true, so absence means "callable".
+     * entry | user | media — what holds the reference. Duplicated from
+     * `fields/relationship-edges.ts`'s `TargetKind` because a pure leaf may not
+     * import a capability.
      */
-    binaryInput?: true;
+    sourceKind: 'entry' | 'user' | 'media';
+    /** The source's entry type, qualified for a plugin type. Null for user and media sources. */
+    sourceType: string | null;
+    /** Schema path of the field holding the reference (`sections[].gallery`). */
+    schemaPath: string;
+    /** Instance path — deep-links to the exact item. Never pattern-matched. */
+    instancePath: string;
+    /** True when the source is a staged (pending-merge) copy. */
+    sourceStaged: boolean;
 };
 
-/** A core domain method (`users`, `media`, `settings`, `content`). */
-export type CoreManifestMethod = ManifestMethodBase & {
-    source: 'core';
-    /** Domain the catalogue belongs to — `id` is `<domain>.<method>`. */
-    domain: string;
-    /** Key on the domain's service API, e.g. `update`. */
-    method: string;
-};
+/** Update payload fragment — fields that can be modified after creation. */
+export type EntryUpdateData = Partial<{
+    title: string;
+    slug: string;
+    fields: JsonObject;
+    status: EntryStatus;
+    publishAt: Date | null;
+}>;
 
-/** One entry type's projection of one `EntriesApi` method. */
-export type EntriesManifestMethod = ManifestMethodBase & {
-    source: 'entries';
-    /** Key on `EntriesApi`, e.g. `publish`. */
-    method: string;
+/** Overrides accepted by `duplicate` — superset of update plus locale fields. */
+export type EntryDuplicateOverrides = Partial<{
+    title: string;
+    slug: string;
+    locale: string;
+    localeGroup: string;
+    fields: JsonObject;
+    status: EntryStatus;
+}>;
+
+// ============================================================================
+// Entries API (unified, type-scoped, options-object)
+// ============================================================================
+
+export type EntriesService = {
+    query(
+        params: EntryQueryParams & { type: string | readonly string[] }
+    ): Promise<QueryResult<Entry>>;
+
+    get(params: {
+        type: string;
+        id: string;
+        locale?: string;
+        /** Request the full (admin) shape instead of the default public shape. */
+        full?: boolean;
+        /** Preview token — see EntryQueryParams.previewToken (public shape only). */
+        previewToken?: string;
+        /** With a valid `previewToken`, preview the staged change instead. */
+        staged?: boolean;
+    }): Promise<Entry | null>;
+
+    create(params: {
+        type: string;
+        /**
+         * Required for titled types (runtime-enforced by the per-type schema,
+         * identical 422). Optional for `titleField: false` types; Phase 3 typegen
+         * restores per-type static strictness.
+         */
+        title?: string;
+        slug?: string;
+        locale?: string;
+        /** Existing localeGroup to join. Omit for a fresh group (ULID generated). */
+        localeGroup?: string;
+        fields?: JsonObject;
+        status?: EntryStatus;
+        publishAt?: Date | null;
+    }): Promise<Entry>;
+
+    update(params: { type: string; id: string; data: EntryUpdateData }): Promise<Entry>;
+    update(params: {
+        type: string;
+        id: readonly string[];
+        data: EntryUpdateData;
+    }): Promise<Entry[]>;
+
+    duplicate(params: {
+        type: string;
+        id: string;
+        overrides?: EntryDuplicateOverrides;
+    }): Promise<Entry>;
+
+    trash(params: {
+        type: string;
+        id: string | readonly string[];
+        cascadeLocales?: boolean;
+    }): Promise<void>;
+
+    restore(params: { type: string; id: string }): Promise<Entry>;
+    restore(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
+
+    delete(params: {
+        type: string;
+        id: string | readonly string[];
+        cascadeLocales?: boolean;
+    }): Promise<void>;
+
+    emptyTrash(params: { type: string }): Promise<void>;
+
+    versions(params: { type: string; id: string }): Promise<EntryVersion[]>;
+    restoreVersion(params: {
+        type: string;
+        id: string;
+        versionId: string;
+    }): Promise<Entry>;
+
+    publish(params: { type: string; id: string }): Promise<Entry>;
+    publish(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
+
+    unpublish(params: { type: string; id: string }): Promise<Entry>;
+    unpublish(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
+
+    schedule(params: { type: string; id: string; publishAt: Date }): Promise<Entry>;
+    schedule(params: {
+        type: string;
+        id: readonly string[];
+        publishAt: Date;
+    }): Promise<Entry[]>;
+
+    incomingRelations(params: { type: string; id: string }): Promise<IncomingRelation[]>;
+
+    // ── Forward versioning (staged entries) ────────────────────────────────
+    // All take the *canonical* entry id. Require the `staging` capability
+    // (built-in storage) on the type; the service throws otherwise.
+
+    /** Stage a change: copy the canonical's content into a new linked row.
+     * Throws `StagedEntryExistsError` if one already exists. */
+    createStaged(params: { type: string; id: string }): Promise<Entry>;
+    /** The canonical entry's staged change, or null. */
+    getStaged(params: { type: string; id: string }): Promise<Entry | null>;
+    /** Merge the staged change into the canonical (backup → update → cleanup);
+     * returns the updated canonical. Content-only — does not change status. */
+    mergeStaged(params: { type: string; id: string }): Promise<Entry>;
+    /** Discard the canonical's staged change (hard delete). */
+    deleteStaged(params: { type: string; id: string }): Promise<void>;
     /**
-     * The type id the service is actually called with: bare for a root type
-     * (`posts`), qualified for a plugin type (`redirects/redirect`). Carried
-     * rather than re-derived from `mount` + `entryType` — those are a permission
-     * namespace and a label, and re-deriving an identifier is how they drift.
+     * Issue a preview token for a canonical entry (replaces any existing one).
+     * The plaintext token is returned once; only its hash is stored.
      */
-    typeId: string;
-    /** Bare wire type, e.g. `posts`. */
-    entryType: string;
-    /** `'root'`, or the owning plugin's permission namespace. */
-    mount: string;
-    /** Plugin namespace this entry type belongs to; absent for root types. */
-    plugin?: string;
-};
-
-/** A plugin-declared service method. */
-export type PluginManifestMethod = ManifestMethodBase & {
-    source: 'plugin';
-    /** Plugin namespace. */
-    plugin: string;
-    /** Plugin service key — `id` is `plugins.<serviceKey>.<method>`. */
-    serviceKey: string;
-    /** Key on the plugin's `service` object. */
-    method: string;
-    access: ManifestAccess;
-};
-
-/** One entry in the manifest's methods array, discriminated by `source`. */
-export type ManifestMethod =
-    | CoreManifestMethod
-    | EntriesManifestMethod
-    | PluginManifestMethod;
-
-/** The emitted method manifest document. */
-export type MethodManifest = {
-    version: number;
-    methods: ManifestMethod[];
+    issuePreviewToken(params: {
+        type: string;
+        id: string;
+        expiresAt?: Date | null;
+    }): Promise<{ token: string }>;
+    /** Revoke the canonical entry's preview token(s). */
+    revokePreviewToken(params: { type: string; id: string }): Promise<void>;
 };
 
 // ============================================================================
-// Tool dispatch — the callable projection of a manifest method
+// Media, Settings, Users APIs
 // ============================================================================
 
-/** Annotations carried on a tool definition. */
-export type ToolAnnotations = {
-    title?: string;
-    readOnlyHint: boolean;
-    destructiveHint: boolean;
-    idempotentHint: boolean;
+export type UserQueryParams = {
+    search?: string;
+    page?: number;
+    limit?: number | 'all';
+    sort?: SortOption | SortOption[];
 };
 
-/** A fully-resolved dispatch descriptor for a single MCP tool. */
-export type ToolDispatch = {
-    toolName: string;
-    description: string;
-    inputSchema: JsonSchemaObject;
-    annotations: ToolAnnotations;
+export type MediaMimeTypeFilter = 'images' | 'videos' | 'documents' | 'other';
+
+export type MediaQueryParams = {
+    search?: string;
+    where?: {
+        mimeType?: MediaMimeTypeFilter;
+    };
+    page?: number;
+    limit?: number | 'all';
+    sort?: SortOption | SortOption[];
+};
+
+export type MediaService = {
+    query(params?: MediaQueryParams): Promise<QueryResult<Media>>;
+    get(params: { id: string }): Promise<Media | null>;
+    upload(params: { file: File }): Promise<Media>;
+    update(params: {
+        id: string;
+        data: Partial<{
+            alt: string;
+            title: string;
+            caption: string;
+            fields: JsonObject;
+        }>;
+    }): Promise<Media>;
+    delete(params: { id: string }): Promise<void>;
+    usedBy(params: { id: string }): Promise<MediaUsage[]>;
+};
+
+export type SettingsService = {
     /**
-     * The permission this tool's method declares — null when it is ungated, or
-     * when it is input-derived (see `permissionDynamic`).
-     *
-     * Carried, NOT enforced, and deliberately unread today: this MCP server is
-     * dev-only and trusted, runs with no role, and enforces a method's
-     * permission no more than the CLI does. It exists so the seam is already in
-     * place when a remote transport — which does carry a role — dispatches
-     * through here; that transport enforces via `policies/scoped-service.ts`,
-     * and reads this only to say up front what it would refuse.
+     * Return all settings. Without `full: true` only public-marked keys are
+     * returned (private keys are omitted). Pass `{ full: true }` from a trusted
+     * (server-side / authenticated) context to receive all keys.
      */
-    permission: string | null;
-    /** True when `permission` is null because the method derives it from the input. */
-    permissionDynamic: boolean;
-    invoke: (args: Record<string, unknown>) => Promise<unknown>;
+    all(params?: { full?: boolean }): Promise<Setting[]>;
+    /**
+     * Return a single setting value. Without `full: true` only public-marked
+     * keys resolve; a non-public key returns `null` on a public read.
+     */
+    get(params: {
+        key: string;
+        locale?: string;
+        full?: boolean;
+    }): Promise<JsonValue | null>;
+    set(params: { key: string; value: JsonValue }): Promise<Setting>;
+};
+
+// ============================================================================
+// Content API (model-driven translate / transform / generate)
+// ============================================================================
+
+/** What a content operation did to one field. */
+export type ContentFieldSummary = {
+    /** Instance path of the rewritten field, e.g. `sections[a1].title`. */
+    path: string;
+    fieldType: string;
+    /** How many strings were sent to the provider for this field. */
+    inputs: number;
+    /** False when the provider handed back exactly what it was given. */
+    changed: boolean;
+};
+
+export type ContentOperationResult = {
+    /** The entry the rewrite landed on: the staged row, or the new sibling. */
+    id: string;
+    type: string;
+    /** `staged` needs a human merge; `created` is an unpublished translation. */
+    outcome: 'staged' | 'created';
+    /** Where a reviewer opens the change. Null when the type declares no `url`. */
+    previewUrl: string | null;
+    /** Present on `staged` — the token the preview URL carries. */
+    previewToken?: string;
+    fields: ContentFieldSummary[];
+};
+
+/** The entry a content operation targets, optionally narrowed to some paths. */
+export type ContentTarget = {
+    type: string;
+    id: string;
+    /** Instance paths to restrict to; a container path selects its subtree. */
+    paths?: string[];
+};
+
+export type ContentService = {
+    translate(
+        params: ContentTarget & { locale: string; instruction?: string }
+    ): Promise<ContentOperationResult>;
+    transform(
+        params: ContentTarget & { instruction: string }
+    ): Promise<ContentOperationResult>;
+    generate(
+        params: ContentTarget & { instruction: string }
+    ): Promise<ContentOperationResult>;
+};
+
+export type UsersService = {
+    query(params?: UserQueryParams): Promise<QueryResult<User>>;
+    get(params: { id: string }): Promise<User | null>;
+    create(params: { email: string; name: string; fields?: JsonObject }): Promise<User>;
+    update(params: {
+        id: string;
+        data: Partial<{ email: string; name: string; fields?: JsonObject }>;
+    }): Promise<User>;
+    delete(params: { id: string }): Promise<void>;
+};
+
+// ============================================================================
+// Notifications API (session-scoped)
+// ============================================================================
+
+export type NotificationsService = {
+    list(): Promise<Notification[]>;
+    count(): Promise<number>;
+    dismiss(params: { id: string }): Promise<void>;
+    dismissAll(): Promise<void>;
 };

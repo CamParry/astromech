@@ -22,7 +22,7 @@ import { generateMethodManifest } from '@/codegen/method-manifest.js';
 // enough to observe exactly what arguments a tool passes it — which is the only
 // thing the dispatcher is responsible for.
 vi.mock('@/entries/service.js', () => ({
-    entries: {
+    entriesService: {
         get: async (params: unknown) => params,
     },
 }));

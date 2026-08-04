@@ -10,8 +10,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
-import { entries as api } from '@/entries/service.js';
-import { usersApi } from '@/users/service.js';
+import { entriesService as api } from '@/entries/service.js';
+import { usersService } from '@/users/service.js';
 import { createMediaStorage } from '@/media/storage.js';
 import { createUserStorage } from '@/users/storage.js';
 import { createRelationshipStorage } from '@/database/storage/relationships.js';
@@ -203,7 +203,7 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
 
     it('drops a dead media id and a dead user id', async () => {
         const mediaId = await createMedia();
-        const user = await usersApi.create({ email: 'gone@test.dev', name: 'Gone' });
+        const user = await usersService.create({ email: 'gone@test.dev', name: 'Gone' });
         const doc = await api.create({
             type: 'doc',
             title: 'Doc',

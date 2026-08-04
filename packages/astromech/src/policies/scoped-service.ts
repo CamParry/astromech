@@ -21,28 +21,28 @@
  */
 
 import type {
-    ContentApi,
-    EntriesApi,
-    MediaApi,
+    ContentService,
+    EntriesService,
+    MediaService,
     Role,
     ServiceMethodDescriptor,
-    SettingsApi,
-    UsersApi,
+    SettingsService,
+    UsersService,
 } from '@/types/index.js';
 import { PermissionDeniedError } from '@/errors/index.js';
 import { entryPermission, type EntryAction } from '@/permissions/entry-permission.js';
 import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/index.js';
 import { permissionsFor, type Permissions } from '@/permissions/permissions-for.js';
-import { usersApi } from '@/users/service.js';
-import { usersDescriptors } from '@/users/descriptors.js';
-import { mediaApi } from '@/media/service.js';
-import { mediaDescriptors } from '@/media/descriptors.js';
-import { settingsApi } from '@/settings/service.js';
-import { settingsDescriptors } from '@/settings/descriptors.js';
-import { entries } from '@/entries/service.js';
-import { ENTRY_METHOD_ACTIONS, type EntryMethodName } from '@/entries/descriptors.js';
-import { contentApi } from '@/content/service.js';
-import { contentDescriptors } from '@/content/descriptors.js';
+import { usersService } from '@/users/service.js';
+import { usersDescriptors } from '@/users/methods.js';
+import { mediaService } from '@/media/service.js';
+import { mediaDescriptors } from '@/media/methods.js';
+import { settingsService } from '@/settings/service.js';
+import { settingsDescriptors } from '@/settings/methods.js';
+import { entriesService } from '@/entries/service.js';
+import { ENTRY_METHOD_ACTIONS, type EntryMethodName } from '@/entries/methods.js';
+import { contentService } from '@/content/service.js';
+import { contentDescriptors } from '@/content/methods.js';
 
 /**
  * A domain's descriptor catalogue, keyed by service method name.
@@ -165,12 +165,12 @@ function wantsFullShape(input: unknown): boolean {
  * way past the projection for every caller holding a bare read.
  */
 export function scopeEntries(
-    entriesApi: EntriesApi,
+    service: EntriesService,
     permissions: Permissions
-): EntriesApi {
+): EntriesService {
     const scoped: ServiceRecord = {};
 
-    for (const [key, value] of Object.entries(entriesApi as unknown as ServiceRecord)) {
+    for (const [key, value] of Object.entries(service as unknown as ServiceRecord)) {
         if (typeof value !== 'function') {
             scoped[key] = value;
             continue;
@@ -206,11 +206,11 @@ export function scopeEntries(
                 throw new PermissionDeniedError(id, PERMISSION_ENTRY_READ_FULL);
             }
 
-            return fn.apply(entriesApi, args);
+            return fn.apply(service, args);
         };
     }
 
-    return scoped as unknown as EntriesApi;
+    return scoped as unknown as EntriesService;
 }
 
 /**
@@ -236,11 +236,14 @@ function targetedContentType(input: unknown): string | null {
  * `entryPermission` helper the entries wrapper and the HTTP route use. A method
  * with no descriptor, or a call naming no usable type, is refused.
  */
-export function scopeContent(api: ContentApi, permissions: Permissions): ContentApi {
+export function scopeContent(
+    service: ContentService,
+    permissions: Permissions
+): ContentService {
     const scoped: ServiceRecord = {};
     const descriptors: DescriptorCatalogue = contentDescriptors;
 
-    for (const [key, value] of Object.entries(api as unknown as ServiceRecord)) {
+    for (const [key, value] of Object.entries(service as unknown as ServiceRecord)) {
         if (typeof value !== 'function') {
             scoped[key] = value;
             continue;
@@ -271,20 +274,20 @@ export function scopeContent(api: ContentApi, permissions: Permissions): Content
                 throw new PermissionDeniedError(id, permission);
             }
 
-            return fn.apply(api, args);
+            return fn.apply(service, args);
         };
     }
 
-    return scoped as unknown as ContentApi;
+    return scoped as unknown as ContentService;
 }
 
 /** The five content domains, each scoped to one role. */
 export type ScopedService = {
-    users: UsersApi;
-    media: MediaApi;
-    settings: SettingsApi;
-    entries: EntriesApi;
-    content: ContentApi;
+    users: UsersService;
+    media: MediaService;
+    settings: SettingsService;
+    entries: EntriesService;
+    content: ContentService;
 };
 
 /**
@@ -296,10 +299,15 @@ export type ScopedService = {
 export function scopedService(role: Role | undefined): ScopedService {
     const permissions = permissionsFor(role);
     return {
-        users: scopeMethods(usersApi, usersDescriptors, permissions, 'users'),
-        media: scopeMethods(mediaApi, mediaDescriptors, permissions, 'media'),
-        settings: scopeMethods(settingsApi, settingsDescriptors, permissions, 'settings'),
-        entries: scopeEntries(entries, permissions),
-        content: scopeContent(contentApi, permissions),
+        users: scopeMethods(usersService, usersDescriptors, permissions, 'users'),
+        media: scopeMethods(mediaService, mediaDescriptors, permissions, 'media'),
+        settings: scopeMethods(
+            settingsService,
+            settingsDescriptors,
+            permissions,
+            'settings'
+        ),
+        entries: scopeEntries(entriesService, permissions),
+        content: scopeContent(contentService, permissions),
     };
 }

@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config.js';
-import { entries } from '@/entries/service.js';
+import { entriesService } from '@/entries/service.js';
 import { printResult } from '../output.js';
 
 export default defineCommand({
@@ -15,7 +15,7 @@ export default defineCommand({
     async run({ args }) {
         await loadConfig(args.config);
         const limitNum = parseInt(args.limit, 10);
-        const { data } = await entries.query({
+        const { data } = await entriesService.query({
             type: args.type,
             limit: limitNum,
             ...(args.status ? { where: { status: args.status } } : {}),

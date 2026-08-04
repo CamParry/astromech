@@ -23,7 +23,7 @@ import {
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import { permissionsFor } from '@/permissions/permissions-for.js';
 import { updateMediaSchema } from '@/media/schema.js';
-import { mediaDescriptors } from '@/media/descriptors.js';
+import { mediaDescriptors } from '@/media/methods.js';
 import type { MediaQueryParams, JsonObject } from '@/types/index.js';
 
 type Env = { Variables: AuthVariables };

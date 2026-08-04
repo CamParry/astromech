@@ -11,12 +11,12 @@ import { PermissionDeniedError } from '@/errors/index.js';
 // The scoped handle resolves the users service at CALL time, so a stub is enough
 // to observe whether a refusal happened before the service was entered.
 vi.mock('@/users/service.js', () => ({
-    usersApi: {
+    usersService: {
         query: vi.fn(() => Promise.resolve({ items: [], total: 0 })),
     },
 }));
 
-import { usersApi } from '@/users/service.js';
+import { usersService } from '@/users/service.js';
 import {
     buildDispatch,
     buildScopedDispatch,
@@ -103,7 +103,7 @@ function scopedTool(
 
 beforeEach(() => {
     setupTestConfig();
-    vi.mocked(usersApi.query).mockClear();
+    vi.mocked(usersService.query).mockClear();
 });
 
 describe('buildScopedDispatch', () => {
@@ -111,7 +111,7 @@ describe('buildScopedDispatch', () => {
         const tool = scopedTool(usersQuery, role('users:create'));
 
         await expect(tool.invoke({})).rejects.toThrow(PermissionDeniedError);
-        expect(usersApi.query).not.toHaveBeenCalled();
+        expect(usersService.query).not.toHaveBeenCalled();
     });
 
     it('calls through when the role holds the permission', async () => {
@@ -121,14 +121,14 @@ describe('buildScopedDispatch', () => {
             items: [],
             total: 0,
         });
-        expect(usersApi.query).toHaveBeenCalledWith({ limit: 10 });
+        expect(usersService.query).toHaveBeenCalledWith({ limit: 10 });
     });
 
     it('refuses when there is no role — allowed nothing, not trusted', async () => {
         const tool = scopedTool(usersQuery, undefined);
 
         await expect(tool.invoke({})).rejects.toThrow(PermissionDeniedError);
-        expect(usersApi.query).not.toHaveBeenCalled();
+        expect(usersService.query).not.toHaveBeenCalled();
     });
 
     it('refuses a plugin method that buildDispatch dispatches', () => {

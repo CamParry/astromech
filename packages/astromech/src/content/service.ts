@@ -38,7 +38,7 @@ import { mapWithConcurrency } from './internal/batch.js';
 import type { JSONContent } from '@tiptap/core';
 import type { ContentProvider } from './provider.js';
 import type {
-    ContentApi,
+    ContentService,
     ContentFieldSummary,
     ContentOperationResult,
     ContentTarget,
@@ -82,7 +82,7 @@ export async function generate(
     return runOperation('generate', params);
 }
 
-export const contentApi: ContentApi = { translate, transform, generate };
+export const contentService: ContentService = { translate, transform, generate };
 
 // ============================================================================
 // Orchestration

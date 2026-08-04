@@ -10,7 +10,7 @@
 import { describe, expect, it } from 'vitest';
 import { createTestDb, setupTestConfig, makeTestConfig } from '@tests/harness.js';
 import { setStorageDriver } from '@/storage/registry.js';
-import { mediaApi } from '@/media/service.js';
+import { mediaService } from '@/media/service.js';
 import { buildImageAttrs } from '@/media/serving/image/build-image-attrs.js';
 import type { AstromechConfig, MediaAccess, StorageDriver } from '@/types/index.js';
 
@@ -74,7 +74,7 @@ async function setup(
 }
 
 async function uploadJpeg(): Promise<{ id: string; url: string }> {
-    const media = await mediaApi.upload({
+    const media = await mediaService.upload({
         file: new File([jpegBytes() as BlobPart], 'photo.jpg', { type: 'image/jpeg' }),
     });
     return { id: media.id, url: media.url };
@@ -108,8 +108,8 @@ describe('media access mode → Media.url', () => {
     it('applies to reads as well as the upload response', async () => {
         await setup('public', 'cdn');
         const { id } = await uploadJpeg();
-        const fetched = await mediaApi.get({ id: id });
-        const listed = await mediaApi.query({ limit: 'all' });
+        const fetched = await mediaService.get({ id: id });
+        const listed = await mediaService.query({ limit: 'all' });
         expect(fetched?.url).toBe(`https://cdn.example/${id}.jpg`);
         expect(listed.data[0]?.url).toBe(`https://cdn.example/${id}.jpg`);
     });
@@ -119,7 +119,7 @@ describe('media access mode → image attrs', () => {
     it("keeps srcset variants on the media route under access 'public'", async () => {
         await setup('public', 'cdn');
         const { id, url } = await uploadJpeg();
-        const media = await mediaApi.get({ id: id });
+        const media = await mediaService.get({ id: id });
 
         const attrs = buildImageAttrs(
             {

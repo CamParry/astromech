@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config.js';
-import { entries } from '@/entries/service.js';
+import { entriesService } from '@/entries/service.js';
 
 export default defineCommand({
     meta: { name: 'entries:get', description: 'Get a single entry' },
@@ -11,7 +11,7 @@ export default defineCommand({
     },
     async run({ args }) {
         await loadConfig(args.config);
-        const entry = await entries.get({ type: args.type, id: args.id });
+        const entry = await entriesService.get({ type: args.type, id: args.id });
         if (!entry) {
             console.error('Entry not found');
             process.exit(1);

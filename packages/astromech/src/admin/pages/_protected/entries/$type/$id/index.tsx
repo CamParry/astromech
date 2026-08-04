@@ -11,13 +11,13 @@ import { Astromech } from '@/transport/http/client/index.js';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntryEditPage } from '@/admin/components/entries/entry-edit-page.js';
 import { entryQueryOptions } from '@/admin/hooks/entries.js';
-import type { EntriesApi } from '@/types/index.js';
+import type { EntriesService } from '@/types/index.js';
 import type { EntriesMount } from '@/admin/components/entries/mount.js';
 
 function EntryEditRoutePage(): React.ReactElement {
     const { type, id } = Route.useParams();
     const mount: EntriesMount = {
-        api: Astromech.entries as unknown as EntriesApi,
+        api: Astromech.entries as unknown as EntriesService,
         type,
         cacheScope: '',
         config: adminConfig.entries[type],

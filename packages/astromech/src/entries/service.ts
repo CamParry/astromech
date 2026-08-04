@@ -1,14 +1,14 @@
 /**
- * Astromech Server Entries API.
+ * Entries service — the entry CRUD verbs.
  *
  * Thin assembler: wires the per-operation functions in `operations/**` into the
- * public `EntriesApi` object. All policy (validation, hooks, relationships,
+ * public `EntriesService` object. All policy (validation, hooks, relationships,
  * versioning/staging, slug, capability gating, bulk dispatch) lives in
  * `operations/**` + `internal/**`; persistence flows through the storage seam.
  * Import from 'astromech/local'.
  */
 
-import type { EntriesApi } from '@/types/index.js';
+import type { EntriesService } from '@/types/index.js';
 import { query } from './operations/query.js';
 import { get } from './operations/get.js';
 import { create } from './operations/create.js';
@@ -30,21 +30,21 @@ import { issuePreviewToken, revokePreviewToken } from './operations/preview/toke
 /** @deprecated Slug uniqueness is now a storage concern. */
 export { generateUniqueSlug } from './internal/slug.js';
 
-export const entries: EntriesApi = {
+export const entriesService: EntriesService = {
     query,
     get,
     create,
-    update: update as EntriesApi['update'],
+    update: update as EntriesService['update'],
     duplicate,
     trash,
-    restore: restore as EntriesApi['restore'],
+    restore: restore as EntriesService['restore'],
     delete: deleteEntry,
     emptyTrash,
     versions: listVersions,
     restoreVersion,
-    publish: publish as EntriesApi['publish'],
-    unpublish: unpublish as EntriesApi['unpublish'],
-    schedule: schedule as EntriesApi['schedule'],
+    publish: publish as EntriesService['publish'],
+    unpublish: unpublish as EntriesService['unpublish'],
+    schedule: schedule as EntriesService['schedule'],
     incomingRelations,
     createStaged,
     getStaged,

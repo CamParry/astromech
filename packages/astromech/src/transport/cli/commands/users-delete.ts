@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config.js';
-import { usersApi } from '@/users/index.js';
+import { usersService } from '@/users/index.js';
 
 export default defineCommand({
     meta: { name: 'users:delete', description: 'Delete a user' },
@@ -24,7 +24,7 @@ export default defineCommand({
                 return;
             }
         }
-        await usersApi.delete({ id: args.id });
+        await usersService.delete({ id: args.id });
         console.log(`User ${args.id} deleted`);
     },
 });

@@ -1,5 +1,5 @@
 /**
- * `title` and `caption` round-trip through `mediaApi.update`.
+ * `title` and `caption` round-trip through `mediaService.update`.
  *
  * The modal shipped a Title input for a column that did not exist: the field
  * validated, the service dropped it, and the value vanished with no error. The
@@ -9,7 +9,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
 import { setStorageDriver } from '@/storage/registry.js';
-import { mediaApi } from '@/media/service.js';
+import { mediaService } from '@/media/service.js';
 import { createMediaStorage } from '@/media/storage.js';
 import type { StorageDriver } from '@/types/index.js';
 
@@ -50,45 +50,45 @@ beforeEach(async () => {
     id = row.id;
 });
 
-describe('mediaApi.update — title and caption', () => {
+describe('mediaService.update — title and caption', () => {
     it('defaults both to null on a fresh record', async () => {
-        const found = await mediaApi.get({ id });
+        const found = await mediaService.get({ id });
         expect(found?.title ?? null).toBeNull();
         expect(found?.caption ?? null).toBeNull();
     });
 
     it('persists a title and reads it back', async () => {
-        await mediaApi.update({ id, data: { title: 'A blue square' } });
-        expect((await mediaApi.get({ id }))?.title).toBe('A blue square');
+        await mediaService.update({ id, data: { title: 'A blue square' } });
+        expect((await mediaService.get({ id }))?.title).toBe('A blue square');
     });
 
     it('persists a caption and reads it back', async () => {
-        await mediaApi.update({ id, data: { caption: 'Shot on a Tuesday' } });
-        expect((await mediaApi.get({ id }))?.caption).toBe('Shot on a Tuesday');
+        await mediaService.update({ id, data: { caption: 'Shot on a Tuesday' } });
+        expect((await mediaService.get({ id }))?.caption).toBe('Shot on a Tuesday');
     });
 
     it('persists alt, title and caption together', async () => {
-        await mediaApi.update({
+        await mediaService.update({
             id,
             data: { alt: 'alt text', title: 'the title', caption: 'the caption' },
         });
-        const found = await mediaApi.get({ id });
+        const found = await mediaService.get({ id });
         expect(found?.alt).toBe('alt text');
         expect(found?.title).toBe('the title');
         expect(found?.caption).toBe('the caption');
     });
 
     it('leaves an omitted column alone rather than nulling it', async () => {
-        await mediaApi.update({ id, data: { title: 'kept', caption: 'also kept' } });
-        await mediaApi.update({ id, data: { alt: 'only alt changed' } });
-        const found = await mediaApi.get({ id });
+        await mediaService.update({ id, data: { title: 'kept', caption: 'also kept' } });
+        await mediaService.update({ id, data: { alt: 'only alt changed' } });
+        const found = await mediaService.get({ id });
         expect(found?.title).toBe('kept');
         expect(found?.caption).toBe('also kept');
         expect(found?.alt).toBe('only alt changed');
     });
 
     it('returns the new values from update itself, not just from a re-read', async () => {
-        const returned = await mediaApi.update({
+        const returned = await mediaService.update({
             id,
             data: { title: 'immediate', caption: 'immediate caption' },
         });

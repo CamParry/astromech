@@ -50,7 +50,7 @@ enforced by each package's `exports` boundary at publish time. The plugin
 Key invariants:
 
 - **Domains are deep modules named for the business, not the tech.** Each owns its
-  `service.ts`, `schema.ts` (`defineTable` table descriptor + Zod validation), `descriptors.ts`,
+  `service.ts`, `schema.ts` (`defineTable` table descriptor + Zod validation), `methods.ts`,
   and `visibility.ts`. Cross-domain data goes through `@/database/schema` (the
   table aggregator) or a shared capability — never via a direct peer import. The
   only permitted exception is a `schema.ts` foreign-key cross-reference.

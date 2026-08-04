@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config.js';
-import { usersApi } from '@/users/index.js';
+import { usersService } from '@/users/index.js';
 
 export default defineCommand({
     meta: { name: 'users:list', description: 'List all users' },
@@ -9,7 +9,7 @@ export default defineCommand({
     },
     async run({ args }) {
         await loadConfig(args.config);
-        const result = await usersApi.query({ limit: 'all' });
+        const result = await usersService.query({ limit: 'all' });
         const users = result.data;
         if (users.length === 0) {
             console.log('No users found.');

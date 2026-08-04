@@ -50,10 +50,10 @@ export async function notify(input: NotifyInput): Promise<void> {
 }
 
 // ============================================================================
-// notificationsRepo — userId-explicit internal repository
+// notificationsService — userId-explicit internal reads/writes
 // ============================================================================
 
-export const notificationsRepo = {
+export const notificationsService = {
     async list(userId: string): Promise<NotificationRow[]> {
         return createNotificationStorage().listByUser(userId);
     },

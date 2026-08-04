@@ -21,7 +21,7 @@ import { queryKeys, scopedEntryKeys } from './use-query-keys.js';
 import { useToast } from '../components/ui/index.js';
 import type {
     Entry,
-    EntriesApi,
+    EntriesService,
     EntryStatus,
     EntryUpdateData,
     JsonObject,
@@ -39,13 +39,13 @@ import type {
  */
 export type EntryHookScope = {
     /** Entries client bound to a base path. Defaults to root `Astromech.entries`. */
-    api?: EntriesApi;
+    api?: EntriesService;
     /** Cache-key scope. `''` (default) = root keys; plugin name = namespaced. */
     cacheScope?: string;
 };
 
-function resolveApi(scope?: EntryHookScope): EntriesApi {
-    return scope?.api ?? (Astromech.entries as unknown as EntriesApi);
+function resolveApi(scope?: EntryHookScope): EntriesService {
+    return scope?.api ?? (Astromech.entries as unknown as EntriesService);
 }
 
 function resolveKeys(scope?: EntryHookScope) {

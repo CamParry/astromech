@@ -1,5 +1,5 @@
 /**
- * `notify` and `notificationsRepo`, pinned across the move onto notification
+ * `notify` and `notificationsService`, pinned across the move onto notification
  * storage.
  *
  * Two things here are worth a test beyond "it still runs". The `users` lookups
@@ -15,7 +15,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Kysely } from 'kysely';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness.js';
-import { notificationsRepo, notify } from '@/notifications/service.js';
+import { notificationsService, notify } from '@/notifications/service.js';
 import type { NotificationRow } from '@/notifications/schema.js';
 import type { DB } from '@/database/types.js';
 
@@ -41,8 +41,8 @@ describe('notify — targets', () => {
     it('delivers one row per user for an `all` target', async () => {
         await notify({ target: { all: true }, type: 'info', title: 'a', message: 'm' });
 
-        expect(await notificationsRepo.count(admin)).toBe(1);
-        expect(await notificationsRepo.count(editor)).toBe(1);
+        expect(await notificationsService.count(admin)).toBe(1);
+        expect(await notificationsService.count(editor)).toBe(1);
     });
 
     it('delivers only to holders of a role for a `role` target', async () => {
@@ -53,8 +53,8 @@ describe('notify — targets', () => {
             message: 'm',
         });
 
-        expect(await notificationsRepo.count(admin)).toBe(0);
-        expect(await notificationsRepo.count(editor)).toBe(1);
+        expect(await notificationsService.count(admin)).toBe(0);
+        expect(await notificationsService.count(editor)).toBe(1);
     });
 
     it('delivers to one user for a `user` target, carrying href through', async () => {
@@ -66,21 +66,21 @@ describe('notify — targets', () => {
             href: '/entries/123',
         });
 
-        const rows = await notificationsRepo.list(admin);
+        const rows = await notificationsService.list(admin);
         expect(rows.length).toBe(1);
         expect(rows[0]?.href).toBe('/entries/123');
         expect(rows[0]?.createdAt).toBeInstanceOf(Date);
-        expect(await notificationsRepo.count(editor)).toBe(0);
+        expect(await notificationsService.count(editor)).toBe(0);
     });
 
     it('leaves href null when none is given', async () => {
         await notify({ target: { user: admin }, type: 'info', title: 'a', message: 'm' });
 
-        expect((await notificationsRepo.list(admin))[0]?.href).toBeNull();
+        expect((await notificationsService.list(admin))[0]?.href).toBeNull();
     });
 });
 
-describe('notificationsRepo', () => {
+describe('notificationsService', () => {
     it('lists a user’s own notifications, newest first', async () => {
         await notify({
             target: { user: admin },
@@ -95,28 +95,28 @@ describe('notificationsRepo', () => {
             message: 'm',
         });
 
-        const rows = await notificationsRepo.list(admin);
+        const rows = await notificationsService.list(admin);
         expect(rows.map((r) => r.title)).toEqual(['two', 'one']);
     });
 
     it('will not dismiss another user’s notification', async () => {
         await notify({ target: { all: true }, type: 'info', title: 'a', message: 'm' });
-        const editorRow = firstId(await notificationsRepo.list(editor));
+        const editorRow = firstId(await notificationsService.list(editor));
 
         // The id is real but belongs to `editor`, so this must be a no-op.
-        await notificationsRepo.dismiss(admin, editorRow);
-        expect(await notificationsRepo.count(editor)).toBe(1);
+        await notificationsService.dismiss(admin, editorRow);
+        expect(await notificationsService.count(editor)).toBe(1);
 
-        await notificationsRepo.dismiss(editor, editorRow);
-        expect(await notificationsRepo.count(editor)).toBe(0);
+        await notificationsService.dismiss(editor, editorRow);
+        expect(await notificationsService.count(editor)).toBe(0);
     });
 
     it('dismisses all of one user’s notifications and no one else’s', async () => {
         await notify({ target: { all: true }, type: 'info', title: 'a', message: 'm' });
         await notify({ target: { all: true }, type: 'info', title: 'b', message: 'm' });
 
-        await notificationsRepo.dismissAll(editor);
-        expect(await notificationsRepo.count(editor)).toBe(0);
-        expect(await notificationsRepo.count(admin)).toBe(2);
+        await notificationsService.dismissAll(editor);
+        expect(await notificationsService.count(editor)).toBe(0);
+        expect(await notificationsService.count(admin)).toBe(2);
     });
 });

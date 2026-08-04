@@ -22,9 +22,14 @@ import type {
 import type { FieldDefinition, FieldValidator } from './fields.js';
 import type { Role, User, NotifyInput, Permission } from './domain.js';
 import type { PluginHooks } from './hooks.js';
-import type { PluginServiceNamespace, TypedEntriesApi } from './client.js';
-import type { MediaApi, NotificationsApi, SettingsApi, UsersApi } from './api.js';
-import type { ServiceMethodEffect, ToolDispatch } from './services.js';
+import type { PluginServiceNamespace, TypedEntriesService } from './client.js';
+import type {
+    MediaService,
+    NotificationsService,
+    SettingsService,
+    UsersService,
+} from './services.js';
+import type { ServiceMethodEffect, ToolDispatch } from './methods.js';
 import type { PermissionDeclarations } from '@/permissions/define.js';
 
 // ============================================================================
@@ -114,15 +119,15 @@ export type PluginContext = {
      * an explicit per-call `full` still wins. No permission checks — HTTP is the
      * enforcement boundary.
      */
-    entries: TypedEntriesApi;
+    entries: TypedEntriesService;
     /** The global media service. */
-    media: MediaApi;
+    media: MediaService;
     /** The global settings service. Reads default to the `full` shape. */
-    settings: SettingsApi;
+    settings: SettingsService;
     /** The global users service. */
-    users: UsersApi;
+    users: UsersService;
     /** The global notifications service (session-scoped). */
-    notifications: NotificationsApi;
+    notifications: NotificationsService;
     /** Other plugins' service methods — `ctx.plugins.<serviceKey>.<method>(input)`. */
     plugins?: PluginServiceNamespace | undefined;
     sendEmail: (to: string, subject: string, element: ReactElement) => Promise<void>;

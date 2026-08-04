@@ -20,12 +20,12 @@ import {
 } from '@/admin/components/entries/mount.js';
 import { EmptyState, Page, PageContent } from '@/admin/components/ui/index.js';
 import { useAIContext } from '@/admin/context/ai-context.js';
-import type { EntriesApi } from '@/types/index.js';
+import type { EntriesService } from '@/types/index.js';
 
 function PluginEntryListPage(): React.ReactElement {
     const { name, type } = Route.useParams();
     const { t } = useTranslation();
-    const api = Astromech.entries as unknown as EntriesApi;
+    const api = Astromech.entries as unknown as EntriesService;
     const mount = buildPluginEntriesMount(adminConfig.plugins, name, type, api);
     // The mount carries the qualified type id the entries service addresses.
     useAIContext(

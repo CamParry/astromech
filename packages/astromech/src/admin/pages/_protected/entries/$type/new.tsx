@@ -10,7 +10,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { Astromech } from '@/transport/http/client/index.js';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntryNewPage } from '@/admin/components/entries/entry-new-page.js';
-import type { EntriesApi } from '@/types/index.js';
+import type { EntriesService } from '@/types/index.js';
 import type { EntriesMount } from '@/admin/components/entries/mount.js';
 
 type SearchParams = {
@@ -21,7 +21,7 @@ function EntryCreatePage(): React.ReactElement {
     const { type } = Route.useParams();
     const search = Route.useSearch();
     const mount: EntriesMount = {
-        api: Astromech.entries as unknown as EntriesApi,
+        api: Astromech.entries as unknown as EntriesService,
         type,
         cacheScope: '',
         config: adminConfig.entries[type],

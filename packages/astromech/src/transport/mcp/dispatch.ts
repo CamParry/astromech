@@ -64,14 +64,15 @@ type ResolveStrategy = (manifest: ManifestMethod) => ResolvedInvoke;
  * building the tool LIST pulls in no service code; only an actual call does.
  */
 const CORE_SERVICES: Record<string, () => Promise<ServiceObject>> = {
-    users: async () => (await import('@/users/service.js')).usersApi,
-    media: async () => (await import('@/media/service.js')).mediaApi,
-    settings: async () => (await import('@/settings/service.js')).settingsApi,
-    content: async () => (await import('@/content/service.js')).contentApi,
+    users: async () => (await import('@/users/service.js')).usersService,
+    media: async () => (await import('@/media/service.js')).mediaService,
+    settings: async () => (await import('@/settings/service.js')).settingsService,
+    content: async () => (await import('@/content/service.js')).contentService,
 };
 
 async function getEntriesService(): Promise<ServiceObject> {
-    return (await import('@/entries/service.js')).entries as unknown as ServiceObject;
+    return (await import('@/entries/service.js'))
+        .entriesService as unknown as ServiceObject;
 }
 
 /**

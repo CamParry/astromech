@@ -17,10 +17,10 @@ import {
 import { createStorage } from '@/database/storage/create-storage.js';
 import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import { relationships, type RelationshipRow } from '@/database/schema.js';
-import { entries as api } from '@/entries/service.js';
-import { mediaApi } from '@/media/service.js';
+import { entriesService as api } from '@/entries/service.js';
+import { mediaService } from '@/media/service.js';
 import { createMediaStorage } from '@/media/storage.js';
-import { usersApi } from '@/users/service.js';
+import { usersService } from '@/users/service.js';
 import { tableStorage } from '@/entries/storage/table.js';
 import { defineTable } from '@/database/define-table.js';
 import { setStorageDriver } from '@/storage/registry.js';
@@ -182,12 +182,12 @@ async function seedContent(): Promise<{ article: string; post: string; media: st
         },
     });
     await api.create({ type: 'links/link', fields: { label: 'One', post: post.id } });
-    await usersApi.create({
+    await usersService.create({
         email: 'owner@test.dev',
         name: 'Owner',
         fields: { avatar: mediaId },
     });
-    await mediaApi.update({ id: mediaId, data: { fields: { credit: post.id } } });
+    await mediaService.update({ id: mediaId, data: { fields: { credit: post.id } } });
 
     return { article: article.id, post: post.id, media: mediaId };
 }

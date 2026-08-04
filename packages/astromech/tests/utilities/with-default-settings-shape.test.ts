@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { withDefaultSettingsShape } from '@/utilities/with-default-shape.js';
-import type { JsonValue, Setting, SettingsApi } from '@/types/index.js';
+import type { JsonValue, Setting, SettingsService } from '@/types/index.js';
 
 type Recorded = {
     all: ({ full?: boolean } | undefined)[];
@@ -17,9 +17,9 @@ type Recorded = {
     set: { key: string; value: JsonValue }[];
 };
 
-function fakeSettings(): { api: SettingsApi; calls: Recorded } {
+function fakeSettings(): { api: SettingsService; calls: Recorded } {
     const calls: Recorded = { all: [], get: [], set: [] };
-    const api: SettingsApi = {
+    const api: SettingsService = {
         all(params) {
             calls.all.push(params);
             return Promise.resolve([]);

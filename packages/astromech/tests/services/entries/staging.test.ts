@@ -9,8 +9,8 @@
  * tests/storage/entries/built-in.test.ts. These tests own the service policy:
  * content/relation copy, the StagedEntryExistsError gate, merge ordering, and
  * the capability assertions. The staging methods live on the concrete service
- * object (EntriesApi & EntriesStagingApi), so we import it directly rather than
- * through the EntriesApi-typed local transport.
+ * object (EntriesService & EntriesStagingApi), so we import it directly rather than
+ * through the EntriesService-typed local transport.
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -19,7 +19,7 @@ import { join } from 'node:path';
 import { rmSync } from 'node:fs';
 import { setupTestConfig, makeTestConfig, createFileTestDb } from '@tests/harness.js';
 import { getDb } from '@/database/registry.js';
-import { entries as api } from '@/entries/service.js';
+import { entriesService as api } from '@/entries/service.js';
 import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import { getEntryStorage } from '@/entries/storage/registry.js';
 import { StagedEntryExistsError, CapabilityError } from '@/entries/errors.js';

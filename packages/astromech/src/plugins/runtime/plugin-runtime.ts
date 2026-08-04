@@ -18,9 +18,9 @@ import type { ReactElement } from 'react';
 import type {
     AnyPluginServiceMethod,
     AstromechClient,
-    EntriesApi,
-    MediaApi,
-    NotificationsApi,
+    EntriesService,
+    MediaService,
+    NotificationsService,
     PluginContext,
     PluginConfigView,
     PluginDatabase,
@@ -32,11 +32,11 @@ import type {
     ResolvedConfig,
     ResolvedPluginIdentity,
     Role,
-    SettingsApi,
+    SettingsService,
     ToolDispatch,
-    TypedEntriesApi,
+    TypedEntriesService,
     User,
-    UsersApi,
+    UsersService,
 } from '@/types/index.js';
 import { getDb } from '@/database/registry.js';
 // The request-context LEAF, not `@/request-context/index.js`: that barrel imports
@@ -409,23 +409,23 @@ export function createPluginContext(
         // scoping wrapper. Both domains with a shape axis default to `full`:
         // plugin altitude is trusted server code, and a `public` default hands it
         // sanitized rich text, stripped private fields and null private settings.
-        get entries(): TypedEntriesApi {
+        get entries(): TypedEntriesService {
             return withDefaultShape(
-                requireClient().entries as unknown as EntriesApi,
+                requireClient().entries as unknown as EntriesService,
                 'full'
-            ) as unknown as TypedEntriesApi;
+            ) as unknown as TypedEntriesService;
         },
         // media / users / notifications have no shape axis, so they pass through.
-        get media(): MediaApi {
+        get media(): MediaService {
             return requireClient().media;
         },
-        get settings(): SettingsApi {
+        get settings(): SettingsService {
             return withDefaultSettingsShape(requireClient().settings, 'full');
         },
-        get users(): UsersApi {
+        get users(): UsersService {
             return requireClient().users;
         },
-        get notifications(): NotificationsApi {
+        get notifications(): NotificationsService {
             return requireClient().notifications;
         },
         get plugins(): PluginServiceNamespace | undefined {

@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config.js';
-import { entries } from '@/entries/service.js';
+import { entriesService } from '@/entries/service.js';
 import { printResult, printError } from '../output.js';
 
 export default defineCommand({
@@ -17,7 +17,10 @@ export default defineCommand({
     async run({ args }) {
         try {
             await loadConfig(args.config);
-            const entry = await entries.unpublish({ type: args.type, id: args.id });
+            const entry = await entriesService.unpublish({
+                type: args.type,
+                id: args.id,
+            });
             printResult(entry, {
                 json: args.json,
                 text: () => console.log(`Unpublished ${args.type} ${args.id}`),
