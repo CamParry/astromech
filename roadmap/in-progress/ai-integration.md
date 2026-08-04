@@ -27,12 +27,13 @@ Fix before building on top. All four are refactors that _delete_ code and shrink
 the rest; nothing is deployed, so this is the cheapest moment. Full detail with
 file references in the spec.
 
-**The foundation is complete — P0a through P6 have all landed, and P7 is built
-and merged but stays unticked until the assistant can write.** The audit's
-counts were stale: the manifest was 83 methods at P0, not 71, and is 145 after
-P1. P4 was unparked when the field-validation work that blocked it carried its
-validation half along (`221989a`); the PATCH-only half followed on 2026-08-03.
-Next is P8's confirm gate, whose wire format shipped 2026-08-04.
+**The foundation is complete, and so is the assistant that stands on it — P0a
+through P8 have all landed.** The audit's counts were stale: the manifest was 83
+methods at P0, not 71, and is 145 after P1. P4 was unparked when the
+field-validation work that blocked it carried its validation half along
+(`221989a`); the PATCH-only half followed on 2026-08-03. P8 closed on 2026-08-04
+and took `readOnly` to `false` with it, which is what finally ticked P7. Next is
+P9, whose storage shape P8 has already part-decided.
 
 - [x] **P0a — normalise every service method to a parameter object.** Shipped
       2026-07-31 (`934f1d0`). `update` takes a nested `data` (`update({id, data})`)
@@ -403,10 +404,10 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       library) still report only the list. All three need a new `kind` or an
       extra wording branch in the formatter first — declaring them today would
       describe a creation screen as an entry list.
-- [ ] **P7 — authoring plugin** — Claude adapter + tool-loop over the manifest +
-      chat drawer. **Built and merged 2026-08-03**; unticked because the
-      assistant is still read-only. A model round-trip has now run: see the
-      tool-surface entry below.
+- [x] **P7 — authoring plugin** — Claude adapter + tool-loop over the manifest +
+      chat drawer. **Built and merged 2026-08-03**, ticked 2026-08-04 when P8's
+      approval gate took `readOnly` to `false` and the assistant could finally
+      write. A model round-trip has now run: see the tool-surface entry below.
     - **Tool surface: deferred behind tool search. Merged 2026-08-04.** Every
       dispatch now ships with `defer_loading: true`, and the server-side
       `tool_search_tool_regex_20251119` tool is the one tool that stays loaded.
@@ -605,9 +606,58 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       characters, and the message closes by stating the quoted values are
       user-supplied data rather than instructions. Same trust boundary as the
       write-back guard.
-- [ ] **P8 — writes, approved out-of-band.** The assistant is read-only
-      (`readOnly: true`) because a click had nowhere to arrive. Design settled
-      2026-08-04; nothing built yet.
+- [x] **P8 — writes, approved out-of-band.** Shipped 2026-08-04 across two
+      commits — the loop and the table, then the drawer. `readOnly` now defaults
+      to `false`. `decisions/0015` holds why an approval is a server-held row.
+    - **Approval is a row, not a value in the transcript.** A paused turn writes
+      one `plugin_authoring_approvals` row per mutating call, holding the acting
+      user, the `tool_use` id, the method and the concrete arguments; the
+      response carries the row ids. The click POSTs the transcript back with a
+      decision per row, and the call runs with **the arguments read off the
+      row**, never the ones in the posted conversation. A client that rewrites
+      what it sends changes what the model believes, not what executes.
+    - **Claiming and answering a row are one conditional UPDATE**, matching on
+      the row being this user's, pending and unexpired. A second request
+      carrying the same decision updates nothing and runs nothing, which is what
+      stops a replayed approval double-executing a delete. The arguments are
+      dropped in the same statement, so the row keeps the decision without
+      keeping a second copy of content that may be `private: true`. A crash
+      between winning a row and running its call loses the call, which is the
+      right way round.
+    - **A mixed turn pauses whole.** `runner.generateToolResponse()` is
+      all-or-nothing, so the resume path builds the `tool_result` message by hand
+      instead: reads run either way, approved writes run from their row, rejected
+      ones get a decline result. That also makes resume just another POST to the
+      chat route carrying `decisions` — one route, one loop, no second endpoint.
+    - **Unanswered `tool_use` blocks are backstopped in the loop**, not left to
+      the interface: any assistant turn the following message does not answer
+      gets synthesised declines. Sending a new message while calls are held
+      therefore rejects them, and the drawer says exactly that rather than
+      blocking the composer.
+    - Named `approval-required` / `ApprovalRequest`, **not** `confirm` /
+      `ConfirmRequest`: core already exports a differently shaped
+      `ConfirmRequest` from the stateless gate, and the whole point is that the
+      two are not the same mechanism. `TERMINOLOGY.md` holds both.
+    - The staged-entry question resolved against redundancy: layer 3 only covers
+      entry content writes on staging-capable types, while `users.create`,
+      `media.delete`, `settings.set` and `entries.emptyTrash` never touch it.
+      Content operations keep routing through staging as P5 built them.
+    - Defect found in the server half by the drawer's first test:
+      `parseChatEvent` allow-lists event types and never listed
+      `approval-required`, so the event was dropped before the interface could
+      see it. The loop's tests cover the events it emits, not the parse boundary
+      they cross — the same class as the HTTP-route blindspot.
+    - **Browser-verified live 2026-08-04** against the demo on 4323 with a real
+      key, both paths. Approve: the row was `pending` and zero pages existed
+      before the click, `approved` with `arguments` nulled and the page created
+      after it. Reject on a destructive call: the row went `rejected` and the
+      page survived with `deleted_at` still null. The resume being accepted is
+      the part no unit test could reach — it proves the `thinking` blocks
+      round-tripped and the `tool_result` blocks led their turn.
+    - Worth knowing from that run: asked to move a page to the trash, the model
+      reached for `entries.page.delete`. The gate is what caught it.
+
+    The design notes below are the record of how it was settled.
     - **The fork, and why this side of it.** `evaluateConfirmation` is stateless
       and sits at dispatch, so wiring the drawer through it as-is means the model
       gets `input_required` back as a tool result, asks in chat, and then writes
@@ -634,9 +684,6 @@ f(x)`), so re-coercion is only observable when the STORED value is not
     - `_confirm` stays out of the drawer's surface entirely. Approval is the
       HTTP request the click makes; there is no argument for the model to forge.
       `readOnly` defaults to `false` only once that path exists.
-    - Worth deciding first: whether the staged-entry + preview-token path
-      (layer 3) makes the drawer gate redundant for the destructive cases, since
-      that channel already exists and is reviewed under a real session.
     - **The wire-format half shipped** 2026-08-04, ahead of the gate itself:
       `ChatMessage.content` is `BetaContentBlockParam[]` in both directions, the
       loop emits each completed turn as a `message` event, and the drawer renders
@@ -668,25 +715,30 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       human action resolves, never inside model-visible content. MCP's spec goes
       furthest and requires the elicitation be bound to a verified session rather
       than anything the client asserts.
-    - **Decide how far to take server-side authority.** A client that holds the
-      transcript can forge a `tool_result`. Here that is weaker than it sounds:
-      the drawer is authenticated as the user, so a forged _approval_ only lets
-      them do what their own permissions already allow through the API directly.
-      The sharper risk is forged `tool_result` _content_ lying to the model about
-      what a read returned. Full mitigation is a server-side record of which
-      `tool_use` ids were approved and run, keyed by session — which is P9's
-      table, so either P8 pulls a slice of P9 forward or it accepts the weaker
-      boundary and says so.
+    - **How far to take server-side authority — settled by pulling a slice of
+      P9 forward.** A client that holds the transcript can forge a `tool_result`.
+      A forged _approval_ was always weak, because the drawer is authenticated
+      as the user and only permits what their role already permits through the
+      API directly; the sharper risk was forged `tool_result` _content_ lying to
+      the model about what a read returned. Building the approvals table now
+      closes the approval half properly and gives P10 its record early, which
+      the weaker option would have deferred twice over. Forged result content
+      for calls that were never gated remains open and is bounded to the
+      conversation it happens in.
+
 - [ ] **P9 — persisted chat sessions, per user.** The transcript lives in
       `useChat`'s React state. It survives closing the drawer and navigating the
       SPA now that the panel stays mounted, but a reload loses the lot. Give a
       user a list of their past conversations to reopen, rename and delete.
-    - **Sequence it after P8**, which turns the wire transcript into content
-      blocks so a paused `tool_use` can round-trip. Whatever P9 stores has to be
-      that shape; storing today's `{role, content: string}` first means migrating
-      rows for a format already known to be changing.
-    - A plugin table via `defineTable`, keyed by user. A session belongs to the
-      user who had it — decide explicitly whether an admin may read someone
+    - **P8 settled the format and part of the shape.** The wire transcript is
+      already content blocks, so that is what P9 stores; and
+      `plugin_authoring_approvals` is a worked example of a per-user plugin
+      table in this package, down to the lazy expiry sweep and the
+      drop-the-payload-on-resolve rule. An approval row references a
+      `tool_use` id but not yet a conversation — giving it a session id is the
+      join P9 adds.
+    - A plugin table via `definePluginTable`, keyed by user. A session belongs to
+      the user who had it — decide explicitly whether an admin may read someone
       else's, because "an admin can read everything" is the default that ships if
       nobody decides. P10 is the answer for oversight; a readable transcript is a
       different and wider thing.
@@ -699,8 +751,11 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       current conversation. Whether that is a header control or a second panel
       state is worth settling before either is built.
 - [ ] **P10 — audit trail for what the assistant did.** Which method ran, with
-      which arguments, for which user, with what outcome — and, once P8 lands,
-      who approved it. Nothing records any of this today.
+      which arguments, for which user, with what outcome. P8 covers one slice of
+      this already — an approval row survives its decision, so an approved or
+      rejected write in the drawer is on record with who, when and what method.
+      Nothing else is: a read, an ungated call, and every other transport are all
+      silent.
     - **It belongs in core, not the plugin.** The CLI, the MCP server and the
       admin's own routes raise the same question, and logging it in the drawer
       leaves every other transport silent. Dispatch through `scopedServices` is
@@ -712,8 +767,12 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       holds: method id, target ids and outcome are cheap and answer most
       questions, while full payloads make the log a second uncontrolled copy of
       the content with P9's disclosure problem attached.
-    - Without P8's decision recorded beside the call, the log cannot answer the
-      question it exists for — whether a human agreed to the write.
+    - P8's approval rows answer "did a human agree to this write" for the drawer
+      only, and they live in the plugin. Decide whether core's log absorbs them
+      or references them; two records of one decision that can disagree is the
+      outcome to avoid.
+    - P8 also set the precedent for what a row keeps: it drops the arguments when
+      it resolves, keeping method, target, decision, who and when.
     - Adjacent, not the same: `@astromech/backups` already keeps versions of an
       entry. A version answers what the row used to look like; an audit trail
       answers who changed it and through what.
