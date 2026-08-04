@@ -38,7 +38,7 @@ export type UserRow = {
 // roles descriptor (defineTable) — RBAC is ours, not a better-auth model
 // ============================================================================
 
-export const roles = defineTable('roles', ({ col }) => ({
+export const rolesTable = defineTable('roles', ({ col }) => ({
     slug: col.text({ primaryKey: true }),
     name: col.text({ notNull: true }),
     permissions: col.json<string[]>({ notNull: true }),
@@ -47,8 +47,8 @@ export const roles = defineTable('roles', ({ col }) => ({
     updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
 }));
 
-export type RoleRow = TableSelect<typeof roles>;
-export type NewRoleRow = TableInsert<typeof roles>;
+export type RoleRow = TableSelect<typeof rolesTable>;
+export type NewRoleRow = TableInsert<typeof rolesTable>;
 
 // ============================================================================
 // Zod schemas

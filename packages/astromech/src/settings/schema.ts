@@ -6,15 +6,15 @@ import {
     type TableInsert,
 } from '@/database/define-table.js';
 
-export const settings = defineTable('settings', ({ col }) => ({
+export const settingsTable = defineTable('settings', ({ col }) => ({
     key: col.text({ primaryKey: true }),
     value: col.json<JsonValue>(),
     updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
     updatedBy: col.reference('users'),
 }));
 
-export type SettingRow = TableSelect<typeof settings>;
-export type NewSettingRow = TableInsert<typeof settings>;
+export type SettingRow = TableSelect<typeof settingsTable>;
+export type NewSettingRow = TableInsert<typeof settingsTable>;
 
 // ============================================================================
 // Zod schemas

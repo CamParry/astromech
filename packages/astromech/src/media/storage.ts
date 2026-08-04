@@ -1,7 +1,7 @@
 /**
  * Media storage — the only place Kysely touches the `media` table.
  *
- * Row CRUD goes through `createStorage(media)`, which owns encoding, `updatedAt`
+ * Row CRUD goes through `createStorage(mediaTable)`, which owns encoding, `updatedAt`
  * stamping and row decoding. `list`/`count` stay on the raw handle because the
  * mime-bucket filter is not expressible in the flat `where` DSL: `documents` is an
  * OR and `other` is a raw negated-LIKE fragment. They compile their DSL-expressible
@@ -21,13 +21,13 @@ import {
     type QueryHandle,
 } from '@/database/storage/create-storage.js';
 import { createRelationshipStorage } from '@/database/storage/relationships.js';
-import { media } from '@/database/schema.js';
+import { mediaTable } from '@/database/schema.js';
 import { getDb } from '@/database/registry.js';
 import type { Db } from '@/database/types.js';
 import type { MediaMimeTypeFilter, MediaQueryParams, SortOption } from '@/types/index.js';
 import type { MediaRow, NewMediaRow } from './schema.js';
 
-type Predicate = ReturnType<QueryHandle<typeof media>['where']>;
+type Predicate = ReturnType<QueryHandle<typeof mediaTable>['where']>;
 type MediaEb = Parameters<Predicate>[0];
 
 /** Page slice for `list`; omit it for an unpaginated read. */
@@ -84,7 +84,7 @@ function buildOrderBy(
 
 /** Defaults to the registered db; pass a tx handle to scope it to a transaction. */
 export function createMediaStorage(db?: Db) {
-    const storage = createStorage(media, db);
+    const storage = createStorage(mediaTable, db);
 
     function filter(params?: MediaQueryParams): Predicate {
         const { where } = storage.query();
@@ -110,7 +110,7 @@ export function createMediaStorage(db?: Db) {
         }
         if (page) q = q.limit(page.limit).offset(page.offset);
         const rows = await q.execute();
-        return rows.map((row) => decodeWith(media, row) as unknown as MediaRow);
+        return rows.map((row) => decodeWith(mediaTable, row) as unknown as MediaRow);
     }
 
     async function count(params?: MediaQueryParams): Promise<number> {
@@ -132,7 +132,10 @@ export function createMediaStorage(db?: Db) {
     }
 
     /** By primary key. Throws when no row matched. */
-    async function update(id: string, patch: Patch<typeof media>): Promise<MediaRow> {
+    async function update(
+        id: string,
+        patch: Patch<typeof mediaTable>
+    ): Promise<MediaRow> {
         return storage.update(id, patch);
     }
 

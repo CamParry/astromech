@@ -8,7 +8,7 @@
 
 import { getDb } from '@/database/registry.js';
 import { createStorage } from '@/database/storage/create-storage.js';
-import { entryPreviewTokens } from '@/database/schema.js';
+import { entryPreviewTokensTable } from '@/database/schema.js';
 import type { Db } from '@/database/types.js';
 
 export type PreviewTokenStorage = ReturnType<typeof createPreviewTokenStorage>;
@@ -23,7 +23,7 @@ export async function hashPreviewToken(plaintext: string): Promise<string> {
 }
 
 export function createPreviewTokenStorage(db: Db = getDb()) {
-    const storage = createStorage(entryPreviewTokens, db);
+    const storage = createStorage(entryPreviewTokensTable, db);
 
     /** Replace any existing token for `entryId` with a freshly-hashed one. */
     async function issue(

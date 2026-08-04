@@ -16,7 +16,7 @@ import { createTestDb, registerTestPlugins, setupTestConfig } from '@tests/harne
 import { Astromech } from '@/transport/local/index.js';
 import { getDb } from '@/database/registry.js';
 import { decodeWith } from '@/database/codec.js';
-import { entries } from '@/database/schema.js';
+import { entriesTable } from '@/database/schema.js';
 import type { Entry, PluginDefinition } from '@/types/index.js';
 
 const api = Astromech.entries;
@@ -496,7 +496,7 @@ describe('trash / restore / delete / emptyTrash', () => {
             .selectAll()
             .where('id', '=', e.id)
             .execute();
-        const decoded = trashedRows.map((r) => decodeWith(entries, r));
+        const decoded = trashedRows.map((r) => decodeWith(entriesTable, r));
         expect(decoded[0]?.deletedAt).toBeInstanceOf(Date);
 
         const restored = await api.restore({ type: 'post', id: e.id });

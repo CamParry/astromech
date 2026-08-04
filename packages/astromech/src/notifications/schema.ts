@@ -4,7 +4,7 @@ import {
     type TableInsert,
 } from '@/database/define-table.js';
 
-export const notifications = defineTable(
+export const notificationsTable = defineTable(
     'notifications',
     ({ col }) => ({
         id: col.id(),
@@ -18,5 +18,5 @@ export const notifications = defineTable(
     ({ index }) => [index('notifications_user_created_idx', ['userId', 'createdAt'])]
 );
 
-export type NotificationRow = TableSelect<typeof notifications>;
-export type NewNotificationRow = TableInsert<typeof notifications>;
+export type NotificationRow = TableSelect<typeof notificationsTable>;
+export type NewNotificationRow = TableInsert<typeof notificationsTable>;

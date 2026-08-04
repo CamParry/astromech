@@ -15,7 +15,7 @@ import { handleScheduled } from '@/cron/index.js';
 import { nodeDriver } from '@/cron/drivers/index.js';
 import { runDue } from '@/cron/runner.js';
 import { encodePatchWith } from '@/database/codec.js';
-import { cron } from '@/database/schema.js';
+import { cronTable } from '@/database/schema.js';
 import type { DB } from '@/database/types.js';
 
 beforeEach(async () => {
@@ -63,7 +63,7 @@ describe('handleScheduled', () => {
         await db
             .updateTable('_astromech_cron')
             .set(
-                encodePatchWith(cron, {
+                encodePatchWith(cronTable, {
                     nextRun: past,
                     lock: null,
                 }) as unknown as Updateable<DB['_astromech_cron']>

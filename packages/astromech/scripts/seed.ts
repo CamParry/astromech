@@ -132,7 +132,7 @@ async function seed(): Promise<void> {
                         createdBy: adminId,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encodeWith(schema.media, r) as never)
+            ).map((r) => schema.encodeWith(schema.mediaTable, r) as never)
         )
         .execute();
     console.log('  Created 4 media items\n');
@@ -683,7 +683,7 @@ async function upsertUser(email: string, name: string): Promise<string> {
 async function insertEntries(rows: Record<string, unknown>[]): Promise<void> {
     await db
         .insertInto('entries')
-        .values(rows.map((r) => schema.encodeWith(schema.entries, r) as never))
+        .values(rows.map((r) => schema.encodeWith(schema.entriesTable, r) as never))
         .execute();
     seededEntries.push(
         ...rows.map((r) => ({
@@ -699,7 +699,7 @@ async function indexRelationships(): Promise<void> {
     const rows = seededEntries.flatMap((entry) =>
         collectRelationshipEdges(entryFieldDefinitions(entry.type), entry.fields).map(
             (edge) =>
-                schema.encodeWith(schema.relationships, {
+                schema.encodeWith(schema.relationshipsTable, {
                     sourceId: entry.id,
                     sourceKind: 'entry' as const,
                     sourceType: entry.type,

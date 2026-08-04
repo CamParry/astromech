@@ -450,6 +450,13 @@ export const widgetsTable = definePluginTable(
 export type WidgetRow = TableSelect<typeof widgetsTable>;
 ```
 
+Name the export `<noun>Table` — `widgetsTable`, not `widgets`. The noun matches
+the bare table name you passed, and the suffix keeps the descriptor distinct
+from the domain word and from anything at service altitude. Every table in
+Astromech follows it: core's `entriesTable`, `mediaTable`, `cronTable`, and the
+first-party plugins' `backupRunsTable`, `submissionsTable` and `redirectsTable`.
+Row types keep their own convention (`WidgetRow`, `NewWidgetRow`).
+
 `definePluginTable`'s first argument takes the package name as a **value** —
 not read off the plugin's definition — because the prefix has to exist as a
 _literal type_ for `PluginDB` to key on, and a value declared inside

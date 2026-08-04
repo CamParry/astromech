@@ -21,30 +21,35 @@ import {
 // these value imports are ONLY so `CORE_TABLES` (bottom of file) can
 // reference the descriptors; the `export {...} from` blocks stay the public
 // re-export surface.
-import { roles as rolesTable } from '@/users/schema.js';
+import { rolesTable } from '@/users/schema.js';
 import {
-    entries as entriesTable,
-    entryVersions as entryVersionsTable,
-    entryPreviewTokens as entryPreviewTokensTable,
+    entriesTable,
+    entryVersionsTable,
+    entryPreviewTokensTable,
 } from '@/entries/schema.js';
-import { media as mediaTable } from '@/media/schema.js';
-import { settings as settingsTable } from '@/settings/schema.js';
-import { notifications as notificationsTable } from '@/notifications/schema.js';
+import { mediaTable } from '@/media/schema.js';
+import { settingsTable } from '@/settings/schema.js';
+import { notificationsTable } from '@/notifications/schema.js';
 
 // ============================================================================
 // Users / RBAC — roles descriptor (ours) + the better-auth `users` row type
 // ============================================================================
 
-export { roles, type RoleRow, type NewRoleRow, type UserRow } from '@/users/schema.js';
+export {
+    rolesTable,
+    type RoleRow,
+    type NewRoleRow,
+    type UserRow,
+} from '@/users/schema.js';
 
 // ============================================================================
 // Entries
 // ============================================================================
 
 export {
-    entries,
-    entryVersions,
-    entryPreviewTokens,
+    entriesTable,
+    entryVersionsTable,
+    entryPreviewTokensTable,
     type EntryRow,
     type NewEntryRow,
     type EntryVersionRow,
@@ -57,10 +62,10 @@ export {
 // Media / Settings / Notifications
 // ============================================================================
 
-export { media, type MediaRow, type NewMediaRow } from '@/media/schema.js';
-export { settings, type SettingRow, type NewSettingRow } from '@/settings/schema.js';
+export { mediaTable, type MediaRow, type NewMediaRow } from '@/media/schema.js';
+export { settingsTable, type SettingRow, type NewSettingRow } from '@/settings/schema.js';
 export {
-    notifications,
+    notificationsTable,
     type NotificationRow,
     type NewNotificationRow,
 } from '@/notifications/schema.js';
@@ -82,7 +87,7 @@ export {
  * `createdAt`, because on a row that is rewritten wholesale it would mean "last
  * indexed", not "when the relation was made".
  */
-export const relationships = defineTable(
+export const relationshipsTable = defineTable(
     'relationships',
     ({ col }) => ({
         sourceId: col.text({ notNull: true }),
@@ -108,8 +113,8 @@ export const relationships = defineTable(
     }
 );
 
-export type RelationshipRow = TableSelect<typeof relationships>;
-export type NewRelationshipRow = TableInsert<typeof relationships>;
+export type RelationshipRow = TableSelect<typeof relationshipsTable>;
+export type NewRelationshipRow = TableInsert<typeof relationshipsTable>;
 
 // ============================================================================
 // Cron
@@ -124,7 +129,7 @@ export type NewRelationshipRow = TableInsert<typeof relationships>;
  * CAS-claims a job by writing an expiry; a crashed claim auto-expires so the
  * next tick can retry.
  */
-export const cron = defineTable('_astromech_cron', ({ col }) => ({
+export const cronTable = defineTable('_astromech_cron', ({ col }) => ({
     name: col.text({ primaryKey: true }),
     schedule: col.text({ notNull: true }),
     enabled: col.boolean({ notNull: true, default: true }),
@@ -133,8 +138,8 @@ export const cron = defineTable('_astromech_cron', ({ col }) => ({
     lock: col.timestamp(),
 }));
 
-export type CronRow = TableSelect<typeof cron>;
-export type NewCronRow = TableInsert<typeof cron>;
+export type CronRow = TableSelect<typeof cronTable>;
+export type NewCronRow = TableInsert<typeof cronTable>;
 
 // ============================================================================
 // Installed-plugin tracking
@@ -150,15 +155,15 @@ export type NewCronRow = TableInsert<typeof cron>;
  * two plugins deriving the same namespace collide as a database constraint at
  * migrate time rather than only in the config-resolution check.
  */
-export const plugins = defineTable('_astromech_plugins', ({ col }) => ({
+export const pluginsTable = defineTable('_astromech_plugins', ({ col }) => ({
     package: col.text({ primaryKey: true }),
     namespace: col.text({ notNull: true, unique: true }),
     version: col.text({ notNull: true }),
     installedAt: col.timestamp({ notNull: true, defaultNow: true }),
 }));
 
-export type PluginTrackingRow = TableSelect<typeof plugins>;
-export type NewPluginTrackingRow = TableInsert<typeof plugins>;
+export type PluginTrackingRow = TableSelect<typeof pluginsTable>;
+export type NewPluginTrackingRow = TableInsert<typeof pluginsTable>;
 
 // ============================================================================
 // Core descriptor list — every `defineTable`-backed table we own
@@ -180,7 +185,7 @@ export const CORE_TABLES: TableDescriptor[] = [
     mediaTable,
     settingsTable,
     notificationsTable,
-    relationships,
-    cron,
-    plugins,
+    relationshipsTable,
+    cronTable,
+    pluginsTable,
 ];

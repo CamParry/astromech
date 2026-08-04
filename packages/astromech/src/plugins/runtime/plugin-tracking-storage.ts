@@ -1,21 +1,21 @@
 /**
  * Plugin-tracking storage — the only place Kysely touches `_astromech_plugins`.
  *
- * Thin domain vocabulary over `createStorage(plugins)`, which owns encoding,
+ * Thin domain vocabulary over `createStorage(pluginsTable)`, which owns encoding,
  * value serialization and row decoding. Both callers are best-effort: the table
  * may not exist in odd dev states, so the try/catch stays at the call site in
  * `plugin-runtime.ts`, next to the warning text that explains the failure.
  */
 
 import { createStorage } from '@/database/storage/create-storage.js';
-import { plugins } from '@/database/schema.js';
+import { pluginsTable } from '@/database/schema.js';
 import type { Db } from '@/database/types.js';
 
 export type PluginTrackingStorage = ReturnType<typeof createPluginTrackingStorage>;
 
 /** Defaults to the registered db; pass a tx handle to scope it to a transaction. */
 export function createPluginTrackingStorage(db?: Db) {
-    const storage = createStorage(plugins, db);
+    const storage = createStorage(pluginsTable, db);
 
     /**
      * Record the plugin, refreshing only `namespace` and `version` if it is

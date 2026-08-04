@@ -7,7 +7,7 @@
  * Policy (validation, hooks, relationships, versioning *decisions*, bulk
  * dispatch) stays in the entries service.
  *
- * Row access goes through `createStorage(entries)` — the descriptor-backed CRUD
+ * Row access goes through `createStorage(entriesTable)` — the descriptor-backed CRUD
  * wrapper — which owns encoding, `updatedAt` stamping and result decoding. Four
  * things it cannot express stay on the raw Kysely handle:
  *
@@ -35,7 +35,7 @@ import { getDb } from '@/database/registry.js';
 import { supportsTransactions } from '@/database/capabilities.js';
 import { encodePatchWith, decodeWith } from '@/database/codec.js';
 import { createStorage } from '@/database/storage/create-storage.js';
-import { entries } from '@/database/schema.js';
+import { entriesTable } from '@/database/schema.js';
 import type { DB, Db } from '@/database/types.js';
 import type { EntryRow } from '../schema.js';
 import { createVersionStorage } from './versions.js';
@@ -263,7 +263,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
 
     // Unbound when there is no override, so it follows `setDb` per call exactly
     // as `handle()` does.
-    const storage = createStorage(entries, dbOverride);
+    const storage = createStorage(entriesTable, dbOverride);
 
     const supports: readonly Capability[] = BUILT_IN_SUPPORTS;
 
@@ -328,7 +328,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
             }
             const rawRows = await q.execute();
             const decodedRows = rawRows.map((r) =>
-                decodeWith(entries, r)
+                decodeWith(entriesTable, r)
             ) as unknown as EntryRow[];
             const data = await populateLocales(db, decodedRows);
             return { data, total: data.length };
@@ -355,7 +355,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
         }
         const rawRows = await rowsQ.execute();
         const decodedRows = rawRows.map((r) =>
-            decodeWith(entries, r)
+            decodeWith(entriesTable, r)
         ) as unknown as EntryRow[];
         const data = await populateLocales(db, decodedRows);
         return { data, total };
@@ -454,7 +454,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
             const restored = await db
                 .updateTable('entries')
                 .set(
-                    encodePatchWith(entries, {
+                    encodePatchWith(entriesTable, {
                         deletedAt: null,
                         updatedAt: new Date(),
                     }) as unknown as Updateable<DB['entries']>
@@ -466,7 +466,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
                 .executeTakeFirstOrThrow();
             return populateLocaleSingle(
                 db,
-                decodeWith(entries, restored) as unknown as EntryRow
+                decodeWith(entriesTable, restored) as unknown as EntryRow
             );
         },
 

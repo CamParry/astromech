@@ -1,7 +1,7 @@
 /**
  * Cron storage — the only place Kysely touches the `_astromech_cron` table.
  *
- * Thin domain vocabulary over `createStorage(cron)`, which owns encoding, value
+ * Thin domain vocabulary over `createStorage(cronTable)`, which owns encoding, value
  * serialization and row decoding. Three of the four methods still drop to
  * `query()`, because the scheduler's predicates are things the flat `where` DSL
  * cannot express: the due test and the claim test are both ORs, and the seed is
@@ -13,14 +13,14 @@
 
 import { decodeWith, encodePatchWith, encodeWith } from '@/database/codec.js';
 import { createStorage } from '@/database/storage/create-storage.js';
-import { cron, type CronRow, type NewCronRow } from '@/database/schema.js';
+import { cronTable, type CronRow, type NewCronRow } from '@/database/schema.js';
 import type { Db } from '@/database/types.js';
 
 export type CronStorage = ReturnType<typeof createCronStorage>;
 
 /** Defaults to the registered db; pass a tx handle to scope it to a transaction. */
 export function createCronStorage(db?: Db) {
-    const storage = createStorage(cron, db);
+    const storage = createStorage(cronTable, db);
 
     /**
      * Insert a job's seed row, or leave an existing one alone. ON CONFLICT DO
@@ -31,7 +31,7 @@ export function createCronStorage(db?: Db) {
         const { db: handle, table } = storage.query();
         await handle
             .insertInto(table)
-            .values(encodeWith(cron, row))
+            .values(encodeWith(cronTable, row))
             .onConflict((oc) => oc.doNothing())
             .execute();
     }
@@ -52,7 +52,7 @@ export function createCronStorage(db?: Db) {
                 ])
             )
             .execute();
-        return rows.map((row) => decodeWith(cron, row) as unknown as CronRow);
+        return rows.map((row) => decodeWith(cronTable, row) as unknown as CronRow);
     }
 
     /**
@@ -65,7 +65,7 @@ export function createCronStorage(db?: Db) {
         const { db: handle, table, where } = storage.query();
         const result = await handle
             .updateTable(table)
-            .set(encodePatchWith(cron, { lock: expiry }))
+            .set(encodePatchWith(cronTable, { lock: expiry }))
             .where((eb) =>
                 eb.and([
                     where({ name })(eb),

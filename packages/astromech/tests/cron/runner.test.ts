@@ -15,7 +15,7 @@ import { registerCronJob } from '@/cron/registry.js';
 import { onTick, runDue } from '@/cron/runner.js';
 import { encodePatchWith, decodeWith } from '@/database/codec.js';
 import type { DB } from '@/database/types.js';
-import { cron, type CronRow } from '@/database/schema.js';
+import { cronTable, type CronRow } from '@/database/schema.js';
 
 // Truncate to second resolution to match DB storage.
 function toSecond(d: Date): number {
@@ -61,7 +61,7 @@ describe('onTick / runDue', () => {
         const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
         const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
         const row = singleRow(
-            rawRows.map((r) => decodeWith(cron, r)) as unknown as CronRow[]
+            rawRows.map((r) => decodeWith(cronTable, r)) as unknown as CronRow[]
         );
         expect(row.name).toBe('test-job');
         expect(row.enabled).toBe(true);
@@ -73,7 +73,7 @@ describe('onTick / runDue', () => {
         await db
             .updateTable('_astromech_cron')
             .set(
-                encodePatchWith(cron, {
+                encodePatchWith(cronTable, {
                     schedule: '0 12 * * *',
                 }) as unknown as Updateable<DB['_astromech_cron']>
             )
@@ -85,7 +85,7 @@ describe('onTick / runDue', () => {
 
         const rawRows2 = await db.selectFrom('_astromech_cron').selectAll().execute();
         const row2 = singleRow(
-            rawRows2.map((r) => decodeWith(cron, r)) as unknown as CronRow[]
+            rawRows2.map((r) => decodeWith(cronTable, r)) as unknown as CronRow[]
         );
         // Admin-edited schedule must survive.
         expect(row2.schedule).toBe('0 12 * * *');
@@ -114,7 +114,7 @@ describe('onTick / runDue', () => {
         await db
             .updateTable('_astromech_cron')
             .set(
-                encodePatchWith(cron, {
+                encodePatchWith(cronTable, {
                     nextRun: past,
                     lock: null,
                 }) as unknown as Updateable<DB['_astromech_cron']>
@@ -131,7 +131,7 @@ describe('onTick / runDue', () => {
         await db
             .updateTable('_astromech_cron')
             .set(
-                encodePatchWith(cron, {
+                encodePatchWith(cronTable, {
                     nextRun: future,
                     lock: null,
                 }) as unknown as Updateable<DB['_astromech_cron']>
@@ -165,7 +165,7 @@ describe('onTick / runDue', () => {
         await db
             .updateTable('_astromech_cron')
             .set(
-                encodePatchWith(cron, {
+                encodePatchWith(cronTable, {
                     nextRun: past,
                     enabled: false,
                     lock: null,
@@ -198,7 +198,7 @@ describe('onTick / runDue', () => {
         await db
             .updateTable('_astromech_cron')
             .set(
-                encodePatchWith(cron, {
+                encodePatchWith(cronTable, {
                     schedule: '0 0 * * *',
                     nextRun: past,
                     lock: null,
@@ -211,7 +211,7 @@ describe('onTick / runDue', () => {
 
         const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
         const row = singleRow(
-            rawRows.map((r) => decodeWith(cron, r)) as unknown as CronRow[]
+            rawRows.map((r) => decodeWith(cronTable, r)) as unknown as CronRow[]
         );
 
         // nextRun must have been recomputed using the new '0 0 * * *' schedule.
@@ -241,7 +241,7 @@ describe('onTick / runDue', () => {
         await db
             .updateTable('_astromech_cron')
             .set(
-                encodePatchWith(cron, {
+                encodePatchWith(cronTable, {
                     nextRun: past,
                     lock: null,
                 }) as unknown as Updateable<DB['_astromech_cron']>
@@ -302,7 +302,7 @@ describe('onTick / runDue', () => {
         await db
             .updateTable('_astromech_cron')
             .set(
-                encodePatchWith(cron, {
+                encodePatchWith(cronTable, {
                     nextRun: past,
                     lock: futureLock,
                 }) as unknown as Updateable<DB['_astromech_cron']>
@@ -318,7 +318,7 @@ describe('onTick / runDue', () => {
         await db
             .updateTable('_astromech_cron')
             .set(
-                encodePatchWith(cron, {
+                encodePatchWith(cronTable, {
                     nextRun: past,
                     lock: pastLock,
                 }) as unknown as Updateable<DB['_astromech_cron']>
@@ -352,7 +352,7 @@ describe('onTick / runDue', () => {
         await db
             .updateTable('_astromech_cron')
             .set(
-                encodePatchWith(cron, {
+                encodePatchWith(cronTable, {
                     nextRun: past,
                     lock: null,
                 }) as unknown as Updateable<DB['_astromech_cron']>
@@ -372,7 +372,7 @@ describe('onTick / runDue', () => {
         // Row: lock cleared, nextRun advanced.
         const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
         const row = singleRow(
-            rawRows.map((r) => decodeWith(cron, r)) as unknown as CronRow[]
+            rawRows.map((r) => decodeWith(cronTable, r)) as unknown as CronRow[]
         );
         expect(row.lock).toBeNull();
         expect(row.nextRun).toBeInstanceOf(Date);
@@ -419,7 +419,7 @@ describe('onTick / runDue', () => {
             const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
             const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
             const row = singleRow(
-                rawRows.map((r) => decodeWith(cron, r)) as unknown as CronRow[]
+                rawRows.map((r) => decodeWith(cronTable, r)) as unknown as CronRow[]
             );
 
             const expectedNext = new Cron('0 0 * * *', {
@@ -455,7 +455,7 @@ describe('onTick / runDue', () => {
         await db
             .updateTable('_astromech_cron')
             .set(
-                encodePatchWith(cron, {
+                encodePatchWith(cronTable, {
                     nextRun: veryPast,
                     lock: null,
                 }) as unknown as Updateable<DB['_astromech_cron']>
@@ -469,7 +469,7 @@ describe('onTick / runDue', () => {
         // nextRun should have advanced to a future time.
         const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
         const row = singleRow(
-            rawRows.map((r) => decodeWith(cron, r)) as unknown as CronRow[]
+            rawRows.map((r) => decodeWith(cronTable, r)) as unknown as CronRow[]
         );
         expect(row.nextRun?.getTime()).toBeGreaterThan(now.getTime());
 

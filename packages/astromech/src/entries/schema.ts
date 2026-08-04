@@ -14,7 +14,7 @@ import {
 // version). One token per canonical entry; only the hash is stored.
 // ============================================================================
 
-export const entries = defineTable(
+export const entriesTable = defineTable(
     'entries',
     ({ col }) => ({
         id: col.id(),
@@ -31,7 +31,7 @@ export const entries = defineTable(
         }),
         // Self-reference (forward versioning). Annotated thunk breaks the
         // circular inference, mirroring drizzle's AnySQLiteColumn pattern.
-        stagedFor: col.reference((): TableDescriptor => entries, {
+        stagedFor: col.reference((): TableDescriptor => entriesTable, {
             onDelete: 'no action',
         }),
         publishedAt: col.timestamp(),
@@ -58,11 +58,14 @@ export const entries = defineTable(
     ]
 );
 
-export const entryVersions = defineTable(
+export const entryVersionsTable = defineTable(
     'entry_versions',
     ({ col }) => ({
         id: col.id(),
-        entryId: col.reference(() => entries, { notNull: true, onDelete: 'cascade' }),
+        entryId: col.reference(() => entriesTable, {
+            notNull: true,
+            onDelete: 'cascade',
+        }),
         versionNumber: col.integer({ notNull: true }),
         title: col.text({ notNull: true }),
         slug: col.text(),
@@ -74,23 +77,23 @@ export const entryVersions = defineTable(
     ({ index }) => [index('idx_versions_entry', ['entryId', 'versionNumber'])]
 );
 
-export const entryPreviewTokens = defineTable('entry_preview_tokens', ({ col }) => ({
+export const entryPreviewTokensTable = defineTable('entry_preview_tokens', ({ col }) => ({
     id: col.id(),
-    entryId: col.reference(() => entries, { notNull: true, onDelete: 'cascade' }),
+    entryId: col.reference(() => entriesTable, { notNull: true, onDelete: 'cascade' }),
     token: col.text({ notNull: true, unique: true }),
     expiresAt: col.timestamp(),
     createdAt: col.timestamp({ notNull: true, defaultNow: true }),
     createdBy: col.reference('users'),
 }));
 
-export type EntryRow = TableSelect<typeof entries>;
-export type NewEntryRow = TableInsert<typeof entries>;
+export type EntryRow = TableSelect<typeof entriesTable>;
+export type NewEntryRow = TableInsert<typeof entriesTable>;
 
-export type EntryVersionRow = TableSelect<typeof entryVersions>;
-export type NewEntryVersionRow = TableInsert<typeof entryVersions>;
+export type EntryVersionRow = TableSelect<typeof entryVersionsTable>;
+export type NewEntryVersionRow = TableInsert<typeof entryVersionsTable>;
 
-export type EntryPreviewTokenRow = TableSelect<typeof entryPreviewTokens>;
-export type NewEntryPreviewTokenRow = TableInsert<typeof entryPreviewTokens>;
+export type EntryPreviewTokenRow = TableSelect<typeof entryPreviewTokensTable>;
+export type NewEntryPreviewTokenRow = TableInsert<typeof entryPreviewTokensTable>;
 
 // ============================================================================
 // Zod schemas

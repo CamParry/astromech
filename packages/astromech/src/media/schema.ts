@@ -6,7 +6,7 @@ import {
     type TableInsert,
 } from '@/database/define-table.js';
 
-export const media = defineTable(
+export const mediaTable = defineTable(
     'media',
     ({ col }) => ({
         id: col.id(),
@@ -33,8 +33,8 @@ export const media = defineTable(
     ]
 );
 
-export type MediaRow = TableSelect<typeof media>;
-export type NewMediaRow = TableInsert<typeof media>;
+export type MediaRow = TableSelect<typeof mediaTable>;
+export type NewMediaRow = TableInsert<typeof mediaTable>;
 
 // ============================================================================
 // Zod Schemas
