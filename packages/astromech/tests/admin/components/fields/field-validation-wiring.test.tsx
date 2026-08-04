@@ -21,7 +21,7 @@ import { describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
 import type { FieldDefinition } from '@/types/index.js';
-import '@/admin/definitions/register-fields.js';
+import '@/admin/rendering/register-fields.js';
 import { FormField } from '@/admin/components/fields/form-field';
 import { FieldValidationProvider } from '@/admin/components/fields/field-validation-context';
 

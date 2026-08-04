@@ -2,8 +2,8 @@
  * Shared entry edit page body.
  *
  * Parameterized by an `EntriesMount`; serves root and plugin-namespaced
- * entry types. Field layout comes from the definition layer:
- * `deriveFormDefinition(config)` splits field groups into main/sidebar/tab and
+ * entry types. Field layout comes from the rendering layer:
+ * `resolveForm(config)` splits field groups into main/sidebar/tab and
  * resolves the title/slug/status capability flags; each field input is
  * resolved from the field registry by type (Phase 4).
  *
@@ -77,10 +77,7 @@ import {
 } from '@/admin/hooks/index.js';
 import type { EntryStatus } from '@/types/index.js';
 import { resolveEntryUrl } from '@/entries/utils/url.js';
-import {
-    deriveFormDefinition,
-    resolveConfigForDerive,
-} from '@/admin/definitions/derive.js';
+import { resolveAdminEntryType, resolveForm } from '@/admin/rendering/resolve.js';
 import { resolveContentLocale } from '@/utilities/locale.js';
 import { useAIContext } from '@/admin/context/ai-context.js';
 import type { EntriesMount } from './mount.js';
@@ -134,8 +131,8 @@ export function EntryEditPage({
     const single = entryTypeConfig?.single ?? type;
     const plural = entryTypeConfig?.plural ?? type;
     const capabilities = entryTypeConfig?.capabilities;
-    const formDef = deriveFormDefinition(resolveConfigForDerive(entryTypeConfig, type));
-    const { hasTitle, hasSlug, hasStatuses, main, sidebar } = formDef;
+    const resolvedForm = resolveForm(resolveAdminEntryType(entryTypeConfig, type));
+    const { hasTitle, hasSlug, hasStatuses, main, sidebar } = resolvedForm;
     // The two columns together ARE the full field tree the client validates.
     const fieldDefinitions = React.useMemo(() => [...main, ...sidebar], [main, sidebar]);
 

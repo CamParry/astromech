@@ -29,7 +29,7 @@ stood on moved.
 - [x] Composable admin CRUD contract `{ data methods + column shape + supports }`
       for entries + tables — satisfied by a different route, so nothing further
       is owed. There is no separate "tables" admin surface to unify: a
-      table-backed type _is_ an entry type. `admin/definitions/derive.ts` plus
+      table-backed type _is_ an entry type. `admin/rendering/resolve.ts` plus
       `adminColumns` and `capabilities` already drive one set of pages for both,
       which is what redirects renders through
 - [ ] **Decide, then act: is `table.ts` still divergence?** The original bullet

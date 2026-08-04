@@ -2,8 +2,8 @@
  * Shared entry create page body.
  *
  * Parameterized by an `EntriesMount`; serves root and plugin-namespaced
- * entry types. Field layout comes from the definition layer:
- * `deriveFormDefinition(config)` splits field groups into main/sidebar/tab and
+ * entry types. Field layout comes from the rendering layer:
+ * `resolveForm(config)` splits field groups into main/sidebar/tab and
  * resolves the title/slug/status capability flags; each field input is
  * resolved from the field registry by type (Phase 4).
  *
@@ -49,10 +49,7 @@ import {
 import { PublishPanel } from '@/admin/components/entries/PublishPanel.js';
 import { useEntryForm, useEntriesQuery, usePermissions } from '@/admin/hooks/index.js';
 import type { Entry } from '@/types/index.js';
-import {
-    deriveFormDefinition,
-    resolveConfigForDerive,
-} from '@/admin/definitions/derive.js';
+import { resolveAdminEntryType, resolveForm } from '@/admin/rendering/resolve.js';
 import { resolveContentLocale } from '@/utilities/locale.js';
 import type { EntriesMount } from './mount.js';
 
@@ -249,8 +246,8 @@ export function EntryNewPage({
     const [chosenLocaleGroup, setChosenLocaleGroup] = useState<string | null>(null);
     const [modalOpen, setModalOpen] = useState<boolean>(isNonDefaultLocale);
 
-    const formDef = deriveFormDefinition(resolveConfigForDerive(entryTypeConfig, type));
-    const { hasTitle, hasSlug, hasStatuses, main, sidebar } = formDef;
+    const resolvedForm = resolveForm(resolveAdminEntryType(entryTypeConfig, type));
+    const { hasTitle, hasSlug, hasStatuses, main, sidebar } = resolvedForm;
     // The two columns together ARE the full field tree the client validates.
     // Derived above the permission bail-out so the memo keeps its hook slot.
     const fieldDefinitions = React.useMemo(() => [...main, ...sidebar], [main, sidebar]);

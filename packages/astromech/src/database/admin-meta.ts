@@ -9,7 +9,7 @@
 
 import { resolveReferenceTarget } from '@/database/descriptor-snapshot.js';
 import type { ColumnKind, TableDescriptor } from '@/database/define-table.js';
-import type { CellKind } from '@/types/definitions.js';
+import type { CellKind } from '@/types/resolved.js';
 import type { FieldType } from '@/types/fields.js';
 
 export type ColumnAdminMeta = {

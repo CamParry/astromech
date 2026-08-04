@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CORE_FIELD_TYPES } from '@/types/index.js';
-import '@/admin/definitions/register-fields.js';
-import { getFieldComponent } from '@/admin/definitions/field-registry.js';
+import '@/admin/rendering/register-fields.js';
+import { getFieldComponent } from '@/admin/rendering/field-registry.js';
 
 const LAYOUT_CONTAINERS_NOT_IN_REGISTRY = new Set([
     'accordion',

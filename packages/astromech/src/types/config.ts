@@ -4,7 +4,7 @@
 
 import type { Dialect, Kysely } from 'kysely';
 import type { DB } from '@/database/types.js';
-import type { CellKind } from './definitions.js';
+import type { CellKind } from './resolved.js';
 import type { Permission } from './domain.js';
 import type {
     EntryFields,
