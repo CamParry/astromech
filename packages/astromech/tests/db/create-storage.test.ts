@@ -13,15 +13,15 @@ import { sql } from 'kysely';
 import { createTestDb } from '@tests/harness.js';
 import { createStorage, type Where } from '@/database/storage/create-storage.js';
 import { defineTable } from '@/database/define-table.js';
-import { entries } from '@/entries/schema.js';
-import { cron } from '@/database/schema.js';
+import { entriesTable } from '@/entries/schema.js';
+import { cronTable } from '@/database/schema.js';
 
 const EARLY = new Date('2020-01-01T00:00:00.000Z');
 const MIDDLE = new Date('2022-06-01T12:00:00.000Z');
 const LATE = new Date('2030-01-01T00:00:00.000Z');
 
 function entryStorage() {
-    return createStorage(entries);
+    return createStorage(entriesTable);
 }
 
 beforeEach(async () => {
@@ -54,7 +54,7 @@ describe('createStorage – round trip', () => {
     });
 
     it('decodes a boolean column back to a boolean', async () => {
-        const storage = createStorage(cron);
+        const storage = createStorage(cronTable);
 
         const created = await storage.create({
             name: 'demo-job',
@@ -169,7 +169,7 @@ describe('createStorage – where', () => {
 
         // Bare arrays are a runtime lenience for loosely-typed callers; the
         // typed DSL spells this `{ in: [...] }`.
-        const where = { type: ['post', 'card'] } as unknown as Where<typeof entries>;
+        const where = { type: ['post', 'card'] } as unknown as Where<typeof entriesTable>;
         const rows = await storage.findMany({
             where,
             orderBy: [['title', 'asc']],
@@ -270,14 +270,14 @@ describe('createStorage – where', () => {
     });
 
     it('throws for an unknown column key', async () => {
-        const bogus = { nope: 'x' } as unknown as Where<typeof entries>;
+        const bogus = { nope: 'x' } as unknown as Where<typeof entriesTable>;
         await expect(entryStorage().findMany({ where: bogus })).rejects.toThrow(
             /unknown column "nope"/
         );
     });
 
     it('throws when an in operand is not an array', async () => {
-        const bogus = { type: { in: 'post' } } as unknown as Where<typeof entries>;
+        const bogus = { type: { in: 'post' } } as unknown as Where<typeof entriesTable>;
         await expect(entryStorage().findMany({ where: bogus })).rejects.toThrow(
             /expects an array/
         );
@@ -453,7 +453,7 @@ describe('createStorage – bulk writes', () => {
 
 describe('createStorage – upsert', () => {
     it('inserts when there is no conflict', async () => {
-        const storage = createStorage(cron);
+        const storage = createStorage(cronTable);
 
         const row = await storage.upsert({
             name: 'demo-job',
@@ -468,7 +468,7 @@ describe('createStorage – upsert', () => {
     });
 
     it('updates the provided non-target columns on conflict', async () => {
-        const storage = createStorage(cron);
+        const storage = createStorage(cronTable);
         await storage.upsert({
             name: 'demo-job',
             schedule: '* * * * *',
@@ -484,7 +484,7 @@ describe('createStorage – upsert', () => {
     });
 
     it('honours an explicit set', async () => {
-        const storage = createStorage(cron);
+        const storage = createStorage(cronTable);
         await storage.upsert({ name: 'demo-job', schedule: '* * * * *' });
 
         const row = await storage.upsert(

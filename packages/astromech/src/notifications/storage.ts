@@ -1,7 +1,7 @@
 /**
  * Notification storage — the only place Kysely touches the `notifications` table.
  *
- * Thin domain vocabulary over `createStorage(notifications)`, which owns encoding,
+ * Thin domain vocabulary over `createStorage(notificationsTable)`, which owns encoding,
  * value serialization and row decoding. `createMany` is the one thing the wrapper
  * cannot express: `notify()` fans one notification out to every targeted user, and
  * the wrapper's `create` is single-row, so going through it would turn one INSERT
@@ -13,7 +13,7 @@
 
 import { encodeWith } from '@/database/codec.js';
 import { createStorage } from '@/database/storage/create-storage.js';
-import { notifications } from '@/database/schema.js';
+import { notificationsTable } from '@/database/schema.js';
 import type { Db } from '@/database/types.js';
 import type { NewNotificationRow, NotificationRow } from './schema.js';
 
@@ -21,7 +21,7 @@ export type NotificationStorage = ReturnType<typeof createNotificationStorage>;
 
 /** Defaults to the registered db; pass a tx handle to scope it to a transaction. */
 export function createNotificationStorage(db?: Db) {
-    const storage = createStorage(notifications, db);
+    const storage = createStorage(notificationsTable, db);
 
     /** Insert one row per user in a single statement. */
     async function createMany(rows: NewNotificationRow[]): Promise<void> {

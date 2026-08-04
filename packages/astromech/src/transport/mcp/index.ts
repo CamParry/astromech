@@ -11,8 +11,8 @@ import { loadConfig, loadRawConfig } from '@/transport/cli/config.js';
 import { generateMethodManifest } from '@/codegen/method-manifest.js';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime.js';
 import { wireEntryAccess } from '@/entries/plugin-access.js';
-import { reduceSurface, type SurfaceOptions } from '@/policies/tool-surface.js';
-import type { ConfirmOptions } from '@/policies/confirm-gate.js';
+import { filterMethods, type MethodFilter } from '@/policies/method-filter.js';
+import type { ConfirmOptions } from '@/policies/confirmation.js';
 import { createMcpServer } from './server.js';
 import type { AstromechConfig, MethodManifest, ResolvedConfig } from '@/types/index.js';
 
@@ -25,7 +25,7 @@ const EXCLUSION_DETAIL_LIMIT = 20;
  * `loadConfig` sets up the database and the virtual-config shim but never
  * touches the plugin runtime, so until now the plugin registry was empty and
  * any plugin tool would have thrown at call time. Three things are needed, in
- * this order — the same order `kernel/boot.ts` uses:
+ * this order — the same order `boot/boot.ts` uses:
  *
  * - Importing the local transport registers the client that backs `ctx.entries`,
  *   `ctx.media` and friends. It is a module side effect, hence the bare import.
@@ -48,7 +48,7 @@ async function registerPluginRuntime(
 }
 
 /**
- * Report what the surface policy removed, on stderr.
+ * Report what the method filter removed, on stderr.
  *
  * A long exclusion list is the NORMAL case for `--read-only` (most of a CMS's
  * manifest mutates), so past a threshold the per-method lines are replaced by a
@@ -85,8 +85,8 @@ function describeConfirm(confirm: ConfirmOptions | undefined): string {
 }
 
 /**
- * @param surface Capability reduction applied BEFORE the tool list is built, so
- * an excluded method never becomes a tool and never enters the dispatch map.
+ * @param filter Method filter applied BEFORE the tool list is built, so an
+ * excluded method never becomes a tool and never enters the dispatch map.
  * Filtering the tool list alone would leave the method callable by name.
  * @param confirm Confirmation policy, OFF unless `--confirm` was passed. An MCP
  * client already asks its user before running a tool, so a gate here would be a
@@ -94,7 +94,7 @@ function describeConfirm(confirm: ConfirmOptions | undefined): string {
  */
 export async function runMcpServer(
     configPath?: string,
-    surface: SurfaceOptions = {},
+    filter: MethodFilter = {},
     confirm?: ConfirmOptions
 ): Promise<void> {
     const raw = await loadRawConfig(configPath);
@@ -105,7 +105,7 @@ export async function runMcpServer(
         generateMethodManifest(resolved, raw.plugins ?? [])
     ) as MethodManifest;
 
-    const { methods, excluded } = reduceSurface(manifest.methods, surface);
+    const { methods, excluded } = filterMethods(manifest.methods, filter);
     const { server, tools, skipped } = createMcpServer({ ...manifest, methods }, confirm);
 
     console.error(

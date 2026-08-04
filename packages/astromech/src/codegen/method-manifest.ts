@@ -29,17 +29,14 @@ import type {
     PluginManifestMethod,
 } from '@/types/index.js';
 import type { ResolvedConfig } from '@/types/index.js';
-import { usersDescriptors } from '@/users/descriptors.js';
-import { mediaDescriptors } from '@/media/descriptors.js';
-import { settingsDescriptors } from '@/settings/descriptors.js';
-import { contentDescriptors } from '@/content/descriptors.js';
-import {
-    entryMethodDescriptors,
-    type EntryMethodDescriptor,
-} from '@/entries/descriptors.js';
+import { usersDescriptors } from '@/users/methods.js';
+import { mediaDescriptors } from '@/media/methods.js';
+import { settingsDescriptors } from '@/settings/methods.js';
+import { contentDescriptors } from '@/content/methods.js';
+import { entryMethodDescriptors, type EntryMethodDescriptor } from '@/entries/methods.js';
 import type { Capability } from '@/entries/storage/capabilities.js';
 import type { ResolvedEntryCapabilities } from '@/types/index.js';
-import { qualifyEntryType } from '@/entries/type-registry.js';
+import { qualifyEntryType } from '@/entries/type-ids.js';
 import {
     resolvePluginIdentity,
     resolvePluginPermission,

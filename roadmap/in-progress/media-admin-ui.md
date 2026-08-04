@@ -76,7 +76,7 @@ every editable column through the HTTP layer.
       permission, so the conflation had become an API that mis-states itself. `users` already split
       read/create/update/delete; media was the odd one out. Rationale and the rejected alternative:
       `decisions/0006-media-update-permission.md`.
-- [ ] `mediaApi.replace` exists with full variant cleanup but is exposed by no route, no client
+- [ ] `mediaService.replace` exists with full variant cleanup but is exposed by no route, no client
       method and no UI
 - [x] `@testing-library/react` + `user-event` added (on `packages/astromech`, where `vitest` and
       `happy-dom` already live), and the media surface has its first render-level coverage: 16 tests

@@ -3,7 +3,8 @@
  * longer exists is dropped the next time its holder is written. Shared by the
  * entry, user and media write paths; it lives in `entries/` because deciding
  * whether a target type even has rows in the `entries` table needs the entry
- * storage registry.
+ * storage registry. This operates on relation FIELD values, not on the derived
+ * `relationships` index (that is `internal/relationships.ts`).
  */
 
 import config from 'virtual:astromech/config';
@@ -20,7 +21,7 @@ import type {
 import { parseFieldPath } from '@/fields/field-path.js';
 import { RESERVED_KEY } from '@/fields/reserved-keys.js';
 import { hasEntryStorageOverride } from '../storage/registry.js';
-import { resolveEntryType } from '../type-registry.js';
+import { resolveEntryType } from '../type-ids.js';
 import type { FieldDefinition } from '@/types/fields.js';
 import type { JsonObject } from '@/types/index.js';
 import type { StorageDb } from '../storage/types.js';

@@ -18,14 +18,14 @@
  */
 
 import type { AdminConfig } from '@/types/index.js';
-import type { EntriesApi } from '@/types/index.js';
-import { qualifyEntryType } from '@/entries/type-registry.js';
+import type { EntriesService } from '@/types/index.js';
+import { qualifyEntryType } from '@/entries/type-ids.js';
 
 export type EntryAction = 'read' | 'create' | 'update' | 'delete' | 'publish';
 
 export type EntriesMount = {
     /** Entries client bound to the mount's base path. */
-    api: EntriesApi;
+    api: EntriesService;
     /** Wire type id: bare for a root type (`post`), qualified for a plugin type (`redirects/redirect`). */
     type: string;
     /** Cache scope: `''` (root) or the plugin name. Namespaces react-query keys. */
@@ -55,7 +55,7 @@ export function buildPluginEntriesMount(
     plugins: AdminConfig['plugins'],
     name: string,
     type: string,
-    api: EntriesApi
+    api: EntriesService
 ): EntriesMount | null {
     const plugin = plugins.find((p) => p.namespace === name);
     if (!plugin) return null;

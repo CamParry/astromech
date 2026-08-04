@@ -7,7 +7,7 @@
  * `{ alias, provider }`. This is the half that has to read `PluginDefinition`s,
  * so it lives here.
  *
- * Kept deliberately dependency-light: `kernel/boot.ts` imports it, and boot must
+ * Kept deliberately dependency-light: `boot/boot.ts` imports it, and boot must
  * stay service-free (no transitive `virtual:astromech/config`).
  */
 

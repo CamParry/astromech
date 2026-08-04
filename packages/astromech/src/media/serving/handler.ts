@@ -1,4 +1,4 @@
-import { mediaApi } from '@/media/service.js';
+import { mediaService } from '@/media/service.js';
 import { getStorageDriver } from '@/storage/registry.js';
 import { getImageConfig } from './image/registry.js';
 import {
@@ -59,7 +59,7 @@ function extOf(filename: string): string {
 export async function handleMediaRequest(info: MediaRequestInfo): Promise<Response> {
     const { id, search, origin, ifNoneMatch, range } = info;
 
-    const media = await mediaApi.get({ id });
+    const media = await mediaService.get({ id });
     if (!media) {
         return new Response('Media not found', { status: 404 });
     }

@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config.js';
-import { entries } from '@/entries/service.js';
+import { entriesService } from '@/entries/service.js';
 import { printResult, printError, parseJsonArg } from '../output.js';
 import type { EntryStatus } from '@/types/index.js';
 import type { JsonObject } from '@/types/index.js';
@@ -25,7 +25,9 @@ export default defineCommand({
         try {
             await loadConfig(args.config);
 
-            const params: Parameters<typeof entries.create>[0] = { type: args.type };
+            const params: Parameters<typeof entriesService.create>[0] = {
+                type: args.type,
+            };
 
             if (args.title !== undefined) params.title = args.title;
             if (args.slug !== undefined) params.slug = args.slug;
@@ -36,7 +38,7 @@ export default defineCommand({
                 params.fields = (await parseJsonArg(args.fields)) as JsonObject;
             }
 
-            const entry = await entries.create(params);
+            const entry = await entriesService.create(params);
 
             printResult(entry, {
                 json: args.json,

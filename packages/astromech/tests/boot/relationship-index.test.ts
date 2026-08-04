@@ -13,14 +13,14 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js
 import {
     checkRelationshipIndex,
     rebuildRelationshipIndex,
-} from '@/kernel/relationship-index.js';
+} from '@/boot/relationship-index.js';
 import { createStorage } from '@/database/storage/create-storage.js';
 import { createRelationshipStorage } from '@/database/storage/relationships.js';
-import { relationships, type RelationshipRow } from '@/database/schema.js';
-import { entries as api } from '@/entries/service.js';
-import { mediaApi } from '@/media/service.js';
+import { relationshipsTable, type RelationshipRow } from '@/database/schema.js';
+import { entriesService as api } from '@/entries/service.js';
+import { mediaService } from '@/media/service.js';
 import { createMediaStorage } from '@/media/storage.js';
-import { usersApi } from '@/users/service.js';
+import { usersService } from '@/users/service.js';
 import { tableStorage } from '@/entries/storage/table.js';
 import { defineTable } from '@/database/define-table.js';
 import { setStorageDriver } from '@/storage/registry.js';
@@ -182,12 +182,12 @@ async function seedContent(): Promise<{ article: string; post: string; media: st
         },
     });
     await api.create({ type: 'links/link', fields: { label: 'One', post: post.id } });
-    await usersApi.create({
+    await usersService.create({
         email: 'owner@test.dev',
         name: 'Owner',
         fields: { avatar: mediaId },
     });
-    await mediaApi.update({ id: mediaId, data: { fields: { credit: post.id } } });
+    await mediaService.update({ id: mediaId, data: { fields: { credit: post.id } } });
 
     return { article: article.id, post: post.id, media: mediaId };
 }
@@ -261,7 +261,7 @@ describe('checkRelationshipIndex', () => {
 describe('rebuildRelationshipIndex', () => {
     it('detects a deleted row as missing and restores it', async () => {
         const { article, post } = await seedContent();
-        await createStorage(relationships).deleteMany({
+        await createStorage(relationshipsTable).deleteMany({
             sourceId: article,
             instancePath: 'author',
             targetId: post,
@@ -278,7 +278,7 @@ describe('rebuildRelationshipIndex', () => {
 
     it('detects a row no field data holds as unexpected and removes it', async () => {
         const { article } = await seedContent();
-        await createStorage(relationships).create({
+        await createStorage(relationshipsTable).create({
             sourceId: article,
             sourceKind: 'entry',
             sourceType: 'article',
@@ -302,7 +302,7 @@ describe('rebuildRelationshipIndex', () => {
 
     it('removes rows left behind by a source that no longer exists', async () => {
         await seedContent();
-        await createStorage(relationships).create({
+        await createStorage(relationshipsTable).create({
             sourceId: 'purged-entry',
             sourceKind: 'entry',
             sourceType: 'article',
@@ -341,7 +341,7 @@ describe('rebuildRelationshipIndex', () => {
 describe('rebuildRelationshipIndex({ type })', () => {
     it('repairs the named type and leaves other types and user/media rows alone', async () => {
         const { article, post, media } = await seedContent();
-        const storage = createStorage(relationships);
+        const storage = createStorage(relationshipsTable);
 
         // Drop an article row (must come back) and plant a bogus row on each of
         // the three scopes a `--type article` run must not touch.

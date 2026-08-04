@@ -14,20 +14,20 @@ export async function deleteOne(
     cascadeLocales: boolean
 ): Promise<void> {
     const existing = await loadAndAssertType(storage, type, id);
-    const relationshipsRepo = createRelationshipStorage(db);
+    const relationships = createRelationshipStorage(db);
 
     if (cascadeLocales && storage.translatable) {
         const siblings = await storage.translatable.siblings(existing.localeGroup, id);
         for (const sib of siblings) {
-            await relationshipsRepo.deleteByResource(sib.id, 'entry');
+            await relationships.deleteByResource(sib.id, 'entry');
         }
-        await relationshipsRepo.deleteByResource(id, 'entry');
+        await relationships.deleteByResource(id, 'entry');
         // Versions cascade-delete via entry_versions.entry_id ON DELETE CASCADE.
         await storage.delete(id, { cascadeLocales: true });
         return;
     }
 
-    await relationshipsRepo.deleteByResource(id, 'entry');
+    await relationships.deleteByResource(id, 'entry');
     await storage.delete(id);
 }
 

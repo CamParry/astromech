@@ -27,32 +27,32 @@ import type { KyselyOf } from '@/database/define-table.js';
 // aggregator exists, and it keeps the rest of `database/` below the domains in
 // the dependency graph (see the `database-no-upward-except-aggregate` rule).
 import type {
-    roles,
-    entries,
-    entryVersions,
-    entryPreviewTokens,
-    media,
-    settings,
-    notifications,
-    relationships,
-    cron,
-    plugins,
+    rolesTable,
+    entriesTable,
+    entryVersionsTable,
+    entryPreviewTokensTable,
+    mediaTable,
+    settingsTable,
+    notificationsTable,
+    relationshipsTable,
+    cronTable,
+    pluginsTable,
 } from '@/database/schema.js';
 
 export type DB = {
     // ── 10 ours — derived from defineTable descriptors (ISO-TEXT timestamps) ─
-    roles: KyselyOf<typeof roles>;
-    entries: KyselyOf<typeof entries>;
-    entryVersions: KyselyOf<typeof entryVersions>;
-    entryPreviewTokens: KyselyOf<typeof entryPreviewTokens>;
-    media: KyselyOf<typeof media>;
-    settings: KyselyOf<typeof settings>;
-    notifications: KyselyOf<typeof notifications>;
-    relationships: KyselyOf<typeof relationships>;
+    roles: KyselyOf<typeof rolesTable>;
+    entries: KyselyOf<typeof entriesTable>;
+    entryVersions: KyselyOf<typeof entryVersionsTable>;
+    entryPreviewTokens: KyselyOf<typeof entryPreviewTokensTable>;
+    media: KyselyOf<typeof mediaTable>;
+    settings: KyselyOf<typeof settingsTable>;
+    notifications: KyselyOf<typeof notificationsTable>;
+    relationships: KyselyOf<typeof relationshipsTable>;
     // Leading-underscore table name has no camelCase humps, so CamelCasePlugin
     // leaves it intact; keep the key identical to the SQL table name.
-    _astromech_cron: KyselyOf<typeof cron>;
-    _astromech_plugins: KyselyOf<typeof plugins>;
+    _astromech_cron: KyselyOf<typeof cronTable>;
+    _astromech_plugins: KyselyOf<typeof pluginsTable>;
 
     // ── 4 better-auth — hand-typed, seconds-INTEGER (UNTOUCHED by the flip) ──
     users: UsersTable;

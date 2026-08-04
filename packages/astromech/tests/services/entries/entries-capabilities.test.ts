@@ -8,7 +8,7 @@
 
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createTestDb, setupTestConfig } from '@tests/harness.js';
-import { entries } from '@/entries/service.js';
+import { entriesService } from '@/entries/service.js';
 import { CapabilityError } from '@/entries/errors.js';
 import type { AstromechConfig } from '@/types/index.js';
 
@@ -100,7 +100,7 @@ beforeAll(async () => {
 // ---------------------------------------------------------------------------
 
 async function createEntry(type: string): Promise<string> {
-    const entry = await entries.create({ type, title: `Test ${type}` });
+    const entry = await entriesService.create({ type, title: `Test ${type}` });
     return entry.id;
 }
 
@@ -111,28 +111,28 @@ async function createEntry(type: string): Promise<string> {
 describe('statuses capability', () => {
     it('publish throws CapabilityError on statuses-off type', async () => {
         const id = await createEntry('nostatuses');
-        await expect(entries.publish({ type: 'nostatuses', id })).rejects.toThrow(
+        await expect(entriesService.publish({ type: 'nostatuses', id })).rejects.toThrow(
             CapabilityError
         );
     });
 
     it('unpublish throws CapabilityError on statuses-off type', async () => {
         const id = await createEntry('nostatuses');
-        await expect(entries.unpublish({ type: 'nostatuses', id })).rejects.toThrow(
-            CapabilityError
-        );
+        await expect(
+            entriesService.unpublish({ type: 'nostatuses', id })
+        ).rejects.toThrow(CapabilityError);
     });
 
     it('schedule throws CapabilityError on statuses-off type', async () => {
         const id = await createEntry('nostatuses');
         await expect(
-            entries.schedule({ type: 'nostatuses', id, publishAt: new Date() })
+            entriesService.schedule({ type: 'nostatuses', id, publishAt: new Date() })
         ).rejects.toThrow(CapabilityError);
     });
 
     it('CapabilityError carries correct type and capability', async () => {
         const id = await createEntry('nostatuses');
-        const err = await entries
+        const err = await entriesService
             .publish({ type: 'nostatuses', id })
             .catch((e: unknown) => e);
         expect(err).toBeInstanceOf(CapabilityError);
@@ -143,7 +143,7 @@ describe('statuses capability', () => {
 
     it('publish works on full type (statuses on)', async () => {
         const id = await createEntry('full');
-        const result = await entries.publish({ type: 'full', id });
+        const result = await entriesService.publish({ type: 'full', id });
         const entry = Array.isArray(result) ? result[0] : result;
         expect(entry?.status).toBe('published');
     });
@@ -156,32 +156,34 @@ describe('statuses capability', () => {
 describe('trash capability', () => {
     it('trash throws CapabilityError on trash-off type', async () => {
         const id = await createEntry('notrash');
-        await expect(entries.trash({ type: 'notrash', id })).rejects.toThrow(
+        await expect(entriesService.trash({ type: 'notrash', id })).rejects.toThrow(
             CapabilityError
         );
     });
 
     it('restore throws CapabilityError on trash-off type', async () => {
         const id = await createEntry('notrash');
-        await expect(entries.restore({ type: 'notrash', id })).rejects.toThrow(
+        await expect(entriesService.restore({ type: 'notrash', id })).rejects.toThrow(
             CapabilityError
         );
     });
 
     it('emptyTrash throws CapabilityError on trash-off type', async () => {
-        await expect(entries.emptyTrash({ type: 'notrash' })).rejects.toThrow(
+        await expect(entriesService.emptyTrash({ type: 'notrash' })).rejects.toThrow(
             CapabilityError
         );
     });
 
     it('delete always works on trash-off type (hard delete)', async () => {
         const id = await createEntry('notrash');
-        await expect(entries.delete({ type: 'notrash', id })).resolves.toBeUndefined();
+        await expect(
+            entriesService.delete({ type: 'notrash', id })
+        ).resolves.toBeUndefined();
     });
 
     it('trash works on full type (trash on)', async () => {
         const id = await createEntry('full');
-        await expect(entries.trash({ type: 'full', id })).resolves.toBeUndefined();
+        await expect(entriesService.trash({ type: 'full', id })).resolves.toBeUndefined();
     });
 });
 
@@ -192,13 +194,13 @@ describe('trash capability', () => {
 describe('versioning leniency', () => {
     it('versions returns [] for versioning-off type', async () => {
         const id = await createEntry('noversioning');
-        const result = await entries.versions({ type: 'noversioning', id });
+        const result = await entriesService.versions({ type: 'noversioning', id });
         expect(result).toEqual([]);
     });
 
     it('versions returns [] for nostatuses type (also versioning-off)', async () => {
         const id = await createEntry('nostatuses');
-        const result = await entries.versions({ type: 'nostatuses', id });
+        const result = await entriesService.versions({ type: 'nostatuses', id });
         expect(result).toEqual([]);
     });
 });

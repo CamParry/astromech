@@ -450,6 +450,13 @@ export const widgetsTable = definePluginTable(
 export type WidgetRow = TableSelect<typeof widgetsTable>;
 ```
 
+Name the export `<noun>Table` — `widgetsTable`, not `widgets`. The noun matches
+the bare table name you passed, and the suffix keeps the descriptor distinct
+from the domain word and from anything at service altitude. Every table in
+Astromech follows it: core's `entriesTable`, `mediaTable`, `cronTable`, and the
+first-party plugins' `backupRunsTable`, `submissionsTable` and `redirectsTable`.
+Row types keep their own convention (`WidgetRow`, `NewWidgetRow`).
+
 `definePluginTable`'s first argument takes the package name as a **value** —
 not read off the plugin's definition — because the prefix has to exist as a
 _literal type_ for `PluginDB` to key on, and a value declared inside
@@ -635,9 +642,9 @@ resolved into a dispatch that runs under that role — `{ toolName, description,
 inputSchema, annotations, invoke }`. `invoke` refuses what the role does not
 hold, and `readOnly` drops every mutating method structurally rather than
 advising against it. Wrap each one in whatever your model SDK's tool shape is
-and call `invoke` from its handler. `ctx.role` is the principal all of this
-runs against — the current request's resolved role, or `null` outside a request
-context (a cron tick, a boot-time `setup()`).
+and call `invoke` from its handler. `ctx.role` is the role all of this is
+checked against — the current request's resolved role, or `null` outside a
+request context (a cron tick, a boot-time `setup()`).
 
 Plugin-declared methods are absent from the list: their `access` is enforced by
 the HTTP RPC route, so there is nothing to scope them with.

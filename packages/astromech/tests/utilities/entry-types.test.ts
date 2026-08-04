@@ -3,7 +3,7 @@ import {
     parseEntryTypeId,
     qualifyEntryType,
     resolveEntryType,
-} from '@/entries/type-registry.js';
+} from '@/entries/type-ids.js';
 import type { ResolvedConfig, ResolvedEntryTypeConfig } from '@/types/index.js';
 
 const entryType = (single: string): ResolvedEntryTypeConfig => ({

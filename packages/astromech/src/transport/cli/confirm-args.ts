@@ -1,7 +1,7 @@
 /**
  * The `--confirm [mode]` flag for `astromech mcp`.
  *
- * Its own module rather than part of `surface-args.ts`: the surface flags are
+ * Its own module rather than part of `filter-args.ts`: the filter flags are
  * shared with `astromech methods` because that command exists to show what `mcp`
  * will serve, and confirmation changes nothing about what is served.
  *
@@ -14,7 +14,7 @@
  */
 
 import type { ArgsDef } from 'citty';
-import type { ConfirmOptions, ConfirmTrigger } from '@/policies/confirm-gate.js';
+import type { ConfirmOptions, ConfirmTrigger } from '@/policies/confirmation.js';
 
 /** citty arg definition. Spread into a command's `args`. */
 export const confirmArgs = {

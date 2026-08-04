@@ -9,7 +9,7 @@
  */
 
 import config from 'virtual:astromech/config';
-import type { JsonValue, Setting, SettingsApi } from '@/types/index.js';
+import type { JsonValue, Setting, SettingsService } from '@/types/index.js';
 import type { ResolvedConfig } from '@/types/config.js';
 import { createSettingsStorage } from './storage.js';
 import type { SettingRow } from './schema.js';
@@ -19,7 +19,7 @@ import { processFields } from '@/fields/pipeline.js';
 import { getDocumentValidator } from '@/fields/document-validators.js';
 import { flattenEntryFields } from '@/fields/helpers.js';
 import { scopedReadsFromRecords } from '@/fields/scoped-reads.js';
-import { getCurrentUser } from '@/context/index.js';
+import { getCurrentUser } from '@/request-context/index.js';
 import { ValidationError } from '@/errors/validation.js';
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
@@ -34,7 +34,7 @@ function toSetting(row: SettingRow): Setting {
     };
 }
 
-export const settingsApi: SettingsApi = {
+export const settingsService: SettingsService = {
     async all(params?: { full?: boolean }): Promise<Setting[]> {
         const rows = await createSettingsStorage().all();
         const full = params?.full ?? false;
@@ -117,7 +117,7 @@ export const settingsApi: SettingsApi = {
                     user: getCurrentUser(),
                     reads: scopedReadsFromRecords({
                         load: async () =>
-                            (await settingsApi.all({ full: true })).filter(
+                            (await settingsService.all({ full: true })).filter(
                                 (s) =>
                                     s.key === baseKey || s.key.startsWith(`${baseKey}:`)
                             ),

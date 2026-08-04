@@ -26,7 +26,7 @@ import type {
     Role,
     ToolDispatch,
 } from '@/types/index.js';
-import type { ScopedService } from '@/policies/scoped-service.js';
+import type { ScopedServices } from '@/policies/scoped-services.js';
 
 // ============================================================================
 // Types
@@ -64,14 +64,15 @@ type ResolveStrategy = (manifest: ManifestMethod) => ResolvedInvoke;
  * building the tool LIST pulls in no service code; only an actual call does.
  */
 const CORE_SERVICES: Record<string, () => Promise<ServiceObject>> = {
-    users: async () => (await import('@/users/service.js')).usersApi,
-    media: async () => (await import('@/media/service.js')).mediaApi,
-    settings: async () => (await import('@/settings/service.js')).settingsApi,
-    content: async () => (await import('@/content/service.js')).contentApi,
+    users: async () => (await import('@/users/service.js')).usersService,
+    media: async () => (await import('@/media/service.js')).mediaService,
+    settings: async () => (await import('@/settings/service.js')).settingsService,
+    content: async () => (await import('@/content/service.js')).contentService,
 };
 
 async function getEntriesService(): Promise<ServiceObject> {
-    return (await import('@/entries/service.js')).entries as unknown as ServiceObject;
+    return (await import('@/entries/service.js'))
+        .entriesService as unknown as ServiceObject;
 }
 
 /**
@@ -105,7 +106,7 @@ async function callServiceMethod(
  * The context carries the current user, which is `null` on this transport — MCP
  * is dev-only and trusted, exactly like the CLI, and a method's declared
  * `access` is not enforced here any more than a core method's permission is.
- * Request-scoped principals and a real permission wrapper are P2; when
+ * Request-scoped roles and a real permission wrapper are P2; when
  * `getCurrentUser()` starts returning one, this call site needs no change.
  */
 async function invokePluginMethod(
@@ -113,7 +114,7 @@ async function invokePluginMethod(
     args: Record<string, unknown>
 ): Promise<unknown> {
     const [{ getCurrentUser }, runtime] = await Promise.all([
-        import('@/context/index.js'),
+        import('@/request-context/index.js'),
         import('@/plugins/runtime/plugin-runtime.js'),
     ]);
 
@@ -169,22 +170,22 @@ function toolNameFor(manifest: ManifestMethod): string {
 /**
  * Build a ToolDispatch from a ManifestMethod, or explain why the method is not
  * callable over JSON-RPC. `invoke` calls the raw domain services, so this is for
- * a trusted caller with no principal — the dev-only MCP server and the CLI.
+ * a trusted caller with no role — the dev-only MCP server and the CLI.
  */
 export function buildDispatch(manifest: ManifestMethod): DispatchResult {
     return buildDispatchWith(manifest, resolveInvoke);
 }
 
 /**
- * The same dispatch, resolved through `scopedService(principal)` so every call
- * is checked against what the principal holds. `undefined` means no principal —
- * allowed nothing — never a trusted caller; that is what `buildDispatch` is for.
+ * The same dispatch, resolved through `scopedServices(role)` so every call is
+ * checked against what the role holds. `undefined` means no role — allowed
+ * nothing — never a trusted caller; that is what `buildDispatch` is for.
  */
 export function buildScopedDispatch(
     manifest: ManifestMethod,
-    principal: Role | undefined
+    role: Role | undefined
 ): DispatchResult {
-    const handle = scopedHandle(principal);
+    const handle = scopedHandle(role);
     return buildDispatchWith(manifest, (method) => resolveScopedInvoke(method, handle));
 }
 
@@ -285,28 +286,28 @@ function noServiceReason(manifest: ManifestMethod): string {
 }
 
 // ============================================================================
-// Resolution — scoped to a principal
+// Resolution — scoped to a role
 // ============================================================================
 
-/** The principal's scoped handle, built on first use and reused after it. */
-type ScopedHandle = () => Promise<ScopedService>;
+/** The role's scoped handle, built on first use and reused after it. */
+type ScopedHandle = () => Promise<ScopedServices>;
 
 /**
- * A handle factory for one dispatch. `scopedService` is imported lazily for the
+ * A handle factory for one dispatch. `scopedServices` is imported lazily for the
  * same reason `CORE_SERVICES` is: building the tool list must pull in no service
  * code, and that module imports every domain service eagerly.
  */
-function scopedHandle(principal: Role | undefined): ScopedHandle {
-    let handle: Promise<ScopedService> | null = null;
+function scopedHandle(role: Role | undefined): ScopedHandle {
+    let handle: Promise<ScopedServices> | null = null;
     return () => {
-        handle ??= import('@/policies/scoped-service.js').then(({ scopedService }) =>
-            scopedService(principal)
+        handle ??= import('@/policies/scoped-services.js').then(({ scopedServices }) =>
+            scopedServices(role)
         );
         return handle;
     };
 }
 
-/** The scoped call this method maps to, or why the principal gets none. */
+/** The scoped call this method maps to, or why the role gets none. */
 function resolveScopedInvoke(
     manifest: ManifestMethod,
     handle: ScopedHandle
@@ -328,7 +329,7 @@ function resolveScopedInvoke(
             // `invokePluginMethod` does not enforce the method's declared
             // `access` — the HTTP RPC route does that separately — so there is
             // nothing here to scope it with, and it is refused rather than run.
-            return { ok: false, reason: 'plugin method — not scoped to a principal yet' };
+            return { ok: false, reason: 'plugin method — not scoped to a role yet' };
     }
 }
 
@@ -340,7 +341,7 @@ function resolveScopedCoreInvoke(
         return { ok: false, reason: noServiceReason(manifest) };
     }
     // The handle's core keys are exactly `CORE_SERVICES`' keys, checked above.
-    const domain = manifest.domain as Exclude<keyof ScopedService, 'entries'>;
+    const domain = manifest.domain as Exclude<keyof ScopedServices, 'entries'>;
     return {
         ok: true,
         invoke: async (args) =>

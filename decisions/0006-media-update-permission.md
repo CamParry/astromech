@@ -23,7 +23,7 @@ Two supporting reasons, neither sufficient alone:
 
 - `users` already splits `read`/`create`/`update`/`delete`. Media read/upload/
   delete with the update folded into upload was the only domain doing this.
-- `mediaApi.replace` still needs a permission assigned (it has no descriptor at
+- `mediaService.replace` still needs a permission assigned (it has no descriptor at
   all — see `roadmap/backlog.md`). `replace` genuinely _is_ an upload, so the
   split gives it an obvious home. Left conflated, assigning it would have
   deepened the problem.

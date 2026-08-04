@@ -6,7 +6,7 @@ import type {
     Role,
     User,
 } from '@/types/index.js';
-import { runWithContext } from '@/context/request-context.js';
+import { runWithContext } from '@/request-context/request-context.js';
 import {
     bootPlugins,
     createPluginContext,

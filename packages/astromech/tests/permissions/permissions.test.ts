@@ -17,7 +17,7 @@ import {
     resolveRoles,
 } from '@/permissions/index.js';
 import { buildPermissionCatalogue } from '@/permissions/catalogue.js';
-import { resolveConfig } from '@/kernel/config-resolver.js';
+import { resolveConfig } from '@/boot/config-resolver.js';
 import { definePlugin } from '@/index.js';
 
 // ============================================================================

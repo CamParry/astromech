@@ -1,5 +1,5 @@
 /**
- * `mediaApi.usedBy` — reverse lookup for the media "used by" panel.
+ * `mediaService.usedBy` — reverse lookup for the media "used by" panel.
  *
  * Media only became a real relationship TARGET in this workstream: the old
  * subsystem recorded a media field as an entry edge and dropped it, so no row
@@ -9,10 +9,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
 import { setStorageDriver } from '@/storage/registry.js';
-import { entries } from '@/entries/service.js';
-import { mediaApi } from '@/media/service.js';
+import { entriesService } from '@/entries/service.js';
+import { mediaService } from '@/media/service.js';
 import { createMediaStorage } from '@/media/storage.js';
-import { usersApi } from '@/users/service.js';
+import { usersService } from '@/users/service.js';
 import type { AstromechConfig, StorageDriver } from '@/types/index.js';
 
 const noopStorage: StorageDriver = {
@@ -84,16 +84,16 @@ beforeEach(async () => {
     setStorageDriver(noopStorage);
 });
 
-describe('mediaApi.usedBy', () => {
+describe('mediaService.usedBy', () => {
     it('returns an entry that references the file from a plain media field', async () => {
         const mediaId = await createMedia();
-        const article = await entries.create({
+        const article = await entriesService.create({
             type: 'article',
             title: 'Article',
             fields: { cover: mediaId },
         });
 
-        expect(await mediaApi.usedBy({ id: mediaId })).toEqual([
+        expect(await mediaService.usedBy({ id: mediaId })).toEqual([
             {
                 sourceId: article.id,
                 sourceKind: 'entry',
@@ -108,13 +108,13 @@ describe('mediaApi.usedBy', () => {
 
     it('records a nested schema path and a distinct instance path inside a repeater', async () => {
         const mediaId = await createMedia();
-        await entries.create({
+        await entriesService.create({
             type: 'article',
             title: 'Nested',
             fields: { sections: [{ image: mediaId }] },
         });
 
-        const usage = await mediaApi.usedBy({ id: mediaId });
+        const usage = await mediaService.usedBy({ id: mediaId });
 
         expect(usage).toHaveLength(1);
         expect(usage[0]?.schemaPath).toBe('sections[].image');
@@ -125,13 +125,13 @@ describe('mediaApi.usedBy', () => {
 
     it('yields one row per path when a source uses the file twice', async () => {
         const mediaId = await createMedia();
-        const article = await entries.create({
+        const article = await entriesService.create({
             type: 'article',
             title: 'Twice',
             fields: { cover: mediaId, sections: [{ image: mediaId }] },
         });
 
-        const usage = await mediaApi.usedBy({ id: mediaId });
+        const usage = await mediaService.usedBy({ id: mediaId });
 
         expect(usage).toHaveLength(2);
         expect(usage.every((row) => row.sourceId === article.id)).toBe(true);
@@ -141,17 +141,17 @@ describe('mediaApi.usedBy', () => {
     // A pending merge that uses the file is a reason not to delete it.
     it('includes a staged source and flags it', async () => {
         const mediaId = await createMedia();
-        const canonical = await entries.create({
+        const canonical = await entriesService.create({
             type: 'article',
             title: 'Canonical',
             fields: { cover: mediaId },
         });
-        const staged = await entries.createStaged({
+        const staged = await entriesService.createStaged({
             type: 'article',
             id: canonical.id,
         });
 
-        const usage = await mediaApi.usedBy({ id: mediaId });
+        const usage = await mediaService.usedBy({ id: mediaId });
 
         expect(usage.map((row) => row.sourceId).sort()).toEqual(
             [canonical.id, staged.id].sort()
@@ -169,13 +169,13 @@ describe('mediaApi.usedBy', () => {
 
     it('returns a user source with a null sourceType', async () => {
         const mediaId = await createMedia();
-        const user = await usersApi.create({
+        const user = await usersService.create({
             email: 'avatar@test.dev',
             name: 'Avatar Owner',
             fields: { avatar: mediaId },
         });
 
-        expect(await mediaApi.usedBy({ id: mediaId })).toEqual([
+        expect(await mediaService.usedBy({ id: mediaId })).toEqual([
             {
                 sourceId: user.id,
                 sourceKind: 'user',
@@ -189,12 +189,12 @@ describe('mediaApi.usedBy', () => {
     });
 
     it('returns an empty list for an unused file', async () => {
-        expect(await mediaApi.usedBy({ id: await createMedia() })).toEqual([]);
+        expect(await mediaService.usedBy({ id: await createMedia() })).toEqual([]);
     });
 
-    // Matches `entries.incomingRelations`, which asserts the target exists
+    // Matches `entries.incomingRelationships`, which asserts the target exists
     // rather than reporting "no usage" for an id that is not a media item.
     it('throws for an unknown media id', async () => {
-        await expect(mediaApi.usedBy({ id: 'nope' })).rejects.toThrow(/not found/);
+        await expect(mediaService.usedBy({ id: 'nope' })).rejects.toThrow(/not found/);
     });
 });

@@ -1,6 +1,6 @@
 import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import { loadAndAssertType } from '../../internal/records.js';
-import { getStagingStorage } from '../../internal/supports.js';
+import { getStagingStorage } from '../../internal/type-config.js';
 
 export async function deleteStaged(params: { type: string; id: string }): Promise<void> {
     const { type, id } = params;

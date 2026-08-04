@@ -21,7 +21,7 @@ import { queryKeys, scopedEntryKeys } from './use-query-keys.js';
 import { useToast } from '../components/ui/index.js';
 import type {
     Entry,
-    EntriesApi,
+    EntriesService,
     EntryStatus,
     EntryUpdateData,
     JsonObject,
@@ -39,13 +39,13 @@ import type {
  */
 export type EntryHookScope = {
     /** Entries client bound to a base path. Defaults to root `Astromech.entries`. */
-    api?: EntriesApi;
+    api?: EntriesService;
     /** Cache-key scope. `''` (default) = root keys; plugin name = namespaced. */
     cacheScope?: string;
 };
 
-function resolveApi(scope?: EntryHookScope): EntriesApi {
-    return scope?.api ?? (Astromech.entries as unknown as EntriesApi);
+function resolveApi(scope?: EntryHookScope): EntriesService {
+    return scope?.api ?? (Astromech.entries as unknown as EntriesService);
 }
 
 function resolveKeys(scope?: EntryHookScope) {
@@ -110,10 +110,10 @@ export function useEntryVersions(
  * Read-only: fetch entries that reference `id` via a relationship row.
  * Used by the delete-confirmation modal to warn about dangling references.
  */
-export function useIncomingRelations(type: string, id: string, enabled = true) {
+export function useIncomingRelationships(type: string, id: string, enabled = true) {
     return useQuery({
-        queryKey: ['entries', type, 'incoming-relations', id] as const,
-        queryFn: () => Astromech.entries.incomingRelations({ type, id }),
+        queryKey: ['entries', type, 'incoming-relationships', id] as const,
+        queryFn: () => Astromech.entries.incomingRelationships({ type, id }),
         enabled,
     });
 }

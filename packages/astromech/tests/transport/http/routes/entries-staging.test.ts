@@ -20,7 +20,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { rmSync } from 'node:fs';
 import { setupTestConfig, makeTestConfig, createFileTestDb } from '@tests/harness.js';
-import { entries as api } from '@/entries/service.js';
+import { entriesService as api } from '@/entries/service.js';
 import { createEntriesRouter } from '@/transport/http/routes/entries.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 import type { Role, User } from '@/types/index.js';

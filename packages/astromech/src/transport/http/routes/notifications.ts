@@ -12,7 +12,7 @@
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { notificationsRepo, toNotification } from '@/notifications/index.js';
+import { notificationsService, toNotification } from '@/notifications/index.js';
 import type { AuthVariables } from '@/transport/http/middleware/auth.js';
 
 type Env = { Variables: AuthVariables };
@@ -25,7 +25,7 @@ const router = new OpenAPIHono<Env>();
 
 router.get('/', async (c) => {
     const userId = c.var.user.id;
-    const rows = await notificationsRepo.list(userId);
+    const rows = await notificationsService.list(userId);
     return c.json({ data: rows.map(toNotification) });
 });
 
@@ -35,7 +35,7 @@ router.get('/', async (c) => {
 
 router.get('/count', async (c) => {
     const userId = c.var.user.id;
-    const count = await notificationsRepo.count(userId);
+    const count = await notificationsService.count(userId);
     return c.json({ data: { count } });
 });
 
@@ -45,7 +45,7 @@ router.get('/count', async (c) => {
 
 router.delete('/', async (c) => {
     const userId = c.var.user.id;
-    await notificationsRepo.dismissAll(userId);
+    await notificationsService.dismissAll(userId);
     return new Response(null, { status: 204 });
 });
 
@@ -56,7 +56,7 @@ router.delete('/', async (c) => {
 router.delete('/:id', async (c) => {
     const userId = c.var.user.id;
     const { id } = c.req.param();
-    await notificationsRepo.dismiss(userId, id);
+    await notificationsService.dismiss(userId, id);
     return new Response(null, { status: 204 });
 });
 

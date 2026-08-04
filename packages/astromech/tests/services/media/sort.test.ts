@@ -1,5 +1,5 @@
 /**
- * `mediaApi.query` sorting.
+ * `mediaService.query` sorting.
  *
  * `sort` was declared on `MediaQueryParams` but dropped by the fetch client, the
  * route and `storage.list` alike, so the media library was always createdAt DESC
@@ -10,7 +10,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
 import { setStorageDriver } from '@/storage/registry.js';
-import { mediaApi } from '@/media/service.js';
+import { mediaService } from '@/media/service.js';
 import { createMediaStorage } from '@/media/storage.js';
 import type { SortOption, StorageDriver } from '@/types/index.js';
 
@@ -55,11 +55,11 @@ beforeEach(async () => {
 });
 
 async function names(sort?: SortOption): Promise<string[]> {
-    const result = await mediaApi.query(sort ? { sort, limit: 10 } : { limit: 10 });
+    const result = await mediaService.query(sort ? { sort, limit: 10 } : { limit: 10 });
     return result.data.map((m) => m.filename);
 }
 
-describe('mediaApi.query — sort', () => {
+describe('mediaService.query — sort', () => {
     it('sorts by filename ascending', async () => {
         expect(await names({ filename: 'asc' })).toEqual([
             'apple.pdf',
@@ -103,7 +103,7 @@ describe('mediaApi.query — sort', () => {
     });
 
     it('applies the sort alongside a filter rather than replacing it', async () => {
-        const result = await mediaApi.query({
+        const result = await mediaService.query({
             where: { mimeType: 'documents' },
             sort: { filename: 'asc' },
             limit: 10,

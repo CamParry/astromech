@@ -59,8 +59,8 @@ Astromech should read as if written by someone fluent in the existing web ecosys
 
 Before adopting a term, check what it already means to a web developer:
 
-- **Don't reuse a word that's taken in-domain.** "Bus" means _event bus_ (`emit`/`subscribe`); bare "context" means React context; "adapter", "middleware", "hook", "store", "provider", "signal" all carry specific expectations. A colliding name costs the reader more than a plain one — they arrive with the wrong mental model and have to unlearn it.
-- **Don't name a quality, a vibe, or an outcome.** "Ambient", "awareness", "insight", "smart", "unified", "orchestrator" sound technical while carrying no information. These are the names most likely to get reached for when the thing isn't yet clearly understood — treat wanting one as a signal to go and understand the thing.
+- **Don't reuse a word that's taken in-domain.** "Bus" means _event bus_ (`emit`/`subscribe`); bare "context" means React context; "adapter", "middleware", "hook", "store", "provider", "signal", "engine", "pipeline", "kernel", "orchestrator", "gateway", "broker" and "manager" all carry specific expectations. Using one is fine when the thing genuinely **is** that thing and you can name the prior art in one sentence — "Laravel's `HttpKernel`, a request handler" is an answer; "it sounds core-ish" isn't. A colliding name costs the reader more than a plain one: they arrive with the wrong mental model and have to unlearn it.
+- **Don't name a quality, a vibe, or an outcome.** "Ambient", "awareness", "insight", "smart", "unified", "holistic", "seamless", "intelligent" and "fabric" sound technical while carrying no information. These are the names most likely to get reached for when the thing isn't yet clearly understood — treat wanting one as a signal to go and understand the thing.
 - **Don't coin unless nothing fits.** Every coinage is vocabulary every future reader must be taught. When one is genuinely unavoidable, it gets a `TERMINOLOGY.md` entry stating what it means and what it was chosen over.
 - **Prefer boring and literal to clever.** A name that a stranger guesses correctly on first read has done its job.
 

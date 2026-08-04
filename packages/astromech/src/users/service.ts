@@ -14,7 +14,7 @@ import { mergePatch, projectToSchema } from '@/fields/patch.js';
 import { getDocumentValidator } from '@/fields/document-validators.js';
 import { flattenFieldNodes } from '@/fields/helpers.js';
 import { scopedReadsFromRecords } from '@/fields/scoped-reads.js';
-import { getCurrentUser } from '@/context/index.js';
+import { getCurrentUser } from '@/request-context/index.js';
 
 function validate<T>(schema: z.ZodType<T>, data: unknown): T {
     try {
@@ -33,7 +33,7 @@ function toUser(row: UserRow): User {
     };
 }
 
-export const usersApi = {
+export const usersService = {
     async query(params?: UserQueryParams): Promise<QueryResult<User>> {
         const storage = createUserStorage();
         const page = params?.page ?? 1;
@@ -97,7 +97,7 @@ export const usersApi = {
                 host: { kind: 'user', record: null },
                 user: getCurrentUser(),
                 reads: scopedReadsFromRecords({
-                    load: async () => (await usersApi.query({ limit: 'all' })).data,
+                    load: async () => (await usersService.query({ limit: 'all' })).data,
                     getId: (r) => r.id,
                     getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
                 }),
@@ -143,7 +143,7 @@ export const usersApi = {
         const validatedData = validate(updateUserSchema, params.data);
 
         if (validatedData.fields !== undefined) {
-            const current = await usersApi.get({ id });
+            const current = await usersService.get({ id });
             const fieldDefs = flattenFieldNodes(config.users?.fields ?? []);
             // Registry first: the Astro config is JSON, so an authored
             // `validate` only survives boot's registration. The config value is
@@ -163,7 +163,7 @@ export const usersApi = {
                 host: { kind: 'user', record: current },
                 user: getCurrentUser(),
                 reads: scopedReadsFromRecords({
-                    load: async () => (await usersApi.query({ limit: 'all' })).data,
+                    load: async () => (await usersService.query({ limit: 'all' })).data,
                     getId: (r) => r.id,
                     getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
                     excludeId: id,

@@ -1,6 +1,6 @@
 /**
  * `astromech/methods` — the boot-generated method manifest and the dispatch,
- * surface, annotation, scoping and confirmation seams that operate on it.
+ * filter, annotation, scoping and confirmation seams that operate on it.
  * Manifest types (`MethodManifest`, `ManifestMethod`) ship from `astromech`.
  */
 
@@ -13,20 +13,20 @@ export { buildDispatch, buildScopedDispatch } from '@/transport/mcp/dispatch.js'
 export type { DispatchResult, ToolDispatch } from '@/transport/mcp/dispatch.js';
 export { buildScopedTools } from '@/transport/mcp/scoped-tools.js';
 
-export { reduceSurface } from '@/policies/tool-surface.js';
+export { filterMethods } from '@/policies/method-filter.js';
 export { annotateManifest } from '@/policies/annotate-manifest.js';
 
-export { scopedService } from '@/policies/scoped-service.js';
-export type { ScopedService } from '@/policies/scoped-service.js';
+export { scopedServices } from '@/policies/scoped-services.js';
+export type { ScopedServices } from '@/policies/scoped-services.js';
 
 export {
     CONFIRM_KEY,
     evaluateConfirmation,
     triggersConfirmation,
-} from '@/policies/confirm-gate.js';
+} from '@/policies/confirmation.js';
 export type {
     ConfirmDecision,
     ConfirmOptions,
+    ConfirmOutcome,
     ConfirmRequest,
-    GateOutcome,
-} from '@/policies/confirm-gate.js';
+} from '@/policies/confirmation.js';

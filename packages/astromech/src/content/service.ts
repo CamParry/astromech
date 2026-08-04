@@ -8,7 +8,7 @@
  */
 
 import config from 'virtual:astromech/config';
-import { getCurrentUser } from '@/context/index.js';
+import { getCurrentUser } from '@/request-context/index.js';
 import { ValidationError } from '@/errors/index.js';
 import { getDocumentValidator } from '@/fields/document-validators.js';
 import { fieldNameToLabel, flattenEntryFields } from '@/fields/helpers.js';
@@ -18,11 +18,11 @@ import {
     extractRichTextSegments,
 } from '@/fields/rich-text/segments.js';
 import { docToMarkdown, markdownToDoc } from '@/fields/rich-text/markdown.js';
-import { assertCapability } from '@/entries/internal/supports.js';
+import { assertCapability } from '@/entries/internal/type-config.js';
 import { UnknownEntryTypeError } from '@/entries/errors.js';
 import { createEntryScopedReads } from '@/entries/reads.js';
 import { getEntryStorage } from '@/entries/storage/registry.js';
-import { resolveEntryType } from '@/entries/type-registry.js';
+import { resolveEntryType } from '@/entries/type-ids.js';
 import { entryValidationStage } from '@/entries/validation-stage.js';
 import { resolveEntryUrl } from '@/entries/utils/url.js';
 import { create } from '@/entries/operations/create.js';
@@ -38,7 +38,7 @@ import { mapWithConcurrency } from './internal/batch.js';
 import type { JSONContent } from '@tiptap/core';
 import type { ContentProvider } from './provider.js';
 import type {
-    ContentApi,
+    ContentService,
     ContentFieldSummary,
     ContentOperationResult,
     ContentTarget,
@@ -82,7 +82,7 @@ export async function generate(
     return runOperation('generate', params);
 }
 
-export const contentApi: ContentApi = { translate, transform, generate };
+export const contentService: ContentService = { translate, transform, generate };
 
 // ============================================================================
 // Orchestration

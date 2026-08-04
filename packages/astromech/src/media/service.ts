@@ -28,7 +28,7 @@ import { mergePatch, projectToSchema } from '@/fields/patch.js';
 import { getDocumentValidator } from '@/fields/document-validators.js';
 import { flattenFieldNodes } from '@/fields/helpers.js';
 import { scopedReadsFromRecords } from '@/fields/scoped-reads.js';
-import { getCurrentUser } from '@/context/index.js';
+import { getCurrentUser } from '@/request-context/index.js';
 import { buildMediaUrl, variantPrefix } from './serving/image/url.js';
 import { isOptimisableImage, readImageDimensions } from './serving/image/dimensions.js';
 import { contentVersion } from './serving/image/version.js';
@@ -116,7 +116,7 @@ async function storeFile(
     return { width: null, height: null, metadata: {} };
 }
 
-export const mediaApi = {
+export const mediaService = {
     async query(params?: MediaQueryParams): Promise<QueryResult<Media>> {
         const storage = createMediaStorage();
         const page = params?.page ?? 1;
@@ -192,7 +192,7 @@ export const mediaApi = {
         const validatedData = validate(updateMediaSchema, params.data);
 
         if (validatedData.fields !== undefined) {
-            const current = await mediaApi.get({ id });
+            const current = await mediaService.get({ id });
             const fieldDefs = flattenFieldNodes(config.media?.fields ?? []);
             // Registry first: the Astro config is JSON, so an authored
             // `validate` only survives boot's registration. The config value is
@@ -212,7 +212,7 @@ export const mediaApi = {
                 host: { kind: 'media', record: current },
                 user: getCurrentUser(),
                 reads: scopedReadsFromRecords({
-                    load: async () => (await mediaApi.query({ limit: 'all' })).data,
+                    load: async () => (await mediaService.query({ limit: 'all' })).data,
                     getId: (r) => r.id,
                     getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
                     excludeId: id,
@@ -303,7 +303,7 @@ export const mediaApi = {
      * edge, so a source using the same file at two paths yields two rows.
      *
      * Titles resolve here rather than in the admin, so this returns the same
-     * shape as `entries.incomingRelations`. Two wire shapes for "what
+     * shape as `entries.incomingRelationships`. Two wire shapes for "what
      * references this" is the split worth avoiding; reading a peer domain to
      * name a row is not.
      */

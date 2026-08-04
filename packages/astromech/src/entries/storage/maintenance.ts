@@ -11,13 +11,13 @@
 
 import { getDb } from '@/database/registry.js';
 import { createStorage } from '@/database/storage/create-storage.js';
-import { entries } from '@/database/schema.js';
+import { entriesTable } from '@/database/schema.js';
 import type { Db } from '@/database/types.js';
 
 export type EntryMaintenanceStorage = ReturnType<typeof createEntryMaintenanceStorage>;
 
 export function createEntryMaintenanceStorage(db: Db = getDb()) {
-    const storage = createStorage(entries, db);
+    const storage = createStorage(entriesTable, db);
 
     /**
      * Transition every scheduled entry whose publish time has passed to

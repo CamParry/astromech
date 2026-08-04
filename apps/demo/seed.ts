@@ -129,7 +129,7 @@ const seededEntries: SeededEntry[] = [];
 async function insertEntries(rows: Record<string, unknown>[]): Promise<void> {
     await db
         .insertInto('entries')
-        .values(rows.map((r) => schema.encodeWith(schema.entries, r) as never))
+        .values(rows.map((r) => schema.encodeWith(schema.entriesTable, r) as never))
         .execute();
     seededEntries.push(
         ...rows.map((r) => ({
@@ -151,7 +151,7 @@ async function indexRelationships(): Promise<void> {
     const rows = seededEntries.flatMap((entry) =>
         collectRelationshipEdges(entryFieldDefinitions(entry.type), entry.fields).map(
             (edge) =>
-                schema.encodeWith(schema.relationships, {
+                schema.encodeWith(schema.relationshipsTable, {
                     sourceId: entry.id,
                     sourceKind: 'entry' as const,
                     sourceType: entry.type,
@@ -184,14 +184,19 @@ async function upsertSetting(key: string, value: unknown): Promise<void> {
     await db
         .insertInto('settings')
         .values(
-            schema.encodeWith(schema.settings, { key, value, updatedAt: now }) as never
+            schema.encodeWith(schema.settingsTable, {
+                key,
+                value,
+                updatedAt: now,
+            }) as never
         )
         .onConflict((oc) =>
-            oc
-                .column('key')
-                .doUpdateSet(
-                    schema.encodeWith(schema.settings, { value, updatedAt: now }) as never
-                )
+            oc.column('key').doUpdateSet(
+                schema.encodeWith(schema.settingsTable, {
+                    value,
+                    updatedAt: now,
+                }) as never
+            )
         )
         .execute();
 }
@@ -435,7 +440,7 @@ async function seed(): Promise<void> {
         .insertInto('media')
         .values(
             (mediaRows as Record<string, unknown>[]).map(
-                (r) => schema.encodeWith(schema.media, r) as never
+                (r) => schema.encodeWith(schema.mediaTable, r) as never
             )
         )
         .execute();

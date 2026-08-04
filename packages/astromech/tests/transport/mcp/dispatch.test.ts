@@ -1,7 +1,7 @@
 /**
- * buildScopedDispatch — the dispatch a caller acting on behalf of a principal
+ * buildScopedDispatch — the dispatch a caller acting on behalf of a role
  * gets. Everything buildDispatch decides is unchanged; what differs is that
- * `invoke` goes through `scopedService`, so a refusal comes from the handle.
+ * `invoke` goes through `scopedServices`, so a refusal comes from the handle.
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -11,12 +11,12 @@ import { PermissionDeniedError } from '@/errors/index.js';
 // The scoped handle resolves the users service at CALL time, so a stub is enough
 // to observe whether a refusal happened before the service was entered.
 vi.mock('@/users/service.js', () => ({
-    usersApi: {
+    usersService: {
         query: vi.fn(() => Promise.resolve({ items: [], total: 0 })),
     },
 }));
 
-import { usersApi } from '@/users/service.js';
+import { usersService } from '@/users/service.js';
 import {
     buildDispatch,
     buildScopedDispatch,
@@ -92,40 +92,43 @@ function role(...permissions: Permission[]): Role {
 }
 
 /** Build a scoped dispatch, failing the test if it produced no tool. */
-function scopedTool(manifest: ManifestMethod, principal: Role | undefined): ToolDispatch {
-    const result = buildScopedDispatch(manifest, principal);
+function scopedTool(
+    manifest: ManifestMethod,
+    actingRole: Role | undefined
+): ToolDispatch {
+    const result = buildScopedDispatch(manifest, actingRole);
     if (!result.ok) expect.unreachable(`expected a tool, got: ${result.reason}`);
     return result.tool;
 }
 
 beforeEach(() => {
     setupTestConfig();
-    vi.mocked(usersApi.query).mockClear();
+    vi.mocked(usersService.query).mockClear();
 });
 
 describe('buildScopedDispatch', () => {
-    it('refuses a method the principal does not hold, from the scoped handle', async () => {
+    it('refuses a method the role does not hold, from the scoped handle', async () => {
         const tool = scopedTool(usersQuery, role('users:create'));
 
         await expect(tool.invoke({})).rejects.toThrow(PermissionDeniedError);
-        expect(usersApi.query).not.toHaveBeenCalled();
+        expect(usersService.query).not.toHaveBeenCalled();
     });
 
-    it('calls through when the principal holds the permission', async () => {
+    it('calls through when the role holds the permission', async () => {
         const tool = scopedTool(usersQuery, role('users:read'));
 
         await expect(tool.invoke({ limit: 10 })).resolves.toEqual({
             items: [],
             total: 0,
         });
-        expect(usersApi.query).toHaveBeenCalledWith({ limit: 10 });
+        expect(usersService.query).toHaveBeenCalledWith({ limit: 10 });
     });
 
-    it('refuses when there is no principal — allowed nothing, not trusted', async () => {
+    it('refuses when there is no role — allowed nothing, not trusted', async () => {
         const tool = scopedTool(usersQuery, undefined);
 
         await expect(tool.invoke({})).rejects.toThrow(PermissionDeniedError);
-        expect(usersApi.query).not.toHaveBeenCalled();
+        expect(usersService.query).not.toHaveBeenCalled();
     });
 
     it('refuses a plugin method that buildDispatch dispatches', () => {

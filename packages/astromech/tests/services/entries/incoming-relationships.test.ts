@@ -1,5 +1,5 @@
 /**
- * `entries.incomingRelations` — reverse lookup for the delete modal.
+ * `entries.incomingRelationships` — reverse lookup for the delete modal.
  *
  * The interesting case is a source whose entry type is NOT the target's: it
  * lives in that type's own storage, so loading it through the target's storage
@@ -10,7 +10,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
-import { entries as api } from '@/entries/service.js';
+import { entriesService as api } from '@/entries/service.js';
 import { tableStorage } from '@/entries/storage/table.js';
 import { defineTable } from '@/database/define-table.js';
 import type { AstromechConfig, PluginDefinition } from '@/types/index.js';
@@ -95,7 +95,7 @@ beforeEach(async () => {
         )`.execute(db);
 });
 
-describe('incomingRelations', () => {
+describe('incomingRelationships', () => {
     it('returns a source whose entry type is not the target type', async () => {
         const target = await api.create({ type: 'post', title: 'Target' });
         const source = await api.create({
@@ -104,7 +104,7 @@ describe('incomingRelations', () => {
             fields: { author: target.id },
         });
 
-        const incoming = await api.incomingRelations({ type: 'post', id: target.id });
+        const incoming = await api.incomingRelationships({ type: 'post', id: target.id });
 
         expect(incoming).toEqual([
             {
@@ -124,7 +124,7 @@ describe('incomingRelations', () => {
             fields: { label: 'A link', post: target.id },
         });
 
-        const incoming = await api.incomingRelations({ type: 'post', id: target.id });
+        const incoming = await api.incomingRelationships({ type: 'post', id: target.id });
 
         expect(incoming).toEqual([
             {
@@ -144,7 +144,7 @@ describe('incomingRelations', () => {
             fields: { author: target.id, sections: [{ related: target.id }] },
         });
 
-        const incoming = await api.incomingRelations({ type: 'post', id: target.id });
+        const incoming = await api.incomingRelationships({ type: 'post', id: target.id });
 
         expect(incoming).toHaveLength(2);
         expect(incoming.every((r) => r.sourceId === source.id)).toBe(true);
@@ -164,7 +164,7 @@ describe('incomingRelations', () => {
         });
         const staged = await api.createStaged({ type: 'article', id: canonical.id });
 
-        const incoming = await api.incomingRelations({ type: 'post', id: target.id });
+        const incoming = await api.incomingRelationships({ type: 'post', id: target.id });
 
         expect(incoming.map((r) => r.sourceId).sort()).toEqual(
             [canonical.id, staged.id].sort()
@@ -180,13 +180,15 @@ describe('incomingRelations', () => {
         });
         await api.trash({ type: 'article', id: source.id });
 
-        const incoming = await api.incomingRelations({ type: 'post', id: target.id });
+        const incoming = await api.incomingRelationships({ type: 'post', id: target.id });
 
         expect(incoming.map((r) => r.sourceId)).toEqual([source.id]);
     });
 
     it('returns an empty list when nothing references the target', async () => {
         const target = await api.create({ type: 'post', title: 'Lonely' });
-        expect(await api.incomingRelations({ type: 'post', id: target.id })).toEqual([]);
+        expect(await api.incomingRelationships({ type: 'post', id: target.id })).toEqual(
+            []
+        );
     });
 });

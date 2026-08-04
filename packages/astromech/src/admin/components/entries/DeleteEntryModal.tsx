@@ -2,14 +2,14 @@
  * DeleteEntryModal — confirmation modal for trashing or permanently deleting
  * an entry. Surfaces:
  *  - cascade-locales toggle (only when the entry has sibling locales)
- *  - incoming-relations list (only when other entries reference this one)
+ *  - incoming-relationships list (only when other entries reference this one)
  */
 
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Checkbox, Modal, Spinner } from '@/admin/components/ui/index.js';
-import { useIncomingRelations } from '@/admin/hooks/entries.js';
-import type { Entry, IncomingRelation } from '@/types/index.js';
+import { useIncomingRelationships } from '@/admin/hooks/entries.js';
+import type { Entry, IncomingRelationship } from '@/types/index.js';
 
 type DeleteEntryModalProps = {
     open: boolean;
@@ -49,7 +49,7 @@ export function DeleteEntryModal({
             : [];
     const hasSiblings = localeSiblings.length > 0;
 
-    const { data: incoming, isLoading: incomingLoading } = useIncomingRelations(
+    const { data: incoming, isLoading: incomingLoading } = useIncomingRelationships(
         entry?.type ?? '',
         entry?.id ?? '',
         open && entry != null
@@ -123,7 +123,7 @@ export function DeleteEntryModal({
                     ) : (
                         <>
                             <p className="am-text-sm">
-                                {t('entries.incomingRelationsHeader', {
+                                {t('entries.incomingRelationshipsHeader', {
                                     count: incomingCount,
                                 })}
                             </p>
@@ -133,7 +133,7 @@ export function DeleteEntryModal({
                             >
                                 {(incoming ?? [])
                                     .slice(0, 10)
-                                    .map((r: IncomingRelation) => (
+                                    .map((r: IncomingRelationship) => (
                                         <li key={`${r.sourceId}-${r.schemaPath}`}>
                                             {r.sourceTitle || r.sourceId}{' '}
                                             <span className="am-text-mono">

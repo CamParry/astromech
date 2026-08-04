@@ -13,7 +13,7 @@ import { createTestDb, setupTestConfig } from '@tests/harness.js';
 import { createBuiltInEntryStorage } from '@/entries/storage/built-in.js';
 import { BUILT_IN_SUPPORTS } from '@/entries/storage/capabilities.js';
 import { encodeWith } from '@/database/codec.js';
-import { entries } from '@/database/schema.js';
+import { entriesTable } from '@/database/schema.js';
 import type { DB } from '@/database/types.js';
 
 let storage: ReturnType<typeof createBuiltInEntryStorage>;
@@ -156,7 +156,7 @@ describe('staging (forward versioning) schema', () => {
         await db
             .insertInto('entries')
             .values(
-                encodeWith(entries, {
+                encodeWith(entriesTable, {
                     type: 'post',
                     locale: 'en',
                     slug: 'live',
@@ -174,7 +174,7 @@ describe('staging (forward versioning) schema', () => {
         await db
             .insertInto('entries')
             .values(
-                encodeWith(entries, {
+                encodeWith(entriesTable, {
                     type: 'post',
                     locale: 'en',
                     slug: 'ghost',

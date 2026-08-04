@@ -11,7 +11,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { Astromech } from '@/transport/http/client/index.js';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntriesListPage } from '@/admin/components/entries/entries-list-page.js';
-import type { EntriesApi } from '@/types/index.js';
+import type { EntriesService } from '@/types/index.js';
 import {
     validateEntriesListSearch,
     type EntriesMount,
@@ -25,7 +25,7 @@ function EntryIndexPage(): React.ReactElement {
         { depth: 0 }
     );
     const mount: EntriesMount = {
-        api: Astromech.entries as unknown as EntriesApi,
+        api: Astromech.entries as unknown as EntriesService,
         type,
         cacheScope: '',
         config: adminConfig.entries[type],

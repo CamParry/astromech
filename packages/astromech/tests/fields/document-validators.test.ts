@@ -13,7 +13,7 @@ import {
     resetDocumentValidators,
     setDocumentValidator,
 } from '@/fields/document-validators.js';
-import { resolveConfig } from '@/kernel/config-resolver.js';
+import { resolveConfig } from '@/boot/config-resolver.js';
 import { makeTestConfig } from '@tests/harness.js';
 import type { AstromechConfig, DocumentValidator } from '@/types/index.js';
 

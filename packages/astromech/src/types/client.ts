@@ -1,23 +1,23 @@
 /**
  * Client types — AstromechClient and the typed-entry narrowing surface.
  *
- * Runtime is `EntriesApi` (api.ts). This file layers literal-type overloads on
- * top so that callers passing string-literal types get a narrowed `TypedEntry`
- * result instead of the wide `Entry`.
+ * Runtime is `EntriesService` (services.ts). This file layers literal-type
+ * overloads on top so that callers passing string-literal types get a narrowed
+ * `TypedEntry` result instead of the wide `Entry`.
  */
 
 import type { Entry, EntryStatus, EntryVersion, JsonObject } from './domain.js';
 import type {
-    EntriesApi,
+    EntriesService,
     EntryDuplicateOverrides,
     EntryQueryParams,
     EntryUpdateData,
-    MediaApi,
-    NotificationsApi,
+    MediaService,
+    NotificationsService,
     QueryResult,
-    SettingsApi,
-    UsersApi,
-} from './api.js';
+    SettingsService,
+    UsersService,
+} from './services.js';
 import type { ResolvedConfig } from './config.js';
 import type { PluginServiceMethod } from './plugins.js';
 
@@ -70,14 +70,14 @@ export type PublicFieldsFor<T extends keyof AstromechEntryTypes> = PublicFieldsF
 // ============================================================================
 
 /**
- * Layered overloads above the wide `EntriesApi`, parameterised by an entry-type
+ * Layered overloads above the wide `EntriesService`, parameterised by an entry-type
  * map. Literal-type `type` args return `TypedEntry<FieldsFor<T>>`; the wide
  * overload fallback returns `Entry`.
  *
- * `TypedEntriesApi` is the standard alias bound to the global
+ * `TypedEntriesService` is the standard alias bound to the global
  * `AstromechEntryTypes`.
  */
-export type TypedEntriesApiFor<EntryMap> = {
+export type TypedEntriesServiceFor<EntryMap> = {
     // ── query ────────────────────────────────────────────────────────────────
     // full: true — returns the full (admin) shape
     query<T extends keyof EntryMap>(
@@ -258,7 +258,7 @@ export type TypedEntriesApiFor<EntryMap> = {
         versionId: string;
     }): Promise<Entry>;
 } & Omit<
-    EntriesApi,
+    EntriesService,
     | 'query'
     | 'get'
     | 'create'
@@ -272,8 +272,8 @@ export type TypedEntriesApiFor<EntryMap> = {
     | 'restoreVersion'
 >;
 
-/** `TypedEntriesApi` — alias of `TypedEntriesApiFor` bound to the global map. */
-export type TypedEntriesApi = TypedEntriesApiFor<AstromechEntryTypes>;
+/** `TypedEntriesService` — alias of `TypedEntriesServiceFor` bound to the global map. */
+export type TypedEntriesService = TypedEntriesServiceFor<AstromechEntryTypes>;
 
 // ============================================================================
 // AstromechClient
@@ -304,11 +304,11 @@ export type PluginServiceNamespace = AstromechPluginServices &
     Record<string, Record<string, (input?: unknown) => Promise<unknown>>>;
 
 export type AstromechClient = {
-    entries: TypedEntriesApi;
-    media: MediaApi;
-    settings: SettingsApi;
-    users: UsersApi;
-    notifications: NotificationsApi;
+    entries: TypedEntriesService;
+    media: MediaService;
+    settings: SettingsService;
+    users: UsersService;
+    notifications: NotificationsService;
     config: ResolvedConfig;
     /** Plugin RPC methods — `Astromech.plugins.<name>.<method>(input)`. */
     plugins?: PluginServiceNamespace;

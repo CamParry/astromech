@@ -1,5 +1,5 @@
 /**
- * `mediaApi.query` filters, pinned across the move onto media storage.
+ * `mediaService.query` filters, pinned across the move onto media storage.
  *
  * The mime-bucket predicate is the one part of the migration whose SQL is
  * genuinely different in kind: it moved from a `DB`-typed expression builder onto
@@ -7,14 +7,14 @@
  * raw `sql` fragment naming snake_case columns (CamelCasePlugin does not
  * transform raw fragments). Nothing else in the suite exercises it.
  *
- * Rows are inserted through storage rather than `mediaApi.upload` so no storage
+ * Rows are inserted through storage rather than `mediaService.upload` so no storage
  * driver, image decoding or real bytes are involved.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
 import { setStorageDriver } from '@/storage/registry.js';
-import { mediaApi } from '@/media/service.js';
+import { mediaService } from '@/media/service.js';
 import { createMediaStorage } from '@/media/storage.js';
 import type { MediaMimeTypeFilter, StorageDriver } from '@/types/index.js';
 
@@ -61,12 +61,12 @@ beforeEach(async () => {
 
 /** Filenames matching a bucket, plus the reported total (they must agree). */
 async function bucket(mimeType: MediaMimeTypeFilter): Promise<string[]> {
-    const result = await mediaApi.query({ where: { mimeType }, limit: 10 });
+    const result = await mediaService.query({ where: { mimeType }, limit: 10 });
     expect(result.pagination?.total).toBe(result.data.length);
     return result.data.map((m) => m.filename).sort();
 }
 
-describe('mediaApi.query — mime buckets', () => {
+describe('mediaService.query — mime buckets', () => {
     it('matches image/* for images', async () => {
         expect(await bucket('images')).toEqual(['a.png']);
     });
@@ -84,21 +84,21 @@ describe('mediaApi.query — mime buckets', () => {
     });
 });
 
-describe('mediaApi.query — search and pagination', () => {
+describe('mediaService.query — search and pagination', () => {
     it('returns every row unpaginated for limit: all', async () => {
-        const result = await mediaApi.query({ limit: 'all' });
+        const result = await mediaService.query({ limit: 'all' });
         expect(result.data.length).toBe(FIXTURES.length);
         expect(result.pagination).toBeNull();
     });
 
     it('filters on filename', async () => {
-        const result = await mediaApi.query({ search: 'a.p', limit: 10 });
+        const result = await mediaService.query({ search: 'a.p', limit: 10 });
         expect(result.data.map((m) => m.filename)).toEqual(['a.png']);
         expect(result.pagination?.total).toBe(1);
     });
 
     it('ANDs the search onto the bucket rather than replacing it', async () => {
-        const result = await mediaApi.query({
+        const result = await mediaService.query({
             search: '.p',
             where: { mimeType: 'documents' },
             limit: 10,
@@ -109,7 +109,7 @@ describe('mediaApi.query — search and pagination', () => {
     });
 
     it('counts every match, not just the page', async () => {
-        const result = await mediaApi.query({ limit: 2, page: 2 });
+        const result = await mediaService.query({ limit: 2, page: 2 });
         expect(result.data.length).toBe(2);
         expect(result.pagination).toEqual({ page: 2, limit: 2, total: 5, pages: 3 });
     });

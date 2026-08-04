@@ -5,8 +5,8 @@
  */
 
 import { scheduleEntrySchema } from '../schema.js';
-import { validate } from '../internal/validation.js';
-import { assertCapability } from '../internal/supports.js';
+import { parseWith } from '../internal/parse.js';
+import { assertCapability } from '../internal/type-config.js';
 import { update } from './update.js';
 import type { Entry } from '@/types/index.js';
 
@@ -40,7 +40,7 @@ export async function schedule(params: {
     publishAt: Date;
 }): Promise<Entry | Entry[]> {
     assertCapability(params.type, 'statuses');
-    const validated = validate(scheduleEntrySchema, { publishAt: params.publishAt });
+    const validated = parseWith(scheduleEntrySchema, { publishAt: params.publishAt });
     return update({
         type: params.type,
         id: params.id,

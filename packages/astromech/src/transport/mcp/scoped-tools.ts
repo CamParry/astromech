@@ -1,19 +1,19 @@
 /**
- * The tool surface one principal reaches: every manifest method that role may
- * call, each dispatched through `buildScopedDispatch`. Lives beside
+ * The tool surface one role reaches: every manifest method it may call, each
+ * dispatched through `buildScopedDispatch`. Lives beside
  * `dispatch.ts` because it composes it, and serves the AI tool-loop as well as
  * MCP.
  */
 
 import type { Role, ToolDispatch } from '@/types/index.js';
 import { getMethodManifest } from '@/codegen/manifest-registry.js';
-import { reduceSurface } from '@/policies/tool-surface.js';
+import { filterMethods } from '@/policies/method-filter.js';
 import { annotateManifest } from '@/policies/annotate-manifest.js';
 import { buildScopedDispatch } from '@/transport/mcp/dispatch.js';
 
-/** Build the dispatches this principal reaches, narrowed by the surface options. */
+/** Build the dispatches this role reaches, narrowed by the method filter. */
 export function buildScopedTools(
-    principal: Role | undefined,
+    role: Role | undefined,
     options?: { readOnly?: boolean }
 ): ToolDispatch[] {
     const manifest = getMethodManifest();
@@ -28,18 +28,18 @@ export function buildScopedTools(
     // dropped here rather than built into a list of refusals.
     const dispatchable = manifest.methods.filter((method) => method.source !== 'plugin');
 
-    const surface = reduceSurface(dispatchable, { readOnly: options?.readOnly });
+    const filtered = filterMethods(dispatchable, { readOnly: options?.readOnly });
 
     // A size reduction, NOT a security measure: the annotation is advisory and
     // `buildScopedDispatch` is what actually refuses. `allowed === null` is an
     // input-derived permission only the scoped handle can decide, so it stays.
-    const permitted = annotateManifest(surface.methods, principal).filter(
+    const permitted = annotateManifest(filtered.methods, role).filter(
         (method) => method.allowed !== false
     );
 
     const tools: ToolDispatch[] = [];
     for (const method of permitted) {
-        const dispatch = buildScopedDispatch(method, principal);
+        const dispatch = buildScopedDispatch(method, role);
         if (!dispatch.ok) continue;
         tools.push(dispatch.tool);
     }

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, setupTestConfig, makeTestConfig } from '@tests/harness.js';
 import { setStorageDriver } from '@/storage/registry.js';
-import { mediaApi } from '@/media/service.js';
+import { mediaService } from '@/media/service.js';
 import type { StorageDriver } from '@/types/index.js';
 
 // Minimal 1x1 JPEG (SOI + APP0 + SOF0 + EOI) — an optimisable raster image.
@@ -89,9 +89,9 @@ beforeEach(async () => {
     setStorageDriver(storage);
 });
 
-describe('mediaApi.upload', () => {
+describe('mediaService.upload', () => {
     it('buffers an image and records dimensions + version', async () => {
-        const media = await mediaApi.upload({
+        const media = await mediaService.upload({
             file: new File([jpegBytes() as BlobPart], 'photo.jpg', {
                 type: 'image/jpeg',
             }),
@@ -104,7 +104,7 @@ describe('mediaApi.upload', () => {
     });
 
     it('mints a ULID id, not a UUID', async () => {
-        const media = await mediaApi.upload({
+        const media = await mediaService.upload({
             file: new File([jpegBytes() as BlobPart], 'photo.jpg', {
                 type: 'image/jpeg',
             }),
@@ -117,7 +117,7 @@ describe('mediaApi.upload', () => {
     });
 
     it('streams a non-image straight to storage (never buffered)', async () => {
-        const media = await mediaApi.upload({
+        const media = await mediaService.upload({
             file: new File(['hello world' as BlobPart], 'notes.txt', {
                 type: 'text/plain',
             }),
@@ -129,9 +129,9 @@ describe('mediaApi.upload', () => {
     });
 });
 
-describe('mediaApi.replace', () => {
+describe('mediaService.replace', () => {
     it('purges variants and overwrites when the extension is unchanged', async () => {
-        const m = await mediaApi.upload({
+        const m = await mediaService.upload({
             file: new File([jpegBytes() as BlobPart], 'photo.jpg', {
                 type: 'image/jpeg',
             }),
@@ -142,7 +142,7 @@ describe('mediaApi.replace', () => {
             new Uint8Array([1])
         );
 
-        await mediaApi.replace({
+        await mediaService.replace({
             id: m.id,
             file: new File([jpegBytes() as BlobPart], 'photo.jpg', {
                 type: 'image/jpeg',
@@ -157,14 +157,14 @@ describe('mediaApi.replace', () => {
     });
 
     it('deletes the old original when the extension changes', async () => {
-        const m = await mediaApi.upload({
+        const m = await mediaService.upload({
             file: new File([jpegBytes() as BlobPart], 'photo.jpg', {
                 type: 'image/jpeg',
             }),
         });
         expect(storage.keys.has(`${m.id}.jpg`)).toBe(true);
 
-        await mediaApi.replace({
+        await mediaService.replace({
             id: m.id,
             file: new File([jpegBytes() as BlobPart], 'photo.png', { type: 'image/png' }),
         });

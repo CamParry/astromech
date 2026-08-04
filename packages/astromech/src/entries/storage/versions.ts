@@ -5,14 +5,14 @@
 
 import { getDb } from '@/database/registry.js';
 import { createStorage } from '@/database/storage/create-storage.js';
-import { entryVersions } from '@/database/schema.js';
+import { entryVersionsTable } from '@/database/schema.js';
 import type { Db } from '@/database/types.js';
 import type { EntryVersionRow, NewEntryVersionRow } from '../schema.js';
 
 export type VersionStorage = ReturnType<typeof createVersionStorage>;
 
 export function createVersionStorage(db: Db = getDb()) {
-    const storage = createStorage(entryVersions, db);
+    const storage = createStorage(entryVersionsTable, db);
 
     /** Create a new version snapshot. */
     async function create(data: NewEntryVersionRow): Promise<EntryVersionRow> {

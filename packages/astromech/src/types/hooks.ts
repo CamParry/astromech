@@ -56,7 +56,7 @@ export type EntryDeleteContext = {
     type: string;
     entry: Entry;
     user: User | null;
-    force: boolean;
+    permanent: boolean;
 };
 
 export type MediaUploadContext = {

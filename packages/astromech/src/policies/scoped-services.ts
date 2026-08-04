@@ -1,8 +1,8 @@
 /**
- * `scopedService(principal)` — the service handle a caller cannot exceed.
+ * `scopedServices(role)` — the service handles a caller cannot exceed.
  *
  * This is what an untrusted transport (a remote/agent tool-loop, anything acting
- * on behalf of a principal) is handed INSTEAD of the raw domain services. Every
+ * under a role) is handed INSTEAD of the raw domain services. Every
  * method on the handle checks its own descriptor before calling through, so the
  * caller's authority is a property of the object it holds rather than of the
  * checks it remembered to write: pass a handle scoped to an editor and there is
@@ -13,7 +13,7 @@
  * therefore ungated" is exactly how a privileged method reaches a caller that
  * was never meant to have it.
  *
- * This does NOT replace `withPermissions`. Its `allows`/`allowsMethod` remain
+ * This does NOT replace `permissionsFor`. Its `allows`/`allowsMethod` remain
  * the seam for route checks that carry custom logic the descriptor cannot state
  * — `users.get` allowing self-access without `users:read`, the last-admin guard.
  * Those routes keep asking; this handle is for callers that should not be asked
@@ -21,28 +21,28 @@
  */
 
 import type {
-    ContentApi,
-    EntriesApi,
-    MediaApi,
+    ContentService,
+    EntriesService,
+    MediaService,
     Role,
     ServiceMethodDescriptor,
-    SettingsApi,
-    UsersApi,
+    SettingsService,
+    UsersService,
 } from '@/types/index.js';
 import { PermissionDeniedError } from '@/errors/index.js';
 import { entryPermission, type EntryAction } from '@/permissions/entry-permission.js';
 import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/index.js';
-import { withPermissions, type Permissions } from './with-permissions.js';
-import { usersApi } from '@/users/service.js';
-import { usersDescriptors } from '@/users/descriptors.js';
-import { mediaApi } from '@/media/service.js';
-import { mediaDescriptors } from '@/media/descriptors.js';
-import { settingsApi } from '@/settings/service.js';
-import { settingsDescriptors } from '@/settings/descriptors.js';
-import { entries } from '@/entries/service.js';
-import { ENTRY_METHOD_ACTIONS, type EntryMethodName } from '@/entries/descriptors.js';
-import { contentApi } from '@/content/service.js';
-import { contentDescriptors } from '@/content/descriptors.js';
+import { permissionsFor, type Permissions } from '@/permissions/permissions-for.js';
+import { usersService } from '@/users/service.js';
+import { usersDescriptors } from '@/users/methods.js';
+import { mediaService } from '@/media/service.js';
+import { mediaDescriptors } from '@/media/methods.js';
+import { settingsService } from '@/settings/service.js';
+import { settingsDescriptors } from '@/settings/methods.js';
+import { entriesService } from '@/entries/service.js';
+import { ENTRY_METHOD_ACTIONS, type EntryMethodName } from '@/entries/methods.js';
+import { contentService } from '@/content/service.js';
+import { contentDescriptors } from '@/content/methods.js';
 
 /**
  * A domain's descriptor catalogue, keyed by service method name.
@@ -121,7 +121,7 @@ export function scopeMethods<S extends object>(
  * `query` accepts a list of types (a cross-type listing), so a call can target
  * more than one; every method takes `{ type, ... }`. A call must hold the
  * permission for EVERY type it touches — a list is not a way to reach a type the
- * principal lacks by pairing it with one it holds.
+ * role lacks by pairing it with one it holds.
  */
 function targetedTypes(input: unknown): string[] | null {
     if (typeof input !== 'object' || input === null) return null;
@@ -165,12 +165,12 @@ function wantsFullShape(input: unknown): boolean {
  * way past the projection for every caller holding a bare read.
  */
 export function scopeEntries(
-    entriesApi: EntriesApi,
+    service: EntriesService,
     permissions: Permissions
-): EntriesApi {
+): EntriesService {
     const scoped: ServiceRecord = {};
 
-    for (const [key, value] of Object.entries(entriesApi as unknown as ServiceRecord)) {
+    for (const [key, value] of Object.entries(service as unknown as ServiceRecord)) {
         if (typeof value !== 'function') {
             scoped[key] = value;
             continue;
@@ -206,11 +206,11 @@ export function scopeEntries(
                 throw new PermissionDeniedError(id, PERMISSION_ENTRY_READ_FULL);
             }
 
-            return fn.apply(entriesApi, args);
+            return fn.apply(service, args);
         };
     }
 
-    return scoped as unknown as EntriesApi;
+    return scoped as unknown as EntriesService;
 }
 
 /**
@@ -228,19 +228,22 @@ function targetedContentType(input: unknown): string | null {
 /**
  * Scope the content service. Content is double-gated: the descriptor's
  * `content:*` permission AND `update` on the entry type the call names, because
- * holding "may use a model" must not rewrite a type the principal cannot edit
- * by hand.
+ * holding "may use a model" must not rewrite a type the role cannot edit by
+ * hand.
  *
  * The first half comes from a fixed catalogue like `scopeMethods`; the second is
  * derived from the call like `scopeEntries`, through the same
  * `entryPermission` helper the entries wrapper and the HTTP route use. A method
  * with no descriptor, or a call naming no usable type, is refused.
  */
-export function scopeContent(api: ContentApi, permissions: Permissions): ContentApi {
+export function scopeContent(
+    service: ContentService,
+    permissions: Permissions
+): ContentService {
     const scoped: ServiceRecord = {};
     const descriptors: DescriptorCatalogue = contentDescriptors;
 
-    for (const [key, value] of Object.entries(api as unknown as ServiceRecord)) {
+    for (const [key, value] of Object.entries(service as unknown as ServiceRecord)) {
         if (typeof value !== 'function') {
             scoped[key] = value;
             continue;
@@ -271,35 +274,40 @@ export function scopeContent(api: ContentApi, permissions: Permissions): Content
                 throw new PermissionDeniedError(id, permission);
             }
 
-            return fn.apply(api, args);
+            return fn.apply(service, args);
         };
     }
 
-    return scoped as unknown as ContentApi;
+    return scoped as unknown as ContentService;
 }
 
-/** The five content domains, each scoped to one principal. */
-export type ScopedService = {
-    users: UsersApi;
-    media: MediaApi;
-    settings: SettingsApi;
-    entries: EntriesApi;
-    content: ContentApi;
+/** The five content domains, each scoped to one role. */
+export type ScopedServices = {
+    users: UsersService;
+    media: MediaService;
+    settings: SettingsService;
+    entries: EntriesService;
+    content: ContentService;
 };
 
 /**
- * Compose one principal into a handle over every content domain.
+ * Compose one role into a handle over every content domain.
  *
- * One `withPermissions` guard backs all five, so a principal is resolved once
- * per handle rather than once per call.
+ * One `permissionsFor` guard backs all five, so the role is resolved once per
+ * handle rather than once per call.
  */
-export function scopedService(principal: Role | undefined): ScopedService {
-    const permissions = withPermissions(principal);
+export function scopedServices(role: Role | undefined): ScopedServices {
+    const permissions = permissionsFor(role);
     return {
-        users: scopeMethods(usersApi, usersDescriptors, permissions, 'users'),
-        media: scopeMethods(mediaApi, mediaDescriptors, permissions, 'media'),
-        settings: scopeMethods(settingsApi, settingsDescriptors, permissions, 'settings'),
-        entries: scopeEntries(entries, permissions),
-        content: scopeContent(contentApi, permissions),
+        users: scopeMethods(usersService, usersDescriptors, permissions, 'users'),
+        media: scopeMethods(mediaService, mediaDescriptors, permissions, 'media'),
+        settings: scopeMethods(
+            settingsService,
+            settingsDescriptors,
+            permissions,
+            'settings'
+        ),
+        entries: scopeEntries(entriesService, permissions),
+        content: scopeContent(contentService, permissions),
     };
 }

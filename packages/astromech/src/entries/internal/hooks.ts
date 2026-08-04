@@ -11,41 +11,47 @@ import {
     runAfterHooks,
     runBeforeHooks,
 } from '@/plugins/runtime/plugin-runtime.js';
-import { getCurrentUser } from '@/context/index.js';
+import { getCurrentUser } from '@/request-context/index.js';
 import { getEntryStorage } from '../storage/registry.js';
 import { loadAndAssertType } from './records.js';
 import type { Entry } from '@/types/index.js';
 
-export function entryHooksActive(...events: string[]): boolean {
+export function hasEntryHooks(...events: string[]): boolean {
     return events.some((event) => hasHookHandlers(event));
 }
 
-export async function entrySnapshot(type: string, id: string): Promise<Entry> {
+export async function loadEntrySnapshot(type: string, id: string): Promise<Entry> {
     return loadAndAssertType(getEntryStorage(type), type, id);
 }
 
 /**
  * Run a trash/delete operation with `entry:beforeDelete`/`entry:afterDelete`
- * hooks. `force` distinguishes permanent delete (true) from trash (false).
+ * hooks. `permanent` distinguishes permanent delete (true) from trash (false).
  */
 export async function runDeleteWithHooks(
     type: string,
     id: string | readonly string[],
-    force: boolean,
+    permanent: boolean,
     op: () => Promise<void>
 ): Promise<void> {
-    if (!entryHooksActive('entry:beforeDelete', 'entry:afterDelete')) {
+    if (!hasEntryHooks('entry:beforeDelete', 'entry:afterDelete')) {
         await op();
         return;
     }
     const user = getCurrentUser();
     const ids = Array.isArray(id) ? Array.from(id) : [id as string];
-    const before = await Promise.all(ids.map((entryId) => entrySnapshot(type, entryId)));
+    const before = await Promise.all(
+        ids.map((entryId) => loadEntrySnapshot(type, entryId))
+    );
     for (const entry of before) {
-        await runBeforeHooks('entry:beforeDelete', { type, entry, user, force }, user);
+        await runBeforeHooks(
+            'entry:beforeDelete',
+            { type, entry, user, permanent },
+            user
+        );
     }
     await op();
     for (const entry of before) {
-        await runAfterHooks('entry:afterDelete', { type, entry, user, force }, user);
+        await runAfterHooks('entry:afterDelete', { type, entry, user, permanent }, user);
     }
 }

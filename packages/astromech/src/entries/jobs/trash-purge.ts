@@ -22,9 +22,9 @@ export const trashPurgeJob: CronJob = {
         const purged = await createEntryMaintenanceStorage(db).purgeTrashedBefore(cutoff);
         // Both directions: the edges a purged entry owned, and the edges other
         // entries still record as pointing at it.
-        const relationshipsRepo = createRelationshipStorage(db);
+        const relationships = createRelationshipStorage(db);
         for (const id of purged) {
-            await relationshipsRepo.deleteByResource(id, 'entry');
+            await relationships.deleteByResource(id, 'entry');
         }
     },
 };

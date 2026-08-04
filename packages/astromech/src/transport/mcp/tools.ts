@@ -11,7 +11,7 @@ import {
     evaluateConfirmation,
     triggersConfirmation,
     type ConfirmOptions,
-} from '@/policies/confirm-gate.js';
+} from '@/policies/confirmation.js';
 import { buildDispatch, type DispatchResult, type ToolAnnotations } from './dispatch.js';
 
 // ============================================================================

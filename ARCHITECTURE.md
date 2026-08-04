@@ -28,13 +28,12 @@ The source is a modular screaming-architecture DAG. Imports may only point
 one another:
 
 ```
-routes · admin · kernel · codegen · cli        entrypoints & composition root
-client                                         consumes the HTTP API over the wire
-transport (http · local · mcp · cli)           delivery
-policies                                       permission/confirmation wrappers (withPermissions)
+routes · admin · boot · codegen · cli          entrypoints & composition root
+transport (http · local · mcp · cli)           delivery — http/client/ is the fetch Client (astromech/fetch), over the wire
+policies                                       permission/confirmation wrappers over the manifest
 entries · media · users · settings             domains — siblings, never import each other
 plugins/runtime · database · storage ·         capabilities
-  email · cron · context · fields · permissions
+  email · cron · request-context · fields · permissions
 types · utilities · errors                     pure leaves
 ```
 
@@ -51,12 +50,12 @@ enforced by each package's `exports` boundary at publish time. The plugin
 Key invariants:
 
 - **Domains are deep modules named for the business, not the tech.** Each owns its
-  `service.ts`, `schema.ts` (`defineTable` table descriptor + Zod validation), `descriptors.ts`,
+  `service.ts`, `schema.ts` (`defineTable` table descriptor + Zod validation), `methods.ts`,
   and `visibility.ts`. Cross-domain data goes through `@/database/schema` (the
   table aggregator) or a shared capability — never via a direct peer import. The
   only permitted exception is a `schema.ts` foreign-key cross-reference.
 - **Capabilities sit below domains.** They expose primitives (`storage`, `database`,
-  `fields`, `permissions`, `context`, `email`, `cron`, `cloudflare`) and may not
+  `fields`, `permissions`, `request-context`, `email`, `cron`, `cloudflare`) and may not
   orchestrate domain logic.
 - **Each capability owns its own driver slot; there is no central context object.**
   Slots share one mechanism (`utilities/registry.ts`) over a single
@@ -89,16 +88,13 @@ packages/
 │   │   ├── middleware.ts   # HTTP middleware entry     (astromech/middleware)
 │   │   │
 │   │   │   ── entrypoints & composition root ──────────────────────────────────
-│   │   ├── kernel/         # composition root — boots & wires all layers; Astro integration (astromech/astro)
+│   │   ├── boot/           # composition root — boots & wires all layers; Astro integration (astromech/astro)
 │   │   ├── routes/         # 3 Astro APIRoute entrypoints injected by the integration (api / auth / media)
 │   │   ├── admin/          # React admin SPA (TanStack Router; deep-imports a few pure domain leaves) — components/dev/ is import.meta.env.DEV-gated
 │   │   ├── codegen/        # type generator + plugin-client manifest + method manifest (.astro/astromech.methods.json, plus manifest-registry.ts — the boot-generated copy)
 │   │   │
-│   │   │   ── over-the-wire client ─────────────────────────────────────────
-│   │   ├── client/         # fetch Client (astromech/fetch) — talks HTTP, no server imports
-│   │   │
 │   │   │   ── delivery ────────────────────────────────────────────────────
-│   │   ├── transport/      # local/ (astromech/local) · http/ (Hono routes+middleware) · cli/ · mcp/
+│   │   ├── transport/      # local/ (astromech/local) · http/ (Hono routes+middleware, plus client/ — the fetch Client, astromech/fetch) · cli/ · mcp/
 │   │   │
 │   │   │   ── policies ───────────────────────────────────────────────────
 │   │   ├── policies/       # permission/confirmation wrappers over the manifest — no domain logic here
@@ -108,7 +104,7 @@ packages/
 │   │   │
 │   │   │   ── domains ────────────────────────────────────────────────────
 │   │   ├── content/        # content operations (translate/transform/generate) — a DOWNSTREAM domain: it may import entries/, never the reverse
-│   │   ├── entries/        # entries domain: service · schema · descriptors · visibility · url · type-registry
+│   │   ├── entries/        # entries domain: service · schema · descriptors · visibility · url · type-ids
 │   │   ├── media/          # media domain: service · schema · serving/image/
 │   │   ├── users/          # users domain: service · schema · auth (Better Auth integration)
 │   │   ├── settings/       # settings domain: service · schema · page-values
@@ -120,7 +116,7 @@ packages/
 │   │   ├── cloudflare/     # binding-name resolution across Workers and Node
 │   │   ├── permissions/    # permission model: roles, grammar, BUILT_IN_ROLES, can()
 │   │   ├── fields/         # field/column builder, formatters, rich-text, helpers
-│   │   ├── context/        # shared server request-context: index.ts, plus request-context.ts (the service-free AsyncLocalStorage store)
+│   │   ├── request-context/ # the AsyncLocalStorage request store: index.ts (barrel) + request-context.ts (the service-free leaf)
 │   │   ├── email/          # email drivers
 │   │   ├── cron/           # scheduled-job infrastructure
 │   │   │
@@ -160,22 +156,22 @@ Plugins access platform resources through two sanctioned, plugin-scoped handles 
 
 **A plugin's server code runs in a different module graph from core's, and `ctx` is the only bridge across it.** This is an invariant, not a convention — the alternative does not merely violate a rule, it throws.
 
-Astro loads `astro.config.mjs`, and therefore `astromech.config.ts` and every `plugin()` factory, in **plain Node at config time**. A `PluginDefinition` and every closure hanging off it — `rawRoutes[].handler`, service methods, hooks — belongs to that Node-loaded copy of the plugin package, whenever it later runs. Core's runtime code is the opposite: the integration injects routes pointing at package **source** (`pkgSrc` in `kernel/astro.ts`), so Vite compiles it.
+Astro loads `astro.config.mjs`, and therefore `astromech.config.ts` and every `plugin()` factory, in **plain Node at config time**. A `PluginDefinition` and every closure hanging off it — `rawRoutes[].handler`, service methods, hooks — belongs to that Node-loaded copy of the plugin package, whenever it later runs. Core's runtime code is the opposite: the integration injects routes pointing at package **source** (`pkgSrc` in `boot/astro.ts`), so Vite compiles it.
 
 |                | how it is loaded         | can it resolve `virtual:`? |
 | -------------- | ------------------------ | -------------------------- |
 | core runtime   | Vite-compiled from `src` | yes                        |
 | plugin runtime | Node-loaded from `dist`  | **no**                     |
 
-So a plugin that imports a core module reaching `virtual:astromech/config` — which every domain service does — dies with `ERR_UNSUPPORTED_ESM_URL_SCHEME` under Node's ESM loader. **`astromech/methods` is unreachable from a plugin package for exactly this reason**, and it fails at _import_ time rather than at call time, because `exports/methods.ts` statically re-exports `scopedService` and so loads the whole service graph.
+So a plugin that imports a core module reaching `virtual:astromech/config` — which every domain service does — dies with `ERR_UNSUPPORTED_ESM_URL_SCHEME` under Node's ESM loader. **`astromech/methods` is unreachable from a plugin package for exactly this reason**, and it fails at _import_ time rather than at call time, because `exports/methods.ts` statically re-exports `scopedServices` and so loads the whole service graph.
 
 **The rule this produces: a plugin package imports `astromech` and `astromech/ui`, and nothing else from core.** Both load under plain Node; type-only imports from any subpath are fine, because they erase. Everything else arrives on `ctx`. New platform capabilities are therefore added as a capability port (above), never as a published subpath a plugin is expected to import — `ctx.methods.tools()` is the worked example, and `decisions/0007-plugin-core-boundary.md` holds the mechanism with the rejected alternatives.
 
-A port's implementation must be a **Vite-graph closure**, which rules out wiring it in `initRuntime` — `kernel/astro.ts` calls that inside `astro:config:setup`, in plain Node. The precedent is `setPluginClient`: `transport/local/index.ts` calls it at module top level, so whichever graph evaluates that module is the graph the plugin's `ctx.entries` runs in. `setPluginMethods` is wired on the same line.
+A port's implementation must be a **Vite-graph closure**, which rules out wiring it in `initRuntime` — `boot/astro.ts` calls that inside `astro:config:setup`, in plain Node. The precedent is `setPluginClient`: `transport/local/index.ts` calls it at module top level, so whichever graph evaluates that module is the graph the plugin's `ctx.entries` runs in. `setPluginMethods` is wired on the same line.
 
 `ssr.noExternal` does **not** fix this and has been tried. It governs which modules Vite's SSR graph compiles; the handler closure was never in that graph, so Vite would compile a second copy that nothing calls. Teaching Node to resolve `virtual:` with module customization hooks is likewise the wrong tool — it would resolve to a _second_ config module rather than the one Vite built.
 
-Two consequences for anything loaded at config time — `plugin-runtime.ts`, the integration itself: imports must stay lazy where they reach a service (`context/request-context.ts` exists for this), and `npm run check:config` loads the demo config the way Astro does to catch a regression before a plugin is wired up. `npm run check:node-imports` covers the other half, asserting the plugin-facing subpaths still load under plain Node.
+Two consequences for anything loaded at config time — `plugin-runtime.ts`, the integration itself: imports must stay lazy where they reach a service (`request-context/request-context.ts` exists for this), and `npm run check:config` loads the demo config the way Astro does to catch a regression before a plugin is wired up. `npm run check:node-imports` covers the other half, asserting the plugin-facing subpaths still load under plain Node.
 
 ## App-owned migration model
 
@@ -207,7 +203,7 @@ separate `plugin-kit` subpath), `astromech/astro` (integration),
 `astromech/local` & `astromech/fetch` (the two API consumers), `astromech/middleware`,
 `astromech/methods` (the server-side seam surface — the boot-generated method
 manifest via `getMethodManifest`, plus `buildDispatch`, `buildScopedDispatch`,
-`reduceSurface`, `annotateManifest`, `scopedService`, the confirm-gate helpers
+`filterMethods`, `annotateManifest`, `scopedServices`, the confirmation helpers
 and `formatAIContextMessage`; **core-internal in practice — a plugin package
 cannot import it, see "Plugin runtime boundary"**),
 `astromech/fields`, `astromech/db/schema`, `astromech/storage/{filesystem,r2,s3}`

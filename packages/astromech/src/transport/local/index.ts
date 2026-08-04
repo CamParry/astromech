@@ -12,16 +12,16 @@
 import config from 'virtual:astromech/config';
 import type {
     AstromechClient,
-    ContentApi,
-    NotificationsApi,
-    TypedEntriesApi,
+    ContentService,
+    NotificationsService,
+    TypedEntriesService,
 } from '@/types/index.js';
-import { usersApi } from '@/users/index.js';
-import { entries } from '@/entries/index.js';
-import { mediaApi } from '@/media/index.js';
-import { settingsApi } from '@/settings/index.js';
-import { contentApi } from '@/content/index.js';
-import { runWithContext } from '@/context/index.js';
+import { usersService } from '@/users/index.js';
+import { entriesService } from '@/entries/index.js';
+import { mediaService } from '@/media/index.js';
+import { settingsService } from '@/settings/index.js';
+import { contentService } from '@/content/index.js';
+import { runWithContext } from '@/request-context/index.js';
 import { setPluginClient, setPluginMethods } from '@/plugins/runtime/plugin-runtime.js';
 import { localPlugins } from '@/transport/local/plugins.js';
 import { buildScopedTools } from '@/transport/mcp/scoped-tools.js';
@@ -38,7 +38,7 @@ const notImplemented = (): never => {
     );
 };
 
-const localNotificationsApi: NotificationsApi = {
+const localNotificationsService: NotificationsService = {
     list: notImplemented,
     count: notImplemented,
     dismiss: notImplemented,
@@ -50,13 +50,13 @@ const localNotificationsApi: NotificationsApi = {
  * operations run in-process only, so the fetch Client has nothing to offer for
  * them and `AstromechClient` must not claim they are there.
  */
-export const Astromech: AstromechClient & { content: ContentApi } = {
-    entries: entries as unknown as TypedEntriesApi,
-    media: mediaApi,
-    settings: settingsApi,
-    users: usersApi,
-    content: contentApi,
-    notifications: localNotificationsApi,
+export const Astromech: AstromechClient & { content: ContentService } = {
+    entries: entriesService as unknown as TypedEntriesService,
+    media: mediaService,
+    settings: settingsService,
+    users: usersService,
+    content: contentService,
+    notifications: localNotificationsService,
     config,
     plugins: localPlugins,
     configure(_options: { baseUrl: string }): void {

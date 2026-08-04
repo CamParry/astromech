@@ -13,7 +13,7 @@
 import { getDb } from '@/database/registry.js';
 import type { Db } from '@/database/types.js';
 import { encodeWith } from '@/database/codec.js';
-import { relationships, type RelationshipRow } from '@/database/schema.js';
+import { relationshipsTable, type RelationshipRow } from '@/database/schema.js';
 import type { RelationshipEdge, TargetKind } from '@/fields/relationship-edges.js';
 import { createStorage } from './create-storage.js';
 
@@ -32,7 +32,7 @@ export type RelationshipSource = {
 
 /**
  * One source and the edges its stored field data holds. What a domain's rebuild
- * collector yields; lives here so the domains and the kernel that composes them
+ * collector yields; lives here so the domains and boot (which composes them)
  * share one shape. A source with no edges is still a source — it is how the
  * drift check sees rows left behind by data that no longer references anything.
  */
@@ -49,7 +49,7 @@ const INSERT_CHUNK_ROWS = 12;
 
 /** Defaults to the registered db; pass a tx handle to scope it to a transaction. */
 export function createRelationshipStorage(db: Db = getDb()) {
-    const storage = createStorage(relationships, db);
+    const storage = createStorage(relationshipsTable, db);
 
     /**
      * Replace every edge recorded for one source. The delete covers the whole
@@ -65,7 +65,7 @@ export function createRelationshipStorage(db: Db = getDb()) {
 
         const { db: handle, table } = storage.query();
         const rows = edges.map((edge) =>
-            encodeWith(relationships, {
+            encodeWith(relationshipsTable, {
                 sourceId: source.id,
                 sourceKind: source.kind,
                 sourceType: source.type ?? null,

@@ -1,5 +1,5 @@
 /**
- * `withDefaultShape(entries, shape)` — wrap an EntriesApi so that read calls
+ * `withDefaultShape(entries, shape)` — wrap an EntriesService so that read calls
  * (`query` / `get`) inject `full: true` when the caller did NOT explicitly
  * supply a `full` key. An explicit per-call value always wins.
  *
@@ -12,7 +12,7 @@
  * only where a call site remembered to ask.
  */
 
-import type { EntriesApi, SettingsApi } from '@/types/index.js';
+import type { EntriesService, SettingsService } from '@/types/index.js';
 
 /**
  * Return a thin wrapper around `entries` that injects `full: true` into
@@ -22,9 +22,9 @@ import type { EntriesApi, SettingsApi } from '@/types/index.js';
  * unchanged — mutations are always full/trusted and carry no shape flag.
  */
 export function withDefaultShape(
-    entries: EntriesApi,
+    entries: EntriesService,
     shape: 'full' | 'public'
-): EntriesApi {
+): EntriesService {
     if (shape === 'public') {
         // public is already the server default — no wrapping needed.
         return entries;
@@ -42,23 +42,23 @@ export function withDefaultShape(
         },
         // Mutations + all other methods pass through unchanged.
         create: (params) => entries.create(params),
-        update: ((params: Parameters<EntriesApi['update']>[0]) =>
-            entries.update(params)) as EntriesApi['update'],
+        update: ((params: Parameters<EntriesService['update']>[0]) =>
+            entries.update(params)) as EntriesService['update'],
         duplicate: (params) => entries.duplicate(params),
         trash: (params) => entries.trash(params),
-        restore: ((params: Parameters<EntriesApi['restore']>[0]) =>
-            entries.restore(params)) as EntriesApi['restore'],
+        restore: ((params: Parameters<EntriesService['restore']>[0]) =>
+            entries.restore(params)) as EntriesService['restore'],
         delete: (params) => entries.delete(params),
         emptyTrash: (params) => entries.emptyTrash(params),
         versions: (params) => entries.versions(params),
         restoreVersion: (params) => entries.restoreVersion(params),
-        publish: ((params: Parameters<EntriesApi['publish']>[0]) =>
-            entries.publish(params)) as EntriesApi['publish'],
-        unpublish: ((params: Parameters<EntriesApi['unpublish']>[0]) =>
-            entries.unpublish(params)) as EntriesApi['unpublish'],
-        schedule: ((params: Parameters<EntriesApi['schedule']>[0]) =>
-            entries.schedule(params)) as EntriesApi['schedule'],
-        incomingRelations: (params) => entries.incomingRelations(params),
+        publish: ((params: Parameters<EntriesService['publish']>[0]) =>
+            entries.publish(params)) as EntriesService['publish'],
+        unpublish: ((params: Parameters<EntriesService['unpublish']>[0]) =>
+            entries.unpublish(params)) as EntriesService['unpublish'],
+        schedule: ((params: Parameters<EntriesService['schedule']>[0]) =>
+            entries.schedule(params)) as EntriesService['schedule'],
+        incomingRelationships: (params) => entries.incomingRelationships(params),
         createStaged: (params) => entries.createStaged(params),
         getStaged: (params) => entries.getStaged(params),
         mergeStaged: (params) => entries.mergeStaged(params),
@@ -77,9 +77,9 @@ export function withDefaultShape(
  * `set` is forwarded unchanged — writes carry no shape flag.
  */
 export function withDefaultSettingsShape(
-    settings: SettingsApi,
+    settings: SettingsService,
     shape: 'full' | 'public'
-): SettingsApi {
+): SettingsService {
     if (shape === 'public') return settings;
 
     return {

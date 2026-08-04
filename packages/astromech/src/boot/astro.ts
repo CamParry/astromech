@@ -2,7 +2,7 @@
  * Astromech — Astro adapter (thin shell)
  *
  * Bridges astromech.config.ts with Astro's integration API. Boot and
- * config-assembly logic lives in kernel/boot, kernel/admin-config, and
+ * config-assembly logic lives in boot/boot, boot/admin-config, and
  * codegen/plugin-client-manifest; this file wires them together.
  *
  * @example
@@ -20,16 +20,16 @@ import { fileURLToPath } from 'node:url';
 import type { AstroIntegration } from 'astro';
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 import type { AstromechConfig } from '@/types/index.js';
-import { resolveConfig } from '@/kernel/config-resolver.js';
-import { registerRoutes } from '@/kernel/route-registration.js';
+import { resolveConfig } from '@/boot/config-resolver.js';
+import { registerRoutes } from '@/boot/route-registration.js';
 import { collectPluginFieldTypes } from '@/plugins/runtime/plugin-fields.js';
-import { initRuntime, runMigrations, startScheduler } from '@/kernel/boot.js';
-import { buildAdminConfig } from '@/kernel/admin-config.js';
+import { initRuntime, runMigrations, startScheduler } from '@/boot/boot.js';
+import { buildAdminConfig } from '@/boot/admin-config.js';
 import { generatePluginClientManifest } from '@/codegen/plugin-client-manifest.js';
 
 export function astromech(config: AstromechConfig): AstroIntegration {
     const resolvedConfig = resolveConfig(config);
-    // dist/kernel/astro.js — go up two levels to reach package src/
+    // dist/boot/astro.js — go up two levels to reach package src/
     const pkgSrc = fileURLToPath(new URL('../../src', import.meta.url));
 
     return {

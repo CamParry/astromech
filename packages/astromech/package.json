@@ -31,8 +31,8 @@
             "default": "./dist/methods.js"
         },
         "./astro": {
-            "types": "./dist/kernel/astro.d.ts",
-            "default": "./dist/kernel/astro.js"
+            "types": "./dist/boot/astro.d.ts",
+            "default": "./dist/boot/astro.js"
         },
         "./local": {
             "types": "./dist/local/index.d.ts",

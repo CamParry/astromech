@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from 'vitest';
 // The dispatcher resolves the service at CALL time, so a stub is enough to
 // observe what a tool passes it — and keeps the DB and the model provider out.
 vi.mock('@/content/service.js', () => ({
-    contentApi: {
+    contentService: {
         translate: (params: unknown) => Promise.resolve({ called: 'translate', params }),
         transform: (params: unknown) => Promise.resolve({ called: 'transform', params }),
         generate: (params: unknown) => Promise.resolve({ called: 'generate', params }),
@@ -19,9 +19,9 @@ vi.mock('@/content/service.js', () => ({
 }));
 
 import { generateMethodManifest } from '@/codegen/method-manifest.js';
-import { resolveConfig } from '@/kernel/config-resolver.js';
-import { contentDescriptors } from '@/content/descriptors.js';
-import { evaluateConfirmation, triggersConfirmation } from '@/policies/confirm-gate.js';
+import { resolveConfig } from '@/boot/config-resolver.js';
+import { contentDescriptors } from '@/content/methods.js';
+import { evaluateConfirmation, triggersConfirmation } from '@/policies/confirmation.js';
 import { buildDispatch } from '@/transport/mcp/dispatch.js';
 import { buildTools } from '@/transport/mcp/tools.js';
 import type {

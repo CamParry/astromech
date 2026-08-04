@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config.js';
-import { usersApi } from '@/users/index.js';
+import { usersService } from '@/users/index.js';
 
 export default defineCommand({
     meta: { name: 'users:get', description: 'Get a user by ID' },
@@ -10,7 +10,7 @@ export default defineCommand({
     },
     async run({ args }) {
         await loadConfig(args.config);
-        const user = await usersApi.get({ id: args.id });
+        const user = await usersService.get({ id: args.id });
         if (!user) {
             console.error('User not found');
             process.exit(1);

@@ -7,7 +7,7 @@
 
 import type {
     AstromechClient,
-    EntriesApi,
+    EntriesService,
     Entry,
     EntryDuplicateOverrides,
     EntryQueryParams,
@@ -15,23 +15,23 @@ import type {
     QueryResult,
     EntryStatus,
     EntryVersion,
-    IncomingRelation,
+    IncomingRelationship,
     JsonObject,
     JsonValue,
     Media,
-    MediaApi,
+    MediaService,
     MediaQueryParams,
     MediaUsage,
     Notification,
-    NotificationsApi,
+    NotificationsService,
     PluginServiceNamespace,
     ResolvedConfig,
     Setting,
-    SettingsApi,
-    TypedEntriesApi,
+    SettingsService,
+    TypedEntriesService,
     User,
     UserQueryParams,
-    UsersApi,
+    UsersService,
 } from '@/types/index.js';
 
 // ============================================================================
@@ -160,7 +160,7 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
 // ============================================================================
 
 /**
- * Create an EntriesApi backed by HTTP fetch.
+ * Create an EntriesService backed by HTTP fetch.
  *
  * `defaultShape` controls what happens when the caller omits the `full` flag on
  * read calls (`query` / `get`):
@@ -170,10 +170,10 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
  *
  * An explicit per-call `full` value always wins over the client default.
  */
-export function createEntriesApi(
+export function createEntriesService(
     basePath: string,
     defaultShape: 'public' | 'full' = 'public'
-): EntriesApi {
+): EntriesService {
     /**
      * Encode a type id for the `:type` path segment. A plugin entry type is
      * addressed by its qualified id (`redirects/redirect`), whose separator
@@ -276,7 +276,7 @@ export function createEntriesApi(
                 { method: 'PUT', body: params.data }
             );
             return res.data;
-        }) as EntriesApi['update'],
+        }) as EntriesService['update'],
 
         async trash(params: {
             type: string;
@@ -332,7 +332,7 @@ export function createEntriesApi(
                 { method: 'POST' }
             );
             return res.data;
-        }) as EntriesApi['restore'],
+        }) as EntriesService['restore'],
 
         async delete(params: {
             type: string;
@@ -385,12 +385,12 @@ export function createEntriesApi(
             return res.data;
         },
 
-        async incomingRelations(params: {
+        async incomingRelationships(params: {
             type: string;
             id: string;
-        }): Promise<IncomingRelation[]> {
-            const res = await apiFetch<{ data: IncomingRelation[] }>(
-                `${basePath}/${typeSeg(params.type)}/${params.id}/incoming-relations`
+        }): Promise<IncomingRelationship[]> {
+            const res = await apiFetch<{ data: IncomingRelationship[] }>(
+                `${basePath}/${typeSeg(params.type)}/${params.id}/incoming-relationships`
             );
             return res.data;
         },
@@ -411,7 +411,7 @@ export function createEntriesApi(
                 { method: 'POST' }
             );
             return res.data;
-        }) as EntriesApi['publish'],
+        }) as EntriesService['publish'],
 
         unpublish: (async (params: {
             type: string;
@@ -429,7 +429,7 @@ export function createEntriesApi(
                 { method: 'POST' }
             );
             return res.data;
-        }) as EntriesApi['unpublish'],
+        }) as EntriesService['unpublish'],
 
         schedule: (async (params: {
             type: string;
@@ -449,7 +449,7 @@ export function createEntriesApi(
                 { method: 'POST', body: { publishAt: publishAtIso } }
             );
             return res.data;
-        }) as EntriesApi['schedule'],
+        }) as EntriesService['schedule'],
 
         // ── Forward versioning (staged entries) ────────────────────────────
         async createStaged(params: { type: string; id: string }): Promise<Entry> {
@@ -514,13 +514,13 @@ export function createEntriesApi(
 }
 
 /** Root entries API — admin fetch client defaults to full shape (authenticated admin). */
-const entriesApi: EntriesApi = createEntriesApi('/entries', 'full');
+const entriesService: EntriesService = createEntriesService('/entries', 'full');
 
 // ============================================================================
 // Media API Implementation
 // ============================================================================
 
-const mediaApi: MediaApi = {
+const mediaService: MediaService = {
     async query(params?: MediaQueryParams): Promise<QueryResult<Media>> {
         return apiFetch<QueryResult<Media>>('/media', {
             params: {
@@ -617,7 +617,7 @@ const mediaApi: MediaApi = {
 // Settings API Implementation
 // ============================================================================
 
-const settingsApi: SettingsApi = {
+const settingsService: SettingsService = {
     // `full` is accepted for type compatibility; the Client is only used by
     // the authenticated admin SPA, so the HTTP endpoint always returns the full
     // set (guarded by `requireAuth` + `settings:read`). The flag is ignored on
@@ -692,7 +692,7 @@ const settingsApi: SettingsApi = {
 // Users API Implementation
 // ============================================================================
 
-const usersApi: UsersApi = {
+const usersService: UsersService = {
     async query(params?: UserQueryParams): Promise<QueryResult<User>> {
         return apiFetch<QueryResult<User>>('/users', {
             params: {
@@ -750,7 +750,7 @@ const usersApi: UsersApi = {
 // Notifications API Implementation
 // ============================================================================
 
-const notificationsApi: NotificationsApi = {
+const notificationsService: NotificationsService = {
     async list(): Promise<Notification[]> {
         const res = await apiFetch<{ data: Notification[] }>('/notifications');
         return res.data;
@@ -808,11 +808,11 @@ const pluginsApi: PluginServiceNamespace = new Proxy({} as PluginServiceNamespac
 // ============================================================================
 
 export const Astromech: AstromechClient = {
-    entries: entriesApi as unknown as TypedEntriesApi,
-    media: mediaApi,
-    settings: settingsApi,
-    users: usersApi,
-    notifications: notificationsApi,
+    entries: entriesService as unknown as TypedEntriesService,
+    media: mediaService,
+    settings: settingsService,
+    users: usersService,
+    notifications: notificationsService,
     config: null as unknown as ResolvedConfig, // Placeholder, will be set in middleware
     plugins: pluginsApi,
     configure({ baseUrl }: { baseUrl: string }): void {

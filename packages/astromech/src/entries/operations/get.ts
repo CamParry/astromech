@@ -1,7 +1,7 @@
 import config from 'virtual:astromech/config';
 import { flattenEntryFields } from '@/fields/helpers.js';
-import { getCurrentUser } from '@/context/index.js';
-import { resolveEntryType } from '../type-registry.js';
+import { getCurrentUser } from '@/request-context/index.js';
+import { resolveEntryType } from '../type-ids.js';
 import { getEntryStorage } from '../storage/registry.js';
 import { runPreviewGet } from './preview/read.js';
 import { applyVisibility, markPublic, type VisibilityShape } from '../visibility.js';

@@ -3,7 +3,7 @@ import { sql } from 'kysely';
 import type { Insertable } from 'kysely';
 import { createTestDb } from '@tests/harness.js';
 import { encodeWith, decodeWith } from '@/database/codec.js';
-import { cron } from '@/database/schema.js';
+import { cronTable } from '@/database/schema.js';
 import type { DB } from '@/database/types.js';
 
 describe('_astromech_cron table', () => {
@@ -22,7 +22,7 @@ describe('_astromech_cron table', () => {
         await db
             .insertInto('_astromech_cron')
             .values(
-                encodeWith(cron, {
+                encodeWith(cronTable, {
                     name: 'demo-job',
                     schedule: '* * * * *',
                     enabled: true,
@@ -31,7 +31,7 @@ describe('_astromech_cron table', () => {
             )
             .execute();
         const rows = await db.selectFrom('_astromech_cron').selectAll().execute();
-        const got = rows.map((r) => decodeWith(cron, r));
+        const got = rows.map((r) => decodeWith(cronTable, r));
         expect(got).toHaveLength(1);
         expect(got[0]?.name).toBe('demo-job');
         expect(got[0]?.schedule).toBe('* * * * *');

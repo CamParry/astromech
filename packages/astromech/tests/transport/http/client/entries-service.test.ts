@@ -8,7 +8,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createEntriesApi } from '@/transport/http/client/index.js';
+import { createEntriesService } from '@/transport/http/client/index.js';
 
 let calls: string[] = [];
 
@@ -29,8 +29,8 @@ afterEach(() => {
     vi.unstubAllGlobals();
 });
 
-describe('createEntriesApi — type path segment', () => {
-    const api = () => createEntriesApi('/entries', 'full');
+describe('createEntriesService — type path segment', () => {
+    const api = () => createEntriesService('/entries', 'full');
 
     it('leaves a bare type id as-is', async () => {
         await api().get({ type: 'post', id: 'abc' });

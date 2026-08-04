@@ -196,7 +196,7 @@ describe('type-generator — public relations reference FieldsPublic', () => {
     it('full relations reference Fields; public should use FieldsPublic for related collections', () => {
         // The Relations type is shared (used for populate overloads referencing either shape).
         // The Relations type itself references full Fields as before.
-        // The public shape's relations are composed at the TypedEntriesApi overload level.
+        // The public shape's relations are composed at the TypedEntriesService overload level.
         // Here we just verify the Relations type still references the full Fields.
         const config = {
             entries: {

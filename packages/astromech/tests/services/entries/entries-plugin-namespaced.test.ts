@@ -7,7 +7,7 @@
 
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
-import { entries } from '@/entries/service.js';
+import { entriesService } from '@/entries/service.js';
 import type { AstromechConfig, PluginDefinition } from '@/types/index.js';
 
 const redirectsPlugin: PluginDefinition = {
@@ -33,7 +33,7 @@ describe('namespaced plugin entries via the entries service', () => {
     });
 
     it('round-trips CRUD on a qualified type and stores the qualified id', async () => {
-        const created = await entries.create({
+        const created = await entriesService.create({
             type: 'redirects/redirect',
             title: 'Home',
             fields: { to: '/' },
@@ -41,7 +41,7 @@ describe('namespaced plugin entries via the entries service', () => {
         expect(created.type).toBe('redirects/redirect');
 
         // full: true — admin read; entry is unpublished
-        const fetched = await entries.get({
+        const fetched = await entriesService.get({
             type: 'redirects/redirect',
             id: created.id,
             full: true,
@@ -49,22 +49,25 @@ describe('namespaced plugin entries via the entries service', () => {
         expect(fetched?.id).toBe(created.id);
         expect(fetched?.type).toBe('redirects/redirect');
 
-        const updated = await entries.update({
+        const updated = await entriesService.update({
             type: 'redirects/redirect',
             id: created.id,
             data: { title: 'Homepage' },
         });
         expect((updated as { title: string }).title).toBe('Homepage');
 
-        await entries.delete({ type: 'redirects/redirect', id: created.id });
-        const gone = await entries.get({ type: 'redirects/redirect', id: created.id });
+        await entriesService.delete({ type: 'redirects/redirect', id: created.id });
+        const gone = await entriesService.get({
+            type: 'redirects/redirect',
+            id: created.id,
+        });
         expect(gone).toBeNull();
     });
 
     it('leaves root types unaffected', async () => {
-        const post = await entries.create({ type: 'post', title: 'A Post' });
+        const post = await entriesService.create({ type: 'post', title: 'A Post' });
         expect(post.type).toBe('post');
-        const list = await entries.query({ type: 'redirects/redirect' });
+        const list = await entriesService.query({ type: 'redirects/redirect' });
         expect(list.data.every((e) => e.type === 'redirects/redirect')).toBe(true);
     });
 });

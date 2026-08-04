@@ -10,7 +10,7 @@ import { createEntryMaintenanceStorage } from '@/entries/storage/maintenance.js'
 import { createStorage } from '@/database/storage/create-storage.js';
 import { createRelationshipStorage } from '@/database/storage/relationships.js';
 import { trashPurgeJob } from '@/entries/jobs/trash-purge.js';
-import { entries } from '@/database/schema.js';
+import { entriesTable } from '@/database/schema.js';
 import type { Db } from '@/database/types.js';
 import type { ResolvedConfig } from '@/types/index.js';
 
@@ -99,7 +99,7 @@ describe('purgeTrashedBefore', () => {
         });
 
         // Backdate `old`'s deletedAt directly — trash() always stamps "now".
-        const rawEntries = createStorage(entries, db);
+        const rawEntries = createStorage(entriesTable, db);
         await rawEntries.update(old.id, {
             deletedAt: new Date(Date.now() - 100_000_000),
         });
@@ -143,7 +143,7 @@ describe('trashPurgeJob', () => {
             slug: 'survivor',
         });
         // Backdate past the 30-day retention default the job reads.
-        await createStorage(entries, db).update(doomed.id, {
+        await createStorage(entriesTable, db).update(doomed.id, {
             deletedAt: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000),
         });
 

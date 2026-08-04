@@ -23,9 +23,9 @@ import {
     toSnakeCase,
 } from '@/database/descriptor-snapshot.js';
 import { serializeSnapshot } from '@astromech/schema-engine';
-import { roles } from '@/users/schema.js';
-import { entries, entryPreviewTokens } from '@/entries/schema.js';
-import { relationships, cron } from '@/database/schema.js';
+import { rolesTable } from '@/users/schema.js';
+import { entriesTable, entryPreviewTokensTable } from '@/entries/schema.js';
+import { relationshipsTable, cronTable } from '@/database/schema.js';
 
 describe('toSnakeCase', () => {
     it('converts camelCase keys to snake_case identifiers', () => {
@@ -241,14 +241,16 @@ describe('emit wrappers', () => {
 
 describe('createSnapshot', () => {
     it('has the expected top-level shape, tables keyed + sorted by name', () => {
-        const snapshot = createSnapshot([entries, roles], { dialect: 'sqlite' });
+        const snapshot = createSnapshot([entriesTable, rolesTable], {
+            dialect: 'sqlite',
+        });
         expect(snapshot.version).toBe(1);
         expect(snapshot.dialect).toBe('sqlite');
         expect(Object.keys(snapshot.tables)).toEqual(['entries', 'roles']);
     });
 
     it('includes the synthesized column-unique index', () => {
-        const snapshot = createSnapshot([entryPreviewTokens], { dialect: 'sqlite' });
+        const snapshot = createSnapshot([entryPreviewTokensTable], { dialect: 'sqlite' });
         expect(snapshot.tables.entry_preview_tokens?.indexes).toContainEqual({
             name: 'entry_preview_tokens_token_unique',
             columns: ['token'],
@@ -257,7 +259,7 @@ describe('createSnapshot', () => {
     });
 
     it('resolves foreign keys to their target table + column', () => {
-        const snapshot = createSnapshot([entries], { dialect: 'sqlite' });
+        const snapshot = createSnapshot([entriesTable], { dialect: 'sqlite' });
         expect(snapshot.tables.entries?.fks).toContainEqual({
             column: 'staged_for',
             targetTable: 'entries',
@@ -273,7 +275,7 @@ describe('createSnapshot', () => {
     });
 
     it('carries enum values on enum columns', () => {
-        const snapshot = createSnapshot([relationships], { dialect: 'sqlite' });
+        const snapshot = createSnapshot([relationshipsTable], { dialect: 'sqlite' });
         const sourceKind = snapshot.tables.relationships?.columns.find(
             (c) => c.key === 'sourceKind'
         );
@@ -281,7 +283,7 @@ describe('createSnapshot', () => {
     });
 
     it('excludes app-side-only facts (appDefault, onUpdate, serialize, parse) from columns', () => {
-        const snapshot = createSnapshot([roles], { dialect: 'sqlite' });
+        const snapshot = createSnapshot([rolesTable], { dialect: 'sqlite' });
         const createdAt = snapshot.tables.roles?.columns.find(
             (c) => c.key === 'createdAt'
         );
@@ -295,10 +297,10 @@ describe('createSnapshot', () => {
 describe('serializeSnapshot', () => {
     it('is deterministic — identical output for identical input regardless of table order', () => {
         const a = serializeSnapshot(
-            createSnapshot([roles, entries, cron], { dialect: 'sqlite' })
+            createSnapshot([rolesTable, entriesTable, cronTable], { dialect: 'sqlite' })
         );
         const b = serializeSnapshot(
-            createSnapshot([cron, entries, roles], { dialect: 'sqlite' })
+            createSnapshot([cronTable, entriesTable, rolesTable], { dialect: 'sqlite' })
         );
         expect(a).toBe(b);
     });

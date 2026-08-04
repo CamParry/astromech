@@ -1,5 +1,5 @@
 /**
- * buildScopedTools — the composition a caller acting for a principal gets:
+ * buildScopedTools — the composition a caller acting for a role gets:
  * which manifest methods survive to become dispatches, and in what order the
  * four seams are applied. Each seam's own behaviour is tested beside it.
  */
@@ -7,12 +7,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/codegen/manifest-registry.js', () => ({ getMethodManifest: vi.fn() }));
-vi.mock('@/policies/tool-surface.js', () => ({ reduceSurface: vi.fn() }));
+vi.mock('@/policies/method-filter.js', () => ({ filterMethods: vi.fn() }));
 vi.mock('@/policies/annotate-manifest.js', () => ({ annotateManifest: vi.fn() }));
 vi.mock('@/transport/mcp/dispatch.js', () => ({ buildScopedDispatch: vi.fn() }));
 
 import { getMethodManifest } from '@/codegen/manifest-registry.js';
-import { reduceSurface } from '@/policies/tool-surface.js';
+import { filterMethods } from '@/policies/method-filter.js';
 import { annotateManifest } from '@/policies/annotate-manifest.js';
 import { buildScopedDispatch } from '@/transport/mcp/dispatch.js';
 import { buildScopedTools } from '@/transport/mcp/scoped-tools.js';
@@ -78,7 +78,7 @@ beforeEach(() => {
         version: 1,
         methods: [coreMethod('users.query'), coreMethod('media.query')],
     });
-    vi.mocked(reduceSurface).mockImplementation((methods) => ({ methods, excluded: [] }));
+    vi.mocked(filterMethods).mockImplementation((methods) => ({ methods, excluded: [] }));
     vi.mocked(annotateManifest).mockImplementation((methods) =>
         methods.map((method) => ({ ...method, allowed: true }))
     );
@@ -99,7 +99,7 @@ describe('buildScopedTools', () => {
         expect(() => buildScopedTools(role)).toThrow(/populated at runtime boot/);
     });
 
-    it('drops plugin methods before reducing the surface', () => {
+    it('drops plugin methods before filtering', () => {
         vi.mocked(getMethodManifest).mockReturnValue({
             version: 1,
             methods: [
@@ -111,7 +111,7 @@ describe('buildScopedTools', () => {
 
         const tools = buildScopedTools(role);
 
-        expect(ids(vi.mocked(reduceSurface).mock.calls[0]?.[0] ?? [])).toEqual([
+        expect(ids(vi.mocked(filterMethods).mock.calls[0]?.[0] ?? [])).toEqual([
             'users.query',
             'media.query',
         ]);
@@ -121,16 +121,16 @@ describe('buildScopedTools', () => {
         ]);
     });
 
-    it('passes readOnly through to the surface reduction', () => {
+    it('passes readOnly through to the method filter', () => {
         buildScopedTools(role, { readOnly: true });
 
-        expect(vi.mocked(reduceSurface).mock.calls[0]?.[1]).toEqual({ readOnly: true });
+        expect(vi.mocked(filterMethods).mock.calls[0]?.[1]).toEqual({ readOnly: true });
     });
 
     it('leaves readOnly undefined when no options are given', () => {
         buildScopedTools(role);
 
-        expect(vi.mocked(reduceSurface).mock.calls[0]?.[1]).toEqual({
+        expect(vi.mocked(filterMethods).mock.calls[0]?.[1]).toEqual({
             readOnly: undefined,
         });
     });
@@ -167,7 +167,7 @@ describe('buildScopedTools', () => {
         expect(tools).toHaveLength(2);
     });
 
-    it('annotates and dispatches against the principal it was given', () => {
+    it('annotates and dispatches against the role it was given', () => {
         buildScopedTools(role);
 
         expect(vi.mocked(annotateManifest).mock.calls[0]?.[1]).toBe(role);

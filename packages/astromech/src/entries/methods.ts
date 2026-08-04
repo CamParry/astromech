@@ -7,7 +7,7 @@
  * method-manifest generator calls once per configured type — the schemas are
  * authored here, in the domain, not in the generator.
  *
- * `input` is the METHOD's argument object: every `EntriesApi` method takes
+ * `input` is the METHOD's argument object: every `EntriesService` method takes
  * `{ type, ... }`, and `type` is fixed per descriptor because a descriptor
  * describes one type's methods.
  */
@@ -15,7 +15,7 @@
 import { z } from '@hono/zod-openapi';
 import type { ServiceMethodDescriptor } from '@/types/index.js';
 import { entryPermission, type EntryAction } from '@/permissions/entry-permission.js';
-import { parseEntryTypeId } from './type-registry.js';
+import { parseEntryTypeId } from './type-ids.js';
 import type { Capability } from './storage/capabilities.js';
 import {
     createEntrySchemaFor,
@@ -26,12 +26,12 @@ import {
 
 /**
  * A per-type entry method descriptor. Adds the two facts the manifest needs
- * which a plain descriptor has no field for: which `EntriesApi` method it
+ * which a plain descriptor has no field for: which `EntriesService` method it
  * describes, and the capability the entry type must declare for the method to
  * exist at all.
  */
 export type EntryMethodDescriptor = ServiceMethodDescriptor & {
-    /** Key on `EntriesApi` — the manifest name is `entries.<method>`. */
+    /** Key on `EntriesService` — the manifest name is `entries.<method>`. */
     method: string;
     /**
      * Capability gate — the SAME capability the service asserts, so the manifest
@@ -74,7 +74,7 @@ function entryMethodSummary(method: string, action: EntryAction, type: string): 
             return `List the version history of a "${type}" entry.`;
         case 'restoreVersion':
             return `Roll a "${type}" entry back to an earlier version.`;
-        case 'incomingRelations':
+        case 'incomingRelationships':
             return `List the entries that reference a "${type}" entry.`;
         case 'createStaged':
             return `Stage a change to a "${type}" entry.`;
@@ -94,7 +94,7 @@ function entryMethodSummary(method: string, action: EntryAction, type: string): 
 }
 
 /**
- * The permission action each `EntriesApi` method enforces.
+ * The permission action each `EntriesService` method enforces.
  *
  * Declared once and read by both consumers: the descriptors below (which project
  * it into the manifest's `permission`) and the scoped entries handle (which
@@ -102,7 +102,7 @@ function entryMethodSummary(method: string, action: EntryAction, type: string): 
  * second declaration of the same fact, and the enforcement half is exactly the
  * half that must not drift.
  *
- * Covers every key on `EntriesApi`; a key missing here has no derivable
+ * Covers every key on `EntriesService`; a key missing here has no derivable
  * permission and the scoped handle refuses it.
  */
 export const ENTRY_METHOD_ACTIONS = {
@@ -120,7 +120,7 @@ export const ENTRY_METHOD_ACTIONS = {
     publish: 'publish',
     unpublish: 'publish',
     schedule: 'publish',
-    incomingRelations: 'read',
+    incomingRelationships: 'read',
     createStaged: 'update',
     getStaged: 'read',
     // Merging a staged change is what makes it live — enforced as a publish even
@@ -131,7 +131,7 @@ export const ENTRY_METHOD_ACTIONS = {
     revokePreviewToken: 'update',
 } as const satisfies Record<string, EntryAction>;
 
-/** A key on `EntriesApi` whose permission action is known. */
+/** A key on `EntriesService` whose permission action is known. */
 export type EntryMethodName = keyof typeof ENTRY_METHOD_ACTIONS;
 
 const sortDirection = z.enum(['asc', 'desc']);
@@ -297,7 +297,7 @@ export function entryMethodDescriptors(params: {
             idempotent: true,
             input: z.object({ type, id: ids }).extend(scheduleEntrySchema.shape),
         },
-        { ...base('incomingRelations'), input: canonical },
+        { ...base('incomingRelationships'), input: canonical },
         { ...base('createStaged'), requires: 'staging', input: canonical },
         { ...base('getStaged'), requires: 'staging', input: canonical },
         { ...base('mergeStaged'), requires: 'staging', input: canonical },

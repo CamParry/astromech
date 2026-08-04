@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config.js';
-import { entries } from '@/entries/service.js';
+import { entriesService } from '@/entries/service.js';
 import { printResult, printError, parseJsonArg } from '../output.js';
 import type { EntryStatus, EntryUpdateData } from '@/types/index.js';
 import type { JsonObject } from '@/types/index.js';
@@ -38,7 +38,7 @@ export default defineCommand({
                 base.fields = (await parseJsonArg(args.fields)) as JsonObject;
             }
 
-            const entry = await entries.update({
+            const entry = await entriesService.update({
                 type: args.type,
                 id: args.id,
                 data: base,
