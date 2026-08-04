@@ -5,7 +5,9 @@
  */
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { KeyboardEvent, ReactElement } from 'react';
+import type { ComponentProps, KeyboardEvent, ReactElement } from 'react';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Button, useAstromechPlugin } from 'astromech/ui';
 import { useChat } from './use-chat.js';
 import type { ChatPart, ChatTurn } from './use-chat.js';
@@ -13,6 +15,16 @@ import './chat-drawer.css';
 
 /** How far off the tail still counts as following it. */
 const BOTTOM_THRESHOLD_PX = 24;
+
+/** Stable identities: the transcript re-renders on every streamed chunk. */
+const REMARK_PLUGINS = [remarkGfm];
+
+/** Assistant links leave the admin, so they open in a new tab. */
+const MARKDOWN_COMPONENTS = {
+    a: (props: ComponentProps<'a'>) => (
+        <a {...props} target="_blank" rel="noreferrer noopener" />
+    ),
+};
 
 export default function ChatDrawer(): ReactElement {
     const { serviceKey } = useAstromechPlugin();
@@ -221,24 +233,33 @@ function Turn({ turn }: { turn: ChatTurn }): ReactElement | null {
                 {turn.role === 'user' ? 'You' : 'Assistant'}
             </span>
             {turn.parts.map((part, index) => (
-                <Part key={index} part={part} />
+                <Part key={index} part={part} role={turn.role} />
             ))}
         </div>
     );
 }
 
 /**
- * Text, a marker naming a tool that ran, or an error. Text is rendered plain:
- * the admin has no markdown renderer and this adds no dependency.
+ * Text, a marker naming a tool that ran, or an error. Only assistant text is
+ * rendered as Markdown; the user's text is shown literally.
  */
-function Part({ part }: { part: ChatPart }): ReactElement {
+function Part({ part, role }: { part: ChatPart; role: ChatTurn['role'] }): ReactElement {
     if (part.kind === 'tool') {
         return <p className="am-authoring-tool">Ran {part.name}</p>;
     }
     if (part.kind === 'error') {
         return <p className="am-authoring-error">{part.message}</p>;
     }
-    return <p className="am-authoring-text">{part.text}</p>;
+    if (role === 'user') {
+        return <p className="am-authoring-text">{part.text}</p>;
+    }
+    return (
+        <div className="am-authoring-markdown">
+            <Markdown remarkPlugins={REMARK_PLUGINS} components={MARKDOWN_COMPONENTS}>
+                {part.text}
+            </Markdown>
+        </div>
+    );
 }
 
 /** Whether the browser grows a textarea from CSS alone. */
