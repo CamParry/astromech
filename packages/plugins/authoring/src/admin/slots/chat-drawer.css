@@ -297,6 +297,79 @@
 }
 
 /* ------------------------------------------------------------------ */
+/* Approvals                                                           */
+/* ------------------------------------------------------------------ */
+
+.am-authoring-approvals {
+    display: flex;
+    flex-shrink: 0;
+    flex-direction: column;
+    gap: calc(var(--am-space) * 3);
+    padding: calc(var(--am-space) * 3);
+    background-color: var(--am-color-bg-subtle);
+    border-top: 1px solid var(--am-color-border);
+}
+
+.am-authoring-approvals-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--am-color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.am-authoring-approval-list {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--am-space) * 2);
+    max-height: 16rem;
+    padding: 0;
+    margin: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.am-authoring-approval {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--am-space) * 2);
+    align-items: flex-start;
+    padding: calc(var(--am-space) * 3);
+    background-color: var(--am-color-bg-base);
+    border: 1px solid var(--am-color-border);
+    border-radius: var(--am-radius-md);
+}
+
+.am-authoring-approval--destructive {
+    background-color: var(--am-color-danger-bg);
+    border-color: var(--am-color-danger-border);
+}
+
+.am-authoring-approval-message {
+    max-width: 100%;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--am-color-text-default);
+    overflow-wrap: anywhere;
+}
+
+.am-authoring-approval--destructive .am-authoring-approval-message {
+    color: var(--am-color-danger-emphasis);
+}
+
+.am-authoring-approval-actions,
+.am-authoring-approval-bulk {
+    display: flex;
+    gap: calc(var(--am-space) * 2);
+    align-items: center;
+}
+
+.am-authoring-approval-answer {
+    font-size: 0.75rem;
+    color: var(--am-color-text-muted);
+}
+
+/* ------------------------------------------------------------------ */
 /* Composer                                                            */
 /* ------------------------------------------------------------------ */
 

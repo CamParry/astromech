@@ -12,12 +12,15 @@ import remarkGfm from 'remark-gfm';
 import { Button, useAstromechPlugin } from 'astromech/ui';
 import { closeDrawer, focusToggleButton, useDrawerOpen } from '../drawer-state.js';
 import { useChat } from '../use-chat.js';
-import type { ChatEntry } from '../use-chat.js';
-import type { ChatMessage } from '../../types.js';
+import type { ChatEntry, RejectedCalls } from '../use-chat.js';
+import type { ApprovalDecision, ApprovalRequest, ChatMessage } from '../../types.js';
 import './chat-drawer.css';
 
 /** How far off the tail still counts as following it. */
 const BOTTOM_THRESHOLD_PX = 24;
+
+/** Tool calls the transcript must not describe as run, by `tool_use` id. */
+type UnrunCalls = Record<string, 'awaiting' | 'declined'>;
 
 /** Stable identities: the transcript re-renders on every streamed chunk. */
 const REMARK_PLUGINS = [remarkGfm];
@@ -31,7 +34,8 @@ const MARKDOWN_COMPONENTS = {
 
 export default function ChatDrawer(): ReactElement {
     const { serviceKey } = useAstromechPlugin();
-    const { entries, tail, isStreaming, send, stop } = useChat(serviceKey);
+    const { entries, tail, isStreaming, pending, rejected, send, respond, stop } =
+        useChat(serviceKey);
     const open = useDrawerOpen();
     const [prompt, setPrompt] = useState('');
     const [showJump, setShowJump] = useState(false);
@@ -41,6 +45,7 @@ export default function ChatDrawer(): ReactElement {
     // Read on every scroll tick and every streamed chunk: in state it would
     // re-render the whole transcript on both.
     const followingRef = useRef(true);
+    const calls = unrunCalls(pending, rejected);
 
     const handleClose = useCallback(() => {
         closeDrawer();
@@ -54,13 +59,15 @@ export default function ChatDrawer(): ReactElement {
         if (transcript !== null) transcript.scrollTop = transcript.scrollHeight;
     }, []);
 
-    // Opening starts at the tail of the transcript, with the composer focused.
+    // Opening starts at the tail of the transcript, with the composer focused —
+    // and answering the last held call hands focus back to it. The panel takes
+    // focus itself while it is up, so nothing here may pull it away.
     useEffect(() => {
         if (!open) return;
         followingRef.current = true;
         setShowJump(false);
-        promptRef.current?.focus();
-    }, [open]);
+        if (pending.length === 0) promptRef.current?.focus();
+    }, [open, pending]);
 
     // Stay pinned to the tail while text streams in, unless the user scrolled off it.
     useLayoutEffect(() => {
@@ -141,7 +148,7 @@ export default function ChatDrawer(): ReactElement {
                         </p>
                     ) : null}
                     {entries.map((entry, index) => (
-                        <Entry key={index} entry={entry} />
+                        <Entry key={index} entry={entry} calls={calls} />
                     ))}
                     {tail !== '' ? (
                         <Turn
@@ -149,6 +156,7 @@ export default function ChatDrawer(): ReactElement {
                                 role: 'assistant',
                                 content: [{ type: 'text', text: tail }],
                             }}
+                            calls={calls}
                         />
                     ) : null}
                     {isStreaming ? (
@@ -167,6 +175,10 @@ export default function ChatDrawer(): ReactElement {
                     </button>
                 ) : null}
             </div>
+
+            {pending.length > 0 ? (
+                <ApprovalPanel requests={pending} onRespond={respond} />
+            ) : null}
 
             <div className="am-authoring-composer">
                 <textarea
@@ -208,19 +220,184 @@ export default function ChatDrawer(): ReactElement {
     );
 }
 
+/**
+ * The calls held for a decision. It takes focus when it mounts, which is both
+ * how a keyboard user reaches it and how a screen reader hears about it — a
+ * live region here would fight the transcript's own.
+ */
+function ApprovalPanel({
+    requests,
+    onRespond,
+}: {
+    requests: ApprovalRequest[];
+    onRespond: (decisions: ApprovalDecision[]) => void;
+}): ReactElement {
+    const panelRef = useRef<HTMLElement | null>(null);
+    const [answers, setAnswers] = useState<Record<string, ApprovalDecision['action']>>(
+        {}
+    );
+
+    useEffect(() => {
+        panelRef.current?.focus();
+    }, []);
+
+    // The turn resumes on a single request carrying every answer, so a call
+    // left out of it is one the server declines. Nothing is sent until each
+    // held call has been answered.
+    function answer(next: Record<string, ApprovalDecision['action']>): void {
+        const decisions: ApprovalDecision[] = [];
+        for (const request of requests) {
+            const action = next[request.approvalId];
+            if (action === undefined) {
+                setAnswers(next);
+                return;
+            }
+            decisions.push({ approvalId: request.approvalId, action });
+        }
+        onRespond(decisions);
+    }
+
+    /** Answer one call, leaving the others as they stand. */
+    function answerOne(approvalId: string, action: ApprovalDecision['action']): void {
+        answer({ ...answers, [approvalId]: action });
+    }
+
+    /** Answer every call still undecided, so one click can clear the panel. */
+    function answerRest(action: ApprovalDecision['action']): void {
+        const next = { ...answers };
+        for (const request of requests) next[request.approvalId] ??= action;
+        answer(next);
+    }
+
+    return (
+        <section
+            ref={panelRef}
+            className="am-authoring-approvals"
+            tabIndex={-1}
+            aria-labelledby="am-authoring-approvals-title"
+        >
+            <h3
+                id="am-authoring-approvals-title"
+                className="am-authoring-approvals-title"
+            >
+                {requests.length === 1
+                    ? 'Approval needed'
+                    : `${String(requests.length)} approvals needed`}
+            </h3>
+            <ul className="am-authoring-approval-list">
+                {requests.map((request) => (
+                    <Approval
+                        key={request.approvalId}
+                        request={request}
+                        answer={answers[request.approvalId]}
+                        onAnswer={answerOne}
+                    />
+                ))}
+            </ul>
+            {requests.length > 1 ? (
+                <div className="am-authoring-approval-bulk">
+                    <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                            answerRest('approve');
+                        }}
+                    >
+                        Approve all
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                            answerRest('reject');
+                        }}
+                    >
+                        Reject all
+                    </Button>
+                </div>
+            ) : null}
+        </section>
+    );
+}
+
+/** One held call: core's question, and the two ways to answer it. */
+function Approval({
+    request,
+    answer,
+    onAnswer,
+}: {
+    request: ApprovalRequest;
+    answer: ApprovalDecision['action'] | undefined;
+    onAnswer: (approvalId: string, action: ApprovalDecision['action']) => void;
+}): ReactElement {
+    const className = [
+        'am-authoring-approval',
+        request.destructive ? 'am-authoring-approval--destructive' : '',
+    ]
+        .filter(Boolean)
+        .join(' ');
+
+    return (
+        <li className={className}>
+            <p className="am-authoring-approval-message">{request.message}</p>
+            {answer === undefined ? (
+                <div className="am-authoring-approval-actions">
+                    <Button
+                        type="button"
+                        variant={request.destructive ? 'danger' : 'primary'}
+                        size="sm"
+                        onClick={() => {
+                            onAnswer(request.approvalId, 'approve');
+                        }}
+                    >
+                        Approve
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                            onAnswer(request.approvalId, 'reject');
+                        }}
+                    >
+                        Reject
+                    </Button>
+                </div>
+            ) : (
+                <p className="am-authoring-approval-answer">
+                    {answer === 'approve' ? 'Approved' : 'Rejected'}
+                </p>
+            )}
+        </li>
+    );
+}
+
 /** One row of the transcript: a turn, or an error the model never saw. */
-function Entry({ entry }: { entry: ChatEntry }): ReactElement | null {
+function Entry({
+    entry,
+    calls,
+}: {
+    entry: ChatEntry;
+    calls: UnrunCalls;
+}): ReactElement | null {
     if (entry.kind === 'error') {
         return <p className="am-authoring-error">{entry.error}</p>;
     }
-    return <Turn message={entry.message} />;
+    return <Turn message={entry.message} calls={calls} />;
 }
 
 /**
  * One side of the conversation. A turn with nothing to show renders nothing —
  * a user turn carrying only tool results is plumbing, not conversation.
  */
-function Turn({ message }: { message: ChatMessage }): ReactElement | null {
+function Turn({
+    message,
+    calls,
+}: {
+    message: ChatMessage;
+    calls: UnrunCalls;
+}): ReactElement | null {
     const blocks = message.content.filter(isRenderedBlock);
     if (blocks.length === 0) return null;
     return (
@@ -229,7 +406,7 @@ function Turn({ message }: { message: ChatMessage }): ReactElement | null {
                 {message.role === 'user' ? 'You' : 'Assistant'}
             </span>
             {blocks.map((block, index) => (
-                <Block key={index} block={block} role={message.role} />
+                <Block key={index} block={block} role={message.role} calls={calls} />
             ))}
         </div>
     );
@@ -242,12 +419,18 @@ function Turn({ message }: { message: ChatMessage }): ReactElement | null {
 function Block({
     block,
     role,
+    calls,
 }: {
     block: BetaContentBlockParam;
     role: ChatMessage['role'];
+    calls: UnrunCalls;
 }): ReactElement | null {
     if (block.type === 'tool_use') {
-        return <p className="am-authoring-tool">Ran {block.name}</p>;
+        return (
+            <p className="am-authoring-tool">
+                {toolCallLabel(block.name, calls[block.id])}
+            </p>
+        );
     }
     if (block.type !== 'text') return null;
     if (role === 'user') {
@@ -260,6 +443,21 @@ function Block({
             </Markdown>
         </div>
     );
+}
+
+/** What the transcript says about one tool call. */
+function toolCallLabel(name: string, state: UnrunCalls[string] | undefined): string {
+    if (state === 'awaiting') return `Awaiting your approval for ${name}`;
+    if (state === 'declined') return `Declined ${name}`;
+    return `Ran ${name}`;
+}
+
+/** The calls the transcript may not call run: those held, and those turned down. */
+function unrunCalls(pending: ApprovalRequest[], rejected: RejectedCalls): UnrunCalls {
+    const calls: UnrunCalls = {};
+    for (const toolUseId of Object.keys(rejected)) calls[toolUseId] = 'declined';
+    for (const request of pending) calls[request.toolUseId] = 'awaiting';
+    return calls;
 }
 
 /** The block types the drawer shows. Everything else, `thinking` included, is carried but hidden. */

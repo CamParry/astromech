@@ -4,10 +4,10 @@ An AI authoring assistant for the Astromech admin: a topbar button in the
 admin shell's `toolbar` slot opening a chat panel in its `right-drawer` slot,
 backed by a server-side model loop that calls the site's own service methods.
 
-**Read-only by default.** The server holds a mutating call for the user's
-approval rather than running it (see [Approvals](#approvals)), but the drawer
-has no way to answer one yet, so `readOnly` stays `true` and those methods are
-kept off the tool surface entirely.
+**Nothing that changes stored data runs unasked.** A mutating call is held for
+the user's approval and put to them in the drawer (see
+[Approvals](#approvals)). Set `readOnly: true` to keep those methods off the
+tool surface entirely instead.
 
 ## Install
 
@@ -28,7 +28,7 @@ authoring({
     model: 'claude-opus-5', // default
     apiKeyEnv: 'ANTHROPIC_API_KEY', // default; env var holding the API key
     effort: 'medium', // default; 'low' | 'medium' | 'high'
-    readOnly: true, // default; drops every mutating method from the surface
+    readOnly: false, // default; `true` drops every mutating method from the surface
 });
 ```
 
@@ -60,6 +60,12 @@ anything runs. It records one row per call in `plugin_authoring_approvals` —
 the acting user, the call's `tool_use` id, the method, the arguments and
 whether it is destructive — and sends the browser an `approval-required` event
 carrying a question per call. Nothing has executed at that point.
+
+The drawer puts each question to the user between the transcript and the
+composer, and posts the transcript back once every held call has an answer —
+one request carries them all, because a call left out of it is one the server
+declines. Typing a new message instead answers none of them, which declines
+them all.
 
 The user's answers come back on the next request as
 `decisions: [{ approvalId, action }]`. Claiming a row and answering it are one

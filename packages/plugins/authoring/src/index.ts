@@ -22,7 +22,7 @@ const DEFAULT_OPTIONS: ResolvedAuthoringOptions = {
     model: 'claude-opus-5',
     apiKeyEnv: 'ANTHROPIC_API_KEY',
     effort: 'medium',
-    readOnly: true,
+    readOnly: false,
 };
 
 /** Applies defaults. Called once when the site registers the plugin. */

@@ -86,6 +86,26 @@ describe('reading a chunked stream', () => {
         ).toEqual([{ type: 'message', message }]);
     });
 
+    it('reads the calls an approval-required frame holds', () => {
+        const requests = [
+            {
+                approvalId: 'ap_1',
+                toolUseId: 'toolu_1',
+                method: 'entries.page.update',
+                toolName: 'entries_page_update',
+                message: 'Update the page "Home"?',
+                destructive: false,
+                arguments: { id: 'page_1' },
+            },
+        ];
+
+        expect(
+            readChunks([
+                `data: ${JSON.stringify({ type: 'approval-required', requests })}\n\n`,
+            ])
+        ).toEqual([{ type: 'approval-required', requests }]);
+    });
+
     it('drops a frame that is not a chat event', () => {
         expect(
             readChunks([': keep-alive\n\ndata: nonsense\n\ndata: {"type":"nope"}\n\n'])
