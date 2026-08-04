@@ -6,7 +6,7 @@ component overview page, an auto-rendered settings form, a service method,
 localized strings, and a declared permission.
 
 It is structured exactly like a first-party plugin — see
-[`apps/docs/plugins/authoring.md`](../../../../apps/docs/plugins/authoring.md) for the
+[`apps/docs/plugins/authoring.md`](../../../../docs/plugins/authoring.md) for the
 canonical convention — with one difference: it lives in the demo app rather than
 a published package, so it declares `root: import.meta.url` and its relative
 asset specifiers resolve against this directory instead of a package specifier.
