@@ -4,9 +4,10 @@ An AI authoring assistant for the Astromech admin: a topbar button in the
 admin shell's `toolbar` slot opening a chat panel in its `right-drawer` slot,
 backed by a server-side model loop that calls the site's own service methods.
 
-**Read-only for now.** The assistant is restricted to methods that do not
-mutate, because approving a write needs a UI that does not exist yet. See
-`readOnly` below.
+**Read-only by default.** The server holds a mutating call for the user's
+approval rather than running it (see [Approvals](#approvals)), but the drawer
+has no way to answer one yet, so `readOnly` stays `true` and those methods are
+kept off the tool surface entirely.
 
 ## Install
 
@@ -27,7 +28,7 @@ authoring({
     model: 'claude-opus-5', // default
     apiKeyEnv: 'ANTHROPIC_API_KEY', // default; env var holding the API key
     effort: 'medium', // default; 'low' | 'medium' | 'high'
-    readOnly: true, // default; drop every mutating method from the surface
+    readOnly: true, // default; drops every mutating method from the surface
 });
 ```
 
@@ -51,6 +52,35 @@ to degrade. Every tool is therefore sent with `defer_loading: true` and found
 through the server-side tool-search tool, which is the one tool loaded up
 front. Nothing is curated as always-resident: the tools an author reaches for
 are named after their own entry types, so there is no fixed set to pick.
+
+## Approvals
+
+When a turn reaches a method that changes stored data, the loop stops before
+anything runs. It records one row per call in `plugin_authoring_approvals` —
+the acting user, the call's `tool_use` id, the method, the arguments and
+whether it is destructive — and sends the browser an `approval-required` event
+carrying a question per call. Nothing has executed at that point.
+
+The user's answers come back on the next request as
+`decisions: [{ approvalId, action }]`. Claiming a row and answering it are one
+conditional UPDATE, which matches only while the row belongs to that user, is
+still pending, and is inside its one-hour life — so two requests carrying the
+same decision run the call once. An approved call then runs **with the
+arguments from its row**, never with the ones in the posted conversation: a
+client that edits the transcript changes what the model sees, not what runs. A
+rejected call, a row that expired, a row belonging to someone else, and a tool
+the user's role no longer holds all answer the same way — a `tool_result`
+saying it was not run, which the model reads as an answer rather than a
+failure. So does a call the user walked away from without answering.
+
+A resolved row keeps its method, target, decision, who approved it and when.
+It does not keep the arguments: those are dropped in the same write that
+answers it, because an update carries field values that may be `private: true`,
+and the rest of the row is the part worth auditing.
+
+This is a different mechanism from core's `evaluateConfirmation`, which is a
+stateless brake at dispatch level. That one takes the caller's word that a
+human said yes; this one holds the answer server-side and reads it back.
 
 ## Permissions
 

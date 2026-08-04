@@ -28,6 +28,7 @@ import type {
     ToolDefinition,
 } from '@/types/index.js';
 import type { ScopedServices } from '@/policies/scoped-services.js';
+import { confirmMessage } from '@/policies/confirmation.js';
 
 // ============================================================================
 // Types
@@ -219,6 +220,7 @@ function buildDispatchWith(
         ok: true,
         tool: {
             name: toolNameFor(manifest),
+            id: manifest.id,
             description: manifest.summary ?? manifest.name,
             inputSchema,
             annotations: {
@@ -231,6 +233,7 @@ function buildDispatchWith(
             },
             permission: manifest.permission,
             permissionDynamic: manifest.permissionDynamic === true,
+            confirmMessage: (args) => confirmMessage(manifest, args),
             invoke: resolved.invoke,
         },
     };

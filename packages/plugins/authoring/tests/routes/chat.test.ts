@@ -126,6 +126,48 @@ describe('readChatRequest', () => {
         ).resolves.toBeNull();
     });
 
+    it('parses answers to a paused turn', async () => {
+        const messages = [text('user', 'publish it')];
+        const decisions = [{ approvalId: 'ap_1', action: 'approve' }];
+
+        await expect(readChatRequest(postJson({ messages, decisions }))).resolves.toEqual(
+            { messages, decisions }
+        );
+    });
+
+    it('rejects decisions that are not an array', async () => {
+        await expect(
+            readChatRequest(
+                postJson({
+                    messages: [text('user', 'hi')],
+                    decisions: { approvalId: 'ap_1', action: 'approve' },
+                })
+            )
+        ).resolves.toBeNull();
+    });
+
+    it('rejects a decision with an unknown action', async () => {
+        await expect(
+            readChatRequest(
+                postJson({
+                    messages: [text('user', 'hi')],
+                    decisions: [{ approvalId: 'ap_1', action: 'accept' }],
+                })
+            )
+        ).resolves.toBeNull();
+    });
+
+    it('rejects a decision with no approvalId', async () => {
+        await expect(
+            readChatRequest(
+                postJson({
+                    messages: [text('user', 'hi')],
+                    decisions: [{ action: 'approve' }],
+                })
+            )
+        ).resolves.toBeNull();
+    });
+
     it('rejects an aiContext that is not an array', async () => {
         await expect(
             readChatRequest(

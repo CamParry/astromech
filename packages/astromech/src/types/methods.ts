@@ -192,6 +192,12 @@ export type ToolAnnotations = {
 /** A single tool: its declaration, plus the handler that runs it. */
 export type ToolDefinition = {
     name: string;
+    /**
+     * The manifest method id this tool projects, e.g. `entries.page.publish`.
+     * `annotations.title` carries it too, but that field is optional and a
+     * title is not an identity — a caller recording what ran indexes on this.
+     */
+    id: string;
     description: string;
     inputSchema: JsonSchemaObject;
     annotations: ToolAnnotations;
@@ -209,5 +215,11 @@ export type ToolDefinition = {
     permission: string | null;
     /** True when `permission` is null because the method derives it from the input. */
     permissionDynamic: boolean;
+    /**
+     * The question to put to a human before running this method with these
+     * arguments. Core owns the wording so a transport that pauses on a mutating
+     * call cannot invent its own.
+     */
+    confirmMessage: (args: Record<string, unknown>) => string;
     invoke: (args: Record<string, unknown>) => Promise<unknown>;
 };

@@ -38,18 +38,24 @@ function toRunnableTool(tool: ToolDefinition): BetaRunnableTool {
             name: tool.name,
             description: tool.description,
             inputSchema: tool.inputSchema as { type: 'object' },
-            run: async (input) => {
-                try {
-                    const result = await tool.invoke(input as Record<string, unknown>);
-                    return JSON.stringify(result);
-                } catch (error) {
-                    // A refused call is normal control flow the model should
-                    // adapt to, so the message goes back as a result — never a
-                    // stack.
-                    return `Error: ${errorMessage(error)}`;
-                }
-            },
+            run: (input) => invokeTool(tool, input as Record<string, unknown>),
         }),
         defer_loading: true,
     };
+}
+
+/**
+ * Run one tool and render its outcome as a `tool_result` body. A refused call
+ * is normal control flow the model should adapt to, so the message goes back as
+ * a result — never a stack.
+ */
+export async function invokeTool(
+    tool: ToolDefinition,
+    args: Record<string, unknown>
+): Promise<string> {
+    try {
+        return JSON.stringify(await tool.invoke(args));
+    } catch (error) {
+        return `Error: ${errorMessage(error)}`;
+    }
 }

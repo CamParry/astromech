@@ -1,0 +1,102 @@
+{
+    "version": 1,
+    "dialect": "sqlite",
+    "tables": {
+        "plugin_authoring_approvals": {
+            "name": "plugin_authoring_approvals",
+            "columns": [
+                {
+                    "key": "id",
+                    "name": "id",
+                    "kind": "id",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": true
+                },
+                {
+                    "key": "userId",
+                    "name": "user_id",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "toolUseId",
+                    "name": "tool_use_id",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "method",
+                    "name": "method",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "toolName",
+                    "name": "tool_name",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "arguments",
+                    "name": "arguments",
+                    "kind": "json",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "destructive",
+                    "name": "destructive",
+                    "kind": "boolean",
+                    "type": "integer",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "status",
+                    "name": "status",
+                    "kind": "enum",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false,
+                    "enumValues": ["pending", "approved", "rejected", "expired"]
+                },
+                {
+                    "key": "createdAt",
+                    "name": "created_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "expiresAt",
+                    "name": "expires_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "resolvedAt",
+                    "name": "resolved_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                }
+            ],
+            "fks": [],
+            "indexes": []
+        }
+    }
+}

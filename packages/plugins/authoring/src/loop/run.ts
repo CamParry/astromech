@@ -6,10 +6,21 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import type { BetaMessageParam } from '@anthropic-ai/sdk/resources/beta';
 import type { AIContextItem, PluginLogger, ToolDefinition } from 'astromech';
+import {
+    answerUnansweredCalls,
+    pauseForApproval,
+    resumePausedTurn,
+} from './approvals.js';
 import { buildRequest } from './request.js';
 import { TOOL_SEARCH, toRunnableTools } from './tools.js';
 import { errorMessage } from '../error-message.js';
-import type { ChatEvent, ChatMessage, ResolvedAuthoringOptions } from '../types.js';
+import type { ApprovalsStorage } from '../approvals/storage.js';
+import type {
+    ApprovalDecision,
+    ChatEvent,
+    ChatMessage,
+    ResolvedAuthoringOptions,
+} from '../types.js';
 
 const MAX_TOKENS = 4096;
 
@@ -24,6 +35,9 @@ export async function* runAuthoringLoop(input: {
     messages: ChatMessage[];
     aiContext: AIContextItem[];
     logger: PluginLogger;
+    approvals: ApprovalsStorage;
+    userId: string;
+    decisions: ApprovalDecision[];
 }): AsyncGenerator<ChatEvent> {
     try {
         const runnableTools = toRunnableTools(input.tools);
@@ -31,7 +45,25 @@ export async function* runAuthoringLoop(input: {
             `Chat request running against ${runnableTools.length} tools, found by search`
         );
 
-        const { system, messages } = buildRequest(input.messages, input.aiContext);
+        // A transcript ending on unanswered calls is a paused turn, and every
+        // one of them is answered before a new request is built.
+        const turns = [...input.messages];
+        const resumed = await resumePausedTurn({
+            messages: turns,
+            tools: input.tools,
+            decisions: input.decisions,
+            approvals: input.approvals,
+            userId: input.userId,
+        });
+        if (resumed !== null) {
+            turns.push(resumed);
+            yield { type: 'message', message: resumed };
+        }
+
+        const { system, messages } = buildRequest(
+            answerUnansweredCalls(turns),
+            input.aiContext
+        );
         const client = new Anthropic({ apiKey: input.apiKey });
         const runner = client.beta.messages.toolRunner({
             model: input.options.model,
@@ -61,10 +93,24 @@ export async function* runAuthoringLoop(input: {
                 message: { role: 'assistant', content: message.content },
             };
 
+            // Stop before anything executes when the turn reached a mutating
+            // call: `generateToolResponse` is what runs the tools, so the gate
+            // has to sit in front of it. Breaking out rather than returning
+            // keeps the `done` event below.
+            const requests = await pauseForApproval({
+                content: message.content,
+                tools: input.tools,
+                approvals: input.approvals,
+                userId: input.userId,
+            });
+            if (requests.length > 0) {
+                yield { type: 'approval-required', requests };
+                break;
+            }
+
             // The runner memoises this per iteration and clears the memo at the
             // top of the next one, so each tool runs exactly once whether it is
-            // called here or by the runner. This is where a confirm gate for a
-            // mutating call will intercept.
+            // called here or by the runner.
             const toolResult = await runner.generateToolResponse();
             if (toolResult !== null)
                 yield { type: 'message', message: toChatMessage(toolResult) };

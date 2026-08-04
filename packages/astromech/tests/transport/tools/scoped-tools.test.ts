@@ -60,11 +60,13 @@ function pluginMethod(id: string): ManifestMethod {
 function dispatchFor(method: ManifestMethod): ToolDefinition {
     return {
         name: method.id.replace('.', '_'),
+        id: method.id,
         description: `Calls ${method.id}.`,
         inputSchema: { type: 'object', properties: {}, additionalProperties: false },
         annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
         permission: null,
         permissionDynamic: false,
+        confirmMessage: () => `Run "${method.id}"?`,
         invoke: () => Promise.resolve({ ok: true }),
     };
 }
