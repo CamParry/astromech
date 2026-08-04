@@ -403,7 +403,42 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       describe a creation screen as an entry list.
 - [ ] **P7 — authoring plugin** — Claude adapter + tool-loop over the manifest +
       chat drawer. **Built and merged 2026-08-03**; unticked because the
-      assistant is read-only and no model round-trip has ever run.
+      assistant is still read-only. A model round-trip has now run: see the
+      tool-surface entry below.
+    - **Tool surface: deferred behind tool search. Merged 2026-08-04.** Every
+      dispatch now ships with `defer_loading: true`, and the server-side
+      `tool_search_tool_regex_20251119` tool is the one tool that stays loaded.
+      The catalogue was 38 read-only tools in the demo and would be roughly four
+      times that with writes on, well past the 30–50 where selection accuracy
+      falls.
+        - **Nothing is curated as always-loaded**, against the docs' "keep your
+          3–5 most-used tools resident" tip. The tools an author reaches for are
+          per-entry-type (`entries_page_get`), so a site's own vocabulary decides
+          them and there is no fixed top five; a set that tracked the current
+          route would invalidate the cached tools prefix on every navigation.
+          The tool-search tool being non-deferred is what satisfies the API's
+          "at least one tool must have `defer_loading=false`".
+        - The search costs **no extra loop iteration** — the API resolves it
+          inside the same assistant turn, emitting `server_tool_use` +
+          `tool_search_tool_result` + `tool_use` in one message — and later turns
+          reuse what it found without searching again. `MAX_ITERATIONS` stays 12.
+        - **Verified live 2026-08-04** against a synthetic catalogue (37 deferred
+          tools shaped like the demo's, one turn on `claude-opus-5`, ~3¢ total):
+          the request validates, and the model discovered and called
+          `entries_page_query`. Run twice — with a generic system prompt its
+          first regex (`list.*(pages|site|sitemap)`) matched **nothing** and it
+          needed a second search; with the shipped prompt's naming-scheme
+          paragraph it wrote `entries_page_` and hit first time (122 output
+          tokens against 199). That paragraph is load-bearing, not decoration.
+        - Unit tests cover what we build, not what the API accepts — an
+          all-deferred catalogue is exactly the class that passes locally and
+          400s on the wire, so the live check is the evidence.
+        - **Not browser-verified.** The drawer has not been driven against the
+          demo since this landed; a tool search shows in the transcript as
+          nothing at all, because `run.ts` yields a `tool` event only for
+          `tool_use` blocks. A `server_tool_use` for the search is silent, so the
+          user sees an unexplained pause. Worth a distinct event and a "Looked
+          for tools" line rather than the drawer's "Ran {name}".
     - **The drawer 500s on every send — found and FIXED 2026-08-04.**
       `POST /api/plugins/authoring/chat` died on
       `ERR_UNSUPPORTED_ESM_URL_SCHEME … 'virtual:'`. Astro loads a site's config
@@ -521,10 +556,8 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       final user turn now, which also keeps it past the last cache breakpoint.
     - **Still open:** no i18n, no component tests, and the API base is `/api`
       hardcoded — `apiRoute` lives only on a virtual
-      module no hook re-exports, so a site that moves it breaks the drawer. And
-      the tool count is unaddressed: selection degrades past 30–50, permission
-      reduction bottoms out near 45, so `defer_loading` plus tool search is
-      still required.
+      module no hook re-exports, so a site that moves it breaks the drawer.
+      (The tool count is closed — see the tool-surface entry above.)
     - **Foundation merged 2026-08-03** (`2b947da`, `610d131`), 2330/161 → 2340/164.
       `@astromech/authoring` was unwritable before it: the manifest generator,
       `buildDispatch`, `filterMethods`, `annotateManifest`, `scopedServices` and
@@ -568,6 +601,38 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       sanitizing (strip newlines and control characters, clamp length, phrase as
       fact) before the loop sends one. Same trust boundary as the write-back
       guard.
+- [ ] **P8 — writes, approved out-of-band.** The assistant is read-only
+      (`readOnly: true`) because a click had nowhere to arrive. Design settled
+      2026-08-04; nothing built yet.
+    - **The fork, and why this side of it.** `evaluateConfirmation` is stateless
+      and sits at dispatch, so wiring the drawer through it as-is means the model
+      gets `input_required` back as a tool result, asks in chat, and then writes
+      `_confirm: {action: 'accept'}` **itself** on the retry. The user's "yes"
+      never leaves the transcript. That is the brake the gate's own docblock
+      describes, not approval. Real approval has to arrive on a channel the
+      requester does not control — the axis recorded in
+      `confirm-gate-is-a-brake`.
+    - **The shape.** The loop keeps using the tool runner but intervenes on the
+      yielded assistant message, before tools execute — the SDK's own
+      recommendation, and the reason `toolRunner` yields it. A mutating
+      `tool_use` is not run: the turn ends with a `confirm` event carrying the
+      method id, `confirmMessage`'s human-readable question, `destructive`, and
+      the concrete arguments. The drawer renders approve/reject; the click POSTs
+      the transcript back with a decision per `tool_use` id, and the server runs
+      only what was approved, appends the `tool_result` blocks, and resumes.
+    - **The cost, and it is the whole reason this needs a plan.** `ChatMessage`
+      on the wire is `{role, content: string}`. A paused tool call cannot survive
+      that round trip — the assistant turn's `tool_use` blocks and the matching
+      `tool_result` have to come back intact — so the transcript becomes
+      content blocks and the drawer starts holding opaque values it does not
+      read. `request.ts`, `use-chat.ts` and `readChatRequest`'s validation all
+      move with it.
+    - `_confirm` stays out of the drawer's surface entirely. Approval is the
+      HTTP request the click makes; there is no argument for the model to forge.
+      `readOnly` defaults to `false` only once that path exists.
+    - Worth deciding first: whether the staged-entry + preview-token path
+      (layer 3) makes the drawer gate redundant for the destructive cases, since
+      that channel already exists and is reviewed under a real session.
 
 ## Decisions worth not re-deriving
 
