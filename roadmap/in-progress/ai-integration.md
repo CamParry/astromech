@@ -500,15 +500,27 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       mock `astromech/methods` rather than importing it, so they cover this
       package's glue and not core's seams, and need no built core dist.
     - The drawer is the **slot system's first consumer**. Hand-written
-      throughout — the admin has no Radix, no markdown renderer, no animation
-      library. Borrowed from shadcn/`ai-elements` as behaviour, not code: the
-      scroll pin held on a ref (in state it re-renders the transcript on every
+      throughout — the admin has no Radix and no animation library. Borrowed
+      from shadcn/`ai-elements` as behaviour, not code: the scroll pin held on a
+      ref (in state it re-renders the transcript on every
       scroll tick), `aria-relevant="additions"` so a screen reader stops
       re-announcing a garbled partial word per chunk, and the
       `nativeEvent.isComposing` guard against Enter sending half a word of IME
       input.
-    - **Still open:** no markdown rendering, no i18n, no component tests, and
-      the API base is `/api` hardcoded — `apiRoute` lives only on a virtual
+    - **Markdown merged 2026-08-04** (`bc833ff`). Assistant text renders through
+      `react-markdown` + `remark-gfm`; user text stays literal. Raw HTML is not
+      rendered and `javascript:` URLs are blocked, both by react-markdown's
+      defaults — no `rehype-raw`. Styling mirrors `.am-richtext-content` rather
+      than reusing the class, which carries editor-only `min-height` and focus
+      rules. Core's own markdown path was rejected: it targets the ProseMirror
+      schema and lives behind the server barrel.
+    - **AI context placement fixed 2026-08-04** (`d2e2b3b`). The context message
+      was spliced _before_ the final user turn, so it landed after an assistant
+      turn and the API rejected the request — `role: 'system'` must follow a user
+      turn and be last or followed by an assistant turn. It is appended after the
+      final user turn now, which also keeps it past the last cache breakpoint.
+    - **Still open:** no i18n, no component tests, and the API base is `/api`
+      hardcoded — `apiRoute` lives only on a virtual
       module no hook re-exports, so a site that moves it breaks the drawer. And
       the tool count is unaddressed: selection degrades past 30–50, permission
       reduction bottoms out near 45, so `defer_loading` plus tool search is
