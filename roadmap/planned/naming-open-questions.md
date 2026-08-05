@@ -5,7 +5,7 @@ that spec's deletion. Each needs a conversation, not an implementation — none 
 a mechanical rename, and one of them changed shape after the review that raised
 it.
 
-The completed pass is `roadmap/in-progress/naming-pass.md`; its rationale is in
+The completed pass is `roadmap/completed/naming-pass.md`; its rationale is in
 `decisions/0009-service-method-client-vocabulary.md`,
 `decisions/0015-public-subpaths-mirror-the-source.md`,
 `decisions/0016-the-fields-module-vocabulary.md`,

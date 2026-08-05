@@ -1,10 +1,11 @@
 /**
  * Entry storage registry.
  *
- * Phase 2: every type resolves to the shared built-in singleton. Phase 3 mounts
- * per-type storages (e.g. tableStorage) via `setEntryStorage`. The singleton is
- * config-free; the entries service resolves locale defaults before dispatching, so
- * the built-in storage's own `defaultLocale` fallback ('en') is never relied on.
+ * A type resolves to its own storage when one is mounted via `setEntryStorage`
+ * (a table-backed type mounts `tableStorage`), and to the shared built-in
+ * singleton otherwise. The singleton is config-free; the entries service resolves
+ * locale defaults before dispatching, so the built-in storage's own
+ * `defaultLocale` fallback ('en') is never relied on.
  *
  * State lives on globalThis (mirrors the db/storage-driver registries): the
  * package has multiple bundle entry points (core, adapters, plugin subpaths),
