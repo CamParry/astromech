@@ -41,7 +41,7 @@ plugins/runtime · database · storage ·         capabilities
 types · utilities · errors                     pure leaves
 ```
 
-The six first-party plugins (`@astromech/{authoring,backups,forms,menus,redirects,seo}`)
+The six first-party plugins (`@astromech/{assistant,backups,forms,menus,redirects,seo}`)
 live OUTSIDE this `src/` graph, in `packages/plugins/` — each a separately published
 npm package that consumes core only through the public `astromech` surface. The
 plugin-authoring API (`definePluginTable`, `createStorage`, codec helpers,
@@ -132,7 +132,7 @@ packages/
 │   └── (tsup|vitest).config.ts · tsconfig*.json · .dependency-cruiser.cjs
 │
 └── plugins/         # first-party plugins as separate published packages
-    ├── authoring/   # @astromech/authoring  (the AI authoring surface: admin route, tool loop, chat drawer)
+    ├── assistant/   # @astromech/assistant  (the AI assistant: admin route, tool loop, chat drawer)
     ├── backups/     # @astromech/backups     (ships a ./tables subpath of plain tables)
     ├── forms/       # @astromech/forms      (notification + spam provider seams a site can extend)
     ├── menus/       # @astromech/menus

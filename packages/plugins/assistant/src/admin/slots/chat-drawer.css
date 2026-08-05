@@ -1,0 +1,423 @@
+/* Authoring assistant drawer (@astromech/authoring) */
+
+.am-assistant-panel {
+    display: flex;
+    flex-direction: column;
+    width: 24rem;
+    max-width: 100vw;
+    height: 100%;
+    background-color: var(--am-color-bg-base);
+    border-left: 1px solid var(--am-color-border);
+}
+
+/* `display: flex` above outranks the `hidden` attribute's UA rule. */
+.am-assistant-panel[hidden] {
+    display: none;
+}
+
+.am-assistant-panel-header {
+    display: flex;
+    flex-shrink: 0;
+    gap: calc(var(--am-space) * 2);
+    align-items: center;
+    justify-content: space-between;
+    height: var(--am-topbar-height);
+    padding: 0 calc(var(--am-space) * 3);
+    border-bottom: 1px solid var(--am-color-border);
+}
+
+.am-assistant-panel-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--am-color-text-default);
+}
+
+.am-assistant-panel-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: calc(var(--am-space) * 2);
+    align-items: center;
+}
+
+.am-assistant-close {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    color: var(--am-color-text-muted);
+    cursor: pointer;
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--am-radius-md);
+}
+
+@media (hover: hover) {
+    .am-assistant-close:hover {
+        color: var(--am-color-text-default);
+        background-color: var(--am-color-bg-subtle);
+    }
+}
+
+.am-assistant-close-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* Transcript                                                          */
+/* ------------------------------------------------------------------ */
+
+.am-assistant-body {
+    position: relative;
+    display: flex;
+    flex: 1;
+    min-height: 0;
+}
+
+.am-assistant-transcript {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: calc(var(--am-space) * 4);
+    min-width: 0;
+    padding: calc(var(--am-space) * 4);
+    overflow-y: auto;
+}
+
+.am-assistant-turn {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--am-space) * 1);
+    align-items: flex-start;
+}
+
+.am-assistant-turn--user {
+    align-items: flex-end;
+}
+
+.am-assistant-turn-role {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--am-color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.am-assistant-text {
+    max-width: 100%;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--am-color-text-default);
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.am-assistant-turn--user .am-assistant-text {
+    padding: calc(var(--am-space) * 2) calc(var(--am-space) * 3);
+    background-color: var(--am-color-bg-subtle);
+    border-radius: var(--am-radius-lg);
+}
+
+.am-assistant-markdown {
+    max-width: 100%;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--am-color-text-default);
+    overflow-wrap: anywhere;
+
+    & > :first-child {
+        margin-top: 0;
+    }
+
+    & > :last-child {
+        margin-bottom: 0;
+    }
+}
+
+.am-assistant-markdown h1 {
+    margin: 1em 0 0.5em;
+    font-size: 1.25em;
+    font-weight: 700;
+}
+
+.am-assistant-markdown h2 {
+    margin: 1em 0 0.5em;
+    font-size: 1.125em;
+    font-weight: 600;
+}
+
+.am-assistant-markdown h3,
+.am-assistant-markdown h4,
+.am-assistant-markdown h5,
+.am-assistant-markdown h6 {
+    margin: 1em 0 0.5em;
+    font-size: 1em;
+    font-weight: 600;
+}
+
+.am-assistant-markdown p {
+    margin: 0.5em 0;
+}
+
+.am-assistant-markdown ul,
+.am-assistant-markdown ol {
+    padding-left: 1.5em;
+    margin: 0.5em 0;
+}
+
+.am-assistant-markdown ul ul,
+.am-assistant-markdown ul ol,
+.am-assistant-markdown ol ul,
+.am-assistant-markdown ol ol {
+    margin: 0.25em 0;
+}
+
+.am-assistant-markdown li {
+    margin: 0.25em 0;
+}
+
+.am-assistant-markdown strong {
+    font-weight: 600;
+}
+
+.am-assistant-markdown em {
+    font-style: italic;
+}
+
+.am-assistant-markdown s {
+    text-decoration: line-through;
+}
+
+.am-assistant-markdown code {
+    padding: 0.125rem 0.25rem;
+    font-family: var(--am-font-mono, monospace);
+    font-size: 0.875em;
+    background-color: var(--am-color-bg-subtle);
+    border-radius: 0.25rem;
+}
+
+.am-assistant-markdown pre {
+    padding: 0.75rem 1rem;
+    margin: 0.5em 0;
+    overflow-x: auto;
+    background-color: var(--am-color-bg-subtle);
+    border-radius: var(--am-radius-sm);
+}
+
+.am-assistant-markdown pre code {
+    padding: 0;
+    font-size: 0.875em;
+    background-color: transparent;
+    border-radius: 0;
+}
+
+.am-assistant-markdown blockquote {
+    padding-left: 1rem;
+    margin: 0.5em 0;
+    font-style: italic;
+    color: var(--am-color-text-muted);
+    border-left: 4px solid var(--am-color-border);
+}
+
+.am-assistant-markdown hr {
+    margin: 1rem 0;
+    border: none;
+    border-top: 1px solid var(--am-color-border);
+}
+
+.am-assistant-markdown a {
+    color: var(--am-richtext-link-color);
+    text-decoration: underline;
+}
+
+.am-assistant-markdown table {
+    display: block;
+    max-width: 100%;
+    margin: 0.5em 0;
+    overflow-x: auto;
+    font-size: 0.8125rem;
+    border-collapse: collapse;
+}
+
+.am-assistant-markdown th,
+.am-assistant-markdown td {
+    padding: 0.25rem 0.5rem;
+    text-align: left;
+    border: 1px solid var(--am-color-border);
+}
+
+.am-assistant-markdown th {
+    font-weight: 600;
+}
+
+.am-assistant-tool {
+    padding: calc(var(--am-space) * 1) calc(var(--am-space) * 2);
+    font-size: 0.75rem;
+    color: var(--am-color-text-muted);
+    background-color: var(--am-color-bg-muted);
+    border: 1px solid var(--am-color-border);
+    border-radius: var(--am-radius-md);
+}
+
+.am-assistant-error {
+    max-width: 100%;
+    padding: calc(var(--am-space) * 2) calc(var(--am-space) * 3);
+    font-size: 0.75rem;
+    color: var(--am-color-danger-emphasis);
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    background-color: var(--am-color-danger-bg);
+    border: 1px solid var(--am-color-danger-border);
+    border-radius: var(--am-radius-md);
+}
+
+.am-assistant-hint,
+.am-assistant-pending {
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--am-color-text-muted);
+}
+
+.am-assistant-jump {
+    position: absolute;
+    bottom: calc(var(--am-space) * 3);
+    left: 50%;
+    display: flex;
+    gap: calc(var(--am-space) * 2);
+    align-items: center;
+    padding: calc(var(--am-space) * 1) calc(var(--am-space) * 3);
+    font-size: 0.75rem;
+    color: var(--am-color-text-default);
+    cursor: pointer;
+    background-color: var(--am-color-bg-base);
+    border: 1px solid var(--am-color-border-strong);
+    border-radius: var(--am-radius-full);
+    box-shadow: var(--am-popup-shadow);
+    transform: translateX(-50%);
+}
+
+.am-assistant-jump-icon {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* Approvals                                                           */
+/* ------------------------------------------------------------------ */
+
+.am-assistant-approvals {
+    display: flex;
+    flex-shrink: 0;
+    flex-direction: column;
+    gap: calc(var(--am-space) * 3);
+    padding: calc(var(--am-space) * 3);
+    background-color: var(--am-color-bg-subtle);
+    border-top: 1px solid var(--am-color-border);
+}
+
+.am-assistant-approvals-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--am-color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.am-assistant-approval-list {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--am-space) * 2);
+    max-height: 16rem;
+    padding: 0;
+    margin: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.am-assistant-approval {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--am-space) * 2);
+    align-items: flex-start;
+    padding: calc(var(--am-space) * 3);
+    background-color: var(--am-color-bg-base);
+    border: 1px solid var(--am-color-border);
+    border-radius: var(--am-radius-md);
+}
+
+.am-assistant-approval--destructive {
+    background-color: var(--am-color-danger-bg);
+    border-color: var(--am-color-danger-border);
+}
+
+.am-assistant-approval-message {
+    max-width: 100%;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--am-color-text-default);
+    overflow-wrap: anywhere;
+}
+
+.am-assistant-approval--destructive .am-assistant-approval-message {
+    color: var(--am-color-danger-emphasis);
+}
+
+.am-assistant-approval-actions,
+.am-assistant-approval-bulk {
+    display: flex;
+    gap: calc(var(--am-space) * 2);
+    align-items: center;
+}
+
+.am-assistant-approval-answer {
+    font-size: 0.75rem;
+    color: var(--am-color-text-muted);
+}
+
+/* ------------------------------------------------------------------ */
+/* Composer                                                            */
+/* ------------------------------------------------------------------ */
+
+.am-assistant-composer {
+    display: flex;
+    flex-shrink: 0;
+    flex-direction: column;
+    gap: calc(var(--am-space) * 2);
+    padding: calc(var(--am-space) * 3);
+    border-top: 1px solid var(--am-color-border);
+}
+
+.am-assistant-prompt {
+    field-sizing: content;
+    width: 100%;
+    min-height: 2.5rem;
+    max-height: 12rem;
+    padding: calc(var(--am-space) * 2) calc(var(--am-space) * 3);
+    overflow-y: auto;
+    font-family: inherit;
+    font-size: var(--am-input-font-size);
+    line-height: 1.5;
+    color: var(--am-input-color);
+    resize: none;
+    background-color: var(--am-input-background-color);
+    border: 1px solid var(--am-input-border-color);
+    border-radius: var(--am-input-border-radius);
+}
+
+.am-assistant-prompt::placeholder {
+    color: var(--am-input-placeholder-color);
+}
+
+.am-assistant-composer-actions {
+    display: flex;
+    gap: calc(var(--am-space) * 2);
+    align-items: center;
+    justify-content: space-between;
+}
+
+.am-assistant-composer-hint {
+    font-size: 0.75rem;
+    color: var(--am-color-text-muted);
+}

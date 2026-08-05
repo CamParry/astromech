@@ -14,7 +14,7 @@
     "dependencies": {
         "@astrojs/node": "^10.1.4",
         "@astrojs/react": "^5.0.1",
-        "@astromech/authoring": "*",
+        "@astromech/assistant": "*",
         "@astromech/backups": "*",
         "@astromech/menus": "*",
         "@astromech/redirects": "*",

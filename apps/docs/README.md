@@ -52,7 +52,7 @@ then look at how they're put together:
   menu, and a public service method that resolves entry refs to URLs.
 - `@astromech/backups` — a database table, a cron job, plugin storage, and raw
   HTTP routes for the streaming endpoints.
-- `@astromech/authoring` — the AI assistant: the first plugin to contribute
+- `@astromech/assistant` — the AI assistant: the first plugin to contribute
   admin slots (a topbar button and the chat drawer), a raw route streaming
   server-sent events, and `ctx.methods.tools()` for the model-callable surface
   the caller's role reaches.

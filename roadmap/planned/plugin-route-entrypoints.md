@@ -25,7 +25,7 @@ injectRoute({ pattern, entrypoint: '@fancy/dashboard/dashboard.astro' });
 addMiddleware({ entrypoint, order });
 ```
 
-The equivalent here would be `entrypoint: '@astromech/authoring/routes/chat'`,
+The equivalent here would be `entrypoint: '@astromech/assistant/routes/chat'`,
 with the file exported from the plugin's `package.json`. Core collects the
 entrypoints at `config:setup` and emits them as static imports into a generated
 module, the way it already generates the admin's plugin components. Vite
@@ -55,7 +55,7 @@ routes are already injected as entrypoints, and only plugin routes are closures.
 
 ## Blast radius if taken
 
-Two packages declare `rawRoutes` — `@astromech/authoring` (`/chat`) and
+Two packages declare `rawRoutes` — `@astromech/assistant` (`/chat`) and
 `@astromech/backups` (`buildBackupRoutes(keep)`). Both capture options in the
 closure. Nothing else in the repo is affected.
 

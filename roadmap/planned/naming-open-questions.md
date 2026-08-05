@@ -26,8 +26,9 @@ the name doesn't: "content operations (translate/transform/generate) — a
 DOWNSTREAM domain: it may import entries/, never the reverse."
 
 Candidates: `rewriting/` (what the code does), `ai/` (what powers it).
-`authoring/` was on the shortlist and is now **taken** — `@astromech/authoring`
-shipped 2026-08-03, after the review that proposed it. `ContentProvider` →
+`authoring/` was on the shortlist and was ruled out as taken by the plugin that
+shipped 2026-08-03; that plugin is now `@astromech/assistant`, so the name is
+**free again**. `ContentProvider` →
 `ModelProvider` reads better than any of the domain renames it would accompany,
 and could go on its own.
 
