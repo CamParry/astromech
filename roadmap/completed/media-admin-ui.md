@@ -3,9 +3,9 @@
 Audit and rebuild of the media library admin surface — the `/admin/media` page, the media detail
 modal, and the media-field picker — plus the serving and schema work those needed.
 
-**Status:** in progress on `feat/media-admin-ui`. Branched from `main` and merged
-`fix/admin-form-defects` (which was committed but not on `main` at the time; that merge resolved
-two conflicts — see the branch's merge commit).
+Built across three branches: `feat/media-admin-ui` (which merged `fix/admin-form-defects`, then
+uncommitted and not on `main` at the time — that merge resolved two conflicts, see its merge
+commit), `feat/media-admin-follow-ups`, and `feat/media-replace`.
 
 ## What the audit found
 
@@ -76,8 +76,18 @@ every editable column through the HTTP layer.
       permission, so the conflation had become an API that mis-states itself. `users` already split
       read/create/update/delete; media was the odd one out. Rationale and the rejected alternative:
       `decisions/0006-media-update-permission.md`.
-- [ ] `mediaService.replace` exists with full variant cleanup but is exposed by no route, no client
-      method and no UI
+- [x] `mediaService.replace` exposed end to end (2026-08-06). It had been complete since the
+      original media work — cross-extension key change, orphaned-original delete, variant-prefix
+      cleanup — and reachable from nothing. `MediaService` never declared it, which is why the HTTP
+      client compiled without it; there was no descriptor, so it was absent from the manifest, the
+      CLI and MCP; no route; no UI. Now `POST /media/:id/replace`, a client method, and a **Replace
+      file** button beside Delete in the detail modal. The descriptor takes `media:upload` —
+      assigned in advance by `decisions/0006-media-update-permission.md` — plus `binaryInput` and
+      `destructive`. Two things the build surfaced that the audit had not: the preview and the
+      thumbnail `<img>` fallback needed tagging with `updatedAt`, because the URL survives a replace
+      and the browser otherwise serves the old bytes; and `tests/policies/scoped-services.test.ts`
+      had been asserting `replace` was unreachable _because no contract existed_, so closing the gap
+      meant rewriting it to assert that `media:read` + `media:update` is refused `media.replace`
 - [x] `@testing-library/react` + `user-event` added (on `packages/astromech`, where `vitest` and
       `happy-dom` already live), and the media surface has its first render-level coverage: 16 tests
       across `MediaDetailModal`, `useBulkDeleteMedia` and `useSelection`. Every one was checked by
