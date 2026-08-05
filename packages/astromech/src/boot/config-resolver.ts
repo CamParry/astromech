@@ -324,7 +324,13 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     const mediaAccess = config.media?.access ?? 'public';
     assertMediaAccessCompatible(mediaAccess, config.image?.driver.name);
 
-    const { db: _db, plugins: _plugins, scheduler: _scheduler, ...rest } = config;
+    const {
+        db: _db,
+        plugins: _plugins,
+        scheduler: _scheduler,
+        ai: _ai,
+        ...rest
+    } = config;
     return {
         ...rest,
         adminRoute: config.adminRoute ?? '/admin',

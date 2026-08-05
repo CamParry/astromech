@@ -30,6 +30,9 @@ export { SmtpDriver } from '@/email/drivers/smtp.js';
 export type { SmtpDriverOptions } from '@/email/drivers/smtp.js';
 export { libsqlDriver } from '@/database/drivers/libsql.js';
 export { runScheduledJobs } from '@/cron/index.js';
+// Model access, so a plugin can reach a configured model without taking its own
+// SDK dependency. Absent unless the site configures `ai` — hence `undefined`.
+export { getModel, hasModel } from '@/ai/index.js';
 export { builtInRole, BUILT_IN_ROLES } from '@/permissions/index.js';
 export type { BuiltInRoleSlug } from '@/permissions/index.js';
 export { definePermissions } from '@/permissions/define.js';
@@ -112,7 +115,9 @@ export { t } from '@/utilities/labels.js';
 // public reads. A plugin holding richtext that is `private` — and so absent
 // from the public shape — has no read to get HTML from, and must render it
 // itself. Exported so that never means reimplementing the sanitizer.
-export { renderRichText } from '@/fields/rich-text/index.js';
+// `parseRichText` is the inverse, for anything holding HTML that has to become
+// a stored document.
+export { parseRichText, renderRichText } from '@/fields/rich-text/index.js';
 // The relationships index is derived from field data, so anything writing
 // entries outside the normal operations (a seed, a rebuild) needs the same pure
 // traversal core uses rather than a second, drifting copy of it.

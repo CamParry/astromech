@@ -13,6 +13,10 @@ This is a living reference; it grows as the project does.
 - [configuration/storage.md](configuration/storage.md) — pick and configure a
   storage driver (`filesystem`, `r2`, `s3`), media access modes and public URLs,
   signed URLs and the R2 signing trap, and the contract for writing your own.
+- [configuration/ai.md](configuration/ai.md) — configure model access: the `ai`
+  block, installing a provider package, `model` versus named `models`, reaching
+  a model from your own code with `getModel`, and what the assistant plugin
+  needs.
 - [content/entry-types.md](content/entry-types.md) — declaring entry types: the
   `entries` record, and `defineEntryType` for splitting a type into its own
   module.
@@ -52,7 +56,7 @@ then look at how they're put together:
   menu, and a public service method that resolves entry refs to URLs.
 - `@astromech/backups` — a database table, a cron job, plugin storage, and raw
   HTTP routes for the streaming endpoints.
-- `@astromech/authoring` — the AI assistant: the first plugin to contribute
+- `@astromech/assistant` — the AI assistant: the first plugin to contribute
   admin slots (a topbar button and the chat drawer), a raw route streaming
   server-sent events, and `ctx.methods.tools()` for the model-callable surface
   the caller's role reaches.

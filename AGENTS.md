@@ -8,7 +8,7 @@ Nested `AGENTS.md` files cover `packages/astromech`, `packages/plugins`, `apps/d
 
 `packages/*` is published to npm, `apps/*` is deployed and never published.
 
-- **`packages/astromech`** — the published core. **`packages/schema-engine`**, **`packages/plugins/*`** (authoring, backups, forms, menus, redirects, seo) — the rest of the published surface.
+- **`packages/astromech`** — the published core. **`packages/schema-engine`**, **`packages/plugins/*`** (assistant, backups, forms, menus, redirects, seo) — the rest of the published surface.
 - **`apps/demo`** — the app to run and browser-verify against. **`apps/docs`** — user-facing guides.
 - **`ARCHITECTURE.md`** — where code lives and what it may import. **`TERMINOLOGY.md`** — what a term means today. **`decisions/`** — why it beat the alternatives.
 - **`roadmap/`** — one file per feature, status by directory (`planned/` → `in-progress/` → `completed/`).

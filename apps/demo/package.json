@@ -12,9 +12,10 @@
         "db:init": "tsx --tsconfig ../../packages/astromech/tsconfig.json ../../packages/astromech/src/transport/cli/index.ts db:init"
     },
     "dependencies": {
+        "@ai-sdk/anthropic": "^4.0.30",
         "@astrojs/node": "^10.1.4",
         "@astrojs/react": "^5.0.1",
-        "@astromech/authoring": "*",
+        "@astromech/assistant": "*",
         "@astromech/backups": "*",
         "@astromech/menus": "*",
         "@astromech/redirects": "*",

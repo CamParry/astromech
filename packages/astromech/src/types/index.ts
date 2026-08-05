@@ -12,3 +12,4 @@ export * from './services.js';
 export * from './client.js';
 export * from './resolved.js';
 export * from './ai-context.js';
+export * from './ai.js';

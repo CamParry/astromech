@@ -24,6 +24,8 @@ import { setImageConfig } from '@/media/serving/image/registry.js';
 import { normaliseWidths } from '@/media/serving/image/url.js';
 import { defaultImageWidths } from '@/media/serving/image/defaults.js';
 import { setEmailConfig } from '@/email/registry.js';
+import { setAIConfig } from '@/ai/registry.js';
+import { buildAIConfig } from '@/ai/middleware.js';
 // Import from the jobs sub-barrel, NOT @/entries/index.js: the main barrel
 // re-exports the entries service, whose top-level `virtual:astromech/config`
 // import would be pulled into the Astro integration and crash config load
@@ -60,6 +62,9 @@ export async function initRuntime(
     }
     if (config.email) {
         setEmailConfig(config.email);
+    }
+    if (config.ai) {
+        setAIConfig(await buildAIConfig(config.ai));
     }
     registerBuiltInEntryJobs();
     setSchedulerDriver(config.scheduler ?? nodeDriver);

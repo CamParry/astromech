@@ -834,9 +834,10 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       is for.
     - **A system prompt shapes the default, it is not a boundary.** Write that
       into the work rather than discovering it later. The enforcing limits are
-      already built — the tool surface, `readOnly`, the permission scope — and the
-      missing one is a spend or rate cap, which belongs with this item but is a
-      different mechanism.
+      the tool surface, `readOnly` and the permission scope, and they are already
+      built. A spend or rate cap is not one of them and is not coming:
+      `decisions/0022-core-hands-out-a-model.md` records why it belongs in the
+      provider's dashboard.
     - Make the refusal useful: decline and name what it can do instead. An
       assistant that only says it can't help reads as broken.
     - **This cannot be unit-tested.** The tool-search work set the precedent — a

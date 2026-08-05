@@ -10,7 +10,8 @@ import {
 import { sharp } from 'astromech/media/image/sharp';
 import { filesystem } from 'astromech/storage/filesystem';
 import * as fields from 'astromech/fields';
-import { authoring } from '@astromech/authoring';
+import { anthropic } from '@ai-sdk/anthropic';
+import { assistant } from '@astromech/assistant';
 import { redirects } from '@astromech/redirects';
 import { seo, seoSection } from '@astromech/seo';
 import { menus } from '@astromech/menus';
@@ -126,13 +127,20 @@ export default defineConfig({
     // plugins can only log the failure.
     email: { driver: new ConsoleDriver(), from: 'demo@astromech.dev' },
     image: { driver: sharp() },
+    // `anthropic()` reads ANTHROPIC_API_KEY from the environment. The model
+    // is a live object, so it reaches the runtime through this config and
+    // never through the virtual config, which is JSON.
+    ai: {
+        model: anthropic('claude-opus-5'),
+        models: { assistant: anthropic('claude-opus-5') },
+    },
     locales: ['en', 'fr'],
     defaultLocale: 'en-GB',
     plugins: [
         redirects(),
         seo(),
         backups(),
-        authoring(),
+        assistant(),
         menus({
             menus: [
                 { key: 'main', label: 'Main Navigation' },
@@ -169,7 +177,7 @@ export default defineConfig({
                 // `read` alone — a content editor has no business downloading,
                 // restoring or deleting the database.
                 ...backups.permissions('read'),
-                ...authoring.permissions('use'),
+                ...assistant.permissions('use'),
             ],
         },
     },

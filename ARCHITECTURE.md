@@ -34,14 +34,14 @@ one another:
 routes · admin · boot · codegen · cli          entrypoints & composition root
 transport (http · local · mcp · cli · tools)   delivery — http/client/ is the fetch Client (astromech/fetch), over the wire
 policies                                       permission/confirmation wrappers over the manifest
-content · entries · media · users ·            domains — siblings, never import each other
-  settings · notifications                       (content is downstream: it may import entries)
+entries · media · users · settings ·           domains — siblings, never import each other
+  notifications
 plugins/runtime · database · storage ·         capabilities
-  email · cron · request-context · fields · permissions
+  email · ai · cron · request-context · fields · permissions
 types · utilities · errors                     pure leaves
 ```
 
-The six first-party plugins (`@astromech/{authoring,backups,forms,menus,redirects,seo}`)
+The six first-party plugins (`@astromech/{assistant,backups,forms,menus,redirects,seo}`)
 live OUTSIDE this `src/` graph, in `packages/plugins/` — each a separately published
 npm package that consumes core only through the public `astromech` surface. The
 plugin-authoring API (`definePluginTable`, `createStorage`, codec helpers,
@@ -58,8 +58,8 @@ Key invariants:
   table aggregator) or a shared capability — never via a direct peer import. The
   only permitted exception is a `schema.ts` foreign-key cross-reference.
 - **Capabilities sit below domains.** They expose primitives (`storage`, `database`,
-  `fields`, `permissions`, `request-context`, `email`, `cron`, `cloudflare`) and may not
-  orchestrate domain logic.
+  `fields`, `permissions`, `request-context`, `email`, `ai`, `cron`, `cloudflare`) and may
+  not orchestrate domain logic.
 - **Each capability owns its own driver slot; there is no central context object.**
   Slots share one mechanism (`utilities/registry.ts`) over a single
   `globalThis.__astromech` namespace, but never a shared type. A hub carrying every
@@ -103,7 +103,6 @@ packages/
 │   │   ├── plugins/        # plugins/runtime (hook engine) only — first-party plugins live in packages/plugins/
 │   │   │
 │   │   │   ── domains ────────────────────────────────────────────────────
-│   │   ├── content/        # content operations (translate/transform/generate) — a DOWNSTREAM domain: it may import entries/, never the reverse
 │   │   ├── entries/        # entries domain: service · schema · methods · visibility · url · type-ids
 │   │   ├── media/          # media domain: service · schema · serving/image/
 │   │   ├── users/          # users domain: service · schema · auth (Better Auth integration)
@@ -118,6 +117,7 @@ packages/
 │   │   ├── fields/         # field/column builder, formatters, rich-text, helpers
 │   │   ├── request-context/ # the AsyncLocalStorage request store: index.ts (barrel) + request-context.ts (the service-free leaf)
 │   │   ├── email/          # email drivers
+│   │   ├── ai/             # model access: getModel / hasModel over the configured models
 │   │   ├── cron/           # scheduled-job infrastructure
 │   │   │
 │   │   │   ── pure leaves ────────────────────────────────────────────────
@@ -132,7 +132,7 @@ packages/
 │   └── (tsup|vitest).config.ts · tsconfig*.json · .dependency-cruiser.cjs
 │
 └── plugins/         # first-party plugins as separate published packages
-    ├── authoring/   # @astromech/authoring  (the AI authoring surface: admin route, tool loop, chat drawer)
+    ├── assistant/   # @astromech/assistant  (the AI assistant: admin route, tool loop, chat drawer)
     ├── backups/     # @astromech/backups     (ships a ./tables subpath of plain tables)
     ├── forms/       # @astromech/forms      (notification + spam provider seams a site can extend)
     ├── menus/       # @astromech/menus

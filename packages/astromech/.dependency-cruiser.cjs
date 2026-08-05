@@ -9,10 +9,9 @@
  *     · http/client = the fetch Client (consumes the HTTP API over the wire;
  *       client half of the transport, nested but kept a distinct DAG node)
  *   policies                                       permission / confirmation wrappers
- *   content                                        downstream domain — may import entries
  *   entries · media · users · settings             domains — siblings, may read each other
  *   plugins/runtime · database · storage · email ·  capabilities
- *     cron · request-context · fields · permissions
+ *     cron · ai · request-context · fields · permissions
  *   types · utilities · errors                     pure leaves
  *
  * This config scans CORE ONLY (`src/`). Cross-package isolation is enforced by
@@ -48,28 +47,20 @@ module.exports = {
         {
             name: 'domain-no-upward',
             comment:
-                'A domain knows nothing about delivery or composition. It must not import routes, admin, a transport (which now houses the fetch client under transport/http/client), policies, boot, codegen, or a first-party plugin. Importing the plugins/runtime hook engine IS allowed — that is a capability the domain fires hooks through. `content` is included: it is a DOWNSTREAM domain (it orchestrates entries + a model provider), but it knows nothing about delivery either.',
+                'A domain knows nothing about delivery or composition. It must not import routes, admin, a transport (which now houses the fetch client under transport/http/client), policies, boot, codegen, or a first-party plugin. Importing the plugins/runtime hook engine IS allowed — that is a capability the domain fires hooks through.',
             severity: 'error',
-            from: { path: '^src/(entries|media|users|settings|content)/' },
+            from: { path: '^src/(entries|media|users|settings)/' },
             to: {
                 path: '^src/(routes|admin|transport|policies|boot|codegen)/',
             },
         },
         {
-            name: 'content-is-downstream-of-the-domains',
-            comment:
-                'content/ sits ABOVE entries/ in the DAG: it reads an entry, rewrites its text through a provider and writes it back, so importing entries/ is a legitimate edge. The half worth enforcing is the reverse one — a domain must never import content/, or the cycle is back. This is the ONE direction still policed between domain-ish modules: the peer siblings may read each other freely (see the header), but content is downstream of them, not beside them.',
-            severity: 'error',
-            from: { path: '^src/(entries|media|users|settings)/' },
-            to: { path: '^src/content/' },
-        },
-        {
             name: 'capability-no-upward',
             comment:
-                'Capabilities (storage, email, cron, request-context, fields, cloudflare) sit below the domains: they expose primitives, they do not orchestrate. They must not import a domain, an upper layer, or a first-party plugin.',
+                'Capabilities (storage, email, cron, ai, request-context, fields, cloudflare) sit below the domains: they expose primitives, they do not orchestrate. They must not import a domain, an upper layer, or a first-party plugin.',
             severity: 'error',
             from: {
-                path: '^src/(storage|email|cron|request-context|fields|permissions|cloudflare)/',
+                path: '^src/(storage|email|cron|ai|request-context|fields|permissions|cloudflare)/',
             },
             to: {
                 path: '^src/(entries|media|users|settings|routes|admin|transport|policies|boot|codegen)/',
@@ -113,7 +104,7 @@ module.exports = {
             severity: 'error',
             from: { path: '^src/admin/' },
             to: {
-                path: '^src/(entries|media|users|settings)/|^src/(storage|email|cron|request-context|database|permissions|policies|transport|boot)/|^src/plugins/runtime/',
+                path: '^src/(entries|media|users|settings)/|^src/(storage|email|cron|ai|request-context|database|permissions|policies|transport|boot)/|^src/plugins/runtime/',
                 pathNot:
                     '^src/entries/(utils/url|type-ids|validation-stage)\\.(ts|js)$|^src/settings/page-values\\.(ts|js)$|^src/media/serving/image/url\\.(ts|js)$|^src/transport/http/client/',
             },
@@ -125,7 +116,7 @@ module.exports = {
             severity: 'error',
             from: { path: '^src/transport/http/client/' },
             to: {
-                path: '^src/(entries|media|users|settings|storage|email|cron|request-context|database|permissions|policies|transport|boot|admin)/',
+                path: '^src/(entries|media|users|settings|storage|email|cron|ai|request-context|database|permissions|policies|transport|boot|admin)/',
                 pathNot: '^src/transport/http/client/',
             },
         },
@@ -159,7 +150,7 @@ module.exports = {
                 'Cyclic dependencies break the acyclic layer graph and tree-shaking. Scoped to the clean capability/delivery spine, now including plugins/runtime (its entries entanglement was untangled via the entry-access port). The four domains stay out of scope for now (their own internal cycles are a separate cleanup).',
             severity: 'warn',
             from: {
-                path: '^src/(storage|email|cron|request-context|fields|permissions|database|policies|transport|boot|plugins/runtime)/',
+                path: '^src/(storage|email|cron|ai|request-context|fields|permissions|database|policies|transport|boot|plugins/runtime)/',
             },
             to: { circular: true },
         },

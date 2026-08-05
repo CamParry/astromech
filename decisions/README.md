@@ -53,3 +53,10 @@ Distinct from the neighbouring directories:
 - [0018](0018-one-chat-session-not-a-library.md) — the assistant keeps one resumable chat session per user, not a browsable library of past ones
 - [0019](0019-a-define-returns-the-thing.md) — a `defineX` returns an `X`; `Descriptor` and `Definition` stop being suffixes
 - [0020](0020-approval-as-a-server-held-row.md) — an approval is a server-held row, claimed and answered in one conditional update
+- [0021](0021-ai-as-an-optional-core-capability.md) — AI as an optional core capability, absent unless configured
+- [0022](0022-core-hands-out-a-model.md) — core hands out a model; it does not wrap generation
+- [0023](0023-ai-sdk-over-vendor-and-agent-frameworks.md) — AI SDK over the vendor SDK and over agent frameworks
+- [0024](0024-removing-the-content-operations.md) — removing the content operations, and what must return with them
+- [0025](0025-html-as-the-rich-text-interchange-format.md) — HTML as the rich-text interchange format
+- [0026](0026-the-assistant-package-name.md) — `@astromech/assistant`, and the "authoring" the rename left alone
+- [0027](0027-the-assistant-loop-on-streamtext.md) — the assistant's loop runs on `streamText`, and keeps its own approval gate
