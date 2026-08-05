@@ -5,9 +5,8 @@
  * Pure: builds a schema from the same extensions the renderer uses.
  */
 
-import { getSchema } from '@tiptap/core';
-import { Node, type Schema } from '@tiptap/pm/model';
-import { buildRichTextExtensions } from './extensions.js';
+import { Node } from '@tiptap/pm/model';
+import { schemaFor } from './schema.js';
 import type { FieldValidator, RichTextAllow } from '@/types/fields.js';
 
 /**
@@ -57,22 +56,6 @@ export function checkRichTextDocument(
     }
 
     return true;
-}
-
-/**
- * Cache schemas by `allow` list. Building one configures the whole StarterKit,
- * which is far too much work to repeat per field per write.
- */
-const schemaCache = new Map<string, Schema>();
-
-/** Build (or reuse) the ProseMirror schema for an `allow` list. */
-function schemaFor(allow?: RichTextAllow): Schema {
-    const key = JSON.stringify(allow ?? {});
-    const cached = schemaCache.get(key);
-    if (cached !== undefined) return cached;
-    const schema = getSchema(buildRichTextExtensions(allow));
-    schemaCache.set(key, schema);
-    return schema;
 }
 
 /** Surface ProseMirror's own reason — it names the offending node or mark. */

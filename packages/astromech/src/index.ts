@@ -115,7 +115,9 @@ export { t } from '@/utilities/labels.js';
 // public reads. A plugin holding richtext that is `private` — and so absent
 // from the public shape — has no read to get HTML from, and must render it
 // itself. Exported so that never means reimplementing the sanitizer.
-export { renderRichText } from '@/fields/rich-text/index.js';
+// `parseRichText` is the inverse, for anything holding HTML that has to become
+// a stored document.
+export { parseRichText, renderRichText } from '@/fields/rich-text/index.js';
 // The relationships index is derived from field data, so anything writing
 // entries outside the normal operations (a seed, a rebuild) needs the same pure
 // traversal core uses rather than a second, drifting copy of it.
