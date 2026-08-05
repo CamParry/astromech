@@ -30,6 +30,9 @@ export { SmtpDriver } from '@/email/drivers/smtp.js';
 export type { SmtpDriverOptions } from '@/email/drivers/smtp.js';
 export { libsqlDriver } from '@/database/drivers/libsql.js';
 export { runScheduledJobs } from '@/cron/index.js';
+// Model access, so a plugin can reach a configured model without taking its own
+// SDK dependency. Absent unless the site configures `ai` — hence `undefined`.
+export { getModel, hasModel } from '@/ai/index.js';
 export { builtInRole, BUILT_IN_ROLES } from '@/permissions/index.js';
 export type { BuiltInRoleSlug } from '@/permissions/index.js';
 export { definePermissions } from '@/permissions/define.js';

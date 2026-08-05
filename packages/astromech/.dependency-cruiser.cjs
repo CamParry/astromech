@@ -12,7 +12,7 @@
  *   content                                        downstream domain — may import entries
  *   entries · media · users · settings             domains — siblings, may read each other
  *   plugins/runtime · database · storage · email ·  capabilities
- *     cron · request-context · fields · permissions
+ *     cron · ai · request-context · fields · permissions
  *   types · utilities · errors                     pure leaves
  *
  * This config scans CORE ONLY (`src/`). Cross-package isolation is enforced by
@@ -66,10 +66,10 @@ module.exports = {
         {
             name: 'capability-no-upward',
             comment:
-                'Capabilities (storage, email, cron, request-context, fields, cloudflare) sit below the domains: they expose primitives, they do not orchestrate. They must not import a domain, an upper layer, or a first-party plugin.',
+                'Capabilities (storage, email, cron, ai, request-context, fields, cloudflare) sit below the domains: they expose primitives, they do not orchestrate. They must not import a domain, an upper layer, or a first-party plugin.',
             severity: 'error',
             from: {
-                path: '^src/(storage|email|cron|request-context|fields|permissions|cloudflare)/',
+                path: '^src/(storage|email|cron|ai|request-context|fields|permissions|cloudflare)/',
             },
             to: {
                 path: '^src/(entries|media|users|settings|routes|admin|transport|policies|boot|codegen)/',
@@ -113,7 +113,7 @@ module.exports = {
             severity: 'error',
             from: { path: '^src/admin/' },
             to: {
-                path: '^src/(entries|media|users|settings)/|^src/(storage|email|cron|request-context|database|permissions|policies|transport|boot)/|^src/plugins/runtime/',
+                path: '^src/(entries|media|users|settings)/|^src/(storage|email|cron|ai|request-context|database|permissions|policies|transport|boot)/|^src/plugins/runtime/',
                 pathNot:
                     '^src/entries/(utils/url|type-ids|validation-stage)\\.(ts|js)$|^src/settings/page-values\\.(ts|js)$|^src/media/serving/image/url\\.(ts|js)$|^src/transport/http/client/',
             },
@@ -125,7 +125,7 @@ module.exports = {
             severity: 'error',
             from: { path: '^src/transport/http/client/' },
             to: {
-                path: '^src/(entries|media|users|settings|storage|email|cron|request-context|database|permissions|policies|transport|boot|admin)/',
+                path: '^src/(entries|media|users|settings|storage|email|cron|ai|request-context|database|permissions|policies|transport|boot|admin)/',
                 pathNot: '^src/transport/http/client/',
             },
         },
@@ -159,7 +159,7 @@ module.exports = {
                 'Cyclic dependencies break the acyclic layer graph and tree-shaking. Scoped to the clean capability/delivery spine, now including plugins/runtime (its entries entanglement was untangled via the entry-access port). The four domains stay out of scope for now (their own internal cycles are a separate cleanup).',
             severity: 'warn',
             from: {
-                path: '^src/(storage|email|cron|request-context|fields|permissions|database|policies|transport|boot|plugins/runtime)/',
+                path: '^src/(storage|email|cron|ai|request-context|fields|permissions|database|policies|transport|boot|plugins/runtime)/',
             },
             to: { circular: true },
         },

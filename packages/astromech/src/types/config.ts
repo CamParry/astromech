@@ -4,6 +4,7 @@
 
 import type { Dialect, Kysely } from 'kysely';
 import type { DB } from '@/database/types.js';
+import type { AIConfig } from './ai.js';
 import type { CellKind } from './resolved.js';
 import type { Permission } from './domain.js';
 import type {
@@ -440,6 +441,8 @@ export type AstromechConfig = {
         driver: EmailDriver;
         from: string;
     };
+    /** Model access. Absent unless configured; see `getModel`. */
+    ai?: AIConfig;
     /** Triggering driver for scheduled jobs. Default: nodeDriver. */
     scheduler?: SchedulerDriver;
     /**
@@ -464,7 +467,10 @@ export type AstromechConfig = {
     };
 };
 
-export type ResolvedConfig = Omit<AstromechConfig, 'plugins' | 'db' | 'scheduler'> & {
+export type ResolvedConfig = Omit<
+    AstromechConfig,
+    'plugins' | 'db' | 'scheduler' | 'ai'
+> & {
     adminRoute: string;
     apiRoute: string;
     mediaRoute: string;
