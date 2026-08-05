@@ -584,6 +584,46 @@ const mediaService: MediaService = {
         return body.data;
     },
 
+    async replace(params: { id: string; file: File }): Promise<Media> {
+        const formData = new FormData();
+        formData.append('file', params.file);
+
+        const response = await fetch(`${apiBase}/media/${params.id}/replace`, {
+            method: 'POST',
+            credentials: 'include',
+            body: formData,
+        } as RequestInit);
+
+        if (!response.ok) {
+            const body = await response.json().catch(() => null);
+            const errPayload = (body as Record<string, unknown> | null)?.error;
+            if (
+                errPayload !== null &&
+                errPayload !== undefined &&
+                typeof errPayload === 'object' &&
+                'code' in errPayload
+            ) {
+                const apiErr = new AstromechApiError(
+                    errPayload as {
+                        id: string;
+                        code: string;
+                        message: string;
+                        status: number;
+                        details?: Record<string, unknown>;
+                    }
+                );
+                emitApiError(apiErr);
+                throw apiErr;
+            }
+            const httpErr = new Error(`HTTP ${response.status}`);
+            emitApiError(httpErr);
+            throw httpErr;
+        }
+
+        const body = (await response.json()) as { data: Media };
+        return body.data;
+    },
+
     async update(params: {
         id: string;
         data: Partial<{

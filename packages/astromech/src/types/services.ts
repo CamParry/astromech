@@ -305,6 +305,7 @@ export type MediaService = {
     query(params?: MediaQueryParams): Promise<QueryResult<Media>>;
     get(params: { id: string }): Promise<Media | null>;
     upload(params: { file: File }): Promise<Media>;
+    replace(params: { id: string; file: File }): Promise<Media>;
     update(params: {
         id: string;
         data: Partial<{

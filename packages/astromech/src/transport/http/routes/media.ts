@@ -1,15 +1,16 @@
 /**
  * Media Routes
  *
- * File upload, listing, update, and delete.
+ * File upload, listing, replace, update, and delete.
  *
  * Routes:
- *   GET    /media            → all()
- *   GET    /media/:id        → get()
- *   GET    /media/:id/usage  → usedBy()
- *   POST   /media/upload     → upload()
- *   PUT    /media/:id        → update()
- *   DELETE /media/:id        → delete()
+ *   GET    /media              → all()
+ *   GET    /media/:id          → get()
+ *   GET    /media/:id/usage    → usedBy()
+ *   POST   /media/upload       → upload()
+ *   POST   /media/:id/replace  → replace()
+ *   PUT    /media/:id          → update()
+ *   DELETE /media/:id          → delete()
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
@@ -110,6 +111,30 @@ router.post('/upload', async (c) => {
 
     const media = await Astromech.media.upload({ file });
     return c.json({ data: media }, 201);
+});
+
+// ============================================================================
+// POST /media/:id/replace
+// ============================================================================
+
+router.post('/:id/replace', async (c) => {
+    const { id } = c.req.param();
+    const permissions = permissionsFor(c.var.role);
+    if (!permissions.allowsMethod(mediaContract.replace)) return forbidden(c);
+
+    const formData = await c.req.formData();
+    const file = formData.get('file');
+
+    if (!(file instanceof File)) {
+        return badRequest(c, 'A file field is required');
+    }
+
+    // The service throws for an unknown id, which would surface as a 500.
+    const item = await Astromech.media.get({ id });
+    if (!item) return notFound(c, `Media '${id}' not found`);
+
+    const media = await Astromech.media.replace({ id, file });
+    return c.json({ data: media });
 });
 
 // ============================================================================

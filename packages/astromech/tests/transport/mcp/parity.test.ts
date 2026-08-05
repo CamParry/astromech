@@ -222,10 +222,14 @@ describe('manifest ↔ MCP tool coverage', () => {
         // written yet" is no longer a reason anything is missing. What is left
         // out is left out because the CONTRACT said so.
         expect(skipped.map((s) => s.id).sort()).toEqual([
+            'media.replace',
             'media.upload',
             'plugins.testMyPlugin.undescribed',
         ]);
         expect(skipped.find((s) => s.id === 'media.upload')?.reason).toContain(
+            'binary input'
+        );
+        expect(skipped.find((s) => s.id === 'media.replace')?.reason).toContain(
             'binary input'
         );
         expect(

@@ -299,6 +299,7 @@ function MediaIndexPage(): React.ReactElement {
                 onDeleted={closeItem}
                 canDelete={canDeleteMedia()}
                 canUpdate={canUpdateMedia()}
+                canUpload={canUpload}
             />
         </>
     );

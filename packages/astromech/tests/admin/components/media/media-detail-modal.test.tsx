@@ -40,6 +40,7 @@ vi.mock('@/admin/hooks/media.js', () => ({
     useMediaItem: () => ({ data: ITEM, isLoading: false, isError: false }),
     useUpdateMedia: () => ({ mutate: updateMutate, isPending: false }),
     useDeleteMedia: () => ({ mutate: deleteMutate, isPending: false }),
+    useReplaceMedia: () => ({ mutate: vi.fn(), isPending: false }),
     useMediaUsage: () => ({ data: [], isLoading: false }),
 }));
 

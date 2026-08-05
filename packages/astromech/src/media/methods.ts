@@ -36,6 +36,14 @@ export const mediaContract = {
         permission: 'media:upload',
         mutates: true,
     },
+    replace: {
+        summary: 'Replace a media item’s file, keeping its id, URL and metadata.',
+        input: z.object({ id: z.string(), file: z.instanceof(File) }),
+        binaryInput: true,
+        permission: 'media:upload',
+        mutates: true,
+        destructive: true,
+    },
     update: {
         summary:
             'Update a media item’s metadata. Fields merge: omitted fields keep ' +

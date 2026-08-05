@@ -1,6 +1,7 @@
 import React from 'react';
 import { File, FileText, Music, Video } from 'lucide-react';
 import type { TypeFilter } from '../types/media.js';
+import type { Media } from '@/types/index.js';
 
 export function matchesTypeFilter(mimeType: string, filter: TypeFilter): boolean {
     if (filter === 'all') return true;
@@ -15,6 +16,16 @@ export function matchesTypeFilter(mimeType: string, filter: TypeFilter): boolean
         !mimeType.startsWith('application/') &&
         !mimeType.startsWith('text/')
     );
+}
+
+/**
+ * A media original's URL tagged with the record's `updatedAt`. Replacing a file
+ * keeps its URL, so without this the browser keeps serving the old bytes.
+ */
+export function versionedMediaUrl(item: Pick<Media, 'url' | 'updatedAt'>): string {
+    const version = new Date(item.updatedAt).getTime();
+    if (Number.isNaN(version)) return item.url;
+    return `${item.url}${item.url.includes('?') ? '&' : '?'}v=${version}`;
 }
 
 export function FileTypeIcon({

@@ -82,6 +82,34 @@ export function useUpdateMedia(
     });
 }
 
+/**
+ * Swap the file behind a media item. The id and URL survive the swap, so both
+ * the item's own cache entry and the library list go stale.
+ */
+export function useReplaceMedia(id: string, options?: { onSuccess?: () => void }) {
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+    const { t } = useTranslation();
+
+    return useMutation({
+        mutationFn: (file: File) => astromechClient.media.replace({ id, file }),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({
+                queryKey: queryKeys.media.detail(id),
+            });
+            void queryClient.invalidateQueries({ queryKey: queryKeys.media.all() });
+            toast({ message: t('media.replaced'), variant: 'success' });
+            options?.onSuccess?.();
+        },
+        onError: (err) => {
+            toast({
+                message: err instanceof Error ? err.message : t('media.replaceFailed'),
+                variant: 'error',
+            });
+        },
+    });
+}
+
 export function useDeleteMedia(options?: { id?: string; onSuccess?: () => void }) {
     const queryClient = useQueryClient();
     const { toast } = useToast();

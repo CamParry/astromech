@@ -10,12 +10,26 @@
 import React from 'react';
 import { useForm, useStore } from '@tanstack/react-form';
 import { useTranslation } from 'react-i18next';
-import { Button, EmptyState, Input, Modal, Spinner, useConfirm } from '../ui/index.js';
-import { useMediaItem, useUpdateMedia, useDeleteMedia } from '../../hooks/media.js';
+import {
+    Button,
+    EmptyState,
+    Input,
+    Modal,
+    Spinner,
+    UploadButton,
+    useConfirm,
+} from '../ui/index.js';
+import {
+    useMediaItem,
+    useUpdateMedia,
+    useDeleteMedia,
+    useReplaceMedia,
+    useMediaUsage,
+} from '../../hooks/media.js';
 import { formatBytes } from '@/utilities/bytes.js';
 import { MediaUsagePanel } from './media-usage-panel.js';
 import { formatDatetime } from '@/utilities/dates.js';
-import { FileTypeIcon } from '@/admin/utilities/media.js';
+import { FileTypeIcon, versionedMediaUrl } from '@/admin/utilities/media.js';
 import type { Media } from '@/types/index.js';
 
 export type MediaDetailModalProps = {
@@ -24,6 +38,7 @@ export type MediaDetailModalProps = {
     onDeleted: () => void;
     canDelete?: boolean;
     canUpdate?: boolean;
+    canUpload?: boolean;
 };
 
 export function MediaDetailModal({
@@ -32,6 +47,7 @@ export function MediaDetailModal({
     onDeleted,
     canDelete = true,
     canUpdate = true,
+    canUpload = true,
 }: MediaDetailModalProps): React.ReactElement {
     const {
         data: item,
@@ -64,6 +80,7 @@ export function MediaDetailModal({
                     onDeleted={onDeleted}
                     canDelete={canDelete}
                     canUpdate={canUpdate}
+                    canUpload={canUpload}
                 />
             )}
         </Modal>
@@ -76,6 +93,7 @@ type MediaDetailBodyProps = {
     onDeleted: () => void;
     canDelete: boolean;
     canUpdate: boolean;
+    canUpload: boolean;
 };
 
 /** The loaded modal. Split out so `key` can remount it per media record. */
@@ -85,6 +103,7 @@ function MediaDetailBody({
     onDeleted,
     canDelete,
     canUpdate,
+    canUpload,
 }: MediaDetailBodyProps): React.ReactElement {
     const { t } = useTranslation();
     const confirm = useConfirm();
@@ -106,6 +125,12 @@ function MediaDetailBody({
 
     const deleteMutation = useDeleteMedia({ onSuccess: onDeleted });
 
+    const replaceMutation = useReplaceMedia(item.id);
+
+    // Same query key as the usage panel below, so this reads that cache entry
+    // rather than fetching again.
+    const { data: usage } = useMediaUsage(item.id);
+
     // `form.state` is a plain getter — reading it in render never re-renders on
     // change, which left the submit button permanently disabled.
     const isDirty = useStore(form.store, (state) => state.isDirty);
@@ -119,6 +144,26 @@ function MediaDetailBody({
         });
     }
 
+    /**
+     * Confirm once the picker has resolved, so the dialog can name the chosen
+     * file and how much content is about to serve different bytes.
+     */
+    function requestReplace(files: File[]): void {
+        const file = files[0];
+        if (file === undefined) return;
+
+        confirm({
+            title: t('media.replaceConfirmTitle'),
+            description: t('media.replaceConfirmDescription', {
+                filename: file.name,
+                count: usage?.length ?? 0,
+            }),
+            variant: 'danger',
+            confirmLabel: t('media.replaceConfirmLabel'),
+            onConfirm: () => replaceMutation.mutate(file),
+        });
+    }
+
     return (
         <>
             <div className="am-media-modal-layout">
@@ -126,7 +171,7 @@ function MediaDetailBody({
                     <div className="am-media-modal-preview">
                         {item.mimeType.startsWith('image/') ? (
                             <img
-                                src={item.url}
+                                src={versionedMediaUrl(item)}
                                 alt={item.alt ?? item.filename}
                                 className="am-media-modal-preview-image"
                             />
@@ -222,6 +267,19 @@ function MediaDetailBody({
                         >
                             {t('common.delete')}
                         </Button>
+                    )}
+                    {canUpload && (
+                        <UploadButton
+                            variant="secondary"
+                            size="sm"
+                            // A different image format is a valid replacement; a
+                            // PDF for a PNG is not.
+                            accept={`${item.mimeType.split('/')[0]}/*`}
+                            onUpload={requestReplace}
+                            loading={replaceMutation.isPending}
+                        >
+                            {t('media.replaceButton')}
+                        </UploadButton>
                     )}
                 </div>
                 <div className="am-media-modal-actions-end">

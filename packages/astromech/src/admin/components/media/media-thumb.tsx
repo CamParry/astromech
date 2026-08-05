@@ -10,7 +10,7 @@
 import React from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
 import { buildVariantUrl } from '@/media/serving/image/url.js';
-import { FileTypeIcon } from '@/admin/utilities/media.js';
+import { FileTypeIcon, versionedMediaUrl } from '@/admin/utilities/media.js';
 import type { Media } from '@/types/index.js';
 
 export type MediaThumbProps = {
@@ -45,7 +45,7 @@ export function MediaThumb({
     if (sources.length === 0) {
         return (
             <img
-                src={item.url}
+                src={versionedMediaUrl(item)}
                 alt={item.alt ?? ''}
                 className={className}
                 loading="lazy"
@@ -60,7 +60,7 @@ export function MediaThumb({
                 <source key={s.type} type={s.type} srcSet={s.srcset} />
             ))}
             <img
-                src={item.url}
+                src={versionedMediaUrl(item)}
                 alt={item.alt ?? ''}
                 className={className}
                 loading="lazy"

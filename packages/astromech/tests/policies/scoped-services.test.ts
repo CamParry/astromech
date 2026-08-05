@@ -42,7 +42,8 @@ function makeService() {
     return {
         read: vi.fn((_input?: unknown) => Promise.resolve('read-result')),
         write: vi.fn((_input?: unknown) => Promise.resolve('write-result')),
-        // Deliberately absent from the catalogue below — the mediaService.replace case.
+        // Deliberately absent from the catalogue below — a service method whose
+        // contract was never written stays unreachable.
         undescribed: vi.fn(() => Promise.resolve('undescribed-result')),
         label: 'not-a-function',
     };
@@ -295,15 +296,20 @@ describe('scopedServices', () => {
         }
     });
 
-    it('refuses mediaService.replace, which declares no contract', () => {
-        // Known gap, asserted rather than papered over: `replace` has no entry in
-        // `mediaContract`, so it is invisible to the manifest AND unreachable
-        // through a scoped handle — even for an admin.
-        const media = scopedServices(role('*')).media as unknown as Record<string, never>;
+    it('refuses media.replace to a role without media:upload', () => {
+        const scoped = scopedServices(role('media:read', 'media:update'));
 
-        expect(() => (media['replace'] as unknown as () => unknown)()).toThrow(
-            PermissionDeniedError
-        );
+        try {
+            void scoped.media.replace({
+                id: 'm1',
+                file: new File(['bytes'], 'a.png', { type: 'image/png' }),
+            });
+            expect.unreachable('media.replace must be refused without media:upload');
+        } catch (e) {
+            expect(e).toBeInstanceOf(PermissionDeniedError);
+            expect((e as PermissionDeniedError).method).toBe('media.replace');
+            expect((e as PermissionDeniedError).permission).toBe('media:upload');
+        }
     });
 });
 
