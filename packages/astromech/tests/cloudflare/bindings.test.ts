@@ -1,11 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { resolveBinding, setBindingEnv, resetBindingEnv } from '@/cloudflare/bindings.js';
 
-// The Workers (`cloudflare:workers`) and Node (`wrangler` getPlatformProxy())
-// detection paths are intentionally not exercised here: neither package is
-// installed and there is no `wrangler.jsonc` in this repo. Every test goes
-// through `setBindingEnv`, the documented bypass for hosts (and tests) that
-// already hold an `env` object.
+// Every test here goes through `setBindingEnv`, the documented bypass for hosts
+// (and tests) that already hold an `env` object, so nothing in this file starts
+// a runtime. Detection itself is covered elsewhere: the wrangler branch by
+// `d1-local-emulation.test.ts`, which boots workerd; the `cloudflare:workers`
+// branch by nothing, since that specifier only resolves inside a Worker.
+//
+// Leaving the env unset would now fall through to wrangler and boot workerd,
+// because this package depends on it — that is a real resolution, not the
+// failure it used to be.
 
 describe('resolveBinding()', () => {
     beforeEach(() => {
@@ -48,17 +52,9 @@ describe('resolveBinding()', () => {
         expect(second).toBe(bucket);
     });
 
-    // The one runtime-detection branch that IS reachable here: with no env set
-    // and no Workers global, detection falls through to wrangler — which this
-    // repo deliberately does not depend on.
-    it('explains how to fix a missing wrangler when detection falls to Node', async () => {
-        await expect(resolveBinding('MEDIA')).rejects.toThrow(
-            /Resolving a Cloudflare binding outside a Worker needs wrangler/
-        );
-    });
-
-    it('does not memoise a failed detection', async () => {
-        await expect(resolveBinding('MEDIA')).rejects.toThrow(/needs wrangler/);
+    it('does not memoise a failed lookup', async () => {
+        setBindingEnv({ OTHER: {} });
+        await expect(resolveBinding('MEDIA')).rejects.toThrow(/not found/);
 
         // A recoverable failure: supplying an env afterwards must still work.
         setBindingEnv({ MEDIA: { name: 'recovered' } });

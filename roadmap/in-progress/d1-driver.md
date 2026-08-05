@@ -3,9 +3,10 @@
 Split out of `planned/additional-database-drivers.md` on 2026-07-29 when the
 driver was built. The remaining dialects (Postgres, MySQL) stay in that file.
 
-**Status:** built and unit-tested; **never executed against real D1 or against
-wrangler's local emulation.** That last step is what keeps this in
-`in-progress/`.
+**Status:** built, unit-tested, and **verified against Cloudflare's own D1
+implementation through wrangler's local emulation**, which found and fixed a
+defect that no fake could reach. Still **never executed against remote D1** on
+real infrastructure — that is what keeps this in `in-progress/`.
 
 ## Built
 
@@ -39,24 +40,33 @@ wrangler's local emulation.** That last step is what keeps this in
       `SqliteAdapter` reports `false`. A test pins this, since the whole D1
       migration story rests on it
 - [x] `apps/docs/configuration/database.md`
+- [x] **Own introspector** (`database/drivers/d1-introspector.ts`). D1 runs
+      every statement behind a SQLite authorizer that rejects a pragma
+      table-valued function whose argument is a column reference —
+      `pragma_table_info(tl.name)` — with `SQLITE_AUTH`. That is exactly the
+      query Kysely's `SqliteIntrospector` uses, and `Migrator` introspects
+      before creating its bookkeeping table, so **every migration on D1 failed**.
+      A bound `pragma_table_info(?)` per table is allowed and produces identical
+      `TableMetadata`
+- [x] **Run it against local emulation.** `wrangler` is a devDependency,
+      `packages/astromech/wrangler.jsonc` declares the `DB` binding, and
+      `tests/cloudflare/d1-local-emulation.test.ts` runs binding resolution,
+      CRUD, `meta` mapping, introspection and a migration chain against workerd
+      in ~1s as part of the normal suite. This is what found the introspector
+      defect: the pre-existing fake was libsql-backed, and libsql has no
+      authorizer, so it answered the illegal query happily
+- [x] **`libsqlDriver` moved to `astromech/database/libsql`** and dropped from
+      the root barrel and from `astromech/database/schema`, so `@libsql/client`
+      is no longer reachable from a Workers bundle. Verified against the built
+      output, not just the source. Breaking
 
 ## Remaining
 
-- [ ] **Run it for real.** No Cloudflare driver in this repo (`r2()` included)
-      has ever been executed against the real platform or against wrangler's
-      `getPlatformProxy()` — `tests/cloudflare/bindings.test.ts` says so
-      outright. Needs `wrangler` as a devDependency and a `wrangler.jsonc` with
-      a D1 binding, then a migrate + CRUD round-trip through the local
-      emulation. Deliberately not done on this branch: it means a lockfile
-      change while three other branches are in flight
-- [ ] Decide whether a D1 deployment should refuse to boot when something the
-      site depends on needs atomicity, or whether the sequential fallback is
-      simply the documented contract (currently the latter)
-
-## Noted, not part of this
-
-- `libsqlDriver` is exported from the **root** barrel, so `@libsql/client` is
-  reachable from every consumer of `astromech` — including Workers bundles.
-  The storage drivers avoid this with per-driver subpaths. Moving it to
-  `astromech/database/libsql` and dropping it from the root is a small breaking
-  change worth making before release.
+- [ ] **Run it against remote D1.** Local emulation is workerd's real D1
+      implementation, so it covers the API surface, but not the network, the
+      row/query size limits, or control-plane behaviour. Needs a Cloudflare
+      account, `wrangler d1 create`, and a deployed Worker — the one step that
+      cannot happen from this repo alone
+- [x] Decided: the sequential fallback is the documented contract and a D1
+      deployment does **not** refuse to boot —
+      `decisions/0028-d1-degrades-rather-than-refusing-to-boot.md`

@@ -73,6 +73,10 @@
             "types": "./dist/database/drivers/d1.d.ts",
             "default": "./dist/database/drivers/d1.js"
         },
+        "./database/libsql": {
+            "types": "./dist/database/drivers/libsql.d.ts",
+            "default": "./dist/database/drivers/libsql.js"
+        },
         "./cloudflare": {
             "types": "./dist/cloudflare/index.d.ts",
             "default": "./dist/cloudflare/index.js"
@@ -199,7 +203,8 @@
         "tsup": "^8.0.0",
         "tsx": "^4.21.0",
         "typescript": "^5.9.3",
-        "vitest": "^4.1.0"
+        "vitest": "^4.1.0",
+        "wrangler": "^4.119.0"
     },
     "engines": {
         "node": ">=20.0.0"

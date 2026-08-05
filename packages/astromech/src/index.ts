@@ -28,7 +28,6 @@ export { ResendDriver } from '@/email/drivers/resend.js';
 export type { ResendDriverOptions } from '@/email/drivers/resend.js';
 export { SmtpDriver } from '@/email/drivers/smtp.js';
 export type { SmtpDriverOptions } from '@/email/drivers/smtp.js';
-export { libsqlDriver } from '@/database/drivers/libsql.js';
 export { runScheduledJobs } from '@/cron/index.js';
 // Model access, so a plugin can reach a configured model without taking its own
 // SDK dependency. Absent unless the site configures `ai` — hence `undefined`.

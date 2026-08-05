@@ -5,8 +5,8 @@ import {
     defineAdminPage,
     defineConfig,
     entryPermissions,
-    libsqlDriver,
 } from 'astromech';
+import { libsqlDriver } from 'astromech/database/libsql';
 import { sharp } from 'astromech/media/image/sharp';
 import { filesystem } from 'astromech/storage/filesystem';
 import * as fields from 'astromech/fields';
