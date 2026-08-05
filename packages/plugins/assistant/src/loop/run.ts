@@ -142,7 +142,11 @@ export async function* runAssistantLoop(input: {
     yield { type: 'done' };
 }
 
-/** The calls a step left unanswered — the ones whose tool declined to run. */
+/**
+ * The calls a step left unanswered — the ones whose tool declined to run.
+ * Provider-executed calls are skipped: the provider runs and answers those
+ * itself, so they are never waiting on an approval.
+ */
 function unexecutedCalls(messages: ChatMessage[]): ToolCallPart[] {
     const answered = new Set<string>();
     const calls: ToolCallPart[] = [];
@@ -158,7 +162,9 @@ function unexecutedCalls(messages: ChatMessage[]): ToolCallPart[] {
             continue;
         }
         for (const part of message.content) {
-            if (part.type === 'tool-call') calls.push(part);
+            if (part.type === 'tool-call' && part.providerExecuted !== true) {
+                calls.push(part);
+            }
         }
     }
 

@@ -1,3 +1,6 @@
+// The config is loaded in plain Node before Vite, so `.env` has not reached
+// `import.meta.env` yet. AI SDK providers read `process.env`, which this fills.
+import 'dotenv/config';
 import { fileURLToPath } from 'node:url';
 import {
     builtInRole,

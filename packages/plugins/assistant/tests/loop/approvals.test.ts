@@ -446,3 +446,46 @@ describe('answerUnansweredCalls', () => {
         ]);
     });
 });
+
+/**
+ * A provider-executed call — Anthropic's tool search runs and answers these
+ * server-side. Synthesising a result for one names a `srvtoolu_` id the request
+ * has no matching call for, which the API rejects outright.
+ */
+function providerCall(id: string, name: string): ToolCallPart {
+    return {
+        type: 'tool-call',
+        toolCallId: id,
+        toolName: name,
+        input: {},
+        providerExecuted: true,
+    };
+}
+
+describe('provider-executed calls', () => {
+    const searched: ChatMessage = {
+        role: 'assistant',
+        content: [providerCall('srvtoolu_1', 'tool_search_tool_regex')],
+    };
+
+    it('is not treated as a paused turn awaiting approval', () => {
+        expect(pausedToolCalls([searched])).toBeNull();
+    });
+
+    it('is not answered with an abandoned result', () => {
+        expect(answerUnansweredCalls([searched])).toEqual([searched]);
+    });
+
+    it('leaves a client call beside it still answerable', () => {
+        const mixed: ChatMessage = {
+            role: 'assistant',
+            content: [
+                providerCall('srvtoolu_1', 'tool_search_tool_regex'),
+                call('toolu_1', UPDATE, { id: 'page_1' }),
+            ],
+        };
+
+        const pending = pausedToolCalls([mixed]);
+        expect(pending?.map((part) => part.toolCallId)).toEqual(['toolu_1']);
+    });
+});

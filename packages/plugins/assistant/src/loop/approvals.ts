@@ -141,11 +141,16 @@ function abandonedResults(
         .map((call) => textResult(call, ABANDONED));
 }
 
-/** The tool-call parts of one assistant turn, in order. */
+/**
+ * The tool-call parts of one assistant turn, in order. A provider-executed call
+ * is skipped: the provider answers it server-side, and a result we synthesised
+ * for one names an id the request has no matching call for.
+ */
 function toolCallsIn(message: ChatMessage): ToolCallPart[] {
     if (message.role !== 'assistant' || typeof message.content === 'string') return [];
     return message.content.filter(
-        (part): part is ToolCallPart => part.type === 'tool-call'
+        (part): part is ToolCallPart =>
+            part.type === 'tool-call' && part.providerExecuted !== true
     );
 }
 
