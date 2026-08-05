@@ -13,6 +13,10 @@ This is a living reference; it grows as the project does.
 - [configuration/storage.md](configuration/storage.md) — pick and configure a
   storage driver (`filesystem`, `r2`, `s3`), media access modes and public URLs,
   signed URLs and the R2 signing trap, and the contract for writing your own.
+- [configuration/ai.md](configuration/ai.md) — configure model access: the `ai`
+  block, installing a provider package, `model` versus named `models`, reaching
+  a model from your own code with `getModel`, and what the assistant plugin
+  needs.
 - [content/entry-types.md](content/entry-types.md) — declaring entry types: the
   `entries` record, and `defineEntryType` for splitting a type into its own
   module.

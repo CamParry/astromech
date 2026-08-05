@@ -11,34 +11,38 @@ tool surface entirely instead.
 
 ## Install
 
+The model comes from core's `ai` capability, not from this plugin. Register one
+under the name `assistant`:
+
 ```ts
 // astromech.config.ts
+import { anthropic } from '@ai-sdk/anthropic';
 import { defineConfig } from 'astromech';
 import { assistant } from '@astromech/assistant';
 
 export default defineConfig({
+    ai: { models: { assistant: anthropic('claude-opus-5') } },
     plugins: [assistant()],
 });
 ```
+
+`anthropic()` reads `ANTHROPIC_API_KEY` from the environment server-side; no key
+is bundled or sent to the browser. Without a model the plugin still installs and
+the drawer still opens, but a chat request answers 503 — see
+[Configuring `ai`](../../../apps/docs/configuration/ai.md).
+
+**The model must be an Anthropic one.** The tool search below is an Anthropic
+provider tool with no equivalent elsewhere, and the plugin refuses a model from
+another provider rather than loading its whole catalogue.
 
 ## Options
 
 ```ts
 assistant({
-    model: 'claude-opus-5', // default
-    apiKeyEnv: 'ANTHROPIC_API_KEY', // default; env var holding the API key
     effort: 'medium', // default; 'low' | 'medium' | 'high'
     readOnly: false, // default; `true` drops every mutating method from the surface
 });
 ```
-
-The API key is read server-side from the named env var per request — it is
-never bundled or sent to the browser.
-
-`model` is a fixed set rather than a free string. AI context reaches the model
-as a `role: 'system'` message inside `messages`, which models that do not
-support it silently downgrade to a top-level `system` block — a quiet wrong
-answer in place of a hard failure.
 
 ## The tool surface
 
@@ -48,18 +52,20 @@ no method it can name that they could not call themselves.
 
 A site publishes one method set per entry type, so the catalogue runs to
 hundreds of tools — well past the 30–50 where a model's tool selection starts
-to degrade. Every tool is therefore sent with `defer_loading: true` and found
-through the server-side tool-search tool, which is the one tool loaded up
-front. Nothing is curated as always-resident: the tools an author reaches for
-are named after their own entry types, so there is no fixed set to pick.
+to degrade. Every tool is therefore deferred and found through the server-side
+tool-search tool, which is the one tool loaded up front. Nothing is curated as
+always-resident: the tools an author reaches for are named after their own entry
+types, so there is no fixed set to pick.
 
 ## Approvals
 
-When a turn reaches a method that changes stored data, the loop stops before
-anything runs. It records one row per call in `plugin_assistant_approvals` —
-the acting user, the call's `tool_use` id, the method, the arguments and
-whether it is destructive — and sends the browser an `approval-required` event
-carrying a question per call. Nothing has executed at that point.
+A method that changes stored data is declared to the model with no way to run
+it, so the loop halts the moment the model calls one. Read-only calls in the
+same step still run; nothing mutating does.
+
+Each held call gets a row in `plugin_assistant_approvals` — the acting user, the
+call id, the method, the arguments and whether it is destructive — and the
+browser gets an `approval-required` event carrying a question per call.
 
 The drawer puts each question to the user between the transcript and the
 composer, and posts the transcript back once every held call has an answer —

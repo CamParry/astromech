@@ -229,6 +229,16 @@ One message an editor configures to be sent when a submission is accepted, store
 
 ---
 
+## `ai` capability
+
+Model access. `packages/astromech/src/ai/` sits with `email` and `cron` below the domains: a site that configures an `ai` block makes a model available to every domain and plugin, and a site that doesn't has none. The whole surface is `getModel(name?)`, which returns the named model, falls back to the default one when that name isn't configured, and returns `undefined` when nothing is; and `hasModel(name?)`, which answers the same question without the instance. A consumer branches on `undefined` to disable its feature — there is nothing to catch.
+
+What `getModel` hands back is **already wrapped** with `wrapLanguageModel`, so core's middleware applies to every call and a consumer cannot ask for a model without it. Core stops there: generation is the caller's, using `generateText`, `streamText` or `Output.object` from the AI SDK directly. `decisions/0022-core-hands-out-a-model.md` records why there is no facade over those.
+
+Distinct from **AI context** below, and the two are at different layers rather than competing for a word: `ai` is model access, AI context is one input that may travel through it. See `apps/docs/configuration/ai.md` for configuring it.
+
+---
+
 ## AI context
 
 What an admin route declares about the thing the user is currently looking at, so a model can resolve "this page" or "this field". A route contributes an `AIContextReference` (`{ kind, type?, id?, label }`) via `useAIContext`; the chat drawer assembles the current ordered set into a `role: 'system'` message inside `messages[]` — never into the system prompt, which would invalidate the prompt cache on every navigation.
@@ -253,7 +263,7 @@ A **`ToolDefinition`** is one manifest method projected into a model-callable to
 
 Both stop a mutating call to put it to a human, and they are different mechanisms at different altitudes.
 
-An **approval** is a stored decision. `@astromech/assistant` writes a row per mutating call into `plugin_assistant_approvals`, stops the turn before anything executes, and asks the user. The answer arrives on a later request naming the row's id; claiming and answering the row are one conditional UPDATE, so a row is won once, by one request, and only while it is that user's and still pending. The call then runs with the arguments stored on the row. Because the arguments live server-side, a client that edits the conversation it posts back changes what the model sees, not what runs.
+An **approval** is a stored decision. `@astromech/assistant` declares every mutating tool with no `execute`, so a turn reaching one halts with nothing mutating run; it then writes a row per held call into `plugin_assistant_approvals` and asks the user. Read-only calls made in the same step have already run, so a paused turn may carry part of its answer. The answer arrives on a later request naming the row's id; claiming and answering the row are one conditional UPDATE, so a row is won once, by one request, and only while it is that user's and still pending. The call then runs with the arguments stored on the row. Because the arguments live server-side, a client that edits the conversation it posts back changes what the model sees, not what runs.
 
 A **confirmation** is a stateless brake at dispatch level — `evaluateConfirmation` in `packages/astromech/src/policies/confirmation.ts`. A mutating call arriving without an answer is turned back with `input_required` and the question to ask; the caller re-issues the call carrying `_confirm: { action }`. It buys one turn between an agent deciding to do something and it happening, which is enough to break a runaway loop, and it is explicitly not a security boundary: the caller supplies the answer, so a caller that wants to proceed can write one itself.
 
