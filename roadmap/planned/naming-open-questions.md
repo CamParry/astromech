@@ -12,26 +12,6 @@ The completed pass is `roadmap/in-progress/naming-pass.md`; its rationale is in
 `decisions/0017-resource-as-the-superordinate-noun.md` and
 `decisions/0019-a-define-returns-the-thing.md`.
 
-## `content/` → ? — lowest confidence, do not action from notes
-
-A downstream domain whose service is `translate` / `transform` / `generate`,
-rewriting entry fields through a registered model (`ContentProvider`,
-`ContentRewriteRequest.rewrite`).
-
-In a CMS, "content" means everything the CMS manages. Entries are content. Media
-is content. This directory is model-backed text rewriting sitting as a sibling to
-`entries/` and `media/`, implying it is a peer category of stuff rather than an
-operation over them. `ARCHITECTURE.md` has to spell the relationship out because
-the name doesn't: "content operations (translate/transform/generate) — a
-DOWNSTREAM domain: it may import entries/, never the reverse."
-
-Candidates: `rewriting/` (what the code does), `ai/` (what powers it).
-`authoring/` was on the shortlist and was ruled out as taken by the plugin that
-shipped 2026-08-03; that plugin is now `@astromech/assistant`, so the name is
-**free again**. `ContentProvider` →
-`ModelProvider` reads better than any of the domain renames it would accompany,
-and could go on its own.
-
 ## `dispatch` lives under `transport/mcp/` but serves three transports
 
 `buildDispatch` and `buildScopedDispatch` are exported from `astromech/methods`

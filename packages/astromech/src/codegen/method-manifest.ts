@@ -2,7 +2,7 @@
  * Method Manifest Generator
  *
  * Produces a JSON catalogue of every service-method contract: core domain
- * methods (users, media, settings, content), per-type entry methods, and plugin
+ * methods (users, media, settings), per-type entry methods, and plugin
  * service methods. Pure function — callers are responsible for writing the
  * result to disk or injecting it into a virtual module.
  *
@@ -32,7 +32,6 @@ import type { ResolvedConfig } from '@/types/index.js';
 import { usersContract } from '@/users/methods.js';
 import { mediaContract } from '@/media/methods.js';
 import { settingsContract } from '@/settings/methods.js';
-import { contentContract } from '@/content/methods.js';
 import { entryMethodContracts, type EntryMethodContract } from '@/entries/methods.js';
 import type { Capability } from '@/entries/storage/capabilities.js';
 import type { ResolvedEntryCapabilities } from '@/types/index.js';
@@ -107,7 +106,6 @@ function buildCoreMethods(): CoreManifestMethod[] {
         ['users', usersContract],
         ['media', mediaContract],
         ['settings', settingsContract],
-        ['content', contentContract],
     ];
     const methods: CoreManifestMethod[] = [];
 

@@ -21,7 +21,6 @@
  */
 
 import type {
-    ContentService,
     EntriesService,
     MediaService,
     Role,
@@ -41,8 +40,6 @@ import { settingsService } from '@/settings/service.js';
 import { settingsContract } from '@/settings/methods.js';
 import { entriesService } from '@/entries/service.js';
 import { ENTRY_METHOD_ACTIONS, type EntryMethodName } from '@/entries/methods.js';
-import { contentService } from '@/content/service.js';
-import { contentContract } from '@/content/methods.js';
 
 /**
  * A domain's contract catalogue, keyed by service method name.
@@ -213,87 +210,18 @@ export function scopeEntries(
     return scoped as unknown as EntriesService;
 }
 
-/**
- * The single entry type one content call targets, or null when it names none.
- *
- * A content operation rewrites ONE entry, so a `type` that is missing, empty or
- * not a string is ill-formed rather than a wildcard.
- */
-function targetedContentType(input: unknown): string | null {
-    if (typeof input !== 'object' || input === null) return null;
-    const type = (input as { type?: unknown }).type;
-    return typeof type === 'string' && type.length > 0 ? type : null;
-}
-
-/**
- * Scope the content service. Content is double-gated: the contract's
- * `content:*` permission AND `update` on the entry type the call names, because
- * holding "may use a model" must not rewrite a type the role cannot edit by
- * hand.
- *
- * The first half comes from a fixed catalogue like `scopeMethods`; the second is
- * derived from the call like `scopeEntries`, through the same
- * `entryPermission` helper the entries wrapper and the HTTP route use. A method
- * with no contract, or a call naming no usable type, is refused.
- */
-export function scopeContent(
-    service: ContentService,
-    permissions: Permissions
-): ContentService {
-    const scoped: ServiceRecord = {};
-    const contracts: ContractCatalogue = contentContract;
-
-    for (const [key, value] of Object.entries(service as unknown as ServiceRecord)) {
-        if (typeof value !== 'function') {
-            scoped[key] = value;
-            continue;
-        }
-        const fn = value as ServiceFn;
-        const id = `content.${key}`;
-
-        scoped[key] = (...args: unknown[]): unknown => {
-            const contract = contracts[key];
-            if (contract === undefined) throw new PermissionDeniedError(id, null);
-
-            const input = args[0];
-            if (!permissions.allowsMethod(contract, input)) {
-                throw new PermissionDeniedError(id, resolvePermission(contract, input));
-            }
-
-            const type = targetedContentType(input);
-            if (type === null) {
-                throw new PermissionDeniedError(
-                    id,
-                    null,
-                    'was called without an entry type, so the permission it needs cannot be derived.'
-                );
-            }
-
-            const permission = entryPermission(type, 'update');
-            if (!permissions.allows(permission)) {
-                throw new PermissionDeniedError(id, permission);
-            }
-
-            return fn.apply(service, args);
-        };
-    }
-
-    return scoped as unknown as ContentService;
-}
-
-/** The five content domains, each scoped to one role. */
+/** The four domains a caller can reach, each scoped to one role. */
 export type ScopedServices = {
     users: UsersService;
     media: MediaService;
     settings: SettingsService;
     entries: EntriesService;
-    content: ContentService;
 };
 
 /**
- * Compose one role into a handle over every content domain.
+ * Compose one role into a handle over every domain.
  *
- * One `permissionsFor` guard backs all five, so the role is resolved once per
+ * One `permissionsFor` guard backs all four, so the role is resolved once per
  * handle rather than once per call.
  */
 export function scopedServices(role: Role | undefined): ScopedServices {
@@ -308,6 +236,5 @@ export function scopedServices(role: Role | undefined): ScopedServices {
             'settings'
         ),
         entries: scopeEntries(entriesService, permissions),
-        content: scopeContent(contentService, permissions),
     };
 }

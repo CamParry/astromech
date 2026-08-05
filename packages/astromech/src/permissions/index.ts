@@ -63,21 +63,6 @@ export const CORE_PERMISSIONS = defineAbsolutePermissions({
         description: "Edit a user's profile, role and password.",
     },
     'users:delete': { label: 'Delete users' },
-    'content:translate': {
-        label: 'Translate content with a model',
-        description:
-            'Run the model-driven translate operation. Reaches an entry only where the caller also holds update on that entry type.',
-    },
-    'content:transform': {
-        label: 'Rewrite content with a model',
-        description:
-            'Run the model-driven transform operation. Reaches an entry only where the caller also holds update on that entry type.',
-    },
-    'content:generate': {
-        label: 'Generate content with a model',
-        description:
-            'Run the model-driven generate operation. Reaches an entry only where the caller also holds update on that entry type.',
-    },
     'entry:read:full': {
         label: 'Read full entry shape',
         description:
@@ -101,20 +86,13 @@ function corePermissions(...keys: CorePermissionKey[]): Permission[] {
 // here rather than members of CORE_PERMISSIONS. The `entry:*` trailing wildcard
 // covers all entry types and all actions, including cross-cutting permissions
 // like `entry:read:full`.
-//
-// The content operations are granted because an editor already holds `entry:*`,
-// which is the other half of the gate they pass through, and because they stage
-// rather than publish.
 const EDITOR_PERMISSIONS: Permission[] = [
     ...corePermissions(
         'admin:access',
         'media:read',
         'media:upload',
         'media:update',
-        'media:delete',
-        'content:translate',
-        'content:transform',
-        'content:generate'
+        'media:delete'
     ),
     'entry:*',
 ];
