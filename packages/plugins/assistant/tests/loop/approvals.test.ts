@@ -6,13 +6,13 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import type { BetaContentBlockParam } from '@anthropic-ai/sdk/resources/beta';
+import type { TextPart, ToolCallPart, ToolResultPart } from 'ai';
 import type { ToolDefinition } from 'astromech';
 import {
     answerUnansweredCalls,
     mutatingCalls,
     pauseForApproval,
-    pausedToolUses,
+    pausedToolCalls,
     resumePausedTurn,
 } from '../../src/loop/approvals.js';
 import type { ChatMessage } from '../../src/types.js';
@@ -41,13 +41,23 @@ function toolFor(
     };
 }
 
-/** One `tool_use` block, as the model emits it. */
-function call(id: string, name: string, input: unknown = {}): BetaContentBlockParam {
-    return { type: 'tool_use', id, name, input };
+/** One `tool-call` part, as the model emits it. */
+function call(id: string, name: string, input: unknown = {}): ToolCallPart {
+    return { type: 'tool-call', toolCallId: id, toolName: name, input };
+}
+
+/** One `tool-result` part answering `id`. */
+function result(id: string, name: string, value: string): ToolResultPart {
+    return {
+        type: 'tool-result',
+        toolCallId: id,
+        toolName: name,
+        output: { type: 'text', value },
+    };
 }
 
 /** An assistant turn carrying `content`. */
-function assistant(content: BetaContentBlockParam[]): ChatMessage {
+function assistant(content: (TextPart | ToolCallPart)[]): ChatMessage {
     return { role: 'assistant', content };
 }
 
@@ -60,7 +70,7 @@ describe('pauseForApproval', () => {
         const approvals = fakeApprovals();
 
         const requests = await pauseForApproval({
-            content: [call('toolu_1', QUERY, { limit: 5 })],
+            calls: [call('toolu_1', QUERY, { limit: 5 })],
             tools: [query],
             approvals: approvals.storage,
             userId: 'user_1',
@@ -76,10 +86,7 @@ describe('pauseForApproval', () => {
         const approvals = fakeApprovals();
 
         const requests = await pauseForApproval({
-            content: [
-                { type: 'text', text: 'Updating that page.' },
-                call('toolu_1', UPDATE, { id: 'page_1' }),
-            ],
+            calls: [call('toolu_1', UPDATE, { id: 'page_1' })],
             tools: [update],
             approvals: approvals.storage,
             userId: 'user_1',
@@ -113,7 +120,7 @@ describe('pauseForApproval', () => {
         const approvals = fakeApprovals();
 
         await pauseForApproval({
-            content: [call('toolu_1', UPDATE)],
+            calls: [call('toolu_1', UPDATE)],
             tools: [toolFor(UPDATE)],
             approvals: approvals.storage,
             userId: 'user_1',
@@ -126,7 +133,7 @@ describe('pauseForApproval', () => {
         const approvals = fakeApprovals();
 
         const requests = await pauseForApproval({
-            content: [call('toolu_1', 'users_delete')],
+            calls: [call('toolu_1', 'users_delete')],
             tools: [toolFor(UPDATE)],
             approvals: approvals.storage,
             userId: 'user_1',
@@ -143,25 +150,25 @@ describe('mutatingCalls', () => {
             [toolFor(QUERY, { readOnly: true }), toolFor(UPDATE)]
         );
 
-        expect(calls.map(({ block }) => block.id)).toEqual(['toolu_2']);
+        expect(calls.map(({ call: found }) => found.toolCallId)).toEqual(['toolu_2']);
     });
 });
 
-describe('pausedToolUses', () => {
+describe('pausedToolCalls', () => {
     it('is null when the transcript ends on a user turn', () => {
         expect(
-            pausedToolUses([{ role: 'user', content: [{ type: 'text', text: 'hi' }] }])
+            pausedToolCalls([{ role: 'user', content: [{ type: 'text', text: 'hi' }] }])
         ).toBeNull();
     });
 
     it('is null when the last assistant turn called nothing', () => {
-        expect(pausedToolUses([assistant([{ type: 'text', text: 'done' }])])).toBeNull();
+        expect(pausedToolCalls([assistant([{ type: 'text', text: 'done' }])])).toBeNull();
     });
 
     it("is the trailing turn's calls", () => {
-        const found = pausedToolUses([assistant([call('toolu_1', UPDATE)])]);
+        const found = pausedToolCalls([assistant([call('toolu_1', UPDATE)])]);
 
-        expect(found?.map((block) => block.id)).toEqual(['toolu_1']);
+        expect(found?.map((part) => part.toolCallId)).toEqual(['toolu_1']);
     });
 });
 
@@ -170,7 +177,7 @@ describe('resumePausedTurn', () => {
     async function resume(input: {
         action: 'approve' | 'reject';
         row?: ReturnType<typeof approvalRow>;
-        posted?: BetaContentBlockParam[];
+        posted?: ToolCallPart[];
         tools?: ToolDefinition[];
         userId?: string;
     }) {
@@ -213,15 +220,16 @@ describe('resumePausedTurn', () => {
             id: 'page_1',
             fields: { title: 'From the row' },
         });
+        expect(message?.role).toBe('tool');
         expect(message?.content).toEqual([
-            {
-                type: 'tool_result',
-                tool_use_id: 'toolu_1',
-                content: JSON.stringify({
+            result(
+                'toolu_1',
+                UPDATE,
+                JSON.stringify({
                     ran: UPDATE,
                     args: { id: 'page_1', fields: { title: 'From the row' } },
-                }),
-            },
+                })
+            ),
         ]);
     });
 
@@ -229,11 +237,9 @@ describe('resumePausedTurn', () => {
         const { message, update } = await resume({ action: 'reject' });
 
         expect(update.invoke).not.toHaveBeenCalled();
-        expect(message?.content[0]).toEqual({
-            type: 'tool_result',
-            tool_use_id: 'toolu_1',
-            content: 'The user declined this call, so it was not run.',
-        });
+        expect(message?.content[0]).toEqual(
+            result('toolu_1', UPDATE, 'The user declined this call, so it was not run.')
+        );
     });
 
     it('declines a row belonging to another user', async () => {
@@ -244,7 +250,7 @@ describe('resumePausedTurn', () => {
 
         expect(update.invoke).not.toHaveBeenCalled();
         expect(message?.content[0]).toMatchObject({
-            content: 'The user declined this call, so it was not run.',
+            output: { value: 'The user declined this call, so it was not run.' },
         });
     });
 
@@ -256,18 +262,20 @@ describe('resumePausedTurn', () => {
 
         expect(update.invoke).not.toHaveBeenCalled();
         expect(message?.content[0]).toMatchObject({
-            content: 'The user declined this call, so it was not run.',
+            output: { value: 'The user declined this call, so it was not run.' },
         });
     });
 
     it('answers a call whose tool the user may no longer make', async () => {
         const { message } = await resume({ action: 'approve', tools: [] });
 
-        expect(message?.content[0]).toEqual({
-            type: 'tool_result',
-            tool_use_id: 'toolu_1',
-            content: `"${UPDATE}" is no longer available, so it was not run.`,
-        });
+        expect(message?.content[0]).toEqual(
+            result(
+                'toolu_1',
+                UPDATE,
+                `"${UPDATE}" is no longer available, so it was not run.`
+            )
+        );
     });
 
     it('runs a read-only call with its own input, ungated', async () => {
@@ -305,11 +313,12 @@ describe('resumePausedTurn', () => {
             userId: 'user_1',
         });
 
-        expect(
-            message?.content.map(
-                (block) => (block as { tool_use_id: string }).tool_use_id
-            )
-        ).toEqual(['toolu_1', 'toolu_2', 'toolu_3']);
+        const content = message?.content as ToolResultPart[] | undefined;
+        expect(content?.map((part) => part.toolCallId)).toEqual([
+            'toolu_1',
+            'toolu_2',
+            'toolu_3',
+        ]);
     });
 
     it('refuses the whole request when an approval names a call the turn lacks', async () => {
@@ -358,7 +367,8 @@ describe('resumePausedTurn', () => {
 
         expect(update.invoke).toHaveBeenCalledTimes(1);
         const answers = [first, second].map(
-            (message) => (message?.content[0] as { content: string }).content
+            (message) =>
+                (message?.content[0] as { output: { value: string } }).output.value
         );
         expect(answers).toContain('The user declined this call, so it was not run.');
     });
@@ -371,50 +381,46 @@ describe('answerUnansweredCalls', () => {
         const messages: ChatMessage[] = [
             { role: 'user', content: [{ type: 'text', text: 'hi' }] },
             assistant([call('toolu_1', UPDATE)]),
-            {
-                role: 'user',
-                content: [
-                    { type: 'tool_result', tool_use_id: 'toolu_1', content: 'done' },
-                ],
-            },
+            { role: 'tool', content: [result('toolu_1', UPDATE, 'done')] },
         ];
 
         expect(answerUnansweredCalls(messages)).toEqual(messages);
     });
 
-    it('answers a paused turn the user typed straight past', () => {
+    it('answers a pause the user typed straight past, so the request stays valid', () => {
         const turns = answerUnansweredCalls([
             assistant([call('toolu_1', UPDATE)]),
             { role: 'user', content: [{ type: 'text', text: 'actually, never mind' }] },
         ]);
 
-        // The follow-up rides in the same turn as the declines, which have to
-        // come first — two user turns in a row is not a shape the API takes.
-        expect(turns).toHaveLength(2);
+        // The decline rides in its own tool message, emitted ahead of the turn
+        // it precedes rather than folded into it.
+        expect(turns).toHaveLength(3);
         expect(turns[1]).toEqual({
+            role: 'tool',
+            content: [result('toolu_1', UPDATE, ABANDONED)],
+        });
+        expect(turns[2]).toEqual({
             role: 'user',
-            content: [
-                { type: 'tool_result', tool_use_id: 'toolu_1', content: ABANDONED },
-                { type: 'text', text: 'actually, never mind' },
-            ],
+            content: [{ type: 'text', text: 'actually, never mind' }],
         });
     });
 
     it('answers a call the next turn left out', () => {
         const turns = answerUnansweredCalls([
             assistant([call('toolu_1', UPDATE), call('toolu_2', QUERY)]),
-            {
-                role: 'user',
-                content: [
-                    { type: 'tool_result', tool_use_id: 'toolu_1', content: 'done' },
-                ],
-            },
+            { role: 'tool', content: [result('toolu_1', UPDATE, 'done')] },
         ]);
 
-        expect(turns[1]?.content).toEqual([
-            { type: 'tool_result', tool_use_id: 'toolu_2', content: ABANDONED },
-            { type: 'tool_result', tool_use_id: 'toolu_1', content: 'done' },
-        ]);
+        expect(turns).toHaveLength(3);
+        expect(turns[1]).toEqual({
+            role: 'tool',
+            content: [result('toolu_2', QUERY, ABANDONED)],
+        });
+        expect(turns[2]).toEqual({
+            role: 'tool',
+            content: [result('toolu_1', UPDATE, 'done')],
+        });
     });
 
     it('answers a trailing turn nothing follows', () => {
@@ -422,10 +428,8 @@ describe('answerUnansweredCalls', () => {
 
         expect(turns).toHaveLength(2);
         expect(turns[1]).toEqual({
-            role: 'user',
-            content: [
-                { type: 'tool_result', tool_use_id: 'toolu_1', content: ABANDONED },
-            ],
+            role: 'tool',
+            content: [result('toolu_1', UPDATE, ABANDONED)],
         });
     });
 
@@ -437,7 +441,7 @@ describe('answerUnansweredCalls', () => {
 
         expect(turns.map((turn) => turn.role)).toEqual([
             'assistant',
-            'user',
+            'tool',
             'assistant',
         ]);
     });

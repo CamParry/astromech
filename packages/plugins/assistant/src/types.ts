@@ -1,6 +1,6 @@
 /** Public options for the assistant plugin, and the chat wire types. */
 
-import type { BetaContentBlockParam } from '@anthropic-ai/sdk/resources/beta';
+import type { AssistantModelMessage, ToolModelMessage, UserModelMessage } from 'ai';
 import type { AIContextItem } from 'astromech';
 
 /**
@@ -10,23 +10,7 @@ import type { AIContextItem } from 'astromech';
  */
 export const ASSISTANT_PACKAGE = '@astromech/assistant';
 
-/**
- * Models the assistant may run on. Restricted rather than a free string:
- * `role: 'system'` inside `messages[]` — how AI context reaches the model —
- * is silently dropped to a top-level `system` block on models that do not
- * support it, which would swap a hard failure for a quiet wrong answer.
- */
-export type AssistantModel =
-    | 'claude-opus-5'
-    | 'claude-opus-4-8'
-    | 'claude-fable-5'
-    | 'claude-mythos-5';
-
 export type AssistantOptions = {
-    /** Defaults to `claude-opus-5`. */
-    model?: AssistantModel;
-    /** Env var holding the API key, read server-side per request. Defaults to `ANTHROPIC_API_KEY`. */
-    apiKeyEnv?: string;
     /** Reasoning effort for the loop. Defaults to `medium`. */
     effort?: 'low' | 'medium' | 'high';
     /**
@@ -41,15 +25,12 @@ export type AssistantOptions = {
 export type ResolvedAssistantOptions = Required<AssistantOptions>;
 
 /**
- * One turn of the conversation, as Anthropic content blocks. Every block is
- * kept and re-posted verbatim whether or not the client understands it:
- * `tool_use` ids are server-minted, and `thinking` blocks are rejected by the
- * API unless they come back unmodified and in the order they were generated.
+ * One turn of the conversation. Every part is kept and re-posted verbatim
+ * whether or not the client understands it: tool-call ids are provider-minted,
+ * and a reasoning part's `providerOptions` carry the signature the API rejects
+ * the next request without.
  */
-export type ChatMessage = {
-    role: 'user' | 'assistant';
-    content: BetaContentBlockParam[];
-};
+export type ChatMessage = UserModelMessage | AssistantModelMessage | ToolModelMessage;
 
 /** The body posted to the chat route. */
 export type ChatRequest = {

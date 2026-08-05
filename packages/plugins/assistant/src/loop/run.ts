@@ -1,10 +1,9 @@
 /**
- * The server-side model loop: assembles one request, runs the Anthropic tool
- * runner, and yields the chat events the SSE route writes to the browser.
+ * The server-side model loop: assembles one request, runs the model, and yields
+ * the chat events the SSE route writes to the browser.
  */
 
-import { Anthropic } from '@anthropic-ai/sdk';
-import type { BetaMessageParam } from '@anthropic-ai/sdk/resources/beta';
+import { stepCountIs, streamText, type LanguageModel, type ToolCallPart } from 'ai';
 import type { AIContextItem, PluginLogger, ToolDefinition } from 'astromech';
 import {
     answerUnansweredCalls,
@@ -12,7 +11,7 @@ import {
     resumePausedTurn,
 } from './approvals.js';
 import { buildRequest } from './request.js';
-import { TOOL_SEARCH, toRunnableTools } from './tools.js';
+import { toToolSet } from './tools.js';
 import { errorMessage } from '../error-message.js';
 import type { ApprovalsStorage } from '../approvals/storage.js';
 import type { SessionsStorage } from '../sessions/storage.js';
@@ -23,14 +22,12 @@ import type {
     ResolvedAssistantOptions,
 } from '../types.js';
 
-const MAX_TOKENS = 4096;
-
 /** Bounded so a looping model cannot spend a request forever. */
-const MAX_ITERATIONS = 12;
+const MAX_STEPS = 12;
 
 /** Run one chat turn, yielding text as it streams and the tools that ran. */
 export async function* runAssistantLoop(input: {
-    apiKey: string;
+    model: LanguageModel;
     options: ResolvedAssistantOptions;
     tools: ToolDefinition[];
     messages: ChatMessage[];
@@ -60,9 +57,9 @@ export async function* runAssistantLoop(input: {
     }
 
     try {
-        const runnableTools = toRunnableTools(input.tools);
+        const tools = toToolSet(input.tools);
         input.logger.info(
-            `Chat request running against ${runnableTools.length} tools, found by search`
+            `Chat request running against ${input.tools.length} tools, found by search`
         );
 
         // A transcript ending on unanswered calls is a paused turn, and every
@@ -84,75 +81,86 @@ export async function* runAssistantLoop(input: {
             answerUnansweredCalls(turns),
             input.aiContext
         );
-        const client = new Anthropic({ apiKey: input.apiKey });
-        const runner = client.beta.messages.toolRunner({
-            model: input.options.model,
-            max_tokens: MAX_TOKENS,
+
+        // The `finish-step` stream part omits `messages`, so completed steps
+        // are queued here and drained as the stream reaches each one.
+        const completed: ChatMessage[][] = [];
+
+        // No `experimental_transform`: smoothStream drops a reasoning part's
+        // signature, and it runs upstream of the recorder, so the loss would
+        // land in storage rather than in one request.
+        const result = streamText({
+            model: input.model,
             system,
-            output_config: { effort: input.options.effort },
             messages,
-            tools: [TOOL_SEARCH, ...runnableTools],
-            stream: true,
-            max_iterations: MAX_ITERATIONS,
+            tools,
+            stopWhen: stepCountIs(MAX_STEPS),
+            allowSystemInMessages: true,
+            providerOptions: { anthropic: { effort: input.options.effort } },
+            onStepEnd: (step) => {
+                completed.push(step.response.messages as ChatMessage[]);
+            },
         });
 
-        for await (const stream of runner) {
-            for await (const event of stream) {
-                if (
-                    event.type === 'content_block_delta' &&
-                    event.delta.type === 'text_delta'
-                ) {
-                    yield { type: 'text-delta', text: event.delta.text };
+        let held: ToolCallPart[] = [];
+
+        /** Append, store and announce every step that has finished. */
+        async function* drain(): AsyncGenerator<ChatEvent> {
+            while (completed.length > 0) {
+                const stepMessages = completed.shift() ?? [];
+                for (const message of stepMessages) {
+                    turns.push(message);
+                    await persist();
+                    yield { type: 'message', message };
                 }
-            }
-            // Mandatory every turn: returning from the loop body without
-            // awaiting the final message aborts the stream.
-            const message = await stream.finalMessage();
-            const turn: ChatMessage = { role: 'assistant', content: message.content };
-            turns.push(turn);
-            await persist();
-            yield { type: 'message', message: turn };
-
-            // Stop before anything executes when the turn reached a mutating
-            // call: `generateToolResponse` is what runs the tools, so the gate
-            // has to sit in front of it. Breaking out rather than returning
-            // keeps the `done` event below.
-            const requests = await pauseForApproval({
-                content: message.content,
-                tools: input.tools,
-                approvals: input.approvals,
-                userId: input.userId,
-            });
-            if (requests.length > 0) {
-                yield { type: 'approval-required', requests };
-                break;
-            }
-
-            // The runner memoises this per iteration and clears the memo at the
-            // top of the next one, so each tool runs exactly once whether it is
-            // called here or by the runner.
-            const toolResult = await runner.generateToolResponse();
-            if (toolResult !== null) {
-                const answered = toChatMessage(toolResult);
-                turns.push(answered);
-                await persist();
-                yield { type: 'message', message: answered };
+                held = unexecutedCalls(stepMessages);
             }
         }
+
+        for await (const part of result.fullStream) {
+            if (part.type === 'text-delta') {
+                yield { type: 'text-delta', text: part.text };
+                continue;
+            }
+            if (part.type === 'finish-step') yield* drain();
+        }
+        yield* drain();
+
+        // The loop halts on a mutating call because its tool has no `execute`,
+        // so the gate sits where the model stopped rather than in front of a
+        // runner. Nothing mutating has run by the time this mints the rows.
+        const requests = await pauseForApproval({
+            calls: held,
+            tools: input.tools,
+            approvals: input.approvals,
+            userId: input.userId,
+        });
+        if (requests.length > 0) yield { type: 'approval-required', requests };
     } catch (error) {
         yield { type: 'error', error: errorMessage(error) };
     }
     yield { type: 'done' };
 }
 
-/** Narrow a runner message to a chat message, spelling string content out as a block. */
-function toChatMessage(param: BetaMessageParam): ChatMessage {
-    return {
-        // `BetaMessageParam` also allows `system`; a tool response is a user turn.
-        role: param.role === 'assistant' ? 'assistant' : 'user',
-        content:
-            typeof param.content === 'string'
-                ? [{ type: 'text', text: param.content }]
-                : param.content,
-    };
+/** The calls a step left unanswered — the ones whose tool declined to run. */
+function unexecutedCalls(messages: ChatMessage[]): ToolCallPart[] {
+    const answered = new Set<string>();
+    const calls: ToolCallPart[] = [];
+
+    for (const message of messages) {
+        if (message.role === 'tool') {
+            for (const part of message.content) {
+                if (part.type === 'tool-result') answered.add(part.toolCallId);
+            }
+            continue;
+        }
+        if (message.role !== 'assistant' || typeof message.content === 'string') {
+            continue;
+        }
+        for (const part of message.content) {
+            if (part.type === 'tool-call') calls.push(part);
+        }
+    }
+
+    return calls.filter((call) => !answered.has(call.toolCallId));
 }

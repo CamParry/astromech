@@ -1,12 +1,19 @@
 /**
  * Where the gate sits in the loop: a turn reaching a mutating call stops before
- * `generateToolResponse`, which is the call that would execute it, and still
- * closes the stream with `done`.
+ * anything runs it, and still closes the stream with `done`.
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { BetaMessage, BetaMessageParam } from '@anthropic-ai/sdk/resources/beta';
+import { streamText } from 'ai';
+import type {
+    LanguageModel,
+    ModelMessage,
+    TextPart,
+    ToolCallPart,
+    ToolResultPart,
+} from 'ai';
+import type * as AiModule from 'ai';
 import type { PluginLogger, ToolDefinition } from 'astromech';
 import { runAssistantLoop } from '../../src/loop/run.js';
 import type {
@@ -18,21 +25,17 @@ import { fakeApprovals } from './fake-approvals.js';
 import { fakeSessions } from '../sessions/fake-sessions.js';
 import type { FakeSessions } from '../sessions/fake-sessions.js';
 
-const generateToolResponse = vi.fn<() => Promise<null>>();
-const toolRunner = vi.fn();
-
-vi.mock('@anthropic-ai/sdk', () => ({
-    Anthropic: class {
-        beta = { messages: { toolRunner } };
-    },
+vi.mock('ai', async (importOriginal) => ({
+    ...(await importOriginal<typeof AiModule>()),
+    streamText: vi.fn(),
 }));
 
 // The loop only reaches core to format AI context, and none is sent here.
 vi.mock('astromech', () => ({ formatAIContextMessage: vi.fn(() => null) }));
 
+const streamTextMock = vi.mocked(streamText);
+
 const OPTIONS: ResolvedAssistantOptions = {
-    model: 'claude-opus-5',
-    apiKeyEnv: 'ANTHROPIC_API_KEY',
     effort: 'medium',
     readOnly: false,
 };
@@ -58,25 +61,50 @@ function toolFor(name: string, readOnly: boolean): ToolDefinition {
     };
 }
 
-/** One assistant reply carrying `content`, as the SDK returns it. */
-function reply(content: BetaMessage['content']): BetaMessage {
-    return { role: 'assistant', content } as BetaMessage;
+/** One `tool-call` part, as the model emits it. */
+function call(id: string, name: string, input: unknown = {}): ToolCallPart {
+    return { type: 'tool-call', toolCallId: id, toolName: name, input };
 }
 
-/** A runner yielding one stream per reply, each with no delta events. */
-function runnerOver(replies: BetaMessage[]) {
+/** One `tool-result` part answering `id`. */
+function result(id: string, name: string, value: string): ToolResultPart {
     return {
-        generateToolResponse,
-        async *[Symbol.asyncIterator]() {
-            for (const message of replies) {
-                yield {
-                    // eslint-disable-next-line @typescript-eslint/no-empty-function
-                    async *[Symbol.asyncIterator]() {},
-                    finalMessage: async () => message,
-                };
-            }
-        },
+        type: 'tool-result',
+        toolCallId: id,
+        toolName: name,
+        output: { type: 'text', value },
     };
+}
+
+/** An assistant turn carrying `content`. */
+function assistant(
+    content: (TextPart | ToolCallPart | { type: 'reasoning'; text: string })[]
+): ChatMessage {
+    return { role: 'assistant', content };
+}
+
+/** What one step of `streamText` produces: the messages `onStepEnd` reports. */
+type FakeStep = { textDeltas?: string[]; messages: ChatMessage[] };
+
+/**
+ * Wire the mocked `streamText` to run through `steps` in order. Each step's
+ * `onStepEnd` fires — carrying the messages that step generated — before its
+ * `finish-step` part streams, matching what `runAssistantLoop` waits on.
+ */
+function mockStreamText(steps: FakeStep[]): void {
+    streamTextMock.mockImplementation(((options: {
+        onStepEnd?: (step: { response: { messages: ChatMessage[] } }) => void;
+    }) => ({
+        fullStream: (async function* () {
+            for (const step of steps) {
+                for (const text of step.textDeltas ?? []) {
+                    yield { type: 'text-delta', text };
+                }
+                options.onStepEnd?.({ response: { messages: step.messages } });
+                yield { type: 'finish-step' };
+            }
+        })(),
+    })) as never);
 }
 
 /** Drain the loop into the events it yielded, against `sessions`. */
@@ -87,7 +115,7 @@ async function collect(
     const approvals = fakeApprovals();
     const events: ChatEvent[] = [];
     for await (const event of runAssistantLoop({
-        apiKey: 'sk-test',
+        model: {} as LanguageModel,
         options: OPTIONS,
         tools,
         messages,
@@ -108,76 +136,64 @@ function stored(): ChatMessage[] | undefined {
     return sessions.rows.get('user_1');
 }
 
-/** The turns the last request would have gone to the API with. */
-function sentMessages(): BetaMessageParam[] {
-    const [request] = toolRunner.mock.calls[0] as [{ messages: BetaMessageParam[] }];
-    return request.messages;
+/** The turns the last request would have gone to the model with. */
+function sentMessages(): ModelMessage[] {
+    const [options] = streamTextMock.mock.calls[0] as [{ messages: ModelMessage[] }];
+    return options.messages;
 }
 
-/** Does every `tool_use` in `turns` have a `tool_result` in the turn after it? */
-function everyCallAnswered(turns: BetaMessageParam[]): boolean {
+/** Does every `tool-call` in `turns` have a `tool-result` in the turn after it? */
+function everyCallAnswered(turns: ModelMessage[]): boolean {
     return turns.every((turn, index) => {
         const content = turn.content;
         if (typeof content === 'string') return true;
-        const calls = content.filter((block) => block.type === 'tool_use');
+        const calls = content.filter(
+            (part): part is ToolCallPart => part.type === 'tool-call'
+        );
         if (calls.length === 0) return true;
         const next = turns[index + 1]?.content;
         const answered = new Set(
             (typeof next === 'string' ? [] : (next ?? []))
-                .filter((block) => block.type === 'tool_result')
-                .map((block) => block.tool_use_id)
+                .filter((part): part is ToolResultPart => part.type === 'tool-result')
+                .map((part) => part.toolCallId)
         );
-        return calls.every((block) => answered.has(block.id));
+        return calls.every((toolCall) => answered.has(toolCall.toolCallId));
     });
 }
+
+const ABANDONED = 'The user moved on without answering this, so it was not run.';
 
 let sessions: FakeSessions;
 
 beforeEach(() => {
     vi.clearAllMocks();
-    generateToolResponse.mockResolvedValue(null);
     sessions = fakeSessions();
 });
 
 describe('runAssistantLoop', () => {
     it('lets a turn of read-only calls run', async () => {
-        toolRunner.mockReturnValue(
-            runnerOver([
-                reply([
-                    {
-                        type: 'tool_use',
-                        id: 'toolu_1',
-                        name: 'entries_page_query',
-                        input: {},
-                    },
-                ]),
-            ])
-        );
+        mockStreamText([
+            { messages: [assistant([call('toolu_1', 'entries_page_query', {})])] },
+        ]);
 
         const events = await collect([toolFor('entries_page_query', true)]);
 
-        expect(generateToolResponse).toHaveBeenCalled();
+        expect(streamText).toHaveBeenCalled();
         expect(events.map((event) => event.type)).toEqual(['message', 'done']);
     });
 
     it('pauses on a mutating call, executing nothing', async () => {
-        toolRunner.mockReturnValue(
-            runnerOver([
-                reply([
-                    {
-                        type: 'tool_use',
-                        id: 'toolu_1',
-                        name: 'entries_page_update',
-                        input: { id: 'page_1' },
-                    },
-                ]),
-            ])
-        );
+        mockStreamText([
+            {
+                messages: [
+                    assistant([call('toolu_1', 'entries_page_update', { id: 'page_1' })]),
+                ],
+            },
+        ]);
         const update = toolFor('entries_page_update', false);
 
         const events = await collect([update]);
 
-        expect(generateToolResponse).not.toHaveBeenCalled();
         expect(update.invoke).not.toHaveBeenCalled();
         expect(events.map((event) => event.type)).toEqual([
             'message',
@@ -191,23 +207,13 @@ describe('runAssistantLoop', () => {
     });
 
     it('answers a pause the user typed straight past, so the request stays valid', async () => {
-        toolRunner.mockReturnValue(runnerOver([reply([{ type: 'text', text: 'ok' }])]));
+        mockStreamText([{ messages: [assistant([{ type: 'text', text: 'ok' }])] }]);
 
         await collect(
             [toolFor('entries_page_update', false)],
             [
                 { role: 'user', content: [{ type: 'text', text: 'update it' }] },
-                {
-                    role: 'assistant',
-                    content: [
-                        {
-                            type: 'tool_use',
-                            id: 'toolu_1',
-                            name: 'entries_page_update',
-                            input: { id: 'page_1' },
-                        },
-                    ],
-                },
+                assistant([call('toolu_1', 'entries_page_update', { id: 'page_1' })]),
                 {
                     role: 'user',
                     content: [{ type: 'text', text: 'no, do this instead' }],
@@ -217,23 +223,21 @@ describe('runAssistantLoop', () => {
 
         const sent = sentMessages();
         expect(everyCallAnswered(sent)).toBe(true);
-        expect(sent).toHaveLength(3);
-        expect(sent[2]?.content).toEqual([
-            {
-                type: 'tool_result',
-                tool_use_id: 'toolu_1',
-                content: 'The user moved on without answering this, so it was not run.',
-            },
-            { type: 'text', text: 'no, do this instead' },
-        ]);
+        expect(sent).toHaveLength(4);
+        expect(sent[2]).toEqual({
+            role: 'tool',
+            content: [result('toolu_1', 'entries_page_update', ABANDONED)],
+        });
+        expect(sent[3]).toEqual({
+            role: 'user',
+            content: [{ type: 'text', text: 'no, do this instead' }],
+        });
     });
 });
 
 describe('runAssistantLoop session storage', () => {
     it('stores the posted turns plus the assistant turn that answered them', async () => {
-        toolRunner.mockReturnValue(
-            runnerOver([reply([{ type: 'text', text: 'hello' }])])
-        );
+        mockStreamText([{ messages: [assistant([{ type: 'text', text: 'hello' }])] }]);
 
         await collect([]);
 
@@ -244,60 +248,46 @@ describe('runAssistantLoop session storage', () => {
     });
 
     it('stores a paused turn whole, so the pause has something to resume from', async () => {
-        const call = {
-            type: 'tool_use',
-            id: 'toolu_1',
-            name: 'entries_page_update',
-            input: { id: 'page_1' },
-        } as const;
-        toolRunner.mockReturnValue(
-            runnerOver([
-                reply([{ type: 'thinking', thinking: '', signature: 'sig' }, call]),
-            ])
-        );
+        const reasoning = {
+            type: 'reasoning' as const,
+            text: '',
+            providerOptions: { anthropic: { signature: 'sig' } },
+        };
+        const toolCall = call('toolu_1', 'entries_page_update', { id: 'page_1' });
+        mockStreamText([{ messages: [assistant([reasoning, toolCall])] }]);
 
         await collect([toolFor('entries_page_update', false)]);
 
         expect(stored()).toEqual([
             { role: 'user', content: [{ type: 'text', text: 'go' }] },
-            {
-                role: 'assistant',
-                content: [{ type: 'thinking', thinking: '', signature: 'sig' }, call],
-            },
+            { role: 'assistant', content: [reasoning, toolCall] },
         ]);
     });
 
     it('stores the tool results a completed call answered with', async () => {
-        toolRunner.mockReturnValue(
-            runnerOver([
-                reply([
+        mockStreamText([
+            {
+                messages: [
+                    assistant([call('toolu_1', 'entries_page_query', {})]),
                     {
-                        type: 'tool_use',
-                        id: 'toolu_1',
-                        name: 'entries_page_query',
-                        input: {},
+                        role: 'tool',
+                        content: [result('toolu_1', 'entries_page_query', '{}')],
                     },
-                ]),
-            ])
-        );
-        generateToolResponse.mockResolvedValue({
-            role: 'user',
-            content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: '{}' }],
-        } as never);
+                ],
+            },
+        ]);
 
         await collect([toolFor('entries_page_query', true)]);
 
         expect(stored()?.at(-1)).toEqual({
-            role: 'user',
-            content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: '{}' }],
+            role: 'tool',
+            content: [result('toolu_1', 'entries_page_query', '{}')],
         });
     });
 
     it('carries the turn on when the transcript is past the size cap', async () => {
         sessions.storage.save = vi.fn(async () => false);
-        toolRunner.mockReturnValue(
-            runnerOver([reply([{ type: 'text', text: 'hello' }])])
-        );
+        mockStreamText([{ messages: [assistant([{ type: 'text', text: 'hello' }])] }]);
 
         const events = await collect([]);
 
@@ -309,9 +299,7 @@ describe('runAssistantLoop session storage', () => {
         sessions.storage.save = vi.fn(async () => {
             throw new Error('database is locked');
         });
-        toolRunner.mockReturnValue(
-            runnerOver([reply([{ type: 'text', text: 'hello' }])])
-        );
+        mockStreamText([{ messages: [assistant([{ type: 'text', text: 'hello' }])] }]);
 
         const events = await collect([]);
 

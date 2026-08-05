@@ -53,12 +53,12 @@ const DELETION: ApprovalRequest = {
 };
 
 /** A turn calling one tool, the shape a paused response streams back. */
-function calling(toolUseId: string, name: string): ChatEntry {
+function calling(toolCallId: string, name: string): ChatEntry {
     return {
         kind: 'message',
         message: {
             role: 'assistant',
-            content: [{ type: 'tool_use', id: toolUseId, name, input: {} }],
+            content: [{ type: 'tool-call', toolCallId, toolName: name, input: {} }],
         },
     };
 }

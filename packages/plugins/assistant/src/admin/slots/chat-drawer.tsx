@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ComponentProps, KeyboardEvent, ReactElement } from 'react';
-import type { BetaContentBlockParam } from '@anthropic-ai/sdk/resources/beta';
+import type { TextPart, ToolCallPart } from 'ai';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from 'astromech/ui';
@@ -21,6 +21,9 @@ const BOTTOM_THRESHOLD_PX = 24;
 
 /** Tool calls the transcript must not describe as run, by `tool_use` id. */
 type UnrunCalls = Record<string, 'awaiting' | 'declined'>;
+
+/** The two part types the transcript renders. */
+type RenderedPart = TextPart | ToolCallPart;
 
 /** Stable identities: the transcript re-renders on every streamed chunk. */
 const REMARK_PLUGINS = [remarkGfm];
@@ -430,15 +433,15 @@ function Turn({
     message: ChatMessage;
     calls: UnrunCalls;
 }): ReactElement | null {
-    const blocks = message.content.filter(isRenderedBlock);
-    if (blocks.length === 0) return null;
+    const parts = renderedParts(message);
+    if (parts.length === 0) return null;
     return (
         <div className={`am-assistant-turn am-assistant-turn--${message.role}`}>
             <span className="am-assistant-turn-role">
                 {message.role === 'user' ? 'You' : 'Assistant'}
             </span>
-            {blocks.map((block, index) => (
-                <Block key={index} block={block} role={message.role} calls={calls} />
+            {parts.map((part, index) => (
+                <Part key={index} part={part} role={message.role} calls={calls} />
             ))}
         </div>
     );
@@ -448,30 +451,29 @@ function Turn({
  * Text, or a marker naming a tool the model called. Only assistant text is
  * rendered as Markdown; the user's text is shown literally.
  */
-function Block({
-    block,
+function Part({
+    part,
     role,
     calls,
 }: {
-    block: BetaContentBlockParam;
+    part: RenderedPart;
     role: ChatMessage['role'];
     calls: UnrunCalls;
 }): ReactElement | null {
-    if (block.type === 'tool_use') {
+    if (part.type === 'tool-call') {
         return (
             <p className="am-assistant-tool">
-                {toolCallLabel(block.name, calls[block.id])}
+                {toolCallLabel(part.toolName, calls[part.toolCallId])}
             </p>
         );
     }
-    if (block.type !== 'text') return null;
     if (role === 'user') {
-        return <p className="am-assistant-text">{block.text}</p>;
+        return <p className="am-assistant-text">{part.text}</p>;
     }
     return (
         <div className="am-assistant-markdown">
             <Markdown remarkPlugins={REMARK_PLUGINS} components={MARKDOWN_COMPONENTS}>
-                {block.text}
+                {part.text}
             </Markdown>
         </div>
     );
@@ -492,9 +494,16 @@ function unrunCalls(pending: ApprovalRequest[], rejected: RejectedCalls): UnrunC
     return calls;
 }
 
-/** The block types the drawer shows. Everything else, `thinking` included, is carried but hidden. */
-function isRenderedBlock(block: BetaContentBlockParam): boolean {
-    return block.type === 'text' || block.type === 'tool_use';
+/**
+ * The parts the drawer shows. Everything else — reasoning included — is carried
+ * through the transcript untouched but never rendered. A tool turn has nothing
+ * to show at all: results are plumbing, not conversation.
+ */
+function renderedParts(message: ChatMessage): RenderedPart[] {
+    if (message.role === 'tool' || typeof message.content === 'string') return [];
+    return message.content.filter(
+        (part): part is RenderedPart => part.type === 'text' || part.type === 'tool-call'
+    );
 }
 
 /** Whether the browser grows a textarea from CSS alone. */

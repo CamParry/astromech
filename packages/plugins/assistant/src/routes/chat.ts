@@ -3,6 +3,7 @@
  * model loop back as server-sent events, which RPC-JSON cannot carry.
  */
 
+import { getModel } from 'astromech';
 import type { AIContextItem, PluginContext, PluginRawRoute } from 'astromech';
 import { createApprovalsStorage } from '../approvals/storage.js';
 import { createSessionsStorage } from '../sessions/storage.js';
@@ -39,11 +40,24 @@ async function handleChat(
         return Response.json({ error: 'Sign in to use the assistant.' }, { status: 401 });
     }
 
-    // A site without a key gets a failed request, not a failed boot.
-    const apiKey = ctx.env[options.apiKeyEnv];
-    if (apiKey === undefined || apiKey === '') {
+    // A site that has not configured a model gets a failed request, not a
+    // failed boot.
+    const model = getModel('assistant');
+    if (model === undefined) {
         return Response.json(
-            { error: `The assistant needs ${options.apiKeyEnv} set.` },
+            {
+                error: 'The assistant needs a model. Add an `ai` block to astromech.config.ts with one registered as `assistant`.',
+            },
+            { status: 503 }
+        );
+    }
+    // The tool search the assistant relies on is Anthropic's, so a model from
+    // another provider would load every tool and blow the catalogue.
+    if (!model.provider.startsWith('anthropic')) {
+        return Response.json(
+            {
+                error: `The assistant needs an Anthropic model; \`assistant\` is configured as ${model.provider}.`,
+            },
             { status: 503 }
         );
     }
@@ -58,13 +72,13 @@ async function handleChat(
         );
     }
 
-    // Imported at request time, never at module load: a static import would pull
-    // `@anthropic-ai/sdk` into every load of a site's config, which Astro does
-    // in plain Node before anything has asked for a chat.
+    // Imported at request time, never at module load: a static import would
+    // pull the AI SDK into every load of a site's config, which Astro does in
+    // plain Node before anything has asked for a chat.
     const { runAssistantLoop } = await import('../loop/run.js');
 
     const events = runAssistantLoop({
-        apiKey,
+        model,
         options,
         tools: ctx.methods.tools({ readOnly: options.readOnly }),
         messages: body.messages,
@@ -141,20 +155,22 @@ function isChatMessages(value: unknown): value is ChatMessage[] {
     return Array.isArray(value) && value.every(isChatMessage);
 }
 
-/** Is this one turn, a role and an array of content blocks? */
+/** Is this one turn — a role, and content the role admits? */
 function isChatMessage(value: unknown): value is ChatMessage {
     if (typeof value !== 'object' || value === null) return false;
     const { role, content } = value as { role?: unknown; content?: unknown };
-    if (role !== 'user' && role !== 'assistant') return false;
-    return Array.isArray(content) && content.every(isContentBlock);
+    if (role !== 'user' && role !== 'assistant' && role !== 'tool') return false;
+    // Only a user turn may spell its content as a bare string.
+    if (typeof content === 'string') return role === 'user';
+    return Array.isArray(content) && content.every(isContentPart);
 }
 
 /**
- * Does this look like a content block? Only the discriminant is checked: the
- * API is the real validator, and a deeper check would reject the block types
+ * Does this look like a content part? Only the discriminant is checked: the
+ * API is the real validator, and a deeper check would reject the part types
  * the transcript deliberately carries through untouched.
  */
-function isContentBlock(value: unknown): boolean {
+function isContentPart(value: unknown): boolean {
     if (typeof value !== 'object' || value === null) return false;
     return typeof (value as { type?: unknown }).type === 'string';
 }

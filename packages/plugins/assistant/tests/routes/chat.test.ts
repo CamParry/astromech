@@ -106,9 +106,19 @@ describe('readChatRequest', () => {
         ).resolves.toBeNull();
     });
 
-    it('rejects a turn whose content is a string', async () => {
+    it('accepts a user turn whose content is a bare string', async () => {
+        const messages = [{ role: 'user', content: 'hi' }];
+
+        await expect(readChatRequest(postJson({ messages }))).resolves.toEqual({
+            messages,
+        });
+    });
+
+    it('rejects a turn whose content is a string on a role that must array it', async () => {
         await expect(
-            readChatRequest(postJson({ messages: [{ role: 'user', content: 'hi' }] }))
+            readChatRequest(
+                postJson({ messages: [{ role: 'assistant', content: 'hi' }] })
+            )
         ).resolves.toBeNull();
     });
 

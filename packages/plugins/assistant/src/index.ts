@@ -12,17 +12,11 @@ import { migrationProvider } from '../migrations/index.js';
 import { approvalsTable } from './tables/approvals.js';
 import { sessionsTable } from './tables/sessions.js';
 import { ASSISTANT_PACKAGE } from './types.js';
-import type {
-    AssistantModel,
-    AssistantOptions,
-    ResolvedAssistantOptions,
-} from './types.js';
+import type { AssistantOptions, ResolvedAssistantOptions } from './types.js';
 
-export type { AssistantModel, AssistantOptions };
+export type { AssistantOptions };
 
 const DEFAULT_OPTIONS: ResolvedAssistantOptions = {
-    model: 'claude-opus-5',
-    apiKeyEnv: 'ANTHROPIC_API_KEY',
     effort: 'medium',
     readOnly: false,
 };

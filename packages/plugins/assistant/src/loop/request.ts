@@ -3,7 +3,7 @@
  * the AI context placed where the API accepts it.
  */
 
-import type { BetaMessageParam } from '@anthropic-ai/sdk/resources/beta';
+import type { ModelMessage } from 'ai';
 import { formatAIContextMessage } from 'astromech';
 import type { AIContextItem } from 'astromech';
 import type { ChatMessage } from '../types.js';
@@ -14,15 +14,16 @@ import type { ChatMessage } from '../types.js';
  * to be last or followed by an assistant turn. That also keeps it past the last
  * cache breakpoint, so navigating does not invalidate the cached prefix. With
  * no user turn to follow, it rides in the system prompt instead.
+ *
+ * Reaching the model there needs `allowSystemInMessages`, and the Anthropic
+ * mapper keeps a later system block inline only because a top-level prompt is
+ * always sent — the first one it sees is hoisted.
  */
 export function buildRequest(
     messages: ChatMessage[],
     aiContext: AIContextItem[]
-): { system: string; messages: BetaMessageParam[] } {
-    const turns: BetaMessageParam[] = messages.map((message) => ({
-        role: message.role,
-        content: message.content,
-    }));
+): { system: string; messages: ModelMessage[] } {
+    const turns: ModelMessage[] = [...messages];
     const context = formatAIContextMessage(aiContext);
     if (context === null) return { system: SYSTEM_PROMPT, messages: turns };
 
