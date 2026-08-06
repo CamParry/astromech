@@ -6,7 +6,7 @@
  * many that is, and it can only be raised once a file has been chosen.
  */
 
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
@@ -38,6 +38,8 @@ const ITEM: Media = {
  * User sources, so the usage panel needs no entry-type labels from the
  * admin-config shim to render them.
  */
+let usage: MediaUsage[] = [];
+
 const USAGE = [
     {
         sourceId: 'u1',
@@ -64,7 +66,7 @@ vi.mock('@/admin/hooks/media.js', () => ({
     useUpdateMedia: () => ({ mutate: vi.fn(), isPending: false }),
     useDeleteMedia: () => ({ mutate: vi.fn(), isPending: false }),
     useReplaceMedia: () => ({ mutate: replaceMutate, isPending: false }),
-    useMediaUsage: () => ({ data: USAGE, isLoading: false }),
+    useMediaUsage: () => ({ data: usage, isLoading: false }),
 }));
 
 beforeAll(async () => {
@@ -73,6 +75,10 @@ beforeAll(async () => {
         resources: { en: { translation: en } },
         interpolation: { escapeValue: false },
     });
+});
+
+beforeEach(() => {
+    usage = USAGE;
 });
 
 afterEach(() => {
@@ -138,7 +144,21 @@ describe('MediaDetailModal replace', () => {
         expect(screen.queryByText('Replace this file?')).not.toBeNull();
         const description = screen.getByText(/will replace the current file/);
         expect(description.textContent).toContain('kitten.jpg');
-        expect(description.textContent).toContain('2 references');
+        expect(description.textContent).toContain('2 references to this file');
+    });
+
+    // i18next only reaches a `_zero` key when one is declared; without it an
+    // unreferenced file reads "0 references to this file".
+    it('says no references when nothing points at the file', async () => {
+        usage = [];
+        const user = userEvent.setup();
+        openModal();
+
+        await user.upload(fileInput(), NEW_FILE);
+
+        const description = screen.getByText(/will replace the current file/);
+        expect(description.textContent).toContain('No references to this file');
+        expect(description.textContent).not.toContain('0 references');
     });
 
     it('replaces with the chosen file once confirmed', async () => {
