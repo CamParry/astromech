@@ -202,7 +202,7 @@ describe('runAssistantLoop', () => {
         ]);
         const paused = events[1];
         expect(paused?.type === 'approval-required' && paused.requests).toMatchObject([
-            { toolUseId: 'toolu_1', method: 'entries.page.update' },
+            { toolCallId: 'toolu_1', method: 'entries.page.update' },
         ]);
     });
 

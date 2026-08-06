@@ -41,7 +41,7 @@ export async function pauseForApproval(input: {
     const rows = await input.approvals.mint(
         calls.map(({ call, tool }) => ({
             userId: input.userId,
-            toolUseId: call.toolCallId,
+            toolCallId: call.toolCallId,
             method: tool.id,
             toolName: tool.name,
             arguments: argumentsOf(call),
@@ -89,7 +89,7 @@ export async function resumePausedTurn(input: {
     const claimed = await input.approvals.claim(input.decisions, input.userId);
     const called = new Set(calls.map((call) => call.toolCallId));
     for (const row of claimed) {
-        if (!called.has(row.toolUseId)) {
+        if (!called.has(row.toolCallId)) {
             throw new Error(
                 'An approval names a call the posted conversation does not contain.'
             );
@@ -219,7 +219,7 @@ async function resultFor(
     if (tool.annotations.readOnlyHint) return invokeTool(tool, argumentsOf(call));
 
     const row = input.claimed.find(
-        (candidate) => candidate.toolUseId === call.toolCallId
+        (candidate) => candidate.toolCallId === call.toolCallId
     );
     // A decline is an answer, not a failure: the result is not an error, so the
     // model treats it as an outcome and moves on.

@@ -14,7 +14,7 @@ export const approvalsTable = definePluginTable(
     ({ col }) => ({
         id: col.id(),
         userId: col.text({ notNull: true }),
-        toolUseId: col.text({ notNull: true }),
+        toolCallId: col.text({ notNull: true }),
         /** Manifest method id, e.g. `entries.page.publish`. */
         method: col.text({ notNull: true }),
         /** How the tool is looked up in the surface when the turn resumes. */

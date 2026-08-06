@@ -96,7 +96,7 @@ describe('pauseForApproval', () => {
         expect(approvals.rows).toEqual([
             expect.objectContaining({
                 userId: 'user_1',
-                toolUseId: 'toolu_1',
+                toolCallId: 'toolu_1',
                 method: 'entries.page.update',
                 toolName: UPDATE,
                 arguments: { id: 'page_1' },
@@ -106,7 +106,7 @@ describe('pauseForApproval', () => {
         ]);
         expect(requests).toEqual([
             expect.objectContaining({
-                toolUseId: 'toolu_1',
+                toolCallId: 'toolu_1',
                 method: 'entries.page.update',
                 toolName: UPDATE,
                 destructive: true,
@@ -296,7 +296,7 @@ describe('resumePausedTurn', () => {
 
     it('answers every call in the turn, in order', async () => {
         const query = toolFor(QUERY, { readOnly: true });
-        const row = approvalRow({ toolUseId: 'toolu_2' });
+        const row = approvalRow({ toolCallId: 'toolu_2' });
         const approvals = fakeApprovals([row]);
 
         const message = await resumePausedTurn({
@@ -322,7 +322,7 @@ describe('resumePausedTurn', () => {
     });
 
     it('refuses the whole request when an approval names a call the turn lacks', async () => {
-        const row = approvalRow({ toolUseId: 'toolu_elsewhere' });
+        const row = approvalRow({ toolCallId: 'toolu_elsewhere' });
         const approvals = fakeApprovals([row]);
         const update = toolFor(UPDATE);
 

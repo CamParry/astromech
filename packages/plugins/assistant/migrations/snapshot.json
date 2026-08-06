@@ -22,8 +22,8 @@
                     "primaryKey": false
                 },
                 {
-                    "key": "toolUseId",
-                    "name": "tool_use_id",
+                    "key": "toolCallId",
+                    "name": "tool_call_id",
                     "kind": "text",
                     "type": "text",
                     "notNull": true,

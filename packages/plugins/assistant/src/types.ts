@@ -51,7 +51,7 @@ export type ChatRequest = {
  */
 export type ApprovalRequest = {
     approvalId: string;
-    toolUseId: string;
+    toolCallId: string;
     method: string;
     toolName: string;
     message: string;

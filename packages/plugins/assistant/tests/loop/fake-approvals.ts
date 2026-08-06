@@ -16,7 +16,7 @@ export function approvalRow(overrides: Partial<ApprovalRow> = {}): ApprovalRow {
     return {
         id: 'ap_1',
         userId: 'user_1',
-        toolUseId: 'toolu_1',
+        toolCallId: 'toolu_1',
         method: 'entries.page.update',
         toolName: 'entries_page_update',
         arguments: { id: 'page_1', fields: { title: 'From the row' } },
@@ -66,7 +66,7 @@ export function fakeApprovals(seed: ApprovalRow[] = []): FakeApprovals {
                 row.arguments = null;
                 won.push({
                     id: row.id,
-                    toolUseId: row.toolUseId,
+                    toolCallId: row.toolCallId,
                     method: row.method,
                     action,
                     arguments: args,
