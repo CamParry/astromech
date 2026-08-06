@@ -28,7 +28,7 @@ export type ApprovalDraft = Omit<NewApprovalRow, 'status' | 'expiresAt'>;
 /** A row this request won, and the arguments read off it before it was marked. */
 export type ClaimedApproval = {
     id: string;
-    toolUseId: string;
+    toolCallId: string;
     method: string;
     action: ApprovalDecision['action'];
     arguments: Record<string, unknown>;
@@ -94,7 +94,7 @@ export function createApprovalsStorage(db: PluginContext['db']) {
             if (taken !== 1) continue;
             won.push({
                 id: row.id,
-                toolUseId: row.toolUseId,
+                toolCallId: row.toolCallId,
                 method: row.method,
                 action,
                 arguments: row.arguments ?? {},

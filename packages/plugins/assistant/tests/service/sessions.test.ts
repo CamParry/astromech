@@ -103,7 +103,7 @@ describe('getSession', () => {
         expect(session.pending).toEqual([
             {
                 approvalId: 'ap_1',
-                toolUseId: 'toolu_1',
+                toolCallId: 'toolu_1',
                 method: 'entries.page.update',
                 toolName: 'entries_page_update',
                 message: 'Update the page "Home"?',

@@ -19,7 +19,7 @@ import './chat-drawer.css';
 /** How far off the tail still counts as following it. */
 const BOTTOM_THRESHOLD_PX = 24;
 
-/** Tool calls the transcript must not describe as run, by `toolUseId`. */
+/** Tool calls the transcript must not describe as run, by `toolCallId`. */
 type UnrunCalls = Record<string, 'awaiting' | 'declined'>;
 
 /** The two part types the transcript renders. */
@@ -489,8 +489,8 @@ function toolCallLabel(name: string, state: UnrunCalls[string] | undefined): str
 /** The calls the transcript may not call run: those held, and those turned down. */
 function unrunCalls(pending: ApprovalRequest[], rejected: RejectedCalls): UnrunCalls {
     const calls: UnrunCalls = {};
-    for (const toolUseId of Object.keys(rejected)) calls[toolUseId] = 'declined';
-    for (const request of pending) calls[request.toolUseId] = 'awaiting';
+    for (const toolCallId of Object.keys(rejected)) calls[toolCallId] = 'declined';
+    for (const request of pending) calls[request.toolCallId] = 'awaiting';
     return calls;
 }
 

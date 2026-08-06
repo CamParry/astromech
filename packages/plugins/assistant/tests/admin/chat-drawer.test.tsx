@@ -34,7 +34,7 @@ vi.mock('../../src/admin/use-chat.js', () => ({ useChat: () => chat }));
 
 const REQUEST: ApprovalRequest = {
     approvalId: 'ap_1',
-    toolUseId: 'toolu_1',
+    toolCallId: 'toolu_1',
     method: 'entries.page.update',
     toolName: 'entries_page_update',
     message: 'Update the page "Home"?',
@@ -45,7 +45,7 @@ const REQUEST: ApprovalRequest = {
 const DELETION: ApprovalRequest = {
     ...REQUEST,
     approvalId: 'ap_2',
-    toolUseId: 'toolu_2',
+    toolCallId: 'toolu_2',
     method: 'entries.page.delete',
     toolName: 'entries_page_delete',
     message: 'Delete the page "Home"? This cannot be undone.',

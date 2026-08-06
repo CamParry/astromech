@@ -24,7 +24,7 @@ export type ChatEntry =
     | { kind: 'error'; error: string };
 
 /**
- * The calls the user turned down, by `toolUseId`. Interface state rather than
+ * The calls the user turned down, by `toolCallId`. Interface state rather than
  * conversation: the model learns of a decline through the tool result it gets.
  */
 export type RejectedCalls = Record<string, 'rejected'>;
@@ -116,7 +116,7 @@ export function useChat(): UseChat {
         if (requests.length === 0) return;
         setRejected((current) => {
             const next = { ...current };
-            for (const request of requests) next[request.toolUseId] = 'rejected';
+            for (const request of requests) next[request.toolCallId] = 'rejected';
             return next;
         });
     }, []);

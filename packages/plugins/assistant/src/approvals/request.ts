@@ -21,7 +21,7 @@ export function toApprovalRequest(
     const args = row.arguments ?? {};
     return {
         approvalId: row.id,
-        toolUseId: row.toolUseId,
+        toolCallId: row.toolCallId,
         method: row.method,
         toolName: row.toolName,
         message: tool?.confirmMessage(args) ?? `Run "${row.method}"?`,

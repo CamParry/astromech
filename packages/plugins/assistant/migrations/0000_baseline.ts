@@ -5,7 +5,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
         CREATE TABLE \`plugin_assistant_approvals\` (
             \`id\` text PRIMARY KEY NOT NULL,
             \`user_id\` text NOT NULL,
-            \`tool_use_id\` text NOT NULL,
+            \`tool_call_id\` text NOT NULL,
             \`method\` text NOT NULL,
             \`tool_name\` text NOT NULL,
             \`arguments\` text,
