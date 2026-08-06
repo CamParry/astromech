@@ -45,6 +45,18 @@ So the recovery is not the ledger-clearing sequence: it is deleting the database
 and rebuilding it. The demo was rebuilt with `db:init` and reseeded with
 `db:seed:demo`.
 
+## Browser-verified live 2026-08-06
+
+Against the demo on 4323 with a real key, on the rebuilt database. Asked to
+create a page, the turn paused and the row was minted with `tool_call_id`
+populated, `pending`, arguments intact, and no page existing. Approve resolved it
+to `approved` with `arguments` nulled and `resolved_at` set, and the page was
+created from the row. The session row persisted the transcript.
+
+That covers every renamed read: `toApprovalRequest` builds the request the drawer
+rendered its awaiting chip from, `unrunCalls` keys off it, and `resultFor` matches
+the claimed row against the call to run the approved write.
+
 ## `plugin:generate` is the check on a hand-edited baseline
 
 `migrations/0000_baseline.ts` and `migrations/snapshot.json` were hand-edited
