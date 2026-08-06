@@ -115,9 +115,11 @@ validator is the only thing standing between the input and storage.
 
 A field that declares no `options` has nothing to check against, so `select`
 and the other choice types accept any string. `slug` normalizes its value
-rather than rejecting one, and `text`, `textarea`, `color`, `link` and the
-`group`/`repeater`/`tree` containers have no type validator yet — declare
-`pattern` or a `custom` rule if you need one on those.
+rather than rejecting one. `text`, `textarea`, `color`, `link` and the
+`group`/`repeater`/`tree` containers are checked for **shape** but not for
+format — a `color` must be a string, and a `link` must be an object with a
+`url` key, but neither is checked against a colour or URL grammar. Declare
+`pattern` or a `custom` rule where the format matters.
 
 Two checks are deliberately **not** made. A `relationship` or `media` value is
 checked for being an id, but nothing confirms the id resolves to a record, or
