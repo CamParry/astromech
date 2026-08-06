@@ -2,8 +2,12 @@
  * Shared TipTap extension factory for rich-text fields.
  *
  * Imported by:
- *   - src/admin/components/ui/rich-text-extensions.ts (browser editor)
- *   - src/utilities/render-rich-text.ts (server/worker static renderer)
+ *   - admin/components/ui/rich-text-extensions.ts (browser editor)
+ *   - fields/rich-text/index.ts (renderRichText, the static renderer)
+ *   - fields/rich-text/schema.ts (the cached schema parse and validate share)
+ *
+ * One factory feeds every direction, so an `allow` list cannot mean one thing
+ * to the editor and another to a write.
  *
  * StarterKit v3 bundles Link and Underline; configure them via StarterKit
  * options rather than standalone imports to avoid duplicate schemas.
