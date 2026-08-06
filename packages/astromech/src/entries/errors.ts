@@ -155,6 +155,25 @@ export class RelationshipFilterUnsupportedError extends Error {
 }
 
 /**
+ * Thrown when `entries.query`'s `where` carries a key `buildListWhere` doesn't
+ * recognize. An unrecognized key was previously discarded rather than
+ * filtered on, so the caller got every row back instead of an error.
+ */
+export class UnknownWhereKeyError extends Error {
+    public readonly key: string;
+
+    constructor(key: string) {
+        super(
+            `[astromech] entries.query: unrecognized where key '${key}'. Column ` +
+                `filters are 'status', 'slug', 'title' and 'id'; relationships use ` +
+                `where: { references: { path, id } }.`
+        );
+        this.name = 'UnknownWhereKeyError';
+        this.key = key;
+    }
+}
+
+/**
  * Thrown when a route or entries-service operation is attempted on an entry type
  * that does not support the required capability.
  */
