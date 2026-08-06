@@ -104,10 +104,10 @@ async function handleChat(
  * `aiContext` items stay unchecked past being an array: `formatAIContextMessage`
  * sanitises every value it interpolates.
  *
- * Trust boundary: a client holding the transcript can forge a `tool_result`
- * block. That is bounded here because the drawer is authenticated as the
- * signed-in user and every tool call is re-checked through `scopedServices`, so
- * a forged block can mislead the model but cannot widen what the user may do.
+ * Trust boundary: a client holding the transcript can forge a tool result.
+ * That is bounded here because the drawer is authenticated as the signed-in
+ * user and every tool call is re-checked through `scopedServices`, so a forged
+ * result can mislead the model but cannot widen what the user may do.
  * A forged `decisions` entry is bounded the same way: an approval is a row this
  * user owns, claimed only while it is pending and unexpired, and the call runs
  * with the arguments off that row — so naming an id is not approving anything,

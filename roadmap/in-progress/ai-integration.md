@@ -1,8 +1,8 @@
 # AI integration
 
 Builds on the services/transport seam. Method manifest (the discovery linchpin)
-shipped first — see `completed/method-manifest.md`; CLI/MCP/confirmation/authoring
-all read it.
+shipped first — see `completed/method-manifest.md`; CLI/MCP/confirmation/the
+assistant all read it.
 
 The 2026-07-30 replan that produced P0–P7 has shipped, and its spec is gone with
 it; what survived is recorded per-item below and in `decisions/`. The WS4–6
@@ -813,11 +813,11 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       the choke point they already share and where the acting identity is known.
       AI is the forcing function here the same way the chat drawer was for UI
       slots.
-    - **Arguments carry content.** A translate call names a field, an update
-      carries its new value, and either can be `private: true`. Decide what a row
-      holds: method id, target ids and outcome are cheap and answer most
-      questions, while full payloads make the log a second uncontrolled copy of
-      the content with P9's disclosure problem attached.
+    - **Arguments carry content.** An update carries a field's new value, and
+      that field can be `private: true`. Decide what a row holds: method id,
+      target ids and outcome are cheap and answer most questions, while full
+      payloads make the log a second uncontrolled copy of the content with P9's
+      disclosure problem attached.
     - P8's approval rows answer "did a human agree to this write" for the drawer
       only, and they live in the plugin. Decide whether core's log absorbs them
       or references them; two records of one decision that can disagree is the
@@ -854,8 +854,16 @@ f(x)`), so re-coercion is only observable when the STORED value is not
   2026-07-28 (stateless core, MRTR, several deprecations) but the SDK tops out at
   the previous revision and real clients track the SDK. Adopt MRTR's _shape_ for
   our gate; leave the transport where the SDK is.
-- **The tool-loop does not hold alone.** `specs/ai-integration.md` §3.13 is
-  overturned: a tool-loop keeps the long tail, and content operations own
-  anything writing entry field data. The split is what makes rich-text editing
-  safe, and it lines the two gate mechanisms up with the two operation classes
-  (form mode for flat confirms, URL mode → staged entry for content review).
+- **The tool loop holds alone, and what sat beside it is now a UI question.**
+  `specs/ai-integration.md` §3.13 was first overturned by a split — the loop kept
+  the long tail, a set of content operations owned anything writing entry field
+  data. Those operations are deleted
+  (`decisions/0024-removing-the-content-operations.md`) and the loop is the only
+  write path there is. Don't re-derive the split when field-level editing comes
+  back: what was missing was never an implementation, it was how an author asks
+  for one — a per-field button, a rich-text toolbar item, a document-level
+  action — and that shape decides what the operation takes and returns. 0024
+  holds the two properties that must carry forward, whatever the UI turns out to
+  be: the operation owns the read, the field selection and the write, so entry
+  data never round-trips through a model's context; and the result lands staged
+  for a human, never published.

@@ -63,7 +63,7 @@ export type {
 
 // ============================================================================
 // Plugin schema authoring (formerly `astromech/plugin-kit`, dissolved in 2c —
-// see roadmap/in-progress/plugin-authoring-experience.md)
+// see roadmap/completed/plugin-authoring-experience.md)
 // ============================================================================
 
 export { definePluginTable } from '@/database/define-plugin-table.js';

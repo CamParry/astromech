@@ -19,7 +19,7 @@ import './chat-drawer.css';
 /** How far off the tail still counts as following it. */
 const BOTTOM_THRESHOLD_PX = 24;
 
-/** Tool calls the transcript must not describe as run, by `tool_use` id. */
+/** Tool calls the transcript must not describe as run, by `toolUseId`. */
 type UnrunCalls = Record<string, 'awaiting' | 'declined'>;
 
 /** The two part types the transcript renders. */

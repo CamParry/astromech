@@ -24,6 +24,9 @@ This is a living reference; it grows as the project does.
   content: declaring a relation, why the value is ids rather than expanded
   records, querying the reverse direction with `where: { references }`, and
   keeping the derived index in sync with `index:rebuild`.
+- [content/rich-text.md](content/rich-text.md) — the `richtext` field and its
+  `allow` list, why the stored value is ProseMirror JSON while a public read is
+  HTML, and the two conversions: `renderRichText` and `parseRichText`.
 - [content/field-validation.md](content/field-validation.md) — declaring rules
   on fields, why `required` only fires at publish while correctness checks run on
   every write, custom validators, and what does and does not run in the browser.

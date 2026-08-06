@@ -37,7 +37,7 @@ policies                                       permission/confirmation wrappers 
 entries · media · users · settings ·           domains — siblings, never import each other
   notifications
 plugins/runtime · database · storage ·         capabilities
-  email · ai · cron · request-context · fields · permissions
+  email · ai · cron · cloudflare · request-context · fields · permissions
 types · utilities · errors                     pure leaves
 ```
 
@@ -166,7 +166,7 @@ Astro loads `astro.config.mjs`, and therefore `astromech.config.ts` and every `p
 
 So a plugin that imports a core module reaching `virtual:astromech/config` — which every domain service does — dies with `ERR_UNSUPPORTED_ESM_URL_SCHEME` under Node's ESM loader. **`astromech/methods` is unreachable from a plugin package for exactly this reason**, and it fails at _import_ time rather than at call time, because `exports/methods.ts` statically re-exports `scopedServices` and so loads the whole service graph.
 
-**The rule this produces: a plugin package imports `astromech` and `astromech/ui`, and nothing else from core.** Both load under plain Node; type-only imports from any subpath are fine, because they erase. Everything else arrives on `ctx`. New platform capabilities are therefore added as a capability port (above), never as a published subpath a plugin is expected to import — `ctx.methods.tools()` is the worked example, and `decisions/0007-plugin-core-boundary.md` holds the mechanism with the rejected alternatives.
+**The rule this produces: a plugin package imports `astromech` and `astromech/ui`, and nothing else from core.** Both load under plain Node; type-only imports from any subpath are fine, because they erase. Everything else arrives on `ctx`. New platform capabilities are therefore added as a capability port (above), never as a published subpath a plugin is expected to import — `ctx.methods.tools()` is the worked example, and `decisions/0007-plugin-core-boundary.md` holds the mechanism with the rejected alternatives. The **root `astromech` barrel** is the sanctioned third route: it is already the one barrel a plugin may import, so a capability whose surface is a pure function over a registry can ship from there and needs neither a port nor a subpath — `getModel`/`hasModel` do.
 
 A port's implementation must be a **Vite-graph closure**, which rules out wiring it in `initRuntime` — `boot/astro.ts` calls that inside `astro:config:setup`, in plain Node. The precedent is `setPluginClient`: `transport/local/index.ts` calls it at module top level, so whichever graph evaluates that module is the graph the plugin's `ctx.entries` runs in. `setPluginMethods` is wired on the same line.
 
@@ -212,7 +212,7 @@ cannot import it, see "Plugin runtime boundary"**),
 `astromech/fields`, `astromech/database/schema`, `astromech/storage/{filesystem,r2,s3}`
 (storage drivers), `astromech/cloudflare` (binding-name resolution), and the
 `astromech` CLI bin. The first-party plugins are their own packages —
-`@astromech/{seo,redirects,menus,backups}` (see `packages/`).
+`@astromech/{assistant,backups,forms,menus,redirects,seo}` (see `packages/`).
 
 ## The development gate
 
@@ -220,15 +220,18 @@ Before a change lands, all of these pass. The husky pre-commit hook runs
 lint-staged (eslint --fix + prettier) on touched files; `--no-verify` is not
 used.
 
-| Command                      | Checks                                                                                                                                                 |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `npm run typecheck`          | `tsc -p tsconfig.test.json` (delegates to `packages/astromech`)                                                                                        |
-| `npm run test:run`           | vitest; tests live in `packages/astromech/tests/` mirroring `src/`                                                                                     |
-| `npm run build`              | tsup (explicit entries, dts). DTS worker can OOM — bump `NODE_OPTIONS=--max-old-space-size`.                                                           |
-| `npm run lint:deps`          | dependency-cruiser — enforces the modular DAG invariants within `packages/astromech/src` (no upward edges, no peer-domain imports, pure leaves)        |
-| `npm run check:config`       | `tsx astromech.config.ts` in the demo — loads the site config the way Astro does, catching a config-time import that reaches a domain service          |
-| `npm run check:node-imports` | spawns plain `node` against built `dist` and imports each plugin-facing subpath. Needs `dist`, so it runs after `build`. See "Plugin runtime boundary" |
-| `npm run check:docs`         | resolves every repo-relative link and backticked path in markdown. Skips `specs/` and `roadmap/planned/`, which name files that do not exist yet       |
+| Command                      | Checks                                                                                                                                                              |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck`          | `tsc -p tsconfig.test.json` (delegates to `packages/astromech`)                                                                                                     |
+| `npm run test:run`           | vitest across three suites — `packages/schema-engine/tests/`, `packages/astromech/tests/` (mirrors `src/`) and `packages/plugins/assistant/tests/`                  |
+| `npm run build`              | tsup (explicit entries, dts). DTS worker can OOM — bump `NODE_OPTIONS=--max-old-space-size`.                                                                        |
+| `npm run lint`               | eslint over `packages/schema-engine/src` and `packages/astromech/src` only. The plugin packages have no `lint` script; the pre-commit hook lints their files anyway |
+| `npm run lint:css`           | stylelint over `packages/astromech/src/admin/styles/`                                                                                                               |
+| `npm run format:check`       | prettier over the repo                                                                                                                                              |
+| `npm run lint:deps`          | dependency-cruiser — enforces the modular DAG invariants within `packages/astromech/src` (no upward edges, no peer-domain imports, pure leaves)                     |
+| `npm run check:config`       | `tsx astromech.config.ts` in the demo — loads the site config the way Astro does, catching a config-time import that reaches a domain service                       |
+| `npm run check:node-imports` | spawns plain `node` against built `dist` and imports each plugin-facing subpath. Needs `dist`, so it runs after `build`. See "Plugin runtime boundary"              |
+| `npm run check:docs`         | resolves every repo-relative link and backticked path in markdown. Skips `specs/` and `roadmap/planned/`, which name files that do not exist yet                    |
 
 For refactors that move tables, `npm run db:generate` must also report "No
 schema changes" (migration-neutrality).

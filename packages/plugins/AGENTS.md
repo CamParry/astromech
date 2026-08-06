@@ -6,4 +6,4 @@ The first-party plugins, each a separately published package consuming core only
 - **These packages have no `lint` script**, so `npm run lint` skips them — but the pre-commit hook lints their files anyway. A plugin change can pass the gate and then fail on commit.
 - **Tables live in `src/tables/`** and are published as a `./tables` subpath where a consumer needs them. `astromech plugin:generate` diffs them against the package's own migration snapshot.
 - **Plugins own their migrations.** Generate into the plugin's own `migrations/`; the app merges the chains.
-- **New platform capabilities are added as a port on `ctx`**, never as a published subpath a plugin is expected to import.
+- **New platform capabilities are added as a port on `ctx`**, never as a published subpath a plugin is expected to import. The root `astromech` barrel is the sanctioned third route — a plugin may already import it, so a capability that is a pure function over a registry ships from there instead of growing a port (`getModel`/`hasModel`).

@@ -1,6 +1,6 @@
 /**
  * Service-method contracts — the self-description a service method carries so
- * the manifest, MCP projection, CLI and authoring AI can all deal in one unit.
+ * the manifest, MCP projection, CLI and the assistant can all deal in one unit.
  * Identical shape for core and plugin methods.
  *
  * The projected form (`ManifestMethod`) lives here too, in the pure leaf, rather
@@ -124,7 +124,7 @@ type ManifestMethodBase = {
     binaryInput?: true;
 };
 
-/** A core domain method (`users`, `media`, `settings`, `content`). */
+/** A core domain method (`users`, `media`, `settings`). */
 export type CoreManifestMethod = ManifestMethodBase & {
     source: 'core';
     /** Domain the catalogue belongs to — `id` is `<domain>.<method>`. */

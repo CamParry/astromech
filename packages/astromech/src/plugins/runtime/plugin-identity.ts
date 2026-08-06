@@ -35,7 +35,7 @@ import type {
  * table prefix, and the database capability may not import the plugin runtime.
  * Re-exported here because this module is the plugin-identity surface every
  * other internal consumer imports from. Not part of the public surface — see
- * roadmap/in-progress/plugin-authoring-experience.md (2c): a plugin reads its
+ * roadmap/completed/plugin-authoring-experience.md (2c): a plugin reads its
  * own resolved identity off `ctx.plugin` instead of deriving it.
  */
 export { pluginNamespace, pluginServiceKey };

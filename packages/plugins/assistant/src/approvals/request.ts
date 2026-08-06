@@ -2,7 +2,7 @@
  * The one mapping from an approval row to the request the drawer renders, used
  * both when a turn pauses and when a reload rebuilds the held calls from the
  * table. It stays clear of the loop so the plugin definition can reach it
- * without pulling `@anthropic-ai/sdk` into a site's config load.
+ * without pulling the AI SDK into a site's config load.
  */
 
 import type { ToolDefinition } from 'astromech';

@@ -38,6 +38,33 @@ API keys are the provider's business, not Astromech's. `anthropic()` reads
 each takes explicit options if you'd rather pass the key yourself. Nothing in
 the `ai` block holds a credential.
 
+### On Astro, load your `.env` yourself
+
+Astro puts `.env` values on `import.meta.env`, and it does that for your app —
+but `astromech.config.ts` is read in plain Node before Vite is involved, and AI
+SDK providers read `process.env`. So a key that works everywhere else in your
+site is missing by the time the provider is constructed, and the first chat
+request fails with `LoadAPIKeyError`.
+
+Load it at the top of the config:
+
+```ts
+import 'dotenv/config';
+```
+
+Or pass the key explicitly, from wherever you keep it:
+
+```ts
+import { createAnthropic } from '@ai-sdk/anthropic';
+
+const anthropic = createAnthropic({ apiKey: mySecret });
+```
+
+Either way the key has to be readable at config load, because that is when the
+provider is constructed. `decisions/0021-ai-as-an-optional-core-capability.md`
+records why the `ai` block holds a live model instance rather than something
+resolved later.
+
 **`model` takes a model instance, not a string.** A bare string is an AI SDK
 gateway model id, which Astromech can't wrap with its own middleware, so it's a
 type error rather than a silently different code path. If you want the gateway,

@@ -24,8 +24,8 @@ export type ChatEntry =
     | { kind: 'error'; error: string };
 
 /**
- * The calls the user turned down, by `tool_use` id. Interface state rather than
- * conversation: the model learns of a decline through its `tool_result`.
+ * The calls the user turned down, by `toolUseId`. Interface state rather than
+ * conversation: the model learns of a decline through the tool result it gets.
  */
 export type RejectedCalls = Record<string, 'rejected'>;
 
@@ -211,7 +211,7 @@ export function useChat(): UseChat {
             decline(requests.filter((request) => turnedDown.has(request.approvalId)));
             updatePending([]);
             // The transcript goes back exactly as it stands: the server builds
-            // the `tool_result` turn and streams it back as a `message` event.
+            // the tool message and streams it back as a `message` event.
             startTurn(entriesRef.current, decisions);
         },
         [decline, startTurn, updatePending]

@@ -1,9 +1,8 @@
 # Naming questions the pass parked
 
 **Status:** planned, not designed. Split out of the naming pass so these survive
-that spec's deletion. Each needs a conversation, not an implementation — none is
-a mechanical rename, and one of them changed shape after the review that raised
-it.
+that spec's deletion. Each needs a conversation, not an implementation — both
+are questions about where something belongs, and neither is a mechanical rename.
 
 The completed pass is `roadmap/completed/naming-pass.md`; its rationale is in
 `decisions/0009-service-method-client-vocabulary.md`,
@@ -11,16 +10,6 @@ The completed pass is `roadmap/completed/naming-pass.md`; its rationale is in
 `decisions/0016-the-fields-module-vocabulary.md`,
 `decisions/0017-resource-as-the-superordinate-noun.md` and
 `decisions/0019-a-define-returns-the-thing.md`.
-
-## `dispatch` lives under `transport/mcp/` but serves three transports
-
-`buildDispatch` and `buildScopedDispatch` are exported from `astromech/methods`
-and used by the CLI, the MCP server and the in-process tool loop, but live in
-`transport/mcp/dispatch.ts` — a shared thing filed under one of its consumers.
-
-Move to `transport/dispatch.ts`, or to `policies/`, which is a more coherent home
-than it was now that `with-permissions.ts` has left for `permissions/`. Interacts
-with the `guards/` question below, so decide them together.
 
 ## `manifest-registry.ts` is in `codegen/` but isn't codegen
 

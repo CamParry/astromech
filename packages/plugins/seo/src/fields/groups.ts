@@ -19,7 +19,7 @@ export type SeoSectionOptions = { label?: Label };
  * `PluginContext` to read `ctx.plugin.namespace` from. `NAMESPACE` is a
  * deliberate package-local stand-in for that — the real fix is hanging
  * host-facing helpers off the plugin factory (`seo.section()`), tracked as
- * Phase 3 in roadmap/in-progress/plugin-authoring-experience.md. The
+ * Phase 3 in roadmap/completed/plugin-authoring-experience.md. The
  * `@astromech/seo` → `seo` derivation is stable and collision-checked at
  * resolve time, so hand-writing it here is safe, just not elegant.
  *

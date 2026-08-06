@@ -8,7 +8,7 @@
  *
  * Every schema is authored in the domain that owns the method; this file only
  * projects contracts into the manifest shape (`ManifestMethod`, declared in
- * `types/services.ts` so consumers share the emitter's declaration). A method's
+ * `types/methods.ts` so consumers share the emitter's declaration). A method's
  * `input` is its ARGUMENT object, not the HTTP body.
  *
  * Schema version: 2

@@ -111,6 +111,35 @@ provider check — it is an Anthropic provider tool, not a core AI SDK feature.
 Thinking-block round-tripping holds as long as a reasoning part's
 `providerMetadata` survives, which is exactly what `smoothStream` destroys.
 
+## What live verification found, and the gate did not
+
+Three things surfaced only from running the demo. All three are fixed; they are
+here because each one is a trap the next person can walk into.
+
+- **A provider-executed tool call must never be answered.** Anthropic's tool
+  search runs and answers its own calls server-side. The loop counted them as
+  unanswered and synthesised a result naming a `srvtoolu_` id the request had no
+  matching call for, which the API rejects outright. It only fires on the
+  **second** request of a conversation, when the transcript carrying the search
+  calls is posted back — so the whole suite and the first live turn both passed.
+  `providerExecuted` is the discriminator, and the regression tests in
+  `packages/plugins/assistant/tests/loop/approvals.test.ts` fail without it.
+- **Moving the credential into the config block moved when it must be readable.**
+  `astromech.config.ts` is read in plain Node before Vite, so `.env` has not
+  reached `import.meta.env`, and AI SDK providers read `process.env`. The old
+  `apiKeyEnv` path read the key per request through `ctx.env`, which merges both,
+  and so never had this problem. `apps/demo/astromech.config.ts` now loads
+  `dotenv/config`, and `apps/docs/configuration/ai.md` says why.
+- **Regenerating the migration baseline made existing dev databases
+  unmigratable.** The ledger namespaces plugin migrations by package, so renaming
+  one leaves rows naming migrations that no longer exist, and kysely refuses to
+  run: `corrupted migrations: previously executed migration
+plugin_authoring_0000_baseline is missing`. `db:init` is what throws, so it
+  cannot recover. Clearing the stale ledger rows, dropping the old tables,
+  re-running `db:init` and then `astromech plugin:purge` is the sequence.
+  "Nothing is deployed" was right about published migrations and silent about
+  local databases.
+
 ## Open
 
 - **Where model-call logs land.** The middleware writes one console line per

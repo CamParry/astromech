@@ -122,21 +122,30 @@ placed mid-conversation does not.
 
 Two constraints come with that placement, and both are on the sender:
 
-- It **cannot be `messages[0]`**, and it must never sit between a `tool_use`
-  block and its `tool_result` — the pair has to stay adjacent.
-- It is supported on **Opus 5, Opus 4.8, Fable 5 and Mythos 5 only**. On
-  Sonnet 5 a system-role message inside `messages[]` silently falls back to the
-  top-level `system` field, which is the behaviour this design exists to avoid.
-  Whatever sends the request therefore cannot take the model as a free-form
-  string and assume this works.
+- It **cannot be `messages[0]`**, and it must never sit between a tool call and
+  its result — the pair has to stay adjacent.
+- **Not every model honours it.** One that doesn't falls back to the top-level
+  `system` field, which is the behaviour this design exists to avoid, and it
+  does so quietly. A sender cannot take the model as a free-form string and
+  assume the placement holds.
 
-> **Not yet safe to send.** `formatAIContextMessage` interpolates `label`
-> verbatim, and for an entry that label is an author-controlled title. System
-> content carries operator-level authority and must not hold text that came
-> from outside the conversation, so `label` needs sanitizing first — newlines
-> and control characters stripped, length clamped. Nothing sends one today;
-> until that sanitizing exists, treat the formatter's output as something to
-> look at, not something to transmit.
+`@astromech/assistant` sends these through the AI SDK, which needs
+`allowSystemInMessages: true` before it will pass a system message inside
+`messages[]` at all. `@ai-sdk/anthropic` then hoists the _first_ system block it
+sees into the top-level prompt and emits any later one inline, adding the
+`mid-conversation-system-2026-04-07` beta itself. Since a top-level system
+prompt is always sent, the AI context message stays where it was put.
+
+That is also why the plugin checks `model.provider` rather than holding a list
+of model ids: a provider check answers the same question and doesn't go stale
+when a new model ships.
+
+`formatAIContextMessage` sanitizes every value it interpolates — control
+characters and backticks stripped, whitespace collapsed, length clamped — and
+the message it builds says in its own last line that the quoted values are
+user-supplied data rather than instructions. An entry's `label` is an
+author-controlled title, and system content carries operator-level authority, so
+neither guard is optional.
 
 ## What does not declare yet
 

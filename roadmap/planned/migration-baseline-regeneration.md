@@ -42,6 +42,15 @@ record of _schema state_.
 - Make the pre-release licence explicit and dated — a note at the top of the
   baseline saying rewriting is legal until first release, so the habit doesn't
   outlive the circumstance that justified it.
+- Say what it does to a database that has already applied the old chain. The
+  ledger namespaces plugin migrations by package, so renaming a plugin package
+  leaves rows naming migrations that no longer exist and kysely refuses to run
+  at all — `corrupted migrations: previously executed migration … is missing`.
+  `db:init` is itself what throws, so it cannot recover: the stale ledger rows
+  have to be cleared and the old tables dropped by hand first, and
+  `roadmap/completed/ai-capability.md` records the sequence that worked.
+  "Nothing is deployed" is a claim about published migrations; every local dev
+  database is still a database that has applied the chain.
 
 ## Why it isn't urgent
 

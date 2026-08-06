@@ -638,13 +638,21 @@ const tools = ctx.methods.tools({ readOnly: true });
 ```
 
 It returns every method the current request's role may call, each already
-resolved into a tool definition that runs under that role — `{ name, description,
-inputSchema, annotations, invoke }`. `invoke` refuses what the role does not
-hold, and `readOnly` drops every mutating method structurally rather than
-advising against it. Wrap each one in whatever your model SDK's tool shape is
-and call `invoke` from its handler. `ctx.role` is the role all of this is
-checked against — the current request's resolved role, or `null` outside a
-request context (a cron tick, a boot-time `setup()`).
+resolved into a tool definition that runs under that role — `{ id, name,
+description, inputSchema, annotations, permission, permissionDynamic,
+confirmMessage, invoke }`. `invoke` refuses what the role does not hold, and
+`readOnly` drops every mutating method structurally rather than advising against
+it. Wrap each one in whatever your model SDK's tool shape is and call `invoke`
+from its handler. `ctx.role` is the role all of this is checked against — the
+current request's resolved role, or `null` outside a request context (a cron
+tick, a boot-time `setup()`).
+
+Two fields are easy to skip past. `id` is the manifest method id (`entries.page.publish`)
+and is the only key you may index a tool on — `name` is not unique, because
+`entries.create` is the name of every entry type's create. `confirmMessage(args)`
+returns the question to put to a human before running that method with those
+arguments; core owns the wording so a plugin pausing on a mutating call doesn't
+invent its own. `@astromech/assistant` builds its approve/reject panel from it.
 
 Plugin-declared methods are absent from the list: their `access` is enforced by
 the HTTP RPC route, so there is nothing to scope them with.
@@ -655,6 +663,35 @@ the HTTP RPC route, so there is nothing to scope them with.
 > domain service reaches cannot resolve; importing a subpath like
 > `astromech/methods` throws `ERR_UNSUPPORTED_ESM_URL_SCHEME` at import time.
 > Type-only imports from any subpath are fine, because they erase.
+
+### Reaching a model
+
+`getModel` and `hasModel` ship from the `astromech` barrel your plugin already
+imports, so reaching a model needs no port and no `ctx` handle:
+
+```ts
+import { getModel } from 'astromech';
+import { generateText } from 'ai';
+
+const model = getModel('my-plugin');
+if (model === undefined) return; // no `ai` block — the feature is off
+```
+
+`getModel(name?)` returns the model registered under that name, falls back to
+the site's default, and returns `undefined` when the site has configured no `ai`
+block at all. It never throws, so branch on `undefined` and disable the feature
+rather than failing the request. `hasModel(name?)` answers the same question
+without handing you an instance, for a check that only decides whether to render
+something.
+
+Generation is the AI SDK's — take `ai` as a dependency of your package and pass
+the model you were given to `generateText`, `streamText` or `Output.object`. The
+provider package is the site's business, not yours; you only ever see the model
+instance it configured. `@astromech/assistant` is the worked example:
+`getModel('assistant')`, a 503 naming what to configure when it comes back
+`undefined`, and a `streamText` loop over `ctx.methods.tools()`.
+[configuration/ai.md](../configuration/ai.md) covers what a site puts in the
+config for any of this to resolve.
 
 ### Raw HTTP routes
 

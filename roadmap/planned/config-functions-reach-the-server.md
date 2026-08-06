@@ -69,4 +69,10 @@ Option 3 is the one that makes the others unnecessary — grill it first.
   work already accounts for that: `custom` and `unique` are skipped in the browser on
   purpose. This item is only about the SERVER config.
 - Worth a check while in here: whether anything else in `AstromechConfig` is
-  function-valued and quietly suffering the same fate.
+  function-valued and quietly suffering the same fate. `ai.model` is the second
+  known instance — a live provider object with methods on it, which
+  `JSON.stringify` flattens to `{}`. It already routes around the hole the way
+  direction (1) describes: `initRuntime` reads it off the live
+  `AstromechConfig`, hands it to `setAIConfig`, and it is stripped from
+  `ResolvedConfig` (`decisions/0021-ai-as-an-optional-core-capability.md`). So
+  the pattern now has two users and two chances to be forgotten by a third.

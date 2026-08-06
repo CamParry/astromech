@@ -1,4 +1,4 @@
-/* Authoring assistant topbar button (@astromech/authoring) */
+/* Assistant topbar button (@astromech/assistant) */
 
 .am-assistant-button[aria-expanded='true'] {
     color: var(--am-color-text-default);
