@@ -39,6 +39,7 @@ import { entriesTable } from '@/database/schema.js';
 import type { DB, Db } from '@/database/types.js';
 import type { EntryRow } from '../schema.js';
 import { createVersionStorage } from './versions.js';
+import { UnknownWhereKeyError } from '../errors.js';
 import type {
     Entry,
     EntryStatus,
@@ -172,6 +173,8 @@ function buildListWhere(params: ListParams, defaultLocale: string, types: string
                     // one, so there is nothing to report from here.
                     if (!isReferencesFilter(value)) continue;
                     conditions.push(referencesExists(eb, value));
+                } else {
+                    throw new UnknownWhereKeyError(key);
                 }
             }
         }

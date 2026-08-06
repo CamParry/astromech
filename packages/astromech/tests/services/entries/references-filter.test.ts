@@ -17,6 +17,7 @@ import { defineTable } from '@/database/define-table.js';
 import {
     InvalidReferencesFilterError,
     RelationshipFilterUnsupportedError,
+    UnknownWhereKeyError,
 } from '@/entries/errors.js';
 import type { AstromechConfig, PluginDefinition } from '@/types/index.js';
 
@@ -352,5 +353,31 @@ describe('where.references on a table-backed type', () => {
                 where: { references: { path: 'post', id: 'x' } },
             })
         ).rejects.toThrow(/links\/link/);
+    });
+});
+
+// ============================================================================
+// Unknown where key
+// ============================================================================
+
+describe('where with an unrecognized key', () => {
+    it('throws rather than silently returning every row', async () => {
+        await api.create({ type: 'post', title: 'Target' });
+
+        await expect(
+            api.query({
+                type: 'post',
+                full: true,
+                where: { category: 'some-id' },
+            })
+        ).rejects.toThrow(UnknownWhereKeyError);
+
+        await expect(
+            api.query({
+                type: 'post',
+                full: true,
+                where: { category: 'some-id' },
+            })
+        ).rejects.toThrow(/category/);
     });
 });
