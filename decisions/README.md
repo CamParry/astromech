@@ -60,3 +60,4 @@ Distinct from the neighbouring directories:
 - [0025](0025-html-as-the-rich-text-interchange-format.md) — HTML as the rich-text interchange format
 - [0026](0026-the-assistant-package-name.md) — `@astromech/assistant`, and the "authoring" the rename left alone
 - [0027](0027-the-assistant-loop-on-streamtext.md) — the assistant's loop runs on `streamText`, and keeps its own approval gate
+- [0028](0028-d1-degrades-rather-than-refusing-to-boot.md) — D1 degrades to sequential writes rather than refusing to boot

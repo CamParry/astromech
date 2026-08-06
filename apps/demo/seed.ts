@@ -15,6 +15,7 @@ import { hashPassword } from 'better-auth/crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import sharpLib from 'sharp';
 import * as schema from 'astromech/database/schema';
+import { libsqlDriver } from 'astromech/database/libsql';
 import { collectRelationshipEdges, encodeWith } from 'astromech';
 import type { Field } from 'astromech';
 import { redirectsTable } from '@astromech/redirects/tables';
@@ -61,7 +62,7 @@ void link; // suppress unused-var warnings for helpers not used in current seed
 
 const DB_PATH = new URL('./database.db', import.meta.url).pathname;
 
-const db = schema.libsqlDriver({ url: `file:${DB_PATH}` }).getInstance();
+const db = libsqlDriver({ url: `file:${DB_PATH}` }).getInstance();
 
 const now = new Date();
 const PUBLISHED_AT = now;
@@ -1372,7 +1373,7 @@ async function seed(): Promise<void> {
                         text(' in your project root:')
                     ),
                     codeBlock(
-                        "import { defineConfig, libsqlDriver } from 'astromech';\nimport * as fields from 'astromech/fields';\n\nexport default defineConfig({\n  db: libsqlDriver({ url: 'file:./database.db' }),\n  entries: {\n    post: {\n      single: 'Post',\n      plural: 'Posts',\n      fields: [\n        fields.richtext('body', { required: true }),\n        fields.textarea('excerpt'),\n      ],\n    },\n  },\n});\n"
+                        "import { defineConfig } from 'astromech';\nimport { libsqlDriver } from 'astromech/database/libsql';\nimport * as fields from 'astromech/fields';\n\nexport default defineConfig({\n  db: libsqlDriver({ url: 'file:./database.db' }),\n  entries: {\n    post: {\n      single: 'Post',\n      plural: 'Posts',\n      fields: [\n        fields.richtext('body', { required: true }),\n        fields.textarea('excerpt'),\n      ],\n    },\n  },\n});\n"
                     ),
                     heading(2, text('Initialise the DB')),
                     codeBlock(

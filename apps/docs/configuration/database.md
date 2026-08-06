@@ -5,7 +5,8 @@ Kysely instance every query in the CMS runs through, and the dialect
 better-auth builds its own instance from.
 
 ```ts
-import { defineConfig, libsqlDriver } from 'astromech';
+import { defineConfig } from 'astromech';
+import { libsqlDriver } from 'astromech/database/libsql';
 
 export default defineConfig({
     db: libsqlDriver({ url: 'file:./database.db' }),
@@ -15,16 +16,22 @@ export default defineConfig({
 
 ## Choosing a driver
 
-| Driver           | Import                  | For                                              | Runs on                    |
-| ---------------- | ----------------------- | ------------------------------------------------ | -------------------------- |
-| `libsqlDriver()` | `astromech`             | local development, single-server Node, and Turso | Node                       |
-| `d1()`           | `astromech/database/d1` | Cloudflare Workers with a D1 database binding    | Workers; Node via wrangler |
+| Driver           | Import                      | For                                              | Runs on                    |
+| ---------------- | --------------------------- | ------------------------------------------------ | -------------------------- |
+| `libsqlDriver()` | `astromech/database/libsql` | local development, single-server Node, and Turso | Node                       |
+| `d1()`           | `astromech/database/d1`     | Cloudflare Workers with a D1 database binding    | Workers; Node via wrangler |
+
+Each driver has its own subpath so that importing one never pulls the other's
+client library into your bundle — that is what keeps `@libsql/client` out of a
+Workers build.
 
 v1 is SQLite-only. Postgres and MySQL are a future major, not a flag.
 
 ## `libsqlDriver()`
 
 ```ts
+import { libsqlDriver } from 'astromech/database/libsql';
+
 libsqlDriver({ url: 'file:./database.db' });
 libsqlDriver(); // reads DATABASE_URL, falls back to file:./database.db
 ```
@@ -113,6 +120,13 @@ Migrations apply normally. Kysely's `Migrator` only wraps a migration in a
 transaction when the dialect reports transactional DDL support, and the SQLite
 adapter reports `false` — so the migration runner never asks D1 for a
 transaction it cannot give.
+
+D1 runs every statement behind a SQLite authorizer, which rejects some
+introspection SQL that plain SQLite accepts — including the query Kysely's own
+`SqliteIntrospector` uses to read column metadata. `d1()` supplies its own
+introspector that stays inside what the authorizer allows, so `db.introspection`
+and anything built on it (the migration runner included) work the same on both
+drivers.
 
 Generation is unchanged too: `db:generate` diffs your tables and
 writes the migration files, and none of that touches the database.

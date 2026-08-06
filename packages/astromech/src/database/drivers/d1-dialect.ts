@@ -11,14 +11,14 @@
  * D1 itself has no interactive transactions — `batch()` is its only atomicity
  * primitive, and it cannot interleave application logic between statements —
  * so `beginTransaction`/`commitTransaction`/`rollbackTransaction` throw. SQL
- * generation and introspection are otherwise ordinary SQLite, so this reuses
- * Kysely's `SqliteAdapter`/`SqliteIntrospector`/`SqliteQueryCompiler` and only
- * supplies the D1-specific `Driver`/`DatabaseConnection` pair.
+ * generation is otherwise ordinary SQLite, so this reuses Kysely's
+ * `SqliteAdapter`/`SqliteQueryCompiler` and supplies the D1-specific
+ * `Driver`/`DatabaseConnection` pair. Introspection needs its own
+ * implementation — see `D1Introspector` for the query D1's authorizer rejects.
  */
 
 import {
     SqliteAdapter,
-    SqliteIntrospector,
     SqliteQueryCompiler,
     type CompiledQuery,
     type DatabaseConnection,
@@ -29,6 +29,7 @@ import {
     type QueryCompiler,
     type QueryResult,
 } from 'kysely';
+import { D1Introspector } from './d1-introspector.js';
 
 /** Structural subset of Cloudflare's D1Database we depend on. */
 export type D1DatabaseLike = {
@@ -79,7 +80,7 @@ export class D1Dialect implements Dialect {
     }
 
     createIntrospector(db: Kysely<unknown>): DatabaseIntrospector {
-        return new SqliteIntrospector(db);
+        return new D1Introspector(db);
     }
 }
 
