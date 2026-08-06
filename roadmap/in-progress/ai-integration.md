@@ -34,8 +34,9 @@ field-validation work that blocked it carried its validation half along
 (`221989a`); the PATCH-only half followed on 2026-08-03. P8 closed on 2026-08-04
 and took `readOnly` to `false` with it, which is what finally ticked P7. P9
 followed the same day, reusing P8's approval rows rather than storing what they
-already hold. Next is P10, which P9 deliberately deferred the "what did the
-assistant do" question to.
+already hold. The "what did the assistant do" question P9 deferred is core work
+across every transport and now lives in `roadmap/planned/audit-trail.md`, which
+leaves P11 as the one item here.
 
 - [x] **P0a — normalise every service method to a parameter object.** Shipped
       2026-07-31 (`934f1d0`). `update` takes a nested `data` (`update({id, data})`)
@@ -723,7 +724,8 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       as the user and only permits what their role already permits through the
       API directly; the sharper risk was forged `tool_result` _content_ lying to
       the model about what a read returned. Building the approvals table now
-      closes the approval half properly and gives P10 its record early, which
+      closes the approval half properly and gives the audit trail its record
+      early, which
       the weaker option would have deferred twice over. Forged result content
       for calls that were never gated remains open and is bounded to the
       conversation it happens in.
@@ -740,8 +742,9 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       conversations to reopen, rename and delete is not, because in a CMS the
       artefact is the entry, not the transcript — once a page is translated the
       conversation is scaffolding. The one genuine reason to want an old thread
-      is "what did the assistant do", which is P10, in core, across every
-      transport, holding method/target/outcome rather than a copy of the content.
+      is "what did the assistant do", which is the audit trail
+      (`roadmap/planned/audit-trail.md`), in core, across every transport,
+      holding method/target/outcome rather than a copy of the content.
     - **One row per user, replaced.** Storage is bounded by user count instead of
       by usage, so there is no archive to grow and no retention policy to invent.
       The cross-user question disappears with it: nothing is browsable, so nobody
@@ -801,32 +804,6 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       `rejected` with `arguments` nulled, deleted the session row, and the page
       survived. `updated_at` landing 3.7s after `created_at` on one row is the
       `onUpdate` stamp firing on the upsert's conflict path.
-- [ ] **P10 — audit trail for what the assistant did.** Which method ran, with
-      which arguments, for which user, with what outcome. P8 covers one slice of
-      this already — an approval row survives its decision, so an approved or
-      rejected write in the drawer is on record with who, when and what method.
-      Nothing else is: a read, an ungated call, and every other transport are all
-      silent.
-    - **It belongs in core, not the plugin.** The CLI, the MCP server and the
-      admin's own routes raise the same question, and logging it in the drawer
-      leaves every other transport silent. Dispatch through `scopedServices` is
-      the choke point they already share and where the acting identity is known.
-      AI is the forcing function here the same way the chat drawer was for UI
-      slots.
-    - **Arguments carry content.** An update carries a field's new value, and
-      that field can be `private: true`. Decide what a row holds: method id,
-      target ids and outcome are cheap and answer most questions, while full
-      payloads make the log a second uncontrolled copy of the content with P9's
-      disclosure problem attached.
-    - P8's approval rows answer "did a human agree to this write" for the drawer
-      only, and they live in the plugin. Decide whether core's log absorbs them
-      or references them; two records of one decision that can disagree is the
-      outcome to avoid.
-    - P8 also set the precedent for what a row keeps: it drops the arguments when
-      it resolves, keeping method, target, decision, who and when.
-    - Adjacent, not the same: `@astromech/backups` already keeps versions of an
-      entry. A version answers what the row used to look like; an audit trail
-      answers who changed it and through what.
 - [ ] **P11 — keep the assistant on the site's content.** The system prompt
       describes the tools and nothing else; nothing tells the model to decline
       "write my cover letter". A CMS assistant that answers general questions is
