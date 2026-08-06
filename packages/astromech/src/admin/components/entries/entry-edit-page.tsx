@@ -14,6 +14,7 @@
 import React from 'react';
 import { useNavigate, Link as RouterLink } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-form';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui/react/menu';
 import {
@@ -75,6 +76,7 @@ import {
     useIssuePreviewToken,
     useRevokePreviewToken,
 } from '@/admin/hooks/index.js';
+import { scopedEntryKeys } from '@/admin/hooks/use-query-keys.js';
 import type { EntryStatus } from '@/types/index.js';
 import { resolveEntryUrl } from '@/entries/utils/url.js';
 import { resolveAdminEntryType, resolveForm } from '@/admin/rendering/resolve.js';
@@ -125,6 +127,7 @@ export function EntryEditPage({
     const { toast } = useToast();
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const [deleteOpen, setDeleteOpen] = React.useState(false);
 
     const { hasPermission } = usePermissions();
@@ -199,7 +202,13 @@ export function EntryEditPage({
         readOnly: isReadOnly,
         saveFn: (data) => api.update({ type, id, data }),
         publishFn: (data) => api.update({ type, id, data }),
-        onSuccess: () => {
+        onSuccess: (updated) => {
+            const keys = scopedEntryKeys(cacheScope);
+            // Seed the cache with the saved entry before invalidating, so the
+            // re-render `form.reset` triggers already sees fresh defaultValues
+            // instead of the stale one the invalidated query hasn't refetched yet.
+            queryClient.setQueryData(keys.get(type, id), updated);
+            void queryClient.invalidateQueries({ queryKey: keys.all(type) });
             toast({
                 message: t('entries.updated', { name: single }),
                 variant: 'success',
