@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Input } from './input.js';
 
@@ -39,6 +39,15 @@ export function KeyValueEditor({
     disabled,
 }: KeyValueEditorProps): React.ReactElement {
     const [pairs, setPairs] = useState<PairWithId[]>(() => recordToPairs(value));
+
+    // Same seeding problem as `useBlocksField`/`RepeaterField`: the initializer
+    // runs before the entry fetch lands. Seed once when real data arrives;
+    // never resync after, or an in-progress edit would be clobbered.
+    const seeded = useRef(Object.keys(value ?? {}).length > 0);
+    if (!seeded.current && Object.keys(value ?? {}).length > 0) {
+        seeded.current = true;
+        setPairs(recordToPairs(value));
+    }
 
     function handleChange(id: string, field: 'key' | 'value', val: string) {
         const next = pairs.map((p) => (p._id === id ? { ...p, [field]: val } : p));
