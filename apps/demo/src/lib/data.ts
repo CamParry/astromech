@@ -137,7 +137,7 @@ export async function getPostsByCategory(
     try {
         const { data } = await Astromech.entries.query({
             type: 'post',
-            where: { category: categoryId },
+            where: { references: { path: 'category', id: categoryId } },
             locale,
             limit: 'all',
         });
@@ -151,7 +151,7 @@ export async function getPostsByTag(tagId: string, locale: Locale): Promise<Entr
     try {
         const { data } = await Astromech.entries.query({
             type: 'post',
-            where: { tags: tagId },
+            where: { references: { path: 'tags', id: tagId } },
             locale,
             limit: 'all',
         });
