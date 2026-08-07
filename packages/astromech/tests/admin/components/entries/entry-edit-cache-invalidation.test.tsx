@@ -12,31 +12,46 @@
  * entry, the next render (which the mutation settling itself triggers) copies
  * the STALE cached entry back over the just-saved values.
  *
- * This does not mount the full `EntryEditPage` — that needs a router context,
- * `useConfirm`, and other providers this suite has no existing pattern for.
- * Instead it recreates the page's exact hook composition (`useEntry` +
- * `useEntryForm`, wired the same way `entry-edit-page.tsx` wires them,
- * including its `onSuccess`), the same approach `entry-form-field-seeding.test.tsx`
- * already uses for this file's neighbourhood.
+ * This mounts the REAL `EntryEditPage` — not a hand-built stand-in — inside a
+ * real `@tanstack/react-router` router (memory history) so `useNavigate` and
+ * `Link` resolve, plus the plain-React-context providers the page's hooks
+ * need (`ToastProvider`, `AuthProvider`, `ConfirmProvider`, `AIContextProvider`).
+ * It deliberately skips the app's `_protected` layout/`AppShell` — that's nav
+ * chrome unrelated to this bug — and builds an `EntriesMount` by hand rather
+ * than going through a route loader, exactly as `entry-edit-cache-invalidation`
+ * needs: a save must survive whatever the real page's `onSuccess` does, not
+ * whatever this test's own copy of it does.
  */
 
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+    Outlet,
+    RouterProvider,
+    createMemoryHistory,
+    createRoute,
+    createRootRoute,
+    createRouter,
+} from '@tanstack/react-router';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { ToastProvider } from '@/admin/components/ui/toast';
-import { useEntry } from '@/admin/hooks/entries.js';
-import { useEntryForm } from '@/admin/hooks/use-entry-form.js';
+import { AuthProvider } from '@/admin/context/auth.js';
+import { sessionQueryOptions } from '@/admin/context/auth.js';
+import { ConfirmProvider } from '@/admin/components/ui/confirm.js';
+import { AIContextProvider } from '@/admin/context/ai-context.js';
+import { EntryEditPage } from '@/admin/components/entries/entry-edit-page.js';
 import { scopedEntryKeys } from '@/admin/hooks/use-query-keys.js';
-import type { Entry, EntriesService, EntryStatus } from '@/types/index.js';
+import '@/admin/rendering/register-fields.js';
+import type { EntriesMount } from '@/admin/components/entries/mount.js';
+import type { AdminEntryType, Entry, EntriesService, EntryStatus } from '@/types/index.js';
 
 afterEach(cleanup);
 
 beforeAll(async () => {
-    // The hook reads labels through `useTranslation`; the SPA's own i18n module
+    // The page reads labels through `useTranslation`; the SPA's own i18n module
     // pulls in virtual modules, so stand up a bare instance instead.
     await i18n.use(initReactI18next).init({
         lng: 'en',
@@ -46,6 +61,7 @@ beforeAll(async () => {
 
 const TYPE = 'caseStudy';
 const ID = 'cs1';
+const CACHE_SCOPE = '';
 
 function makeEntry(customer: string): Entry {
     return {
@@ -57,89 +73,77 @@ function makeEntry(customer: string): Entry {
     } as unknown as Entry;
 }
 
+const ENTRY_TYPE_CONFIG: AdminEntryType = {
+    single: 'Case Study',
+    plural: 'Case Studies',
+    versioning: false,
+    translatable: false,
+    slug: null,
+    adminColumns: [],
+    fields: { main: [{ name: 'customer', type: 'text', label: 'Customer' }], sidebar: [] },
+    url: null,
+    capabilities: {
+        statuses: true,
+        slug: false,
+        translatable: false,
+        versioning: false,
+        staging: false,
+        trash: true,
+    },
+    titleField: 'title',
+};
+
 /**
- * Mounts `useEntry` + `useEntryForm` wired the same way `entry-edit-page.tsx`
- * wires them: `defaultValues` rebuilt fresh from the cached entry each render,
- * and `onSuccess` seeding the cache before invalidating it.
+ * Mounts the real `EntryEditPage` inside a real router + the provider stack
+ * its hooks need, skipping only the `_protected` layout's nav chrome.
  */
 function mountEditPage(queryClient: QueryClient) {
-    const keys = scopedEntryKeys('');
     const update = vi.fn(async (params: { data: { fields?: Record<string, unknown> } }) =>
         makeEntry((params.data.fields?.['customer'] as string) ?? '')
     );
     const api = {
-        get: vi.fn(async () => queryClient.getQueryData(keys.get(TYPE, ID)) ?? null),
+        get: vi.fn(
+            async () =>
+                queryClient.getQueryData(scopedEntryKeys(CACHE_SCOPE).get(TYPE, ID)) ?? null
+        ),
         update,
     } as unknown as EntriesService;
 
-    let handleSave: (() => void) | undefined;
+    const mount: EntriesMount = {
+        api,
+        type: TYPE,
+        cacheScope: CACHE_SCOPE,
+        config: ENTRY_TYPE_CONFIG,
+        basePath: `/entries/${TYPE}`,
+        permissionFor: (action) => `entry:${TYPE}:${action}`,
+    };
 
-    function Probe(): React.ReactElement {
-        const { data: entry } = useEntry(TYPE, ID, { api, cacheScope: '' });
-        const result = useEntryForm({
-            fieldDefinitions: [{ name: 'customer', type: 'text', label: 'Customer' }],
-            operation: 'update',
-            namespace: 'translation',
-            hasSlug: false,
-            defaultValues: {
-                title: entry?.title ?? '',
-                slug: '',
-                status: entry?.status ?? ('unpublished' as EntryStatus),
-                publishAt: '',
-                fields: (entry?.fields as Record<string, unknown>) ?? {},
-            },
-            saveFn: (data) => api.update({ type: TYPE, id: ID, data }),
-            publishFn: (data) => api.update({ type: TYPE, id: ID, data }),
-            onSuccess: (updated) => {
-                // Mirrors entry-edit-page.tsx: seed the cache with the saved
-                // entry BEFORE invalidating, so the re-render `form.reset`
-                // triggers already sees fresh defaultValues.
-                queryClient.setQueryData(keys.get(TYPE, ID), updated);
-                void queryClient.invalidateQueries({ queryKey: keys.all(TYPE) });
-            },
-        });
-        handleSave = result.handleSave;
-        const { form } = result;
-
-        if (entry == null) return <p>loading</p>;
-
-        return (
-            <form.Field name="fields">
-                {(f) => (
-                    <input
-                        aria-label="Customer"
-                        value={
-                            ((f.state.value as Record<string, unknown>)['customer'] as
-                                | string
-                                | undefined) ?? ''
-                        }
-                        onChange={(e) =>
-                            f.handleChange({
-                                ...(f.state.value as Record<string, unknown>),
-                                customer: e.target.value,
-                            })
-                        }
-                    />
-                )}
-            </form.Field>
-        );
-    }
+    const rootRoute = createRootRoute({ component: () => <Outlet /> });
+    const editRoute = createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/',
+        component: () => <EntryEditPage mount={mount} id={ID} />,
+    });
+    const router = createRouter({
+        routeTree: rootRoute.addChildren([editRoute]),
+        history: createMemoryHistory({ initialEntries: ['/'] }),
+    });
 
     render(
         <QueryClientProvider client={queryClient}>
             <ToastProvider>
-                <Probe />
+                <AuthProvider>
+                    <ConfirmProvider>
+                        <AIContextProvider>
+                            <RouterProvider router={router} />
+                        </AIContextProvider>
+                    </ConfirmProvider>
+                </AuthProvider>
             </ToastProvider>
         </QueryClientProvider>
     );
 
-    return {
-        update,
-        save: () => {
-            if (handleSave === undefined) throw new Error('the probe never rendered');
-            handleSave();
-        },
-    };
+    return { update };
 }
 
 /** Let a submit (and the mutation it fires) settle. */
@@ -157,18 +161,33 @@ describe('the entry edit page after a save', () => {
         const queryClient = new QueryClient({
             defaultOptions: { queries: { staleTime: 30_000 } },
         });
-        const keys = scopedEntryKeys('');
-        queryClient.setQueryData(keys.get(TYPE, ID), makeEntry('Lumenflow'));
+        queryClient.setQueryData(
+            scopedEntryKeys(CACHE_SCOPE).get(TYPE, ID),
+            makeEntry('Lumenflow')
+        );
+        // Session, so `usePermissions()` grants the update action without a
+        // network round trip — the session query shares the same staleTime.
+        queryClient.setQueryData(sessionQueryOptions.queryKey, {
+            id: 'u1',
+            name: 'Admin',
+            email: 'admin@astromech.dev',
+            image: null,
+            roleSlug: 'admin',
+            permissions: ['*'],
+        });
 
         const page = mountEditPage(queryClient);
 
-        const input = (await screen.findByLabelText('Customer')) as HTMLInputElement;
-        expect(input.value).toBe('Lumenflow');
+        const input = (await screen.findByDisplayValue(
+            'Lumenflow'
+        )) as HTMLInputElement;
+        expect(input.name).toBe('customer');
 
-        // First edit + save.
+        // First edit + save, via the real Update button.
         await user.clear(input);
         await user.type(input, 'Lumenflow International');
-        act(() => page.save());
+        const updateButton = await screen.findByRole('button', { name: 'common.update' });
+        await user.click(updateButton);
         await settle();
 
         expect(page.update).toHaveBeenCalledTimes(1);
@@ -183,7 +202,7 @@ describe('the entry edit page after a save', () => {
         // the display went back to the ORIGINAL value, not the prior save.
         await user.clear(input);
         await user.type(input, 'Zephyr Labs');
-        act(() => page.save());
+        await user.click(updateButton);
         await settle();
 
         expect(page.update).toHaveBeenCalledTimes(2);
