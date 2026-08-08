@@ -44,20 +44,31 @@ it was real and the misattribution is the useful part.
     - Two candidate explanations for the original observation, both untested: it
       was the `key-value` defect misattributed, or it was form state already
       corrupted by the `href`/`url` bug that `cccf47d` fixed the same day.
-    - **What to try next is a browser run, not more static tracing**: on the demo,
-      subscribe to `form.store` and log every `values.fields` transition with a
-      stack trace. Watch a locale switch through `LocaleSwitcher`, which navigates
-      to a different entry id while `useForm` keeps the same `FormApi`; the
-      assistant plugin writing the entry mid-session; and the `seo-preview` plugin
-      field's `React.lazy` boundary, which the test harness cannot exercise without
-      `virtual:astromech/plugins/components`.
+    - **Also not reproduced in the browser, on the reported shape.** Verified
+      2026-08-06 against the demo: a Post's `seo` group seeded with
+      `{title, description}`, Meta title edited alone, the `PUT` intercepted. The
+      request carried the **whole** group, and `description` was intact in storage
+      after. This is stronger evidence than the render tests, because a partial
+      group cannot be rescued downstream — a group's object value is atomic, so an
+      absent sibling on the wire would be an absent sibling in the row.
+    - What is left to try is a run that varies what the render harness and the
+      browser check could not: a locale switch through `LocaleSwitcher`, which
+      navigates to a different entry id while `useForm` keeps the same `FormApi`;
+      the assistant plugin writing the entry mid-session; and the `seo-preview`
+      plugin field's `React.lazy` boundary, which the harness cannot exercise
+      without `virtual:astromech/plugins/components`. Subscribe to `form.store`
+      and log every `values.fields` transition with a stack trace.
+    - If none of those show it, close this as unreproducible rather than leaving
+      it open indefinitely. Two rounds have now failed to find a mechanism, and
+      the two candidate explanations above are both consistent with the symptom
+      having been fixed already.
 - [x] **`repeater` seeds `useState` with no re-seed guard.** Closed by `cccf47d`;
       the guard is at `repeater-field.tsx:270-273`.
 - [ ] **`key-value` loses stored pairs.** Real and data-destroying, but not in
       `key-value-field.tsx`, which is stateless and passes the whole record
       through. The defect is one layer down at
       `admin/components/ui/key-value-editor.tsx:41` — `useState(() =>
-    recordToPairs(value))` with no re-seed guard, the last unguarded stateful
+  recordToPairs(value))` with no re-seed guard, the last unguarded stateful
       container. An entry storing `{alpha, beta}` renders zero pair rows, and
       adding a pair commits `{gamma: ''}`, destroying both.
     - The root fact under this and the three already-guarded containers:
