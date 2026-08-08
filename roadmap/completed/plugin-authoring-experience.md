@@ -130,17 +130,17 @@ takes a bare `permission: 'view'` and namespaces it, and computes a settings
 - **seo hardcodes its own namespace literal.** `seoSection()` is called from the
   _site's_ config, so there is no assembly moment and no context to inject
   identity from. 2c deleted `labels.ts` and its `pluginNamespace` call, but the
-  fact had to land somewhere: `fields/groups.ts` now writes `const NAMESPACE =
-'seo'` by hand. That is a stand-in, not the fix. The fix is to hang
-  host-facing helpers off the factory (`seo.section()`, as
+  fact had to land somewhere: `fields/groups.ts` now writes
+  `const NAMESPACE = 'seo'` by hand. That is a stand-in, not the fix. The fix is
+  to hang host-facing helpers off the factory (`seo.section()`, as
   `plugin.permissions()` already does), which needs `definePlugin` to carry
   plugin-declared extras.
 
-                    This bullet used to say "— Phase 3", which was wrong and stayed wrong
-                    through the Phase 3 build: Phase 3 as designed is `definePermissions` and
-                    nothing else, and the factory-extras mechanism was never designed. Tracked
-                    in `roadmap/planned/plugin-factory-extras.md`; the stand-in survives until
-                    then and is harmless (seo has no tables, so no identifier derives from it).
+    This bullet used to say "— Phase 3", which was wrong and stayed wrong
+    through the Phase 3 build: Phase 3 as designed is `definePermissions` and
+    nothing else, and the factory-extras mechanism was never designed. Tracked
+    in `roadmap/planned/plugin-factory-extras.md`; the stand-in survives until
+    then and is harmless (seo has no tables, so no identifier derives from it).
 
 - **Service module augmentation stays hand-written.** `declare module
 'astromech' { interface AstromechPluginServices { seo: … } }` needs the
@@ -483,21 +483,21 @@ ones that should never have been hand-written.
 - [x] Core derives entry permissions per plugin entry type for the declaration
       list; delete `packages/plugins/redirects/src/permissions/redirects.ts`
 
-              A site still has to _grant_ those permissions, and with nothing declared
-              there was nothing to spread. The replacement is `entryPermissions(typeId,
+    A site still has to _grant_ those permissions, and with nothing declared
+    there was nothing to spread. The replacement is
+    `entryPermissions(typeId, ...actions)` (`permissions/entry-permission.ts`),
+    exported from the package root — core's own derivation, enumerated at the
+    call site:
 
-    ...actions)` (`permissions/entry-permission.ts`), exported from the package
-    root — core's own derivation, enumerated at the call site:
+    ```ts
+    ...entryPermissions('redirects/redirect', 'read', 'create', 'update', 'delete')
+    ```
 
-              ```ts
-              ...entryPermissions('redirects/redirect', 'read', 'create', 'update', 'delete')
-              ```
-
-              That is what stops a site hand-writing
-              `plugin:redirects:entry:redirect:*`, which is precisely the string this
-              design exists to stop people writing. `redirects` now declares no
-              permissions at all, which is correct: its one service method is `public`
-              and its entry permissions are derived.
+    That is what stops a site hand-writing
+    `plugin:redirects:entry:redirect:*`, which is precisely the string this
+    design exists to stop people writing. `redirects` now declares no
+    permissions at all, which is correct: its one service method is `public`
+    and its entry permissions are derived.
 
 ### Decided: the effect axis stays on service methods
 

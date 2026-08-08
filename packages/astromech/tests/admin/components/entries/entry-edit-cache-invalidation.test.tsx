@@ -46,7 +46,12 @@ import { EntryEditPage } from '@/admin/components/entries/entry-edit-page.js';
 import { scopedEntryKeys } from '@/admin/hooks/use-query-keys.js';
 import '@/admin/rendering/register-fields.js';
 import type { EntriesMount } from '@/admin/components/entries/mount.js';
-import type { AdminEntryType, Entry, EntriesService, EntryStatus } from '@/types/index.js';
+import type {
+    AdminEntryType,
+    Entry,
+    EntriesService,
+    EntryStatus,
+} from '@/types/index.js';
 
 afterEach(cleanup);
 
@@ -80,7 +85,10 @@ const ENTRY_TYPE_CONFIG: AdminEntryType = {
     translatable: false,
     slug: null,
     adminColumns: [],
-    fields: { main: [{ name: 'customer', type: 'text', label: 'Customer' }], sidebar: [] },
+    fields: {
+        main: [{ name: 'customer', type: 'text', label: 'Customer' }],
+        sidebar: [],
+    },
     url: null,
     capabilities: {
         statuses: true,
@@ -104,7 +112,8 @@ function mountEditPage(queryClient: QueryClient) {
     const api = {
         get: vi.fn(
             async () =>
-                queryClient.getQueryData(scopedEntryKeys(CACHE_SCOPE).get(TYPE, ID)) ?? null
+                queryClient.getQueryData(scopedEntryKeys(CACHE_SCOPE).get(TYPE, ID)) ??
+                null
         ),
         update,
     } as unknown as EntriesService;
@@ -178,9 +187,7 @@ describe('the entry edit page after a save', () => {
 
         const page = mountEditPage(queryClient);
 
-        const input = (await screen.findByDisplayValue(
-            'Lumenflow'
-        )) as HTMLInputElement;
+        const input = (await screen.findByDisplayValue('Lumenflow')) as HTMLInputElement;
         expect(input.name).toBe('customer');
 
         // First edit + save, via the real Update button.
