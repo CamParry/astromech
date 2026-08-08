@@ -79,14 +79,6 @@ not be re-derived.
 
 ### Storage-layer follow-ups (from `completed/storage-layer-follow-ups.md`)
 
-- [ ] `buildListWhere`'s silent drop of unknown `where` keys has its own file —
-      `planned/field-value-query-indexing.md`. One live consequence found while
-      migrating storage and worth recording there: `apps/demo/src/lib/data.ts:143,157`
-      pass `where: { category: categoryId }` and `where: { tags: tagId }`, so the
-      demo's category and tag pages **silently return every post** today. It was
-      deliberately not fixed on the storage-follow-ups branch — making the key
-      throw would turn those pages into errors until JSON-field filtering lands,
-      which is a call to make on purpose rather than in passing.
 - [ ] Give the `users` table a real `defineTable` descriptor so
       `users/storage.ts` can compose on `createStorage` like every other domain.
       Needs the column vocabulary to express better-auth's format —

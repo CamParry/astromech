@@ -15,20 +15,21 @@ the two should not be unified into one EAV table — that reinvents `postmeta`.
 
 ## The state today (all verified)
 
-- `where` on entries is a hardcoded five-key allow-list — `_search`, `status`, `slug`, `title`,
-  `id` (`entries/storage/built-in.ts:87-153`). **Every other key is silently ignored**: the loop has
-  no `else` and no throw. `where: { featured: true }` returns _unfiltered_ rows, and `total`/`pages`
-  are computed from that unfiltered count (`built-in.ts:276-281`).
+- `where` on entries is a hardcoded allow-list — `locale`, `_search`, `status`, `slug`, `title`,
+  `id`, `references` (`entries/storage/built-in.ts`). Anything else throws `UnknownWhereKeyError`,
+  so `where: { featured: true }` is now a loud failure rather than a silent full result set
+  (`decisions/0029-an-unknown-where-key-throws.md`).
 - Sorting is a six-name allow-list, `SORTABLE_FIELDS` (`built-in.ts:62-69`); anything else is
-  dropped and falls back to `createdAt desc`.
+  dropped and falls back to `createdAt desc`. **This one is still a silent drop** — the sort
+  equivalent of what 0029 fixed for filters, and worth closing on the same reasoning.
 - No JSON path handling exists anywhere — a repo-wide grep for `json_extract` / `->>` / `jsonb` /
   `json_each` returns zero hits outside `node_modules`.
-- Table-backed entry types already behave differently: they forward `where` into the storage
-  wrapper's full operator DSL and **throw** on unknown keys (`entries/storage/table.ts:288-295`).
-  So the two storage shapes disagree on whether an unrecognised filter is an error.
+- Table-backed entry types forward `where` into the storage wrapper's full operator DSL and throw
+  on unknown keys (`entries/storage/table.ts:288-295`). The two storage shapes now agree that an
+  unrecognised filter is an error, though not yet on which filters they accept.
 
-The silent-drop is the worst part and is **separable** — making an unknown `where` key throw is
-cheap and doesn't depend on any of the design below.
+The separable silent-drop half is **done**. What is left here is the feature itself: making a
+filter on a declared scalar field actually work, rather than fail.
 
 ## Direction (researched, not locked)
 

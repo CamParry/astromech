@@ -19,7 +19,9 @@ Nested `AGENTS.md` files cover `packages/astromech`, `packages/plugins`, `apps/d
 `ARCHITECTURE.md` has the gate table. What it doesn't say:
 
 - **Root `lint` only covers `astromech` and `@astromech/schema-engine`.** Plugin packages have no lint script, but the pre-commit hook lints their files anyway — so a plugin change can pass `npm run lint` and then fail on commit.
-- **`apps/demo` has no typecheck.** Nothing in the gate type-checks it.
+- **`apps/demo` has no typecheck.** Nothing in the gate type-checks it, and it
+  currently has 17 errors — `roadmap/planned/demo-typecheck.md` has the breakdown.
+  Read a change to `apps/demo` carefully; the gate will not.
 - **Never `--no-verify`.** If the hook fails, fix the cause.
 - Common commands: `npm run build`, `typecheck`, `test:run`, `lint`, `lint:deps`, `check:docs`, `format`, `db:generate`, `db:init`.
 

@@ -64,19 +64,22 @@ it was real and the misattribution is the useful part.
       having been fixed already.
 - [x] **`repeater` seeds `useState` with no re-seed guard.** Closed by `cccf47d`;
       the guard is at `repeater-field.tsx:270-273`.
-- [ ] **`key-value` loses stored pairs.** Real and data-destroying, but not in
-      `key-value-field.tsx`, which is stateless and passes the whole record
-      through. The defect is one layer down at
-      `admin/components/ui/key-value-editor.tsx:41` — `useState(() =>
-  recordToPairs(value))` with no re-seed guard, the last unguarded stateful
-      container. An entry storing `{alpha, beta}` renders zero pair rows, and
-      adding a pair commits `{gamma: ''}`, destroying both.
+- [x] **`key-value` loses stored pairs.** Fixed 2026-08-06. Real and
+      data-destroying, but not in `key-value-field.tsx`, which is stateless and
+      passes the whole record through. The defect was one layer down at
+      `admin/components/ui/key-value-editor.tsx:41`, whose `useState` initializer
+      seeded from the prop with no re-seed guard — the last unguarded stateful
+      container. An entry storing `{alpha, beta}` rendered zero pair rows, and
+      adding a pair committed `{gamma: ''}`, destroying both.
     - The root fact under this and the three already-guarded containers:
       `useEntryForm` is constructed with `fields: {}` while the entry is fetching,
       and `@tanstack/react-form`'s `useForm` runs `FormApi.update` in a layout
       effect with no dependency array. Layout effects run child-before-parent, so
       **the field tree's first render always sees `fields = {}`**. One fact, one
       remaining victim — not one root cause with three fixes.
+    - The guard is the same one `use-blocks-field.ts`, `use-tree-field.ts` and
+      `repeater-field.tsx` carry: seed once when real data arrives, never resync
+      after, or an in-progress edit is clobbered by the last-saved value.
 - [ ] **`tabs()` takes no name and hardcodes one.** Every other factory is
       `type(name, options?)`; `fields/builder.ts:215-217` is
       `tabs(options)` returning `{ name: 'tabs', … }`. Two `tabs()` in one entry
@@ -85,11 +88,17 @@ it was real and the misattribution is the useful part.
       keys off it. Don't fix it in isolation: it is the accidental prototype for
       `roadmap/planned/named-layout-fields.md`, which decides what a layout
       field's name means.
-- [ ] Extend render-level coverage to the **field** components.
-      `tests/admin/components/entries/entry-form-field-seeding.test.tsx` is the
-      start: it pins the `{}`-first-render fact, covers the `key-value` regression,
-      and holds a group-keeps-its-sibling case. `@testing-library/react` and
-      `user-event` are in and the media surface is covered, but the rest of the
-      field components are not, and
+- [ ] Extend render-level coverage to the **field** components. Two files now
+      exist to copy from, and they are different tools:
+      `tests/admin/components/entries/entry-form-field-seeding.test.tsx` renders a
+      field tree directly — it pins the `{}`-first-render fact, covers the
+      `key-value` regression, and holds a group-keeps-its-sibling case.
+      `tests/admin/components/entries/entry-edit-cache-invalidation.test.tsx`
+      mounts the **real `EntryEditPage`** behind a memory router plus the provider
+      stack, which is what makes it fail when the page itself regresses. Reach for
+      the second shape whenever the thing under test is page-level wiring rather
+      than a component's own behaviour — a test that rebuilds the wiring it means
+      to protect cannot fail when that wiring is removed.
+    - Still uncovered: the rest of the field components, and
       `tests/admin/hooks/container-field-seeding.test.tsx` still hand-rolls a React
       root that testing-library could now replace.
