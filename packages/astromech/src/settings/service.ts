@@ -16,7 +16,6 @@ import type { SettingRow } from './schema.js';
 import { mergeLocaleSetting } from './page-values.js';
 import { isPublicSettingKey } from './visibility.js';
 import { processFields } from '@/fields/pipeline.js';
-import { getResourceValidator } from '@/fields/resource-validators.js';
 import { flattenEntryFields } from '@/fields/flatten.js';
 import { fieldReadsFromRecords } from '@/fields/field-reads.js';
 import { getCurrentUser } from '@/request-context/index.js';
@@ -100,14 +99,11 @@ export const settingsService: SettingsService = {
             const presentDefs = allDefs.filter((f) =>
                 Object.prototype.hasOwnProperty.call(effectiveValue, f.name)
             );
-            // Registry first: the Astro config is JSON, so an authored
-            // `validate` only survives boot's registration. The fallback reads
-            // the AUTHORED page — `ResolvedAdminPage` drops `validate` along
-            // with everything else it does not project.
-            const resourceValidate =
-                getResourceValidator(`setting:${page.path}`) ??
-                (config as ResolvedConfig).admin?.pages?.find((p) => p.path === page.path)
-                    ?.validate;
+            // `ResolvedAdminPage` drops `validate` along with everything else
+            // it does not project, so it has to come from the AUTHORED page.
+            const resourceValidate = (config as ResolvedConfig).admin?.pages?.find(
+                (p) => p.path === page.path
+            )?.validate;
             const processed = await processFields(
                 effectiveValue as Record<string, unknown>,
                 presentDefs,

@@ -19,7 +19,6 @@ import { resolveEntryType } from '../type-ids.js';
 import { entryValidationStage } from '../validation-stage.js';
 import { flattenEntryFields } from '@/fields/flatten.js';
 import { processFields } from '@/fields/pipeline.js';
-import { getResourceValidator } from '@/fields/resource-validators.js';
 import { ValidationError } from '@/errors/index.js';
 import config from 'virtual:astromech/config';
 import type { EntryStorage, StorageDb } from '../storage/types.js';
@@ -94,10 +93,7 @@ export async function create(params: {
         }
     }
 
-    // Registry first: the Astro config is JSON, so an authored `validate` only
-    // survives boot's registration. The config value is the fallback for the
-    // live-config paths (CLI, tests).
-    const resourceValidate = getResourceValidator(`entry:${type}`) ?? entryType.validate;
+    const resourceValidate = entryType.validate;
 
     const processed = await processFields(incomingFields, fieldDefs, {
         operation: 'create',

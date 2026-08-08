@@ -64,7 +64,7 @@ Every other field type is a leaf: one data key, no children.
 
 The superordinate noun for the four things that carry fields and run the field pipeline: an **entry**, a **media item**, a **user**, and a **settings page**. `ResourceType` (`packages/astromech/src/types/domain.ts`) is that union, and it types `host.kind` on both validation contexts — the pipeline is host-generic, so a validator can see which kind of resource it is running against.
 
-A **resource validator** is the whole-resource `validate` an author declares on any of the four: the cross-field rules no single field owns. Boot registers them by key (`entry:<type>`, `media`, `users`, `setting:<page path>`) in `packages/astromech/src/fields/resource-validators.ts`.
+A **resource validator** is the whole-resource `validate` an author declares on any of the four: the cross-field rules no single field owns. Each write path reads it straight off `virtual:astromech/config` (`entryType.validate`, `config.media?.validate`, `config.users?.validate`, the matching `admin.pages[].validate`).
 
 **`TargetKind`** (`packages/astromech/src/fields/relationship-edges.ts`) is the relation-eligible subset: entry, user, media. A settings page carries fields but cannot be pointed at by a relation, so the two unions differ and both exist. `decisions/0017-resource-as-the-superordinate-noun.md` records why `resource` beat `record` and `document`.
 

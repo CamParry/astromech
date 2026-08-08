@@ -8,7 +8,6 @@ import { resolveEntryType } from '../../type-ids.js';
 import { entryValidationStage } from '../../validation-stage.js';
 import { flattenEntryFields } from '@/fields/flatten.js';
 import { processFields } from '@/fields/pipeline.js';
-import { getResourceValidator } from '@/fields/resource-validators.js';
 import { ValidationError } from '@/errors/index.js';
 import config from 'virtual:astromech/config';
 import type { EntryStorage, StorageDb } from '../../storage/types.js';
@@ -27,10 +26,8 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
     // BEFORE the transaction opens so a rejection costs no backup version.
     const entryType = resolveEntryType(config, type);
     const fieldDefs = entryType ? flattenEntryFields(entryType.fields) : [];
-    // The canonical's type governs: the staged row is a copy of it. Registry
-    // first (the Astro config is JSON, so an authored `validate` only survives
-    // boot's registration), config value second for the live-config paths.
-    const resourceValidate = getResourceValidator(`entry:${type}`) ?? entryType?.validate;
+    // The canonical's type governs: the staged row is a copy of it.
+    const resourceValidate = entryType?.validate;
     const processed = await processFields(
         (staged.fields ?? {}) as Record<string, unknown>,
         fieldDefs,
