@@ -81,6 +81,8 @@ Before adopting a term, check what it already means to a web developer:
 
 The same thinking governs every identifier — functions, variables, files, types, config keys. The `code` skill has the conventions.
 
+**It governs prose too**, not just things that get named: explanations, commit messages, review comments, docs. Use the word a working developer already recognises, or the one established in the specific niche being worked in. Reach for the plain word over a term of art from one methodology's dialect, and be especially wary of dialect that collides with a meaning the word already has here — say "experiment" or "throwaway test", not "spike", which in this domain reads as a jump in traffic or latency.
+
 Where a name was contested, record the comparison rather than just the winner — `TERMINOLOGY.md` for what a term means today, `decisions/` for why it beat the alternatives. `decisions/0005-ai-context-naming.md` is the worked example.
 
 ## Conventions
