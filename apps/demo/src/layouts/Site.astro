@@ -4,7 +4,12 @@ import Seo from '../components/Seo.astro';
 import { Icon } from 'astro-icon/components';
 import '../styles/global.css';
 import type { Locale } from '../lib/site.ts';
-import { localizedPath, LOCALES, DEFAULT_LOCALE } from '../lib/site.ts';
+import {
+    localizedPath,
+    stripLocalePrefix,
+    LOCALES,
+    DEFAULT_LOCALE,
+} from '../lib/site.ts';
 import { socialIconName } from '../lib/icons.ts';
 
 interface Props {
@@ -125,8 +130,7 @@ const otherLocales = LOCALES.filter((l) => l !== locale);
                             {LOCALES.map((l) => (
                                 <a
                                     href={localizedPath(
-                                        Astro.url.pathname.replace(`/${locale}`, '') ||
-                                            '/',
+                                        stripLocalePrefix(Astro.url.pathname, locale),
                                         l
                                     )}
                                     class={`px-2 py-1 text-xs font-mono rounded border transition-colors ${
