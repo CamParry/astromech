@@ -4,9 +4,11 @@ Any function an author writes in `astromech.config.ts` is silently dropped befor
 running server sees it. Found 2026-08-02 while building the document-level `validate`
 hook, which would have shipped inert for exactly this reason.
 
-**Status:** filed, not started. The resource-validator work routed around it with a
-boot-time registry (`fields/resource-validators.ts`); this item is about closing the
-hole generally.
+The resource-validator work routed around it with a boot-time registry
+(`fields/resource-validators.ts`); this item is about closing the hole generally.
+
+Being worked 2026-08-08: gathering the facts direction 3 needs before the direction is
+locked. Nothing is implemented yet and no direction is chosen.
 
 ## The mechanism
 

@@ -202,7 +202,8 @@ on a field inside a repeater item sees that item's siblings.
 > `astro build`. The server's config is serialized to JSON before it reaches the
 > running server, which turns `{ custom: fn }` into an empty rule — silently. It
 > does work through the CLI. Until that is fixed, do not rely on `custom` as a
-> data-integrity guarantee. See `roadmap/planned/config-functions-reach-the-server.md`.
+> data-integrity guarantee. See
+> `roadmap/in-progress/config-functions-reach-the-server.md`.
 
 ## Whole-resource validation
 
