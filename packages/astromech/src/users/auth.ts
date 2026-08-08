@@ -2,12 +2,13 @@ import { betterAuth } from 'better-auth';
 import type { Auth, BetterAuthOptions } from 'better-auth';
 import { getDatabaseDriver } from '@/database/driver-registry.js';
 
-const apiRoute = process.env.ASTROMECH_API_ROUTE ?? '/api';
-
 let _auth: Auth<BetterAuthOptions> | null = null;
 
 function getAuth(): Auth<BetterAuthOptions> {
     if (!_auth) {
+        // Read at call time, not module scope: `initRuntime` writes this during
+        // the first request, which is after this module is evaluated.
+        const apiRoute = process.env.ASTROMECH_API_ROUTE ?? '/api';
         _auth = betterAuth({
             baseURL: import.meta.env.BETTER_AUTH_URL,
             basePath: `${apiRoute}/auth`,
