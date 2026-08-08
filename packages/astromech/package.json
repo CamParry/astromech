@@ -180,10 +180,18 @@
     },
     "peerDependencies": {
         "@modelcontextprotocol/sdk": "*",
-        "astro": "^6.0.8"
+        "astro": "^6.0.8",
+        "nodemailer": "^7.0.0",
+        "wrangler": "^4.0.0"
     },
     "peerDependenciesMeta": {
         "@modelcontextprotocol/sdk": {
+            "optional": true
+        },
+        "nodemailer": {
+            "optional": true
+        },
+        "wrangler": {
             "optional": true
         }
     },
