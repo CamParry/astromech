@@ -17,7 +17,16 @@ export async function loadConfigFile(
     configFile?: string
 ): Promise<AstromechConfig> {
     const jiti = createJiti(import.meta.url);
-    const path = resolve(rootDir, configFile ?? DEFAULT_CONFIG_FILE);
-    const mod = (await jiti.import(path)) as { default: AstromechConfig };
+    const mod = (await jiti.import(resolveConfigPath(rootDir, configFile))) as {
+        default: AstromechConfig;
+    };
     return mod.default;
+}
+
+/**
+ * The absolute path of the author's config file. The Astro integration needs
+ * the path itself, not the module, to re-export it from the virtual config.
+ */
+export function resolveConfigPath(rootDir: string, configFile?: string): string {
+    return resolve(rootDir, configFile ?? DEFAULT_CONFIG_FILE);
 }

@@ -25,10 +25,10 @@ import type { AstroIntegration } from 'astro';
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 import type { AstromechConfig, ResolvedConfig } from '@/types/index.js';
 import { resolveConfig } from '@/boot/config-resolver.js';
-import { loadConfigFile } from '@/boot/config-loader.js';
+import { loadConfigFile, resolveConfigPath } from '@/boot/config-loader.js';
 import { registerRoutes } from '@/boot/route-registration.js';
 import { collectPluginFieldTypes } from '@/plugins/runtime/plugin-fields.js';
-import { initRuntime, runMigrations, startScheduler } from '@/boot/boot.js';
+import { runMigrations } from '@/boot/boot.js';
 import { buildAdminConfig } from '@/boot/admin-config.js';
 import { generatePluginClientManifest } from '@/codegen/plugin-client-manifest.js';
 
@@ -62,16 +62,12 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
                 logger,
                 config: astroConfig,
             }) => {
-                const config = await loadConfigFile(
-                    fileURLToPath(astroConfig.root),
-                    options.configFile
-                );
+                const rootDir = fileURLToPath(astroConfig.root);
+                const config = await loadConfigFile(rootDir, options.configFile);
                 const resolvedConfig = resolveConfig(config);
                 loaded = { config, resolved: resolvedConfig };
 
                 logger.info('Initializing Astromech CMS');
-
-                await initRuntime(config, resolvedConfig);
 
                 updateConfig({
                     vite: {
@@ -133,7 +129,9 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
                                 },
                                 load(id) {
                                     if (id === '\0virtual:astromech/config') {
-                                        return `export default ${JSON.stringify(resolvedConfig)};`;
+                                        return liveConfigModule(
+                                            resolveConfigPath(rootDir, options.configFile)
+                                        );
                                     }
                                     return undefined;
                                 },
@@ -235,18 +233,48 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
                 logger.info('Astromech configuration complete');
             },
 
+            // Migrations run in the build/dev process against their own database
+            // handle. Nothing here touches the registries: the one booted copy of
+            // the config lives in the serving process (see src/middleware.ts).
             'astro:server:setup': async ({ logger }) => {
                 const { config } = requireLoaded();
                 logger.info('Astromech dev server ready');
-                await runMigrations(logger, config.plugins ?? []);
-                await startScheduler();
+                await runMigrations(
+                    config.db.getInstance(),
+                    logger,
+                    config.plugins ?? []
+                );
             },
 
             'astro:build:done': async ({ logger }) => {
                 const { config } = requireLoaded();
                 logger.info('Astromech build complete');
-                await runMigrations(logger, config.plugins ?? []);
+                await runMigrations(
+                    config.db.getInstance(),
+                    logger,
+                    config.plugins ?? []
+                );
             },
         },
     };
+}
+
+/**
+ * Source for `virtual:astromech/config`. Re-exporting the author's module puts
+ * the live config in the SSR graph, so functions and class instances survive
+ * where a JSON literal destroyed them.
+ */
+function liveConfigModule(configPath: string): string {
+    const resolverPath = fileURLToPath(new URL('./config-resolver.js', import.meta.url));
+    return [
+        `import rawConfig from ${specifier(configPath)};`,
+        `import { resolveConfig } from ${specifier(resolverPath)};`,
+        `export { rawConfig };`,
+        `export default resolveConfig(rawConfig);`,
+    ].join('\n');
+}
+
+/** An absolute filesystem path as a module specifier literal. */
+function specifier(path: string): string {
+    return JSON.stringify(path.replace(/\\/g, '/'));
 }

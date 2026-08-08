@@ -2,6 +2,9 @@ declare module 'virtual:astromech/config' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- inline import() keeps this an ambient module declaration; a top-level/inner `import type` statement breaks the ambient typing and collapses consumers to `any`
     const config: import('./types').ResolvedConfig;
     export default config;
+    /** The author's config as written, before defaults are applied. */
+    // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- see above
+    export const rawConfig: import('./types').AstromechConfig;
 }
 
 declare module 'virtual:astromech/admin-config' {

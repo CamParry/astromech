@@ -10,7 +10,7 @@
  * tsup aliases this path to here for the CLI build only.
  */
 
-import type { ResolvedConfig } from '@/types/index.js';
+import type { AstromechConfig, ResolvedConfig } from '@/types/index.js';
 
 declare global {
     var __astromechCliConfig: ResolvedConfig | undefined;
@@ -42,3 +42,14 @@ const configProxy = new Proxy({} as ResolvedConfig, {
 });
 
 export default configProxy;
+
+// The live virtual module also exports the author's config as written. The CLI
+// only ever holds the resolved one, so this exists to match the module's shape
+// and throws rather than passing a resolved config off as a raw one.
+export const rawConfig = new Proxy({} as AstromechConfig, {
+    get(_target, prop: string) {
+        throw new Error(
+            `[Astromech CLI] The raw config is not available here (read '${prop}').`
+        );
+    },
+});

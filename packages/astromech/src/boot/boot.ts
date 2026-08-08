@@ -6,15 +6,17 @@
  * tests) without pulling in Astro types.
  */
 
+import type { Kysely } from 'kysely';
 import type {
     AstromechConfig,
     MethodManifest,
     PluginDefinition,
     ResolvedConfig,
 } from '@/types/index.js';
+import type { DB } from '@/database/types.js';
 import { generateMethodManifest } from '@/codegen/method-manifest.js';
 import { setMethodManifest } from '@/codegen/manifest-registry.js';
-import { setDb, getDb } from '@/database/registry.js';
+import { setDb } from '@/database/registry.js';
 import { migrateToLatest, mergeMigrationProviders } from '@astromech/schema-engine';
 import { collectPluginMigrations } from '@/database/plugin-migrations.js';
 import { loadAppMigrations } from '@/database/app-migrations.js';
@@ -89,6 +91,7 @@ export async function initRuntime(
 }
 
 export async function runMigrations(
+    db: Kysely<DB>,
     logger: {
         info: (msg: string) => void;
         error: (msg: string) => void;
@@ -107,7 +110,7 @@ export async function runMigrations(
             migrationProvider,
             collectPluginMigrations(plugins)
         );
-        await migrateToLatest(getDb(), merged, { allowUnorderedMigrations: true });
+        await migrateToLatest(db, merged, { allowUnorderedMigrations: true });
         logger.info('Astromech database migrations applied');
     } catch (err) {
         logger.error(

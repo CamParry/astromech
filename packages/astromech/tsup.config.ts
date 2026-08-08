@@ -12,6 +12,10 @@ export default defineConfig([
             columns: 'src/exports/columns.ts',
             methods: 'src/exports/methods.ts',
             'boot/astro': 'src/exports/astro.ts',
+            // Not a package.json subpath: the integration writes an absolute
+            // path to this file into `virtual:astromech/config`, so it needs a
+            // stable filename in dist rather than a hashed chunk.
+            'boot/config-resolver': 'src/boot/config-resolver.ts',
             'local/index': 'src/exports/local.ts',
             'fetch/index': 'src/exports/fetch.ts',
             middleware: 'src/exports/middleware.ts',
