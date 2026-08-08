@@ -153,6 +153,8 @@ Plugins access platform resources through two sanctioned, plugin-scoped handles 
 
 **`DatabaseDriver` capability seam:** `dump?()` and `restore?()` are optional fields on `DatabaseDriver` (`src/types/config.ts`). Implemented for libsql (local `file:` connections only — `VACUUM INTO` requires a local path); unimplemented on D1/Postgres drivers (feature-detects off). A driver may implement `dump` without `restore`.
 
+**`ctx.config` is a projection of the resolved config, not the resolved config.** `PluginConfigView` (`src/types/plugins.ts`) is an explicit `Pick` of structural fields (the route prefixes, `entries`, `pluginEntries`, `adminPages`, `admin`, `media`, `users`, `roles`, `locales`, `defaultLocale`, `trash`, `publicSettingKeys`, `timezone`) plus `entryTypesWithField`. `makeConfigView` in `src/plugins/runtime/plugin-runtime.ts` builds it field by field rather than by spreading, so the allow-list is enforced at runtime and not only in the type. Two invariants follow. A live driver cannot ride along on it: `storage`, `email` and `image` are absent, so nothing reaches past `ctx.storage`'s `plugin/<alias>/` prefix or past `ctx.sendEmail`. And a field added to `ResolvedConfig` is not visible to plugins until it is named in both the `Pick` and the constructor. `decisions/0031-the-plugin-config-view-is-an-allow-list.md` records why the projection carries this rather than the strips in `resolveConfig`.
+
 ## Plugin runtime boundary
 
 **A plugin's server code runs in a different module graph from core's, and `ctx` is the only bridge across it.** This is an invariant, not a convention — the alternative does not merely violate a rule, it throws.

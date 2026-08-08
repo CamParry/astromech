@@ -66,7 +66,7 @@ import {
 } from '@/utilities/with-default-shape.js';
 
 // ============================================================================
-// Registry (globalThis — visible from config:setup through request time)
+// Registry (globalThis — shared across the package's entry chunks)
 // ============================================================================
 
 type HookCallback = (eventCtx: unknown, ctx: PluginContext) => Promise<void> | void;
@@ -109,9 +109,9 @@ function state(): PluginRuntimeState {
 }
 
 /**
- * Index all installed plugins into the runtime registry. Called once at boot
- * (Astro `config:setup`). Identity collisions and dependencies are validated
- * earlier in `resolveConfig`.
+ * Index all installed plugins into the runtime registry. Called once from
+ * `initRuntime`, which the injected middleware runs on the first request.
+ * Identity collisions and dependencies are validated earlier in `resolveConfig`.
  */
 export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig): void {
     const s = state();

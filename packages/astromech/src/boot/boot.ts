@@ -70,14 +70,15 @@ export async function initRuntime(
     registerBuiltInEntryJobs();
     setSchedulerDriver(config.scheduler ?? nodeDriver);
     // Stash the resolved config so the cron runner reads it from the registry
-    // instead of importing `virtual:astromech/config` (which the plain-Node
-    // scheduler tick cannot resolve).
+    // instead of importing `virtual:astromech/config`, which it cannot: this
+    // module is in the integration's plain-Node import graph and drags
+    // `cron/runner.ts` in with it.
     setRuntimeConfig(resolvedConfig);
     wireEntryAccess();
     registerPlugins(config.plugins ?? [], resolvedConfig);
     // Generated here because this is the only runtime site holding both the
-    // resolved config and the RAW plugin definitions, whose Zod input schemas
-    // cannot survive the JSON the virtual config is stringified into.
+    // resolved config and the raw `PluginDefinition[]`, which `ResolvedConfig`
+    // strips and only `rawConfig` carries.
     setMethodManifest(
         JSON.parse(
             generateMethodManifest(resolvedConfig, config.plugins ?? [])

@@ -1,9 +1,8 @@
 /**
  * CRON job registry.
  *
- * globalThis-backed (see `@/utilities/registry.js`) so jobs registered during
- * Astro's config:setup hook are visible to the runner at request/scheduled
- * event time.
+ * globalThis-backed (see `@/utilities/registry.js`) so a job registered through
+ * one entry chunk is visible to the runner reached through another.
  */
 
 import { createRegistry } from '@/utilities/registry.js';
@@ -45,12 +44,11 @@ export const setSchedulerDriver = scheduler.set;
 export const getSchedulerDriver = scheduler.peek;
 
 /**
- * Stash the resolved config at boot so the cron runner can read it WITHOUT
- * importing `virtual:astromech/config`. The node scheduler driver ticks in
- * plain Node (detached from any Vite request context), where `virtual:` does
- * not resolve — see the cron runner. globalThis-backed so the value set during
- * the integration's plain-Node boot is visible to the SSR module graph and the
- * detached timer alike.
+ * Stash the resolved config at boot so the cron runner reads it here instead of
+ * importing `virtual:astromech/config`. `boot/astro.ts` → `boot/boot.js` →
+ * `cron/runner.js` puts the runner in the plain-Node graph Astro loads at
+ * `astro:config:setup`, where a static `virtual:` import throws
+ * `ERR_UNSUPPORTED_ESM_URL_SCHEME` during Astro's own config load.
  */
 const runtimeConfig = createRegistry<ResolvedConfig>('runtimeConfig', {
     hint: 'initRuntime() must run before the scheduler ticks.',

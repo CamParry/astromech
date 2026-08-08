@@ -87,8 +87,9 @@ function collectSearchable(nodes: Field[], out: string[]): void {
 
 /**
  * Resolve a single entry type: validate capabilities + titleField (crash-loud
- * on mismatch) and strip the live `storage` instance (it cannot be serialised
- * into the virtual config module). `typeKey` is used in error messages — the
+ * on mismatch) and strip the live `storage` instance, which `ResolvedEntryType`
+ * omits — a type's storage is reached through `entries/storage/registry.js`,
+ * keyed by type, not off the config. `typeKey` is used in error messages — the
  * qualified `{plugin}/{type}` key for plugin types.
  */
 function toResolvedEntryType(
@@ -282,11 +283,10 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     // Step 4: Validate qualified relationship targets against the built maps.
     assertQualifiedRelationshipTargets({ entries: resolvedEntries, pluginEntries });
 
-    // Step 5: Return resolved config with defaults
-    // Destructure out `db` and `plugins` so neither is included in the resolved
-    // config: the driver instance and plugin definitions (which carry live
-    // Drizzle table objects in `schema`) cannot be JSON.stringify'd into the
-    // virtual config module — `ResolvedConfig` already omits both.
+    // Step 5: Return resolved config with defaults. `db`, `plugins`,
+    // `scheduler` and `ai` are destructured out below because `ResolvedConfig`
+    // omits all four; each is reached through its own registry instead. See
+    // decisions/0031-the-plugin-config-view-is-an-allow-list.md.
     const adminPages: ResolvedAdminPage[] = (config.admin?.pages ?? []).map(
         resolveAdminPage
     );

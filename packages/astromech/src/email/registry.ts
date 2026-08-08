@@ -1,9 +1,9 @@
 /**
  * Email driver registry.
  *
- * globalThis-backed (see `@/utilities/registry.js`) so the driver set during
- * Astro's config:setup hook (integration context) is visible to the server at
- * request time. Email is optional — reads probe rather than throw.
+ * globalThis-backed (see `@/utilities/registry.js`) so the driver `initRuntime`
+ * sets is visible to every reader, whichever entry chunk it came through. Email
+ * is optional — reads probe rather than throw.
  */
 
 import { createRegistry } from '@/utilities/registry.js';

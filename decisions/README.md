@@ -63,3 +63,4 @@ Distinct from the neighbouring directories:
 - [0028](0028-d1-degrades-rather-than-refusing-to-boot.md) — D1 degrades to sequential writes rather than refusing to boot
 - [0029](0029-an-unknown-where-key-throws.md) — an unknown entries-list `where` key throws instead of being dropped
 - [0030](0030-the-server-loads-the-config-as-a-module.md) — the server loads the config as a module, and boots itself on the first request
+- [0031](0031-the-plugin-config-view-is-an-allow-list.md) — `ctx.config` is an allow-list projection, not the resolved config

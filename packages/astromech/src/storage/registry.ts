@@ -1,10 +1,9 @@
 /**
  * Storage driver registry.
  *
- * globalThis-backed (see `@/utilities/registry.js`) so the driver set during
- * Astro's config:setup hook (integration context) is visible to the local
- * transport at request time (Vite SSR context) — both run in the same Node.js
- * process.
+ * globalThis-backed (see `@/utilities/registry.js`) so the driver `initRuntime`
+ * sets is visible to the local transport however it was reached — module-scope
+ * state duplicates across the package's entry chunks.
  */
 
 import { createRegistry } from '@/utilities/registry.js';
