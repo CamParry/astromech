@@ -119,11 +119,15 @@ One branch, a commit per workstream.
       `build.rollupOptions.external` worked. Find the general answer rather than
       listing packages one at a time, since a user's config will reach drivers the
       demo does not.
-- [ ] **WS5 — Config authoring rules.** No paths resolved from `import.meta.url`:
+- [x] **WS5 — Config authoring rules.** No paths resolved from `import.meta.url`:
       once bundled it points at the chunk, which silently created an empty
-      SQLite file in `dist/server/chunks/` and served 200s over it. Change the
-      demo's `db` to a connection string from the environment. Decide the rule for
-      `filesystem({ dir: './public/uploads' })`, which resolves against cwd.
+      SQLite file in `dist/server/chunks/` and served 200s over it. The rule is
+      that config paths resolve against the working directory and commands run
+      from the project root, which is what Astro itself does and what
+      `filesystem({ dir: './public/uploads' })` already assumed. The demo's `db`
+      became a bare `libsqlDriver()`, which already reads `DATABASE_URL` and
+      already falls back to `file:./database.db`, so no new environment variable
+      was invented. Landed before WS2 so it is verifiable on its own.
 - [ ] **WS6 — Delete the workarounds.** The resource-validator registry
       (`fields/resource-validators.ts`) and the `ai.model` special case exist only
       because functions could not cross. Establish whether they can go, or what
