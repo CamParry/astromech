@@ -23,7 +23,6 @@ import type {
     Entry,
     EntriesService,
     EntryStatus,
-    EntryUpdateData,
     JsonObject,
     EntryQueryParams,
 } from '@/types/index.js';
@@ -167,38 +166,6 @@ export function useCreateEntry() {
                 message: err instanceof Error ? err.message : t('entries.createFailed'),
                 variant: 'error',
             });
-        },
-    });
-}
-
-export function useUpdateEntry(
-    type: string,
-    id: string,
-    options?: {
-        onSuccess?: (entry: Entry) => void;
-        onError?: (err: Error) => void;
-    }
-) {
-    const queryClient = useQueryClient();
-
-    return useMutation({
-        mutationFn: (payload: Record<string, unknown>) =>
-            astromechClient.entries.update({
-                type,
-                id,
-                data: payload as EntryUpdateData,
-            }),
-        onSuccess: (entry) => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.get(type, id),
-            });
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(type),
-            });
-            options?.onSuccess?.(entry);
-        },
-        onError: (err) => {
-            options?.onError?.(err);
         },
     });
 }
