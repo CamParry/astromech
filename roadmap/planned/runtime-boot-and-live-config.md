@@ -1,0 +1,169 @@
+# Runtime Boot and Live Config
+
+The server never boots itself. `initRuntime` is called once, from
+`astro:config:setup` in `boot/astro.ts`, which runs in the process that builds the
+site. A deployed server is a different process, so the 17 `globalThis` registries
+that hook fills are empty at request time.
+
+Verified 2026-08-08, not inferred: `npm run build` in `apps/demo`, then
+`PORT=4399 node ./dist/server/entry.mjs`, and every request fails with
+`[Astromech] 'dbDriver' is not configured`. `/admin` and `/api/*` return 404 as a
+downstream effect of the same thing. `astro dev` hides it completely, because
+there the config phase and the SSR runtime share one process, which is what
+`utilities/registry.ts` records as an assumption in its own docblock.
+
+The second symptom has the same root. `virtual:astromech/config` is emitted as
+`export default ${JSON.stringify(resolvedConfig)}`, so anything carrying
+behaviour is destroyed in transit. `{ custom: fn }` has never run under Astro,
+and `storage`, `image.driver` and `email.driver` arrive as husks that nothing
+reads.
+
+One decision causes both: config crosses the build boundary as data, so live
+things need a side channel, and that side channel only works when both sides are
+one process.
+
+This item replaces `config-functions-reach-the-server.md`, which described the
+serialisation half alone. Its three proposed directions are superseded: (1) and
+(2) both register functions at boot, which is the mechanism that does not survive
+a build.
+
+## Why this shape
+
+Every CMS whose config holds live objects loads the config file as a module in
+the serving process. Payload imports `payload.config.ts` at runtime through a path
+alias and serialises nothing, memoising init on `globalThis` by caching the
+promise. Keystone compiles to `.keystone/config.js` and `require`s it at runtime.
+Strapi and Sanity are the same idea in their own shapes. The systems that
+serialise (`@astrojs/db`, Nuxt `runtimeConfig`, `astro:config`) do so because
+their config is data by construction, never behaviour. `@astrojs/db` has since
+been removed from Astro.
+
+In Astro specifically, `auth-astro` already ships the re-export: its virtual
+module is `import authConfig from "${configFile}"; export default authConfig`, and
+Auth.js providers and database adapters survive it.
+
+Astro has no runtime hook, by design. Every documented integration hook is
+dev-time or build-time; `astro:server:setup` and `astro:server:start` are dev
+only. On a request for a production start hook, a maintainer stated the rule:
+passing a function is unsafe because the information must be available after a
+build and a function is not serialisable, so "usually, we accept a path to an
+entry point, load it, and execute it." `addMiddleware({ entrypoint })` is already
+that mechanism, and Astromech already uses it.
+
+## What the experiment measured
+
+A throwaway change (live virtual module plus lazy middleware boot), built and
+run, then reverted:
+
+- The built server serves real content. `/` went 500 to 200, `/admin` 404 to 200,
+  and `/api/*` returned real JSON once authenticated.
+- Config evaluations: 1 during build, 1 per serving process, 2 under `astro dev`.
+- Memoisation held. Eight concurrent requests fired the instant the port opened
+  produced exactly one `initRuntime` call.
+- The client bundle stayed clean. The admin SPA reads
+  `virtual:astromech/admin-config`, which is JSON and stays JSON.
+
+Two costs surfaced, both addressed below: `import.meta.url` inside the config
+changes meaning once the config is bundled, and an optional peer reachable from
+the `astromech` barrel becomes a hard build error.
+
+## The design
+
+The integration takes a config **path** rather than an evaluated config object.
+It loads that file in Node at config time for what it needs then (route
+registration, the admin route `define`, the admin config, codegen), and emits
+`virtual:astromech/config` as a re-export of the same path so the SSR graph gets
+the live object.
+
+`apps/demo/astro.config.mjs` becomes `astromech()`, defaulting to
+`./astromech.config.ts`, with `astromech({ configFile: './elsewhere.ts' })` when
+it is not the default.
+
+The file is still evaluated twice, once in Node at config time and once in the
+SSR graph. That is unavoidable here and is where Astromech differs from
+`auth-astro`, which needs nothing from its config at config time and so never
+loads it in Node. Two evaluations are safe only if **exactly one copy is ever
+booted**, so the eager `initRuntime` is deleted rather than supplemented, and
+drivers must construct lazily so the unbooted copy costs nothing. `libsqlDriver`
+already does. In a real build the two evaluations are in different processes and
+never coexist; only `astro dev` holds both at once.
+
+Boot moves into the injected middleware, lazily, caching the promise rather than
+the result so concurrent first requests share one init. Not module scope:
+Cloudflare Workers forbid I/O outside a request context, so a module-scope boot
+would pass under Node and throw on Workers. Workers are also per-isolate rather
+than per-process, and isolates are evicted, so boot runs repeatedly over a
+deployment's life and has to stay cheap.
+
+Migrations and the scheduler do not move into the request path.
+
+## Workstreams
+
+One branch, a commit per workstream.
+
+- [ ] **WS1 — Config path API.** `astromech()` accepts `{ configFile }` and
+      defaults to `./astromech.config.ts`. The integration loads it in Node at
+      config time. Decide what does the loading; `transport/cli/config.ts` already
+      resolves a config by convention and may be the seam to reuse.
+- [ ] **WS2 — Live virtual module.** `virtual:astromech/config` re-exports the
+      author's module instead of a JSON literal. Keep the default export a
+      `ResolvedConfig`, since 28 modules read properties off it.
+- [ ] **WS3 — Lazy boot.** Delete the `initRuntime` call in `astro:config:setup`.
+      Add a memoised `ensureBooted()` to the injected middleware, caching the
+      promise. Confirm nothing else depended on boot having run at config time.
+- [ ] **WS4 — Bundler hygiene.** Optional peers reachable from the `astromech`
+      barrel break the build once the config joins the SSR graph. `nodemailer` is
+      the known instance. `vite.ssr.external` was ignored;
+      `build.rollupOptions.external` worked. Find the general answer rather than
+      listing packages one at a time, since a user's config will reach drivers the
+      demo does not.
+- [ ] **WS5 — Config authoring rules.** No paths resolved from `import.meta.url`:
+      once bundled it points at the chunk, which silently created an empty
+      SQLite file in `dist/server/chunks/` and served 200s over it. Change the
+      demo's `db` to a connection string from the environment. Decide the rule for
+      `filesystem({ dir: './public/uploads' })`, which resolves against cwd.
+- [ ] **WS6 — Delete the workarounds.** The resource-validator registry
+      (`fields/resource-validators.ts`) and the `ai.model` special case exist only
+      because functions could not cross. Establish whether they can go, or what
+      still needs them.
+- [ ] **WS7 — Documentation.** `ARCHITECTURE.md`'s two-graph section is a map of
+      the present, so it changes when the code does, not before. The
+      known-limitation callout in `apps/docs/content/field-validation.md` gets
+      deleted rather than reworded once `custom` runs. The plugin boundary note in
+      `apps/docs/plugins/authoring.md` says Astro loads your config "in plain
+      Node, where the `virtual:astromech/config` that every domain service reaches
+      cannot resolve" — that becomes only half true when the config is also
+      evaluated in the SSR graph, so re-derive it rather than patching the
+      sentence. A decision record covers why loading the config as a module beat
+      registering functions at boot, and supersedes the implication in
+      `decisions/0021` that `storage` and `email.driver` are stripped from
+      `ResolvedConfig`; they are not, they arrive as husks.
+
+## Verification
+
+The gate does not cover any of this. `apps/demo` has no typecheck and nothing in
+the suite runs a build.
+
+- [ ] `npm run build` in `apps/demo`, run `dist/server/entry.mjs`, and confirm
+      `/`, `/admin` and an authenticated `/api/*` read all work. This is the check
+      that would have caught the original defect and does not exist today.
+- [ ] `astro dev` still works. A change that fixes the build and breaks dev is the
+      obvious failure mode.
+- [ ] A `{ custom: fn }` rule actually rejects a bad value, under **both**
+      `astro dev` and a built server. The existing
+      `tests/fields/pipeline.test.ts` passes today against a configuration the
+      product never runs.
+- [ ] Count config evaluations before and after, so a regression to double-boot is
+      visible.
+
+## Open questions
+
+- What loads the config in Node at config time, and does it share code with the
+  CLI's loader.
+- Whether the dev double-evaluation is acceptable or whether the config should
+  split into build-time knobs and runtime values.
+- Whether the CLI and vitest shims (`transport/cli/virtual-config-shim.ts` and the
+  vitest alias) still need to exist once the virtual module is live, or whether
+  all three paths collapse to one.
+- Where migrations run for a Workers deployment, given there is no build-time
+  process holding a filesystem.

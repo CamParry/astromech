@@ -95,6 +95,13 @@ Payload identifies browser-safe code by where it lives, not by a list:
       marker cannot be applied to something that drags `virtual:astromech/config`
       into the browser bundle.
 
+That last rule gets sharper teeth under
+`roadmap/planned/runtime-boot-and-live-config.md`. Once the virtual module
+re-exports the author's config rather than a JSON literal, dragging it into the
+browser drags the whole config graph with it, drivers and plugins included. The
+cost of getting this wrong stops being a large bundle and starts being a build
+failure or a leaked server module.
+
 The second benefit is the one that matters more than the config saving: the
 constraint becomes visible in the filename, so the
 `domain-barrel-browser-boundary` class of mistake is legible at review time

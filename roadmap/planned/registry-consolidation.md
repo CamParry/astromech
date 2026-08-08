@@ -109,3 +109,12 @@ across tsup entry chunks — without sharing its shape.
 - This is small enough to land as a single branch, and it is a good candidate to
   do before `roadmap/planned/manifest-driven-transports.md` — it touches many
   files shallowly, so it conflicts badly with anything long-running.
+
+`roadmap/planned/runtime-boot-and-live-config.md` raises the stakes on the
+inventory. It moves boot out of `astro:config:setup` and into the first request,
+so these slots stop being filled once per build process and start being filled
+once per serving process, and on Cloudflare once per isolate. Anything relying on
+a slot already being populated at import time breaks there. The 17 slots
+`initRuntime` fills are the ones to check; the lazy ones
+(`cloudflareEnv`, `cloudflareProxy`, `__astromechRequestContext`) already have the
+right shape and are worth reading as the model.
