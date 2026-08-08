@@ -3,7 +3,6 @@ import react from '@astrojs/react';
 import node from '@astrojs/node';
 import tailwindcss from '@tailwindcss/vite';
 import { astromech } from 'astromech/astro';
-import astromechConfig from './astromech.config.ts';
 import icon from 'astro-icon';
 
 export default defineConfig({
@@ -17,7 +16,7 @@ export default defineConfig({
     },
     integrations: [
         react(),
-        astromech(astromechConfig),
+        astromech(),
         icon({
             include: {
                 lucide: ['*'],

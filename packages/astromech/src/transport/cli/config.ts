@@ -5,20 +5,14 @@
  * without a pre-build step) and initialises the DB registry so service methods work.
  */
 
-import { createJiti } from 'jiti';
-import { resolve } from 'node:path';
 import { setDb } from '@/database/registry.js';
 import { resolveConfig } from '@/boot/config-resolver.js';
+import { loadConfigFile } from '@/boot/config-loader.js';
 import { setCliConfig } from './virtual-config-shim.js';
 import type { AstromechConfig, ResolvedConfig } from '@/types/index.js';
 
 export async function loadRawConfig(configPath?: string): Promise<AstromechConfig> {
-    const jiti = createJiti(import.meta.url);
-    const path = configPath
-        ? resolve(process.cwd(), configPath)
-        : resolve(process.cwd(), 'astromech.config.ts');
-    const mod = (await jiti.import(path)) as { default: AstromechConfig };
-    return mod.default;
+    return loadConfigFile(process.cwd(), configPath);
 }
 
 export async function loadConfig(configPath?: string): Promise<ResolvedConfig> {

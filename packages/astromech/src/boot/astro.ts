@@ -12,25 +12,45 @@
  *
  * // astro.config.mjs
  * import { astromech } from 'astromech/astro';
- * import astromechConfig from './astromech.config.ts';
- * export default defineConfig({ integrations: [astromech(astromechConfig)] });
+ * export default defineConfig({ integrations: [astromech()] });
+ *
+ * // non-default config path
+ * export default defineConfig({
+ *     integrations: [astromech({ configFile: './elsewhere.ts' })],
+ * });
  */
 
 import { fileURLToPath } from 'node:url';
 import type { AstroIntegration } from 'astro';
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
-import type { AstromechConfig } from '@/types/index.js';
+import type { AstromechConfig, ResolvedConfig } from '@/types/index.js';
 import { resolveConfig } from '@/boot/config-resolver.js';
+import { loadConfigFile } from '@/boot/config-loader.js';
 import { registerRoutes } from '@/boot/route-registration.js';
 import { collectPluginFieldTypes } from '@/plugins/runtime/plugin-fields.js';
 import { initRuntime, runMigrations, startScheduler } from '@/boot/boot.js';
 import { buildAdminConfig } from '@/boot/admin-config.js';
 import { generatePluginClientManifest } from '@/codegen/plugin-client-manifest.js';
 
-export function astromech(config: AstromechConfig): AstroIntegration {
-    const resolvedConfig = resolveConfig(config);
+export type AstromechIntegrationOptions = {
+    /** Path to the site's astromech.config.ts, resolved against the Astro project root. */
+    configFile?: string;
+};
+
+export function astromech(options: AstromechIntegrationOptions = {}): AstroIntegration {
     // dist/boot/astro.js — go up two levels to reach package src/
     const pkgSrc = fileURLToPath(new URL('../../src', import.meta.url));
+
+    let loaded: { config: AstromechConfig; resolved: ResolvedConfig } | undefined;
+
+    function requireLoaded(): { config: AstromechConfig; resolved: ResolvedConfig } {
+        if (loaded === undefined) {
+            throw new Error(
+                '[Astromech] Config not loaded — the astro:config:setup hook has not run.'
+            );
+        }
+        return loaded;
+    }
 
     return {
         name: 'astromech',
@@ -42,6 +62,13 @@ export function astromech(config: AstromechConfig): AstroIntegration {
                 logger,
                 config: astroConfig,
             }) => {
+                const config = await loadConfigFile(
+                    fileURLToPath(astroConfig.root),
+                    options.configFile
+                );
+                const resolvedConfig = resolveConfig(config);
+                loaded = { config, resolved: resolvedConfig };
+
                 logger.info('Initializing Astromech CMS');
 
                 await initRuntime(config, resolvedConfig);
@@ -171,6 +198,7 @@ export function astromech(config: AstromechConfig): AstroIntegration {
             },
 
             'astro:config:done': async ({ injectTypes, logger, config: astroConfig }) => {
+                const { config, resolved: resolvedConfig } = requireLoaded();
                 const { generateClientTypes } =
                     await import('@/codegen/type-generator.js');
                 injectTypes({
@@ -208,12 +236,14 @@ export function astromech(config: AstromechConfig): AstroIntegration {
             },
 
             'astro:server:setup': async ({ logger }) => {
+                const { config } = requireLoaded();
                 logger.info('Astromech dev server ready');
                 await runMigrations(logger, config.plugins ?? []);
                 await startScheduler();
             },
 
             'astro:build:done': async ({ logger }) => {
+                const { config } = requireLoaded();
                 logger.info('Astromech build complete');
                 await runMigrations(logger, config.plugins ?? []);
             },
