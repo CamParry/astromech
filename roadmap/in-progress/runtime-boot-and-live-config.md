@@ -101,10 +101,12 @@ Migrations and the scheduler do not move into the request path.
 
 One branch, a commit per workstream.
 
-- [ ] **WS1 — Config path API.** `astromech()` accepts `{ configFile }` and
-      defaults to `./astromech.config.ts`. The integration loads it in Node at
-      config time. Decide what does the loading; `transport/cli/config.ts` already
-      resolves a config by convention and may be the seam to reuse.
+- [x] **WS1 — Config path API.** `astromech()` accepts `{ configFile }` and
+      defaults to `./astromech.config.ts`, resolved against the Astro project
+      root. The jiti loading `transport/cli/config.ts` already did moved to
+      `boot/config-loader.ts` and both callers share it. `resolveConfig` runs
+      inside `astro:config:setup` rather than at factory time, since the load is
+      async.
 - [ ] **WS2 — Live virtual module.** `virtual:astromech/config` re-exports the
       author's module instead of a JSON literal. Keep the default export a
       `ResolvedConfig`, since 28 modules read properties off it.
@@ -158,8 +160,6 @@ the suite runs a build.
 
 ## Open questions
 
-- What loads the config in Node at config time, and does it share code with the
-  CLI's loader.
 - Whether the dev double-evaluation is acceptable or whether the config should
   split into build-time knobs and runtime values.
 - Whether the CLI and vitest shims (`transport/cli/virtual-config-shim.ts` and the
