@@ -85,11 +85,30 @@ export type PluginLogger = {
 };
 
 /**
- * The resolved config as seen by a plugin, plus footprint helpers. Plugin
- * "footprint" (which entry types use a plugin) is *derived* from field
- * presence, never declared.
+ * A projection of the resolved config, not the whole of it: structural fields
+ * only, so `storage`, `email` and `image` are absent — those capabilities are
+ * reached through the scoped ports (`ctx.storage`, `ctx.sendEmail`,
+ * `ctx.database`). Plugin "footprint" (which entry types use a plugin) is
+ * *derived* from field presence, never declared.
  */
-export type PluginConfigView = ResolvedConfig & {
+export type PluginConfigView = Pick<
+    ResolvedConfig,
+    | 'entries'
+    | 'pluginEntries'
+    | 'adminPages'
+    | 'admin'
+    | 'media'
+    | 'users'
+    | 'locales'
+    | 'defaultLocale'
+    | 'adminRoute'
+    | 'apiRoute'
+    | 'mediaRoute'
+    | 'trash'
+    | 'publicSettingKeys'
+    | 'timezone'
+    | 'roles'
+> & {
     /** Entry type names whose field groups contain a field of the given name. */
     entryTypesWithField(fieldName: string): string[];
 };

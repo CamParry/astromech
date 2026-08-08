@@ -344,9 +344,29 @@ function makeLogger(name: string): PluginLogger {
     };
 }
 
-function makeConfigView(config: ResolvedConfig): PluginConfigView {
+/**
+ * Project the resolved config onto the plugin view — named fields only, so a
+ * live driver can never ride along on a spread.
+ */
+function makeConfigView(
+    config: Omit<PluginConfigView, 'entryTypesWithField'>
+): PluginConfigView {
     return {
-        ...config,
+        entries: config.entries,
+        pluginEntries: config.pluginEntries,
+        adminPages: config.adminPages,
+        media: config.media,
+        adminRoute: config.adminRoute,
+        apiRoute: config.apiRoute,
+        mediaRoute: config.mediaRoute,
+        trash: config.trash,
+        publicSettingKeys: config.publicSettingKeys,
+        timezone: config.timezone,
+        ...(config.admin ? { admin: config.admin } : {}),
+        ...(config.users ? { users: config.users } : {}),
+        ...(config.roles ? { roles: config.roles } : {}),
+        ...(config.locales ? { locales: config.locales } : {}),
+        ...(config.defaultLocale ? { defaultLocale: config.defaultLocale } : {}),
         entryTypesWithField(fieldName: string): string[] {
             return Object.entries(config.entries)
                 .filter(([, entryType]) =>
@@ -467,7 +487,7 @@ export function createPluginContext(
     };
 }
 
-function emptyConfig(): ResolvedConfig {
+function emptyConfig(): Omit<PluginConfigView, 'entryTypesWithField'> {
     return {
         adminRoute: '/admin',
         apiRoute: '/api',
@@ -477,17 +497,9 @@ function emptyConfig(): ResolvedConfig {
         trash: { enabled: true, retentionDays: 30 },
         publicSettingKeys: [],
         timezone: 'UTC',
-        storage: {
-            name: 'noop',
-            put: () => Promise.resolve(),
-            get: () => Promise.resolve(null),
-            stat: () => Promise.resolve(null),
-            delete: () => Promise.resolve(),
-            list: () => Promise.resolve({ keys: [] }),
-        },
         mediaRoute: '/_media',
         media: { access: 'public' },
-    } as ResolvedConfig;
+    };
 }
 
 // ============================================================================
