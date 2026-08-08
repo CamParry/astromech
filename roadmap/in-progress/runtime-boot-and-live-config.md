@@ -142,10 +142,23 @@ One branch, a commit per workstream.
       became a bare `libsqlDriver()`, which already reads `DATABASE_URL` and
       already falls back to `file:./database.db`, so no new environment variable
       was invented. Landed before WS2 so it is verifiable on its own.
-- [ ] **WS6 — Delete the workarounds.** The resource-validator registry
-      (`fields/resource-validators.ts`) and the `ai.model` special case exist only
-      because functions could not cross. Establish whether they can go, or what
-      still needs them.
+- [x] **WS6 — Delete the workarounds.** The resource-validator registry is gone;
+      every call site was already `getResourceValidator(key) ?? <the config
+  value>`, and that fallback is now simply correct. The `ai` strip stays.
+      `decisions/0021` justifies it by the JSON round trip, which no longer
+      applies, but it turns out to be load-bearing for a better reason:
+      consumers must reach the model through `getAIConfig()` to get the copy
+      `buildAIConfig` wrapped with logging middleware, and `config.ai.model`
+      would bypass it. Recorded so nobody removes it as dead weight later.
+
+          Deleting the registry surfaced a coverage gap that predates this work.
+          Resource-level `validate` was tested only through the registry's own unit
+          tests, which tested the store rather than the behaviour. Breaking each
+          call site in turn and running its suite: entries `create`/`update` fail
+          (covered), while **staging-merge, media, users and settings-page
+          `validate` have no test that notices at all**. Nothing was written to
+          paper over it — see `roadmap/planned/field-validation-coverage.md`.
+
 - [ ] **WS7 — Documentation.** `ARCHITECTURE.md`'s two-graph section is a map of
       the present, so it changes when the code does, not before. The
       known-limitation callout in `apps/docs/content/field-validation.md` gets
