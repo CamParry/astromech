@@ -107,18 +107,32 @@ One branch, a commit per workstream.
       `boot/config-loader.ts` and both callers share it. `resolveConfig` runs
       inside `astro:config:setup` rather than at factory time, since the load is
       async.
-- [ ] **WS2 — Live virtual module.** `virtual:astromech/config` re-exports the
-      author's module instead of a JSON literal. Keep the default export a
-      `ResolvedConfig`, since 28 modules read properties off it.
-- [ ] **WS3 — Lazy boot.** Delete the `initRuntime` call in `astro:config:setup`.
-      Add a memoised `ensureBooted()` to the injected middleware, caching the
-      promise. Confirm nothing else depended on boot having run at config time.
-- [ ] **WS4 — Bundler hygiene.** Optional peers reachable from the `astromech`
-      barrel break the build once the config joins the SSR graph. `nodemailer` is
-      the known instance. `vite.ssr.external` was ignored;
-      `build.rollupOptions.external` worked. Find the general answer rather than
-      listing packages one at a time, since a user's config will reach drivers the
-      demo does not.
+- [x] **WS2 — Live virtual module.** `virtual:astromech/config` re-exports the
+      author's module instead of a JSON literal. The default export stays a
+      `ResolvedConfig`, and a `rawConfig` named export carries the config as
+      written, which `initRuntime` needs. `resolveConfig` gained its own tsup
+      entry: the emitted module imports it by absolute path, and the library
+      build is otherwise all hashed chunks with no stable filename to point at.
+- [x] **WS3 — Lazy boot.** The `initRuntime` call in `astro:config:setup` is
+      deleted, and `src/middleware.ts` boots on the first request, memoising the
+      promise through the existing `createRegistry` singleton so concurrent
+      first requests share one init. Nothing else depended on config-time boot —
+      `registerRoutes`, `buildAdminConfig`, `generatePluginClientManifest`,
+      `generateClientTypes` and `generateMethodManifest` all take config
+      structure as arguments and read no registry. Two things did change:
+      `startScheduler` moved into the boot, because it needs the driver
+      `initRuntime` registers and the only booted runtime now lives in the
+      serving process, and `runMigrations` takes the database explicitly so the
+      build hooks can migrate without populating the registries.
+- [x] **WS4 — Bundler hygiene.** The general answer is `peerDependenciesMeta`,
+      not bundler configuration. Vite stubs an unresolved specifier that the
+      importing package declares optional, so declaring `nodemailer` and
+      `wrangler` — both guarded at runtime, neither declared — fixes the build on
+      its own. `build.rollupOptions.external` was tried and then removed: it is
+      redundant, and it bypasses Vite's stub so a missing package surfaces as
+      `ERR_MODULE_NOT_FOUND` instead of a message naming the package. Measured by
+      pointing the demo at `SmtpDriver`, which is the only way to make the
+      failure reachable — the demo's `ConsoleDriver` tree-shakes nodemailer out.
 - [x] **WS5 — Config authoring rules.** No paths resolved from `import.meta.url`:
       once bundled it points at the chunk, which silently created an empty
       SQLite file in `dist/server/chunks/` and served 200s over it. The rule is
@@ -150,22 +164,30 @@ One branch, a commit per workstream.
 The gate does not cover any of this. `apps/demo` has no typecheck and nothing in
 the suite runs a build.
 
-- [ ] `npm run build` in `apps/demo`, run `dist/server/entry.mjs`, and confirm
+- [x] `npm run build` in `apps/demo`, run `dist/server/entry.mjs`, and confirm
       `/`, `/admin` and an authenticated `/api/*` read all work. This is the check
-      that would have caught the original defect and does not exist today.
-- [ ] `astro dev` still works. A change that fixes the build and breaks dev is the
+      that would have caught the original defect and does not exist today. `/` and
+      `/admin` went 500 and 404 to 200, and an authenticated create returned real
+      JSON.
+- [x] `astro dev` still works. A change that fixes the build and breaks dev is the
       obvious failure mode.
-- [ ] A `{ custom: fn }` rule actually rejects a bad value, under **both**
-      `astro dev` and a built server. The existing
-      `tests/fields/pipeline.test.ts` passes today against a configuration the
-      product never runs.
-- [ ] Count config evaluations before and after, so a regression to double-boot is
-      visible.
+- [x] A `{ custom: fn }` rule actually rejects a bad value, under **both**
+      `astro dev` and a built server. Measured by adding an always-failing rule to
+      the demo's `category.description`: 422 from both, naming the rule's own
+      message.
+- [x] Count config evaluations before and after, so a regression to double-boot is
+      visible. One per build, one per serving process, two under `astro dev`.
+- [ ] Nothing in the gate runs a build, so all of the above is a one-off by hand.
+      Decide whether a check earns a place in the gate, or the next regression is
+      found the same way this one was.
 
 ## Open questions
 
 - Whether the dev double-evaluation is acceptable or whether the config should
-  split into build-time knobs and runtime values.
+  split into build-time knobs and runtime values. It is not currently causing
+  harm: plugin methods, a plugin entry type and the admin routes were all
+  exercised under dev after the change, and plugin registration survives the two
+  module registries not being shared.
 - Whether the CLI and vitest shims (`transport/cli/virtual-config-shim.ts` and the
   vitest alias) still need to exist once the virtual module is live, or whether
   all three paths collapse to one.
