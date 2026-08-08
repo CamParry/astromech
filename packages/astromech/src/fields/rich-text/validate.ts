@@ -6,7 +6,9 @@
  */
 
 import { Node } from '@tiptap/pm/model';
+import type { JSONContent } from '@tiptap/core';
 import { schemaFor } from './schema.js';
+import { findUnsafeLink } from './safe-links.js';
 import type { FieldValidator, RichTextAllow } from '@/types/fields.js';
 
 /**
@@ -27,7 +29,7 @@ export const coerceRichText = (v: unknown): unknown => (v === '' ? null : v);
 /**
  * Validate a value as a ProseMirror document against an `allow` list.
  * `fromJSON` rejects unknown node and mark types; `check()` adds the nested
- * content rules that `fromJSON` does not enforce on its own.
+ * content rules; neither looks at link hrefs, so executable schemes are last.
  */
 export function checkRichTextDocument(
     value: unknown,
@@ -55,6 +57,11 @@ export function checkRichTextDocument(
         return describe(error);
     }
 
+    const unsafe = findUnsafeLink(value as JSONContent);
+    if (unsafe !== null) {
+        return `Invalid rich text: link href uses an unsafe scheme (${truncate(unsafe)})`;
+    }
+
     return true;
 }
 
@@ -64,4 +71,9 @@ function describe(error: unknown): string {
     return detail === ''
         ? 'Must be a valid rich text document'
         : `Invalid rich text: ${detail}`;
+}
+
+/** Cap an echoed href so a base64 `data:` URI cannot bloat the message. */
+function truncate(href: string): string {
+    return href.length <= 80 ? href : `${href.slice(0, 80)}…`;
 }

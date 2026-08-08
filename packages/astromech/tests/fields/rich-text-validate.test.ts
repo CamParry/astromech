@@ -99,6 +99,124 @@ describe('checkRichTextDocument', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Executable link schemes — `fromJSON` and `check()` never look at an href
+// ---------------------------------------------------------------------------
+
+describe('checkRichTextDocument rejects executable link schemes', () => {
+    /** A one-paragraph document whose only text carries a link mark. */
+    function docWithHref(href: string) {
+        return {
+            type: 'doc',
+            content: [
+                {
+                    type: 'paragraph',
+                    content: [
+                        {
+                            type: 'text',
+                            text: 'click',
+                            marks: [{ type: 'link', attrs: { href } }],
+                        },
+                    ],
+                },
+            ],
+        };
+    }
+
+    it('rejects a javascript: href and names it', () => {
+        const result = checkRichTextDocument(docWithHref('javascript:alert(1)'));
+
+        expect(result).toMatch(/^Invalid rich text: link href uses an unsafe scheme/);
+        expect(result).toContain('javascript:alert(1)');
+    });
+
+    it('rejects a data: href and names it', () => {
+        const href = 'data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==';
+        const result = checkRichTextDocument(docWithHref(href));
+
+        expect(result).toMatch(/^Invalid rich text: link href uses an unsafe scheme/);
+        expect(result).toContain(href);
+    });
+
+    it('still accepts an ordinary link', () => {
+        expect(checkRichTextDocument(docWithHref('https://example.com'))).toBe(true);
+    });
+
+    it('rejects one nested inside a list, not just at the top level', () => {
+        const nested = {
+            type: 'doc',
+            content: [
+                {
+                    type: 'bulletList',
+                    content: [
+                        {
+                            type: 'listItem',
+                            content: [
+                                {
+                                    type: 'paragraph',
+                                    content: [
+                                        {
+                                            type: 'text',
+                                            text: 'deep',
+                                            marks: [
+                                                {
+                                                    type: 'link',
+                                                    attrs: {
+                                                        href: 'javascript:alert(1)',
+                                                    },
+                                                },
+                                            ],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        };
+
+        expect(checkRichTextDocument(nested)).toMatch(
+            /^Invalid rich text: link href uses an unsafe scheme/
+        );
+    });
+
+    it('truncates a long href so the message stays readable', () => {
+        const href = `data:text/html;base64,${'A'.repeat(500)}`;
+        const result = checkRichTextDocument(docWithHref(href));
+
+        expect(typeof result).toBe('string');
+        expect((result as string).length).toBeLessThan(140);
+        expect(result).toContain('A…)');
+    });
+
+    // ProseMirror's reason names the offending node, which is the more useful one.
+    it('reports the structural reason first when the document is also invalid', () => {
+        const invalid = {
+            type: 'doc',
+            content: [
+                {
+                    type: 'text',
+                    text: 'bare',
+                    marks: [{ type: 'link', attrs: { href: 'javascript:alert(1)' } }],
+                },
+            ],
+        };
+
+        const result = checkRichTextDocument(invalid);
+        expect(result).toMatch(/^Invalid rich text:/);
+        expect(result).not.toContain('unsafe scheme');
+    });
+
+    it('rejects through validateRichText too', async () => {
+        const result = await validateRichText(
+            ctx(docWithHref('javascript:alert(1)'), { name: 'body', type: 'richtext' })
+        );
+
+        expect(result).toMatch(/^Invalid rich text: link href uses an unsafe scheme/);
+    });
+});
+
+// ---------------------------------------------------------------------------
 // allow list
 // ---------------------------------------------------------------------------
 

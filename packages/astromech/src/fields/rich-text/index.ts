@@ -12,6 +12,7 @@ import { renderToHTMLString } from '@tiptap/static-renderer';
 import type { JSONContent } from '@tiptap/core';
 import type { RichTextAllow } from '@/types/fields.js';
 import { buildRichTextExtensions } from './extensions.js';
+import { isUnsafeHref } from './safe-links.js';
 
 // ============================================================================
 // Sanitization
@@ -30,8 +31,7 @@ function sanitize(html: string): string {
             uq: string | undefined
         ) => {
             const href = (dq ?? sq ?? uq ?? '').trim();
-            const scheme = href.replace(/[\s\0]/g, '').toLowerCase();
-            if (scheme.startsWith('javascript:') || scheme.startsWith('data:')) {
+            if (isUnsafeHref(href)) {
                 return `${prefix}href="#"`;
             }
             return _match;
