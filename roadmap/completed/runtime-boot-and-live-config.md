@@ -1,6 +1,12 @@
 # Runtime Boot and Live Config
 
-The server never boots itself. `initRuntime` is called once, from
+Shipped 2026-08-09. The server now boots itself on the first request, and the
+config reaches it as a live module. What follows is the record of the defect and
+the work, kept as it was written.
+
+## The defect
+
+The server never booted itself. `initRuntime` was called once, from
 `astro:config:setup` in `boot/astro.ts`, which runs in the process that builds the
 site. A deployed server is a different process, so the 17 `globalThis` registries
 that hook fills are empty at request time.
@@ -142,35 +148,39 @@ One branch, a commit per workstream.
       became a bare `libsqlDriver()`, which already reads `DATABASE_URL` and
       already falls back to `file:./database.db`, so no new environment variable
       was invented. Landed before WS2 so it is verifiable on its own.
-- [x] **WS6 — Delete the workarounds.** The resource-validator registry is gone;
-      every call site was already `getResourceValidator(key) ?? <the config
-  value>`, and that fallback is now simply correct. The `ai` strip stays.
+- [x] **WS6 — Delete the workarounds.** The resource-validator registry is gone.
+      Every call site was already a registry lookup with the config value as its
+      fallback, and that fallback is now simply correct. The `ai` strip stays:
       `decisions/0021` justifies it by the JSON round trip, which no longer
-      applies, but it turns out to be load-bearing for a better reason:
-      consumers must reach the model through `getAIConfig()` to get the copy
+      applies, but it turns out to be load-bearing for a better reason.
+      Consumers must reach the model through `getAIConfig()` to get the copy
       `buildAIConfig` wrapped with logging middleware, and `config.ai.model`
       would bypass it. Recorded so nobody removes it as dead weight later.
+      Deleting the registry also surfaced a coverage gap that predates this
+      work. Resource-level `validate` was tested only through the registry's own
+      unit tests, which tested the store rather than the behaviour. Breaking
+      each call site in turn and running its suite: entries `create` and
+      `update` fail, so they are covered, while **staging-merge, media, users
+      and settings-page `validate` have no test that notices at all**. Nothing
+      was written to paper over it; the gap belongs with
+      `roadmap/planned/field-validation-coverage.md`.
 
-          Deleting the registry surfaced a coverage gap that predates this work.
-          Resource-level `validate` was tested only through the registry's own unit
-          tests, which tested the store rather than the behaviour. Breaking each
-          call site in turn and running its suite: entries `create`/`update` fail
-          (covered), while **staging-merge, media, users and settings-page
-          `validate` have no test that notices at all**. Nothing was written to
-          paper over it — see `roadmap/planned/field-validation-coverage.md`.
-
-- [ ] **WS7 — Documentation.** `ARCHITECTURE.md`'s two-graph section is a map of
-      the present, so it changes when the code does, not before. The
-      known-limitation callout in `apps/docs/content/field-validation.md` gets
-      deleted rather than reworded once `custom` runs. The plugin boundary note in
-      `apps/docs/plugins/authoring.md` says Astro loads your config "in plain
-      Node, where the `virtual:astromech/config` that every domain service reaches
-      cannot resolve" — that becomes only half true when the config is also
-      evaluated in the SSR graph, so re-derive it rather than patching the
-      sentence. A decision record covers why loading the config as a module beat
-      registering functions at boot, and supersedes the implication in
-      `decisions/0021` that `storage` and `email.driver` are stripped from
-      `ResolvedConfig`; they are not, they arrive as husks.
+- [x] **WS7 — Documentation.** `ARCHITECTURE.md`'s two-graph section is
+      re-derived, and so is the plugin boundary callout in
+      `apps/docs/plugins/authoring.md`: the rule survives, the reason is now that
+      the config is loaded twice and the plugin has to survive the plain-Node
+      one. A claim that a port cannot be wired in `initRuntime` is gone, since
+      `initRuntime` now runs in the serving process's Vite graph. The
+      known-limitation callout in `apps/docs/content/field-validation.md` is
+      deleted outright. `apps/docs/configuration/database.md` gains WS5's rule.
+      `decisions/0030-the-server-loads-the-config-as-a-module.md` records the
+      why and supersedes 0021's reasoning. One claim was measured rather than
+      asserted, because it is load-bearing: a plugin package's module body runs
+      **twice** under `astro dev`, with `globalThis` shared and module-level
+      state not, so Vite does not reuse the Node-loaded instance for the SSR
+      graph. One gap was left open — `apps/docs` has no installation or setup
+      page at all, so `astromech({ configFile })` has no user-facing home and is
+      documented only in the docblock of `boot/astro.ts`.
 
 ## Verification
 
@@ -190,19 +200,22 @@ the suite runs a build.
       message.
 - [x] Count config evaluations before and after, so a regression to double-boot is
       visible. One per build, one per serving process, two under `astro dev`.
-- [ ] Nothing in the gate runs a build, so all of the above is a one-off by hand.
-      Decide whether a check earns a place in the gate, or the next regression is
-      found the same way this one was.
+      All of the above was done by hand. Nothing in the gate runs a build, so none of
+      it would catch the next regression — carried out to
+      `roadmap/planned/gate-runs-a-build.md`.
 
-## Open questions
+## What was left open
 
-- Whether the dev double-evaluation is acceptable or whether the config should
-  split into build-time knobs and runtime values. It is not currently causing
-  harm: plugin methods, a plugin entry type and the admin routes were all
-  exercised under dev after the change, and plugin registration survives the two
-  module registries not being shared.
-- Whether the CLI and vitest shims (`transport/cli/virtual-config-shim.ts` and the
-  vitest alias) still need to exist once the virtual module is live, or whether
-  all three paths collapse to one.
+- The dev double-evaluation is accepted. It is not causing harm: plugin methods,
+  a plugin entry type and the admin routes were all exercised under dev after
+  the change, and plugin registration survives the two module registries not
+  being shared. Splitting the config into build-time knobs and runtime values
+  stays available if that changes.
+- Whether the CLI and vitest shims (`transport/cli/virtual-config-shim.ts` and
+  the vitest alias) still need to exist now the virtual module is live, or
+  whether all three paths collapse to one. Untouched here; both still work.
 - Where migrations run for a Workers deployment, given there is no build-time
-  process holding a filesystem.
+  process holding a filesystem. `runMigrations` now takes a database explicitly,
+  which is the shape a Workers caller would need, but no such caller exists.
+- `apps/docs` has no installation page, so the config-path API has no
+  user-facing home — carried out to `roadmap/planned/docs-installation-page.md`.
