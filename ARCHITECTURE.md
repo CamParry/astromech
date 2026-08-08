@@ -85,7 +85,7 @@ packages/
 ├── astromech/       # the published `astromech` core package
 │   ├── src/
 │   │   ├── index.ts        # public framework-agnostic entry (re-exported via exports/)
-│   │   ├── middleware.ts   # HTTP middleware entry     (astromech/middleware)
+│   │   ├── middleware.ts   # Astro middleware entry; boots the runtime on the first request (astromech/middleware)
 │   │   │
 │   │   │   ── entrypoints & composition root ──────────────────────────────────
 │   │   ├── boot/           # composition root — boots & wires all layers; Astro integration (astromech/astro)
@@ -157,18 +157,20 @@ Plugins access platform resources through two sanctioned, plugin-scoped handles 
 
 **A plugin's server code runs in a different module graph from core's, and `ctx` is the only bridge across it.** This is an invariant, not a convention — the alternative does not merely violate a rule, it throws.
 
-Astro loads `astro.config.mjs`, and therefore `astromech.config.ts` and every `plugin()` factory, in **plain Node at config time**. A `PluginDefinition` and every closure hanging off it — `rawRoutes[].handler`, service methods, hooks — belongs to that Node-loaded copy of the plugin package, whenever it later runs. Core's runtime code is the opposite: the integration injects routes pointing at package **source** (`pkgSrc` in `boot/astro.ts`), so Vite compiles it.
+The integration takes a config **path** and the site's `astromech.config.ts` is evaluated twice. Once in **plain Node at config time**, inside `astro:config:setup` (`boot/config-loader.ts`), which is what route registration, the admin config, codegen and the build-time migration run read; and once in the **Vite SSR graph**, where `virtual:astromech/config` re-exports the same file. Every `plugin()` factory runs in both, so a plugin package is evaluated in two module registries and module-level state in it is not shared between them. The evaluation that boots is the SSR one: `src/middleware.ts` hands that module's `rawConfig` to `initRuntime`, so the registered `PluginDefinition`, with `rawRoutes[].handler`, service methods and hooks hanging off it, is the SSR-graph copy. Core's runtime code is the opposite: the integration injects routes pointing at package **source** (`pkgSrc` in `boot/astro.ts`), so Vite compiles it.
 
-|                | how it is loaded         | can it resolve `virtual:`? |
-| -------------- | ------------------------ | -------------------------- |
-| core runtime   | Vite-compiled from `src` | yes                        |
-| plugin runtime | Node-loaded from `dist`  | **no**                     |
+The config-time evaluation is the constraint. A plugin package has to load under plain Node, with no Vite in the process:
+
+|                  | how it is loaded                     | can it resolve `virtual:`? |
+| ---------------- | ------------------------------------ | -------------------------- |
+| core runtime     | Vite-compiled from `src`             | yes                        |
+| a plugin package | Node-loaded from `dist`, config time | **no**                     |
 
 So a plugin that imports a core module reaching `virtual:astromech/config` — which every domain service does — dies with `ERR_UNSUPPORTED_ESM_URL_SCHEME` under Node's ESM loader. **`astromech/methods` is unreachable from a plugin package for exactly this reason**, and it fails at _import_ time rather than at call time, because `exports/methods.ts` statically re-exports `scopedServices` and so loads the whole service graph.
 
 **The rule this produces: a plugin package imports `astromech` and `astromech/ui`, and nothing else from core.** Both load under plain Node; type-only imports from any subpath are fine, because they erase. Everything else arrives on `ctx`. New platform capabilities are therefore added as a capability port (above), never as a published subpath a plugin is expected to import — `ctx.methods.tools()` is the worked example, and `decisions/0007-plugin-core-boundary.md` holds the mechanism with the rejected alternatives. The **root `astromech` barrel** is the sanctioned third route: it is already the one barrel a plugin may import, so a capability whose surface is a pure function over a registry can ship from there and needs neither a port nor a subpath — `getModel`/`hasModel` do.
 
-A port's implementation must be a **Vite-graph closure**, which rules out wiring it in `initRuntime` — `boot/astro.ts` calls that inside `astro:config:setup`, in plain Node. The precedent is `setPluginClient`: `transport/local/index.ts` calls it at module top level, so whichever graph evaluates that module is the graph the plugin's `ctx.entries` runs in. `setPluginMethods` is wired on the same line.
+A port's implementation must be a **Vite-graph closure**. The precedent is `setPluginClient`: `transport/local/index.ts` calls it at module top level, so whichever graph evaluates that module is the graph the plugin's `ctx.entries` runs in. `setPluginMethods` is wired on the same line. `initRuntime` sits in that graph too, its only caller being `src/middleware.ts`, which runs in the serving process.
 
 `ssr.noExternal` does **not** fix this, and neither does teaching Node to resolve `virtual:` with module customization hooks. `decisions/0007-plugin-core-boundary.md` records why each fails.
 

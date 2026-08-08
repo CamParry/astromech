@@ -50,6 +50,17 @@ are supported for **local file databases only**. They use `VACUUM INTO`, which
 needs a local file, so a remote Turso URL is rejected with an explicit error
 rather than silently producing a broken backup.
 
+### Where `file:./database.db` points
+
+Relative paths in your config resolve against the **working directory**, so run
+`astro` and the `astromech` CLI from your project root. Every path in the config
+works this way, `filesystem({ dir: './public/uploads' })` included.
+
+Don't derive the path from `import.meta.url`. Your config is loaded into the
+server that Astro builds, and there `import.meta.url` points at the emitted
+chunk: a URL built from it creates an empty database next to that chunk, which
+the server then reads and writes without complaining.
+
 ## `d1()`
 
 ```ts

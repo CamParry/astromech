@@ -658,11 +658,13 @@ Plugin-declared methods are absent from the list: their `access` is enforced by
 the HTTP RPC route, so there is nothing to scope them with.
 
 > **A plugin imports `astromech` and `astromech/ui`, and nothing else from
-> core.** Everything else arrives on `ctx`. Astro loads your config — and so
-> your plugin — in plain Node, where the `virtual:astromech/config` that every
-> domain service reaches cannot resolve; importing a subpath like
-> `astromech/methods` throws `ERR_UNSUPPORTED_ESM_URL_SCHEME` at import time.
-> Type-only imports from any subpath are fine, because they erase.
+> core.** Everything else arrives on `ctx`. Your config is loaded twice: in the
+> running server's module graph, and in plain Node at config time, where the
+> `virtual:astromech/config` that every domain service reaches cannot resolve.
+> Your plugin is loaded with it both times and has to survive the plain-Node one,
+> so importing a subpath like `astromech/methods` throws
+> `ERR_UNSUPPORTED_ESM_URL_SCHEME` at import time. Type-only imports from any
+> subpath are fine, because they erase.
 
 ### Reaching a model
 

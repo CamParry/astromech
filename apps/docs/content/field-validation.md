@@ -198,13 +198,6 @@ rules), `field`, `path`, `operation` (`'create'` or `'update'`), `stage`
 `values` is scoped to the field's own container, not the whole record — a rule
 on a field inside a repeater item sees that item's siblings.
 
-> **Known limitation.** `custom` does not currently run under `astro dev` or
-> `astro build`. The server's config is serialized to JSON before it reaches the
-> running server, which turns `{ custom: fn }` into an empty rule — silently. It
-> does work through the CLI. Until that is fixed, do not rely on `custom` as a
-> data-integrity guarantee. See
-> `roadmap/in-progress/runtime-boot-and-live-config.md`.
-
 ## Whole-resource validation
 
 Some rules belong to no single field — "an event's end date must follow its
