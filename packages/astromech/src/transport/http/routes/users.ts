@@ -4,14 +4,15 @@
  * CRUD operations for CMS users.
  *
  * Routes:
- *   GET    /users         → all()
- *   GET    /users/:id     → get()
- *   POST   /users         → create()
- *   PUT    /users/:id     → update()
- *   DELETE /users/:id     → delete()
+ *   GET    /users         → users.query
+ *   GET    /users/:id     → users.get (bespoke)
+ *   POST   /users         → users.create
+ *   PUT    /users/:id     → users.update (bespoke)
+ *   DELETE /users/:id     → users.delete (bespoke)
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
+import type { Context } from 'hono';
 import { Astromech } from '@/transport/local/index';
 import {
     badRequest,
@@ -21,24 +22,33 @@ import {
 } from '@/transport/http/middleware/errors';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { permissionsFor } from '@/permissions/permissions-for';
-import { createUserSchema, updateUserSchema, usersContract } from '@/users/index';
+import { updateUserSchema, usersContract } from '@/users/index';
 import { createUserStorage } from '@/users/storage';
 import type { JsonObject, UserQueryParams } from '@/types/index';
+import { mountRestRoutes, type RestRoute } from './rest-route';
 
 type Env = { Variables: AuthVariables };
 
 const router = new OpenAPIHono<Env>();
 
-// ============================================================================
-// GET /users
-// ============================================================================
-
+/** Sort fields accepted off the wire. An unlisted one is dropped, not rejected. */
 const SORTABLE_FIELDS = new Set(['name', 'email', 'createdAt', 'updatedAt', 'roleSlug']);
 
-router.get('/', async (c) => {
-    const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(usersContract.query)) return forbidden(c);
+const USERS_ROUTES: RestRoute[] = [
+    { verb: 'get', path: '/', id: 'users.query', args: queryArgs, envelope: 'raw' },
+    {
+        verb: 'post',
+        path: '/',
+        id: 'users.create',
+        args: (c) => c.req.json<Record<string, unknown>>(),
+        status: 201,
+    },
+];
 
+mountRestRoutes(router, usersContract, USERS_ROUTES);
+
+/** `users.query` arguments, read off the query string. */
+function queryArgs(c: Context<Env>): UserQueryParams {
     const q = c.req.query();
     const params: UserQueryParams = {};
     if (q['search']) params.search = q['search'];
@@ -50,13 +60,15 @@ router.get('/', async (c) => {
         const dir = q['dir'] === 'asc' ? 'asc' : 'desc';
         params.sort = { [sortField]: dir };
     }
-    return c.json(await Astromech.users.query(params));
-});
+    return params;
+}
 
 // ============================================================================
-// GET /users/:id
+// GET /users/:id — bespoke
 // ============================================================================
 
+// Not in the table: self-access. A caller reading its own row passes without
+// `users:read`, which no method contract can state.
 router.get('/:id', async (c) => {
     const { id } = c.req.param();
     const permissions = permissionsFor(c.var.role);
@@ -70,31 +82,11 @@ router.get('/:id', async (c) => {
 });
 
 // ============================================================================
-// POST /users
+// PUT /users/:id — bespoke
 // ============================================================================
 
-router.post('/', async (c) => {
-    const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(usersContract.create)) return forbidden(c);
-
-    const raw = await c.req.json();
-    const parsed = createUserSchema.safeParse(raw);
-    if (!parsed.success) return fromZodError(c, parsed.error);
-
-    const { email, name, fields, roleSlug } = parsed.data;
-    const user = await Astromech.users.create({
-        email,
-        name,
-        ...(fields !== undefined && { fields: fields as JsonObject }),
-        ...(roleSlug !== undefined && { roleSlug }),
-    });
-    return c.json({ data: user }, 201);
-});
-
-// ============================================================================
-// PUT /users/:id
-// ============================================================================
-
+// Not in the table: self-access, a `roleSlug` change that still demands
+// `users:update`, and the last-admin guard — which is a second storage call.
 router.put('/:id', async (c) => {
     const { id } = c.req.param();
     const permissions = permissionsFor(c.var.role);
@@ -137,9 +129,11 @@ router.put('/:id', async (c) => {
 });
 
 // ============================================================================
-// DELETE /users/:id
+// DELETE /users/:id — bespoke
 // ============================================================================
 
+// Not in the table: the last-admin guard, a second storage call no contract
+// can state.
 router.delete('/:id', async (c) => {
     const { id } = c.req.param();
     const permissions = permissionsFor(c.var.role);
