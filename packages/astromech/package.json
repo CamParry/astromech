@@ -95,6 +95,30 @@
             "types": "./dist/email/index.d.ts",
             "default": "./dist/email/index.js"
         },
+        "./email/console": {
+            "types": "./dist/email/drivers/console.d.ts",
+            "default": "./dist/email/drivers/console.js"
+        },
+        "./email/resend": {
+            "types": "./dist/email/drivers/resend.d.ts",
+            "default": "./dist/email/drivers/resend.js"
+        },
+        "./email/smtp": {
+            "types": "./dist/email/drivers/smtp.d.ts",
+            "default": "./dist/email/drivers/smtp.js"
+        },
+        "./scheduler/interval": {
+            "types": "./dist/scheduler/drivers/interval.d.ts",
+            "default": "./dist/scheduler/drivers/interval.js"
+        },
+        "./scheduler/webhook": {
+            "types": "./dist/scheduler/drivers/webhook.d.ts",
+            "default": "./dist/scheduler/drivers/webhook.js"
+        },
+        "./scheduler/cloudflare": {
+            "types": "./dist/scheduler/drivers/cloudflare.d.ts",
+            "default": "./dist/scheduler/drivers/cloudflare.js"
+        },
         "./ui/fields": {
             "types": "./dist/admin/components/fields/index.d.ts",
             "default": "./src/exports/admin/ui-fields.ts"

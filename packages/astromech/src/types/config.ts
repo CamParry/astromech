@@ -140,9 +140,9 @@ export type ImageConfig = {
     avif?: boolean;
 };
 
+/** No `from` — the driver supplies the envelope sender it was configured with. */
 export type EmailMessage = {
     to: string;
-    from: string;
     subject: string;
     html: string;
     text?: string;
@@ -240,10 +240,11 @@ export type EntryType = {
      */
     url?: string;
     /**
-     * Custom storage backend for this entry type. Plugin entry types may mount
-     * their own storage; absent means built-in storage. Stripped from the
-     * resolved config (a live instance cannot be serialised into the virtual
-     * module) and registered into the storage registry at boot.
+     * Custom storage backend for this entry type; absent means built-in
+     * storage. Stripped from the resolved config (a live instance cannot be
+     * serialised into the virtual module) and registered into the storage
+     * registry at boot, under the bare type name for a host type and the
+     * qualified `{plugin}/{type}` id for a plugin's.
      */
     storage?: EntryStorage;
     /** Field names a multi-type storage should index for free-text search. */
@@ -301,6 +302,11 @@ export type MediaConfig = {
     /** How media is delivered. Default: `'public'`. */
     access?: MediaAccess;
     /**
+     * The image transform driver plus core's variant allow-list. Absent means
+     * originals are served unchanged.
+     */
+    image?: ImageConfig;
+    /**
      * Cross-field validator for a media record, run after every field has been
      * processed. Server-side only — it is a function, so it cannot cross into
      * the admin's JSON config.
@@ -308,8 +314,12 @@ export type MediaConfig = {
     validate?: ResourceValidator;
 };
 
-/** `MediaConfig` with its defaults applied. */
-export type ResolvedMediaConfig = Omit<MediaConfig, 'access'> & {
+/**
+ * `MediaConfig` with its defaults applied. `image` is absent: it holds a live
+ * driver, and this shape is `Pick`ed into `PluginConfigView`, so leaving it in
+ * would hand every plugin the `ImageDriver`. Read it from the image registry.
+ */
+export type ResolvedMediaConfig = Omit<MediaConfig, 'access' | 'image'> & {
     access: MediaAccess;
 };
 
@@ -416,7 +426,6 @@ export type AstromechConfig = {
     adminRoute?: string;
     apiRoute?: string;
     mediaRoute?: string;
-    image?: ImageConfig;
     entries: Record<string, EntryType>;
     admin?: {
         pages?: AdminPage[];
@@ -437,13 +446,11 @@ export type AstromechConfig = {
     defaultRole?: string;
     plugins?: PluginDefinition[];
     trash?: TrashConfig;
-    email?: {
-        driver: EmailDriver;
-        from: string;
-    };
+    /** Email sending. The driver carries its own `from`; absent means no email. */
+    email?: EmailDriver;
     /** Model access. Absent unless configured; see `getModel`. */
     ai?: AIConfig;
-    /** Triggering driver for scheduled jobs. Default: nodeDriver. */
+    /** Triggering driver for scheduled jobs. Default: `interval()`. */
     scheduler?: SchedulerDriver;
     /**
      * IANA timezone used to interpret cron expressions (e.g. '0 3 * * *' =
@@ -467,9 +474,15 @@ export type AstromechConfig = {
     };
 };
 
+/**
+ * `AstromechConfig` with its defaults applied, minus every capability that is
+ * one shared resource for the whole app: those are declared in config and
+ * reached from their registry, never off the config. `plugins` is not a driver
+ * but is stripped too — the raw `PluginDefinition[]` carries live functions.
+ */
 export type ResolvedConfig = Omit<
     AstromechConfig,
-    'plugins' | 'db' | 'scheduler' | 'ai'
+    'db' | 'storage' | 'email' | 'scheduler' | 'ai' | 'plugins'
 > & {
     adminRoute: string;
     apiRoute: string;

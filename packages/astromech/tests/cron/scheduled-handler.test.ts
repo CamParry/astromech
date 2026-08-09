@@ -12,7 +12,7 @@ import {
     getSchedulerDriver,
 } from '@/cron/registry.js';
 import { handleScheduled } from '@/cron/index.js';
-import { nodeDriver } from '@/cron/drivers/index.js';
+import { interval } from '@/cron/drivers/index.js';
 import { runDue } from '@/cron/runner.js';
 import { encodePatchWith } from '@/database/codec.js';
 import { cronTable } from '@/database/schema.js';
@@ -22,7 +22,7 @@ beforeEach(async () => {
     delete globalThis.__astromech?.cronJobs;
     globalThis.__astromechCronTickRunning = false;
     globalThis.__astromechCronUnscheduledWarned = new Set();
-    // Clear any held scheduler / node interval between tests.
+    // Clear any held scheduler / interval handle between tests.
     globalThis.__astromechCronInterval = undefined;
     delete globalThis.__astromech?.scheduler;
 
@@ -104,8 +104,8 @@ describe('handleScheduled', () => {
 
 describe('scheduler driver selection', () => {
     it('setSchedulerDriver / getSchedulerDriver round-trips via globalThis', () => {
-        setSchedulerDriver(nodeDriver);
-        expect(getSchedulerDriver()?.name).toBe('node');
+        setSchedulerDriver(interval());
+        expect(getSchedulerDriver()?.name).toBe('interval');
     });
 
     it('getSchedulerDriver returns null when no driver is set', () => {

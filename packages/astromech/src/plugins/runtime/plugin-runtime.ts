@@ -47,7 +47,7 @@ import { kyselyTableKey, registerTableCodec } from '@/database/codec.js';
 import { peekDatabaseDriver } from '@/database/driver-registry.js';
 import { getStorageDriver } from '@/storage/registry.js';
 import { listAll } from '@/storage/prefix.js';
-import { getEmailConfig } from '@/email/registry.js';
+import { getEmailDriver } from '@/email/registry.js';
 import { renderEmail } from '@/email/render.js';
 import { notify } from '@/notifications/index.js';
 import type { NotifyInput } from '@/types/index.js';
@@ -379,19 +379,20 @@ function makeConfigView(
     };
 }
 
-async function sendEmail(
+/** Backs `ctx.email.send`: render the element, then hand it to the configured driver. */
+async function sendPluginEmail(
     to: string,
     subject: string,
     element: ReactElement
 ): Promise<void> {
-    const emailConfig = getEmailConfig();
-    if (!emailConfig) {
+    const driver = getEmailDriver();
+    if (!driver) {
         throw new Error(
             '[Astromech] Email is not configured; cannot send from a plugin.'
         );
     }
     const { html, text } = await renderEmail(element);
-    await emailConfig.driver.send({ to, from: emailConfig.from, subject, html, text });
+    await driver.send({ to, subject, html, text });
 }
 
 /**
@@ -448,7 +449,7 @@ export function createPluginContext(
         get plugins(): PluginServiceNamespace | undefined {
             return requireClient().plugins;
         },
-        sendEmail,
+        email: { send: sendPluginEmail },
         notify: (input: NotifyInput) =>
             notify({ ...input, type: `plugin:${identity.namespace}.${input.type}` }),
         logger: makeLogger(identity.namespace),

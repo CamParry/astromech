@@ -5,9 +5,9 @@
  * URL and auth token are read from environment variables if not provided explicitly.
  *
  * Usage:
- *   import { libsqlDriver } from 'astromech';
- *   db: libsqlDriver()                          // reads DATABASE_URL from env
- *   db: libsqlDriver({ url: 'file:./dev.db' })  // explicit URL
+ *   import { libsql } from 'astromech/database/libsql';
+ *   db: libsql()                          // reads DATABASE_URL from env
+ *   db: libsql({ url: 'file:./dev.db' })  // explicit URL
  */
 
 import { tmpdir } from 'node:os';
@@ -23,7 +23,7 @@ import { LibsqlDialect } from '@libsql/kysely-libsql';
 import type { DB } from '@/database/types.js';
 import type { DbDump } from '@/types/config.js';
 
-type LibSQLDriverOptions = {
+export type LibsqlOptions = {
     url?: string;
     authToken?: string;
 };
@@ -33,7 +33,7 @@ function firstValue(row: Row): unknown {
     return (row as unknown as unknown[])[0] ?? Object.values(row)[0];
 }
 
-export function libsqlDriver(options?: LibSQLDriverOptions) {
+export function libsql(options?: LibsqlOptions) {
     let client: Client | null = null;
     let instance: Kysely<DB> | null = null;
 

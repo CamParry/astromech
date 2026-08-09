@@ -163,8 +163,7 @@ describe('resolveEntryCapabilities — staging', () => {
             plural: 'Items',
             staging: true,
         };
-        const caps = resolveEntryCapabilities(cfg, []);
-        expect(() => assertEntryTypeValid('widget', cfg, caps, [])).toThrow(/staging/);
+        expect(() => assertEntryTypeValid('widget', cfg, [])).toThrow(/staging/);
     });
 });
 
@@ -207,8 +206,7 @@ describe('assertEntryTypeValid — capability mismatch', () => {
             versioning: true,
             trash: true,
         };
-        const caps = resolveEntryCapabilities(cfg, []);
-        expect(() => assertEntryTypeValid('widget', cfg, caps, [])).toThrow(
+        expect(() => assertEntryTypeValid('widget', cfg, [])).toThrow(
             'Astromech entry type "widget" declares capabilities its storage does not support: trash, versioning. Storage supports: (none).'
         );
     });
@@ -219,9 +217,7 @@ describe('assertEntryTypeValid — capability mismatch', () => {
             plural: 'Items',
             versioning: true,
         };
-        const narrowSupports = ['statuses'] as const;
-        const caps = resolveEntryCapabilities(cfg, narrowSupports);
-        expect(() => assertEntryTypeValid('widget', cfg, caps, narrowSupports)).toThrow(
+        expect(() => assertEntryTypeValid('widget', cfg, ['statuses'])).toThrow(
             'Storage supports: statuses.'
         );
     });
@@ -233,9 +229,8 @@ describe('assertEntryTypeValid — capability mismatch', () => {
             versioning: true,
             translatable: true,
         };
-        const caps = resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS);
         expect(() =>
-            assertEntryTypeValid('widget', cfg, caps, BUILT_IN_SUPPORTS)
+            assertEntryTypeValid('widget', cfg, BUILT_IN_SUPPORTS)
         ).not.toThrow();
     });
 });
@@ -245,11 +240,6 @@ describe('assertEntryTypeValid — capability mismatch', () => {
 // ============================================================================
 
 describe('assertEntryTypeValid — titleField', () => {
-    const caps = resolveEntryCapabilities(
-        { single: 'Item', plural: 'Items' },
-        BUILT_IN_SUPPORTS
-    );
-
     it("'title' is valid", () => {
         const cfg: EntryType = {
             single: 'Item',
@@ -257,7 +247,7 @@ describe('assertEntryTypeValid — titleField', () => {
             titleField: 'title',
         };
         expect(() =>
-            assertEntryTypeValid('widget', cfg, caps, BUILT_IN_SUPPORTS)
+            assertEntryTypeValid('widget', cfg, BUILT_IN_SUPPORTS)
         ).not.toThrow();
     });
 
@@ -268,7 +258,7 @@ describe('assertEntryTypeValid — titleField', () => {
             titleField: false,
         };
         expect(() =>
-            assertEntryTypeValid('widget', cfg, caps, BUILT_IN_SUPPORTS)
+            assertEntryTypeValid('widget', cfg, BUILT_IN_SUPPORTS)
         ).not.toThrow();
     });
 
@@ -278,7 +268,7 @@ describe('assertEntryTypeValid — titleField', () => {
             plural: 'Items',
         };
         expect(() =>
-            assertEntryTypeValid('widget', cfg, caps, BUILT_IN_SUPPORTS)
+            assertEntryTypeValid('widget', cfg, BUILT_IN_SUPPORTS)
         ).not.toThrow();
     });
 
@@ -289,10 +279,19 @@ describe('assertEntryTypeValid — titleField', () => {
             plural: 'Items',
             titleField: 'name',
         } as unknown as EntryType;
-        expect(() =>
-            assertEntryTypeValid('widget', cfg, caps, BUILT_IN_SUPPORTS)
-        ).toThrow(
-            `Astromech entry type "widget": titleField must be 'title' or false for built-in storage (got "name"). Custom title fields arrive with custom storage.`
+        expect(() => assertEntryTypeValid('widget', cfg, BUILT_IN_SUPPORTS)).toThrow(
+            `Astromech entry type "widget": titleField must be 'title' or false (got "name"). A custom title field name is not supported — a type is either titled on \`title\` or titleless.`
+        );
+    });
+
+    it('rejects a custom title field even with custom storage', () => {
+        const cfg = {
+            single: 'Item',
+            plural: 'Items',
+            titleField: 'name',
+        } as unknown as EntryType;
+        expect(() => assertEntryTypeValid('widget', cfg, ['statuses'])).toThrow(
+            /titleField must be 'title' or false/
         );
     });
 });

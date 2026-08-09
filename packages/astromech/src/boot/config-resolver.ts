@@ -98,7 +98,7 @@ function toResolvedEntryType(
     storageSupports: readonly Capability[]
 ): ResolvedEntryType {
     const capabilities = resolveEntryCapabilities(cfg, storageSupports);
-    assertEntryTypeValid(typeKey, cfg, capabilities, storageSupports);
+    assertEntryTypeValid(typeKey, cfg, storageSupports);
 
     const resolvedFields = toResolvedFields(cfg.fields);
     validateFieldTree(typeKey, resolvedFields.main, false);
@@ -283,10 +283,9 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     // Step 4: Validate qualified relationship targets against the built maps.
     assertQualifiedRelationshipTargets({ entries: resolvedEntries, pluginEntries });
 
-    // Step 5: Return resolved config with defaults. `db`, `plugins`,
-    // `scheduler` and `ai` are destructured out below because `ResolvedConfig`
-    // omits all four; each is reached through its own registry instead. See
-    // decisions/0031-the-plugin-config-view-is-an-allow-list.md.
+    // Step 5: Return resolved config with defaults. The registry-held
+    // capabilities and `plugins` are destructured out below, matching
+    // `ResolvedConfig`'s `Omit`, so the strip holds at runtime too.
     const adminPages: ResolvedAdminPage[] = (config.admin?.pages ?? []).map(
         resolveAdminPage
     );
@@ -322,13 +321,19 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     }
 
     const mediaAccess = config.media?.access ?? 'public';
-    assertMediaAccessCompatible(mediaAccess, config.image?.driver.name);
+    assertMediaAccessCompatible(mediaAccess, config.media?.image?.driver.name);
+
+    // `image` carries a live driver and `media` is picked into
+    // `PluginConfigView`, so it is dropped here rather than only in the type.
+    const { image: _image, ...media } = config.media ?? {};
 
     const {
         db: _db,
-        plugins: _plugins,
+        storage: _storage,
+        email: _email,
         scheduler: _scheduler,
         ai: _ai,
+        plugins: _plugins,
         ...rest
     } = config;
     return {
@@ -336,7 +341,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
         adminRoute: config.adminRoute ?? '/admin',
         apiRoute: config.apiRoute ?? '/api',
         mediaRoute: config.mediaRoute ?? '/_media',
-        media: { ...config.media, access: mediaAccess },
+        media: { ...media, access: mediaAccess },
         entries: resolvedEntries,
         pluginEntries,
         adminPages,

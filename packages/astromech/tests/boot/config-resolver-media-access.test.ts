@@ -56,13 +56,18 @@ const sharpLike: ImageDriver = {
 const configWith = (
     media: MediaConfig | undefined,
     image?: ImageDriver
-): AstromechConfig => ({
-    db: dbDriver,
-    storage: storageDriver,
-    entries: {},
-    ...(media === undefined ? {} : { media }),
-    ...(image === undefined ? {} : { image: { driver: image } }),
-});
+): AstromechConfig => {
+    // An image driver alone still needs a `media` object to hang off, so the
+    // absent-media case grows one rather than dropping the driver.
+    const resolvedMedia: MediaConfig | undefined =
+        image === undefined ? media : { ...media, image: { driver: image } };
+    return {
+        db: dbDriver,
+        storage: storageDriver,
+        entries: {},
+        ...(resolvedMedia === undefined ? {} : { media: resolvedMedia }),
+    };
+};
 
 describe('resolveConfig media.access', () => {
     it("defaults to 'public' when media is absent", () => {

@@ -146,14 +146,17 @@ apps/
 
 ## Plugin capability ports
 
-Plugins access platform resources through two sanctioned, plugin-scoped handles on `PluginContext`:
+Plugins access platform resources through three sanctioned ports on `PluginContext`:
 
 - **`ctx.storage`** — a plugin-scoped view of the storage registry. Keys are auto-prefixed `plugin/<alias>/` on `put`/`get`/`delete` and de-prefixed on `list()`. Plugins never see or construct raw storage keys.
+- **`ctx.email`** — `send(to, subject, element)`, backed by the email registry (`src/email/registry.ts`). The port renders the React element to html and text, so a plugin never touches `EmailMessage` or the renderer, and throws when the site configures no email driver. The envelope sender is the driver's, never the caller's.
 - **`ctx.database`** — `{ dialect, dump?, restore? }`. `dump` and `restore` are optional and feature-detected from the driver. Code against their presence, not the dialect. Backed by the **driver registry** (`src/database/driver-registry.ts`), which retains the full `DatabaseDriver` object alongside the Kysely instance.
 
 **`DatabaseDriver` capability seam:** `dump?()` and `restore?()` are optional fields on `DatabaseDriver` (`src/types/config.ts`). Implemented for libsql (local `file:` connections only — `VACUUM INTO` requires a local path); unimplemented on D1/Postgres drivers (feature-detects off). A driver may implement `dump` without `restore`.
 
-**`ctx.config` is a projection of the resolved config, not the resolved config.** `PluginConfigView` (`src/types/plugins.ts`) is an explicit `Pick` of structural fields (the route prefixes, `entries`, `pluginEntries`, `adminPages`, `admin`, `media`, `users`, `roles`, `locales`, `defaultLocale`, `trash`, `publicSettingKeys`, `timezone`) plus `entryTypesWithField`. `makeConfigView` in `src/plugins/runtime/plugin-runtime.ts` builds it field by field rather than by spreading, so the allow-list is enforced at runtime and not only in the type. Two invariants follow. A live driver cannot ride along on it: `storage`, `email` and `image` are absent, so nothing reaches past `ctx.storage`'s `plugin/<alias>/` prefix or past `ctx.sendEmail`. And a field added to `ResolvedConfig` is not visible to plugins until it is named in both the `Pick` and the constructor. `decisions/0031-the-plugin-config-view-is-an-allow-list.md` records why the projection carries this rather than the strips in `resolveConfig`.
+**`ctx.config` is a projection of the resolved config, not the resolved config.** `PluginConfigView` (`src/types/plugins.ts`) is an explicit `Pick` of structural fields (the route prefixes, `entries`, `pluginEntries`, `adminPages`, `admin`, `media`, `users`, `roles`, `locales`, `defaultLocale`, `trash`, `publicSettingKeys`, `timezone`) plus `entryTypesWithField`. `makeConfigView` in `src/plugins/runtime/plugin-runtime.ts` builds it field by field rather than by spreading, so the allow-list is enforced at runtime and not only in the type.
+
+Two layers keep a driver out of a plugin's hands, and they do different jobs. `ResolvedConfig` holds no capability drivers at all: `db`, `storage`, `email`, `scheduler` and `ai` are omitted from the type and destructured out in `resolveConfig`, and `media.image` is stripped from `ResolvedMediaConfig` the same way, so a plugin reaches storage through `ctx.storage`'s `plugin/<alias>/` prefix and email through `ctx.email`. The `Pick` then covers the other case: a field added to `ResolvedConfig` is invisible to plugins until it is named in both the `Pick` and `makeConfigView`, which is what makes the projection worth keeping once no driver is left to exclude. `decisions/0031-the-plugin-config-view-is-an-allow-list.md` has the per-capability reasoning.
 
 ## Plugin runtime boundary
 
@@ -192,7 +195,7 @@ The app owns its migration history. Adding a plugin, running `db:generate`, and 
 
 Cadence lives in the **database**, not in deploy config, because schedules are runtime-editable from the admin. Platform-native cron (Cloudflare Cron Triggers, a system crontab) demotes to a dumb frequent tick; core does the due-evaluation against the live schedule. Every trigger converges on the same contract: _frequent poke → core due-eval_.
 
-- **`SchedulerDriver`** (`src/cron/drivers/{node,cloudflare,http}.ts`) abstracts _triggering only_ — it knows nothing about which jobs exist or are due.
+- **`SchedulerDriver`** (`src/cron/drivers/{interval,cloudflare,webhook}.ts`, published as `interval()`, `cloudflareCron()` and `webhook()`) abstracts _triggering only_ — it knows nothing about which jobs exist or are due.
 - **`_astromech_cron`** is the single source of truth for due-evaluation and doubles as the multi-instance **CAS lock** — the double-fire guard when N instances or overlapping ticks fire at once.
 - **Registry holds handlers; the table holds cadence.** A job's manifest `schedule` is a seed/default written on first boot; the stored row wins thereafter, so an admin edit takes effect on the next tick with no redeploy.
 - Due-eval parses cron expressions via `croner`; per-job try/catch isolates failures so one job's throw never aborts the tick.

@@ -25,7 +25,7 @@ import { setStorageDriver } from '@/storage/registry.js';
 import { setImageConfig } from '@/media/serving/image/registry.js';
 import { normaliseWidths } from '@/media/serving/image/url.js';
 import { defaultImageWidths } from '@/media/serving/image/defaults.js';
-import { setEmailConfig } from '@/email/registry.js';
+import { setEmailDriver } from '@/email/registry.js';
 import { setAIConfig } from '@/ai/registry.js';
 import { buildAIConfig } from '@/ai/middleware.js';
 // Import from the jobs sub-barrel, NOT @/entries/index.js: the main barrel
@@ -42,8 +42,12 @@ import {
     getSchedulerDriver,
     setRuntimeConfig,
 } from '@/cron/registry.js';
-import { nodeDriver } from '@/cron/drivers/index.js';
+import { interval } from '@/cron/drivers/index.js';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime.js';
+// The entry-access port, not `@/entries/storage/registry.js`: this module is in
+// the integration's plain-Node import graph, and the registry reaches the
+// built-in storage. The port has no domain imports.
+import { entryAccess } from '@/plugins/runtime/entry-access.js';
 import { onTick } from '@/cron/runner.js';
 
 export async function initRuntime(
@@ -53,22 +57,22 @@ export async function initRuntime(
     setDb(config.db.getInstance());
     setDatabaseDriver(config.db);
     setStorageDriver(config.storage);
-    if (config.image) {
+    const image = config.media?.image;
+    if (image) {
         setImageConfig({
-            driver: config.image.driver,
-            widths: normaliseWidths(config.image.widths ?? defaultImageWidths),
-            avif: config.image.avif ?? true,
-            mediaRoute: resolvedConfig.mediaRoute,
+            driver: image.driver,
+            widths: normaliseWidths(image.widths ?? defaultImageWidths),
+            avif: image.avif ?? true,
         });
     }
     if (config.email) {
-        setEmailConfig(config.email);
+        setEmailDriver(config.email);
     }
     if (config.ai) {
         setAIConfig(await buildAIConfig(config.ai));
     }
     registerBuiltInEntryJobs();
-    setSchedulerDriver(config.scheduler ?? nodeDriver);
+    setSchedulerDriver(config.scheduler ?? interval());
     // Stash the resolved config so the cron runner reads it from the registry
     // instead of importing `virtual:astromech/config`, which it cannot: this
     // module is in the integration's plain-Node import graph and drags
@@ -76,6 +80,13 @@ export async function initRuntime(
     setRuntimeConfig(resolvedConfig);
     wireEntryAccess();
     registerPlugins(config.plugins ?? [], resolvedConfig);
+    // Host entry types declaring their own storage, mounted after
+    // `registerPlugins` — that opens by clearing every override, so registering
+    // earlier would silently wipe them. Keyed by the bare type name, which is
+    // what the entries domain looks up; plugin types are qualified instead.
+    for (const [type, entryType] of Object.entries(config.entries)) {
+        if (entryType.storage) entryAccess().setEntryStorage(type, entryType.storage);
+    }
     // Generated here because this is the only runtime site holding both the
     // resolved config and the raw `PluginDefinition[]`, which `ResolvedConfig`
     // strips and only `rawConfig` carries.

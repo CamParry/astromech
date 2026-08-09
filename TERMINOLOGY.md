@@ -17,14 +17,48 @@ The standard term for any pluggable backend implementation in Astromech. A drive
 
 Current drivers:
 
-- **DatabaseDriver** — wraps a database connection (`libsqlDriver`)
+- **DatabaseDriver** — wraps a database connection (`libsql()`, `d1()`)
 - **StorageDriver** — wraps a file storage backend (`filesystem()`, `r2()`, `s3()`)
-- **EmailDriver** — wraps an email sending service (`SmtpDriver`, `ResendDriver`, `ConsoleDriver`)
+- **EmailDriver** — wraps an email sending service (`smtp()`, `resend()`, `consoleEmail()`)
+- **ImageDriver** — transforms an image variant (`sharp()`, `cloudflareImages()`)
+- **SchedulerDriver** — produces the ticks that drive due-evaluation (`interval()`, `webhook()`, `cloudflareCron()`)
 
-Storage drivers are factories on their own subpaths (`astromech/storage/r2`),
-never classes on the root barrel — see `apps/docs/configuration/storage.md`.
+Every driver is a lowercase factory on its own subpath — `astromech/storage/r2`,
+`astromech/email/smtp`, `astromech/scheduler/interval` — never a class or a
+pre-built singleton on the root barrel. See `apps/docs/configuration/storage.md`
+for the storage set and `decisions/0032-a-capability-slot-holds-what-the-config-declared.md`
+for why the factory is the one style.
 
 An **adapter** is a different thing: it reshapes one internal interface into another, as `tableStorage` reshapes a plugin table into `EntryStorage`. A driver reaches an external system. `decisions/0012-driver-not-adapter.md` records why the two words are kept apart.
+
+---
+
+## Driver vs port
+
+A **driver** is what the host configures. It goes in a capability slot in
+`astromech.config.ts` (`db`, `storage`, `email`, `media.image`, `scheduler`), and
+core reads it back from that capability's registry rather than off the config.
+Swapping one is a site's decision, and every driver of a kind satisfies the same
+interface so nothing above it changes.
+
+A **port** is the narrow handle a plugin receives on `PluginContext`
+(`packages/astromech/src/types/plugins.ts`). `ctx.storage` prefixes every key with
+`plugin/<alias>/`, `ctx.email` renders a React element and throws when no email
+driver is configured, `ctx.database` exposes `{ dialect, dump?, restore? }`
+feature-detected off the driver, and `ctx.methods` hands out only the methods the
+acting role may call.
+
+They are not two names for one thing. A driver's interface is the whole
+capability, and a plugin holding one could reach past its own scope — every
+object in the bucket, any envelope sender, any table. A port is a smaller
+interface chosen for what a plugin is allowed to do, which is why
+`PluginStorage` and `StorageDriver` are separate types rather than one aliased to
+the other.
+
+`ctx.db` is the exception: it is the raw `Kysely` instance, not a port.
+
+`decisions/0007-plugin-core-boundary.md` covers how plugin code reaches core, and
+`decisions/0008-plugin-methods-port.md` the shape a port takes.
 
 ---
 

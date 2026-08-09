@@ -1,3 +1,4 @@
+import config from 'virtual:astromech/config';
 import { mediaService } from '@/media/service.js';
 import { getStorageDriver } from '@/storage/registry.js';
 import { getImageConfig } from './image/registry.js';
@@ -121,7 +122,7 @@ export async function handleMediaRequest(info: MediaRequestInfo): Promise<Respon
 
     // Missing format, missing version param, or stale version — redirect to canonical
     if (params.format == null || params.version == null || params.version !== version) {
-        const location = buildVariantUrl(imageConfig.mediaRoute, id, ext, {
+        const location = buildVariantUrl(config.mediaRoute, id, ext, {
             width: params.width,
             format: wantFormat,
             version,
@@ -168,7 +169,7 @@ export async function handleMediaRequest(info: MediaRequestInfo): Promise<Respon
             if (!o) throw new Error('original missing');
             return streamToBytes(o.body);
         },
-        originUrl: `${origin}${buildMediaUrl(imageConfig.mediaRoute, id, ext)}`,
+        originUrl: `${origin}${buildMediaUrl(config.mediaRoute, id, ext)}`,
     };
 
     const out = await imageConfig.driver.transform(src, { width: params.width, format });

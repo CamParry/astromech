@@ -5,7 +5,9 @@ export default defineConfig([
     {
         // Sources point ONLY at the curated `src/exports/` layer. Output keys
         // mirror the source layout, and the package.json subpaths mirror them in
-        // turn, so a public import names the directory the code lives in.
+        // turn, so a public import names the directory the code lives in. The
+        // scheduler subpaths are the exception: they are named for the `scheduler`
+        // config key rather than for `src/cron/`, which holds jobs and triggering.
         entry: {
             index: 'src/exports/index.ts',
             fields: 'src/exports/fields.ts',
@@ -24,6 +26,12 @@ export default defineConfig([
             'admin/components/ui/layout': 'src/exports/admin/ui-layout.ts',
             'admin/components/fields/index': 'src/exports/admin/ui-fields.ts',
             'email/index': 'src/exports/email.ts',
+            'email/drivers/console': 'src/exports/email-console.ts',
+            'email/drivers/resend': 'src/exports/email-resend.ts',
+            'email/drivers/smtp': 'src/exports/email-smtp.ts',
+            'scheduler/drivers/interval': 'src/exports/scheduler-interval.ts',
+            'scheduler/drivers/webhook': 'src/exports/scheduler-webhook.ts',
+            'scheduler/drivers/cloudflare': 'src/exports/scheduler-cloudflare.ts',
             'media/image/drivers/sharp': 'src/exports/media-image-sharp.ts',
             'media/image/drivers/cloudflare': 'src/exports/media-image-cloudflare.ts',
             'storage/drivers/r2': 'src/exports/storage-r2.ts',

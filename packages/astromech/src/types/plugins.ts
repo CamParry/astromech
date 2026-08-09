@@ -57,6 +57,15 @@ export type PluginStorage = {
     delete(key: string): Promise<void>;
 };
 
+/**
+ * Email scoped to a plugin — the element is rendered to html and text here, and
+ * a missing email driver throws rather than sending nothing. The envelope sender
+ * comes from the configured driver, never from the caller.
+ */
+export type PluginEmail = {
+    send(to: string, subject: string, element: ReactElement): Promise<void>;
+};
+
 /** Database maintenance capabilities, feature-detected per driver. Distinct from `db` (the query instance). */
 export type PluginDatabase = {
     dialect: string;
@@ -85,10 +94,10 @@ export type PluginLogger = {
 };
 
 /**
- * A projection of the resolved config, not the whole of it: structural fields
- * only, so `storage`, `email` and `image` are absent — those capabilities are
- * reached through the scoped ports (`ctx.storage`, `ctx.sendEmail`,
- * `ctx.database`). Plugin "footprint" (which entry types use a plugin) is
+ * A projection of the resolved config, not the whole of it. `ResolvedConfig`
+ * holds no capability drivers, so this `Pick` is a second layer: a field added
+ * to `ResolvedConfig` stays invisible to plugins until it is named both here and
+ * in `makeConfigView`. Plugin "footprint" (which entry types use a plugin) is
  * *derived* from field presence, never declared.
  */
 export type PluginConfigView = Pick<
@@ -149,7 +158,8 @@ export type PluginContext = {
     notifications: NotificationsService;
     /** Other plugins' service methods — `ctx.plugins.<serviceKey>.<method>(input)`. */
     plugins?: PluginServiceNamespace | undefined;
-    sendEmail: (to: string, subject: string, element: ReactElement) => Promise<void>;
+    /** Email port — the element is rendered here, and an unconfigured driver throws. */
+    email: PluginEmail;
     notify: (input: NotifyInput) => Promise<void>;
     logger: PluginLogger;
     /** Env vars (resolved via import.meta.env in Vite/Astro SSR). Never the browser. */

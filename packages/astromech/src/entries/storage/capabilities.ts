@@ -50,13 +50,12 @@ export function resolveEntryCapabilities(
  *
  * (a) Any capability explicitly requested by the config but not in
  *     storageSupports throws with a message mirroring plugin-runtime.ts style.
- * (b) titleField values other than 'title' or false are rejected — custom field
- *     names arrive with custom storage (Phase 3).
+ * (b) titleField values other than 'title' or false are rejected: a type is
+ *     titled on `title` or titleless, with no third option.
  */
 export function assertEntryTypeValid(
     typeKey: string,
     cfg: EntryType,
-    capabilities: ResolvedEntryCapabilities,
     storageSupports: readonly Capability[]
 ): void {
     // Build list of explicitly-requested capabilities that are unsupported.
@@ -79,17 +78,16 @@ export function assertEntryTypeValid(
         );
     }
 
-    // titleField validation — only 'title' or false allowed on built-in storage.
+    // titleField validation — only 'title' or false, whatever the storage.
     if (
         cfg.titleField !== undefined &&
         cfg.titleField !== false &&
         cfg.titleField !== 'title'
     ) {
         throw new Error(
-            `Astromech entry type "${typeKey}": titleField must be 'title' or false for built-in storage ` +
-                `(got "${String(cfg.titleField)}"). Custom title fields arrive with custom storage.`
+            `Astromech entry type "${typeKey}": titleField must be 'title' or false ` +
+                `(got "${String(cfg.titleField)}"). A custom title field name is not ` +
+                `supported — a type is either titled on \`title\` or titleless.`
         );
     }
-
-    void capabilities; // used by callers; parameter kept for symmetry
 }

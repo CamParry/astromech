@@ -1,14 +1,9 @@
 // The config is loaded in plain Node before Vite, so `.env` has not reached
 // `import.meta.env` yet. AI SDK providers read `process.env`, which this fills.
 import 'dotenv/config';
-import {
-    builtInRole,
-    ConsoleDriver,
-    defineAdminPage,
-    defineConfig,
-    entryPermissions,
-} from 'astromech';
-import { libsqlDriver } from 'astromech/database/libsql';
+import { builtInRole, defineAdminPage, defineConfig, entryPermissions } from 'astromech';
+import { libsql } from 'astromech/database/libsql';
+import { consoleEmail } from 'astromech/email/console';
 import { sharp } from 'astromech/media/image/sharp';
 import { filesystem } from 'astromech/storage/filesystem';
 import * as fields from 'astromech/fields';
@@ -123,15 +118,14 @@ export default defineConfig({
     // from this directory. Nothing may be derived from `import.meta.url`: once
     // this file is bundled into the server that points at the chunk, and a
     // relative SQLite URL silently creates an empty database there instead.
-    // Bare `libsqlDriver()` reads DATABASE_URL, falling back to file:./database.db.
-    db: libsqlDriver(),
+    // Bare `libsql()` reads DATABASE_URL, falling back to file:./database.db.
+    db: libsql(),
     storage: filesystem({ dir: './public/uploads', urlPrefix: '/uploads' }),
     // The demo sends nothing real — the console driver prints each message so
     // form notifications (and anything else that emails) are visible in the dev
-    // server output. Without an `email` block at all, `ctx.sendEmail` throws and
+    // server output. With no `email` driver at all, `ctx.email.send` throws and
     // plugins can only log the failure.
-    email: { driver: new ConsoleDriver(), from: 'demo@astromech.dev' },
-    image: { driver: sharp() },
+    email: consoleEmail({ from: 'demo@astromech.dev' }),
     // `anthropic()` reads ANTHROPIC_API_KEY from the environment. The model
     // is a live object, so it reaches the runtime through this config and
     // never through the virtual config, which is JSON.
@@ -440,6 +434,7 @@ export default defineConfig({
             fields.text('copyright'),
             fields.text('alt_text'),
         ],
+        image: { driver: sharp() },
     },
 
     users: {

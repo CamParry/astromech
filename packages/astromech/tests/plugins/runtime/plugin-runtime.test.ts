@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createElement } from 'react';
 import type {
+    EmailMessage,
     PluginContext,
     PluginDefinition,
     ResolvedConfig,
     Role,
     User,
 } from '@/types/index.js';
+import { setEmailDriver } from '@/email/registry.js';
 import { runWithContext } from '@/request-context/request-context.js';
 import {
     bootPlugins,
@@ -75,14 +78,6 @@ const config: ResolvedConfig = {
     trash: { enabled: true, retentionDays: 30 },
     publicSettingKeys: [],
     timezone: 'UTC',
-    storage: {
-        name: 'noop',
-        put: () => Promise.resolve(),
-        get: () => Promise.resolve(null),
-        stat: () => Promise.resolve(null),
-        delete: () => Promise.resolve(),
-        list: () => Promise.resolve({ keys: [] }),
-    },
     mediaRoute: '/_media',
     media: { access: 'public' },
 };
@@ -115,6 +110,7 @@ const adminRole: Role = {
 beforeEach(() => {
     globalThis.__astromechPluginRuntime = undefined;
     delete globalThis.__astromech?.cronJobs;
+    delete globalThis.__astromech?.email;
     vi.restoreAllMocks();
 });
 
@@ -235,6 +231,46 @@ describe('createPluginContext', () => {
         });
 
         expect(tools).toHaveBeenCalledWith(adminRole, { readOnly: true });
+    });
+
+    // The port renders, rather than passing the element through: a driver only
+    // ever sees html, so a plugin never touches EmailMessage or the renderer.
+    it('renders the element and hands the html to the email driver', async () => {
+        registerPlugins([def({ package: '@astromech/seo' })], config);
+        const sent: EmailMessage[] = [];
+        setEmailDriver({
+            name: 'capture',
+            send: async (message: EmailMessage): Promise<void> => {
+                sent.push(message);
+            },
+        });
+        const ctx = createPluginContext(
+            resolvePluginIdentity(def({ package: '@astromech/seo' })),
+            user
+        );
+
+        await ctx.email.send(
+            'to@example.com',
+            'Subject',
+            createElement('p', null, 'Hello from a plugin')
+        );
+
+        expect(sent).toHaveLength(1);
+        expect(sent[0]?.to).toBe('to@example.com');
+        expect(sent[0]?.subject).toBe('Subject');
+        expect(sent[0]?.html).toContain('Hello from a plugin');
+    });
+
+    it('throws when the site configures no email driver', async () => {
+        registerPlugins([def({ package: '@astromech/seo' })], config);
+        const ctx = createPluginContext(
+            resolvePluginIdentity(def({ package: '@astromech/seo' })),
+            user
+        );
+
+        await expect(
+            ctx.email.send('to@example.com', 'Subject', createElement('p'))
+        ).rejects.toThrow('[Astromech] Email is not configured');
     });
 });
 

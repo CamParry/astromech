@@ -22,7 +22,7 @@ import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
-import { libsqlDriver } from '@/database/drivers/libsql.js';
+import { libsql } from '@/database/drivers/libsql.js';
 import { filesystem } from '@/storage/drivers/filesystem.js';
 import { listAll } from '@/storage/prefix.js';
 import { decodeWith } from '@/database/codec.js';
@@ -50,10 +50,10 @@ function makeTmpDir(): string {
  */
 async function makeFileDb(dbPath: string): Promise<{
     db: Kysely<DB>;
-    driver: ReturnType<typeof libsqlDriver>;
+    driver: ReturnType<typeof libsql>;
 }> {
     const url = `file:${dbPath}`;
-    const driver = libsqlDriver({ url });
+    const driver = libsql({ url });
     const db = driver.getInstance() as Kysely<DB>;
 
     // Create the backups table directly — no full migrations needed for these
@@ -105,7 +105,7 @@ function makeCtx(
         settings: null as unknown as PluginContext['settings'],
         users: null as unknown as PluginContext['users'],
         notifications: null as unknown as PluginContext['notifications'],
-        sendEmail: async () => undefined,
+        email: { send: async () => undefined },
         logger: {
             info: () => undefined,
             warn: () => undefined,
@@ -162,7 +162,7 @@ afterEach(async () => {
 // 1. libsql dump → restore round-trip
 // ============================================================================
 
-describe('libsqlDriver.dump / restore', () => {
+describe('libsql.dump / restore', () => {
     it('should round-trip a table full of rows', async () => {
         const { db, driver } = await makeFileDb(dbPath);
 
@@ -189,12 +189,12 @@ describe('libsqlDriver.dump / restore', () => {
     });
 
     it('should throw a clear error for a non-file: URL on dump', async () => {
-        const remoteDriver = libsqlDriver({ url: 'libsql://example.turso.io' });
+        const remoteDriver = libsql({ url: 'libsql://example.turso.io' });
         await expect(remoteDriver.dump()).rejects.toThrow('file:');
     });
 
     it('should throw a clear error for a non-file: URL on restore', async () => {
-        const remoteDriver = libsqlDriver({ url: 'libsql://example.turso.io' });
+        const remoteDriver = libsql({ url: 'libsql://example.turso.io' });
         const emptyStream = new ReadableStream<Uint8Array>({
             start(c) {
                 c.close();
@@ -210,7 +210,7 @@ describe('libsqlDriver.dump / restore', () => {
 // 2. restore preserves listed tables
 // ============================================================================
 
-describe('libsqlDriver.restore — preserve', () => {
+describe('libsql.restore — preserve', () => {
     it('should NOT revert preserved tables while reverting non-preserved tables', async () => {
         const { db, driver } = await makeFileDb(dbPath);
 

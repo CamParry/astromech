@@ -23,7 +23,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import { defineHook } from '@/index.js';
-import { setEmailConfig } from '@/email/registry.js';
+import { setEmailDriver } from '@/email/registry.js';
 import {
     createTestDb,
     makeTestConfig,
@@ -92,14 +92,11 @@ function configWithForms(options?: FormsOptions): AstromechConfig {
 /** Recording email driver — the failure case swaps in a throwing one. */
 function recordEmails(send?: () => never): void {
     sent = [];
-    setEmailConfig({
-        from: 'site@example.com',
-        driver: {
-            name: 'test-recorder',
-            send: async (message: EmailMessage): Promise<void> => {
-                if (send) send();
-                sent.push(message);
-            },
+    setEmailDriver({
+        name: 'test-recorder',
+        send: async (message: EmailMessage): Promise<void> => {
+            if (send) send();
+            sent.push(message);
         },
     });
 }

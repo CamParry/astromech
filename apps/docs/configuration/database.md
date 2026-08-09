@@ -6,20 +6,20 @@ better-auth builds its own instance from.
 
 ```ts
 import { defineConfig } from 'astromech';
-import { libsqlDriver } from 'astromech/database/libsql';
+import { libsql } from 'astromech/database/libsql';
 
 export default defineConfig({
-    db: libsqlDriver({ url: 'file:./database.db' }),
+    db: libsql({ url: 'file:./database.db' }),
     // …
 });
 ```
 
 ## Choosing a driver
 
-| Driver           | Import                      | For                                              | Runs on                    |
-| ---------------- | --------------------------- | ------------------------------------------------ | -------------------------- |
-| `libsqlDriver()` | `astromech/database/libsql` | local development, single-server Node, and Turso | Node                       |
-| `d1()`           | `astromech/database/d1`     | Cloudflare Workers with a D1 database binding    | Workers; Node via wrangler |
+| Driver     | Import                      | For                                              | Runs on                    |
+| ---------- | --------------------------- | ------------------------------------------------ | -------------------------- |
+| `libsql()` | `astromech/database/libsql` | local development, single-server Node, and Turso | Node                       |
+| `d1()`     | `astromech/database/d1`     | Cloudflare Workers with a D1 database binding    | Workers; Node via wrangler |
 
 Each driver has its own subpath so that importing one never pulls the other's
 client library into your bundle — that is what keeps `@libsql/client` out of a
@@ -27,13 +27,13 @@ Workers build.
 
 v1 is SQLite-only. Postgres and MySQL are a future major, not a flag.
 
-## `libsqlDriver()`
+## `libsql()`
 
 ```ts
-import { libsqlDriver } from 'astromech/database/libsql';
+import { libsql } from 'astromech/database/libsql';
 
-libsqlDriver({ url: 'file:./database.db' });
-libsqlDriver(); // reads DATABASE_URL, falls back to file:./database.db
+libsql({ url: 'file:./database.db' });
+libsql(); // reads DATABASE_URL, falls back to file:./database.db
 ```
 
 | Option      | Required | What it is                                            |

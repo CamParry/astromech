@@ -31,7 +31,7 @@ Under the rule, these are the eight shared resources: `db`, `storage`, `email`,
 Worth recording, because the question is reasonable and the answer is not
 obvious. The drivers are already self-contained lazy objects: `r2()` resolves its
 binding on first use because a resolved bucket is not reachable from Node
-(`packages/astromech/src/storage/drivers/r2.ts`), and `libsqlDriver()` memoises
+(`packages/astromech/src/storage/drivers/r2.ts`), and `libsql()` memoises
 `getInstance()`. Nothing about them needs boot to make them usable, so
 `config.storage.put(…)` looks like it should just work now that
 `virtual:astromech/config` is a live module.
@@ -136,10 +136,12 @@ not in play.
 The config surface changes, so these land together on one branch rather than
 dribbling out.
 
-- [ ] **WS1 — `ResolvedConfig` holds no drivers.** Extend the `Omit` to `storage`
+- [x] **WS1 — `ResolvedConfig` holds no drivers.** Extend the `Omit` to `storage`
       and `email`, rewrite it as an explicit list of registry-held capabilities
       with the rule as its docblock, and drop `image` from `ResolvedMediaConfig`,
-      which a top-level `Omit` cannot reach once WS4 nests it under `media`.
+      which a top-level `Omit` cannot reach once WS4 nests it under `media`. The
+      `media.image` half landed with WS4, a commit early, since nesting `image`
+      under `media` is what put it out of the top-level `Omit`'s reach.
       Free: nothing reads any of them post-boot, and
       `packages/astromech/src/boot/admin-config.ts` builds `imageWidths` from the
       raw `AstromechConfig`. This also demotes `PluginConfigView`'s allow-list
@@ -148,17 +150,21 @@ dribbling out.
       that `Pick`, so the nested strip is load-bearing rather than tidiness:
       without it a live `ImageDriver` rides into every plugin's
       `ctx.config.media`.
-- [ ] **WS2 — Register host entry storage.** A loop over `config.entries` in
+- [x] **WS2 — Register host entry storage.** A loop over `config.entries` in
       `initRuntime`, placed after `registerPlugins`, which opens with
       `resetEntryStorageOverrides()` and would otherwise wipe it. The alternative
       is dropping `storage` from host entry types, but
       `packages/astromech/src/boot/config-resolver.ts` already treats both paths
-      identically, so registering it is the smaller lie to unwind. While here,
-      settle the `titleField` check in
-      `packages/astromech/src/entries/storage/capabilities.ts`, which rejects
-      anything but `'title'` unconditionally while its own error message says
-      custom title fields arrive with custom storage.
-- [ ] **WS3 — A slot holds what the config declared, and nothing copied in.**
+      identically, so registering it is the smaller lie to unwind. The
+      `titleField` check in
+      `packages/astromech/src/entries/storage/capabilities.ts` keeps rejecting
+      anything but `'title'` or `false` unconditionally, which is correct: only
+      the error message promising custom storage would help was wrong, and it is
+      gone. Widening `titleField` to an arbitrary field name is a separate
+      feature — it would have to reach `createEntrySchemaFor`,
+      `EntryRecord.title`, `EntryWrite.title` and the admin's label resolution,
+      all of which type the field as the literal `'title' | false`.
+- [x] **WS3 — A slot holds what the config declared, and nothing copied in.**
       `email` becomes the `EmailDriver`: `from` moves into the email driver's
       factory, since it is the envelope sender and the two call sites
       (`packages/astromech/src/users/auth.ts` and the plugin `sendEmail`) both
@@ -171,7 +177,7 @@ dribbling out.
       `avif` stay out of `sharp()` because they are core's allow-list, and stay
       out of `media` at large because they are image policy that does not
       generalise: a video has a bitrate ladder, a PDF has page thumbnails.
-- [ ] **WS4 — Every capability slot is authored as its driver.**
+- [x] **WS4 — Every capability slot is authored as its driver.**
       `email: resend({ apiKey, from })` alongside the existing `db:` and
       `storage:`; nobody types `.driver` on a slot that is only a driver. `image`
       moves under `media` as `media.image`, because the image pipeline only ever
@@ -189,17 +195,23 @@ dribbling out.
       `globalThis.console` in a config file), and the scheduler singletons become
       `interval()`, `webhook()` and `cloudflareCron()`, named for the triggering
       mechanism rather than the host. All of them need published subpaths: the
-      scheduler drivers have none today, so a site cannot select one at all.
-- [ ] **WS5 — Plugins receive ports, never drivers.** `ctx.sendEmail` becomes
+      scheduler drivers have none today, so a site cannot select one at all. The
+      one database factory still carrying the suffix loses it too —
+      `libsqlDriver()` becomes `libsql()`, matching `d1()`, on the same
+      `astromech/database/libsql` subpath.
+- [x] **WS5 — Plugins receive ports, never drivers.** `ctx.sendEmail` becomes
       `ctx.email.send(to, subject, element)`, matching `ctx.storage.put(…)`. It
-      stays a port rather than the raw driver because it renders the React
-      element to html and text, applies any registered override component from
-      `packages/astromech/src/email/email-overrides.ts`, and supplies `from`.
-      Small blast radius: one real call site in
+      stays a port rather than the raw driver for two reasons: it renders the
+      React element to html and text, and it throws a named error when the site
+      configures no email driver. That keeps a plugin off `EmailMessage` and off
+      the render step, and gives email the same shape as `ctx.storage`. It does
+      not apply a template override, and cannot: `registerEmailOverride` keys
+      overrides by name and a plugin hands the port a bare `ReactElement` with no
+      name attached. Small blast radius: one real call site in
       `packages/plugins/forms/src/notifications/providers/email.ts`, one test
       fixture, the demo config comment, and
       `apps/docs/plugins/authoring.md`.
-- [ ] **WS6 — Write the rule down.** A `decisions/` record for the rule and what
+- [x] **WS6 — Write the rule down.** A `decisions/` record for the rule and what
       it rejected, the `ARCHITECTURE.md` layer notes, and the plugin context
       section of `apps/docs/plugins/authoring.md`. The record has to carry the
       `media.image` comparison as well as the rule, since three flatter shapes
@@ -212,6 +224,11 @@ dribbling out.
       ladder or pushes it into the driver. `TERMINOLOGY.md` gets an entry for
       driver against port, since after WS5 the distinction is load-bearing: a
       driver is what the host configures, a port is what a plugin receives.
+      Landed as `decisions/0032-a-capability-slot-holds-what-the-config-declared.md`.
+      The `ARCHITECTURE.md` notes went in with WS1, WS4 and WS5 rather than here,
+      each alongside the change it describes. `apps/docs/plugins/authoring.md`
+      gained a capability-ports section covering `ctx.storage`, `ctx.email` and
+      `ctx.database` as a set, since only the email rename had reached it.
 
 ## Not in scope
 
@@ -253,9 +270,11 @@ dribbling out.
       None of this is covered by the suite, and WS1 through WS4 all touch the
       boot path that only a real build exercises. See
       `roadmap/planned/gate-runs-a-build.md`.
-- [ ] A host entry type with custom storage actually reaches that storage, proved
-      by a storage whose methods throw. WS2 has no test today because the
-      capability has never worked.
+- [x] A host entry type with custom storage actually reaches that storage, proved
+      by a storage whose methods throw:
+      `packages/astromech/tests/boot/init-runtime.test.ts` drives the real
+      `initRuntime` rather than the harness, which mirrors the boot sequence and
+      so cannot fail when the loop moves or goes.
 - [ ] Email still sends under both `astro dev` and a built server after `from`
       moves, including the password reset path in
       `packages/astromech/src/users/auth.ts`, which is the one caller outside the

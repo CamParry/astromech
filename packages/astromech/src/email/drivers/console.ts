@@ -1,13 +1,17 @@
-import type { EmailDriver, EmailMessage } from '@/types/index.js';
+import type { EmailDriver } from '@/types/index.js';
 
-/**
- * Console email driver for local development.
- * Logs email details to stdout instead of sending.
- */
-export class ConsoleDriver implements EmailDriver {
-    readonly name = 'console';
+export type ConsoleEmailOptions = {
+    from: string;
+};
 
-    async send({ to, from, subject }: EmailMessage): Promise<void> {
-        console.log(`[Astromech Email] To: ${to} | From: ${from} | Subject: ${subject}`);
-    }
+/** Logs each message instead of sending. For local development. */
+export function consoleEmail({ from }: ConsoleEmailOptions): EmailDriver {
+    return {
+        name: 'console',
+        async send({ to, subject }) {
+            console.log(
+                `[Astromech Email] To: ${to} | From: ${from} | Subject: ${subject}`
+            );
+        },
+    };
 }
