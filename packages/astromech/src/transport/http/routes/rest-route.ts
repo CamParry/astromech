@@ -2,11 +2,15 @@
  * The declarative REST route table.
  *
  * A route states `(verb, path, method id, args, envelope)` and `mountRestRoutes`
- * does the rest: build the argument object, validate it against the method's own
- * contract schema, dispatch through `scopedServices` so the role is enforced by
- * the handle rather than by a check the handler remembered to write, and wrap
- * the result in the envelope. The only per-route code is `args` — how path
- * params, query string and body become the method's argument object.
+ * does the rest: read the contract's permission, build the argument object,
+ * validate it against the method's own contract schema, dispatch through
+ * `scopedServices` so the role is enforced by the handle rather than by a check
+ * the handler remembered to write, and wrap the result in the envelope. The only
+ * per-route code is `args` — how path params, query string and body become the
+ * method's argument object.
+ *
+ * The permission is read BEFORE the body, so a request that is both unauthorized
+ * and malformed answers 403 rather than telling the caller its body was wrong.
  *
  * A handler needing anything else (a permission no contract states, a body that
  * is not JSON, a response outside the closed envelope set) is not in a table: it
@@ -17,10 +21,16 @@ import type { OpenAPIHono } from '@hono/zod-openapi';
 import type { Context } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { PermissionDeniedError } from '@/errors/index';
+import { permissionsFor } from '@/permissions/permissions-for';
 import { scopedServices } from '@/policies/scoped-services';
 import { runWithContext } from '@/request-context/index';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import { forbidden, fromZodError, notFound } from '@/transport/http/middleware/errors';
+import {
+    badRequest,
+    forbidden,
+    fromZodError,
+    notFound,
+} from '@/transport/http/middleware/errors';
 import type { ServiceMethodContract } from '@/types/index';
 
 type Env = { Variables: AuthVariables };
@@ -49,6 +59,13 @@ export type RestRoute = {
     envelope?: RestEnvelope;
     /** When given, a null result answers 404 with this message. */
     notFound?: (c: Context<Env>) => string;
+    /**
+     * The argument key the request body lands under, when the method takes the
+     * body as one key of a larger object (`{ id, data }`). Validation-error
+     * field paths are rebased onto it, so the caller reads back the field names
+     * it sent rather than the method's argument shape.
+     */
+    bodyKey?: string;
 };
 
 /** Mount every route in `routes`, validating against `contracts`. */
@@ -77,8 +94,22 @@ async function handleRestRoute(
         );
     }
 
-    const parsed = contract.input.safeParse(await route.args(c));
-    if (!parsed.success) return fromZodError(c, parsed.error);
+    // Checked before the body is read, so a caller that may not call this method
+    // learns nothing about the request it sent. The scoped handle below is still
+    // what enforces; this only decides when the refusal arrives.
+    if (!permissionsFor(c.var.role).allowsMethod(contract)) return forbidden(c);
+
+    let args: unknown;
+    try {
+        args = await route.args(c);
+    } catch (error) {
+        // An unparseable JSON body is the caller's bug, not the server's.
+        if (error instanceof SyntaxError) return badRequest(c, 'Invalid JSON body');
+        throw error;
+    }
+
+    const parsed = contract.input.safeParse(args);
+    if (!parsed.success) return fromZodError(c, parsed.error, route.bodyKey);
 
     try {
         const result = await invoke(c, route.id, contract, parsed.data);

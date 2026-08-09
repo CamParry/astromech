@@ -118,11 +118,21 @@ export function internalError(
 // App-Level Handlers
 // ============================================================================
 
-/** Convert a ZodError into a validationFailed response. */
-export function fromZodError(c: Context, err: ZodError): Response {
+/**
+ * Convert a ZodError into a validationFailed response.
+ *
+ * `bodyKey` names the key the request body was validated under, and is stripped
+ * from the front of each field path: a body parsed as one key of a larger
+ * argument object still reports the field names the caller sent.
+ */
+export function fromZodError(c: Context, err: ZodError, bodyKey?: string): Response {
     const fields: Record<string, string[]> = {};
     for (const issue of err.issues) {
-        const key = issue.path.join('.') || '_';
+        const path =
+            bodyKey !== undefined && issue.path[0] === bodyKey
+                ? issue.path.slice(1)
+                : issue.path;
+        const key = path.join('.') || '_';
         (fields[key] ??= []).push(issue.message);
     }
     return validationFailed(c, fields);

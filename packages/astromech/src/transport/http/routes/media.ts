@@ -47,6 +47,7 @@ const MEDIA_ROUTES: RestRoute[] = [
             id: c.req.param('id'),
             data: await c.req.json<Record<string, unknown>>(),
         }),
+        bodyKey: 'data',
     },
     {
         verb: 'delete',
