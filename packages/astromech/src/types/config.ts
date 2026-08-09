@@ -474,9 +474,15 @@ export type AstromechConfig = {
     };
 };
 
+/**
+ * `AstromechConfig` with its defaults applied, minus every capability that is
+ * one shared resource for the whole app: those are declared in config and
+ * reached from their registry, never off the config. `plugins` is not a driver
+ * but is stripped too — the raw `PluginDefinition[]` carries live functions.
+ */
 export type ResolvedConfig = Omit<
     AstromechConfig,
-    'plugins' | 'db' | 'scheduler' | 'ai'
+    'db' | 'storage' | 'email' | 'scheduler' | 'ai' | 'plugins'
 > & {
     adminRoute: string;
     apiRoute: string;

@@ -75,14 +75,6 @@ const config: ResolvedConfig = {
     trash: { enabled: true, retentionDays: 30 },
     publicSettingKeys: [],
     timezone: 'UTC',
-    storage: {
-        name: 'noop',
-        put: () => Promise.resolve(),
-        get: () => Promise.resolve(null),
-        stat: () => Promise.resolve(null),
-        delete: () => Promise.resolve(),
-        list: () => Promise.resolve({ keys: [] }),
-    },
     mediaRoute: '/_media',
     media: { access: 'public' },
 };

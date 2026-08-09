@@ -136,10 +136,12 @@ not in play.
 The config surface changes, so these land together on one branch rather than
 dribbling out.
 
-- [ ] **WS1 — `ResolvedConfig` holds no drivers.** Extend the `Omit` to `storage`
+- [x] **WS1 — `ResolvedConfig` holds no drivers.** Extend the `Omit` to `storage`
       and `email`, rewrite it as an explicit list of registry-held capabilities
       with the rule as its docblock, and drop `image` from `ResolvedMediaConfig`,
-      which a top-level `Omit` cannot reach once WS4 nests it under `media`.
+      which a top-level `Omit` cannot reach once WS4 nests it under `media`. The
+      `media.image` half landed with WS4, a commit early, since nesting `image`
+      under `media` is what put it out of the top-level `Omit`'s reach.
       Free: nothing reads any of them post-boot, and
       `packages/astromech/src/boot/admin-config.ts` builds `imageWidths` from the
       raw `AstromechConfig`. This also demotes `PluginConfigView`'s allow-list

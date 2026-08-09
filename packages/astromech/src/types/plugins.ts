@@ -85,10 +85,10 @@ export type PluginLogger = {
 };
 
 /**
- * A projection of the resolved config, not the whole of it: structural fields
- * only, so `storage`, `email` and `image` are absent — those capabilities are
- * reached through the scoped ports (`ctx.storage`, `ctx.sendEmail`,
- * `ctx.database`). Plugin "footprint" (which entry types use a plugin) is
+ * A projection of the resolved config, not the whole of it. `ResolvedConfig`
+ * holds no capability drivers, so this `Pick` is a second layer: a field added
+ * to `ResolvedConfig` stays invisible to plugins until it is named both here and
+ * in `makeConfigView`. Plugin "footprint" (which entry types use a plugin) is
  * *derived* from field presence, never declared.
  */
 export type PluginConfigView = Pick<

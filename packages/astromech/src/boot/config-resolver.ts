@@ -283,10 +283,9 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     // Step 4: Validate qualified relationship targets against the built maps.
     assertQualifiedRelationshipTargets({ entries: resolvedEntries, pluginEntries });
 
-    // Step 5: Return resolved config with defaults. `db`, `plugins`,
-    // `scheduler` and `ai` are destructured out below because `ResolvedConfig`
-    // omits all four; each is reached through its own registry instead. See
-    // decisions/0031-the-plugin-config-view-is-an-allow-list.md.
+    // Step 5: Return resolved config with defaults. The registry-held
+    // capabilities and `plugins` are destructured out below, matching
+    // `ResolvedConfig`'s `Omit`, so the strip holds at runtime too.
     const adminPages: ResolvedAdminPage[] = (config.admin?.pages ?? []).map(
         resolveAdminPage
     );
@@ -330,9 +329,11 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
 
     const {
         db: _db,
-        plugins: _plugins,
+        storage: _storage,
+        email: _email,
         scheduler: _scheduler,
         ai: _ai,
+        plugins: _plugins,
         ...rest
     } = config;
     return {
