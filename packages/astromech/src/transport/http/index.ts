@@ -20,6 +20,7 @@ import { entryTypesRouter } from './routes/entry-types';
 import { cronRouter } from './routes/cron';
 import { pluginsRouter } from './routes/plugins';
 import { notificationsRouter } from './routes/notifications';
+import { rpcRouter } from './routes/rpc';
 import { Astromech } from '@/transport/local/index';
 
 type AppEnv = { Variables: AuthVariables };
@@ -113,6 +114,9 @@ app.route('/media', mediaRouter);
 app.route('/settings', settingsRouter);
 app.route('/entry-types', entryTypesRouter);
 app.route('/notifications', notificationsRouter);
+
+// One route over the whole method manifest, beside the REST surface.
+app.route('/rpc', rpcRouter);
 
 // ============================================================================
 // OpenAPI spec + Swagger UI

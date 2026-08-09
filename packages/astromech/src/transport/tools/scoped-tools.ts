@@ -4,11 +4,11 @@
  * it composes it, and serves the AI tool-loop as well as MCP.
  */
 
-import type { Role, ToolDefinition } from '@/types/index';
+import type { ManifestMethod, Role, ToolDefinition } from '@/types/index';
 import { getMethodManifest } from '@/codegen/manifest-registry';
 import { filterMethods } from '@/policies/method-filter';
 import { annotateManifest } from '@/policies/annotate-manifest';
-import { buildScopedDispatch } from '@/transport/tools/dispatch';
+import { buildScopedDispatch, type DispatchResult } from '@/transport/tools/dispatch';
 
 /** Build the tool definitions this role reaches, narrowed by the method filter. */
 export function buildScopedTools(
@@ -43,4 +43,19 @@ export function buildScopedTools(
         tools.push(dispatch.tool);
     }
     return tools;
+}
+
+/**
+ * The dispatch one role gets for a single manifest method id, or undefined when
+ * the manifest declares no such method. The method travels with the dispatch: a
+ * transport mapping a request onto the call reads facts (`typeId`) the tool does
+ * not carry.
+ */
+export function resolveScopedMethod(
+    id: string,
+    role: Role | undefined
+): { method: ManifestMethod; dispatch: DispatchResult } | undefined {
+    const method = getMethodManifest()?.methods.find((entry) => entry.id === id);
+    if (method === undefined) return undefined;
+    return { method, dispatch: buildScopedDispatch(method, role) };
 }

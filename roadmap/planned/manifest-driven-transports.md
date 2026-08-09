@@ -252,15 +252,15 @@ and `GET /me`.
 Additive and independently verifiable, so it lands first and proves the seam
 before any existing route is touched.
 
-- [ ] `POST {apiRoute}/rpc/:id` — resolve the manifest method by id from
+- [x] `POST {apiRoute}/rpc/:id` — resolve the manifest method by id from
       `codegen/manifest-registry.ts`, build via `buildScopedDispatch(method, role)`,
       validate the body against the contract's input schema, invoke, return the
       envelope.
-- [ ] Refuse with the dispatcher's own `DispatchResult.reason` when the method is
+- [x] Refuse with the dispatcher's own `DispatchResult.reason` when the method is
       not callable, so a `binaryInput` method fails with the reason it declares
       rather than a generic 400.
-- [ ] Mount after `requireAuth`, so the role is present.
-- [ ] Test it the way `tests/transport/mcp/parity.test.ts` tests the MCP
+- [x] Mount after `requireAuth`, so the role is present.
+- [x] Test it the way `tests/transport/mcp/parity.test.ts` tests the MCP
       projection: assert every manifest method is either reachable or refused
       with a declared reason, with no third outcome.
 
