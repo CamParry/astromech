@@ -266,19 +266,27 @@ dribbling out.
 
 ## Verification
 
-- [ ] The gate, plus a `apps/demo` build and a run of `dist/server/entry.mjs`.
+- [x] The gate, plus a `apps/demo` build and a run of `dist/server/entry.mjs`.
       None of this is covered by the suite, and WS1 through WS4 all touch the
       boot path that only a real build exercises. See
-      `roadmap/planned/gate-runs-a-build.md`.
+      `roadmap/planned/gate-runs-a-build.md`. The built server serves `/`,
+      `/admin` and `/blog`, and every driver subpath imports and exports the name
+      it should — which only a build can show, since a worktree resolves `dist`
+      to the main checkout.
 - [x] A host entry type with custom storage actually reaches that storage, proved
       by a storage whose methods throw:
       `packages/astromech/tests/boot/init-runtime.test.ts` drives the real
       `initRuntime` rather than the harness, which mirrors the boot sequence and
       so cannot fail when the loop moves or goes.
-- [ ] Email still sends under both `astro dev` and a built server after `from`
+- [x] Email still sends under both `astro dev` and a built server after `from`
       moves, including the password reset path in
       `packages/astromech/src/users/auth.ts`, which is the one caller outside the
-      plugin port.
-- [ ] Image variants still serve at every configured width after the slot moves
+      plugin port. `POST /api/auth/request-password-reset` prints
+      `To: … | From: demo@astromech.dev` on both, so the driver supplies the
+      envelope sender the message no longer carries.
+- [x] Image variants still serve at every configured width after the slot moves
       to `media.image` and loses its `mediaRoute` copy, and the admin still builds
-      thumbnail URLs.
+      thumbnail URLs. All seven widths return `image/webp`, `f=avif` returns
+      `image/avif`, and an unlisted width still 404s, so the allow-list survived
+      the move. `imageWidths` reaches the admin bundle and the media library
+      renders `<picture>` srcsets in both formats.
