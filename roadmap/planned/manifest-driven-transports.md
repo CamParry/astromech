@@ -66,13 +66,186 @@ Before anything is collapsed, write down which handlers are genuinely bespoke an
 why. Expected members, to be confirmed rather than assumed: `media.upload` and
 `media.replace` (`binaryInput`), media serving, the auth routes, `/setup/check`,
 the cron poke, the plugin RPC route, notifications (session-scoped — see
-`roadmap/planned/domain-shape-convergence.md`), `users.get` self-access, and the
+`roadmap/completed/domain-shape-convergence.md`), `users.get` self-access, and the
 last-admin guard.
 
-- [ ] List every handler in `transport/http/routes/` with the reason it is or is
+- [x] List every handler in `transport/http/routes/` with the reason it is or is
       not expressible as `(verb, path, method id, argument mapping)`.
-- [ ] Record the count that survives. It is the honest measure of what this work
+- [x] Record the count that survives. It is the honest measure of what this work
       saves, and it is the number to check the result against.
+
+#### What "generic" means here
+
+A handler counts as generic when it is fully described by `(verb, path, method
+id, args, success status, envelope)`, where `envelope` is one of a closed set —
+`{ data }`, `{ success: true }`, `204`, raw — plus four preconditions the table
+reads from the manifest rather than restating:
+
+1. entry type does not resolve → `404`,
+2. the contract's `requires` capability is unmet → the `capability_not_supported`
+   `409`,
+3. the method returned `null` → `404`,
+4. a per-domain map from a declared domain error to a status.
+
+Everything else is bespoke: a permission check no contract can state, a
+capability check no contract declares, a method id chosen at request time, a
+non-JSON body, a response shape outside the closed set, or a handler with no
+manifest method behind it at all.
+
+#### The count
+
+| Scope                        | Handlers | Generic | Bespoke |
+| ---------------------------- | -------: | ------: | ------: |
+| `routes/entries.ts`          |       30 |      24 |       6 |
+| `routes/users.ts`            |        5 |       2 |       3 |
+| `routes/media.ts`            |        7 |       4 |       3 |
+| `routes/settings.ts`         |        3 |       2 |       1 |
+| `routes/entry-types.ts`      |        2 |       0 |       2 |
+| `routes/notifications.ts`    |        4 |       3 |       1 |
+| `routes/plugins.ts`          |        2 |       0 |       2 |
+| `routes/cron.ts`             |        1 |       0 |       1 |
+| **`transport/http/routes/`** |   **54** |  **35** |  **19** |
+| `transport/http/index.ts`    |        2 |       0 |       2 |
+| **Whole Hono app**           |   **56** |  **35** |  **21** |
+
+**21 bespoke handlers survive**, and 35 collapse into the table. That is the
+number to check the result against.
+
+`src/routes/media-handler.ts` (media serving) and `src/routes/auth-handler.ts`
+(Better Auth) are Astro `APIRoute`s outside the Hono app, so they are not
+candidates for the table at all — they are named here only because the paragraph
+above expected them in the bespoke set.
+
+#### `routes/entries.ts` — 30 handlers
+
+| Verb + path                                   | Method id                        | Generic | Reason                                                                                                                                                         |
+| --------------------------------------------- | -------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /query`                                 | `entries.query`                  | no      | `type` arrives in the body and may be a list; absent → a hand-rolled `invalid_input` 400 outside `ApiErrorCode`                                                |
+| `GET /:type`                                  | `entries.query`                  | yes     | args are the query string                                                                                                                                      |
+| `GET /:type/:id`                              | `entries.get`                    | yes     | null → 404                                                                                                                                                     |
+| `POST /:type`                                 | `entries.create`                 | no      | per-FIELD capability 409: `status`/`publishAt` need `statuses`, `slug` needs `slug` — no contract states this                                                  |
+| `POST /:type/query`                           | `entries.query`                  | yes     | args are the body                                                                                                                                              |
+| `POST /:type/bulk-update`                     | `entries.update`                 | no      | per-field capability 409, plus `status: 'published'` demanding the `publish` permission on an `update` method                                                  |
+| `POST /:type/bulk-trash`                      | `entries.trash`                  | yes     | `requires: 'trash'`                                                                                                                                            |
+| `POST /:type/bulk-delete`                     | `entries.delete`                 | yes     |                                                                                                                                                                |
+| `POST /:type/bulk-restore`                    | `entries.restore`                | yes     | `requires: 'trash'`                                                                                                                                            |
+| `POST /:type/bulk-publish`                    | `entries.publish`                | yes     | `requires: 'statuses'`                                                                                                                                         |
+| `POST /:type/bulk-unpublish`                  | `entries.unpublish`              | yes     | `requires: 'statuses'`                                                                                                                                         |
+| `POST /:type/bulk-schedule`                   | `entries.schedule`               | yes     | `requires: 'statuses'`                                                                                                                                         |
+| `POST /:type/:id/restore`                     | `entries.restore`                | yes     | `requires: 'trash'`                                                                                                                                            |
+| `POST /:type/:id/duplicate`                   | `entries.duplicate`              | yes     | absent body → `{}` is an args concern                                                                                                                          |
+| `PUT /:type/:id`                              | `entries.update`                 | no      | per-field capability 409, plus the same publish escalation                                                                                                     |
+| `DELETE /:type/trash`                         | `entries.emptyTrash`             | yes     | `requires: 'trash'`                                                                                                                                            |
+| `DELETE /:type/:id/force`                     | `entries.delete`                 | yes     |                                                                                                                                                                |
+| `DELETE /:type/:id`                           | `entries.trash` **or** `.delete` | no      | the method id is chosen at request time from the type's `trash` capability                                                                                     |
+| `POST /:type/:id/publish`                     | `entries.publish`                | yes     | `requires: 'statuses'`                                                                                                                                         |
+| `POST /:type/:id/unpublish`                   | `entries.unpublish`              | yes     | `requires: 'statuses'`                                                                                                                                         |
+| `POST /:type/:id/schedule`                    | `entries.schedule`               | yes     | `requires: 'statuses'`                                                                                                                                         |
+| `GET /:type/:id/versions`                     | `entries.versions`               | yes     | the contract declares `requires: 'versioning'` and the route does not check it — honouring it ADDS a 409                                                       |
+| `POST /:type/:id/versions/:versionId/restore` | `entries.restoreVersion`         | yes     | same unchecked `requires: 'versioning'`                                                                                                                        |
+| `GET /:type/:id/incoming-relationships`       | `entries.incomingRelationships`  | yes     |                                                                                                                                                                |
+| `POST /:type/:id/staged`                      | `entries.createStaged`           | no      | `StagedEntryExistsError` → a 409 carrying `details.stagedId`, and a catch-all that turns every other throw into a 500 instead of letting `onError` classify it |
+| `GET /:type/:id/staged`                       | `entries.getStaged`              | yes     | `requires: 'staging'`; returns `{ data: null }`, not a 404                                                                                                     |
+| `POST /:type/:id/staged/merge`                | `entries.mergeStaged`            | yes     | `requires: 'staging'`                                                                                                                                          |
+| `DELETE /:type/:id/staged`                    | `entries.deleteStaged`           | yes     | `requires: 'staging'`                                                                                                                                          |
+| `POST /:type/:id/preview-token`               | `entries.issuePreviewToken`      | yes     | `requires: 'staging'`; absent body → no TTL                                                                                                                    |
+| `DELETE /:type/:id/preview-token`             | `entries.revokePreviewToken`     | yes     | `requires: 'staging'`                                                                                                                                          |
+
+The `PublicTrashedReadError` → 400 shared by the three query routes is the
+per-domain error map, not per-route code, so it does not make them bespoke.
+
+#### `routes/users.ts` — 5 handlers
+
+| Verb + path   | Method id      | Generic | Reason                                                                                                           |
+| ------------- | -------------- | ------- | ---------------------------------------------------------------------------------------------------------------- |
+| `GET /`       | `users.query`  | yes     |                                                                                                                  |
+| `GET /:id`    | `users.get`    | no      | self-access: `currentUser.id === id` passes without `users:read`                                                 |
+| `POST /`      | `users.create` | yes     | 201                                                                                                              |
+| `PUT /:id`    | `users.update` | no      | self-access, `roleSlug` changes still demanding `users:update`, and the last-admin guard (a second storage call) |
+| `DELETE /:id` | `users.delete` | no      | the last-admin guard                                                                                             |
+
+#### `routes/media.ts` — 7 handlers
+
+| Verb + path         | Method id       | Generic | Reason                                                                                     |
+| ------------------- | --------------- | ------- | ------------------------------------------------------------------------------------------ |
+| `GET /`             | `media.query`   | yes     | `mimeType` maps into `where`                                                               |
+| `GET /:id`          | `media.get`     | yes     | null → 404                                                                                 |
+| `GET /:id/usage`    | `media.usedBy`  | no      | pre-flights `media.get` to turn an unknown id into a 404 — two method calls in one handler |
+| `POST /upload`      | `media.upload`  | no      | `binaryInput`: multipart body, `File` has no JSON representation                           |
+| `POST /:id/replace` | `media.replace` | no      | `binaryInput`, plus the same `media.get` pre-flight                                        |
+| `PUT /:id`          | `media.update`  | yes     |                                                                                            |
+| `DELETE /:id`       | `media.delete`  | yes     |                                                                                            |
+
+#### `routes/settings.ts` — 3 handlers
+
+| Verb + path | Method id      | Generic | Reason                                                                                                 |
+| ----------- | -------------- | ------- | ------------------------------------------------------------------------------------------------------ |
+| `GET /`     | `settings.all` | yes     | args pin `full: true`                                                                                  |
+| `GET /:key` | `settings.get` | no      | the method returns the value alone; the route re-attaches the path param as `{ data: { key, value } }` |
+| `PUT /:key` | `settings.set` | yes     | args merge the path key with the body value                                                            |
+
+#### `routes/entry-types.ts` — 2 handlers
+
+Neither has a service method or a contract behind it. Both read
+`Astromech.config` directly, project a metadata shape, and are reachable by any
+authenticated caller with no permission check at all.
+
+| Verb + path  | Generic | Reason                                                                                                                            |
+| ------------ | ------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /`      | no      | no method id; returns a bare array with no envelope                                                                               |
+| `GET /:type` | no      | no method id; resolves only ROOT types via `config.entries[type]`, so a plugin entry type 404s here while it serves on `/entries` |
+
+#### `routes/notifications.ts` — 4 handlers
+
+The roadmap expected all four to be bespoke. Since
+`decisions/0037-session-scoped-service-methods.md` landed, three are not:
+`scopedServices` fills `userId` from the request context for a `sessionScoped`
+contract, which is exactly what these handlers do by hand.
+
+| Verb + path   | Method id                  | Generic | Reason                                                                   |
+| ------------- | -------------------------- | ------- | ------------------------------------------------------------------------ |
+| `GET /`       | `notifications.list`       | yes     | `sessionScoped`                                                          |
+| `GET /count`  | `notifications.count`      | no      | the method returns a scalar; the route wraps it as `{ data: { count } }` |
+| `DELETE /`    | `notifications.dismissAll` | yes     | 204                                                                      |
+| `DELETE /:id` | `notifications.dismiss`    | yes     | 204                                                                      |
+
+#### `routes/plugins.ts` — 2 handlers
+
+| Handler                                      | Generic | Reason                                                                                                                                                                                   |
+| -------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| the raw-route loop (`pluginsRouter.on(...)`) | no      | verb and path are plugin-declared, the handler takes a Web `Request`, and access is `PluginAccess`                                                                                       |
+| `POST /:name/:method`                        | no      | the method id is two path params resolved at request time against the plugin service registry; `PluginAccess`, not a contract permission; the raw handler result is returned unenveloped |
+
+#### `routes/cron.ts` — 1 handler
+
+| Verb + path | Generic | Reason                                                                                           |
+| ----------- | ------- | ------------------------------------------------------------------------------------------------ |
+| `POST /run` | no      | no service method; its own auth (bearer secret OR admin session), mounted ahead of `requireAuth` |
+
+#### `transport/http/index.ts` — 2 handlers
+
+| Verb + path        | Generic | Reason                                                                                          |
+| ------------------ | ------- | ----------------------------------------------------------------------------------------------- |
+| `GET /setup/check` | no      | unauthenticated by design, and deliberately calls `users.query` (a `users:read` method) ungated |
+| `GET /me`          | no      | no service method — it returns `c.var.user` and `c.var.role`                                    |
+
+#### Against the roadmap's expected list
+
+Confirmed: `media.upload` / `media.replace`, `/setup/check`, the cron poke, the
+plugin RPC route, `users.get` self-access, the last-admin guard.
+
+Not applicable: media serving and the auth routes are Astro `APIRoute`s, not
+Hono handlers.
+
+Refuted: notifications, three quarters of it. Only `count` is bespoke, and only
+because of its response shape.
+
+Unanticipated: the per-field capability 409s on create/update/bulk-update, the
+`status: 'published'` publish escalation, `DELETE /:type/:id` picking its method
+id from a capability, `POST /entries/query`'s `invalid_input` 400, the staged
+409, both `entry-types` handlers, `media.usedBy`'s pre-flight, `settings.get`
+re-attaching the key, `notifications.count`'s wrapper, the plugin raw-route loop,
+and `GET /me`.
 
 ### 1. An RPC route over the manifest
 
@@ -182,9 +355,19 @@ not already give.
 - **Browser-verify the admin after step 3.** The admin is the fetch client's only
   real consumer, and a proxy that returns the wrong envelope shape typechecks
   fine. `apps/demo` on port 4323 is the check.
-- The entries route's per-type permission derivation (`entryPermission(type,
-action)`) is already what `scopedServices` does for the entries handle, so the
-  inline `entryGate` contract at `routes/entries.ts` is duplicated logic rather
-  than a special case. Confirm that before deleting it.
+- **`entryGate` is confirmed duplicated logic**, not a special case.
+  `permissionsFor(...).allowsMethod` reads only `contract.permission`, so
+  `entryGate`'s `mutates` and `destructive` fields are dead on arrival and the
+  whole call reduces to `permissions.allows(entryPermission(type, action))` —
+  which is character-for-character what `scopeEntries` runs per targeted type.
+  The `entry:read:full` check the routes make is duplicated too:
+  `scopeEntries`'s `wantsFullShape` already enforces it. Every route's hand-picked
+  action also agrees with `ENTRY_METHOD_ACTIONS` for the method it dispatches, all
+  30 of them, so nothing is lost by deriving it. Two residues are NOT covered and
+  must stay: the `status: 'published'` publish escalation on `update` /
+  `bulk-update`, and the ordering — 29 of the 30 routes check the permission
+  BEFORE the type exists, so an unknown type answers 403 to an under-privileged
+  role and 404 to a privileged one. `POST /entries/query` is the odd one out and
+  checks type existence first, so it answers 404 either way.
 - No migration, no stored-data change, no public API change if done correctly —
   the URL surface is preserved by the table.
