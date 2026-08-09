@@ -13,9 +13,10 @@
  * A dispatcher that cannot restate a method cannot disagree with it, and adding
  * a contract is now all it takes to get a tool.
  *
- * A method is skipped only for a reason it declares — no input schema, or a
- * `binaryInput` a JSON-RPC transport cannot carry. Each skip carries that reason
- * so the server can log deliberate omissions as deliberate.
+ * A method is skipped only for a reason it declares — no input schema, a
+ * `binaryInput` a JSON-RPC transport cannot carry, or a `sessionScoped` subject
+ * a transport with no signed-in user cannot supply. Each skip carries that
+ * reason so the server can log deliberate omissions as deliberate.
  */
 
 import type {
@@ -262,6 +263,15 @@ function resolveInvoke(manifest: ManifestMethod): ResolvedInvoke {
 }
 
 function resolveCoreInvoke(manifest: CoreManifestMethod): ResolvedInvoke {
+    // The raw services take a session-scoped method's `userId` as an ordinary
+    // argument, and this path has nobody to fill it with: `buildDispatch` serves
+    // the dev-only MCP server and the CLI, which run with no signed-in user. So
+    // it is refused with its reason rather than called on a guessed subject —
+    // `buildScopedDispatch`, whose handle fills it from the request context, is
+    // the path such a method is reachable from.
+    if (manifest.sessionScoped === true) {
+        return { ok: false, reason: 'session-scoped — this transport has no user' };
+    }
     const load = CORE_SERVICES[manifest.domain];
     if (!load) return { ok: false, reason: noServiceReason(manifest) };
     return {

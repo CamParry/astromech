@@ -13,6 +13,10 @@
  * therefore ungated" is exactly how a privileged method reaches a caller that
  * was never meant to have it.
  *
+ * It is also where a `sessionScoped` contract gets its subject: the handle fills
+ * `userId` from the request context, so a per-user method's authority is the
+ * caller's identity rather than an argument it chose. `decisions/0037` is why.
+ *
  * This does NOT replace `permissionsFor`. Its `allows`/`allowsMethod` remain
  * the seam for route checks that carry custom logic the contract cannot state
  * — `users.get` allowing self-access without `users:read`, the last-admin guard.
@@ -32,6 +36,7 @@ import { PermissionDeniedError } from '@/errors/index';
 import { entryPermission, type EntryAction } from '@/permissions/entry-permission';
 import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/index';
 import { permissionsFor, type Permissions } from '@/permissions/permissions-for';
+import { getCurrentUser } from '@/request-context/index';
 import { usersService } from '@/users/service';
 import { usersContract } from '@/users/methods';
 import { mediaService } from '@/media/service';
@@ -55,6 +60,29 @@ type ServiceRecord = Record<string, unknown>;
 
 /** A method as this wrapper calls it: one parameter object, any return. */
 type ServiceFn = (...args: unknown[]) => unknown;
+
+/**
+ * The input a session-scoped method is called with: the caller's own `userId`,
+ * pinned LAST so a caller-supplied one is overwritten rather than trusted. Such
+ * a method declares no permission — you may always reach your own rows — so the
+ * pinning is the whole of its authorization, exactly as `scopeEntries` pins the
+ * entry type it derives a permission from.
+ *
+ * Refused outright when nobody is signed in: the method's subject comes from the
+ * session, and there is no sensible subject for a caller that has none.
+ */
+function sessionInput(id: string, input: unknown): Record<string, unknown> {
+    const user = getCurrentUser();
+    if (user === null) {
+        throw new PermissionDeniedError(
+            id,
+            null,
+            'is session-scoped, and this caller has no signed-in user to act as.'
+        );
+    }
+    const base = typeof input === 'object' && input !== null ? input : {};
+    return { ...base, userId: user.id };
+}
 
 /** The permission a contract demands for `input`, or null if it demands none. */
 function resolvePermission(
@@ -105,7 +133,10 @@ export function scopeMethods<S extends object>(
             }
             // Called on the service so a method reaching for a sibling through
             // `this` keeps working.
-            return fn.apply(service, args);
+            return fn.apply(
+                service,
+                contract.sessionScoped === true ? [sessionInput(id, input)] : args
+            );
         };
     }
 

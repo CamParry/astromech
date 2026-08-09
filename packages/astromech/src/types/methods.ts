@@ -56,6 +56,18 @@ export type ServiceMethodContract<Input = unknown, Output = unknown> = {
     /** The permission this method requires; absent ⇒ no permission gate. */
     permission?: PermissionRule<Input>;
     /**
+     * The method acts on the CALLER'S OWN rows. Its `userId` argument is filled
+     * from the request context by `policies/scoped-services.ts`, and a
+     * caller-supplied one is overwritten rather than trusted — such a method
+     * carries no permission (you may always reach your own rows), so an input
+     * `userId` would be an impersonation hole with nothing to gate it.
+     *
+     * The `input` schema therefore omits `userId`: it is not the caller's to
+     * pass. A transport with no signed-in user cannot call the method at all and
+     * refuses it with a declared reason, the way `binaryInput` is refused.
+     */
+    sessionScoped?: boolean;
+    /**
      * The input carries a value JSON cannot express — a `File`, a stream. Such a
      * method is unreachable from a JSON-RPC transport however well it describes
      * itself, so it declares that here rather than leaving each transport to keep
@@ -122,6 +134,12 @@ type ManifestMethodBase = {
      * Emitted only when true, so absence means "callable".
      */
     binaryInput?: true;
+    /**
+     * The method acts on the caller's own rows and takes its `userId` from the
+     * session — see `ServiceMethodContract['sessionScoped']`. A transport with
+     * no signed-in user refuses it. Emitted only when true.
+     */
+    sessionScoped?: true;
 };
 
 /** A core domain method (`users`, `media`, `settings`). */

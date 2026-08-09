@@ -142,6 +142,11 @@ function buildCoreMethods(): CoreManifestMethod[] {
             if (contract.binaryInput === true) {
                 method.binaryInput = true;
             }
+            // Also only when true: the method's `userId` comes from the session,
+            // so a transport with no signed-in user cannot call it.
+            if (contract.sessionScoped === true) {
+                method.sessionScoped = true;
+            }
 
             methods.push(method);
         }

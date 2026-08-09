@@ -50,15 +50,20 @@ resource.
 
 Do this first; steps 2 and 3 are mechanical and this one is not.
 
-- [ ] Decide how a `ServiceMethodContract` declares that an argument is supplied
-      by the caller's identity. Candidate: a `sessionScoped: true` flag plus the
-      convention that the service method takes `{ userId }` and the dispatcher
-      fills it from `getCurrentUser()`, which `request-context` already holds.
-- [ ] Decide what a trusted transport with no user does with such a method —
-      refuse with a declared reason, the way `binaryInput` is refused, is the
-      shape that already exists.
-- [ ] Record the choice in `decisions/`, with the rejected alternatives. This is
-      a contract-vocabulary decision and will be re-litigated otherwise.
+- [x] `ServiceMethodContract` takes a `sessionScoped: true` flag. The service
+      method takes `{ userId }`; `policies/scoped-services.ts` fills it from
+      `getCurrentUser()` and overwrites any caller-supplied value, and the
+      contract's `input` schema omits it. The fill sits on the scoped handle
+      rather than in the tool dispatcher because the handle is what untrusted
+      callers hold directly.
+- [x] A trusted transport with no user refuses it with a declared reason.
+      `buildDispatch` — the raw path the dev-only MCP server and the CLI use —
+      answers `ok: false` with a reason naming the missing user, beside the
+      `binaryInput` refusal.
+- [x] `decisions/0037-session-scoped-service-methods.md`, with the three
+      rejected alternatives: naming the argument (`sessionArgument: 'userId'`),
+      one declaration also covering `users.get`'s self-access exemption, and
+      leaving notifications out of the manifest.
 
 ### 2. Bring notifications up to the contract
 

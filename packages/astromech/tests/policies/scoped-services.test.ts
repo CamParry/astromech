@@ -13,6 +13,7 @@ import { PermissionDeniedError } from '@/errors/index';
 import { annotateManifest } from '@/policies/annotate-manifest';
 import { scopeEntries, scopeMethods, scopedServices } from '@/policies/scoped-services';
 import { permissionsFor } from '@/permissions/permissions-for';
+import { runWithContext } from '@/request-context/index';
 import type {
     CoreManifestMethod,
     EntriesService,
@@ -20,6 +21,7 @@ import type {
     Permission,
     Role,
     ServiceMethodContract,
+    User,
 } from '@/types/index';
 
 beforeEach(() => {
@@ -148,6 +150,69 @@ describe('scopeMethods', () => {
         );
 
         expect(scoped.label).toBe('not-a-function');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// scopeMethods — session-scoped contracts (decisions/0037)
+// ---------------------------------------------------------------------------
+
+const sessionContracts = {
+    read: { sessionScoped: true, mutates: false },
+} satisfies Record<string, ServiceMethodContract>;
+
+/** A scoped handle over `makeService()`, with `read` declared session-scoped. */
+function scopeSession(service: ReturnType<typeof makeService>) {
+    return scopeMethods(service, sessionContracts, permissionsFor(role()), 'inbox');
+}
+
+/** Run `fn` as `id`, the way a request-scoped transport would. */
+function asUser<T>(id: string, fn: () => T): T {
+    return runWithContext({ user: { id } as User, role: null }, fn);
+}
+
+describe('scopeMethods — session-scoped', () => {
+    it('fills userId from the request context, with no permission held', async () => {
+        const service = makeService();
+        const scoped = scopeSession(service);
+
+        await asUser('user-1', () => scoped.read({}));
+        expect(service.read).toHaveBeenCalledWith({ userId: 'user-1' });
+    });
+
+    it('overwrites a caller-supplied userId rather than trusting it', async () => {
+        const service = makeService();
+        const scoped = scopeSession(service);
+
+        await asUser('user-1', () => scoped.read({ userId: 'someone-else' }));
+        expect(service.read).toHaveBeenCalledWith({ userId: 'user-1' });
+    });
+
+    it('refuses when nobody is signed in, without entering the service', () => {
+        const service = makeService();
+        const scoped = scopeSession(service);
+
+        try {
+            scoped.read({});
+            expect.unreachable('a session-scoped method needs a signed-in user');
+        } catch (e) {
+            expect(e).toBeInstanceOf(PermissionDeniedError);
+            expect((e as Error).message).toContain('session-scoped');
+        }
+        expect(service.read).not.toHaveBeenCalled();
+    });
+
+    it('leaves a method that is not session-scoped alone', async () => {
+        const service = makeService();
+        const scoped = scopeMethods(
+            service,
+            contracts,
+            permissionsFor(role('settings:read')),
+            'settings'
+        );
+
+        await asUser('user-1', () => scoped.read({ key: 'site.title' }));
+        expect(service.read).toHaveBeenCalledWith({ key: 'site.title' });
     });
 });
 
