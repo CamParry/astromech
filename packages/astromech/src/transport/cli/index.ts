@@ -30,6 +30,7 @@ const main = defineCommand({
         'plugin:generate': () =>
             import('./commands/plugin-generate').then((m) => m.default),
         'plugin:purge': () => import('./commands/plugin-purge').then((m) => m.default),
+        call: () => import('./commands/call').then((m) => m.default),
         methods: () => import('./commands/methods').then((m) => m.default),
         permissions: () => import('./commands/permissions').then((m) => m.default),
         mcp: () => import('./commands/mcp').then((m) => m.default),

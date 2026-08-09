@@ -362,12 +362,26 @@ envelope type-checks fine and the admin is what would break.
 
 ### 4. A generic CLI call path
 
-- [ ] Add `astromech call <method-id> --args <json|@file>` on top of
+- [x] Add `astromech call <method-id> --args <json|@file>` on top of
       `buildDispatch`, alongside the existing `astromech methods`.
-- [ ] Decide per command whether the hand-written `entries:*` / `users:*`
+- [x] Decide per command whether the hand-written `entries:*` / `users:*`
       commands stay as ergonomic aliases over `call` or are retired. Their flag
       parsing is the only thing they hold that `call` does not, and for
       `entries:create` that is `--fields @file`, which is worth keeping.
+
+All eleven stay, unchanged and not rewritten over `call`. They restate nothing:
+no schema, no permission, no URL, no envelope — so there is no second
+declaration to drift, which is the defect the rest of this work removes. What
+they hold is a flag surface `call` cannot offer, and it is larger than
+`--fields @file`: `entries:create` and `entries:update` coerce `--publishAt`
+into a `Date` that JSON has no form for, and `users:create` prompts for a
+password and writes the Better Auth credential row beside the user, which
+`users.create` does not do at all. Rewriting them as aliases would keep every
+`args` block and replace a three-line body with an indirection.
+
+`call` validates against the contract's input schema before invoking, the way
+`POST /rpc/:id` does, and a method the dispatcher refuses reports the reason it
+declared — `binaryInput`, `sessionScoped`, or no input schema.
 
 ### 5. Close the enforcement question
 

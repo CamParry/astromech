@@ -24,6 +24,7 @@ import {
     fromZodError,
     notFound,
 } from '@/transport/http/middleware/errors';
+import { dispatchArgs } from '@/transport/tools/dispatch';
 import { resolveScopedMethod } from '@/transport/tools/scoped-tools';
 import type { ManifestMethod } from '@/types/index';
 
@@ -63,16 +64,16 @@ router.post('/:id', async (c) => {
 });
 
 /**
- * The argument object to validate: the JSON body, plus the entry type for an
- * entries method — the id already names the type, and the contract pins it as a
- * constant, so a caller is not asked to repeat it.
+ * The argument object to validate: the JSON body, read through `dispatchArgs`
+ * so an entries method gets the type its id already names rather than asking
+ * the caller to repeat it.
  */
 function callArgs(method: ManifestMethod, body: unknown): Record<string, unknown> {
     const args =
         typeof body === 'object' && body !== null && !Array.isArray(body)
             ? (body as Record<string, unknown>)
             : {};
-    return method.source === 'entries' ? { ...args, type: method.typeId } : args;
+    return dispatchArgs(method, args);
 }
 
 export { router as rpcRouter };

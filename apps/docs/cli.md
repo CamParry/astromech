@@ -62,6 +62,30 @@ astromech methods --filter create     # case-insensitive substring on method nam
 astromech methods --json              # full manifest entries (input/output schemas, entryType, …)
 ```
 
+## Calling a method
+
+`call` runs any manifest entry by id, with its arguments as JSON. The id is the
+one `astromech methods` prints; `--args` takes inline JSON or `@file`, and
+defaults to `{}`. The result is printed as JSON.
+
+```sh
+astromech call users.query --args '{"limit":10}'
+astromech call entries.post.create --args @post.json
+```
+
+Arguments are validated against the method's own contract schema before the
+call, so a bad key fails with the field path rather than inside the service. An
+entries method takes its type from the id, so `--args` does not repeat it.
+
+A method the CLI cannot call says why: `media.upload` carries binary input that
+JSON cannot express, and a session-scoped method (the notifications ones) has no
+signed-in user on a trusted transport. Both are reachable over HTTP instead, at
+`POST {apiRoute}/rpc/{method id}`.
+
+The per-domain commands above stay: they hold flag parsing `call` has no way to
+offer — `--fields @file`, an ISO date coerced to a `Date`, `users:create`'s
+password prompt and the credential row it writes alongside the user.
+
 ## Permission discovery
 
 `permissions` lists every grantable permission your resolved config produces —

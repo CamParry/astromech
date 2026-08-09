@@ -294,6 +294,19 @@ function entriesArgs(
     return { ...args, type: manifest.typeId };
 }
 
+/**
+ * The argument object to VALIDATE a call against, for a transport that parses
+ * before it invokes. An entries method takes its type from the id rather than
+ * from the caller, and its schema pins that type as a constant, so the same
+ * value `invoke` supplies has to be there before the schema sees it.
+ */
+export function dispatchArgs(
+    manifest: ManifestMethod,
+    args: Record<string, unknown>
+): Record<string, unknown> {
+    return manifest.source === 'entries' ? entriesArgs(manifest, args) : args;
+}
+
 /** The refusal for a manifest domain that names no registered service. */
 function noServiceReason(manifest: ManifestMethod): string {
     return `no service registered for domain "${manifest.name}"`;
