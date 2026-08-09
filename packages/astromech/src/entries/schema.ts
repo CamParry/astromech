@@ -189,7 +189,16 @@ const sortObject = z.record(z.string(), sortDirection);
 export const entrySortSchema = z
     .union([sortObject, z.array(sortObject)])
     .optional()
-    .catch(undefined);
+    .catch(undefined)
+    // `catch` is the one wrapper `@asteasolutions/zod-to-openapi` cannot render,
+    // so the OpenAPI shape is stated here. The method manifest still reads the
+    // union off the schema itself.
+    .openapi({
+        type: 'object',
+        additionalProperties: { type: 'string', enum: ['asc', 'desc'] },
+        description: 'Field → direction, or a list of such objects.',
+        example: { title: 'asc' },
+    });
 
 export const scheduleEntrySchema = z.object({
     publishAt: z.union([

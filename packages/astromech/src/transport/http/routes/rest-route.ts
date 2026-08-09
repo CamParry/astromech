@@ -12,12 +12,15 @@
  * The permission is read BEFORE the body, so a request that is both unauthorized
  * and malformed answers 403 rather than telling the caller its body was wrong.
  *
+ * Each route also registers itself in the router's OpenAPI document, so
+ * `/openapi.json` describes the table rather than a hand-written subset of it.
+ *
  * A handler needing anything else (a permission no contract states, a body that
  * is not JSON, a response outside the closed envelope set) is not in a table: it
  * stays an explicit `router.get(...)` carrying the reason it is not.
  */
 
-import type { OpenAPIHono, z } from '@hono/zod-openapi';
+import { z, type OpenAPIHono } from '@hono/zod-openapi';
 import type { Context } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { PermissionDeniedError } from '@/errors/index';
@@ -42,13 +45,15 @@ export type ContractCatalogue = Record<string, ServiceMethodContract>;
 /**
  * A catalogue resolved per request, for a domain whose contracts are not
  * constant. Entries is the case: the entry type is a path param, so which
- * contract a route runs under is only known once the request arrives.
+ * contract a route runs under is only known once the request arrives, while the
+ * document still has to be written from something static.
  */
 export type PerRequestContracts = {
     forRequest: (c: Context<Env>) => ContractCatalogue | undefined;
+    documented: ContractCatalogue;
 };
 
-/** What a mount validates against. */
+/** What a mount validates and documents against. */
 export type RestContracts = ContractCatalogue | PerRequestContracts;
 
 /** Anything callable through a string key — a scoped domain handle. */
@@ -79,7 +84,7 @@ export type RestRoute = {
      * it sent rather than the method's argument shape.
      */
     bodyKey?: string;
-    /** The query string this route accepts, validated before anything else. */
+    /** The query string this route accepts. Documented, and validated first. */
     query?: z.ZodObject;
     /** Checks run before the body is read; a Response short-circuits the route. */
     precondition?: (c: Context<Env>, route: RestRoute) => Response | null;
@@ -93,7 +98,10 @@ export function mountRestRoutes(
     contracts: RestContracts,
     routes: RestRoute[]
 ): void {
+    const documented = isPerRequest(contracts) ? contracts.documented : contracts;
     for (const route of routes) {
+        const contract = documented[methodName(route.id)];
+        if (contract !== undefined) documentRestRoute(router, route, contract);
         router.on(route.verb.toUpperCase(), route.path, (c) =>
             handleRestRoute(c, route, contracts)
         );
@@ -189,6 +197,77 @@ function respond(c: Context<Env>, route: RestRoute, result: unknown): Response {
         case 'empty':
             return new Response(null, { status: 204 });
     }
+}
+
+// ============================================================================
+// OpenAPI document
+// ============================================================================
+
+/** Register one table route in the router's OpenAPI document. */
+function documentRestRoute(
+    router: OpenAPIHono<Env>,
+    route: RestRoute,
+    contract: ServiceMethodContract
+): void {
+    const params = pathParams(route.path);
+    const body = requestBody(route, contract);
+    const status = route.status ?? (route.envelope === 'empty' ? 204 : 200);
+
+    router.openAPIRegistry.registerPath({
+        method: route.verb,
+        path: documentPath(route.path),
+        ...(contract.summary !== undefined ? { summary: contract.summary } : {}),
+        request: {
+            ...(params !== undefined ? { params } : {}),
+            ...(route.query !== undefined ? { query: route.query } : {}),
+            ...(body !== undefined
+                ? { body: { content: { 'application/json': { schema: body } } } }
+                : {}),
+        },
+        responses: { [status]: { description: contract.summary ?? 'Success' } },
+    });
+}
+
+/** `/:type/:id` → `/{type}/{id}`, the form an OpenAPI path takes. */
+function documentPath(path: string): string {
+    return path.replace(/:([A-Za-z0-9_]+)/g, '{$1}');
+}
+
+/** The names Hono matches as path params, in order. */
+function paramNames(path: string): string[] {
+    return [...path.matchAll(/:([A-Za-z0-9_]+)/g)].map(([, name]) => name ?? '');
+}
+
+/** The path params of `path` as a schema, or undefined when it has none. */
+function pathParams(path: string): z.ZodObject | undefined {
+    const names = paramNames(path);
+    if (names.length === 0) return undefined;
+    return z.object(Object.fromEntries(names.map((name) => [name, z.string()])));
+}
+
+/**
+ * The request body this route documents: the key it declares as `bodyKey`, or
+ * the method's argument object minus whatever the path already carries. A route
+ * left with no fields sends no body.
+ */
+function requestBody(
+    route: RestRoute,
+    contract: ServiceMethodContract
+): z.ZodType | undefined {
+    if (route.verb !== 'post' && route.verb !== 'put') return undefined;
+    const input = contract.input;
+    if (input === undefined || !(input instanceof z.ZodObject)) return undefined;
+
+    if (route.bodyKey !== undefined) return input.shape[route.bodyKey];
+
+    const inPath = paramNames(route.path).filter((name) => name in input.shape);
+    const rest = inPath.length > 0 ? input.omit(maskFor(inPath)) : input;
+    return Object.keys(rest.shape).length > 0 ? rest : undefined;
+}
+
+/** `['type', 'id']` → `{ type: true, id: true }`, the mask `omit` reads. */
+function maskFor(names: string[]): Record<string, true> {
+    return Object.fromEntries(names.map((name) => [name, true]));
 }
 
 // ============================================================================

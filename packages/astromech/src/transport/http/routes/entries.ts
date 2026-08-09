@@ -59,7 +59,11 @@ type Env = { Variables: AuthVariables };
  */
 export function createEntriesRouter(): OpenAPIHono<Env> {
     const router = new OpenAPIHono<Env>();
-    mountRestRoutes(router, { forRequest: contractsForRequest }, ENTRIES_ROUTES);
+    mountRestRoutes(
+        router,
+        { forRequest: contractsForRequest, documented: DOCUMENTED_CONTRACTS },
+        ENTRIES_ROUTES
+    );
     mountBespokeRoutes(router);
     return router;
 }
@@ -90,7 +94,7 @@ const entryQuery = z.object({
     staged: z.string().optional(),
 });
 
-const ENTRIES_ROUTES: RestRoute[] = [
+export const ENTRIES_ROUTES: RestRoute[] = [
     {
         verb: 'get',
         path: '/:type',
@@ -369,6 +373,18 @@ const CONTRACTS_BY_TYPE = new WeakMap<
     ResolvedEntryType,
     Record<string, EntryMethodContract>
 >();
+
+/**
+ * The catalogue the OpenAPI document is written from. REST addresses a type by
+ * path param, so the document describes `{type}` rather than any one type, and
+ * the titled schemas are the documented default.
+ */
+const DOCUMENTED_CONTRACTS: ContractCatalogue = Object.fromEntries(
+    entryMethodContracts({ typeId: '{type}', titleField: 'title' }).map((contract) => [
+        contract.method,
+        contract,
+    ])
+);
 
 /** The method catalogue for `resolved`, addressed as `typeId`. */
 function entryContracts(
