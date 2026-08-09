@@ -608,8 +608,48 @@ const blobKey = `plugin:${ctx.plugin.namespace}:/menus/${key}`;
 config rather than the whole of it: the route prefixes, entry types, admin
 pages, locales, trash, timezone, and `entryTypesWithField(name)` for the entry
 types carrying one of your fields. `storage`, `email` and `media.image` are
-absent, so reach those capabilities through `ctx.storage` and `ctx.email`
-rather than looking for a driver on the config.
+absent, so reach those capabilities through the ports below rather than looking
+for a driver on the config.
+
+### Capability ports
+
+Three platform capabilities reach you as ports on the context, each already
+scoped to your plugin. You never see the driver the site configured, and you never
+name the backend.
+
+**`ctx.storage`** — blob storage, with every key transparently prefixed
+`plugin/<alias>/`. `put(key, body, { contentType? })`, `get(key)`,
+`list(prefix?)`, `delete(key)`. `list()` hands back de-prefixed keys, so the
+strings you put in are the strings you get out:
+
+```ts
+await ctx.storage.put('exports/latest.json', bytes, { contentType: 'application/json' });
+const object = await ctx.storage.get('exports/latest.json');
+```
+
+**`ctx.email`** — `send(to, subject, element)`. Pass a React element; the port
+renders it to html and text. The envelope sender is the one the site configured on
+its email driver. A site with no email driver at all makes this throw, so catch it
+where sending is optional to your plugin:
+
+```tsx
+await ctx.email.send(user.email, 'Your export is ready', <ExportReady url={url} />);
+```
+
+**`ctx.database`** — `{ dialect, dump?, restore? }`, for maintenance work rather
+than queries (`ctx.db` is the query handle). `dump` and `restore` are optional and
+depend on the site's database driver, so check for them rather than switching on
+`dialect`:
+
+```ts
+if (!ctx.database.dump) throw new Error('This database cannot be dumped');
+const { stream, cleanup } = await ctx.database.dump();
+try {
+    await ctx.storage.put('snapshot.sqlite', stream);
+} finally {
+    await cleanup();
+}
+```
 
 ### Reaching the content services
 

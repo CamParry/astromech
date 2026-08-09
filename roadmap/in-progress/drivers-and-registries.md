@@ -208,7 +208,7 @@ dribbling out.
       `packages/plugins/forms/src/notifications/providers/email.ts`, one test
       fixture, the demo config comment, and
       `apps/docs/plugins/authoring.md`.
-- [ ] **WS6 — Write the rule down.** A `decisions/` record for the rule and what
+- [x] **WS6 — Write the rule down.** A `decisions/` record for the rule and what
       it rejected, the `ARCHITECTURE.md` layer notes, and the plugin context
       section of `apps/docs/plugins/authoring.md`. The record has to carry the
       `media.image` comparison as well as the rule, since three flatter shapes
@@ -221,6 +221,11 @@ dribbling out.
       ladder or pushes it into the driver. `TERMINOLOGY.md` gets an entry for
       driver against port, since after WS5 the distinction is load-bearing: a
       driver is what the host configures, a port is what a plugin receives.
+      Landed as `decisions/0032-a-capability-slot-holds-what-the-config-declared.md`.
+      The `ARCHITECTURE.md` notes went in with WS1, WS4 and WS5 rather than here,
+      each alongside the change it describes. `apps/docs/plugins/authoring.md`
+      gained a capability-ports section covering `ctx.storage`, `ctx.email` and
+      `ctx.database` as a set, since only the email rename had reached it.
 
 ## Not in scope
 
