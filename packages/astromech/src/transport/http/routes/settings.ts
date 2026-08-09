@@ -4,41 +4,48 @@
  * Key-value settings read and write.
  *
  * Routes:
- *   GET  /settings         → all()
- *   GET  /settings/:key    → get()
- *   PUT  /settings/:key    → set()
+ *   GET  /settings         → settings.all
+ *   GET  /settings/:key    → settings.get (bespoke)
+ *   PUT  /settings/:key    → settings.set
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { Astromech } from '@/transport/local/index';
-import { forbidden, fromZodError, notFound } from '@/transport/http/middleware/errors';
+import { forbidden, notFound } from '@/transport/http/middleware/errors';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { JsonValue } from '@/types/index';
 import { permissionsFor } from '@/permissions/permissions-for';
-import { setSettingSchema, settingsContract } from '@/settings/index';
+import { settingsContract } from '@/settings/index';
+import { mountRestRoutes, type RestRoute } from './rest-route';
 
 type Env = { Variables: AuthVariables };
 
 const router = new OpenAPIHono<Env>();
 
+const SETTINGS_ROUTES: RestRoute[] = [
+    // `full: true`: an authenticated admin endpoint guarded by settings:read
+    // returns the whole set, not just the public keys.
+    { verb: 'get', path: '/', id: 'settings.all', args: () => ({ full: true }) },
+    // The value is the body, the key is the path param — pinned last so a body
+    // key cannot redirect the write.
+    {
+        verb: 'put',
+        path: '/:key',
+        id: 'settings.set',
+        args: async (c) => ({
+            ...(await c.req.json<Record<string, unknown>>()),
+            key: c.req.param('key'),
+        }),
+    },
+];
+
+mountRestRoutes(router, settingsContract, SETTINGS_ROUTES);
+
 // ============================================================================
-// GET /settings
+// GET /settings/:key — bespoke
 // ============================================================================
 
-router.get('/', async (c) => {
-    const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(settingsContract.all)) return forbidden(c);
-
-    // Authenticated admin endpoint (guarded by settings:read): return the
-    // full set, not just public keys.
-    const settings = await Astromech.settings.all({ full: true });
-    return c.json({ data: settings });
-});
-
-// ============================================================================
-// GET /settings/:key
-// ============================================================================
-
+// Not in the table: `settings.get` returns the value alone, and the route
+// re-attaches the path param as `{ data: { key, value } }`.
 router.get('/:key', async (c) => {
     const { key } = c.req.param();
     const permissions = permissionsFor(c.var.role);
@@ -51,26 +58,6 @@ router.get('/:key', async (c) => {
     const value = await Astromech.settings.get({ key, full: true });
     if (value === null) return notFound(c, `Setting '${key}' not found`);
     return c.json({ data: { key, value } });
-});
-
-// ============================================================================
-// PUT /settings/:key
-// ============================================================================
-
-router.put('/:key', async (c) => {
-    const { key } = c.req.param();
-    const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(settingsContract.set)) return forbidden(c);
-
-    const raw = await c.req.json();
-    const parsed = setSettingSchema.safeParse(raw);
-    if (!parsed.success) return fromZodError(c, parsed.error);
-
-    const setting = await Astromech.settings.set({
-        key,
-        value: parsed.data.value as JsonValue,
-    });
-    return c.json({ data: setting });
 });
 
 export { router as settingsRouter };
