@@ -287,8 +287,8 @@ through `scopedServices`, wrap the envelope. The only bespoke code left per rout
 is the `args` function, which is the one genuinely per-route fact (how path
 params and query string become the argument object).
 
-- [ ] Define `RestRoute` and the generic handler in `transport/http/routes/`.
-- [ ] Convert one domain first. `settings` (76 lines, 3 handlers) is the
+- [x] Define `RestRoute` and the generic handler in `transport/http/routes/`.
+- [x] Convert one domain first. `settings` (76 lines, 3 handlers) is the
       smallest honest test; `entries` is the payoff and goes last.
 - [ ] Delete `parseQueryParams` / `validateSort` / `SORTABLE_FIELDS` from
       `routes/entries.ts` in favour of the contract's own schema, and move any
@@ -299,6 +299,10 @@ params and query string become the argument object).
 - [ ] Emit the OpenAPI document from the table plus the contracts, replacing the
       five hand-written `createRoute()` calls. This is the point at which
       `/openapi.json` starts describing the whole API.
+
+`settings`, `notifications`, `users`, `media` and `entry-types` are converted —
+11 handlers in a table, 10 bespoke, exactly the split step 0 predicted.
+`entries` is what remains, and it is what the two unticked boxes above wait on.
 
 ### 3. Generate the fetch client from the same table
 
