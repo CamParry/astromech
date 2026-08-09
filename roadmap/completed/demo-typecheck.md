@@ -44,15 +44,10 @@ does, so it is the only place these can surface at all.
       was core's too — `ServiceInterface` made an `undefined`-input method's
       parameter mandatory.
 
-## Still open
-
-- [ ] A **site** cannot get a plugin's tables onto the shared handle without
-      naming that plugin's table module itself. Automatic would mean the type
-      generator emitting the installed plugins' table types into `.astro/`, and
-      an augmentable interface on `astromech`'s public surface for them to land
-      on. A generator feature, not a typecheck fix.
-- [ ] `encodeWith` returns `Record<string, unknown>` rather than its table's
-      insert shape, so `seed.ts` still casts the rows it hands to `.values()`.
+Two things this surfaced are generator work rather than typecheck fixes, and
+moved to `roadmap/planned/plugin-tables-on-the-site-handle.md`: a site still has
+to name a plugin's table module to reach its tables, and `encodeWith` returns
+`Record<string, unknown>` rather than its table's insert shape.
 
 ## Then wire it into the gate
 
@@ -64,6 +59,6 @@ does, so it is the only place these can surface at all.
 `.astro/` generated output is part of what gets checked, so the script has to run
 after `astro sync`. Confirm the ordering works in CI, not just locally.
 
-- [ ] Confirmed locally: `astro sync && tsc --noEmit` in one script. Unconfirmed
-      in CI — the typecheck job runs `npm run build` first, which is what the
-      demo's Node-loaded subpaths need, but no CI run has exercised it yet.
+- [x] Confirmed on `main`: `astro sync && tsc --noEmit` in one script, run after
+      `npm run build`, reports zero errors. The CI typecheck job builds first for
+      the same reason.

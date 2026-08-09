@@ -47,6 +47,7 @@ start the built server and make a request.
 
 ## Verification
 
-- [ ] Run `npm run check:boot` for real on `main` and confirm it passes. It has
-      never been executed — a worktree cannot build `apps/demo`, so the script
-      shipped unrun.
+- [x] Run `npm run check:boot` for real on `main` and confirm it passes. It could
+      not be run where it was written — a worktree cannot build `apps/demo` — so
+      the first execution was on `main` after the merge. All four assertions
+      pass, including the config-evaluation count.
