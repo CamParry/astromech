@@ -8,9 +8,13 @@
 restores the full `./dist/…` map, and npm substitutes it at pack time.
 
 The pattern is Payload 4's. In-repo consumers compile core through their own
-bundler, the built artifact exists only for npm consumers, and the local rebuild
-loop disappears with it — `apps/demo` no longer needs a root `npm run build` and
-a dev-server restart before a core edit shows up.
+bundler and the built artifact exists only for npm consumers, so `apps/demo` no
+longer needs a root `npm run build` before a core edit shows up. The dev-server
+restart is still needed: core source resolves through `node_modules/astromech`,
+which Vite's watcher excludes, so an edit to a moved subpath is picked up on the
+next boot rather than by HMR. Teaching the watcher about it would mean shipping a
+monorepo-shaped `server.watch` override to every consumer of the integration,
+which is a worse trade than restarting.
 
 ## Only half of core can take it
 

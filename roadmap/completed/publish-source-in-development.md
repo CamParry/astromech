@@ -49,7 +49,7 @@ the plugin packages import.
       must keep testing what npm consumers get, not what the repo resolves.
 - [x] Add a check that `exports` and `publishConfig.exports` have identical key
       sets, so a new subpath cannot be added to one and forgotten in the other.
-- [ ] Verify by browser-checking `apps/demo` on port 4323 after a core edit with
+- [x] Verify by browser-checking `apps/demo` on port 4323 after a core edit with
       no rebuild.
 
 ## Notes / caveats
