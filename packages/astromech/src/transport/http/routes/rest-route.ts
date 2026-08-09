@@ -1,13 +1,14 @@
 /**
- * The declarative REST route table.
+ * The server half of the REST route table.
  *
- * A route states `(verb, path, method id, args, envelope)` and `mountRestRoutes`
- * does the rest: read the contract's permission, build the argument object,
- * validate it against the method's own contract schema, dispatch through
- * `scopedServices` so the role is enforced by the handle rather than by a check
- * the handler remembered to write, and wrap the result in the envelope. The only
- * per-route code is `args` — how path params, query string and body become the
- * method's argument object.
+ * The rows are data, in `types/http-routes.shared.ts`, which the fetch client
+ * reads too. This file attaches the one genuinely per-route piece of server code
+ * — `args`, how path params, query string and body become the method's argument
+ * object — and `mountRestRoutes` does the rest: read the contract's permission,
+ * build the argument object, validate it against the method's own contract
+ * schema, dispatch through `scopedServices` so the role is enforced by the
+ * handle rather than by a check the handler remembered to write, and wrap the
+ * result in the envelope.
  *
  * The permission is read BEFORE the body, so a request that is both unauthorized
  * and malformed answers 403 rather than telling the caller its body was wrong.
@@ -16,8 +17,10 @@
  * `/openapi.json` describes the table rather than a hand-written subset of it.
  *
  * A handler needing anything else (a permission no contract states, a body that
- * is not JSON, a response outside the closed envelope set) is not in a table: it
- * stays an explicit `router.get(...)` carrying the reason it is not.
+ * is not JSON, a response outside the closed envelope set) keeps its explicit
+ * `router.get(...)` and the reason it is not generic — but its row stays in the
+ * shared table marked `handler: 'bespoke'`, and `documentBespokeRoutes` puts it
+ * in the document with the rest. A hand-written handler is still public API.
  */
 
 import { z, type OpenAPIHono } from '@hono/zod-openapi';
@@ -35,6 +38,7 @@ import {
     notFound,
     requestSchemaError,
 } from '@/transport/http/middleware/errors';
+import type { HttpRouteSpec } from '@/types/http-routes.shared';
 import type { ServiceMethodContract } from '@/types/index';
 
 type Env = { Variables: AuthVariables };
@@ -59,31 +63,12 @@ export type RestContracts = ContractCatalogue | PerRequestContracts;
 /** Anything callable through a string key — a scoped domain handle. */
 type ServiceRecord = Record<string, (args: unknown) => unknown>;
 
-/** The response shapes a table route may answer with. */
-export type RestEnvelope = 'data' | 'raw' | 'success' | 'empty';
-
-/** One REST route, fully described. */
-export type RestRoute = {
-    verb: 'get' | 'post' | 'put' | 'delete';
-    /** Path within the router, as Hono matches it. */
-    path: string;
-    /** Manifest method id — `<domain>.<method>`. */
-    id: string;
+/** The server code one route needs beyond the facts the shared table states. */
+export type RestHandlers = {
     /** How this request becomes the method's argument object. */
     args: (c: Context<Env>) => unknown | Promise<unknown>;
-    /** Success status; 200 unless given. */
-    status?: 201;
-    /** `{ data }` unless given. */
-    envelope?: RestEnvelope;
     /** When given, a null result answers 404 with this message. */
     notFound?: (c: Context<Env>) => string;
-    /**
-     * The argument key the request body lands under, when the method takes the
-     * body as one key of a larger object (`{ id, data }`). Validation-error
-     * field paths are rebased onto it, so the caller reads back the field names
-     * it sent rather than the method's argument shape.
-     */
-    bodyKey?: string;
     /** The query string this route accepts. Documented, and validated first. */
     query?: z.ZodObject;
     /** Checks run before the body is read; a Response short-circuits the route. */
@@ -92,19 +77,64 @@ export type RestRoute = {
     mapError?: (error: unknown, c: Context<Env>) => Response | null;
 };
 
+/** One mountable REST route: its shared row, plus this file's half. */
+export type RestRoute = HttpRouteSpec & RestHandlers;
+
+/** `'get /:type/:id'` — how a handler names the row it serves. */
+type HandlerKey<T extends readonly HttpRouteSpec[]> = {
+    [I in keyof T]: T[I] extends { handler: 'bespoke' }
+        ? never
+        : `${T[I]['verb']} ${T[I]['path']}`;
+}[number];
+
+/**
+ * Pair each generic row of `specs` with its handler. The key union is derived
+ * from the rows themselves, so a row with no handler and a handler for a row
+ * that is bespoke (or absent) are both type errors rather than a 500 in
+ * production.
+ */
+export function attachHandlers<const T extends readonly HttpRouteSpec[]>(
+    specs: T,
+    handlers: Record<HandlerKey<T>, RestHandlers>
+): RestRoute[] {
+    const byKey = handlers as Record<string, RestHandlers | undefined>;
+    return specs
+        .filter((spec) => spec.handler !== 'bespoke')
+        .map((spec) => {
+            const key = `${spec.verb} ${spec.path}`;
+            const handler = byKey[key];
+            if (handler === undefined) throw new Error(`Route '${key}' has no handler.`);
+            return { ...spec, ...handler };
+        });
+}
+
 /** Mount every route in `routes`, validating against `contracts`. */
 export function mountRestRoutes(
     router: OpenAPIHono<Env>,
     contracts: RestContracts,
     routes: RestRoute[]
 ): void {
-    const documented = isPerRequest(contracts) ? contracts.documented : contracts;
     for (const route of routes) {
-        const contract = documented[methodName(route.id)];
-        if (contract !== undefined) documentRestRoute(router, route, contract);
+        documentRoute(router, contracts, route);
         router.on(route.verb.toUpperCase(), route.path, (c) =>
             handleRestRoute(c, route, contracts)
         );
+    }
+}
+
+/**
+ * Document the bespoke rows of `specs` — the routes this domain writes out by
+ * hand. They are public API and were documented before they were hand-written,
+ * so the row carries their path and the contract carries their schema; only the
+ * handler is bespoke.
+ */
+export function documentBespokeRoutes(
+    router: OpenAPIHono<Env>,
+    contracts: RestContracts,
+    specs: readonly HttpRouteSpec[]
+): void {
+    for (const spec of specs) {
+        if (spec.handler === 'bespoke') documentRoute(router, contracts, spec);
     }
 }
 
@@ -147,7 +177,9 @@ async function handleRestRoute(
     }
 
     const parsed = contract.input.safeParse(args);
-    if (!parsed.success) return fromZodError(c, parsed.error, route.bodyKey);
+    if (!parsed.success) {
+        return fromZodError(c, parsed.error, route.bodyKey, route.wireNames);
+    }
 
     try {
         const result = await invoke(c, route.id, contract, parsed.data);
@@ -185,7 +217,7 @@ function invoke(
 }
 
 /** Wrap a result in the route's envelope. */
-function respond(c: Context<Env>, route: RestRoute, result: unknown): Response {
+function respond(c: Context<Env>, route: HttpRouteSpec, result: unknown): Response {
     const status = (route.status ?? 200) as ContentfulStatusCode;
     switch (route.envelope ?? 'data') {
         case 'data':
@@ -203,12 +235,20 @@ function respond(c: Context<Env>, route: RestRoute, result: unknown): Response {
 // OpenAPI document
 // ============================================================================
 
-/** Register one table route in the router's OpenAPI document. */
-function documentRestRoute(
+/**
+ * Register one row in the router's OpenAPI document, if a contract describes it.
+ * A row whose method has no contract in this catalogue is silently absent, which
+ * is what a per-request catalogue does for a type it cannot resolve.
+ */
+function documentRoute(
     router: OpenAPIHono<Env>,
-    route: RestRoute,
-    contract: ServiceMethodContract
+    contracts: RestContracts,
+    route: HttpRouteSpec & { query?: z.ZodObject }
 ): void {
+    const documented = isPerRequest(contracts) ? contracts.documented : contracts;
+    const contract = documented[methodName(route.id)];
+    if (contract === undefined) return;
+
     const params = pathParams(route.path);
     const body = requestBody(route, contract);
     const status = route.status ?? (route.envelope === 'empty' ? 204 : 200);
@@ -247,11 +287,11 @@ function pathParams(path: string): z.ZodObject | undefined {
 
 /**
  * The request body this route documents: the key it declares as `bodyKey`, or
- * the method's argument object minus whatever the path already carries. A route
- * left with no fields sends no body.
+ * the method's argument object minus whatever the path already carries, under
+ * the names the wire gives them. A route left with no fields sends no body.
  */
 function requestBody(
-    route: RestRoute,
+    route: HttpRouteSpec,
     contract: ServiceMethodContract
 ): z.ZodType | undefined {
     if (route.verb !== 'post' && route.verb !== 'put') return undefined;
@@ -262,12 +302,29 @@ function requestBody(
 
     const inPath = paramNames(route.path).filter((name) => name in input.shape);
     const rest = inPath.length > 0 ? input.omit(maskFor(inPath)) : input;
-    return Object.keys(rest.shape).length > 0 ? rest : undefined;
+    if (Object.keys(rest.shape).length === 0) return undefined;
+    return renameShape(rest, route.wireNames);
 }
 
 /** `['type', 'id']` → `{ type: true, id: true }`, the mask `omit` reads. */
 function maskFor(names: string[]): Record<string, true> {
     return Object.fromEntries(names.map((name) => [name, true]));
+}
+
+/** `object` with each key the route renames on the wire — `id` → `ids`. */
+function renameShape(
+    object: z.ZodObject,
+    wireNames: Record<string, string> | undefined
+): z.ZodObject {
+    if (wireNames === undefined) return object;
+    return z.object(
+        Object.fromEntries(
+            Object.entries(object.shape).map(([key, schema]) => [
+                wireNames[key] ?? key,
+                schema,
+            ])
+        )
+    );
 }
 
 // ============================================================================

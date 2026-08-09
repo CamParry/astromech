@@ -21,7 +21,13 @@ import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { mediaContract } from '@/media/methods';
 import type { MediaQueryParams } from '@/types/index';
-import { mountRestRoutes, type RestRoute } from './rest-route';
+import { MEDIA_ROUTE_SPECS } from '@/types/http-routes.shared';
+import {
+    attachHandlers,
+    documentBespokeRoutes,
+    mountRestRoutes,
+    type RestRoute,
+} from './rest-route';
 
 type Env = { Variables: AuthVariables };
 
@@ -30,35 +36,23 @@ const router = new OpenAPIHono<Env>();
 /** Sort fields accepted off the wire. Mirrors the storage allowlist. */
 const SORTABLE_FIELDS = new Set(['filename', 'mimeType', 'size', 'createdAt']);
 
-export const MEDIA_ROUTES: RestRoute[] = [
-    { verb: 'get', path: '/', id: 'media.query', args: queryArgs, envelope: 'raw' },
-    {
-        verb: 'get',
-        path: '/:id',
-        id: 'media.get',
+export const MEDIA_ROUTES: RestRoute[] = attachHandlers(MEDIA_ROUTE_SPECS, {
+    'get /': { args: queryArgs },
+    'get /:id': {
         args: (c) => ({ id: c.req.param('id') }),
         notFound: (c) => `Media '${c.req.param('id')}' not found`,
     },
-    {
-        verb: 'put',
-        path: '/:id',
-        id: 'media.update',
+    'put /:id': {
         args: async (c) => ({
             id: c.req.param('id'),
             data: await c.req.json<Record<string, unknown>>(),
         }),
-        bodyKey: 'data',
     },
-    {
-        verb: 'delete',
-        path: '/:id',
-        id: 'media.delete',
-        args: (c) => ({ id: c.req.param('id') }),
-        envelope: 'success',
-    },
-];
+    'delete /:id': { args: (c) => ({ id: c.req.param('id') }) },
+});
 
 mountRestRoutes(router, mediaContract, MEDIA_ROUTES);
+documentBespokeRoutes(router, mediaContract, MEDIA_ROUTE_SPECS);
 
 /** `media.query` arguments, read off the query string. */
 function queryArgs(c: Context<Env>): MediaQueryParams {

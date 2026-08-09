@@ -25,7 +25,13 @@ import { permissionsFor } from '@/permissions/permissions-for';
 import { updateUserSchema, usersContract } from '@/users/index';
 import { createUserStorage } from '@/users/storage';
 import type { JsonObject, UserQueryParams } from '@/types/index';
-import { mountRestRoutes, type RestRoute } from './rest-route';
+import { USERS_ROUTE_SPECS } from '@/types/http-routes.shared';
+import {
+    attachHandlers,
+    documentBespokeRoutes,
+    mountRestRoutes,
+    type RestRoute,
+} from './rest-route';
 
 type Env = { Variables: AuthVariables };
 
@@ -34,18 +40,13 @@ const router = new OpenAPIHono<Env>();
 /** Sort fields accepted off the wire. An unlisted one is dropped, not rejected. */
 const SORTABLE_FIELDS = new Set(['name', 'email', 'createdAt', 'updatedAt', 'roleSlug']);
 
-export const USERS_ROUTES: RestRoute[] = [
-    { verb: 'get', path: '/', id: 'users.query', args: queryArgs, envelope: 'raw' },
-    {
-        verb: 'post',
-        path: '/',
-        id: 'users.create',
-        args: (c) => c.req.json<Record<string, unknown>>(),
-        status: 201,
-    },
-];
+export const USERS_ROUTES: RestRoute[] = attachHandlers(USERS_ROUTE_SPECS, {
+    'get /': { args: queryArgs },
+    'post /': { args: (c) => c.req.json<Record<string, unknown>>() },
+});
 
 mountRestRoutes(router, usersContract, USERS_ROUTES);
+documentBespokeRoutes(router, usersContract, USERS_ROUTE_SPECS);
 
 /** `users.query` arguments, read off the query string. */
 function queryArgs(c: Context<Env>): UserQueryParams {

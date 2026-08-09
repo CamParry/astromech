@@ -16,32 +16,30 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { notificationsService } from '@/notifications/index';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import { mountRestRoutes, type RestRoute } from './rest-route';
+import { NOTIFICATIONS_ROUTE_SPECS } from '@/types/http-routes.shared';
+import {
+    attachHandlers,
+    documentBespokeRoutes,
+    mountRestRoutes,
+    type RestRoute,
+} from './rest-route';
 import { notificationsContract } from '@/notifications/methods';
 
 type Env = { Variables: AuthVariables };
 
 const router = new OpenAPIHono<Env>();
 
-export const NOTIFICATIONS_ROUTES: RestRoute[] = [
-    { verb: 'get', path: '/', id: 'notifications.list', args: () => ({}) },
+export const NOTIFICATIONS_ROUTES: RestRoute[] = attachHandlers(
+    NOTIFICATIONS_ROUTE_SPECS,
     {
-        verb: 'delete',
-        path: '/',
-        id: 'notifications.dismissAll',
-        args: () => ({}),
-        envelope: 'empty',
-    },
-    {
-        verb: 'delete',
-        path: '/:id',
-        id: 'notifications.dismiss',
-        args: (c) => ({ id: c.req.param('id') }),
-        envelope: 'empty',
-    },
-];
+        'get /': { args: () => ({}) },
+        'delete /': { args: () => ({}) },
+        'delete /:id': { args: (c) => ({ id: c.req.param('id') }) },
+    }
+);
 
 mountRestRoutes(router, notificationsContract, NOTIFICATIONS_ROUTES);
+documentBespokeRoutes(router, notificationsContract, NOTIFICATIONS_ROUTE_SPECS);
 
 // ============================================================================
 // GET /notifications/count — bespoke

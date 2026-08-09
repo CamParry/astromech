@@ -8,8 +8,10 @@
  * id's own shape — the single source that keeps plugin entries out of the
  * `entry:*` wildcard.
  *
- * 24 of the 30 handlers are the table below. The six that are not follow it,
- * each carrying the reason.
+ * The 30 routes are declared in `types/http-routes.shared.ts`; 24 of them get
+ * their server handler from the map below. The six that cannot follow it, each
+ * carrying the reason — they are still declared, still documented, and still
+ * reachable by the fetch client.
  */
 
 import { OpenAPIHono, z } from '@hono/zod-openapi';
@@ -46,7 +48,14 @@ import {
 } from '@/entries/schema';
 import { PublicTrashedReadError, StagedEntryExistsError } from '@/entries/errors';
 import { resolveEntryType } from '@/entries/type-ids.shared';
-import { mountRestRoutes, type ContractCatalogue, type RestRoute } from './rest-route';
+import { ENTRIES_ROUTE_SPECS } from '@/types/http-routes.shared';
+import {
+    attachHandlers,
+    documentBespokeRoutes,
+    mountRestRoutes,
+    type ContractCatalogue,
+    type RestRoute,
+} from './rest-route';
 
 type Env = { Variables: AuthVariables };
 
@@ -59,17 +68,18 @@ type Env = { Variables: AuthVariables };
  */
 export function createEntriesRouter(): OpenAPIHono<Env> {
     const router = new OpenAPIHono<Env>();
-    mountRestRoutes(
-        router,
-        { forRequest: contractsForRequest, documented: DOCUMENTED_CONTRACTS },
-        ENTRIES_ROUTES
-    );
+    const contracts = {
+        forRequest: contractsForRequest,
+        documented: DOCUMENTED_CONTRACTS,
+    };
+    mountRestRoutes(router, contracts, ENTRIES_ROUTES);
+    documentBespokeRoutes(router, contracts, ENTRIES_ROUTE_SPECS);
     mountBespokeRoutes(router);
     return router;
 }
 
 // ============================================================================
-// The table
+// The handlers, one per generic row of ENTRIES_ROUTE_SPECS
 // ============================================================================
 
 /** The query string the list route accepts. `dir` is the only one that can fail. */
@@ -94,201 +104,82 @@ const entryQuery = z.object({
     staged: z.string().optional(),
 });
 
-export const ENTRIES_ROUTES: RestRoute[] = [
-    {
-        verb: 'get',
-        path: '/:type',
-        id: 'entries.query',
+export const ENTRIES_ROUTES: RestRoute[] = attachHandlers(ENTRIES_ROUTE_SPECS, {
+    'get /:type': {
         args: listArgs,
-        envelope: 'raw',
         query: listQuery,
         precondition: entryAccess(),
         mapError: publicTrashedRead,
     },
-    {
-        verb: 'get',
-        path: '/:type/:id',
-        id: 'entries.get',
+    'get /:type/:id': {
         args: getArgs,
         query: entryQuery,
         precondition: entryAccess(),
         notFound: (c) => `Entry '${c.req.param('id')}' not found`,
     },
-    {
-        verb: 'post',
-        path: '/:type/query',
-        id: 'entries.query',
+    'post /:type/query': {
         args: queryBodyArgs,
-        envelope: 'raw',
         precondition: entryAccess(),
         mapError: publicTrashedRead,
     },
-    {
-        verb: 'post',
-        path: '/:type/bulk-trash',
-        id: 'entries.trash',
-        args: bulkArgs,
-        envelope: 'success',
-        precondition: entryAccess(),
-    },
-    {
-        verb: 'post',
-        path: '/:type/bulk-delete',
-        id: 'entries.delete',
-        args: bulkArgs,
-        envelope: 'success',
-        precondition: entryAccess(),
-    },
-    {
-        verb: 'post',
-        path: '/:type/bulk-restore',
-        id: 'entries.restore',
-        args: bulkArgs,
-        precondition: entryAccess(),
-    },
-    {
-        verb: 'post',
-        path: '/:type/bulk-publish',
-        id: 'entries.publish',
-        args: bulkArgs,
-        precondition: entryAccess(),
-    },
-    {
-        verb: 'post',
-        path: '/:type/bulk-unpublish',
-        id: 'entries.unpublish',
-        args: bulkArgs,
-        precondition: entryAccess(),
-    },
-    {
-        verb: 'post',
-        path: '/:type/bulk-schedule',
-        id: 'entries.schedule',
-        args: bulkArgs,
-        precondition: entryAccess(),
-    },
-    {
-        verb: 'post',
-        path: '/:type/:id/restore',
-        id: 'entries.restore',
-        args: canonicalArgs,
-        precondition: entryAccess(),
-    },
-    {
-        verb: 'post',
-        path: '/:type/:id/duplicate',
-        id: 'entries.duplicate',
+    'post /:type/bulk-trash': { args: bulkArgs, precondition: entryAccess() },
+    'post /:type/bulk-delete': { args: bulkArgs, precondition: entryAccess() },
+    'post /:type/bulk-restore': { args: bulkArgs, precondition: entryAccess() },
+    'post /:type/bulk-publish': { args: bulkArgs, precondition: entryAccess() },
+    'post /:type/bulk-unpublish': { args: bulkArgs, precondition: entryAccess() },
+    'post /:type/bulk-schedule': { args: bulkArgs, precondition: entryAccess() },
+    'post /:type/:id/restore': { args: canonicalArgs, precondition: entryAccess() },
+    'post /:type/:id/duplicate': {
         args: async (c) => ({ ...canonicalArgs(c), overrides: await optionalBody(c) }),
-        bodyKey: 'overrides',
-        status: 201,
         precondition: entryAccess(),
     },
-    {
-        verb: 'delete',
-        path: '/:type/trash',
-        id: 'entries.emptyTrash',
+    'delete /:type/trash': {
         args: (c) => ({ type: param(c, 'type') }),
-        envelope: 'success',
         precondition: entryAccess(),
     },
-    {
-        verb: 'delete',
-        path: '/:type/:id/force',
-        id: 'entries.delete',
+    'delete /:type/:id/force': {
         args: (c) => ({ ...canonicalArgs(c), cascadeLocales: cascadeLocales(c) }),
-        envelope: 'success',
         precondition: entryAccess(),
     },
-    {
-        verb: 'post',
-        path: '/:type/:id/publish',
-        id: 'entries.publish',
-        args: canonicalArgs,
-        precondition: entryAccess(),
-    },
-    {
-        verb: 'post',
-        path: '/:type/:id/unpublish',
-        id: 'entries.unpublish',
-        args: canonicalArgs,
-        precondition: entryAccess(),
-    },
-    {
-        verb: 'post',
-        path: '/:type/:id/schedule',
-        id: 'entries.schedule',
+    'post /:type/:id/publish': { args: canonicalArgs, precondition: entryAccess() },
+    'post /:type/:id/unpublish': { args: canonicalArgs, precondition: entryAccess() },
+    'post /:type/:id/schedule': {
         args: async (c) => ({ ...(await c.req.json()), ...canonicalArgs(c) }),
         precondition: entryAccess(),
     },
     // `versions` and `restoreVersion` declare `requires: 'versioning'` that these
     // routes have never enforced — honouring it would add a 409 to an unversioned
     // type, which answers 200 with an empty list today.
-    {
-        verb: 'get',
-        path: '/:type/:id/versions',
-        id: 'entries.versions',
+    'get /:type/:id/versions': {
         args: canonicalArgs,
         precondition: entryAccess('unchecked'),
     },
-    {
-        verb: 'post',
-        path: '/:type/:id/versions/:versionId/restore',
-        id: 'entries.restoreVersion',
+    'post /:type/:id/versions/:versionId/restore': {
         args: (c) => ({ ...canonicalArgs(c), versionId: param(c, 'versionId') }),
         precondition: entryAccess('unchecked'),
     },
-    {
-        verb: 'get',
-        path: '/:type/:id/incoming-relationships',
-        id: 'entries.incomingRelationships',
+    'get /:type/:id/incoming-relationships': {
         args: canonicalArgs,
         precondition: entryAccess(),
     },
     // Forward versioning (staged entries). Each is gated on the `staging`
     // capability its contract declares, so a misconfigured type answers 409
     // rather than the service's 500.
-    {
-        verb: 'get',
-        path: '/:type/:id/staged',
-        id: 'entries.getStaged',
-        args: canonicalArgs,
-        precondition: entryAccess(),
-    },
-    {
-        verb: 'post',
-        path: '/:type/:id/staged/merge',
-        id: 'entries.mergeStaged',
-        args: canonicalArgs,
-        precondition: entryAccess(),
-    },
-    {
-        verb: 'delete',
-        path: '/:type/:id/staged',
-        id: 'entries.deleteStaged',
-        args: canonicalArgs,
-        envelope: 'success',
-        precondition: entryAccess(),
-    },
-    {
-        verb: 'post',
-        path: '/:type/:id/preview-token',
-        id: 'entries.issuePreviewToken',
+    'get /:type/:id/staged': { args: canonicalArgs, precondition: entryAccess() },
+    'post /:type/:id/staged/merge': { args: canonicalArgs, precondition: entryAccess() },
+    'delete /:type/:id/staged': { args: canonicalArgs, precondition: entryAccess() },
+    'post /:type/:id/preview-token': {
         args: async (c) => ({
             ...canonicalArgs(c),
             expiresAt: (await optionalBody(c))['expiresAt'] ?? null,
         }),
-        status: 201,
         precondition: entryAccess(),
     },
-    {
-        verb: 'delete',
-        path: '/:type/:id/preview-token',
-        id: 'entries.revokePreviewToken',
+    'delete /:type/:id/preview-token': {
         args: canonicalArgs,
-        envelope: 'success',
         precondition: entryAccess(),
     },
-];
+});
 
 // ============================================================================
 // Arguments

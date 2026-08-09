@@ -302,10 +302,21 @@ params and query string become the argument object).
 
 Every domain is converted: 35 handlers in a table and 21 bespoke, exactly the
 split step 0 predicted. `routes/entries.ts` went from 1137 lines to 756, and
-`transport/http/routes/` from 2009 to 1783. `/openapi.json` describes 29 paths
-and 35 operations, emitted from the tables rather than hand-written; the bespoke
-handlers are not in it, since documenting them would mean writing the
-`createRoute()` calls this step deleted.
+`transport/http/routes/` from 2009 to 1783. `/openapi.json` is emitted from the
+table rather than hand-written.
+
+A bespoke handler is still public API, so a row of the table may declare a
+route's path and schema without also naming a generic handler for it: the row
+carries `handler: 'bespoke'`, `documentBespokeRoutes` puts it in the document,
+and the handler stays hand-written. Twelve of the 21 bespoke handlers are
+documented that way — every one with a method contract behind it. The nine that
+are not are the two multipart media routes (a `File` has no JSON schema) and the
+seven handlers with no service method at all: both `entry-types` routes, both
+plugin routes, the cron poke, `/setup/check` and `/me`.
+
+The bulk routes report a validation failure under `ids`, the name the caller
+sent, rather than `id`, the method's argument — declared once as `wireNames` on
+the row and read by the document and the error path alike.
 
 ### 3. Generate the fetch client from the same table
 

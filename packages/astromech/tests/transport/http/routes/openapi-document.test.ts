@@ -1,8 +1,13 @@
 /**
- * `/openapi.json` is emitted from the route tables, so every route in one has to
- * appear in it. This is the check that a table row and its document entry cannot
- * drift: adding a row with no document entry, or renaming a path in only one of
- * the two places, fails here.
+ * `/openapi.json` is emitted from the route table, so every row has to appear in
+ * it — including the rows whose server handler is written by hand. A bespoke
+ * handler is still public API: `POST /entries/{type}`, `PUT /entries/{type}/{id}`
+ * and `DELETE /entries/{type}/{id}` are three of the most-used routes in the API
+ * and were documented before they were hand-written.
+ *
+ * This is the check that a row and its document entry cannot drift: adding a row
+ * with no document entry, or renaming a path in only one of the two places,
+ * fails here.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -18,9 +23,19 @@ import {
 import { settingsRouter, SETTINGS_ROUTES } from '@/transport/http/routes/settings';
 import { usersRouter, USERS_ROUTES } from '@/transport/http/routes/users';
 import type { RestRoute } from '@/transport/http/routes/rest-route';
+import { HTTP_ROUTES, type MountedRoute } from '@/types/http-routes.shared';
+
+type Operation = {
+    summary?: string;
+    requestBody?: {
+        content: {
+            'application/json': { schema: { properties?: Record<string, unknown> } };
+        };
+    };
+};
 
 type Document = {
-    paths: Record<string, Record<string, { summary?: string }>>;
+    paths: Record<string, Record<string, Operation>>;
 };
 
 /** Every mounted table, against the base path its router serves from. */
@@ -32,6 +47,17 @@ function tables(): [string, RestRoute[]][] {
         ['/settings', SETTINGS_ROUTES],
         ['/notifications', NOTIFICATIONS_ROUTES],
     ];
+}
+
+/** The rows whose handler is hand-written — documented, not mounted generically. */
+function bespokeRoutes(): MountedRoute[] {
+    return HTTP_ROUTES.filter((route) => route.handler === 'bespoke');
+}
+
+/** The JSON request body an operation documents, by property name. */
+function bodyProperties(operation: Operation | undefined): string[] {
+    const schema = operation?.requestBody?.content['application/json'].schema;
+    return Object.keys(schema?.properties ?? {});
 }
 
 /** The document the five domain routers compose to. */
@@ -80,5 +106,47 @@ describe('the emitted document', () => {
         const total = tables().reduce((sum, [, routes]) => sum + routes.length, 0);
         expect(total).toBe(35);
         expect(Object.keys(document().paths).length).toBeGreaterThan(5);
+    });
+
+    it('carries the three entry routes whose handlers are bespoke', () => {
+        const paths = document().paths;
+        expect(Object.keys(paths['/entries/{type}'] ?? {})).toContain('post');
+        expect(Object.keys(paths['/entries/{type}/{id}'] ?? {})).toContain('put');
+        expect(Object.keys(paths['/entries/{type}/{id}'] ?? {})).toContain('delete');
+    });
+
+    it('carries every other bespoke row too', () => {
+        const paths = document().paths;
+        for (const route of bespokeRoutes()) {
+            const key = documentPath(route.base, route.path);
+            expect(Object.keys(paths[key] ?? {}), key).toContain(route.verb);
+        }
+    });
+
+    it('describes a bespoke route from its own method contract', () => {
+        const paths = document().paths;
+        expect(paths['/entries/{type}']?.['post']?.summary).toBe(
+            'Create a "{type}" entry.'
+        );
+        // The path already carries `type`, so the body is the rest of the input.
+        expect(bodyProperties(paths['/entries/{type}']?.['post'])).toContain('title');
+        expect(bodyProperties(paths['/entries/{type}']?.['post'])).not.toContain('type');
+    });
+
+    it('names the bulk request body `ids`, as the wire does', () => {
+        const paths = document().paths;
+        for (const path of [
+            '/entries/{type}/bulk-trash',
+            '/entries/{type}/bulk-delete',
+            '/entries/{type}/bulk-restore',
+            '/entries/{type}/bulk-publish',
+            '/entries/{type}/bulk-unpublish',
+            '/entries/{type}/bulk-schedule',
+            '/entries/{type}/bulk-update',
+        ]) {
+            const properties = bodyProperties(paths[path]?.['post']);
+            expect(properties, path).toContain('ids');
+            expect(properties, path).not.toContain('id');
+        }
     });
 });

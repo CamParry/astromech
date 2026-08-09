@@ -15,30 +15,34 @@ import { forbidden, notFound } from '@/transport/http/middleware/errors';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { settingsContract } from '@/settings/index';
-import { mountRestRoutes, type RestRoute } from './rest-route';
+import { SETTINGS_ROUTE_SPECS } from '@/types/http-routes.shared';
+import {
+    attachHandlers,
+    documentBespokeRoutes,
+    mountRestRoutes,
+    type RestRoute,
+} from './rest-route';
 
 type Env = { Variables: AuthVariables };
 
 const router = new OpenAPIHono<Env>();
 
-export const SETTINGS_ROUTES: RestRoute[] = [
+export const SETTINGS_ROUTES: RestRoute[] = attachHandlers(SETTINGS_ROUTE_SPECS, {
     // `full: true`: an authenticated admin endpoint guarded by settings:read
     // returns the whole set, not just the public keys.
-    { verb: 'get', path: '/', id: 'settings.all', args: () => ({ full: true }) },
+    'get /': { args: () => ({ full: true }) },
     // The value is the body, the key is the path param — pinned last so a body
     // key cannot redirect the write.
-    {
-        verb: 'put',
-        path: '/:key',
-        id: 'settings.set',
+    'put /:key': {
         args: async (c) => ({
             ...(await c.req.json<Record<string, unknown>>()),
             key: c.req.param('key'),
         }),
     },
-];
+});
 
 mountRestRoutes(router, settingsContract, SETTINGS_ROUTES);
+documentBespokeRoutes(router, settingsContract, SETTINGS_ROUTE_SPECS);
 
 // ============================================================================
 // GET /settings/:key — bespoke

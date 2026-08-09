@@ -102,6 +102,17 @@ describe('POST /entries/:type/bulk-trash', () => {
         const res = await post('/post/bulk-trash', { ids: [] });
         expect(res.status).toBe(422);
     });
+
+    it('reports the failure under `ids`, the name the caller sent', async () => {
+        // The method's argument is `id`; the wire has always called it `ids`,
+        // and an error that names the argument names a field the caller has not
+        // heard of.
+        const res = await post('/post/bulk-trash', { ids: [] });
+        const body = (await res.json()) as {
+            error: { details: { fields: Record<string, string[]> } };
+        };
+        expect(Object.keys(body.error.details.fields)).toEqual(['ids']);
+    });
 });
 
 describe('POST /entries/:type/bulk-delete', () => {
