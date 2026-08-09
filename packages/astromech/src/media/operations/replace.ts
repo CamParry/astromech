@@ -1,0 +1,41 @@
+import { getStorageDriver } from '@/storage/registry';
+import { deletePrefix } from '@/storage/prefix';
+import type { Media } from '@/types/index';
+import { createMediaStorage } from '../storage';
+import { originalKey } from '../internal/keys';
+import { storeFile } from '../internal/store-file';
+import { toMedia } from '../internal/to-media';
+import { variantPrefix } from '../serving/image/url.shared';
+
+/** Swap a media item's file, keeping its id, URL shape and metadata row. */
+export async function replace(params: { id: string; file: File }): Promise<Media> {
+    const { id, file } = params;
+    const storage = createMediaStorage();
+    const driver = getStorageDriver();
+
+    const row = await storage.get(id);
+    if (!row) throw new Error(`Media '${id}' not found`);
+
+    const newKey = originalKey(id, file.name);
+    const oldKey = originalKey(id, row.filename);
+
+    const { width, height, metadata } = await storeFile(driver, newKey, file);
+
+    // Drop the previous original when the extension (hence key) changed, so a
+    // cross-extension replace doesn't leave the old bytes orphaned.
+    if (oldKey !== newKey) {
+        await driver.delete(oldKey);
+    }
+    await deletePrefix(driver, variantPrefix(id));
+
+    return toMedia(
+        await storage.update(id, {
+            filename: file.name,
+            mimeType: file.type,
+            size: file.size,
+            width,
+            height,
+            metadata,
+        })
+    );
+}

@@ -89,18 +89,25 @@ Do this first; steps 2 and 3 are mechanical and this one is not.
 holding all eight verbs inline, six private helpers, and
 `collectMediaRelationshipSources` exported from the bottom of a service file.
 
-- [ ] Decompose into `media/operations/{query,get,upload,update,delete,replace,used-by}.ts`,
+- [x] Decompose into `media/operations/{query,get,upload,update,delete,replace,used-by}.ts`,
       leaving `service.ts` as the assembler `entries/service.ts` is.
-- [ ] Move the private helpers (`extOf`, `originalKey`, `resolveMediaUrl`,
-      `toMedia`, `storeFile`) into `media/internal/`.
-- [ ] Move `collectMediaRelationshipSources` and `indexMediaRelationships` out of
+- [x] Move the private helpers (`extOf`, `originalKey`, `resolveMediaUrl`,
+      `toMedia`, `storeFile`) into `media/internal/` — `keys.ts`, `to-media.ts`,
+      `store-file.ts`, plus `parse.ts` for the zod-to-`ValidationError` adapter
+      the service held inline.
+- [x] Move `collectMediaRelationshipSources` and `indexMediaRelationships` out of
       the service file — they are relationship-index concerns with a
-      `boot/relationship-index.ts` consumer, not media verbs.
-- [ ] Add `media/visibility.ts`. `entries` and `settings` have one and `media`
-      does not, so the media shape axis is decided at each call site instead of
-      in one place. Confirm against
-      `roadmap/completed/content-visibility.md` whether media has a public/full
-      split to express before writing the file.
+      `boot/relationship-index.ts` consumer, not media verbs. They live in
+      `media/internal/relationships.ts`, where `entries` keeps its pair.
+- [x] **No `media/visibility.ts` — media has no shape axis to express.**
+      `roadmap/completed/content-visibility.md` scopes the public/full split to
+      entries and settings, and `utilities/with-default-shape.ts` names those two
+      as "the domain that carries a shape axis" and "the other" one. Media's own
+      `public`/`private` config key is `MediaAccess`, a DELIVERY policy (driver
+      URL vs proxying route) that `types/config.ts` documents as "NOT access
+      control today" — nothing projects a media row into two shapes, so there is
+      no per-call-site decision to centralise and a `visibility.ts` here would be
+      a new feature, not a relocation.
 
 ### 4. Apply it to `users` and `settings`, or decide not to
 
