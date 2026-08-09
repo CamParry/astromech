@@ -13,7 +13,7 @@ import { Spinner } from '../ui/index';
 import { Link } from '@/admin/rendering/cells/link';
 import { useMediaUsage } from '@/admin/hooks/media';
 import { entryAdminPath } from '@/admin/utilities/entry-admin-path';
-import { parseEntryTypeId } from '@/entries/type-ids';
+import { parseEntryTypeId } from '@/entries/type-ids.shared';
 import type { MediaUsage } from '@/types/index';
 
 export type MediaUsagePanelProps = {

@@ -1,90 +1,179 @@
 /**
  * Dependency-direction guardrail — modular (screaming-architecture) DAG.
  *
- * Imports may only point DOWN this list; upward edges are forbidden. Peer
- * domains may read one another.
+ * Two families of rule live here, in two labelled blocks.
  *
- *   routes · admin · boot · codegen · cli        entrypoints & composition root
- *   transport (http · local · mcp · cli)           delivery
- *     · http/client = the fetch Client (consumes the HTTP API over the wire;
- *       client half of the transport, nested but kept a distinct DAG node)
- *   policies                                       permission / confirmation wrappers
- *   entries · media · users · settings             domains — siblings, may read each other
- *   plugins/runtime · database · storage · email ·  capabilities
- *     cron · ai · request-context · fields · permissions
- *   types · utilities · errors                     pure leaves
+ * **Layer rules** are generated from the `LAYERS` table below. Imports may only
+ * point DOWN the table; upward edges are forbidden. Peers inside a layer may
+ * read one another. Adding a directory to `src/` means adding one word to that
+ * table — and `directory-must-be-in-a-layer` fails the scan until somebody does,
+ * so the guardrail cannot silently stop covering new code.
+ *
+ * **Environment rules** say what may load where, and they are the ones that have
+ * caught real defects: admin code runs in a browser and must not pull the config
+ * virtual module into the bundle, and the fetch Client talks to the server over
+ * the wire rather than importing it. They have two siblings outside this file —
+ * `npm run check:config` and `npm run check:node-imports` — and the block below
+ * says what each covers.
  *
  * This config scans CORE ONLY (`src/`). Cross-package isolation is enforced by
  * package `exports` boundaries, not this scan.
  *
  * The boot layer is the composition root and may import from any layer below it.
  *
- * The leaves (types/utilities/errors) are now pure and enforced by
- * `leaves-are-pure` — errors' entry-specific subclasses moved into entries/, and
- * the only remaining leaf→domain edges (config.ts's two contract types) are
- * type-only and carved out explicitly.
- *
  * Domains may read one another. The module split is for organisation, not
  * isolation: a reverse lookup that needs an entry's title and a user's name is
  * one clean call each, and forbidding it only pushed the same work somewhere
  * worse — a second wire shape for the same concept, resolved in the browser.
  * What the split defends against is functionality smeared across the codebase,
- * which no dependency rule can detect; `domain-no-upward` still holds the shape
- * that matters. The domains sit outside `no-circular` because they have
- * pre-existing internal cycles — worth bringing into scope once those are
+ * which no dependency rule can detect; the generated no-upward rules still hold
+ * the shape that matters. The domains sit outside `no-circular` because they
+ * have pre-existing internal cycles — worth bringing into scope once those are
  * cleaned up, since a cycle IS the entanglement worth catching.
  *
- * The former `plugins/runtime ↔ entries` entanglement is GONE: the runtime is a
- * pure capability again. It declares the slice of entries it needs as a port
- * (`plugins/runtime/entry-access.ts`, typed only from leaves) and the entries
- * domain injects the implementation at boot (`entries/plugin-access.ts`). This
- * is now enforced by `plugins-runtime-is-a-capability`, and plugins/runtime is
- * back inside the acyclic `no-circular` scope.
- *
+ * The plugin runtime is a pure capability. It declares the slice of entries it
+ * needs as a port (`plugins/runtime/entry-access.ts`, typed only from leaves)
+ * and the entries domain injects the implementation at boot
+ * (`entries/plugin-access.ts`).
  */
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The layer table
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Every top-level directory under `src/`, ordered from the top of the DAG to the
+ * bottom. This is the single source for the generated rules below; nothing else
+ * in this file hand-enumerates a sibling directory.
+ */
+const LAYERS = [
+    ['routes', 'admin', 'boot', 'codegen'],
+    ['transport', 'policies'],
+    ['entries', 'media', 'users', 'settings', 'notifications'],
+    [
+        'database',
+        'storage',
+        'email',
+        'ai',
+        'cron',
+        'cloudflare',
+        'request-context',
+        'fields',
+        'permissions',
+        'plugins/runtime',
+    ],
+    ['types', 'utilities', 'errors'],
+];
+
+/** What each layer is called, used in generated rule names and comments. */
+const LAYER_NAMES = ['entrypoints', 'delivery', 'domains', 'capabilities', 'leaves'];
+
+/**
+ * Directories whose no-upward rule is written by hand further down, because it
+ * carries an exemption the table cannot express: `database/schema.ts` is the
+ * table aggregator, and the leaves have two type-only carve-outs. They stay in
+ * `LAYERS` so `directory-must-be-in-a-layer` still accounts for them.
+ */
+const HAND_WRITTEN_NO_UPWARD = new Set(['database', 'types', 'utilities', 'errors']);
+
+/**
+ * Directories that are not a layer. `exports/` holds the tsup entry barrels,
+ * which re-export from every layer by design.
+ */
+const UNLAYERED = ['exports'];
+
+/**
+ * Sources exempt from their layer's generated no-upward rule.
+ *
+ * - `transport/cli/` is a standalone entrypoint: it resolves its own config and
+ *   boots itself, so it reaches `boot/` and `codegen/` the way `routes/` does.
+ * - `transport/tools/` and `transport/mcp/` read the generated method manifest
+ *   from `codegen/`. The manifest is data the transports project, not
+ *   composition — it moves out from under `codegen/` in
+ *   `roadmap/planned/manifest-driven-transports.md`.
+ * - `plugins/runtime/plugin-runtime.ts` calls `notify()` on the notifications
+ *   domain. The remaining upward edge from the plugin runtime; it wants the same
+ *   port treatment `entry-access.ts` gave the entries edge.
+ */
+const NO_UPWARD_EXEMPT =
+    '^src/transport/(cli|tools|mcp)/|^src/plugins/runtime/plugin-runtime\\.ts$';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The browser boundary
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A file the admin SPA may hold that does not live in a browser-safe directory.
+ * The marker is the filename so the constraint is legible at review time without
+ * running this scan; `shared-files-stay-browser-safe` keeps it honest.
+ */
+const SHARED_MARKER = '\\.shared\\.(ts|tsx)$';
+
+/**
+ * Directories a browser bundle may hold: the pure leaves, plus the field
+ * definitions the admin renders from.
+ */
+const BROWSER_SAFE = new Set([...LAYERS[4], 'fields']);
+
+/**
+ * Everything a browser bundle may NOT hold — the domains, the server-side
+ * capabilities, the transports, the policies and the composition root. Pulling
+ * any of these into the admin drags `virtual:astromech/config` (and with it the
+ * whole driver and plugin graph) into the client bundle.
+ */
+const SERVER_ONLY = [
+    'boot',
+    ...LAYERS.slice(1)
+        .flat()
+        .filter((directory) => !BROWSER_SAFE.has(directory)),
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Generation
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** `['entries', 'plugins/runtime']` → `'^src/(entries|plugins/runtime)/'`. */
+const under = (directories) => `^src/(${directories.join('|')})/`;
+
+const KNOWN_DIRECTORIES = [...LAYERS.flat(), ...UNLAYERED];
+
+const layerRules = LAYERS.flatMap((layer, index) => {
+    const above = LAYERS.slice(0, index).flat();
+    const from = layer.filter((directory) => !HAND_WRITTEN_NO_UPWARD.has(directory));
+    if (above.length === 0 || from.length === 0) return [];
+
+    return {
+        name: `${LAYER_NAMES[index]}-no-upward`,
+        comment: `Generated from the LAYERS table. The ${LAYER_NAMES[index]} layer (${layer.join(', ')}) sits below ${above.join(', ')} and must not import any of them. Fix the direction rather than the rule: an upward edge is a port waiting to be declared, the way plugins/runtime/entry-access.ts declares the entries slice the plugin runtime needs. Exemptions are listed on NO_UPWARD_EXEMPT with their reason.`,
+        severity: 'error',
+        from: { path: under(from), pathNot: NO_UPWARD_EXEMPT },
+        to: { path: under(above) },
+    };
+});
+
 module.exports = {
     forbidden: [
+        // ─────────────────────────────────────────────────────────────────────
+        // LAYER RULES — generated from LAYERS, plus the four that carry an
+        // exemption the table cannot express.
+        // ─────────────────────────────────────────────────────────────────────
+        ...layerRules,
         {
-            name: 'domain-no-upward',
+            name: 'directory-must-be-in-a-layer',
             comment:
-                'A domain knows nothing about delivery or composition. It must not import routes, admin, a transport (which now houses the fetch client under transport/http/client), policies, boot, codegen, or a first-party plugin. Importing the plugins/runtime hook engine IS allowed — that is a capability the domain fires hooks through.',
+                'Every top-level directory under src/ must appear in the LAYERS table, so a new directory is covered by the rules above from its first commit. This is the check that stops the next notifications/ — a domain that existed for months while every hand-written rule failed to mention it. Add the directory to its layer in LAYERS; if it is genuinely not a layer (the exports/ barrels), add it to UNLAYERED with the reason. It fires on the unlisted directory IMPORTING something, which every real module does; a directory that imports nothing at all is dead code and out of scope.',
             severity: 'error',
-            from: { path: '^src/(entries|media|users|settings)/' },
-            to: {
-                path: '^src/(routes|admin|transport|policies|boot|codegen)/',
-            },
-        },
-        {
-            name: 'capability-no-upward',
-            comment:
-                'Capabilities (storage, email, cron, ai, request-context, fields, cloudflare) sit below the domains: they expose primitives, they do not orchestrate. They must not import a domain, an upper layer, or a first-party plugin.',
-            severity: 'error',
-            from: {
-                path: '^src/(storage|email|cron|ai|request-context|fields|permissions|cloudflare)/',
-            },
-            to: {
-                path: '^src/(entries|media|users|settings|routes|admin|transport|policies|boot|codegen)/',
-            },
-        },
-        {
-            name: 'plugins-runtime-is-a-capability',
-            comment:
-                'The plugin runtime (hook engine + plugin context/registry) is a capability, not a domain consumer. It may use sibling capabilities (database/email/cron/fields/…) and pure leaves, but must NOT import a domain or an upper layer. The entries behaviour it needs (scoping, type qualification, per-type storage) comes through the entry-access PORT (plugins/runtime/entry-access.ts), injected by the entries domain at boot — never via a direct entries import.',
-            severity: 'error',
-            from: { path: '^src/plugins/runtime/' },
-            to: {
-                path: '^src/(entries|media|users|settings|routes|admin|transport|policies|boot|codegen)/',
-            },
+            from: { path: `^src/(?!(${KNOWN_DIRECTORIES.join('|')})/)[^/]+/` },
+            // Any dependency at all, third-party included.
+            to: {},
         },
         {
             name: 'database-no-upward-except-aggregate',
             comment:
-                'The database capability must not import domains or upper layers — EXCEPT database/schema.ts, the table aggregator that re-exports each domain schema to form the `astromech/database/schema` public surface. Every other database/ file stays below the domains.',
+                'The database capability must not import domains or upper layers — EXCEPT database/schema.ts, the table aggregator that re-exports each domain schema to form the `astromech/database/schema` public surface. Every other database/ file stays below the domains, and reaches a table through the aggregator rather than the domain (see database/types.ts).',
             severity: 'error',
             from: { path: '^src/database/', pathNot: '^src/database/schema\\.ts$' },
-            to: {
-                path: '^src/(entries|media|users|settings|routes|admin|transport|policies|boot|codegen)/',
-            },
+            to: { path: under(LAYERS.slice(0, 3).flat()) },
         },
         {
             name: 'leaves-are-pure',
@@ -92,41 +181,10 @@ module.exports = {
                 'The pure leaves (types, utilities, errors) sit at the very bottom of the DAG: they define contracts and helpers and may import ONLY other leaves (or third-party packages) — never a domain, a capability, or an upper layer. EXEMPT: the two public authoring contracts, types/config.ts (AstromechConfig — composes EntryStorage/ImageFormat) and types/plugins.ts (PluginDefinition — composes the Kysely DB and the TableDescriptor a plugin ships as its schema). Both compose at the TYPE level only, with no runtime coupling.',
             severity: 'error',
             from: {
-                path: '^src/(types|utilities|errors)/',
+                path: under(LAYERS[4]),
                 pathNot: '^src/types/(config|plugins)\\.ts$',
             },
-            to: { path: '^src/(?!(types|utilities|errors)/)' },
-        },
-        {
-            name: 'admin-only-client-and-pure-leaves',
-            comment:
-                'The admin SPA holds the Client and may use shared pure leaves (fields, types, utilities, errors). It must not reach into domains, capabilities, transports, policies, or boot — EXCEPT (a) the fetch Client at transport/http/client/, which the admin is built around, and (b) a short allowlist of pure domain leaves it renders with: entries/utils/url, entries/type-ids, entries/validation-stage (the browser runs the server pipeline before a submit and must pick the same stage the server will), settings/page-values, media/serving/image/url (URL string-building with zero imports — the admin thumb builds the same variant URL the server route parses, and a second copy could only drift). Those deep-imports avoid pulling a domain service (and its virtual:config) into the browser bundle.',
-            severity: 'error',
-            from: { path: '^src/admin/' },
-            to: {
-                path: '^src/(entries|media|users|settings)/|^src/(storage|email|cron|ai|request-context|database|permissions|policies|transport|boot)/|^src/plugins/runtime/',
-                pathNot:
-                    '^src/entries/(utils/url|type-ids|validation-stage)\\.(ts|js)$|^src/settings/page-values\\.(ts|js)$|^src/media/serving/image/url\\.(ts|js)$|^src/transport/http/client/',
-            },
-        },
-        {
-            name: 'client-is-over-the-wire',
-            comment:
-                'The fetch Client (astromech/fetch) lives at transport/http/client/ but talks to the HTTP API over the wire — it is the client *half* of the http transport, not part of the server. It must not reach into domains, capabilities, policies, the rest of transport (the server), boot, or admin — only shared pure leaves (types/utilities/errors). Its own subtree is exempt so it may have internal imports.',
-            severity: 'error',
-            from: { path: '^src/transport/http/client/' },
-            to: {
-                path: '^src/(entries|media|users|settings|storage|email|cron|ai|request-context|database|permissions|policies|transport|boot|admin)/',
-                pathNot: '^src/transport/http/client/',
-            },
-        },
-        {
-            name: 'policies-no-upward',
-            comment:
-                'Policies wrap domain services with permission/confirmation logic. They must not import a transport (which houses the fetch client), admin, or boot.',
-            severity: 'error',
-            from: { path: '^src/policies/' },
-            to: { path: '^src/(transport|admin|boot)/' },
+            to: { path: `^src/(?!(${LAYERS[4].join('|')})/)` },
         },
         {
             name: 'transport-server-no-reach-client-or-admin',
@@ -137,22 +195,53 @@ module.exports = {
             to: { path: '^src/transport/http/client/|^src/admin/' },
         },
         {
-            name: 'transport-no-reach-boot',
-            comment:
-                'The http/local/mcp transports and the shared tool surface are projected BY the boot layer and must not import it. transport/cli is exempt — it is a standalone entrypoint that performs its own config resolution + boot.',
-            severity: 'error',
-            from: { path: '^src/transport/(http|local|mcp|tools)/' },
-            to: { path: '^src/boot/' },
-        },
-        {
             name: 'no-circular',
             comment:
-                'Cyclic dependencies break the acyclic layer graph and tree-shaking. Scoped to the clean capability/delivery spine, now including plugins/runtime (its entries entanglement was untangled via the entry-access port). The four domains stay out of scope for now (their own internal cycles are a separate cleanup).',
+                'Cyclic dependencies break the acyclic layer graph and tree-shaking. Scoped to the clean capability/delivery spine: the whole capability and delivery layers, plus the composition root. The five domains stay out of scope for now (their own internal cycles are a separate cleanup).',
             severity: 'warn',
-            from: {
-                path: '^src/(storage|email|cron|ai|request-context|fields|permissions|database|policies|transport|boot|plugins/runtime)/',
-            },
+            from: { path: under(['boot', ...LAYERS[1], ...LAYERS[3]]) },
             to: { circular: true },
+        },
+
+        // ─────────────────────────────────────────────────────────────────────
+        // ENVIRONMENT RULES — what may load where. Three checks cover this, and
+        // the other two are not dependency rules:
+        //
+        //   npm run check:node-imports  — a plugin package loads in plain Node
+        //                                 and cannot resolve `virtual:`.
+        //   npm run check:config        — the Astro integration loads at config
+        //                                 time and must not reach a service.
+        //   the rules below             — the admin bundle runs in a browser.
+        // ─────────────────────────────────────────────────────────────────────
+        {
+            name: 'admin-only-client-and-pure-leaves',
+            comment:
+                'The admin SPA holds the Client and may use browser-safe code: the pure leaves (types, utilities, errors), the field definitions it renders from (fields), the fetch Client at transport/http/client/ that it is built around, and any *.shared.ts file. It must not otherwise reach into domains, capabilities, transports, policies or boot — a domain service drags virtual:astromech/config, and with it every driver and plugin the config names, into the client bundle. A pure function the browser needs from a domain becomes a *.shared.ts file next to its domain rather than an entry on a list here.',
+            severity: 'error',
+            from: { path: '^src/admin/' },
+            to: {
+                path: under(SERVER_ONLY),
+                pathNot: `${SHARED_MARKER}|^src/transport/http/client/`,
+            },
+        },
+        {
+            name: 'shared-files-stay-browser-safe',
+            comment:
+                'A *.shared.ts file is a domain leaf the admin bundle is allowed to hold, so it may import only what the admin itself may import: pure leaves, fields, and other *.shared.ts files. Without this, the marker is a way to launder a server module into the browser — rename a file that reaches a service and the whole config graph follows it into the bundle.',
+            severity: 'error',
+            from: { path: SHARED_MARKER },
+            to: { path: under(SERVER_ONLY), pathNot: SHARED_MARKER },
+        },
+        {
+            name: 'client-is-over-the-wire',
+            comment:
+                'The fetch Client (astromech/fetch) lives at transport/http/client/ but talks to the HTTP API over the wire — it is the client *half* of the http transport, not part of the server. It must not reach into domains, capabilities, policies, the rest of transport (the server), boot, or admin — only shared pure leaves (types/utilities/errors). Its own subtree is exempt so it may have internal imports.',
+            severity: 'error',
+            from: { path: '^src/transport/http/client/' },
+            to: {
+                path: `${under([...SERVER_ONLY, 'admin'])}|^src/fields/`,
+                pathNot: '^src/transport/http/client/',
+            },
         },
     ],
     options: {

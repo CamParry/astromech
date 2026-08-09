@@ -21,7 +21,7 @@ import type {
 import { parseInstancePath } from '@/fields/field-path';
 import { RESERVED_KEY } from '@/fields/reserved-keys';
 import { hasEntryStorageOverride } from '../storage/registry';
-import { resolveEntryType } from '../type-ids';
+import { resolveEntryType } from '../type-ids.shared';
 import type { Field } from '@/types/fields';
 import type { JsonObject } from '@/types/index';
 import type { StorageDb } from '../storage/types';

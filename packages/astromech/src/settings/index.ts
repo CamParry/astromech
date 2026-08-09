@@ -8,4 +8,4 @@ export {
     mergeGlobalValues,
     mergeLocaleSetting,
     type PartitionedGlobalValues,
-} from './page-values';
+} from './page-values.shared';

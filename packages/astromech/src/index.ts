@@ -39,8 +39,8 @@ export {
     entryPermissions,
 } from '@/permissions/entry-permission';
 export { withDefaults } from '@/utilities/options';
-export { resolveEntryUrl, resolveEntryPath } from '@/entries/utils/url';
-export type { UrlEntry } from '@/entries/utils/url';
+export { resolveEntryUrl, resolveEntryPath } from '@/entries/utils/url.shared';
+export type { UrlEntry } from '@/entries/utils/url.shared';
 export { defaultImageWidths } from '@/media/serving/image/defaults';
 export { buildImageAttrs } from '@/media/serving/image/build-image-attrs';
 export type {

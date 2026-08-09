@@ -9,7 +9,7 @@ import {
     variantPrefix,
     variantStorageKey,
     widthLadder,
-} from '@/media/serving/image/url';
+} from '@/media/serving/image/url.shared';
 
 describe('buildMediaUrl', () => {
     it('produces the canonical original URL', () => {

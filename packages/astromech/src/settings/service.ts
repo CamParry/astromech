@@ -13,7 +13,7 @@ import type { JsonValue, Setting, SettingsService } from '@/types/index';
 import type { ResolvedConfig } from '@/types/config';
 import { createSettingsStorage } from './storage';
 import type { SettingRow } from './schema';
-import { mergeLocaleSetting } from './page-values';
+import { mergeLocaleSetting } from './page-values.shared';
 import { isPublicSettingKey } from './visibility';
 import { processFields } from '@/fields/pipeline';
 import { flattenEntryFields } from '@/fields/flatten';

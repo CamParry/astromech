@@ -28,7 +28,7 @@ import {
     assertEntryTypeValid,
     type Capability,
 } from '@/entries/storage/capabilities';
-import { parseEntryTypeId, resolveEntryType } from '@/entries/type-ids';
+import { parseEntryTypeId, resolveEntryType } from '@/entries/type-ids.shared';
 
 /** Layout fields — presentational, flat data. Their children stay top-level. */
 const LAYOUT_TYPES = new Set(['section', 'tabs', 'tab', 'accordion']);

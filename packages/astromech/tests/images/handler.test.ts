@@ -5,7 +5,7 @@ import { setImageConfig } from '@/media/serving/image/registry';
 import { mediaService } from '@/media/service';
 import { handleMediaRequest } from '@/media/serving/handler';
 import type { StorageDriver, ImageDriver, ImageSource } from '@/types/index';
-import type { ImageFormat } from '@/media/serving/image/url';
+import type { ImageFormat } from '@/media/serving/image/url.shared';
 
 // ---------------------------------------------------------------------------
 // Minimal JPEG header bytes (SOF0 marker with 1x1 dimensions)

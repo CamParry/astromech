@@ -13,7 +13,7 @@ import { astromechClient } from '@/transport/http/client/index';
 // Deep-import the pure helper, NOT the @/settings barrel: the barrel re-exports
 // the settings service (getDb / virtual:astromech/config), which must never enter
 // the admin browser bundle.
-import { partitionGlobalValues } from '@/settings/page-values';
+import { partitionGlobalValues } from '@/settings/page-values.shared';
 
 export async function saveSettingsPage(opts: {
     baseKey: string;

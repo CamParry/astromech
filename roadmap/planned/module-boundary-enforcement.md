@@ -60,19 +60,32 @@ const LAYERS = [
 ];
 ```
 
-- [ ] Emit `no-upward` per layer from `LAYERS`, replacing `domain-no-upward`,
+- [x] Emit `no-upward` per layer from `LAYERS`, replacing `domain-no-upward`,
       `capability-no-upward`, `plugins-runtime-is-a-capability`,
-      `policies-no-upward` and `transport-no-reach-boot`.
-- [ ] Add a generated `directory-must-be-in-a-layer` rule: any top-level `src/`
+      `policies-no-upward` and `transport-no-reach-boot`. Three rules come out:
+      `delivery-no-upward`, `domains-no-upward`, `capabilities-no-upward`.
+- [x] Add a generated `directory-must-be-in-a-layer` rule: any top-level `src/`
       directory absent from `LAYERS` is an error. This is what stops the next
       `notifications/`.
-- [ ] Keep the genuinely bespoke rules as explicit entries below the generated
+- [x] Keep the genuinely bespoke rules as explicit entries below the generated
       block: `database/schema.ts` as the table aggregator, `leaves-are-pure` with
       its two type-only exemptions, `client-is-over-the-wire`,
-      `transport-server-no-reach-client-or-admin`, `no-circular`.
-- [ ] Verify the generated set catches everything the eleven rules caught, by
+      `transport-server-no-reach-client-or-admin`, `no-circular`. Each takes its
+      layer sets from `LAYERS` too, so the table stays the only place a sibling
+      directory is enumerated.
+- [x] Verify the generated set catches everything the eleven rules caught, by
       running `npm run lint:deps` against a temporary commit that introduces one
-      deliberate violation per replaced rule.
+      deliberate violation per replaced rule. Twelve probes, one per rule,
+      each caught and each reverted.
+
+Widening the table to the whole tree surfaced three upward edges the
+hand-written rules never mentioned, all listed on `NO_UPWARD_EXEMPT` with their
+reason rather than silently dropped: `transport/cli/` reaches `boot/` and
+`codegen/` (it is a standalone entrypoint and was already exempt),
+`transport/tools/` and `transport/mcp/` read the generated method manifest from
+`codegen/`, and `plugins/runtime/plugin-runtime.ts` calls `notify()` on the
+notifications domain. The last is the one worth fixing: it is the same shape as
+the entries edge that `plugins/runtime/entry-access.ts` turned into a port.
 
 Adding a domain then becomes one word in one array, and forgetting becomes
 impossible.
@@ -88,19 +101,22 @@ config edit.
 Payload identifies browser-safe code by where it lives, not by a list:
 `src/exports/shared.ts` plus the `browser` export condition.
 
-- [ ] Adopt `*.shared.ts` as the marker for a browser-safe domain leaf, and
+- [x] Adopt `*.shared.ts` as the marker for a browser-safe domain leaf, and
       rename the five allowlisted files to it.
-- [ ] Collapse the `pathNot` to a single `\.shared\.(ts|tsx)$` pattern.
-- [ ] Add a rule that a `*.shared.ts` file may import only pure leaves, so the
+- [x] Collapse the `pathNot` to a single `\.shared\.(ts|tsx)$` pattern.
+- [x] Add a rule that a `*.shared.ts` file may import only pure leaves, so the
       marker cannot be applied to something that drags `virtual:astromech/config`
-      into the browser bundle.
+      into the browser bundle. `shared-files-stay-browser-safe` states it as "may
+      import only what the admin itself may import", which is the same set plus
+      `fields/` — `settings/page-values.shared.ts` reads `fields/flatten`, and
+      the admin already reaches `fields/` directly.
 
-That last rule gets sharper teeth under
-`roadmap/planned/runtime-boot-and-live-config.md`. Once the virtual module
-re-exports the author's config rather than a JSON literal, dragging it into the
-browser drags the whole config graph with it, drivers and plugins included. The
-cost of getting this wrong stops being a large bundle and starts being a build
-failure or a leaked server module.
+That last rule has teeth because of
+`roadmap/completed/runtime-boot-and-live-config.md`. The virtual module
+re-exports the author's config rather than a JSON literal, so dragging it into
+the browser drags the whole config graph with it, drivers and plugins included.
+The cost of getting this wrong is not a large bundle, it is a build failure or a
+leaked server module.
 
 The second benefit is the one that matters more than the config saving: the
 constraint becomes visible in the filename, so the
@@ -116,9 +132,9 @@ admin code runs in a browser and must not pull the config virtual module into
 the bundle. `policies-no-upward` and `transport-no-reach-boot` have no such
 record.
 
-- [ ] Split the config into two labelled blocks: generated layer rules, and
+- [x] Split the config into two labelled blocks: generated layer rules, and
       environment rules.
-- [ ] Cross-reference `check:config` and `check:node-imports` from the
+- [x] Cross-reference `check:config` and `check:node-imports` from the
       environment block, so the three read as one family rather than as unrelated
       one-offs.
 
@@ -133,9 +149,9 @@ record.
   sides: `notifications/` is absent from every rule here _and_ absent from the
   method manifest there, both because it was added after the conventions were
   set. Neither fix catches the other's case.
-- `roadmap/planned/domain-owned-service-contracts.md` step 0 depends on whether
-  a rule here can exclude type-only edges via `dependencyTypesNot`. Answering it
-  is cheap and worth doing while this config is already open.
+- `roadmap/planned/domain-owned-service-contracts.md` step 0 depended on whether
+  a rule here can exclude type-only edges via `dependencyTypesNot`. It can, and
+  the measurement is recorded there; that item proceeds.
 - Migration-neutral: no runtime code changes in step 1, and step 2 is renames
   plus import updates only.
 - The relaxation already recorded in the config header (domains may read one

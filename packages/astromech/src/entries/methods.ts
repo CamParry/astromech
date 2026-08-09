@@ -15,7 +15,7 @@
 import { z } from '@hono/zod-openapi';
 import type { ServiceMethodContract } from '@/types/index';
 import { entryPermission, type EntryAction } from '@/permissions/entry-permission';
-import { parseEntryTypeId } from './type-ids';
+import { parseEntryTypeId } from './type-ids.shared';
 import type { Capability } from './storage/capabilities';
 import {
     createEntrySchemaFor,

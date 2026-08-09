@@ -23,7 +23,7 @@ import { loadAppMigrations } from '@/database/app-migrations';
 import { setDatabaseDriver } from '@/database/driver-registry';
 import { setStorageDriver } from '@/storage/registry';
 import { setImageConfig } from '@/media/serving/image/registry';
-import { normaliseWidths } from '@/media/serving/image/url';
+import { normaliseWidths } from '@/media/serving/image/url.shared';
 import { defaultImageWidths } from '@/media/serving/image/defaults';
 import { setEmailDriver } from '@/email/registry';
 import { setAIConfig } from '@/ai/registry';

@@ -11,7 +11,7 @@ import type {
     ResolvedEntryType,
 } from '@/types/config';
 import { resolveRoles } from '@/permissions/index';
-import { normaliseWidths } from '@/media/serving/image/url';
+import { normaliseWidths } from '@/media/serving/image/url.shared';
 import { defaultImageWidths } from '@/media/serving/image/defaults';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import {

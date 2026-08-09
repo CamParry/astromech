@@ -53,22 +53,42 @@ carve-outs are unaffected.
 
 ### 0. Verify dependency-cruiser can distinguish a type-only edge
 
-**This step can kill the whole item, so it goes first and costs an afternoon.**
+**Answered: it can. This item proceeds.**
 
 Consumers of a domain's contract include `admin/`, which may only reach pure
-leaves and an allowlisted set of browser-safe files. A type import erases at
+leaves and files carrying the `*.shared.ts` marker. A type import erases at
 runtime and costs nothing in the bundle, but `leaves-are-pure` and
-`admin-only-client-and-pure-leaves` currently match on path alone.
+`admin-only-client-and-pure-leaves` match on path alone.
 
-- [ ] Confirm dependency-cruiser reports `type-only` in `dependencyTypes` for
+- [x] Confirm dependency-cruiser reports `type-only` in `dependencyTypes` for
       `import type` in this TypeScript setup, and that a rule can exclude it via
-      `dependencyTypesNot`.
-- [ ] If it can: the admin's type imports of domain contracts are expressible
-      without an allowlist entry, and this item proceeds.
+      `dependencyTypesNot`. Measured against
+      `packages/astromech/.dependency-cruiser.cjs`, whose
+      `tsPreCompilationDeps` is what makes the distinction available at all. A
+      type import of `SettingsService` from `@/settings/service`, added to
+      `admin/lib/settings-page-save.ts`, is reported with `type-only` in its
+      `dependencyTypes` alongside `aliased-tsconfig-paths`, `local` and
+      `import`; the sibling value import of the same module carries the same
+      list without `type-only`. Adding `dependencyTypesNot` to
+      `admin-only-client-and-pure-leaves` cleared the type-only edge and still
+      failed the value import of the same module from the same file. The key
+      belongs inside `to`, not at the top level of a rule — at the top level the
+      config fails schema validation on an additional property.
+- [x] If it can: the admin's type imports of domain contracts are expressible
+      without an allowlist entry, and this item proceeds. A domain contract the
+      admin imports as a type needs no `*.shared.ts` rename and no carve-out —
+      the rule that admits it is one key on the existing rule.
 - [ ] If it cannot: the contracts have to reach the admin as `*.shared.ts` files
       per `roadmap/planned/module-boundary-enforcement.md` step 2, which is a
       larger and less obviously worthwhile change. Record the finding here and
-      re-decide rather than pushing on.
+      re-decide rather than pushing on. **Not the case.**
+
+One caveat for step 2. `dependencyTypesNot: ['type-only']` opens the exemption
+for the whole rule, not for the contracts alone: any admin file could then
+`import type` from any domain service implementation. That is acceptable for a
+type erased at build time, and `verbatimModuleSyntax` keeps an accidental value
+import from hiding inside one, but it is a wider hole than the `*.shared.ts`
+marker, which stays scoped to the file that carries it.
 
 ### 1. Move `AstromechClient` to the transport layer
 

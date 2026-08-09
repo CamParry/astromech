@@ -28,7 +28,7 @@ import { mergePatch, projectToSchema } from '@/fields/values';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { fieldReadsFromRecords } from '@/fields/field-reads';
 import { getCurrentUser } from '@/request-context/index';
-import { buildMediaUrl, variantPrefix } from './serving/image/url';
+import { buildMediaUrl, variantPrefix } from './serving/image/url.shared';
 import { isOptimisableImage, readImageDimensions } from './serving/image/dimensions';
 import { contentVersion } from './serving/image/version';
 import { getImageConfig } from './serving/image/registry';

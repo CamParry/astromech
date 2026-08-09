@@ -26,7 +26,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import adminConfig from 'virtual:astromech/admin-config';
 import { astromechClient } from '@/transport/http/client/index';
-import { parseEntryTypeId } from '@/entries/type-ids';
+import { parseEntryTypeId } from '@/entries/type-ids.shared';
 import { entryLabel } from '@/admin/components/entries/entry-label';
 import { usePermissions } from '../../hooks/index';
 import { useDebounce } from '../../hooks/use-debounce';

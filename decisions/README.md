@@ -68,3 +68,4 @@ Distinct from the neighbouring directories:
 - [0033](0033-the-repo-resolves-src-and-npm-gets-dist.md) — the repo `exports` map resolves `src`, `publishConfig.exports` gives npm `dist`
 - [0034](0034-generated-field-types-are-aliases-and-the-gate-boots-a-server.md) — generated field types are `type` aliases, and `check:boot` builds and boots the demo
 - [0035](0035-one-namespace-and-one-declare-global.md) — one `globalThis.__astromech` namespace and one `declare global`, plus `createKeyedRegistry`
+- [0036](0036-one-layer-table-and-a-shared-suffix.md) — the layer rules generate from one `LAYERS` table, and `*.shared.ts` replaces the admin allowlist

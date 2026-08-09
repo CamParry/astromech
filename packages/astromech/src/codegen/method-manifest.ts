@@ -35,7 +35,7 @@ import { settingsContract } from '@/settings/methods';
 import { entryMethodContracts, type EntryMethodContract } from '@/entries/methods';
 import type { Capability } from '@/entries/storage/capabilities';
 import type { ResolvedEntryCapabilities } from '@/types/index';
-import { qualifyEntryType } from '@/entries/type-ids';
+import { qualifyEntryType } from '@/entries/type-ids.shared';
 import {
     resolvePluginIdentity,
     resolvePluginPermission,

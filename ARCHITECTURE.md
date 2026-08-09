@@ -27,11 +27,11 @@ Postgres and MySQL are a future major
 ## The layer model
 
 The source is a modular screaming-architecture DAG. Imports may only point
-**down** this list; upward edges are forbidden, and peer domains may never import
+**down** this list; upward edges are forbidden, and peers inside a layer may read
 one another:
 
 ```
-routes · admin · boot · codegen · cli          entrypoints & composition root
+routes · admin · boot · codegen                entrypoints & composition root
 transport (http · local · mcp · cli · tools)   delivery — http/client/ is the fetch Client (astromech/fetch), over the wire
 policies                                       permission/confirmation wrappers over the manifest
 entries · media · users · settings ·           domains — siblings, never import each other
@@ -54,9 +54,10 @@ Key invariants:
 
 - **Domains are deep modules named for the business, not the tech.** Each owns its
   `service.ts`, `schema.ts` (`defineTable` table + Zod validation), `methods.ts`,
-  and `visibility.ts`. Cross-domain data goes through `@/database/schema` (the
-  table aggregator) or a shared capability — never via a direct peer import. The
-  only permitted exception is a `schema.ts` foreign-key cross-reference.
+  and `visibility.ts`. Tables are reached through `@/database/schema` (the table
+  aggregator) rather than another domain's `schema.ts`. A domain may call a peer
+  directly — the split is for organisation, not isolation, and the alternative
+  was a second wire shape for the same concept.
 - **Capabilities sit below domains.** They expose primitives (`storage`, `database`,
   `fields`, `permissions`, `request-context`, `email`, `ai`, `cron`, `cloudflare`) and may
   not orchestrate domain logic.
@@ -77,7 +78,14 @@ Key invariants:
   `no-restricted-syntax` in `eslint.config.js`; a new global goes in the namespace.
 - **Leaves are pure.** `types/`, `utilities/`, and `errors/` import only other
   leaves or third-party packages.
-- **Enforced** by `packages/astromech/.dependency-cruiser.cjs` (`npm run lint:deps`), which scans `packages/astromech/src` only — core's internal DAG. Cross-package isolation is enforced by `exports` boundaries at publish, not a repo-wide scan.
+- **`*.shared.ts` marks a domain file the admin bundle may hold.** The admin runs
+  in a browser, so it may not import a domain or a server-side capability — a
+  domain service drags `virtual:astromech/config`, and every driver and plugin the
+  config names, into the client bundle. A pure function the browser needs from a
+  domain (`entries/type-ids.shared.ts`, `media/serving/image/url.shared.ts`) stays
+  where it lives and takes the suffix, which limits it to importing the leaves,
+  `fields/`, and other `*.shared.ts` files.
+- **Enforced** by `packages/astromech/.dependency-cruiser.cjs` (`npm run lint:deps`), which scans `packages/astromech/src` only — core's internal DAG. The layer rules there are generated from one `LAYERS` table, and a top-level `src/` directory missing from it fails the scan. Cross-package isolation is enforced by `exports` boundaries at publish, not a repo-wide scan.
 
 ## Directory map
 
@@ -98,7 +106,7 @@ packages/
 │   │   │   ── entrypoints & composition root ──────────────────────────────────
 │   │   ├── boot/           # composition root — boots & wires all layers; Astro integration (astromech/astro)
 │   │   ├── routes/         # 3 Astro APIRoute entrypoints injected by the integration (api / auth / media)
-│   │   ├── admin/          # React admin SPA (TanStack Router; deep-imports a few pure domain leaves) — components/dev/ is import.meta.env.DEV-gated
+│   │   ├── admin/          # React admin SPA (TanStack Router; deep-imports the *.shared.ts domain leaves) — components/dev/ is import.meta.env.DEV-gated
 │   │   ├── codegen/        # type generator + plugin-client manifest + method manifest (.astro/astromech.methods.json, plus manifest-registry.ts — the boot-generated copy)
 │   │   │
 │   │   │   ── delivery ────────────────────────────────────────────────────
@@ -111,10 +119,10 @@ packages/
 │   │   ├── plugins/        # plugins/runtime (hook engine) only — first-party plugins live in packages/plugins/
 │   │   │
 │   │   │   ── domains ────────────────────────────────────────────────────
-│   │   ├── entries/        # entries domain: service · schema · methods · visibility · url · type-ids
+│   │   ├── entries/        # entries domain: service · schema · methods · visibility · url.shared · type-ids.shared
 │   │   ├── media/          # media domain: service · schema · serving/image/
 │   │   ├── users/          # users domain: service · schema · auth (Better Auth integration)
-│   │   ├── settings/       # settings domain: service · schema · page-values
+│   │   ├── settings/       # settings domain: service · schema · page-values.shared
 │   │   ├── notifications/  # notifications domain: service · schema · user-scoped storage
 │   │   │
 │   │   │   ── capabilities ───────────────────────────────────────────────
@@ -246,7 +254,7 @@ used.
 | `npm run lint`               | eslint over `packages/schema-engine/src` and `packages/astromech/src` only. The plugin packages have no `lint` script; the pre-commit hook lints their files anyway                                                                                 |
 | `npm run lint:css`           | stylelint over `packages/astromech/src/admin/styles/`                                                                                                                                                                                               |
 | `npm run format:check`       | prettier over the repo                                                                                                                                                                                                                              |
-| `npm run lint:deps`          | dependency-cruiser — enforces the modular DAG invariants within `packages/astromech/src` (no upward edges, no peer-domain imports, pure leaves)                                                                                                     |
+| `npm run lint:deps`          | dependency-cruiser — enforces the modular DAG within `packages/astromech/src`: no upward edges, pure leaves, every top-level directory in a layer, and the browser boundary the admin and `*.shared.ts` files sit on                                |
 | `npm run check:config`       | `tsx astromech.config.ts` in the demo — loads the site config the way Astro does, catching a config-time import that reaches a domain service                                                                                                       |
 | `npm run check:node-imports` | spawns plain `node` against built `dist` and imports each plugin-facing subpath. Needs `dist`, so it runs after `build`. See "Plugin runtime boundary"                                                                                              |
 | `npm run check:exports`      | asserts `exports` and `publishConfig.exports` name the same subpaths, so a new one cannot be added to the repo map and forgotten in the published one                                                                                               |

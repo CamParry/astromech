@@ -16,7 +16,7 @@ import type {
 } from './fields';
 import type { PluginDefinition, PluginNavItem } from './plugins';
 import type { EntryStorage } from '@/entries/storage/types';
-import type { ImageFormat } from '@/media/serving/image/url';
+import type { ImageFormat } from '@/media/serving/image/url.shared';
 
 // ============================================================================
 // Drivers

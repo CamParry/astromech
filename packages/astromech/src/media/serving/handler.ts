@@ -8,8 +8,8 @@ import {
     buildMediaUrl,
     buildVariantUrl,
     variantStorageKey,
-} from './image/url';
-import type { ImageFormat } from './image/url';
+} from './image/url.shared';
+import type { ImageFormat } from './image/url.shared';
 import { isOptimisableImage } from './image/dimensions';
 import type { ImageSource, StorageDriver } from '@/types/index';
 

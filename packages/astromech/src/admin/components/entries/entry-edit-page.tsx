@@ -75,7 +75,7 @@ import {
 } from '@/admin/hooks/index';
 import { scopedEntryKeys } from '@/admin/hooks/use-query-keys';
 import type { EntryStatus } from '@/types/index';
-import { resolveEntryUrl } from '@/entries/utils/url';
+import { resolveEntryUrl } from '@/entries/utils/url.shared';
 import { resolveAdminEntryType, resolveForm } from '@/admin/rendering/resolve';
 import { resolveContentLocale } from '@/utilities/locale';
 import { useAIContext } from '@/admin/context/ai-context';

@@ -39,7 +39,7 @@ import {
     scheduleEntrySchema,
 } from '@/entries/schema';
 import { PublicTrashedReadError, StagedEntryExistsError } from '@/entries/errors';
-import { resolveEntryType } from '@/entries/type-ids';
+import { resolveEntryType } from '@/entries/type-ids.shared';
 
 type Env = { Variables: AuthVariables };
 

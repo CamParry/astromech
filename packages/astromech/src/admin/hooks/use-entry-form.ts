@@ -30,7 +30,7 @@ import type {
 } from '../../types/index';
 // Deep import of a pure leaf: the browser must pick the same stage the server
 // will, and the entries barrel would drag a domain service into the bundle.
-import { entryValidationStage } from '@/entries/validation-stage';
+import { entryValidationStage } from '@/entries/validation-stage.shared';
 import { AstromechApiError } from '../../transport/http/client/index';
 
 // ============================================================================

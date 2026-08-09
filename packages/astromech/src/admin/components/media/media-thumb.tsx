@@ -9,7 +9,7 @@
 
 import React from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
-import { buildVariantUrl } from '@/media/serving/image/url';
+import { buildVariantUrl } from '@/media/serving/image/url.shared';
 import { FileTypeIcon, versionedMediaUrl } from '@/admin/utilities/media';
 import type { Media } from '@/types/index';
 
