@@ -9,17 +9,17 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'kysely';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
-import { entriesService as api } from '@/entries/service.js';
-import { createMediaStorage } from '@/media/storage.js';
-import { tableStorage } from '@/entries/storage/table.js';
-import { defineTable } from '@/database/define-table.js';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { entriesService as api } from '@/entries/service';
+import { createMediaStorage } from '@/media/storage';
+import { tableStorage } from '@/entries/storage/table';
+import { defineTable } from '@/database/define-table';
 import {
     InvalidReferencesFilterError,
     RelationshipFilterUnsupportedError,
     UnknownWhereKeyError,
-} from '@/entries/errors.js';
-import type { AstromechConfig, PluginDefinition } from '@/types/index.js';
+} from '@/entries/errors';
+import type { AstromechConfig, PluginDefinition } from '@/types/index';
 
 const linksTable = defineTable('test_links', ({ col }) => ({
     id: col.id(),

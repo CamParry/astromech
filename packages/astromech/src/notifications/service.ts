@@ -1,7 +1,7 @@
-import type { NotificationRow } from './schema.js';
-import { createNotificationStorage } from './storage.js';
-import { createUserStorage } from '@/users/storage.js';
-import type { Notification, NotifyInput } from '@/types/index.js';
+import type { NotificationRow } from './schema';
+import { createNotificationStorage } from './storage';
+import { createUserStorage } from '@/users/storage';
+import type { Notification, NotifyInput } from '@/types/index';
 
 // ============================================================================
 // Serializer

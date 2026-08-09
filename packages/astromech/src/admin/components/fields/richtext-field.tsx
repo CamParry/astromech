@@ -1,11 +1,11 @@
 import React from 'react';
 import type { JSONContent } from '@tiptap/core';
-import type { BaseFieldProps } from '@/types/index.js';
+import type { BaseFieldProps } from '@/types/index';
 import {
     RichTextEditor,
     type RichTextEditorProps,
-} from '@/admin/components/ui/rich-text-editor.js';
-import type { RichTextAllow } from '@/types/fields.js';
+} from '@/admin/components/ui/rich-text-editor';
+import type { RichTextAllow } from '@/types/fields';
 
 // ============================================================================
 // Legacy coercion

@@ -5,7 +5,7 @@ import type {
     Permission,
     Role,
     StorageDriver,
-} from '@/types/index.js';
+} from '@/types/index';
 import {
     hasPermission,
     can,
@@ -15,10 +15,10 @@ import {
     definePermissions,
     entryPermissions,
     resolveRoles,
-} from '@/permissions/index.js';
-import { buildPermissionCatalogue } from '@/permissions/catalogue.js';
-import { resolveConfig } from '@/boot/config-resolver.js';
-import { definePlugin } from '@/index.js';
+} from '@/permissions/index';
+import { buildPermissionCatalogue } from '@/permissions/catalogue';
+import { resolveConfig } from '@/boot/config-resolver';
+import { definePlugin } from '@/index';
 
 // ============================================================================
 // hasPermission — new grammar (resource[:identifier]:action, action last)

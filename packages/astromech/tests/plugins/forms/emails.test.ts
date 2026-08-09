@@ -8,11 +8,11 @@ import { describe, expect, it } from 'vitest';
 import {
     applyMergeTags,
     mergeTagValues,
-} from '../../../../plugins/forms/src/notifications/merge-tags.js';
+} from '../../../../plugins/forms/src/notifications/merge-tags';
 import {
     displayValue,
     toValueRows,
-} from '../../../../plugins/forms/src/utilities/values.js';
+} from '../../../../plugins/forms/src/utilities/values';
 
 describe('applyMergeTags', () => {
     it('substitutes a known token', () => {

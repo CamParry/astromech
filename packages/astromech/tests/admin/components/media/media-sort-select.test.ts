@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { sortPatch } from '@/admin/components/media/media-sort-select.js';
+import { sortPatch } from '@/admin/components/media/media-sort-select';
 
 const CLEARED = { sort: undefined, dir: undefined, page: 1 };
 

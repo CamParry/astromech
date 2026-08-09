@@ -9,8 +9,8 @@
  */
 
 import { z } from 'zod';
-import type { ServiceMethodContract } from '@/types/index.js';
-import { setSettingSchema } from './schema.js';
+import type { ServiceMethodContract } from '@/types/index';
+import { setSettingSchema } from './schema';
 
 export const settingsContract = {
     all: {

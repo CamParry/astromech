@@ -4,7 +4,7 @@
  * `index.ts`; keep this the only other place naming it.
  */
 
-import type { SpamProvider } from './spam/types.js';
+import type { SpamProvider } from './spam/types';
 
 export const FORMS_PACKAGE = '@astromech/forms';
 

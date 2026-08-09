@@ -6,7 +6,7 @@
 
 import type { Field, Label, SelectOption, ValidationRule } from 'astromech';
 import * as fields from 'astromech/fields';
-import type { FormFieldKind, StoredFormField } from '../types.js';
+import type { FormFieldKind, StoredFormField } from '../types';
 
 /**
  * A form's stored blocks as a flat list of leaf fields — a submission is a flat

@@ -4,10 +4,10 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb } from '@tests/harness.js';
-import { getDb } from '@/database/registry.js';
-import { createRelationshipStorage } from '@/database/storage/relationships.js';
-import type { RelationshipEdge } from '@/fields/relationship-edges.js';
+import { createTestDb } from '@tests/harness';
+import { getDb } from '@/database/registry';
+import { createRelationshipStorage } from '@/database/storage/relationships';
+import type { RelationshipEdge } from '@/fields/relationship-edges';
 
 const SOURCE = { id: 'src-1', kind: 'entry', type: 'post' } as const;
 

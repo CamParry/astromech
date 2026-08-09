@@ -21,8 +21,8 @@ import { describe, expect, it } from 'vitest';
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
-import { useBlocksField } from '@/admin/hooks/use-blocks-field.js';
-import { useTreeField } from '@/admin/hooks/use-tree-field.js';
+import { useBlocksField } from '@/admin/hooks/use-blocks-field';
+import { useTreeField } from '@/admin/hooks/use-tree-field';
 
 type Harness<T> = {
     current: () => T;

@@ -12,12 +12,12 @@
  * reads their tables directly; core `db:generate` covers core tables only.
  */
 
-import type { Table } from '@/database/define-table.js';
-import type { PluginDefinition } from '@/types/index.js';
+import type { Table } from '@/database/define-table';
+import type { PluginDefinition } from '@/types/index';
 import {
     pluginTablePrefix,
     resolvePluginIdentity,
-} from '@/plugins/runtime/plugin-identity.js';
+} from '@/plugins/runtime/plugin-identity';
 
 export type CollectedPluginTable = {
     namespace: string;

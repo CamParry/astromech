@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Field, FieldValidationContext } from '@/types/fields.js';
+import type { Field, FieldValidationContext } from '@/types/fields';
 import {
     coerceEmail,
     validateEmail,
@@ -22,8 +22,8 @@ import {
     validateLink,
     validateGroup,
     validateItemList,
-} from '@/fields/built-in-rules.js';
-import { processFields } from '@/fields/pipeline.js';
+} from '@/fields/built-in-rules';
+import { processFields } from '@/fields/pipeline';
 
 // ---------------------------------------------------------------------------
 // Helpers

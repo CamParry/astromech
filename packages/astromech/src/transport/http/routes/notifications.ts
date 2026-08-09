@@ -12,8 +12,8 @@
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { notificationsService, toNotification } from '@/notifications/index.js';
-import type { AuthVariables } from '@/transport/http/middleware/auth.js';
+import { notificationsService, toNotification } from '@/notifications/index';
+import type { AuthVariables } from '@/transport/http/middleware/auth';
 
 type Env = { Variables: AuthVariables };
 

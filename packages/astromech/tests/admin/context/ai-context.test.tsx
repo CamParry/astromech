@@ -13,14 +13,14 @@
 import { describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import React, { act } from 'react';
-import type { AIContextReference } from '@/types/ai-context.js';
-import type { AIContextItem } from '@/types/ai-context.js';
+import type { AIContextReference } from '@/types/ai-context';
+import type { AIContextItem } from '@/types/ai-context';
 import {
     AIContextProvider,
     createAIContextStore,
     useAIContext,
     useAIContextItems,
-} from '@/admin/context/ai-context.js';
+} from '@/admin/context/ai-context';
 
 const postsList: AIContextReference = { kind: 'entries', type: 'posts', label: 'Posts' };
 const postEntry: AIContextReference = {

@@ -8,8 +8,8 @@
 import { group, section, text, textarea } from 'astromech/fields';
 import { t } from 'astromech';
 import type { Field, Label, MessageRef } from 'astromech';
-import { SEO_FIELD_NAME } from '../types.js';
-import { SEO_DESCRIPTION_RANGE, SEO_TITLE_RANGE } from '../utilities/length.js';
+import { SEO_FIELD_NAME } from '../types';
+import { SEO_DESCRIPTION_RANGE, SEO_TITLE_RANGE } from '../utilities/length';
 
 export type SeoSectionOptions = { label?: Label };
 

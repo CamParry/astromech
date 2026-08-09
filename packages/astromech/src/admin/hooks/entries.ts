@@ -16,16 +16,16 @@ import {
     queryOptions,
 } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { astromechClient, AstromechApiError } from '@/transport/http/client/index.js';
-import { queryKeys, scopedEntryKeys } from './use-query-keys.js';
-import { useToast } from '../components/ui/index.js';
+import { astromechClient, AstromechApiError } from '@/transport/http/client/index';
+import { queryKeys, scopedEntryKeys } from './use-query-keys';
+import { useToast } from '../components/ui/index';
 import type {
     Entry,
     EntriesService,
     EntryStatus,
     JsonObject,
     EntryQueryParams,
-} from '@/types/index.js';
+} from '@/types/index';
 
 // ============================================================================
 // Mount scoping

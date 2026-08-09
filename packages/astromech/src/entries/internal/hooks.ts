@@ -10,11 +10,11 @@ import {
     hasHookHandlers,
     runAfterHooks,
     runBeforeHooks,
-} from '@/plugins/runtime/plugin-runtime.js';
-import { getCurrentUser } from '@/request-context/index.js';
-import { getEntryStorage } from '../storage/registry.js';
-import { loadAndAssertType } from './records.js';
-import type { Entry } from '@/types/index.js';
+} from '@/plugins/runtime/plugin-runtime';
+import { getCurrentUser } from '@/request-context/index';
+import { getEntryStorage } from '../storage/registry';
+import { loadAndAssertType } from './records';
+import type { Entry } from '@/types/index';
 
 export function hasEntryHooks(...events: string[]): boolean {
     return events.some((event) => hasHookHandlers(event));

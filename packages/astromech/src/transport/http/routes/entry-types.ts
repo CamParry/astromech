@@ -10,9 +10,9 @@
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { Astromech } from '@/transport/local/index.js';
-import { notFound } from '@/transport/http/middleware/errors.js';
-import type { AuthVariables } from '@/transport/http/middleware/auth.js';
+import { Astromech } from '@/transport/local/index';
+import { notFound } from '@/transport/http/middleware/errors';
+import type { AuthVariables } from '@/transport/http/middleware/auth';
 
 type Env = { Variables: AuthVariables };
 

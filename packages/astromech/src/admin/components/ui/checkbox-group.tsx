@@ -1,4 +1,4 @@
-import { Checkbox } from './checkbox.js';
+import { Checkbox } from './checkbox';
 
 export type CheckboxGroupOption = { label: string; value: string };
 

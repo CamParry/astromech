@@ -10,20 +10,20 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import type { Updateable } from 'kysely';
 import type { Kysely } from 'kysely';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
-import { registerCronJob } from '@/cron/registry.js';
-import { cronRouter } from '@/transport/http/routes/cron.js';
-import { encodePatchWith } from '@/database/codec.js';
-import { cronTable } from '@/database/schema.js';
-import type { DB } from '@/database/types.js';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { registerCronJob } from '@/cron/registry';
+import { cronRouter } from '@/transport/http/routes/cron';
+import { encodePatchWith } from '@/database/codec';
+import { cronTable } from '@/database/schema';
+import type { DB } from '@/database/types';
 
 // Mock resolveSessionUser so tests control the session branch without a real
 // Better Auth stack.
-vi.mock('@/users/session.js', () => ({
+vi.mock('@/users/session', () => ({
     resolveSessionUser: vi.fn(),
 }));
 
-import { resolveSessionUser } from '@/users/session.js';
+import { resolveSessionUser } from '@/users/session';
 
 const mockResolveSessionUser = vi.mocked(resolveSessionUser);
 
@@ -94,8 +94,8 @@ async function seedDueJob(): Promise<{ ran: boolean }> {
         },
     });
 
-    const { getDb } = await import('@/database/registry.js');
-    const { onTick } = await import('@/cron/runner.js');
+    const { getDb } = await import('@/database/registry');
+    const { onTick } = await import('@/cron/runner');
 
     // Seed the row (initial nextRun will be future).
     await onTick(new Date('2024-01-01T00:00:00.000Z'));

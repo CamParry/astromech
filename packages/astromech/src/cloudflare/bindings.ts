@@ -22,7 +22,7 @@
  * Workers build never bundles `wrangler`.
  */
 
-import { createRegistry } from '@/utilities/registry.js';
+import { createRegistry } from '@/utilities/registry';
 
 type BindingEnv = Record<string, unknown>;
 

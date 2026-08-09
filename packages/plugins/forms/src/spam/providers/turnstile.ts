@@ -1,7 +1,7 @@
 /** Cloudflare Turnstile, verified against its `siteverify` endpoint. */
 
-import { siteverify } from '../siteverify.js';
-import type { SpamProvider } from '../types.js';
+import { siteverify } from '../siteverify';
+import type { SpamProvider } from '../types';
 
 const VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 

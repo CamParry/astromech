@@ -13,10 +13,10 @@
 
 import type { MiddlewareHandler } from 'astro';
 import resolvedConfig, { rawConfig } from 'virtual:astromech/config';
-import { initRuntime, startScheduler } from '@/boot/boot.js';
-import { createRegistry } from '@/utilities/registry.js';
-import { resolveSessionUser } from '@/users/index.js';
-import { runWithContext } from '@/request-context/index.js';
+import { initRuntime, startScheduler } from '@/boot/boot';
+import { createRegistry } from '@/utilities/registry';
+import { resolveSessionUser } from '@/users/index';
+import { runWithContext } from '@/request-context/index';
 
 export const onRequest: MiddlewareHandler = async (context, next) => {
     await ensureBooted();

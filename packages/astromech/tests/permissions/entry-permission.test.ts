@@ -4,8 +4,8 @@ import {
     rootEntryPermission,
     pluginEntryPermission,
     type EntryAction,
-} from '@/permissions/entry-permission.js';
-import { hasPermission } from '@/utilities/permission-match.js';
+} from '@/permissions/entry-permission';
+import { hasPermission } from '@/utilities/permission-match';
 
 describe('rootEntryPermission', () => {
     it('should return entry:<type>:<action>', () => {

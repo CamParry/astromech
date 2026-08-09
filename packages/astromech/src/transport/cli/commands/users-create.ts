@@ -1,10 +1,10 @@
 import { defineCommand } from 'citty';
 import type { Insertable } from 'kysely';
-import { loadConfig } from '../config.js';
-import { getDb } from '@/database/registry.js';
-import { encode } from '@/database/codec.js';
-import { createUserStorage } from '@/users/storage.js';
-import type { DB } from '@/database/types.js';
+import { loadConfig } from '../config';
+import { getDb } from '@/database/registry';
+import { encode } from '@/database/codec';
+import { createUserStorage } from '@/users/storage';
+import type { DB } from '@/database/types';
 
 export default defineCommand({
     meta: { name: 'users:create', description: 'Create a new user' },

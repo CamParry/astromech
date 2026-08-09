@@ -1,9 +1,9 @@
 import { defineCommand } from 'citty';
-import { loadConfig } from '../config.js';
-import { entriesService } from '@/entries/service.js';
-import { printResult, printError, parseJsonArg } from '../output.js';
-import type { EntryStatus, EntryUpdateData } from '@/types/index.js';
-import type { JsonObject } from '@/types/index.js';
+import { loadConfig } from '../config';
+import { entriesService } from '@/entries/service';
+import { printResult, printError, parseJsonArg } from '../output';
+import type { EntryStatus, EntryUpdateData } from '@/types/index';
+import type { JsonObject } from '@/types/index';
 
 export default defineCommand({
     meta: { name: 'entries:update', description: 'Update an existing entry' },

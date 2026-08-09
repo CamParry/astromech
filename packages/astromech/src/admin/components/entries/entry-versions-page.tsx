@@ -14,7 +14,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link as RouterLink } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import { formatDatetime } from '@/utilities/dates.js';
+import { formatDatetime } from '@/utilities/dates';
 import {
     Button,
     Panel,
@@ -25,14 +25,10 @@ import {
     PageHeader,
     PageTitle,
     PageContent,
-} from '@/admin/components/ui/index.js';
-import {
-    useEntry,
-    useEntryVersions,
-    useRestoreEntryVersion,
-} from '@/admin/hooks/index.js';
-import type { EntryVersion } from '@/types/index.js';
-import type { EntriesMount } from './mount.js';
+} from '@/admin/components/ui/index';
+import { useEntry, useEntryVersions, useRestoreEntryVersion } from '@/admin/hooks/index';
+import type { EntryVersion } from '@/types/index';
+import type { EntriesMount } from './mount';
 
 // Mount link bases are runtime strings; address `Link` by string `to`.
 type LinkProps = Omit<React.ComponentProps<typeof RouterLink>, 'to'> & { to: string };

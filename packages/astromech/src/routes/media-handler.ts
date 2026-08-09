@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { handleMediaRequest } from '@/media/serving/handler.js';
+import { handleMediaRequest } from '@/media/serving/handler';
 
 export const prerender = false;
 

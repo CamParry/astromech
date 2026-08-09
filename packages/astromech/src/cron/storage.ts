@@ -11,10 +11,10 @@
  * ISO-TEXT these columns store.
  */
 
-import { decodeWith, encodePatchWith, encodeWith } from '@/database/codec.js';
-import { createStorage } from '@/database/storage/create-storage.js';
-import { cronTable, type CronRow, type NewCronRow } from '@/database/schema.js';
-import type { Db } from '@/database/types.js';
+import { decodeWith, encodePatchWith, encodeWith } from '@/database/codec';
+import { createStorage } from '@/database/storage/create-storage';
+import { cronTable, type CronRow, type NewCronRow } from '@/database/schema';
+import type { Db } from '@/database/types';
 
 export type CronStorage = ReturnType<typeof createCronStorage>;
 

@@ -6,7 +6,7 @@
  * and their membership.
  */
 
-import type { ResourceType, User } from './domain.js';
+import type { ResourceType, User } from './domain';
 
 // ============================================================================
 // Field Types

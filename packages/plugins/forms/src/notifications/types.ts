@@ -4,7 +4,7 @@
  */
 
 import type { Block, Entry, Field, PluginContext } from 'astromech';
-import type { ValueRow } from '../utilities/values.js';
+import type { ValueRow } from '../utilities/values';
 
 /**
  * One stored notification block instance. `_type` selects the provider and the

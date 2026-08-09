@@ -11,10 +11,10 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { ConfirmProvider } from '@/admin/components/ui/confirm.js';
-import { MediaDetailModal } from '@/admin/components/media/MediaDetailModal.js';
+import { ConfirmProvider } from '@/admin/components/ui/confirm';
+import { MediaDetailModal } from '@/admin/components/media/MediaDetailModal';
 import en from '@/admin/locales/en.json';
-import type { Media, MediaUsage } from '@/types/index.js';
+import type { Media, MediaUsage } from '@/types/index';
 
 const { replaceMutate } = vi.hoisted(() => ({ replaceMutate: vi.fn() }));
 
@@ -61,7 +61,7 @@ const USAGE = [
     },
 ] as MediaUsage[];
 
-vi.mock('@/admin/hooks/media.js', () => ({
+vi.mock('@/admin/hooks/media', () => ({
     useMediaItem: () => ({ data: ITEM, isLoading: false, isError: false }),
     useUpdateMedia: () => ({ mutate: vi.fn(), isPending: false }),
     useDeleteMedia: () => ({ mutate: vi.fn(), isPending: false }),

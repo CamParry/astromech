@@ -8,23 +8,23 @@
  */
 
 import config from 'virtual:astromech/config';
-import { existingResourceIds } from '@/database/storage/resource-existence.js';
+import { existingResourceIds } from '@/database/storage/resource-existence';
 import {
     collectRelationshipDeclarations,
     collectRelationshipEdges,
-} from '@/fields/relationship-edges.js';
+} from '@/fields/relationship-edges';
 import type {
     RelationshipDeclaration,
     RelationshipEdge,
     TargetKind,
-} from '@/fields/relationship-edges.js';
-import { parseInstancePath } from '@/fields/field-path.js';
-import { RESERVED_KEY } from '@/fields/reserved-keys.js';
-import { hasEntryStorageOverride } from '../storage/registry.js';
-import { resolveEntryType } from '../type-ids.js';
-import type { Field } from '@/types/fields.js';
-import type { JsonObject } from '@/types/index.js';
-import type { StorageDb } from '../storage/types.js';
+} from '@/fields/relationship-edges';
+import { parseInstancePath } from '@/fields/field-path';
+import { RESERVED_KEY } from '@/fields/reserved-keys';
+import { hasEntryStorageOverride } from '../storage/registry';
+import { resolveEntryType } from '../type-ids';
+import type { Field } from '@/types/fields';
+import type { JsonObject } from '@/types/index';
+import type { StorageDb } from '../storage/types';
 
 const TARGET_KINDS = ['entry', 'user', 'media'] as const satisfies readonly TargetKind[];
 

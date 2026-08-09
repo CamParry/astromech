@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
-import { loadConfig } from '../config.js';
-import { getDb } from '@/database/registry.js';
+import { loadConfig } from '../config';
+import { getDb } from '@/database/registry';
 
 export default defineCommand({
     meta: { name: 'db:status', description: 'Show migration status' },

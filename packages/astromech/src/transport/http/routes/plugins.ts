@@ -23,24 +23,24 @@
  */
 
 import { Hono } from 'hono';
-import type { AuthVariables } from '@/transport/http/middleware/auth.js';
-import { optionalAuth } from '@/transport/http/middleware/auth.js';
-import { forbidden, notFound, unauthorized } from '@/transport/http/middleware/errors.js';
+import type { AuthVariables } from '@/transport/http/middleware/auth';
+import { optionalAuth } from '@/transport/http/middleware/auth';
+import { forbidden, notFound, unauthorized } from '@/transport/http/middleware/errors';
 import {
     createPluginContext,
     getPluginIdentity,
     getPluginRawRoutes,
     getPluginServiceMethods,
-} from '@/plugins/runtime/plugin-runtime.js';
-import { permissionsFor } from '@/permissions/permissions-for.js';
-import { resolvePluginPermission } from '@/plugins/runtime/plugin-identity.js';
+} from '@/plugins/runtime/plugin-runtime';
+import { permissionsFor } from '@/permissions/permissions-for';
+import { resolvePluginPermission } from '@/plugins/runtime/plugin-identity';
 import type { Context } from 'hono';
 import type {
     Permission,
     PluginAccess,
     PluginContext,
     ResolvedPluginIdentity,
-} from '@/types/index.js';
+} from '@/types/index';
 
 type PluginEnv = { Variables: Partial<AuthVariables> };
 

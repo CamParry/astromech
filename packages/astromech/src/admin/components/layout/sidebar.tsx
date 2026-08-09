@@ -12,12 +12,12 @@ import {
     icons,
 } from 'lucide-react';
 import adminConfig from 'virtual:astromech/admin-config';
-import type { PluginNavItem } from '@/types/index.js';
-import { useUI } from '../../context/ui.js';
-import { usePermissions } from '../../hooks/index.js';
-import { Logo } from '../brand/Brand.js';
-import { EntryTypeIcon } from '../ui/entry-type-icon.js';
-import { resolveLabel } from '../../i18n/labels.js';
+import type { PluginNavItem } from '@/types/index';
+import { useUI } from '../../context/ui';
+import { usePermissions } from '../../hooks/index';
+import { Logo } from '../brand/Brand';
+import { EntryTypeIcon } from '../ui/entry-type-icon';
+import { resolveLabel } from '../../i18n/labels';
 
 /**
  * Drop nav items the user lacks permission for, recursively. A linkless

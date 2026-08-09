@@ -9,8 +9,8 @@
 import { Readable } from 'node:stream';
 import { createGzip } from 'node:zlib';
 import type { PluginContext } from 'astromech';
-import { createBackupRunsStorage } from './storage.js';
-import type { BackupRunRow } from './tables/runs.js';
+import { createBackupRunsStorage } from './storage';
+import type { BackupRunRow } from './tables/runs';
 
 // ============================================================================
 // In-process overlap guard

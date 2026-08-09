@@ -12,8 +12,8 @@ import {
     getCurrentUser,
     getRequestContext,
     runWithContext,
-} from '@/request-context/index.js';
-import type { Role, User } from '@/types/index.js';
+} from '@/request-context/index';
+import type { Role, User } from '@/types/index';
 
 function makeUser(id: string): User {
     return {

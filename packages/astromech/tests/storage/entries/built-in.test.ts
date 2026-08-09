@@ -9,12 +9,12 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Insertable } from 'kysely';
-import { createTestDb, setupTestConfig } from '@tests/harness.js';
-import { createBuiltInEntryStorage } from '@/entries/storage/built-in.js';
-import { BUILT_IN_SUPPORTS } from '@/entries/storage/capabilities.js';
-import { encodeWith } from '@/database/codec.js';
-import { entriesTable } from '@/database/schema.js';
-import type { DB } from '@/database/types.js';
+import { createTestDb, setupTestConfig } from '@tests/harness';
+import { createBuiltInEntryStorage } from '@/entries/storage/built-in';
+import { BUILT_IN_SUPPORTS } from '@/entries/storage/capabilities';
+import { encodeWith } from '@/database/codec';
+import { entriesTable } from '@/database/schema';
+import type { DB } from '@/database/types';
 
 let storage: ReturnType<typeof createBuiltInEntryStorage>;
 let db: Awaited<ReturnType<typeof createTestDb>>;

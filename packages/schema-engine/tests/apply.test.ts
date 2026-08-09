@@ -16,8 +16,8 @@ import { pathToFileURL } from 'node:url';
 import { createClient } from '@libsql/client';
 import { Kysely, sql, type MigrationProvider } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
-import { mergeMigrationProviders, migrateToLatest } from '../src/apply.js';
-import { dumpSchema } from '../src/oracle.js';
+import { mergeMigrationProviders, migrateToLatest } from '../src/apply';
+import { dumpSchema } from '../src/oracle';
 
 function makeDb(): Kysely<unknown> {
     const client = createClient({ url: ':memory:' });

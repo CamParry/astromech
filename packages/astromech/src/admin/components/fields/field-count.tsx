@@ -1,6 +1,6 @@
 import { clsx } from 'clsx';
-import type { Field } from '@/types/index.js';
-import { countStatus } from '@/fields/count.js';
+import type { Field } from '@/types/index';
+import { countStatus } from '@/fields/count';
 
 type CountSetting = NonNullable<Field['count']>;
 

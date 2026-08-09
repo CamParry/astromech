@@ -5,9 +5,9 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { EmptyState, UploadZone } from '@/admin/components/ui/index.js';
-import { TYPE_FILTER_KEYS } from '@/admin/types/media.js';
-import type { MediaBrowserQuery } from '@/admin/types/media.js';
+import { EmptyState, UploadZone } from '@/admin/components/ui/index';
+import { TYPE_FILTER_KEYS } from '@/admin/types/media';
+import type { MediaBrowserQuery } from '@/admin/types/media';
 
 export type MediaEmptyProps = {
     query: MediaBrowserQuery;

@@ -1,3 +1,3 @@
 /** `astromech/storage/filesystem` — the Node filesystem storage driver. */
 
-export * from '@/storage/drivers/filesystem.js';
+export * from '@/storage/drivers/filesystem';

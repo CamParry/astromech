@@ -12,8 +12,8 @@
  */
 
 import type { MigrationProvider } from 'kysely';
-import type { PluginDefinition } from '@/types/index.js';
-import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity.js';
+import type { PluginDefinition } from '@/types/index';
+import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 
 /**
  * The migration providers shipped by the configured plugins, paired with the

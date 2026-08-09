@@ -3,17 +3,17 @@
  * registry. Imported once at admin bundle load (src/admin/main.tsx) so cells are
  * available before any render.
  */
-import { registerCell } from '../cell-registry.js';
-import { BadgeCell } from './badge-cell.js';
-import { BooleanCell } from './boolean-cell.js';
-import { DateCell } from './date-cell.js';
-import { LocaleCell } from './locale-cell.js';
-import { NumberCell } from './number-cell.js';
-import { RelationshipCell } from './relationship-cell.js';
-import { SlugCell } from './slug-cell.js';
-import { TextCell } from './text-cell.js';
-import { TitleCell } from './title-cell.js';
-import { TranslationsCell } from './translations-cell.js';
+import { registerCell } from '../cell-registry';
+import { BadgeCell } from './badge-cell';
+import { BooleanCell } from './boolean-cell';
+import { DateCell } from './date-cell';
+import { LocaleCell } from './locale-cell';
+import { NumberCell } from './number-cell';
+import { RelationshipCell } from './relationship-cell';
+import { SlugCell } from './slug-cell';
+import { TextCell } from './text-cell';
+import { TitleCell } from './title-cell';
+import { TranslationsCell } from './translations-cell';
 
 registerCell('text', TextCell);
 registerCell('title', TitleCell);

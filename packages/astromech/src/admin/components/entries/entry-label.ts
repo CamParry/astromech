@@ -1,6 +1,6 @@
 /** Shared human label for an entry, used by the command palette and AI context. */
 
-import type { AdminEntryType, Entry } from '@/types/index.js';
+import type { AdminEntryType, Entry } from '@/types/index';
 
 /**
  * Pick a human label for a live entry result. Entry types with

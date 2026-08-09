@@ -7,7 +7,7 @@
  * and resolve a type id against the right map.
  */
 
-import type { ResolvedConfig, ResolvedEntryType } from '@/types/index.js';
+import type { ResolvedConfig, ResolvedEntryType } from '@/types/index';
 
 export const QUALIFIED_SEPARATOR = '/';
 

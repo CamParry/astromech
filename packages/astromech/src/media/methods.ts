@@ -8,8 +8,8 @@
  */
 
 import { z } from '@hono/zod-openapi';
-import type { ServiceMethodContract } from '@/types/index.js';
-import { mediaQuerySchema, updateMediaSchema } from './schema.js';
+import type { ServiceMethodContract } from '@/types/index';
+import { mediaQuerySchema, updateMediaSchema } from './schema';
 
 export const mediaContract = {
     query: {

@@ -4,9 +4,9 @@
  * Returns plain data; framework renderers (Image.astro, future React) consume it.
  */
 
-import type { ImageFormat } from './url.js';
-import { buildMediaUrl, buildVariantUrl, normaliseWidths } from './url.js';
-import { isOptimisableImage } from './dimensions.js';
+import type { ImageFormat } from './url';
+import { buildMediaUrl, buildVariantUrl, normaliseWidths } from './url';
+import { isOptimisableImage } from './dimensions';
 
 export type ImageAttrsInput = {
     id: string;

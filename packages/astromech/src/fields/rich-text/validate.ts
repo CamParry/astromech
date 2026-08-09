@@ -7,9 +7,9 @@
 
 import { Node } from '@tiptap/pm/model';
 import type { JSONContent } from '@tiptap/core';
-import { schemaFor } from './schema.js';
-import { findUnsafeLink } from './safe-links.js';
-import type { FieldValidator, RichTextAllow } from '@/types/fields.js';
+import { schemaFor } from './schema';
+import { findUnsafeLink } from './safe-links';
+import type { FieldValidator, RichTextAllow } from '@/types/fields';
 
 /**
  * Reject anything that is not a valid rich-text document for this field.

@@ -5,18 +5,14 @@
 import { beforeEach, afterEach, describe, expect, it } from 'vitest';
 import type { Updateable } from 'kysely';
 import type { Kysely } from 'kysely';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
-import {
-    registerCronJob,
-    setSchedulerDriver,
-    getSchedulerDriver,
-} from '@/cron/registry.js';
-import { handleScheduled } from '@/cron/index.js';
-import { interval } from '@/cron/drivers/index.js';
-import { runDue } from '@/cron/runner.js';
-import { encodePatchWith } from '@/database/codec.js';
-import { cronTable } from '@/database/schema.js';
-import type { DB } from '@/database/types.js';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { registerCronJob, setSchedulerDriver, getSchedulerDriver } from '@/cron/registry';
+import { handleScheduled } from '@/cron/index';
+import { interval } from '@/cron/drivers/index';
+import { runDue } from '@/cron/runner';
+import { encodePatchWith } from '@/database/codec';
+import { cronTable } from '@/database/schema';
+import type { DB } from '@/database/types';
 
 beforeEach(async () => {
     delete globalThis.__astromech?.cronJobs;
@@ -58,7 +54,7 @@ describe('handleScheduled', () => {
         await runDue(seedTime);
 
         // Manually set nextRun to a past date so the job is due.
-        const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
+        const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
         const past = new Date(seedTime.getTime() - 60_000);
         await db
             .updateTable('_astromech_cron')

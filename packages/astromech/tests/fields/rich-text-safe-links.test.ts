@@ -10,7 +10,7 @@ import {
     findUnsafeLink,
     isUnsafeHref,
     stripUnsafeLinks,
-} from '@/fields/rich-text/safe-links.js';
+} from '@/fields/rich-text/safe-links';
 
 /** A one-paragraph document whose only text carries a link mark. */
 function docWithHref(href: string): JSONContent {

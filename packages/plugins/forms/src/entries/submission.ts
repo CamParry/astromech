@@ -6,8 +6,8 @@
 
 import type { EntryType } from 'astromech';
 import { tableStorage } from 'astromech';
-import { submissionsTable } from '../tables/submissions.js';
-import { SUBMISSION_TYPE } from '../types.js';
+import { submissionsTable } from '../tables/submissions';
+import { SUBMISSION_TYPE } from '../types';
 import * as fields from 'astromech/fields';
 import * as columns from 'astromech/columns';
 

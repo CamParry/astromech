@@ -6,8 +6,8 @@
  * state duplicates across the package's entry chunks.
  */
 
-import { createRegistry } from '@/utilities/registry.js';
-import type { StorageDriver } from '@/types/index.js';
+import { createRegistry } from '@/utilities/registry';
+import type { StorageDriver } from '@/types/index';
 
 const storage = createRegistry<StorageDriver>('storage', {
     hint: 'Set `storage` in your Astromech config.',

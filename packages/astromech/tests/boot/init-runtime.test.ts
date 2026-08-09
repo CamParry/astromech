@@ -8,14 +8,14 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb } from '@tests/harness.js';
-import { initRuntime } from '@/boot/boot.js';
-import { resolveConfig } from '@/boot/config-resolver.js';
-import { setCliConfig } from '@/transport/cli/virtual-config-shim.js';
-import { getEntryStorage } from '@/entries/storage/registry.js';
-import { entriesService } from '@/entries/service.js';
-import type { EntryStorage } from '@/entries/storage/types.js';
-import type { AstromechConfig, StorageDriver } from '@/types/index.js';
+import { createTestDb } from '@tests/harness';
+import { initRuntime } from '@/boot/boot';
+import { resolveConfig } from '@/boot/config-resolver';
+import { setCliConfig } from '@/transport/cli/virtual-config-shim';
+import { getEntryStorage } from '@/entries/storage/registry';
+import { entriesService } from '@/entries/service';
+import type { EntryStorage } from '@/entries/storage/types';
+import type { AstromechConfig, StorageDriver } from '@/types/index';
 
 const storageDriver: StorageDriver = {
     name: 'noop',

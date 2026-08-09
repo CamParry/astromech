@@ -16,31 +16,26 @@ import {
     type Table,
     type TableSelect,
     type TableInsert,
-} from '@/database/define-table.js';
+} from '@/database/define-table';
 // `export { x } from '...'` (below) re-exports without binding `x` locally —
 // these value imports are ONLY so `CORE_TABLES` (bottom of file) can
 // reference the tables; the `export {...} from` blocks stay the public
 // re-export surface.
-import { rolesTable } from '@/users/schema.js';
+import { rolesTable } from '@/users/schema';
 import {
     entriesTable,
     entryVersionsTable,
     entryPreviewTokensTable,
-} from '@/entries/schema.js';
-import { mediaTable } from '@/media/schema.js';
-import { settingsTable } from '@/settings/schema.js';
-import { notificationsTable } from '@/notifications/schema.js';
+} from '@/entries/schema';
+import { mediaTable } from '@/media/schema';
+import { settingsTable } from '@/settings/schema';
+import { notificationsTable } from '@/notifications/schema';
 
 // ============================================================================
 // Users / RBAC — the roles table (ours) + the better-auth `users` row type
 // ============================================================================
 
-export {
-    rolesTable,
-    type RoleRow,
-    type NewRoleRow,
-    type UserRow,
-} from '@/users/schema.js';
+export { rolesTable, type RoleRow, type NewRoleRow, type UserRow } from '@/users/schema';
 
 // ============================================================================
 // Entries
@@ -56,19 +51,19 @@ export {
     type NewEntryVersionRow,
     type EntryPreviewTokenRow,
     type NewEntryPreviewTokenRow,
-} from '@/entries/schema.js';
+} from '@/entries/schema';
 
 // ============================================================================
 // Media / Settings / Notifications
 // ============================================================================
 
-export { mediaTable, type MediaRow, type NewMediaRow } from '@/media/schema.js';
-export { settingsTable, type SettingRow, type NewSettingRow } from '@/settings/schema.js';
+export { mediaTable, type MediaRow, type NewMediaRow } from '@/media/schema';
+export { settingsTable, type SettingRow, type NewSettingRow } from '@/settings/schema';
 export {
     notificationsTable,
     type NotificationRow,
     type NewNotificationRow,
-} from '@/notifications/schema.js';
+} from '@/notifications/schema';
 
 // ============================================================================
 // Relationships

@@ -6,10 +6,10 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb, setupTestConfig } from '@tests/harness.js';
-import { createBuiltInEntryStorage } from '@/entries/storage/built-in.js';
-import { createVersionStorage } from '@/entries/storage/versions.js';
-import type { Db } from '@/database/types.js';
+import { createTestDb, setupTestConfig } from '@tests/harness';
+import { createBuiltInEntryStorage } from '@/entries/storage/built-in';
+import { createVersionStorage } from '@/entries/storage/versions';
+import type { Db } from '@/database/types';
 
 let db: Db;
 let entryStorage: ReturnType<typeof createBuiltInEntryStorage>;

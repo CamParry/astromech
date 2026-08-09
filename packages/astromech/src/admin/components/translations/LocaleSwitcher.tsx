@@ -11,7 +11,7 @@ import React, { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Select } from '../ui/index';
-import { useCreateTranslation } from '../../hooks/entries.js';
+import { useCreateTranslation } from '../../hooks/entries';
 
 // ============================================================================
 // Types

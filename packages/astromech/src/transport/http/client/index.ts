@@ -31,7 +31,7 @@ import type {
     User,
     UserQueryParams,
     UsersService,
-} from '@/types/index.js';
+} from '@/types/index';
 
 // ============================================================================
 // Typed API Error

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { valuesEqual } from '@/utilities/values-equal.js';
+import { valuesEqual } from '@/utilities/values-equal';
 
 describe('valuesEqual', () => {
     it('returns true for identical primitives', () => {

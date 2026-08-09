@@ -13,13 +13,13 @@
  * silently drift apart.
  */
 
-import { capIdentifier } from './identifiers.js';
+import { capIdentifier } from './identifiers';
 import type {
     SnapshotColumn,
     SnapshotForeignKey,
     SnapshotIndex,
     SnapshotTable,
-} from './model.js';
+} from './model';
 
 function quoteLiteral(value: string): string {
     return `'${value.replace(/'/g, "''")}'`;

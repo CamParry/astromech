@@ -11,9 +11,9 @@
  */
 
 import { defineServiceMethod, noInput, z } from 'astromech';
-import type { BackupRunRow } from '../tables/runs.js';
-import { createBackupRunsStorage } from '../storage.js';
-import { isBackupRunning, performBackup, resolveKeep } from '../backup.js';
+import type { BackupRunRow } from '../tables/runs';
+import { createBackupRunsStorage } from '../storage';
+import { isBackupRunning, performBackup, resolveKeep } from '../backup';
 
 const MAX_RUNS = 100;
 

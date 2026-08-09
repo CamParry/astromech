@@ -10,10 +10,10 @@ import type { TextPart, ToolCallPart } from 'ai';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from 'astromech/ui';
-import { closeDrawer, focusToggleButton, useDrawerOpen } from '../drawer-state.js';
-import { useChat } from '../use-chat.js';
-import type { ChatEntry, RejectedCalls } from '../use-chat.js';
-import type { ApprovalDecision, ApprovalRequest, ChatMessage } from '../../types.js';
+import { closeDrawer, focusToggleButton, useDrawerOpen } from '../drawer-state';
+import { useChat } from '../use-chat';
+import type { ChatEntry, RejectedCalls } from '../use-chat';
+import type { ApprovalDecision, ApprovalRequest, ChatMessage } from '../../types';
 import './chat-drawer.css';
 
 /** How far off the tail still counts as following it. */

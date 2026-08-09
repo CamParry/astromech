@@ -11,11 +11,11 @@
  * table's rows, not this one's.
  */
 
-import { encodeWith } from '@/database/codec.js';
-import { createStorage } from '@/database/storage/create-storage.js';
-import { notificationsTable } from '@/database/schema.js';
-import type { Db } from '@/database/types.js';
-import type { NewNotificationRow, NotificationRow } from './schema.js';
+import { encodeWith } from '@/database/codec';
+import { createStorage } from '@/database/storage/create-storage';
+import { notificationsTable } from '@/database/schema';
+import type { Db } from '@/database/types';
+import type { NewNotificationRow, NotificationRow } from './schema';
 
 export type NotificationStorage = ReturnType<typeof createNotificationStorage>;
 

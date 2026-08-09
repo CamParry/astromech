@@ -11,18 +11,18 @@
  * which types and plugins exist.
  */
 
-import type { PluginDefinition, ResolvedConfig } from '@/types/index.js';
-import type { PermissionDeclarations } from '@/permissions/define.js';
-import { CORE_PERMISSIONS } from '@/permissions/index.js';
+import type { PluginDefinition, ResolvedConfig } from '@/types/index';
+import type { PermissionDeclarations } from '@/permissions/define';
+import { CORE_PERMISSIONS } from '@/permissions/index';
 import {
     type EntryAction,
     pluginEntryPermission,
     rootEntryPermission,
-} from '@/permissions/entry-permission.js';
+} from '@/permissions/entry-permission';
 import {
     resolvePluginIdentity,
     resolvePluginPermission,
-} from '@/plugins/runtime/plugin-identity.js';
+} from '@/plugins/runtime/plugin-identity';
 
 export type PermissionCatalogueEntry = {
     /** Fully-qualified, grantable permission string. */

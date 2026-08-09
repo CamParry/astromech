@@ -6,7 +6,7 @@
  * children, so they are treated as opaque leaves here.
  */
 
-import type { Field, ResolvedEntryFields } from '@/types/fields.js';
+import type { Field, ResolvedEntryFields } from '@/types/fields';
 
 /** Flatten a node list into its top-level data fields (layout fields unwrapped). */
 export function flattenFieldNodes(nodes: Field[]): Field[] {

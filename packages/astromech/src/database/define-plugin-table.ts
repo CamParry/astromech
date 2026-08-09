@@ -18,7 +18,7 @@
  *
  * ```ts
  * import { definePluginTable } from 'astromech';
- * import { BACKUPS_PACKAGE } from '../types.js';
+ * import { BACKUPS_PACKAGE } from '../types';
  *
  * export const runsTable = definePluginTable(BACKUPS_PACKAGE, 'runs', ({ col }) => ({
  *     id: col.id(),
@@ -41,9 +41,9 @@ import {
     type IndexSpec,
     type KyselyOf,
     type Table,
-} from '@/database/define-table.js';
-import { pluginNamespace, type PluginNamespace } from '@/utilities/plugin-namespace.js';
-import type { PluginIdentity } from '@/types/plugins.js';
+} from '@/database/define-table';
+import { pluginNamespace, type PluginNamespace } from '@/utilities/plugin-namespace';
+import type { PluginIdentity } from '@/types/plugins';
 
 /** Accepted first argument: the package name, or any object carrying one. */
 type PackageSource = string | PluginIdentity;

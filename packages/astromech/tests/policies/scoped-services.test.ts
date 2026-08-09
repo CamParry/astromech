@@ -8,15 +8,11 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { setupTestConfig } from '@tests/harness.js';
-import { PermissionDeniedError } from '@/errors/index.js';
-import { annotateManifest } from '@/policies/annotate-manifest.js';
-import {
-    scopeEntries,
-    scopeMethods,
-    scopedServices,
-} from '@/policies/scoped-services.js';
-import { permissionsFor } from '@/permissions/permissions-for.js';
+import { setupTestConfig } from '@tests/harness';
+import { PermissionDeniedError } from '@/errors/index';
+import { annotateManifest } from '@/policies/annotate-manifest';
+import { scopeEntries, scopeMethods, scopedServices } from '@/policies/scoped-services';
+import { permissionsFor } from '@/permissions/permissions-for';
 import type {
     CoreManifestMethod,
     EntriesService,
@@ -24,7 +20,7 @@ import type {
     Permission,
     Role,
     ServiceMethodContract,
-} from '@/types/index.js';
+} from '@/types/index';
 
 beforeEach(() => {
     setupTestConfig();

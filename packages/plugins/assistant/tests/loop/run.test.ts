@@ -15,15 +15,11 @@ import type {
 } from 'ai';
 import type * as AiModule from 'ai';
 import type { PluginLogger, ToolDefinition } from 'astromech';
-import { runAssistantLoop } from '../../src/loop/run.js';
-import type {
-    ChatEvent,
-    ChatMessage,
-    ResolvedAssistantOptions,
-} from '../../src/types.js';
-import { fakeApprovals } from './fake-approvals.js';
-import { fakeSessions } from '../sessions/fake-sessions.js';
-import type { FakeSessions } from '../sessions/fake-sessions.js';
+import { runAssistantLoop } from '../../src/loop/run';
+import type { ChatEvent, ChatMessage, ResolvedAssistantOptions } from '../../src/types';
+import { fakeApprovals } from './fake-approvals';
+import { fakeSessions } from '../sessions/fake-sessions';
+import type { FakeSessions } from '../sessions/fake-sessions';
 
 vi.mock('ai', async (importOriginal) => ({
     ...(await importOriginal<typeof AiModule>()),

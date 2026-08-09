@@ -4,7 +4,7 @@
  * `forms:afterSubmit` runs post-commit and is swallow-and-logged by core.
  */
 
-import type { SubmissionMeta } from '../types.js';
+import type { SubmissionMeta } from '../types';
 
 export const BEFORE_SUBMIT = 'forms:beforeSubmit';
 export const AFTER_SUBMIT = 'forms:afterSubmit';

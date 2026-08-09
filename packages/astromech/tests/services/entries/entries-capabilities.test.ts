@@ -7,10 +7,10 @@
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createTestDb, setupTestConfig } from '@tests/harness.js';
-import { entriesService } from '@/entries/service.js';
-import { CapabilityError } from '@/entries/errors.js';
-import type { AstromechConfig } from '@/types/index.js';
+import { createTestDb, setupTestConfig } from '@tests/harness';
+import { entriesService } from '@/entries/service';
+import { CapabilityError } from '@/entries/errors';
+import type { AstromechConfig } from '@/types/index';
 
 // ---------------------------------------------------------------------------
 // Config with capability-restricted types

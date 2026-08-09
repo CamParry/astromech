@@ -3,20 +3,20 @@
  */
 
 import type { Dialect, Kysely } from 'kysely';
-import type { DB } from '@/database/types.js';
-import type { AIConfig } from './ai.js';
-import type { CellKind } from './resolved.js';
-import type { Permission } from './domain.js';
+import type { DB } from '@/database/types';
+import type { AIConfig } from './ai';
+import type { CellKind } from './resolved';
+import type { Permission } from './domain';
 import type {
     EntryFields,
     Field,
     Label,
     ResolvedEntryFields,
     ResourceValidator,
-} from './fields.js';
-import type { PluginDefinition, PluginNavItem } from './plugins.js';
-import type { EntryStorage } from '@/entries/storage/types.js';
-import type { ImageFormat } from '@/media/serving/image/url.js';
+} from './fields';
+import type { PluginDefinition, PluginNavItem } from './plugins';
+import type { EntryStorage } from '@/entries/storage/types';
+import type { ImageFormat } from '@/media/serving/image/url';
 
 // ============================================================================
 // Drivers

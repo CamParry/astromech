@@ -5,15 +5,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAIContextItems, useAstromechPlugin } from 'astromech/ui';
-import { parseChatEvent, splitSseFrames } from './sse.js';
-import { errorMessage } from '../error-message.js';
-import type { ChatSession } from '../service/sessions.js';
-import type {
-    ApprovalDecision,
-    ApprovalRequest,
-    ChatEvent,
-    ChatMessage,
-} from '../types.js';
+import { parseChatEvent, splitSseFrames } from './sse';
+import { errorMessage } from '../error-message';
+import type { ChatSession } from '../service/sessions';
+import type { ApprovalDecision, ApprovalRequest, ChatEvent, ChatMessage } from '../types';
 
 /**
  * One row of the transcript. An error is not a content block and must never

@@ -18,19 +18,19 @@ import {
     Spinner,
     UploadButton,
     useConfirm,
-} from '../ui/index.js';
+} from '../ui/index';
 import {
     useMediaItem,
     useUpdateMedia,
     useDeleteMedia,
     useReplaceMedia,
     useMediaUsage,
-} from '../../hooks/media.js';
-import { formatBytes } from '@/utilities/bytes.js';
-import { MediaUsagePanel } from './media-usage-panel.js';
-import { formatDatetime } from '@/utilities/dates.js';
-import { FileTypeIcon, versionedMediaUrl } from '@/admin/utilities/media.js';
-import type { Media } from '@/types/index.js';
+} from '../../hooks/media';
+import { formatBytes } from '@/utilities/bytes';
+import { MediaUsagePanel } from './media-usage-panel';
+import { formatDatetime } from '@/utilities/dates';
+import { FileTypeIcon, versionedMediaUrl } from '@/admin/utilities/media';
+import type { Media } from '@/types/index';
 
 export type MediaDetailModalProps = {
     mediaId: string | null;

@@ -6,8 +6,8 @@
  */
 
 import type { ToolDefinition } from 'astromech';
-import type { ApprovalRow } from '../tables/approvals.js';
-import type { ApprovalRequest } from '../types.js';
+import type { ApprovalRow } from '../tables/approvals';
+import type { ApprovalRequest } from '../types';
 
 /**
  * The wire request for one row, worded by the tool core built it from. A tool

@@ -10,12 +10,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Updateable } from 'kysely';
 import { Cron } from 'croner';
 import type { Kysely } from 'kysely';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
-import { registerCronJob } from '@/cron/registry.js';
-import { onTick, runDue } from '@/cron/runner.js';
-import { encodePatchWith, decodeWith } from '@/database/codec.js';
-import type { DB } from '@/database/types.js';
-import { cronTable, type CronRow } from '@/database/schema.js';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { registerCronJob } from '@/cron/registry';
+import { onTick, runDue } from '@/cron/runner';
+import { encodePatchWith, decodeWith } from '@/database/codec';
+import type { DB } from '@/database/types';
+import { cronTable, type CronRow } from '@/database/schema';
 
 // Truncate to second resolution to match DB storage.
 function toSecond(d: Date): number {
@@ -58,7 +58,7 @@ describe('onTick / runDue', () => {
 
         await onTick(now);
 
-        const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
+        const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
         const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
         const row = singleRow(
             rawRows.map((r) => decodeWith(cronTable, r)) as unknown as CronRow[]
@@ -107,7 +107,7 @@ describe('onTick / runDue', () => {
         await onTick(new Date('2024-06-01T11:00:00.000Z'));
         callCount = 0; // reset after seed tick (it may have run)
 
-        const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
+        const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
 
         // Set nextRun in the past → should run.
         const past = new Date(now.getTime() - 60_000);
@@ -158,7 +158,7 @@ describe('onTick / runDue', () => {
         // Seed the row.
         await onTick(new Date('2024-06-01T11:00:00.000Z'));
 
-        const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
+        const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
 
         // Make it due but disabled.
         const past = new Date(now.getTime() - 60_000);
@@ -191,7 +191,7 @@ describe('onTick / runDue', () => {
         // First tick: seed + run (nextRun is computed from '* * * * *').
         await onTick(now);
 
-        const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
+        const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
 
         // Admin changes schedule to daily midnight, and forces it due.
         const past = new Date(now.getTime() - 60_000);
@@ -236,7 +236,7 @@ describe('onTick / runDue', () => {
         await runDue(new Date('2024-06-01T11:00:00.000Z'));
         callCount = 0;
 
-        const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
+        const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
         const past = new Date(now.getTime() - 60_000);
         await db
             .updateTable('_astromech_cron')
@@ -294,7 +294,7 @@ describe('onTick / runDue', () => {
         await runDue(new Date('2024-06-01T11:00:00.000Z'));
         callCount = 0;
 
-        const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
+        const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
         const past = new Date(now.getTime() - 60_000);
 
         // Set lock to FUTURE expiry (claim active) → should NOT run.
@@ -347,7 +347,7 @@ describe('onTick / runDue', () => {
 
         // Seed + make due.
         await runDue(new Date('2024-06-01T11:00:00.000Z'));
-        const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
+        const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
         const past = new Date(now.getTime() - 60_000);
         await db
             .updateTable('_astromech_cron')
@@ -416,7 +416,7 @@ describe('onTick / runDue', () => {
 
             await onTick(now);
 
-            const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
+            const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
             const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
             const row = singleRow(
                 rawRows.map((r) => decodeWith(cronTable, r)) as unknown as CronRow[]
@@ -450,7 +450,7 @@ describe('onTick / runDue', () => {
         await runDue(new Date('2024-06-01T11:00:00.000Z'));
         callCount = 0;
 
-        const db = (await import('@/database/registry.js')).getDb() as Kysely<DB>;
+        const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
         const veryPast = new Date('2024-01-01T00:00:00.000Z');
         await db
             .updateTable('_astromech_cron')

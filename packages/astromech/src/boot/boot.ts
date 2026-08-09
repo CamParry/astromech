@@ -12,43 +12,43 @@ import type {
     MethodManifest,
     PluginDefinition,
     ResolvedConfig,
-} from '@/types/index.js';
-import type { DB } from '@/database/types.js';
-import { generateMethodManifest } from '@/codegen/method-manifest.js';
-import { setMethodManifest } from '@/codegen/manifest-registry.js';
-import { setDb } from '@/database/registry.js';
+} from '@/types/index';
+import type { DB } from '@/database/types';
+import { generateMethodManifest } from '@/codegen/method-manifest';
+import { setMethodManifest } from '@/codegen/manifest-registry';
+import { setDb } from '@/database/registry';
 import { migrateToLatest, mergeMigrationProviders } from '@astromech/schema-engine';
-import { collectPluginMigrations } from '@/database/plugin-migrations.js';
-import { loadAppMigrations } from '@/database/app-migrations.js';
-import { setDatabaseDriver } from '@/database/driver-registry.js';
-import { setStorageDriver } from '@/storage/registry.js';
-import { setImageConfig } from '@/media/serving/image/registry.js';
-import { normaliseWidths } from '@/media/serving/image/url.js';
-import { defaultImageWidths } from '@/media/serving/image/defaults.js';
-import { setEmailDriver } from '@/email/registry.js';
-import { setAIConfig } from '@/ai/registry.js';
-import { buildAIConfig } from '@/ai/middleware.js';
+import { collectPluginMigrations } from '@/database/plugin-migrations';
+import { loadAppMigrations } from '@/database/app-migrations';
+import { setDatabaseDriver } from '@/database/driver-registry';
+import { setStorageDriver } from '@/storage/registry';
+import { setImageConfig } from '@/media/serving/image/registry';
+import { normaliseWidths } from '@/media/serving/image/url';
+import { defaultImageWidths } from '@/media/serving/image/defaults';
+import { setEmailDriver } from '@/email/registry';
+import { setAIConfig } from '@/ai/registry';
+import { buildAIConfig } from '@/ai/middleware';
 // Import from the jobs sub-barrel, NOT @/entries/index.js: the main barrel
 // re-exports the entries service, whose top-level `virtual:astromech/config`
 // import would be pulled into the Astro integration and crash config load
 // (the integration is loaded in plain Node, where `virtual:` doesn't resolve).
-import { registerBuiltInEntryJobs } from '@/entries/jobs/index.js';
+import { registerBuiltInEntryJobs } from '@/entries/jobs/index';
 // Wire the entries-domain implementation into the plugin runtime's entry-access
 // port BEFORE registerPlugins runs. Like the jobs sub-barrel above, this module
 // is service-free, so the integration's plain-Node config load stays safe.
-import { wireEntryAccess } from '@/entries/plugin-access.js';
+import { wireEntryAccess } from '@/entries/plugin-access';
 import {
     setSchedulerDriver,
     getSchedulerDriver,
     setRuntimeConfig,
-} from '@/cron/registry.js';
-import { interval } from '@/cron/drivers/index.js';
-import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime.js';
+} from '@/cron/registry';
+import { interval } from '@/cron/drivers/index';
+import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime';
 // The entry-access port, not `@/entries/storage/registry.js`: this module is in
 // the integration's plain-Node import graph, and the registry reaches the
 // built-in storage. The port has no domain imports.
-import { entryAccess } from '@/plugins/runtime/entry-access.js';
-import { onTick } from '@/cron/runner.js';
+import { entryAccess } from '@/plugins/runtime/entry-access';
+import { onTick } from '@/cron/runner';
 
 export async function initRuntime(
     config: AstromechConfig,

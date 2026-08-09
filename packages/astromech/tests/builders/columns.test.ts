@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { AdminColumn } from '@/types/config.js';
-import { t } from '@/fields/index.js';
-import { badge, boolean, text } from '@/fields/columns.js';
+import type { AdminColumn } from '@/types/config';
+import { t } from '@/fields/index';
+import { badge, boolean, text } from '@/fields/columns';
 
 // Compile-proof: factory output is assignable to adminColumns.
 const _cols: AdminColumn[] = [text('from'), badge('status'), boolean('enabled')];

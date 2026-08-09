@@ -16,8 +16,8 @@ import {
     generateMigrations as engineGenerate,
     generateMigrationFromOps as engineGenerateFromOps,
 } from '@astromech/schema-engine/generate';
-import { createSnapshot, type SqlDialect } from '@/database/table-snapshot.js';
-import type { Table } from '@/database/define-table.js';
+import { createSnapshot, type SqlDialect } from '@/database/table-snapshot';
+import type { Table } from '@/database/define-table';
 import type {
     GenerateResult,
     MigrationOpsAuthor,

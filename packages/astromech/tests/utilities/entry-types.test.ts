@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-    parseEntryTypeId,
-    qualifyEntryType,
-    resolveEntryType,
-} from '@/entries/type-ids.js';
-import type { ResolvedConfig, ResolvedEntryType } from '@/types/index.js';
+import { parseEntryTypeId, qualifyEntryType, resolveEntryType } from '@/entries/type-ids';
+import type { ResolvedConfig, ResolvedEntryType } from '@/types/index';
 
 const entryType = (single: string): ResolvedEntryType => ({
     single,

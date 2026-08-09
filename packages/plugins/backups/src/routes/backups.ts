@@ -16,9 +16,9 @@
 import { Readable } from 'node:stream';
 import { createGunzip } from 'node:zlib';
 import type { PluginContext, PluginRawRoute } from 'astromech';
-import { backupRunsTable, type BackupRunRow } from '../tables/runs.js';
-import { createBackupRunsStorage } from '../storage.js';
-import { isBackupRunning, performBackup, resolveKeep } from '../backup.js';
+import { backupRunsTable, type BackupRunRow } from '../tables/runs';
+import { createBackupRunsStorage } from '../storage';
+import { isBackupRunning, performBackup, resolveKeep } from '../backup';
 
 /**
  * The table's **SQL** name, for the restore driver's `preserve` list — that is a

@@ -6,8 +6,8 @@
  * is optional — reads probe rather than throw.
  */
 
-import { createRegistry } from '@/utilities/registry.js';
-import type { EmailDriver } from '@/types/index.js';
+import { createRegistry } from '@/utilities/registry';
+import type { EmailDriver } from '@/types/index';
 
 const email = createRegistry<EmailDriver>('email', { required: false });
 

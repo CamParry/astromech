@@ -7,13 +7,13 @@
 
 import { definePlugin, withDefaults } from 'astromech';
 import type { ServiceInterface } from 'astromech';
-import { REDIRECTS_PACKAGE } from './types.js';
-import type { RedirectsOptions } from './types.js';
-import { migrationProvider } from '../migrations/index.js';
-import { redirectEntryType } from './entries/redirect.js';
-import { redirectsTable } from './tables/redirects.js';
-import { redirectsService } from './service/redirects.js';
-import { slugChangeHook } from './hooks/slug-change.js';
+import { REDIRECTS_PACKAGE } from './types';
+import type { RedirectsOptions } from './types';
+import { migrationProvider } from '../migrations/index';
+import { redirectEntryType } from './entries/redirect';
+import { redirectsTable } from './tables/redirects';
+import { redirectsService } from './service/redirects';
+import { slugChangeHook } from './hooks/slug-change';
 
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
@@ -22,7 +22,7 @@ declare module 'astromech' {
     }
 }
 
-export type { RedirectMatch, RedirectStatus, RedirectsOptions } from './types.js';
+export type { RedirectMatch, RedirectStatus, RedirectsOptions } from './types';
 
 const DEFAULT_OPTIONS: Required<RedirectsOptions> = {
     generateOnSlugChange: true,

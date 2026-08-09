@@ -11,13 +11,13 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { defineHook } from '@/index.js';
-import { createTestDb, registerTestPlugins, setupTestConfig } from '@tests/harness.js';
-import { Astromech } from '@/transport/local/index.js';
-import { getDb } from '@/database/registry.js';
-import { decodeWith } from '@/database/codec.js';
-import { entriesTable } from '@/database/schema.js';
-import type { Entry, PluginDefinition } from '@/types/index.js';
+import { defineHook } from '@/index';
+import { createTestDb, registerTestPlugins, setupTestConfig } from '@tests/harness';
+import { Astromech } from '@/transport/local/index';
+import { getDb } from '@/database/registry';
+import { decodeWith } from '@/database/codec';
+import { entriesTable } from '@/database/schema';
+import type { Entry, PluginDefinition } from '@/types/index';
 
 const api = Astromech.entries;
 

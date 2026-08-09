@@ -13,16 +13,16 @@
  */
 
 import { z } from '@hono/zod-openapi';
-import type { ServiceMethodContract } from '@/types/index.js';
-import { entryPermission, type EntryAction } from '@/permissions/entry-permission.js';
-import { parseEntryTypeId } from './type-ids.js';
-import type { Capability } from './storage/capabilities.js';
+import type { ServiceMethodContract } from '@/types/index';
+import { entryPermission, type EntryAction } from '@/permissions/entry-permission';
+import { parseEntryTypeId } from './type-ids';
+import type { Capability } from './storage/capabilities';
 import {
     createEntrySchemaFor,
     duplicateOverridesSchema,
     scheduleEntrySchema,
     updateEntrySchemaFor,
-} from './schema.js';
+} from './schema';
 
 /**
  * A per-type entry method contract. Adds the two facts the manifest needs

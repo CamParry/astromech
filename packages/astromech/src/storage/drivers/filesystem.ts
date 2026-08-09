@@ -19,7 +19,7 @@ import type {
     StorageObject,
     StorageRange,
     StorageStat,
-} from '@/types/index.js';
+} from '@/types/index';
 
 type FilesystemOptions = {
     /** Absolute or cwd-relative path to write files, e.g. `'./public/uploads'` */

@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { Menu } from '@base-ui/react/menu';
-import type { DropdownItem } from './dropdown.js';
+import type { DropdownItem } from './dropdown';
 
 // ============================================================================
 // Types

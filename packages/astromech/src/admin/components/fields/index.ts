@@ -10,36 +10,36 @@
  * the same state and spreads the same ARIA onto itself.
  */
 
-export { FormField } from './form-field.js';
-export type { FormFieldProps } from './form-field.js';
+export { FormField } from './form-field';
+export type { FormFieldProps } from './form-field';
 
-export { useFieldValue } from './field-context.js';
+export { useFieldValue } from './field-context';
 
-export { useFieldControl } from './field-control-context.js';
-export type { FieldControlState } from './field-control-context.js';
+export { useFieldControl } from './field-control-context';
+export type { FieldControlState } from './field-control-context';
 
-export { TextField } from './text-field.js';
-export { TextareaField } from './textarea-field.js';
-export { RichtextField } from './richtext-field.js';
-export { NumberField } from './number-field.js';
-export { BooleanField } from './boolean-field.js';
-export { DateField } from './date-field.js';
-export { DatetimeField } from './datetime-field.js';
-export { SelectField } from './select-field.js';
-export { MultiselectField } from './multiselect-field.js';
-export { MediaField } from './media-field.js';
-export { RelationshipField } from './relationship-field.js';
-export { RepeaterField } from './repeater-field.js';
-export { EmailField } from './email-field.js';
-export { UrlField } from './url-field.js';
-export { ColorField } from './color-field.js';
-export { SlugField } from './slug-field.js';
-export { JsonField } from './json-field.js';
-export { GroupField } from './group-field.js';
-export { RangeField } from './range-field.js';
-export { CheckboxGroupField } from './checkbox-group-field.js';
-export { RadioGroupField } from './radio-group-field.js';
-export { LinkField } from './link-field.js';
-export { KeyValueField } from './key-value-field.js';
-export { BlocksField } from './blocks-field.js';
-export { TreeField } from './tree-field.js';
+export { TextField } from './text-field';
+export { TextareaField } from './textarea-field';
+export { RichtextField } from './richtext-field';
+export { NumberField } from './number-field';
+export { BooleanField } from './boolean-field';
+export { DateField } from './date-field';
+export { DatetimeField } from './datetime-field';
+export { SelectField } from './select-field';
+export { MultiselectField } from './multiselect-field';
+export { MediaField } from './media-field';
+export { RelationshipField } from './relationship-field';
+export { RepeaterField } from './repeater-field';
+export { EmailField } from './email-field';
+export { UrlField } from './url-field';
+export { ColorField } from './color-field';
+export { SlugField } from './slug-field';
+export { JsonField } from './json-field';
+export { GroupField } from './group-field';
+export { RangeField } from './range-field';
+export { CheckboxGroupField } from './checkbox-group-field';
+export { RadioGroupField } from './radio-group-field';
+export { LinkField } from './link-field';
+export { KeyValueField } from './key-value-field';
+export { BlocksField } from './blocks-field';
+export { TreeField } from './tree-field';

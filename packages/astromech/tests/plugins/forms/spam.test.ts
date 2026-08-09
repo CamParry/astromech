@@ -13,12 +13,12 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { turnstile } from '../../../../plugins/forms/src/spam/providers/turnstile.js';
-import { recaptcha } from '../../../../plugins/forms/src/spam/providers/recaptcha.js';
-import { spamHook } from '../../../../plugins/forms/src/spam/hook.js';
-import { BEFORE_SUBMIT } from '../../../../plugins/forms/src/hooks/events.js';
-import type { FormsBeforeSubmitPayload } from '../../../../plugins/forms/src/hooks/events.js';
-import type { SpamProvider } from '../../../../plugins/forms/src/spam/types.js';
+import { turnstile } from '../../../../plugins/forms/src/spam/providers/turnstile';
+import { recaptcha } from '../../../../plugins/forms/src/spam/providers/recaptcha';
+import { spamHook } from '../../../../plugins/forms/src/spam/hook';
+import { BEFORE_SUBMIT } from '../../../../plugins/forms/src/hooks/events';
+import type { FormsBeforeSubmitPayload } from '../../../../plugins/forms/src/hooks/events';
+import type { SpamProvider } from '../../../../plugins/forms/src/spam/types';
 import type { PluginContext } from 'astromech';
 
 function jsonResponse(body: unknown, status = 200): Response {

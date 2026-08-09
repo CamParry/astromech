@@ -14,7 +14,7 @@
  * so variant write-back to storage is unnecessary and is skipped.
  */
 
-import type { ImageDriver } from '@/types/index.js';
+import type { ImageDriver } from '@/types/index';
 
 /**
  * Driver name. Exported because config resolution has to recognise this driver

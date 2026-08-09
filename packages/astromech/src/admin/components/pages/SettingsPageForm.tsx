@@ -13,10 +13,10 @@ import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import type { Label, ResolvedEntryFields } from '@/types/index.js';
-import { astromechClient } from '@/transport/http/client/index.js';
-import { saveSettingsPage } from '@/admin/lib/settings-page-save.js';
-import { FieldTreeForm } from '@/admin/components/fields/FieldTreeForm.js';
+import type { Label, ResolvedEntryFields } from '@/types/index';
+import { astromechClient } from '@/transport/http/client/index';
+import { saveSettingsPage } from '@/admin/lib/settings-page-save';
+import { FieldTreeForm } from '@/admin/components/fields/FieldTreeForm';
 import {
     Button,
     Page,
@@ -26,9 +26,9 @@ import {
     Select,
     Spinner,
     useToast,
-} from '@/admin/components/ui/index.js';
-import { resolveLabel } from '@/admin/i18n/labels.js';
-import { resolveContentLocale } from '@/utilities/locale.js';
+} from '@/admin/components/ui/index';
+import { resolveLabel } from '@/admin/i18n/labels';
+import { resolveContentLocale } from '@/utilities/locale';
 
 // ============================================================================
 // Query key

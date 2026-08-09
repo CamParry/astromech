@@ -5,8 +5,8 @@
  * load below; the `coerce → default → validate` pipeline dispatches to them.
  */
 
-import type { FieldType } from '@/types/fields.js';
-import { coreFieldTypes } from './core-field-types.js';
+import type { FieldType } from '@/types/fields';
+import { coreFieldTypes } from './core-field-types';
 
 /** Registered field types keyed by field `type`. Populated at module load. */
 const fieldTypes = new Map<string, FieldType>();

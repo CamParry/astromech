@@ -9,15 +9,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { rmSync } from 'node:fs';
-import { createFileTestDb, setupTestConfig } from '@tests/harness.js';
-import { Astromech } from '@/transport/local/index.js';
-import { getDb } from '@/database/registry.js';
-import type * as RelationshipStorageModule from '@/database/storage/relationships.js';
+import { createFileTestDb, setupTestConfig } from '@tests/harness';
+import { Astromech } from '@/transport/local/index';
+import { getDb } from '@/database/registry';
+import type * as RelationshipStorageModule from '@/database/storage/relationships';
 
 // `create` persists the row and its index rows inside a storage transaction.
 // Fail `replaceForSource` so the transaction rolls back; everything else
 // delegates to the real storage.
-vi.mock('@/database/storage/relationships.js', async (importOriginal) => {
+vi.mock('@/database/storage/relationships', async (importOriginal) => {
     const actual = await importOriginal<typeof RelationshipStorageModule>();
     return {
         ...actual,

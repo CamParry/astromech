@@ -6,21 +6,21 @@
  */
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
-import { Astromech } from '@/transport/local/index.js';
+import { Astromech } from '@/transport/local/index';
 import {
     badRequest,
     forbidden,
     fromZodError,
     internalError,
     notFound,
-} from '@/transport/http/middleware/errors.js';
-import type { AuthVariables } from '@/transport/http/middleware/auth.js';
+} from '@/transport/http/middleware/errors';
+import type { AuthVariables } from '@/transport/http/middleware/auth';
 import {
     PERMISSION_ENTRY_READ_FULL,
     type EntryAction,
     entryPermission,
-} from '@/permissions/index.js';
-import { permissionsFor } from '@/permissions/permissions-for.js';
+} from '@/permissions/index';
+import { permissionsFor } from '@/permissions/permissions-for';
 import type {
     EntryDuplicateOverrides,
     EntryQueryParams,
@@ -30,16 +30,16 @@ import type {
     ResolvedEntryType,
     ServiceMethodContract,
     SortOption,
-} from '@/types/index.js';
+} from '@/types/index';
 import {
     updateEntrySchema,
     createEntrySchemaFor,
     duplicateOverridesSchema,
     updateEntrySchemaFor,
     scheduleEntrySchema,
-} from '@/entries/schema.js';
-import { PublicTrashedReadError, StagedEntryExistsError } from '@/entries/errors.js';
-import { resolveEntryType } from '@/entries/type-ids.js';
+} from '@/entries/schema';
+import { PublicTrashedReadError, StagedEntryExistsError } from '@/entries/errors';
+import { resolveEntryType } from '@/entries/type-ids';
 
 type Env = { Variables: AuthVariables };
 

@@ -11,15 +11,15 @@
  */
 
 import React from 'react';
-import { ComponentErrorBoundary } from '@/admin/components/pages/ComponentErrorBoundary.js';
-import { PluginUiProvider, type PluginUiIdentity } from '@/admin/context/plugin.js';
+import { ComponentErrorBoundary } from '@/admin/components/pages/ComponentErrorBoundary';
+import { PluginUiProvider, type PluginUiIdentity } from '@/admin/context/plugin';
 import {
     Page,
     PageContent,
     PageHeader,
     PageTitle,
     Spinner,
-} from '@/admin/components/ui/index.js';
+} from '@/admin/components/ui/index';
 
 export type ComponentPageViewProps = {
     /** Stable key for the module-level React.lazy cache. */

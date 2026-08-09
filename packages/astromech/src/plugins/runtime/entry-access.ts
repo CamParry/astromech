@@ -12,7 +12,7 @@
  * package's multiple bundle entry points.
  */
 
-import type { EntryType } from '@/types/index.js';
+import type { EntryType } from '@/types/index';
 
 export type EntryAccess = {
     /**

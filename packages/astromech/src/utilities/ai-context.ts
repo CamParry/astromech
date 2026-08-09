@@ -3,7 +3,7 @@
  * `role: 'system'` message a chat request carries inside `messages[]`.
  */
 
-import type { AIContextItem, AIContextReference } from '@/types/ai-context.js';
+import type { AIContextItem, AIContextReference } from '@/types/ai-context';
 
 /**
  * Build the context message from the current references, ordered least to most

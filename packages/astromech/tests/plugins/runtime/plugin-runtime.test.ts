@@ -7,9 +7,9 @@ import type {
     ResolvedConfig,
     Role,
     User,
-} from '@/types/index.js';
-import { setEmailDriver } from '@/email/registry.js';
-import { runWithContext } from '@/request-context/request-context.js';
+} from '@/types/index';
+import { setEmailDriver } from '@/email/registry';
+import { runWithContext } from '@/request-context/request-context';
 import {
     bootPlugins,
     createPluginContext,
@@ -21,15 +21,15 @@ import {
     runAfterHooks,
     runBeforeHooks,
     setPluginMethods,
-} from '@/plugins/runtime/plugin-runtime.js';
-import { defineHook } from '@/index.js';
+} from '@/plugins/runtime/plugin-runtime';
+import { defineHook } from '@/index';
 // This test drives registerPlugins directly (no harness), so wire the
 // entry-access port that registerPlugins now depends on.
-import { wireEntryAccess } from '@/entries/plugin-access.js';
-import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity.js';
+import { wireEntryAccess } from '@/entries/plugin-access';
+import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 
 wireEntryAccess();
-import { getCronJobs } from '@/cron/registry.js';
+import { getCronJobs } from '@/cron/registry';
 
 const config: ResolvedConfig = {
     adminRoute: '/admin',

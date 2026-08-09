@@ -5,11 +5,11 @@
  * without a pre-build step) and initialises the DB registry so service methods work.
  */
 
-import { setDb } from '@/database/registry.js';
-import { resolveConfig } from '@/boot/config-resolver.js';
-import { loadConfigFile } from '@/boot/config-loader.js';
-import { setCliConfig } from './virtual-config-shim.js';
-import type { AstromechConfig, ResolvedConfig } from '@/types/index.js';
+import { setDb } from '@/database/registry';
+import { resolveConfig } from '@/boot/config-resolver';
+import { loadConfigFile } from '@/boot/config-loader';
+import { setCliConfig } from './virtual-config-shim';
+import type { AstromechConfig, ResolvedConfig } from '@/types/index';
 
 export async function loadRawConfig(configPath?: string): Promise<AstromechConfig> {
     return loadConfigFile(process.cwd(), configPath);

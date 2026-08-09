@@ -4,5 +4,5 @@
  * `@/fields/rich-text/extensions.js`.
  */
 
-export { buildRichTextExtensions } from '@/fields/rich-text/extensions.js';
-export type { RichTextAllow } from '@/types/fields.js';
+export { buildRichTextExtensions } from '@/fields/rich-text/extensions';
+export type { RichTextAllow } from '@/types/fields';

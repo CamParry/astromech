@@ -10,11 +10,11 @@
 
 import { definePlugin } from 'astromech';
 import type { ServiceInterface } from 'astromech';
-import { seoPermissions } from './permissions/seo.js';
-import { seoPreviewField } from './fields/seo-preview.js';
-import { seoService } from './service/seo.js';
-import { overviewPage } from './pages/overview.js';
-import { settingsPage } from './pages/settings.js';
+import { seoPermissions } from './permissions/seo';
+import { seoPreviewField } from './fields/seo-preview';
+import { seoService } from './service/seo';
+import { overviewPage } from './pages/overview';
+import { settingsPage } from './pages/settings';
 
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
@@ -23,9 +23,9 @@ declare module 'astromech' {
     }
 }
 
-export { seoSection } from './fields/groups.js';
-export type { SeoSectionOptions } from './fields/groups.js';
-export { SEO_FIELD_NAME } from './types.js';
+export { seoSection } from './fields/groups';
+export type { SeoSectionOptions } from './fields/groups';
+export { SEO_FIELD_NAME } from './types';
 export type {
     SeoFieldHealth,
     SeoOverview,
@@ -33,15 +33,11 @@ export type {
     SeoResolvedMeta,
     SeoSitemap,
     SeoSitemapUrl,
-} from './types.js';
-export {
-    SEO_DESCRIPTION_RANGE,
-    SEO_TITLE_RANGE,
-    lengthStatus,
-} from './utilities/length.js';
-export type { LengthRange, LengthStatus } from './utilities/length.js';
-export { parseSeoMetaValue } from './utilities/meta-value.js';
-export type { SeoMetaValue } from './utilities/meta-value.js';
+} from './types';
+export { SEO_DESCRIPTION_RANGE, SEO_TITLE_RANGE, lengthStatus } from './utilities/length';
+export type { LengthRange, LengthStatus } from './utilities/length';
+export { parseSeoMetaValue } from './utilities/meta-value';
+export type { SeoMetaValue } from './utilities/meta-value';
 
 export const seo = definePlugin({
     package: '@astromech/seo',

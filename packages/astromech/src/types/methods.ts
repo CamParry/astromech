@@ -10,7 +10,7 @@
  */
 
 import type { z } from '@hono/zod-openapi';
-import type { Permission } from './domain.js';
+import type { Permission } from './domain';
 
 /**
  * MCP-aligned effect hints (ai-integration §3.6). `mutates` is the query/command

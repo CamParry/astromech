@@ -5,18 +5,18 @@
  * list plus a dispatch map keyed by tool name. No I/O; unit-testable.
  */
 
-import type { JsonSchemaObject, ManifestMethod, MethodManifest } from '@/types/index.js';
+import type { JsonSchemaObject, ManifestMethod, MethodManifest } from '@/types/index';
 import {
     CONFIRM_KEY,
     evaluateConfirmation,
     triggersConfirmation,
     type ConfirmOptions,
-} from '@/policies/confirmation.js';
+} from '@/policies/confirmation';
 import {
     buildDispatch,
     type DispatchResult,
     type ToolAnnotations,
-} from '@/transport/tools/dispatch.js';
+} from '@/transport/tools/dispatch';
 
 // ============================================================================
 // Types

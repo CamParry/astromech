@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { writeFile, unlink } from 'node:fs/promises';
-import { parseJsonArg, printResult, printError } from '@/transport/cli/output.js';
+import { parseJsonArg, printResult, printError } from '@/transport/cli/output';
 
 afterEach(() => {
     process.exitCode = 0;

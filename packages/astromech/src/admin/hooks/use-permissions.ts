@@ -3,8 +3,8 @@
  * server (src/utilities/permission-match.ts).
  */
 
-import { hasPermission } from '@/utilities/permission-match.js';
-import { useAuth } from '../context/auth.js';
+import { hasPermission } from '@/utilities/permission-match';
+import { useAuth } from '../context/auth';
 
 export { hasPermission };
 

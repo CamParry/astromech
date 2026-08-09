@@ -28,11 +28,11 @@ import {
     Eye,
     Plus,
 } from 'lucide-react';
-import type { BaseFieldProps, Field } from '@/types/index.js';
+import type { BaseFieldProps, Field } from '@/types/index';
 import { FormField } from '@/admin/components/fields/form-field';
 import { InlineTitle } from '@/admin/components/fields/inline-title';
 // Deep import: the `fields/` barrel reaches server code (virtual config / DB).
-import { formatInstancePath, parseInstancePath } from '@/fields/field-path.js';
+import { formatInstancePath, parseInstancePath } from '@/fields/field-path';
 import './repeater-field.css';
 
 // Lock dragging to the vertical axis — verticalListSortingStrategy only governs

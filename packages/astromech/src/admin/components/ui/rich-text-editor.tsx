@@ -21,7 +21,7 @@ import {
     ChevronDown,
     WrapText,
 } from 'lucide-react';
-import { buildRichTextExtensions, type RichTextAllow } from './rich-text-extensions.js';
+import { buildRichTextExtensions, type RichTextAllow } from './rich-text-extensions';
 import { useFieldControl } from '@/admin/components/fields/field-control-context';
 
 // ============================================================================

@@ -23,14 +23,14 @@
 import { fileURLToPath } from 'node:url';
 import type { AstroIntegration } from 'astro';
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
-import type { AstromechConfig, ResolvedConfig } from '@/types/index.js';
-import { resolveConfig } from '@/boot/config-resolver.js';
-import { loadConfigFile, resolveConfigPath } from '@/boot/config-loader.js';
-import { registerRoutes } from '@/boot/route-registration.js';
-import { collectPluginFieldTypes } from '@/plugins/runtime/plugin-fields.js';
-import { runMigrations } from '@/boot/boot.js';
-import { buildAdminConfig } from '@/boot/admin-config.js';
-import { generatePluginClientManifest } from '@/codegen/plugin-client-manifest.js';
+import type { AstromechConfig, ResolvedConfig } from '@/types/index';
+import { resolveConfig } from '@/boot/config-resolver';
+import { loadConfigFile, resolveConfigPath } from '@/boot/config-loader';
+import { registerRoutes } from '@/boot/route-registration';
+import { collectPluginFieldTypes } from '@/plugins/runtime/plugin-fields';
+import { runMigrations } from '@/boot/boot';
+import { buildAdminConfig } from '@/boot/admin-config';
+import { generatePluginClientManifest } from '@/codegen/plugin-client-manifest';
 
 export type AstromechIntegrationOptions = {
     /** Path to the site's astromech.config.ts, resolved against the Astro project root. */
@@ -197,8 +197,7 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
 
             'astro:config:done': async ({ injectTypes, logger, config: astroConfig }) => {
                 const { config, resolved: resolvedConfig } = requireLoaded();
-                const { generateClientTypes } =
-                    await import('@/codegen/type-generator.js');
+                const { generateClientTypes } = await import('@/codegen/type-generator');
                 injectTypes({
                     filename: 'astromech.d.ts',
                     content: generateClientTypes(
@@ -209,7 +208,7 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
                 });
 
                 const { generateMethodManifest, METHOD_MANIFEST_FILENAME } =
-                    await import('@/codegen/method-manifest.js');
+                    await import('@/codegen/method-manifest');
                 const manifestJson = generateMethodManifest(
                     resolvedConfig,
                     config.plugins ?? []

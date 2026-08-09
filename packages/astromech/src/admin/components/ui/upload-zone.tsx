@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { UploadCloud } from 'lucide-react';
-import { MEDIA_ACCEPT } from '@/admin/types/media.js';
+import { MEDIA_ACCEPT } from '@/admin/types/media';
 import { clsx } from 'clsx';
 
 type UploadZoneProps = {

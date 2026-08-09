@@ -9,7 +9,7 @@
  * Only the fields touched by registration-chain modules are needed; an empty
  * locales/defaultLocale is sufficient for tests that don't render.
  */
-import type { AdminConfig } from '@/types/index.js';
+import type { AdminConfig } from '@/types/index';
 
 const config = {
     defaultLocale: 'en',

@@ -1,3 +1,3 @@
-import type { CellRenderer } from '@/types/index.js';
+import type { CellRenderer } from '@/types/index';
 
 export const TextCell: CellRenderer = ({ value }) => String(value ?? '—');

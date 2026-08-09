@@ -10,7 +10,7 @@
  * the client-side runner picks the same stage the server will.
  */
 
-import type { EntryStatus, ValidationStage } from '@/types/index.js';
+import type { EntryStatus, ValidationStage } from '@/types/index';
 
 export function entryValidationStage(params: {
     status: EntryStatus | undefined;

@@ -20,6 +20,38 @@ export default tseslint.config(
         rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
     },
     {
+        files: ['**/*.ts', '**/*.tsx'],
+        rules: {
+            'no-restricted-syntax': [
+                'error',
+                {
+                    selector:
+                        'ImportDeclaration[source.value=/^(\\.{1,2}\\/|@\\/|@tests\\/).*\\.js$/]',
+                    message:
+                        'Drop the .js extension from relative and alias imports — moduleResolution is "bundler".',
+                },
+                {
+                    selector:
+                        'ExportNamedDeclaration[source.value=/^(\\.{1,2}\\/|@\\/|@tests\\/).*\\.js$/]',
+                    message:
+                        'Drop the .js extension from relative and alias imports — moduleResolution is "bundler".',
+                },
+                {
+                    selector:
+                        'ExportAllDeclaration[source.value=/^(\\.{1,2}\\/|@\\/|@tests\\/).*\\.js$/]',
+                    message:
+                        'Drop the .js extension from relative and alias imports — moduleResolution is "bundler".',
+                },
+                {
+                    selector:
+                        'ImportExpression[source.value=/^(\\.{1,2}\\/|@\\/|@tests\\/).*\\.js$/]',
+                    message:
+                        'Drop the .js extension from relative and alias imports — moduleResolution is "bundler".',
+                },
+            ],
+        },
+    },
+    {
         // Repo tooling: plain Node, run by npm scripts rather than bundled.
         files: ['scripts/**/*.mjs'],
         languageOptions: { globals: { console: 'readonly', process: 'readonly' } },

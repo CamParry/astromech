@@ -9,10 +9,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act } from 'react';
 import type { ComponentProps, ReactElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import ChatDrawer from '../../src/admin/slots/chat-drawer.js';
-import { closeDrawer, toggleDrawer } from '../../src/admin/drawer-state.js';
-import type { ApprovalDecision, ApprovalRequest } from '../../src/types.js';
-import type { ChatEntry, UseChat } from '../../src/admin/use-chat.js';
+import ChatDrawer from '../../src/admin/slots/chat-drawer';
+import { closeDrawer, toggleDrawer } from '../../src/admin/drawer-state';
+import type { ApprovalDecision, ApprovalRequest } from '../../src/types';
+import type { ChatEntry, UseChat } from '../../src/admin/use-chat';
 
 let chat: UseChat;
 
@@ -27,7 +27,7 @@ vi.mock('astromech/ui', () => ({
     ),
 }));
 
-vi.mock('../../src/admin/use-chat.js', () => ({ useChat: () => chat }));
+vi.mock('../../src/admin/use-chat', () => ({ useChat: () => chat }));
 
 // `act` only batches and flushes once React is told it is under test.
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;

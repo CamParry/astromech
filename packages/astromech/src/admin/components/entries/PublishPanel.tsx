@@ -7,9 +7,9 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Panel, Select, Input } from '../ui/index.js';
-import { formatDatetime } from '@/utilities/dates.js';
-import type { EntryStatus } from '../../../types/index.js';
+import { Panel, Select, Input } from '../ui/index';
+import { formatDatetime } from '@/utilities/dates';
+import type { EntryStatus } from '../../../types/index';
 
 // ============================================================================
 // Types

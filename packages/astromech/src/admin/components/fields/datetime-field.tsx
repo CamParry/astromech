@@ -1,5 +1,5 @@
 import { Input } from '@/admin/components/ui/input';
-import type { BaseFieldProps } from '@/types/index.js';
+import type { BaseFieldProps } from '@/types/index';
 
 export function DatetimeField({
     name,

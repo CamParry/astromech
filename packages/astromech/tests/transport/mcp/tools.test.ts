@@ -3,14 +3,14 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildTools } from '@/transport/mcp/tools.js';
+import { buildTools } from '@/transport/mcp/tools';
 import type {
     CoreManifestMethod,
     EntriesManifestMethod,
     JsonSchemaObject,
     MethodManifest,
     PluginManifestMethod,
-} from '@/types/index.js';
+} from '@/types/index';
 
 // ============================================================================
 // Sample manifest

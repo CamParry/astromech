@@ -1,3 +1,3 @@
 /** `astromech/email/resend` — the Resend email driver. */
 
-export * from '@/email/drivers/resend.js';
+export * from '@/email/drivers/resend';

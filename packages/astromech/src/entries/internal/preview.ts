@@ -3,12 +3,9 @@
  * and the preview projection (public shape with the publish gate bypassed).
  */
 
-import {
-    createPreviewTokenStorage,
-    hashPreviewToken,
-} from '../storage/preview-tokens.js';
-import { applyVisibility, markPublic, type AudienceContext } from '../visibility.js';
-import type { Entry, Field } from '@/types/index.js';
+import { createPreviewTokenStorage, hashPreviewToken } from '../storage/preview-tokens';
+import { applyVisibility, markPublic, type AudienceContext } from '../visibility';
+import type { Entry, Field } from '@/types/index';
 
 /** Generate a high-entropy preview token secret (32 random bytes, hex). */
 export function generatePreviewSecret(): string {

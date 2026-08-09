@@ -22,14 +22,14 @@ import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
-import { libsql } from '@/database/drivers/libsql.js';
-import { filesystem } from '@/storage/drivers/filesystem.js';
-import { listAll } from '@/storage/prefix.js';
-import { decodeWith } from '@/database/codec.js';
+import { libsql } from '@/database/drivers/libsql';
+import { filesystem } from '@/storage/drivers/filesystem';
+import { listAll } from '@/storage/prefix';
+import { decodeWith } from '@/database/codec';
 import { backupRunsTable } from '@astromech/backups/tables';
-import type { DB } from '@/database/types.js';
+import type { DB } from '@/database/types';
 import { performBackup, rotate, isBackupRunning } from '@astromech/backups/internals';
-import type { PluginContext, PluginDatabase, PluginStorage } from '@/types/index.js';
+import type { PluginContext, PluginDatabase, PluginStorage } from '@/types/index';
 
 declare global {
     var __astromechBackupRunning: boolean | undefined;

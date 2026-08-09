@@ -13,7 +13,7 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { defineHook } from '@/index.js';
+import { defineHook } from '@/index';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import {
@@ -21,20 +21,20 @@ import {
     makeTestConfig,
     registerTestPlugins,
     setupTestConfig,
-} from '@tests/harness.js';
-import '@/transport/local/index.js'; // registers the plugin client (setPluginClient)
-import { localPlugins } from '@/transport/local/plugins.js';
-import { entriesService as localEntries } from '@/entries/service.js';
+} from '@tests/harness';
+import '@/transport/local/index'; // registers the plugin client (setPluginClient)
+import { localPlugins } from '@/transport/local/plugins';
+import { entriesService as localEntries } from '@/entries/service';
 import { redirects } from '@astromech/redirects';
 import type { RedirectMatch } from '@astromech/redirects';
-import type { DB } from '@/database/types.js';
+import type { DB } from '@/database/types';
 import type {
     AstromechClient,
     AstromechConfig,
     EntriesService,
     PluginDefinition,
     ResolvedConfig,
-} from '@/types/index.js';
+} from '@/types/index';
 
 // Type-level proof: redirects.lookup carries real Input/Output via self-augmentation.
 async function _serviceTypeProof(client: AstromechClient) {

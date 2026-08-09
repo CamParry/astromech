@@ -6,15 +6,15 @@
 
 import { definePlugin, withDefaults } from 'astromech';
 import type { PluginContext, ServiceInterface } from 'astromech';
-import { BACKUPS_PACKAGE } from './types.js';
-import type { BackupsOptions } from './types.js';
-import { migrationProvider } from '../migrations/index.js';
-import { backupRunsTable } from './tables/runs.js';
-import { backupsPermissions } from './permissions/backups.js';
-import { performBackup, resolveKeep } from './backup.js';
-import { buildBackupsService } from './service/backups.js';
-import { buildBackupRoutes } from './routes/backups.js';
-import { backupsPage } from './pages/backups.js';
+import { BACKUPS_PACKAGE } from './types';
+import type { BackupsOptions } from './types';
+import { migrationProvider } from '../migrations/index';
+import { backupRunsTable } from './tables/runs';
+import { backupsPermissions } from './permissions/backups';
+import { performBackup, resolveKeep } from './backup';
+import { buildBackupsService } from './service/backups';
+import { buildBackupRoutes } from './routes/backups';
+import { backupsPage } from './pages/backups';
 
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
@@ -23,13 +23,13 @@ declare module 'astromech' {
     }
 }
 
-export type { BackupsOptions } from './types.js';
+export type { BackupsOptions } from './types';
 export type {
     BackupCapabilities,
     DeleteRunResult,
     ListRunsResult,
     TriggerRunResult,
-} from './service/backups.js';
+} from './service/backups';
 
 const DEFAULT_OPTIONS: Required<BackupsOptions> = {
     schedule: '0 3 * * *',

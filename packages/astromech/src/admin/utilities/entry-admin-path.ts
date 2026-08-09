@@ -6,7 +6,7 @@
  * id must never be pasted into it.
  */
 
-import { parseEntryTypeId } from '@/entries/type-ids.js';
+import { parseEntryTypeId } from '@/entries/type-ids';
 
 export function entryAdminPath(typeId: string, id: string): string {
     const parsed = parseEntryTypeId(typeId);

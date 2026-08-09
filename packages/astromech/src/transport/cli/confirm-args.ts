@@ -14,7 +14,7 @@
  */
 
 import type { ArgsDef } from 'citty';
-import type { ConfirmOptions, ConfirmTrigger } from '@/policies/confirmation.js';
+import type { ConfirmOptions, ConfirmTrigger } from '@/policies/confirmation';
 
 /** citty arg definition. Spread into a command's `args`. */
 export const confirmArgs = {

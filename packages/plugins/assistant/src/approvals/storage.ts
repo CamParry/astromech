@@ -13,8 +13,8 @@ import {
     approvalsTable,
     type ApprovalRow,
     type NewApprovalRow,
-} from '../tables/approvals.js';
-import type { ApprovalDecision } from '../types.js';
+} from '../tables/approvals';
+import type { ApprovalDecision } from '../types';
 
 /**
  * How long an approval stays answerable. A pause the user never answers is

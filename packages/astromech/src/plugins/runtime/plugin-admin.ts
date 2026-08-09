@@ -20,13 +20,13 @@ import type {
     PluginNavItem,
     ResolvedAdminPage,
     ResolvedPluginIdentity,
-} from '@/types/index.js';
-import type { EntryFields, ResolvedEntryFields } from '@/types/fields.js';
+} from '@/types/index';
+import type { EntryFields, ResolvedEntryFields } from '@/types/fields';
 import {
     pluginEntryTypes,
     resolvePluginPermission,
     titleCaseNamespace,
-} from './plugin-identity.js';
+} from './plugin-identity';
 
 // ---------------------------------------------------------------------------
 // Field normalisation (mirrors config-resolver's toResolvedFields)

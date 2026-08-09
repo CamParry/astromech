@@ -1,5 +1,5 @@
-import { createRegistry } from '@/utilities/registry.js';
-import type { ImageDriver } from '@/types/index.js';
+import { createRegistry } from '@/utilities/registry';
+import type { ImageDriver } from '@/types/index';
 
 export type ResolvedImageConfig = {
     driver: ImageDriver;

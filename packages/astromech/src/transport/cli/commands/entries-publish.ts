@@ -1,7 +1,7 @@
 import { defineCommand } from 'citty';
-import { loadConfig } from '../config.js';
-import { entriesService } from '@/entries/service.js';
-import { printResult, printError } from '../output.js';
+import { loadConfig } from '../config';
+import { entriesService } from '@/entries/service';
+import { printResult, printError } from '../output';
 
 export default defineCommand({
     meta: { name: 'entries:publish', description: 'Publish an entry' },

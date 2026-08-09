@@ -14,7 +14,7 @@ export {
     FormLayoutContent,
     Stack,
     ButtonGroup,
-} from './page.js';
-export { Breadcrumb } from './breadcrumb.js';
-export { Toolbar } from './toolbar.js';
-export { Panel } from './panel.js';
+} from './page';
+export { Breadcrumb } from './breadcrumb';
+export { Toolbar } from './toolbar';
+export { Panel } from './panel';

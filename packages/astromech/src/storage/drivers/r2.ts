@@ -19,14 +19,14 @@
  * S3-compatible endpoint when signing is required.
  */
 
-import { resolveBinding } from '@/cloudflare/bindings.js';
+import { resolveBinding } from '@/cloudflare/bindings';
 import type {
     StorageDriver,
     StorageList,
     StorageObject,
     StorageRange,
     StorageStat,
-} from '@/types/index.js';
+} from '@/types/index';
 
 /** Object metadata shared by `head()` and `get()`. Mirrors `R2Object`. */
 type R2ObjectLike = {

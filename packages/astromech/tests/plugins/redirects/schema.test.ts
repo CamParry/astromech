@@ -6,8 +6,8 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
-import { createTestDb } from '@tests/harness.js';
-import type { DB } from '@/database/types.js';
+import { createTestDb } from '@tests/harness';
+import type { DB } from '@/database/types';
 
 let db: Kysely<DB>;
 

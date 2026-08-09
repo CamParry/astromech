@@ -1,9 +1,9 @@
 import { defineCommand } from 'citty';
-import { loadConfig, loadRawConfig } from '../config.js';
+import { loadConfig, loadRawConfig } from '../config';
 import {
     generateMethodManifest,
     METHOD_MANIFEST_FILENAME,
-} from '@/codegen/method-manifest.js';
+} from '@/codegen/method-manifest';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 

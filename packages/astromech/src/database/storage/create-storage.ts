@@ -48,21 +48,21 @@
  */
 
 import type { Expression, ExpressionBuilder, Kysely, SqlBool } from 'kysely';
-import { getDb } from '@/database/registry.js';
+import { getDb } from '@/database/registry';
 import {
     decodeWith,
     encodePatchWith,
     encodeWith,
     kyselyTableKey,
-} from '@/database/codec.js';
+} from '@/database/codec';
 import type {
     ColumnRuntime,
     Table,
     TableInsert,
     TableSelect,
     TableUpdate,
-} from '@/database/define-table.js';
-import type { Db } from '@/database/types.js';
+} from '@/database/define-table';
+import type { Db } from '@/database/types';
 
 // ============================================================================
 // Query-layer types

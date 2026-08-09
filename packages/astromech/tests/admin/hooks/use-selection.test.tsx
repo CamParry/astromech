@@ -7,7 +7,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 import { act, cleanup, renderHook } from '@testing-library/react';
-import { useSelection } from '@/admin/hooks/use-selection.js';
+import { useSelection } from '@/admin/hooks/use-selection';
 
 afterEach(cleanup);
 

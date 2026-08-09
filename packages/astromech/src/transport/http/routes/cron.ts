@@ -10,9 +10,9 @@
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { unauthorized } from '@/transport/http/middleware/errors.js';
-import { resolveSessionUser } from '@/users/index.js';
-import { onTick } from '@/cron/runner.js';
+import { unauthorized } from '@/transport/http/middleware/errors';
+import { resolveSessionUser } from '@/users/index';
+import { onTick } from '@/cron/runner';
 
 const router = new OpenAPIHono();
 

@@ -28,13 +28,13 @@ import {
     Eye,
     Plus,
 } from 'lucide-react';
-import type { BaseFieldProps, Block, Field } from '@/types/index.js';
+import type { BaseFieldProps, Block, Field } from '@/types/index';
 import { FormField } from '@/admin/components/fields/form-field';
 import { InlineTitle } from '@/admin/components/fields/inline-title';
 import { useBlocksField } from '@/admin/hooks/use-blocks-field';
-import { useLabel } from '@/admin/i18n/entry-namespace.js';
+import { useLabel } from '@/admin/i18n/entry-namespace';
 // Deep import: the `fields/` barrel reaches server code (virtual config / DB).
-import { formatInstancePath, parseInstancePath } from '@/fields/field-path.js';
+import { formatInstancePath, parseInstancePath } from '@/fields/field-path';
 import type { BlockWithId } from '@/admin/hooks/use-blocks-field';
 import './blocks-field.css';
 

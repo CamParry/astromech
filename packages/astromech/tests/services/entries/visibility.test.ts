@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { Entry, Field } from '@/types/index.js';
+import type { Entry, Field } from '@/types/index';
 import {
     applyVisibility,
     isPublicBranded,
@@ -14,7 +14,7 @@ import {
     PublicShapeWriteError,
     type AudienceContext,
     type VisibilityOptions,
-} from '@/entries/visibility.js';
+} from '@/entries/visibility';
 
 // ============================================================================
 // Helpers

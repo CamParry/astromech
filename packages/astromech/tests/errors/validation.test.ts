@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ValidationError } from '@/errors/validation.js';
+import { ValidationError } from '@/errors/validation';
 
 describe('ValidationError.fromFieldErrors', () => {
     it('exposes the per-field map verbatim on .fields', () => {

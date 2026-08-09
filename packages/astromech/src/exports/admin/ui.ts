@@ -1,3 +1,3 @@
 /** `astromech/ui` — admin UI component library. */
 
-export * from '@/admin/components/ui/index.js';
+export * from '@/admin/components/ui/index';

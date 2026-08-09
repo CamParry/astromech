@@ -6,13 +6,13 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Dialect, Kysely } from 'kysely';
-import { createTestDb } from '@tests/harness.js';
-import { setDatabaseDriver } from '@/database/driver-registry.js';
-import { createBuiltInEntryStorage } from '@/entries/storage/built-in.js';
-import { tableStorage } from '@/entries/storage/table.js';
-import { defineTable } from '@/database/define-table.js';
-import type { DatabaseDriver } from '@/types/index.js';
-import type { DB } from '@/database/types.js';
+import { createTestDb } from '@tests/harness';
+import { setDatabaseDriver } from '@/database/driver-registry';
+import { createBuiltInEntryStorage } from '@/entries/storage/built-in';
+import { tableStorage } from '@/entries/storage/table';
+import { defineTable } from '@/database/define-table';
+import type { DatabaseDriver } from '@/types/index';
+import type { DB } from '@/database/types';
 
 const scratchTable = defineTable('degrade_scratch', ({ col }) => ({
     id: col.id(),

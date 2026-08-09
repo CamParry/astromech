@@ -4,7 +4,7 @@ import {
     type TableSelect,
     type TableInsert,
     type Table,
-} from '@/database/define-table.js';
+} from '@/database/define-table';
 
 // ============================================================================
 // Tables (defineTable) — source of truth for types + row codec

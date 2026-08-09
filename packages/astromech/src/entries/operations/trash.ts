@@ -1,10 +1,10 @@
-import { createRelationshipStorage } from '@/database/storage/relationships.js';
-import { getEntryStorage } from '../storage/registry.js';
-import { loadAndAssertType } from '../internal/records.js';
-import { assertCapability } from '../internal/type-config.js';
-import { runBulkVoid } from '../internal/bulk.js';
-import { runDeleteWithHooks } from '../internal/hooks.js';
-import type { EntryStorage } from '../storage/types.js';
+import { createRelationshipStorage } from '@/database/storage/relationships';
+import { getEntryStorage } from '../storage/registry';
+import { loadAndAssertType } from '../internal/records';
+import { assertCapability } from '../internal/type-config';
+import { runBulkVoid } from '../internal/bulk';
+import { runDeleteWithHooks } from '../internal/hooks';
+import type { EntryStorage } from '../storage/types';
 
 /** Soft-delete a single entry (policy). */
 async function trashOne(

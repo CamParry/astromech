@@ -8,8 +8,8 @@
 
 import { createStorage } from 'astromech';
 import type { PluginContext } from 'astromech';
-import { sessionsTable } from '../tables/sessions.js';
-import type { ChatMessage } from '../types.js';
+import { sessionsTable } from '../tables/sessions';
+import type { ChatMessage } from '../types';
 
 /**
  * A database-row backstop, not a retention policy. The model's context window

@@ -1,6 +1,6 @@
-import type { BaseFieldProps } from '@/types/index.js';
-import { MultiSelect } from '@/admin/components/ui/multi-select.js';
-import { useLabel } from '@/admin/i18n/entry-namespace.js';
+import type { BaseFieldProps } from '@/types/index';
+import { MultiSelect } from '@/admin/components/ui/multi-select';
+import { useLabel } from '@/admin/i18n/entry-namespace';
 
 export function MultiselectField({
     name,

@@ -14,10 +14,10 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Kysely } from 'kysely';
-import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness.js';
-import { notificationsService, notify } from '@/notifications/service.js';
-import type { NotificationRow } from '@/notifications/schema.js';
-import type { DB } from '@/database/types.js';
+import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
+import { notificationsService, notify } from '@/notifications/service';
+import type { NotificationRow } from '@/notifications/schema';
+import type { DB } from '@/database/types';
 
 let db: Kysely<DB>;
 let admin: string;

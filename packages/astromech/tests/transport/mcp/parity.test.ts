@@ -16,27 +16,27 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { generateMethodManifest } from '@/codegen/method-manifest.js';
+import { generateMethodManifest } from '@/codegen/method-manifest';
 
 // The dispatcher resolves the entries service at CALL time, so a stub here is
 // enough to observe exactly what arguments a tool passes it — which is the only
 // thing the dispatcher is responsible for.
-vi.mock('@/entries/service.js', () => ({
+vi.mock('@/entries/service', () => ({
     entriesService: {
         get: async (params: unknown) => params,
     },
 }));
-import { resolveConfig } from '@/boot/config-resolver.js';
-import { filterMethods } from '@/policies/method-filter.js';
-import { buildDispatch } from '@/transport/tools/dispatch.js';
-import { buildTools } from '@/transport/mcp/tools.js';
+import { resolveConfig } from '@/boot/config-resolver';
+import { filterMethods } from '@/policies/method-filter';
+import { buildDispatch } from '@/transport/tools/dispatch';
+import { buildTools } from '@/transport/mcp/tools';
 import type {
     AstromechConfig,
     DatabaseDriver,
     MethodManifest,
     PluginDefinition,
     StorageDriver,
-} from '@/types/index.js';
+} from '@/types/index';
 
 // ============================================================================
 // Stubs — resolveConfig requires a db + storage but never calls them here

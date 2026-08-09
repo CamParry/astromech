@@ -16,12 +16,12 @@
  */
 
 import type { ExpressionBuilder, Insertable, Updateable } from 'kysely';
-import { getDb } from '@/database/registry.js';
-import { decode, encode, encodePatch } from '@/database/codec.js';
-import { createRelationshipStorage } from '@/database/storage/relationships.js';
-import type { DB, Db } from '@/database/types.js';
-import type { JsonObject, SortOption } from '@/types/index.js';
-import type { UserRow } from './schema.js';
+import { getDb } from '@/database/registry';
+import { decode, encode, encodePatch } from '@/database/codec';
+import { createRelationshipStorage } from '@/database/storage/relationships';
+import type { DB, Db } from '@/database/types';
+import type { JsonObject, SortOption } from '@/types/index';
+import type { UserRow } from './schema';
 
 // ============================================================================
 // Write shapes

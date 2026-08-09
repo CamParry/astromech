@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { renderRichText } from '@/fields/rich-text/index.js';
+import { renderRichText } from '@/fields/rich-text/index';
 
 function doc(text: string) {
     return {

@@ -6,13 +6,13 @@
  */
 
 import config from 'virtual:astromech/config';
-import { flattenEntryFields } from '@/fields/flatten.js';
-import { resolveEntryType } from '../../type-ids.js';
-import { getEntryStorage } from '../../storage/registry.js';
-import { getDefaultLocale } from '../../internal/type-config.js';
-import { asEntry } from '../../internal/records.js';
-import { verifyPreviewToken, projectPreview } from '../../internal/preview.js';
-import type { Entry, EntryQueryParams, QueryResult } from '@/types/index.js';
+import { flattenEntryFields } from '@/fields/flatten';
+import { resolveEntryType } from '../../type-ids';
+import { getEntryStorage } from '../../storage/registry';
+import { getDefaultLocale } from '../../internal/type-config';
+import { asEntry } from '../../internal/records';
+import { verifyPreviewToken, projectPreview } from '../../internal/preview';
+import type { Entry, EntryQueryParams, QueryResult } from '@/types/index';
 
 export async function runPreviewQuery(
     params: EntryQueryParams & { type: string | readonly string[] }

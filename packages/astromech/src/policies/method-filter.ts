@@ -25,7 +25,7 @@
  * never scoped grants nothing.
  */
 
-import type { ManifestMethod } from '@/types/index.js';
+import type { ManifestMethod } from '@/types/index';
 
 // ============================================================================
 // Types

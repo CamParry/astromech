@@ -4,8 +4,8 @@
  * Pure functions — no DB imports. Consumed by core-field-types.ts.
  */
 
-import type { Field, FieldValidator } from '@/types/fields.js';
-import { slugify } from '@/utilities/strings.js';
+import type { Field, FieldValidator } from '@/types/fields';
+import { slugify } from '@/utilities/strings';
 
 // ---------------------------------------------------------------------------
 // email

@@ -9,7 +9,7 @@ import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { loadAppMigrations } from '@/database/app-migrations.js';
+import { loadAppMigrations } from '@/database/app-migrations';
 
 const created: string[] = [];
 
@@ -40,7 +40,7 @@ describe('loadAppMigrations', () => {
         const dir = await appDir({
             '0000_baseline.ts': MIGRATION,
             'index.ts': `
-                import * as m0000 from './0000_baseline.js';
+                import * as m0000 from './0000_baseline';
                 export const migrationProvider = {
                     async getMigrations() {
                         return { '0000_baseline': m0000 };

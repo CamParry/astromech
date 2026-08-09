@@ -8,16 +8,10 @@
  * Applied at the end of `query()` and `get()`, just before return.
  */
 
-import type {
-    Entry,
-    Field,
-    JsonObject,
-    JsonValue,
-    RichTextAllow,
-} from '@/types/index.js';
+import type { Entry, Field, JsonObject, JsonValue, RichTextAllow } from '@/types/index';
 import type { JSONContent } from '@tiptap/core';
-import { renderRichText } from '@/fields/rich-text/index.js';
-import { PUBLIC_STRIPPED_KEYS, RESERVED_KEY } from '@/fields/reserved-keys.js';
+import { renderRichText } from '@/fields/rich-text/index';
+import { PUBLIC_STRIPPED_KEYS, RESERVED_KEY } from '@/fields/reserved-keys';
 
 // ============================================================================
 // Public types

@@ -10,9 +10,9 @@
  */
 
 import React from 'react';
-import type { ResolvedEntryFields } from '@/types/index.js';
-import { FormLayout, FormLayoutContent, Stack } from '@/admin/components/ui/index.js';
-import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer.js';
+import type { ResolvedEntryFields } from '@/types/index';
+import { FormLayout, FormLayoutContent, Stack } from '@/admin/components/ui/index';
+import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer';
 
 export type FieldTreeFormProps = {
     fields: ResolvedEntryFields;

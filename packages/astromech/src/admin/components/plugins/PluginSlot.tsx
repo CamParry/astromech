@@ -8,10 +8,10 @@
 
 import React from 'react';
 import { slots } from 'virtual:astromech/plugins/components';
-import type { AdminSlotName } from '@/types/config.js';
-import { usePermissions } from '@/admin/hooks/index.js';
-import { PluginUiProvider } from '@/admin/context/plugin.js';
-import { ComponentErrorBoundary } from '@/admin/components/pages/ComponentErrorBoundary.js';
+import type { AdminSlotName } from '@/types/config';
+import { usePermissions } from '@/admin/hooks/index';
+import { PluginUiProvider } from '@/admin/context/plugin';
+import { ComponentErrorBoundary } from '@/admin/components/pages/ComponentErrorBoundary';
 
 type LazySlot = React.LazyExoticComponent<React.ComponentType>;
 const lazyCache = new Map<string, LazySlot>();

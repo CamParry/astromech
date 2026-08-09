@@ -12,18 +12,18 @@
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { Astromech } from '@/transport/local/index.js';
+import { Astromech } from '@/transport/local/index';
 import {
     badRequest,
     forbidden,
     fromZodError,
     notFound,
-} from '@/transport/http/middleware/errors.js';
-import type { AuthVariables } from '@/transport/http/middleware/auth.js';
-import { permissionsFor } from '@/permissions/permissions-for.js';
-import { createUserSchema, updateUserSchema, usersContract } from '@/users/index.js';
-import { createUserStorage } from '@/users/storage.js';
-import type { JsonObject, UserQueryParams } from '@/types/index.js';
+} from '@/transport/http/middleware/errors';
+import type { AuthVariables } from '@/transport/http/middleware/auth';
+import { permissionsFor } from '@/permissions/permissions-for';
+import { createUserSchema, updateUserSchema, usersContract } from '@/users/index';
+import { createUserStorage } from '@/users/storage';
+import type { JsonObject, UserQueryParams } from '@/types/index';
 
 type Env = { Variables: AuthVariables };
 

@@ -4,9 +4,9 @@
  * exercised until the chat drawer consumes it.
  */
 
-import { useAIContextItems } from '@/admin/context/ai-context.js';
-import { useLocalState } from '@/admin/hooks/use-local-state.js';
-import { formatAIContextMessage } from '@/utilities/ai-context.js';
+import { useAIContextItems } from '@/admin/context/ai-context';
+import { useLocalState } from '@/admin/hooks/use-local-state';
+import { formatAIContextMessage } from '@/utilities/ai-context';
 import './ai-context-readout.css';
 
 type ReadoutState = 'open' | 'closed';

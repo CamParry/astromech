@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
-import { loadConfig } from '../config.js';
-import { entriesService } from '@/entries/service.js';
+import { loadConfig } from '../config';
+import { entriesService } from '@/entries/service';
 
 export default defineCommand({
     meta: { name: 'entries:get', description: 'Get a single entry' },

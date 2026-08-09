@@ -12,8 +12,8 @@
 import { describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { diffSnapshots } from '@astromech/schema-engine';
-import { createSnapshot, type Snapshot } from '@/database/table-snapshot.js';
-import { CORE_TABLES } from '@/database/schema.js';
+import { createSnapshot, type Snapshot } from '@/database/table-snapshot';
+import { CORE_TABLES } from '@/database/schema';
 
 describe('migrations/snapshot.json drift gate', () => {
     it('the committed snapshot matches the live tables — db:generate would produce nothing', async () => {

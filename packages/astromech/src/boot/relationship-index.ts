@@ -27,12 +27,12 @@
 import {
     createRelationshipStorage,
     type RelationshipIndexSource,
-} from '@/database/storage/relationships.js';
-import type { RelationshipRow } from '@/database/schema.js';
-import type { TargetKind } from '@/fields/relationship-edges.js';
-import { collectEntryRelationshipSources } from '@/entries/internal/relationships.js';
-import { collectUserRelationshipSources } from '@/users/service.js';
-import { collectMediaRelationshipSources } from '@/media/service.js';
+} from '@/database/storage/relationships';
+import type { RelationshipRow } from '@/database/schema';
+import type { TargetKind } from '@/fields/relationship-edges';
+import { collectEntryRelationshipSources } from '@/entries/internal/relationships';
+import { collectUserRelationshipSources } from '@/users/service';
+import { collectMediaRelationshipSources } from '@/media/service';
 
 /** Scope of a repair run. `type` is an ENTRY type; it never covers user or media. */
 export type RelationshipIndexScope = { type?: string };

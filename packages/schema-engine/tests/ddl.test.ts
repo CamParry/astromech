@@ -15,8 +15,8 @@ import {
     renderCreateTable,
     renderLiteral,
     renderTableStatements,
-} from '../src/ddl.js';
-import { col, fk, index, table } from './_support/tables.js';
+} from '../src/ddl';
+import { col, fk, index, table } from './_support/tables';
 
 const child = table(
     'child',

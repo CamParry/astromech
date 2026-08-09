@@ -7,13 +7,13 @@
  * per-locale fields to `baseKey:<locale>`.
  */
 
-import type { JsonValue } from '@/types/index.js';
-import type { ResolvedEntryFields } from '@/types/fields.js';
-import { astromechClient } from '@/transport/http/client/index.js';
+import type { JsonValue } from '@/types/index';
+import type { ResolvedEntryFields } from '@/types/fields';
+import { astromechClient } from '@/transport/http/client/index';
 // Deep-import the pure helper, NOT the @/settings barrel: the barrel re-exports
 // the settings service (getDb / virtual:astromech/config), which must never enter
 // the admin browser bundle.
-import { partitionGlobalValues } from '@/settings/page-values.js';
+import { partitionGlobalValues } from '@/settings/page-values';
 
 export async function saveSettingsPage(opts: {
     baseKey: string;

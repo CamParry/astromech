@@ -6,24 +6,24 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { PluginContext, ToolDefinition } from 'astromech';
-import { buildSessionsService } from '../../src/service/sessions.js';
-import type { ChatSession } from '../../src/service/sessions.js';
-import type { ChatMessage, ResolvedAssistantOptions } from '../../src/types.js';
-import { approvalRow, fakeApprovals } from '../loop/fake-approvals.js';
-import type { FakeApprovals } from '../loop/fake-approvals.js';
-import { fakeSessions } from '../sessions/fake-sessions.js';
-import type { FakeSessions } from '../sessions/fake-sessions.js';
+import { buildSessionsService } from '../../src/service/sessions';
+import type { ChatSession } from '../../src/service/sessions';
+import type { ChatMessage, ResolvedAssistantOptions } from '../../src/types';
+import { approvalRow, fakeApprovals } from '../loop/fake-approvals';
+import type { FakeApprovals } from '../loop/fake-approvals';
+import { fakeSessions } from '../sessions/fake-sessions';
+import type { FakeSessions } from '../sessions/fake-sessions';
 
 vi.mock('astromech', () => ({
     defineServiceMethod: (method: unknown) => method,
     noInput: () => undefined,
 }));
 
-vi.mock('../../src/sessions/storage.js', () => ({
+vi.mock('../../src/sessions/storage', () => ({
     createSessionsStorage: () => sessions.storage,
 }));
 
-vi.mock('../../src/approvals/storage.js', () => ({
+vi.mock('../../src/approvals/storage', () => ({
     createApprovalsStorage: () => approvals.storage,
 }));
 

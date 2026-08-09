@@ -10,8 +10,8 @@
 
 import { describe, expect, it } from 'vitest';
 import type { MigrationProvider } from 'kysely';
-import { collectPluginMigrations } from '@/database/plugin-migrations.js';
-import type { PluginDefinition } from '@/types/index.js';
+import { collectPluginMigrations } from '@/database/plugin-migrations';
+import type { PluginDefinition } from '@/types/index';
 
 function provider(name: string): MigrationProvider {
     return {

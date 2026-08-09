@@ -4,29 +4,29 @@
  * Manifest types (`MethodManifest`, `ManifestMethod`) ship from `astromech`.
  */
 
-export { getMethodManifest } from '@/codegen/manifest-registry.js';
+export { getMethodManifest } from '@/codegen/manifest-registry';
 
-export { formatAIContextMessage } from '@/utilities/ai-context.js';
-export type { AIContextItem } from '@/types/ai-context.js';
+export { formatAIContextMessage } from '@/utilities/ai-context';
+export type { AIContextItem } from '@/types/ai-context';
 
-export { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch.js';
-export type { DispatchResult, ToolDefinition } from '@/transport/tools/dispatch.js';
-export { buildScopedTools } from '@/transport/tools/scoped-tools.js';
+export { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch';
+export type { DispatchResult, ToolDefinition } from '@/transport/tools/dispatch';
+export { buildScopedTools } from '@/transport/tools/scoped-tools';
 
-export { filterMethods } from '@/policies/method-filter.js';
-export { annotateManifest } from '@/policies/annotate-manifest.js';
+export { filterMethods } from '@/policies/method-filter';
+export { annotateManifest } from '@/policies/annotate-manifest';
 
-export { scopedServices } from '@/policies/scoped-services.js';
-export type { ScopedServices } from '@/policies/scoped-services.js';
+export { scopedServices } from '@/policies/scoped-services';
+export type { ScopedServices } from '@/policies/scoped-services';
 
 export {
     CONFIRM_KEY,
     evaluateConfirmation,
     triggersConfirmation,
-} from '@/policies/confirmation.js';
+} from '@/policies/confirmation';
 export type {
     ConfirmDecision,
     ConfirmOptions,
     ConfirmOutcome,
     ConfirmRequest,
-} from '@/policies/confirmation.js';
+} from '@/policies/confirmation';

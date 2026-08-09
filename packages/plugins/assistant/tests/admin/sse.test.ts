@@ -4,8 +4,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { parseChatEvent, splitSseFrames } from '../../src/admin/sse.js';
-import type { ChatEvent } from '../../src/types.js';
+import { parseChatEvent, splitSseFrames } from '../../src/admin/sse';
+import type { ChatEvent } from '../../src/types';
 
 /** Feed chunks through the buffer the way the reader loop does. */
 function readChunks(chunks: string[]): ChatEvent[] {

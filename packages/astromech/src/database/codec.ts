@@ -36,7 +36,7 @@
  * values (e.g. a setting `value` of `"123"`).
  */
 
-import type { Table } from '@/database/define-table.js';
+import type { Table } from '@/database/define-table';
 
 // ── Plugin tables (registered at boot) ──────────────────────────────────────
 

@@ -46,22 +46,19 @@ import {
     Stack,
     PageContent,
     useConfirm,
-} from '@/admin/components/ui/index.js';
-import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal.js';
-import { entryLabel } from '@/admin/components/entries/entry-label.js';
-import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer.js';
+} from '@/admin/components/ui/index';
+import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal';
+import { entryLabel } from '@/admin/components/entries/entry-label';
+import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer';
 import {
     FieldErrorsProvider,
     FieldWarningsProvider,
-} from '@/admin/components/fields/field-errors-context.js';
-import { EntryFormErrors } from './entry-form-errors.js';
-import { FieldValidationProvider } from '@/admin/components/fields/field-validation-context.js';
-import {
-    EntryNamespaceProvider,
-    namespaceForScope,
-} from '@/admin/i18n/entry-namespace.js';
-import { LocaleSwitcher } from '@/admin/components/translations/LocaleSwitcher.js';
-import { PublishPanel } from '@/admin/components/entries/PublishPanel.js';
+} from '@/admin/components/fields/field-errors-context';
+import { EntryFormErrors } from './entry-form-errors';
+import { FieldValidationProvider } from '@/admin/components/fields/field-validation-context';
+import { EntryNamespaceProvider, namespaceForScope } from '@/admin/i18n/entry-namespace';
+import { LocaleSwitcher } from '@/admin/components/translations/LocaleSwitcher';
+import { PublishPanel } from '@/admin/components/entries/PublishPanel';
 import {
     useEntryForm,
     usePermissions,
@@ -75,14 +72,14 @@ import {
     useDeleteStaged,
     useIssuePreviewToken,
     useRevokePreviewToken,
-} from '@/admin/hooks/index.js';
-import { scopedEntryKeys } from '@/admin/hooks/use-query-keys.js';
-import type { EntryStatus } from '@/types/index.js';
-import { resolveEntryUrl } from '@/entries/utils/url.js';
-import { resolveAdminEntryType, resolveForm } from '@/admin/rendering/resolve.js';
-import { resolveContentLocale } from '@/utilities/locale.js';
-import { useAIContext } from '@/admin/context/ai-context.js';
-import type { EntriesMount } from './mount.js';
+} from '@/admin/hooks/index';
+import { scopedEntryKeys } from '@/admin/hooks/use-query-keys';
+import type { EntryStatus } from '@/types/index';
+import { resolveEntryUrl } from '@/entries/utils/url';
+import { resolveAdminEntryType, resolveForm } from '@/admin/rendering/resolve';
+import { resolveContentLocale } from '@/utilities/locale';
+import { useAIContext } from '@/admin/context/ai-context';
+import type { EntriesMount } from './mount';
 
 // Surface link bases are runtime strings; address `Link` by string `to`.
 type LinkProps = Omit<React.ComponentProps<typeof RouterLink>, 'to'> & { to: string };

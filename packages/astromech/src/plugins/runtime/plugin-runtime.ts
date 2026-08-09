@@ -13,7 +13,7 @@
  */
 
 import type { Kysely } from 'kysely';
-import type { DB } from '@/database/types.js';
+import type { DB } from '@/database/types';
 import type { ReactElement } from 'react';
 import type {
     AnyServiceMethod,
@@ -37,33 +37,33 @@ import type {
     TypedEntriesService,
     User,
     UsersService,
-} from '@/types/index.js';
-import { getDb } from '@/database/registry.js';
+} from '@/types/index';
+import { getDb } from '@/database/registry';
 // The request-context LEAF, not `@/request-context/index.js`: that barrel imports
 // `virtual:astromech/config`, which cannot resolve during Astro's plain-Node
 // config load — the path this module is on.
-import { getCurrentRole } from '@/request-context/request-context.js';
-import { kyselyTableKey, registerTableCodec } from '@/database/codec.js';
-import { peekDatabaseDriver } from '@/database/driver-registry.js';
-import { getStorageDriver } from '@/storage/registry.js';
-import { listAll } from '@/storage/prefix.js';
-import { getEmailDriver } from '@/email/registry.js';
-import { renderEmail } from '@/email/render.js';
-import { notify } from '@/notifications/index.js';
-import type { NotifyInput } from '@/types/index.js';
+import { getCurrentRole } from '@/request-context/request-context';
+import { kyselyTableKey, registerTableCodec } from '@/database/codec';
+import { peekDatabaseDriver } from '@/database/driver-registry';
+import { getStorageDriver } from '@/storage/registry';
+import { listAll } from '@/storage/prefix';
+import { getEmailDriver } from '@/email/registry';
+import { renderEmail } from '@/email/render';
+import { notify } from '@/notifications/index';
+import type { NotifyInput } from '@/types/index';
 import {
     pluginEntryTypes,
     resolvePluginIdentity,
-} from '@/plugins/runtime/plugin-identity.js';
-import { entryAccess } from '@/plugins/runtime/entry-access.js';
-import { isTable } from '@/plugins/runtime/plugin-tables.js';
-import { createPluginTrackingStorage } from '@/plugins/runtime/plugin-tracking-storage.js';
-import { registerCronJob } from '@/cron/registry.js';
-import { flattenEntryFields } from '@/fields/flatten.js';
+} from '@/plugins/runtime/plugin-identity';
+import { entryAccess } from '@/plugins/runtime/entry-access';
+import { isTable } from '@/plugins/runtime/plugin-tables';
+import { createPluginTrackingStorage } from '@/plugins/runtime/plugin-tracking-storage';
+import { registerCronJob } from '@/cron/registry';
+import { flattenEntryFields } from '@/fields/flatten';
 import {
     withDefaultShape,
     withDefaultSettingsShape,
-} from '@/utilities/with-default-shape.js';
+} from '@/utilities/with-default-shape';
 
 // ============================================================================
 // Registry (globalThis — shared across the package's entry chunks)

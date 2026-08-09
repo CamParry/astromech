@@ -20,8 +20,8 @@
 import { describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
-import type { Field } from '@/types/index.js';
-import '@/admin/rendering/register-fields.js';
+import type { Field } from '@/types/index';
+import '@/admin/rendering/register-fields';
 import { FormField } from '@/admin/components/fields/form-field';
 import { FieldValidationProvider } from '@/admin/components/fields/field-validation-context';
 

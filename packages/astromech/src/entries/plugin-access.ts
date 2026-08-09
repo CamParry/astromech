@@ -5,7 +5,7 @@
  *
  * Exposed as an explicit `wireEntryAccess()` CALL rather than an import
  * side-effect: the package is `sideEffects: false`, so a bare
- * `import './plugin-access.js'` would be tree-shaken out of the build and the
+ * `import './plugin-access'` would be tree-shaken out of the build and the
  * port would never register. The composition root calls this once before
  * `registerPlugins`.
  *
@@ -14,9 +14,9 @@
  * config time — can wire it without dragging the entries service into its graph.
  */
 
-import { registerEntryAccess } from '@/plugins/runtime/entry-access.js';
-import { qualifyEntryType } from './type-ids.js';
-import { setEntryStorage, resetEntryStorageOverrides } from './storage/registry.js';
+import { registerEntryAccess } from '@/plugins/runtime/entry-access';
+import { qualifyEntryType } from './type-ids';
+import { setEntryStorage, resetEntryStorageOverrides } from './storage/registry';
 
 /** Wire the entries implementation into the plugin runtime. Idempotent. */
 export function wireEntryAccess(): void {

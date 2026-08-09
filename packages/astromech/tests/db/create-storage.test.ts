@@ -10,11 +10,11 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'kysely';
-import { createTestDb } from '@tests/harness.js';
-import { createStorage, type Where } from '@/database/storage/create-storage.js';
-import { defineTable } from '@/database/define-table.js';
-import { entriesTable } from '@/entries/schema.js';
-import { cronTable } from '@/database/schema.js';
+import { createTestDb } from '@tests/harness';
+import { createStorage, type Where } from '@/database/storage/create-storage';
+import { defineTable } from '@/database/define-table';
+import { entriesTable } from '@/entries/schema';
+import { cronTable } from '@/database/schema';
 
 const EARLY = new Date('2020-01-01T00:00:00.000Z');
 const MIDDLE = new Date('2022-06-01T12:00:00.000Z');

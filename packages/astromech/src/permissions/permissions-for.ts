@@ -4,8 +4,8 @@
  * for SSR/hooks, the CLI) compose nothing and never check.
  */
 
-import type { Permission, Role, ServiceMethodContract } from '@/types/index.js';
-import { can } from '@/permissions/index.js';
+import type { Permission, Role, ServiceMethodContract } from '@/types/index';
+import { can } from '@/permissions/index';
 
 export type Permissions = {
     /** True if the role holds `permission`. A missing role holds nothing. */

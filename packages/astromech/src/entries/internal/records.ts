@@ -4,9 +4,9 @@
  * service applies before every by-id operation).
  */
 
-import { EntryTypeMismatchError } from '../errors.js';
-import type { EntryRecord, EntryStorage } from '../storage/types.js';
-import type { Entry } from '@/types/index.js';
+import { EntryTypeMismatchError } from '../errors';
+import type { EntryRecord, EntryStorage } from '../storage/types';
+import type { Entry } from '@/types/index';
 
 /**
  * Narrow a storage `EntryRecord` to the public `Entry`. The built-in storage —

@@ -5,7 +5,7 @@
  * one module graph, so there is no tsup multi-entry chunk duplication to guard
  * against (contrast src/storage/entries/registry.ts, which must use globalThis).
  */
-import type { CellKind, CellRenderer } from '@/types/index.js';
+import type { CellKind, CellRenderer } from '@/types/index';
 
 const registry = new Map<CellKind, CellRenderer>();
 

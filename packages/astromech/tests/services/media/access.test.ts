@@ -8,11 +8,11 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { createTestDb, setupTestConfig, makeTestConfig } from '@tests/harness.js';
-import { setStorageDriver } from '@/storage/registry.js';
-import { mediaService } from '@/media/service.js';
-import { buildImageAttrs } from '@/media/serving/image/build-image-attrs.js';
-import type { AstromechConfig, MediaAccess, StorageDriver } from '@/types/index.js';
+import { createTestDb, setupTestConfig, makeTestConfig } from '@tests/harness';
+import { setStorageDriver } from '@/storage/registry';
+import { mediaService } from '@/media/service';
+import { buildImageAttrs } from '@/media/serving/image/build-image-attrs';
+import type { AstromechConfig, MediaAccess, StorageDriver } from '@/types/index';
 
 // Minimal 1x1 JPEG (SOI + APP0 + SOF0 + EOI) — an optimisable raster image.
 function jpegBytes(): Uint8Array {

@@ -9,8 +9,8 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Label } from '@/types/index.js';
-import { resolveLabel } from './labels.js';
+import type { Label } from '@/types/index';
+import { resolveLabel } from './labels';
 
 const CORE_NS = 'translation';
 

@@ -5,8 +5,8 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { MAX_SESSION_CHARS, createSessionsStorage } from '../../src/sessions/storage.js';
-import type { ChatMessage } from '../../src/types.js';
+import { MAX_SESSION_CHARS, createSessionsStorage } from '../../src/sessions/storage';
+import type { ChatMessage } from '../../src/types';
 
 type StoredRow = { userId: string; messages: ChatMessage[] };
 

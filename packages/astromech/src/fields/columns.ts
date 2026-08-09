@@ -5,8 +5,8 @@
  * the column reads. Designed for namespaced use: `import * as columns`.
  */
 
-import type { AdminColumn } from '@/types/config.js';
-import type { Label } from '@/types/fields.js';
+import type { AdminColumn } from '@/types/config';
+import type { Label } from '@/types/fields';
 
 type ColumnOptions = { label?: Label; sortable?: boolean };
 

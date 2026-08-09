@@ -9,9 +9,9 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Kysely } from 'kysely';
-import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness.js';
-import { usersService } from '@/users/service.js';
-import type { DB } from '@/database/types.js';
+import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
+import { usersService } from '@/users/service';
+import type { DB } from '@/database/types';
 
 let db: Kysely<DB>;
 

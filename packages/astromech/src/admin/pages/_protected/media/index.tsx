@@ -18,28 +18,25 @@ import {
     ToolbarStart,
     UploadButton,
     useConfirm,
-} from '@/admin/components/ui/index.js';
-import type { SortDirection } from '@/admin/components/ui/table.js';
-import { MediaDetailModal } from '@/admin/components/media/MediaDetailModal.js';
-import { MediaEmpty } from '@/admin/components/media/media-empty.js';
-import { MediaFilters } from '@/admin/components/media/media-filters.js';
-import { MediaGrid } from '@/admin/components/media/media-grid.js';
-import {
-    MediaSortSelect,
-    sortPatch,
-} from '@/admin/components/media/media-sort-select.js';
-import { MediaTable } from '@/admin/components/media/media-table.js';
-import { useViewMode } from '@/admin/hooks/use-view-mode.js';
-import { useSelection } from '@/admin/hooks/use-selection.js';
+} from '@/admin/components/ui/index';
+import type { SortDirection } from '@/admin/components/ui/table';
+import { MediaDetailModal } from '@/admin/components/media/MediaDetailModal';
+import { MediaEmpty } from '@/admin/components/media/media-empty';
+import { MediaFilters } from '@/admin/components/media/media-filters';
+import { MediaGrid } from '@/admin/components/media/media-grid';
+import { MediaSortSelect, sortPatch } from '@/admin/components/media/media-sort-select';
+import { MediaTable } from '@/admin/components/media/media-table';
+import { useViewMode } from '@/admin/hooks/use-view-mode';
+import { useSelection } from '@/admin/hooks/use-selection';
 import {
     useUploadMedia,
     usePermissions,
     useMediaBrowser,
     useBulkDeleteMedia,
-} from '@/admin/hooks/index.js';
-import { useAIContext } from '@/admin/context/ai-context.js';
-import { MEDIA_ACCEPT, TYPE_FILTER_VALUES, isSortKey } from '@/admin/types/media.js';
-import type { MediaBrowserQuery, MediaSortKey, TypeFilter } from '@/admin/types/media.js';
+} from '@/admin/hooks/index';
+import { useAIContext } from '@/admin/context/ai-context';
+import { MEDIA_ACCEPT, TYPE_FILTER_VALUES, isSortKey } from '@/admin/types/media';
+import type { MediaBrowserQuery, MediaSortKey, TypeFilter } from '@/admin/types/media';
 
 const PER_PAGE = 20;
 

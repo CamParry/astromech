@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { resolveBinding, setBindingEnv, resetBindingEnv } from '@/cloudflare/bindings.js';
+import { resolveBinding, setBindingEnv, resetBindingEnv } from '@/cloudflare/bindings';
 
 // Every test here goes through `setBindingEnv`, the documented bypass for hosts
 // (and tests) that already hold an `env` object, so nothing in this file starts

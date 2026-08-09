@@ -1,4 +1,4 @@
-import type { CellRenderer } from '@/types/index.js';
+import type { CellRenderer } from '@/types/index';
 import { Check } from 'lucide-react';
 
 export const BooleanCell: CellRenderer = ({ value }) =>

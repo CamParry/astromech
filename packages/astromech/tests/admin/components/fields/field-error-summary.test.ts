@@ -13,12 +13,12 @@
 import { describe, expect, it, beforeAll } from 'vitest';
 import i18next from 'i18next';
 import type { TFunction } from 'i18next';
-import type { Field } from '@/types/index.js';
+import type { Field } from '@/types/index';
 import {
     fieldErrorNames,
     fieldLabelPathForError,
     validationSummaryMessage,
-} from '@/admin/components/fields/field-error-summary.js';
+} from '@/admin/components/fields/field-error-summary';
 import en from '@/admin/locales/en.json' with { type: 'json' };
 
 // ============================================================================

@@ -13,9 +13,9 @@
 
 import { definePlugin, defineServiceMethod } from 'astromech';
 import type { ServiceInterface } from 'astromech';
-import { buildMenusService } from './service/menus.js';
-import { buildMenuPages } from './pages/menus.js';
-import type { MenusOptions, MenuItem } from './types.js';
+import { buildMenusService } from './service/menus';
+import { buildMenuPages } from './pages/menus';
+import type { MenusOptions, MenuItem } from './types';
 
 /** Typed service shape — used only for the module augmentation. */
 const _menusServiceTyped = {
@@ -37,7 +37,7 @@ declare module 'astromech' {
     }
 }
 
-export type { MenuItem, MenuConfig, MenusOptions } from './types.js';
+export type { MenuItem, MenuConfig, MenusOptions } from './types';
 
 export const menus = definePlugin((options?: MenusOptions) => {
     const menuConfigs = options?.menus ?? [];

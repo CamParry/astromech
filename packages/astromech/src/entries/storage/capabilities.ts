@@ -2,7 +2,7 @@
  * Entry capability resolution and boot-time validation.
  */
 
-import type { EntryType, ResolvedEntryCapabilities } from '@/types/index.js';
+import type { EntryType, ResolvedEntryCapabilities } from '@/types/index';
 
 export type Capability =
     | 'statuses'

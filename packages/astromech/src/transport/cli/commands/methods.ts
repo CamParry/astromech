@@ -1,15 +1,15 @@
 import { defineCommand } from 'citty';
-import { loadConfig, loadRawConfig } from '../config.js';
-import { generateMethodManifest } from '@/codegen/method-manifest.js';
+import { loadConfig, loadRawConfig } from '../config';
+import { generateMethodManifest } from '@/codegen/method-manifest';
 import {
     annotateManifest,
     type AnnotatedManifestMethod,
-} from '@/policies/annotate-manifest.js';
-import { resolveRoles } from '@/permissions/index.js';
-import { filterMethods, type ExcludedMethod } from '@/policies/method-filter.js';
-import type { ManifestMethod, MethodManifest, ResolvedConfig } from '@/types/index.js';
-import { printError } from '../output.js';
-import { filterArgs, toMethodFilter } from '../filter-args.js';
+} from '@/policies/annotate-manifest';
+import { resolveRoles } from '@/permissions/index';
+import { filterMethods, type ExcludedMethod } from '@/policies/method-filter';
+import type { ManifestMethod, MethodManifest, ResolvedConfig } from '@/types/index';
+import { printError } from '../output';
+import { filterArgs, toMethodFilter } from '../filter-args';
 
 /**
  * Resolve a role slug, rejecting one that is not configured.

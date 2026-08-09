@@ -11,9 +11,9 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
-import { settingsService } from '@/settings/service.js';
-import type { AstromechConfig } from '@/types/index.js';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { settingsService } from '@/settings/service';
+import type { AstromechConfig } from '@/types/index';
 
 /** `site` and every `site:<locale>` variant are public; `secret` is not. */
 function makePublicConfig(): AstromechConfig {

@@ -9,10 +9,10 @@
  * as ISO-TEXT) and the `updatedAt` stamp.
  */
 
-import { getDb } from '@/database/registry.js';
-import { createStorage } from '@/database/storage/create-storage.js';
-import { entriesTable } from '@/database/schema.js';
-import type { Db } from '@/database/types.js';
+import { getDb } from '@/database/registry';
+import { createStorage } from '@/database/storage/create-storage';
+import { entriesTable } from '@/database/schema';
+import type { Db } from '@/database/types';
 
 export type EntryMaintenanceStorage = ReturnType<typeof createEntryMaintenanceStorage>;
 

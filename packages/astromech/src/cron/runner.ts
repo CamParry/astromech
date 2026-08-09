@@ -11,9 +11,9 @@
  */
 
 import { Cron } from 'croner';
-import { getDb } from '@/database/registry.js';
-import { createCronStorage, type CronStorage } from '@/cron/storage.js';
-import { getCronJobs, getRuntimeConfig } from '@/cron/registry.js';
+import { getDb } from '@/database/registry';
+import { createCronStorage, type CronStorage } from '@/cron/storage';
+import { getCronJobs, getRuntimeConfig } from '@/cron/registry';
 
 /** Claim lease: generous so a normal job never self-expires mid-run. A crashed
  *  claim auto-expires after this and the next tick retries. */

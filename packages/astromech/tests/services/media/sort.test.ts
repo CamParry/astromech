@@ -8,11 +8,11 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
-import { setStorageDriver } from '@/storage/registry.js';
-import { mediaService } from '@/media/service.js';
-import { createMediaStorage } from '@/media/storage.js';
-import type { SortOption, StorageDriver } from '@/types/index.js';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { setStorageDriver } from '@/storage/registry';
+import { mediaService } from '@/media/service';
+import { createMediaStorage } from '@/media/storage';
+import type { SortOption, StorageDriver } from '@/types/index';
 
 const noopStorage: StorageDriver = {
     name: 'noop',

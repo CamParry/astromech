@@ -1,5 +1,5 @@
-import type { BaseFieldProps } from '@/types/index.js';
-import { ColorPicker } from '@/admin/components/ui/color-picker.js';
+import type { BaseFieldProps } from '@/types/index';
+import { ColorPicker } from '@/admin/components/ui/color-picker';
 
 export function ColorField({ name, value, onChange, disabled }: BaseFieldProps) {
     const hex = typeof value === 'string' && value ? value : '#000000';

@@ -10,12 +10,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
 import { slots } from 'virtual:astromech/plugins/components';
-import type { AdminSlotName } from '@/types/config.js';
-import { PluginSlot } from '@/admin/components/plugins/PluginSlot.js';
+import type { AdminSlotName } from '@/types/config';
+import { PluginSlot } from '@/admin/components/plugins/PluginSlot';
 
 const granted = vi.hoisted(() => ({ permissions: [] as string[] }));
 
-vi.mock('@/admin/hooks/index.js', () => ({
+vi.mock('@/admin/hooks/index', () => ({
     usePermissions: () => ({
         hasPermission: (permission: string) => granted.permissions.includes(permission),
     }),

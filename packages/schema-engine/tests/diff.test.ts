@@ -8,8 +8,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { diffSnapshots } from '../src/diff.js';
-import { col, fk, index, snap, table } from './_support/tables.js';
+import { diffSnapshots } from '../src/diff';
+import { col, fk, index, snap, table } from './_support/tables';
 
 describe('diffSnapshots', () => {
     it('prev === null → createTable for every table, no warnings', () => {

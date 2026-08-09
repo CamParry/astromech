@@ -30,12 +30,12 @@ import {
     IndentIncrease,
     IndentDecrease,
 } from 'lucide-react';
-import type { BaseFieldProps, Field } from '@/types/index.js';
+import type { BaseFieldProps, Field } from '@/types/index';
 import { FormField } from '@/admin/components/fields/form-field';
-import type { TreeNode } from '@/admin/hooks/use-tree-field.js';
-import { useTreeField } from '@/admin/hooks/use-tree-field.js';
+import type { TreeNode } from '@/admin/hooks/use-tree-field';
+import { useTreeField } from '@/admin/hooks/use-tree-field';
 // Deep import: the `fields/` barrel reaches server code (virtual config / DB).
-import { formatInstancePath, parseInstancePath } from '@/fields/field-path.js';
+import { formatInstancePath, parseInstancePath } from '@/fields/field-path';
 import './tree-field.css';
 
 // Lock dragging to the vertical axis — sortable strategy governs reordering

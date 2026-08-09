@@ -4,15 +4,15 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb, setupTestConfig } from '@tests/harness.js';
-import { createBuiltInEntryStorage } from '@/entries/storage/built-in.js';
-import { createEntryMaintenanceStorage } from '@/entries/storage/maintenance.js';
-import { createStorage } from '@/database/storage/create-storage.js';
-import { createRelationshipStorage } from '@/database/storage/relationships.js';
-import { trashPurgeJob } from '@/entries/jobs/trash-purge.js';
-import { entriesTable } from '@/database/schema.js';
-import type { Db } from '@/database/types.js';
-import type { ResolvedConfig } from '@/types/index.js';
+import { createTestDb, setupTestConfig } from '@tests/harness';
+import { createBuiltInEntryStorage } from '@/entries/storage/built-in';
+import { createEntryMaintenanceStorage } from '@/entries/storage/maintenance';
+import { createStorage } from '@/database/storage/create-storage';
+import { createRelationshipStorage } from '@/database/storage/relationships';
+import { trashPurgeJob } from '@/entries/jobs/trash-purge';
+import { entriesTable } from '@/database/schema';
+import type { Db } from '@/database/types';
+import type { ResolvedConfig } from '@/types/index';
 
 let db: Db;
 let config: ResolvedConfig;

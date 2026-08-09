@@ -1,6 +1,6 @@
-import type { EntryStorage } from './storage/types.js';
-import { fieldReadsFromRecords } from '@/fields/field-reads.js';
-import type { FieldReads } from '@/types/fields.js';
+import type { EntryStorage } from './storage/types';
+import { fieldReadsFromRecords } from '@/fields/field-reads';
+import type { FieldReads } from '@/types/fields';
 
 /**
  * Field reads for entry validation. `isUnique` checks no OTHER entry of

@@ -6,12 +6,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { Entry, Field, JsonObject, JsonValue } from '@/types/index.js';
+import type { Entry, Field, JsonObject, JsonValue } from '@/types/index';
 import {
     applyVisibility,
     type AudienceContext,
     type VisibilityOptions,
-} from '@/entries/visibility.js';
+} from '@/entries/visibility';
 
 const NOW = new Date('2026-06-15T12:00:00Z');
 

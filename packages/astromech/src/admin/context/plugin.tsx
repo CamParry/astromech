@@ -10,10 +10,10 @@
 import React from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { astromechClient } from '@/transport/http/client/index.js';
-import { useToast } from '@/admin/components/ui/index.js';
-import { useConfirm } from '@/admin/components/ui/confirm.js';
-import { useAuth } from '@/admin/context/auth.js';
+import { astromechClient } from '@/transport/http/client/index';
+import { useToast } from '@/admin/components/ui/index';
+import { useConfirm } from '@/admin/components/ui/confirm';
+import { useAuth } from '@/admin/context/auth';
 
 export type PluginUiIdentity = {
     /** The plugin's derived namespace, e.g. `seo` — also its admin route segment. */

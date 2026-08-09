@@ -6,9 +6,9 @@ import type {
     LanguageModelV4StreamResult,
     LanguageModelV4Usage,
 } from '@ai-sdk/provider';
-import { getModel, hasModel } from '@/ai/index.js';
-import { buildAIConfig } from '@/ai/middleware.js';
-import { setAIConfig } from '@/ai/registry.js';
+import { getModel, hasModel } from '@/ai/index';
+import { buildAIConfig } from '@/ai/middleware';
+import { setAIConfig } from '@/ai/registry';
 
 beforeEach(() => {
     globalThis.__astromech = undefined;

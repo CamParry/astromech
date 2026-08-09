@@ -37,24 +37,24 @@
  *   Absent entirely when the active driver has no interactive transactions.
  */
 
-import { supportsTransactions } from '@/database/capabilities.js';
+import { supportsTransactions } from '@/database/capabilities';
 import {
     createStorage,
     type QueryHandle,
     type Storage,
-} from '@/database/storage/create-storage.js';
-import { decodeWith } from '@/database/codec.js';
-import type { Column, Table } from '@/database/define-table.js';
-import type { Db } from '@/database/types.js';
-import { RelationshipFilterUnsupportedError } from '../errors.js';
-import type { JsonObject } from '@/types/index.js';
+} from '@/database/storage/create-storage';
+import { decodeWith } from '@/database/codec';
+import type { Column, Table } from '@/database/define-table';
+import type { Db } from '@/database/types';
+import { RelationshipFilterUnsupportedError } from '../errors';
+import type { JsonObject } from '@/types/index';
 import type {
     EntryRecord,
     EntryStorage,
     EntryWrite,
     ListParams,
     StorageDb,
-} from './types.js';
+} from './types';
 
 type OrderPair = [column: string, direction: 'asc' | 'desc'];
 

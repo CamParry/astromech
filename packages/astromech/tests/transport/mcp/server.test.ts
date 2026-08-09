@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toToolResultText } from '@/transport/mcp/server.js';
+import { toToolResultText } from '@/transport/mcp/server';
 
 describe('toToolResultText', () => {
     it('serializes objects to pretty JSON', () => {

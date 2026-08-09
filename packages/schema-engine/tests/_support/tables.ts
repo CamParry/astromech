@@ -12,7 +12,7 @@ import type {
     SnapshotForeignKey,
     SnapshotIndex,
     SnapshotTable,
-} from '../../src/model.js';
+} from '../../src/model';
 
 type ColOpts = {
     notNull?: boolean;

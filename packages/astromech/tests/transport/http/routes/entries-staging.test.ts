@@ -19,11 +19,11 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { rmSync } from 'node:fs';
-import { setupTestConfig, makeTestConfig, createFileTestDb } from '@tests/harness.js';
-import { entriesService as api } from '@/entries/service.js';
-import { createEntriesRouter } from '@/transport/http/routes/entries.js';
-import type { AuthVariables } from '@/transport/http/middleware/auth.js';
-import type { Role, User } from '@/types/index.js';
+import { setupTestConfig, makeTestConfig, createFileTestDb } from '@tests/harness';
+import { entriesService as api } from '@/entries/service';
+import { createEntriesRouter } from '@/transport/http/routes/entries';
+import type { AuthVariables } from '@/transport/http/middleware/auth';
+import type { Role, User } from '@/types/index';
 
 const fakeUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;
 

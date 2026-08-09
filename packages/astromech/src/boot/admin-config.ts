@@ -3,22 +3,22 @@
  * admin SPA via the `virtual:astromech/admin-config` virtual module.
  */
 
-import type { AstromechConfig, ResolvedConfig } from '@/types/index.js';
+import type { AstromechConfig, ResolvedConfig } from '@/types/index';
 import type {
     AdminConfig,
     AdminEntryType,
     ResolvedAdminPage,
     ResolvedEntryType,
-} from '@/types/config.js';
-import { resolveRoles } from '@/permissions/index.js';
-import { normaliseWidths } from '@/media/serving/image/url.js';
-import { defaultImageWidths } from '@/media/serving/image/defaults.js';
-import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity.js';
+} from '@/types/config';
+import { resolveRoles } from '@/permissions/index';
+import { normaliseWidths } from '@/media/serving/image/url';
+import { defaultImageWidths } from '@/media/serving/image/defaults';
+import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import {
     derivePluginNav,
     derivePluginPages,
     resolvePluginLabel,
-} from '@/plugins/runtime/plugin-admin.js';
+} from '@/plugins/runtime/plugin-admin';
 
 /**
  * Project a resolved entry type into the serializable admin shape. Shared by

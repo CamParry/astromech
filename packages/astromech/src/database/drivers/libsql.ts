@@ -20,8 +20,8 @@ import { pipeline } from 'node:stream/promises';
 import { createClient, type Client, type Row } from '@libsql/client';
 import { Kysely, CamelCasePlugin } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
-import type { DB } from '@/database/types.js';
-import type { DbDump } from '@/types/config.js';
+import type { DB } from '@/database/types';
+import type { DbDump } from '@/types/config';
 
 export type LibsqlOptions = {
     url?: string;

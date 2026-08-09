@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { EntryType } from '@/types/index.js';
-import type { Field } from '@/types/fields.js';
+import type { EntryType } from '@/types/index';
+import type { Field } from '@/types/fields';
 import {
     accordion,
     block,
@@ -16,7 +16,7 @@ import {
     tabs,
     text,
     textarea,
-} from '@/fields/index.js';
+} from '@/fields/index';
 
 // Compile-proof: factory output assignable to EntryType['fields'].
 const _flat: EntryType['fields'] = [

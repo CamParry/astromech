@@ -7,7 +7,7 @@
 import type { AnyServiceMethod, Entry, PluginContext } from 'astromech';
 import { defineServiceMethod, z } from 'astromech';
 import { resolveEntryUrl } from 'astromech';
-import type { MenuConfig, MenuItem } from '../types.js';
+import type { MenuConfig, MenuItem } from '../types';
 
 /** Raw stored node shape (with reserved underscore keys). */
 type RawNode = {

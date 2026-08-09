@@ -18,11 +18,11 @@ import {
     PageLoading,
     PageHeader,
     PageContent,
-} from '@/admin/components/ui/index.js';
-import { astromechClient } from '@/transport/http/client/index.js';
-import { useAIContext } from '@/admin/context/ai-context.js';
-import type { Entry } from '@/types/index.js';
-import { formatDate } from '@/utilities/dates.js';
+} from '@/admin/components/ui/index';
+import { astromechClient } from '@/transport/http/client/index';
+import { useAIContext } from '@/admin/context/ai-context';
+import type { Entry } from '@/types/index';
+import { formatDate } from '@/utilities/dates';
 
 // ============================================================================
 // Helpers

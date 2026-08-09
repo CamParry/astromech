@@ -13,9 +13,9 @@ import type {
     PluginFieldTypeRegistration,
     ResolvedConfig,
     ResolvedEntryFields,
-} from '@/types/index.js';
-import { getFieldType } from '@/fields/field-type-registry.js';
-import { RESERVED_KEY_META } from '@/fields/reserved-keys.js';
+} from '@/types/index';
+import { getFieldType } from '@/fields/field-type-registry';
+import { RESERVED_KEY_META } from '@/fields/reserved-keys';
 
 // ============================================================================
 // Naming Helpers

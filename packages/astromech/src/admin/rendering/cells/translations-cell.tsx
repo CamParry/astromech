@@ -1,5 +1,5 @@
-import type { CellRenderer } from '@/types/index.js';
-import { Link } from './link.js';
+import type { CellRenderer } from '@/types/index';
+import { Link } from './link';
 
 export const TranslationsCell: CellRenderer = ({ entry, ctx }) => (
     <span style={{ display: 'inline-flex', gap: '0.25rem', flexWrap: 'wrap' }}>

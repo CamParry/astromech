@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { defineTable, type Table } from '@/database/define-table.js';
+import { defineTable, type Table } from '@/database/define-table';
 import {
     columnType,
     createSnapshot,
@@ -21,11 +21,11 @@ import {
     emitTableStatements,
     resolveReferenceTarget,
     toSnakeCase,
-} from '@/database/table-snapshot.js';
+} from '@/database/table-snapshot';
 import { serializeSnapshot } from '@astromech/schema-engine';
-import { rolesTable } from '@/users/schema.js';
-import { entriesTable, entryPreviewTokensTable } from '@/entries/schema.js';
-import { relationshipsTable, cronTable } from '@/database/schema.js';
+import { rolesTable } from '@/users/schema';
+import { entriesTable, entryPreviewTokensTable } from '@/entries/schema';
+import { relationshipsTable, cronTable } from '@/database/schema';
 
 describe('toSnakeCase', () => {
     it('converts camelCase keys to snake_case identifiers', () => {

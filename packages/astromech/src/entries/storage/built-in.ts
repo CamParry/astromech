@@ -31,15 +31,15 @@
  */
 
 import type { ExpressionBuilder, Updateable } from 'kysely';
-import { getDb } from '@/database/registry.js';
-import { supportsTransactions } from '@/database/capabilities.js';
-import { encodePatchWith, decodeWith } from '@/database/codec.js';
-import { createStorage } from '@/database/storage/create-storage.js';
-import { entriesTable } from '@/database/schema.js';
-import type { DB, Db } from '@/database/types.js';
-import type { EntryRow } from '../schema.js';
-import { createVersionStorage } from './versions.js';
-import { UnknownWhereKeyError } from '../errors.js';
+import { getDb } from '@/database/registry';
+import { supportsTransactions } from '@/database/capabilities';
+import { encodePatchWith, decodeWith } from '@/database/codec';
+import { createStorage } from '@/database/storage/create-storage';
+import { entriesTable } from '@/database/schema';
+import type { DB, Db } from '@/database/types';
+import type { EntryRow } from '../schema';
+import { createVersionStorage } from './versions';
+import { UnknownWhereKeyError } from '../errors';
 import type {
     Entry,
     EntryStatus,
@@ -47,15 +47,15 @@ import type {
     JsonObject,
     ReferencesFilter,
     SortOption,
-} from '@/types/index.js';
-import { BUILT_IN_SUPPORTS } from './capabilities.js';
+} from '@/types/index';
+import { BUILT_IN_SUPPORTS } from './capabilities';
 import type {
     Capability,
     EntryStorage,
     EntryWrite,
     ListParams,
     NewEntryVersionSnapshot,
-} from './types.js';
+} from './types';
 
 // ============================================================================
 // Query helpers

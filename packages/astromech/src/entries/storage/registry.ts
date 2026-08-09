@@ -13,8 +13,8 @@
  * write overrides into one copy while the entries service reads another.
  */
 
-import { createBuiltInEntryStorage } from './built-in.js';
-import type { EntryStorage } from './types.js';
+import { createBuiltInEntryStorage } from './built-in';
+import type { EntryStorage } from './types';
 
 type EntryStorageRegistry = {
     builtIn: EntryStorage | undefined;

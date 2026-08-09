@@ -13,25 +13,25 @@ import { useForm, useStore } from '@tanstack/react-form';
 import { useMutation } from '@tanstack/react-query';
 import type { UseMutationResult } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useHotkeys } from './index.js';
-import { useFieldValidation } from './use-field-validation.js';
-import { useToast } from '../components/ui/index.js';
+import { useHotkeys } from './index';
+import { useFieldValidation } from './use-field-validation';
+import { useToast } from '../components/ui/index';
 import {
     fieldErrorNames,
     validationSummaryMessage,
-} from '@/admin/components/fields/field-error-summary.js';
-import { resolveLabel } from '@/admin/i18n/labels.js';
+} from '@/admin/components/fields/field-error-summary';
+import { resolveLabel } from '@/admin/i18n/labels';
 import type {
     Entry,
     EntryStatus,
     Field,
     FieldErrors,
     JsonObject,
-} from '../../types/index.js';
+} from '../../types/index';
 // Deep import of a pure leaf: the browser must pick the same stage the server
 // will, and the entries barrel would drag a domain service into the bundle.
-import { entryValidationStage } from '@/entries/validation-stage.js';
-import { AstromechApiError } from '../../transport/http/client/index.js';
+import { entryValidationStage } from '@/entries/validation-stage';
+import { AstromechApiError } from '../../transport/http/client/index';
 
 // ============================================================================
 // Types

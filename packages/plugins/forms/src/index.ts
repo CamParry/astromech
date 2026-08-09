@@ -6,14 +6,14 @@
 
 import { definePlugin, withDefaults } from 'astromech';
 import type { ServiceInterface } from 'astromech';
-import { migrationProvider } from '../migrations/index.js';
-import { formEntryType } from './entries/form.js';
-import { submissionEntryType } from './entries/submission.js';
-import { buildFormsService } from './service/forms.js';
-import { spamHook } from './spam/hook.js';
-import { submissionsTable } from './tables/submissions.js';
-import { FORMS_PACKAGE } from './types.js';
-import type { FormsOptions } from './types.js';
+import { migrationProvider } from '../migrations/index';
+import { formEntryType } from './entries/form';
+import { submissionEntryType } from './entries/submission';
+import { buildFormsService } from './service/forms';
+import { spamHook } from './spam/hook';
+import { submissionsTable } from './tables/submissions';
+import { FORMS_PACKAGE } from './types';
+import type { FormsOptions } from './types';
 
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
@@ -22,24 +22,21 @@ declare module 'astromech' {
     }
 }
 
-export type { FormFieldKind, FormsOptions, SubmissionMeta } from './types.js';
-export { FORM_FIELD_KINDS } from './types.js';
-export type {
-    FormsAfterSubmitPayload,
-    FormsBeforeSubmitPayload,
-} from './hooks/events.js';
-export { FORM_ERROR_KEY } from './service/forms.js';
-export type { PublicForm, SubmitInput, SubmitResult } from './service/forms.js';
-export type { SpamContext, SpamProvider, SpamVerdict } from './spam/types.js';
-export { turnstile } from './spam/providers/turnstile.js';
-export type { TurnstileOptions } from './spam/providers/turnstile.js';
-export { recaptcha } from './spam/providers/recaptcha.js';
-export type { RecaptchaOptions } from './spam/providers/recaptcha.js';
+export type { FormFieldKind, FormsOptions, SubmissionMeta } from './types';
+export { FORM_FIELD_KINDS } from './types';
+export type { FormsAfterSubmitPayload, FormsBeforeSubmitPayload } from './hooks/events';
+export { FORM_ERROR_KEY } from './service/forms';
+export type { PublicForm, SubmitInput, SubmitResult } from './service/forms';
+export type { SpamContext, SpamProvider, SpamVerdict } from './spam/types';
+export { turnstile } from './spam/providers/turnstile';
+export type { TurnstileOptions } from './spam/providers/turnstile';
+export { recaptcha } from './spam/providers/recaptcha';
+export type { RecaptchaOptions } from './spam/providers/recaptcha';
 export type {
     NotificationContext,
     NotificationProvider,
     StoredNotification,
-} from './notifications/types.js';
+} from './notifications/types';
 
 const DEFAULT_OPTIONS: Required<Pick<FormsOptions, 'storeMeta'>> = {
     storeMeta: true,

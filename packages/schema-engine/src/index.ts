@@ -14,9 +14,9 @@ export type {
     SnapshotIndex,
     SnapshotTable,
     SqlDialect,
-} from './model.js';
-export { serializeSnapshot } from './model.js';
-export { capIdentifier, hash8, isAscii, MAX_IDENTIFIER_BYTES } from './identifiers.js';
+} from './model';
+export { serializeSnapshot } from './model';
+export { capIdentifier, hash8, isAscii, MAX_IDENTIFIER_BYTES } from './identifiers';
 export {
     foreignKeyName,
     renderColumnClause,
@@ -24,10 +24,10 @@ export {
     renderCreateTable,
     renderLiteral,
     renderTableStatements,
-} from './ddl.js';
-export { diffSnapshots } from './diff.js';
-export type { DiffResult, TableOp } from './diff.js';
-export { renderMigrationFile, renderOpStatements } from './render.js';
-export { migrateToLatest, mergeMigrationProviders } from './apply.js';
-export { dumpSchema } from './oracle.js';
-export type { SchemaRow } from './oracle.js';
+} from './ddl';
+export { diffSnapshots } from './diff';
+export type { DiffResult, TableOp } from './diff';
+export { renderMigrationFile, renderOpStatements } from './render';
+export { migrateToLatest, mergeMigrationProviders } from './apply';
+export { dumpSchema } from './oracle';
+export type { SchemaRow } from './oracle';

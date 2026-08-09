@@ -1,14 +1,14 @@
-import { getCurrentUser } from '@/request-context/index.js';
-import { getEntryStorage } from '../../storage/registry.js';
+import { getCurrentUser } from '@/request-context/index';
+import { getEntryStorage } from '../../storage/registry';
 import {
     createPreviewTokenStorage,
     hashPreviewToken,
-} from '../../storage/preview-tokens.js';
-import { loadAndAssertType } from '../../internal/records.js';
-import { assertCapability } from '../../internal/type-config.js';
-import { generatePreviewSecret } from '../../internal/preview.js';
-import { previewTokenSchema } from '../../schema.js';
-import { parseWith } from '../../internal/parse.js';
+} from '../../storage/preview-tokens';
+import { loadAndAssertType } from '../../internal/records';
+import { assertCapability } from '../../internal/type-config';
+import { generatePreviewSecret } from '../../internal/preview';
+import { previewTokenSchema } from '../../schema';
+import { parseWith } from '../../internal/parse';
 
 /**
  * How long a preview token lives when the caller names no expiry: 7 days.

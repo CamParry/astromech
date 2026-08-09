@@ -14,18 +14,18 @@
  */
 
 import { sql, type Expression, type SqlBool } from 'kysely';
-import { decodeWith } from '@/database/codec.js';
+import { decodeWith } from '@/database/codec';
 import {
     createStorage,
     type Patch,
     type QueryHandle,
-} from '@/database/storage/create-storage.js';
-import { createRelationshipStorage } from '@/database/storage/relationships.js';
-import { mediaTable } from '@/database/schema.js';
-import { getDb } from '@/database/registry.js';
-import type { Db } from '@/database/types.js';
-import type { MediaMimeTypeFilter, MediaQueryParams, SortOption } from '@/types/index.js';
-import type { MediaRow, NewMediaRow } from './schema.js';
+} from '@/database/storage/create-storage';
+import { createRelationshipStorage } from '@/database/storage/relationships';
+import { mediaTable } from '@/database/schema';
+import { getDb } from '@/database/registry';
+import type { Db } from '@/database/types';
+import type { MediaMimeTypeFilter, MediaQueryParams, SortOption } from '@/types/index';
+import type { MediaRow, NewMediaRow } from './schema';
 
 type Predicate = ReturnType<QueryHandle<typeof mediaTable>['where']>;
 type MediaEb = Parameters<Predicate>[0];

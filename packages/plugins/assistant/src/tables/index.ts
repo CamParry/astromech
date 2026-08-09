@@ -3,5 +3,5 @@
  * `astromech plugin:generate` loads to diff its tables against the snapshot.
  */
 
-export * from './approvals.js';
-export * from './sessions.js';
+export * from './approvals';
+export * from './sessions';

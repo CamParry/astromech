@@ -20,9 +20,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { ToastProvider } from '@/admin/components/ui/toast';
-import { useEntryForm } from '@/admin/hooks/use-entry-form.js';
-import type { UseEntryFormReturn } from '@/admin/hooks/use-entry-form.js';
-import type { Entry, Field } from '@/types/index.js';
+import { useEntryForm } from '@/admin/hooks/use-entry-form';
+import type { UseEntryFormReturn } from '@/admin/hooks/use-entry-form';
+import type { Entry, Field } from '@/types/index';
 
 beforeAll(async () => {
     // The hook reads labels through `useTranslation`; the SPA's own i18n module

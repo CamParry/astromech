@@ -9,8 +9,8 @@
 import type { ComponentType, ReactElement } from 'react';
 import type { z } from '@hono/zod-openapi';
 import type { Kysely, MigrationProvider } from 'kysely';
-import type { DB } from '@/database/types.js';
-import type { Table } from '@/database/define-table.js';
+import type { DB } from '@/database/types';
+import type { Table } from '@/database/define-table';
 import type {
     AdminPage,
     AdminSlotContribution,
@@ -18,19 +18,19 @@ import type {
     EntryType,
     ResolvedConfig,
     StorageObject,
-} from './config.js';
-import type { Field, FieldValidator } from './fields.js';
-import type { Role, User, NotifyInput, Permission } from './domain.js';
-import type { PluginHooks } from './hooks.js';
-import type { PluginServiceNamespace, TypedEntriesService } from './client.js';
+} from './config';
+import type { Field, FieldValidator } from './fields';
+import type { Role, User, NotifyInput, Permission } from './domain';
+import type { PluginHooks } from './hooks';
+import type { PluginServiceNamespace, TypedEntriesService } from './client';
 import type {
     MediaService,
     NotificationsService,
     SettingsService,
     UsersService,
-} from './services.js';
-import type { ServiceMethodEffect, ToolDefinition } from './methods.js';
-import type { PermissionDeclarations } from '@/permissions/define.js';
+} from './services';
+import type { ServiceMethodEffect, ToolDefinition } from './methods';
+import type { PermissionDeclarations } from '@/permissions/define';
 
 // ============================================================================
 // Email overrides (carried over from the prior plugin surface)

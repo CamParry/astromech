@@ -7,8 +7,8 @@
  */
 
 import { startCase } from 'lodash-es';
-import type { Label, MessageRef } from '@/types/fields.js';
-import { slugify } from './strings.js';
+import type { Label, MessageRef } from '@/types/fields';
+import { slugify } from './strings';
 
 /** Capture an i18n key as a serializable `MessageRef` (`resolveLabel` resolves it). */
 export function t(key: string): MessageRef {

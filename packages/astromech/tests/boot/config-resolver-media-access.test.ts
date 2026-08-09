@@ -3,15 +3,15 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { resolveConfig } from '@/boot/config-resolver.js';
-import { cloudflareImages } from '@/media/serving/image/drivers/cloudflare.js';
+import { resolveConfig } from '@/boot/config-resolver';
+import { cloudflareImages } from '@/media/serving/image/drivers/cloudflare';
 import type {
     AstromechConfig,
     DatabaseDriver,
     ImageDriver,
     MediaConfig,
     StorageDriver,
-} from '@/types/index.js';
+} from '@/types/index';
 
 const dbDriver: DatabaseDriver = {
     type: 'test',

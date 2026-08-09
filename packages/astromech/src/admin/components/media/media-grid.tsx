@@ -5,9 +5,9 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Checkbox, ContentGrid } from '@/admin/components/ui/index.js';
-import { MediaCard } from './MediaCard.js';
-import type { Media } from '@/types/index.js';
+import { Checkbox, ContentGrid } from '@/admin/components/ui/index';
+import { MediaCard } from './MediaCard';
+import type { Media } from '@/types/index';
 
 export type MediaGridProps = {
     items: Media[];

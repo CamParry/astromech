@@ -9,10 +9,10 @@
  */
 
 import config from 'virtual:astromech/config';
-import { auth } from './auth.js';
-import { createUserStorage } from './storage.js';
-import { resolveRole } from '@/permissions/index.js';
-import type { User, Role } from '@/types/index.js';
+import { auth } from './auth';
+import { createUserStorage } from './storage';
+import { resolveRole } from '@/permissions/index';
+import type { User, Role } from '@/types/index';
 
 /** The session record Better Auth returns alongside the user. */
 type AuthSession = NonNullable<

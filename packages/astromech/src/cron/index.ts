@@ -5,7 +5,7 @@
  * by the entries domain — see `@/entries/index.js`.
  */
 
-import { onTick } from '@/cron/runner.js';
+import { onTick } from '@/cron/runner';
 
 /**
  * Cloudflare Worker entry calls this from its `scheduled()` handler:
@@ -17,6 +17,6 @@ export async function handleScheduled(event: { scheduledTime: number }): Promise
     await onTick(new Date(event.scheduledTime));
 }
 
-export { onTick, runDue, runScheduledJobs } from '@/cron/runner.js';
-export { registerCronJob, getCronJobs } from '@/cron/registry.js';
-export type { CronJob, CronContext } from '@/cron/registry.js';
+export { onTick, runDue, runScheduledJobs } from '@/cron/runner';
+export { registerCronJob, getCronJobs } from '@/cron/registry';
+export type { CronJob, CronContext } from '@/cron/registry';

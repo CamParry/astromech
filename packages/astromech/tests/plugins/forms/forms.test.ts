@@ -22,27 +22,27 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
-import { defineHook } from '@/index.js';
-import { setEmailDriver } from '@/email/registry.js';
+import { defineHook } from '@/index';
+import { setEmailDriver } from '@/email/registry';
 import {
     createTestDb,
     makeTestConfig,
     registerTestPlugins,
     setupTestConfig,
-} from '@tests/harness.js';
-import '@/transport/local/index.js'; // registers the plugin client (setPluginClient)
-import { localPlugins } from '@/transport/local/plugins.js';
-import { entriesService as localEntries } from '@/entries/service.js';
+} from '@tests/harness';
+import '@/transport/local/index'; // registers the plugin client (setPluginClient)
+import { localPlugins } from '@/transport/local/plugins';
+import { entriesService as localEntries } from '@/entries/service';
 import { forms, turnstile } from '@astromech/forms';
 import type { FormsOptions, PublicForm, SubmitResult } from '@astromech/forms';
-import type { DB } from '@/database/types.js';
+import type { DB } from '@/database/types';
 import type {
     AstromechConfig,
     EmailMessage,
     EntriesService,
     PluginDefinition,
     ResolvedConfig,
-} from '@/types/index.js';
+} from '@/types/index';
 
 const FORM = 'forms/form';
 

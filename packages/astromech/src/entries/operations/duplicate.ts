@@ -1,7 +1,7 @@
-import { getEntryStorage } from '../storage/registry.js';
-import { asEntry, loadAndAssertType } from '../internal/records.js';
-import { indexEntryRelationships } from '../internal/relationships.js';
-import type { Entry, EntryDuplicateOverrides, JsonObject } from '@/types/index.js';
+import { getEntryStorage } from '../storage/registry';
+import { asEntry, loadAndAssertType } from '../internal/records';
+import { indexEntryRelationships } from '../internal/relationships';
+import type { Entry, EntryDuplicateOverrides, JsonObject } from '@/types/index';
 
 export async function duplicate(params: {
     type: string;

@@ -4,8 +4,8 @@
  */
 
 import type { Block } from 'astromech';
-import { emailNotification } from './providers/email.js';
-import type { NotificationProvider } from './types.js';
+import { emailNotification } from './providers/email';
+import type { NotificationProvider } from './types';
 
 export const NOTIFICATION_PROVIDERS: readonly NotificationProvider[] = [
     emailNotification,

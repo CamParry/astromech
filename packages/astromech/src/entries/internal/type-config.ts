@@ -5,14 +5,14 @@
  */
 
 import config from 'virtual:astromech/config';
-import { resolveContentLocale } from '@/utilities/locale.js';
-import { flattenEntryFields } from '@/fields/flatten.js';
-import { resolveEntryType } from '../type-ids.js';
-import { getEntryStorage } from '../storage/registry.js';
-import { CapabilityError } from '../errors.js';
-import type { Capability } from '../storage/capabilities.js';
-import type { EntryStorage } from '../storage/types.js';
-import type { Field } from '@/types/index.js';
+import { resolveContentLocale } from '@/utilities/locale';
+import { flattenEntryFields } from '@/fields/flatten';
+import { resolveEntryType } from '../type-ids';
+import { getEntryStorage } from '../storage/registry';
+import { CapabilityError } from '../errors';
+import type { Capability } from '../storage/capabilities';
+import type { EntryStorage } from '../storage/types';
+import type { Field } from '@/types/index';
 
 export function getDefaultLocale(): string {
     // `defaultLocale` is a DISPLAY tag (e.g. `en-GB`) and may not be a content

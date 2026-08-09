@@ -15,9 +15,9 @@ import { createClient } from '@libsql/client';
 import { Kysely, sql } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { dumpSchema, type SchemaRow } from '@astromech/schema-engine';
-import { createTestDb } from '@tests/harness.js';
-import { emitTableStatements } from '@/database/table-snapshot.js';
-import { CORE_TABLES } from '@/database/schema.js';
+import { createTestDb } from '@tests/harness';
+import { emitTableStatements } from '@/database/table-snapshot';
+import { CORE_TABLES } from '@/database/schema';
 
 const TABLE_NAMES = CORE_TABLES.map((table) => table.name);
 

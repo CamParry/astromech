@@ -4,11 +4,11 @@
  * lives in `update`, so they sit here as thin status wrappers.)
  */
 
-import { scheduleEntrySchema } from '../schema.js';
-import { parseWith } from '../internal/parse.js';
-import { assertCapability } from '../internal/type-config.js';
-import { update } from './update.js';
-import type { Entry } from '@/types/index.js';
+import { scheduleEntrySchema } from '../schema';
+import { parseWith } from '../internal/parse';
+import { assertCapability } from '../internal/type-config';
+import { update } from './update';
+import type { Entry } from '@/types/index';
 
 export async function publish(params: {
     type: string;

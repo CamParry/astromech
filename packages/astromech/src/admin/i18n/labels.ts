@@ -9,7 +9,7 @@
  */
 
 import type { TFunction } from 'i18next';
-import type { Label } from '@/types/index.js';
+import type { Label } from '@/types/index';
 
 /**
  * The fallback an omitted `Label` resolves to. Exported so anything building a

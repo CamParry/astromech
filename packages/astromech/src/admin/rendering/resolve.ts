@@ -3,9 +3,9 @@ import type {
     ResolvedForm,
     ResolvedTable,
     TableColumn,
-} from '@/types/index.js';
-import { flattenEntryFields } from '@/fields/flatten.js';
-import { defaultCellKind } from './cell-kind-map.js';
+} from '@/types/index';
+import { flattenEntryFields } from '@/fields/flatten';
+import { defaultCellKind } from './cell-kind-map';
 
 /** Resolve a field's declared type by scanning the config's field tree. */
 export function fieldTypeOf(config: AdminEntryType, fieldName: string): string {

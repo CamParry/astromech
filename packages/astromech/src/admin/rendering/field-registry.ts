@@ -7,7 +7,7 @@
  * through to that path when getFieldComponent returns undefined.
  */
 import type * as React from 'react';
-import type { BaseFieldProps } from '@/types/index.js';
+import type { BaseFieldProps } from '@/types/index';
 
 export type FieldComponent = (props: BaseFieldProps) => React.ReactElement;
 

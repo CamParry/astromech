@@ -7,13 +7,13 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import adminConfig from 'virtual:astromech/admin-config';
-import { astromechClient } from '@/transport/http/client/index.js';
-import { setDateLocale } from '../utilities/dates.js';
-import { resolveContentLocale } from '../utilities/locale.js';
-import { createAppRouter } from './router.js';
-import './rendering/cells/register-cells.js';
-import './rendering/register-fields.js';
-import './i18n.js';
+import { astromechClient } from '@/transport/http/client/index';
+import { setDateLocale } from '../utilities/dates';
+import { resolveContentLocale } from '../utilities/locale';
+import { createAppRouter } from './router';
+import './rendering/cells/register-cells';
+import './rendering/register-fields';
+import './i18n';
 import './styles/main.css';
 
 declare const __ASTROMECH_API_ROUTE__: string;

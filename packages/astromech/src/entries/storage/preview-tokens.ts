@@ -6,10 +6,10 @@
  * One active token per entry: issuing replaces any existing token.
  */
 
-import { getDb } from '@/database/registry.js';
-import { createStorage } from '@/database/storage/create-storage.js';
-import { entryPreviewTokensTable } from '@/database/schema.js';
-import type { Db } from '@/database/types.js';
+import { getDb } from '@/database/registry';
+import { createStorage } from '@/database/storage/create-storage';
+import { entryPreviewTokensTable } from '@/database/schema';
+import type { Db } from '@/database/types';
 
 export type PreviewTokenStorage = ReturnType<typeof createPreviewTokenStorage>;
 

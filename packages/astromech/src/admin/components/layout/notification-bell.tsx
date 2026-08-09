@@ -10,13 +10,13 @@ import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui/react/menu';
 import { Bell, X } from 'lucide-react';
-import type { Notification } from '@/types/index.js';
+import type { Notification } from '@/types/index';
 import {
     useNotificationCount,
     useNotifications,
     useDismiss,
     useDismissAll,
-} from '../../hooks/notifications.js';
+} from '../../hooks/notifications';
 
 declare const __ASTROMECH_ADMIN_ROUTE__: string;
 

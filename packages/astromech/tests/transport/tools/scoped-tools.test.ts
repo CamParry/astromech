@@ -6,17 +6,17 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/codegen/manifest-registry.js', () => ({ getMethodManifest: vi.fn() }));
-vi.mock('@/policies/method-filter.js', () => ({ filterMethods: vi.fn() }));
-vi.mock('@/policies/annotate-manifest.js', () => ({ annotateManifest: vi.fn() }));
-vi.mock('@/transport/tools/dispatch.js', () => ({ buildScopedDispatch: vi.fn() }));
+vi.mock('@/codegen/manifest-registry', () => ({ getMethodManifest: vi.fn() }));
+vi.mock('@/policies/method-filter', () => ({ filterMethods: vi.fn() }));
+vi.mock('@/policies/annotate-manifest', () => ({ annotateManifest: vi.fn() }));
+vi.mock('@/transport/tools/dispatch', () => ({ buildScopedDispatch: vi.fn() }));
 
-import { getMethodManifest } from '@/codegen/manifest-registry.js';
-import { filterMethods } from '@/policies/method-filter.js';
-import { annotateManifest } from '@/policies/annotate-manifest.js';
-import { buildScopedDispatch } from '@/transport/tools/dispatch.js';
-import { buildScopedTools } from '@/transport/tools/scoped-tools.js';
-import type { ManifestMethod, Role, ToolDefinition } from '@/types/index.js';
+import { getMethodManifest } from '@/codegen/manifest-registry';
+import { filterMethods } from '@/policies/method-filter';
+import { annotateManifest } from '@/policies/annotate-manifest';
+import { buildScopedDispatch } from '@/transport/tools/dispatch';
+import { buildScopedTools } from '@/transport/tools/scoped-tools';
+import type { ManifestMethod, Role, ToolDefinition } from '@/types/index';
 
 // ---------------------------------------------------------------------------
 // Fixtures

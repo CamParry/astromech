@@ -6,7 +6,7 @@
 
 import { definePluginTable } from 'astromech';
 import type { TableInsert, TableSelect } from 'astromech';
-import { BACKUPS_PACKAGE } from '../types.js';
+import { BACKUPS_PACKAGE } from '../types';
 
 export const backupRunsTable = definePluginTable(BACKUPS_PACKAGE, 'runs', ({ col }) => ({
     id: col.id(),

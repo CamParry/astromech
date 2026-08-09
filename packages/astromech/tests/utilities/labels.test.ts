@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fieldNameToLabel, getFieldLabel } from '@/utilities/labels.js';
+import { fieldNameToLabel, getFieldLabel } from '@/utilities/labels';
 
 describe('fieldNameToLabel', () => {
     it('converts snake_case to Title Case', () => {

@@ -1,5 +1,5 @@
-import type { BaseFieldProps } from '@/types/index.js';
-import { Toggle } from '@/admin/components/ui/toggle.js';
+import type { BaseFieldProps } from '@/types/index';
+import { Toggle } from '@/admin/components/ui/toggle';
 
 export function BooleanField({ name, value, onChange, disabled }: BaseFieldProps) {
     const checked = value === true || value === 'true';

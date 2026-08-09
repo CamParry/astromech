@@ -20,13 +20,13 @@ import {
     UserIcon,
 } from 'lucide-react';
 import adminConfig from 'virtual:astromech/admin-config';
-import { useAuth } from '../../context/auth.js';
-import { useUI } from '../../context/ui.js';
-import { useTheme } from '../../context/theme.js';
-import { useCommandPalette } from '../ui/command-palette.js';
-import { EntryTypeIcon } from '../ui/entry-type-icon.js';
-import { NotificationBell } from './notification-bell.js';
-import { PluginSlot } from '../plugins/PluginSlot.js';
+import { useAuth } from '../../context/auth';
+import { useUI } from '../../context/ui';
+import { useTheme } from '../../context/theme';
+import { useCommandPalette } from '../ui/command-palette';
+import { EntryTypeIcon } from '../ui/entry-type-icon';
+import { NotificationBell } from './notification-bell';
+import { PluginSlot } from '../plugins/PluginSlot';
 
 export function Topbar() {
     const { user, logout } = useAuth();

@@ -17,14 +17,14 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { pages } from 'virtual:astromech/plugins/components';
 import adminConfig from 'virtual:astromech/admin-config';
-import { usePermissions } from '@/admin/hooks/index.js';
-import { ComponentErrorBoundary } from '@/admin/components/pages/ComponentErrorBoundary.js';
-import { ComponentPageView } from '@/admin/components/pages/ComponentPageView.js';
-import { SettingsPageForm } from '@/admin/components/pages/SettingsPageForm.js';
-import { PluginUiProvider } from '@/admin/context/plugin.js';
-import { EmptyState, Page, PageContent } from '@/admin/components/ui/index.js';
-import { resolveLabel } from '@/admin/i18n/labels.js';
-import { useAIContext } from '@/admin/context/ai-context.js';
+import { usePermissions } from '@/admin/hooks/index';
+import { ComponentErrorBoundary } from '@/admin/components/pages/ComponentErrorBoundary';
+import { ComponentPageView } from '@/admin/components/pages/ComponentPageView';
+import { SettingsPageForm } from '@/admin/components/pages/SettingsPageForm';
+import { PluginUiProvider } from '@/admin/context/plugin';
+import { EmptyState, Page, PageContent } from '@/admin/components/ui/index';
+import { resolveLabel } from '@/admin/i18n/labels';
+import { useAIContext } from '@/admin/context/ai-context';
 
 function PluginPage(): React.ReactElement {
     const params = Route.useParams();

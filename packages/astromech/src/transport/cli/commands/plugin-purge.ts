@@ -14,10 +14,10 @@
 
 import { defineCommand } from 'citty';
 import { sql, type Kysely } from 'kysely';
-import { loadConfig, loadRawConfig } from '../config.js';
-import { getDb } from '@/database/registry.js';
-import { pluginNamespace } from '@/plugins/runtime/plugin-identity.js';
-import type { DB } from '@/database/types.js';
+import { loadConfig, loadRawConfig } from '../config';
+import { getDb } from '@/database/registry';
+import { pluginNamespace } from '@/plugins/runtime/plugin-identity';
+import type { DB } from '@/database/types';
 
 export type PurgeResult = {
     /** Dropped table names, in `sqlite_master` order. */

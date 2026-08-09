@@ -4,11 +4,11 @@
  * it composes it, and serves the AI tool-loop as well as MCP.
  */
 
-import type { Role, ToolDefinition } from '@/types/index.js';
-import { getMethodManifest } from '@/codegen/manifest-registry.js';
-import { filterMethods } from '@/policies/method-filter.js';
-import { annotateManifest } from '@/policies/annotate-manifest.js';
-import { buildScopedDispatch } from '@/transport/tools/dispatch.js';
+import type { Role, ToolDefinition } from '@/types/index';
+import { getMethodManifest } from '@/codegen/manifest-registry';
+import { filterMethods } from '@/policies/method-filter';
+import { annotateManifest } from '@/policies/annotate-manifest';
+import { buildScopedDispatch } from '@/transport/tools/dispatch';
 
 /** Build the tool definitions this role reaches, narrowed by the method filter. */
 export function buildScopedTools(

@@ -17,12 +17,12 @@ import {
     Table,
     useAstromechPlugin,
 } from 'astromech/ui';
-import type { BackupRunRow } from '../../tables/runs.js';
+import type { BackupRunRow } from '../../tables/runs';
 import type {
     DeleteRunResult,
     ListRunsResult,
     TriggerRunResult,
-} from '../../service/backups.js';
+} from '../../service/backups';
 
 // ============================================================================
 // Types

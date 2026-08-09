@@ -7,9 +7,9 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import type { Field, ValidationStage } from '@/types/fields.js';
-import type { ResourceType } from '@/types/domain.js';
-import { processFields } from '@/fields/pipeline.js';
+import type { Field, ValidationStage } from '@/types/fields';
+import type { ResourceType } from '@/types/domain';
+import { processFields } from '@/fields/pipeline';
 
 // ---------------------------------------------------------------------------
 // Helpers

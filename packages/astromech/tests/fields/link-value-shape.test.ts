@@ -9,9 +9,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { FieldValidationContext } from '@/types/fields.js';
-import { getFieldType } from '@/fields/field-type-registry.js';
-import { validateLink } from '@/fields/built-in-rules.js';
+import type { FieldValidationContext } from '@/types/fields';
+import { getFieldType } from '@/fields/field-type-registry';
+import { validateLink } from '@/fields/built-in-rules';
 
 function ctx(value: unknown): FieldValidationContext {
     return {

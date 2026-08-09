@@ -3,7 +3,7 @@
  * subject and body, substituted with that submission's values at send time.
  */
 
-import { displayValue } from '../utilities/values.js';
+import { displayValue } from '../utilities/values';
 
 /** `{{key}}`, tolerating inner whitespace. The group excludes the braces. */
 const MERGE_TAG_PATTERN = /\{\{\s*([^{}]+?)\s*\}\}/g;

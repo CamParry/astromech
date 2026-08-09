@@ -6,7 +6,7 @@
  * `TypedEntry` result instead of the wide `Entry`.
  */
 
-import type { Entry, EntryStatus, EntryVersion, JsonObject } from './domain.js';
+import type { Entry, EntryStatus, EntryVersion, JsonObject } from './domain';
 import type {
     EntriesService,
     EntryDuplicateOverrides,
@@ -17,9 +17,9 @@ import type {
     QueryResult,
     SettingsService,
     UsersService,
-} from './services.js';
-import type { ResolvedConfig } from './config.js';
-import type { ServiceMethod } from './plugins.js';
+} from './services';
+import type { ResolvedConfig } from './config';
+import type { ServiceMethod } from './plugins';
 
 // ============================================================================
 // Typed Entry

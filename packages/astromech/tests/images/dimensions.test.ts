@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     isOptimisableImage,
     readImageDimensions,
-} from '@/media/serving/image/dimensions.js';
+} from '@/media/serving/image/dimensions';
 
 // ---------------------------------------------------------------------------
 // isOptimisableImage

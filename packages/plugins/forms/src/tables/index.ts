@@ -3,4 +3,4 @@
  * snapshot. Nothing in this package imports through it.
  */
 
-export * from './submissions.js';
+export * from './submissions';

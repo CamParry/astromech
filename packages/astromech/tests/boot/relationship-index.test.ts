@@ -9,22 +9,22 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'kysely';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import {
     checkRelationshipIndex,
     rebuildRelationshipIndex,
-} from '@/boot/relationship-index.js';
-import { createStorage } from '@/database/storage/create-storage.js';
-import { createRelationshipStorage } from '@/database/storage/relationships.js';
-import { relationshipsTable, type RelationshipRow } from '@/database/schema.js';
-import { entriesService as api } from '@/entries/service.js';
-import { mediaService } from '@/media/service.js';
-import { createMediaStorage } from '@/media/storage.js';
-import { usersService } from '@/users/service.js';
-import { tableStorage } from '@/entries/storage/table.js';
-import { defineTable } from '@/database/define-table.js';
-import { setStorageDriver } from '@/storage/registry.js';
-import type { AstromechConfig, PluginDefinition, StorageDriver } from '@/types/index.js';
+} from '@/boot/relationship-index';
+import { createStorage } from '@/database/storage/create-storage';
+import { createRelationshipStorage } from '@/database/storage/relationships';
+import { relationshipsTable, type RelationshipRow } from '@/database/schema';
+import { entriesService as api } from '@/entries/service';
+import { mediaService } from '@/media/service';
+import { createMediaStorage } from '@/media/storage';
+import { usersService } from '@/users/service';
+import { tableStorage } from '@/entries/storage/table';
+import { defineTable } from '@/database/define-table';
+import { setStorageDriver } from '@/storage/registry';
+import type { AstromechConfig, PluginDefinition, StorageDriver } from '@/types/index';
 
 /** Media reads resolve a public URL through the driver; nothing here needs bytes. */
 const noopStorage: StorageDriver = {

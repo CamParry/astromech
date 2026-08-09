@@ -10,11 +10,11 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { createTestDb, setupTestConfig } from '@tests/harness.js';
-import { entriesService as api } from '@/entries/service.js';
-import { createEntriesRouter } from '@/transport/http/routes/entries.js';
-import type { AuthVariables } from '@/transport/http/middleware/auth.js';
-import type { Entry, Role, User } from '@/types/index.js';
+import { createTestDb, setupTestConfig } from '@tests/harness';
+import { entriesService as api } from '@/entries/service';
+import { createEntriesRouter } from '@/transport/http/routes/entries';
+import type { AuthVariables } from '@/transport/http/middleware/auth';
+import type { Entry, Role, User } from '@/types/index';
 
 const fakeUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;
 

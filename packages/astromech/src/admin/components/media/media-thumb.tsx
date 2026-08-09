@@ -9,9 +9,9 @@
 
 import React from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
-import { buildVariantUrl } from '@/media/serving/image/url.js';
-import { FileTypeIcon, versionedMediaUrl } from '@/admin/utilities/media.js';
-import type { Media } from '@/types/index.js';
+import { buildVariantUrl } from '@/media/serving/image/url';
+import { FileTypeIcon, versionedMediaUrl } from '@/admin/utilities/media';
+import type { Media } from '@/types/index';
 
 export type MediaThumbProps = {
     item: Media;

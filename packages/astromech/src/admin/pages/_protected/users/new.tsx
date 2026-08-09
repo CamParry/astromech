@@ -21,8 +21,8 @@ import {
     PageContent,
     FormLayout,
     Stack,
-} from '@/admin/components/ui/index.js';
-import { usePermissions, useCreateUser } from '@/admin/hooks/index.js';
+} from '@/admin/components/ui/index';
+import { usePermissions, useCreateUser } from '@/admin/hooks/index';
 import adminConfig from 'virtual:astromech/admin-config';
 
 // ============================================================================

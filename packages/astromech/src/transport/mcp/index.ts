@@ -7,14 +7,14 @@
  */
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { loadConfig, loadRawConfig } from '@/transport/cli/config.js';
-import { generateMethodManifest } from '@/codegen/method-manifest.js';
-import { registerPlugins } from '@/plugins/runtime/plugin-runtime.js';
-import { wireEntryAccess } from '@/entries/plugin-access.js';
-import { filterMethods, type MethodFilter } from '@/policies/method-filter.js';
-import type { ConfirmOptions } from '@/policies/confirmation.js';
-import { createMcpServer } from './server.js';
-import type { AstromechConfig, MethodManifest, ResolvedConfig } from '@/types/index.js';
+import { loadConfig, loadRawConfig } from '@/transport/cli/config';
+import { generateMethodManifest } from '@/codegen/method-manifest';
+import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
+import { wireEntryAccess } from '@/entries/plugin-access';
+import { filterMethods, type MethodFilter } from '@/policies/method-filter';
+import type { ConfirmOptions } from '@/policies/confirmation';
+import { createMcpServer } from './server';
+import type { AstromechConfig, MethodManifest, ResolvedConfig } from '@/types/index';
 
 /** Above this many exclusions, the per-method lines stop being readable. */
 const EXCLUSION_DETAIL_LIMIT = 20;
@@ -42,7 +42,7 @@ async function registerPluginRuntime(
     raw: AstromechConfig,
     resolved: ResolvedConfig
 ): Promise<void> {
-    await import('@/transport/local/index.js');
+    await import('@/transport/local/index');
     wireEntryAccess();
     registerPlugins(raw.plugins ?? [], resolved);
 }

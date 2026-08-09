@@ -5,11 +5,11 @@
  */
 
 import type { Entry, Field, PluginContext } from 'astromech';
-import { entryFields } from '../utilities/form-entry.js';
-import { toValueRows } from '../utilities/values.js';
-import { mergeTagValues } from './merge-tags.js';
-import { NOTIFICATION_PROVIDERS } from './registry.js';
-import type { NotificationContext, StoredNotification } from './types.js';
+import { entryFields } from '../utilities/form-entry';
+import { toValueRows } from '../utilities/values';
+import { mergeTagValues } from './merge-tags';
+import { NOTIFICATION_PROVIDERS } from './registry';
+import type { NotificationContext, StoredNotification } from './types';
 
 export const NOTIFICATIONS_FIELD = 'notifications';
 

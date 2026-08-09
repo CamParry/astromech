@@ -60,7 +60,7 @@
  * re-exported here so this module stays the one place to reach for the grammar.
  */
 
-import type { FieldPathSegment } from '@/types/fields.js';
+import type { FieldPathSegment } from '@/types/fields';
 
 export type { FieldPathSegment };
 

@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ToolDefinition } from 'astromech';
-import { TOOL_SEARCH_KEY, toToolSet } from '../../src/loop/tools.js';
+import { TOOL_SEARCH_KEY, toToolSet } from '../../src/loop/tools';
 
 /** A dispatch whose `invoke` resolves to `result`. */
 function dispatchFor(

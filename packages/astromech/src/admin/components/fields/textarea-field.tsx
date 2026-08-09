@@ -1,5 +1,5 @@
-import type { BaseFieldProps } from '@/types/index.js';
-import { Textarea } from '@/admin/components/ui/textarea.js';
+import type { BaseFieldProps } from '@/types/index';
+import { Textarea } from '@/admin/components/ui/textarea';
 import { FieldCount } from './field-count';
 
 export function TextareaField({

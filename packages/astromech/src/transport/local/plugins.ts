@@ -12,13 +12,13 @@
  * at module-load time.
  */
 
-import type { PluginContext, PluginServiceNamespace } from '@/types/index.js';
-import { getCurrentUser } from '@/request-context/index.js';
+import type { PluginContext, PluginServiceNamespace } from '@/types/index';
+import { getCurrentUser } from '@/request-context/index';
 import {
     createPluginContext,
     getPluginIdentity,
     getPluginServiceMethods,
-} from '@/plugins/runtime/plugin-runtime.js';
+} from '@/plugins/runtime/plugin-runtime';
 
 type MethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
 

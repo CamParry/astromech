@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { resolveConfig } from '@/boot/config-resolver.js';
+import { resolveConfig } from '@/boot/config-resolver';
 import type {
     AstromechConfig,
     DatabaseDriver,
@@ -17,7 +17,7 @@ import type {
     ModelInstance,
     SchedulerDriver,
     StorageDriver,
-} from '@/types/index.js';
+} from '@/types/index';
 
 const dbDriver = {
     type: 'test',

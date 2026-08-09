@@ -3,8 +3,8 @@ import {
     partitionGlobalValues,
     mergeGlobalValues,
     mergeLocaleSetting,
-} from '@/settings/index.js';
-import type { ResolvedEntryFields } from '@/types/fields.js';
+} from '@/settings/index';
+import type { ResolvedEntryFields } from '@/types/fields';
 
 // ---------------------------------------------------------------------------
 // Helpers

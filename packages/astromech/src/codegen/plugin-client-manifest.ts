@@ -7,12 +7,12 @@
  */
 
 import { fileURLToPath } from 'node:url';
-import type { AdminPage, AdminSlotContribution, AdminSlotName } from '@/types/config.js';
-import type { PluginDefinition, PluginFieldTypeRegistration } from '@/types/plugins.js';
+import type { AdminPage, AdminSlotContribution, AdminSlotName } from '@/types/config';
+import type { PluginDefinition, PluginFieldTypeRegistration } from '@/types/plugins';
 import {
     resolvePluginIdentity,
     resolvePluginPermission,
-} from '@/plugins/runtime/plugin-identity.js';
+} from '@/plugins/runtime/plugin-identity';
 
 /**
  * Turn a plugin's asset specifier into one this module can emit an `import()`

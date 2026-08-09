@@ -29,7 +29,7 @@ import {
     type QueryCompiler,
     type QueryResult,
 } from 'kysely';
-import { D1Introspector } from './d1-introspector.js';
+import { D1Introspector } from './d1-introspector';
 
 /** Structural subset of Cloudflare's D1Database we depend on. */
 export type D1DatabaseLike = {

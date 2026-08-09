@@ -5,8 +5,8 @@
 
 import type { Hook } from 'astromech';
 import { defineHook } from 'astromech';
-import { BEFORE_SUBMIT, type FormsBeforeSubmitPayload } from '../hooks/events.js';
-import type { SpamProvider } from './types.js';
+import { BEFORE_SUBMIT, type FormsBeforeSubmitPayload } from '../hooks/events';
+import type { SpamProvider } from './types';
 
 /** Reject a submission whose spam token fails verification. */
 export function spamHook(spam: SpamProvider): Hook {

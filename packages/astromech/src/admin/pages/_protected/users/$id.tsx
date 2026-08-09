@@ -24,17 +24,17 @@ import {
     PageContent,
     FormLayout,
     Stack,
-} from '@/admin/components/ui/index.js';
-import { formatDatetime } from '@/utilities/dates.js';
+} from '@/admin/components/ui/index';
+import { formatDatetime } from '@/utilities/dates';
 import {
     usePermissions,
     useUser,
     useUpdateUser,
     useDeleteUser,
-} from '@/admin/hooks/index.js';
-import { userQueryOptions } from '@/admin/hooks/users.js';
-import { useAIContext } from '@/admin/context/ai-context.js';
-import { useAuth } from '@/admin/context/auth.js';
+} from '@/admin/hooks/index';
+import { userQueryOptions } from '@/admin/hooks/users';
+import { useAIContext } from '@/admin/context/ai-context';
+import { useAuth } from '@/admin/context/auth';
 import adminConfig from 'virtual:astromech/admin-config';
 
 // ============================================================================

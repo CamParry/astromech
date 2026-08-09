@@ -19,7 +19,7 @@ import type {
     Notification,
     Setting,
     User,
-} from './domain.js';
+} from './domain';
 
 // ============================================================================
 // Locale Sentinels

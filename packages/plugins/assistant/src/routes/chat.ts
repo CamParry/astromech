@@ -5,15 +5,15 @@
 
 import { getModel } from 'astromech';
 import type { AIContextItem, PluginContext, PluginRawRoute } from 'astromech';
-import { createApprovalsStorage } from '../approvals/storage.js';
-import { createSessionsStorage } from '../sessions/storage.js';
+import { createApprovalsStorage } from '../approvals/storage';
+import { createSessionsStorage } from '../sessions/storage';
 import type {
     ApprovalDecision,
     ChatEvent,
     ChatMessage,
     ChatRequest,
     ResolvedAssistantOptions,
-} from '../types.js';
+} from '../types';
 
 /** The plugin's raw routes: the streaming chat endpoint. */
 export function chatRoutes(options: ResolvedAssistantOptions): PluginRawRoute[] {
@@ -75,7 +75,7 @@ async function handleChat(
     // Imported at request time, never at module load: a static import would
     // pull the AI SDK into every load of a site's config, which Astro does in
     // plain Node before anything has asked for a chat.
-    const { runAssistantLoop } = await import('../loop/run.js');
+    const { runAssistantLoop } = await import('../loop/run');
 
     const events = runAssistantLoop({
         model,

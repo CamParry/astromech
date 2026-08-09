@@ -1,4 +1,4 @@
-import type { BaseFieldProps } from '@/types/index.js';
+import type { BaseFieldProps } from '@/types/index';
 import { Input } from '@/admin/components/ui/input';
 
 export function EmailField({

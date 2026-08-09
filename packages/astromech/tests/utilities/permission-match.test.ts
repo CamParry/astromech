@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hasPermission, matchesPermission } from '@/utilities/permission-match.js';
+import { hasPermission, matchesPermission } from '@/utilities/permission-match';
 
 describe('matchesPermission', () => {
     describe('global wildcard', () => {

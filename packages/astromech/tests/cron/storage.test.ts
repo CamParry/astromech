@@ -10,8 +10,8 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb } from '@tests/harness.js';
-import { createCronStorage } from '@/cron/storage.js';
+import { createTestDb } from '@tests/harness';
+import { createCronStorage } from '@/cron/storage';
 
 const NOW = new Date('2024-06-01T12:00:00.000Z');
 const EXPIRY = new Date('2024-06-01T12:05:00.000Z');

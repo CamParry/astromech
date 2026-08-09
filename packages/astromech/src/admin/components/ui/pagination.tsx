@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from './button.js';
+import { Button } from './button';
 
 export type PaginationProps = {
     currentPage: number;

@@ -11,8 +11,8 @@ import type {
     LanguageModelV4StreamPart,
     LanguageModelV4Usage,
 } from '@ai-sdk/provider';
-import type { AIConfig } from '@/types/index.js';
-import type { WrappedAIConfig } from '@/ai/registry.js';
+import type { AIConfig } from '@/types/index';
+import type { WrappedAIConfig } from '@/ai/registry';
 
 /**
  * Wrap the configured models with core's middleware, keyed by name. `ai` is

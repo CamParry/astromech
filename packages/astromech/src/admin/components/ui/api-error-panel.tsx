@@ -8,10 +8,10 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { AstromechApiError } from '@/transport/http/client/index.js';
-import { Badge } from './badge.js';
-import { Button } from './button.js';
-import { Modal } from './modal.js';
+import type { AstromechApiError } from '@/transport/http/client/index';
+import { Badge } from './badge';
+import { Button } from './button';
+import { Modal } from './modal';
 
 // ============================================================================
 // Types

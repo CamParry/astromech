@@ -13,8 +13,8 @@
  */
 
 import { z } from '@hono/zod-openapi';
-import type { ServiceMethodContract } from '@/types/index.js';
-import { createUserSchema, updateUserSchema, userQuerySchema } from './schema.js';
+import type { ServiceMethodContract } from '@/types/index';
+import { createUserSchema, updateUserSchema, userQuerySchema } from './schema';
 
 export const usersContract = {
     query: {

@@ -11,12 +11,12 @@ import {
     Video,
     X,
 } from 'lucide-react';
-import type { BaseFieldProps } from '@/types/index.js';
-import { astromechClient } from '@/transport/http/client/index.js';
+import type { BaseFieldProps } from '@/types/index';
+import { astromechClient } from '@/transport/http/client/index';
 import { Modal } from '@/admin/components/ui/modal';
 import { Spinner } from '@/admin/components/ui/spinner';
-import { MediaPicker } from '@/admin/components/media/media-picker.js';
-import type { MediaBrowserQuery } from '@/admin/types/media.js';
+import { MediaPicker } from '@/admin/components/media/media-picker';
+import type { MediaBrowserQuery } from '@/admin/types/media';
 import './media-field.css';
 
 type MediaItem = {

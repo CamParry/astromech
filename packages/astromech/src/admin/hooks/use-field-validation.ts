@@ -23,9 +23,9 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Field, FieldErrors, FieldReads, ValidationStage } from '@/types/index.js';
+import type { Field, FieldErrors, FieldReads, ValidationStage } from '@/types/index';
 // Deep import: the `fields/` barrel reaches server code (virtual config / DB).
-import { processFields } from '@/fields/pipeline.js';
+import { processFields } from '@/fields/pipeline';
 
 /**
  * Data-dependent checks are server-only and are skipped in silence.

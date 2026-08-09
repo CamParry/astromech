@@ -22,12 +22,8 @@ import {
     pluginNamespace,
     pluginServiceKey,
     type PluginNamespace,
-} from '@/utilities/plugin-namespace.js';
-import type {
-    EntryType,
-    PluginDefinition,
-    ResolvedPluginIdentity,
-} from '@/types/index.js';
+} from '@/utilities/plugin-namespace';
+import type { EntryType, PluginDefinition, ResolvedPluginIdentity } from '@/types/index';
 
 /**
  * The derivation itself lives in a pure leaf: `database/define-plugin-table`

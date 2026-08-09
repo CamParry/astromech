@@ -15,19 +15,19 @@
  * keys / ListParams the entries service passes.
  */
 
-import type { Db } from '@/database/types.js';
-import type { Capability } from './capabilities.js';
+import type { Db } from '@/database/types';
+import type { Capability } from './capabilities';
 import type {
     EntryStatus,
     EntryVersion,
     JsonObject,
     SortOption,
     WhereFilters,
-} from '@/types/index.js';
+} from '@/types/index';
 
 export type StorageDb = Db;
 
-export type { Capability } from './capabilities.js';
+export type { Capability } from './capabilities';
 
 /**
  * Universal entry shape a storage returns. The built-in storage returns full

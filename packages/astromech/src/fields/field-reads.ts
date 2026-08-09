@@ -1,5 +1,5 @@
-import type { Field, FieldReads } from '@/types/fields.js';
-import { valuesEqual } from '@/utilities/values-equal.js';
+import type { Field, FieldReads } from '@/types/fields';
+import { valuesEqual } from '@/utilities/values-equal';
 
 /**
  * Build a FieldReads from a lazy record loader. isUnique scans the loaded

@@ -1,9 +1,9 @@
-import { getEntryStorage } from '../storage/registry.js';
-import { asEntry, loadAndAssertType } from '../internal/records.js';
-import { assertCapability } from '../internal/type-config.js';
-import { runBulk } from '../internal/bulk.js';
-import type { EntryStorage } from '../storage/types.js';
-import type { Entry } from '@/types/index.js';
+import { getEntryStorage } from '../storage/registry';
+import { asEntry, loadAndAssertType } from '../internal/records';
+import { assertCapability } from '../internal/type-config';
+import { runBulk } from '../internal/bulk';
+import type { EntryStorage } from '../storage/types';
+import type { Entry } from '@/types/index';
 
 /** Restore a single trashed entry (policy). */
 async function restoreOne(

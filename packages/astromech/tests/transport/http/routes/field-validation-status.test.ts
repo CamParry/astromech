@@ -32,16 +32,16 @@ import {
     createTestUser,
     makeTestConfig,
     setupTestConfig,
-} from '@tests/harness.js';
-import { setStorageDriver } from '@/storage/registry.js';
-import { Astromech } from '@/transport/local/index.js';
-import { onError } from '@/transport/http/middleware/errors.js';
-import { createEntriesRouter } from '@/transport/http/routes/entries.js';
-import { usersRouter } from '@/transport/http/routes/users.js';
-import { mediaRouter } from '@/transport/http/routes/media.js';
-import { settingsRouter } from '@/transport/http/routes/settings.js';
-import type { AuthVariables } from '@/transport/http/middleware/auth.js';
-import type { AstromechConfig, Role, StorageDriver, User } from '@/types/index.js';
+} from '@tests/harness';
+import { setStorageDriver } from '@/storage/registry';
+import { Astromech } from '@/transport/local/index';
+import { onError } from '@/transport/http/middleware/errors';
+import { createEntriesRouter } from '@/transport/http/routes/entries';
+import { usersRouter } from '@/transport/http/routes/users';
+import { mediaRouter } from '@/transport/http/routes/media';
+import { settingsRouter } from '@/transport/http/routes/settings';
+import type { AuthVariables } from '@/transport/http/middleware/auth';
+import type { AstromechConfig, Role, StorageDriver, User } from '@/types/index';
 
 // ---------------------------------------------------------------------------
 // Harness

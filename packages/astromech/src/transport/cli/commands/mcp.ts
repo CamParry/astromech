@@ -1,8 +1,8 @@
 import { defineCommand } from 'citty';
-import { filterArgs, toMethodFilter } from '../filter-args.js';
-import { confirmArgs, toConfirmOptions } from '../confirm-args.js';
-import type { MethodFilter } from '@/policies/method-filter.js';
-import type { ConfirmOptions } from '@/policies/confirmation.js';
+import { filterArgs, toMethodFilter } from '../filter-args';
+import { confirmArgs, toConfirmOptions } from '../confirm-args';
+import type { MethodFilter } from '@/policies/method-filter';
+import type { ConfirmOptions } from '@/policies/confirmation';
 
 type RunMcpServer = (
     configPath?: string,
@@ -27,7 +27,7 @@ export default defineCommand({
             // graph until the user actually runs `astromech mcp`.
             mod = (await import(
                 /* @vite-ignore */
-                '@/transport/mcp/index.js'
+                '@/transport/mcp/index'
             )) as { runMcpServer: RunMcpServer };
         } catch (err) {
             const message = err instanceof Error ? err.message : String(err);

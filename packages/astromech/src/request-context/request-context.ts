@@ -4,7 +4,7 @@
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';
-import type { Role, User } from '@/types/index.js';
+import type { Role, User } from '@/types/index';
 
 export type RequestContext = {
     user: User | null;

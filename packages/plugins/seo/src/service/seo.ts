@@ -7,20 +7,20 @@
 import type { Entry, PluginContext } from 'astromech';
 import { defineServiceMethod, noInput, z } from 'astromech';
 import { resolveEntryPath } from 'astromech';
-import { SEO_FIELD_NAME } from '../types.js';
+import { SEO_FIELD_NAME } from '../types';
 import type {
     SeoOverview,
     SeoOverviewItem,
     SeoResolvedMeta,
     SeoSitemap,
     SeoSitemapUrl,
-} from '../types.js';
+} from '../types';
 import {
     lengthStatus,
     SEO_DESCRIPTION_RANGE,
     SEO_TITLE_RANGE,
-} from '../utilities/length.js';
-import { parseSeoMetaValue } from '../utilities/meta-value.js';
+} from '../utilities/length';
+import { parseSeoMetaValue } from '../utilities/meta-value';
 
 async function footprintEntries(
     ctx: PluginContext

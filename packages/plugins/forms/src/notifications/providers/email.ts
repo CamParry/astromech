@@ -6,9 +6,9 @@
 
 import { renderRichText } from 'astromech';
 import * as fields from 'astromech/fields';
-import { applyMergeTags, applyMergeTagsInRichText } from '../merge-tags.js';
-import { SubmissionEmail } from '../templates/submission-email.js';
-import type { NotificationProvider } from '../types.js';
+import { applyMergeTags, applyMergeTagsInRichText } from '../merge-tags';
+import { SubmissionEmail } from '../templates/submission-email';
+import type { NotificationProvider } from '../types';
 
 export const EMAIL_NOTIFICATION = 'email';
 

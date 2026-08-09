@@ -9,14 +9,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, renderHook, waitFor } from '@testing-library/react';
-import { useMediaBrowser } from '@/admin/hooks/use-media-browser.js';
-import type { MediaBrowserResult } from '@/admin/hooks/use-media-browser.js';
-import type { MediaBrowserQuery } from '@/admin/types/media.js';
-import type { Media, MediaQueryParams } from '@/types/index.js';
+import { useMediaBrowser } from '@/admin/hooks/use-media-browser';
+import type { MediaBrowserResult } from '@/admin/hooks/use-media-browser';
+import type { MediaBrowserQuery } from '@/admin/types/media';
+import type { Media, MediaQueryParams } from '@/types/index';
 
 const { mediaQuery } = vi.hoisted(() => ({ mediaQuery: vi.fn() }));
 
-vi.mock('@/transport/http/client/index.js', () => ({
+vi.mock('@/transport/http/client/index', () => ({
     astromechClient: { media: { query: mediaQuery } },
 }));
 

@@ -7,12 +7,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { filterMethods } from '@/policies/method-filter.js';
+import { filterMethods } from '@/policies/method-filter';
 import type {
     CoreManifestMethod,
     EntriesManifestMethod,
     ManifestMethod,
-} from '@/types/index.js';
+} from '@/types/index';
 
 // ---------------------------------------------------------------------------
 // Fixtures

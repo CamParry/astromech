@@ -13,8 +13,8 @@
  * `:before` gates; everything else is swallow-and-logged.
  */
 
-import type { Entry, EntryStatus, JsonObject, Media, User } from './domain.js';
-import type { PluginContext } from './plugins.js';
+import type { Entry, EntryStatus, JsonObject, Media, User } from './domain';
+import type { PluginContext } from './plugins';
 
 // ============================================================================
 // Hook Context Types (core events)

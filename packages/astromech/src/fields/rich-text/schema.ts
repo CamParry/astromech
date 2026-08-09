@@ -7,8 +7,8 @@
 
 import { getSchema } from '@tiptap/core';
 import type { Schema } from '@tiptap/pm/model';
-import { buildRichTextExtensions } from './extensions.js';
-import type { RichTextAllow } from '@/types/fields.js';
+import { buildRichTextExtensions } from './extensions';
+import type { RichTextAllow } from '@/types/fields';
 
 /** Build (or reuse) the ProseMirror schema for an `allow` list. */
 export function schemaFor(allow?: RichTextAllow): Schema {

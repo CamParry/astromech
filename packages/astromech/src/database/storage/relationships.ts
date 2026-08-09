@@ -10,12 +10,12 @@
  * rebuildable, so the extra write volume is the cheaper side of that trade.
  */
 
-import { getDb } from '@/database/registry.js';
-import type { Db } from '@/database/types.js';
-import { encodeWith } from '@/database/codec.js';
-import { relationshipsTable, type RelationshipRow } from '@/database/schema.js';
-import type { RelationshipEdge, TargetKind } from '@/fields/relationship-edges.js';
-import { createStorage } from './create-storage.js';
+import { getDb } from '@/database/registry';
+import type { Db } from '@/database/types';
+import { encodeWith } from '@/database/codec';
+import { relationshipsTable, type RelationshipRow } from '@/database/schema';
+import type { RelationshipEdge, TargetKind } from '@/fields/relationship-edges';
+import { createStorage } from './create-storage';
 
 export type RelationshipStorage = ReturnType<typeof createRelationshipStorage>;
 

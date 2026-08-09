@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { s3 } from '@/storage/drivers/s3.js';
+import { s3 } from '@/storage/drivers/s3';
 
 // ---------------------------------------------------------------------------
 // fetch stub — aws4fetch signs and then calls global fetch, so every assertion

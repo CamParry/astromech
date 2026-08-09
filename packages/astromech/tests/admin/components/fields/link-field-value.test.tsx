@@ -15,10 +15,10 @@
 import { describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
-import type { Field, FieldValidationContext } from '@/types/index.js';
-import '@/admin/rendering/register-fields.js';
+import type { Field, FieldValidationContext } from '@/types/index';
+import '@/admin/rendering/register-fields';
 import { FormField } from '@/admin/components/fields/form-field';
-import { validateLink } from '@/fields/built-in-rules.js';
+import { validateLink } from '@/fields/built-in-rules';
 
 const cta: Field = { name: 'cta', type: 'link' };
 

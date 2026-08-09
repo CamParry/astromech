@@ -14,9 +14,9 @@ import {
     pauseForApproval,
     pausedToolCalls,
     resumePausedTurn,
-} from '../../src/loop/approvals.js';
-import type { ChatMessage } from '../../src/types.js';
-import { approvalRow, fakeApprovals } from './fake-approvals.js';
+} from '../../src/loop/approvals';
+import type { ChatMessage } from '../../src/types';
+import { approvalRow, fakeApprovals } from './fake-approvals';
 
 /** A tool that records what it was invoked with. */
 function toolFor(

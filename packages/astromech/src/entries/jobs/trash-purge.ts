@@ -6,9 +6,9 @@
  * rows have none, so the purged ids are cleared from the index by hand.
  */
 
-import { createRelationshipStorage } from '@/database/storage/relationships.js';
-import { createEntryMaintenanceStorage } from '../storage/maintenance.js';
-import type { CronJob } from '@/cron/registry.js';
+import { createRelationshipStorage } from '@/database/storage/relationships';
+import { createEntryMaintenanceStorage } from '../storage/maintenance';
+import type { CronJob } from '@/cron/registry';
 
 export const trashPurgeJob: CronJob = {
     name: 'trash-purge',

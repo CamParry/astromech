@@ -12,9 +12,9 @@ import { defineCommand } from 'citty';
 import { createJiti } from 'jiti';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { generateMigrations } from '@/database/generate.js';
-import { pluginNamespace, pluginTablePrefix } from '@/plugins/runtime/plugin-identity.js';
-import type { Table } from '@/database/define-table.js';
+import { generateMigrations } from '@/database/generate';
+import { pluginNamespace, pluginTablePrefix } from '@/plugins/runtime/plugin-identity';
+import type { Table } from '@/database/define-table';
 
 /** Structural check — a `Table`, without importing runtime code. */
 function isTable(value: unknown): value is Table {

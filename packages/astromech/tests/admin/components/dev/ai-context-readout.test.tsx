@@ -9,10 +9,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
-import type { AIContextReference } from '@/types/ai-context.js';
-import { AIContextProvider, useAIContext } from '@/admin/context/ai-context.js';
-import { formatAIContextMessage } from '@/utilities/ai-context.js';
-import { AIContextReadout } from '@/admin/components/dev/ai-context-readout.js';
+import type { AIContextReference } from '@/types/ai-context';
+import { AIContextProvider, useAIContext } from '@/admin/context/ai-context';
+import { formatAIContextMessage } from '@/utilities/ai-context';
+import { AIContextReadout } from '@/admin/components/dev/ai-context-readout';
 
 const postsList: AIContextReference = { kind: 'entries', type: 'posts', label: 'Posts' };
 

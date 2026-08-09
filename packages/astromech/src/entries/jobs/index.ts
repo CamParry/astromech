@@ -1,6 +1,6 @@
-import { registerCronJob } from '@/cron/registry.js';
-import { scheduledPublishJob } from './scheduled-publish.js';
-import { trashPurgeJob } from './trash-purge.js';
+import { registerCronJob } from '@/cron/registry';
+import { scheduledPublishJob } from './scheduled-publish';
+import { trashPurgeJob } from './trash-purge';
 
 export { scheduledPublishJob, trashPurgeJob };
 

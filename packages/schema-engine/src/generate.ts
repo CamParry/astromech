@@ -15,9 +15,9 @@
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { diffSnapshots, type TableOp } from './diff.js';
-import { renderMigrationFile } from './render.js';
-import { serializeSnapshot, type Snapshot, type SqlDialect } from './model.js';
+import { diffSnapshots, type TableOp } from './diff';
+import { renderMigrationFile } from './render';
+import { serializeSnapshot, type Snapshot, type SqlDialect } from './model';
 
 export type GenerateResult =
     | { status: 'no-changes' }
@@ -70,7 +70,7 @@ function migrationVarName(idx: number): string {
 function renderIndexFile(entries: JournalEntry[]): string {
     const sorted = [...entries].sort((a, b) => a.idx - b.idx);
     const imports = sorted
-        .map((e) => `import * as ${migrationVarName(e.idx)} from './${e.tag}.js';`)
+        .map((e) => `import * as ${migrationVarName(e.idx)} from './${e.tag}';`)
         .join('\n');
     const providerEntries = sorted
         .map((e) => `            '${e.tag}': ${migrationVarName(e.idx)},`)

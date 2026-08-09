@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildImageAttrs } from '@/media/serving/image/build-image-attrs.js';
+import { buildImageAttrs } from '@/media/serving/image/build-image-attrs';
 import type {
     ImageAttrsContext,
     ImageAttrsInput,
-} from '@/media/serving/image/build-image-attrs.js';
+} from '@/media/serving/image/build-image-attrs';
 
 const MEDIA_ROUTE = '/_media';
 

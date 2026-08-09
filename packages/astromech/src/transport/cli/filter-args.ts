@@ -8,7 +8,7 @@
  */
 
 import type { ArgsDef } from 'citty';
-import type { MethodFilter } from '@/policies/method-filter.js';
+import type { MethodFilter } from '@/policies/method-filter';
 
 /** citty arg definitions. Spread into a command's `args`. */
 export const filterArgs = {

@@ -4,11 +4,11 @@
  * storage.
  */
 
-import { createRelationshipStorage } from '@/database/storage/relationships.js';
-import { getEntryStorage } from '../storage/registry.js';
-import { loadAndAssertType } from '../internal/records.js';
-import type { EntryRecord, EntryStorage } from '../storage/types.js';
-import type { IncomingRelationship } from '@/types/index.js';
+import { createRelationshipStorage } from '@/database/storage/relationships';
+import { getEntryStorage } from '../storage/registry';
+import { loadAndAssertType } from '../internal/records';
+import type { EntryRecord, EntryStorage } from '../storage/types';
+import type { IncomingRelationship } from '@/types/index';
 
 /** One row per index edge: a source referencing the target twice is two rows. */
 export async function incomingRelationships(params: {

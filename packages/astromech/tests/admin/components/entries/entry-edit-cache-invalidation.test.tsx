@@ -38,20 +38,15 @@ import {
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { ToastProvider } from '@/admin/components/ui/toast';
-import { AuthProvider } from '@/admin/context/auth.js';
-import { sessionQueryOptions } from '@/admin/context/auth.js';
-import { ConfirmProvider } from '@/admin/components/ui/confirm.js';
-import { AIContextProvider } from '@/admin/context/ai-context.js';
-import { EntryEditPage } from '@/admin/components/entries/entry-edit-page.js';
-import { scopedEntryKeys } from '@/admin/hooks/use-query-keys.js';
-import '@/admin/rendering/register-fields.js';
-import type { EntriesMount } from '@/admin/components/entries/mount.js';
-import type {
-    AdminEntryType,
-    Entry,
-    EntriesService,
-    EntryStatus,
-} from '@/types/index.js';
+import { AuthProvider } from '@/admin/context/auth';
+import { sessionQueryOptions } from '@/admin/context/auth';
+import { ConfirmProvider } from '@/admin/components/ui/confirm';
+import { AIContextProvider } from '@/admin/context/ai-context';
+import { EntryEditPage } from '@/admin/components/entries/entry-edit-page';
+import { scopedEntryKeys } from '@/admin/hooks/use-query-keys';
+import '@/admin/rendering/register-fields';
+import type { EntriesMount } from '@/admin/components/entries/mount';
+import type { AdminEntryType, Entry, EntriesService, EntryStatus } from '@/types/index';
 
 afterEach(cleanup);
 

@@ -5,8 +5,8 @@
  */
 
 import { vi } from 'vitest';
-import type { SessionsStorage } from '../../src/sessions/storage.js';
-import type { ChatMessage } from '../../src/types.js';
+import type { SessionsStorage } from '../../src/sessions/storage';
+import type { ChatMessage } from '../../src/types';
 
 export type FakeSessions = {
     storage: SessionsStorage;

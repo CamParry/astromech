@@ -25,11 +25,11 @@
  * Pure: no db, no config, no `virtual:` import.
  */
 
-import { formatInstancePath, formatSchemaPath } from '@/fields/field-path.js';
-import { flattenFieldNodes } from '@/fields/flatten.js';
-import { getFieldType } from '@/fields/field-type-registry.js';
-import { RESERVED_KEY } from '@/fields/reserved-keys.js';
-import type { Field, FieldPathSegment } from '@/types/fields.js';
+import { formatInstancePath, formatSchemaPath } from '@/fields/field-path';
+import { flattenFieldNodes } from '@/fields/flatten';
+import { getFieldType } from '@/fields/field-type-registry';
+import { RESERVED_KEY } from '@/fields/reserved-keys';
+import type { Field, FieldPathSegment } from '@/types/fields';
 
 /**
  * What a relation points at — the relation-eligible subset of `ResourceType`

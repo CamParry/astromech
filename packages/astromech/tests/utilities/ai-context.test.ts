@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { AIContextItem } from '@/types/ai-context.js';
-import { formatAIContextMessage } from '@/utilities/ai-context.js';
+import type { AIContextItem } from '@/types/ai-context';
+import { formatAIContextMessage } from '@/utilities/ai-context';
 
 /** Build a single-reference list so a line can be asserted in isolation. */
 function lineFor(reference: AIContextItem['reference']): string {

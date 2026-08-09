@@ -5,22 +5,18 @@
 
 import { stepCountIs, streamText, type LanguageModel, type ToolCallPart } from 'ai';
 import type { AIContextItem, PluginLogger, ToolDefinition } from 'astromech';
-import {
-    answerUnansweredCalls,
-    pauseForApproval,
-    resumePausedTurn,
-} from './approvals.js';
-import { buildRequest } from './request.js';
-import { toToolSet } from './tools.js';
-import { errorMessage } from '../error-message.js';
-import type { ApprovalsStorage } from '../approvals/storage.js';
-import type { SessionsStorage } from '../sessions/storage.js';
+import { answerUnansweredCalls, pauseForApproval, resumePausedTurn } from './approvals';
+import { buildRequest } from './request';
+import { toToolSet } from './tools';
+import { errorMessage } from '../error-message';
+import type { ApprovalsStorage } from '../approvals/storage';
+import type { SessionsStorage } from '../sessions/storage';
 import type {
     ApprovalDecision,
     ChatEvent,
     ChatMessage,
     ResolvedAssistantOptions,
-} from '../types.js';
+} from '../types';
 
 /** Bounded so a looping model cannot spend a request forever. */
 const MAX_STEPS = 12;

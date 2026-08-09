@@ -21,7 +21,7 @@
  */
 
 import type { Generated, Kysely, Transaction } from 'kysely';
-import type { KyselyOf } from '@/database/define-table.js';
+import type { KyselyOf } from '@/database/define-table';
 // Every table comes through the `database/schema.ts` aggregator rather than
 // from each domain directly — that indirection is the whole reason the
 // aggregator exists, and it keeps the rest of `database/` below the domains in
@@ -37,7 +37,7 @@ import type {
     relationshipsTable,
     cronTable,
     pluginsTable,
-} from '@/database/schema.js';
+} from '@/database/schema';
 
 export type DB = {
     // ── 10 ours — derived from defineTable tables (ISO-TEXT timestamps) ──────

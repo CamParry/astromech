@@ -15,8 +15,8 @@ import type {
     RichTextAllow,
     SelectOption,
     ValidationRule,
-} from '@/types/fields.js';
-import { t } from '@/utilities/labels.js';
+} from '@/types/fields';
+import { t } from '@/utilities/labels';
 
 // Re-exported so `astromech/fields` surfaces the `t` label descriptor.
 export { t };

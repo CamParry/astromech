@@ -1,9 +1,9 @@
 import { defineCommand } from 'citty';
-import { loadConfig, loadRawConfig } from '../config.js';
-import { getDb } from '@/database/registry.js';
+import { loadConfig, loadRawConfig } from '../config';
+import { getDb } from '@/database/registry';
 import { migrateToLatest, mergeMigrationProviders } from '@astromech/schema-engine';
-import { collectPluginMigrations } from '@/database/plugin-migrations.js';
-import { loadAppMigrations } from '@/database/app-migrations.js';
+import { collectPluginMigrations } from '@/database/plugin-migrations';
+import { loadAppMigrations } from '@/database/app-migrations';
 
 export default defineCommand({
     meta: { name: 'db:init', description: 'Run database migrations' },

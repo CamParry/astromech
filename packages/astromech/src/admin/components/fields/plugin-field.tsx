@@ -10,10 +10,10 @@
 
 import React from 'react';
 import { fieldTypes } from 'virtual:astromech/plugins/components';
-import type { BaseFieldProps } from '@/types/index.js';
-import { Spinner } from '@/admin/components/ui/index.js';
-import { ComponentErrorBoundary } from '@/admin/components/pages/ComponentErrorBoundary.js';
-import { PluginUiProvider } from '@/admin/context/plugin.js';
+import type { BaseFieldProps } from '@/types/index';
+import { Spinner } from '@/admin/components/ui/index';
+import { ComponentErrorBoundary } from '@/admin/components/pages/ComponentErrorBoundary';
+import { PluginUiProvider } from '@/admin/context/plugin';
 import { useFieldControl } from '@/admin/components/fields/field-control-context';
 
 export function hasPluginFieldType(type: string): boolean {

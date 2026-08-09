@@ -34,24 +34,21 @@ import {
     FormLayout,
     FormLayoutContent,
     Stack,
-} from '@/admin/components/ui/index.js';
-import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer.js';
+} from '@/admin/components/ui/index';
+import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer';
 import {
     FieldErrorsProvider,
     FieldWarningsProvider,
-} from '@/admin/components/fields/field-errors-context.js';
-import { EntryFormErrors } from './entry-form-errors.js';
-import { FieldValidationProvider } from '@/admin/components/fields/field-validation-context.js';
-import {
-    EntryNamespaceProvider,
-    namespaceForScope,
-} from '@/admin/i18n/entry-namespace.js';
-import { PublishPanel } from '@/admin/components/entries/PublishPanel.js';
-import { useEntryForm, useEntriesQuery, usePermissions } from '@/admin/hooks/index.js';
-import type { Entry } from '@/types/index.js';
-import { resolveAdminEntryType, resolveForm } from '@/admin/rendering/resolve.js';
-import { resolveContentLocale } from '@/utilities/locale.js';
-import type { EntriesMount } from './mount.js';
+} from '@/admin/components/fields/field-errors-context';
+import { EntryFormErrors } from './entry-form-errors';
+import { FieldValidationProvider } from '@/admin/components/fields/field-validation-context';
+import { EntryNamespaceProvider, namespaceForScope } from '@/admin/i18n/entry-namespace';
+import { PublishPanel } from '@/admin/components/entries/PublishPanel';
+import { useEntryForm, useEntriesQuery, usePermissions } from '@/admin/hooks/index';
+import type { Entry } from '@/types/index';
+import { resolveAdminEntryType, resolveForm } from '@/admin/rendering/resolve';
+import { resolveContentLocale } from '@/utilities/locale';
+import type { EntriesMount } from './mount';
 
 // ============================================================================
 // Types

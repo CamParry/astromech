@@ -1,17 +1,17 @@
-import { getCurrentUser } from '@/request-context/index.js';
-import { createRelationshipStorage } from '@/database/storage/relationships.js';
-import { asEntry, loadAndAssertType } from '../../internal/records.js';
-import { getStagingStorage, isVersioningEnabled } from '../../internal/type-config.js';
-import { indexEntryRelationships } from '../../internal/relationships.js';
-import { createEntryFieldReads } from '../../reads.js';
-import { resolveEntryType } from '../../type-ids.js';
-import { entryValidationStage } from '../../validation-stage.js';
-import { flattenEntryFields } from '@/fields/flatten.js';
-import { processFields } from '@/fields/pipeline.js';
-import { ValidationError } from '@/errors/index.js';
+import { getCurrentUser } from '@/request-context/index';
+import { createRelationshipStorage } from '@/database/storage/relationships';
+import { asEntry, loadAndAssertType } from '../../internal/records';
+import { getStagingStorage, isVersioningEnabled } from '../../internal/type-config';
+import { indexEntryRelationships } from '../../internal/relationships';
+import { createEntryFieldReads } from '../../reads';
+import { resolveEntryType } from '../../type-ids';
+import { entryValidationStage } from '../../validation-stage';
+import { flattenEntryFields } from '@/fields/flatten';
+import { processFields } from '@/fields/pipeline';
+import { ValidationError } from '@/errors/index';
 import config from 'virtual:astromech/config';
-import type { EntryStorage, StorageDb } from '../../storage/types.js';
-import type { Entry, JsonObject } from '@/types/index.js';
+import type { EntryStorage, StorageDb } from '../../storage/types';
+import type { Entry, JsonObject } from '@/types/index';
 
 export async function mergeStaged(params: { type: string; id: string }): Promise<Entry> {
     const { type, id } = params;

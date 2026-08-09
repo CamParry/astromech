@@ -9,17 +9,17 @@
  */
 
 import config from 'virtual:astromech/config';
-import type { JsonValue, Setting, SettingsService } from '@/types/index.js';
-import type { ResolvedConfig } from '@/types/config.js';
-import { createSettingsStorage } from './storage.js';
-import type { SettingRow } from './schema.js';
-import { mergeLocaleSetting } from './page-values.js';
-import { isPublicSettingKey } from './visibility.js';
-import { processFields } from '@/fields/pipeline.js';
-import { flattenEntryFields } from '@/fields/flatten.js';
-import { fieldReadsFromRecords } from '@/fields/field-reads.js';
-import { getCurrentUser } from '@/request-context/index.js';
-import { ValidationError } from '@/errors/validation.js';
+import type { JsonValue, Setting, SettingsService } from '@/types/index';
+import type { ResolvedConfig } from '@/types/config';
+import { createSettingsStorage } from './storage';
+import type { SettingRow } from './schema';
+import { mergeLocaleSetting } from './page-values';
+import { isPublicSettingKey } from './visibility';
+import { processFields } from '@/fields/pipeline';
+import { flattenEntryFields } from '@/fields/flatten';
+import { fieldReadsFromRecords } from '@/fields/field-reads';
+import { getCurrentUser } from '@/request-context/index';
+import { ValidationError } from '@/errors/validation';
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
     typeof v === 'object' && v !== null && !Array.isArray(v);

@@ -6,8 +6,8 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { getMethodManifest, setMethodManifest } from '@/codegen/manifest-registry.js';
-import type { CoreManifestMethod, MethodManifest } from '@/types/index.js';
+import { getMethodManifest, setMethodManifest } from '@/codegen/manifest-registry';
+import type { CoreManifestMethod, MethodManifest } from '@/types/index';
 
 beforeEach(() => {
     globalThis.__astromech = undefined;

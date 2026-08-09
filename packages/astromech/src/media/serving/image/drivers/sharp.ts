@@ -12,7 +12,7 @@
 
 import sharpLib from 'sharp';
 import { encode } from 'blurhash';
-import type { ImageDriver, ImageSource } from '@/types/index.js';
+import type { ImageDriver, ImageSource } from '@/types/index';
 
 export function sharp(): ImageDriver {
     return {

@@ -1,17 +1,17 @@
 import config from 'virtual:astromech/config';
-import { mediaService } from '@/media/service.js';
-import { getStorageDriver } from '@/storage/registry.js';
-import { getImageConfig } from './image/registry.js';
+import { mediaService } from '@/media/service';
+import { getStorageDriver } from '@/storage/registry';
+import { getImageConfig } from './image/registry';
 import {
     parseImageParams,
     isAllowedWidth,
     buildMediaUrl,
     buildVariantUrl,
     variantStorageKey,
-} from './image/url.js';
-import type { ImageFormat } from './image/url.js';
-import { isOptimisableImage } from './image/dimensions.js';
-import type { ImageSource, StorageDriver } from '@/types/index.js';
+} from './image/url';
+import type { ImageFormat } from './image/url';
+import { isOptimisableImage } from './image/dimensions';
+import type { ImageSource, StorageDriver } from '@/types/index';
 
 export type MediaRequestInfo = {
     id: string;

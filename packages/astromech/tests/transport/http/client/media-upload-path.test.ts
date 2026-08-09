@@ -8,7 +8,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { astromechClient } from '@/transport/http/client/index.js';
+import { astromechClient } from '@/transport/http/client/index';
 
 let calls: { url: string; method: string | undefined }[] = [];
 

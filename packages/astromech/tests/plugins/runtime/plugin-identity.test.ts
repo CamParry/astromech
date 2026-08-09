@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { PluginDefinition } from '@/types/index.js';
+import type { PluginDefinition } from '@/types/index';
 import {
     assertNoPluginCollisions,
     checkPluginDependencies,
@@ -7,7 +7,7 @@ import {
     pluginServiceKey,
     resolvePluginIdentity,
     satisfiesRange,
-} from '@/plugins/runtime/plugin-identity.js';
+} from '@/plugins/runtime/plugin-identity';
 
 const def = (
     partial: Partial<PluginDefinition> & { package: string }

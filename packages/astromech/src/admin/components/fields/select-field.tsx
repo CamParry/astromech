@@ -1,6 +1,6 @@
-import type { BaseFieldProps } from '@/types/index.js';
+import type { BaseFieldProps } from '@/types/index';
 import { Select } from '@/admin/components/ui/select';
-import { useLabel } from '@/admin/i18n/entry-namespace.js';
+import { useLabel } from '@/admin/i18n/entry-namespace';
 
 export function SelectField({
     name,

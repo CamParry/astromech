@@ -6,7 +6,7 @@
  * Plugin custom field types are NOT registered here; FormField falls through
  * to the lazy plugin-field path when getFieldComponent returns undefined.
  */
-import { registerField } from './field-registry.js';
+import { registerField } from './field-registry';
 import { TextField } from '@/admin/components/fields/text-field';
 import { TextareaField } from '@/admin/components/fields/textarea-field';
 import { RichtextField } from '@/admin/components/fields/richtext-field';

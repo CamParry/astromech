@@ -30,19 +30,19 @@ import {
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import type { CellRenderContext, Entry, TableColumn } from '@/types/index.js';
-import type { DropdownItem } from '@/admin/components/ui/dropdown.js';
+import type { CellRenderContext, Entry, TableColumn } from '@/types/index';
+import type { DropdownItem } from '@/admin/components/ui/dropdown';
 import {
     fieldTypeOf,
     resolveAdminEntryType,
     resolveTable,
-} from '@/admin/rendering/resolve.js';
-import { defaultCellKind } from '@/admin/rendering/cell-kind-map.js';
-import { getCellRenderer } from '@/admin/rendering/cell-registry.js';
-import { resolveLabel } from '@/admin/i18n/labels.js';
-import { namespaceForScope } from '@/admin/i18n/entry-namespace.js';
-import { statusVariant } from '@/admin/rendering/cells/status-variant.js';
-import { Link } from '@/admin/rendering/cells/link.js';
+} from '@/admin/rendering/resolve';
+import { defaultCellKind } from '@/admin/rendering/cell-kind-map';
+import { getCellRenderer } from '@/admin/rendering/cell-registry';
+import { resolveLabel } from '@/admin/i18n/labels';
+import { namespaceForScope } from '@/admin/i18n/entry-namespace';
+import { statusVariant } from '@/admin/rendering/cells/status-variant';
+import { Link } from '@/admin/rendering/cells/link';
 import {
     Badge,
     Button,
@@ -65,8 +65,8 @@ import {
     useConfirm,
     useContextMenu,
     useToast,
-} from '@/admin/components/ui/index.js';
-import type { SortDirection } from '@/admin/components/ui/table.js';
+} from '@/admin/components/ui/index';
+import type { SortDirection } from '@/admin/components/ui/table';
 import {
     useSelection,
     useViewMode,
@@ -81,10 +81,10 @@ import {
     useBulkDeleteEntries,
     useBulkPublishEntries,
     useBulkUnpublishEntries,
-} from '@/admin/hooks/index.js';
-import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal.js';
-import { resolveContentLocale } from '@/utilities/locale.js';
-import type { EntriesMount, EntriesListSearch } from './mount.js';
+} from '@/admin/hooks/index';
+import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal';
+import { resolveContentLocale } from '@/utilities/locale';
+import type { EntriesMount, EntriesListSearch } from './mount';
 
 // ============================================================================
 // Types

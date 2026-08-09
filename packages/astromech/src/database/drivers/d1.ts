@@ -18,15 +18,11 @@
  */
 
 import { Kysely, CamelCasePlugin } from 'kysely';
-import { resolveBinding } from '@/cloudflare/bindings.js';
-import { D1Dialect, type D1DatabaseLike } from './d1-dialect.js';
-import type { DB } from '@/database/types.js';
+import { resolveBinding } from '@/cloudflare/bindings';
+import { D1Dialect, type D1DatabaseLike } from './d1-dialect';
+import type { DB } from '@/database/types';
 
-export type {
-    D1DatabaseLike,
-    D1PreparedStatementLike,
-    D1ResultLike,
-} from './d1-dialect.js';
+export type { D1DatabaseLike, D1PreparedStatementLike, D1ResultLike } from './d1-dialect';
 
 export type D1Options =
     | { binding: string; database?: never }

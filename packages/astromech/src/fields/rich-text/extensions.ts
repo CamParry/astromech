@@ -20,7 +20,7 @@ import StarterKit from '@tiptap/starter-kit';
 import TextAlign from '@tiptap/extension-text-align';
 import { Placeholder } from '@tiptap/extension-placeholder';
 import { Extension, type Extensions } from '@tiptap/core';
-import type { RichTextAllow } from '@/types/fields.js';
+import type { RichTextAllow } from '@/types/fields';
 
 // ============================================================================
 // TextBalance extension — inline style; always on

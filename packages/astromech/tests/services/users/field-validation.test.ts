@@ -5,9 +5,9 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
-import { usersService } from '@/users/service.js';
-import type { AstromechConfig } from '@/types/index.js';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { usersService } from '@/users/service';
+import type { AstromechConfig } from '@/types/index';
 
 // ---------------------------------------------------------------------------
 // Config with custom user fields

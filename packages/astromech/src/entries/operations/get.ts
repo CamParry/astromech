@@ -1,11 +1,11 @@
 import config from 'virtual:astromech/config';
-import { flattenEntryFields } from '@/fields/flatten.js';
-import { getCurrentUser } from '@/request-context/index.js';
-import { resolveEntryType } from '../type-ids.js';
-import { getEntryStorage } from '../storage/registry.js';
-import { runPreviewGet } from './preview/read.js';
-import { applyVisibility, markPublic, type VisibilityShape } from '../visibility.js';
-import type { Entry } from '@/types/index.js';
+import { flattenEntryFields } from '@/fields/flatten';
+import { getCurrentUser } from '@/request-context/index';
+import { resolveEntryType } from '../type-ids';
+import { getEntryStorage } from '../storage/registry';
+import { runPreviewGet } from './preview/read';
+import { applyVisibility, markPublic, type VisibilityShape } from '../visibility';
+import type { Entry } from '@/types/index';
 
 export async function get(params: {
     type: string;

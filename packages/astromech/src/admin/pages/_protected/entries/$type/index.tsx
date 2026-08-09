@@ -8,15 +8,15 @@
 
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { astromechClient } from '@/transport/http/client/index.js';
+import { astromechClient } from '@/transport/http/client/index';
 import adminConfig from 'virtual:astromech/admin-config';
-import { EntriesListPage } from '@/admin/components/entries/entries-list-page.js';
-import type { EntriesService } from '@/types/index.js';
+import { EntriesListPage } from '@/admin/components/entries/entries-list-page';
+import type { EntriesService } from '@/types/index';
 import {
     validateEntriesListSearch,
     type EntriesMount,
-} from '@/admin/components/entries/mount.js';
-import { useAIContext } from '@/admin/context/ai-context.js';
+} from '@/admin/components/entries/mount';
+import { useAIContext } from '@/admin/context/ai-context';
 
 function EntryIndexPage(): React.ReactElement {
     const { type } = Route.useParams();

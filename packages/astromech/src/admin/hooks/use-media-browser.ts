@@ -3,9 +3,9 @@
  * the field picker run this, so neither maps query params itself.
  */
 
-import { useMediaQuery } from './media.js';
-import type { MediaBrowserQuery } from '@/admin/types/media.js';
-import type { Media } from '@/types/index.js';
+import { useMediaQuery } from './media';
+import type { MediaBrowserQuery } from '@/admin/types/media';
+import type { Media } from '@/types/index';
 
 export type MediaBrowserResult = {
     items: Media[];

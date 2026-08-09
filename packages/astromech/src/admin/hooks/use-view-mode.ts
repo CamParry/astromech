@@ -1,5 +1,5 @@
-import type { ViewMode } from '../types/media.js';
-import { useLocalState } from './use-local-state.js';
+import type { ViewMode } from '../types/media';
+import { useLocalState } from './use-local-state';
 
 type UseViewModeOptions = {
     storageKey?: string;

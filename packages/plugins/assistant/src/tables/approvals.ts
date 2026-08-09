@@ -6,7 +6,7 @@
 
 import { definePluginTable } from 'astromech';
 import type { TableInsert, TableSelect } from 'astromech';
-import { ASSISTANT_PACKAGE } from '../types.js';
+import { ASSISTANT_PACKAGE } from '../types';
 
 export const approvalsTable = definePluginTable(
     ASSISTANT_PACKAGE,

@@ -3,7 +3,7 @@
  * Centralized logic for converting values between database and input formats
  */
 
-import type { FieldTypeName } from '@/types/index.js';
+import type { FieldTypeName } from '@/types/index';
 
 /**
  * Format a date value for date input (YYYY-MM-DD)

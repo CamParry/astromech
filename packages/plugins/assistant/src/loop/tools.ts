@@ -6,7 +6,7 @@
 import { anthropic } from '@ai-sdk/anthropic';
 import { jsonSchema, tool, type Tool, type ToolSet } from 'ai';
 import type { ToolDefinition } from 'astromech';
-import { errorMessage } from '../error-message.js';
+import { errorMessage } from '../error-message';
 
 /**
  * The key the search tool is registered under. The provider fixes the name the

@@ -8,27 +8,27 @@
  * Import from 'astromech/local'.
  */
 
-import type { EntriesService } from '@/types/index.js';
-import { query } from './operations/query.js';
-import { get } from './operations/get.js';
-import { create } from './operations/create.js';
-import { update } from './operations/update.js';
-import { duplicate } from './operations/duplicate.js';
-import { trash, emptyTrash } from './operations/trash.js';
-import { restore } from './operations/restore.js';
-import { deleteEntry } from './operations/delete.js';
-import { publish, unpublish, schedule } from './operations/status.js';
-import { incomingRelationships } from './operations/relationships.js';
-import { listVersions } from './operations/versions/list.js';
-import { restoreVersion } from './operations/versions/restore.js';
-import { createStaged } from './operations/staging/create.js';
-import { getStaged } from './operations/staging/get.js';
-import { mergeStaged } from './operations/staging/merge.js';
-import { deleteStaged } from './operations/staging/delete.js';
-import { issuePreviewToken, revokePreviewToken } from './operations/preview/token.js';
+import type { EntriesService } from '@/types/index';
+import { query } from './operations/query';
+import { get } from './operations/get';
+import { create } from './operations/create';
+import { update } from './operations/update';
+import { duplicate } from './operations/duplicate';
+import { trash, emptyTrash } from './operations/trash';
+import { restore } from './operations/restore';
+import { deleteEntry } from './operations/delete';
+import { publish, unpublish, schedule } from './operations/status';
+import { incomingRelationships } from './operations/relationships';
+import { listVersions } from './operations/versions/list';
+import { restoreVersion } from './operations/versions/restore';
+import { createStaged } from './operations/staging/create';
+import { getStaged } from './operations/staging/get';
+import { mergeStaged } from './operations/staging/merge';
+import { deleteStaged } from './operations/staging/delete';
+import { issuePreviewToken, revokePreviewToken } from './operations/preview/token';
 
 /** @deprecated Slug uniqueness is now a storage concern. */
-export { generateUniqueSlug } from './internal/slug.js';
+export { generateUniqueSlug } from './internal/slug';
 
 export const entriesService: EntriesService = {
     query,

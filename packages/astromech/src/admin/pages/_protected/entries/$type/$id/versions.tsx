@@ -7,12 +7,12 @@
 
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { astromechClient } from '@/transport/http/client/index.js';
+import { astromechClient } from '@/transport/http/client/index';
 import adminConfig from 'virtual:astromech/admin-config';
-import { EntryVersionsPage } from '@/admin/components/entries/entry-versions-page.js';
-import { entryQueryOptions, entryVersionsQueryOptions } from '@/admin/hooks/entries.js';
-import type { EntriesService } from '@/types/index.js';
-import type { EntriesMount } from '@/admin/components/entries/mount.js';
+import { EntryVersionsPage } from '@/admin/components/entries/entry-versions-page';
+import { entryQueryOptions, entryVersionsQueryOptions } from '@/admin/hooks/entries';
+import type { EntriesService } from '@/types/index';
+import type { EntriesMount } from '@/admin/components/entries/mount';
 
 function EntryVersionsRoutePage(): React.ReactElement {
     const { type, id } = Route.useParams();

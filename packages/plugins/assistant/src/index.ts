@@ -5,14 +5,14 @@
  */
 
 import { definePlugin, withDefaults } from 'astromech';
-import { assistantPermissions } from './permissions/assistant.js';
-import { chatRoutes } from './routes/chat.js';
-import { buildSessionsService } from './service/sessions.js';
-import { migrationProvider } from '../migrations/index.js';
-import { approvalsTable } from './tables/approvals.js';
-import { sessionsTable } from './tables/sessions.js';
-import { ASSISTANT_PACKAGE } from './types.js';
-import type { AssistantOptions, ResolvedAssistantOptions } from './types.js';
+import { assistantPermissions } from './permissions/assistant';
+import { chatRoutes } from './routes/chat';
+import { buildSessionsService } from './service/sessions';
+import { migrationProvider } from '../migrations/index';
+import { approvalsTable } from './tables/approvals';
+import { sessionsTable } from './tables/sessions';
+import { ASSISTANT_PACKAGE } from './types';
+import type { AssistantOptions, ResolvedAssistantOptions } from './types';
 
 export type { AssistantOptions };
 

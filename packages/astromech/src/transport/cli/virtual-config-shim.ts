@@ -10,7 +10,7 @@
  * tsup aliases this path to here for the CLI build only.
  */
 
-import type { AstromechConfig, ResolvedConfig } from '@/types/index.js';
+import type { AstromechConfig, ResolvedConfig } from '@/types/index';
 
 declare global {
     var __astromechCliConfig: ResolvedConfig | undefined;

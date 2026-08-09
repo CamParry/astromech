@@ -16,8 +16,8 @@ import { pathToFileURL } from 'node:url';
 import { createClient } from '@libsql/client';
 import { Kysely, sql } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
-import { generateMigrationFromOps, generateMigrations } from '../src/generate.js';
-import { col, index, snap, table } from './_support/tables.js';
+import { generateMigrationFromOps, generateMigrations } from '../src/generate';
+import { col, index, snap, table } from './_support/tables';
 
 async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
     const dir = await mkdtemp(join(tmpdir(), 'schema-engine-gen-'));
@@ -63,7 +63,7 @@ describe('generateMigrations', () => {
             ]);
 
             const indexSource = await readFile(resolve(dir, 'index.ts'), 'utf-8');
-            expect(indexSource).toContain("import * as m0000 from './0000_init.js';");
+            expect(indexSource).toContain("import * as m0000 from './0000_init';");
             expect(indexSource).toContain("'0000_init': m0000,");
         });
     });
@@ -119,8 +119,8 @@ describe('generateMigrations', () => {
             ]);
 
             const indexSource = await readFile(resolve(dir, 'index.ts'), 'utf-8');
-            expect(indexSource).toContain("import * as m0000 from './0000_init.js';");
-            expect(indexSource).toContain("import * as m0001 from './0001_add-note.js';");
+            expect(indexSource).toContain("import * as m0000 from './0000_init';");
+            expect(indexSource).toContain("import * as m0001 from './0001_add-note';");
             expect(indexSource).toContain("'0000_init': m0000,");
             expect(indexSource).toContain("'0001_add-note': m0001,");
         });

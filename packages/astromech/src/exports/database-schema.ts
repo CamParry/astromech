@@ -18,6 +18,6 @@
  * owns (`users`, `accounts`, …), which has no `Table` to pass.
  */
 
-export * from '@/database/schema.js';
-export { encode, decode, encodeWith, decodeWith } from '@/database/codec.js';
-export type { DB, Db } from '@/database/types.js';
+export * from '@/database/schema';
+export { encode, decode, encodeWith, decodeWith } from '@/database/codec';
+export type { DB, Db } from '@/database/types';

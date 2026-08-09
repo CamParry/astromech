@@ -14,7 +14,7 @@ import React, {
     useState,
     useSyncExternalStore,
 } from 'react';
-import type { AIContextItem, AIContextReference } from '@/types/ai-context.js';
+import type { AIContextItem, AIContextReference } from '@/types/ai-context';
 
 // ============================================================================
 // Types

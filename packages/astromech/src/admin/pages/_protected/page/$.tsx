@@ -13,12 +13,12 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { hostPages } from 'virtual:astromech/plugins/components';
 import adminConfig from 'virtual:astromech/admin-config';
-import { usePermissions } from '@/admin/hooks/index.js';
-import { ComponentPageView } from '@/admin/components/pages/ComponentPageView.js';
-import { SettingsPageForm } from '@/admin/components/pages/SettingsPageForm.js';
-import { EmptyState, Page, PageContent } from '@/admin/components/ui/index.js';
-import { resolveLabel } from '@/admin/i18n/labels.js';
-import { useAIContext } from '@/admin/context/ai-context.js';
+import { usePermissions } from '@/admin/hooks/index';
+import { ComponentPageView } from '@/admin/components/pages/ComponentPageView';
+import { SettingsPageForm } from '@/admin/components/pages/SettingsPageForm';
+import { EmptyState, Page, PageContent } from '@/admin/components/ui/index';
+import { resolveLabel } from '@/admin/i18n/labels';
+import { useAIContext } from '@/admin/context/ai-context';
 
 // ============================================================================
 // Route component

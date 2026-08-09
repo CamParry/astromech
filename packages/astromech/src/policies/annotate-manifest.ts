@@ -11,8 +11,8 @@
  * happens (ai-integration decision 11).
  */
 
-import type { ManifestMethod, Permission, Role } from '@/types/index.js';
-import { can } from '@/permissions/index.js';
+import type { ManifestMethod, Permission, Role } from '@/types/index';
+import { can } from '@/permissions/index';
 
 export type AnnotatedManifestMethod = ManifestMethod & {
     /** true = the role holds it; false = denied; null = input-derived, decidable only at call time. */

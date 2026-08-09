@@ -5,8 +5,8 @@
 
 import { definePluginTable } from 'astromech';
 import type { TableInsert, TableSelect } from 'astromech';
-import { FORMS_PACKAGE } from '../types.js';
-import type { SubmissionMeta } from '../types.js';
+import { FORMS_PACKAGE } from '../types';
+import type { SubmissionMeta } from '../types';
 
 export const submissionsTable = definePluginTable(
     FORMS_PACKAGE,

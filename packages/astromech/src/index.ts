@@ -14,44 +14,41 @@ import type {
     PluginDefinition,
     PluginFactory,
     ServiceMethod,
-} from '@/types/index.js';
-import { pluginNamespace } from '@/utilities/plugin-namespace.js';
+} from '@/types/index';
+import { pluginNamespace } from '@/utilities/plugin-namespace';
 import * as zod from 'zod';
 
 // ============================================================================
 // Type Exports
 // ============================================================================
 
-export * from '@/types/index.js';
-export { runScheduledJobs } from '@/cron/index.js';
+export * from '@/types/index';
+export { runScheduledJobs } from '@/cron/index';
 // Model access, so a plugin can reach a configured model without taking its own
 // SDK dependency. Absent unless the site configures `ai` — hence `undefined`.
-export { getModel, hasModel } from '@/ai/index.js';
-export { builtInRole, BUILT_IN_ROLES } from '@/permissions/index.js';
-export type { BuiltInRoleSlug } from '@/permissions/index.js';
-export { definePermissions } from '@/permissions/define.js';
-export type {
-    PermissionDeclaration,
-    PermissionDeclarations,
-} from '@/permissions/define.js';
+export { getModel, hasModel } from '@/ai/index';
+export { builtInRole, BUILT_IN_ROLES } from '@/permissions/index';
+export type { BuiltInRoleSlug } from '@/permissions/index';
+export { definePermissions } from '@/permissions/define';
+export type { PermissionDeclaration, PermissionDeclarations } from '@/permissions/define';
 // Entry permissions are derived, never declared — a site grants a plugin's entry
 // types with these rather than reading a list off the plugin.
 export {
     type EntryAction,
     entryPermission,
     entryPermissions,
-} from '@/permissions/entry-permission.js';
-export { withDefaults } from '@/utilities/options.js';
-export { resolveEntryUrl, resolveEntryPath } from '@/entries/utils/url.js';
-export type { UrlEntry } from '@/entries/utils/url.js';
-export { defaultImageWidths } from '@/media/serving/image/defaults.js';
-export { buildImageAttrs } from '@/media/serving/image/build-image-attrs.js';
+} from '@/permissions/entry-permission';
+export { withDefaults } from '@/utilities/options';
+export { resolveEntryUrl, resolveEntryPath } from '@/entries/utils/url';
+export type { UrlEntry } from '@/entries/utils/url';
+export { defaultImageWidths } from '@/media/serving/image/defaults';
+export { buildImageAttrs } from '@/media/serving/image/build-image-attrs';
 export type {
     ImageAttrs,
     ImageAttrsContext,
     ImageAttrsInput,
     ImageAttrsOptions,
-} from '@/media/serving/image/build-image-attrs.js';
+} from '@/media/serving/image/build-image-attrs';
 
 // Field factories now live in the `astromech/fields` subpath (see src/fields.ts).
 
@@ -60,8 +57,8 @@ export type {
 // see roadmap/completed/plugin-authoring-experience.md)
 // ============================================================================
 
-export { definePluginTable } from '@/database/define-plugin-table.js';
-export type { KyselyTableKey, PluginDB } from '@/database/define-plugin-table.js';
+export { definePluginTable } from '@/database/define-plugin-table';
+export type { KyselyTableKey, PluginDB } from '@/database/define-plugin-table';
 // The whole `Table` type vocabulary, not just the headline types: a plugin's
 // emitted `.d.ts` has to be able to *name* the type `definePluginTable` infers,
 // and that mentions `Column`/`IndexSpec` structurally. Without them on this
@@ -84,15 +81,15 @@ export type {
     TableOptions,
     TableSelect,
     TableUpdate,
-} from '@/database/define-table.js';
-export { decodeWith, encodeWith, encodePatchWith } from '@/database/codec.js';
+} from '@/database/define-table';
+export { decodeWith, encodeWith, encodePatchWith } from '@/database/codec';
 // The `Table`-backed CRUD wrapper, on the same surface as the `Table`
 // vocabulary and the codec it is built on: a plugin holding a `definePluginTable`
 // table composes `createStorage` inside its own `createXStorage(db)` factory
 // exactly as core's domains do, and then never spells the table name or reaches
 // for a codec again. Its public types ship with it for the TS2742 reason above —
 // a plugin's `.d.ts` has to be able to *name* what the factory returns.
-export { createStorage } from '@/database/storage/create-storage.js';
+export { createStorage } from '@/database/storage/create-storage';
 export type {
     FindManyParams,
     GenericDb,
@@ -102,28 +99,28 @@ export type {
     Storage,
     UpsertOptions,
     Where,
-} from '@/database/storage/create-storage.js';
-export { tableStorage } from '@/entries/storage/table.js';
-export { t } from '@/utilities/labels.js';
+} from '@/database/storage/create-storage';
+export { tableStorage } from '@/entries/storage/table';
+export { t } from '@/utilities/labels';
 // Rich text is stored as ProseMirror JSON and rendered to sanitized HTML on
 // public reads. A plugin holding richtext that is `private` — and so absent
 // from the public shape — has no read to get HTML from, and must render it
 // itself. Exported so that never means reimplementing the sanitizer.
 // `parseRichText` is the inverse, for anything holding HTML that has to become
 // a stored document.
-export { parseRichText, renderRichText } from '@/fields/rich-text/index.js';
+export { parseRichText, renderRichText } from '@/fields/rich-text/index';
 // The relationships index is derived from field data, so anything writing
 // entries outside the normal operations (a seed, a rebuild) needs the same pure
 // traversal core uses rather than a second, drifting copy of it.
 export {
     collectRelationshipEdges,
     collectRelationshipSchemaPaths,
-} from '@/fields/relationship-edges.js';
-export type { RelationshipEdge, TargetKind } from '@/fields/relationship-edges.js';
+} from '@/fields/relationship-edges';
+export type { RelationshipEdge, TargetKind } from '@/fields/relationship-edges';
 // The AI context formatter ships from the plugin-authoring surface as well as
 // `astromech/methods`: a plugin building a chat request needs it, and this is
 // the only barrel it may import.
-export { formatAIContextMessage } from '@/utilities/ai-context.js';
+export { formatAIContextMessage } from '@/utilities/ai-context';
 
 // ============================================================================
 // Config / Collection / Plugin Helpers

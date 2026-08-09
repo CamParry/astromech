@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { generateClientTypes } from '@/codegen/type-generator.js';
-import type { ResolvedConfig } from '@/types/index.js';
+import { generateClientTypes } from '@/codegen/type-generator';
+import type { ResolvedConfig } from '@/types/index';
 
 /**
  * Golden baseline locking the EXACT generated output across every data field

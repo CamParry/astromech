@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { PluginDefinition } from '@/types/index.js';
-import { defineTable, type Table } from '@/database/define-table.js';
+import type { PluginDefinition } from '@/types/index';
+import { defineTable, type Table } from '@/database/define-table';
 import {
     assertPluginTablePrefixes,
     collectPluginTables,
-} from '@/plugins/runtime/plugin-tables.js';
+} from '@/plugins/runtime/plugin-tables';
 
 const def = (
     partial: Partial<PluginDefinition> & { package: string }

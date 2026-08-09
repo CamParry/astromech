@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { CORE_FIELD_TYPES } from '@/types/fields.js';
-import type { Field } from '@/types/fields.js';
-import { getFieldType } from '@/fields/field-type-registry.js';
+import { CORE_FIELD_TYPES } from '@/types/fields';
+import type { Field } from '@/types/fields';
+import { getFieldType } from '@/fields/field-type-registry';
 
 const LAYOUT_TYPES = new Set(['section', 'tabs', 'tab', 'accordion']);
 

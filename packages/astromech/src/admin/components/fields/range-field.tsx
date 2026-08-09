@@ -1,6 +1,6 @@
-import type { BaseFieldProps } from '@/types/index.js';
-import { RangeInput } from '@/admin/components/ui/range-input.js';
-import { useLabel } from '@/admin/i18n/entry-namespace.js';
+import type { BaseFieldProps } from '@/types/index';
+import { RangeInput } from '@/admin/components/ui/range-input';
+import { useLabel } from '@/admin/i18n/entry-namespace';
 
 export function RangeField({ name, value, field, onChange, disabled }: BaseFieldProps) {
     const label = useLabel();

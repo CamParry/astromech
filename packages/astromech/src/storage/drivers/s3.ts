@@ -33,7 +33,7 @@ import type {
     StorageObject,
     StorageRange,
     StorageStat,
-} from '@/types/index.js';
+} from '@/types/index';
 
 export type S3Options = {
     /** Falls back to `S3_ENDPOINT` on Node. Required on Workers. */

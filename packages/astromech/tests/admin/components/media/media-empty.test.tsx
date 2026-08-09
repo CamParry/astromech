@@ -9,9 +9,9 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { MediaEmpty } from '@/admin/components/media/media-empty.js';
+import { MediaEmpty } from '@/admin/components/media/media-empty';
 import en from '@/admin/locales/en.json';
-import type { MediaBrowserQuery } from '@/admin/types/media.js';
+import type { MediaBrowserQuery } from '@/admin/types/media';
 
 const BROWSING: MediaBrowserQuery = { q: '', type: 'all', page: 1 };
 

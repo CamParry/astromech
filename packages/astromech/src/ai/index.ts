@@ -7,7 +7,7 @@
  */
 
 import type { LanguageModelV4 } from '@ai-sdk/provider';
-import { getAIConfig } from '@/ai/registry.js';
+import { getAIConfig } from '@/ai/registry';
 
 /**
  * The configured model, or the one registered under `name`. A name that is not

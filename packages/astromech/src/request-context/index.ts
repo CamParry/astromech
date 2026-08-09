@@ -22,16 +22,16 @@
  */
 
 import config from 'virtual:astromech/config';
-import { getDb } from '@/database/registry.js';
-import { getCurrentUser } from '@/request-context/request-context.js';
+import { getDb } from '@/database/registry';
+import { getCurrentUser } from '@/request-context/request-context';
 
-export type { RequestContext } from '@/request-context/request-context.js';
+export type { RequestContext } from '@/request-context/request-context';
 export {
     getCurrentRole,
     getCurrentUser,
     getRequestContext,
     runWithContext,
-} from '@/request-context/request-context.js';
+} from '@/request-context/request-context';
 
 export function getServerContext() {
     return {

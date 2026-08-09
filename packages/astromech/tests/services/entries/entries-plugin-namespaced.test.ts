@@ -6,9 +6,9 @@
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
-import { entriesService } from '@/entries/service.js';
-import type { AstromechConfig, PluginDefinition } from '@/types/index.js';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { entriesService } from '@/entries/service';
+import type { AstromechConfig, PluginDefinition } from '@/types/index';
 
 const redirectsPlugin: PluginDefinition = {
     package: '@astromech/redirects',

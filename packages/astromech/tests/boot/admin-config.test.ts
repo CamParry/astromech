@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { buildAdminConfig, toAdminEntryType } from '@/boot/admin-config.js';
-import { resolveConfig } from '@/boot/config-resolver.js';
+import { buildAdminConfig, toAdminEntryType } from '@/boot/admin-config';
+import { resolveConfig } from '@/boot/config-resolver';
 import type {
     AstromechConfig,
     DatabaseDriver,
     EntryType,
     PluginDefinition,
     StorageDriver,
-} from '@/types/index.js';
+} from '@/types/index';
 
 const driver: DatabaseDriver = {
     type: 'test',

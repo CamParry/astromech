@@ -13,11 +13,11 @@
  */
 
 import React from 'react';
-import type { Field } from '@/types/index.js';
-import { Panel, Tabs, Collapsible, Stack } from '@/admin/components/ui/index.js';
-import { FormField } from '@/admin/components/fields/form-field.js';
-import { FieldValuesProvider } from '@/admin/components/fields/field-context.js';
-import { useLabel } from '@/admin/i18n/entry-namespace.js';
+import type { Field } from '@/types/index';
+import { Panel, Tabs, Collapsible, Stack } from '@/admin/components/ui/index';
+import { FormField } from '@/admin/components/fields/form-field';
+import { FieldValuesProvider } from '@/admin/components/fields/field-context';
+import { useLabel } from '@/admin/i18n/entry-namespace';
 
 const LAYOUT_TYPES = new Set(['section', 'tabs', 'tab', 'accordion']);
 

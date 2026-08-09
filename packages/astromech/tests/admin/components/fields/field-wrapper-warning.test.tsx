@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import React, { act } from 'react';
 import { FieldWrapper } from '@/admin/components/fields/field-wrapper';
-import { useFieldControl } from '@/admin/components/fields/index.js';
+import { useFieldControl } from '@/admin/components/fields/index';
 
 /** A field type's own control, of the kind a plugin would hand-roll. */
 function CustomControl(): React.ReactElement {

@@ -5,10 +5,10 @@
  * one entry chunk is visible to the runner reached through another.
  */
 
-import { createRegistry } from '@/utilities/registry.js';
+import { createRegistry } from '@/utilities/registry';
 import type { Kysely } from 'kysely';
-import type { DB } from '@/database/types.js';
-import type { ResolvedConfig, SchedulerDriver } from '@/types/index.js';
+import type { DB } from '@/database/types';
+import type { ResolvedConfig, SchedulerDriver } from '@/types/index';
 
 export type CronContext = {
     db: Kysely<DB>;

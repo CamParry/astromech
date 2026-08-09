@@ -9,8 +9,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { processFields } from '@/fields/pipeline.js';
-import { compileFormFields } from '../../../../plugins/forms/src/fields/compile.js';
+import { processFields } from '@/fields/pipeline';
+import { compileFormFields } from '../../../../plugins/forms/src/fields/compile';
 
 describe('compileFormFields', () => {
     it('compiles a text block', () => {

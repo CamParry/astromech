@@ -1,7 +1,7 @@
 /** Reading a `form` entry: its stored values, and loading a submittable one. */
 
 import type { Entry, PluginContext } from 'astromech';
-import { FORM_TYPE } from '../types.js';
+import { FORM_TYPE } from '../types';
 
 /** An entry's stored field values. */
 export function entryFields(entry: Entry): Record<string, unknown> {

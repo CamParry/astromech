@@ -1,4 +1,4 @@
-export { renderEmail } from './render.js';
-export { BaseLayout } from './components/base-layout.js';
-export { PasswordResetEmail } from './components/password-reset.js';
-export type { EmailTemplateOverride } from '../types/plugins.js';
+export { renderEmail } from './render';
+export { BaseLayout } from './components/base-layout';
+export { PasswordResetEmail } from './components/password-reset';
+export type { EmailTemplateOverride } from '../types/plugins';

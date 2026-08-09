@@ -1,28 +1,28 @@
-import { getCurrentUser } from '@/request-context/index.js';
-import { runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime.js';
-import { slugify } from '@/utilities/strings.js';
-import { createEntrySchemaFor } from '../schema.js';
-import { getEntryStorage } from '../storage/registry.js';
-import { parseWith } from '../internal/parse.js';
+import { getCurrentUser } from '@/request-context/index';
+import { runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime';
+import { slugify } from '@/utilities/strings';
+import { createEntrySchemaFor } from '../schema';
+import { getEntryStorage } from '../storage/registry';
+import { parseWith } from '../internal/parse';
 import {
     getDefaultLocale,
     getNonTranslatableFieldNames,
     getTitleField,
-} from '../internal/type-config.js';
-import { indexEntryRelationships } from '../internal/relationships.js';
-import { pruneDanglingRelations } from '../internal/dangling-relations.js';
-import { asEntry } from '../internal/records.js';
-import { isPublicBranded, PublicShapeWriteError } from '../visibility.js';
-import { UnknownEntryTypeError } from '../errors.js';
-import { createEntryFieldReads } from '../reads.js';
-import { resolveEntryType } from '../type-ids.js';
-import { entryValidationStage } from '../validation-stage.js';
-import { flattenEntryFields } from '@/fields/flatten.js';
-import { processFields } from '@/fields/pipeline.js';
-import { ValidationError } from '@/errors/index.js';
+} from '../internal/type-config';
+import { indexEntryRelationships } from '../internal/relationships';
+import { pruneDanglingRelations } from '../internal/dangling-relations';
+import { asEntry } from '../internal/records';
+import { isPublicBranded, PublicShapeWriteError } from '../visibility';
+import { UnknownEntryTypeError } from '../errors';
+import { createEntryFieldReads } from '../reads';
+import { resolveEntryType } from '../type-ids';
+import { entryValidationStage } from '../validation-stage';
+import { flattenEntryFields } from '@/fields/flatten';
+import { processFields } from '@/fields/pipeline';
+import { ValidationError } from '@/errors/index';
 import config from 'virtual:astromech/config';
-import type { EntryStorage, StorageDb } from '../storage/types.js';
-import type { Entry, EntryStatus, JsonObject } from '@/types/index.js';
+import type { EntryStorage, StorageDb } from '../storage/types';
+import type { Entry, EntryStatus, JsonObject } from '@/types/index';
 
 export async function create(params: {
     type: string;

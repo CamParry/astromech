@@ -26,9 +26,9 @@ import {
     renderCreateIndex,
     renderCreateTable,
     renderLiteral,
-} from './ddl.js';
-import type { SqlDialect } from './model.js';
-import type { TableOp } from './diff.js';
+} from './ddl';
+import type { SqlDialect } from './model';
+import type { TableOp } from './diff';
 
 /** Render one op's SQL statement(s), in apply order. */
 export function renderOpStatements(op: TableOp, dialect: SqlDialect): string[] {

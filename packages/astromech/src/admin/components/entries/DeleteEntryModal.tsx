@@ -7,9 +7,9 @@
 
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Checkbox, Modal, Spinner } from '@/admin/components/ui/index.js';
-import { useIncomingRelationships } from '@/admin/hooks/entries.js';
-import type { Entry, IncomingRelationship } from '@/types/index.js';
+import { Button, Checkbox, Modal, Spinner } from '@/admin/components/ui/index';
+import { useIncomingRelationships } from '@/admin/hooks/entries';
+import type { Entry, IncomingRelationship } from '@/types/index';
 
 type DeleteEntryModalProps = {
     open: boolean;

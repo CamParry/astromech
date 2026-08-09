@@ -1,4 +1,4 @@
-import type { StorageDriver } from '@/types/index.js';
+import type { StorageDriver } from '@/types/index';
 
 /** Every key under a prefix, following the cursor. Prefer paginated `list` where you can. */
 export async function listAll(driver: StorageDriver, prefix: string): Promise<string[]> {

@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { selectDroppedFiles } from '@/admin/components/ui/drop-zone.js';
+import { selectDroppedFiles } from '@/admin/components/ui/drop-zone';
 
 const png = new File(['x'], 'a.png', { type: 'image/png' });
 const pdf = new File(['x'], 'b.pdf', { type: 'application/pdf' });

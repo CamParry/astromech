@@ -27,19 +27,19 @@ import type {
     ServiceMethodContract,
     SettingsService,
     UsersService,
-} from '@/types/index.js';
-import { PermissionDeniedError } from '@/errors/index.js';
-import { entryPermission, type EntryAction } from '@/permissions/entry-permission.js';
-import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/index.js';
-import { permissionsFor, type Permissions } from '@/permissions/permissions-for.js';
-import { usersService } from '@/users/service.js';
-import { usersContract } from '@/users/methods.js';
-import { mediaService } from '@/media/service.js';
-import { mediaContract } from '@/media/methods.js';
-import { settingsService } from '@/settings/service.js';
-import { settingsContract } from '@/settings/methods.js';
-import { entriesService } from '@/entries/service.js';
-import { ENTRY_METHOD_ACTIONS, type EntryMethodName } from '@/entries/methods.js';
+} from '@/types/index';
+import { PermissionDeniedError } from '@/errors/index';
+import { entryPermission, type EntryAction } from '@/permissions/entry-permission';
+import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/index';
+import { permissionsFor, type Permissions } from '@/permissions/permissions-for';
+import { usersService } from '@/users/service';
+import { usersContract } from '@/users/methods';
+import { mediaService } from '@/media/service';
+import { mediaContract } from '@/media/methods';
+import { settingsService } from '@/settings/service';
+import { settingsContract } from '@/settings/methods';
+import { entriesService } from '@/entries/service';
+import { ENTRY_METHOD_ACTIONS, type EntryMethodName } from '@/entries/methods';
 
 /**
  * A domain's contract catalogue, keyed by service method name.

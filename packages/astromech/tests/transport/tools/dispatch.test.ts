@@ -5,23 +5,23 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { setupTestConfig } from '@tests/harness.js';
-import { PermissionDeniedError } from '@/errors/index.js';
+import { setupTestConfig } from '@tests/harness';
+import { PermissionDeniedError } from '@/errors/index';
 
 // The scoped handle resolves the users service at CALL time, so a stub is enough
 // to observe whether a refusal happened before the service was entered.
-vi.mock('@/users/service.js', () => ({
+vi.mock('@/users/service', () => ({
     usersService: {
         query: vi.fn(() => Promise.resolve({ items: [], total: 0 })),
     },
 }));
 
-import { usersService } from '@/users/service.js';
+import { usersService } from '@/users/service';
 import {
     buildDispatch,
     buildScopedDispatch,
     type ToolDefinition,
-} from '@/transport/tools/dispatch.js';
+} from '@/transport/tools/dispatch';
 import type {
     CoreManifestMethod,
     JsonSchemaObject,
@@ -29,7 +29,7 @@ import type {
     Permission,
     PluginManifestMethod,
     Role,
-} from '@/types/index.js';
+} from '@/types/index';
 
 const objectSchema: JsonSchemaObject = {
     type: 'object',

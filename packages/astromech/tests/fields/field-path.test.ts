@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { FieldPathSegment } from '@/fields/field-path.js';
+import type { FieldPathSegment } from '@/fields/field-path';
 import {
     formatInstancePath,
     formatSchemaPath,
     isValidFieldName,
     parseInstancePath,
-} from '@/fields/field-path.js';
+} from '@/fields/field-path';
 
 // ---------------------------------------------------------------------------
 // Helpers

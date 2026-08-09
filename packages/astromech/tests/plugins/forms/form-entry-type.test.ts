@@ -13,9 +13,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { Field } from '@/types/fields.js';
-import { processFields } from '@/fields/pipeline.js';
-import { formEntryType } from '../../../../plugins/forms/src/entries/form.js';
+import type { Field } from '@/types/fields';
+import { processFields } from '@/fields/pipeline';
+import { formEntryType } from '../../../../plugins/forms/src/entries/form';
 
 /** The `form` type declares a plain array; narrow the `EntryFields` union to it. */
 function definitions(): Field[] {

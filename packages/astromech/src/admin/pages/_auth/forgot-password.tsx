@@ -5,9 +5,9 @@
 import { useState, type FormEvent } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { AuthCard } from '@/admin/components/auth/AuthCard.js';
-import { Input } from '@/admin/components/ui/input.js';
-import { Button } from '@/admin/components/ui/button.js';
+import { AuthCard } from '@/admin/components/auth/AuthCard';
+import { Input } from '@/admin/components/ui/input';
+import { Button } from '@/admin/components/ui/button';
 
 declare const __ASTROMECH_API_ROUTE__: string;
 declare const __ASTROMECH_ADMIN_ROUTE__: string;

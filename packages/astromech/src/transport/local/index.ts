@@ -14,15 +14,15 @@ import type {
     AstromechClient,
     NotificationsService,
     TypedEntriesService,
-} from '@/types/index.js';
-import { usersService } from '@/users/index.js';
-import { entriesService } from '@/entries/index.js';
-import { mediaService } from '@/media/index.js';
-import { settingsService } from '@/settings/index.js';
-import { runWithContext } from '@/request-context/index.js';
-import { setPluginClient, setPluginMethods } from '@/plugins/runtime/plugin-runtime.js';
-import { localPlugins } from '@/transport/local/plugins.js';
-import { buildScopedTools } from '@/transport/tools/scoped-tools.js';
+} from '@/types/index';
+import { usersService } from '@/users/index';
+import { entriesService } from '@/entries/index';
+import { mediaService } from '@/media/index';
+import { settingsService } from '@/settings/index';
+import { runWithContext } from '@/request-context/index';
+import { setPluginClient, setPluginMethods } from '@/plugins/runtime/plugin-runtime';
+import { localPlugins } from '@/transport/local/plugins';
+import { buildScopedTools } from '@/transport/tools/scoped-tools';
 
 export { runWithContext };
 

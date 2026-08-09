@@ -9,10 +9,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { useChat } from '../../src/admin/use-chat.js';
-import type { UseChat } from '../../src/admin/use-chat.js';
-import type { ChatSession } from '../../src/service/sessions.js';
-import type { ApprovalRequest, ChatEvent, ChatMessage } from '../../src/types.js';
+import { useChat } from '../../src/admin/use-chat';
+import type { UseChat } from '../../src/admin/use-chat';
+import type { ChatSession } from '../../src/service/sessions';
+import type { ApprovalRequest, ChatEvent, ChatMessage } from '../../src/types';
 
 const { sessionsService } = vi.hoisted(() => ({
     sessionsService: {

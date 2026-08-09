@@ -19,10 +19,10 @@ must already be the emitted path. We are not in that case:
 
 ## Change
 
-- [ ] Codemod `from '(\.{1,2}/|@/|@tests/)…\.js'` → drop the `.js`, across `packages/*/src`,
+- [x] Codemod `from '(\.{1,2}/|@/|@tests/)…\.js'` → drop the `.js`, across `packages/*/src`,
       `packages/plugins/*/src`, and `packages/*/tests`. Also covers `import type`,
       `export … from`, dynamic `import()`, and `vi.mock()` specifiers.
-- [ ] Add an eslint rule pinning the convention (`import-x/extensions` set to `never` for
+- [x] Add an eslint rule pinning the convention (`import-x/extensions` set to `never` for
       ts/tsx, or equivalent) so it doesn't drift back.
 - [ ] Verify: `npm run typecheck`, `npm run lint`, full test suite, `npm run build`, plus a
       demo boot — the specifiers that resolve through Vite/Astro rather than tsup

@@ -10,8 +10,8 @@
  * in `plugin-identity.ts` and are assembled from `config-resolver.ts`.
  */
 
-import type { AstromechConfig } from '@/types/index.js';
-import { registerEmailOverride } from '@/email/email-overrides.js';
+import type { AstromechConfig } from '@/types/index';
+import { registerEmailOverride } from '@/email/email-overrides';
 
 /**
  * Register plugin email template overrides.

@@ -1,7 +1,7 @@
 import { defineCommand } from 'citty';
-import { loadConfig, loadRawConfig } from '../config.js';
-import { generateClientTypes } from '@/codegen/type-generator.js';
-import { collectPluginFieldTypes } from '@/plugins/runtime/plugin-fields.js';
+import { loadConfig, loadRawConfig } from '../config';
+import { generateClientTypes } from '@/codegen/type-generator';
+import { collectPluginFieldTypes } from '@/plugins/runtime/plugin-fields';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 

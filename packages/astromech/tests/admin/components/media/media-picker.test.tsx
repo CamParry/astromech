@@ -11,10 +11,10 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { ToastProvider } from '@/admin/components/ui/toast.js';
-import { MediaPicker } from '@/admin/components/media/media-picker.js';
+import { ToastProvider } from '@/admin/components/ui/toast';
+import { MediaPicker } from '@/admin/components/media/media-picker';
 import en from '@/admin/locales/en.json';
-import type { Media } from '@/types/index.js';
+import type { Media } from '@/types/index';
 
 const { mediaQuery, uploadMedia, canUploadMedia } = vi.hoisted(() => ({
     mediaQuery: vi.fn(),
@@ -22,12 +22,12 @@ const { mediaQuery, uploadMedia, canUploadMedia } = vi.hoisted(() => ({
     canUploadMedia: vi.fn(),
 }));
 
-vi.mock('@/transport/http/client/index.js', () => ({
+vi.mock('@/transport/http/client/index', () => ({
     astromechClient: { media: { query: mediaQuery, upload: uploadMedia } },
 }));
 
 // The picker reads one flag; the barrel re-exports `hasPermission` from here.
-vi.mock('@/admin/hooks/use-permissions.js', () => ({
+vi.mock('@/admin/hooks/use-permissions', () => ({
     usePermissions: () => ({ canUploadMedia }),
     hasPermission: () => false,
 }));

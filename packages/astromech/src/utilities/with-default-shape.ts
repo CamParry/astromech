@@ -12,7 +12,7 @@
  * only where a call site remembered to ask.
  */
 
-import type { EntriesService, SettingsService } from '@/types/index.js';
+import type { EntriesService, SettingsService } from '@/types/index';
 
 /**
  * Return a thin wrapper around `entries` that injects `full: true` into

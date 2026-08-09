@@ -1,4 +1,4 @@
-import type { Capability } from './storage/capabilities.js';
+import type { Capability } from './storage/capabilities';
 
 /**
  * Thrown when an entry mutation is called with a `type` that doesn't match the

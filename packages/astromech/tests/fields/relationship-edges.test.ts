@@ -8,8 +8,8 @@ import { describe, expect, it } from 'vitest';
 import {
     collectRelationshipEdges,
     collectRelationshipSchemaPaths,
-} from '@/fields/relationship-edges.js';
-import type { Field } from '@/types/index.js';
+} from '@/fields/relationship-edges';
+import type { Field } from '@/types/index';
 
 describe('collectRelationshipEdges — top-level fields', () => {
     it('yields one edge for a single relationship', () => {

@@ -9,12 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-    capIdentifier,
-    hash8,
-    isAscii,
-    MAX_IDENTIFIER_BYTES,
-} from '../src/identifiers.js';
+import { capIdentifier, hash8, isAscii, MAX_IDENTIFIER_BYTES } from '../src/identifiers';
 
 const repeat = (length: number): string => 'a'.repeat(length);
 

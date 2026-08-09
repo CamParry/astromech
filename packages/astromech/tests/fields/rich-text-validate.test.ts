@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import type { Field, FieldValidationContext } from '@/types/fields.js';
+import type { Field, FieldValidationContext } from '@/types/fields';
 import {
     checkRichTextDocument,
     coerceRichText,
     validateRichText,
-} from '@/fields/rich-text/validate.js';
-import { renderRichText } from '@/fields/rich-text/index.js';
-import { processFields } from '@/fields/pipeline.js';
+} from '@/fields/rich-text/validate';
+import { renderRichText } from '@/fields/rich-text/index';
+import { processFields } from '@/fields/pipeline';
 
 // ---------------------------------------------------------------------------
 // Helpers

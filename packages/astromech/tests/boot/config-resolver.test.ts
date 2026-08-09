@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { resolveConfig } from '@/boot/config-resolver.js';
+import { resolveConfig } from '@/boot/config-resolver';
 import type {
     AstromechConfig,
     DatabaseDriver,
     EntryType,
     PluginDefinition,
     StorageDriver,
-} from '@/types/index.js';
-import type { EntryStorage } from '@/entries/storage/types.js';
+} from '@/types/index';
+import type { EntryStorage } from '@/entries/storage/types';
 
 const driver: DatabaseDriver = {
     type: 'test',

@@ -9,11 +9,11 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createTestDb } from '@tests/harness.js';
-import { bootPlugins } from '@/plugins/runtime/plugin-runtime.js';
-import { pluginsTable, type PluginTrackingRow } from '@/database/schema.js';
-import { decodeWith } from '@/database/codec.js';
-import type { DB } from '@/database/types.js';
+import { createTestDb } from '@tests/harness';
+import { bootPlugins } from '@/plugins/runtime/plugin-runtime';
+import { pluginsTable, type PluginTrackingRow } from '@/database/schema';
+import { decodeWith } from '@/database/codec';
+import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
 
 type Db = Kysely<DB>;

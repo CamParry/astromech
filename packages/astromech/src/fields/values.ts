@@ -6,7 +6,7 @@
  * drop any key the schema no longer declares.
  */
 
-import type { Field } from '@/types/fields.js';
+import type { Field } from '@/types/fields';
 
 /**
  * Merge `patch` onto `current` at the root level only. An absent or `undefined`

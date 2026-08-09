@@ -26,10 +26,10 @@ import {
     ToolbarStart,
     SearchInput,
     Pagination,
-} from '@/admin/components/ui/index.js';
-import { usePermissions, useUsersQuery, useDeleteUser } from '@/admin/hooks/index.js';
-import { useAIContext } from '@/admin/context/ai-context.js';
-import { formatDate } from '@/utilities/dates.js';
+} from '@/admin/components/ui/index';
+import { usePermissions, useUsersQuery, useDeleteUser } from '@/admin/hooks/index';
+import { useAIContext } from '@/admin/context/ai-context';
+import { formatDate } from '@/utilities/dates';
 
 const PER_PAGE = 20;
 

@@ -36,18 +36,18 @@ import { createClient } from '@libsql/client';
 import { Kysely, CamelCasePlugin } from 'kysely';
 import type { Dialect, Insertable, MigrationProvider } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
-import { setDb } from '@/database/registry.js';
-import { setDatabaseDriver } from '@/database/driver-registry.js';
+import { setDb } from '@/database/registry';
+import { setDatabaseDriver } from '@/database/driver-registry';
 import { mergeMigrationProviders, migrateToLatest } from '@astromech/schema-engine';
-import { encode, decode } from '@/database/codec.js';
-import type { DB } from '@/database/types.js';
-import type { UserRow } from '@/database/schema.js';
-import { resolveConfig } from '@/boot/config-resolver.js';
-import { setCliConfig } from '@/transport/cli/virtual-config-shim.js';
-import { setRuntimeConfig } from '@/cron/registry.js';
-import { registerPlugins } from '@/plugins/runtime/plugin-runtime.js';
-import { wireEntryAccess } from '@/entries/plugin-access.js';
-import { runWithContext } from '@/request-context/index.js';
+import { encode, decode } from '@/database/codec';
+import type { DB } from '@/database/types';
+import type { UserRow } from '@/database/schema';
+import { resolveConfig } from '@/boot/config-resolver';
+import { setCliConfig } from '@/transport/cli/virtual-config-shim';
+import { setRuntimeConfig } from '@/cron/registry';
+import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
+import { wireEntryAccess } from '@/entries/plugin-access';
+import { runWithContext } from '@/request-context/index';
 import type {
     AstromechConfig,
     DatabaseDriver,
@@ -56,7 +56,7 @@ import type {
     StorageDriver,
     StorageList,
     User,
-} from '@/types/index.js';
+} from '@/types/index';
 
 // Wire the entry-access port (entries → runtime dependency inversion) once for
 // every harness-based test, before any registerPlugins call below.

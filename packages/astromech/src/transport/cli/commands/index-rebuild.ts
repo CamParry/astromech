@@ -1,12 +1,12 @@
 import { defineCommand } from 'citty';
-import { loadConfig, loadRawConfig } from '../config.js';
-import { registerPlugins } from '@/plugins/runtime/plugin-runtime.js';
-import { wireEntryAccess } from '@/entries/plugin-access.js';
+import { loadConfig, loadRawConfig } from '../config';
+import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
+import { wireEntryAccess } from '@/entries/plugin-access';
 import {
     checkRelationshipIndex,
     rebuildRelationshipIndex,
     type DriftReport,
-} from '@/boot/relationship-index.js';
+} from '@/boot/relationship-index';
 
 export default defineCommand({
     meta: {

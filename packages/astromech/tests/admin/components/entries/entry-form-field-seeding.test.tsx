@@ -24,11 +24,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { ToastProvider } from '@/admin/components/ui/toast';
-import '@/admin/rendering/register-fields.js';
-import { useEntryForm } from '@/admin/hooks/use-entry-form.js';
-import type { UseEntryFormReturn } from '@/admin/hooks/use-entry-form.js';
-import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer.js';
-import type { Entry, Field } from '@/types/index.js';
+import '@/admin/rendering/register-fields';
+import { useEntryForm } from '@/admin/hooks/use-entry-form';
+import type { UseEntryFormReturn } from '@/admin/hooks/use-entry-form';
+import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer';
+import type { Entry, Field } from '@/types/index';
 
 afterEach(cleanup);
 

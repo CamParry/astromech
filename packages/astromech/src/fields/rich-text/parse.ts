@@ -8,9 +8,9 @@
 import { parseHTML } from 'linkedom';
 import { DOMParser } from '@tiptap/pm/model';
 import type { JSONContent } from '@tiptap/core';
-import type { RichTextAllow } from '@/types/fields.js';
-import { schemaFor } from './schema.js';
-import { stripUnsafeLinks } from './safe-links.js';
+import type { RichTextAllow } from '@/types/fields';
+import { schemaFor } from './schema';
+import { stripUnsafeLinks } from './safe-links';
 
 /**
  * Parse an HTML string into a ProseMirror JSON document.

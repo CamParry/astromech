@@ -4,10 +4,10 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Select } from '@/admin/components/ui/index.js';
-import type { SortDirection } from '@/admin/components/ui/table.js';
-import { isSortKey } from '@/admin/types/media.js';
-import type { MediaBrowserQuery } from '@/admin/types/media.js';
+import { Select } from '@/admin/components/ui/index';
+import type { SortDirection } from '@/admin/components/ui/table';
+import { isSortKey } from '@/admin/types/media';
+import type { MediaBrowserQuery } from '@/admin/types/media';
 
 const SORT_NONE = 'none';
 

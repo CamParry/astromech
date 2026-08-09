@@ -11,10 +11,10 @@ import { describe, expect, it } from 'vitest';
 import { createClient } from '@libsql/client';
 import { Kysely, sql } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
-import { renderTableStatements } from '../src/ddl.js';
-import { diffSnapshots } from '../src/diff.js';
-import { renderOpStatements } from '../src/render.js';
-import { col, index, snap, table } from './_support/tables.js';
+import { renderTableStatements } from '../src/ddl';
+import { diffSnapshots } from '../src/diff';
+import { renderOpStatements } from '../src/render';
+import { col, index, snap, table } from './_support/tables';
 
 const edges = table(
     'edges',

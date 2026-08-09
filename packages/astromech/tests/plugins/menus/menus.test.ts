@@ -9,14 +9,14 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
-import '@/transport/local/index.js';
-import { localPlugins } from '@/transport/local/plugins.js';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import '@/transport/local/index';
+import { localPlugins } from '@/transport/local/plugins';
 import { menus } from '@astromech/menus';
 import type { MenuItem } from '@astromech/menus';
-import type { AstromechConfig, JsonValue } from '@/types/index.js';
-import { derivePluginPages, derivePluginNav } from '@/plugins/runtime/plugin-admin.js';
-import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity.js';
+import type { AstromechConfig, JsonValue } from '@/types/index';
+import { derivePluginPages, derivePluginNav } from '@/plugins/runtime/plugin-admin';
+import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -37,7 +37,7 @@ async function get(key: string, locale?: string): Promise<MenuItem[] | null> {
 
 async function writeSetting(key: string, value: unknown): Promise<void> {
     // Use the Local API to write settings directly
-    const { default: Astromech } = await import('@/transport/local/index.js');
+    const { default: Astromech } = await import('@/transport/local/index');
     await (
         Astromech as {
             settings: { set(params: { key: string; value: unknown }): Promise<unknown> };
@@ -285,7 +285,7 @@ describe('menus.get — locale', () => {
 describe('menus.get — entry ref resolution', () => {
     it('resolves an entry ref to its front-end URL', async () => {
         // Create a published post entry so it passes the public visibility filter
-        const { default: Astromech } = await import('@/transport/local/index.js');
+        const { default: Astromech } = await import('@/transport/local/index');
         const astromech = Astromech as {
             entries: { create(p: Record<string, unknown>): Promise<{ id: string }> };
         };
@@ -307,7 +307,7 @@ describe('menus.get — entry ref resolution', () => {
     });
 
     it('prefers entry url over url field when both are set', async () => {
-        const { default: Astromech } = await import('@/transport/local/index.js');
+        const { default: Astromech } = await import('@/transport/local/index');
         const astromech = Astromech as {
             entries: { create(p: Record<string, unknown>): Promise<{ id: string }> };
         };

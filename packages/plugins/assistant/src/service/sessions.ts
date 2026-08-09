@@ -7,10 +7,10 @@
  */
 
 import { defineServiceMethod, noInput } from 'astromech';
-import { toApprovalRequest } from '../approvals/request.js';
-import { createApprovalsStorage } from '../approvals/storage.js';
-import { createSessionsStorage } from '../sessions/storage.js';
-import type { ApprovalRequest, ChatMessage, ResolvedAssistantOptions } from '../types.js';
+import { toApprovalRequest } from '../approvals/request';
+import { createApprovalsStorage } from '../approvals/storage';
+import { createSessionsStorage } from '../sessions/storage';
+import type { ApprovalRequest, ChatMessage, ResolvedAssistantOptions } from '../types';
 
 /**
  * A user's conversation. `pending` is read off the approvals table rather than

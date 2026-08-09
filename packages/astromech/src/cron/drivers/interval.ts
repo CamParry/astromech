@@ -1,4 +1,4 @@
-import type { SchedulerDriver } from '@/types/index.js';
+import type { SchedulerDriver } from '@/types/index';
 
 /** In-process ticker driving onTick once a minute. The default scheduler. */
 export function interval(): SchedulerDriver {

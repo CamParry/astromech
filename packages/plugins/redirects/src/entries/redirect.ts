@@ -7,8 +7,8 @@
 
 import type { EntryType } from 'astromech';
 import { tableStorage } from 'astromech';
-import { redirectsTable } from '../tables/redirects.js';
-import { REDIRECT_TYPE } from '../types.js';
+import { redirectsTable } from '../tables/redirects';
+import { REDIRECT_TYPE } from '../types';
 import * as fields from 'astromech/fields';
 import * as columns from 'astromech/columns';
 

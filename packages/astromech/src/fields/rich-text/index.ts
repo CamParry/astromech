@@ -10,9 +10,9 @@
 
 import { renderToHTMLString } from '@tiptap/static-renderer';
 import type { JSONContent } from '@tiptap/core';
-import type { RichTextAllow } from '@/types/fields.js';
-import { buildRichTextExtensions } from './extensions.js';
-import { isUnsafeHref } from './safe-links.js';
+import type { RichTextAllow } from '@/types/fields';
+import { buildRichTextExtensions } from './extensions';
+import { isUnsafeHref } from './safe-links';
 
 // ============================================================================
 // Sanitization
@@ -90,4 +90,4 @@ export function renderRichText(
 // Parse
 // ============================================================================
 
-export { parseRichText } from './parse.js';
+export { parseRichText } from './parse';

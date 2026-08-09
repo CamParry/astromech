@@ -26,16 +26,16 @@ import type {
     PluginManifestMethod,
     Role,
     ToolDefinition,
-} from '@/types/index.js';
-import type { ScopedServices } from '@/policies/scoped-services.js';
-import { confirmMessage } from '@/policies/confirmation.js';
+} from '@/types/index';
+import type { ScopedServices } from '@/policies/scoped-services';
+import { confirmMessage } from '@/policies/confirmation';
 
 // ============================================================================
 // Types
 // ============================================================================
 
 // The dispatch shapes live in the pure leaf so `types/plugins.ts` can name them.
-export type { ToolAnnotations, ToolDefinition } from '@/types/index.js';
+export type { ToolAnnotations, ToolDefinition } from '@/types/index';
 
 /**
  * Either a dispatchable tool or the reason there isn't one. A bare `null` told
@@ -66,14 +66,13 @@ type ResolveStrategy = (manifest: ManifestMethod) => ResolvedInvoke;
  * building the tool LIST pulls in no service code; only an actual call does.
  */
 const CORE_SERVICES: Record<string, () => Promise<ServiceObject>> = {
-    users: async () => (await import('@/users/service.js')).usersService,
-    media: async () => (await import('@/media/service.js')).mediaService,
-    settings: async () => (await import('@/settings/service.js')).settingsService,
+    users: async () => (await import('@/users/service')).usersService,
+    media: async () => (await import('@/media/service')).mediaService,
+    settings: async () => (await import('@/settings/service')).settingsService,
 };
 
 async function getEntriesService(): Promise<ServiceObject> {
-    return (await import('@/entries/service.js'))
-        .entriesService as unknown as ServiceObject;
+    return (await import('@/entries/service')).entriesService as unknown as ServiceObject;
 }
 
 /**
@@ -115,8 +114,8 @@ async function invokePluginMethod(
     args: Record<string, unknown>
 ): Promise<unknown> {
     const [{ getCurrentUser }, runtime] = await Promise.all([
-        import('@/request-context/index.js'),
-        import('@/plugins/runtime/plugin-runtime.js'),
+        import('@/request-context/index'),
+        import('@/plugins/runtime/plugin-runtime'),
     ]);
 
     const identity = runtime.getPluginIdentity(manifest.serviceKey);
@@ -303,7 +302,7 @@ type ScopedHandle = () => Promise<ScopedServices>;
 function scopedHandle(role: Role | undefined): ScopedHandle {
     let handle: Promise<ScopedServices> | null = null;
     return () => {
-        handle ??= import('@/policies/scoped-services.js').then(({ scopedServices }) =>
+        handle ??= import('@/policies/scoped-services').then(({ scopedServices }) =>
             scopedServices(role)
         );
         return handle;

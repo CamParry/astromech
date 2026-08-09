@@ -5,9 +5,9 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
-import { Astromech } from '@/transport/local/index.js';
-import type { AstromechConfig } from '@/types/index.js';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { Astromech } from '@/transport/local/index';
+import type { AstromechConfig } from '@/types/index';
 
 const api = Astromech.entries;
 

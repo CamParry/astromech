@@ -7,7 +7,7 @@
  * catch-all already serves. Plugins cannot register routes outside `/api`.
  */
 
-import type { ResolvedConfig } from '@/types/index.js';
+import type { ResolvedConfig } from '@/types/index';
 
 /**
  * Register all API and auth routes

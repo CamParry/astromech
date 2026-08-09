@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { BaseFieldProps } from '@/types/index.js';
+import type { BaseFieldProps } from '@/types/index';
 import { useFieldControl } from '@/admin/components/fields/field-control-context';
 import './json-field.css';
 

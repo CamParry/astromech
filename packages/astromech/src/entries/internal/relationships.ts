@@ -5,17 +5,17 @@
  */
 
 import config from 'virtual:astromech/config';
-import { createRelationshipStorage } from '@/database/storage/relationships.js';
-import type { RelationshipIndexSource } from '@/database/storage/relationships.js';
-import { createStorage } from '@/database/storage/create-storage.js';
-import { collectRelationshipEdges } from '@/fields/relationship-edges.js';
-import type { RelationshipEdge } from '@/fields/relationship-edges.js';
-import { flattenEntryFields } from '@/fields/flatten.js';
-import { entriesTable } from '../schema.js';
-import { getEntryStorage, hasEntryStorageOverride } from '../storage/registry.js';
-import { qualifyEntryType, resolveEntryType } from '../type-ids.js';
-import type { JsonObject } from '@/types/index.js';
-import type { StorageDb } from '../storage/types.js';
+import { createRelationshipStorage } from '@/database/storage/relationships';
+import type { RelationshipIndexSource } from '@/database/storage/relationships';
+import { createStorage } from '@/database/storage/create-storage';
+import { collectRelationshipEdges } from '@/fields/relationship-edges';
+import type { RelationshipEdge } from '@/fields/relationship-edges';
+import { flattenEntryFields } from '@/fields/flatten';
+import { entriesTable } from '../schema';
+import { getEntryStorage, hasEntryStorageOverride } from '../storage/registry';
+import { qualifyEntryType, resolveEntryType } from '../type-ids';
+import type { JsonObject } from '@/types/index';
+import type { StorageDb } from '../storage/types';
 
 /**
  * Re-index one entry. `fields` must be post-`processFields` values — item ids

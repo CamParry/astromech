@@ -12,9 +12,9 @@ import {
     PageHeader,
     PageTitle,
     PageContent,
-} from '@/admin/components/ui/index.js';
-import { usePermissions } from '@/admin/hooks/index.js';
-import { useAIContext } from '@/admin/context/ai-context.js';
+} from '@/admin/components/ui/index';
+import { usePermissions } from '@/admin/hooks/index';
+import { useAIContext } from '@/admin/context/ai-context';
 
 function SettingsPage(): React.ReactElement {
     const { t } = useTranslation();

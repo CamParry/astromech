@@ -11,24 +11,24 @@ import type {
     ResolvedAdminPage,
     ResolvedConfig,
     ResolvedEntryType,
-} from '@/types/index.js';
-import { CLOUDFLARE_IMAGES_DRIVER } from '@/media/serving/image/drivers/cloudflare.js';
-import type { EntryFields, Field, ResolvedEntryFields } from '@/types/fields.js';
+} from '@/types/index';
+import { CLOUDFLARE_IMAGES_DRIVER } from '@/media/serving/image/drivers/cloudflare';
+import type { EntryFields, Field, ResolvedEntryFields } from '@/types/fields';
 import {
     assertNoPluginCollisions,
     checkPluginDependencies,
     pluginEntryTypes,
     resolvePluginIdentity,
-} from '@/plugins/runtime/plugin-identity.js';
-import { assertPluginTablePrefixes } from '@/plugins/runtime/plugin-tables.js';
-import { assertNoFieldTypeCollisions } from '@/plugins/runtime/plugin-fields.js';
+} from '@/plugins/runtime/plugin-identity';
+import { assertPluginTablePrefixes } from '@/plugins/runtime/plugin-tables';
+import { assertNoFieldTypeCollisions } from '@/plugins/runtime/plugin-fields';
 import {
     BUILT_IN_SUPPORTS,
     resolveEntryCapabilities,
     assertEntryTypeValid,
     type Capability,
-} from '@/entries/storage/capabilities.js';
-import { parseEntryTypeId, resolveEntryType } from '@/entries/type-ids.js';
+} from '@/entries/storage/capabilities';
+import { parseEntryTypeId, resolveEntryType } from '@/entries/type-ids';
 
 /** Layout fields — presentational, flat data. Their children stay top-level. */
 const LAYOUT_TYPES = new Set(['section', 'tabs', 'tab', 'accordion']);

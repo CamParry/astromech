@@ -8,7 +8,7 @@
 
 import { createJiti } from 'jiti';
 import { resolve } from 'node:path';
-import type { AstromechConfig } from '@/types/index.js';
+import type { AstromechConfig } from '@/types/index';
 
 export const DEFAULT_CONFIG_FILE = './astromech.config.ts';
 

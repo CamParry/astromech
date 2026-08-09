@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { fieldReadsFromRecords } from '@/fields/field-reads.js';
-import type { Field } from '@/types/fields.js';
+import { fieldReadsFromRecords } from '@/fields/field-reads';
+import type { Field } from '@/types/fields';
 
 type TestRecord = { id: string; fields: Record<string, unknown> };
 

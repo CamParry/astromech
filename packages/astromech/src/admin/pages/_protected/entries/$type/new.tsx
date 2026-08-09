@@ -7,11 +7,11 @@
 
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { astromechClient } from '@/transport/http/client/index.js';
+import { astromechClient } from '@/transport/http/client/index';
 import adminConfig from 'virtual:astromech/admin-config';
-import { EntryNewPage } from '@/admin/components/entries/entry-new-page.js';
-import type { EntriesService } from '@/types/index.js';
-import type { EntriesMount } from '@/admin/components/entries/mount.js';
+import { EntryNewPage } from '@/admin/components/entries/entry-new-page';
+import type { EntriesService } from '@/types/index';
+import type { EntriesMount } from '@/admin/components/entries/mount';
 
 type SearchParams = {
     locale?: string;

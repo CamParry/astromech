@@ -8,8 +8,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { withDefaultSettingsShape } from '@/utilities/with-default-shape.js';
-import type { JsonValue, Setting, SettingsService } from '@/types/index.js';
+import { withDefaultSettingsShape } from '@/utilities/with-default-shape';
+import type { JsonValue, Setting, SettingsService } from '@/types/index';
 
 type Recorded = {
     all: ({ full?: boolean } | undefined)[];

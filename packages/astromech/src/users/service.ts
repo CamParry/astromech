@@ -1,19 +1,19 @@
 import { z } from 'zod';
-import type { UserRow } from './schema.js';
-import { createUserStorage } from './storage.js';
-import { createRelationshipStorage } from '@/database/storage/relationships.js';
-import type { RelationshipIndexSource } from '@/database/storage/relationships.js';
-import { collectRelationshipEdges } from '@/fields/relationship-edges.js';
-import { pruneDanglingRelations } from '@/entries/internal/dangling-relations.js';
-import type { JsonObject, User, QueryResult, UserQueryParams } from '@/types/index.js';
-import { ValidationError } from '@/errors/validation.js';
-import { createUserSchema, updateUserSchema } from './schema.js';
+import type { UserRow } from './schema';
+import { createUserStorage } from './storage';
+import { createRelationshipStorage } from '@/database/storage/relationships';
+import type { RelationshipIndexSource } from '@/database/storage/relationships';
+import { collectRelationshipEdges } from '@/fields/relationship-edges';
+import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
+import type { JsonObject, User, QueryResult, UserQueryParams } from '@/types/index';
+import { ValidationError } from '@/errors/validation';
+import { createUserSchema, updateUserSchema } from './schema';
 import config from 'virtual:astromech/config';
-import { processFields } from '@/fields/pipeline.js';
-import { mergePatch, projectToSchema } from '@/fields/values.js';
-import { flattenFieldNodes } from '@/fields/flatten.js';
-import { fieldReadsFromRecords } from '@/fields/field-reads.js';
-import { getCurrentUser } from '@/request-context/index.js';
+import { processFields } from '@/fields/pipeline';
+import { mergePatch, projectToSchema } from '@/fields/values';
+import { flattenFieldNodes } from '@/fields/flatten';
+import { fieldReadsFromRecords } from '@/fields/field-reads';
+import { getCurrentUser } from '@/request-context/index';
 
 function validate<T>(schema: z.ZodType<T>, data: unknown): T {
     try {

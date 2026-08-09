@@ -9,14 +9,14 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb, setupTestConfig, makeTestConfig } from '@tests/harness.js';
-import { entriesService as api } from '@/entries/service.js';
-import { CapabilityError } from '@/entries/errors.js';
-import { DEFAULT_PREVIEW_TOKEN_TTL_MS } from '@/entries/operations/preview/token.js';
+import { createTestDb, setupTestConfig, makeTestConfig } from '@tests/harness';
+import { entriesService as api } from '@/entries/service';
+import { CapabilityError } from '@/entries/errors';
+import { DEFAULT_PREVIEW_TOKEN_TTL_MS } from '@/entries/operations/preview/token';
 import {
     createPreviewTokenStorage,
     hashPreviewToken,
-} from '@/entries/storage/preview-tokens.js';
+} from '@/entries/storage/preview-tokens';
 
 beforeEach(async () => {
     await createTestDb();

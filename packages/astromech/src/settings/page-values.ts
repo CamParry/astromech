@@ -12,9 +12,9 @@
  * own `translatable` flag governs.
  */
 
-import { flattenEntryFields } from '@/fields/flatten.js';
-import type { ResolvedEntryFields } from '@/types/fields.js';
-import type { JsonObject, JsonValue } from '@/types/index.js';
+import { flattenEntryFields } from '@/fields/flatten';
+import type { ResolvedEntryFields } from '@/types/fields';
+import type { JsonObject, JsonValue } from '@/types/index';
 
 export type PartitionedGlobalValues = {
     shared: JsonObject;

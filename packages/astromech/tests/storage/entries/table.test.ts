@@ -11,11 +11,11 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'kysely';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
-import { Astromech } from '@/transport/local/index.js';
-import type { AstromechConfig, PluginDefinition } from '@/types/index.js';
-import { tableStorage } from '@/entries/storage/table.js';
-import { defineTable } from '@/database/define-table.js';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { Astromech } from '@/transport/local/index';
+import type { AstromechConfig, PluginDefinition } from '@/types/index';
+import { tableStorage } from '@/entries/storage/table';
+import { defineTable } from '@/database/define-table';
 
 // ============================================================================
 // Scratch table definition

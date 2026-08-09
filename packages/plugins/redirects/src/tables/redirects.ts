@@ -6,7 +6,7 @@
 
 import { definePluginTable } from 'astromech';
 import type { TableInsert, TableSelect } from 'astromech';
-import { REDIRECTS_PACKAGE } from '../types.js';
+import { REDIRECTS_PACKAGE } from '../types';
 
 export const redirectsTable = definePluginTable(
     REDIRECTS_PACKAGE,

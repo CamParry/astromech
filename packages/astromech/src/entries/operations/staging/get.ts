@@ -1,6 +1,6 @@
-import { asEntry, loadAndAssertType } from '../../internal/records.js';
-import { getStagingStorage } from '../../internal/type-config.js';
-import type { Entry } from '@/types/index.js';
+import { asEntry, loadAndAssertType } from '../../internal/records';
+import { getStagingStorage } from '../../internal/type-config';
+import type { Entry } from '@/types/index';
 
 export async function getStaged(params: {
     type: string;

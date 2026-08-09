@@ -7,9 +7,9 @@
 import type { Block, EntryType, Field } from 'astromech';
 import * as columns from 'astromech/columns';
 import * as fields from 'astromech/fields';
-import { NOTIFICATIONS_FIELD } from '../notifications/dispatch.js';
-import { notificationBlocks } from '../notifications/registry.js';
-import { FORM_FIELD_KINDS, FORM_TYPE } from '../types.js';
+import { NOTIFICATIONS_FIELD } from '../notifications/dispatch';
+import { notificationBlocks } from '../notifications/registry';
+import { FORM_FIELD_KINDS, FORM_TYPE } from '../types';
 
 const BLOCK_LABELS: Record<(typeof FORM_FIELD_KINDS)[number], string> = {
     text: 'Text',

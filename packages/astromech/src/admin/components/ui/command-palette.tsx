@@ -25,13 +25,13 @@ import { Image, LayoutDashboard, Settings, Users, Puzzle, icons } from 'lucide-r
 import type { LucideIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import adminConfig from 'virtual:astromech/admin-config';
-import { astromechClient } from '@/transport/http/client/index.js';
-import { parseEntryTypeId } from '@/entries/type-ids.js';
-import { entryLabel } from '@/admin/components/entries/entry-label.js';
-import { usePermissions } from '../../hooks/index.js';
-import { useDebounce } from '../../hooks/use-debounce.js';
-import { EntryTypeIcon } from './entry-type-icon.js';
-import type { AdminEntryType, Entry, Media, User } from '@/types/index.js';
+import { astromechClient } from '@/transport/http/client/index';
+import { parseEntryTypeId } from '@/entries/type-ids';
+import { entryLabel } from '@/admin/components/entries/entry-label';
+import { usePermissions } from '../../hooks/index';
+import { useDebounce } from '../../hooks/use-debounce';
+import { EntryTypeIcon } from './entry-type-icon';
+import type { AdminEntryType, Entry, Media, User } from '@/types/index';
 
 // ============================================================================
 // Lucide icon helper

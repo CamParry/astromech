@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth';
 import type { Auth, BetterAuthOptions } from 'better-auth';
-import { getDatabaseDriver } from '@/database/driver-registry.js';
+import { getDatabaseDriver } from '@/database/driver-registry';
 
 let _auth: Auth<BetterAuthOptions> | null = null;
 
@@ -69,12 +69,11 @@ function getAuth(): Auth<BetterAuthOptions> {
                     url: string;
                     token: string;
                 }) => {
-                    const { getEmailDriver } = await import('@/email/registry.js');
-                    const { renderEmail } = await import('@/email/render.js');
+                    const { getEmailDriver } = await import('@/email/registry');
+                    const { renderEmail } = await import('@/email/render');
                     const { PasswordResetEmail } =
-                        await import('@/email/components/password-reset.js');
-                    const { getEmailOverride } =
-                        await import('@/email/email-overrides.js');
+                        await import('@/email/components/password-reset');
+                    const { getEmailOverride } = await import('@/email/email-overrides');
                     const driver = getEmailDriver();
                     if (!driver) {
                         console.log(

@@ -14,8 +14,8 @@ import type {
     FieldPathSegment,
     FieldType,
     FieldValidator,
-} from '@/types/fields.js';
-import { RESERVED_KEY } from './reserved-keys.js';
+} from '@/types/fields';
+import { RESERVED_KEY } from './reserved-keys';
 import {
     coerceEmail,
     validateEmail,
@@ -37,8 +37,8 @@ import {
     validateLink,
     validateGroup,
     validateItemList,
-} from './built-in-rules.js';
-import { coerceRichText, validateRichText } from './rich-text/validate.js';
+} from './built-in-rules';
+import { coerceRichText, validateRichText } from './rich-text/validate';
 import {
     boolean,
     checkboxGroup,
@@ -65,7 +65,7 @@ import {
     tree,
     blocks,
     url,
-} from '@/fields/builder.js';
+} from '@/fields/builder';
 
 // ---------------------------------------------------------------------------
 // Container children — normalization + scope discovery

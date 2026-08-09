@@ -8,9 +8,9 @@
  * back to the registered db.
  */
 
-import { getEntryStorage } from '../storage/registry.js';
-import { BulkOperationError } from '../errors.js';
-import type { EntryStorage, StorageDb } from '../storage/types.js';
+import { getEntryStorage } from '../storage/registry';
+import { BulkOperationError } from '../errors';
+import type { EntryStorage, StorageDb } from '../storage/types';
 
 export async function runBulk<T>(
     type: string,

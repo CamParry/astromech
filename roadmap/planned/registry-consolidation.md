@@ -118,7 +118,7 @@ a slot already being populated at import time breaks there. The 17 slots
 (`cloudflareEnv`, `cloudflareProxy`, `__astromechRequestContext`) already have the
 right shape and are worth reading as the model.
 
-`roadmap/planned/drivers-and-registries.md` is the other half of the same
+`roadmap/completed/drivers-and-registries.md` is the other half of the same
 subject: this item is about how a slot is built, that one is about what goes in
 it and how it is reached. They are independent, but doing this one first means
 that one converts a single shape instead of two.

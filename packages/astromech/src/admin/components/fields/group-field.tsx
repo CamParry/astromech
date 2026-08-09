@@ -1,7 +1,7 @@
-import type { BaseFieldProps } from '@/types/index.js';
+import type { BaseFieldProps } from '@/types/index';
 import { FormField } from '@/admin/components/fields/form-field';
 // Deep import: the `fields/` barrel reaches server code (virtual config / DB).
-import { formatInstancePath, parseInstancePath } from '@/fields/field-path.js';
+import { formatInstancePath, parseInstancePath } from '@/fields/field-path';
 import './group-field.css';
 
 export function GroupField({ name, value, field, onChange }: BaseFieldProps) {

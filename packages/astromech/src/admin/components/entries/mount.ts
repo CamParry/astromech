@@ -17,9 +17,9 @@
  * hand-written and consume those definitions.
  */
 
-import type { AdminConfig } from '@/types/index.js';
-import type { EntriesService } from '@/types/index.js';
-import { qualifyEntryType } from '@/entries/type-ids.js';
+import type { AdminConfig } from '@/types/index';
+import type { EntriesService } from '@/types/index';
+import { qualifyEntryType } from '@/entries/type-ids';
 
 export type EntryAction = 'read' | 'create' | 'update' | 'delete' | 'publish';
 

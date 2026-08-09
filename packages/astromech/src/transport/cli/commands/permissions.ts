@@ -1,7 +1,7 @@
 import { defineCommand } from 'citty';
-import { loadConfig, loadRawConfig } from '../config.js';
-import { buildPermissionCatalogue } from '@/permissions/catalogue.js';
-import { printError } from '../output.js';
+import { loadConfig, loadRawConfig } from '../config';
+import { buildPermissionCatalogue } from '@/permissions/catalogue';
+import { printError } from '../output';
 
 export default defineCommand({
     meta: { name: 'permissions', description: 'List grantable permissions' },

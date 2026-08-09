@@ -1,8 +1,8 @@
 import React from 'react';
-import type { Field } from '@/types/index.js';
+import type { Field } from '@/types/index';
 import { Input } from '@/admin/components/ui/input';
-import { getFieldComponent } from '@/admin/rendering/field-registry.js';
-import { useLabel } from '@/admin/i18n/entry-namespace.js';
+import { getFieldComponent } from '@/admin/rendering/field-registry';
+import { useLabel } from '@/admin/i18n/entry-namespace';
 import { hasPluginFieldType, PluginField } from './plugin-field';
 import { FieldPathProvider } from './field-context';
 import { FieldWrapper } from './field-wrapper';

@@ -7,19 +7,19 @@
 import type { Field, FieldErrors, FieldReads } from 'astromech';
 import { defineServiceMethod, z } from 'astromech';
 import { processFields } from 'astromech/fields';
-import { compileFormFields } from '../fields/compile.js';
+import { compileFormFields } from '../fields/compile';
 import {
     AFTER_SUBMIT,
     BEFORE_SUBMIT,
     type FormsAfterSubmitPayload,
     type FormsBeforeSubmitPayload,
-} from '../hooks/events.js';
-import { sendNotifications } from '../notifications/dispatch.js';
-import type { SpamProvider } from '../spam/types.js';
-import { SUBMISSION_TYPE } from '../types.js';
-import type { FormsOptions, SubmissionMeta } from '../types.js';
-import { entryFields, loadForm, usesSpam } from '../utilities/form-entry.js';
-import { buildSummary } from '../utilities/summary.js';
+} from '../hooks/events';
+import { sendNotifications } from '../notifications/dispatch';
+import type { SpamProvider } from '../spam/types';
+import { SUBMISSION_TYPE } from '../types';
+import type { FormsOptions, SubmissionMeta } from '../types';
+import { entryFields, loadForm, usesSpam } from '../utilities/form-entry';
+import { buildSummary } from '../utilities/summary';
 
 /** The public projection of a form, built by explicit allow-list. */
 export type PublicForm = {

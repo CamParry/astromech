@@ -6,8 +6,8 @@
  * registry pattern.
  */
 
-import { createRegistry } from '@/utilities/registry.js';
-import type { DatabaseDriver } from '@/types/index.js';
+import { createRegistry } from '@/utilities/registry';
+import type { DatabaseDriver } from '@/types/index';
 
 const dbDriver = createRegistry<DatabaseDriver>('dbDriver', {
     hint: 'Ensure the Astromech integration is configured with a db driver.',

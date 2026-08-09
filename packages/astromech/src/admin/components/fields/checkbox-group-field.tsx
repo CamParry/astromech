@@ -1,6 +1,6 @@
-import type { BaseFieldProps } from '@/types/index.js';
-import { CheckboxGroup } from '@/admin/components/ui/checkbox-group.js';
-import { useLabel } from '@/admin/i18n/entry-namespace.js';
+import type { BaseFieldProps } from '@/types/index';
+import { CheckboxGroup } from '@/admin/components/ui/checkbox-group';
+import { useLabel } from '@/admin/i18n/entry-namespace';
 
 export function CheckboxGroupField({
     name,

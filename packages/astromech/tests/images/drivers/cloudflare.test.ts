@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { cloudflareImages } from '@/media/serving/image/drivers/cloudflare.js';
+import { cloudflareImages } from '@/media/serving/image/drivers/cloudflare';
 
 const ORIGIN_URL = 'https://example.com/image.jpg';
 

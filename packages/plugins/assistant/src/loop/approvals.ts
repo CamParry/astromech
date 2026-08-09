@@ -5,10 +5,10 @@
 
 import type { ToolCallPart, ToolResultPart } from 'ai';
 import type { ToolDefinition } from 'astromech';
-import { invokeTool } from './tools.js';
-import { toApprovalRequest } from '../approvals/request.js';
-import type { ApprovalsStorage, ClaimedApproval } from '../approvals/storage.js';
-import type { ApprovalDecision, ApprovalRequest, ChatMessage } from '../types.js';
+import { invokeTool } from './tools';
+import { toApprovalRequest } from '../approvals/request';
+import type { ApprovalsStorage, ClaimedApproval } from '../approvals/storage';
+import type { ApprovalDecision, ApprovalRequest, ChatMessage } from '../types';
 
 /** A mutating call the model made, paired with the tool it named. */
 type MutatingCall = { call: ToolCallPart; tool: ToolDefinition };

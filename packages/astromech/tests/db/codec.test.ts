@@ -18,10 +18,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'kysely';
 import type { Insertable } from 'kysely';
-import { createTestDb } from '@tests/harness.js';
-import { decode, encode, encodePatch } from '@/database/codec.js';
-import type { DB, Db } from '@/database/types.js';
-import type { UserRow } from '@/users/schema.js';
+import { createTestDb } from '@tests/harness';
+import { decode, encode, encodePatch } from '@/database/codec';
+import type { DB, Db } from '@/database/types';
+import type { UserRow } from '@/users/schema';
 
 const CREATED = new Date('2024-03-04T05:06:07.000Z');
 

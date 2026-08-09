@@ -6,19 +6,19 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import * as methods from '@/exports/methods.js';
-import { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch.js';
-import { buildScopedTools } from '@/transport/tools/scoped-tools.js';
-import { filterMethods } from '@/policies/method-filter.js';
-import { annotateManifest } from '@/policies/annotate-manifest.js';
-import { scopedServices } from '@/policies/scoped-services.js';
+import * as methods from '@/exports/methods';
+import { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch';
+import { buildScopedTools } from '@/transport/tools/scoped-tools';
+import { filterMethods } from '@/policies/method-filter';
+import { annotateManifest } from '@/policies/annotate-manifest';
+import { scopedServices } from '@/policies/scoped-services';
 import {
     CONFIRM_KEY,
     evaluateConfirmation,
     triggersConfirmation,
-} from '@/policies/confirmation.js';
-import { getMethodManifest } from '@/codegen/manifest-registry.js';
-import { formatAIContextMessage } from '@/utilities/ai-context.js';
+} from '@/policies/confirmation';
+import { getMethodManifest } from '@/codegen/manifest-registry';
+import { formatAIContextMessage } from '@/utilities/ai-context';
 
 // Types, asserted structurally: an unexported one fails the typecheck, not this.
 import type {
@@ -29,7 +29,7 @@ import type {
     DispatchResult,
     ScopedServices,
     ToolDefinition,
-} from '@/exports/methods.js';
+} from '@/exports/methods';
 
 export type Exported = [
     ConfirmDecision,

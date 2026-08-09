@@ -1,6 +1,6 @@
-import type { BaseFieldProps } from '@/types/index.js';
-import { RadioGroup } from '@/admin/components/ui/radio-group.js';
-import { useLabel } from '@/admin/i18n/entry-namespace.js';
+import type { BaseFieldProps } from '@/types/index';
+import { RadioGroup } from '@/admin/components/ui/radio-group';
+import { useLabel } from '@/admin/i18n/entry-namespace';
 
 export function RadioGroupField({
     name,

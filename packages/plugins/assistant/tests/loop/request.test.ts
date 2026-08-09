@@ -14,8 +14,8 @@ vi.mock('astromech', () => ({
 
 import { formatAIContextMessage } from 'astromech';
 import type { AIContextItem } from 'astromech';
-import { buildRequest, SYSTEM_PROMPT } from '../../src/loop/request.js';
-import type { ChatMessage } from '../../src/types.js';
+import { buildRequest, SYSTEM_PROMPT } from '../../src/loop/request';
+import type { ChatMessage } from '../../src/types';
 
 const CONTEXT = { role: 'system' as const, content: '<<context>>' };
 

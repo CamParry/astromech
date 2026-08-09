@@ -10,10 +10,10 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { ConfirmProvider } from '@/admin/components/ui/confirm.js';
-import { MediaDetailModal } from '@/admin/components/media/MediaDetailModal.js';
+import { ConfirmProvider } from '@/admin/components/ui/confirm';
+import { MediaDetailModal } from '@/admin/components/media/MediaDetailModal';
 import en from '@/admin/locales/en.json';
-import type { Media } from '@/types/index.js';
+import type { Media } from '@/types/index';
 
 const { updateMutate, deleteMutate } = vi.hoisted(() => ({
     updateMutate: vi.fn(),
@@ -36,7 +36,7 @@ const ITEM: Media = {
 };
 
 // The usage panel queries too, so the whole hooks module is stood in for.
-vi.mock('@/admin/hooks/media.js', () => ({
+vi.mock('@/admin/hooks/media', () => ({
     useMediaItem: () => ({ data: ITEM, isLoading: false, isError: false }),
     useUpdateMedia: () => ({ mutate: updateMutate, isPending: false }),
     useDeleteMedia: () => ({ mutate: deleteMutate, isPending: false }),

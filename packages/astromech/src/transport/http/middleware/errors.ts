@@ -8,7 +8,7 @@ import type { Context, ErrorHandler, NotFoundHandler } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { ZodError } from 'zod';
-import { ValidationError } from '@/errors/validation.js';
+import { ValidationError } from '@/errors/validation';
 
 // ============================================================================
 // Error Types

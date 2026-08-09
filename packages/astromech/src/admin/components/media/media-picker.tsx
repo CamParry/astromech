@@ -15,15 +15,15 @@ import {
     ToolbarEnd,
     ToolbarStart,
     UploadButton,
-} from '@/admin/components/ui/index.js';
-import { MediaCard } from './MediaCard.js';
-import { MediaEmpty } from './media-empty.js';
-import { MediaFilters } from './media-filters.js';
-import { MediaSortSelect } from './media-sort-select.js';
-import { useMediaBrowser, usePermissions, useUploadMedia } from '@/admin/hooks/index.js';
-import { MEDIA_ACCEPT } from '@/admin/types/media.js';
-import type { MediaBrowserQuery } from '@/admin/types/media.js';
-import type { Media } from '@/types/index.js';
+} from '@/admin/components/ui/index';
+import { MediaCard } from './MediaCard';
+import { MediaEmpty } from './media-empty';
+import { MediaFilters } from './media-filters';
+import { MediaSortSelect } from './media-sort-select';
+import { useMediaBrowser, usePermissions, useUploadMedia } from '@/admin/hooks/index';
+import { MEDIA_ACCEPT } from '@/admin/types/media';
+import type { MediaBrowserQuery } from '@/admin/types/media';
+import type { Media } from '@/types/index';
 
 const DEFAULT_PER_PAGE = 24;
 

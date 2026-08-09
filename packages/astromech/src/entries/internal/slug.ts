@@ -1,4 +1,4 @@
-import { getEntryStorage } from '../storage/registry.js';
+import { getEntryStorage } from '../storage/registry';
 
 /**
  * @deprecated Slug uniqueness is now a storage concern. Kept for the existing

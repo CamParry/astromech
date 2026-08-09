@@ -17,13 +17,9 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { sql, type Kysely, type MigrationProvider } from 'kysely';
 import { migrateToLatest } from '@astromech/schema-engine';
-import { d1 } from '@/database/drivers/d1.js';
-import {
-    disposeBindings,
-    resetBindingEnv,
-    resolveBinding,
-} from '@/cloudflare/bindings.js';
-import type { D1DatabaseLike } from '@/database/drivers/d1-dialect.js';
+import { d1 } from '@/database/drivers/d1';
+import { disposeBindings, resetBindingEnv, resolveBinding } from '@/cloudflare/bindings';
+import type { D1DatabaseLike } from '@/database/drivers/d1-dialect';
 
 /** Test-only schema; deliberately unrelated to the app's `DB` type. */
 type TestSchema = {

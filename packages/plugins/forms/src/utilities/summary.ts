@@ -1,7 +1,7 @@
 /** The submission list's one human-readable column. */
 
 import type { Field } from 'astromech';
-import { toValueRows } from './values.js';
+import { toValueRows } from './values';
 
 const SUMMARY_MAX_LENGTH = 120;
 const SUMMARY_SEPARATOR = ' · ';

@@ -7,8 +7,8 @@
  * type generator and the `virtual:astromech/plugins/components` code-gen.
  */
 
-import type { PluginDefinition, PluginFieldTypeRegistration } from '@/types/index.js';
-import { CORE_FIELD_TYPES } from '@/types/index.js';
+import type { PluginDefinition, PluginFieldTypeRegistration } from '@/types/index';
+import { CORE_FIELD_TYPES } from '@/types/index';
 
 /**
  * Collect all plugin field-type registrations, keyed by field type.

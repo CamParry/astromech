@@ -6,4 +6,4 @@
  * freely as long as these barrels keep re-exporting the same surface.
  */
 
-export * from '@/index.js';
+export * from '@/index';

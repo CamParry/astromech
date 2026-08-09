@@ -10,10 +10,10 @@
  */
 
 import { createMiddleware } from 'hono/factory';
-import { resolveSessionUser } from '@/users/index.js';
-import { getRequestContext, runWithContext } from '@/request-context/index.js';
-import { unauthorized } from './errors.js';
-import type { User, Role } from '@/types/index.js';
+import { resolveSessionUser } from '@/users/index';
+import { getRequestContext, runWithContext } from '@/request-context/index';
+import { unauthorized } from './errors';
+import type { User, Role } from '@/types/index';
 
 export type AuthVariables = {
     user: User;

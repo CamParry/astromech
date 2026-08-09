@@ -8,9 +8,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { renderMigrationFile, renderOpStatements } from '../src/render.js';
-import type { TableOp } from '../src/diff.js';
-import type { SnapshotTable } from '../src/model.js';
+import { renderMigrationFile, renderOpStatements } from '../src/render';
+import type { TableOp } from '../src/diff';
+import type { SnapshotTable } from '../src/model';
 
 const widgets: SnapshotTable = {
     name: 'widgets',

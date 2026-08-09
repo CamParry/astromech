@@ -41,7 +41,7 @@ import type {
     IndexSpec,
     ReferenceTarget,
     Table,
-} from '@/database/define-table.js';
+} from '@/database/define-table';
 
 export type {
     Snapshot,

@@ -1,9 +1,5 @@
 import { z } from '@hono/zod-openapi';
-import {
-    defineTable,
-    type TableSelect,
-    type TableInsert,
-} from '@/database/define-table.js';
+import { defineTable, type TableSelect, type TableInsert } from '@/database/define-table';
 
 // ============================================================================
 // better-auth tables — users, sessions, accounts, verifications

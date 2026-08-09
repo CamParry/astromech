@@ -27,19 +27,19 @@ import type {
     ManifestMethod,
     MethodManifest,
     PluginManifestMethod,
-} from '@/types/index.js';
-import type { ResolvedConfig } from '@/types/index.js';
-import { usersContract } from '@/users/methods.js';
-import { mediaContract } from '@/media/methods.js';
-import { settingsContract } from '@/settings/methods.js';
-import { entryMethodContracts, type EntryMethodContract } from '@/entries/methods.js';
-import type { Capability } from '@/entries/storage/capabilities.js';
-import type { ResolvedEntryCapabilities } from '@/types/index.js';
-import { qualifyEntryType } from '@/entries/type-ids.js';
+} from '@/types/index';
+import type { ResolvedConfig } from '@/types/index';
+import { usersContract } from '@/users/methods';
+import { mediaContract } from '@/media/methods';
+import { settingsContract } from '@/settings/methods';
+import { entryMethodContracts, type EntryMethodContract } from '@/entries/methods';
+import type { Capability } from '@/entries/storage/capabilities';
+import type { ResolvedEntryCapabilities } from '@/types/index';
+import { qualifyEntryType } from '@/entries/type-ids';
 import {
     resolvePluginIdentity,
     resolvePluginPermission,
-} from '@/plugins/runtime/plugin-identity.js';
+} from '@/plugins/runtime/plugin-identity';
 
 /**
  * Filename of the emitted manifest (lands in the project's `.astro/` dir).

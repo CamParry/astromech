@@ -6,8 +6,8 @@
  */
 
 import { vi } from 'vitest';
-import type { ApprovalsStorage, ClaimedApproval } from '../../src/approvals/storage.js';
-import type { ApprovalRow } from '../../src/tables/approvals.js';
+import type { ApprovalsStorage, ClaimedApproval } from '../../src/approvals/storage';
+import type { ApprovalRow } from '../../src/tables/approvals';
 
 const HOUR_MS = 60 * 60 * 1000;
 

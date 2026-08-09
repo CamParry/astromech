@@ -10,13 +10,13 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness.js';
-import { setStorageDriver } from '@/storage/registry.js';
-import { mediaRouter } from '@/transport/http/routes/media.js';
-import { createMediaStorage } from '@/media/storage.js';
-import { mediaService } from '@/media/service.js';
-import type { AuthVariables } from '@/transport/http/middleware/auth.js';
-import type { Role, StorageDriver, User } from '@/types/index.js';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { setStorageDriver } from '@/storage/registry';
+import { mediaRouter } from '@/transport/http/routes/media';
+import { createMediaStorage } from '@/media/storage';
+import { mediaService } from '@/media/service';
+import type { AuthVariables } from '@/transport/http/middleware/auth';
+import type { Role, StorageDriver, User } from '@/types/index';
 
 const noopStorage: StorageDriver = {
     name: 'noop',

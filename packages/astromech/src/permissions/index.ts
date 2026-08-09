@@ -5,24 +5,21 @@
  * The local transport bypasses permission checks by design — only the HTTP API enforces them.
  */
 
-import type { AstromechConfig, ResolvedConfig } from '@/types/config.js';
-import type { Permission, Role } from '@/types/domain.js';
+import type { AstromechConfig, ResolvedConfig } from '@/types/config';
+import type { Permission, Role } from '@/types/domain';
 
-import { defineAbsolutePermissions } from '@/permissions/define.js';
-import { hasPermission as hasPermissionImpl } from '@/utilities/permission-match.js';
-export { hasPermission, matchesPermission } from '@/utilities/permission-match.js';
-export { definePermissions } from '@/permissions/define.js';
-export type {
-    PermissionDeclaration,
-    PermissionDeclarations,
-} from '@/permissions/define.js';
+import { defineAbsolutePermissions } from '@/permissions/define';
+import { hasPermission as hasPermissionImpl } from '@/utilities/permission-match';
+export { hasPermission, matchesPermission } from '@/utilities/permission-match';
+export { definePermissions } from '@/permissions/define';
+export type { PermissionDeclaration, PermissionDeclarations } from '@/permissions/define';
 export {
     type EntryAction,
     entryPermission,
     entryPermissions,
     rootEntryPermission,
     pluginEntryPermission,
-} from '@/permissions/entry-permission.js';
+} from '@/permissions/entry-permission';
 
 type ConfigWithRoles = Pick<AstromechConfig, 'roles'> | Pick<ResolvedConfig, 'roles'>;
 

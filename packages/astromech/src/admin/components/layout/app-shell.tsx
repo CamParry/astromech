@@ -8,13 +8,13 @@
 import { Outlet } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui/react/dialog';
-import { useUI } from '../../context/ui.js';
-import { CommandPalette, CommandPaletteProvider } from '../ui/command-palette.js';
-import { Sidebar } from './sidebar.js';
-import { Topbar } from './topbar.js';
-import { useHotkeys } from '../../hooks/index.js';
-import { PluginSlot } from '../plugins/PluginSlot.js';
-import { AIContextReadout } from '../dev/ai-context-readout.js';
+import { useUI } from '../../context/ui';
+import { CommandPalette, CommandPaletteProvider } from '../ui/command-palette';
+import { Sidebar } from './sidebar';
+import { Topbar } from './topbar';
+import { useHotkeys } from '../../hooks/index';
+import { PluginSlot } from '../plugins/PluginSlot';
+import { AIContextReadout } from '../dev/ai-context-readout';
 
 export function AppShell() {
     const { sidebarOpen, setSidebarOpen, shortcutsOpen, setShortcutsOpen } = useUI();

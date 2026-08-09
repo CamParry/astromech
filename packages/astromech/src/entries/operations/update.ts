@@ -1,30 +1,30 @@
-import { getCurrentUser } from '@/request-context/index.js';
-import { runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime.js';
-import { updateEntrySchemaFor } from '../schema.js';
-import { getEntryStorage } from '../storage/registry.js';
-import { parseWith } from '../internal/parse.js';
+import { getCurrentUser } from '@/request-context/index';
+import { runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime';
+import { updateEntrySchemaFor } from '../schema';
+import { getEntryStorage } from '../storage/registry';
+import { parseWith } from '../internal/parse';
 import {
     getTitleField,
     isVersioningEnabled,
     getNonTranslatableFieldNames,
-} from '../internal/type-config.js';
-import { indexEntryRelationships } from '../internal/relationships.js';
-import { pruneDanglingRelations } from '../internal/dangling-relations.js';
-import { asEntry, loadAndAssertType } from '../internal/records.js';
-import { deepEqual } from '../internal/deep-equal.js';
-import { runBulk } from '../internal/bulk.js';
-import { hasEntryHooks, loadEntrySnapshot } from '../internal/hooks.js';
-import { isPublicBranded, PublicShapeWriteError } from '../visibility.js';
-import { createEntryFieldReads } from '../reads.js';
-import { resolveEntryType } from '../type-ids.js';
-import { entryValidationStage } from '../validation-stage.js';
-import { flattenEntryFields } from '@/fields/flatten.js';
-import { processFields } from '@/fields/pipeline.js';
-import { mergePatch, projectToSchema } from '@/fields/values.js';
-import { ValidationError } from '@/errors/index.js';
+} from '../internal/type-config';
+import { indexEntryRelationships } from '../internal/relationships';
+import { pruneDanglingRelations } from '../internal/dangling-relations';
+import { asEntry, loadAndAssertType } from '../internal/records';
+import { deepEqual } from '../internal/deep-equal';
+import { runBulk } from '../internal/bulk';
+import { hasEntryHooks, loadEntrySnapshot } from '../internal/hooks';
+import { isPublicBranded, PublicShapeWriteError } from '../visibility';
+import { createEntryFieldReads } from '../reads';
+import { resolveEntryType } from '../type-ids';
+import { entryValidationStage } from '../validation-stage';
+import { flattenEntryFields } from '@/fields/flatten';
+import { processFields } from '@/fields/pipeline';
+import { mergePatch, projectToSchema } from '@/fields/values';
+import { ValidationError } from '@/errors/index';
 import config from 'virtual:astromech/config';
-import type { EntryStorage, StorageDb } from '../storage/types.js';
-import type { Entry, EntryUpdateData, JsonObject } from '@/types/index.js';
+import type { EntryStorage, StorageDb } from '../storage/types';
+import type { Entry, EntryUpdateData, JsonObject } from '@/types/index';
 
 /** Update a single entry (policy; persistence via storage). */
 export async function updateOne(

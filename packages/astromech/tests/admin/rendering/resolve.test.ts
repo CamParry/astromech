@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { AdminEntryType, ResolvedEntryCapabilities } from '@/types/index.js';
-import { resolveForm, resolveTable } from '@/admin/rendering/resolve.js';
+import type { AdminEntryType, ResolvedEntryCapabilities } from '@/types/index';
+import { resolveForm, resolveTable } from '@/admin/rendering/resolve';
 
 function caps(
     overrides: Partial<ResolvedEntryCapabilities> = {}

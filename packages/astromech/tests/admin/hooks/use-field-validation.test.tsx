@@ -24,9 +24,9 @@
 import { describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import React, { act } from 'react';
-import type { Field, FieldErrors, ValidationRule } from '@/types/index.js';
-import { useFieldValidation } from '@/admin/hooks/use-field-validation.js';
-import type { FieldValidationHandle } from '@/admin/hooks/use-field-validation.js';
+import type { Field, FieldErrors, ValidationRule } from '@/types/index';
+import { useFieldValidation } from '@/admin/hooks/use-field-validation';
+import type { FieldValidationHandle } from '@/admin/hooks/use-field-validation';
 
 type Mounted = {
     handle: () => FieldValidationHandle;

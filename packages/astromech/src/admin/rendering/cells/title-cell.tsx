@@ -1,5 +1,5 @@
-import type { CellRenderer } from '@/types/index.js';
-import { Link } from './link.js';
+import type { CellRenderer } from '@/types/index';
+import { Link } from './link';
 
 export const TitleCell: CellRenderer = ({ entry, ctx }) =>
     ctx.isTrash ? (

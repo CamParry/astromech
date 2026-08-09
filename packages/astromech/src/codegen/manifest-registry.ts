@@ -5,8 +5,8 @@
  * cannot survive JSON, so the manifest is generated once at boot and read here.
  */
 
-import { createRegistry } from '@/utilities/registry.js';
-import type { MethodManifest } from '@/types/index.js';
+import { createRegistry } from '@/utilities/registry';
+import type { MethodManifest } from '@/types/index';
 
 const manifest = createRegistry<MethodManifest>('methodManifest', { required: false });
 

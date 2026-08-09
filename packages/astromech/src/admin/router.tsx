@@ -1,6 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { createRouter } from '@tanstack/react-router';
-import { routeTree } from './routeTree.gen.js';
+import { routeTree } from './routeTree.gen';
 
 declare const __ASTROMECH_ADMIN_ROUTE__: string;
 

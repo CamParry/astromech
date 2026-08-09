@@ -10,7 +10,7 @@
  */
 
 import type { APIRoute } from 'astro';
-import { app } from '@/transport/http/index.js';
+import { app } from '@/transport/http/index';
 
 export const prerender = false;
 

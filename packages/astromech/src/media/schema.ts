@@ -1,10 +1,6 @@
-import type { MediaMetadata } from '@/types/index.js';
+import type { MediaMetadata } from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import {
-    defineTable,
-    type TableSelect,
-    type TableInsert,
-} from '@/database/define-table.js';
+import { defineTable, type TableSelect, type TableInsert } from '@/database/define-table';
 
 export const mediaTable = defineTable(
     'media',

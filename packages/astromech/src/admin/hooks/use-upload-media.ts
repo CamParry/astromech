@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { astromechClient } from '@/transport/http/client/index.js';
-import { queryKeys } from './use-query-keys.js';
-import { useToast } from '../components/ui/index.js';
-import type { Media } from '../../types/index.js';
+import { astromechClient } from '@/transport/http/client/index';
+import { queryKeys } from './use-query-keys';
+import { useToast } from '../components/ui/index';
+import type { Media } from '../../types/index';
 
 export type UseUploadMediaResult = {
     upload: (files: File[]) => void;

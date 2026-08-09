@@ -9,12 +9,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { evaluateConfirmation, type ConfirmDecision } from '@/policies/confirmation.js';
+import { evaluateConfirmation, type ConfirmDecision } from '@/policies/confirmation';
 import type {
     CoreManifestMethod,
     EntriesManifestMethod,
     ManifestMethod,
-} from '@/types/index.js';
+} from '@/types/index';
 
 // ---------------------------------------------------------------------------
 // Fixtures

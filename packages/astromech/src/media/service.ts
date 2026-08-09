@@ -1,17 +1,17 @@
 import { z } from 'zod';
 import { ulid } from 'ulidx';
-import type { MediaRow } from './schema.js';
-import { createMediaStorage } from './storage.js';
-import { createRelationshipStorage } from '@/database/storage/relationships.js';
-import type { RelationshipIndexSource } from '@/database/storage/relationships.js';
-import type { RelationshipRow } from '@/database/schema.js';
+import type { MediaRow } from './schema';
+import { createMediaStorage } from './storage';
+import { createRelationshipStorage } from '@/database/storage/relationships';
+import type { RelationshipIndexSource } from '@/database/storage/relationships';
+import type { RelationshipRow } from '@/database/schema';
 // Peer domains, read only to name a source row. See the `usedBy` docstring.
-import { getEntryStorage } from '@/entries/storage/registry.js';
-import { pruneDanglingRelations } from '@/entries/internal/dangling-relations.js';
-import { createUserStorage } from '@/users/storage.js';
-import { collectRelationshipEdges } from '@/fields/relationship-edges.js';
-import { getStorageDriver } from '@/storage/registry.js';
-import { deletePrefix } from '@/storage/prefix.js';
+import { getEntryStorage } from '@/entries/storage/registry';
+import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
+import { createUserStorage } from '@/users/storage';
+import { collectRelationshipEdges } from '@/fields/relationship-edges';
+import { getStorageDriver } from '@/storage/registry';
+import { deletePrefix } from '@/storage/prefix';
 import type {
     Media,
     JsonObject,
@@ -20,18 +20,18 @@ import type {
     MediaMetadata,
     MediaUsage,
     StorageDriver,
-} from '@/types/index.js';
-import { ValidationError } from '@/errors/validation.js';
-import { updateMediaSchema } from './schema.js';
-import { processFields } from '@/fields/pipeline.js';
-import { mergePatch, projectToSchema } from '@/fields/values.js';
-import { flattenFieldNodes } from '@/fields/flatten.js';
-import { fieldReadsFromRecords } from '@/fields/field-reads.js';
-import { getCurrentUser } from '@/request-context/index.js';
-import { buildMediaUrl, variantPrefix } from './serving/image/url.js';
-import { isOptimisableImage, readImageDimensions } from './serving/image/dimensions.js';
-import { contentVersion } from './serving/image/version.js';
-import { getImageConfig } from './serving/image/registry.js';
+} from '@/types/index';
+import { ValidationError } from '@/errors/validation';
+import { updateMediaSchema } from './schema';
+import { processFields } from '@/fields/pipeline';
+import { mergePatch, projectToSchema } from '@/fields/values';
+import { flattenFieldNodes } from '@/fields/flatten';
+import { fieldReadsFromRecords } from '@/fields/field-reads';
+import { getCurrentUser } from '@/request-context/index';
+import { buildMediaUrl, variantPrefix } from './serving/image/url';
+import { isOptimisableImage, readImageDimensions } from './serving/image/dimensions';
+import { contentVersion } from './serving/image/version';
+import { getImageConfig } from './serving/image/registry';
 import config from 'virtual:astromech/config';
 
 function validate<T>(schema: z.ZodType<T>, data: unknown): T {

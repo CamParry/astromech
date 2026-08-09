@@ -8,8 +8,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { Field, FieldValidationContext, ValidationStage } from '@/types/fields.js';
-import { processFields } from '@/fields/pipeline.js';
+import type { Field, FieldValidationContext, ValidationStage } from '@/types/fields';
+import { processFields } from '@/fields/pipeline';
 
 // ---------------------------------------------------------------------------
 // Helpers

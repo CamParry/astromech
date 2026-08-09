@@ -6,7 +6,7 @@
 import type { ModelMessage } from 'ai';
 import { formatAIContextMessage } from 'astromech';
 import type { AIContextItem } from 'astromech';
-import type { ChatMessage } from '../types.js';
+import type { ChatMessage } from '../types';
 
 /**
  * The system prompt and turns to send. AI context goes after the final user

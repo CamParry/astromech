@@ -5,10 +5,10 @@
 import React, { useState } from 'react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '@/admin/context/auth.js';
-import { AuthCard } from '@/admin/components/auth/AuthCard.js';
-import { Input } from '@/admin/components/ui/input.js';
-import { Button } from '@/admin/components/ui/button.js';
+import { useAuth } from '@/admin/context/auth';
+import { AuthCard } from '@/admin/components/auth/AuthCard';
+import { Input } from '@/admin/components/ui/input';
+import { Button } from '@/admin/components/ui/button';
 
 function LoginPage() {
     const { login } = useAuth();

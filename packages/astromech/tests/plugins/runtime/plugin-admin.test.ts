@@ -4,9 +4,9 @@ import type {
     EntryType,
     PluginDefinition,
     PluginNavItem,
-} from '@/types/index.js';
-import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity.js';
-import { derivePluginNav, derivePluginPages } from '@/plugins/runtime/plugin-admin.js';
+} from '@/types/index';
+import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
+import { derivePluginNav, derivePluginPages } from '@/plugins/runtime/plugin-admin';
 
 const entryType = (type: string, single: string, plural: string): EntryType => ({
     type,

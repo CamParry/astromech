@@ -11,16 +11,16 @@
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { astromechClient } from '@/transport/http/client/index.js';
+import { astromechClient } from '@/transport/http/client/index';
 import adminConfig from 'virtual:astromech/admin-config';
-import { EntriesListPage } from '@/admin/components/entries/entries-list-page.js';
+import { EntriesListPage } from '@/admin/components/entries/entries-list-page';
 import {
     buildPluginEntriesMount,
     validateEntriesListSearch,
-} from '@/admin/components/entries/mount.js';
-import { EmptyState, Page, PageContent } from '@/admin/components/ui/index.js';
-import { useAIContext } from '@/admin/context/ai-context.js';
-import type { EntriesService } from '@/types/index.js';
+} from '@/admin/components/entries/mount';
+import { EmptyState, Page, PageContent } from '@/admin/components/ui/index';
+import { useAIContext } from '@/admin/context/ai-context';
+import type { EntriesService } from '@/types/index';
 
 function PluginEntryListPage(): React.ReactElement {
     const { name, type } = Route.useParams();

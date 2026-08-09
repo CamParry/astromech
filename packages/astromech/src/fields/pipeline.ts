@@ -58,10 +58,10 @@ import type {
     ResourceValidator,
     ValidationRule,
     ValidationStage,
-} from '@/types/fields.js';
-import { getFieldType } from './field-type-registry.js';
-import { formatInstancePath, isValidFieldName } from './field-path.js';
-import { flattenFieldNodes } from './flatten.js';
+} from '@/types/fields';
+import { getFieldType } from './field-type-registry';
+import { formatInstancePath, isValidFieldName } from './field-path';
+import { flattenFieldNodes } from './flatten';
 
 // ---------------------------------------------------------------------------
 // Helpers

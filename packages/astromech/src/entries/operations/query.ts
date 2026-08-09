@@ -1,20 +1,20 @@
 import config from 'virtual:astromech/config';
-import { flattenEntryFields } from '@/fields/flatten.js';
-import { collectRelationshipSchemaPaths } from '@/fields/relationship-edges.js';
-import { getCurrentUser } from '@/request-context/index.js';
-import { resolveEntryType } from '../type-ids.js';
-import { getEntryStorage } from '../storage/registry.js';
-import { getDefaultLocale } from '../internal/type-config.js';
-import { asEntry } from '../internal/records.js';
-import { runPreviewQuery } from './preview/read.js';
-import { InvalidReferencesFilterError, PublicTrashedReadError } from '../errors.js';
-import { applyVisibility, markPublic, type VisibilityShape } from '../visibility.js';
+import { flattenEntryFields } from '@/fields/flatten';
+import { collectRelationshipSchemaPaths } from '@/fields/relationship-edges';
+import { getCurrentUser } from '@/request-context/index';
+import { resolveEntryType } from '../type-ids';
+import { getEntryStorage } from '../storage/registry';
+import { getDefaultLocale } from '../internal/type-config';
+import { asEntry } from '../internal/records';
+import { runPreviewQuery } from './preview/read';
+import { InvalidReferencesFilterError, PublicTrashedReadError } from '../errors';
+import { applyVisibility, markPublic, type VisibilityShape } from '../visibility';
 import type {
     Entry,
     EntryQueryParams,
     QueryResult,
     ReferencesFilter,
-} from '@/types/index.js';
+} from '@/types/index';
 
 export async function query(
     params: EntryQueryParams & { type: string | readonly string[] }

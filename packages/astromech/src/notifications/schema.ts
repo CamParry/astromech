@@ -1,8 +1,4 @@
-import {
-    defineTable,
-    type TableSelect,
-    type TableInsert,
-} from '@/database/define-table.js';
+import { defineTable, type TableSelect, type TableInsert } from '@/database/define-table';
 
 export const notificationsTable = defineTable(
     'notifications',

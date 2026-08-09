@@ -14,13 +14,13 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { createClient, type Client, type InValue } from '@libsql/client';
 import { sql, type Kysely, type MigrationProvider } from 'kysely';
 import { migrateToLatest } from '@astromech/schema-engine';
-import { d1 } from '@/database/drivers/d1.js';
+import { d1 } from '@/database/drivers/d1';
 import type {
     D1DatabaseLike,
     D1PreparedStatementLike,
     D1ResultLike,
-} from '@/database/drivers/d1-dialect.js';
-import { resetBindingEnv, setBindingEnv } from '@/cloudflare/bindings.js';
+} from '@/database/drivers/d1-dialect';
+import { resetBindingEnv, setBindingEnv } from '@/cloudflare/bindings';
 
 // ---------------------------------------------------------------------------
 // Fake D1Database — real SQLite underneath via libsql, D1 result shape on top

@@ -32,7 +32,7 @@
  * `ConfirmOutcome` why a call stopped.
  */
 
-import type { ManifestMethod } from '@/types/index.js';
+import type { ManifestMethod } from '@/types/index';
 
 // ============================================================================
 // Types

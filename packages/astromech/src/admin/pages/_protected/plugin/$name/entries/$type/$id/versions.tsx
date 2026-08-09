@@ -9,12 +9,12 @@
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { astromechClient } from '@/transport/http/client/index.js';
+import { astromechClient } from '@/transport/http/client/index';
 import adminConfig from 'virtual:astromech/admin-config';
-import { EntryVersionsPage } from '@/admin/components/entries/entry-versions-page.js';
-import { buildPluginEntriesMount } from '@/admin/components/entries/mount.js';
-import { EmptyState, Page, PageContent } from '@/admin/components/ui/index.js';
-import type { EntriesService } from '@/types/index.js';
+import { EntryVersionsPage } from '@/admin/components/entries/entry-versions-page';
+import { buildPluginEntriesMount } from '@/admin/components/entries/mount';
+import { EmptyState, Page, PageContent } from '@/admin/components/ui/index';
+import type { EntriesService } from '@/types/index';
 
 function PluginEntryVersionsPage(): React.ReactElement {
     const { name, type, id } = Route.useParams();
