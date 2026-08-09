@@ -35,8 +35,11 @@ field-validation work that blocked it carried its validation half along
 and took `readOnly` to `false` with it, which is what finally ticked P7. P9
 followed the same day, reusing P8's approval rows rather than storing what they
 already hold. The "what did the assistant do" question P9 deferred is core work
-across every transport and now lives in `roadmap/planned/audit-trail.md`, which
-leaves P11 as the one item here.
+across every transport and now lives in `roadmap/planned/audit-trail.md`. P11 —
+keeping the assistant on the site's content — went to
+`roadmap/planned/assistant-declines-off-topic-work.md` on 2026-08-08: it needs a
+rule nobody has drawn yet, and none of the assistant's enforcing limits depend on
+it.
 
 - [x] **P0a — normalise every service method to a parameter object.** Shipped
       2026-07-31 (`934f1d0`). `update` takes a nested `data` (`update({id, data})`)
@@ -804,26 +807,6 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       `rejected` with `arguments` nulled, deleted the session row, and the page
       survived. `updated_at` landing 3.7s after `created_at` on one row is the
       `onUpdate` stamp firing on the upsert's conflict path.
-- [ ] **P11 — keep the assistant on the site's content.** The system prompt
-      describes the tools and nothing else; nothing tells the model to decline
-      "write my cover letter". A CMS assistant that answers general questions is
-      an uncapped bill on the site owner's API key, and it is not what the drawer
-      is for.
-    - **A system prompt shapes the default, it is not a boundary.** Write that
-      into the work rather than discovering it later. The enforcing limits are
-      the tool surface, `readOnly` and the permission scope, and they are already
-      built. A spend or rate cap is not one of them and is not coming:
-      `decisions/0022-core-hands-out-a-model.md` records why it belongs in the
-      provider's dashboard.
-    - Make the refusal useful: decline and name what it can do instead. An
-      assistant that only says it can't help reads as broken.
-    - **This cannot be unit-tested.** The tool-search work set the precedent — a
-      live run is the evidence, and it is what proved a single prompt paragraph
-      was load-bearing. Budget a cheap recorded check against a set of off-topic
-      prompts, not a mock.
-    - A site should be able to add its own house rules by appending to the
-      prompt, never replacing it: a replaced prompt drops the tool-naming
-      paragraph the tool search depends on.
 
 ## Decisions worth not re-deriving
 

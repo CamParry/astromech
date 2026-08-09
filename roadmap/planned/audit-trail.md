@@ -1,7 +1,7 @@
 # Audit trail
 
 A record of which service method ran, with which arguments, for which user, with
-what outcome. Split out of `roadmap/in-progress/ai-integration.md` on 2026-08-06,
+what outcome. Split out of `roadmap/completed/ai-integration.md` on 2026-08-06,
 where it was P10 and where P9 deferred it; it is core work across every
 transport, not assistant work, so it outlived the feature that raised it.
 

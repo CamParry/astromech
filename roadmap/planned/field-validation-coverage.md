@@ -49,7 +49,7 @@ never sees).
       `{ ...values }` and iterates only _declared_ fields, so a key belonging to
       no field is copied through untouched. Harmless under full-replace writes
       (the next write drops it), but it becomes permanent under the PATCH-merge
-      semantics settled for P4 — see `in-progress/ai-integration.md`. Projecting
+      semantics settled for P4 — see `completed/ai-integration.md`. Projecting
       the merged result through the schema before writing cleans these up.
 - [ ] **Validation is write-time only.** Tightening a rule does not invalidate
       rows already stored. There is no revalidation pass or report of rows that
@@ -58,7 +58,7 @@ never sees).
 ## Related
 
 The public-shape write-back problem is tracked with P4 in
-`in-progress/ai-integration.md`. Rich text and reference validation close the
+`completed/ai-integration.md`. Rich text and reference validation close the
 part of it that validation can reach; the rest needs the PATCH-merge change,
 because a public read that dropped a private **text** field is indistinguishable
 from a deliberate clear.
