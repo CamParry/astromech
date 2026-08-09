@@ -4,28 +4,24 @@
  * File upload, listing, replace, update, and delete.
  *
  * Routes:
- *   GET    /media              → all()
- *   GET    /media/:id          → get()
- *   GET    /media/:id/usage    → usedBy()
- *   POST   /media/upload       → upload()
- *   POST   /media/:id/replace  → replace()
- *   PUT    /media/:id          → update()
- *   DELETE /media/:id          → delete()
+ *   GET    /media              → media.query
+ *   GET    /media/:id          → media.get
+ *   GET    /media/:id/usage    → media.usedBy (bespoke)
+ *   POST   /media/upload       → media.upload (bespoke)
+ *   POST   /media/:id/replace  → media.replace (bespoke)
+ *   PUT    /media/:id          → media.update
+ *   DELETE /media/:id          → media.delete
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
+import type { Context } from 'hono';
 import { Astromech } from '@/transport/local/index';
-import {
-    badRequest,
-    forbidden,
-    fromZodError,
-    notFound,
-} from '@/transport/http/middleware/errors';
+import { badRequest, forbidden, notFound } from '@/transport/http/middleware/errors';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { permissionsFor } from '@/permissions/permissions-for';
-import { updateMediaSchema } from '@/media/schema';
 import { mediaContract } from '@/media/methods';
-import type { MediaQueryParams, JsonObject } from '@/types/index';
+import type { MediaQueryParams } from '@/types/index';
+import { mountRestRoutes, type RestRoute } from './rest-route';
 
 type Env = { Variables: AuthVariables };
 
@@ -34,14 +30,37 @@ const router = new OpenAPIHono<Env>();
 /** Sort fields accepted off the wire. Mirrors the storage allowlist. */
 const SORTABLE_FIELDS = new Set(['filename', 'mimeType', 'size', 'createdAt']);
 
-// ============================================================================
-// GET /media
-// ============================================================================
+const MEDIA_ROUTES: RestRoute[] = [
+    { verb: 'get', path: '/', id: 'media.query', args: queryArgs, envelope: 'raw' },
+    {
+        verb: 'get',
+        path: '/:id',
+        id: 'media.get',
+        args: (c) => ({ id: c.req.param('id') }),
+        notFound: (c) => `Media '${c.req.param('id')}' not found`,
+    },
+    {
+        verb: 'put',
+        path: '/:id',
+        id: 'media.update',
+        args: async (c) => ({
+            id: c.req.param('id'),
+            data: await c.req.json<Record<string, unknown>>(),
+        }),
+    },
+    {
+        verb: 'delete',
+        path: '/:id',
+        id: 'media.delete',
+        args: (c) => ({ id: c.req.param('id') }),
+        envelope: 'success',
+    },
+];
 
-router.get('/', async (c) => {
-    const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(mediaContract.query)) return forbidden(c);
+mountRestRoutes(router, mediaContract, MEDIA_ROUTES);
 
+/** `media.query` arguments, read off the query string. */
+function queryArgs(c: Context<Env>): MediaQueryParams {
     const q = c.req.query();
     const params: MediaQueryParams = {};
     if (q['search']) params.search = q['search'];
@@ -61,27 +80,15 @@ router.get('/', async (c) => {
     if (sortField && SORTABLE_FIELDS.has(sortField)) {
         params.sort = { [sortField]: q['dir'] === 'asc' ? 'asc' : 'desc' };
     }
-    return c.json(await Astromech.media.query(params));
-});
+    return params;
+}
 
 // ============================================================================
-// GET /media/:id
+// GET /media/:id/usage — bespoke
 // ============================================================================
 
-router.get('/:id', async (c) => {
-    const { id } = c.req.param();
-    const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(mediaContract.get)) return forbidden(c);
-
-    const item = await Astromech.media.get({ id });
-    if (!item) return notFound(c, `Media '${id}' not found`);
-    return c.json({ data: item });
-});
-
-// ============================================================================
-// GET /media/:id/usage
-// ============================================================================
-
+// Not in the table: it pre-flights `media.get` to turn an unknown id into a
+// 404, so one handler makes two method calls.
 router.get('/:id/usage', async (c) => {
     const { id } = c.req.param();
     const permissions = permissionsFor(c.var.role);
@@ -95,9 +102,11 @@ router.get('/:id/usage', async (c) => {
 });
 
 // ============================================================================
-// POST /media/upload
+// POST /media/upload — bespoke
 // ============================================================================
 
+// Not in the table: `binaryInput`. The body is multipart and a `File` has no
+// JSON representation, so no contract schema can validate the call.
 router.post('/upload', async (c) => {
     const permissions = permissionsFor(c.var.role);
     if (!permissions.allowsMethod(mediaContract.upload)) return forbidden(c);
@@ -114,9 +123,10 @@ router.post('/upload', async (c) => {
 });
 
 // ============================================================================
-// POST /media/:id/replace
+// POST /media/:id/replace — bespoke
 // ============================================================================
 
+// Not in the table: `binaryInput`, plus the same `media.get` pre-flight.
 router.post('/:id/replace', async (c) => {
     const { id } = c.req.param();
     const permissions = permissionsFor(c.var.role);
@@ -135,45 +145,6 @@ router.post('/:id/replace', async (c) => {
 
     const media = await Astromech.media.replace({ id, file });
     return c.json({ data: media });
-});
-
-// ============================================================================
-// PUT /media/:id
-// ============================================================================
-
-router.put('/:id', async (c) => {
-    const { id } = c.req.param();
-    const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(mediaContract.update)) return forbidden(c);
-
-    const raw = await c.req.json();
-    const parsed = updateMediaSchema.safeParse(raw);
-    if (!parsed.success) return fromZodError(c, parsed.error);
-
-    const { alt, title, caption, fields } = parsed.data;
-    const media = await Astromech.media.update({
-        id,
-        data: {
-            ...(alt !== undefined && { alt }),
-            ...(title !== undefined && { title }),
-            ...(caption !== undefined && { caption }),
-            ...(fields !== undefined && { fields: fields as JsonObject }),
-        },
-    });
-    return c.json({ data: media });
-});
-
-// ============================================================================
-// DELETE /media/:id
-// ============================================================================
-
-router.delete('/:id', async (c) => {
-    const { id } = c.req.param();
-    const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(mediaContract.delete)) return forbidden(c);
-
-    await Astromech.media.delete({ id });
-    return c.json({ success: true });
 });
 
 export { router as mediaRouter };
