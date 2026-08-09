@@ -31,7 +31,7 @@ import {
 import type { RelationshipRow } from '@/database/schema';
 import type { TargetKind } from '@/fields/relationship-edges';
 import { collectEntryRelationshipSources } from '@/entries/internal/relationships';
-import { collectUserRelationshipSources } from '@/users/service';
+import { collectUserRelationshipSources } from '@/users/internal/relationships';
 import { collectMediaRelationshipSources } from '@/media/internal/relationships';
 
 /** Scope of a repair run. `type` is an ENTRY type; it never covers user or media. */

@@ -341,10 +341,20 @@ export type SettingsService = {
 export type UsersService = {
     query(params?: UserQueryParams): Promise<QueryResult<User>>;
     get(params: { id: string }): Promise<User | null>;
-    create(params: { email: string; name: string; fields?: JsonObject }): Promise<User>;
+    create(params: {
+        email: string;
+        name: string;
+        fields?: JsonObject;
+        roleSlug?: string;
+    }): Promise<User>;
     update(params: {
         id: string;
-        data: Partial<{ email: string; name: string; fields?: JsonObject }>;
+        data: Partial<{
+            email: string;
+            name: string;
+            fields?: JsonObject;
+            roleSlug: string;
+        }>;
     }): Promise<User>;
     delete(params: { id: string }): Promise<void>;
 };

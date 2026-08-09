@@ -52,12 +52,22 @@ publish time. The plugin **runtime** (hook engine) stays a core capability.
 
 Key invariants:
 
-- **Domains are deep modules named for the business, not the tech.** Each owns its
-  `service.ts`, `schema.ts` (`defineTable` table + Zod validation), `methods.ts`,
-  and `visibility.ts`. Tables are reached through `@/database/schema` (the table
-  aggregator) rather than another domain's `schema.ts`. A domain may call a peer
-  directly — the split is for organisation, not isolation, and the alternative
-  was a second wire shape for the same concept.
+- **Domains are deep modules named for the business, not the tech.** Every domain
+  owns a `service.ts` (its verbs), a `schema.ts` (`defineTable` table + Zod
+  validation) and a `methods.ts` (its contract catalogue, which is what puts it
+  in the method manifest). Two further files are per-domain, not universal:
+  `visibility.ts` exists only where a domain projects a row into more than one
+  shape (`entries`, `settings`), and `operations/` + `internal/` only where one
+  `service.ts` has stopped being readable (`entries`, `media`, `users` —
+  `settings` and `notifications` stay a single file). Tables are reached through
+  `@/database/schema` (the table aggregator) rather than another domain's
+  `schema.ts`. A domain may call a peer directly — the split is for organisation,
+  not isolation, and the alternative was a second wire shape for the same
+  concept.
+- **A decomposed domain's `service.ts` is an assembler and nothing else.** It
+  imports one function per verb from `operations/**` and names them on the
+  service object; per-domain helpers live in `internal/**`, and nothing that is
+  not a verb is exported from `service.ts`.
 - **Capabilities sit below domains.** They expose primitives (`storage`, `database`,
   `fields`, `permissions`, `request-context`, `email`, `ai`, `cron`, `cloudflare`) and may
   not orchestrate domain logic.
@@ -119,11 +129,11 @@ packages/
 │   │   ├── plugins/        # plugins/runtime (hook engine) only — first-party plugins live in packages/plugins/
 │   │   │
 │   │   │   ── domains ────────────────────────────────────────────────────
-│   │   ├── entries/        # entries domain: service · schema · methods · visibility · url.shared · type-ids.shared
-│   │   ├── media/          # media domain: service · schema · serving/image/
-│   │   ├── users/          # users domain: service · schema · auth (Better Auth integration)
-│   │   ├── settings/       # settings domain: service · schema · page-values.shared
-│   │   ├── notifications/  # notifications domain: service · schema · user-scoped storage
+│   │   ├── entries/        # entries domain: service (assembler) · operations/ · internal/ · schema · methods · visibility · url.shared · type-ids.shared
+│   │   ├── media/          # media domain: service (assembler) · operations/ · internal/ · schema · methods · serving/image/
+│   │   ├── users/          # users domain: service (assembler) · operations/ · internal/ · schema · methods · auth (Better Auth integration)
+│   │   ├── settings/       # settings domain: service · schema · methods · visibility · page-values.shared
+│   │   ├── notifications/  # notifications domain: service (+ notify) · schema · methods · user-scoped storage
 │   │   │
 │   │   │   ── capabilities ───────────────────────────────────────────────
 │   │   ├── database/       # Kysely client/drivers + schema.ts aggregator

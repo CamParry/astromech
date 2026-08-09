@@ -121,13 +121,37 @@ holding all eight verbs inline, six private helpers, and
 
 ### 4. Apply it to `users` and `settings`, or decide not to
 
-- [ ] `users/service.ts` (234 lines) and `settings/service.ts` (139) are below
-      the size where decomposition obviously pays. Decide once, explicitly:
-      either they follow the template for uniformity, or the template applies
-      above a stated threshold and this file records the threshold.
-- [ ] Whichever way it goes, say so in `ARCHITECTURE.md` — the invariant list
-      currently implies every domain owns `service.ts`, `schema.ts`, `methods.ts`
-      and `visibility.ts`, and three domains do not.
+**Decision: `users` follows the template; `settings` and `notifications` do not.**
+
+The test is two clauses, and both do work. A domain decomposes when it has **more
+than three verbs** AND **at least one verb whose body carries policy rather than
+a storage call**. `entries` (18 verbs), `media` (7) and `users` (5) pass.
+`settings` fails the first — `set` and `get` are genuinely policy, but with three
+verbs `service.ts` fits on two screens and is its own index, so splitting buys a
+hop and no findability. `notifications` fails the second — four verbs, every body
+a single storage call, so `operations/count.ts` would hold a one-line function.
+
+Line count is what this file offered, and it is the wrong axis: `users` at 234
+lines has the same profile as `media` at 435, two field-pipeline verbs and three
+storage wrappers. It also had the identical defect step 3 fixed —
+`collectUserRelationshipSources` exported from the bottom of the service file
+with a `boot/relationship-index.ts` consumer. Leaving it would have meant boot
+importing one collector from an `internal/relationships.ts` and the other from a
+`service.ts`, which is drift a reader has to explain.
+
+Annotating `usersService: UsersService` — free once the assembler exists —
+surfaced another instance of the sweep's pattern: `UsersService` declared neither
+`create`'s nor `update`'s `roleSlug`, though the schema, the contract, the routes
+and the service all carry it. Fixed.
+
+- [x] `users` decomposed into `operations/{query,get,create,update,delete}.ts`
+      and `internal/{parse,to-user,relationships}.ts`, with `service.ts` as the
+      assembler. `settings` and `notifications` stay one file each.
+- [x] `ARCHITECTURE.md`'s invariant now separates the three files every domain
+      owns (`service.ts`, `schema.ts`, `methods.ts`) from the two that are
+      per-domain (`visibility.ts` where a domain has more than one shape;
+      `operations/` + `internal/` where one file stopped being readable), and
+      names which domains have which. The directory map matches.
 
 ## Notes / caveats
 
@@ -135,11 +159,29 @@ holding all eight verbs inline, six private helpers, and
   first if the media decomposition is the more useful unblock.
 - **Step 3 is behaviour-preserving.** `tests/services/media/` has seven files and
   is the safety net; run it before and after with no edits to it.
-- Notifications is the domain `roadmap/planned/module-boundary-enforcement.md`
-  found absent from every dependency-cruiser rule. The two gaps have the same
-  cause — it was added after the conventions were set and never held to them —
-  and finding a third would not be surprising. Worth a deliberate sweep for
-  anything else that skipped it.
+- **The sweep found three more.** Notifications is the domain
+  `roadmap/planned/module-boundary-enforcement.md` found absent from every
+  dependency-cruiser rule, and the manifest gap has the same cause. Every place
+  that hand-enumerates the domains was checked; three more had skipped it, all
+  now fixed here: `ScopedServices` and `scopedServices()` in
+  `policies/scoped-services.ts` (four domains, so a role-scoped caller could
+  reach nothing), `CORE_SERVICES` in `transport/tools/dispatch.ts` (so a manifest
+  entry would have resolved to "no service registered for domain"), and the
+  invariant list in `ARCHITECTURE.md`.
+
+    Three enumerations omit it correctly and were left alone: `CORE_PERMISSIONS`
+    (a session-scoped method declares none by design), `AIContextKind` (there is no
+    notifications admin page — it is a bell dropdown), and the relationship-index
+    collectors in `boot/relationship-index.ts` (notifications carries no fields, so
+    it is not a relationship source).
+
+    Two more instances of the same PATTERN — a declaration that drifted from the
+    code it describes — turned up outside notifications. `UsersService` declared
+    neither `create`'s nor `update`'s `roleSlug`, hidden because `usersService`
+    carried no type annotation (fixed in step 4). And `apps/docs/cli.md`'s MCP
+    coverage list did not say why a method is omitted from the tool surface (fixed
+    in step 2).
+
 - **What manifest presence did and did not buy notifications.** It gets a CLI
   listing (`astromech methods` shows all four), assistant tool visibility
   (`buildScopedTools` builds them, and the scoped handle supplies the subject),
