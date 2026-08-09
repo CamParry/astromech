@@ -240,10 +240,11 @@ export type EntryType = {
      */
     url?: string;
     /**
-     * Custom storage backend for this entry type. Plugin entry types may mount
-     * their own storage; absent means built-in storage. Stripped from the
-     * resolved config (a live instance cannot be serialised into the virtual
-     * module) and registered into the storage registry at boot.
+     * Custom storage backend for this entry type; absent means built-in
+     * storage. Stripped from the resolved config (a live instance cannot be
+     * serialised into the virtual module) and registered into the storage
+     * registry at boot, under the bare type name for a host type and the
+     * qualified `{plugin}/{type}` id for a plugin's.
      */
     storage?: EntryStorage;
     /** Field names a multi-type storage should index for free-text search. */

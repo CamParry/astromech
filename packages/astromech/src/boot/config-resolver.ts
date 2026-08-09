@@ -98,7 +98,7 @@ function toResolvedEntryType(
     storageSupports: readonly Capability[]
 ): ResolvedEntryType {
     const capabilities = resolveEntryCapabilities(cfg, storageSupports);
-    assertEntryTypeValid(typeKey, cfg, capabilities, storageSupports);
+    assertEntryTypeValid(typeKey, cfg, storageSupports);
 
     const resolvedFields = toResolvedFields(cfg.fields);
     validateFieldTree(typeKey, resolvedFields.main, false);

@@ -148,16 +148,20 @@ dribbling out.
       that `Pick`, so the nested strip is load-bearing rather than tidiness:
       without it a live `ImageDriver` rides into every plugin's
       `ctx.config.media`.
-- [ ] **WS2 — Register host entry storage.** A loop over `config.entries` in
+- [x] **WS2 — Register host entry storage.** A loop over `config.entries` in
       `initRuntime`, placed after `registerPlugins`, which opens with
       `resetEntryStorageOverrides()` and would otherwise wipe it. The alternative
       is dropping `storage` from host entry types, but
       `packages/astromech/src/boot/config-resolver.ts` already treats both paths
-      identically, so registering it is the smaller lie to unwind. While here,
-      settle the `titleField` check in
-      `packages/astromech/src/entries/storage/capabilities.ts`, which rejects
-      anything but `'title'` unconditionally while its own error message says
-      custom title fields arrive with custom storage.
+      identically, so registering it is the smaller lie to unwind. The
+      `titleField` check in
+      `packages/astromech/src/entries/storage/capabilities.ts` keeps rejecting
+      anything but `'title'` or `false` unconditionally, which is correct: only
+      the error message promising custom storage would help was wrong, and it is
+      gone. Widening `titleField` to an arbitrary field name is a separate
+      feature — it would have to reach `createEntrySchemaFor`,
+      `EntryRecord.title`, `EntryWrite.title` and the admin's label resolution,
+      all of which type the field as the literal `'title' | false`.
 - [ ] **WS3 — A slot holds what the config declared, and nothing copied in.**
       `email` becomes the `EmailDriver`: `from` moves into the email driver's
       factory, since it is the envelope sender and the two call sites
@@ -253,9 +257,11 @@ dribbling out.
       None of this is covered by the suite, and WS1 through WS4 all touch the
       boot path that only a real build exercises. See
       `roadmap/planned/gate-runs-a-build.md`.
-- [ ] A host entry type with custom storage actually reaches that storage, proved
-      by a storage whose methods throw. WS2 has no test today because the
-      capability has never worked.
+- [x] A host entry type with custom storage actually reaches that storage, proved
+      by a storage whose methods throw:
+      `packages/astromech/tests/boot/init-runtime.test.ts` drives the real
+      `initRuntime` rather than the harness, which mirrors the boot sequence and
+      so cannot fail when the loop moves or goes.
 - [ ] Email still sends under both `astro dev` and a built server after `from`
       moves, including the password reset path in
       `packages/astromech/src/users/auth.ts`, which is the one caller outside the
