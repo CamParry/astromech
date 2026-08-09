@@ -290,19 +290,22 @@ params and query string become the argument object).
 - [x] Define `RestRoute` and the generic handler in `transport/http/routes/`.
 - [x] Convert one domain first. `settings` (76 lines, 3 handlers) is the
       smallest honest test; `entries` is the payoff and goes last.
-- [ ] Delete `parseQueryParams` / `validateSort` / `SORTABLE_FIELDS` from
+- [x] Delete `parseQueryParams` / `validateSort` / `SORTABLE_FIELDS` from
       `routes/entries.ts` in favour of the contract's own schema, and move any
       sortable-field constraint into `entries/schema.ts` where the rest of the
       entry contract lives.
-- [ ] Bespoke handlers from step 0 stay as explicit entries below the table,
+- [x] Bespoke handlers from step 0 stay as explicit entries below the table,
       each carrying the reason it is not in it.
-- [ ] Emit the OpenAPI document from the table plus the contracts, replacing the
+- [x] Emit the OpenAPI document from the table plus the contracts, replacing the
       five hand-written `createRoute()` calls. This is the point at which
       `/openapi.json` starts describing the whole API.
 
-`settings`, `notifications`, `users`, `media` and `entry-types` are converted —
-11 handlers in a table, 10 bespoke, exactly the split step 0 predicted.
-`entries` is what remains, and it is what the two unticked boxes above wait on.
+Every domain is converted: 35 handlers in a table and 21 bespoke, exactly the
+split step 0 predicted. `routes/entries.ts` went from 1137 lines to 756, and
+`transport/http/routes/` from 2009 to 1783. `/openapi.json` describes 29 paths
+and 35 operations, emitted from the tables rather than hand-written; the bespoke
+handlers are not in it, since documenting them would mean writing the
+`createRoute()` calls this step deleted.
 
 ### 3. Generate the fetch client from the same table
 
