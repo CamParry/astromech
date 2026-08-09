@@ -436,3 +436,7 @@ had the reason in a file header rather than against the handler.
   checks type existence first, so it answers 404 either way.
 - No migration, no stored-data change, no public API change if done correctly —
   the URL surface is preserved by the table.
+
+`decisions/0038-a-route-declares-itself.md` records the why: what the audit
+refuted, why a proxy beat generating a client file, why REST and the eleven
+hand-written CLI commands stayed, and which enforcement residues are deliberate.

@@ -70,3 +70,4 @@ Distinct from the neighbouring directories:
 - [0035](0035-one-namespace-and-one-declare-global.md) — one `globalThis.__astromech` namespace and one `declare global`, plus `createKeyedRegistry`
 - [0036](0036-one-layer-table-and-a-shared-suffix.md) — the layer rules generate from one `LAYERS` table, and `*.shared.ts` replaces the admin allowlist
 - [0037](0037-session-scoped-service-methods.md) — a method whose subject is the caller declares `sessionScoped`, and the scoped handle fills it
+- [0038](0038-a-route-declares-itself.md) — a route declares itself, and one table is read by the handler, the document and the client
