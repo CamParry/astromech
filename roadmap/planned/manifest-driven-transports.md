@@ -324,22 +324,41 @@ Once a route declares `(verb, path, method id)`, the client has no independent
 facts left to hold. `client/index.ts` becomes a proxy: look up the route for the
 method id, build the URL, fetch, unwrap.
 
-- [ ] Move the route table into a pure data module both halves import. This is
+- [x] Move the route table into a pure data module both halves import. This is
       the `*.shared.ts` convention from
-      `roadmap/planned/module-boundary-enforcement.md` step 2 — the table names
+      `roadmap/completed/module-boundary-enforcement.md` step 2 — the table names
       no service and imports no config, so it is browser-safe by construction.
-- [ ] Rebuild `astromechClient` as a proxy over the table, keeping
+- [x] Rebuild `astromechClient` as a proxy over the table, keeping
       `AstromechApiError`, `emitApiError` and the `configure({ baseUrl })`
       surface unchanged.
-- [ ] Keep the hand-written methods for the bespoke routes (media upload is
+- [x] Keep the hand-written methods for the bespoke routes (media upload is
       `FormData`, not JSON) and nothing else.
-- [ ] The client's static types keep coming from `AstromechClient`, so admin call
+- [x] The client's static types keep coming from `AstromechClient`, so admin call
       sites do not change and a wrong proxy fails the typecheck.
 
 The alternative — generating a client file at build time via `codegen/` — is
 worth naming and rejecting explicitly: it adds a generated artifact to review
 and a build ordering constraint, and buys nothing a proxy over shared data does
 not already give.
+
+The table is `packages/astromech/src/types/http-routes.shared.ts`. It sits under
+`types/` rather than beside the routes because `client-is-over-the-wire` lets the
+fetch client reach the pure leaves and nothing else — the marker is what holds it
+browser-safe, and no exemption was added to make the import legal.
+
+`client/index.ts` went from 862 lines to 511. Of the 40 methods on
+`AstromechClient`, 31 are the bare proxy and 7 more resolve their route from the
+table with a client-side wrapper the row cannot describe: the admin's full-shape
+default (`entries.query`, `entries.get`), a query string the service params do
+not match one-to-one (`media.query`, `users.query`), a flag with no wire form
+(`settings.all`), a 404 that means "no value" plus the per-locale merge
+(`settings.get`), and a scalar behind a wrapper object (`notifications.count`).
+Two are written out end to end — `media.upload` and `media.replace`, whose body
+is `FormData`.
+
+`tests/transport/http/client/methods.test.ts` asserts the URL, verb, body and
+unwrapped result of every one of them, since a proxy that returns the wrong
+envelope type-checks fine and the admin is what would break.
 
 ### 4. A generic CLI call path
 

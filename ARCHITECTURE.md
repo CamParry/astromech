@@ -94,7 +94,9 @@ Key invariants:
   config names, into the client bundle. A pure function the browser needs from a
   domain (`entries/type-ids.shared.ts`, `media/serving/image/url.shared.ts`) stays
   where it lives and takes the suffix, which limits it to importing the leaves,
-  `fields/`, and other `*.shared.ts` files.
+  `fields/`, and other `*.shared.ts` files. The fetch client sits on the same
+  boundary and reaches only the leaves, so the REST route table both halves of the
+  HTTP transport read lives at `packages/astromech/src/types/http-routes.shared.ts`.
 - **Enforced** by `packages/astromech/.dependency-cruiser.cjs` (`npm run lint:deps`), which scans `packages/astromech/src` only — core's internal DAG. The layer rules there are generated from one `LAYERS` table, and a top-level `src/` directory missing from it fails the scan. Cross-package isolation is enforced by `exports` boundaries at publish, not a repo-wide scan.
 
 ## Directory map
