@@ -1,35 +1,34 @@
 # Registry Consolidation
 
 `ARCHITECTURE.md` says driver slots "share one mechanism
-(`utilities/registry.ts`) over a single `globalThis.__astromech` namespace". Ten
-slots do. Eleven other globals do not: each declares its own top-level
+(`utilities/registry.ts`) over a single `globalThis.__astromech` namespace".
+Thirteen slots do. Ten other globals do not: each declares its own top-level
 `globalThis.__astromechX`, its own `declare global` block, and its own lazy-init
 and reset helpers.
 
 ```
-declare global blocks:            11 files
-distinct global keys:             12 (__astromech + 11 siblings)
-slots inside __astromech:         10
+declare global blocks:            10 files
+distinct global keys:             11 (__astromech + 10 siblings)
+slots inside __astromech:         13
 ```
 
 The comments show this was seen and copied rather than routed through the
 abstraction. `entries/storage/registry.ts` says "State lives on globalThis
-(mirrors the db/storage-driver registries)"; `fields/resource-validators.ts`
-says the same; `plugins/runtime/entry-access.ts` says "State lives on globalThis
-(like the other registries)". Three files reimplementing the thing they name is
-past the rule of three by a clear margin, and the cost is not the duplicated
-lines — it is that the architecture doc is false, and that the next author has
-two patterns to choose between with nothing saying which.
+(mirrors the db/storage-driver registries)"; `plugins/runtime/entry-access.ts`
+says "State lives on globalThis (like the other registries)". Files
+reimplementing the thing they name is past the rule of three by a clear margin,
+and the cost is not the duplicated lines — it is that the architecture doc is
+false, and that the next author has two patterns to choose between with nothing
+saying which.
 
 ## Why the abstraction does not currently fit
 
-`createRegistry` models a **single-value slot**. Three of the hand-rolls are
+`createRegistry` models a **single-value slot**. Two of the hand-rolls are
 **keyed maps**, which is why they were written by hand:
 
 | File                                 | Shape                         |
 | ------------------------------------ | ----------------------------- |
 | `entries/storage/registry.ts`        | keyed by entry type           |
-| `fields/resource-validators.ts`      | keyed by validator key        |
 | `email/email-overrides.ts`           | keyed by override             |
 | `plugins/runtime/entry-access.ts`    | single slot, resolve-or-throw |
 | `request-context/request-context.ts` | single slot, lazy default     |
@@ -54,10 +53,10 @@ across tsup entry chunks — without sharing its shape.
 - [ ] `clear()` resets the whole map. Every hand-rolled version has a
       `reset*Overrides()` that tests call, and they should converge on one name.
 
-### 2. Convert the six registries
+### 2. Convert the five registries
 
-- [ ] `entries/storage/registry.ts`, `fields/resource-validators.ts`,
-      `email/email-overrides.ts` → `createKeyedRegistry`.
+- [ ] `entries/storage/registry.ts` and `email/email-overrides.ts` →
+      `createKeyedRegistry`.
 - [ ] `plugins/runtime/entry-access.ts` → `createRegistry` with `required: true`.
       It is already resolve-or-throw, so this is a direct substitution.
 - [ ] `request-context/request-context.ts` → `createRegistry`, with the lazy
@@ -70,7 +69,7 @@ across tsup entry chunks — without sharing its shape.
       defensible if the parts are set together, and this file should say which
       it was.
 - [ ] Each conversion keeps its existing public function names
-      (`getEntryStorage`, `setResourceValidator`, …) so no call site changes.
+      (`getEntryStorage`, `setEntryStorage`, …) so no call site changes.
       The registry is the implementation, not the surface.
 
 ### 3. Bring the non-registry globals into the namespace
@@ -99,7 +98,7 @@ across tsup entry chunks — without sharing its shape.
   change, no migration. The full suite is the safety net and should need no
   edits; a test that needs editing is a signal the conversion changed something.
 - **Test resets are the risk.** Several suites reset state between cases via the
-  per-file helpers (`resetEntryStorageOverrides`, `resetResourceValidators`).
+  per-file helpers, notably `resetEntryStorageOverrides`.
   Converting the storage without converting the reset is how a suite starts
   leaking state across files, which shows up as order-dependent failures rather
   than clean ones. Convert each registry and its reset in the same commit.
@@ -110,11 +109,16 @@ across tsup entry chunks — without sharing its shape.
   do before `roadmap/planned/manifest-driven-transports.md` — it touches many
   files shallowly, so it conflicts badly with anything long-running.
 
-`roadmap/planned/runtime-boot-and-live-config.md` raises the stakes on the
-inventory. It moves boot out of `astro:config:setup` and into the first request,
-so these slots stop being filled once per build process and start being filled
-once per serving process, and on Cloudflare once per isolate. Anything relying on
+`roadmap/completed/runtime-boot-and-live-config.md` raised the stakes on the
+inventory. It moved boot out of `astro:config:setup` and into the first request,
+so these slots are no longer filled once per build process but once per serving
+process, and on Cloudflare once per isolate. Anything relying on
 a slot already being populated at import time breaks there. The 17 slots
 `initRuntime` fills are the ones to check; the lazy ones
 (`cloudflareEnv`, `cloudflareProxy`, `__astromechRequestContext`) already have the
 right shape and are worth reading as the model.
+
+`roadmap/planned/drivers-and-registries.md` is the other half of the same
+subject: this item is about how a slot is built, that one is about what goes in
+it and how it is reached. They are independent, but doing this one first means
+that one converts a single shape instead of two.
