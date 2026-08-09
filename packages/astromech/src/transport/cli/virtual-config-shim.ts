@@ -11,22 +11,20 @@
  */
 
 import type { AstromechConfig, ResolvedConfig } from '@/types/index';
-
-declare global {
-    var __astromechCliConfig: ResolvedConfig | undefined;
-}
+import { globals } from '@/utilities/registry';
 
 export function setCliConfig(config: ResolvedConfig): void {
-    globalThis.__astromechCliConfig = config;
+    globals().cliConfig = config;
 }
 
 function getCliConfig(): ResolvedConfig {
-    if (!globalThis.__astromechCliConfig) {
+    const config = globals().cliConfig;
+    if (config === undefined) {
         throw new Error(
             '[Astromech CLI] Config not loaded. Ensure loadConfig() has been called.'
         );
     }
-    return globalThis.__astromechCliConfig;
+    return config as ResolvedConfig;
 }
 
 // Export as a Proxy so property accesses are always forwarded to the live config.

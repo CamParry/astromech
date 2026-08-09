@@ -30,6 +30,7 @@ import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 
 wireEntryAccess();
 import { getCronJobs } from '@/cron/registry';
+import { globals } from '@/utilities/registry';
 
 const config: ResolvedConfig = {
     adminRoute: '/admin',
@@ -108,7 +109,7 @@ const adminRole: Role = {
 };
 
 beforeEach(() => {
-    globalThis.__astromechPluginRuntime = undefined;
+    globals().pluginRuntime = undefined;
     delete globalThis.__astromech?.cronJobs;
     delete globalThis.__astromech?.email;
     vi.restoreAllMocks();

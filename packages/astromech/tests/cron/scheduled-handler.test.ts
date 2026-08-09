@@ -13,13 +13,14 @@ import { runDue } from '@/cron/runner';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/schema';
 import type { DB } from '@/database/types';
+import { globals } from '@/utilities/registry';
 
 beforeEach(async () => {
     delete globalThis.__astromech?.cronJobs;
-    globalThis.__astromechCronTickRunning = false;
-    globalThis.__astromechCronUnscheduledWarned = new Set();
+    globals().cronTickRunning = false;
+    globals().cronUnscheduledWarned = new Set<string>();
     // Clear any held scheduler / interval handle between tests.
-    globalThis.__astromechCronInterval = undefined;
+    globals().cronInterval = undefined;
     delete globalThis.__astromech?.scheduler;
 
     await createTestDb();
@@ -28,9 +29,9 @@ beforeEach(async () => {
 
 afterEach(() => {
     delete globalThis.__astromech?.cronJobs;
-    globalThis.__astromechCronTickRunning = false;
-    globalThis.__astromechCronUnscheduledWarned = new Set();
-    globalThis.__astromechCronInterval = undefined;
+    globals().cronTickRunning = false;
+    globals().cronUnscheduledWarned = new Set<string>();
+    globals().cronInterval = undefined;
     delete globalThis.__astromech?.scheduler;
 });
 

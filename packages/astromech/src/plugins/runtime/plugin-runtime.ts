@@ -64,6 +64,7 @@ import {
     withDefaultShape,
     withDefaultSettingsShape,
 } from '@/utilities/with-default-shape';
+import { createRegistry } from '@/utilities/registry';
 
 // ============================================================================
 // Registry (globalThis — shared across the package's entry chunks)
@@ -89,23 +90,29 @@ type PluginRuntimeState = {
     methods: PluginMethodsAccess | null;
 };
 
-declare global {
-    var __astromechPluginRuntime: PluginRuntimeState | undefined;
-}
+// One slot holding all seven fields rather than seven slots: `registerPlugins`
+// rewrites config/identities/hooks/service/rawRoutes together in a single pass
+// and deliberately leaves client/methods standing, and that split is only
+// legible while the two groups sit in one record.
+const runtime = createRegistry<PluginRuntimeState>('pluginRuntime', {
+    required: false,
+});
 
+/** The runtime state, built empty on first use. */
 function state(): PluginRuntimeState {
-    if (!globalThis.__astromechPluginRuntime) {
-        globalThis.__astromechPluginRuntime = {
-            config: null,
-            identities: [],
-            hooks: new Map(),
-            service: new Map(),
-            rawRoutes: [],
-            client: null,
-            methods: null,
-        };
-    }
-    return globalThis.__astromechPluginRuntime;
+    const existing = runtime.peek();
+    if (existing) return existing;
+    const created: PluginRuntimeState = {
+        config: null,
+        identities: [],
+        hooks: new Map(),
+        service: new Map(),
+        rawRoutes: [],
+        client: null,
+        methods: null,
+    };
+    runtime.set(created);
+    return created;
 }
 
 /**

@@ -45,50 +45,50 @@ across tsup entry chunks — without sharing its shape.
 
 ### 1. Add a keyed registry alongside the single-value one
 
-- [ ] `createKeyedRegistry<T>(name)` in `utilities/registry.ts`, returning
+- [x] `createKeyedRegistry<T>(name)` in `utilities/registry.ts`, returning
       `{ set(key, value), get(key), peek(key), has(key), keys(), clear() }`,
       backed by a `Map` in the same `globalThis.__astromech[name]` slot.
-- [ ] Keep it type-agnostic for the reason the file already states: a registry
+- [x] Keep it type-agnostic for the reason the file already states: a registry
       that names its value types turns the leaf into a hub.
-- [ ] `clear()` resets the whole map. Every hand-rolled version has a
+- [x] `clear()` resets the whole map. Every hand-rolled version has a
       `reset*Overrides()` that tests call, and they should converge on one name.
 
 ### 2. Convert the five registries
 
-- [ ] `entries/storage/registry.ts` and `email/email-overrides.ts` →
+- [x] `entries/storage/registry.ts` and `email/email-overrides.ts` →
       `createKeyedRegistry`.
-- [ ] `plugins/runtime/entry-access.ts` → `createRegistry` with `required: true`.
+- [x] `plugins/runtime/entry-access.ts` → `createRegistry` with `required: true`.
       It is already resolve-or-throw, so this is a direct substitution.
-- [ ] `request-context/request-context.ts` → `createRegistry`, with the lazy
+- [x] `request-context/request-context.ts` → `createRegistry`, with the lazy
       `new AsyncLocalStorage()` default kept at the single call site rather than
       inside the registry. Do this one last and carefully: it is the only one on
       the request hot path, and `request-context/request-context.ts` exists
       specifically to stay service-free for the plain-Node config load.
-- [ ] `plugins/runtime/plugin-runtime.ts` holds a record of several things behind
+- [x] `plugins/runtime/plugin-runtime.ts` holds a record of several things behind
       one key. Decide whether it becomes several slots or stays one; one slot is
       defensible if the parts are set together, and this file should say which
       it was.
-- [ ] Each conversion keeps its existing public function names
+- [x] Each conversion keeps its existing public function names
       (`getEntryStorage`, `setEntryStorage`, …) so no call site changes.
       The registry is the implementation, not the surface.
 
 ### 3. Bring the non-registry globals into the namespace
 
-- [ ] Move `__astromechCronInterval`, `__astromechCronTickRunning`,
+- [x] Move `__astromechCronInterval`, `__astromechCronTickRunning`,
       `__astromechCronUnscheduledWarned`, `__astromechUiInstance` and
       `__astromechCliConfig` inside `globalThis.__astromech` as plain keys, so
       there is one namespace to inspect and one to reset in tests.
-- [ ] Delete the five `declare global` blocks that become unnecessary. The target
+- [x] Delete the five `declare global` blocks that become unnecessary. The target
       is one `declare global` in `utilities/registry.ts`.
-- [ ] Leave them as direct property access rather than registry objects — they
+- [x] Leave them as direct property access rather than registry objects — they
       are guards, not slots, and wrapping them would misdescribe them.
 
 ### 4. Make the doc true and keep it true
 
-- [ ] Update the `ARCHITECTURE.md` invariant to say what the mechanism covers
+- [x] Update the `ARCHITECTURE.md` invariant to say what the mechanism covers
       (driver and override slots) and what else lives in the namespace (process
       guards), since after step 3 both are true statements about one namespace.
-- [ ] Add a dependency-cruiser or lint rule that a `declare global` outside
+- [x] Add a dependency-cruiser or lint rule that a `declare global` outside
       `utilities/registry.ts` is an error. Without it this regrows — it grew to
       eleven with the invariant already written down.
 

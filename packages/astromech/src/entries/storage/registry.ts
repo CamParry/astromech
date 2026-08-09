@@ -7,48 +7,34 @@
  * locale defaults before dispatching, so the built-in storage's own
  * `defaultLocale` fallback ('en') is never relied on.
  *
- * State lives on globalThis (mirrors the db/storage-driver registries): the
- * package has multiple bundle entry points (core, adapters, plugin subpaths),
- * so module-level state can be duplicated per chunk — `registerPlugins` would
- * write overrides into one copy while the entries service reads another.
+ * Both slots live in the shared `globalThis` namespace: the package has multiple
+ * bundle entry points (core, adapters, plugin subpaths), so module-level state
+ * can be duplicated per chunk — `registerPlugins` would write overrides into one
+ * copy while the entries service reads another.
  */
 
+import { createKeyedRegistry, createRegistry } from '@/utilities/registry';
 import { createBuiltInEntryStorage } from './built-in';
 import type { EntryStorage } from './types';
 
-type EntryStorageRegistry = {
-    builtIn: EntryStorage | undefined;
-    overrides: Map<string, EntryStorage>;
-};
+const builtIn = createRegistry<EntryStorage>('entryStorageBuiltIn', { required: false });
+const overrides = createKeyedRegistry<EntryStorage>('entryStorageOverrides');
 
-declare global {
-    var __astromechEntryStorage: EntryStorageRegistry | undefined;
-}
-
-function registry(): EntryStorageRegistry {
-    if (!globalThis.__astromechEntryStorage) {
-        globalThis.__astromechEntryStorage = {
-            builtIn: undefined,
-            overrides: new Map<string, EntryStorage>(),
-        };
-    }
-    return globalThis.__astromechEntryStorage;
-}
-
+/** The shared built-in storage, constructed on first use. */
 function getBuiltIn(): EntryStorage {
-    const state = registry();
-    if (!state.builtIn) {
-        state.builtIn = createBuiltInEntryStorage();
-    }
-    return state.builtIn;
+    const existing = builtIn.peek();
+    if (existing) return existing;
+    const created = createBuiltInEntryStorage();
+    builtIn.set(created);
+    return created;
 }
 
 export function getEntryStorage(type: string): EntryStorage {
-    return registry().overrides.get(type) ?? getBuiltIn();
+    return overrides.peek(type) ?? getBuiltIn();
 }
 
 export function setEntryStorage(type: string, storage: EntryStorage): void {
-    registry().overrides.set(type, storage);
+    overrides.set(type, storage);
 }
 
 /**
@@ -57,7 +43,7 @@ export function setEntryStorage(type: string, storage: EntryStorage): void {
  * it to tell which types have rows there at all.
  */
 export function hasEntryStorageOverride(type: string): boolean {
-    return registry().overrides.has(type);
+    return overrides.has(type);
 }
 
 /**
@@ -65,5 +51,5 @@ export function hasEntryStorageOverride(type: string): boolean {
  * so repeated registrations (notably in tests) don't leak stale plugin storages.
  */
 export function resetEntryStorageOverrides(): void {
-    registry().overrides.clear();
+    overrides.clear();
 }

@@ -24,6 +24,7 @@ vi.mock('@/users/session', () => ({
 }));
 
 import { resolveSessionUser } from '@/users/session';
+import { globals } from '@/utilities/registry';
 
 const mockResolveSessionUser = vi.mocked(resolveSessionUser);
 
@@ -49,8 +50,8 @@ let originalSecret: string | undefined;
 beforeEach(async () => {
     // Reset cron globals.
     delete globalThis.__astromech?.cronJobs;
-    globalThis.__astromechCronTickRunning = false;
-    globalThis.__astromechCronUnscheduledWarned = new Set();
+    globals().cronTickRunning = false;
+    globals().cronUnscheduledWarned = new Set<string>();
 
     // Reset session mock.
     mockResolveSessionUser.mockReset();
@@ -74,8 +75,8 @@ afterEach(() => {
     }
 
     delete globalThis.__astromech?.cronJobs;
-    globalThis.__astromechCronTickRunning = false;
-    globalThis.__astromechCronUnscheduledWarned = new Set();
+    globals().cronTickRunning = false;
+    globals().cronUnscheduledWarned = new Set<string>();
 });
 
 /**

@@ -4,6 +4,9 @@
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';
+// `@/utilities/registry` imports nothing, which is what keeps this module
+// service-free and loadable before `virtual:astromech/config` resolves.
+import { createRegistry } from '@/utilities/registry';
 import type { Role, User } from '@/types/index';
 
 export type RequestContext = {
@@ -11,20 +14,22 @@ export type RequestContext = {
     role: Role | null;
 };
 
-declare global {
-    var __astromechRequestContext: AsyncLocalStorage<RequestContext> | undefined;
-}
+const requestContext = createRegistry<AsyncLocalStorage<RequestContext>>(
+    'requestContext',
+    { required: false }
+);
 
 /**
- * The store lives on globalThis (mirrors the db/entry-storage registries): the
- * package has multiple bundle entry points, so a second copy of this module in
- * another chunk would otherwise be a second, EMPTY store.
+ * The store lives in a registry slot: the package has multiple bundle entry
+ * points, so a second copy of this module in another chunk would otherwise be a
+ * second, EMPTY store. Constructed here on first use rather than in the slot.
  */
 function store(): AsyncLocalStorage<RequestContext> {
-    if (!globalThis.__astromechRequestContext) {
-        globalThis.__astromechRequestContext = new AsyncLocalStorage<RequestContext>();
-    }
-    return globalThis.__astromechRequestContext;
+    const existing = requestContext.peek();
+    if (existing) return existing;
+    const created = new AsyncLocalStorage<RequestContext>();
+    requestContext.set(created);
+    return created;
 }
 
 /** Run `fn` with `ctx` as the request context, for `fn` and everything it awaits. */

@@ -2,16 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { interval } from '@/cron/drivers/interval';
 import { webhook } from '@/cron/drivers/webhook';
 import { cloudflareCron } from '@/cron/drivers/cloudflare';
+import { globals } from '@/utilities/registry';
 
 describe('interval', () => {
     beforeEach(() => {
-        globalThis.__astromechCronInterval = undefined;
+        globals().cronInterval = undefined;
         vi.useFakeTimers();
     });
 
     afterEach(() => {
         interval().stop?.();
-        globalThis.__astromechCronInterval = undefined;
+        globals().cronInterval = undefined;
         vi.useRealTimers();
     });
 
@@ -54,7 +55,7 @@ describe('interval', () => {
 
         await vi.advanceTimersByTimeAsync(120_000);
         expect(onTick).not.toHaveBeenCalled();
-        expect(globalThis.__astromechCronInterval).toBeUndefined();
+        expect(globals().cronInterval).toBeUndefined();
     });
 });
 

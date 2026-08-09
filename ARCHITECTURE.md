@@ -61,12 +61,20 @@ Key invariants:
   `fields`, `permissions`, `request-context`, `email`, `ai`, `cron`, `cloudflare`) and may
   not orchestrate domain logic.
 - **Each capability owns its own driver slot; there is no central context object.**
-  Slots share one mechanism (`utilities/registry.ts`) over a single
-  `globalThis.__astromech` namespace, but never a shared type. A hub carrying every
-  driver would have to import every domain's types, which is what this DAG exists
-  to prevent. globalThis is not a taste choice — tsup emits several entry chunks and
-  a module-level singleton duplicates across them. Required slots resolve-or-throw;
-  genuinely optional ones expose `peek()` and no `get()` at all.
+  Every driver and override slot shares one mechanism (`utilities/registry.ts`)
+  over a single `globalThis.__astromech` namespace, but never a shared type. A hub
+  carrying every driver would have to import every domain's types, which is what
+  this DAG exists to prevent. globalThis is not a taste choice — tsup emits several
+  entry chunks and a module-level singleton duplicates across them. `createRegistry`
+  is a single-value slot: required ones resolve-or-throw, genuinely optional ones
+  expose `peek()` and no `get()` at all. `createKeyedRegistry` is the same slot keyed
+  by string, for the per-type and per-name override maps.
+  The namespace also carries a few **process guards** — a cron tick lock and
+  interval handle, the duplicate-admin-UI check, the CLI's config stash — as plain
+  keys read directly rather than through a registry object. They share the
+  duplicate-chunk hazard without sharing the slot shape.
+- **`utilities/registry.ts` holds the only `declare global`.** Enforced by
+  `no-restricted-syntax` in `eslint.config.js`; a new global goes in the namespace.
 - **Leaves are pure.** `types/`, `utilities/`, and `errors/` import only other
   leaves or third-party packages.
 - **Enforced** by `packages/astromech/.dependency-cruiser.cjs` (`npm run lint:deps`), which scans `packages/astromech/src` only — core's internal DAG. Cross-package isolation is enforced by `exports` boundaries at publish, not a repo-wide scan.

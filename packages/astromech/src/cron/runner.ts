@@ -14,15 +14,11 @@ import { Cron } from 'croner';
 import { getDb } from '@/database/registry';
 import { createCronStorage, type CronStorage } from '@/cron/storage';
 import { getCronJobs, getRuntimeConfig } from '@/cron/registry';
+import { globals } from '@/utilities/registry';
 
 /** Claim lease: generous so a normal job never self-expires mid-run. A crashed
  *  claim auto-expires after this and the next tick retries. */
 const LOCK_TTL_MS = 5 * 60 * 1000;
-
-declare global {
-    var __astromechCronTickRunning: boolean | undefined;
-    var __astromechCronUnscheduledWarned: Set<string> | undefined;
-}
 
 /** Next run strictly after `from`, interpreting `schedule` in `timezone`. */
 function nextRunFrom(schedule: string, from: Date, timezone: string): Date | null {
@@ -35,7 +31,7 @@ function nextRunFrom(schedule: string, from: Date, timezone: string): Date | nul
  * row are not scheduled — warn once.
  */
 async function seed(storage: CronStorage, now: Date, timezone: string): Promise<void> {
-    const warned = (globalThis.__astromechCronUnscheduledWarned ??= new Set());
+    const warned = (globals().cronUnscheduledWarned ??= new Set<string>());
     for (const job of getCronJobs()) {
         if (!job.schedule) {
             if (!warned.has(job.name)) {
@@ -101,12 +97,12 @@ export async function runDue(now: Date): Promise<void> {
  * in THIS process is still running) layered over the cross-instance DB lock.
  */
 export async function onTick(now: Date = new Date()): Promise<void> {
-    if (globalThis.__astromechCronTickRunning) return;
-    globalThis.__astromechCronTickRunning = true;
+    if (globals().cronTickRunning === true) return;
+    globals().cronTickRunning = true;
     try {
         await runDue(now);
     } finally {
-        globalThis.__astromechCronTickRunning = false;
+        globals().cronTickRunning = false;
     }
 }
 

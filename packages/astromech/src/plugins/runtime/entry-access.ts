@@ -8,10 +8,11 @@
  * injects the implementation at boot via `registerEntryAccess` (see
  * `@/entries/plugin-access`).
  *
- * State lives on globalThis (like the other registries) so it survives the
- * package's multiple bundle entry points.
+ * The implementation lives in a registry slot so it survives the package's
+ * multiple bundle entry points.
  */
 
+import { createRegistry } from '@/utilities/registry';
 import type { EntryType } from '@/types/index';
 
 export type EntryAccess = {
@@ -30,24 +31,18 @@ export type EntryAccess = {
     resetEntryStorageOverrides(): void;
 };
 
-declare global {
-    var __astromechEntryAccess: EntryAccess | undefined;
-}
+const access = createRegistry<EntryAccess>('entryAccess', {
+    hint:
+        'The entries domain must call registerEntryAccess() (via @/entries/plugin-access) ' +
+        'before the plugin runtime mounts plugins.',
+});
 
 /** Inject the entries-domain implementation. Called once at boot, idempotent. */
-export function registerEntryAccess(access: EntryAccess): void {
-    globalThis.__astromechEntryAccess = access;
+export function registerEntryAccess(implementation: EntryAccess): void {
+    access.set(implementation);
 }
 
 /** The injected entry access, or crash-loud if the entries domain wasn't wired. */
 export function entryAccess(): EntryAccess {
-    const access = globalThis.__astromechEntryAccess;
-    if (!access) {
-        throw new Error(
-            '[Astromech] Entry access is not registered. The entries domain must call ' +
-                'registerEntryAccess() (via @/entries/plugin-access) before the plugin runtime ' +
-                'mounts plugins.'
-        );
-    }
-    return access;
+    return access.get();
 }

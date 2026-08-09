@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createRegistry } from '@/utilities/registry';
+import { createKeyedRegistry, createRegistry } from '@/utilities/registry';
 
 type Driver = { name: string };
 
@@ -53,5 +53,54 @@ describe('createRegistry', () => {
         const get = reg.get;
         set({ name: 'c' });
         expect(get().name).toBe('c');
+    });
+});
+
+describe('createKeyedRegistry', () => {
+    it('round-trips a value under its key', () => {
+        const reg = createKeyedRegistry<Driver>('test.keyed.roundTrip');
+        reg.set('a', { name: 'first' });
+        expect(reg.get('a').name).toBe('first');
+        expect(reg.peek('a')).toEqual({ name: 'first' });
+    });
+
+    it('throws on get() for an unset key, naming the slot and the key', () => {
+        const reg = createKeyedRegistry<Driver>('test.keyed.unset');
+        expect(() => reg.get('missing')).toThrow(/test\.keyed\.unset/);
+        expect(() => reg.get('missing')).toThrow(/missing/);
+    });
+
+    it('peek() returns null and has() false for an unset key', () => {
+        const reg = createKeyedRegistry<Driver>('test.keyed.probe');
+        expect(reg.peek('a')).toBeNull();
+        expect(reg.has('a')).toBe(false);
+        reg.set('a', { name: 'x' });
+        expect(reg.has('a')).toBe(true);
+    });
+
+    it('keys() lists every set key, and clear() empties the map', () => {
+        const reg = createKeyedRegistry<Driver>('test.keyed.clear');
+        reg.set('a', { name: 'x' });
+        reg.set('b', { name: 'y' });
+        expect(reg.keys()).toEqual(['a', 'b']);
+        reg.clear();
+        expect(reg.keys()).toEqual([]);
+        expect(reg.peek('a')).toBeNull();
+    });
+
+    it('does not collide with a keyed registry of a different name', () => {
+        const one = createKeyedRegistry<Driver>('test.keyed.one');
+        const two = createKeyedRegistry<Driver>('test.keyed.two');
+        one.set('shared', { name: 'one' });
+        expect(two.peek('shared')).toBeNull();
+    });
+
+    it('survives a wholesale reset of the namespace', () => {
+        const reg = createKeyedRegistry<Driver>('test.keyed.reset');
+        reg.set('a', { name: 'x' });
+        globalThis.__astromech = undefined;
+        expect(reg.peek('a')).toBeNull();
+        reg.set('a', { name: 'y' });
+        expect(reg.get('a').name).toBe('y');
     });
 });

@@ -1,8 +1,6 @@
 /** Dev-only detection of a second copy of the admin UI barrel in one page. */
 
-declare global {
-    var __astromechUiInstance: string | undefined;
-}
+import { globals } from '@/utilities/registry';
 
 /**
  * Records the UI barrel's module URL and logs if a different URL turns up.
@@ -11,9 +9,9 @@ declare global {
 export function assertSingleUiInstance(moduleUrl: string): void {
     if (!import.meta.env.DEV) return;
 
-    const existing = globalThis.__astromechUiInstance;
+    const existing = globals().uiInstance;
     if (existing === undefined) {
-        globalThis.__astromechUiInstance = moduleUrl;
+        globals().uiInstance = moduleUrl;
         return;
     }
     if (existing === moduleUrl) return;

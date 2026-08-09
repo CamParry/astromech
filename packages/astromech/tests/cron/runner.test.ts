@@ -16,6 +16,7 @@ import { onTick, runDue } from '@/cron/runner';
 import { encodePatchWith, decodeWith } from '@/database/codec';
 import type { DB } from '@/database/types';
 import { cronTable, type CronRow } from '@/database/schema';
+import { globals } from '@/utilities/registry';
 
 // Truncate to second resolution to match DB storage.
 function toSecond(d: Date): number {
@@ -33,8 +34,8 @@ function singleRow(rows: CronRow[]): CronRow {
 beforeEach(async () => {
     // Reset all cron globalThis state between tests.
     delete globalThis.__astromech?.cronJobs;
-    globalThis.__astromechCronTickRunning = false;
-    globalThis.__astromechCronUnscheduledWarned = new Set();
+    globals().cronTickRunning = false;
+    globals().cronUnscheduledWarned = new Set<string>();
 
     await createTestDb();
     setupTestConfig(makeTestConfig());
@@ -42,8 +43,8 @@ beforeEach(async () => {
 
 afterEach(() => {
     delete globalThis.__astromech?.cronJobs;
-    globalThis.__astromechCronTickRunning = false;
-    globalThis.__astromechCronUnscheduledWarned = new Set();
+    globals().cronTickRunning = false;
+    globals().cronUnscheduledWarned = new Set<string>();
 });
 
 describe('onTick / runDue', () => {
@@ -269,13 +270,13 @@ describe('onTick / runDue', () => {
         const now = new Date('2024-06-01T12:00:00.000Z');
 
         // Simulate a tick already running.
-        globalThis.__astromechCronTickRunning = true;
+        globals().cronTickRunning = true;
 
         await onTick(now);
         expect(callCount).toBe(0);
 
         // Clean up.
-        globalThis.__astromechCronTickRunning = false;
+        globals().cronTickRunning = false;
     });
 
     it('7. fresh lock blocks; expired lock reclaims', async () => {
