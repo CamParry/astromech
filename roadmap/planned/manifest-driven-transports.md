@@ -385,13 +385,27 @@ declared — `binaryInput`, `sessionScoped`, or no input schema.
 
 ### 5. Close the enforcement question
 
-- [ ] Every route reached through the generic handler is enforced by
+- [x] Every route reached through the generic handler is enforced by
       `scopedServices`, so its handler contains no permission code at all.
-- [ ] The exception list from step 0 keeps its explicit `permissionsFor` check,
+- [x] The exception list from step 0 keeps its explicit `permissionsFor` check,
       and each one carries a comment naming the logic the contract cannot state.
-- [ ] `ARCHITECTURE.md` gains a sentence stating which transports enforce and
+- [x] `ARCHITECTURE.md` gains a sentence stating which transports enforce and
       which are trusted, since that fact currently has to be reconstructed from
       four files.
+
+`mountRestRoutes` dispatches all 35 table routes through `scopedServices`, and
+in eleven of them — users, media, settings and notifications — no handler
+function names a permission at all. The 24 entries rows share
+`entryPrecondition`, which still reads `entryPermission(type, action)`, and it
+is the one residue the caveats below predicted: `scopedServices` refuses the
+call whatever it returns, so what that read decides is the ORDER — an unknown
+type answers 403 to an under-privileged role and 404 to a privileged one. No
+contract can stand in for it, because an unresolved entry type has none. The
+comment on it now says that rather than reading as the gate.
+
+All 21 bespoke handlers carry their reason. Sixteen already did; the five added
+here are the two plugin routes, the cron poke, `/setup/check` and `/me`, which
+had the reason in a file header rather than against the handler.
 
 ## Notes / caveats
 

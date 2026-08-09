@@ -70,6 +70,10 @@ function enforceAccess(
 }
 
 // ── Raw escape-hatch routes (registered before the RPC catch-all) ──────────
+
+// Not in a route table: the verb and path are plugin-declared, the handler
+// takes a Web `Request`, and access is `PluginAccess` rather than a contract
+// permission — so `scopedServices` has nothing to scope.
 for (const { identity, route } of getPluginRawRoutes()) {
     const method = (route.method ?? 'GET').toUpperCase();
     const path = `/${identity.serviceKey}${route.path}`;
@@ -84,6 +88,10 @@ for (const { identity, route } of getPluginRawRoutes()) {
 }
 
 // ── RPC: POST /plugins/{serviceKey}/{method} ───────────────────────────────
+
+// Not in a route table: the method id is two path params resolved at request
+// time against the plugin service registry, access is `PluginAccess`, and the
+// handler's result is returned unenveloped.
 pluginsRouter.post('/:name/:method', async (c) => {
     const name = c.req.param('name');
     const method = c.req.param('method');

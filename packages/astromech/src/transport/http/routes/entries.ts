@@ -308,10 +308,12 @@ function contractsForRequest(c: Context<Env>): ContractCatalogue | undefined {
  * per-(type, action) permission, the type's existence, then the capability the
  * method's contract requires.
  *
- * Permission first, so an unknown type answers 403 to an under-privileged role
- * and 404 to a privileged one — a caller cannot enumerate the entry types it
- * has no grant for. `capability: 'unchecked'` is the one exception, named at its
- * two call sites.
+ * The permission is READ here, not enforced here — `scopedServices` refuses the
+ * call whatever this returns. What it decides is the ORDER: an unknown type
+ * answers 403 to an under-privileged role and 404 to a privileged one, so a
+ * caller cannot enumerate the entry types it has no grant for. No contract can
+ * stand in for it, because an unresolved type has none. `capability: 'unchecked'`
+ * is the one exception, named at its two call sites.
  */
 function entryAccess(
     capability: 'declared' | 'unchecked' = 'declared'

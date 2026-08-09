@@ -77,6 +77,9 @@ app.use('*', (c, next) => {
 // Public routes (no auth required)
 // ============================================================================
 
+// Not in a route table: unauthenticated by design, and it deliberately calls
+// `users.query` — a `users:read` method — ungated, because before the first
+// user exists there is no role to hold the grant.
 app.get('/setup/check', async (c) => {
     const result = await Astromech.users.query({ limit: 'all' });
     return c.json({ needsSetup: result.data.length === 0 });
@@ -99,7 +102,8 @@ app.route('/cron', cronRouter);
 
 app.use('*', requireAuth);
 
-// GET /me — current user + role (used by admin SPA)
+// GET /me — current user + role (used by admin SPA). Not in a route table: no
+// service method behind it, only the session `requireAuth` already resolved.
 app.get('/me', (c) => {
     return c.json({ data: { user: c.var.user, role: c.var.role } });
 });

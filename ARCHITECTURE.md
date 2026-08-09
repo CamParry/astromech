@@ -88,6 +88,17 @@ Key invariants:
   `no-restricted-syntax` in `eslint.config.js`; a new global goes in the namespace.
 - **Leaves are pure.** `types/`, `utilities/`, and `errors/` import only other
   leaves or third-party packages.
+- **Permission enforcement is a property of the handle, not of the transport.**
+  `scopedServices(role)` (`policies/scoped-services.ts`) refuses a method the
+  role may not call, and every untrusted path composes it: the HTTP REST routes
+  dispatch through it, `POST /rpc/:id` reaches it via `buildScopedDispatch`, and
+  so does the AI tool-loop. The trusted paths compose nothing and say so —
+  `transport/local` (SSR, hooks, seeding), `transport/cli` including
+  `astromech call`, and the dev-only MCP server, which is why `buildDispatch`
+  carries a method's `permission` without checking it. `permissionsFor` stays the
+  seam for the route checks carrying logic no contract can state — `users.get`'s
+  self-access, the last-admin guard, the entries routes answering 403 before 404
+  — and each of those handlers names its reason where it is written.
 - **`*.shared.ts` marks a domain file the admin bundle may hold.** The admin runs
   in a browser, so it may not import a domain or a server-side capability — a
   domain service drags `virtual:astromech/config`, and every driver and plugin the

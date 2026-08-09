@@ -21,6 +21,8 @@ function cronSecret(): string | undefined {
     return typeof process !== 'undefined' ? process.env.ASTROMECH_CRON_SECRET : undefined;
 }
 
+// Not in a route table: no service method behind it, and its own auth — a
+// bearer secret OR an admin session — which no contract permission can state.
 router.post('/run', async (c) => {
     const secret = cronSecret();
     const authHeader = c.req.header('authorization');
