@@ -33,7 +33,7 @@ compiles the handler, `virtual:` resolves, and a plugin route can import
 anything core publishes with no port in between.
 
 The principle behind this is no longer local to plugin routes.
-`roadmap/planned/runtime-boot-and-live-config.md` adopts the same rule for the
+`roadmap/completed/runtime-boot-and-live-config.md` adopts the same rule for the
 config itself, on Astro's own stated reasoning: a function cannot cross a build
 boundary, so pass a path to an entrypoint and let the bundler load it. If that
 lands first, this item is applying an established pattern rather than proposing

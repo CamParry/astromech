@@ -91,7 +91,7 @@ const UNLAYERED = ['exports'];
  * - `transport/tools/` and `transport/mcp/` read the generated method manifest
  *   from `codegen/`. The manifest is data the transports project, not
  *   composition — it moves out from under `codegen/` in
- *   `roadmap/planned/manifest-driven-transports.md`.
+ *   `roadmap/completed/manifest-driven-transports.md`.
  */
 const NO_UPWARD_EXEMPT = '^src/transport/(cli|tools|mcp)/';
 

@@ -1,7 +1,7 @@
 # HTTP route defects
 
 Eight defects found while writing the route test net for
-`roadmap/planned/manifest-driven-transports.md`. Each is pinned by a test
+`roadmap/completed/manifest-driven-transports.md`. Each is pinned by a test
 asserting **current** behaviour, so fixing one means changing its test — that is
 deliberate. A test net that encoded the fixes would not have been a net.
 

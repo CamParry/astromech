@@ -1,7 +1,7 @@
 # Admin as its own package
 
-`src/admin/` is 196 of the 479 source files in `packages/astromech`. It is the
-single largest directory in core by a factor of four over the next one
+`src/admin/` is 257 of the 577 source files in `packages/astromech`. It is the
+single largest directory in core by a factor of five over the next one
 (`entries/`, at 50), and it is a React SPA living inside the package that ships
 the server. No comparable project does this: Payload has `packages/ui` and
 `packages/next`, Directus a top-level `app/`, Strapi `packages/core/admin`,
@@ -119,7 +119,7 @@ Of the three costs the move was going to remove, one survives.
   allowlist left to grow.
 - **Mostly paid down — the DAG scan's scope.** Step 1 of the same item
   generates the layer rules from one `LAYERS` table, so the per-rule maintenance
-  that made a 479-file scan expensive is gone. The scan still covers `admin/`;
+  that made a 577-file scan expensive is gone. The scan still covers `admin/`;
   that is now a runtime cost, not a maintenance one.
 - **Standing — a broken import in the admin entry passes the whole gate.**
   `check:boot` asserts `/admin` returns 200, but `admin/shell.astro` mounts
@@ -127,7 +127,7 @@ Of the three costs the move was going to remove, one survives.
   passes. This is real and it is the only justification left.
 
 And that one is addressed far more cheaply by
-`roadmap/planned/gate-executes-the-admin.md` than by moving 196 files.
+`roadmap/planned/gate-executes-the-admin.md` than by moving 257 files.
 
 ## Prerequisites
 

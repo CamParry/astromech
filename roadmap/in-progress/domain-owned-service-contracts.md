@@ -79,10 +79,12 @@ runtime and costs nothing in the bundle, but `leaves-are-pure` and
       without an allowlist entry, and this item proceeds. A domain contract the
       admin imports as a type needs no `*.shared.ts` rename and no carve-out —
       the rule that admits it is one key on the existing rule.
-- [ ] If it cannot: the contracts have to reach the admin as `*.shared.ts` files
-      per `roadmap/planned/module-boundary-enforcement.md` step 2, which is a
-      larger and less obviously worthwhile change. Record the finding here and
-      re-decide rather than pushing on. **Not the case.**
+      The other branch — contracts reaching the admin as `*.shared.ts` files per
+      `roadmap/completed/module-boundary-enforcement.md` step 2 — did not apply, so it
+      is not outstanding work. It is recorded because step 2 later found a narrower
+      version of the same question: the marker turned out to be the better answer for
+      the two rules it can reach, and `dependencyTypesNot` the worse one, because the
+      marker scopes to the file that carries it while the key opens a whole rule.
 
 One caveat for step 2. `dependencyTypesNot: ['type-only']` opens the exemption
 for the whole rule, not for the contracts alone: any admin file could then

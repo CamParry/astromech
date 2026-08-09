@@ -8,7 +8,7 @@
 
 Every adapter here needs an answer to "how does this host boot the runtime and
 reach the author's config", and the hosts do not agree.
-`roadmap/planned/runtime-boot-and-live-config.md` settles it for Astro and should
+`roadmap/completed/runtime-boot-and-live-config.md` settles it for Astro and should
 set the contract the others implement. What the research turned up, so the wheel
 is not reinvented per adapter: SvelteKit has a real once-per-server hook (`init`
 in `hooks.server.js`), Next uses `instrumentation.ts` and a path alias to the
