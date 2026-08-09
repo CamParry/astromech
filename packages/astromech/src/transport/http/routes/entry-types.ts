@@ -4,6 +4,10 @@
  * Returns entry type configuration for the SPA to discover available
  * entry types, their fields, and display settings.
  *
+ * Neither handler is in a REST route table: there is no service method or
+ * contract behind either, only `Astromech.config` projected into a metadata
+ * shape.
+ *
  * Routes:
  *   GET /entry-types            → all entry type metadata
  *   GET /entry-types/:type      → single entry type metadata
@@ -19,9 +23,10 @@ type Env = { Variables: AuthVariables };
 const router = new OpenAPIHono<Env>();
 
 // ============================================================================
-// GET /entry-types
+// GET /entry-types — bespoke
 // ============================================================================
 
+// No method id, and the response is a bare array rather than an envelope.
 router.get('/', (c) => {
     const { entries } = Astromech.config;
 
@@ -41,9 +46,11 @@ router.get('/', (c) => {
 });
 
 // ============================================================================
-// GET /entry-types/:type
+// GET /entry-types/:type — bespoke
 // ============================================================================
 
+// No method id, and it resolves only ROOT types via `config.entries[type]`, so
+// a plugin entry type 404s here while it serves on `/entries`.
 router.get('/:type', (c) => {
     const { type } = c.req.param();
     const config = Astromech.config.entries[type];
