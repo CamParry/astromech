@@ -16,7 +16,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { Kysely } from 'kysely';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
 import { notificationsService, notify } from '@/notifications/service';
-import type { NotificationRow } from '@/notifications/schema';
+import type { Notification } from '@/types/index';
 import type { DB } from '@/database/types';
 
 let db: Kysely<DB>;
@@ -31,7 +31,7 @@ beforeEach(async () => {
 });
 
 /** First row's id, or a loud failure — keeps the assertions free of `!`. */
-function firstId(rows: NotificationRow[]): string {
+function firstId(rows: Notification[]): string {
     const [row] = rows;
     if (!row) throw new Error('expected at least one notification');
     return row.id;
@@ -41,8 +41,8 @@ describe('notify — targets', () => {
     it('delivers one row per user for an `all` target', async () => {
         await notify({ target: { all: true }, type: 'info', title: 'a', message: 'm' });
 
-        expect(await notificationsService.count(admin)).toBe(1);
-        expect(await notificationsService.count(editor)).toBe(1);
+        expect(await notificationsService.count({ userId: admin })).toBe(1);
+        expect(await notificationsService.count({ userId: editor })).toBe(1);
     });
 
     it('delivers only to holders of a role for a `role` target', async () => {
@@ -53,8 +53,8 @@ describe('notify — targets', () => {
             message: 'm',
         });
 
-        expect(await notificationsService.count(admin)).toBe(0);
-        expect(await notificationsService.count(editor)).toBe(1);
+        expect(await notificationsService.count({ userId: admin })).toBe(0);
+        expect(await notificationsService.count({ userId: editor })).toBe(1);
     });
 
     it('delivers to one user for a `user` target, carrying href through', async () => {
@@ -66,17 +66,17 @@ describe('notify — targets', () => {
             href: '/entries/123',
         });
 
-        const rows = await notificationsService.list(admin);
+        const rows = await notificationsService.list({ userId: admin });
         expect(rows.length).toBe(1);
         expect(rows[0]?.href).toBe('/entries/123');
-        expect(rows[0]?.createdAt).toBeInstanceOf(Date);
-        expect(await notificationsService.count(editor)).toBe(0);
+        expect(typeof rows[0]?.createdAt).toBe('string');
+        expect(await notificationsService.count({ userId: editor })).toBe(0);
     });
 
     it('leaves href null when none is given', async () => {
         await notify({ target: { user: admin }, type: 'info', title: 'a', message: 'm' });
 
-        expect((await notificationsService.list(admin))[0]?.href).toBeNull();
+        expect((await notificationsService.list({ userId: admin }))[0]?.href).toBeNull();
     });
 });
 
@@ -95,28 +95,28 @@ describe('notificationsService', () => {
             message: 'm',
         });
 
-        const rows = await notificationsService.list(admin);
+        const rows = await notificationsService.list({ userId: admin });
         expect(rows.map((r) => r.title)).toEqual(['two', 'one']);
     });
 
     it('will not dismiss another user’s notification', async () => {
         await notify({ target: { all: true }, type: 'info', title: 'a', message: 'm' });
-        const editorRow = firstId(await notificationsService.list(editor));
+        const editorRow = firstId(await notificationsService.list({ userId: editor }));
 
         // The id is real but belongs to `editor`, so this must be a no-op.
-        await notificationsService.dismiss(admin, editorRow);
-        expect(await notificationsService.count(editor)).toBe(1);
+        await notificationsService.dismiss({ userId: admin, id: editorRow });
+        expect(await notificationsService.count({ userId: editor })).toBe(1);
 
-        await notificationsService.dismiss(editor, editorRow);
-        expect(await notificationsService.count(editor)).toBe(0);
+        await notificationsService.dismiss({ userId: editor, id: editorRow });
+        expect(await notificationsService.count({ userId: editor })).toBe(0);
     });
 
     it('dismisses all of one user’s notifications and no one else’s', async () => {
         await notify({ target: { all: true }, type: 'info', title: 'a', message: 'm' });
         await notify({ target: { all: true }, type: 'info', title: 'b', message: 'm' });
 
-        await notificationsService.dismissAll(editor);
-        expect(await notificationsService.count(editor)).toBe(0);
-        expect(await notificationsService.count(admin)).toBe(2);
+        await notificationsService.dismissAll({ userId: editor });
+        expect(await notificationsService.count({ userId: editor })).toBe(0);
+        expect(await notificationsService.count({ userId: admin })).toBe(2);
     });
 });

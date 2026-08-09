@@ -70,6 +70,8 @@ const CORE_SERVICES: Record<string, () => Promise<ServiceObject>> = {
     users: async () => (await import('@/users/service')).usersService,
     media: async () => (await import('@/media/service')).mediaService,
     settings: async () => (await import('@/settings/service')).settingsService,
+    notifications: async () =>
+        (await import('@/notifications/service')).notificationsService,
 };
 
 async function getEntriesService(): Promise<ServiceObject> {

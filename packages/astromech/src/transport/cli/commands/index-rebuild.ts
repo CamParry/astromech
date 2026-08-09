@@ -2,6 +2,7 @@ import { defineCommand } from 'citty';
 import { loadConfig, loadRawConfig } from '../config';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { wireEntryAccess } from '@/entries/plugin-access';
+import { wireNotifyAccess } from '@/notifications/plugin-access';
 import {
     checkRelationshipIndex,
     rebuildRelationshipIndex,
@@ -29,6 +30,7 @@ export default defineCommand({
         // its rows would go unread, and a rebuild would delete every edge it has.
         const raw = await loadRawConfig(args.config);
         wireEntryAccess();
+        wireNotifyAccess();
         registerPlugins(raw.plugins ?? [], resolved);
 
         const scope = args.type ? { type: args.type } : {};

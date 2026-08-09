@@ -11,6 +11,7 @@ import { loadConfig, loadRawConfig } from '@/transport/cli/config';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { wireEntryAccess } from '@/entries/plugin-access';
+import { wireNotifyAccess } from '@/notifications/plugin-access';
 import { filterMethods, type MethodFilter } from '@/policies/method-filter';
 import type { ConfirmOptions } from '@/policies/confirmation';
 import { createMcpServer } from './server';
@@ -30,7 +31,8 @@ const EXCLUSION_DETAIL_LIMIT = 20;
  * - Importing the local transport registers the client that backs `ctx.entries`,
  *   `ctx.media` and friends. It is a module side effect, hence the bare import.
  * - `wireEntryAccess` plugs the entries domain into the port the plugin runtime
- *   mounts entry types through. `registerPlugins` throws without it.
+ *   mounts entry types through, and `wireNotifyAccess` the port behind
+ *   `ctx.notify`. `registerPlugins` throws without the first.
  * - `registerPlugins` indexes the service methods AND registers each plugin
  *   table's codec, without which a plugin method querying its own table decodes
  *   its rows wrong.
@@ -44,6 +46,7 @@ async function registerPluginRuntime(
 ): Promise<void> {
     await import('@/transport/local/index');
     wireEntryAccess();
+    wireNotifyAccess();
     registerPlugins(raw.plugins ?? [], resolved);
 }
 

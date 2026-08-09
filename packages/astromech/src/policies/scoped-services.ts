@@ -43,6 +43,9 @@ import { mediaService } from '@/media/service';
 import { mediaContract } from '@/media/methods';
 import { settingsService } from '@/settings/service';
 import { settingsContract } from '@/settings/methods';
+import { notificationsService } from '@/notifications/service';
+import type { NotificationsDomainService } from '@/notifications/service';
+import { notificationsContract } from '@/notifications/methods';
 import { entriesService } from '@/entries/service';
 import { ENTRY_METHOD_ACTIONS, type EntryMethodName } from '@/entries/methods';
 
@@ -241,18 +244,24 @@ export function scopeEntries(
     return scoped as unknown as EntriesService;
 }
 
-/** The four domains a caller can reach, each scoped to one role. */
+/**
+ * The domains a caller can reach, each scoped to one role.
+ *
+ * `notifications` is the domain shape, not the client's `NotificationsService`:
+ * its methods name the `userId` they act for, and this handle is what fills it.
+ */
 export type ScopedServices = {
     users: UsersService;
     media: MediaService;
     settings: SettingsService;
     entries: EntriesService;
+    notifications: NotificationsDomainService;
 };
 
 /**
  * Compose one role into a handle over every domain.
  *
- * One `permissionsFor` guard backs all four, so the role is resolved once per
+ * One `permissionsFor` guard backs them all, so the role is resolved once per
  * handle rather than once per call.
  */
 export function scopedServices(role: Role | undefined): ScopedServices {
@@ -267,5 +276,11 @@ export function scopedServices(role: Role | undefined): ScopedServices {
             'settings'
         ),
         entries: scopeEntries(entriesService, permissions),
+        notifications: scopeMethods(
+            notificationsService,
+            notificationsContract,
+            permissions,
+            'notifications'
+        ),
     };
 }

@@ -37,6 +37,9 @@ import { registerBuiltInEntryJobs } from '@/entries/jobs/index';
 // port BEFORE registerPlugins runs. Like the jobs sub-barrel above, this module
 // is service-free, so the integration's plain-Node config load stays safe.
 import { wireEntryAccess } from '@/entries/plugin-access';
+// Same treatment for `ctx.notify`: the runtime holds a notify port, the
+// notifications domain fills it. Service-free for the same reason.
+import { wireNotifyAccess } from '@/notifications/plugin-access';
 import {
     setSchedulerDriver,
     getSchedulerDriver,
@@ -79,6 +82,7 @@ export async function initRuntime(
     // `cron/runner.ts` in with it.
     setRuntimeConfig(resolvedConfig);
     wireEntryAccess();
+    wireNotifyAccess();
     registerPlugins(config.plugins ?? [], resolvedConfig);
     // Host entry types declaring their own storage, mounted after
     // `registerPlugins` — that opens by clearing every override, so registering

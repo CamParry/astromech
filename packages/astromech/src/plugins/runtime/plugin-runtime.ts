@@ -49,13 +49,13 @@ import { getStorageDriver } from '@/storage/registry';
 import { listAll } from '@/storage/prefix';
 import { getEmailDriver } from '@/email/registry';
 import { renderEmail } from '@/email/render';
-import { notify } from '@/notifications/index';
 import type { NotifyInput } from '@/types/index';
 import {
     pluginEntryTypes,
     resolvePluginIdentity,
 } from '@/plugins/runtime/plugin-identity';
 import { entryAccess } from '@/plugins/runtime/entry-access';
+import { notifyAccess } from '@/plugins/runtime/notify-access';
 import { isTable } from '@/plugins/runtime/plugin-tables';
 import { createPluginTrackingStorage } from '@/plugins/runtime/plugin-tracking-storage';
 import { registerCronJob } from '@/cron/registry';
@@ -458,7 +458,10 @@ export function createPluginContext(
         },
         email: { send: sendPluginEmail },
         notify: (input: NotifyInput) =>
-            notify({ ...input, type: `plugin:${identity.namespace}.${input.type}` }),
+            notifyAccess().notify({
+                ...input,
+                type: `plugin:${identity.namespace}.${input.type}`,
+            }),
         logger: makeLogger(identity.namespace),
         env: resolveEnv(),
         emit: (event, payload) => emitEvent(event, payload, user),

@@ -149,6 +149,11 @@ is missing, the command prints an install hint and exits with code 1.
 **v1 coverage:** core domain methods (users, settings, media query/get/delete)
 and the standard entry CRUD+publish actions (query, get, create, update,
 publish, unpublish, delete). Not yet projected: plugin service methods, media
-upload/replace (binary data cannot cross JSON-RPC), and entries long-tail
-actions (duplicate, trash, restore, emptyTrash, versions, restoreVersion,
-schedule).
+upload/replace (binary data cannot cross JSON-RPC), the notifications methods
+(they act on the signed-in user's own rows and this transport has no signed-in
+user), and entries long-tail actions (duplicate, trash, restore, emptyTrash,
+versions, restoreVersion, schedule).
+
+`astromech methods` lists everything in the manifest, including the methods MCP
+declines to project, so a method missing from the tool list is still visible
+there with the reason it was skipped.

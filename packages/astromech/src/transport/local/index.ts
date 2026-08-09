@@ -10,17 +10,14 @@
  */
 
 import config from 'virtual:astromech/config';
-import type {
-    AstromechClient,
-    NotificationsService,
-    TypedEntriesService,
-} from '@/types/index';
+import type { AstromechClient, TypedEntriesService } from '@/types/index';
 import { usersService } from '@/users/index';
 import { entriesService } from '@/entries/index';
 import { mediaService } from '@/media/index';
 import { settingsService } from '@/settings/index';
 import { runWithContext } from '@/request-context/index';
 import { setPluginClient, setPluginMethods } from '@/plugins/runtime/plugin-runtime';
+import { localNotificationsService } from '@/transport/local/notifications';
 import { localPlugins } from '@/transport/local/plugins';
 import { buildScopedTools } from '@/transport/tools/scoped-tools';
 
@@ -29,19 +26,6 @@ export { runWithContext };
 // ============================================================================
 // Assemble the Local API
 // ============================================================================
-
-const notImplemented = (): never => {
-    throw new Error(
-        '[Astromech] notifications are session-scoped and not available in the in-process client; use ctx.notify to emit, or the HTTP API to read.'
-    );
-};
-
-const localNotificationsService: NotificationsService = {
-    list: notImplemented,
-    count: notImplemented,
-    dismiss: notImplemented,
-    dismissAll: notImplemented,
-};
 
 /** The shared `AstromechClient` contract, backed by the in-process services. */
 export const Astromech: AstromechClient = {

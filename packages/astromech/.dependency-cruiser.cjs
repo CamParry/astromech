@@ -31,10 +31,11 @@
  * have pre-existing internal cycles — worth bringing into scope once those are
  * cleaned up, since a cycle IS the entanglement worth catching.
  *
- * The plugin runtime is a pure capability. It declares the slice of entries it
- * needs as a port (`plugins/runtime/entry-access.ts`, typed only from leaves)
- * and the entries domain injects the implementation at boot
- * (`entries/plugin-access.ts`).
+ * The plugin runtime is a pure capability. It declares each slice of a domain it
+ * needs as a port typed only from leaves — `plugins/runtime/entry-access.ts` for
+ * the entry types it mounts, `plugins/runtime/notify-access.ts` for `ctx.notify`
+ * — and the owning domain injects the implementation at boot
+ * (`entries/plugin-access.ts`, `notifications/plugin-access.ts`).
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -91,12 +92,8 @@ const UNLAYERED = ['exports'];
  *   from `codegen/`. The manifest is data the transports project, not
  *   composition — it moves out from under `codegen/` in
  *   `roadmap/planned/manifest-driven-transports.md`.
- * - `plugins/runtime/plugin-runtime.ts` calls `notify()` on the notifications
- *   domain. The remaining upward edge from the plugin runtime; it wants the same
- *   port treatment `entry-access.ts` gave the entries edge.
  */
-const NO_UPWARD_EXEMPT =
-    '^src/transport/(cli|tools|mcp)/|^src/plugins/runtime/plugin-runtime\\.ts$';
+const NO_UPWARD_EXEMPT = '^src/transport/(cli|tools|mcp)/';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The browser boundary

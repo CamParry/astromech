@@ -224,6 +224,10 @@ describe('manifest ↔ MCP tool coverage', () => {
         expect(skipped.map((s) => s.id).sort()).toEqual([
             'media.replace',
             'media.upload',
+            'notifications.count',
+            'notifications.dismiss',
+            'notifications.dismissAll',
+            'notifications.list',
             'plugins.testMyPlugin.undescribed',
         ]);
         expect(skipped.find((s) => s.id === 'media.upload')?.reason).toContain(
@@ -232,6 +236,13 @@ describe('manifest ↔ MCP tool coverage', () => {
         expect(skipped.find((s) => s.id === 'media.replace')?.reason).toContain(
             'binary input'
         );
+        // MCP is dev-only and trusted, so it runs with no signed-in user and has
+        // no subject for a session-scoped method to act on.
+        for (const id of ['list', 'count', 'dismiss', 'dismissAll']) {
+            expect(skipped.find((s) => s.id === `notifications.${id}`)?.reason).toContain(
+                'session-scoped'
+            );
+        }
         expect(
             skipped.find((s) => s.id === 'plugins.testMyPlugin.undescribed')?.reason
         ).toContain('no input schema');

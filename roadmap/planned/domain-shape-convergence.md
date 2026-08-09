@@ -67,26 +67,31 @@ Do this first; steps 2 and 3 are mechanical and this one is not.
 
 ### 2. Bring notifications up to the contract
 
-- [ ] Normalise `notificationsService` to single-parameter-object methods:
+- [x] Normalise `notificationsService` to single-parameter-object methods:
       `list({ userId })`, `count({ userId })`, `dismiss({ userId, id })`,
-      `dismissAll({ userId })`.
-- [ ] Add `notifications/methods.ts` declaring the four contracts under whatever
-      step 1 decides.
-- [ ] Add the catalogue to `codegen/method-manifest.ts` alongside `users`,
-      `media` and `settings`.
-- [ ] Reconcile the two `NotificationsService` shapes — one interface, or two
-      names. If the client-facing and server-facing shapes genuinely differ, the
-      server one is not `NotificationsService` and should not read as if it is.
-- [ ] Replace the `notImplemented` stubs in `transport/local/index.ts` with
-      either the real methods or one honest error naming the reason, not four.
-- [ ] `plugins/runtime/plugin-runtime.ts` imports `notifications` directly, via
-      `notify()`. That is a capability reaching up into a domain, and it is on
-      `NO_UPWARD_EXEMPT` in `packages/astromech/.dependency-cruiser.cjs` rather
-      than fixed — the old `capability-no-upward` rule missed it only because it
-      never listed `notifications`. It wants the same port treatment
-      `plugins/runtime/entry-access.ts` has: declare the slice as a port typed
-      from leaves, and have the domain inject the implementation at boot. Remove
-      the exemption once it does.
+      `dismissAll({ userId })`. `list` returns `Notification[]` rather than rows,
+      so it matches its peers and the transports stop each mapping the row
+      themselves.
+- [x] Add `notifications/methods.ts` declaring the four contracts. All four are
+      `sessionScoped` with no permission, which is the model the routes already
+      enforced written down.
+- [x] Add the catalogue to `codegen/method-manifest.ts` alongside `users`,
+      `media` and `settings`, plus `notifications` on `ScopedServices` and
+      `CORE_SERVICES` so the manifest entry resolves to a callable service.
+- [x] Two names. `NotificationsService` stays the CLIENT's shape (no `userId`,
+      every transport fills it); the server object is
+      `NotificationsDomainService`, declared in `notifications/service.ts`, which
+      names the user each verb acts for. Both docstrings point at the other.
+- [x] One error, in `transport/local/notifications.ts`: the Local API now
+      implements the four methods for real, reading the request context the way
+      the HTTP routes read `c.var.user`, and throws once — naming the missing
+      session — when called outside a request.
+- [x] `plugins/runtime/notify-access.ts` is the port, typed only from
+      `NotifyInput`; `notifications/plugin-access.ts` fills it via
+      `wireNotifyAccess()`, called beside `wireEntryAccess()` at all three
+      composition sites. `plugin-runtime.ts` is off `NO_UPWARD_EXEMPT` and
+      `lint:deps` still passes — verified by re-adding the import and confirming
+      `capabilities-no-upward` rejects it by name.
 
 ### 3. Apply the entries template to `media`
 
@@ -135,6 +140,17 @@ holding all eight verbs inline, six private helpers, and
   cause — it was added after the conventions were set and never held to them —
   and finding a third would not be surprising. Worth a deliberate sweep for
   anything else that skipped it.
+- **What manifest presence did and did not buy notifications.** It gets a CLI
+  listing (`astromech methods` shows all four), assistant tool visibility
+  (`buildScopedTools` builds them, and the scoped handle supplies the subject),
+  and a Local API that works. It gets **no MCP tool** — that transport is
+  trusted, dev-only and runs with no signed-in user, so it refuses a
+  session-scoped method the way it refuses `binaryInput` — and **no permission**,
+  which is the design: having a session is the authority. It also gets **no
+  OpenAPI entry**, but that is not a notifications gap: `transport/http/index.ts`
+  builds the document from `createRoute` registrations, and only
+  `routes/entries.ts` uses them, so `media`, `users`, `settings`, `cron` and
+  `plugins` are equally absent.
 - `roadmap/planned/notification-events.md` is the emitter backlog and is
   unaffected by this; it wires `notify()` call sites, which is the one part of
   the domain that does have a coherent surface.

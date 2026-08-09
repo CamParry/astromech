@@ -659,6 +659,10 @@ the **global** service, not a per-plugin view. Reads default to the `full`
 shape, because plugin altitude is trusted server code; pass an explicit
 `full: false` if you want the public shape.
 
+`ctx.notifications` is the exception: it acts on the signed-in user's own rows,
+so it needs a request to run inside and throws outside one. Use `ctx.notify` to
+send a notification, which names its recipients and needs no session.
+
 `ctx.entries` therefore addresses a plugin's own entry types by their qualified
 id, built from context rather than from an identity import:
 
