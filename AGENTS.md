@@ -45,7 +45,7 @@ Every document answers one question and has one home. A fact lives in exactly on
 - **Give the agent the whole plan** — file paths, exact code changes, expected outcomes — so it can execute without re-researching the codebase.
 - **Verify what comes back.** Re-run the gate yourself; a sub-agent's report of a clean typecheck is not evidence, and one that contradicts a known test baseline is a red flag.
 - **Don't commit while sub-agents are still writing in the same worktree.** The pre-commit hook stashes repo-wide and can clobber their in-flight edits.
-- **Reflect on focus shifts.** When the focus of work changes significantly, pause: are there lessons that belong in a skill? Anything worth saving to memory? Does a `roadmap/` file need to move between `planned/`, `in-progress/` and `completed/`, or a new one to be added?
+- **Reflect on focus shifts.** When the focus of work changes significantly, pause: are there lessons that belong in a skill? Does a `roadmap/` file need to move between `planned/`, `in-progress/` and `completed/`, or a new one to be added?
 - **No time estimates.**
 
 ## Branches and worktrees
