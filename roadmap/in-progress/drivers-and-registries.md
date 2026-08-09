@@ -162,7 +162,7 @@ dribbling out.
       feature — it would have to reach `createEntrySchemaFor`,
       `EntryRecord.title`, `EntryWrite.title` and the admin's label resolution,
       all of which type the field as the literal `'title' | false`.
-- [ ] **WS3 — A slot holds what the config declared, and nothing copied in.**
+- [x] **WS3 — A slot holds what the config declared, and nothing copied in.**
       `email` becomes the `EmailDriver`: `from` moves into the email driver's
       factory, since it is the envelope sender and the two call sites
       (`packages/astromech/src/users/auth.ts` and the plugin `sendEmail`) both
@@ -175,7 +175,7 @@ dribbling out.
       `avif` stay out of `sharp()` because they are core's allow-list, and stay
       out of `media` at large because they are image policy that does not
       generalise: a video has a bitrate ladder, a PDF has page thumbnails.
-- [ ] **WS4 — Every capability slot is authored as its driver.**
+- [x] **WS4 — Every capability slot is authored as its driver.**
       `email: resend({ apiKey, from })` alongside the existing `db:` and
       `storage:`; nobody types `.driver` on a slot that is only a driver. `image`
       moves under `media` as `media.image`, because the image pipeline only ever

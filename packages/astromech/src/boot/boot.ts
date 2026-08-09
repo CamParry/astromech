@@ -25,7 +25,7 @@ import { setStorageDriver } from '@/storage/registry.js';
 import { setImageConfig } from '@/media/serving/image/registry.js';
 import { normaliseWidths } from '@/media/serving/image/url.js';
 import { defaultImageWidths } from '@/media/serving/image/defaults.js';
-import { setEmailConfig } from '@/email/registry.js';
+import { setEmailDriver } from '@/email/registry.js';
 import { setAIConfig } from '@/ai/registry.js';
 import { buildAIConfig } from '@/ai/middleware.js';
 // Import from the jobs sub-barrel, NOT @/entries/index.js: the main barrel
@@ -42,7 +42,7 @@ import {
     getSchedulerDriver,
     setRuntimeConfig,
 } from '@/cron/registry.js';
-import { nodeDriver } from '@/cron/drivers/index.js';
+import { interval } from '@/cron/drivers/index.js';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime.js';
 // The entry-access port, not `@/entries/storage/registry.js`: this module is in
 // the integration's plain-Node import graph, and the registry reaches the
@@ -57,22 +57,22 @@ export async function initRuntime(
     setDb(config.db.getInstance());
     setDatabaseDriver(config.db);
     setStorageDriver(config.storage);
-    if (config.image) {
+    const image = config.media?.image;
+    if (image) {
         setImageConfig({
-            driver: config.image.driver,
-            widths: normaliseWidths(config.image.widths ?? defaultImageWidths),
-            avif: config.image.avif ?? true,
-            mediaRoute: resolvedConfig.mediaRoute,
+            driver: image.driver,
+            widths: normaliseWidths(image.widths ?? defaultImageWidths),
+            avif: image.avif ?? true,
         });
     }
     if (config.email) {
-        setEmailConfig(config.email);
+        setEmailDriver(config.email);
     }
     if (config.ai) {
         setAIConfig(await buildAIConfig(config.ai));
     }
     registerBuiltInEntryJobs();
-    setSchedulerDriver(config.scheduler ?? nodeDriver);
+    setSchedulerDriver(config.scheduler ?? interval());
     // Stash the resolved config so the cron runner reads it from the registry
     // instead of importing `virtual:astromech/config`, which it cannot: this
     // module is in the integration's plain-Node import graph and drags

@@ -47,7 +47,7 @@ import { kyselyTableKey, registerTableCodec } from '@/database/codec.js';
 import { peekDatabaseDriver } from '@/database/driver-registry.js';
 import { getStorageDriver } from '@/storage/registry.js';
 import { listAll } from '@/storage/prefix.js';
-import { getEmailConfig } from '@/email/registry.js';
+import { getEmailDriver } from '@/email/registry.js';
 import { renderEmail } from '@/email/render.js';
 import { notify } from '@/notifications/index.js';
 import type { NotifyInput } from '@/types/index.js';
@@ -384,14 +384,14 @@ async function sendEmail(
     subject: string,
     element: ReactElement
 ): Promise<void> {
-    const emailConfig = getEmailConfig();
-    if (!emailConfig) {
+    const driver = getEmailDriver();
+    if (!driver) {
         throw new Error(
             '[Astromech] Email is not configured; cannot send from a plugin.'
         );
     }
     const { html, text } = await renderEmail(element);
-    await emailConfig.driver.send({ to, from: emailConfig.from, subject, html, text });
+    await driver.send({ to, subject, html, text });
 }
 
 /**

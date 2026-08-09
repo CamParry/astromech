@@ -1,22 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { nodeDriver } from '@/cron/drivers/node.js';
-import { httpDriver } from '@/cron/drivers/http.js';
-import { cloudflareDriver } from '@/cron/drivers/cloudflare.js';
+import { interval } from '@/cron/drivers/interval.js';
+import { webhook } from '@/cron/drivers/webhook.js';
+import { cloudflareCron } from '@/cron/drivers/cloudflare.js';
 
-describe('nodeDriver', () => {
+describe('interval', () => {
     beforeEach(() => {
         globalThis.__astromechCronInterval = undefined;
         vi.useFakeTimers();
     });
 
     afterEach(() => {
-        nodeDriver.stop?.();
+        interval().stop?.();
         globalThis.__astromechCronInterval = undefined;
         vi.useRealTimers();
     });
 
-    it('has name "node"', () => {
-        expect(nodeDriver.name).toBe('node');
+    it('has name "interval"', () => {
+        expect(interval().name).toBe('interval');
     });
 
     it('invokes onTick with a Date after 60 seconds', async () => {
@@ -25,7 +25,7 @@ describe('nodeDriver', () => {
             ticks.push(now);
         });
 
-        nodeDriver.start(onTick);
+        interval().start(onTick);
         expect(onTick).not.toHaveBeenCalled();
 
         await vi.advanceTimersByTimeAsync(60_000);
@@ -33,11 +33,13 @@ describe('nodeDriver', () => {
         expect(ticks[0]).toBeInstanceOf(Date);
     });
 
+    // Two separate instances, because the handle lives on globalThis rather than
+    // in the closure — a second driver must see the first one's interval.
     it('calling start() twice does not stack intervals', async () => {
         const onTick = vi.fn(async (_now: Date) => undefined);
 
-        nodeDriver.start(onTick);
-        nodeDriver.start(onTick);
+        interval().start(onTick);
+        interval().start(onTick);
 
         await vi.advanceTimersByTimeAsync(60_000);
         expect(onTick).toHaveBeenCalledTimes(1);
@@ -45,9 +47,10 @@ describe('nodeDriver', () => {
 
     it('stop() clears the interval', async () => {
         const onTick = vi.fn(async (_now: Date) => undefined);
+        const driver = interval();
 
-        nodeDriver.start(onTick);
-        nodeDriver.stop?.();
+        driver.start(onTick);
+        driver.stop?.();
 
         await vi.advanceTimersByTimeAsync(120_000);
         expect(onTick).not.toHaveBeenCalled();
@@ -55,22 +58,22 @@ describe('nodeDriver', () => {
     });
 });
 
-describe('httpDriver', () => {
-    it('has name "http"', () => {
-        expect(httpDriver.name).toBe('http');
+describe('webhook', () => {
+    it('has name "webhook"', () => {
+        expect(webhook().name).toBe('webhook');
     });
 
     it('start() is a no-op (does not throw)', () => {
-        expect(() => httpDriver.start(async () => undefined)).not.toThrow();
+        expect(() => webhook().start(async () => undefined)).not.toThrow();
     });
 });
 
-describe('cloudflareDriver', () => {
+describe('cloudflareCron', () => {
     it('has name "cloudflare"', () => {
-        expect(cloudflareDriver.name).toBe('cloudflare');
+        expect(cloudflareCron().name).toBe('cloudflare');
     });
 
     it('start() is a no-op (does not throw)', () => {
-        expect(() => cloudflareDriver.start(async () => undefined)).not.toThrow();
+        expect(() => cloudflareCron().start(async () => undefined)).not.toThrow();
     });
 });

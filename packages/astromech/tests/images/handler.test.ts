@@ -160,7 +160,6 @@ beforeEach(async () => {
         driver: fakeDriver.driver,
         widths: [320, 640],
         avif: true,
-        mediaRoute: '/_media',
     });
 });
 

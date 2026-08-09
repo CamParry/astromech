@@ -5,7 +5,6 @@ export type ResolvedImageConfig = {
     driver: ImageDriver;
     widths: number[];
     avif: boolean;
-    mediaRoute: string;
 };
 
 /** Optional — no image driver means originals are served unchanged. */

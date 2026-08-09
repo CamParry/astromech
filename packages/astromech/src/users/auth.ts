@@ -69,14 +69,14 @@ function getAuth(): Auth<BetterAuthOptions> {
                     url: string;
                     token: string;
                 }) => {
-                    const { getEmailConfig } = await import('@/email/registry.js');
+                    const { getEmailDriver } = await import('@/email/registry.js');
                     const { renderEmail } = await import('@/email/render.js');
                     const { PasswordResetEmail } =
                         await import('@/email/components/password-reset.js');
                     const { getEmailOverride } =
                         await import('@/email/email-overrides.js');
-                    const emailConfig = getEmailConfig();
-                    if (!emailConfig) {
+                    const driver = getEmailDriver();
+                    if (!driver) {
                         console.log(
                             `[Astromech] Password reset URL for ${user.email}: ${url}`
                         );
@@ -89,13 +89,7 @@ function getAuth(): Auth<BetterAuthOptions> {
                         ? createElement(Override, { url })
                         : createElement(PasswordResetEmail, { url });
                     const { html, text } = await renderEmail(element);
-                    await emailConfig.driver.send({
-                        to: user.email,
-                        from: emailConfig.from,
-                        subject,
-                        html,
-                        text,
-                    });
+                    await driver.send({ to: user.email, subject, html, text });
                 },
             },
         }) as unknown as Auth<BetterAuthOptions>;

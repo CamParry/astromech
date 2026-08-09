@@ -18,7 +18,7 @@ that option is documented only in the docblock at the top of
   the project root. `apps/docs/configuration/database.md` states this for the
   database; the general rule wants a home earlier in the reading order.
 - Which optional peers a site installs for itself, and when. `nodemailer` for
-  `SmtpDriver`, `wrangler` for local Cloudflare bindings. Both are declared
+  `smtp()`, `wrangler` for local Cloudflare bindings. Both are declared
   optional, so npm does not install them and the failure is deferred to first
   use.
 

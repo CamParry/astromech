@@ -25,9 +25,11 @@ interface Props {
 const { src, alt, sizes, widths, loading = 'lazy', class: className } = Astro.props;
 
 const ic = getImageConfig();
-const ctx = ic
-    ? { mediaRoute: ic.mediaRoute, widths: ic.widths, avif: ic.avif }
-    : { mediaRoute: config.mediaRoute, widths: [], avif: false };
+const ctx = {
+    mediaRoute: config.mediaRoute,
+    widths: ic?.widths ?? [],
+    avif: ic?.avif ?? false,
+};
 
 const attrs = buildImageAttrs(
     {

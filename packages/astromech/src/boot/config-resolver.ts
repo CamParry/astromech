@@ -322,7 +322,11 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     }
 
     const mediaAccess = config.media?.access ?? 'public';
-    assertMediaAccessCompatible(mediaAccess, config.image?.driver.name);
+    assertMediaAccessCompatible(mediaAccess, config.media?.image?.driver.name);
+
+    // `image` carries a live driver and `media` is picked into
+    // `PluginConfigView`, so it is dropped here rather than only in the type.
+    const { image: _image, ...media } = config.media ?? {};
 
     const {
         db: _db,
@@ -336,7 +340,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
         adminRoute: config.adminRoute ?? '/admin',
         apiRoute: config.apiRoute ?? '/api',
         mediaRoute: config.mediaRoute ?? '/_media',
-        media: { ...config.media, access: mediaAccess },
+        media: { ...media, access: mediaAccess },
         entries: resolvedEntries,
         pluginEntries,
         adminPages,

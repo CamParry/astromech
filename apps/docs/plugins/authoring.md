@@ -607,9 +607,9 @@ const blobKey = `plugin:${ctx.plugin.namespace}:/menus/${key}`;
 `ctx.config` sits alongside it, and is a projection of the site's resolved
 config rather than the whole of it: the route prefixes, entry types, admin
 pages, locales, trash, timezone, and `entryTypesWithField(name)` for the entry
-types carrying one of your fields. `storage`, `email` and `image` are absent, so
-reach those capabilities through `ctx.storage` and `ctx.sendEmail` rather than
-looking for a driver on the config.
+types carrying one of your fields. `storage`, `email` and `media.image` are
+absent, so reach those capabilities through `ctx.storage` and `ctx.sendEmail`
+rather than looking for a driver on the config.
 
 ### Reaching the content services
 

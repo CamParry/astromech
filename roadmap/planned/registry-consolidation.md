@@ -36,7 +36,7 @@ two patterns to choose between with nothing saying which.
 | `plugins/runtime/plugin-runtime.ts`  | record of several slots       |
 
 The remaining globals are not registries at all and should not be forced into
-one: `cron/runner.ts` (a tick lock and a warn-once set), `cron/drivers/node.ts`
+one: `cron/runner.ts` (a tick lock and a warn-once set), `cron/drivers/interval.ts`
 (an interval handle), `admin/support/ui-instance-guard.ts` (a duplicate-instance
 guard), `transport/cli/virtual-config-shim.ts` (a CLI config stash). They share
 the hazard that motivated the registry — a module-level singleton duplicates

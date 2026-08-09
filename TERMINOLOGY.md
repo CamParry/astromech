@@ -19,7 +19,7 @@ Current drivers:
 
 - **DatabaseDriver** — wraps a database connection (`libsqlDriver`)
 - **StorageDriver** — wraps a file storage backend (`filesystem()`, `r2()`, `s3()`)
-- **EmailDriver** — wraps an email sending service (`SmtpDriver`, `ResendDriver`, `ConsoleDriver`)
+- **EmailDriver** — wraps an email sending service (`smtp()`, `resend()`, `consoleEmail()`)
 
 Storage drivers are factories on their own subpaths (`astromech/storage/r2`),
 never classes on the root barrel — see `apps/docs/configuration/storage.md`.
