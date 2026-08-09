@@ -205,9 +205,9 @@ describe('generateClientTypes — plugin entry types', () => {
         },
     } as unknown as ResolvedConfig;
 
-    it('generates PluginRedirectsRedirectFields interface', () => {
+    it('generates the PluginRedirectsRedirectFields type', () => {
         const output = generateClientTypes(configWithPluginEntries);
-        expect(output).toContain('export interface PluginRedirectsRedirectFields {');
+        expect(output).toContain('export type PluginRedirectsRedirectFields = {');
         expect(output).toContain('from: string;');
         expect(output).toContain('to: string;');
         expect(output).toContain('status?: string;');
@@ -226,7 +226,7 @@ describe('generateClientTypes — plugin entry types', () => {
         );
     });
 
-    it('resolves qualified relation target to plugin Fields interface', () => {
+    it('resolves qualified relation target to plugin Fields type', () => {
         const configWithRelation = {
             ...configWithPluginEntries,
             entries: {
@@ -263,7 +263,7 @@ describe('generateClientTypes — plugin entry types', () => {
         expect(withEmpty).toBe(baseline);
     });
 
-    it('PascalCases hyphenated plugin/type names into the Fields interface name', () => {
+    it('PascalCases hyphenated plugin/type names into the Fields type name', () => {
         const configWithHyphenated = {
             ...baseConfig,
             pluginEntries: {
@@ -287,6 +287,6 @@ describe('generateClientTypes — plugin entry types', () => {
         } as unknown as ResolvedConfig;
 
         const output = generateClientTypes(configWithHyphenated);
-        expect(output).toContain('export interface PluginMyPluginSomeTypeFields {');
+        expect(output).toContain('export type PluginMyPluginSomeTypeFields = {');
     });
 });

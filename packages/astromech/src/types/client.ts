@@ -279,10 +279,16 @@ export type TypedEntriesService = TypedEntriesServiceFor<AstromechEntryTypes>;
 // AstromechClient
 // ============================================================================
 
-/** Map a plugin's service object type to its caller-facing callable signatures. */
+/**
+ * Map a plugin's service object type to its caller-facing callable signatures.
+ * A method declared with an `undefined` input takes no argument, so its
+ * parameter is optional and `.method()` is a legal bare call.
+ */
 export type ServiceInterface<T> = {
     [K in keyof T]: T[K] extends ServiceMethod<infer I, infer O>
-        ? (input: I) => Promise<O>
+        ? undefined extends I
+            ? (input?: I) => Promise<O>
+            : (input: I) => Promise<O>
         : (input?: unknown) => Promise<unknown>;
 };
 
@@ -310,7 +316,12 @@ export type AstromechClient = {
     users: UsersService;
     notifications: NotificationsService;
     config: ResolvedConfig;
-    /** Plugin RPC methods — `Astromech.plugins.<name>.<method>(input)`. */
-    plugins?: PluginServiceNamespace;
+    /**
+     * Plugin RPC methods — `Astromech.plugins.<name>.<method>(input)`.
+     * Always present: both transports assemble a namespace whose lookups are
+     * lazy, so an uninstalled plugin resolves to `undefined` a level down rather
+     * than leaving the namespace itself absent.
+     */
+    plugins: PluginServiceNamespace;
     configure(options: { baseUrl: string }): void;
 };

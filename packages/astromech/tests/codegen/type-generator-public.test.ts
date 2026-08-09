@@ -21,12 +21,12 @@ function makeConfig(mainFields: object[], sidebarFields: object[] = []): Resolve
 }
 
 describe('type-generator — FieldsPublic variant', () => {
-    it('emits a FieldsPublic interface alongside Fields for every collection', () => {
+    it('emits a FieldsPublic type alongside Fields for every collection', () => {
         const config = makeConfig([{ name: 'title', type: 'text' }]);
         const output = generateClientTypes(config);
 
-        expect(output).toContain('export interface PostsFields {');
-        expect(output).toContain('export interface PostsFieldsPublic {');
+        expect(output).toContain('export type PostsFields = {');
+        expect(output).toContain('export type PostsFieldsPublic = {');
     });
 
     it('adds fieldsPublic to the AstromechEntryTypes map entry', () => {
@@ -42,8 +42,8 @@ describe('type-generator — FieldsPublic variant', () => {
         const config = makeConfig([{ name: 'title', type: 'text' }]);
         const output = generateClientTypes(config);
 
-        // The brand must appear inside the PostsFieldsPublic interface.
-        const publicIdx = output.indexOf('export interface PostsFieldsPublic {');
+        // The brand must appear inside the PostsFieldsPublic type.
+        const publicIdx = output.indexOf('export type PostsFieldsPublic = {');
         expect(publicIdx).toBeGreaterThan(-1);
         const snippet = output.slice(publicIdx, publicIdx + 200);
         expect(snippet).toContain("readonly __shape?: 'public';");
@@ -57,13 +57,13 @@ describe('type-generator — FieldsPublic variant', () => {
         const output = generateClientTypes(config);
 
         // Full type includes it.
-        const fullIdx = output.indexOf('export interface PostsFields {');
+        const fullIdx = output.indexOf('export type PostsFields = {');
         const fullEnd = output.indexOf('\n}', fullIdx);
         const fullSlice = output.slice(fullIdx, fullEnd);
         expect(fullSlice).toContain('internalScore');
 
         // Public type omits it.
-        const pubIdx = output.indexOf('export interface PostsFieldsPublic {');
+        const pubIdx = output.indexOf('export type PostsFieldsPublic = {');
         const pubEnd = output.indexOf('\n}', pubIdx);
         const pubSlice = output.slice(pubIdx, pubEnd);
         expect(pubSlice).not.toContain('internalScore');
@@ -78,7 +78,7 @@ describe('type-generator — FieldsPublic variant', () => {
         ]);
         const output = generateClientTypes(config);
 
-        const pubIdx = output.indexOf('export interface PostsFieldsPublic {');
+        const pubIdx = output.indexOf('export type PostsFieldsPublic = {');
         const pubEnd = output.indexOf('\n}', pubIdx);
         const pubSlice = output.slice(pubIdx, pubEnd);
         expect(pubSlice).toContain('body');
@@ -95,14 +95,14 @@ describe('type-generator — FieldsPublic variant', () => {
         const output = generateClientTypes(config);
 
         // Full type includes _disabled and _title.
-        const fullIdx = output.indexOf('export interface PostsFields {');
-        const fullEnd = output.indexOf('\nexport interface PostsFieldsPublic', fullIdx);
+        const fullIdx = output.indexOf('export type PostsFields = {');
+        const fullEnd = output.indexOf('\nexport type PostsFieldsPublic', fullIdx);
         const fullSlice = output.slice(fullIdx, fullEnd);
         expect(fullSlice).toContain('_disabled?: boolean;');
         expect(fullSlice).toContain('_title?: string;');
 
         // Public type omits them.
-        const pubIdx = output.indexOf('export interface PostsFieldsPublic {');
+        const pubIdx = output.indexOf('export type PostsFieldsPublic = {');
         const pubEnd = output.indexOf('\nexport type PostsRelations', pubIdx);
         const pubSlice = output.slice(pubIdx, pubEnd);
         expect(pubSlice).not.toContain('_disabled');
@@ -121,9 +121,9 @@ describe('type-generator — FieldsPublic variant', () => {
         ]);
         const output = generateClientTypes(config);
 
-        // Public tree node interface is emitted with a distinct name.
-        expect(output).toContain('export interface NavItemsPublicTreeNode {');
-        const nodeIdx = output.indexOf('export interface NavItemsPublicTreeNode {');
+        // Public tree node type is emitted with a distinct name.
+        expect(output).toContain('export type NavItemsPublicTreeNode = {');
+        const nodeIdx = output.indexOf('export type NavItemsPublicTreeNode = {');
         const nodeEnd = output.indexOf('\n}', nodeIdx);
         const nodeSlice = output.slice(nodeIdx, nodeEnd);
         expect(nodeSlice).toContain('_id: string;');
@@ -132,7 +132,7 @@ describe('type-generator — FieldsPublic variant', () => {
         expect(nodeSlice).toContain('label');
 
         // Public field references the public node type.
-        const pubIdx = output.indexOf('export interface PostsFieldsPublic {');
+        const pubIdx = output.indexOf('export type PostsFieldsPublic = {');
         const pubEnd = output.indexOf('\nexport type PostsRelations', pubIdx);
         const pubSlice = output.slice(pubIdx, pubEnd);
         expect(pubSlice).toContain('navItems?: NavItemsPublicTreeNode[]');
@@ -142,7 +142,7 @@ describe('type-generator — FieldsPublic variant', () => {
         const config = makeConfig([{ name: 'content', type: 'blocks' }]);
         const output = generateClientTypes(config);
 
-        const pubIdx = output.indexOf('export interface PostsFieldsPublic {');
+        const pubIdx = output.indexOf('export type PostsFieldsPublic = {');
         const pubEnd = output.indexOf('\nexport type PostsRelations', pubIdx);
         const pubSlice = output.slice(pubIdx, pubEnd);
 
@@ -156,9 +156,9 @@ describe('type-generator — FieldsPublic variant', () => {
         const config = makeConfig([{ name: 'title', type: 'text' }]);
         const output = generateClientTypes(config);
 
-        // Both interfaces exist.
-        expect(output).toContain('export interface PostsFields {');
-        expect(output).toContain('export interface PostsFieldsPublic {');
+        // Both types exist.
+        expect(output).toContain('export type PostsFields = {');
+        expect(output).toContain('export type PostsFieldsPublic = {');
     });
 
     it('FieldsPublic omits private fields inside a group', () => {
@@ -174,7 +174,7 @@ describe('type-generator — FieldsPublic variant', () => {
         ]);
         const output = generateClientTypes(config);
 
-        const pubIdx = output.indexOf('export interface PostsFieldsPublic {');
+        const pubIdx = output.indexOf('export type PostsFieldsPublic = {');
         const pubEnd = output.indexOf('\nexport type PostsRelations', pubIdx);
         const pubSlice = output.slice(pubIdx, pubEnd);
         expect(pubSlice).toContain('title');
@@ -185,8 +185,8 @@ describe('type-generator — FieldsPublic variant', () => {
         const config = makeConfig([{ name: 'title', type: 'text' }]);
         const output = generateClientTypes(config);
 
-        const fullIdx = output.indexOf('export interface PostsFields {');
-        const fullEnd = output.indexOf('\nexport interface PostsFieldsPublic', fullIdx);
+        const fullIdx = output.indexOf('export type PostsFields = {');
+        const fullEnd = output.indexOf('\nexport type PostsFieldsPublic', fullIdx);
         const fullSlice = output.slice(fullIdx, fullEnd);
         expect(fullSlice).not.toContain('__shape');
     });
@@ -227,8 +227,8 @@ describe('type-generator — public relations reference FieldsPublic', () => {
 
         // Relations type uses full Fields (unchanged from original behaviour).
         expect(output).toContain("import('astromech').TypedEntry<CategoriesFields>");
-        // Both collection public interfaces exist.
-        expect(output).toContain('export interface PostsFieldsPublic {');
-        expect(output).toContain('export interface CategoriesFieldsPublic {');
+        // Both collection public types exist.
+        expect(output).toContain('export type PostsFieldsPublic = {');
+        expect(output).toContain('export type CategoriesFieldsPublic = {');
     });
 });

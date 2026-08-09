@@ -12,14 +12,14 @@ declare module 'astromech' {
 
 // --- Collection: posts (Posts) ---
 
-export interface FTreeTreeNode {
+export type FTreeTreeNode = {
   _id: string;
   _disabled?: boolean;
   tLabel?: string;
   _children?: FTreeTreeNode[];
-}
+};
 
-export interface PostsFields {
+export type PostsFields = {
   fText?: string;
   fTextarea?: string;
   fRichtext?: import('astromech').JsonValue;
@@ -56,17 +56,17 @@ export interface PostsFields {
   rCount?: number;
 }>;
   fTree?: FTreeTreeNode[];
-  fBlocks?: Array<{ _id: string; _type: string; _disabled?: boolean; _title?: string; [key: string]: import('astromech').JsonValue | undefined }>;
+  fBlocks?: Array<import('astromech').JsonObject & { _id: string; _type: string; _disabled?: boolean; _title?: string; }>;
   sInside?: string;
-}
+};
 
-export interface FTreePublicTreeNode {
+export type FTreePublicTreeNode = {
   _id: string;
   tLabel?: string;
   _children?: FTreePublicTreeNode[];
-}
+};
 
-export interface PostsFieldsPublic {
+export type PostsFieldsPublic = {
   readonly __shape?: 'public';
   fText?: string;
   fTextarea?: string;
@@ -100,9 +100,9 @@ export interface PostsFieldsPublic {
   rCount?: number;
 }>;
   fTree?: FTreePublicTreeNode[];
-  fBlocks?: Array<{ _id: string; _type: string; [key: string]: import('astromech').JsonValue | undefined }>;
+  fBlocks?: Array<import('astromech').JsonObject & { _id: string; _type: string; }>;
   sInside?: string;
-}
+};
 
 export type PostsRelations = {
   fMediaSingle: import('astromech').Media;
@@ -113,14 +113,14 @@ export type PostsRelations = {
 
 // --- Collection: categories (Categories) ---
 
-export interface CategoriesFields {
+export type CategoriesFields = {
   name?: string;
-}
+};
 
-export interface CategoriesFieldsPublic {
+export type CategoriesFieldsPublic = {
   readonly __shape?: 'public';
   name?: string;
-}
+};
 
 export type CategoriesRelations = Record<string, never>;
 

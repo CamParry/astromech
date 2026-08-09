@@ -21,7 +21,7 @@ function makeConfig(fields: object[]): ResolvedConfig {
 }
 
 describe('type-generator — tree field', () => {
-    it('emits a named self-referential node interface', () => {
+    it('emits a named self-referential node type', () => {
         const config = makeConfig([
             {
                 name: 'navItems',
@@ -32,15 +32,15 @@ describe('type-generator — tree field', () => {
 
         const output = generateClientTypes(config);
 
-        // Named node interface must appear.
-        expect(output).toContain('export interface NavItemsTreeNode');
+        // Named node type must appear.
+        expect(output).toContain('export type NavItemsTreeNode');
         // Self-referential _children property.
         expect(output).toContain('_children?: NavItemsTreeNode[]');
         // Field typed as array of the named node.
         expect(output).toContain('navItems?: NavItemsTreeNode[]');
     });
 
-    it('includes reserved _id and _disabled in the node interface', () => {
+    it('includes reserved _id and _disabled in the node type', () => {
         const config = makeConfig([
             {
                 name: 'items',
@@ -55,7 +55,7 @@ describe('type-generator — tree field', () => {
         expect(output).toContain('_disabled?: boolean;');
     });
 
-    it('includes child field types in the node interface', () => {
+    it('includes child field types in the node type', () => {
         const config = makeConfig([
             {
                 name: 'items',
@@ -73,7 +73,7 @@ describe('type-generator — tree field', () => {
         expect(output).toContain('count?: number;');
     });
 
-    it('node interface appears before the collection Fields interface (hoisted)', () => {
+    it('node type appears before the collection Fields type (hoisted)', () => {
         const config = makeConfig([
             {
                 name: 'menuItems',
@@ -84,8 +84,8 @@ describe('type-generator — tree field', () => {
 
         const output = generateClientTypes(config);
 
-        const nodePos = output.indexOf('export interface MenuItemsTreeNode');
-        const fieldsPos = output.indexOf('export interface PagesFields');
+        const nodePos = output.indexOf('export type MenuItemsTreeNode');
+        const fieldsPos = output.indexOf('export type PagesFields');
         expect(nodePos).toBeGreaterThan(-1);
         expect(fieldsPos).toBeGreaterThan(-1);
         expect(nodePos).toBeLessThan(fieldsPos);

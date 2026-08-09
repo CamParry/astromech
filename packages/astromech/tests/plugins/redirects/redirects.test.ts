@@ -38,8 +38,9 @@ import type {
 
 // Type-level proof: redirects.lookup carries real Input/Output via self-augmentation.
 async function _serviceTypeProof(client: AstromechClient) {
-    const result: RedirectMatch | null =
-        (await client.plugins?.redirects.lookup({ from: '/x' })) ?? null;
+    const result: RedirectMatch | null = await client.plugins.redirects.lookup({
+        from: '/x',
+    });
     void result;
 }
 void _serviceTypeProof;

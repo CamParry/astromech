@@ -98,7 +98,7 @@ function collectDataFields(fields: Field[], shape: 'full' | 'public' = 'full'): 
  * Used for top-level collections and recursively for group/repeater children.
  * Each line is indented by `indent` spaces.
  *
- * `hoisted` — optional accumulator for top-level interface declarations that
+ * `hoisted` — optional accumulator for top-level type declarations that
  * cannot be expressed inline (e.g. self-referential tree node types).
  */
 function buildObjectLines(
@@ -120,13 +120,13 @@ function buildObjectLines(
 }
 
 /**
- * Map a Field to its TypeScript type string for the Fields interface.
+ * Map a Field to its TypeScript type string for the Fields type.
  * Plugin-registered types use their `typeGen` (default `JsonValue`). Returns
  * null for layout field types (they never appear as a field line —
  * collectDataFields flattens them away before this is called) and for
  * unrecognised types.
  *
- * `hoisted` — optional accumulator; tree fields push a named interface here so
+ * `hoisted` — optional accumulator; tree fields push a named type alias here so
  * the self-referential node type terminates without infinite inlining.
  *
  * `shape` — 'full' emits all instance keys; 'public' omits `_disabled`/`_title`
@@ -188,8 +188,8 @@ function fieldToTsType(
             }
 
             case 'tree': {
-                // Self-referential node type — must be a named interface so the
-                // recursion terminates. Push the interface to the hoisted accumulator
+                // Self-referential node type — must be a named declaration so the
+                // recursion terminates. Push the alias to the hoisted accumulator
                 // and return a reference to it as an array.
                 const suffix = shape === 'public' ? 'PublicTreeNode' : 'TreeNode';
                 const nodeName = `${toPascalCase(field.name)}${suffix}`;
@@ -206,18 +206,22 @@ function fieldToTsType(
                     ...childLines,
                     `  _children?: ${nodeName}[];`,
                 ];
-                const iface = `export interface ${nodeName} {\n${lines.join('\n')}\n}`;
+                const alias = `export type ${nodeName} = {\n${lines.join('\n')}\n};`;
                 if (hoisted !== undefined) {
-                    hoisted.push(iface);
+                    hoisted.push(alias);
                 }
                 return `${nodeName}[]`;
             }
 
             case 'blocks': {
                 // Heterogeneous array; `_type` discriminates the block variant and
-                // the index signature carries arbitrary block data.
+                // the intersected `JsonObject` carries arbitrary block data. The
+                // intersection rather than an inline `[key: string]` index
+                // signature is what keeps the element a `JsonObject`: an inline
+                // signature would have to admit `undefined` to cover the optional
+                // reserved keys, and `JsonValue | undefined` is not `JsonValue`.
                 const reserved = reservedKeyLines(fieldType, shape);
-                return `Array<{ ${reserved.join(' ')} [key: string]: import('astromech').JsonValue | undefined }>`;
+                return `Array<import('astromech').JsonObject & { ${reserved.join(' ')} }>`;
             }
         }
     }
@@ -230,7 +234,7 @@ function fieldToTsType(
  * Returns null if the field is not a relation/media field.
  *
  * `knownCollections` — bare root collection keys.
- * `qualifiedTargetMap` — qualified target ids (`plugin/type`) → Fields interface name.
+ * `qualifiedTargetMap` — qualified target ids (`plugin/type`) → Fields type name.
  * `shape` — 'public' references `…FieldsPublic`; 'full' references `…Fields`.
  */
 function fieldToRelationType(
@@ -257,7 +261,7 @@ function fieldToRelationType(
     } else if (field.target === 'media') {
         single = "import('astromech').Media";
     } else if (qualifiedTargetMap.has(field.target)) {
-        // Qualified target: `plugin/type` → resolved plugin Fields interface
+        // Qualified target: `plugin/type` → resolved plugin Fields type
         const fieldsName = qualifiedTargetMap.get(field.target) ?? 'never';
         single = `import('astromech').TypedEntry<${fieldsName}>`;
     } else if (knownCollections.has(field.target)) {
@@ -278,8 +282,8 @@ function fieldToRelationType(
 
 type CollectionTypeBlock = {
     collectionKey: string;
-    fieldsInterface: string;
-    fieldsPublicInterface: string;
+    fieldsType: string;
+    fieldsPublicType: string;
     relationsType: string;
 };
 
@@ -303,11 +307,11 @@ function generateCollectionTypes(
     );
 
     // Accumulator for top-level declarations hoisted by nested field types (e.g. tree
-    // node interfaces that must be named to allow self-reference).
+    // node types that must be named to allow self-reference).
     const hoisted: string[] = [];
     const hoistedPublic: string[] = [];
 
-    // Build full Fields interface lines
+    // Build full Fields lines
     const fieldLines: string[] = [];
     for (const field of allFields) {
         const tsType = fieldToTsType(field, pluginFieldTypes, hoisted, 'full');
@@ -316,18 +320,20 @@ function generateCollectionTypes(
         fieldLines.push(`  ${propertyKey(field.name)}${optional}: ${tsType};`);
     }
 
-    const mainInterface =
+    // A type alias, not an interface: only an alias of an object type gets the
+    // implicit index signature that makes it assignable to `Entry['fields']`
+    // (`JsonObject`). An interface never does, so `TypedEntry<PostFields>` could
+    // not be passed where an `Entry` was expected.
+    const mainType =
         fieldLines.length > 0
-            ? `export interface ${fieldsName} {\n${fieldLines.join('\n')}\n}`
-            : `export interface ${fieldsName} {}`;
+            ? `export type ${fieldsName} = {\n${fieldLines.join('\n')}\n};`
+            : `export type ${fieldsName} = {};`;
 
-    // Hoist any extra declarations (tree node interfaces) before the Fields interface.
-    const fieldsInterface =
-        hoisted.length > 0
-            ? `${hoisted.join('\n\n')}\n\n${mainInterface}`
-            : mainInterface;
+    // Hoist any extra declarations (tree node types) before the Fields type.
+    const fieldsType =
+        hoisted.length > 0 ? `${hoisted.join('\n\n')}\n\n${mainType}` : mainType;
 
-    // Build public FieldsPublic interface lines
+    // Build public FieldsPublic lines
     const fieldPublicLines: string[] = [];
     for (const field of allFieldsPublic) {
         const tsType = fieldToTsType(field, pluginFieldTypes, hoistedPublic, 'public');
@@ -338,12 +344,12 @@ function generateCollectionTypes(
 
     // Always add the __shape brand marker for public types.
     const publicBodyLines = ["  readonly __shape?: 'public';", ...fieldPublicLines];
-    const mainPublicInterface = `export interface ${fieldsPublicName} {\n${publicBodyLines.join('\n')}\n}`;
+    const mainPublicType = `export type ${fieldsPublicName} = {\n${publicBodyLines.join('\n')}\n};`;
 
-    const fieldsPublicInterface =
+    const fieldsPublicType =
         hoistedPublic.length > 0
-            ? `${hoistedPublic.join('\n\n')}\n\n${mainPublicInterface}`
-            : mainPublicInterface;
+            ? `${hoistedPublic.join('\n\n')}\n\n${mainPublicType}`
+            : mainPublicType;
 
     // Build Relations type (only populate-able fields from flat top-level data fields)
     const relationLines: string[] = [];
@@ -363,7 +369,7 @@ function generateCollectionTypes(
             ? `export type ${relationsName} = {\n${relationLines.join('\n')}\n};`
             : `export type ${relationsName} = Record<string, never>;`;
 
-    return { collectionKey, fieldsInterface, fieldsPublicInterface, relationsType };
+    return { collectionKey, fieldsType, fieldsPublicType, relationsType };
 }
 
 // ============================================================================
@@ -374,7 +380,7 @@ function generateCollectionTypes(
  * Generate the full content of the `.astro/astromech.d.ts` type declaration file.
  */
 
-/** Derive the interface-name prefix for a plugin entry type. */
+/** Derive the type-name prefix for a plugin entry type. */
 function pluginEntryPrefix(pluginName: string, typeName: string): string {
     return `Plugin${toPascalCase(pluginName)}${toPascalCase(typeName)}`;
 }
@@ -382,13 +388,13 @@ function pluginEntryPrefix(pluginName: string, typeName: string): string {
 type PluginEntryBlock = {
     pluginName: string;
     typeName: string;
-    fieldsInterface: string;
-    fieldsPublicInterface: string;
+    fieldsType: string;
+    fieldsPublicType: string;
     relationsType: string;
 };
 
 /**
- * Generate per-plugin entry type interfaces (`Fields`/`FieldsPublic`/`Relations`),
+ * Generate per-plugin entry types (`Fields`/`FieldsPublic`/`Relations`),
  * so a root collection's relationship field can target a qualified plugin entry
  * type (`redirects/redirect`). Returns an empty array when there are no plugin
  * entries.
@@ -405,7 +411,7 @@ function generatePluginEntryBlocks(
         for (const [typeName, entryType] of Object.entries(types)) {
             const prefix = pluginEntryPrefix(pluginName, typeName);
 
-            // Reuse collection codegen with plugin-prefixed interface names.
+            // Reuse collection codegen with plugin-prefixed type names.
             // collectionKey === prefix → pascal === prefix (already PascalCase),
             // so the generated names are `${prefix}Fields` / `${prefix}Relations`.
             const block = generateCollectionTypes(
@@ -419,13 +425,13 @@ function generatePluginEntryBlocks(
             blocks.push({
                 pluginName,
                 typeName,
-                fieldsInterface: block.fieldsInterface,
-                fieldsPublicInterface: block.fieldsPublicInterface,
+                fieldsType: block.fieldsType,
+                fieldsPublicType: block.fieldsPublicType,
                 relationsType: block.relationsType,
             });
 
             // Register qualified target so other fields can reference it.
-            // For full shape, map to the full Fields interface.
+            // For full shape, map to the full Fields type.
             // For public shape, callers use the public variant directly.
             qualifiedTargetMap.set(`${pluginName}/${typeName}`, `${prefix}Fields`);
         }
@@ -500,25 +506,18 @@ export function generateClientTypes(
         .join('\n');
 
     const collectionTypeBlocks = blocks
-        .map(
-            ({
-                collectionKey,
-                fieldsInterface,
-                fieldsPublicInterface,
+        .map(({ collectionKey, fieldsType, fieldsPublicType, relationsType }) => {
+            const pascal = toPascalCase(collectionKey);
+            return [
+                `// --- Collection: ${collectionKey} (${pascal}) ---`,
+                '',
+                fieldsType,
+                '',
+                fieldsPublicType,
+                '',
                 relationsType,
-            }) => {
-                const pascal = toPascalCase(collectionKey);
-                return [
-                    `// --- Collection: ${collectionKey} (${pascal}) ---`,
-                    '',
-                    fieldsInterface,
-                    '',
-                    fieldsPublicInterface,
-                    '',
-                    relationsType,
-                ].join('\n');
-            }
-        )
+            ].join('\n');
+        })
         .join('\n\n');
 
     // Generate plugin entry type blocks
@@ -535,9 +534,9 @@ export function generateClientTypes(
             return [
                 `// --- Plugin entry: ${block.pluginName}/${block.typeName} (${prefix}) ---`,
                 '',
-                block.fieldsInterface,
+                block.fieldsType,
                 '',
-                block.fieldsPublicInterface,
+                block.fieldsPublicType,
                 '',
                 block.relationsType,
             ].join('\n');

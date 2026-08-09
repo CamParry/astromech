@@ -7,7 +7,8 @@ const redirectsMiddleware = defineMiddleware(async (context, next) => {
             from: context.url.pathname,
         });
         if (match) {
-            return context.redirect(match.to, Number(match.status));
+            // `Astro.redirect` wants a literal status, not a widened `number`.
+            return context.redirect(match.to, match.status === '301' ? 301 : 302);
         }
     } catch {
         // redirects plugin not available or lookup failed

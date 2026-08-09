@@ -7,6 +7,7 @@
         "dev": "astro dev",
         "build": "astro build",
         "preview": "astro preview",
+        "typecheck": "astro sync && tsc --noEmit",
         "check:config": "tsx astromech.config.ts",
         "db:generate": "tsx --tsconfig ../../packages/astromech/tsconfig.json ../../packages/astromech/src/transport/cli/index.ts db:generate",
         "db:init": "tsx --tsconfig ../../packages/astromech/tsconfig.json ../../packages/astromech/src/transport/cli/index.ts db:init"

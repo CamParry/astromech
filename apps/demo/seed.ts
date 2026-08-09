@@ -17,7 +17,7 @@ import sharpLib from 'sharp';
 import * as schema from 'astromech/database/schema';
 import { libsql } from 'astromech/database/libsql';
 import { collectRelationshipEdges, encodeWith } from 'astromech';
-import type { Field } from 'astromech';
+import type { Field, PluginDB } from 'astromech';
 import { redirectsTable } from '@astromech/redirects/tables';
 import { readImageDimensions, contentVersion, sharp } from 'astromech/media/image/sharp';
 import config from './astromech.config.js';
@@ -63,6 +63,14 @@ void link; // suppress unused-var warnings for helpers not used in current seed
 const DB_PATH = new URL('./database.db', import.meta.url).pathname;
 
 const db = libsql({ url: `file:${DB_PATH}` }).getInstance();
+
+/**
+ * The same handle, widened with the redirects plugin's own table. Core's `DB`
+ * names core's tables only, so a plugin's have to be added by the caller;
+ * `PluginDB` derives them from the plugin's `Table` objects, and the key it
+ * derives is the CamelCasePlugin one, not the SQL name.
+ */
+const pluginDb = db.withTables<PluginDB<{ redirects: typeof redirectsTable }>>();
 
 const now = new Date();
 const PUBLISHED_AT = now;
@@ -234,7 +242,7 @@ async function seed(): Promise<void> {
 
     // Clear settings and redirects
     await db.deleteFrom('settings').execute();
-    await db.deleteFrom('plugin_redirects_redirects').execute();
+    await pluginDb.deleteFrom('pluginRedirectsRedirects').execute();
 
     // Clear leftover media rows (no files on disk referenced)
     await db.deleteFrom('media').execute();
@@ -312,7 +320,9 @@ async function seed(): Promise<void> {
 
         const dims = readImageDimensions(bytes);
         const version = await contentVersion(bytes);
-        const blurhash = await sharp().placeholder(bytes);
+        // `placeholder` is optional on the ImageDriver contract, so it is called
+        // the same way `media/service.ts` calls it.
+        const blurhash = (await sharp().placeholder?.(bytes)) ?? null;
 
         return {
             id: spec.id,
@@ -1887,8 +1897,8 @@ async function seed(): Promise<void> {
     // plugin's own table codec rather than being hand-built: `encodeWith` mints
     // the ULID id and the ISO-TEXT createdAt/updatedAt from the table's
     // defaults, exactly as `tableStorage` does at runtime.
-    await db
-        .insertInto('plugin_redirects_redirects')
+    await pluginDb
+        .insertInto('pluginRedirectsRedirects')
         .values(
             [
                 { from: '/old-home', to: '/', status: '301', enabled: true },
