@@ -54,7 +54,15 @@ export default tseslint.config(
     {
         // Repo tooling: plain Node, run by npm scripts rather than bundled.
         files: ['scripts/**/*.mjs'],
-        languageOptions: { globals: { console: 'readonly', process: 'readonly' } },
+        languageOptions: {
+            globals: {
+                console: 'readonly',
+                process: 'readonly',
+                fetch: 'readonly',
+                setTimeout: 'readonly',
+                clearTimeout: 'readonly',
+            },
+        },
     },
     {
         ignores: [

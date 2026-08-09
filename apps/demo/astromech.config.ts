@@ -17,6 +17,15 @@ import { forms } from '@astromech/forms';
 import { rating } from './src/plugins/rating/index.js';
 import { author } from './src/entries/author.js';
 
+// This file is evaluated twice in development — once by plain Node at config
+// time and once in the SSR graph — and exactly once in a serving process. A
+// regression to two evaluations per server is what would undo lazy boot, so
+// `npm run check:boot` sets this variable and counts the lines. Silent
+// otherwise.
+if (process.env.ASTROMECH_LOG_CONFIG_EVAL === '1') {
+    console.log('[demo] config evaluated');
+}
+
 // ---------------------------------------------------------------------------
 // Block catalog — shared by `page` and `caseStudy`
 // ---------------------------------------------------------------------------

@@ -19,22 +19,34 @@ once, by hand, and nothing re-measures them.
 Building alone is not enough — the build always succeeded. The check has to
 start the built server and make a request.
 
-- `npm run build` in `apps/demo`, start `dist/server/entry.mjs` on a free port,
-  and assert `/` and `/admin` return 200. A boot failure is a 500 on `/` and a
-  404 on `/admin`, so both are worth asserting; the 404 is the misleading one.
-- An authenticated `/api/*` read is the stronger assertion, and needs a seeded
-  database and a sign-in. Decide whether that earns its cost or whether the two
-  unauthenticated routes are enough.
+- [x] `npm run build` in `apps/demo`, start `dist/server/entry.mjs` on a free
+      port, and assert `/` and `/admin` return 200. A boot failure is a 500 on
+      `/` and a 404 on `/admin`, so both are worth asserting; the 404 is the
+      misleading one. `/api/entries/post` is asserted at 401 as well, which
+      separates "route mounted, caller rejected" from "runtime never booted".
+- [x] An authenticated `/api/*` read is the stronger assertion, and needs a
+      seeded database and a sign-in. **Declined** — the three unauthenticated
+      statuses already separate every failure mode the boot defect produced, and
+      a seed plus a sign-in is a large fixture for the margin.
 
 ## What to work out first
 
-- **Where it runs.** The full sequence is slow enough that it does not belong in
-  the pre-commit hook. A separate script the gate table names, or CI only.
-- **What database it uses.** `apps/demo/database.db` is a working file, not a
-  fixture. A check that writes to it is a check that changes a developer's data.
-- **Whether `apps/demo` should get a typecheck at the same time.** It has none,
-  and `roadmap/planned/demo-typecheck.md` has the 17 existing errors. The two are
-  separate pieces of work but they land in the same place.
-- **Whether the config-evaluation count is assertable.** A regression to
-  double-boot is the specific thing that would undo the fix, and it is currently
-  only visible by adding a `console.log` to the config by hand.
+- [x] **Where it runs.** `scripts/check-boot.mjs`, wired as `npm run check:boot`,
+      named in `ARCHITECTURE.md`'s gate table, with its own CI job. Not in the
+      pre-commit hook — a full Astro build is far too slow for one.
+- [x] **What database it uses.** A fresh one migrated into a temp directory,
+      reached through `DATABASE_URL`, which `libsql()` already reads. Removed on
+      every exit path. `apps/demo/database.db` is never opened.
+- [x] **Whether `apps/demo` should get a typecheck at the same time.** It did —
+      `roadmap/planned/demo-typecheck.md`, same branch, its own commit.
+- [x] **Whether the config-evaluation count is assertable.** It is.
+      `apps/demo/astromech.config.ts` logs one line per evaluation when
+      `ASTROMECH_LOG_CONFIG_EVAL=1`, and the check counts them in the server's
+      output. A counter on `globalThis` was rejected: nothing outside the
+      process can read it without inventing a route to expose it.
+
+## Verification
+
+- [ ] Run `npm run check:boot` for real on `main` and confirm it passes. It has
+      never been executed — a worktree cannot build `apps/demo`, so the script
+      shipped unrun.

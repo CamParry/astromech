@@ -63,3 +63,18 @@ jobs:
                   cache: npm
             - run: npm ci
             - run: npm run test:run
+
+    boot:
+        name: Boot
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: npm
+            - run: npm ci
+            # `apps/demo` reaches core's Node-loaded subpaths through `dist`,
+            # so the packages have to be built before the demo can be.
+            - run: npm run build
+            - run: npm run check:boot
