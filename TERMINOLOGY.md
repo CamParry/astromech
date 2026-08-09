@@ -17,7 +17,7 @@ The standard term for any pluggable backend implementation in Astromech. A drive
 
 Current drivers:
 
-- **DatabaseDriver** — wraps a database connection (`libsqlDriver()`, `d1()`)
+- **DatabaseDriver** — wraps a database connection (`libsql()`, `d1()`)
 - **StorageDriver** — wraps a file storage backend (`filesystem()`, `r2()`, `s3()`)
 - **EmailDriver** — wraps an email sending service (`smtp()`, `resend()`, `consoleEmail()`)
 - **ImageDriver** — transforms an image variant (`sharp()`, `cloudflareImages()`)

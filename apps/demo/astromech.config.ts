@@ -2,7 +2,7 @@
 // `import.meta.env` yet. AI SDK providers read `process.env`, which this fills.
 import 'dotenv/config';
 import { builtInRole, defineAdminPage, defineConfig, entryPermissions } from 'astromech';
-import { libsqlDriver } from 'astromech/database/libsql';
+import { libsql } from 'astromech/database/libsql';
 import { consoleEmail } from 'astromech/email/console';
 import { sharp } from 'astromech/media/image/sharp';
 import { filesystem } from 'astromech/storage/filesystem';
@@ -118,8 +118,8 @@ export default defineConfig({
     // from this directory. Nothing may be derived from `import.meta.url`: once
     // this file is bundled into the server that points at the chunk, and a
     // relative SQLite URL silently creates an empty database there instead.
-    // Bare `libsqlDriver()` reads DATABASE_URL, falling back to file:./database.db.
-    db: libsqlDriver(),
+    // Bare `libsql()` reads DATABASE_URL, falling back to file:./database.db.
+    db: libsql(),
     storage: filesystem({ dir: './public/uploads', urlPrefix: '/uploads' }),
     // The demo sends nothing real — the console driver prints each message so
     // form notifications (and anything else that emails) are visible in the dev

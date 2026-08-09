@@ -9,7 +9,7 @@ import { hashPassword } from 'better-auth/crypto';
 import { collectRelationshipEdges } from 'astromech';
 import type { Field } from 'astromech';
 import * as schema from 'astromech/database/schema';
-import { libsqlDriver } from 'astromech/database/libsql';
+import { libsql } from 'astromech/database/libsql';
 import config from '../../../apps/demo/astromech.config.js';
 
 // Resolved against this file, not the cwd: `npm run db:seed` delegates with
@@ -18,7 +18,7 @@ const DEFAULT_DB_URL = `file:${fileURLToPath(
     new URL('../../../apps/demo/database.db', import.meta.url)
 )}`;
 
-const db = libsqlDriver({
+const db = libsql({
     url: process.env.DATABASE_URL ?? DEFAULT_DB_URL,
 }).getInstance();
 

@@ -33,7 +33,7 @@ Only shared resources move.
 The question is reasonable and the answer is not about the drivers. Every driver
 is already a self-contained lazy object: `r2()` resolves its binding on first use
 because a resolved bucket is not reachable from Node
-(`packages/astromech/src/storage/drivers/r2.ts`), and `libsqlDriver()` memoises
+(`packages/astromech/src/storage/drivers/r2.ts`), and `libsql()` memoises
 `getInstance()`. Nothing about them needs boot to make them usable, so with
 `virtual:astromech/config` now the author's own module
 ([0030](0030-the-server-loads-the-config-as-a-module.md)), `config.storage.put(…)`
@@ -139,7 +139,7 @@ it down into the driver.
 were exported classes needing `new` and carrying a `Driver` suffix; scheduler
 drivers were pre-built singleton objects. The factory won because it was already
 the majority (`filesystem()`, `r2()`, `s3()`, `sharp()`, `cloudflareImages()`,
-`d1()`, `libsqlDriver()`) and because it is the only one of the three that can
+`d1()`, `libsql()`) and because it is the only one of the three that can
 defer work: `r2()` has to resolve its binding on first use, since a resolved
 bucket is not reachable from the plain-Node graph the config is loaded in.
 

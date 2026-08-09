@@ -8,7 +8,7 @@ This is a living reference; it grows as the project does.
 ## Contents
 
 - [configuration/database.md](configuration/database.md) — pick and configure a
-  database driver (`libsqlDriver`, `d1`), what D1's lack of transactions means
+  database driver (`libsql`, `d1`), what D1's lack of transactions means
   for your data, and the contract for writing your own.
 - [configuration/storage.md](configuration/storage.md) — pick and configure a
   storage driver (`filesystem`, `r2`, `s3`), media access modes and public URLs,

@@ -31,7 +31,7 @@ Under the rule, these are the eight shared resources: `db`, `storage`, `email`,
 Worth recording, because the question is reasonable and the answer is not
 obvious. The drivers are already self-contained lazy objects: `r2()` resolves its
 binding on first use because a resolved bucket is not reachable from Node
-(`packages/astromech/src/storage/drivers/r2.ts`), and `libsqlDriver()` memoises
+(`packages/astromech/src/storage/drivers/r2.ts`), and `libsql()` memoises
 `getInstance()`. Nothing about them needs boot to make them usable, so
 `config.storage.put(…)` looks like it should just work now that
 `virtual:astromech/config` is a live module.
@@ -195,7 +195,10 @@ dribbling out.
       `globalThis.console` in a config file), and the scheduler singletons become
       `interval()`, `webhook()` and `cloudflareCron()`, named for the triggering
       mechanism rather than the host. All of them need published subpaths: the
-      scheduler drivers have none today, so a site cannot select one at all.
+      scheduler drivers have none today, so a site cannot select one at all. The
+      one database factory still carrying the suffix loses it too —
+      `libsqlDriver()` becomes `libsql()`, matching `d1()`, on the same
+      `astromech/database/libsql` subpath.
 - [x] **WS5 — Plugins receive ports, never drivers.** `ctx.sendEmail` becomes
       `ctx.email.send(to, subject, element)`, matching `ctx.storage.put(…)`. It
       stays a port rather than the raw driver for two reasons: it renders the
