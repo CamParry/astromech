@@ -19,15 +19,23 @@ const SKIP_DIRS = new Set([
     'build',
 ]);
 
-// Not scanned at all: these describe work that has not been built, so their
-// paths are expected to name files that do not exist yet.
-const SKIP_TREES = [join('specs', ''), join('roadmap', 'planned', '')];
-
-// Frozen records. They quote paths that were accurate when written, so a later
-// rename must not make them fail — that would tax a historical document for an
-// unrelated change, and the fix would be to falsify the record. Markdown links
-// are still checked here, because a link is a promise the reader can click.
-const FROZEN_TREES = [join('roadmap', 'completed', ''), join('decisions', '')];
+// Trees whose backticked paths are not checked, for two different reasons.
+//
+// Planned work and in-flight designs name files that do not exist yet, so a
+// path there is a proposal rather than a claim. Frozen records quote paths that
+// were accurate when written, so a later rename must not fail them — that would
+// tax a historical document for an unrelated change, and the fix would be to
+// falsify the record.
+//
+// Markdown LINKS are checked in all of them, because a link is a promise the
+// reader can click, and a roadmap file linking to a sibling that has since moved
+// to `completed/` is exactly the rot worth catching.
+const PATHS_UNCHECKED_TREES = [
+    join('specs', ''),
+    join('roadmap', 'planned', ''),
+    join('roadmap', 'completed', ''),
+    join('decisions', ''),
+];
 
 // Build output — present after a build, absent in a clean checkout.
 const GENERATED = ['/.astro/', '/dist/', '/.tanstack/'];
@@ -55,7 +63,6 @@ const failures = [];
 
 for (const file of markdownFiles(repoRoot)) {
     const local = relative(repoRoot, file);
-    if (SKIP_TREES.some((tree) => local.startsWith(tree))) continue;
 
     const source = readFileSync(file, 'utf8');
     const body = withoutFencedBlocks(source);
@@ -66,7 +73,7 @@ for (const file of markdownFiles(repoRoot)) {
         }
     }
 
-    if (FROZEN_TREES.some((tree) => local.startsWith(tree))) continue;
+    if (PATHS_UNCHECKED_TREES.some((tree) => local.startsWith(tree))) continue;
 
     for (const token of backtickedPaths(body)) {
         if (!isPathCandidate(file, token)) continue;

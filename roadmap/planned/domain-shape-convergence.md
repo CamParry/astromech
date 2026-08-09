@@ -74,6 +74,14 @@ Do this first; steps 2 and 3 are mechanical and this one is not.
       server one is not `NotificationsService` and should not read as if it is.
 - [ ] Replace the `notImplemented` stubs in `transport/local/index.ts` with
       either the real methods or one honest error naming the reason, not four.
+- [ ] `plugins/runtime/plugin-runtime.ts` imports `notifications` directly, via
+      `notify()`. That is a capability reaching up into a domain, and it is on
+      `NO_UPWARD_EXEMPT` in `packages/astromech/.dependency-cruiser.cjs` rather
+      than fixed — the old `capability-no-upward` rule missed it only because it
+      never listed `notifications`. It wants the same port treatment
+      `plugins/runtime/entry-access.ts` has: declare the slice as a port typed
+      from leaves, and have the domain inject the implementation at boot. Remove
+      the exemption once it does.
 
 ### 3. Apply the entries template to `media`
 
