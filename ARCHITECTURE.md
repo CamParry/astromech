@@ -162,7 +162,7 @@ Two layers keep a driver out of a plugin's hands, and they do different jobs. `R
 
 **A plugin's server code runs in a different module graph from core's, and `ctx` is the only bridge across it.** This is an invariant, not a convention — the alternative does not merely violate a rule, it throws.
 
-The integration takes a config **path** and the site's `astromech.config.ts` is evaluated twice. Once in **plain Node at config time**, inside `astro:config:setup` (`boot/config-loader.ts`), which is what route registration, the admin config, codegen and the build-time migration run read; and once in the **Vite SSR graph**, where `virtual:astromech/config` re-exports the same file. Every `plugin()` factory runs in both, so a plugin package is evaluated in two module registries and module-level state in it is not shared between them. The evaluation that boots is the SSR one: `src/middleware.ts` hands that module's `rawConfig` to `initRuntime`, so the registered `PluginDefinition`, with `rawRoutes[].handler`, service methods and hooks hanging off it, is the SSR-graph copy. Core's runtime code is the opposite: the integration injects routes pointing at package **source** (`pkgSrc` in `boot/astro.ts`), so Vite compiles it.
+The integration takes a config **path** and the site's `astromech.config.ts` is evaluated twice. Once in **plain Node at config time**, inside `astro:config:setup` (`boot/config-loader.ts`), which is what route registration, the admin config, codegen and the build-time migration run read; and once in the **Vite SSR graph**, where `virtual:astromech/config` re-exports the same file. Every `plugin()` factory runs in both, so a plugin package is evaluated in two module registries and module-level state in it is not shared between them. The evaluation that boots is the SSR one: `src/middleware.ts` hands that module's `rawConfig` to `initRuntime`, so the registered `PluginDefinition`, with `rawRoutes[].handler`, service methods and hooks hanging off it, is the SSR-graph copy. Core's runtime code is the opposite: every subpath Vite loads — `astromech/middleware`, `astromech/local`, the injected `astromech/routes/*.ts` and `astromech/admin/shell.astro`, and `astromech/ui*` — resolves through `exports` to package **source**, which `boot/astro.ts` compiles via the `@/` Vite alias it registers against `pkgSrc`.
 
 The config-time evaluation is the constraint. A plugin package has to load under plain Node, with no Vite in the process:
 
@@ -205,7 +205,10 @@ Cadence lives in the **database**, not in deploy config, because schedules are r
 ## Public entry points
 
 Consumers import from subpaths, never deep into `src/`. The published surface is
-defined by `exports` in `package.json` — that's canonical. The ones to know:
+defined by `exports` in `package.json` — that's canonical. In the repo, the
+subpaths Vite loads resolve to `src/` so a core edit reaches `apps/demo` without
+a rebuild; `publishConfig.exports` restores the full `dist/` map for npm, and
+`npm run check:exports` holds the two key sets identical. The ones to know:
 `astromech` (core helpers + types, incl. the plugin-authoring API — there is no
 separate `plugin-kit` subpath), `astromech/astro` (integration),
 `astromech/local` & `astromech/fetch` (the two API consumers — local exports
@@ -238,6 +241,7 @@ used.
 | `npm run lint:deps`          | dependency-cruiser — enforces the modular DAG invariants within `packages/astromech/src` (no upward edges, no peer-domain imports, pure leaves)                     |
 | `npm run check:config`       | `tsx astromech.config.ts` in the demo — loads the site config the way Astro does, catching a config-time import that reaches a domain service                       |
 | `npm run check:node-imports` | spawns plain `node` against built `dist` and imports each plugin-facing subpath. Needs `dist`, so it runs after `build`. See "Plugin runtime boundary"              |
+| `npm run check:exports`      | asserts `exports` and `publishConfig.exports` name the same subpaths, so a new one cannot be added to the repo map and forgotten in the published one               |
 | `npm run check:docs`         | resolves every repo-relative link and backticked path in markdown. Skips `specs/` and `roadmap/planned/`, which name files that do not exist yet                    |
 
 For refactors that move tables, `npm run db:generate` must also report "No

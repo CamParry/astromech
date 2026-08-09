@@ -18,6 +18,7 @@
         "lint:deps": "npm run lint:deps -w astromech",
         "check:config": "npm run check:config -w astromech-demo",
         "check:node-imports": "npm run check:node-imports -w astromech",
+        "check:exports": "npm run check:exports -w astromech",
         "check:docs": "node scripts/check-docs-links.mjs",
         "format": "prettier --write .",
         "format:check": "prettier --check .",

@@ -36,7 +36,7 @@
         },
         "./local": {
             "types": "./dist/local/index.d.ts",
-            "default": "./dist/local/index.js"
+            "default": "./src/exports/local.ts"
         },
         "./fetch": {
             "types": "./dist/fetch/index.d.ts",
@@ -44,7 +44,7 @@
         },
         "./middleware": {
             "types": "./dist/middleware.d.ts",
-            "default": "./dist/middleware.js"
+            "default": "./src/exports/middleware.ts"
         },
         "./routes/auth-handler.ts": "./src/routes/auth-handler.ts",
         "./routes/api.ts": "./src/routes/api.ts",
@@ -128,6 +128,123 @@
             "default": "./src/exports/admin/ui-layout.ts"
         }
     },
+    "publishConfig": {
+        "exports": {
+            ".": {
+                "types": "./dist/index.d.ts",
+                "default": "./dist/index.js"
+            },
+            "./fields": {
+                "types": "./dist/fields.d.ts",
+                "default": "./dist/fields.js"
+            },
+            "./columns": {
+                "types": "./dist/columns.d.ts",
+                "default": "./dist/columns.js"
+            },
+            "./methods": {
+                "types": "./dist/methods.d.ts",
+                "default": "./dist/methods.js"
+            },
+            "./astro": {
+                "types": "./dist/boot/astro.d.ts",
+                "default": "./dist/boot/astro.js"
+            },
+            "./local": {
+                "types": "./dist/local/index.d.ts",
+                "default": "./dist/local/index.js"
+            },
+            "./fetch": {
+                "types": "./dist/fetch/index.d.ts",
+                "default": "./dist/fetch/index.js"
+            },
+            "./middleware": {
+                "types": "./dist/middleware.d.ts",
+                "default": "./dist/middleware.js"
+            },
+            "./routes/auth-handler.ts": "./src/routes/auth-handler.ts",
+            "./routes/api.ts": "./src/routes/api.ts",
+            "./routes/media-handler.ts": "./src/routes/media-handler.ts",
+            "./media/image/sharp": {
+                "types": "./dist/media/image/drivers/sharp.d.ts",
+                "default": "./dist/media/image/drivers/sharp.js"
+            },
+            "./media/image/cloudflare": {
+                "types": "./dist/media/image/drivers/cloudflare.d.ts",
+                "default": "./dist/media/image/drivers/cloudflare.js"
+            },
+            "./storage/r2": {
+                "types": "./dist/storage/drivers/r2.d.ts",
+                "default": "./dist/storage/drivers/r2.js"
+            },
+            "./storage/filesystem": {
+                "types": "./dist/storage/drivers/filesystem.d.ts",
+                "default": "./dist/storage/drivers/filesystem.js"
+            },
+            "./storage/s3": {
+                "types": "./dist/storage/drivers/s3.d.ts",
+                "default": "./dist/storage/drivers/s3.js"
+            },
+            "./database/d1": {
+                "types": "./dist/database/drivers/d1.d.ts",
+                "default": "./dist/database/drivers/d1.js"
+            },
+            "./database/libsql": {
+                "types": "./dist/database/drivers/libsql.d.ts",
+                "default": "./dist/database/drivers/libsql.js"
+            },
+            "./cloudflare": {
+                "types": "./dist/cloudflare/index.d.ts",
+                "default": "./dist/cloudflare/index.js"
+            },
+            "./admin/shell.astro": "./src/admin/shell.astro",
+            "./media/Image": "./src/media/serving/image/Image.astro",
+            "./ui": {
+                "types": "./dist/admin/components/ui/index.d.ts",
+                "default": "./dist/admin/components/ui/index.js"
+            },
+            "./database/schema": {
+                "types": "./dist/database/schema.d.ts",
+                "default": "./dist/database/schema.js"
+            },
+            "./email": {
+                "types": "./dist/email/index.d.ts",
+                "default": "./dist/email/index.js"
+            },
+            "./email/console": {
+                "types": "./dist/email/drivers/console.d.ts",
+                "default": "./dist/email/drivers/console.js"
+            },
+            "./email/resend": {
+                "types": "./dist/email/drivers/resend.d.ts",
+                "default": "./dist/email/drivers/resend.js"
+            },
+            "./email/smtp": {
+                "types": "./dist/email/drivers/smtp.d.ts",
+                "default": "./dist/email/drivers/smtp.js"
+            },
+            "./scheduler/interval": {
+                "types": "./dist/scheduler/drivers/interval.d.ts",
+                "default": "./dist/scheduler/drivers/interval.js"
+            },
+            "./scheduler/webhook": {
+                "types": "./dist/scheduler/drivers/webhook.d.ts",
+                "default": "./dist/scheduler/drivers/webhook.js"
+            },
+            "./scheduler/cloudflare": {
+                "types": "./dist/scheduler/drivers/cloudflare.d.ts",
+                "default": "./dist/scheduler/drivers/cloudflare.js"
+            },
+            "./ui/fields": {
+                "types": "./dist/admin/components/fields/index.d.ts",
+                "default": "./dist/admin/components/fields/index.js"
+            },
+            "./ui/layout": {
+                "types": "./dist/admin/components/ui/layout.d.ts",
+                "default": "./dist/admin/components/ui/layout.js"
+            }
+        }
+    },
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "bin": {
@@ -146,6 +263,7 @@
         "lint": "eslint src",
         "lint:deps": "depcruise src --config .dependency-cruiser.cjs",
         "check:node-imports": "node scripts/check-node-imports.mjs",
+        "check:exports": "node scripts/check-exports-parity.mjs",
         "format": "prettier --write src",
         "format:check": "prettier --check src",
         "test": "vitest",

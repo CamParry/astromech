@@ -41,13 +41,13 @@ the plugin packages import.
 
 ## Change
 
-- [ ] Audit each `exports` subpath and classify it Node-loaded or Vite-loaded.
+- [x] Audit each `exports` subpath and classify it Node-loaded or Vite-loaded.
       The Node-loaded set is already enumerated by `npm run check:node-imports`.
-- [ ] Point the Vite-loaded subpaths at `src/` in the repo `exports`, and add a
+- [x] Point the Vite-loaded subpaths at `src/` in the repo `exports`, and add a
       `publishConfig.exports` that restores the full `dist/` map.
-- [ ] Confirm `npm run check:node-imports` still runs against built `dist` — it
+- [x] Confirm `npm run check:node-imports` still runs against built `dist` — it
       must keep testing what npm consumers get, not what the repo resolves.
-- [ ] Add a check that `exports` and `publishConfig.exports` have identical key
+- [x] Add a check that `exports` and `publishConfig.exports` have identical key
       sets, so a new subpath cannot be added to one and forgotten in the other.
 - [ ] Verify by browser-checking `apps/demo` on port 4323 after a core edit with
       no rebuild.

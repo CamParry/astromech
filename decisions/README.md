@@ -65,3 +65,4 @@ Distinct from the neighbouring directories:
 - [0030](0030-the-server-loads-the-config-as-a-module.md) — the server loads the config as a module, and boots itself on the first request
 - [0031](0031-the-plugin-config-view-is-an-allow-list.md) — `ctx.config` is an allow-list projection, not the resolved config
 - [0032](0032-a-capability-slot-holds-what-the-config-declared.md) — a capability slot holds what the config declared, `media.image` over three flatter shapes
+- [0033](0033-the-repo-resolves-src-and-npm-gets-dist.md) — the repo `exports` map resolves `src`, `publishConfig.exports` gives npm `dist`
