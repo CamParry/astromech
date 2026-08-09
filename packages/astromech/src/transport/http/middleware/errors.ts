@@ -119,6 +119,15 @@ export function internalError(
 // ============================================================================
 
 /**
+ * OpenAPIHono's own request-validation envelope, for a request that fails the
+ * schema its documented operation declares. Distinct from the canonical error
+ * body on purpose: it is what a client generated from the document expects.
+ */
+export function requestSchemaError(c: Context, err: ZodError): Response {
+    return c.json({ success: false, error: err }, 400);
+}
+
+/**
  * Convert a ZodError into a validationFailed response.
  *
  * `bodyKey` names the key the request body was validated under, and is stripped

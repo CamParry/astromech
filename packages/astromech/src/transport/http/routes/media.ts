@@ -30,7 +30,7 @@ const router = new OpenAPIHono<Env>();
 /** Sort fields accepted off the wire. Mirrors the storage allowlist. */
 const SORTABLE_FIELDS = new Set(['filename', 'mimeType', 'size', 'createdAt']);
 
-const MEDIA_ROUTES: RestRoute[] = [
+export const MEDIA_ROUTES: RestRoute[] = [
     { verb: 'get', path: '/', id: 'media.query', args: queryArgs, envelope: 'raw' },
     {
         verb: 'get',

@@ -34,7 +34,7 @@ const router = new OpenAPIHono<Env>();
 /** Sort fields accepted off the wire. An unlisted one is dropped, not rejected. */
 const SORTABLE_FIELDS = new Set(['name', 'email', 'createdAt', 'updatedAt', 'roleSlug']);
 
-const USERS_ROUTES: RestRoute[] = [
+export const USERS_ROUTES: RestRoute[] = [
     { verb: 'get', path: '/', id: 'users.query', args: queryArgs, envelope: 'raw' },
     {
         verb: 'post',

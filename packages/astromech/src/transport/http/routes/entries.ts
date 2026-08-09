@@ -1,11 +1,19 @@
 /**
  * Entry Routes
  *
- * Full CRUD operations for collection entries — type-scoped routes,
- * bulk-* sub-routes.
+ * Every entry type is served here, addressed by the type id the entries service
+ * itself uses: bare (`post`) for a root type, qualified (`redirects/redirect`)
+ * for a plugin type, URL-encoded into the `:type` segment. The id is passed to
+ * the service verbatim, and the permission an action needs is derived from the
+ * id's own shape — the single source that keeps plugin entries out of the
+ * `entry:*` wildcard.
+ *
+ * 24 of the 30 handlers are the table below. The six that are not follow it,
+ * each carrying the reason.
  */
 
-import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
+import { OpenAPIHono, z } from '@hono/zod-openapi';
+import type { Context } from 'hono';
 import { Astromech } from '@/transport/local/index';
 import {
     badRequest,
@@ -13,250 +21,479 @@ import {
     fromZodError,
     internalError,
     notFound,
+    requestSchemaError,
 } from '@/transport/http/middleware/errors';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import {
-    PERMISSION_ENTRY_READ_FULL,
-    type EntryAction,
-    entryPermission,
-} from '@/permissions/index';
+import { PERMISSION_ENTRY_READ_FULL, entryPermission } from '@/permissions/index';
 import { permissionsFor } from '@/permissions/permissions-for';
 import type {
-    EntryDuplicateOverrides,
     EntryQueryParams,
     EntryUpdateData,
     JsonObject,
-    Permission,
     ResolvedEntryType,
-    ServiceMethodContract,
-    SortOption,
 } from '@/types/index';
 import {
-    updateEntrySchema,
+    ENTRY_METHOD_ACTIONS,
+    entryMethodContracts,
+    type EntryMethodContract,
+    type EntryMethodName,
+} from '@/entries/methods';
+import {
     createEntrySchemaFor,
-    duplicateOverridesSchema,
+    entrySortSchema,
+    updateEntrySchema,
     updateEntrySchemaFor,
-    scheduleEntrySchema,
 } from '@/entries/schema';
 import { PublicTrashedReadError, StagedEntryExistsError } from '@/entries/errors';
 import { resolveEntryType } from '@/entries/type-ids.shared';
+import { mountRestRoutes, type ContractCatalogue, type RestRoute } from './rest-route';
 
 type Env = { Variables: AuthVariables };
 
-// ============================================================================
-// Router
-// ============================================================================
-
 /**
- * Build the entries router. There is exactly ONE — root and plugin entry types
- * are both served here, addressed by the type id the entries service itself
- * uses: bare (`post`) for a root type, qualified (`redirects/redirect`) for a
- * plugin type. A qualified id reaches the `:type` path param URL-encoded, which
- * the client does and Hono decodes.
+ * Build the entries router. There is exactly ONE in production; this is a
+ * factory so tests can mount an isolated instance.
  *
- * Nothing is namespaced on the way in or out: the type is passed through to the
- * entries service verbatim, and the permission an action checks is derived from
- * the id's own shape by `entryPermission` — the single source that keeps plugin
- * entries out of the `entry:*` wildcard.
- *
- * Response envelopes are passed through verbatim too: entries returned by the
- * entries service carry whatever `type` it assigns (the qualified id for built-in
- * storage, or `undefined` for `tableStorage`).
- *
- * Exported as a factory so tests can mount an isolated instance; production has
- * the single `entriesRouter` below.
+ * The table mounts first: `DELETE /:type/trash` has to be matched before the
+ * bespoke `DELETE /:type/:id` that would otherwise swallow it.
  */
 export function createEntriesRouter(): OpenAPIHono<Env> {
     const router = new OpenAPIHono<Env>();
+    mountRestRoutes(router, { forRequest: contractsForRequest }, ENTRIES_ROUTES);
+    mountBespokeRoutes(router);
+    return router;
+}
 
-    /**
-     * Wrap the per-(type, action) permission as a method contract, so entries
-     * are enforced through the same `permissionsFor(...).allowsMethod` seam as
-     * every other service.
-     */
-    const entryGate = (type: string, action: EntryAction): ServiceMethodContract => ({
-        permission: entryPermission(type, action) as Permission,
-        mutates: action !== 'read',
-        destructive: action === 'delete',
-    });
+// ============================================================================
+// The table
+// ============================================================================
 
-    /** Resolve a type id against root entries (bare) or pluginEntries (qualified). */
-    const lookup = (type: string): ResolvedEntryType | undefined =>
-        resolveEntryType(Astromech.config, type);
+/** The query string the list route accepts. `dir` is the only one that can fail. */
+const listQuery = z.object({
+    page: z.string().optional(),
+    limit: z.string().optional(),
+    search: z.string().optional(),
+    trashed: z.string().optional(),
+    full: z.string().optional(),
+    locale: z.string().optional().openapi({ example: 'en' }),
+    sort: z.string().optional(),
+    dir: z.enum(['asc', 'desc']).optional(),
+    previewToken: z.string().optional(),
+    staged: z.string().optional(),
+});
 
-    // ============================================================================
-    // Helpers
-    // ============================================================================
+/** The query string the single-entry read accepts. */
+const entryQuery = z.object({
+    locale: z.string().optional(),
+    full: z.string().optional(),
+    previewToken: z.string().optional(),
+    staged: z.string().optional(),
+});
 
-    const SORTABLE_FIELDS = new Set([
-        'title',
-        'status',
-        'createdAt',
-        'updatedAt',
-        'publishedAt',
-        'slug',
-    ]);
+const ENTRIES_ROUTES: RestRoute[] = [
+    {
+        verb: 'get',
+        path: '/:type',
+        id: 'entries.query',
+        args: listArgs,
+        envelope: 'raw',
+        query: listQuery,
+        precondition: entryAccess(),
+        mapError: publicTrashedRead,
+    },
+    {
+        verb: 'get',
+        path: '/:type/:id',
+        id: 'entries.get',
+        args: getArgs,
+        query: entryQuery,
+        precondition: entryAccess(),
+        notFound: (c) => `Entry '${c.req.param('id')}' not found`,
+    },
+    {
+        verb: 'post',
+        path: '/:type/query',
+        id: 'entries.query',
+        args: queryBodyArgs,
+        envelope: 'raw',
+        precondition: entryAccess(),
+        mapError: publicTrashedRead,
+    },
+    {
+        verb: 'post',
+        path: '/:type/bulk-trash',
+        id: 'entries.trash',
+        args: bulkArgs,
+        envelope: 'success',
+        precondition: entryAccess(),
+    },
+    {
+        verb: 'post',
+        path: '/:type/bulk-delete',
+        id: 'entries.delete',
+        args: bulkArgs,
+        envelope: 'success',
+        precondition: entryAccess(),
+    },
+    {
+        verb: 'post',
+        path: '/:type/bulk-restore',
+        id: 'entries.restore',
+        args: bulkArgs,
+        precondition: entryAccess(),
+    },
+    {
+        verb: 'post',
+        path: '/:type/bulk-publish',
+        id: 'entries.publish',
+        args: bulkArgs,
+        precondition: entryAccess(),
+    },
+    {
+        verb: 'post',
+        path: '/:type/bulk-unpublish',
+        id: 'entries.unpublish',
+        args: bulkArgs,
+        precondition: entryAccess(),
+    },
+    {
+        verb: 'post',
+        path: '/:type/bulk-schedule',
+        id: 'entries.schedule',
+        args: bulkArgs,
+        precondition: entryAccess(),
+    },
+    {
+        verb: 'post',
+        path: '/:type/:id/restore',
+        id: 'entries.restore',
+        args: canonicalArgs,
+        precondition: entryAccess(),
+    },
+    {
+        verb: 'post',
+        path: '/:type/:id/duplicate',
+        id: 'entries.duplicate',
+        args: async (c) => ({ ...canonicalArgs(c), overrides: await optionalBody(c) }),
+        bodyKey: 'overrides',
+        status: 201,
+        precondition: entryAccess(),
+    },
+    {
+        verb: 'delete',
+        path: '/:type/trash',
+        id: 'entries.emptyTrash',
+        args: (c) => ({ type: param(c, 'type') }),
+        envelope: 'success',
+        precondition: entryAccess(),
+    },
+    {
+        verb: 'delete',
+        path: '/:type/:id/force',
+        id: 'entries.delete',
+        args: (c) => ({ ...canonicalArgs(c), cascadeLocales: cascadeLocales(c) }),
+        envelope: 'success',
+        precondition: entryAccess(),
+    },
+    {
+        verb: 'post',
+        path: '/:type/:id/publish',
+        id: 'entries.publish',
+        args: canonicalArgs,
+        precondition: entryAccess(),
+    },
+    {
+        verb: 'post',
+        path: '/:type/:id/unpublish',
+        id: 'entries.unpublish',
+        args: canonicalArgs,
+        precondition: entryAccess(),
+    },
+    {
+        verb: 'post',
+        path: '/:type/:id/schedule',
+        id: 'entries.schedule',
+        args: async (c) => ({ ...(await c.req.json()), ...canonicalArgs(c) }),
+        precondition: entryAccess(),
+    },
+    // `versions` and `restoreVersion` declare `requires: 'versioning'` that these
+    // routes have never enforced — honouring it would add a 409 to an unversioned
+    // type, which answers 200 with an empty list today.
+    {
+        verb: 'get',
+        path: '/:type/:id/versions',
+        id: 'entries.versions',
+        args: canonicalArgs,
+        precondition: entryAccess('unchecked'),
+    },
+    {
+        verb: 'post',
+        path: '/:type/:id/versions/:versionId/restore',
+        id: 'entries.restoreVersion',
+        args: (c) => ({ ...canonicalArgs(c), versionId: param(c, 'versionId') }),
+        precondition: entryAccess('unchecked'),
+    },
+    {
+        verb: 'get',
+        path: '/:type/:id/incoming-relationships',
+        id: 'entries.incomingRelationships',
+        args: canonicalArgs,
+        precondition: entryAccess(),
+    },
+    // Forward versioning (staged entries). Each is gated on the `staging`
+    // capability its contract declares, so a misconfigured type answers 409
+    // rather than the service's 500.
+    {
+        verb: 'get',
+        path: '/:type/:id/staged',
+        id: 'entries.getStaged',
+        args: canonicalArgs,
+        precondition: entryAccess(),
+    },
+    {
+        verb: 'post',
+        path: '/:type/:id/staged/merge',
+        id: 'entries.mergeStaged',
+        args: canonicalArgs,
+        precondition: entryAccess(),
+    },
+    {
+        verb: 'delete',
+        path: '/:type/:id/staged',
+        id: 'entries.deleteStaged',
+        args: canonicalArgs,
+        envelope: 'success',
+        precondition: entryAccess(),
+    },
+    {
+        verb: 'post',
+        path: '/:type/:id/preview-token',
+        id: 'entries.issuePreviewToken',
+        args: async (c) => ({
+            ...canonicalArgs(c),
+            expiresAt: (await optionalBody(c))['expiresAt'] ?? null,
+        }),
+        status: 201,
+        precondition: entryAccess(),
+    },
+    {
+        verb: 'delete',
+        path: '/:type/:id/preview-token',
+        id: 'entries.revokePreviewToken',
+        args: canonicalArgs,
+        envelope: 'success',
+        precondition: entryAccess(),
+    },
+];
 
-    function validateSort(sort: unknown): SortOption | SortOption[] | undefined {
-        if (!sort) return undefined;
-        const validate = (s: unknown): SortOption | null => {
-            if (typeof s !== 'object' || s === null || Array.isArray(s)) return null;
-            const result: SortOption = {};
-            for (const [key, val] of Object.entries(s as Record<string, unknown>)) {
-                if (!SORTABLE_FIELDS.has(key)) continue;
-                if (val !== 'asc' && val !== 'desc') continue;
-                result[key] = val;
-            }
-            return Object.keys(result).length > 0 ? result : null;
-        };
-        if (Array.isArray(sort)) {
-            const results = sort.map(validate).filter(Boolean) as SortOption[];
-            return results.length > 0 ? results : undefined;
-        }
-        return validate(sort) ?? undefined;
+// ============================================================================
+// Arguments
+// ============================================================================
+
+/**
+ * A path param the route has already matched. A bare `Context` cannot say which
+ * params a path declares, so the type is widened and narrowed back here.
+ */
+function param(c: Context<Env>, name: string): string {
+    return c.req.param(name) ?? '';
+}
+
+/** The `{ type, id }` every single-entry method takes. */
+function canonicalArgs(c: Context<Env>): { type: string; id: string } {
+    return { type: param(c, 'type'), id: param(c, 'id') };
+}
+
+/** `entries.query` arguments, read off the query string. */
+function listArgs(c: Context<Env>): EntryQueryParams & { type: string } {
+    const q = c.req.query();
+    const params: EntryQueryParams & { type: string } = {
+        type: param(c, 'type'),
+        full: q['full'] === 'true',
+    };
+    if (q['locale']) params.locale = q['locale'];
+    if (q['trashed'] === 'true') params.trashed = true;
+    if (q['search']) params.search = q['search'];
+    if (q['page']) params.page = Number(q['page']);
+    if (q['limit'] === 'all') params.limit = 'all';
+    else if (q['limit']) params.limit = Number(q['limit']);
+    const sort = q['sort'];
+    if (sort) params.sort = { [sort]: q['dir'] === 'asc' ? 'asc' : 'desc' };
+    // Forward versioning: a preview token bypasses the publish gate for the
+    // matched canonical (or its staged change with `staged`). Public shape only.
+    if (q['previewToken']) params.previewToken = q['previewToken'];
+    if (q['staged'] === 'true' || q['staged'] === '1') params.staged = true;
+    return params;
+}
+
+/** `entries.get` arguments, read off the query string. */
+function getArgs(c: Context<Env>): Record<string, unknown> {
+    const q = c.req.query();
+    return {
+        ...canonicalArgs(c),
+        full: q['full'] === 'true',
+        ...(q['locale'] ? { locale: q['locale'] } : {}),
+        ...(q['previewToken'] ? { previewToken: q['previewToken'] } : {}),
+        ...(q['staged'] === 'true' || q['staged'] === '1' ? { staged: true } : {}),
+    };
+}
+
+/** `entries.query` arguments, read off a JSON body. Type pinned last. */
+async function queryBodyArgs(c: Context<Env>): Promise<Record<string, unknown>> {
+    const body = await c.req.json<Record<string, unknown>>();
+    return { ...body, type: param(c, 'type'), full: body['full'] === true };
+}
+
+/** A bulk route's arguments: the wire's `ids` list is the method's `id`. */
+async function bulkArgs(c: Context<Env>): Promise<Record<string, unknown>> {
+    const body = await c.req.json<Record<string, unknown>>();
+    return { ...body, type: param(c, 'type'), id: body['ids'] };
+}
+
+/** A JSON body that need not be there — an absent one means "no options". */
+async function optionalBody(c: Context<Env>): Promise<Record<string, unknown>> {
+    return c.req.json<Record<string, unknown>>().catch(() => ({}));
+}
+
+/** The `cascadeLocales` flag, as the delete routes spell it on the query string. */
+function cascadeLocales(c: Context<Env>): boolean {
+    const value = c.req.query('cascadeLocales');
+    return value === 'true' || value === '1';
+}
+
+// ============================================================================
+// Contracts and preconditions
+// ============================================================================
+
+/** One entry type's method catalogue, built once per resolved type. */
+const CONTRACTS_BY_TYPE = new WeakMap<
+    ResolvedEntryType,
+    Record<string, EntryMethodContract>
+>();
+
+/** The method catalogue for `resolved`, addressed as `typeId`. */
+function entryContracts(
+    resolved: ResolvedEntryType,
+    typeId: string
+): Record<string, EntryMethodContract> {
+    const cached = CONTRACTS_BY_TYPE.get(resolved);
+    if (cached) return cached;
+
+    const catalogue: Record<string, EntryMethodContract> = {};
+    for (const contract of entryMethodContracts({
+        typeId,
+        titleField: resolved.titleField,
+    })) {
+        catalogue[contract.method] = contract;
+    }
+    CONTRACTS_BY_TYPE.set(resolved, catalogue);
+    return catalogue;
+}
+
+/** Resolve the catalogue for one request — the entry type is a path param. */
+function contractsForRequest(c: Context<Env>): ContractCatalogue | undefined {
+    const type = param(c, 'type');
+    const resolved = resolveEntryType(Astromech.config, type);
+    return resolved ? entryContracts(resolved, type) : undefined;
+}
+
+/**
+ * The three checks an entries route makes before its body is read: the
+ * per-(type, action) permission, the type's existence, then the capability the
+ * method's contract requires.
+ *
+ * Permission first, so an unknown type answers 403 to an under-privileged role
+ * and 404 to a privileged one — a caller cannot enumerate the entry types it
+ * has no grant for. `capability: 'unchecked'` is the one exception, named at its
+ * two call sites.
+ */
+function entryAccess(
+    capability: 'declared' | 'unchecked' = 'declared'
+): (c: Context<Env>, route: RestRoute) => Response | null {
+    return (c, route) => {
+        const method = route.id.slice(route.id.indexOf('.') + 1) as EntryMethodName;
+        return entryPrecondition(c, method, capability);
+    };
+}
+
+/** {@link entryAccess}, for the bespoke handlers that make the same checks. */
+function entryPrecondition(
+    c: Context<Env>,
+    method: EntryMethodName,
+    capability: 'declared' | 'unchecked' = 'declared'
+): Response | null {
+    const type = param(c, 'type');
+    const action = ENTRY_METHOD_ACTIONS[method];
+    if (!permissionsFor(c.var.role).allows(entryPermission(type, action))) {
+        return forbidden(c);
     }
 
-    function parseQueryParams(
-        query: Record<string, string>
-    ): Omit<EntryQueryParams, 'type'> {
-        const params: Omit<EntryQueryParams, 'type'> = {};
+    const resolved = resolveEntryType(Astromech.config, type);
+    if (!resolved) return notFound(c, `Entry type '${type}' not found`);
+    if (capability === 'unchecked') return null;
 
-        const locale = query['locale'];
-        if (locale) params.locale = locale;
-
-        if (query['trashed'] === 'true') params.trashed = true;
-
-        if (query['search']) params.search = query['search'];
-
-        const page = query['page'];
-        if (page) params.page = Number(page);
-
-        const limit = query['limit'];
-        if (limit === 'all') params.limit = 'all';
-        else if (limit) params.limit = Number(limit);
-
-        const sortField = query['sort'];
-        if (sortField) {
-            const dir = query['dir'] === 'asc' ? 'asc' : 'desc';
-            if (SORTABLE_FIELDS.has(sortField)) {
-                params.sort = { [sortField]: dir };
-            }
-        }
-
-        // Forward versioning: a preview token bypasses the publish gate for the
-        // matched canonical (or its staged change with `staged`). Public shape only.
-        const previewToken = query['previewToken'];
-        if (previewToken) params.previewToken = previewToken;
-        if (query['staged'] === 'true' || query['staged'] === '1') params.staged = true;
-
-        return params;
+    const requires = entryContracts(resolved, type)[method]?.requires;
+    if (requires !== undefined && !resolved.capabilities[requires]) {
+        return capabilityDenied(c, type, requires);
     }
+    return null;
+}
 
-    /** Parse the `full` flag from a GET query string. */
-    function parseFullFromQuery(query: Record<string, string>): boolean {
-        return query['full'] === 'true';
-    }
+/**
+ * A public `trashed` read is a caller bug — a public read never returns trashed
+ * rows — so it answers 400 rather than the catch-all 500. Every other failure is
+ * left to `onError`, which would otherwise turn a `ValidationError` into a 500.
+ */
+function publicTrashedRead(error: unknown, c: Context<Env>): Response | null {
+    return error instanceof PublicTrashedReadError ? badRequest(c, error.message) : null;
+}
 
-    /** Parse the `full` flag from a POST JSON body. */
-    function parseFullFromBody(body: Record<string, unknown>): boolean {
-        return body['full'] === true;
-    }
-
-    function cascadeLocalesFromQuery(query: Record<string, string>): boolean {
-        return query['cascadeLocales'] === 'true' || query['cascadeLocales'] === '1';
-    }
-
-    function requireEntryType(type: string) {
-        if (!lookup(type)) return null;
-        return type;
-    }
-
-    function getTypeCapabilities(type: string) {
-        return lookup(type)?.capabilities;
-    }
-
-    function getTypeTitleField(type: string): 'title' | false {
-        return lookup(type)?.titleField ?? 'title';
-    }
-
-    function capabilityDenied(
-        c: Parameters<typeof forbidden>[0],
-        type: string,
-        capability: string
-    ): Response {
-        return c.json(
-            {
-                error: {
-                    code: 'capability_not_supported',
-                    message: `Entry type "${type}" does not support capability: ${capability}`,
-                    status: 409,
-                },
+/** The 409 a method gated on a capability the entry type lacks answers with. */
+function capabilityDenied(c: Context<Env>, type: string, capability: string): Response {
+    return c.json(
+        {
+            error: {
+                code: 'capability_not_supported',
+                message: `Entry type "${type}" does not support capability: ${capability}`,
+                status: 409,
             },
-            409
-        );
+        },
+        409
+    );
+}
+
+/** The per-field capability gate shared by create, update and bulk-update. */
+function fieldCapabilitiesDenied(
+    c: Context<Env>,
+    type: string,
+    resolved: ResolvedEntryType,
+    data: { status?: unknown; publishAt?: unknown; slug?: unknown }
+): Response | null {
+    const caps = resolved.capabilities;
+    if (!caps.statuses && (data.status !== undefined || data.publishAt !== undefined)) {
+        return capabilityDenied(c, type, 'statuses');
     }
+    if (!caps.slug && data.slug !== undefined) return capabilityDenied(c, type, 'slug');
+    return null;
+}
 
-    /**
-     * Reproduce OpenAPIHono's default request-validation envelope. Body validation
-     * is per-type (titled vs titleless), so it happens in the handler rather than
-     * the route's static schema; titled types must still fail with the exact same
-     * `{ success: false, error }` 400 they did when the route schema validated them.
-     */
-    function zodValidationError(
-        c: Parameters<typeof forbidden>[0],
-        err: z.ZodError
-    ): Response {
-        return c.json({ success: false, error: err }, 400);
-    }
+// ============================================================================
+// Bespoke handlers
+// ============================================================================
 
-    /**
-     * Run a query, answering 400 for a public `trashed` read. That is a caller
-     * bug — a public read never returns trashed rows — so it does not deserve the
-     * catch-all 500. Every other failure is re-thrown so `onError` classifies it;
-     * a blanket catch here would turn a `ValidationError` back into a 500.
-     */
-    async function runQuery(
-        c: Parameters<typeof forbidden>[0],
-        params: EntryQueryParams & { type: string | readonly string[] }
-    ): Promise<Response> {
-        try {
-            return c.json(await Astromech.entries.query(params));
-        } catch (err) {
-            if (err instanceof PublicTrashedReadError) return badRequest(c, err.message);
-            throw err;
-        }
-    }
+const bulkUpdateSchema = z.object({
+    ids: z.array(z.string().min(1)).min(1),
+    data: updateEntrySchema,
+});
 
-    const bulkIdsSchema = z.object({
-        ids: z.array(z.string().min(1)).min(1),
-    });
-
-    const bulkUpdateSchema = z.object({
-        ids: z.array(z.string().min(1)).min(1),
-        data: updateEntrySchema,
-    });
-
-    const bulkScheduleSchema = z.object({
-        ids: z.array(z.string().min(1)).min(1),
-        publishAt: z.union([
-            z.date(),
-            z
-                .string()
-                .datetime({ offset: true })
-                .transform((v) => new Date(v)),
-        ]),
-    });
-
-    const bulkTrashOrDeleteSchema = z.object({
-        ids: z.array(z.string().min(1)).min(1),
-        cascadeLocales: z.boolean().optional(),
-    });
-
-    // ============================================================================
+/** The six handlers the table cannot express, each with the reason. */
+function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
+    // ========================================================================
     // POST /entries/query  (cross-type)
-    // Registered BEFORE any /:type/... route so it isn't shadowed.
-    // ============================================================================
+    // ========================================================================
 
+    // Not in the table: `type` arrives in the body and may be a list, and an
+    // absent one answers a hand-rolled `invalid_input` 400 outside ApiErrorCode.
+    // It is also the one route that resolves the type BEFORE the permission.
     router.post('/query', async (c) => {
         const permissions = permissionsFor(c.var.role);
         const body = await c.req.json<EntryQueryParams & Record<string, unknown>>();
@@ -280,173 +517,61 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
             );
         }
 
-        for (const t of types) {
-            if (!requireEntryType(t)) return notFound(c, `Entry type '${t}' not found`);
-            if (!permissions.allowsMethod(entryGate(t, 'read'))) return forbidden(c);
+        for (const type of types) {
+            if (!resolveEntryType(Astromech.config, type)) {
+                return notFound(c, `Entry type '${type}' not found`);
+            }
+            if (!permissions.allows(entryPermission(type, 'read'))) return forbidden(c);
         }
 
-        const wantsFull = parseFullFromBody(body);
-        if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL))
+        const wantsFull = body['full'] === true;
+        if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL)) {
             return forbidden(c);
+        }
 
-        const validatedSort = validateSort(body.sort);
-        const params: EntryQueryParams & { type: string | readonly string[] } = {
-            ...body,
-            type: types,
-            full: wantsFull,
-            ...(validatedSort !== undefined ? { sort: validatedSort } : {}),
-        };
-        return runQuery(c, params);
+        const sort = entrySortSchema.parse(body.sort);
+        try {
+            return c.json(
+                await Astromech.entries.query({
+                    ...body,
+                    type: types,
+                    full: wantsFull,
+                    ...(sort !== undefined ? { sort } : {}),
+                })
+            );
+        } catch (error) {
+            return publicTrashedRead(error, c) ?? raise(error);
+        }
     });
 
-    // ============================================================================
-    // GET /entries/:type
-    // ============================================================================
-
-    const listEntriesRoute = createRoute({
-        method: 'get',
-        path: '/{type}',
-        request: {
-            params: z.object({ type: z.string().openapi({ example: 'post' }) }),
-            query: z.object({
-                page: z.string().optional(),
-                limit: z.string().optional(),
-                search: z.string().optional(),
-                trashed: z.string().optional(),
-                locale: z.string().optional().openapi({ example: 'en' }),
-                sort: z.string().optional(),
-                dir: z.enum(['asc', 'desc']).optional(),
-            }),
-        },
-        responses: {
-            200: { description: 'Entry list' },
-        },
-    });
-
-    router.openapi(listEntriesRoute, async (c) => {
-        const { type } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'read'))) return forbidden(c);
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-        const query = c.req.query();
-        const wantsFull = parseFullFromQuery(query);
-        if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL))
-            return forbidden(c);
-
-        const params = {
-            ...parseQueryParams(query),
-            type: type,
-            full: wantsFull,
-        };
-        return runQuery(c, params);
-    });
-
-    // ============================================================================
-    // GET /entries/:type/:id
-    // ============================================================================
-
-    const getEntryRoute = createRoute({
-        method: 'get',
-        path: '/{type}/{id}',
-        request: {
-            params: z.object({
-                type: z.string().openapi({ example: 'post' }),
-                id: z.string().openapi({ example: 'clx1234abc' }),
-            }),
-            query: z.object({
-                locale: z.string().optional(),
-                previewToken: z.string().optional(),
-                staged: z.string().optional(),
-            }),
-        },
-        responses: {
-            200: { description: 'Entry detail' },
-            404: { description: 'Entry not found' },
-        },
-    });
-
-    router.openapi(getEntryRoute, async (c) => {
-        const { type, id } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'read'))) return forbidden(c);
-
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-        const query = c.req.query();
-        const wantsFull = parseFullFromQuery(query);
-        if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL))
-            return forbidden(c);
-
-        const qp = parseQueryParams(query);
-        const entry = await Astromech.entries.get({
-            type: type,
-            id,
-            full: wantsFull,
-            ...(qp.locale ? { locale: qp.locale } : {}),
-            ...(qp.previewToken ? { previewToken: qp.previewToken } : {}),
-            ...(qp.staged ? { staged: true } : {}),
-        });
-        if (!entry) return notFound(c, `Entry '${id}' not found`);
-        return c.json({ data: entry });
-    });
-
-    // ============================================================================
+    // ========================================================================
     // POST /entries/:type
-    // ============================================================================
+    // ========================================================================
 
-    // The route body is validated per entry type in the handler (titled vs
-    // titleless). The OpenAPI registration advertises the titled schema (the
-    // documented default); the handler runs the type-specific schema and emits the
-    // same `{ success: false, error }` envelope OpenAPIHono's validator would, so
-    // titled types behave byte-for-byte as before while titleless types are admitted.
-    const createEntryRoute = createRoute({
-        method: 'post',
-        path: '/{type}',
-        request: {
-            params: z.object({ type: z.string().openapi({ example: 'post' }) }),
-            body: {
-                content: {
-                    'application/json': { schema: createEntrySchemaFor(false) },
-                },
-                required: true,
-            },
-        },
-        responses: {
-            201: { description: 'Entry created' },
-            422: { description: 'Validation error' },
-        },
-    });
-
-    router.openapi(createEntryRoute, async (c) => {
+    // Not in the table: a per-FIELD capability 409 — `status`/`publishAt` need
+    // `statuses` and `slug` needs `slug`, which no contract states.
+    router.post('/:type', async (c) => {
         const { type } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'create'))) return forbidden(c);
+        const denied = entryPrecondition(c, 'create');
+        if (denied) return denied;
 
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
+        const resolved = resolveEntryType(Astromech.config, type) as ResolvedEntryType;
+        const raw = await c.req.json().catch(() => undefined);
+        if (raw === undefined) return badRequest(c, 'Invalid JSON body');
 
-        const raw = await c.req.json();
-        const parsed = createEntrySchemaFor(getTypeTitleField(type)).safeParse(raw);
-        if (!parsed.success) return zodValidationError(c, parsed.error);
+        const parsed = createEntrySchemaFor(resolved.titleField).safeParse(raw);
+        // The per-type body schema answers the same envelope OpenAPIHono's
+        // request validator did, so a titled type behaves as it always has.
+        if (!parsed.success) return requestSchemaError(c, parsed.error);
 
-        const caps = getTypeCapabilities(type);
-
-        if (
-            !caps?.statuses &&
-            (parsed.data.status !== undefined || parsed.data.publishAt !== undefined)
-        ) {
-            return capabilityDenied(c, type, 'statuses');
-        }
-
-        if (!caps?.slug && parsed.data.slug !== undefined) {
-            return capabilityDenied(c, type, 'slug');
-        }
+        const refused = fieldCapabilitiesDenied(c, type, resolved, parsed.data);
+        if (refused) return refused;
 
         const { title, slug, fields, status, publishAt, locale, localeGroup } =
             parsed.data;
 
         const entry = await Astromech.entries.create({
-            type: type,
+            type,
             ...(title !== undefined && { title }),
             ...(slug !== undefined && { slug }),
             ...(locale !== undefined && { locale }),
@@ -459,326 +584,70 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         return c.json({ data: entry }, 201);
     });
 
-    // ============================================================================
-    // POST /entries/:type/query  (single-type)
-    // ============================================================================
-
-    router.post('/:type/query', async (c) => {
-        const { type } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'read'))) return forbidden(c);
-
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-        const body = await c.req.json<
-            Omit<EntryQueryParams, 'type'> & Record<string, unknown>
-        >();
-        const wantsFull = parseFullFromBody(body);
-        if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL))
-            return forbidden(c);
-
-        const validatedSort = validateSort(body.sort);
-        const params: EntryQueryParams & { type: string } = {
-            ...body,
-            type: type,
-            full: wantsFull,
-            ...(validatedSort !== undefined ? { sort: validatedSort } : {}),
-        };
-        return runQuery(c, params);
-    });
-
-    // ============================================================================
+    // ========================================================================
     // POST /entries/:type/bulk-update
-    // ============================================================================
+    // ========================================================================
 
+    // Not in the table: the per-field capability 409, plus `status: 'published'`
+    // demanding the publish permission on an update method.
     router.post('/:type/bulk-update', async (c) => {
         const { type } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'update'))) return forbidden(c);
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
+        const denied = entryPrecondition(c, 'update');
+        if (denied) return denied;
 
-        const raw = await c.req.json();
+        const resolved = resolveEntryType(Astromech.config, type) as ResolvedEntryType;
+        const raw = await c.req.json().catch(() => undefined);
+        if (raw === undefined) return badRequest(c, 'Invalid JSON body');
+
         const parsed = bulkUpdateSchema.safeParse(raw);
         if (!parsed.success) return fromZodError(c, parsed.error);
 
         const { ids, data } = parsed.data;
-        const caps = getTypeCapabilities(type);
+        const refused = fieldCapabilitiesDenied(c, type, resolved, data);
+        if (refused) return refused;
 
-        if (
-            !caps?.statuses &&
-            (data.status !== undefined || data.publishAt !== undefined)
-        ) {
-            return capabilityDenied(c, type, 'statuses');
-        }
-
-        if (!caps?.slug && data.slug !== undefined) {
-            return capabilityDenied(c, type, 'slug');
-        }
-
-        if (data.status === 'published') {
-            if (!permissions.allowsMethod(entryGate(type, 'publish')))
-                return forbidden(c);
-        }
+        const escalated = publishEscalation(c, type, data.status);
+        if (escalated) return escalated;
 
         const entries = await Astromech.entries.update({
-            type: type,
+            type,
             id: ids,
             data: data as EntryUpdateData,
         });
         return c.json({ data: entries });
     });
 
-    // ============================================================================
-    // POST /entries/:type/bulk-trash
-    // ============================================================================
-
-    router.post('/:type/bulk-trash', async (c) => {
-        const { type } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'delete'))) return forbidden(c);
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-        const caps = getTypeCapabilities(type);
-        if (!caps?.trash) return capabilityDenied(c, type, 'trash');
-
-        const raw = await c.req.json();
-        const parsed = bulkTrashOrDeleteSchema.safeParse(raw);
-        if (!parsed.success) return fromZodError(c, parsed.error);
-
-        await Astromech.entries.trash({
-            type: type,
-            id: parsed.data.ids,
-            ...(parsed.data.cascadeLocales ? { cascadeLocales: true } : {}),
-        });
-        return c.json({ success: true });
-    });
-
-    // ============================================================================
-    // POST /entries/:type/bulk-delete
-    // ============================================================================
-
-    router.post('/:type/bulk-delete', async (c) => {
-        const { type } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'delete'))) return forbidden(c);
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-        const raw = await c.req.json();
-        const parsed = bulkTrashOrDeleteSchema.safeParse(raw);
-        if (!parsed.success) return fromZodError(c, parsed.error);
-
-        await Astromech.entries.delete({
-            type: type,
-            id: parsed.data.ids,
-            ...(parsed.data.cascadeLocales ? { cascadeLocales: true } : {}),
-        });
-        return c.json({ success: true });
-    });
-
-    // ============================================================================
-    // POST /entries/:type/bulk-restore
-    // ============================================================================
-
-    router.post('/:type/bulk-restore', async (c) => {
-        const { type } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'update'))) return forbidden(c);
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-        const caps = getTypeCapabilities(type);
-        if (!caps?.trash) return capabilityDenied(c, type, 'trash');
-
-        const raw = await c.req.json();
-        const parsed = bulkIdsSchema.safeParse(raw);
-        if (!parsed.success) return fromZodError(c, parsed.error);
-
-        const entries = await Astromech.entries.restore({
-            type: type,
-            id: parsed.data.ids,
-        });
-        return c.json({ data: entries });
-    });
-
-    // ============================================================================
-    // POST /entries/:type/bulk-publish
-    // ============================================================================
-
-    router.post('/:type/bulk-publish', async (c) => {
-        const { type } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'publish'))) return forbidden(c);
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-        const caps = getTypeCapabilities(type);
-        if (!caps?.statuses) return capabilityDenied(c, type, 'statuses');
-
-        const raw = await c.req.json();
-        const parsed = bulkIdsSchema.safeParse(raw);
-        if (!parsed.success) return fromZodError(c, parsed.error);
-
-        const entries = await Astromech.entries.publish({
-            type: type,
-            id: parsed.data.ids,
-        });
-        return c.json({ data: entries });
-    });
-
-    // ============================================================================
-    // POST /entries/:type/bulk-unpublish
-    // ============================================================================
-
-    router.post('/:type/bulk-unpublish', async (c) => {
-        const { type } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'publish'))) return forbidden(c);
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-        const caps = getTypeCapabilities(type);
-        if (!caps?.statuses) return capabilityDenied(c, type, 'statuses');
-
-        const raw = await c.req.json();
-        const parsed = bulkIdsSchema.safeParse(raw);
-        if (!parsed.success) return fromZodError(c, parsed.error);
-
-        const entries = await Astromech.entries.unpublish({
-            type: type,
-            id: parsed.data.ids,
-        });
-        return c.json({ data: entries });
-    });
-
-    // ============================================================================
-    // POST /entries/:type/bulk-schedule
-    // ============================================================================
-
-    router.post('/:type/bulk-schedule', async (c) => {
-        const { type } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'publish'))) return forbidden(c);
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-        const caps = getTypeCapabilities(type);
-        if (!caps?.statuses) return capabilityDenied(c, type, 'statuses');
-
-        const raw = await c.req.json();
-        const parsed = bulkScheduleSchema.safeParse(raw);
-        if (!parsed.success) return fromZodError(c, parsed.error);
-
-        const entries = await Astromech.entries.schedule({
-            type: type,
-            id: parsed.data.ids,
-            publishAt: parsed.data.publishAt,
-        });
-        return c.json({ data: entries });
-    });
-
-    // ============================================================================
-    // POST /entries/:type/:id/restore
-    // ============================================================================
-
-    router.post('/:type/:id/restore', async (c) => {
-        const { type, id } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'update'))) return forbidden(c);
-
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-        const caps = getTypeCapabilities(type);
-        if (!caps?.trash) return capabilityDenied(c, type, 'trash');
-
-        const entry = await Astromech.entries.restore({
-            type: type,
-            id,
-        });
-        return c.json({ data: entry });
-    });
-
-    // ============================================================================
-    // POST /entries/:type/:id/duplicate
-    // ============================================================================
-
-    router.post('/:type/:id/duplicate', async (c) => {
-        const { type, id } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'create'))) return forbidden(c);
-
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-        let overrides: Record<string, unknown> = {};
-        try {
-            const raw = await c.req.json();
-            const parsed = duplicateOverridesSchema.safeParse(raw);
-            if (!parsed.success) return fromZodError(c, parsed.error);
-            overrides = parsed.data as Record<string, unknown>;
-        } catch {
-            // No body / empty body — proceed with no overrides.
-        }
-        const entry = await Astromech.entries.duplicate({
-            type: type,
-            id,
-            overrides: overrides as EntryDuplicateOverrides,
-        });
-        return c.json({ data: entry }, 201);
-    });
-
-    // ============================================================================
+    // ========================================================================
     // PUT /entries/:type/:id
-    // ============================================================================
+    // ========================================================================
 
-    const updateEntryRoute = createRoute({
-        method: 'put',
-        path: '/{type}/{id}',
-        request: {
-            params: z.object({
-                type: z.string().openapi({ example: 'post' }),
-                id: z.string().openapi({ example: 'clx1234abc' }),
-            }),
-            body: {
-                content: {
-                    'application/json': { schema: updateEntrySchemaFor(false) },
-                },
-                required: true,
-            },
-        },
-        responses: {
-            200: { description: 'Entry updated' },
-            422: { description: 'Validation error' },
-        },
-    });
-
-    router.openapi(updateEntryRoute, async (c) => {
+    // Not in the table: the same per-field capability 409 and publish escalation.
+    router.put('/:type/:id', async (c) => {
         const { type, id } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'update'))) return forbidden(c);
+        const denied = entryPrecondition(c, 'update');
+        if (denied) return denied;
 
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
+        const resolved = resolveEntryType(Astromech.config, type) as ResolvedEntryType;
+        const raw = await c.req.json().catch(() => undefined);
+        if (raw === undefined) return badRequest(c, 'Invalid JSON body');
 
-        const raw = await c.req.json();
-        const parsed = updateEntrySchemaFor(getTypeTitleField(type)).safeParse(raw);
+        // Two stages, as this route has always had: the request schema the
+        // document declares answers 400, and the per-type schema answers 422.
+        const envelope = updateEntrySchemaFor(false).safeParse(raw);
+        if (!envelope.success) return requestSchemaError(c, envelope.error);
+
+        const parsed = updateEntrySchemaFor(resolved.titleField).safeParse(raw);
         if (!parsed.success) return fromZodError(c, parsed.error);
 
-        const caps = getTypeCapabilities(type);
+        const refused = fieldCapabilitiesDenied(c, type, resolved, parsed.data);
+        if (refused) return refused;
 
-        if (
-            !caps?.statuses &&
-            (parsed.data.status !== undefined || parsed.data.publishAt !== undefined)
-        ) {
-            return capabilityDenied(c, type, 'statuses');
-        }
-
-        if (!caps?.slug && parsed.data.slug !== undefined) {
-            return capabilityDenied(c, type, 'slug');
-        }
+        const escalated = publishEscalation(c, type, parsed.data.status);
+        if (escalated) return escalated;
 
         const { title, slug, fields, status, publishAt } = parsed.data;
-
-        if (parsed.data.status === 'published') {
-            if (!permissions.allowsMethod(entryGate(type, 'publish')))
-                return forbidden(c);
-        }
-
         const entry = await Astromech.entries.update({
-            type: type,
+            type,
             id,
             data: {
                 ...(title !== undefined && { title }),
@@ -792,345 +661,79 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         return c.json({ data: entry });
     });
 
-    // ============================================================================
-    // DELETE /entries/:type/trash  (empty trash)
-    // ============================================================================
-
-    router.delete('/:type/trash', async (c) => {
-        const { type } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'delete'))) return forbidden(c);
-
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-        const caps = getTypeCapabilities(type);
-        if (!caps?.trash) return capabilityDenied(c, type, 'trash');
-
-        await Astromech.entries.emptyTrash({ type: type });
-        return c.json({ success: true });
-    });
-
-    // ============================================================================
-    // DELETE /entries/:type/:id/force  (force delete)
-    // ============================================================================
-
-    router.delete('/:type/:id/force', async (c) => {
-        const { type, id } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'delete'))) return forbidden(c);
-
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-        await Astromech.entries.delete({
-            type: type,
-            id,
-            cascadeLocales: cascadeLocalesFromQuery(c.req.query()),
-        });
-        return c.json({ success: true });
-    });
-
-    // ============================================================================
+    // ========================================================================
     // DELETE /entries/:type/:id  (soft delete)
-    // ============================================================================
+    // ========================================================================
 
-    const trashEntryRoute = createRoute({
-        method: 'delete',
-        path: '/{type}/{id}',
-        request: {
-            params: z.object({
-                type: z.string().openapi({ example: 'post' }),
-                id: z.string().openapi({ example: 'clx1234abc' }),
-            }),
-        },
-        responses: {
-            200: { description: 'Entry trashed' },
-            404: { description: 'Entry not found' },
-        },
-    });
-
-    router.openapi(trashEntryRoute, async (c) => {
+    // Not in the table: the method id is chosen at request time from the type's
+    // `trash` capability — trash it if the type keeps a bin, delete it if not.
+    router.delete('/:type/:id', async (c) => {
         const { type, id } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'delete'))) return forbidden(c);
+        const denied = entryPrecondition(c, 'delete');
+        if (denied) return denied;
 
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-        const cascade = cascadeLocalesFromQuery(c.req.query());
-        const caps = getTypeCapabilities(type);
-
-        if (!caps?.trash) {
-            // trash is off → hard delete
-            await Astromech.entries.delete({
-                type: type,
-                id,
-                cascadeLocales: cascade,
-            });
-        } else {
-            await Astromech.entries.trash({
-                type: type,
-                id,
-                cascadeLocales: cascade,
-            });
-        }
+        const resolved = resolveEntryType(Astromech.config, type) as ResolvedEntryType;
+        const call = resolved.capabilities.trash
+            ? Astromech.entries.trash
+            : Astromech.entries.delete;
+        await call({ type, id, cascadeLocales: cascadeLocales(c) });
         return c.json({ success: true });
     });
 
-    // ============================================================================
-    // POST /entries/:type/:id/publish
-    // ============================================================================
-
-    router.post('/:type/:id/publish', async (c) => {
-        const { type, id } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'publish'))) return forbidden(c);
-
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-        const caps = getTypeCapabilities(type);
-        if (!caps?.statuses) return capabilityDenied(c, type, 'statuses');
-
-        const entry = await Astromech.entries.publish({
-            type: type,
-            id,
-        });
-        return c.json({ data: entry });
-    });
-
-    // ============================================================================
-    // POST /entries/:type/:id/unpublish
-    // ============================================================================
-
-    router.post('/:type/:id/unpublish', async (c) => {
-        const { type, id } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'publish'))) return forbidden(c);
-
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-        const caps = getTypeCapabilities(type);
-        if (!caps?.statuses) return capabilityDenied(c, type, 'statuses');
-
-        const entry = await Astromech.entries.unpublish({
-            type: type,
-            id,
-        });
-        return c.json({ data: entry });
-    });
-
-    // ============================================================================
-    // POST /entries/:type/:id/schedule
-    // ============================================================================
-
-    router.post('/:type/:id/schedule', async (c) => {
-        const { type, id } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'publish'))) return forbidden(c);
-
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-        const caps = getTypeCapabilities(type);
-        if (!caps?.statuses) return capabilityDenied(c, type, 'statuses');
-
-        const raw = await c.req.json();
-        const parsed = scheduleEntrySchema.safeParse(raw);
-        if (!parsed.success) return fromZodError(c, parsed.error);
-        const entry = await Astromech.entries.schedule({
-            type: type,
-            id,
-            publishAt: parsed.data.publishAt,
-        });
-        return c.json({ data: entry });
-    });
-
-    // ============================================================================
-    // GET /entries/:type/:id/versions
-    // ============================================================================
-
-    router.get('/:type/:id/versions', async (c) => {
-        const { type, id } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'read'))) return forbidden(c);
-
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-        const versions = await Astromech.entries.versions({
-            type: type,
-            id,
-        });
-        return c.json({ data: versions });
-    });
-
-    // ============================================================================
-    // POST /entries/:type/:id/versions/:versionId/restore
-    // ============================================================================
-
-    router.post('/:type/:id/versions/:versionId/restore', async (c) => {
-        const { type, id, versionId } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'update'))) return forbidden(c);
-
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-        const entry = await Astromech.entries.restoreVersion({
-            type: type,
-            id,
-            versionId,
-        });
-        return c.json({ data: entry });
-    });
-
-    // ============================================================================
-    // GET /entries/:type/:id/incoming-relationships
-    // ============================================================================
-
-    router.get('/:type/:id/incoming-relationships', async (c) => {
-        const { type, id } = c.req.param();
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, 'read'))) return forbidden(c);
-
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-
-        const relations = await Astromech.entries.incomingRelationships({
-            type: type,
-            id,
-        });
-        return c.json({ data: relations });
-    });
-
     // ========================================================================
-    // Forward versioning (staged entries)
-    //
-    // Permissions: createStaged / deleteStaged / token issue+revoke = `update`;
-    // getStaged = `read`; mergeStaged = `publish`. All require the `staging`
-    // capability (built-in storage); the route checks it up-front so a misconfig
-    // returns 409 rather than the service's 500.
+    // POST /entries/:type/:id/staged
     // ========================================================================
 
-    const previewTokenSchema = z.object({
-        expiresAt: z.union([z.string().datetime({ offset: true }), z.null()]).optional(),
-    });
-
-    /** Guard a staging route: type exists + permission + `staging` capability. */
-    function requireStaging(
-        c: Parameters<typeof forbidden>[0],
-        type: string,
-        action: EntryAction
-    ): Response | null {
-        const permissions = permissionsFor(c.var.role);
-        if (!permissions.allowsMethod(entryGate(type, action))) return forbidden(c);
-        if (!requireEntryType(type)) return notFound(c, `Entry type '${type}' not found`);
-        const caps = getTypeCapabilities(type);
-        if (!caps?.staging) return capabilityDenied(c, type, 'staging');
-        return null;
-    }
-
-    // ── POST /:type/:id/staged  (create) ────────────────────────────────────
+    // Not in the table: `StagedEntryExistsError` answers a 409 carrying
+    // `details.stagedId`, and a catch-all turns every other throw into a 500
+    // instead of letting `onError` classify it.
     router.post('/:type/:id/staged', async (c) => {
         const { type, id } = c.req.param();
-        const denied = requireStaging(c, type, 'update');
+        const denied = entryPrecondition(c, 'createStaged');
         if (denied) return denied;
 
         try {
-            const entry = await Astromech.entries.createStaged({
-                type: type,
-                id,
-            });
+            const entry = await Astromech.entries.createStaged({ type, id });
             return c.json({ data: entry }, 201);
-        } catch (err) {
-            if (err instanceof StagedEntryExistsError) {
-                // 409 carries the existing staged id so the admin can redirect.
+        } catch (error) {
+            if (error instanceof StagedEntryExistsError) {
+                // The 409 carries the existing staged id so the admin can redirect.
                 return c.json(
                     {
                         error: {
                             code: 'staged_entry_exists',
-                            message: err.message,
+                            message: error.message,
                             status: 409,
-                            details: { stagedId: err.stagedId },
+                            details: { stagedId: error.stagedId },
                         },
                     },
                     409
                 );
             }
-            return internalError(c, err instanceof Error ? err.message : undefined);
+            return internalError(c, error instanceof Error ? error.message : undefined);
         }
     });
+}
 
-    // ── GET /:type/:id/staged  (read) ───────────────────────────────────────
-    router.get('/:type/:id/staged', async (c) => {
-        const { type, id } = c.req.param();
-        const denied = requireStaging(c, type, 'read');
-        if (denied) return denied;
+/**
+ * Publishing through an update. `scopedServices` derives `entry:<type>:update`
+ * from the method, and cannot see that this particular payload makes the entry
+ * live — so the publish grant is demanded here.
+ */
+function publishEscalation(
+    c: Context<Env>,
+    type: string,
+    status: string | undefined
+): Response | null {
+    if (status !== 'published') return null;
+    return permissionsFor(c.var.role).allows(entryPermission(type, 'publish'))
+        ? null
+        : forbidden(c);
+}
 
-        const entry = await Astromech.entries.getStaged({
-            type: type,
-            id,
-        });
-        return c.json({ data: entry });
-    });
-
-    // ── POST /:type/:id/staged/merge  (publish) ─────────────────────────────
-    router.post('/:type/:id/staged/merge', async (c) => {
-        const { type, id } = c.req.param();
-        const denied = requireStaging(c, type, 'publish');
-        if (denied) return denied;
-
-        const entry = await Astromech.entries.mergeStaged({
-            type: type,
-            id,
-        });
-        return c.json({ data: entry });
-    });
-
-    // ── DELETE /:type/:id/staged  (discard) ─────────────────────────────────
-    router.delete('/:type/:id/staged', async (c) => {
-        const { type, id } = c.req.param();
-        const denied = requireStaging(c, type, 'update');
-        if (denied) return denied;
-
-        await Astromech.entries.deleteStaged({
-            type: type,
-            id,
-        });
-        return c.json({ success: true });
-    });
-
-    // ── POST /:type/:id/preview-token  (issue) ──────────────────────────────
-    router.post('/:type/:id/preview-token', async (c) => {
-        const { type, id } = c.req.param();
-        const denied = requireStaging(c, type, 'update');
-        if (denied) return denied;
-
-        let expiresAt: Date | null = null;
-        try {
-            const raw = await c.req.json();
-            const parsed = previewTokenSchema.safeParse(raw);
-            if (!parsed.success) return fromZodError(c, parsed.error);
-            if (parsed.data.expiresAt) expiresAt = new Date(parsed.data.expiresAt);
-        } catch {
-            // No body / empty body — no TTL.
-        }
-        const result = await Astromech.entries.issuePreviewToken({
-            type: type,
-            id,
-            expiresAt,
-        });
-        return c.json({ data: result }, 201);
-    });
-
-    // ── DELETE /:type/:id/preview-token  (revoke) ───────────────────────────
-    router.delete('/:type/:id/preview-token', async (c) => {
-        const { type, id } = c.req.param();
-        const denied = requireStaging(c, type, 'update');
-        if (denied) return denied;
-
-        await Astromech.entries.revokePreviewToken({
-            type: type,
-            id,
-        });
-        return c.json({ success: true });
-    });
-
-    return router;
+/** Re-throw, as an expression, so a declined error map reads as one line. */
+function raise(error: unknown): never {
+    throw error;
 }
 
 /** The entries router, mounted at `/entries`. Serves every entry type. */

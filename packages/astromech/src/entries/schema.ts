@@ -174,6 +174,23 @@ export const createEntrySchema = createEntrySchemaFor('title');
 /** Titled-type update schema. Kept for OpenAPI registration and bulk paths. */
 export const updateEntrySchema = updateEntrySchemaFor('title');
 
+const sortDirection = z.enum(['asc', 'desc']);
+
+const sortObject = z.record(z.string(), sortDirection);
+
+/**
+ * A query's `sort` — one field→direction map, or a list of them.
+ *
+ * A value that does not parse is DROPPED rather than rejected: asking to order
+ * by something the store cannot order by answers the default order, not a 422.
+ * `entries/storage/built-in.ts` holds the allowlist that decides which fields
+ * survive, and normalises the direction.
+ */
+export const entrySortSchema = z
+    .union([sortObject, z.array(sortObject)])
+    .optional()
+    .catch(undefined);
+
 export const scheduleEntrySchema = z.object({
     publishAt: z.union([
         z.date(),

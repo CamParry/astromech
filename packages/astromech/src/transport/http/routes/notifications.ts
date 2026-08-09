@@ -23,7 +23,7 @@ type Env = { Variables: AuthVariables };
 
 const router = new OpenAPIHono<Env>();
 
-const NOTIFICATIONS_ROUTES: RestRoute[] = [
+export const NOTIFICATIONS_ROUTES: RestRoute[] = [
     { verb: 'get', path: '/', id: 'notifications.list', args: () => ({}) },
     {
         verb: 'delete',

@@ -21,7 +21,7 @@ type Env = { Variables: AuthVariables };
 
 const router = new OpenAPIHono<Env>();
 
-const SETTINGS_ROUTES: RestRoute[] = [
+export const SETTINGS_ROUTES: RestRoute[] = [
     // `full: true`: an authenticated admin endpoint guarded by settings:read
     // returns the whole set, not just the public keys.
     { verb: 'get', path: '/', id: 'settings.all', args: () => ({ full: true }) },

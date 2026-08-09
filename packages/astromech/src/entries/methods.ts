@@ -20,6 +20,8 @@ import type { Capability } from './storage/capabilities';
 import {
     createEntrySchemaFor,
     duplicateOverridesSchema,
+    entrySortSchema,
+    previewTokenSchema,
     scheduleEntrySchema,
     updateEntrySchemaFor,
 } from './schema';
@@ -134,13 +136,6 @@ export const ENTRY_METHOD_ACTIONS = {
 /** A key on `EntriesService` whose permission action is known. */
 export type EntryMethodName = keyof typeof ENTRY_METHOD_ACTIONS;
 
-const sortDirection = z.enum(['asc', 'desc']);
-
-const sortParam = z.union([
-    z.record(z.string(), sortDirection),
-    z.array(z.record(z.string(), sortDirection)),
-]);
-
 const limitParam = z.union([z.number(), z.literal('all')]);
 
 /**
@@ -164,8 +159,8 @@ export function entryMethodContracts(params: {
 
     const type = z.literal(typeId);
     const id = z.string();
-    /** Bulk-capable methods take one id or an array of them. */
-    const ids = z.union([z.string(), z.array(z.string())]);
+    /** Bulk-capable methods take one id or a non-empty list of them. */
+    const ids = z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]);
     const canonical = z.object({ type, id });
 
     /**
@@ -194,7 +189,7 @@ export function entryMethodContracts(params: {
                 trashed: z.boolean().optional(),
                 page: z.number().optional(),
                 limit: limitParam.optional(),
-                sort: sortParam.optional(),
+                sort: entrySortSchema,
                 locale: z.string().optional(),
                 full: z.boolean().optional(),
                 previewToken: z.string().optional(),
@@ -305,7 +300,9 @@ export function entryMethodContracts(params: {
         {
             ...base('issuePreviewToken'),
             requires: 'staging',
-            input: z.object({ type, id, expiresAt: z.date().nullable().optional() }),
+            // `previewTokenSchema` coerces an ISO string, which is what a JSON
+            // caller sends and what the REST route has always accepted.
+            input: z.object({ type, id }).extend(previewTokenSchema.shape),
         },
         {
             ...base('revokePreviewToken'),
