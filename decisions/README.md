@@ -73,3 +73,4 @@ Distinct from the neighbouring directories:
 - [0038](0038-a-route-declares-itself.md) — a route declares itself, and one table is read by the handler, the document and the client
 - [0039](0039-a-contract-lives-with-the-layer-that-implements-it.md) — a contract lives with the layer that implements it, and the plugin context is why the domain contracts cannot follow
 - [0040](0040-policies-and-manifest-registry-keep-their-directories.md) — `policies/` over `guards/`, and `manifest-registry.ts` stays in `codegen/`
+- [0041](0041-the-admin-split-is-blocked-and-ui-is-browser-only.md) — the admin package split waits on two prerequisites, and `astromech/ui` does not load under Node
