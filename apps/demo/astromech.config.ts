@@ -123,7 +123,7 @@ export default defineConfig({
     storage: filesystem({ dir: './public/uploads', urlPrefix: '/uploads' }),
     // The demo sends nothing real — the console driver prints each message so
     // form notifications (and anything else that emails) are visible in the dev
-    // server output. Without an `email` block at all, `ctx.sendEmail` throws and
+    // server output. With no `email` driver at all, `ctx.email.send` throws and
     // plugins can only log the failure.
     email: consoleEmail({ from: 'demo@astromech.dev' }),
     // `anthropic()` reads ANTHROPIC_API_KEY from the environment. The model

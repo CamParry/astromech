@@ -57,6 +57,15 @@ export type PluginStorage = {
     delete(key: string): Promise<void>;
 };
 
+/**
+ * Email scoped to a plugin — the element is rendered to html and text here, and
+ * a missing email driver throws rather than sending nothing. The envelope sender
+ * comes from the configured driver, never from the caller.
+ */
+export type PluginEmail = {
+    send(to: string, subject: string, element: ReactElement): Promise<void>;
+};
+
 /** Database maintenance capabilities, feature-detected per driver. Distinct from `db` (the query instance). */
 export type PluginDatabase = {
     dialect: string;
@@ -149,7 +158,8 @@ export type PluginContext = {
     notifications: NotificationsService;
     /** Other plugins' service methods — `ctx.plugins.<serviceKey>.<method>(input)`. */
     plugins?: PluginServiceNamespace | undefined;
-    sendEmail: (to: string, subject: string, element: ReactElement) => Promise<void>;
+    /** Email port — the element is rendered here, and an unconfigured driver throws. */
+    email: PluginEmail;
     notify: (input: NotifyInput) => Promise<void>;
     logger: PluginLogger;
     /** Env vars (resolved via import.meta.env in Vite/Astro SSR). Never the browser. */

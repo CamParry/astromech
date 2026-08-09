@@ -50,7 +50,7 @@ export const emailNotification: NotificationProvider = {
 
         for (const to of resolveRecipients(config['to'], tags)) {
             try {
-                await ctx.sendEmail(
+                await ctx.email.send(
                     to,
                     subject,
                     SubmissionEmail({

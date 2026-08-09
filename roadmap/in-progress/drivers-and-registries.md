@@ -196,12 +196,15 @@ dribbling out.
       `interval()`, `webhook()` and `cloudflareCron()`, named for the triggering
       mechanism rather than the host. All of them need published subpaths: the
       scheduler drivers have none today, so a site cannot select one at all.
-- [ ] **WS5 — Plugins receive ports, never drivers.** `ctx.sendEmail` becomes
+- [x] **WS5 — Plugins receive ports, never drivers.** `ctx.sendEmail` becomes
       `ctx.email.send(to, subject, element)`, matching `ctx.storage.put(…)`. It
-      stays a port rather than the raw driver because it renders the React
-      element to html and text, applies any registered override component from
-      `packages/astromech/src/email/email-overrides.ts`, and supplies `from`.
-      Small blast radius: one real call site in
+      stays a port rather than the raw driver for two reasons: it renders the
+      React element to html and text, and it throws a named error when the site
+      configures no email driver. That keeps a plugin off `EmailMessage` and off
+      the render step, and gives email the same shape as `ctx.storage`. It does
+      not apply a template override, and cannot: `registerEmailOverride` keys
+      overrides by name and a plugin hands the port a bare `ReactElement` with no
+      name attached. Small blast radius: one real call site in
       `packages/plugins/forms/src/notifications/providers/email.ts`, one test
       fixture, the demo config comment, and
       `apps/docs/plugins/authoring.md`.

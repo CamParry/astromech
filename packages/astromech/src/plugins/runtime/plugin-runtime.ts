@@ -379,7 +379,8 @@ function makeConfigView(
     };
 }
 
-async function sendEmail(
+/** Backs `ctx.email.send`: render the element, then hand it to the configured driver. */
+async function sendPluginEmail(
     to: string,
     subject: string,
     element: ReactElement
@@ -448,7 +449,7 @@ export function createPluginContext(
         get plugins(): PluginServiceNamespace | undefined {
             return requireClient().plugins;
         },
-        sendEmail,
+        email: { send: sendPluginEmail },
         notify: (input: NotifyInput) =>
             notify({ ...input, type: `plugin:${identity.namespace}.${input.type}` }),
         logger: makeLogger(identity.namespace),

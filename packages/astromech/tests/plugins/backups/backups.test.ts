@@ -105,7 +105,7 @@ function makeCtx(
         settings: null as unknown as PluginContext['settings'],
         users: null as unknown as PluginContext['users'],
         notifications: null as unknown as PluginContext['notifications'],
-        sendEmail: async () => undefined,
+        email: { send: async () => undefined },
         logger: {
             info: () => undefined,
             warn: () => undefined,
