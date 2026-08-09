@@ -145,7 +145,7 @@ packages/
 │   │   ├── transport/      # astromech-client.shared (the AstromechClient contract both transports implement) · local/ (astromech/local) · http/ (Hono routes+middleware, plus client/ — the fetch Client, astromech/fetch) · cli/ · mcp/ · tools/ (tool dispatch + scoped tool surface, shared by MCP and the AI tool-loop)
 │   │   │
 │   │   │   ── policies ───────────────────────────────────────────────────
-│   │   ├── policies/       # permission/confirmation wrappers over the manifest — no domain logic here
+│   │   ├── policies/       # authorization policies over the manifest — what an actor may do, not a per-request guard — enforcement (scoped-services), method filtering, manifest annotation and confirmation; no domain logic here
 │   │   │
 │   │   │   ── plugin runtime (capability) ──────────────────────────────────
 │   │   ├── plugins/        # plugins/runtime (hook engine) only — first-party plugins live in packages/plugins/; entry-access · notify-access · client-access are its ports onto the layers above

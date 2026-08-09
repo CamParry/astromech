@@ -302,3 +302,11 @@ An **approval** is a stored decision. `@astromech/assistant` declares every muta
 A **confirmation** is a stateless brake at dispatch level — `evaluateConfirmation` in `packages/astromech/src/policies/confirmation.ts`. A mutating call arriving without an answer is turned back with `input_required` and the question to ask; the caller re-issues the call carrying `_confirm: { action }`. It buys one turn between an agent deciding to do something and it happening, which is enough to break a runaway loop, and it is explicitly not a security boundary: the caller supplies the answer, so a caller that wants to proceed can write one itself.
 
 The types stay apart for the same reason: `ConfirmRequest` carries the arguments a caller may re-post, `ApprovalRequest` names a row the arguments are read back from.
+
+---
+
+## Policy
+
+A **policy** is code that answers what an actor may do, not how a request reaches it — the sense Laravel Policies, Pundit and IAM policies all share. `packages/astromech/src/policies/` holds four: `scoped-services.ts` (`scopedServices(role)`) is the one that enforces, handing out service handles a caller cannot exceed; `method-filter.ts` is structural filtering of what a transport exposes; `annotate-manifest.ts` is advisory only, by its own header; and `confirmation.ts` is the stateless brake described above. None of the four is a per-request interceptor, which is what "guard" names in NestJS, Angular and Vue Router (`canActivate`, a boolean per route) — a different shape from what any of these four return.
+
+`permissions/` is the sibling directory: it holds the permission vocabulary a policy applies — `Permission`, `Role`, `permissionsFor` — the Gate half of Laravel's Gate/Policy split. `decisions/0040-policies-and-manifest-registry-keep-their-directories.md` records why "guard" lost.

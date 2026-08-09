@@ -1,8 +1,13 @@
 /**
  * Runtime slot for the generated method manifest.
  *
- * `generateMethodManifest` needs the RAW plugin definitions, whose Zod schemas
- * cannot survive JSON, so the manifest is generated once at boot and read here.
+ * Lives in `codegen/` because `codegen/` owns the method manifest as a concept,
+ * not because this file generates anything: `method-manifest.ts` generates it,
+ * this is the runtime slot holding the generated result, and the two belong
+ * beside each other rather than split across `codegen/` and a `boot/` that would
+ * hold nothing but this. `generateMethodManifest` needs the RAW plugin
+ * definitions, whose Zod schemas cannot survive JSON, so the manifest is
+ * generated once at boot and read here rather than written to disk.
  */
 
 import { createRegistry } from '@/utilities/registry';
