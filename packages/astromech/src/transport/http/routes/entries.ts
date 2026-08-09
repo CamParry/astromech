@@ -8,7 +8,7 @@
  * id's own shape — the single source that keeps plugin entries out of the
  * `entry:*` wildcard.
  *
- * The 30 routes are declared in `types/http-routes.shared.ts`; 24 of them get
+ * The 30 routes are declared in `http-routes.shared.ts`; 24 of them get
  * their server handler from the map below. The six that cannot follow it, each
  * carrying the reason — they are still declared, still documented, and still
  * reachable by the fetch client.
@@ -48,7 +48,7 @@ import {
 } from '@/entries/schema';
 import { PublicTrashedReadError, StagedEntryExistsError } from '@/entries/errors';
 import { resolveEntryType } from '@/entries/type-ids.shared';
-import { ENTRIES_ROUTE_SPECS } from '@/types/http-routes.shared';
+import { ENTRIES_ROUTE_SPECS } from './http-routes.shared';
 import {
     attachHandlers,
     documentBespokeRoutes,

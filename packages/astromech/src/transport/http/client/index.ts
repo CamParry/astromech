@@ -4,7 +4,7 @@
  * `astromech/fetch`.
  *
  * It holds no URLs of its own. Every method resolves its route from
- * `types/http-routes.shared.ts`, the same rows the server mounts and documents:
+ * `routes/http-routes.shared.ts`, the same rows the server mounts and documents:
  * fill the path params from the arguments, send what is left as a query string
  * or a JSON body, and unwrap the row's envelope. A method reachable through two
  * routes (one id or a list of them) picks between them on the shape of the
@@ -22,7 +22,7 @@ import {
     HTTP_ROUTES,
     type MountedRoute,
     type ResponseEnvelope,
-} from '@/types/http-routes.shared';
+} from '@/transport/http/routes/http-routes.shared';
 import type {
     AstromechClient,
     EntriesService,

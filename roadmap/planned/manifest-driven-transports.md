@@ -341,10 +341,10 @@ worth naming and rejecting explicitly: it adds a generated artifact to review
 and a build ordering constraint, and buys nothing a proxy over shared data does
 not already give.
 
-The table is `packages/astromech/src/types/http-routes.shared.ts`. It sits under
-`types/` rather than beside the routes because `client-is-over-the-wire` lets the
-fetch client reach the pure leaves and nothing else — the marker is what holds it
-browser-safe, and no exemption was added to make the import legal.
+The table is `packages/astromech/src/transport/http/routes/http-routes.shared.ts`,
+beside the routes it describes. `client-is-over-the-wire` reads the `*.shared.ts`
+marker, the same allowance the admin has, rather than carrying a path exemption
+for the table.
 
 `client/index.ts` went from 862 lines to 511. Of the 40 methods on
 `AstromechClient`, 31 are the bare proxy and 7 more resolve their route from the

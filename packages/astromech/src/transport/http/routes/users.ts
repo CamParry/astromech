@@ -25,7 +25,7 @@ import { permissionsFor } from '@/permissions/permissions-for';
 import { updateUserSchema, usersContract } from '@/users/index';
 import { createUserStorage } from '@/users/storage';
 import type { JsonObject, UserQueryParams } from '@/types/index';
-import { USERS_ROUTE_SPECS } from '@/types/http-routes.shared';
+import { USERS_ROUTE_SPECS } from './http-routes.shared';
 import {
     attachHandlers,
     documentBespokeRoutes,

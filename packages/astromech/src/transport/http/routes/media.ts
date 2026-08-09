@@ -21,7 +21,7 @@ import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { mediaContract } from '@/media/methods';
 import type { MediaQueryParams } from '@/types/index';
-import { MEDIA_ROUTE_SPECS } from '@/types/http-routes.shared';
+import { MEDIA_ROUTE_SPECS } from './http-routes.shared';
 import {
     attachHandlers,
     documentBespokeRoutes,

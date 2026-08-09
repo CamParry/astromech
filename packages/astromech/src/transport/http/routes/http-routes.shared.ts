@@ -9,10 +9,10 @@
  * every row in `/openapi.json`, and `transport/http/client/` builds its URL,
  * body and unwrapping from the same rows. Neither restates the other's facts.
  *
- * It is a `*.shared.ts` file because the fetch client runs in a browser, and it
- * lives under `types/` because that is the only leaf the client may import — the
- * `client-is-over-the-wire` rule stops it reaching into `transport/`, marker or
- * not. It names no service, imports nothing, and holds no config.
+ * It is a `*.shared.ts` file because the fetch client runs in a browser and
+ * imports it: the marker is what lets it cross that boundary, and
+ * `shared-files-stay-browser-safe` holds it to what the admin bundle may hold.
+ * It names no service, imports nothing, and holds no config.
  *
  * A row marked `handler: 'bespoke'` has no generic server handler: the route is
  * written out by hand in its domain file, for the reason recorded there. It is

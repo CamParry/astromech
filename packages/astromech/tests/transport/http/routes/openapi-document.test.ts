@@ -23,7 +23,10 @@ import {
 import { settingsRouter, SETTINGS_ROUTES } from '@/transport/http/routes/settings';
 import { usersRouter, USERS_ROUTES } from '@/transport/http/routes/users';
 import type { RestRoute } from '@/transport/http/routes/rest-route';
-import { HTTP_ROUTES, type MountedRoute } from '@/types/http-routes.shared';
+import {
+    HTTP_ROUTES,
+    type MountedRoute,
+} from '@/transport/http/routes/http-routes.shared';
 
 type Operation = {
     summary?: string;

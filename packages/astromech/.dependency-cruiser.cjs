@@ -100,9 +100,10 @@ const NO_UPWARD_EXEMPT = '^src/transport/(cli|tools|mcp)/';
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * A file the admin SPA may hold that does not live in a browser-safe directory.
- * The marker is the filename so the constraint is legible at review time without
- * running this scan; `shared-files-stay-browser-safe` keeps it honest.
+ * A file a browser bundle may hold — the admin SPA and the fetch Client alike —
+ * that does not live in a browser-safe directory. The marker is the filename so
+ * the constraint is legible at review time without running this scan;
+ * `shared-files-stay-browser-safe` keeps it honest.
  */
 const SHARED_MARKER = '\\.shared\\.(ts|tsx)$';
 
@@ -232,12 +233,12 @@ module.exports = {
         {
             name: 'client-is-over-the-wire',
             comment:
-                'The fetch Client (astromech/fetch) lives at transport/http/client/ but talks to the HTTP API over the wire — it is the client *half* of the http transport, not part of the server. It must not reach into domains, capabilities, policies, the rest of transport (the server), boot, or admin — only shared pure leaves (types/utilities/errors). Its own subtree is exempt so it may have internal imports.',
+                'The fetch Client (astromech/fetch) lives at transport/http/client/ but talks to the HTTP API over the wire — it is the client *half* of the http transport, not part of the server. It must not reach into domains, capabilities, policies, the rest of transport (the server), boot, or admin — only the pure leaves and any *.shared.ts file, which is the same allowance the admin has and is held browser-safe by shared-files-stay-browser-safe. Its own subtree is exempt so it may have internal imports.',
             severity: 'error',
             from: { path: '^src/transport/http/client/' },
             to: {
                 path: `${under([...SERVER_ONLY, 'admin'])}|^src/fields/`,
-                pathNot: '^src/transport/http/client/',
+                pathNot: `${SHARED_MARKER}|^src/transport/http/client/`,
             },
         },
     ],

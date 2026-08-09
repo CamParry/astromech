@@ -15,7 +15,7 @@ import { forbidden, notFound } from '@/transport/http/middleware/errors';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { settingsContract } from '@/settings/index';
-import { SETTINGS_ROUTE_SPECS } from '@/types/http-routes.shared';
+import { SETTINGS_ROUTE_SPECS } from './http-routes.shared';
 import {
     attachHandlers,
     documentBespokeRoutes,

@@ -1,8 +1,8 @@
 /**
  * The server half of the REST route table.
  *
- * The rows are data, in `types/http-routes.shared.ts`, which the fetch client
- * reads too. This file attaches the one genuinely per-route piece of server code
+ * The rows are data, in `http-routes.shared.ts`, which the fetch client reads
+ * too. This file attaches the one genuinely per-route piece of server code
  * — `args`, how path params, query string and body become the method's argument
  * object — and `mountRestRoutes` does the rest: read the contract's permission,
  * build the argument object, validate it against the method's own contract
@@ -38,7 +38,7 @@ import {
     notFound,
     requestSchemaError,
 } from '@/transport/http/middleware/errors';
-import type { HttpRouteSpec } from '@/types/http-routes.shared';
+import type { HttpRouteSpec } from './http-routes.shared';
 import type { ServiceMethodContract } from '@/types/index';
 
 type Env = { Variables: AuthVariables };

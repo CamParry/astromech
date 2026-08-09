@@ -16,7 +16,7 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { notificationsService } from '@/notifications/index';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import { NOTIFICATIONS_ROUTE_SPECS } from '@/types/http-routes.shared';
+import { NOTIFICATIONS_ROUTE_SPECS } from './http-routes.shared';
 import {
     attachHandlers,
     documentBespokeRoutes,
