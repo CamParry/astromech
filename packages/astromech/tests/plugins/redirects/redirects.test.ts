@@ -28,8 +28,8 @@ import { entriesService as localEntries } from '@/entries/service';
 import { redirects } from '@astromech/redirects';
 import type { RedirectMatch } from '@astromech/redirects';
 import type { DB } from '@/database/types';
+import type { AstromechClient } from '@/transport/astromech-client.shared';
 import type {
-    AstromechClient,
     AstromechConfig,
     EntriesService,
     PluginDefinition,

@@ -88,6 +88,14 @@ Key invariants:
   `no-restricted-syntax` in `eslint.config.js`; a new global goes in the namespace.
 - **Leaves are pure.** `types/`, `utilities/`, and `errors/` import only other
   leaves or third-party packages.
+- **A contract lives with the layer that implements it.** `AstromechClient`
+  (`transport/astromech-client.shared.ts`) composes the five domain services and
+  has exactly two implementations, `transport/local/` and
+  `transport/http/client/`, so it sits beside them rather than in `types/`. It
+  carries the `*.shared.ts` marker because the fetch client holds it. What stays
+  in `types/` is the vocabulary every layer shares: the data model, the config
+  and plugin authoring contracts, fields, hooks, the service contracts and the
+  query primitives.
 - **Permission enforcement is a property of the handle, not of the transport.**
   `scopedServices(role)` (`policies/scoped-services.ts`) refuses a method the
   role may not call, and every untrusted path composes it: the HTTP REST routes
@@ -134,13 +142,13 @@ packages/
 │   │   ├── codegen/        # type generator + plugin-client manifest + method manifest (.astro/astromech.methods.json, plus manifest-registry.ts — the boot-generated copy)
 │   │   │
 │   │   │   ── delivery ────────────────────────────────────────────────────
-│   │   ├── transport/      # local/ (astromech/local) · http/ (Hono routes+middleware, plus client/ — the fetch Client, astromech/fetch) · cli/ · mcp/ · tools/ (tool dispatch + scoped tool surface, shared by MCP and the AI tool-loop)
+│   │   ├── transport/      # astromech-client.shared (the AstromechClient contract both transports implement) · local/ (astromech/local) · http/ (Hono routes+middleware, plus client/ — the fetch Client, astromech/fetch) · cli/ · mcp/ · tools/ (tool dispatch + scoped tool surface, shared by MCP and the AI tool-loop)
 │   │   │
 │   │   │   ── policies ───────────────────────────────────────────────────
 │   │   ├── policies/       # permission/confirmation wrappers over the manifest — no domain logic here
 │   │   │
 │   │   │   ── plugin runtime (capability) ──────────────────────────────────
-│   │   ├── plugins/        # plugins/runtime (hook engine) only — first-party plugins live in packages/plugins/
+│   │   ├── plugins/        # plugins/runtime (hook engine) only — first-party plugins live in packages/plugins/; entry-access · notify-access · client-access are its ports onto the layers above
 │   │   │
 │   │   │   ── domains ────────────────────────────────────────────────────
 │   │   ├── entries/        # entries domain: service (assembler) · operations/ · internal/ · schema · methods · visibility · url.shared · type-ids.shared
@@ -161,7 +169,7 @@ packages/
 │   │   ├── cron/           # scheduled-job infrastructure
 │   │   │
 │   │   │   ── pure leaves ────────────────────────────────────────────────
-│   │   ├── types/          # shared TS types — data model, config shape, field/hook contracts
+│   │   ├── types/          # shared TS types — data model, config shape, field/hook contracts, the five domain service contracts, the typed-entry surface
 │   │   ├── utilities/      # pure helpers (strings, dates, entry-fields, rich-text, …)
 │   │   ├── errors/         # base error classes
 │   │   │

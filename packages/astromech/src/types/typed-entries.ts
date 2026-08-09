@@ -1,5 +1,6 @@
 /**
- * Client types — AstromechClient and the typed-entry narrowing surface.
+ * The typed-entry narrowing surface — the generated entry-type map and the
+ * literal-type overloads layered over it.
  *
  * Runtime is `EntriesService` (services.ts). This file layers literal-type
  * overloads on top so that callers passing string-literal types get a narrowed
@@ -12,14 +13,8 @@ import type {
     EntryDuplicateOverrides,
     EntryQueryParams,
     EntryUpdateData,
-    MediaService,
-    NotificationsService,
     QueryResult,
-    SettingsService,
-    UsersService,
 } from './services';
-import type { ResolvedConfig } from './config';
-import type { ServiceMethod } from './plugins';
 
 // ============================================================================
 // Typed Entry
@@ -274,54 +269,3 @@ export type TypedEntriesServiceFor<EntryMap> = {
 
 /** `TypedEntriesService` — alias of `TypedEntriesServiceFor` bound to the global map. */
 export type TypedEntriesService = TypedEntriesServiceFor<AstromechEntryTypes>;
-
-// ============================================================================
-// AstromechClient
-// ============================================================================
-
-/**
- * Map a plugin's service object type to its caller-facing callable signatures.
- * A method declared with an `undefined` input takes no argument, so its
- * parameter is optional and `.method()` is a legal bare call.
- */
-export type ServiceInterface<T> = {
-    [K in keyof T]: T[K] extends ServiceMethod<infer I, infer O>
-        ? undefined extends I
-            ? (input?: I) => Promise<O>
-            : (input: I) => Promise<O>
-        : (input?: unknown) => Promise<unknown>;
-};
-
-/**
- * Augmented by plugins' own `.d.ts` via `declare module 'astromech'`: each
- * installed plugin's access key maps to its service method signatures. Empty
- * by default; plugins self-augment using `ServiceInterface<typeof service>`.
- */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
-export interface AstromechPluginServices {}
-
-/**
- * Plugin service methods only. A plugin's ENTRY types are NOT reachable here —
- * they live on the one entries service, addressed by their qualified id
- * (`Astromech.entries.query({ type: 'redirects/redirect' })`). Two entry points
- * to the same content was the problem, not a feature.
- */
-export type PluginServiceNamespace = AstromechPluginServices &
-    Record<string, Record<string, (input?: unknown) => Promise<unknown>>>;
-
-export type AstromechClient = {
-    entries: TypedEntriesService;
-    media: MediaService;
-    settings: SettingsService;
-    users: UsersService;
-    notifications: NotificationsService;
-    config: ResolvedConfig;
-    /**
-     * Plugin RPC methods — `Astromech.plugins.<name>.<method>(input)`.
-     * Always present: both transports assemble a namespace whose lookups are
-     * lazy, so an uninstalled plugin resolves to `undefined` a level down rather
-     * than leaving the namespace itself absent.
-     */
-    plugins: PluginServiceNamespace;
-    configure(options: { baseUrl: string }): void;
-};

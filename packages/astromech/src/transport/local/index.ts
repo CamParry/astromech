@@ -10,7 +10,8 @@
  */
 
 import config from 'virtual:astromech/config';
-import type { AstromechClient, TypedEntriesService } from '@/types/index';
+import type { TypedEntriesService } from '@/types/index';
+import type { AstromechClient } from '@/transport/astromech-client.shared';
 import { usersService } from '@/users/index';
 import { entriesService } from '@/entries/index';
 import { mediaService } from '@/media/index';

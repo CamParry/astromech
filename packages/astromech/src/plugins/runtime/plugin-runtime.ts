@@ -17,7 +17,6 @@ import type { DB } from '@/database/types';
 import type { ReactElement } from 'react';
 import type {
     AnyServiceMethod,
-    AstromechClient,
     EntriesService,
     MediaService,
     NotificationsService,
@@ -54,6 +53,7 @@ import {
     pluginEntryTypes,
     resolvePluginIdentity,
 } from '@/plugins/runtime/plugin-identity';
+import type { ClientAccess } from '@/plugins/runtime/client-access';
 import { entryAccess } from '@/plugins/runtime/entry-access';
 import { notifyAccess } from '@/plugins/runtime/notify-access';
 import { isTable } from '@/plugins/runtime/plugin-tables';
@@ -86,7 +86,7 @@ type PluginRuntimeState = {
     hooks: Map<string, RegisteredHook[]>;
     service: Map<string, Record<string, AnyServiceMethod>>;
     rawRoutes: RegisteredRawRoute[];
-    client: AstromechClient | null;
+    client: ClientAccess | null;
     methods: PluginMethodsAccess | null;
 };
 
@@ -297,12 +297,12 @@ export function getPluginRawRoutes(): RegisteredRawRoute[] {
 }
 
 /** Set by the Local API at module load to break the import cycle. */
-export function setPluginClient(client: AstromechClient): void {
+export function setPluginClient(client: ClientAccess): void {
     state().client = client;
 }
 
 /** The registered client, or crash-loud if a context reaches for it too early. */
-function requireClient(): AstromechClient {
+function requireClient(): ClientAccess {
     const client = state().client;
     if (!client) {
         throw new Error('[Astromech] Plugin client is not available in this context.');

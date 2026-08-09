@@ -23,8 +23,8 @@ import {
     type MountedRoute,
     type ResponseEnvelope,
 } from '@/transport/http/routes/http-routes.shared';
+import type { AstromechClient } from '@/transport/astromech-client.shared';
 import type {
-    AstromechClient,
     EntriesService,
     Media,
     MediaQueryParams,

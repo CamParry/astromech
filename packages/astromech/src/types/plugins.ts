@@ -22,7 +22,7 @@ import type {
 import type { Field, FieldValidator } from './fields';
 import type { Role, User, NotifyInput, Permission } from './domain';
 import type { PluginHooks } from './hooks';
-import type { PluginServiceNamespace, TypedEntriesService } from './client';
+import type { TypedEntriesService } from './typed-entries';
 import type {
     MediaService,
     NotificationsService,
@@ -220,6 +220,36 @@ export type ServiceMethod<Input = unknown, Output = unknown> = {
 export type AnyServiceMethod = Omit<ServiceMethod<never, unknown>, 'input'> & {
     input?: z.ZodType;
 };
+
+/**
+ * Map a plugin's service object type to its caller-facing callable signatures.
+ * A method declared with an `undefined` input takes no argument, so its
+ * parameter is optional and `.method()` is a legal bare call.
+ */
+export type ServiceInterface<T> = {
+    [K in keyof T]: T[K] extends ServiceMethod<infer I, infer O>
+        ? undefined extends I
+            ? (input?: I) => Promise<O>
+            : (input: I) => Promise<O>
+        : (input?: unknown) => Promise<unknown>;
+};
+
+/**
+ * Augmented by plugins' own `.d.ts` via `declare module 'astromech'`: each
+ * installed plugin's access key maps to its service method signatures. Empty
+ * by default; plugins self-augment using `ServiceInterface<typeof service>`.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
+export interface AstromechPluginServices {}
+
+/**
+ * Plugin service methods only. A plugin's ENTRY types are NOT reachable here —
+ * they live on the one entries service, addressed by their qualified id
+ * (`Astromech.entries.query({ type: 'redirects/redirect' })`). Two entry points
+ * to the same content was the problem, not a feature.
+ */
+export type PluginServiceNamespace = AstromechPluginServices &
+    Record<string, Record<string, (input?: unknown) => Promise<unknown>>>;
 
 /**
  * Raw request handler for payloads RPC-JSON can't carry (binary / multipart /

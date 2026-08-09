@@ -9,7 +9,7 @@ export * from './hooks';
 export * from './plugins';
 export * from './methods';
 export * from './services';
-export * from './client';
+export * from './typed-entries';
 export * from './resolved';
 export * from './ai-context';
 export * from './ai';
