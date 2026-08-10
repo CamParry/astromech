@@ -8,6 +8,7 @@ export * from './config';
 export * from './hooks';
 export * from './plugins';
 export * from './methods';
+export * from './query';
 export * from './services';
 export * from './typed-entries';
 export * from './resolved';

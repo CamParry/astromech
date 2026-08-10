@@ -11,10 +11,9 @@ import type { Entry, EntryStatus, EntryVersion, JsonObject } from './domain';
 import type {
     EntriesService,
     EntryDuplicateOverrides,
-    EntryQueryParams,
     EntryUpdateData,
-    QueryResult,
 } from './services';
+import type { EntryQueryParams, QueryResult } from './query';
 
 // ============================================================================
 // Typed Entry
