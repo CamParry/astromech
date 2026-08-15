@@ -78,3 +78,4 @@ Distinct from the neighbouring directories:
 - [0043](0043-field-queries-ride-declared-expression-indexes.md) — field-value queries ride declared expression indexes, not columns and not a lookup table
 - [0044](0044-search-is-a-derived-fts5-index.md) — search is a derived FTS5 external-content index, not a column on `entries`
 - [0045](0045-the-asset-root-stays-declared.md) — the asset root stays declared, not inferred
+- [0046](0046-worktrees-live-outside-the-checkout.md) — worktrees live outside the checkout, so they can verify their own work

@@ -56,7 +56,15 @@ Every document answers one question and has one home. A fact lives in exactly on
 
 Create the worktree by hand from a verified base, and run a non-isolated agent scoped to that path. The Agent tool's `isolation: worktree` forks from an unpredictable base and has landed work on the wrong one.
 
-**A worktree can't verify its own work.** Worktrees under `.claude/worktrees/*` resolve `node_modules` and `dist` to the main checkout, so a build there passes without deps and `apps/demo` runs main's code rather than the branch's. Expect breakage in a worktree build, flag it rather than chasing it, and verify by merging to main and testing there.
+**Worktrees live outside the checkout**, at `../Astromech-worktrees/<branch>`. A worktree nested inside the repo inherits the main checkout's `node_modules` and `dist` through Node's parent-directory resolution, so its build passes with no deps installed and `apps/demo` serves main's code rather than the branch's. From a sibling path the same import fails with `MODULE_NOT_FOUND`, which is the point — the failure is loud instead of silent.
+
+**A new worktree needs three things before it can verify itself**, because a checkout carries only tracked files:
+
+- `npm install` — nothing resolves without it.
+- **A copy of `apps/demo/.env`.** It is gitignored, so it does not travel, and without it the demo boot and the assistant fail in ways that don't name the cause.
+- `npm run build` — its own `dist`, not main's.
+
+`npm run check:boot` needs nothing further: it makes a scratch database under `tmpdir` and takes a free port from the OS, so worktrees can run it concurrently. Only `npm run dev` collides — `apps/demo/astro.config.mjs` pins port 4323, so pass `-- --port <n>` when a second worktree wants a dev server.
 
 Nothing in this project is live yet — it's in active development. Optimise for a small, current, honest set of branches, not for isolating half-built work.
 
