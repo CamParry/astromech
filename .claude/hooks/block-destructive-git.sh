@@ -13,7 +13,7 @@ cmd="$(jq -r '.tool_input.command // ""' 2>/dev/null)"
 
 if printf '%s' "$cmd" | grep -Eq 'git[[:space:]]+([a-zA-Z-]+[[:space:]]+)*(reset[[:space:]]+(--hard|--merge|--keep)|clean[[:space:]]+-[A-Za-z]*[fF]|checkout[[:space:]]+(\.|--([[:space:]]|$)|-f|[^[:space:]]+[[:space:]]+--([[:space:]]|$))|restore([[:space:]]|$)|stash[[:space:]]+(drop|clear)|branch[[:space:]]+-D|push[[:space:]].*(--force|--force-with-lease|[[:space:]]-f([[:space:]]|$)))'; then
   cat <<'JSON'
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"ask","permissionDecisionReason":"Destructive git command (reset --hard, clean -f, checkout -- <path>, restore, stash drop/clear, branch -D, or force-push). These can permanently destroy uncommitted work on a shared tree — approve only if you intend it. Consider snapshotting first (auto-stash / safety branch). See memory: destructive-git-guard."}}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"ask","permissionDecisionReason":"Destructive git command (reset --hard, clean -f, checkout -- <path>, restore, stash drop/clear, branch -D, or force-push). These can permanently destroy uncommitted work on a shared tree — approve only if you intend it. Consider snapshotting first (auto-stash / safety branch)."}}
 JSON
   exit 0
 fi
