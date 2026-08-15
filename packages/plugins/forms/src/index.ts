@@ -51,7 +51,6 @@ export const forms = definePlugin((options?: FormsOptions) => {
         version: '0.1.0',
         label: 'Forms',
         icon: 'ClipboardList',
-        root: import.meta.url,
         tables: [submissionsTable],
         migrations: migrationProvider,
         entries: [formEntryType, submissionEntryType],
