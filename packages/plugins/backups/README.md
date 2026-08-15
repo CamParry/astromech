@@ -26,6 +26,7 @@ backups/
   src/routes/backups.ts         download + restore (raw routes — they stream)
   src/permissions/backups.ts    definePermissions — the grantable permission keys
   src/pages/backups.ts          defineAdminPage — the run history page
+  src/pages/settings.ts         defineAdminPage — the retention settings form
   src/admin/pages/backups-page.tsx  the page renderer (browser asset)
   src/locales/en.json           i18n bundle
 ```
@@ -47,9 +48,13 @@ export default defineConfig({
 });
 ```
 
-Both options are optional. `keep` is a _fallback_ — if the site has set a
-retention value in settings (`plugin:backups:retention`), that wins, so an
-admin can change retention without a redeploy.
+Both options are optional. `keep` is a _fallback_ — the **Backups → Settings**
+admin page holds a `retention` value, and that wins when set, so an admin can
+change retention without a redeploy. Like every settings page it stores one blob
+under its own key: `plugin:backups:/settings` → `{ "retention": 7 }`.
+
+`schedule` has no settings equivalent — cron jobs are registered at boot, so
+changing the schedule needs a redeploy.
 
 The plugin owns a table, so run the migration step for it the same way as any
 other table-bearing plugin (`astromech plugin:generate` at authoring time; the
@@ -137,3 +142,14 @@ record of itself.
 - **Backups** — `/admin/plugin/backups` (requires `plugin:backups:read`). Run
   history with status, trigger, size and per-row download / restore / delete.
   Restore and delete both go through a confirmation dialog.
+- **Settings** — `/admin/plugin/backups/settings` (requires `settings:read`, and
+  `settings:update` to save). The retention count.
+
+## Rotation
+
+After every successful run, artifacts beyond the newest `keep` are deleted from
+storage; the run row stays, marked `artifactDeletedAt`, so the history is intact.
+
+`pre-restore` snapshots are exempt: they are the undo for a restore, so they
+neither count against `keep` nor get rotated away. Delete one by hand from the
+run history when it is no longer wanted.

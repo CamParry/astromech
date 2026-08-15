@@ -88,8 +88,11 @@ function PluginPage(): React.ReactElement {
             t,
             'translation'
         );
-        // Compose plugin label + page label (e.g. "SEO Settings")
-        const composedLabel = `${pluginLabel} ${pageLabel}`;
+        // Compose plugin label + page label (e.g. "SEO Settings"). A page whose
+        // label already matches its plugin's stands alone — a single-page
+        // plugin must not render "Backups Backups".
+        const composedLabel =
+            pluginLabel === pageLabel ? pageLabel : `${pluginLabel} ${pageLabel}`;
 
         return (
             <PluginUiProvider

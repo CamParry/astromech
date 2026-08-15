@@ -76,11 +76,26 @@ export function createBackupRunsStorage(db: PluginContext['db']) {
      * to rotation, which keeps the head of this list and drops the tail. The
      * table is the source of truth, so an already-rotated row is excluded here
      * rather than re-deleted.
+     *
+     * `pre-restore` snapshots are excluded: they are the undo for a restore, so
+     * they must neither be rotated away nor count against keep-N and push a
+     * scheduled backup out of the window.
+     *
+     * `startedAt` is ISO-8601 TEXT with millisecond precision, but two runs can
+     * still share a millisecond, so `id` breaks the tie — a ULID leads with its
+     * timestamp, so id-desc agrees with startedAt-desc.
      */
     async function rotationCandidates(): Promise<BackupRunRow[]> {
         return storage.findMany({
-            where: { status: 'success', artifactDeletedAt: null },
-            orderBy: [['startedAt', 'desc']],
+            where: {
+                status: 'success',
+                artifactDeletedAt: null,
+                trigger: { ne: 'pre-restore' },
+            },
+            orderBy: [
+                ['startedAt', 'desc'],
+                ['id', 'desc'],
+            ],
         });
     }
 

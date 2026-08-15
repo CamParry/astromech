@@ -15,6 +15,7 @@ import { performBackup, resolveKeep } from './backup';
 import { buildBackupsService } from './service/backups';
 import { buildBackupRoutes } from './routes/backups';
 import { backupsPage } from './pages/backups';
+import { settingsPage } from './pages/settings';
 
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
@@ -49,7 +50,7 @@ export const backups = definePlugin((options?: BackupsOptions) => {
         permissions: backupsPermissions,
         i18n: ['en'],
         admin: {
-            pages: [backupsPage],
+            pages: [backupsPage, settingsPage],
         },
         service: buildBackupsService(keep),
         // Streaming only — the JSON endpoints live on the service above.

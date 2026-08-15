@@ -13,6 +13,7 @@
  *  4. performBackup failure — no dump capability → failed run row
  *  5. rotate keep-N — oldest artifacts deleted, rows marked artifactDeletedAt
  *  6. in-process guard — isBackupRunning reflects an in-flight performBackup
+ *  7. resolveKeep — the retention settings blob overrides the configured keep
  */
 
 import { mkdir, rm } from 'node:fs/promises';
@@ -28,8 +29,21 @@ import { listAll } from '@/storage/prefix';
 import { decodeWith } from '@/database/codec';
 import { backupRunsTable } from '@astromech/backups/tables';
 import type { DB } from '@/database/types';
-import { performBackup, rotate, isBackupRunning } from '@astromech/backups/internals';
-import type { PluginContext, PluginDatabase, PluginStorage } from '@/types/index';
+import {
+    performBackup,
+    resolveKeep,
+    rotate,
+    isBackupRunning,
+} from '@astromech/backups/internals';
+import { backups } from '@astromech/backups';
+import { derivePluginPages } from '@/plugins/runtime/plugin-admin';
+import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
+import type {
+    JsonValue,
+    PluginContext,
+    PluginDatabase,
+    PluginStorage,
+} from '@/types/index';
 
 declare global {
     var __astromechBackupRunning: boolean | undefined;
@@ -406,6 +420,120 @@ describe('rotate', () => {
     });
 });
 
+describe('rotate — pre-restore snapshots', () => {
+    /** Insert a success row with an explicit trigger, id and ISO startedAt. */
+    async function seedRun(
+        db: Kysely<DB>,
+        storage: PluginStorage,
+        run: { id: string; trigger: string; startedAt: string }
+    ): Promise<void> {
+        const key = `${run.id}.sqlite.gz`;
+        await storage.put(key, new Uint8Array([0, 1, 2]));
+        await sql
+            .raw(
+                `INSERT INTO plugin_backups_runs (id, key, status, trigger, started_at)
+                 VALUES ('${run.id}', '${key}', 'success', '${run.trigger}', '${run.startedAt}')`
+            )
+            .execute(db);
+    }
+
+    async function liveKeys(db: Kysely<DB>): Promise<string[]> {
+        const { rows } = await sql
+            .raw(
+                `SELECT id FROM plugin_backups_runs WHERE artifact_deleted_at IS NULL ORDER BY id`
+            )
+            .execute(db);
+        return (rows as Record<string, unknown>[]).map((r) => r['id'] as string);
+    }
+
+    it('should neither rotate a pre-restore snapshot nor count it against keep', async () => {
+        const { db, driver } = await makeFileDb(dbPath);
+        const storage = makeStorage(storageDir);
+        const ctx = makeCtx(db, storage, {
+            dialect: 'libsql',
+            dump: () => driver.dump(),
+        });
+
+        // Two pre-restore snapshots interleaved with three scheduled runs. With
+        // pre-restore counted, keep=3 would delete two scheduled backups.
+        await seedRun(db, storage, {
+            id: 'a-scheduled-1',
+            trigger: 'scheduled',
+            startedAt: '2026-01-01T03:00:00.000Z',
+        });
+        await seedRun(db, storage, {
+            id: 'b-pre-restore-1',
+            trigger: 'pre-restore',
+            startedAt: '2026-01-02T09:00:00.000Z',
+        });
+        await seedRun(db, storage, {
+            id: 'c-scheduled-2',
+            trigger: 'scheduled',
+            startedAt: '2026-01-03T03:00:00.000Z',
+        });
+        await seedRun(db, storage, {
+            id: 'd-pre-restore-2',
+            trigger: 'pre-restore',
+            startedAt: '2026-01-04T09:00:00.000Z',
+        });
+        await seedRun(db, storage, {
+            id: 'e-scheduled-3',
+            trigger: 'scheduled',
+            startedAt: '2026-01-05T03:00:00.000Z',
+        });
+
+        await rotate(ctx, 3);
+
+        expect(await liveKeys(db)).toEqual([
+            'a-scheduled-1',
+            'b-pre-restore-1',
+            'c-scheduled-2',
+            'd-pre-restore-2',
+            'e-scheduled-3',
+        ]);
+        expect(await storage.list('')).toHaveLength(5);
+
+        // Tightening to keep=2 drops the oldest scheduled run only.
+        await rotate(ctx, 2);
+
+        expect(await liveKeys(db)).toEqual([
+            'b-pre-restore-1',
+            'c-scheduled-2',
+            'd-pre-restore-2',
+            'e-scheduled-3',
+        ]);
+        expect(await storage.list('')).toHaveLength(4);
+    });
+
+    it('should break a startedAt tie on id, so ordering is total', async () => {
+        const { db, driver } = await makeFileDb(dbPath);
+        const storage = makeStorage(storageDir);
+        const ctx = makeCtx(db, storage, {
+            dialect: 'libsql',
+            dump: () => driver.dump(),
+        });
+
+        // Same millisecond for all three — only the (ULID) id can order them.
+        const sameInstant = '2026-01-01T03:00:00.000Z';
+        for (const id of ['01JC000000000000000000000A', '01JC000000000000000000000B']) {
+            await seedRun(db, storage, {
+                id,
+                trigger: 'scheduled',
+                startedAt: sameInstant,
+            });
+        }
+        await seedRun(db, storage, {
+            id: '01JC000000000000000000000C',
+            trigger: 'scheduled',
+            startedAt: sameInstant,
+        });
+
+        await rotate(ctx, 1);
+
+        expect(await liveKeys(db)).toEqual(['01JC000000000000000000000C']);
+    });
+});
+
 // ============================================================================
 // 6. in-process guard
 // ============================================================================
@@ -459,5 +587,80 @@ describe('isBackupRunning / in-process guard', () => {
         await performBackup(ctx, 'manual', { keep: 10 });
 
         expect(isBackupRunning()).toBe(false);
+    });
+});
+
+// ============================================================================
+// 7. resolveKeep — the retention setting
+// ============================================================================
+
+describe('resolveKeep', () => {
+    /**
+     * A ctx whose settings service answers one key with one blob, and records
+     * the key it was asked for.
+     */
+    async function ctxWithSettings(
+        blob: JsonValue | null
+    ): Promise<{ ctx: PluginContext; keys: string[] }> {
+        const { db } = await makeFileDb(dbPath);
+        const storage = makeStorage(storageDir);
+        const ctx = makeCtx(db, storage, { dialect: 'test-no-dump' });
+        const keys: string[] = [];
+        ctx.settings = {
+            get: async (params: { key: string }) => {
+                keys.push(params.key);
+                return blob;
+            },
+        } as unknown as PluginContext['settings'];
+        return { ctx, keys };
+    }
+
+    it('should read retention out of the settings page blob', async () => {
+        const { ctx, keys } = await ctxWithSettings({ retention: 3 });
+        expect(await resolveKeep(ctx, 7)).toBe(3);
+        expect(keys).toEqual(['plugin:backups:/settings']);
+    });
+
+    it('should read the key the plugin’s settings page actually writes', async () => {
+        const definition = backups();
+        const pages = derivePluginPages(resolvePluginIdentity(definition), definition);
+        const settingsPage = pages.find((page) => page.fields !== null);
+
+        // The retention field is reachable, and its blob lands on the key
+        // resolveKeep asks for (asserted in the test above).
+        expect(settingsPage?.baseKey).toBe('plugin:backups:/settings');
+        expect(settingsPage?.fields?.main.map((field) => field.name)).toEqual([
+            'retention',
+        ]);
+    });
+
+    it('should fall back when the setting is absent, empty or not positive', async () => {
+        const blobs: (JsonValue | null)[] = [
+            null,
+            {},
+            { retention: null },
+            { retention: 0 },
+            { retention: -1 },
+            { retention: 'lots' },
+        ];
+        for (const blob of blobs) {
+            const { ctx } = await ctxWithSettings(blob);
+            expect(await resolveKeep(ctx, 7)).toBe(7);
+        }
+    });
+
+    it('should floor a fractional retention value', async () => {
+        const { ctx } = await ctxWithSettings({ retention: 4.8 });
+        expect(await resolveKeep(ctx, 7)).toBe(4);
+    });
+
+    it('should fall back when the settings service throws', async () => {
+        const { ctx } = await ctxWithSettings(null);
+        ctx.settings = {
+            get: async () => {
+                throw new Error('no settings here');
+            },
+        } as unknown as PluginContext['settings'];
+        expect(await resolveKeep(ctx, 7)).toBe(7);
     });
 });

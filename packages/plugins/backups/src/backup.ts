@@ -10,6 +10,7 @@ import { Readable } from 'node:stream';
 import { createGzip } from 'node:zlib';
 import type { PluginContext } from 'astromech';
 import { createBackupRunsStorage } from './storage';
+import { BACKUPS_SETTINGS_PATH } from './pages/settings';
 import type { BackupRunRow } from './tables/runs';
 
 // ============================================================================
@@ -116,15 +117,23 @@ export async function performBackup(
 
 /**
  * Read the retention setting for this plugin from the settings store.
- * Key: `plugin:<namespace>:retention`. Reads through `ctx.settings` are
- * full-shaped by default — plugin altitude is trusted server code — so a
- * private setting needs no options here.
+ *
+ * The settings page writes one object blob at its own key —
+ * `plugin:<permissionNamespace>:<page path>`, the `baseKey` core derives — so
+ * the value read here is `{ retention }`, not a bare number. Reads through
+ * `ctx.settings` are full-shaped by default (plugin altitude is trusted server
+ * code), so a private setting needs no options here.
+ *
  * Falls back to `fallback` if the setting is absent or not a valid positive number.
  */
 export async function resolveKeep(ctx: PluginContext, fallback: number): Promise<number> {
-    const key = `plugin:${ctx.plugin.namespace}:retention`;
+    const key = `plugin:${ctx.plugin.permissionNamespace}:${BACKUPS_SETTINGS_PATH}`;
     try {
-        const value = await ctx.settings.get({ key });
+        const settings = await ctx.settings.get({ key });
+        const value =
+            typeof settings === 'object' && settings !== null && !Array.isArray(settings)
+                ? settings['retention']
+                : null;
         if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
             return Math.floor(value);
         }
@@ -138,6 +147,10 @@ export async function resolveKeep(ctx: PluginContext, fallback: number): Promise
  * Rotate artifacts: delete storage objects for successful runs beyond the
  * first `keep`, ordered oldest-first. The table is the source of truth —
  * we only touch artifacts that haven't already been deleted (`artifactDeletedAt IS NULL`).
+ *
+ * `rotationCandidates` decides what is eligible: already-rotated rows and
+ * `pre-restore` snapshots are not in the list, so neither is counted against
+ * `keep`.
  */
 export async function rotate(ctx: PluginContext, keep: number): Promise<void> {
     const runs = createBackupRunsStorage(ctx.db);
