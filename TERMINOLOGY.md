@@ -200,6 +200,18 @@ An **admin slot** is distinct from an admin page: a named mount point in the adm
 
 ---
 
+## Mount (entry types)
+
+Where an entry type is served from: the root, or a plugin. A root type is addressed bare (`post`), lives under `/entries/{type}` in the admin, and carries `entry:{type}:{action}` permissions; a plugin's type is addressed by its qualified id (`redirects/redirect`), lives under `/plugin/{name}/entries/{type}`, and carries `plugin:{namespace}:entry:{type}:{action}`.
+
+**`mount`** on an `EntriesManifestMethod` (`packages/astromech/src/types/methods.ts`) names it — `'root'`, or the owning plugin's permission namespace. It is a permission namespace and a label, never an identifier to call with: the callable id is the sibling `typeId`, carried rather than re-derived from `mount` + `entryType`. Tool dispatch reads it for the tool name, so two plugins each mounting a `page` type do not collide (`entries_redirects_page_create` against a root type's bare `entries_page_create`).
+
+**`EntriesMount`** (`packages/astromech/src/admin/components/entries/mount.ts`) is the admin's object for the same thing: the entries client, the wire type id, the react-query cache scope (`''` at the root, otherwise the plugin name), the single-type admin config, the link base and a `permissionFor(action)` resolver. The shared entry pages — list, new, edit, versions — take one as a prop, so a root route and a plugin route render the same components. Root routes build it inline; `buildPluginEntriesMount` builds the plugin one, returning `null` for an unknown plugin or type.
+
+Distinct from the ordinary web-framework verb: `mountRestRoutes` and "the entries router, mounted at `/entries`" mean attaching a handler at a URL prefix, and a "mount point" in the admin shell is a named slot (above).
+
+---
+
 ## Relation vs Relationship
 
 **Relation** — a field type (`'relationship'`) on an entry type that links an entry to one or more entries (or users) in another type. Authored with `fields.relationship(name, { target, multiple })`.
