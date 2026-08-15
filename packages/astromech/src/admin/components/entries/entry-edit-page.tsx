@@ -112,7 +112,29 @@ function StatusBadge({ status }: StatusBadgeProps): React.ReactElement {
 // Page
 // ============================================================================
 
+/**
+ * Keyed by entry id.
+ *
+ * `LocaleSwitcher`, staging and duplicate all navigate to a DIFFERENT id on the
+ * SAME route, so the route component is never remounted. Without the key the
+ * body keeps one `FormApi` — and TanStack Form only copies changed
+ * `defaultValues` in while the form is untouched, so after any edit the
+ * previous row's values stay on screen and a save writes them to the new id.
+ * A `form.reset` alone would not fix it either: the stateful field containers
+ * (repeater, key-value editor, blocks, tree) seed their local state once and
+ * never resync, so remount is the only reset that reaches them.
+ */
 export function EntryEditPage({
+    mount,
+    id,
+}: {
+    mount: EntriesMount;
+    id: string;
+}): React.ReactElement {
+    return <EntryEditPageBody key={id} mount={mount} id={id} />;
+}
+
+function EntryEditPageBody({
     mount,
     id,
 }: {

@@ -85,16 +85,23 @@ it was real and the misattribution is the useful part.
           while suspended and again after it landed, kept both sub-keys.
           Throwaway — `seo-preview` writes nothing, so it has no path to a group
           value at all.
-- [ ] **A locale switch mid-edit shows the previous locale's values.** Found by
-      the probe above on 2026-08-15. `LocaleSwitcher` navigates to a sibling
-      entry id on the same route, so the route component is not remounted and
-      `useEntryForm` keeps one `FormApi`; `defaultValues` swaps to the new row,
-      but `@tanstack/react-form` only copies them while `isTouched` is false. Edit
-      anything, switch locale, and the other locale's form is populated with the
-      first one's values — a save there writes them into the sibling row. With
-      no prior edit the copy lands and the sibling's own values show, which
-      `entry-edit-locale-switch.test.tsx` pins; the touched case is left
-      unasserted rather than locking the wrong behaviour into a test.
+- [x] **A locale switch mid-edit shows the previous locale's values.** Found by
+      the probe above on 2026-08-15, fixed the same day. `LocaleSwitcher`
+      navigates to a sibling entry id on the same route, so the route component
+      was not remounted and `useEntryForm` kept one `FormApi`; `defaultValues`
+      swapped to the new row, but `@tanstack/react-form` only copies them while
+      `isTouched` is false — after any edit the other locale's form showed the
+      first one's values, and a save there would have written them into the
+      sibling row.
+    - The fix: `EntryEditPage` renders its body keyed by the entry id, so any
+      same-route id change (locale switch, stage/discard, duplicate) remounts
+      the whole form. A `form.reset` on id change was rejected because the
+      stateful field containers (`repeater-field.tsx`, `key-value-editor.tsx`,
+      `use-blocks-field.ts`, `use-tree-field.ts`) seed local state once and
+      deliberately never resync, so only a remount reaches them.
+    - Both cases are pinned in `entry-edit-locale-switch.test.tsx`: untouched
+      (the copy lands) and touched (edit → switch shows the sibling's own
+      values, switch back discards the unsaved edit).
 - [x] **`repeater` seeds `useState` with no re-seed guard.** Closed by `cccf47d`;
       the guard is at `repeater-field.tsx:270-273`.
 - [x] **`key-value` loses stored pairs.** Fixed 2026-08-06. Real and

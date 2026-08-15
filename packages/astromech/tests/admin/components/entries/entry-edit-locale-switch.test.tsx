@@ -339,4 +339,42 @@ describe('the entry edit page across a locale switch', () => {
         expect(control('input[name="seo.title"]').value).toBe('FR title');
         assertNoPartialGroup();
     });
+
+    it('loads the sibling locale’s own values when the form has been edited', async () => {
+        const user = userEvent.setup();
+        const queryClient = makeClient();
+        const { api, update } = makeApi();
+        const router = mountApp(queryClient, api);
+        await settle();
+        await settle();
+
+        // Touch the form. From here TanStack Form stops copying `defaultValues`
+        // in, so only the remount can show the sibling row.
+        const title = control('input[name="seo.title"]');
+        await user.clear(title);
+        await user.type(title, 'EN edited');
+        expect(control('input[name="seo.title"]').value).toBe('EN edited');
+
+        await act(async () => {
+            await router.navigate({ to: `/entries/${TYPE}/${FR}` });
+        });
+        await settle();
+        await settle();
+
+        expect(control('input[name="seo.title"]').value).toBe('FR title');
+        expect(control('textarea[name="excerpt"]').value).toBe('Un extrait');
+        expect(control('#entry-title').value).toBe('Une étude de cas');
+
+        // Back to the first locale: its stored values, not the unsaved edit.
+        await act(async () => {
+            await router.navigate({ to: `/entries/${TYPE}/${EN}` });
+        });
+        await settle();
+        await settle();
+
+        expect(control('input[name="seo.title"]').value).toBe('EN title');
+        expect(control('textarea[name="excerpt"]').value).toBe('An excerpt');
+        expect(update).not.toHaveBeenCalled();
+        assertNoPartialGroup();
+    });
 });
