@@ -1,8 +1,8 @@
 /**
  * Loads the app-owned migration provider from the app's working directory.
  *
- * jiti rather than `import()`: the generated module is TypeScript importing its
- * siblings by `.js` specifier, which plain Node cannot resolve.
+ * jiti rather than `import()`: the generated module and its siblings are
+ * TypeScript, which plain Node cannot load.
  */
 
 import { resolve } from 'node:path';

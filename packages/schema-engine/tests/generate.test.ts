@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -88,6 +88,34 @@ describe('generateMigrations', () => {
 
             const filesAfter = (await readdir(dir)).sort();
             expect(filesAfter).toEqual(filesBefore);
+        });
+    });
+
+    it('no-changes still rewrites an index.ts that no longer matches the renderer', async () => {
+        await withTempDir(async (dir) => {
+            await generateMigrations({
+                dir,
+                snapshot: v1,
+                dialect: 'sqlite',
+                name: 'init',
+            });
+            const generated = await readFile(resolve(dir, 'index.ts'), 'utf-8');
+            await writeFile(
+                resolve(dir, 'index.ts'),
+                generated.replace("'./0000_init'", "'./0000_init.js'"),
+                'utf-8'
+            );
+
+            const result = await generateMigrations({
+                dir,
+                snapshot: v1,
+                dialect: 'sqlite',
+                name: 'init-again',
+            });
+            expect(result).toEqual({ status: 'no-changes' });
+
+            const indexSource = await readFile(resolve(dir, 'index.ts'), 'utf-8');
+            expect(indexSource).toBe(generated);
         });
     });
 

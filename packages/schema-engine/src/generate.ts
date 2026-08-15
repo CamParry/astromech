@@ -51,13 +51,18 @@ function kebabCase(name: string): string {
         .replace(/^-+|-+$/g, '');
 }
 
-async function readJsonIfExists<T>(path: string): Promise<T | null> {
+async function readFileIfExists(path: string): Promise<string | null> {
     try {
-        return JSON.parse(await readFile(path, 'utf-8')) as T;
+        return await readFile(path, 'utf-8');
     } catch (err) {
         if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
         throw err;
     }
+}
+
+async function readJsonIfExists<T>(path: string): Promise<T | null> {
+    const contents = await readFileIfExists(path);
+    return contents === null ? null : (JSON.parse(contents) as T);
 }
 
 function migrationVarName(idx: number): string {
@@ -66,7 +71,13 @@ function migrationVarName(idx: number): string {
 
 /** Regenerate `index.ts` — the static `MigrationProvider` — from every
  *  journal entry, ordered by `idx`. Static imports only (no dynamic
- *  discovery): an edge bundler can't do runtime `fs` scanning. */
+ *  discovery): an edge bundler can't do runtime `fs` scanning.
+ *
+ *  Sibling specifiers carry no extension. The files on disk are `.ts`, and the
+ *  two loaders that read them disagree about extensions: a `.ts` specifier
+ *  needs `allowImportingTsExtensions` in the app's tsconfig, and a `.js` one
+ *  resolves under `tsx` but not under plain Node. Extensionless resolves in
+ *  both, and under `moduleResolution: bundler`. */
 function renderIndexFile(entries: JournalEntry[]): string {
     const sorted = [...entries].sort((a, b) => a.idx - b.idx);
     const imports = sorted
@@ -89,6 +100,22 @@ function renderIndexFile(entries: JournalEntry[]): string {
         '};',
         '',
     ].join('\n');
+}
+
+/**
+ * Write `index.ts` if what the journal renders to differs from what is on disk.
+ *
+ * Called on every run, not only when a migration is written: `index.ts` is
+ * derived wholly from `journal.json`, so a change to {@link renderIndexFile}
+ * would otherwise reach an existing app only on its next schema change.
+ */
+async function syncIndexFile(dir: string, entries: JournalEntry[]): Promise<void> {
+    if (entries.length === 0) return;
+    const contents = renderIndexFile(entries);
+    const path = resolve(dir, 'index.ts');
+    if ((await readFileIfExists(path)) === contents) return;
+    await mkdir(dir, { recursive: true });
+    await writeFile(path, contents, 'utf-8');
 }
 
 /** Read the three files that make up a migrations directory's current state. */
@@ -148,7 +175,7 @@ async function writeMigration(opts: {
         `${serializeSnapshot(next)}\n`,
         'utf-8'
     );
-    await writeFile(resolve(dir, 'index.ts'), renderIndexFile(journal.entries), 'utf-8');
+    await syncIndexFile(dir, journal.entries);
 
     return { status: 'generated', file: `${tag}.ts`, tag, warnings: opts.warnings };
 }
@@ -180,6 +207,7 @@ export async function generateMigrations(opts: {
     }
 
     if (diff.ops.length === 0) {
+        await syncIndexFile(opts.dir, journal.entries);
         return { status: 'no-changes' };
     }
 
