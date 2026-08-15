@@ -11,11 +11,13 @@ part of the route conversion, which is noted per item.
 
 ## Access control
 
-- [ ] **`routes/entry-types.ts` has no permission check at all.** Any
+- [x] **`routes/entry-types.ts` has no permission check at all.** Any
       authenticated caller gets the full field configuration of every entry type
       — field names, types, validation rules, relationship targets. Both handlers
       in the file are affected. This is the one to fix first and on its own; it
-      does not need the conversion.
+      does not need the conversion. Fixed 2026-08-15: both handlers gate on
+      `entry:{type}:read`; the list filters to the readable types, the single
+      read 403s before the existence check.
 - [ ] **`POST /entries/query` checks type existence before permission**, unlike
       the other 29 entries routes, so an unauthorised caller can enumerate which
       entry types exist by reading 404 against 403. The inversion is visible in

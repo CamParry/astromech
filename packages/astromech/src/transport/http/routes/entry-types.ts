@@ -8,6 +8,11 @@
  * contract behind either, only `Astromech.config` projected into a metadata
  * shape.
  *
+ * A type's metadata is its full field configuration, so both handlers gate on
+ * the same `entry:{type}:read` the entries routes check. The list filters rather
+ * than 403s: it feeds admin navigation, and "nothing you can see" is an empty
+ * array.
+ *
  * Routes:
  *   GET /entry-types            → all entry type metadata
  *   GET /entry-types/:type      → single entry type metadata
@@ -15,8 +20,10 @@
 
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { Astromech } from '@/transport/local/index';
-import { notFound } from '@/transport/http/middleware/errors';
+import { forbidden, notFound } from '@/transport/http/middleware/errors';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
+import { entryPermission } from '@/permissions/index';
+import { permissionsFor } from '@/permissions/permissions-for';
 
 type Env = { Variables: AuthVariables };
 
@@ -29,18 +36,21 @@ const router = new OpenAPIHono<Env>();
 // No method id, and the response is a bare array rather than an envelope.
 router.get('/', (c) => {
     const { entries } = Astromech.config;
+    const permissions = permissionsFor(c.var.role);
 
-    const meta = Object.entries(entries).map(([type, config]) => ({
-        type,
-        single: config.single,
-        plural: config.plural,
-        versioning: config.versioning ?? false,
-        slug: config.slug ?? null,
-        adminColumns: config.adminColumns ?? [],
-        fields: config.fields,
-        capabilities: config.capabilities,
-        titleField: config.titleField,
-    }));
+    const meta = Object.entries(entries)
+        .filter(([type]) => permissions.allows(entryPermission(type, 'read')))
+        .map(([type, config]) => ({
+            type,
+            single: config.single,
+            plural: config.plural,
+            versioning: config.versioning ?? false,
+            slug: config.slug ?? null,
+            adminColumns: config.adminColumns ?? [],
+            fields: config.fields,
+            capabilities: config.capabilities,
+            titleField: config.titleField,
+        }));
 
     return c.json(meta);
 });
@@ -53,8 +63,14 @@ router.get('/', (c) => {
 // a plugin entry type 404s here while it serves on `/entries`.
 router.get('/:type', (c) => {
     const { type } = c.req.param();
-    const config = Astromech.config.entries[type];
 
+    // Permission before existence, as on every entries route: a 404 an
+    // unpermitted caller can read is a type enumeration.
+    if (!permissionsFor(c.var.role).allows(entryPermission(type, 'read'))) {
+        return forbidden(c);
+    }
+
+    const config = Astromech.config.entries[type];
     if (!config) return notFound(c, `Entry type '${type}' not found`);
 
     return c.json({
