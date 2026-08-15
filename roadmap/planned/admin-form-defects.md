@@ -22,8 +22,9 @@ it was real and the misattribution is the useful part.
     - **The rich-text link mark is independent and uses `href`**, matching HTML and
       TipTap (`fields/rich-text/safe-links.ts`). It shares no code or types with
       the `link` field. There is nothing to reconcile between them.
-- [ ] **A `group()` field submits only its touched sub-key, destroying its
-      siblings.** Observed end-to-end on 2026-08-03: a Post's `seo` group held
+- [x] **A `group()` field submits only its touched sub-key, destroying its
+      siblings.** Closed 2026-08-15 as unreproducible after a third round; see
+      the last sub-bullet. Observed end-to-end on 2026-08-03: a Post's `seo` group held
       `{title, description}`; editing only Meta title sent
       `fields.seo = {"title": "…"}` and `description` was gone after the save.
     - **Not reproduced at render level, and the hypothesis in the original entry
@@ -62,6 +63,38 @@ it was real and the misattribution is the useful part.
       it open indefinitely. Two rounds have now failed to find a mechanism, and
       the two candidate explanations above are both consistent with the symptom
       having been fixed already.
+    - **2026-08-15 — third round ran all three, none showed it; closed as
+      unreproducible.** The two candidate explanations above (the `key-value`
+      defect misattributed, or form state already corrupted by the `href`/`url`
+      bug `cccf47d` fixed the same day) are what stands.
+        - **Locale switch**, in the real-`EntryEditPage` router harness, with a
+          subscription to the page's own `form.store` recording every distinct
+          `values.fields`: edit `seo.title` alone → navigate to the sibling
+          locale's id → edit there → navigate back → edit → save. Every
+          transition carried both sub-keys and the `PUT` payload did too. Kept
+          as `tests/admin/components/entries/entry-edit-locale-switch.test.tsx`.
+        - **An external write landing mid-session**, same harness: the server row
+          replaced behind the author's back and `invalidateQueries` run, both
+          while an edit was in flight and after a save had cleared `isTouched`.
+          The group survived both saves. Throwaway — no new mechanism to pin.
+        - **The plugin field's `React.lazy` boundary IS exercisable in the
+          harness**, contrary to the note above: `virtual:astromech/plugins/components`
+          is a vitest alias to `tests/_support/plugins-components-shim.ts`, so a
+          test `vi.mock`s it with a `fieldTypes` entry whose `load` resolves on
+          command. A group holding a `seo-preview`-shaped lazy field, edited
+          while suspended and again after it landed, kept both sub-keys.
+          Throwaway — `seo-preview` writes nothing, so it has no path to a group
+          value at all.
+- [ ] **A locale switch mid-edit shows the previous locale's values.** Found by
+      the probe above on 2026-08-15. `LocaleSwitcher` navigates to a sibling
+      entry id on the same route, so the route component is not remounted and
+      `useEntryForm` keeps one `FormApi`; `defaultValues` swaps to the new row,
+      but `@tanstack/react-form` only copies them while `isTouched` is false. Edit
+      anything, switch locale, and the other locale's form is populated with the
+      first one's values — a save there writes them into the sibling row. With
+      no prior edit the copy lands and the sibling's own values show, which
+      `entry-edit-locale-switch.test.tsx` pins; the touched case is left
+      unasserted rather than locking the wrong behaviour into a test.
 - [x] **`repeater` seeds `useState` with no re-seed guard.** Closed by `cccf47d`;
       the guard is at `repeater-field.tsx:270-273`.
 - [x] **`key-value` loses stored pairs.** Fixed 2026-08-06. Real and
