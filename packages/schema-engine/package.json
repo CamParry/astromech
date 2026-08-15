@@ -36,7 +36,7 @@
     "devDependencies": {
         "@libsql/client": "^0.17.2",
         "@libsql/kysely-libsql": "^0.4.1",
-        "@types/node": "^25.5.0",
+        "@types/node": "^22.20.1",
         "eslint": "^10.8.1",
         "kysely": "^0.28.14",
         "tsup": "^8.0.0",

@@ -42,6 +42,9 @@ export default defineConfig([
             'cloudflare/index': 'src/exports/cloudflare.ts',
         },
         format: ['esm'],
+        // The floor in engines.node, enforced rather than assumed: esbuild
+        // defaults to esnext and would happily emit syntax Node 22 cannot run.
+        target: 'node22',
         dts: true,
         sourcemap: true,
         clean: true,
@@ -68,6 +71,7 @@ export default defineConfig([
             'transport/mcp/index': 'src/transport/mcp/index.ts',
         },
         format: ['esm'],
+        target: 'node22',
         dts: false,
         sourcemap: true,
         clean: false,

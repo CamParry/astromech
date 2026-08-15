@@ -7,6 +7,7 @@ export default defineConfig({
     // the package's export map rather than by convention.
     entry: { index: 'src/index.ts', generate: 'src/generate.ts' },
     format: ['esm'],
+    target: 'node22',
     dts: true,
     sourcemap: true,
     clean: true,

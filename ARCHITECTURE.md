@@ -24,6 +24,12 @@ driver exists (`database/drivers/d1.ts`) but nothing has been run on Workers;
 Postgres and MySQL are a future major
 (`roadmap/planned/additional-database-drivers.md`).
 
+**Node:** the floor is 22.13, stated in `engines.node` on every published
+package. It is held in three places that must move together — `@types/node` at
+`^22`, `target: "node22"` in every tsup config, and the Node 22 leg of the Test
+and Boot matrix in `.github/workflows/ci.yml`. Development runs the Active LTS
+(`.nvmrc` names 24), which CI also covers.
+
 ## The layer model
 
 The source is a modular screaming-architecture DAG. Imports may only point

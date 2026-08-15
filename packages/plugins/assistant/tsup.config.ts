@@ -10,6 +10,7 @@ export default defineConfig({
     // app (or `plugin:generate`) can load them without the plugin definition.
     entry: { index: 'src/index.ts', tables: 'src/tables/index.ts' },
     format: ['esm'],
+    target: 'node22',
     dts: true,
     sourcemap: true,
     clean: true,

@@ -6,6 +6,7 @@ export default defineConfig({
     // them standalone without pulling in the plugin definition.
     entry: { index: 'src/index.ts', tables: 'src/tables/index.ts' },
     format: ['esm'],
+    target: 'node22',
     dts: true,
     sourcemap: true,
     clean: true,

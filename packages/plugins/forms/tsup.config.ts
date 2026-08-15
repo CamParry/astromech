@@ -6,6 +6,7 @@ export default defineConfig({
     // imports the submissions table.
     entry: { index: 'src/index.ts' },
     format: ['esm'],
+    target: 'node22',
     dts: true,
     sourcemap: true,
     clean: true,

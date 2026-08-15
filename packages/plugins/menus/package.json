@@ -26,9 +26,12 @@
         "astromech": "*"
     },
     "devDependencies": {
-        "@types/node": "^25.9.5",
+        "@types/node": "^22.20.1",
         "astromech": "workspace:*",
         "tsup": "^8.5.1",
         "typescript": "^5.9.3"
+    },
+    "engines": {
+        "node": ">=22.13.0"
     }
 }

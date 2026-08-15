@@ -8,6 +8,7 @@ export default defineConfig({
     // aliases `astromech/ui` to the library src for exactly this reason).
     entry: { index: 'src/index.ts' },
     format: ['esm'],
+    target: 'node22',
     dts: true,
     sourcemap: true,
     clean: true,

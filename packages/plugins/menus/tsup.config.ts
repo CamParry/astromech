@@ -6,6 +6,7 @@ export default defineConfig({
     // app's single copy is shared, never bundled in).
     entry: { index: 'src/index.ts' },
     format: ['esm'],
+    target: 'node22',
     dts: true,
     sourcemap: true,
     clean: true,
