@@ -33,6 +33,7 @@ import { FormField } from '@/admin/components/fields/form-field';
 import { InlineTitle } from '@/admin/components/fields/inline-title';
 // Deep import: the `fields/` barrel reaches server code (virtual config / DB).
 import { formatInstancePath, parseInstancePath } from '@/fields/field-path';
+import { buildDefaultValues } from '@/fields/defaults';
 import './repeater-field.css';
 
 // Lock dragging to the vertical axis — verticalListSortingStrategy only governs
@@ -292,8 +293,11 @@ export function RepeaterField({
         );
     }
 
+    // Declared defaults are seeded here rather than by the field pipeline, which
+    // applies them on `create` only — an item added while editing an existing
+    // entry saves as an update and would otherwise arrive empty.
     const handleAdd = (): void => {
-        commit([...items, withId({})]);
+        commit([...items, withId(buildDefaultValues(fields))]);
     };
 
     const handleRemove = (index: number): void => {

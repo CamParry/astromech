@@ -431,7 +431,7 @@ export function TreeField({
         reorderNodes,
         indentNode,
         outdentNode,
-    } = useTreeField({ name, value, onChange, maxDepth });
+    } = useTreeField({ name, value, onChange, maxDepth, fields });
 
     return (
         <div className="am-tree">

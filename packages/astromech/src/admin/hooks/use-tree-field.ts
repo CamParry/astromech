@@ -96,15 +96,26 @@ function deepCloneNode(node: TreeNode): TreeNode {
 // ============================================================================
 
 import { useState, useCallback, useRef } from 'react';
+import type { Field } from '@/types/index';
+// Deep import: the `fields/` barrel reaches server code (virtual config / DB).
+import { buildDefaultValues } from '@/fields/defaults';
 
 type UseTreeFieldOptions = {
     name: string;
     value: unknown;
     onChange: (name: string, value: unknown) => void;
     maxDepth?: number | undefined;
+    /** The field's sub-field definitions — the schema a new node is seeded from. */
+    fields?: Field[];
 };
 
-export function useTreeField({ name, value, onChange, maxDepth }: UseTreeFieldOptions) {
+export function useTreeField({
+    name,
+    value,
+    onChange,
+    maxDepth,
+    fields = [],
+}: UseTreeFieldOptions) {
     const rawArray = Array.isArray(value) ? (value as TreeNode[]) : [];
 
     const [nodes, setNodes] = useState<TreeNode[]>(() =>
@@ -132,10 +143,18 @@ export function useTreeField({ name, value, onChange, maxDepth }: UseTreeFieldOp
         [name, onChange]
     );
 
+    // Declared defaults are seeded here rather than by the field pipeline, which
+    // applies them on `create` only — a node added while editing an existing
+    // entry saves as an update and would otherwise arrive empty.
+    const newNode = useCallback(
+        (): TreeNode => ({ ...buildDefaultValues(fields), _id: crypto.randomUUID() }),
+        [fields]
+    );
+
     // Add a root-level node.
     const addRoot = useCallback(() => {
-        commit([...nodes, withId()]);
-    }, [nodes, commit]);
+        commit([...nodes, newNode()]);
+    }, [nodes, commit, newNode]);
 
     // Add a child to the node with the given id.
     const addChild = useCallback(
@@ -149,7 +168,7 @@ export function useTreeField({ name, value, onChange, maxDepth }: UseTreeFieldOp
                     if (n._id === parentId) {
                         return {
                             ...n,
-                            _children: [...(n._children ?? []), withId()],
+                            _children: [...(n._children ?? []), newNode()],
                         };
                     }
                     if (Array.isArray(n._children)) {
@@ -160,7 +179,7 @@ export function useTreeField({ name, value, onChange, maxDepth }: UseTreeFieldOp
 
             commit(addChildToNode(nodes));
         },
-        [nodes, flat, commit, maxDepth]
+        [nodes, flat, commit, maxDepth, newNode]
     );
 
     // Remove node by id (including its subtree).
