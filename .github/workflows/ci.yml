@@ -75,6 +75,11 @@ jobs:
                   node-version: 22
                   cache: pnpm
             - run: pnpm install --frozen-lockfile
+            # The assistant suite resolves `astromech` through its exports map,
+            # which points at `dist/`. pnpm links the workspace package in to
+            # satisfy the peer dependency, so the import resolves and needs the
+            # build; under npm it did not resolve at all and the mock covered it.
+            - run: pnpm run build
             - run: pnpm run test:run
 
     boot:
