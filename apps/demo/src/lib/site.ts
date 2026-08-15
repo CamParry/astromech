@@ -2,18 +2,31 @@
  * Site helpers: locale resolution, path localisation, UI strings.
  */
 
-export const LOCALES = ['en', 'fr'] as const;
-export type Locale = (typeof LOCALES)[number];
-export const DEFAULT_LOCALE: Locale = 'en';
+import Astromech from 'astromech/local';
+
+export type Locale = string;
+
+/** Content locales, from `astromech.config.ts`. */
+export const LOCALES: readonly Locale[] = Astromech.config.locales ?? ['en'];
+
+/**
+ * `defaultLocale` is a display tag (`en-GB`) and need not be a content locale.
+ * Routing matches locales exactly, so fall back to the first configured one.
+ */
+const configuredDefault = Astromech.config.defaultLocale;
+export const DEFAULT_LOCALE: Locale =
+    configuredDefault !== undefined && LOCALES.includes(configuredDefault)
+        ? configuredDefault
+        : (LOCALES[0] ?? 'en');
 
 /**
  * Resolve the active locale from a URL pathname.
- * Default locale (`en`) is unprefixed; others live under `/<locale>/...`.
+ * The default locale is unprefixed; others live under `/<locale>/...`.
  */
 export function localeFromPath(pathname: string): Locale {
     const seg = pathname.split('/')[1];
-    if (seg && (LOCALES as readonly string[]).includes(seg) && seg !== DEFAULT_LOCALE) {
-        return seg as Locale;
+    if (seg && LOCALES.includes(seg) && seg !== DEFAULT_LOCALE) {
+        return seg;
     }
     return DEFAULT_LOCALE;
 }

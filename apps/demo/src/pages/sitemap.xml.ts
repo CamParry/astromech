@@ -2,9 +2,10 @@ import type { APIRoute } from 'astro';
 import Astromech from 'astromech/local';
 import { LOCALES, localizedPath } from '../lib/site.ts';
 
-const SITE = import.meta.env.SITE ?? 'https://astromech.dev';
-
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ site, url: requestUrl }) => {
+    // `site` is the origin from `astro.config.mjs`; the request origin only
+    // stands in if a deployment ever ships without one.
+    const origin = (site ?? requestUrl).origin;
     const urls: { loc: string; lastmod: string }[] = [];
 
     try {
@@ -31,7 +32,7 @@ export const GET: APIRoute = async () => {
         urls
             .map(
                 (url) =>
-                    `<url><loc>${SITE}${url.loc}</loc><lastmod>${url.lastmod}</lastmod></url>`
+                    `<url><loc>${origin}${url.loc}</loc><lastmod>${url.lastmod}</lastmod></url>`
             )
             .join('\n') +
         '\n</urlset>';

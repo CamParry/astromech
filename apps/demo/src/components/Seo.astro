@@ -28,7 +28,7 @@ interface Props {
      * pass in pre-resolved `hreflangUrls` if they want full hreflang support.
      */
     hreflangUrls?: Record<string, string>;
-    /** Site origin e.g. https://astromech.dev */
+    /** Site origin override, e.g. https://astromech.dev. Defaults to `Astro.site`. */
     siteUrl?: string;
 }
 
@@ -40,7 +40,7 @@ const {
     canonical,
     ogImage: propOgImage,
     hreflangUrls,
-    siteUrl = '',
+    siteUrl = Astro.site?.origin,
 } = Astro.props;
 
 let resolvedTitle = propTitle ?? 'Astromech';
@@ -60,7 +60,8 @@ if (type && slug) {
     }
 }
 
-const canonicalUrl = canonical ?? (siteUrl ? `${siteUrl}${Astro.url.pathname}` : null);
+const canonicalUrl =
+    canonical ?? (siteUrl !== undefined ? `${siteUrl}${Astro.url.pathname}` : null);
 ---
 
 <title>{resolvedTitle}</title>
