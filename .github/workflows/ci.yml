@@ -14,21 +14,29 @@ concurrency:
 # package.json, so the toolchain is pinned in one place. It runs before
 # `setup-node`, which needs pnpm on PATH already to resolve `cache: pnpm`.
 #
-# Node 22, not 20: pnpm 11 requires at least v22.13, and `cache: pnpm` makes
-# `setup-node` run `pnpm store path`, so on 20 the job dies at that step before
-# installing anything. The published packages still declare `engines.node
-# >=20.0.0` — that is the runtime a consumer needs, not the toolchain this repo
-# builds with, and nothing here exercises 20 any more.
+# Two Node versions, and only where they can differ. 22 is `engines.node`, the
+# floor a consumer may install on; 24 is the Active LTS most of them run. Test
+# and Boot execute the runtime, so both matter there. Lint, Type Check and
+# Build run eslint, tsc and tsup, whose output does not vary across the two, so
+# doubling them would buy nothing — they pin the Active LTS.
+#
+# Node 20 is not here and cannot be: pnpm 11 requires at least v22.13, and
+# `cache: pnpm` makes `setup-node` run `pnpm store path`, so a Node 20 job dies
+# at that step before installing anything. Node 20 reached end of life in April
+# 2026 in any case.
+env:
+    ACTIVE_LTS: 24
+
 jobs:
     lint:
         name: Lint
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
-            - uses: pnpm/action-setup@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@v7
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v7
               with:
-                  node-version: 22
+                  node-version: ${{ env.ACTIVE_LTS }}
                   cache: pnpm
             - run: pnpm install --frozen-lockfile
             - run: pnpm run lint
@@ -39,11 +47,11 @@ jobs:
         name: Type Check
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
-            - uses: pnpm/action-setup@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@v7
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v7
               with:
-                  node-version: 22
+                  node-version: ${{ env.ACTIVE_LTS }}
                   cache: pnpm
             - run: pnpm install --frozen-lockfile
             # The plugin packages import `astromech` through its published
@@ -55,24 +63,31 @@ jobs:
         name: Build
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
-            - uses: pnpm/action-setup@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@v7
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v7
               with:
-                  node-version: 22
+                  node-version: ${{ env.ACTIVE_LTS }}
                   cache: pnpm
             - run: pnpm install --frozen-lockfile
             - run: pnpm run build
 
     test:
-        name: Test
+        name: Test (Node ${{ matrix.node }})
         runs-on: ubuntu-latest
+        strategy:
+            # Report both versions. Cancelling the sibling on the first failure
+            # would hide whether a break is version-specific, which is the only
+            # question the matrix exists to answer.
+            fail-fast: false
+            matrix:
+                node: [22, 24]
         steps:
-            - uses: actions/checkout@v4
-            - uses: pnpm/action-setup@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@v7
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v7
               with:
-                  node-version: 22
+                  node-version: ${{ matrix.node }}
                   cache: pnpm
             - run: pnpm install --frozen-lockfile
             # The assistant suite resolves `astromech` through its exports map,
@@ -83,14 +98,18 @@ jobs:
             - run: pnpm run test:run
 
     boot:
-        name: Boot
+        name: Boot (Node ${{ matrix.node }})
         runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                node: [22, 24]
         steps:
-            - uses: actions/checkout@v4
-            - uses: pnpm/action-setup@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@v7
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v7
               with:
-                  node-version: 22
+                  node-version: ${{ matrix.node }}
                   cache: pnpm
             - run: pnpm install --frozen-lockfile
             # `apps/demo` reaches core's Node-loaded subpaths through `dist`,
