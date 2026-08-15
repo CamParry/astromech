@@ -4,12 +4,15 @@
  * `/entries/<type>/<id>`. Both the media "used by" panel and the command
  * palette's live-entry results route through it, so a change here moves both.
  *
- * The qualified-id case is the one that matters: pasting a qualified id into
- * the root route produces a link that 404s.
+ * `pluginEntryRouteParams` is the other half of the rule: the root routes call
+ * it in `beforeLoad` to redirect a qualified type param to the plugin route.
  */
 
 import { describe, expect, it } from 'vitest';
-import { entryAdminPath } from '@/admin/utilities/entry-admin-path';
+import {
+    entryAdminPath,
+    pluginEntryRouteParams,
+} from '@/admin/utilities/entry-admin-path';
 
 describe('entryAdminPath', () => {
     it('routes a bare type id to the root entries route', () => {
@@ -37,5 +40,25 @@ describe('entryAdminPath', () => {
         expect(entryAdminPath('notinstalled/thing', 'x')).toBe(
             '/plugin/notinstalled/entries/thing/x'
         );
+    });
+});
+
+describe('pluginEntryRouteParams', () => {
+    it('returns null for a bare type, so the root route renders', () => {
+        expect(pluginEntryRouteParams('post')).toBeNull();
+    });
+
+    it('splits a qualified type into the plugin route params', () => {
+        expect(pluginEntryRouteParams('forms/form')).toEqual({
+            name: 'forms',
+            type: 'form',
+        });
+    });
+
+    it('splits on the first separator only, keeping the rest as the type', () => {
+        expect(pluginEntryRouteParams('forms/nested/form')).toEqual({
+            name: 'forms',
+            type: 'nested/form',
+        });
     });
 });

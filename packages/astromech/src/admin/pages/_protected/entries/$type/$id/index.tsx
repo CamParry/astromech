@@ -2,17 +2,19 @@
  * Entry edit route — root entry types.
  *
  * Thin wrapper around the shared `EntryEditPage`. The loader prefetches the
- * entry via the root-scoped query options.
+ * entry via the root-scoped query options. A qualified type redirects to the
+ * plugin route.
  */
 
 import React from 'react';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 import { astromechClient } from '@/transport/http/client/index';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntryEditPage } from '@/admin/components/entries/entry-edit-page';
 import { entryQueryOptions } from '@/admin/hooks/entries';
 import type { EntriesService } from '@/types/index';
 import type { EntriesMount } from '@/admin/components/entries/mount';
+import { pluginEntryRouteParams } from '@/admin/utilities/entry-admin-path';
 
 function EntryEditRoutePage(): React.ReactElement {
     const { type, id } = Route.useParams();
@@ -28,6 +30,15 @@ function EntryEditRoutePage(): React.ReactElement {
 }
 
 export const Route = createFileRoute('/_protected/entries/$type/$id/')({
+    beforeLoad: ({ params }) => {
+        const plugin = pluginEntryRouteParams(params.type);
+        if (plugin !== null) {
+            throw redirect({
+                to: '/plugin/$name/entries/$type/$id',
+                params: { ...plugin, id: params.id },
+            });
+        }
+    },
     loader: ({ context, params }) =>
         context.queryClient.ensureQueryData(entryQueryOptions(params.type, params.id)),
     component: EntryEditRoutePage,
