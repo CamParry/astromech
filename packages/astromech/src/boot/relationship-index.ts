@@ -24,10 +24,12 @@
  * SQLite-only v1 and is the first thing to revisit if this ever needs to scale.
  */
 
+import config from 'virtual:astromech/config';
 import {
     createRelationshipStorage,
     type RelationshipIndexSource,
 } from '@/database/storage/relationships';
+import { getPluginIdentities } from '@/plugins/runtime/plugin-runtime';
 import type { RelationshipRow } from '@/database/schema';
 import type { TargetKind } from '@/fields/relationship-edges';
 import { collectEntryRelationshipSources } from '@/entries/internal/relationships';
@@ -58,6 +60,7 @@ export type DriftReport = {
 export async function rebuildRelationshipIndex(
     opts?: RelationshipIndexScope
 ): Promise<RebuildReport> {
+    assertPluginSourcesReachable();
     const sources = await collectSources(opts);
     const storage = createRelationshipStorage();
 
@@ -154,6 +157,21 @@ async function collectSources(
         ...(await collectUserRelationshipSources()),
         ...(await collectMediaRelationshipSources()),
     ];
+}
+
+/**
+ * Refuse a rebuild that cannot see every plugin source. A rebuild deletes rows
+ * for any source it did not enumerate, and an unregistered plugin runtime
+ * resolves a table-backed plugin entry type to the built-in storage, so its
+ * rows read as zero sources and its whole edge set would go.
+ */
+function assertPluginSourcesReachable(): void {
+    const plugins = Object.keys(config.pluginEntries);
+    if (plugins.length === 0 || getPluginIdentities().length > 0) return;
+    throw new Error(
+        `Cannot rebuild the relationships index: the config contributes entry types from ${plugins.join(', ')} but the plugin runtime is not registered, so those sources would read as empty and the rebuild would delete their rows. ` +
+            'Call wireEntryAccess() and registerPlugins(config.plugins ?? [], resolvedConfig) first, as `astromech index:rebuild` does.'
+    );
 }
 
 /** The stored rows a scoped run is allowed to compare against or delete. */

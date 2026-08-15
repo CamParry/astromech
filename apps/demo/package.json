@@ -10,7 +10,8 @@
         "typecheck": "astro sync && tsc --noEmit",
         "check:config": "tsx astromech.config.ts",
         "db:generate": "tsx --tsconfig ../../packages/astromech/tsconfig.json ../../packages/astromech/src/transport/cli/index.ts db:generate",
-        "db:init": "tsx --tsconfig ../../packages/astromech/tsconfig.json ../../packages/astromech/src/transport/cli/index.ts db:init"
+        "db:init": "tsx --tsconfig ../../packages/astromech/tsconfig.json ../../packages/astromech/src/transport/cli/index.ts db:init",
+        "index:rebuild": "node ../../packages/astromech/dist/cli/index.js index:rebuild"
     },
     "dependencies": {
         "@ai-sdk/anthropic": "^4.0.30",

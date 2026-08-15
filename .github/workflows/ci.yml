@@ -18,7 +18,9 @@ concurrency:
 # floor a consumer may install on; 24 is the Active LTS most of them run. Test
 # and Boot execute the runtime, so both matter there. Lint, Type Check and
 # Build run eslint, tsc and tsup, whose output does not vary across the two, so
-# doubling them would buy nothing — they pin the Active LTS.
+# doubling them would buy nothing — they pin the Active LTS. Relationships
+# Index does run the runtime, but it asks whether the index matches the field
+# data, which no Node version changes; those two already cover the runtime.
 #
 # Node 20 is not here and cannot be: pnpm 11 requires at least v22.13, and
 # `cache: pnpm` makes `setup-node` run `pnpm store path`, so a Node 20 job dies
@@ -71,6 +73,31 @@ jobs:
                   cache: pnpm
             - run: pnpm install --frozen-lockfile
             - run: pnpm run build
+
+    index:
+        name: Relationships Index
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: ${{ env.ACTIVE_LTS }}
+                  cache: pnpm
+            - run: pnpm install --frozen-lockfile
+            # `index:rebuild` runs the built CLI, whose bundle is the only place
+            # `virtual:astromech/config` is aliased to the CLI config shim.
+            - run: pnpm run build
+            # The check compares the index against the field data it is derived
+            # from, so it needs content: against an empty database it scans zero
+            # sources and passes vacuously. The demo seed is the only fixture
+            # with relationships in it, and it writes index rows through the
+            # same collector the services use — so this is a real parity check
+            # on the demo config, plugins included. Both commands write
+            # `apps/demo/database.db`, which is gitignored and absent in CI.
+            - run: pnpm -F astromech-demo db:init
+            - run: pnpm run db:seed:demo
+            - run: pnpm -F astromech-demo index:rebuild --check
 
     test:
         name: Test (Node ${{ matrix.node }})

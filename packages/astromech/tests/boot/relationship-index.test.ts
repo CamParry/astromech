@@ -14,6 +14,9 @@ import {
     checkRelationshipIndex,
     rebuildRelationshipIndex,
 } from '@/boot/relationship-index';
+import { resolveConfig } from '@/boot/config-resolver';
+import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
+import { setCliConfig } from '@/transport/cli/virtual-config-shim';
 import { createStorage } from '@/database/storage/create-storage';
 import { createRelationshipStorage } from '@/database/storage/relationships';
 import { relationshipsTable, type RelationshipRow } from '@/database/schema';
@@ -331,6 +334,33 @@ describe('rebuildRelationshipIndex', () => {
         expect(await storedRows()).toEqual(afterFirst);
         expect(second.rowsWritten).toBe(first.rowsWritten);
         expect(second.orphanRowsRemoved).toBe(0);
+    });
+});
+
+// ============================================================================
+// Enumeration guard
+// ============================================================================
+
+describe('rebuildRelationshipIndex without the plugin runtime', () => {
+    it('refuses to run when the config contributes plugin entry types', async () => {
+        await seedContent();
+        // What a programmatic caller gets from `loadConfig` alone: a resolved
+        // config with plugin entry types and a runtime that knows none of them.
+        const resolved = resolveConfig(makeIndexConfig());
+        setCliConfig(resolved);
+        registerPlugins([], resolved);
+
+        await expect(rebuildRelationshipIndex()).rejects.toThrow(
+            /plugin runtime is not registered/
+        );
+        const rows = await createRelationshipStorage().findAll();
+        expect(rows.filter((row) => row.sourceType === 'links/link')).toHaveLength(1);
+    });
+
+    it('runs for a config with no plugins', async () => {
+        setupTestConfig({ ...makeIndexConfig(), plugins: [] });
+
+        await expect(rebuildRelationshipIndex()).resolves.toBeDefined();
     });
 });
 
