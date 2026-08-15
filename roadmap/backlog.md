@@ -23,7 +23,6 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 ### Method manifest and the AI surface
 
 - [ ] Media ingest over JSON-RPC: `media.upload`/`replace` take a `File`, so they are the one thing the MCP/AI surface cannot call. Needs a path or base64 ingest method, declared as its own descriptor rather than by loosening `binaryInput`
-- [ ] Notifications domain not in the method manifest — the generator hardcodes the users/media/settings catalogues; the merged `notifications/` domain (and any future domain) is absent. Give each domain a registered `methods.ts` the generator discovers, or make catalogue discovery dynamic. P1 makes this cheap: the dispatcher resolves core services from one `CORE_SERVICES` map, so a `notifications` catalogue plus one entry there is the whole job. Blocked on a decision nobody has made: whether `notifications` gets a descriptor catalogue with an identity-derived permission rule, or stays deliberately outside the manifest with that documented. `PermissionRule` models only static and input-derived permissions today, so the first option needs the rule model widened
 - [ ] MCP tool-list size: the demo projects 144 tools, and `transport/mcp/server.ts` sends every one of them as a fixed prompt prefix to any MCP client. The assistant no longer has this problem — it takes a filtered surface (`ctx.methods.tools({ readOnly })`) and relies on deferred tool search to keep the rest findable — so what is left is whether the MCP server should filter too, and on what: source, entry type, or a client-supplied selection
 - [ ] Reconcile entry `destructive` semantics: `entries.publish` collapses publish+unpublish into one action, so "unpublish is destructive" can't be expressed. Revisit when the permission model gains an `unpublish` action
 - [ ] Nothing stops `astromech mcp` or the CLI being pointed at a production database. The D1-in-Node failure that currently prevents it is accidental, not a guard. Decide the shape: a warning, a `--force` flag, or a driver allowlist
@@ -71,10 +70,6 @@ not be re-derived.
 - [ ] **`index:rebuild --check` is not wired into CI.** It exits non-zero on drift and was built to
       be gate-runnable, but nothing runs it. The vitest parity test covers write-path/rebuild-path
       agreement; what `--check` would add is drift detection against a real seeded database.
-- [ ] **`entryAdminPath` has a second, hand-rolled copy.** `admin/utilities/entry-admin-path.ts` was
-      extracted for the media "used by" panel, but `admin/components/ui/command-palette.tsx:406`
-      still builds the same plugin-aware path inline. Two copies of the rule that a plugin entry type
-      lives at `/plugin/<ns>/entries/<bare-type>` is exactly the drift the helper exists to prevent.
 
 ### Storage-layer follow-ups (from `completed/storage-layer-follow-ups.md`)
 
@@ -88,10 +83,13 @@ not be re-derived.
       editorial columns: `planned/profile-entry-type.md` keeps editorial data off
       `users` entirely, so what remains is purely about who controls the DDL.
 - [ ] Derive `encodeWith`'s return type from the descriptor. It returns a bare
-      `Record<string, unknown>`, so every call site still needs
-      `as unknown as Insertable<DB[…]>` — the codec collapse removed zero casts
-      because the `*With` form takes a descriptor as an _argument_ rather than
-      being descriptor-_typed_.
+      `Record<string, unknown>` because the `*With` form takes a descriptor as an
+      _argument_ rather than being descriptor-_typed_. No `encodeWith` call site
+      casts today — the two `as unknown as Insertable<DB[…]>` casts left in the
+      repo are both on the string-keyed `encode('users', …)` path
+      (`users/storage.ts`, `transport/cli/commands/users-create.ts`) and belong to
+      the `users` descriptor item above. So this is a typing improvement with no
+      cast to remove, which is why it keeps being deferred.
 - [ ] Decide whether storage should support **savepoint-based nested
       transactions**. Kysely refuses nesting outright, so a tx-bound storage's
       `transaction()` now fails loudly rather than silently escaping the outer
@@ -135,4 +133,4 @@ not be re-derived.
 - [ ] Entry **creation** routes (`new.tsx`) and **version-history** routes (`versions.tsx`) declare no AI context. A `{ kind: 'entries', type }` with no `id` renders as "Entry list for type X" via `describeReference`, which would describe a creation screen as a list — actively misleading, so they were left undeclared. Needs either a new `AIContextKind` or an extra wording branch in `utilities/ai-context.ts` before they can be wired
 - [ ] **Modal-driven detail views declare nothing** — opening a media item from the library (`MediaDetailModal` on the media index) still reports only the library at depth 0. The reference should be declared by whatever is actually in view, not by the route alone; a modal is the first case where those differ
 - [ ] No **field-level** reference yet. Depth 1 is the deepest anything declares, so "this field" has nothing to resolve against. The ordered-list design already accommodates it (a focused field editor at depth 2); the open question is what withdraws the reference on blur without thrashing the store
-- [ ] `scopedServices(role: Role | undefined)` does not accept `ctx.role`, which is `Role | null` — every plugin call site needs `scopedServices(ctx.role ?? undefined)`. Widen the signature to `Role | null | undefined` (and check `permissionsFor` alongside it); `ctx.role` matching `ctx.user`'s `| null` is the right shape, so the wrapper is what should bend. Fix at the first real call site, P7's tool-loop
+- [ ] `scopedServices(role: Role | undefined)` does not accept `ctx.role`, which is `Role | null`, so a plugin passing `ctx.role` straight through would need `?? undefined`. **No plugin calls it yet** — the only two callers are core (`transport/tools/dispatch.ts`, `transport/http/routes/rest-route.ts`) and both pass a compatible type, so nothing is paying this cost today. Widen the signature to `Role | null | undefined` (and check `permissionsFor` alongside it) at the first real plugin call site; `ctx.role` matching `ctx.user`'s `| null` is the right shape, so the wrapper is what should bend
