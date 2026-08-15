@@ -10,9 +10,8 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 
 ### Admin
 
-- [ ] Remove the obsolete `src/admin/pages/_protected/settings/index.tsx` "Coming soon" placeholder + its sidebar footer link
+- [ ] The demo has no authoritative site URL: `apps/demo/src/pages/sitemap.xml.ts` falls back to a hardcoded `'https://astromech.dev'` because `astro.config.mjs` sets no `site`, and `Seo.astro`'s `siteUrl` prop defaults to `''` with no caller passing it, so canonical and `og:url` are never emitted. Per `decisions/0051-settings-are-content-config-is-code.md` the URL is a deployment fact — fix it in config/env, not settings
 - [ ] Investigate admin-page composition — one page rendering **both** a managed form and custom widgets (Sanity-style view tabs, or a custom component mounting managed form regions via a `useSettingsForm` hook). `AdminPage` XOR-validates `fields`/`component` today and was deliberately left open so this is additive (from `completed/unified-admin-pages.md`)
-- [ ] Investigate version history for settings (app-pages + plugin settings pages currently KV-upsert, no revisions) — relevant if settings-backed features (e.g. menus) want revert/history the way entries get it
 - [ ] The root `/entries/<type>` admin route renders for a **qualified** plugin type (`forms/form`) but generates unencoded links (`/admin/entries/forms/form/<id>`) that 404, and shows the raw type as its heading. Plugin entry types have their own working `/plugin/<ns>/entries/<type>` route and nothing links to the root one with a qualified type — so this is a latent trap rather than a live bug. Either encode the segment or reject a qualified type on that route
 
 ### Search
