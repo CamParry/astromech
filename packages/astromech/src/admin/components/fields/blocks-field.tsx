@@ -313,7 +313,7 @@ export function BlocksField({
         renameBlock,
         updateBlock,
         reorder,
-    } = useBlocksField({ name, value, onChange });
+    } = useBlocksField({ name, value, onChange, blockDefs });
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),

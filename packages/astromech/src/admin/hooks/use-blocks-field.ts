@@ -1,4 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
+import type { Block } from '@/types/index';
+// Deep import: the `fields/` barrel reaches server code (virtual config / DB).
+import { buildDefaultValues } from '@/fields/defaults';
 
 export type BlockWithId = {
     _id: string;
@@ -27,9 +30,16 @@ type UseBlocksFieldOptions = {
     name: string;
     value: unknown;
     onChange: (name: string, value: unknown) => void;
+    /** The field's block definitions — the schema a new block is seeded from. */
+    blockDefs?: Block[];
 };
 
-export function useBlocksField({ name, value, onChange }: UseBlocksFieldOptions) {
+export function useBlocksField({
+    name,
+    value,
+    onChange,
+    blockDefs = [],
+}: UseBlocksFieldOptions) {
     const rawArray = Array.isArray(value) ? (value as SerializedBlock[]) : [];
 
     const [blocks, setBlocks] = useState<BlockWithId[]>(() => rawArray.map(attachId));
@@ -56,11 +66,16 @@ export function useBlocksField({ name, value, onChange }: UseBlocksFieldOptions)
         [name, onChange]
     );
 
+    // Declared defaults are seeded here rather than by the field pipeline, which
+    // applies them on `create` only — a block added while editing an existing
+    // entry saves as an update and would otherwise arrive empty.
     const addBlock = useCallback(
         (type: string) => {
-            commit([...blocks, attachId({ _type: type })]);
+            const blockDef = blockDefs.find((bd) => bd.type === type);
+            const defaults = buildDefaultValues(blockDef?.fields ?? []);
+            commit([...blocks, attachId({ ...defaults, _type: type })]);
         },
-        [blocks, commit]
+        [blocks, blockDefs, commit]
     );
 
     const removeBlock = useCallback(
