@@ -80,3 +80,4 @@ Distinct from the neighbouring directories:
 - [0045](0045-the-asset-root-stays-declared.md) — the asset root stays declared, not inferred
 - [0046](0046-worktrees-live-outside-the-checkout.md) — worktrees live outside the checkout, so they can verify their own work
 - [0047](0047-pnpm-is-the-package-manager.md) — pnpm replaces npm workspaces, so an undeclared dependency fails instead of hoisting
+- [0048](0048-the-supported-node-floor-is-22-13.md) — the supported Node floor is 22.13, because pnpm 11 requires it and an untested range is worse than a narrow one
