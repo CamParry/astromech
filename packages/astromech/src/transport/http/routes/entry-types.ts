@@ -20,6 +20,7 @@
 
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { Astromech } from '@/transport/local/index';
+import { resolveEntryType } from '@/entries/type-ids.shared';
 import { forbidden, notFound } from '@/transport/http/middleware/errors';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { entryPermission } from '@/permissions/index';
@@ -59,8 +60,8 @@ router.get('/', (c) => {
 // GET /entry-types/:type — bespoke
 // ============================================================================
 
-// No method id, and it resolves only ROOT types via `config.entries[type]`, so
-// a plugin entry type 404s here while it serves on `/entries`.
+// No method id. It resolves root and plugin-qualified ids alike through
+// `resolveEntryType`, so `widgets/widget` serves here exactly as on `/entries`.
 router.get('/:type', (c) => {
     const { type } = c.req.param();
 
@@ -70,7 +71,7 @@ router.get('/:type', (c) => {
         return forbidden(c);
     }
 
-    const config = Astromech.config.entries[type];
+    const config = resolveEntryType(Astromech.config, type);
     if (!config) return notFound(c, `Entry type '${type}' not found`);
 
     return c.json({

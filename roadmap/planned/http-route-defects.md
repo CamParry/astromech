@@ -18,11 +18,13 @@ part of the route conversion, which is noted per item.
       does not need the conversion. Fixed 2026-08-15: both handlers gate on
       `entry:{type}:read`; the list filters to the readable types, the single
       read 403s before the existence check.
-- [ ] **`POST /entries/query` checks type existence before permission**, unlike
+- [x] **`POST /entries/query` checks type existence before permission**, unlike
       the other 29 entries routes, so an unauthorised caller can enumerate which
       entry types exist by reading 404 against 403. The inversion is visible in
       `tests/transport/http/routes/entries-permissions.test.ts`, which asserts
-      both orderings.
+      both orderings. Fixed 2026-08-15: the loop checks permission first, and
+      the test now asserts the same 403-before-404 ordering as every other
+      route.
 
 ## Contract not honoured
 
@@ -31,10 +33,12 @@ part of the route conversion, which is noted per item.
       other capability-gated route answers 409. A table-driven handler reading
       `requires` from the manifest fixes this by construction, so it is cheapest
       inside step 2 of the conversion.
-- [ ] **`GET /entry-types/:type` 404s a plugin entry type.** It reads
+- [x] **`GET /entry-types/:type` 404s a plugin entry type.** It reads
       `Astromech.config.entries[type]` directly instead of `resolveEntryType`, so
       `widgets/widget` has no metadata endpoint even though
-      `/entries/widgets%2Fwidget` serves fine.
+      `/entries/widgets%2Fwidget` serves fine. Fixed 2026-08-15: the handler
+      resolves through `resolveEntryType`, so root and plugin-qualified ids
+      serve alike; the list route stays root-only on purpose.
 
 ## Error handling
 

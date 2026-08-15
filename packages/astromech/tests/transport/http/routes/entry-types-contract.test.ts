@@ -134,11 +134,25 @@ describe('GET /entry-types/:type', () => {
         expect(body.error.message).toBe("Entry type 'nope' not found");
     });
 
-    it('404s a plugin entry type, which the entries router does serve', async () => {
+    it('serves a plugin entry type by its qualified id', async () => {
         const res = await app().request(
             `/entry-types/${encodeURIComponent('widgets/widget')}`
         );
-        expect(res.status).toBe(404);
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as TypeMeta;
+        expect(Object.keys(body).sort()).toEqual(META_KEYS);
+        expect(body.type).toBe('widgets/widget');
+        expect(body.single).toBe('Widget');
+        expect(body.plural).toBe('Widgets');
+    });
+
+    it('403s a plugin entry type before resolving it, for a role lacking its read', async () => {
+        const res = await app(roleWith(['entry:post:read'])).request(
+            `/entry-types/${encodeURIComponent('widgets/widget')}`
+        );
+        expect(res.status).toBe(403);
+        const body = (await res.json()) as { error: { code: string } };
+        expect(body.error.code).toBe('FORBIDDEN');
     });
 });
 
