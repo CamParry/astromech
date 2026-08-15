@@ -5,7 +5,6 @@ import {
     LayoutDashboard,
     Image,
     Users,
-    Settings,
     ChevronLeft,
     ChevronRight,
     Puzzle,
@@ -41,8 +40,7 @@ function filterNavItems(
 export function Sidebar() {
     const { t } = useTranslation();
     const { sidebarOpen, setSidebarOpen } = useUI();
-    const { canReadMedia, canReadUsers, canReadSettings, hasPermission } =
-        usePermissions();
+    const { canReadMedia, canReadUsers, hasPermission } = usePermissions();
     const entryTypes = Object.entries(adminConfig.entries);
     // Each host page carries its own resolved permission (`settings:read` for a
     // fields page, null/explicit for a component page), so the group gates
@@ -144,7 +142,7 @@ export function Sidebar() {
                         </nav>
                     </>
                 )}
-                {(canReadUsers() || canReadSettings()) && (
+                {canReadUsers() && (
                     <>
                         <div className="am-sidebar-nav-divider"></div>
                         <nav className="am-sidebar-nav" aria-label={t('nav.system')}>
@@ -154,13 +152,6 @@ export function Sidebar() {
                                         to="/users"
                                         label={t('nav.users')}
                                         icon={<Users size={16} />}
-                                    />
-                                )}
-                                {canReadSettings() && (
-                                    <SidebarNavItem
-                                        to="/settings"
-                                        label={t('nav.settings')}
-                                        icon={<Settings size={16} />}
                                     />
                                 )}
                             </ul>

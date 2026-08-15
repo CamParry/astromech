@@ -38,7 +38,6 @@
         "dashboard": "Dashboard",
         "media": "Media",
         "users": "Users",
-        "settings": "Settings",
         "logout": "Log out",
         "openNav": "Open navigation",
         "closeNav": "Close navigation",
@@ -228,11 +227,6 @@
     "permissions": {
         "readOnly": "You have read-only access to this entry type.",
         "forbidden": "You don't have permission to access this page."
-    },
-    "settings": {
-        "title": "Settings",
-        "comingSoon": "Settings coming soon",
-        "comingSoonDescription": "Configuration options will be available in a future update."
     },
     "topbar": {
         "brand": "Astromech",

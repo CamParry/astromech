@@ -21,7 +21,7 @@ import React, {
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui/react/dialog';
 import { useNavigate } from '@tanstack/react-router';
-import { Image, LayoutDashboard, Settings, Users, Puzzle, icons } from 'lucide-react';
+import { Image, LayoutDashboard, Users, Puzzle, icons } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -184,14 +184,6 @@ export function CommandPalette(): React.ReactElement {
                 to: '/users',
                 group: 'Navigation' as const,
                 Icon: () => <Users size={15} />,
-            },
-            {
-                kind: 'static' as const,
-                id: 'nav-settings',
-                label: t('nav.settings'),
-                to: '/settings',
-                group: 'Navigation' as const,
-                Icon: () => <Settings size={15} />,
             },
         ],
         [t]

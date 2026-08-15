@@ -46,8 +46,6 @@ function describeReference(reference: AIContextReference): string {
             return sanitizedId === undefined
                 ? `User list (\`${sanitizedLabel}\`)`
                 : `User \`${sanitizedLabel}\` (id \`${sanitizedId}\`)`;
-        case 'settings':
-            return withId(`Settings screen \`${sanitizedLabel}\``, sanitizedId);
         case 'pages':
             return withId(`Admin page \`${sanitizedLabel}\``, sanitizedId);
         default:

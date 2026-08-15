@@ -101,20 +101,6 @@ describe('formatAIContextMessage', () => {
         });
     });
 
-    describe('settings', () => {
-        it('appends the id when present', () => {
-            expect(lineFor({ kind: 'settings', id: 'site', label: 'Site' })).toBe(
-                'Settings screen `Site` (id `site`)'
-            );
-        });
-
-        it('omits the id when absent', () => {
-            expect(lineFor({ kind: 'settings', label: 'Site' })).toBe(
-                'Settings screen `Site`'
-            );
-        });
-    });
-
     describe('pages', () => {
         it('appends the id when present', () => {
             expect(lineFor({ kind: 'pages', id: 'dashboard', label: 'Dashboard' })).toBe(

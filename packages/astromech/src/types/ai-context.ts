@@ -1,6 +1,6 @@
 /** What an admin route declares about the thing the user is currently looking at. */
 
-export type AIContextKind = 'entries' | 'media' | 'users' | 'settings' | 'pages';
+export type AIContextKind = 'entries' | 'media' | 'users' | 'pages';
 
 export type AIContextReference = {
     kind: AIContextKind;
