@@ -75,3 +75,6 @@ Distinct from the neighbouring directories:
 - [0040](0040-policies-and-manifest-registry-keep-their-directories.md) — `policies/` over `guards/`, and `manifest-registry.ts` stays in `codegen/`
 - [0041](0041-the-admin-split-is-blocked-and-ui-is-browser-only.md) — the admin package split waits on two prerequisites, and `astromech/ui` does not load under Node
 - [0042](0042-domain-contracts-stay-centralised-in-the-leaf.md) — domain contracts stay centralised in the types leaf
+- [0043](0043-field-queries-ride-declared-expression-indexes.md) — field-value queries ride declared expression indexes, not columns and not a lookup table
+- [0044](0044-search-is-a-derived-fts5-index.md) — search is a derived FTS5 external-content index, not a column on `entries`
+- [0045](0045-the-asset-root-stays-declared.md) — the asset root stays declared, not inferred

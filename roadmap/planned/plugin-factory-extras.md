@@ -28,14 +28,6 @@ Low urgency: seo has no tables, so nothing derives an identifier from that
 literal. A rename of the seo package would silently desync it, which is the
 only real failure mode.
 
-## Asset root inference
-
-`root: import.meta.url` is declared by hand on every in-tree plugin. Published
-packages omit it and relative specifiers resolve to `<package>/<path>` instead.
-Open question: whether the in-tree case can be inferred rather than declared.
-Phase 1 established the two resolution modes; this is only about deleting the
-one line.
-
 ## `astromech plugin:new` scaffolding
 
 There is `plugin:generate` and `plugin:purge`, but nothing to start a plugin
