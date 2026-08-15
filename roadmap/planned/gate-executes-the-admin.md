@@ -1,6 +1,6 @@
 # The gate executes the admin
 
-`npm run check:boot` builds `apps/demo`, starts the built server, and asserts
+`pnpm run check:boot` builds `apps/demo`, starts the built server, and asserts
 `/admin` returns 200. `admin/shell.astro` mounts `<AdminApp client:only="react" />`,
 so that 200 is the shell: an html document, a stylesheet link and a script tag.
 The React app has not been evaluated when the response is written, and the

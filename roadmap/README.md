@@ -8,7 +8,7 @@ One feature per file, split across three directories:
 
 Status is encoded by the directory, so there are no status fields or emoji to go
 stale. To add a feature, create a file in the right directory. To change status,
-`git mv` the file — then run `npm run check:docs` and fix what it names.
+`git mv` the file — then run `pnpm run check:docs` and fix what it names.
 
 `check:docs` catches a **markdown link** to the old path from anywhere. It does
 not catch a **backticked path**, because those go unchecked in `specs/`,

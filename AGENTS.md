@@ -18,14 +18,16 @@ Nested `AGENTS.md` files cover `packages/astromech`, `packages/plugins`, `apps/d
 
 `ARCHITECTURE.md` has the gate table. What it doesn't say:
 
-- **Root `lint` only covers `astromech` and `@astromech/schema-engine`.** Plugin packages have no lint script, but the pre-commit hook lints their files anyway — so a plugin change can pass `npm run lint` and then fail on commit.
-- **`npm run check:boot` is not in the pre-commit hook.** It builds `apps/demo`
+- **Root `lint` only covers `astromech` and `@astromech/schema-engine`.** Plugin packages have no lint script, but the pre-commit hook lints their files anyway — so a plugin change can pass `pnpm run lint` and then fail on commit.
+- **`pnpm run check:boot` is not in the pre-commit hook.** It builds `apps/demo`
   and boots the built server — the only way a defect in the serving process is
   visible — and a full build is far too slow for a hook. CI runs it; run it by
   hand after anything that touches boot, the config path or the injected
   middleware.
 - **Never `--no-verify`.** If the hook fails, fix the cause.
-- Common commands: `npm run build`, `typecheck`, `test:run`, `lint`, `lint:deps`, `check:docs`, `check:boot`, `format`, `db:generate`, `db:init`.
+- **pnpm is the package manager**, pinned by `packageManager` in the root `package.json`. `npm install` here builds a flat tree that hides undeclared dependencies, which is the failure mode pnpm exists to catch — so every package declares what it imports.
+- **`pnpm-workspace.yaml` holds the workspace globs and the hoist list.** `publicHoistPattern` is not a convenience: the admin ships as source and the host app's Vite has to resolve its client dependencies from the app root, so that list must stay in step with `optimizeDeps.include` in `packages/astromech/src/boot/astro.ts`. A server dependency Vite cannot resolve gets inlined into the build instead of externalised, and anything loading a native binding by dynamic `require` breaks at request time when that happens.
+- Common commands: `pnpm run build`, `typecheck`, `test:run`, `lint`, `lint:deps`, `check:docs`, `check:boot`, `format`, `db:generate`, `db:init`.
 
 ## Documentation
 
@@ -36,7 +38,7 @@ Every document answers one question and has one home. A fact lives in exactly on
 - **`roadmap/` holds the work.** Status is the directory, never a field in the file.
 - **`specs/` holds in-flight design**, deleted on ship. Nothing durable may link to a spec.
 - **`apps/docs/` is user-facing**, and a page is a how-to, a reference, or an explanation — not two at once.
-- **`npm run check:docs`** verifies every repo-relative link and backticked path in markdown resolves. It runs in the gate.
+- **`pnpm run check:docs`** verifies every repo-relative link and backticked path in markdown resolves. It runs in the gate.
 
 ## Workflow
 
@@ -60,11 +62,11 @@ Create the worktree by hand from a verified base, and run a non-isolated agent s
 
 **A new worktree needs three things before it can verify itself**, because a checkout carries only tracked files:
 
-- `npm install` — nothing resolves without it.
+- `pnpm install` — nothing resolves without it.
 - **A copy of `apps/demo/.env`.** It is gitignored, so it does not travel, and without it the demo boot and the assistant fail in ways that don't name the cause.
-- `npm run build` — its own `dist`, not main's.
+- `pnpm run build` — its own `dist`, not main's.
 
-`npm run check:boot` needs nothing further: it makes a scratch database under `tmpdir` and takes a free port from the OS, so worktrees can run it concurrently. Only `npm run dev` collides — `apps/demo/astro.config.mjs` pins port 4323, so pass `-- --port <n>` when a second worktree wants a dev server.
+`pnpm run check:boot` needs nothing further: it makes a scratch database under `tmpdir` and takes a free port from the OS, so worktrees can run it concurrently. Only `pnpm run dev` collides — `apps/demo/astro.config.mjs` pins port 4323, so pass `-- --port <n>` when a second worktree wants a dev server.
 
 Nothing in this project is live yet — it's in active development. Optimise for a small, current, honest set of branches, not for isolating half-built work.
 

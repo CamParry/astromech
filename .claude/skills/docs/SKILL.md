@@ -71,4 +71,4 @@ Prune it. A ticked item in `backlog.md` is finished work sitting in a list of un
 
 ## Before you finish
 
-`npm run check:docs` must pass. It resolves every repo-relative link and every backticked path in markdown, which is the check that catches a rename nobody propagated.
+`pnpm run check:docs` must pass. It resolves every repo-relative link and every backticked path in markdown, which is the check that catches a rename nobody propagated.

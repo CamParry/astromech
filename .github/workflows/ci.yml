@@ -10,71 +10,79 @@ concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
     cancel-in-progress: true
 
+# `pnpm/action-setup` takes its version from `packageManager` in the root
+# package.json, so the toolchain is pinned in one place. It runs before
+# `setup-node`, which needs pnpm on PATH already to resolve `cache: pnpm`.
 jobs:
     lint:
         name: Lint
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v4
             - uses: actions/setup-node@v4
               with:
                   node-version: 20
-                  cache: npm
-            - run: npm ci
-            - run: npm run lint
-            - run: npm run lint:deps
-            - run: npm run format:check
+                  cache: pnpm
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm run lint
+            - run: pnpm run lint:deps
+            - run: pnpm run format:check
 
     typecheck:
         name: Type Check
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v4
             - uses: actions/setup-node@v4
               with:
                   node-version: 20
-                  cache: npm
-            - run: npm ci
+                  cache: pnpm
+            - run: pnpm install --frozen-lockfile
             # The plugin packages import `astromech` through its published
             # exports map, so they only typecheck against `dist/`. Build first.
-            - run: npm run build
-            - run: npm run typecheck
+            - run: pnpm run build
+            - run: pnpm run typecheck
 
     build:
         name: Build
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v4
             - uses: actions/setup-node@v4
               with:
                   node-version: 20
-                  cache: npm
-            - run: npm ci
-            - run: npm run build
+                  cache: pnpm
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm run build
 
     test:
         name: Test
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v4
             - uses: actions/setup-node@v4
               with:
                   node-version: 20
-                  cache: npm
-            - run: npm ci
-            - run: npm run test:run
+                  cache: pnpm
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm run test:run
 
     boot:
         name: Boot
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v4
             - uses: actions/setup-node@v4
               with:
                   node-version: 20
-                  cache: npm
-            - run: npm ci
+                  cache: pnpm
+            - run: pnpm install --frozen-lockfile
             # `apps/demo` reaches core's Node-loaded subpaths through `dist`,
             # so the packages have to be built before the demo can be.
-            - run: npm run build
-            - run: npm run check:boot
+            - run: pnpm run build
+            - run: pnpm run check:boot

@@ -40,7 +40,8 @@
             "@astromech/redirects/tables": ["../plugins/redirects/src/tables/index.ts"],
             "@astromech/backups": ["../plugins/backups/src/index.ts"],
             "@astromech/backups/tables": ["../plugins/backups/src/tables/index.ts"],
-            "@astromech/backups/internals": ["../plugins/backups/src/backup.ts"]
+            "@astromech/backups/internals": ["../plugins/backups/src/backup.ts"],
+            "@astromech/forms": ["../plugins/forms/src/index.ts"]
         }
     },
     "include": ["src/**/*"],

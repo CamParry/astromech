@@ -5,8 +5,8 @@
 # Untracked, per-developer Claude Code settings — not repo content.
 .claude/settings.local.json
 
-# Lockfile: npm owns the formatting.
-package-lock.json
+# Lockfile: pnpm owns the formatting.
+pnpm-lock.yaml
 
 # Migration snapshot: db:generate owns the formatting. Prettier collapses its
 # expanded arrays and the next generate expands them again.

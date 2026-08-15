@@ -26,6 +26,15 @@ const demoDir = join(repoRoot, 'apps', 'demo');
 const READY_ATTEMPTS = 60;
 const READY_INTERVAL_MS = 500;
 
+// Every request is given a deadline because `fetch` has none of its own. A
+// server that accepts the connection and then never answers would otherwise
+// hang this check forever: the retry loop below is bounded, but it only gets
+// to count an attempt once the request settles. That is not hypothetical — the
+// node adapter responds to an unhandled rejection during render by logging it
+// and leaving the socket open, so a boot defect presents as a hang rather than
+// as the failure this check exists to report.
+const REQUEST_TIMEOUT_MS = 10_000;
+
 let scratchDir = null;
 let server = null;
 
@@ -42,14 +51,18 @@ async function main() {
     const env = {
         ...process.env,
         DATABASE_URL: databaseUrl,
+        // `run` spawns with stdio: 'inherit', so any prompt a child package
+        // manager raises reads a stdin that may not be a terminal and hangs.
+        // This check is non-interactive by definition; say so.
+        CI: 'true',
         ASTROMECH_LOG_CONFIG_EVAL: '1',
     };
 
     step('migrating a scratch database');
-    await run('npm', ['run', 'db:init', '-w', 'astromech-demo'], { cwd: repoRoot, env });
+    await run('pnpm', ['-F', 'astromech-demo', 'db:init'], { cwd: repoRoot, env });
 
     step('building apps/demo');
-    await run('npm', ['run', 'build'], { cwd: demoDir, env });
+    await run('pnpm', ['build'], { cwd: demoDir, env });
 
     const port = await freePort();
     step(`starting dist/server/entry.mjs on port ${port}`);
@@ -122,22 +135,39 @@ function startServer(env) {
 }
 
 async function waitForServer(base) {
+    // Distinguishes the two ways this loop runs out: nothing ever listened, or
+    // something listened and would not answer. They have different causes and
+    // the same symptom, so the message has to say which one happened.
+    let connected = false;
     for (let attempt = 0; attempt < READY_ATTEMPTS; attempt += 1) {
         if (server.exited !== undefined) {
             throw new Error(`the server exited with ${server.exited} before serving`);
         }
         try {
-            await fetch(base, { redirect: 'manual' });
+            await request(base);
             return;
-        } catch {
+        } catch (error) {
+            if (error.name === 'TimeoutError') connected = true;
             await sleep(READY_INTERVAL_MS);
         }
     }
-    throw new Error(`the server never opened its port (${base})`);
+    throw new Error(
+        connected
+            ? `the server accepted connections but never answered one (${base}) — see the server output above`
+            : `the server never opened its port (${base})`
+    );
+}
+
+/** `fetch` with a deadline. See REQUEST_TIMEOUT_MS. */
+function request(url) {
+    return fetch(url, {
+        redirect: 'manual',
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
 }
 
 async function expectStatus(url, expected, description) {
-    const response = await fetch(url, { redirect: 'manual' });
+    const response = await request(url);
     if (response.status !== expected) {
         throw new Error(
             `${url} returned ${response.status}, expected ${expected} — ${description}`

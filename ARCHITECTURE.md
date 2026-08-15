@@ -117,7 +117,7 @@ Key invariants:
   boundary and holds the same allowance, so the REST route table both halves of
   the HTTP transport read stays beside the routes it describes, at
   `packages/astromech/src/transport/http/routes/http-routes.shared.ts`.
-- **Enforced** by `packages/astromech/.dependency-cruiser.cjs` (`npm run lint:deps`), which scans `packages/astromech/src` only — core's internal DAG. The layer rules there are generated from one `LAYERS` table, and a top-level `src/` directory missing from it fails the scan. Cross-package isolation is enforced by `exports` boundaries at publish, not a repo-wide scan.
+- **Enforced** by `packages/astromech/.dependency-cruiser.cjs` (`pnpm run lint:deps`), which scans `packages/astromech/src` only — core's internal DAG. The layer rules there are generated from one `LAYERS` table, and a top-level `src/` directory missing from it fails the scan. Cross-package isolation is enforced by `exports` boundaries at publish, not a repo-wide scan.
 
 ## Directory map
 
@@ -227,7 +227,7 @@ A port's implementation must be a **Vite-graph closure**. The precedent is `setP
 
 `ssr.noExternal` does **not** fix this, and neither does teaching Node to resolve `virtual:` with module customization hooks. `decisions/0007-plugin-core-boundary.md` records why each fails.
 
-Two consequences for anything loaded at config time — `plugin-runtime.ts`, the integration itself: imports must stay lazy where they reach a service (`request-context/request-context.ts` exists for this), and `npm run check:config` loads the demo config the way Astro does to catch a regression before a plugin is wired up. `npm run check:node-imports` covers the other half, asserting the plugin-facing subpaths still load under plain Node.
+Two consequences for anything loaded at config time — `plugin-runtime.ts`, the integration itself: imports must stay lazy where they reach a service (`request-context/request-context.ts` exists for this), and `pnpm run check:config` loads the demo config the way Astro does to catch a regression before a plugin is wired up. `pnpm run check:node-imports` covers the other half, asserting the plugin-facing subpaths still load under plain Node.
 
 ## App-owned migration model
 
@@ -256,7 +256,7 @@ Consumers import from subpaths, never deep into `src/`. The published surface is
 defined by `exports` in `package.json` — that's canonical. In the repo, the
 subpaths Vite loads resolve to `src/` so a core edit reaches `apps/demo` without
 a rebuild; `publishConfig.exports` restores the full `dist/` map for npm, and
-`npm run check:exports` holds the two key sets identical. The ones to know:
+`pnpm run check:exports` holds the two key sets identical. The ones to know:
 `astromech` (core helpers + types, incl. the plugin-authoring API — there is no
 separate `plugin-kit` subpath), `astromech/astro` (integration),
 `astromech/local` & `astromech/fetch` (the two API consumers — local exports
@@ -278,22 +278,22 @@ Before a change lands, all of these pass. The husky pre-commit hook runs
 lint-staged (eslint --fix + prettier) on touched files; `--no-verify` is not
 used.
 
-| Command                      | Checks                                                                                                                                                                                                                                              |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run typecheck`          | `tsc -p tsconfig.test.json` across every published package, then `astro sync && tsc --noEmit` in `apps/demo` — the only place the generated types are consumed as a site consumes them                                                              |
-| `npm run test:run`           | vitest across three suites — `packages/schema-engine/tests/`, `packages/astromech/tests/` (mirrors `src/`) and `packages/plugins/assistant/tests/`                                                                                                  |
-| `npm run build`              | tsup (explicit entries, dts). DTS worker can OOM — bump `NODE_OPTIONS=--max-old-space-size`.                                                                                                                                                        |
-| `npm run lint`               | eslint over `packages/schema-engine/src` and `packages/astromech/src` only. The plugin packages have no `lint` script; the pre-commit hook lints their files anyway                                                                                 |
-| `npm run lint:css`           | stylelint over `packages/astromech/src/admin/styles/`                                                                                                                                                                                               |
-| `npm run format:check`       | prettier over the repo                                                                                                                                                                                                                              |
-| `npm run lint:deps`          | dependency-cruiser — enforces the modular DAG within `packages/astromech/src`: no upward edges, pure leaves, every top-level directory in a layer, and the browser boundary the admin and `*.shared.ts` files sit on                                |
-| `npm run check:config`       | `tsx astromech.config.ts` in the demo — loads the site config the way Astro does, catching a config-time import that reaches a domain service                                                                                                       |
-| `npm run check:node-imports` | spawns plain `node` against built `dist` and imports each plugin-facing subpath. Needs `dist`, so it runs after `build`. See "Plugin runtime boundary"                                                                                              |
-| `npm run check:exports`      | asserts `exports` and `publishConfig.exports` name the same subpaths, so a new one cannot be added to the repo map and forgotten in the published one                                                                                               |
-| `npm run check:docs`         | resolves every repo-relative link and backticked path in markdown. Skips `specs/` and `roadmap/planned/`, which name files that do not exist yet                                                                                                    |
-| `npm run check:boot`         | builds `apps/demo`, starts `dist/server/entry.mjs` against a scratch database, and asserts `/` 200, `/admin` 200, `/api/entries/post` 401 and one config evaluation. Run on demand and in CI — a full build is far too slow for the pre-commit hook |
+| Command                       | Checks                                                                                                                                                                                                                                              |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm run typecheck`          | `tsc -p tsconfig.test.json` across every published package, then `astro sync && tsc --noEmit` in `apps/demo` — the only place the generated types are consumed as a site consumes them                                                              |
+| `pnpm run test:run`           | vitest across three suites — `packages/schema-engine/tests/`, `packages/astromech/tests/` (mirrors `src/`) and `packages/plugins/assistant/tests/`                                                                                                  |
+| `pnpm run build`              | tsup (explicit entries, dts). DTS worker can OOM — bump `NODE_OPTIONS=--max-old-space-size`.                                                                                                                                                        |
+| `pnpm run lint`               | eslint over `packages/schema-engine/src` and `packages/astromech/src` only. The plugin packages have no `lint` script; the pre-commit hook lints their files anyway                                                                                 |
+| `pnpm run lint:css`           | stylelint over `packages/astromech/src/admin/styles/`                                                                                                                                                                                               |
+| `pnpm run format:check`       | prettier over the repo                                                                                                                                                                                                                              |
+| `pnpm run lint:deps`          | dependency-cruiser — enforces the modular DAG within `packages/astromech/src`: no upward edges, pure leaves, every top-level directory in a layer, and the browser boundary the admin and `*.shared.ts` files sit on                                |
+| `pnpm run check:config`       | `tsx astromech.config.ts` in the demo — loads the site config the way Astro does, catching a config-time import that reaches a domain service                                                                                                       |
+| `pnpm run check:node-imports` | spawns plain `node` against built `dist` and imports each plugin-facing subpath. Needs `dist`, so it runs after `build`. See "Plugin runtime boundary"                                                                                              |
+| `pnpm run check:exports`      | asserts `exports` and `publishConfig.exports` name the same subpaths, so a new one cannot be added to the repo map and forgotten in the published one                                                                                               |
+| `pnpm run check:docs`         | resolves every repo-relative link and backticked path in markdown. Skips `specs/` and `roadmap/planned/`, which name files that do not exist yet                                                                                                    |
+| `pnpm run check:boot`         | builds `apps/demo`, starts `dist/server/entry.mjs` against a scratch database, and asserts `/` 200, `/admin` 200, `/api/entries/post` 401 and one config evaluation. Run on demand and in CI — a full build is far too slow for the pre-commit hook |
 
-For refactors that move tables, `npm run db:generate` must also report "No
+For refactors that move tables, `pnpm run db:generate` must also report "No
 schema changes" (migration-neutrality).
 
 ## Further reading

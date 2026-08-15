@@ -25,13 +25,18 @@
     },
     "peerDependencies": {
         "astromech": "*",
+        "kysely": "^0.28.14",
         "react": "^19.0.0"
     },
     "dependencies": {
         "@react-email/components": "^1.0.10"
     },
     "devDependencies": {
-        "astromech": "*",
-        "@types/react": "^19.0.0"
+        "@types/node": "^25.9.5",
+        "@types/react": "^19.0.0",
+        "astromech": "workspace:*",
+        "kysely": "^0.28.17",
+        "tsup": "^8.5.1",
+        "typescript": "^5.9.3"
     }
 }

@@ -32,11 +32,17 @@
         "typecheck": "tsc -p tsconfig.json"
     },
     "peerDependencies": {
+        "@tanstack/react-query": "^5.94.5",
         "astromech": "*",
         "kysely": "^0.28.0",
         "react": "^19.0.0"
     },
     "devDependencies": {
-        "astromech": "*"
+        "@tanstack/react-query": "^5.101.4",
+        "@types/node": "^25.9.5",
+        "@types/react": "^19.2.18",
+        "astromech": "workspace:*",
+        "tsup": "^8.5.1",
+        "typescript": "^5.9.3"
     }
 }

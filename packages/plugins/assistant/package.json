@@ -34,7 +34,9 @@
     },
     "peerDependencies": {
         "astromech": "*",
-        "react": "^19.0.0"
+        "kysely": "^0.28.14",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0"
     },
     "dependencies": {
         "@ai-sdk/anthropic": "^4.0.30",
@@ -43,6 +45,14 @@
         "remark-gfm": "^4.0.1"
     },
     "devDependencies": {
-        "astromech": "*"
+        "@types/node": "^25.9.5",
+        "@types/react": "^19.2.18",
+        "@types/react-dom": "^19.2.4",
+        "astromech": "workspace:*",
+        "kysely": "^0.28.17",
+        "react-dom": "^19.2.8",
+        "tsup": "^8.5.1",
+        "typescript": "^5.9.3",
+        "vitest": "^4.1.10"
     }
 }

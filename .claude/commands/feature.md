@@ -30,9 +30,9 @@ Follow this process. Don't skip phases. Stop and ask before acting whenever a re
 
 ## 4. Test & verify — all of these, not a subset
 
-- `npm run typecheck` and `npm run lint` clean.
+- `pnpm run typecheck` and `pnpm run lint` clean.
 - Tests: use the `tester` agent (Vitest; real fixtures, never mock the DB). Add coverage for new logic and API/DB behaviour.
-- `npm run build` (bump `NODE_OPTIONS` heap if the DTS worker OOMs).
+- `pnpm run build` (bump `NODE_OPTIONS` heap if the DTS worker OOMs).
 - **The demo loads the library from `dist/`** — adapter/core changes need a rebuild + dev-server restart before they show up.
 - Admin UI changes: browser-verify against the demo on **port 4323** (`admin@astromech.dev` / `password`). tsc + library build pass even with broken SPA side-effect imports — only the browser catches those. Discard test writes to the demo database afterward.
 - Then run `/review` (standards + spec) and `/verify` (real-app behaviour) before considering it done.

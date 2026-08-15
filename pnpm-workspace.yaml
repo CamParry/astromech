@@ -1,0 +1,50 @@
+packages:
+    - 'packages/schema-engine'
+    - 'packages/astromech'
+    - 'packages/plugins/*'
+    - 'apps/*'
+
+# Native postinstall scripts. pnpm blocks these by default; all three ship
+# platform binaries that do not work unless their install script runs.
+# workerd backs the D1 local-emulation test, so blocking it fails the suite.
+allowBuilds:
+    esbuild: true
+    sharp: true
+    workerd: true
+
+# Never prompt before removing node_modules when the layout changes. The prompt
+# reads stdin, and scripts/check-boot.mjs spawns pnpm with `stdio: 'inherit'`,
+# so a prompt there waits on a terminal that isn't attached and hangs the gate.
+confirmModulesPurge: false
+
+# The admin ships as SOURCE, so the host app's Vite compiles it and has to
+# resolve the admin's client dependencies from the app root. That is what the
+# `optimizeDeps.include` array in packages/astromech/src/boot/astro.ts asks for,
+# and it is deliberate: the admin shares the host's React instance rather than
+# bundling a second one. pnpm's default layout hides those packages from the
+# app, so this hoists exactly them and nothing else. Keep the two lists in step
+# — a package in one and not the other is a bug.
+#
+# `libsql` and `@libsql/*` are here for a different reason. Vite externalises a
+# server dependency only if it can resolve it from the app root, and `libsql`
+# reaches `apps/demo` transitively through `@libsql/client`. When it cannot be
+# resolved, Vite inlines it instead — and libsql loads its native binding with a
+# dynamic `require('@libsql/darwin-arm64')`, which Rollup can only replace with
+# a stub that throws. So the whole failure is decided at build time and does not
+# surface until the first render, where the node adapter answers the unhandled
+# rejection by holding the socket open rather than returning 500.
+publicHoistPattern:
+    - 'libsql'
+    - '@libsql/*'
+    - 'react'
+    - 'react-dom'
+    - 'lucide-react'
+    - '@tanstack/react-router'
+    - '@tanstack/react-query'
+    - '@base-ui/react'
+    - 'i18next'
+    - 'react-i18next'
+    - '@tiptap/core'
+    - '@tiptap/react'
+    - '@tiptap/starter-kit'
+    - 'lodash-es'

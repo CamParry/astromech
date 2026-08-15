@@ -36,8 +36,8 @@ Per `AGENTS.md`, clarify before acting; for structural decisions, discuss the di
 
 ## 6. Verify — prove behaviour is unchanged
 
-- `npm run typecheck` and `npm run lint` clean; the test suite green (same results as the phase-3 baseline).
-- `npm run build` (bump `NODE_OPTIONS` heap if the DTS worker OOMs). The demo loads the library from `dist/` — rebuild + restart the dev server before checking.
+- `pnpm run typecheck` and `pnpm run lint` clean; the test suite green (same results as the phase-3 baseline).
+- `pnpm run build` (bump `NODE_OPTIONS` heap if the DTS worker OOMs). The demo loads the library from `dist/` — rebuild + restart the dev server before checking.
 - Admin UI: browser-verify against the demo on **port 4323** (`admin@astromech.dev` / `password`); broken SPA side-effect imports pass tsc + build and only show up in the browser. Discard test writes to the demo database.
 - Run `/review` and `/verify`. The bar for a refactor is: same behaviour, better structure.
 

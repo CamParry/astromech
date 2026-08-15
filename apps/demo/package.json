@@ -16,22 +16,33 @@
         "@ai-sdk/anthropic": "^4.0.30",
         "@astrojs/node": "^10.1.4",
         "@astrojs/react": "^5.0.1",
-        "@astromech/assistant": "*",
-        "@astromech/backups": "*",
-        "@astromech/menus": "*",
-        "@astromech/redirects": "*",
-        "@astromech/seo": "*",
+        "@astromech/assistant": "workspace:*",
+        "@astromech/backups": "workspace:*",
+        "@astromech/forms": "workspace:*",
+        "@astromech/menus": "workspace:*",
+        "@astromech/redirects": "workspace:*",
+        "@astromech/seo": "workspace:*",
         "@tailwindcss/vite": "^4.3.1",
         "astro": "^6.0.8",
-        "astromech": "*",
-        "dotenv": "^17.3.1"
+        "astromech": "workspace:*",
+        "better-auth": "^1.6.28",
+        "dotenv": "^17.3.1",
+        "kysely": "^0.28.17",
+        "react": "^19.2.8",
+        "react-dom": "^19.2.8",
+        "sharp": "^0.35.3"
     },
     "devDependencies": {
-        "@astromech/schema-engine": "*",
+        "@astromech/schema-engine": "workspace:*",
         "@iconify-json/lucide": "^1.2.112",
         "@iconify-json/simple-icons": "^1.2.86",
         "@tailwindcss/forms": "^0.5.11",
         "@tailwindcss/typography": "^0.5.20",
-        "astro-icon": "^1.1.5"
+        "@types/react": "^19.2.18",
+        "@types/react-dom": "^19.2.4",
+        "astro-icon": "^1.1.5",
+        "tailwindcss": "^4.3.3",
+        "tsx": "^4.23.12",
+        "typescript": "^5.9.3"
     }
 }
