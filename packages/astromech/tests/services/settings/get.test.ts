@@ -91,15 +91,14 @@ describe('settingsService.get — visibility', () => {
         });
     });
 
-    it('withholds a private per-locale variant from a public read of a public base key', async () => {
-        // Only the bare key is public here — `site:en` is NOT covered, because a
-        // bare entry is an exact match, not a prefix.
+    it('exposes per-locale variants of a bare publicSettings entry', async () => {
+        // A bare entry derives both `site` and the `site:` prefix, so `site:en`
+        // is public too — the same pair a `public: true` admin page derives.
         setupTestConfig({ ...makeTestConfig(), publicSettings: ['site'] });
         await settingsService.set({ key: 'site', value: { title: 'Base' } });
         await settingsService.set({ key: 'site:en', value: { title: 'English' } });
 
-        expect(await settingsService.get({ key: 'site' })).toEqual({ title: 'Base' });
-        expect(await settingsService.get({ key: 'site', full: true })).toEqual({
+        expect(await settingsService.get({ key: 'site' })).toEqual({
             title: 'English',
         });
     });

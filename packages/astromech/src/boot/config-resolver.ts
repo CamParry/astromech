@@ -295,13 +295,18 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     //    a `baseKey:` prefix (covers per-locale variants like `globals:en`).
     // 2. Plugin admin pages with `public: true` do the same for their
     //    `plugin:<ns>:<path>` baseKey.
-    // 3. The raw `publicSettings` list from config is included verbatim.
+    // 3. Raw `publicSettings` entries derive the same pair, so a translatable
+    //    key listed there exposes its `:locale` variants too. An entry that is
+    //    already a prefix (ends with `:`) is taken as written.
     const publicSettingKeys: string[] = [];
 
+    function addPublicKey(key: string): void {
+        if (!publicSettingKeys.includes(key)) publicSettingKeys.push(key);
+    }
+
     function addPublicBaseKey(baseKey: string): void {
-        if (!publicSettingKeys.includes(baseKey)) publicSettingKeys.push(baseKey);
-        const prefix = `${baseKey}:`;
-        if (!publicSettingKeys.includes(prefix)) publicSettingKeys.push(prefix);
+        addPublicKey(baseKey);
+        addPublicKey(`${baseKey}:`);
     }
 
     for (const page of adminPages) {
@@ -317,7 +322,8 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
         }
     }
     for (const key of config.publicSettings ?? []) {
-        if (!publicSettingKeys.includes(key)) publicSettingKeys.push(key);
+        if (key.endsWith(':')) addPublicKey(key);
+        else addPublicBaseKey(key);
     }
 
     const mediaAccess = config.media?.access ?? 'public';

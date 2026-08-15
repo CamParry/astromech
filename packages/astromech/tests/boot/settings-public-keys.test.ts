@@ -5,12 +5,13 @@
  *  (a) Empty by default
  *  (b) PluginPage with `public: true` adds key + prefix
  *  (c) Non-public plugin pages are excluded
- *  (d) config.publicSettings merged in verbatim
+ *  (d) config.publicSettings entries derive key + prefix, like public pages
  *  (e) No duplicates when page key and publicSettings overlap
  */
 
 import { describe, expect, it } from 'vitest';
 import { resolveConfig } from '@/boot/config-resolver';
+import { isPublicSettingKey } from '@/settings/visibility';
 import type { AstromechConfig, DatabaseDriver, StorageDriver } from '@/types/index';
 
 const driver: DatabaseDriver = {
@@ -153,11 +154,11 @@ describe('publicSettingKeys — plugin page public: true', () => {
 });
 
 // ---------------------------------------------------------------------------
-// (c) config.publicSettings merged verbatim
+// (c) config.publicSettings derives key + prefix
 // ---------------------------------------------------------------------------
 
 describe('publicSettingKeys — config.publicSettings', () => {
-    it('includes raw publicSettings entries verbatim', () => {
+    it('includes raw publicSettings entries', () => {
         const resolved = resolveConfig(
             baseConfig({ publicSettings: ['my-key', 'another'] })
         );
@@ -165,10 +166,23 @@ describe('publicSettingKeys — config.publicSettings', () => {
         expect(resolved.publicSettingKeys).toContain('another');
     });
 
-    it('does not add a prefix entry for raw publicSettings keys (user controls format)', () => {
+    it('adds the locale prefix for a bare entry, exposing its :locale variants', () => {
         const resolved = resolveConfig(baseConfig({ publicSettings: ['my-key'] }));
-        // Only 'my-key' itself — no auto-added 'my-key:'
-        expect(resolved.publicSettingKeys).not.toContain('my-key:');
+        expect(resolved.publicSettingKeys).toContain('my-key');
+        expect(resolved.publicSettingKeys).toContain('my-key:');
+        expect(isPublicSettingKey('my-key:en', resolved.publicSettingKeys)).toBe(true);
+    });
+
+    it('leaves an entry that is already a prefix as written', () => {
+        const resolved = resolveConfig(baseConfig({ publicSettings: ['my-key:'] }));
+        expect(resolved.publicSettingKeys).toEqual(['my-key:']);
+    });
+
+    it('does not duplicate when both the bare key and its prefix are listed', () => {
+        const resolved = resolveConfig(
+            baseConfig({ publicSettings: ['my-key', 'my-key:'] })
+        );
+        expect(resolved.publicSettingKeys).toEqual(['my-key', 'my-key:']);
     });
 });
 

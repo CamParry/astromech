@@ -431,13 +431,15 @@ export type AstromechConfig = {
         pages?: AdminPage[];
     };
     /**
-     * Bare setting keys (or key prefixes ending with `/`) that are readable
-     * without authentication. Complements the page-level `public` flag on
-     * `AdminPage`. Keys not listed here (and not on a public admin page) are
-     * private by default.
+     * Setting keys readable without authentication. Complements the page-level
+     * `public` flag on `AdminPage`. Keys not listed here (and not on a public
+     * admin page) are private by default.
      *
-     * Example: `['site-meta', 'theme/']` allows `'site-meta'` and any key
-     * starting with `'theme/'`.
+     * A bare key exposes the key itself and every `<key>:<locale>` variant, the
+     * same pair a `public: true` admin page derives. An entry already ending
+     * with `:` is a prefix and is taken as written.
+     *
+     * Example: `['site-meta']` allows `'site-meta'` and `'site-meta:en'`.
      */
     publicSettings?: string[];
     media?: MediaConfig;
@@ -498,10 +500,11 @@ export type ResolvedConfig = Omit<
     adminPages: ResolvedAdminPage[];
     trash: Required<TrashConfig>;
     /**
-     * Derived set of setting keys (exact) and prefixes (ending with `/`) that
+     * Derived set of setting keys (exact) and prefixes (ending with `:`) that
      * are publicly readable. Computed once at config resolution from:
      *   1. Admin pages with `public: true` → their `baseKey` and `baseKey:` prefix.
-     *   2. `AstromechConfig.publicSettings` → verbatim.
+     *   2. `AstromechConfig.publicSettings` → the same pair per bare entry; an
+     *      entry already ending with `:` is kept as written.
      * Always present (empty array when nothing is public).
      */
     publicSettingKeys: string[];
