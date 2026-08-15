@@ -27,6 +27,7 @@ import { useQuery } from '@tanstack/react-query';
 import adminConfig from 'virtual:astromech/admin-config';
 import { astromechClient } from '@/transport/http/client/index';
 import { parseEntryTypeId } from '@/entries/type-ids.shared';
+import { entryAdminPath } from '@/admin/utilities/entry-admin-path';
 import { entryLabel } from '@/admin/components/entries/entry-label';
 import { usePermissions } from '../../hooks/index';
 import { useDebounce } from '../../hooks/use-debounce';
@@ -368,8 +369,6 @@ export function CommandPalette(): React.ReactElement {
                 typeof entry.type === 'string'
                     ? adminConfig.entries[entry.type]
                     : undefined;
-            let pluginName: string | undefined;
-            let bareType = entry.type;
             if (cfg === undefined && typeof entry.type === 'string') {
                 const parsed = parseEntryTypeId(entry.type);
                 if (parsed) {
@@ -379,17 +378,15 @@ export function CommandPalette(): React.ReactElement {
                     const pluginCfg = plugin?.entries[parsed.type];
                     if (plugin && pluginCfg) {
                         cfg = pluginCfg;
-                        pluginName = plugin.namespace;
-                        bareType = parsed.type;
                     }
                 }
             }
             const label = entryLabel(entry, cfg);
             const iconName = cfg?.icon;
-            const to =
-                pluginName !== undefined
-                    ? `/plugin/${pluginName}/entries/${bareType}/${entry.id}`
-                    : `/entries/${bareType}/${entry.id}`;
+            const to = entryAdminPath(
+                typeof entry.type === 'string' ? entry.type : '',
+                entry.id
+            );
             return {
                 kind: 'live' as const,
                 id: `live-entry-${entry.id}-${entry.type}`,
