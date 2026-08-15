@@ -6,7 +6,7 @@
  * move changed nothing — including the two things the scoped handle does not
  * derive: the publish escalation on an `update` carrying `status: 'published'`,
  * and the fact that the permission is checked BEFORE the entry type is
- * resolved on every route except the cross-type `POST /query`.
+ * resolved on every route, the cross-type `POST /query` included.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -238,9 +238,12 @@ describe('permission is checked before the type is resolved', () => {
         expect(found.status).toBe(404);
     });
 
-    it('POST /query is the exception — it 404s an unknown type either way', async () => {
+    it('holds on POST /query too: 403 for an under-privileged role, 404 for a privileged one', async () => {
         const denied = await request(roleWith([]), '/query', json({ type: 'nope' }));
-        expect(denied.status).toBe(404);
+        expect(denied.status).toBe(403);
+
+        const found = await request(roleWith(['*']), '/query', json({ type: 'nope' }));
+        expect(found.status).toBe(404);
     });
 });
 

@@ -402,7 +402,6 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
 
     // Not in the table: `type` arrives in the body and may be a list, and an
     // absent one answers a hand-rolled `invalid_input` 400 outside ApiErrorCode.
-    // It is also the one route that resolves the type BEFORE the permission.
     router.post('/query', async (c) => {
         const permissions = permissionsFor(c.var.role);
         const body = await c.req.json<EntryQueryParams & Record<string, unknown>>();
@@ -427,10 +426,12 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         }
 
         for (const type of types) {
+            // Permission before existence, as on every entries route: a 404 an
+            // unpermitted caller can read is a type enumeration.
+            if (!permissions.allows(entryPermission(type, 'read'))) return forbidden(c);
             if (!resolveEntryType(Astromech.config, type)) {
                 return notFound(c, `Entry type '${type}' not found`);
             }
-            if (!permissions.allows(entryPermission(type, 'read'))) return forbidden(c);
         }
 
         const wantsFull = body['full'] === true;
