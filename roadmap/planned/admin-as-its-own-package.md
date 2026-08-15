@@ -121,13 +121,14 @@ Of the three costs the move was going to remove, one survives.
   generates the layer rules from one `LAYERS` table, so the per-rule maintenance
   that made a 577-file scan expensive is gone. The scan still covers `admin/`;
   that is now a runtime cost, not a maintenance one.
-- **Standing — a broken import in the admin entry passes the whole gate.**
-  `check:boot` asserts `/admin` returns 200, but `admin/shell.astro` mounts
+- **Paid down — a broken import in the admin entry passes the whole gate.**
+  `check:boot` asserted `/admin` returns 200, but `admin/shell.astro` mounts
   `<AdminApp client:only="react" />`, so a 200 shell in front of a dead client
-  passes. This is real and it is the only justification left.
+  passed. `roadmap/completed/gate-executes-the-admin.md` now loads the admin in
+  a browser and asserts it painted.
 
-And that one is addressed far more cheaply by
-`roadmap/planned/gate-executes-the-admin.md` than by moving 257 files.
+That was the last standing justification, and it was addressed far more cheaply
+than by moving 257 files.
 
 ## Prerequisites
 
@@ -136,10 +137,10 @@ And that one is addressed far more cheaply by
    Independently landable and verifiable while the admin is still in-package,
    and it turns the `astromech/ui` question above from a design fork into a
    mechanical move.
-2. **`roadmap/planned/gate-executes-the-admin.md`** — a headless check that the
-   mounted admin renders. This closes the one standing justification, which
-   means it makes the case for the split thinner rather than thicker. That is
-   the honest reading and it is written down in that file too.
+2. **`roadmap/completed/gate-executes-the-admin.md`** — landed. A headless check
+   that the mounted admin renders. It closed the one standing justification,
+   which makes the case for the split thinner rather than thicker. That is the
+   honest reading and it is written down in that file too.
 
 Both are worth doing on their own terms. Neither commits to the split.
 

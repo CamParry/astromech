@@ -84,3 +84,4 @@ Distinct from the neighbouring directories:
 - [0049](0049-ci-tests-the-floor-and-the-active-lts.md) — CI tests the engines floor and the Active LTS, and only the jobs where the runtime can differ
 - [0050](0050-every-published-package-states-and-enforces-the-node-floor.md) — every published package states the Node floor, and the types and build enforce it
 - [0051](0051-settings-are-content-config-is-code.md) — settings are content, config is code, secrets are env-only, and core ships no settings page
+- [0052](0052-the-gate-executes-the-admin-in-a-browser.md) — the gate loads the admin in headless chromium, mandatory and stopping before login

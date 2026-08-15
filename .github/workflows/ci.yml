@@ -142,4 +142,7 @@ jobs:
             # `apps/demo` reaches core's Node-loaded subpaths through `dist`,
             # so the packages have to be built before the demo can be.
             - run: pnpm run build
+            # `check:boot` loads `/admin` in headless chromium. The browser is
+            # not part of the npm install, so it is fetched here.
+            - run: pnpm exec playwright install --with-deps chromium
             - run: pnpm run check:boot

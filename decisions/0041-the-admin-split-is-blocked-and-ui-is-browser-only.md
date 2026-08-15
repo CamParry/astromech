@@ -127,7 +127,7 @@ into a config-free kit and the config-bound exports — Payload's
 in-package, it makes `astromech/ui` describable in one sentence, and it turns
 the fork above from a design question into a mechanical move.
 
-`roadmap/planned/gate-executes-the-admin.md` asserts, headlessly, that the
+`roadmap/completed/gate-executes-the-admin.md` asserts, headlessly, that the
 mounted admin renders. It closes the one standing justification directly, and
 far more cheaply than moving 196 files.
 

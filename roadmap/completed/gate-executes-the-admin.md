@@ -17,22 +17,30 @@ This is the defect `roadmap/planned/admin-as-its-own-package.md` wants to fix by
 moving 196 files into a package with its own build. A headless check that
 executes the mounted admin fixes it directly, without moving anything.
 
-## Change
+## Shipped (2026-08-15)
 
-- [ ] After `check:boot`'s existing assertions, load `/admin` in a headless
+- [x] After `check:boot`'s existing assertions, load `/admin` in a headless
       browser and assert the app actually mounted — a selector that only exists
-      once React has rendered, not merely a 200.
-- [ ] Fail on any console error and on any uncaught page error, since a broken
-      import surfaces as one of the two and not as a missing element.
-- [ ] Pick the driver against what the check needs, which is one page load and
-      no interaction. Playwright is the obvious default and brings a browser
-      download; whether that cost belongs in CI, in the on-demand path, or
-      behind a flag is the decision to make.
-- [ ] Assert past the login screen or stop before it, explicitly. The demo's
-      `/admin` renders an unauthenticated shell, so "React mounted" is
-      reachable without a session while "the entries list rendered" is not.
-      Whichever line is chosen, say so in the script header, because the
-      untested half is the half that will rot.
+      once React has rendered, not merely a 200. The selector is
+      `#am-app form input[type="password"]`: the router root from
+      `packages/astromech/src/admin/pages/__root.tsx` plus the password field of
+      the unauthenticated screen, so it separates a painted screen from the
+      pending placeholder as well as from the shell.
+- [x] Fail on any console error and on any uncaught page error, since a broken
+      import surfaces as one of the two and not as a missing element. Chromium
+      logs the unauthenticated `/api/me` 401 as a console error too, so messages
+      that carry no JavaScript arguments — the ones no script emitted — are
+      printed with a mount failure but do not fail the check by themselves.
+- [x] Playwright, headless chromium, launched inside the same server lifecycle.
+      puppeteer-core against a system Chrome and a bare CDP probe both avoid the
+      browser download and were rejected;
+      `decisions/0052-the-gate-executes-the-admin-in-a-browser.md` records why.
+- [x] The step is mandatory, not behind a flag. `check:boot` is already on
+      demand and in CI only, and a skippable check is the rot this file warns
+      about. A missing browser binary fails with the install command in the
+      message, and CI installs chromium before the run.
+- [x] The line is before login, stated in the script header: everything behind
+      it is untested by this check.
 
 ## What this does to the case for the split
 
