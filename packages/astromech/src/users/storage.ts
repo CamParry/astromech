@@ -22,7 +22,16 @@ import type { UserRow } from './schema';
 type UsersEb = ExpressionBuilder<Record<string, Record<string, unknown>>, string>;
 
 export type NewUser = TableInsert<typeof usersTable>;
-export type UserPatch = Patch<typeof usersTable>;
+
+/**
+ * An allow-list, not the table's full patch shape: `id` is the key, `createdAt`
+ * is history, and `emailVerified` and `image` belong to better-auth's own flows.
+ * Derived from the descriptor so the value types stay in step with it.
+ */
+export type UserPatch = Pick<
+    Patch<typeof usersTable>,
+    'email' | 'name' | 'fields' | 'roleSlug'
+>;
 
 export type UserListParams = {
     search?: string | undefined;

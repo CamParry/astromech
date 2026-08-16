@@ -10,7 +10,7 @@
  *     `defineTable` table carries per-column `serialize`/`parse`/`default`
  *     fns, so the caller passes the one it already has and the codec needs
  *     no table registry at all. Each column declares its own storage format,
- *     so `users` (seconds-INTEGER timestamps, uuid ids — better-auth's adapter
+ *     so `users` (seconds-INTEGER timestamps, TEXT ids — better-auth's adapter
  *     writes it too) converts through the same path as an ISO-TEXT table.
  *
  *   - **Table-name-keyed** (`decode`/`encode`/`encodePatch`) — for the rows whose
@@ -172,11 +172,24 @@ export function encodePatch(
  * Storage → JS for one table's row. Call on every row a query returns
  * (selects AND `returningAll`). Typed as the table's domain row shape, so the
  * result needs no cast.
+ *
+ * The overloads keep `decodeWith(t, await q.executeTakeFirst())` honest: a
+ * missing row decodes to `undefined`, not to an empty object wearing the row
+ * type.
  */
 export function decodeWith<D extends Table>(
     table: D,
     row: Record<string, unknown>
-): TableSelect<D> {
+): TableSelect<D>;
+export function decodeWith<D extends Table>(
+    table: D,
+    row: Record<string, unknown> | undefined
+): TableSelect<D> | undefined;
+export function decodeWith<D extends Table>(
+    table: D,
+    row: Record<string, unknown> | undefined
+): TableSelect<D> | undefined {
+    if (!row) return undefined;
     const out: Record<string, unknown> = { ...row };
     for (const [key, col] of Object.entries(table.columns)) {
         const v = out[key];

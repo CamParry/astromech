@@ -158,8 +158,9 @@ type BooleanOpts = {
     default?: boolean;
 };
 type IdOpts = {
-    /** Generated id format — ULID by default, uuid for a table another writer
-     *  (better-auth) also inserts into. */
+    /** Format of the id the app default mints — ULID by default, uuid for a
+     *  table another writer (better-auth) also inserts into. That writer mints
+     *  ids in its own format; the column is text either way. */
     format?: 'ulid' | 'uuid';
 };
 type TimestampOpts = {
