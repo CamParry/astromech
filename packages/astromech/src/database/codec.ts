@@ -34,8 +34,8 @@
  * values (e.g. a setting `value` of `"123"`).
  */
 
-import type { Insertable } from 'kysely';
-import type { KyselyOf, Table } from '@/database/define-table';
+import type { Insertable, Updateable } from 'kysely';
+import type { KyselyOf, Table, TableSelect } from '@/database/define-table';
 
 // ── Plugin tables (registered at boot) ──────────────────────────────────────
 
@@ -113,7 +113,9 @@ const LEGACY_CODECS: Record<string, LegacyCodec> = {
 export function decode<T extends Record<string, unknown>>(tableName: string, row: T): T {
     if (!row) return row;
     const table = PLUGIN_TABLES.get(tableName);
-    if (table) return decodeWith(table, row);
+    // The name-keyed tier has no `Table` type to derive a row shape from, so a
+    // plugin table's decoded row is returned in the shape the caller passed in.
+    if (table) return decodeWith(table, row) as unknown as T;
     const legacy = LEGACY_CODECS[tableName];
     if (!legacy) return row;
     const out: Record<string, unknown> = { ...row };
@@ -168,17 +170,20 @@ export function encodePatch(
 
 /**
  * Storage → JS for one table's row. Call on every row a query returns
- * (selects AND `returningAll`).
+ * (selects AND `returningAll`). Typed as the table's domain row shape, so the
+ * result needs no cast.
  */
-export function decodeWith<T extends Record<string, unknown>>(table: Table, row: T): T {
-    if (!row) return row;
+export function decodeWith<D extends Table>(
+    table: D,
+    row: Record<string, unknown>
+): TableSelect<D> {
     const out: Record<string, unknown> = { ...row };
     for (const [key, col] of Object.entries(table.columns)) {
         const v = out[key];
         if (v === null || v === undefined) continue;
         out[key] = col.parse(v);
     }
-    return out as T;
+    return out as TableSelect<D>;
 }
 
 /**
@@ -199,12 +204,15 @@ export function encodeWith<D extends Table>(
     return serializeTable(table, out) as Insertable<KyselyOf<D>>;
 }
 
-/** JS → storage for an UPDATE: serialize what was provided, never default. */
-export function encodePatchWith(
-    table: Table,
+/**
+ * JS → storage for an UPDATE: serialize what was provided, never default. Typed
+ * as the table's Kysely update shape so the result goes straight into `.set()`.
+ */
+export function encodePatchWith<D extends Table>(
+    table: D,
     values: Record<string, unknown>
-): Record<string, unknown> {
-    return serializeTable(table, values);
+): Updateable<KyselyOf<D>> {
+    return serializeTable(table, values) as Updateable<KyselyOf<D>>;
 }
 
 // ============================================================================

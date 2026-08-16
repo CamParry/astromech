@@ -91,7 +91,7 @@ export function createUserStorage(db?: Db) {
         if (params?.limit !== undefined) q = q.limit(params.limit);
         if (params?.offset !== undefined) q = q.offset(params.offset);
         const rows = await q.execute();
-        return rows.map((row) => decodeWith(usersTable, row) as unknown as UserRow);
+        return rows.map((row) => decodeWith(usersTable, row));
     }
 
     async function count(params?: { search?: string | undefined }): Promise<number> {

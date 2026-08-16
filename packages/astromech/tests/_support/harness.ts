@@ -305,5 +305,5 @@ export async function createTestUser(
         .returningAll()
         .executeTakeFirst();
     if (!row) throw new Error('failed to insert test user');
-    return decodeWith(usersTable, row) as unknown as UserRow;
+    return decodeWith(usersTable, row);
 }

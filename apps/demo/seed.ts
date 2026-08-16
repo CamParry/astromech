@@ -107,7 +107,7 @@ async function upsertAdmin(): Promise<string> {
                 roleSlug: 'admin',
                 createdAt: now,
                 updatedAt: now,
-            }) as never
+            })
         )
         .execute();
 

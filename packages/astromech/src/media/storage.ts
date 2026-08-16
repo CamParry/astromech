@@ -110,7 +110,7 @@ export function createMediaStorage(db?: Db) {
         }
         if (page) q = q.limit(page.limit).offset(page.offset);
         const rows = await q.execute();
-        return rows.map((row) => decodeWith(mediaTable, row) as unknown as MediaRow);
+        return rows.map((row) => decodeWith(mediaTable, row));
     }
 
     async function count(params?: MediaQueryParams): Promise<number> {

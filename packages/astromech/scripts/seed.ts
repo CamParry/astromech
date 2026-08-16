@@ -133,7 +133,7 @@ async function seed(): Promise<void> {
                         createdBy: adminId,
                     },
                 ] as Record<string, unknown>[]
-            ).map((r) => schema.encodeWith(schema.mediaTable, r) as never)
+            ).map((r) => schema.encodeWith(schema.mediaTable, r))
         )
         .execute();
     console.log('  Created 4 media items\n');
@@ -663,7 +663,7 @@ async function upsertUser(
                 emailVerified: true,
                 createdAt: now,
                 updatedAt: now,
-            }) as never
+            })
         )
         .execute();
 
@@ -689,7 +689,7 @@ async function upsertUser(
 async function insertEntries(rows: Record<string, unknown>[]): Promise<void> {
     await db
         .insertInto('entries')
-        .values(rows.map((r) => schema.encodeWith(schema.entriesTable, r) as never))
+        .values(rows.map((r) => schema.encodeWith(schema.entriesTable, r)))
         .execute();
     seededEntries.push(
         ...rows.map((r) => ({
@@ -703,18 +703,17 @@ async function insertEntries(rows: Record<string, unknown>[]): Promise<void> {
 /** Derive the relationships index from every seeded entry's field data. */
 async function indexRelationships(): Promise<void> {
     const rows = seededEntries.flatMap((entry) =>
-        collectRelationshipEdges(entryFields(entry.type), entry.fields).map(
-            (edge) =>
-                schema.encodeWith(schema.relationshipsTable, {
-                    sourceId: entry.id,
-                    sourceKind: 'entry' as const,
-                    sourceType: entry.type,
-                    schemaPath: edge.schemaPath,
-                    instancePath: edge.instancePath,
-                    targetId: edge.targetId,
-                    targetKind: edge.targetKind,
-                    sourceStaged: false,
-                }) as never
+        collectRelationshipEdges(entryFields(entry.type), entry.fields).map((edge) =>
+            schema.encodeWith(schema.relationshipsTable, {
+                sourceId: entry.id,
+                sourceKind: 'entry' as const,
+                sourceType: entry.type,
+                schemaPath: edge.schemaPath,
+                instancePath: edge.instancePath,
+                targetId: edge.targetId,
+                targetKind: edge.targetKind,
+                sourceStaged: false,
+            })
         )
     );
 

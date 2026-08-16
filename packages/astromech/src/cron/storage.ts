@@ -52,7 +52,7 @@ export function createCronStorage(db?: Db) {
                 ])
             )
             .execute();
-        return rows.map((row) => decodeWith(cronTable, row) as unknown as CronRow);
+        return rows.map((row) => decodeWith(cronTable, row));
     }
 
     /**
