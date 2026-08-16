@@ -68,8 +68,9 @@ export async function create(params: {
             : null;
 
     const user = getCurrentUser();
-    const fieldDefs = flattenEntryFields(entryType.fields);
 
+    // Handle Fields
+    const fieldDefs = flattenEntryFields(entryType.fields);
     // Non-translatable fields belong to the locale group, not to this row, so a
     // new translation inherits them from an existing sibling rather than taking
     // whatever the form sent. Runs before validation so an inherited value is
