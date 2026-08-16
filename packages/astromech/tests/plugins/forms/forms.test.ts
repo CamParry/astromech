@@ -108,8 +108,9 @@ async function setup(options?: FormsOptions): Promise<ResolvedConfig> {
     // `FIRST_PARTY_PLUGIN_MIGRATIONS`. Emitting the table from its `Table`
     // here instead would test a table the migrations might not actually
     // produce.
-    // The submit rate limit counts in a process-wide map, and every submission
-    // here carries no ip, so they all share one bucket.
+    // The submit rate limit counts in a process-wide map. These calls carry no
+    // connecting address, so they go unmetered — the reset only clears a
+    // counter another test file may have left behind.
     resetRateLimit();
     db = await createTestDb();
     recordEmails();

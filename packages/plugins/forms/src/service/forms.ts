@@ -86,12 +86,13 @@ export function buildFormsService(
             input: submitInputSchema,
             mutates: true,
             handler: async (input, ctx): Promise<SubmitResult> => {
-                // The Hono context is not forwarded to a service method, so the
-                // only client identity available is the caller-supplied ip.
-                if (rateLimit !== false) {
-                    const meta = isRecord(input?.meta) ? input.meta : {};
-                    const ip = typeof meta['ip'] === 'string' ? meta['ip'] : UNKNOWN_IP;
-                    if (!consumeRateLimit(ip, rateLimit)) return formError(TOO_MANY);
+                // A caller with no connecting address is a trusted local one
+                // (CLI, MCP, in-process) and goes unmetered. `meta.ip` is not
+                // read here: it is caller-supplied, so keying on it would let a
+                // client mint a fresh counter per request.
+                const address = ctx.clientAddress;
+                if (rateLimit !== false && address !== undefined) {
+                    if (!consumeRateLimit(address, rateLimit)) return formError(TOO_MANY);
                 }
 
                 const form = await loadForm(ctx, input?.slug);
@@ -196,9 +197,6 @@ const submitInputSchema = z.object({
 const NOT_ACCEPTING = 'This form is not accepting submissions';
 
 const TOO_MANY = 'Too many submissions — please try again shortly';
-
-/** The bucket every submission with no `meta.ip` shares. */
-const UNKNOWN_IP = 'unknown';
 
 /**
  * `processFields` only reaches this port for DB-backed rules, which the form
