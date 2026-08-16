@@ -258,7 +258,7 @@ export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
     }
 
     function decodeRow(row: Record<string, unknown>): TableSelect<D> {
-        return asSelect(decodeWith(table, row));
+        return decodeWith(table, row);
     }
 
     // ── where ───────────────────────────────────────────────────────────────
@@ -551,15 +551,12 @@ export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
 
 /**
  * The `Table` row types are generic over `D`, so TypeScript cannot see that
- * they are plain records. These two helpers hold the single cast each way,
- * rather than scattering `as unknown as` through the query calls.
+ * they are plain records. This holds the single cast into a query call, rather
+ * than scattering `as unknown as` through them. Coming back out, `decodeWith`
+ * is already typed as the table's row.
  */
 function asRecord(value: unknown): Record<string, unknown> {
     return value as Record<string, unknown>;
-}
-
-function asSelect<D>(row: Record<string, unknown>): TableSelect<D> {
-    return row as TableSelect<D>;
 }
 
 function omit(

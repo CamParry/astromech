@@ -26,6 +26,7 @@ const main = defineCommand({
         'generate:manifest': () =>
             import('./commands/generate-manifest').then((m) => m.default),
         'db:generate': () => import('./commands/db-generate').then((m) => m.default),
+        'db:rebaseline': () => import('./commands/db-rebaseline').then((m) => m.default),
         'index:rebuild': () => import('./commands/index-rebuild').then((m) => m.default),
         'plugin:generate': () =>
             import('./commands/plugin-generate').then((m) => m.default),

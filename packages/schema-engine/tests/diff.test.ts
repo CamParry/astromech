@@ -191,6 +191,36 @@ describe('diffSnapshots', () => {
         expect(widgetsOp?.kind).toBe('rebuildTable');
     });
 
+    it('a rebuild of a table children reference ON DELETE cascade → error', () => {
+        const prev = table('users', [col.id(), col.text('name')]);
+        const next = table('users', [col.id(), col.integer('name')]);
+        const sessions = table('sessions', [col.id(), col.reference('user_id')], {
+            fks: [fk('user_id', 'users', 'cascade')],
+        });
+        const accounts = table('accounts', [col.id(), col.reference('user_id')], {
+            fks: [fk('user_id', 'users', 'cascade')],
+        });
+        const result = diffSnapshots(
+            snap(prev, sessions, accounts),
+            snap(next, sessions, accounts)
+        );
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toMatch(/"users" needs a rebuild/);
+        expect(result.errors[0]).toMatch(/"accounts", "sessions"/);
+        expect(result.errors[0]).toMatch(/ON DELETE cascade/);
+    });
+
+    it('a rebuild of a table children reference without cascade → no error', () => {
+        const prev = table('users', [col.id(), col.text('name')]);
+        const next = table('users', [col.id(), col.integer('name')]);
+        const sessions = table('sessions', [col.id(), col.reference('user_id')], {
+            fks: [fk('user_id', 'users', 'no action')],
+        });
+        const result = diffSnapshots(snap(prev, sessions), snap(next, sessions));
+        expect(result.ops.map((op) => op.kind)).toEqual(['rebuildTable']);
+        expect(result.errors).toEqual([]);
+    });
+
     it('a primary-key membership change → rebuildTable', () => {
         const prev = table('widgets', [col.id(), col.text('code')]);
         const next = table('widgets', [

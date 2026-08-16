@@ -25,9 +25,7 @@ async function trackedRows(db: Db): Promise<PluginTrackingRow[]> {
         .selectAll()
         .orderBy('package')
         .execute();
-    return rows.map(
-        (row) => decodeWith(pluginsTable, row) as unknown as PluginTrackingRow
-    );
+    return rows.map((row) => decodeWith(pluginsTable, row));
 }
 
 let db: Db;

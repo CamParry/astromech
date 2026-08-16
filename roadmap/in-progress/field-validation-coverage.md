@@ -30,38 +30,30 @@ forms plugin writes `submittedAt: new Date()`), and `''` → `null` on `richtext
 absent, so it would have been stored as a string — the one bad value validation
 never sees).
 
-## Still open
+## The gaps
 
-- [ ] **Reference existence and target type.** `media`/`relationship` are checked
-      for being an id, but nothing confirms the id resolves, or that the record
-      is the declared `target` type. A dangling reference stores cleanly.
-      `FieldReads` currently offers only `isUnique`, so this needs a second
-      method on it and a matching change wherever the pipeline context is built
-      (entries, media, users, settings).
-
-          **Blocked on a decision, not on the code.** Built and reverted on
-          `fix/field-validation-coverage`: the mechanics work (a `referenceStatus`
-          method on `FieldReads`, an `existingEntryTypes` read beside
-          `existingResourceIds`, the `unchecked` guard for a target that is
-          table-backed or names no configured entry type), but rejecting a dangling
-          id contradicts `decisions/0004-relationships-as-a-derived-index.md`:
-          "A dangling id stays in field data until that entry is next written, then
-          the write pipeline drops it." `pruneDanglingRelations` implements exactly
-          that, and it runs AFTER `processFields` — so with the check in place the
-          write is rejected before the cleanup can drop the id, and four
-          `dangling-relations` tests fail. An entry whose target was deleted becomes
-          unsavable rather than self-healing.
-
-          Two ways out, and the choice is a design decision:
-
-          - **Check the type only, never existence.** Pruning already removes an id
-            that resolves to nothing, but it never checks that the id is the
-            DECLARED target type, so a wrong-type reference is the real uncovered
-            gap. Costs nothing in the 0004 model.
-          - **Reject only ids this write INTRODUCES**, and keep pruning the stale
-            ones. Needs the pipeline to tell a newly-written value from a merged-in
-            stored one; `ctx.coerceOnly` is close but the admin's entry form posts
-            every field, so through the admin nothing would read as untouched.
+- [x] **Reference target type — type check only, never existence.**
+      `media`/`relationship` were checked for being an id, but nothing confirmed
+      a `relationship` id resolves to the declared `target` type — a wrong-type
+      reference stored cleanly. Existence is
+      deliberately NOT checked: rejecting a dangling id contradicts
+      `decisions/0004-relationships-as-a-derived-index.md` ("a dangling id stays
+      in field data until that entry is next written, then the write pipeline
+      drops it") — `pruneDanglingRelations` runs after `processFields`, so an
+      existence check would make an entry whose target was deleted unsavable
+      rather than self-healing; a first build on `fix/field-validation-coverage`
+      proved exactly that and was reverted. The type-only check costs nothing in
+      the 0004 model: an id absent from the entries table (dangling,
+      table-backed, or an unconfigured target) passes unchecked, and only an id
+      that resolves to a different type fails. The rejected alternative,
+      rejecting only ids the write introduces, needed the pipeline to tell a
+      newly-written value from a merged-in stored one, and the admin's entry
+      form posts every field, so nothing would read as untouched.
+      **Done:** `FieldReads` gained an optional `entryTypes` read, backed by
+      `existingEntryTypes` beside `existingResourceIds`. Optional is
+      load-bearing: the admin's client-side reads and the forms plugin's
+      `noReads` do not implement it, and `validateReference` skips the check
+      when it is absent.
 
 - [x] **`color` and `link` are shape-checked, not format-checked.** `color` must
       be a string but no format is enforced; `link` must be an object with a
@@ -99,9 +91,14 @@ never sees).
       public-shape write-back this protects (P4) legitimately carries keys the
       schema does not declare. Empty definitions still drop nothing — that means
       the schema is unknown here, not that there are no fields.
-- [ ] **Validation is write-time only.** Tightening a rule does not invalidate
-      rows already stored. There is no revalidation pass or report of rows that
-      would now fail.
+- [x] **Validation is write-time only.** Tightening a rule did not invalidate
+      rows already stored, and there was no report of rows that would now fail.
+      **Done:** `astromech validate` reports them. `validateStoredContent` runs
+      entries, media, users and settings back through `processFields` with each
+      domain's own update-path context and discards the values — coercion is
+      off and the minted item ids go nowhere, so the run is read-only. No
+      repair mode: the replacement for a value a rule now rejects is an
+      editorial choice.
 
 ## Related
 

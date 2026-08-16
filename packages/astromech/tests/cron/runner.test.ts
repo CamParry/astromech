@@ -61,9 +61,7 @@ describe('onTick / runDue', () => {
 
         const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
         const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
-        const row = singleRow(
-            rawRows.map((r) => decodeWith(cronTable, r)) as unknown as CronRow[]
-        );
+        const row = singleRow(rawRows.map((r) => decodeWith(cronTable, r)));
         expect(row.name).toBe('test-job');
         expect(row.enabled).toBe(true);
         expect(row.schedule).toBe('* * * * *');
@@ -85,9 +83,7 @@ describe('onTick / runDue', () => {
         await onTick(now2);
 
         const rawRows2 = await db.selectFrom('_astromech_cron').selectAll().execute();
-        const row2 = singleRow(
-            rawRows2.map((r) => decodeWith(cronTable, r)) as unknown as CronRow[]
-        );
+        const row2 = singleRow(rawRows2.map((r) => decodeWith(cronTable, r)));
         // Admin-edited schedule must survive.
         expect(row2.schedule).toBe('0 12 * * *');
     });
@@ -211,9 +207,7 @@ describe('onTick / runDue', () => {
         await onTick(now);
 
         const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
-        const row = singleRow(
-            rawRows.map((r) => decodeWith(cronTable, r)) as unknown as CronRow[]
-        );
+        const row = singleRow(rawRows.map((r) => decodeWith(cronTable, r)));
 
         // nextRun must have been recomputed using the new '0 0 * * *' schedule.
         const expectedNext = new Cron('0 0 * * *', { timezone: 'UTC' }).nextRun(now);
@@ -372,9 +366,7 @@ describe('onTick / runDue', () => {
 
         // Row: lock cleared, nextRun advanced.
         const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
-        const row = singleRow(
-            rawRows.map((r) => decodeWith(cronTable, r)) as unknown as CronRow[]
-        );
+        const row = singleRow(rawRows.map((r) => decodeWith(cronTable, r)));
         expect(row.lock).toBeNull();
         expect(row.nextRun).toBeInstanceOf(Date);
         expect(row.nextRun?.getTime()).toBeGreaterThan(now.getTime());
@@ -419,9 +411,7 @@ describe('onTick / runDue', () => {
 
             const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
             const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
-            const row = singleRow(
-                rawRows.map((r) => decodeWith(cronTable, r)) as unknown as CronRow[]
-            );
+            const row = singleRow(rawRows.map((r) => decodeWith(cronTable, r)));
 
             const expectedNext = new Cron('0 0 * * *', {
                 timezone: 'America/New_York',
@@ -469,9 +459,7 @@ describe('onTick / runDue', () => {
 
         // nextRun should have advanced to a future time.
         const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
-        const row = singleRow(
-            rawRows.map((r) => decodeWith(cronTable, r)) as unknown as CronRow[]
-        );
+        const row = singleRow(rawRows.map((r) => decodeWith(cronTable, r)));
         expect(row.nextRun?.getTime()).toBeGreaterThan(now.getTime());
 
         // Second immediate tick — should NOT run again.

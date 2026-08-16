@@ -9,6 +9,13 @@ rejected, what the trade-off was, and what a thing used to be. It is deliberatel
 someone trying to change it, not someone re-litigating the choice — and not in
 `ARCHITECTURE.md` or `TERMINOLOGY.md`, which describe only the present.
 
+A record explains why a choice was right **at the time, with what was known
+then**. It is evidence, not law: it exists so a settled question isn't re-argued
+from scratch, never so a better option can be refused because something was
+written down. When current knowledge points somewhere better, the move is a
+superseding record that says what changed — the one argument a record can never
+make is "we decided this already".
+
 Every record opens with the same block:
 
 ```markdown
@@ -87,3 +94,6 @@ Distinct from the neighbouring directories:
 - [0052](0052-the-gate-executes-the-admin-in-a-browser.md) — the gate loads the admin in headless chromium, mandatory and stopping before login
 - [0053](0053-scheduled-entrypoints-live-in-boot.md) — `handleScheduled` boots the runtime, so it is an entrypoint and lives in `boot/`, not `cron/`
 - [0054](0054-the-kit-keeps-the-ui-name.md) — the component kit keeps the `astromech/ui` name and the config-bound exports move to `astromech/ui/app`
+- [0055](0055-storage-does-not-nest-transactions.md) — a tx-bound storage's `transaction()` throws; no savepoint nesting until a consumer exists
+- [0056](0056-better-auth-owns-the-users-format-not-its-ddl.md) — `users` gets a descriptor that describes better-auth's format, and the parity test proves they agree
+- [0057](0057-one-application-instance-thin-framework-integrations.md) — `getAstromech()` fronts one application instance; framework glue lives in `integrations/` and stays thin

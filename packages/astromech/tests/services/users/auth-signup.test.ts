@@ -1,15 +1,19 @@
 /**
- * better-auth signup writes `role_slug` itself.
+ * What better-auth's own signup writes into `users`.
  *
  * Signup inserts through better-auth's own Kysely instance, bypassing our codec
  * and storage, so the role it writes comes from `user.additionalFields` in
- * `users/auth.ts`. The column has no SQL default to fall back on.
+ * `users/auth.ts` (the column has no SQL default to fall back on) and the
+ * timestamp format it writes is what the descriptor has to describe.
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';
-import type { Kysely } from 'kysely';
+import { sql, type Kysely } from 'kysely';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { auth } from '@/users/auth';
+import { decodeWith } from '@/database/codec';
+import { createUserStorage } from '@/users/storage';
+import { usersTable } from '@/users/schema';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 import type { DB } from '@/database/types';
 
@@ -59,5 +63,79 @@ describe('better-auth email signup', () => {
             .executeTakeFirstOrThrow();
 
         expect(row.roleSlug).toBe(DEFAULT_ROLE_SLUG);
+    });
+
+    // The descriptor is generated from, and generates, both the DDL and the
+    // codec, so what better-auth's own INSERT puts in each column is what the
+    // descriptor has to describe. This is the check that they agree.
+    it('writes a row the descriptor codec reads back', async () => {
+        const before = Date.now();
+        await auth.api.signUpEmail({
+            body: { email: 'codec@test.dev', password: 'password123', name: 'Codec' },
+        });
+
+        const raw = await db
+            .selectFrom('users')
+            .selectAll()
+            .where('email', '=', 'codec@test.dev')
+            .executeTakeFirst();
+        const user = decodeWith(usersTable, raw);
+
+        expect(user).toBeDefined();
+        expect(user?.id).toBe(raw?.id);
+        expect(user?.email).toBe('codec@test.dev');
+        expect(user?.name).toBe('Codec');
+        // The id is better-auth's own — 32 alphanumeric characters, not a uuid.
+        // `col.id({ format: 'uuid' })` describes what OUR writes mint.
+        expect(user?.id).toMatch(/^[A-Za-z0-9]{32}$/);
+        expect(user?.emailVerified).toBe(false);
+        expect(user?.roleSlug).toBe(DEFAULT_ROLE_SLUG);
+        expect(user?.createdAt).toBeInstanceOf(Date);
+        expect(user?.createdAt.getTime()).not.toBeNaN();
+        expect(Math.abs((user?.createdAt.getTime() ?? 0) - before)).toBeLessThan(60_000);
+        expect(Math.abs((user?.updatedAt.getTime() ?? 0) - before)).toBeLessThan(60_000);
+    });
+
+    /**
+     * Both writers of `users` produce the same cell: better-auth's adapter and
+     * our own storage each write ISO-8601 TEXT. The descriptor declares that
+     * format, so this is what would fail first if either side moved.
+     */
+    it('writes ISO-8601 TEXT timestamps, the same format our own writes store', async () => {
+        await auth.api.signUpEmail({
+            body: { email: 'stamp@test.dev', password: 'password123', name: 'Stamp' },
+        });
+        await createUserStorage().create({
+            email: 'ours@test.dev',
+            name: 'Ours',
+            roleSlug: DEFAULT_ROLE_SLUG,
+        });
+
+        const { rows } = await sql<{ email: string; kind: string; value: unknown }>`
+            SELECT email, typeof(created_at) AS kind, created_at AS value
+            FROM users WHERE email IN ('stamp@test.dev', 'ours@test.dev')
+            ORDER BY email
+        `.execute(db);
+
+        expect(rows.map((r) => [r.email, r.kind])).toEqual([
+            ['ours@test.dev', 'text'],
+            ['stamp@test.dev', 'text'],
+        ]);
+        for (const row of rows) {
+            expect(String(row.value)).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+            expect(
+                Math.abs(new Date(String(row.value)).getTime() - Date.now())
+            ).toBeLessThan(60_000);
+        }
+    });
+
+    it('decodes a missing row as undefined', async () => {
+        const raw = await db
+            .selectFrom('users')
+            .selectAll()
+            .where('email', '=', 'nobody@test.dev')
+            .executeTakeFirst();
+
+        expect(decodeWith(usersTable, raw)).toBeUndefined();
     });
 });

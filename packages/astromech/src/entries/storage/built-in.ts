@@ -475,10 +475,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
                 )
                 .returningAll()
                 .executeTakeFirstOrThrow();
-            return populateLocaleSingle(
-                db,
-                decodeWith(entriesTable, restored) as unknown as EntryRow
-            );
+            return populateLocaleSingle(db, decodeWith(entriesTable, restored));
         },
 
         emptyTrash: async (type: string): Promise<void> => {

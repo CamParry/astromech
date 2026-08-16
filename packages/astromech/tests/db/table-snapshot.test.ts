@@ -35,17 +35,36 @@ describe('toSnakeCase', () => {
     });
 });
 
+const kinds = defineTable('kinds', ({ col }) => ({
+    id: col.id(),
+    text: col.text(),
+    integer: col.integer(),
+    real: col.real(),
+    boolean: col.boolean(),
+    timestamp: col.timestamp(),
+    json: col.json(),
+    enum: col.enum(['a', 'b']),
+    reference: col.reference('users'),
+}));
+
 describe('columnType', () => {
     it('maps every column kind to its sqlite storage type', () => {
-        expect(columnType('id', 'sqlite')).toBe('text');
-        expect(columnType('text', 'sqlite')).toBe('text');
-        expect(columnType('integer', 'sqlite')).toBe('integer');
-        expect(columnType('real', 'sqlite')).toBe('real');
-        expect(columnType('boolean', 'sqlite')).toBe('integer');
-        expect(columnType('timestamp', 'sqlite')).toBe('text');
-        expect(columnType('json', 'sqlite')).toBe('text');
-        expect(columnType('enum', 'sqlite')).toBe('text');
-        expect(columnType('reference', 'sqlite')).toBe('text');
+        expect(columnType(kinds.columns.id, 'sqlite')).toBe('text');
+        expect(columnType(kinds.columns.text, 'sqlite')).toBe('text');
+        expect(columnType(kinds.columns.integer, 'sqlite')).toBe('integer');
+        expect(columnType(kinds.columns.real, 'sqlite')).toBe('real');
+        expect(columnType(kinds.columns.boolean, 'sqlite')).toBe('integer');
+        expect(columnType(kinds.columns.timestamp, 'sqlite')).toBe('text');
+        expect(columnType(kinds.columns.json, 'sqlite')).toBe('text');
+        expect(columnType(kinds.columns.enum, 'sqlite')).toBe('text');
+        expect(columnType(kinds.columns.reference, 'sqlite')).toBe('text');
+    });
+});
+
+describe('toSnapshotTable timestamp storage', () => {
+    it('renders a timestamp as a text column', () => {
+        const snap = toSnapshotTable(kinds, 'sqlite');
+        expect(snap.columns.find((c) => c.key === 'timestamp')?.type).toBe('text');
     });
 });
 
