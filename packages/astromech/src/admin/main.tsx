@@ -16,9 +16,9 @@ import './rendering/register-fields';
 import './i18n';
 import './styles/main.css';
 
-declare const __ASTROMECH_API_ROUTE__: string;
+declare const __ASTROMECH_BASE_PATH__: string;
 
-astromechClient.configure({ baseUrl: __ASTROMECH_API_ROUTE__ });
+astromechClient.configure({ baseUrl: `${__ASTROMECH_BASE_PATH__}/api` });
 
 // Dates render in the install's configured locale (e.g. en-GB → `14 Jun 2026`).
 setDateLocale(adminConfig.defaultLocale);

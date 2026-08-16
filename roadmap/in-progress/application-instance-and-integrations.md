@@ -52,8 +52,8 @@ has failed even if the gate is green.
 
 ## Where this stands
 
-Stages 1, 2 and 3 are on `main`. **Stage 4 is next and is unblocked.** One item
-inside stage 3 is outstanding and is left ticked-off-able rather than ticked:
+Stages 1, 2, 3 and 4 are on `main`. **Stage 5 is next and is unblocked.** One
+item inside stage 3 is outstanding and is left ticked-off-able rather than ticked:
 Q9, the module-scope `let _auth` in `users/auth.ts`, was never investigated and
 no rule was stated for when a module-scope singleton is permitted.
 
@@ -207,14 +207,14 @@ export once the migration is done.
 
 A config-shape change only. No files move.
 
-- [ ] `basePath` replaces `adminRoute` and `apiRoute` in `AstromechConfig` and
+- [x] `basePath` replaces `adminRoute` and `apiRoute` in `AstromechConfig` and
       `ResolvedConfig`. Admin at `${basePath}`, API at `${basePath}/api`, both
       derived rather than configured. Default `/cms`.
-- [ ] `mediaRoute` is unchanged and keeps its underscore. The spec records why
+- [x] `mediaRoute` is unchanged and keeps its underscore. The spec records why
       media stays on its own top-level prefix.
-- [ ] Update `boot/route-registration.ts`, the admin's `__ASTROMECH_ADMIN_ROUTE__`
+- [x] Update `boot/route-registration.ts`, the admin's `__ASTROMECH_ADMIN_ROUTE__`
       / `__ASTROMECH_API_ROUTE__` defines, and anything reading either key.
-- [ ] Update `apps/demo` and `apps/docs`.
+- [x] Update `apps/demo` and `apps/docs`.
 
 **Cautions.** This lands before the Hono rebuild deliberately, so stage 5
 registers routes against the final shape instead of being rewritten. It is a

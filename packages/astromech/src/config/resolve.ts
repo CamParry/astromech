@@ -67,8 +67,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
 
     return {
         ...rest,
-        adminRoute: config.adminRoute ?? '/admin',
-        apiRoute: config.apiRoute ?? '/api',
+        basePath: config.basePath ?? '/cms',
         mediaRoute: config.mediaRoute ?? '/_media',
         media: { ...media, access: mediaAccess },
         entries,

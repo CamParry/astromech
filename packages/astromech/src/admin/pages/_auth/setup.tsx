@@ -12,7 +12,7 @@ import { AuthCard } from '@/admin/components/auth/AuthCard';
 import { Input } from '@/admin/components/ui/input';
 import { Button } from '@/admin/components/ui/button';
 
-declare const __ASTROMECH_API_ROUTE__: string;
+declare const __ASTROMECH_BASE_PATH__: string;
 
 function SetupPage() {
     const { login } = useAuth();
@@ -28,7 +28,7 @@ function SetupPage() {
     const [isChecking, setIsChecking] = useState(true);
 
     useEffect(() => {
-        fetch(`${__ASTROMECH_API_ROUTE__}/setup/check`, { credentials: 'include' })
+        fetch(`${__ASTROMECH_BASE_PATH__}/api/setup/check`, { credentials: 'include' })
             .then(async (res) => {
                 const data = (await res.json()) as { needsSetup: boolean };
                 if (!data.needsSetup) {
@@ -55,7 +55,7 @@ function SetupPage() {
         setIsSubmitting(true);
 
         try {
-            const res = await fetch(`${__ASTROMECH_API_ROUTE__}/auth/sign-up/email`, {
+            const res = await fetch(`${__ASTROMECH_BASE_PATH__}/api/auth/sign-up/email`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },

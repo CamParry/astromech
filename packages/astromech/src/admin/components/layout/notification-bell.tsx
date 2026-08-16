@@ -18,20 +18,19 @@ import {
     useDismissAll,
 } from '../../hooks/notifications';
 
-declare const __ASTROMECH_ADMIN_ROUTE__: string;
+declare const __ASTROMECH_BASE_PATH__: string;
 
 // ============================================================================
 // Href normalisation
 // ============================================================================
 
 /**
- * `href` is stored admin-relative (e.g. `/entries/123`). The router's `navigate`
- * is already scoped to the admin basepath, so a stored href that includes the
- * admin base (e.g. `/admin/entries`) would double up to `/admin/admin/entries`.
- * Strip a leading admin-base segment defensively so both forms navigate correctly.
+ * `href` is stored admin-relative (e.g. `/entries/123`). `navigate` is already
+ * scoped to the admin basepath, so an href carrying the base (`/cms/entries`)
+ * would double up; stripping a leading base segment makes both forms work.
  */
 function toAdminRelative(href: string): string {
-    const base = __ASTROMECH_ADMIN_ROUTE__;
+    const base = __ASTROMECH_BASE_PATH__;
     if (base && base !== '/') {
         if (href === base) return '/';
         if (href.startsWith(base + '/')) return href.slice(base.length);

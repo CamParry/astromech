@@ -2,10 +2,10 @@
  * API Route Handler
  *
  * Delegates all requests to the Hono app after stripping the base API path.
- * Mounted at `${apiRoute}/[...path]` by Astromech's route registration.
+ * Mounted at `${basePath}/api/[...path]` by Astromech's route registration.
  *
  * The Astro catch-all provides `params.path` as the portion after the base,
- * e.g. for `/api/cms/collections/posts` → params.path = `collections/posts`.
+ * e.g. for `/cms/api/collections/posts` → params.path = `collections/posts`.
  * We reconstruct an absolute path so Hono's router matches correctly.
  */
 

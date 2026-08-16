@@ -349,7 +349,7 @@ export type UsersConfig = {
  *
  * - Host: authored into `admin.pages`; path is the route + storage key.
  * - Plugin: authored into `PluginDefinition.admin.pages`; path is relative to
- *   `/admin/plugin/<name>`.
+ *   `${basePath}/plugin/<name>`.
  */
 export type AdminPage = {
     path: string;
@@ -429,8 +429,8 @@ export type ResolvedAdminPage = {
 export type AstromechConfig = {
     db: DatabaseDriver;
     storage: StorageDriver;
-    adminRoute?: string;
-    apiRoute?: string;
+    /** URL prefix for the admin panel; the API is served at `${basePath}/api`. Default `/cms`. */
+    basePath?: string;
     mediaRoute?: string;
     entries: Record<string, EntryType>;
     admin?: {
@@ -508,8 +508,7 @@ export type ResolvedConfig = Omit<
     AstromechConfig,
     'db' | 'storage' | 'email' | 'scheduler' | 'ai' | 'plugins'
 > & {
-    adminRoute: string;
-    apiRoute: string;
+    basePath: string;
     mediaRoute: string;
     entries: Record<string, ResolvedEntryType>;
     /** Always present — `access` defaults to `'public'`. */
@@ -543,8 +542,8 @@ export type ResolvedConfig = Omit<
 // ============================================================================
 
 export type AdminConfig = {
-    adminRoute: string;
-    apiRoute: string;
+    /** URL prefix for the admin panel; the API is served at `${basePath}/api`. */
+    basePath: string;
     /** Where `/_media` variants are served from, so the admin can build thumbnail URLs. */
     mediaRoute: string;
     /**

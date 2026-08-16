@@ -7,12 +7,12 @@
  * end-to-end: `demo-rating` → namespace `demo_rating` → service key
  * `demoRating`. Both transports address it by the service key —
  * `Astromech.plugins.demoRating.describe()` locally, `POST
- * /api/plugins/demoRating/describe` over HTTP — and the namespace never appears
+ * /cms/api/plugins/demoRating/describe` over HTTP — and the namespace never appears
  * on the wire.
  */
 
 import { defineServiceMethod, noInput } from 'astromech';
-import { RATING_FIELD_TYPE } from '../fields/rating.js';
+import { RATING_FIELD_TYPE } from '../fields/rating';
 
 export type RatingDescription = {
     fieldType: string;

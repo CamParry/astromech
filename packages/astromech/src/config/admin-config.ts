@@ -70,8 +70,7 @@ export function buildAdminConfig(
                 pages: derivePluginPages(identity, p) as ResolvedAdminPage[],
             };
         }),
-        adminRoute: resolvedConfig.adminRoute,
-        apiRoute: resolvedConfig.apiRoute,
+        basePath: resolvedConfig.basePath,
         mediaRoute: resolvedConfig.mediaRoute,
         // No driver means no variants exist to request — the admin falls back
         // to the original rather than asking for a width that would 404.

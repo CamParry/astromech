@@ -9,7 +9,7 @@
 import React, { createContext, useContext } from 'react';
 import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 
-declare const __ASTROMECH_API_ROUTE__: string;
+declare const __ASTROMECH_BASE_PATH__: string;
 
 // ============================================================================
 // Types
@@ -54,7 +54,7 @@ type MeResponse = {
 // ============================================================================
 
 async function fetchSession(): Promise<AuthUser | null> {
-    const res = await fetch(`${__ASTROMECH_API_ROUTE__}/me`, {
+    const res = await fetch(`${__ASTROMECH_BASE_PATH__}/api/me`, {
         credentials: 'include',
     });
     if (!res.ok) return null;
@@ -84,7 +84,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const { data, isPending } = useQuery(sessionQueryOptions);
 
     async function login(email: string, password: string): Promise<void> {
-        const res = await fetch(`${__ASTROMECH_API_ROUTE__}/auth/sign-in/email`, {
+        const res = await fetch(`${__ASTROMECH_BASE_PATH__}/api/auth/sign-in/email`, {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
@@ -98,7 +98,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     async function logout(): Promise<void> {
-        await fetch(`${__ASTROMECH_API_ROUTE__}/auth/sign-out`, {
+        await fetch(`${__ASTROMECH_BASE_PATH__}/api/auth/sign-out`, {
             method: 'POST',
             credentials: 'include',
         });

@@ -31,7 +31,7 @@ rating/
 ```ts
 // astromech.config.ts
 import { defineConfig } from 'astromech';
-import { rating } from './src/plugins/rating/index.js';
+import { rating } from './src/plugins/rating/index';
 
 export default defineConfig({
     plugins: [rating()],
@@ -54,10 +54,10 @@ declared:
 derives from it, and this plugin is the demo's one **multi-word** example, so it
 is where the two derived forms are actually distinguishable:
 
-| form        | value         | where it appears                                 |
-| ----------- | ------------- | ------------------------------------------------ |
-| namespace   | `demo_rating` | permissions, settings keys, i18n, admin URLs     |
-| service key | `demoRating`  | `Astromech.plugins.demoRating`, `/api/plugins/…` |
+| form        | value         | where it appears                                     |
+| ----------- | ------------- | ---------------------------------------------------- |
+| namespace   | `demo_rating` | permissions, settings keys, i18n, admin URLs         |
+| service key | `demoRating`  | `Astromech.plugins.demoRating`, `/cms/api/plugins/…` |
 
 ## Permissions
 
@@ -80,12 +80,12 @@ const { fieldType, usedBy, max } = await Astromech.plugins.demoRating.describe()
 ```
 
 Addressed by the service key in both transports — locally as above, and over
-HTTP as `POST /api/plugins/demoRating/describe`. The namespace form
+HTTP as `POST /cms/api/plugins/demoRating/describe`. The namespace form
 (`demo_rating`) is not a route and 404s.
 
 ## Admin surface
 
-- **Overview** — `/admin/plugin/demo_rating/overview` (requires
+- **Overview** — `/cms/plugin/demo_rating/overview` (requires
   `plugin:demo_rating:view`).
-- **Settings** — `/admin/plugin/demo_rating/settings`, an auto-rendered form for
+- **Settings** — `/cms/plugin/demo_rating/settings`, an auto-rendered form for
   `minimumQuality` and `showInListing`.

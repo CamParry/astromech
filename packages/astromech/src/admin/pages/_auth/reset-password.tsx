@@ -9,7 +9,7 @@ import { AuthCard } from '@/admin/components/auth/AuthCard';
 import { Input } from '@/admin/components/ui/input';
 import { Button } from '@/admin/components/ui/button';
 
-declare const __ASTROMECH_API_ROUTE__: string;
+declare const __ASTROMECH_BASE_PATH__: string;
 
 function ResetPasswordPage() {
     const { t } = useTranslation();
@@ -33,12 +33,15 @@ function ResetPasswordPage() {
         setIsSubmitting(true);
 
         try {
-            const res = await fetch(`${__ASTROMECH_API_ROUTE__}/auth/reset-password`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token, newPassword }),
-            });
+            const res = await fetch(
+                `${__ASTROMECH_BASE_PATH__}/api/auth/reset-password`,
+                {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, newPassword }),
+                }
+            );
 
             if (!res.ok) {
                 const data = (await res.json().catch(() => ({}))) as { message?: string };

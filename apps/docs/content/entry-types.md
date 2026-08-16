@@ -27,7 +27,7 @@ export default defineConfig({
 ```
 
 The record key (`tag`) is the type name — it is what `Astromech.entries.query({
-type: 'tag' })`, the admin route `/admin/entries/tag`, and the generated
+type: 'tag' })`, the admin route `/cms/entries/tag`, and the generated
 `Fields` types all use. Root-config entry types therefore leave the `type`
 property unset. (A plugin's entry types are the exception: they live in an
 array on the plugin definition, so each one self-declares `type` — see

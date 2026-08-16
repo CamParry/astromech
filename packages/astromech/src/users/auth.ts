@@ -8,10 +8,10 @@ let _auth: Auth<BetterAuthOptions> | null = null;
 
 function getAuth(): Auth<BetterAuthOptions> {
     if (!_auth) {
-        const { apiRoute } = getConfig();
+        const { basePath } = getConfig();
         _auth = betterAuth({
             baseURL: import.meta.env.BETTER_AUTH_URL,
-            basePath: `${apiRoute}/auth`,
+            basePath: `${basePath}/api/auth`,
             database: {
                 dialect: getDatabaseDriver().createDialect(),
                 type: 'sqlite',

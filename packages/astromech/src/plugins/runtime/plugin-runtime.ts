@@ -366,8 +366,7 @@ function makeConfigView(
         pluginEntries: config.pluginEntries,
         adminPages: config.adminPages,
         media: config.media,
-        adminRoute: config.adminRoute,
-        apiRoute: config.apiRoute,
+        basePath: config.basePath,
         mediaRoute: config.mediaRoute,
         trash: config.trash,
         publicSettingKeys: config.publicSettingKeys,
@@ -504,8 +503,7 @@ export function createPluginContext(
 
 function emptyConfig(): Omit<PluginConfigView, 'entryTypesWithField'> {
     return {
-        adminRoute: '/admin',
-        apiRoute: '/api',
+        basePath: '/cms',
         entries: {},
         pluginEntries: {},
         adminPages: [],

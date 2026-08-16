@@ -9,8 +9,7 @@ import { AuthCard } from '@/admin/components/auth/AuthCard';
 import { Input } from '@/admin/components/ui/input';
 import { Button } from '@/admin/components/ui/button';
 
-declare const __ASTROMECH_API_ROUTE__: string;
-declare const __ASTROMECH_ADMIN_ROUTE__: string;
+declare const __ASTROMECH_BASE_PATH__: string;
 
 function ForgotPasswordPage() {
     const { t } = useTranslation();
@@ -26,13 +25,16 @@ function ForgotPasswordPage() {
 
         try {
             const redirectTo =
-                window.location.origin + __ASTROMECH_ADMIN_ROUTE__ + '/reset-password';
-            const res = await fetch(`${__ASTROMECH_API_ROUTE__}/auth/forget-password`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, redirectTo }),
-            });
+                window.location.origin + __ASTROMECH_BASE_PATH__ + '/reset-password';
+            const res = await fetch(
+                `${__ASTROMECH_BASE_PATH__}/api/auth/forget-password`,
+                {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, redirectTo }),
+                }
+            );
 
             if (!res.ok) {
                 const data = (await res.json().catch(() => ({}))) as { message?: string };

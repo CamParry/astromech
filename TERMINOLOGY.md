@@ -188,9 +188,9 @@ A secret that authorizes reading an entry through the **publish/schedule gate** 
 
 ---
 
-## adminRoute (config) vs Admin Routes (SPA pages)
+## basePath (config) vs Admin Routes (SPA pages)
 
-`adminRoute` in `AstromechConfig` is a **string** — the URL prefix for the admin panel (default: `"/admin"`).
+`basePath` in `AstromechConfig` is a **string** — the URL prefix for the admin panel (default: `"/cms"`). The API is derived from it and served at `${basePath}/api`; media keeps its own top-level `mediaRoute`.
 
 "Admin routes" (or "admin pages") refers to the **pages registered in the SPA** — either built-in pages (collections, media, users, settings) or plugin-contributed pages via the `admin:registerRoutes` hook.
 

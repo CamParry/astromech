@@ -2,7 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { createRouter } from '@tanstack/react-router';
 import { routeTree } from './routeTree.gen';
 
-declare const __ASTROMECH_ADMIN_ROUTE__: string;
+declare const __ASTROMECH_BASE_PATH__: string;
 
 export type RouterContext = {
     queryClient: QueryClient;
@@ -11,7 +11,7 @@ export type RouterContext = {
 export function createAppRouter(queryClient: QueryClient) {
     return createRouter({
         routeTree,
-        basepath: __ASTROMECH_ADMIN_ROUTE__,
+        basepath: __ASTROMECH_BASE_PATH__,
         context: { queryClient } satisfies RouterContext,
         defaultNotFoundComponent: () => <div>Page not found</div>,
     });

@@ -110,8 +110,7 @@ export type PluginConfigView = Pick<
     | 'users'
     | 'locales'
     | 'defaultLocale'
-    | 'adminRoute'
-    | 'apiRoute'
+    | 'basePath'
     | 'mediaRoute'
     | 'trash'
     | 'publicSettingKeys'
@@ -260,11 +259,11 @@ export type PluginServiceNamespace = AstromechPluginServices &
 
 /**
  * Raw request handler for payloads RPC-JSON can't carry (binary / multipart /
- * streaming). Mounted inside `/api/plugins/{name}/*`.
+ * streaming). Mounted inside `${basePath}/api/plugins/{name}/*`.
  */
 export type PluginRawRoute = {
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-    /** Path relative to `/api/plugins/{name}`, e.g. `/upload`. */
+    /** Path relative to `${basePath}/api/plugins/{name}`, e.g. `/upload`. */
     path: string;
     access: PluginAccess;
     handler: (request: Request, ctx: PluginContext) => Promise<Response> | Response;

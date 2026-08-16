@@ -1,5 +1,5 @@
 /**
- * Ratings overview — a component view at `/admin/plugin/rating/overview`,
+ * Ratings overview — a component view at `/cms/plugin/rating/overview`,
  * gated on the plugin's `view` permission. The renderer lives in
  * `admin/pages/overview-page.tsx`; this is its admin-page registration.
  */

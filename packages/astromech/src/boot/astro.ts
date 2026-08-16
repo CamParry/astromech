@@ -108,11 +108,8 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
                             ],
                         },
                         define: {
-                            __ASTROMECH_ADMIN_ROUTE__: JSON.stringify(
-                                resolvedConfig.adminRoute
-                            ),
-                            __ASTROMECH_API_ROUTE__: JSON.stringify(
-                                resolvedConfig.apiRoute
+                            __ASTROMECH_BASE_PATH__: JSON.stringify(
+                                resolvedConfig.basePath
                             ),
                         },
                         plugins: [
@@ -190,7 +187,7 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
                 });
 
                 logger.info(
-                    `Admin UI: ${resolvedConfig.adminRoute}, API: ${resolvedConfig.apiRoute}`
+                    `Admin UI: ${resolvedConfig.basePath}, API: ${resolvedConfig.basePath}/api`
                 );
                 logger.info(
                     `Entry types: ${Object.keys(resolvedConfig.entries).join(', ')}`

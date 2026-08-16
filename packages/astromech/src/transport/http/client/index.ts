@@ -72,10 +72,9 @@ export class AstromechApiError extends Error {
 // Client Configuration
 // ============================================================================
 
-declare const __ASTROMECH_API_ROUTE__: string;
+declare const __ASTROMECH_BASE_PATH__: string;
 
-let apiBase =
-    typeof __ASTROMECH_API_ROUTE__ !== 'undefined' ? __ASTROMECH_API_ROUTE__ : '/api';
+let apiBase = `${typeof __ASTROMECH_BASE_PATH__ !== 'undefined' ? __ASTROMECH_BASE_PATH__ : '/cms'}/api`;
 
 // ============================================================================
 // Error event helper

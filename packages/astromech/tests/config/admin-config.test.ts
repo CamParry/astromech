@@ -115,18 +115,16 @@ describe('toAdminEntryType', () => {
 });
 
 describe('buildAdminConfig', () => {
-    it('produces correct adminRoute, apiRoute, locales, defaultLocale', () => {
+    it('produces correct basePath, locales, defaultLocale', () => {
         const config = baseConfig([], {
-            adminRoute: '/cms',
-            apiRoute: '/cms-api',
+            basePath: '/panel',
             locales: ['en', 'fr'],
             defaultLocale: 'en',
         });
         const resolved = resolveConfig(config);
         const adminConfig = buildAdminConfig(config, resolved);
 
-        expect(adminConfig.adminRoute).toBe('/cms');
-        expect(adminConfig.apiRoute).toBe('/cms-api');
+        expect(adminConfig.basePath).toBe('/panel');
         expect(adminConfig.locales).toEqual(['en', 'fr']);
         expect(adminConfig.defaultLocale).toBe('en');
     });

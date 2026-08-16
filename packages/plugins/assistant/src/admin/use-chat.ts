@@ -48,11 +48,14 @@ type SessionsService = {
     clearSession: () => Promise<null>;
 };
 
-/**
- * A site can move the API mount, but the admin exposes no route base to plugin
- * components — only the plugin's own `/plugins/<serviceKey>` segment.
- */
-const API_BASE_PATH = '/api';
+declare const __ASTROMECH_BASE_PATH__: string;
+
+/** Base for the raw (streaming) chat route; the site can move the mount. */
+function apiBase(): string {
+    const base =
+        typeof __ASTROMECH_BASE_PATH__ !== 'undefined' ? __ASTROMECH_BASE_PATH__ : '/cms';
+    return `${base}/api`;
+}
 
 /** Hold the transcript and drive one in-flight request against the chat route. */
 export function useChat(): UseChat {
@@ -128,7 +131,7 @@ export function useChat(): UseChat {
             setIsStreaming(true);
 
             void runStream({
-                url: `${API_BASE_PATH}/plugins/${serviceKey}/chat`,
+                url: `${apiBase()}/plugins/${serviceKey}/chat`,
                 body: {
                     messages: toMessages(next),
                     aiContext: [...aiContext],

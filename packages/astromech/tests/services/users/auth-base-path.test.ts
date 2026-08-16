@@ -1,9 +1,9 @@
 /**
- * better-auth's `basePath` follows the site's configured `apiRoute`.
+ * better-auth's `basePath` follows the site's configured `basePath`.
  *
- * `getAuth()` reads it from the `runtimeConfig` registry slot at first access,
- * so a host mounting the API somewhere other than `/api` gets auth endpoints
- * under the same prefix.
+ * `getAuth()` reads it from the config registry slot at first access, so a host
+ * mounting Astromech somewhere other than `/cms` gets auth endpoints under the
+ * same prefix.
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -14,11 +14,11 @@ import { auth } from '@/users/auth';
 // before any test in this file touches it.
 beforeAll(async () => {
     await createTestDb();
-    setupTestConfig({ ...makeTestConfig(), apiRoute: '/cms' });
+    setupTestConfig({ ...makeTestConfig(), basePath: '/cms' });
 });
 
 describe('the auth base path', () => {
-    it('sits under the configured apiRoute', () => {
-        expect(auth.options.basePath).toBe('/cms/auth');
+    it('sits under the configured basePath', () => {
+        expect(auth.options.basePath).toBe('/cms/api/auth');
     });
 });

@@ -80,7 +80,7 @@ shared-secret bearer token for sessionless pokes:
 ```bash
 export ASTROMECH_CRON_SECRET=…   # on the server; the route is off until set
 
-curl -X POST https://example.com/api/cron/run \
+curl -X POST https://example.com/cms/api/cron/run \
     -H "Authorization: Bearer $ASTROMECH_CRON_SECRET"
 ```
 

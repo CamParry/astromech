@@ -1,6 +1,6 @@
 /**
  * Ratings settings — an auto-rendered settings form at
- * `/admin/plugin/rating/settings`. Values are stored as one object blob at
+ * `/cms/plugin/rating/settings`. Values are stored as one object blob at
  * `plugin:demo_rating:/settings` in the core settings table.
  */
 

@@ -48,13 +48,13 @@ type ConfirmState =
 // Helpers
 // ============================================================================
 
-declare const __ASTROMECH_API_ROUTE__: string;
+declare const __ASTROMECH_BASE_PATH__: string;
 
 /** Base for the two raw (streaming) routes; everything else goes through `service`. */
 function apiBase(): string {
-    return typeof __ASTROMECH_API_ROUTE__ !== 'undefined'
-        ? __ASTROMECH_API_ROUTE__
-        : '/api';
+    const base =
+        typeof __ASTROMECH_BASE_PATH__ !== 'undefined' ? __ASTROMECH_BASE_PATH__ : '/cms';
+    return `${base}/api`;
 }
 
 function rawFetch(plugin: string, path: string, init?: RequestInit): Promise<Response> {

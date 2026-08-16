@@ -114,9 +114,9 @@ The two forms split cleanly by audience:
 
 - **namespace** — everything that lives in your database or your permission
   strings: `plugin_acme_seo_settings`, `plugin:acme_seo:view`, the i18n bundle
-  key, and the admin URL `/admin/plugin/acme_seo/*`.
+  key, and the admin URL `/cms/plugin/acme_seo/*`.
 - **service key** — everything an API caller says: `Astromech.plugins.acmeSeo`
-  and the matching route, `POST /api/plugins/acmeSeo/*`. Both transports use it,
+  and the matching route, `POST /cms/api/plugins/acmeSeo/*`. Both transports use it,
   so the property you write is the segment that goes on the wire.
 
 Derivation runs one way only — `package` → namespace → service key. Nothing
@@ -277,10 +277,10 @@ and a plugin's `admin.pages` take the same object. **The registration site
 decides the scoping, not the name of the helper**, so what you declare is a
 **bare `path`** and Astromech absolutizes it wherever it was registered:
 
-| declared in     | route                             | settings `baseKey`          | default permission                                 |
-| --------------- | --------------------------------- | --------------------------- | -------------------------------------------------- |
-| a plugin        | `/admin/plugin/<namespace><path>` | `plugin:<namespace>:<path>` | `settings:read` for `fields`, none for `component` |
-| the host config | `/admin/page/<path>`              | `<path>`                    | `settings:read` for `fields`, none for `component` |
+| declared in     | route                           | settings `baseKey`          | default permission                                 |
+| --------------- | ------------------------------- | --------------------------- | -------------------------------------------------- |
+| a plugin        | `/cms/plugin/<namespace><path>` | `plugin:<namespace>:<path>` | `settings:read` for `fields`, none for `component` |
+| the host config | `/cms/page/<path>`              | `<path>`                    | `settings:read` for `fields`, none for `component` |
 
 A `component` specifier is resolved relative to the **plugin's `root`** for a
 plugin page and relative to the **Astro project root** for a host page — so a
@@ -294,14 +294,14 @@ The `baseKey` is the settings key a `fields` page reads and writes: a
 non-translatable page stores one blob at `baseKey`, a translatable one stores
 the shared fields at `baseKey` and per-locale fields at `baseKey:<locale>`.
 
-Plugin paths lead with a `/` (`'/overview'` → `/admin/plugin/seo/overview`);
+Plugin paths lead with a `/` (`'/overview'` → `/cms/plugin/seo/overview`);
 `path: ''` is legal and mounts the page at the plugin's root,
-`/admin/plugin/backups`. Host paths don't (`path: 'globals'` →
-`/admin/page/globals`), because the host route already supplies the separator.
+`/cms/plugin/backups`. Host paths don't (`path: 'globals'` →
+`/cms/page/globals`), because the host route already supplies the separator.
 
 **Do not namespace the path yourself.** A declaration is relative by design and
 there is no double-prefix guard — writing `path: '/myplugin/overview'` inside
-`@acme/myplugin` gets you `/admin/plugin/myplugin/myplugin/overview` and a
+`@acme/myplugin` gets you `/cms/plugin/myplugin/myplugin/overview` and a
 `baseKey` of `plugin:myplugin:/myplugin/overview`. The same rule holds for
 `permission`, which takes a bare key (`'view'` → `plugin:<namespace>:view`).
 
@@ -761,7 +761,7 @@ import type { PluginRawRoute } from 'astromech';
 export const exportRoutes: PluginRawRoute[] = [
     {
         method: 'GET',
-        path: '/exports/:id/download', // relative to /api/plugins/<serviceKey>
+        path: '/exports/:id/download', // relative to ${basePath}/api/plugins/<serviceKey>
         access: { permission: 'download' },
         handler: async (request, ctx) => {
             const obj = await ctx.storage.get(keyFrom(request));
@@ -795,7 +795,7 @@ callable off `Astromech.plugins.<serviceKey>`), **hooks** (`defineHook`, e.g.
 `entry:afterUpdate`), **entry types**, **cron jobs**, and **i18n** locale
 bundles. See the bundled `redirects` and `seo` plugins for each.
 
-> Plugins can't register routes outside `/api`. To integrate with the front end,
+> Plugins can't register routes outside `${basePath}/api`. To integrate with the front end,
 > expose data through a service method and document a small middleware recipe —
 > the plugin owns the data, the app owns the route.
 

@@ -5,13 +5,13 @@
 // phase and the runtime share a process under `astro dev`, which hides the
 // failure entirely.
 //
-// A boot failure shows as 500 on `/` and 404 on `/admin`. The 404 is the
+// A boot failure shows as 500 on `/` and 404 on `/cms`. The 404 is the
 // misleading one — it reads like a routing mistake rather than an empty
 // registry, so both are asserted.
 //
-// `/admin` returning 200 only proves the shell was served: it mounts
+// `/cms` returning 200 only proves the shell was served: it mounts
 // `<AdminApp client:only="react" />`, so the React app has not been evaluated
-// when the response is written. A browser step therefore loads `/admin` in
+// when the response is written. A browser step therefore loads `/cms` in
 // headless chromium and waits for markup that only exists once React has
 // painted. A broken import under `src/admin/` reaches nothing else in the gate.
 //
@@ -95,11 +95,11 @@ async function main() {
     await waitForServer(base);
 
     await expectStatus(`${base}/`, 200, 'the site renders');
-    await expectStatus(`${base}/admin`, 200, 'the admin route is mounted');
+    await expectStatus(`${base}/cms`, 200, 'the admin route is mounted');
     // 401 rather than 500 is the whole point: it proves the API is mounted and
     // rejecting an anonymous caller, not that the runtime never booted.
     await expectStatus(
-        `${base}/api/entries/post`,
+        `${base}/cms/api/entries/post`,
         401,
         'the API rejects an anonymous read'
     );
@@ -112,17 +112,17 @@ async function main() {
     }
     console.log('  ok  the config is evaluated once per serving process');
 
-    await expectAdminMounts(`${base}/admin`);
+    await expectAdminMounts(`${base}/cms`);
 }
 
 /**
- * Load `/admin` in headless chromium and assert the React app rendered.
+ * Load `/cms` in headless chromium and assert the React app rendered.
  *
  * Runs against the server already started above — a second one would double
  * the slowest part of the check and prove nothing extra.
  */
 async function expectAdminMounts(url) {
-    step('loading /admin in headless chromium');
+    step('loading /cms in headless chromium');
     const { chromium } = await import('playwright');
 
     try {
@@ -141,7 +141,7 @@ async function expectAdminMounts(url) {
     // and reported after the mount assertion — the mount failure is the more
     // useful message when they happen together.
     //
-    // The unauthenticated admin asks `/api/me` who it is and is answered 401,
+    // The unauthenticated admin asks `/cms/api/me` who it is and is answered 401,
     // by design, and chromium logs every failed response as a console error.
     // Those messages carry no JavaScript arguments because no script emitted
     // them; anything `console.error` produced does. So argument-less messages

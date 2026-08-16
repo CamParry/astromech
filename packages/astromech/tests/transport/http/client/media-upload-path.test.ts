@@ -36,7 +36,7 @@ describe('media upload path', () => {
 
         expect(calls).toHaveLength(1);
         expect(calls[0]?.method).toBe('POST');
-        expect(calls[0]?.url).toBe('/api/media/upload');
-        expect(calls[0]?.url).not.toBe('/api/media');
+        expect(calls[0]?.url).toBe('/cms/api/media/upload');
+        expect(calls[0]?.url).not.toBe('/cms/api/media');
     });
 });

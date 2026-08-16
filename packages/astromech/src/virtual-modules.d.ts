@@ -11,5 +11,4 @@ declare module 'virtual:astromech/admin-config' {
     export default config;
 }
 
-declare const __ASTROMECH_ADMIN_ROUTE__: string;
-declare const __ASTROMECH_API_ROUTE__: string;
+declare const __ASTROMECH_BASE_PATH__: string;

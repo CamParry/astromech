@@ -1,7 +1,7 @@
 /**
  * Astromech API — Hono Root App
  *
- * Mounted inside the Astro catch-all endpoint at `${apiRoute}/[...path]`.
+ * Mounted inside the Astro catch-all endpoint at `${basePath}/api/[...path]`.
  * Auth and Better Auth routes are excluded via Astro's route ordering.
  */
 
@@ -136,5 +136,5 @@ app.doc('/openapi.json', {
 });
 
 if (process.env.NODE_ENV !== 'production') {
-    app.get('/docs', swaggerUI({ url: `${Astromech.config.apiRoute}/openapi.json` }));
+    app.get('/docs', swaggerUI({ url: `${Astromech.config.basePath}/api/openapi.json` }));
 }

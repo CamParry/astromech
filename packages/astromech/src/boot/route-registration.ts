@@ -2,9 +2,9 @@
  * Route Registration
  * Handles registration of API and auth routes.
  *
- * Plugin routes are NOT injected here: plugin RPC and raw routes mount inside
- * the existing Hono app under `/api/plugins/*`, which the `${apiRoute}/[...path]`
- * catch-all already serves. Plugins cannot register routes outside `/api`.
+ * Plugin routes are not injected here: plugin RPC and raw routes mount inside
+ * the Hono app under `${basePath}/api/plugins/*`, which the
+ * `${basePath}/api/[...path]` catch-all already serves.
  */
 
 import type { ResolvedConfig } from '@/types/index';
@@ -23,11 +23,11 @@ export function registerRoutes(
     }) => void,
     resolvedConfig: ResolvedConfig
 ): void {
-    const { apiRoute } = resolvedConfig;
+    const { basePath, mediaRoute } = resolvedConfig;
 
     // Auth API route (must be before the catch-all API route)
     injectRoute({
-        pattern: `${apiRoute}/auth/[...all]`,
+        pattern: `${basePath}/api/auth/[...all]`,
         entrypoint: 'astromech/routes/auth-handler.ts',
         prerender: false,
     });
@@ -36,21 +36,21 @@ export function registerRoutes(
     // (`${mediaRoute}/<id>.<ext>[?w&f&v]`). Serves originals (stream) and
     // on-demand, allowlisted image variants. Mounted like the auth route.
     injectRoute({
-        pattern: `${resolvedConfig.mediaRoute}/[...path]`,
+        pattern: `${mediaRoute}/[...path]`,
         entrypoint: 'astromech/routes/media-handler.ts',
         prerender: false,
     });
 
-    // Admin SPA shell — catch-all that serves the React SPA for all /admin/* paths
+    // Admin SPA shell — catch-all that serves the React SPA for all admin paths
     injectRoute({
-        pattern: `${resolvedConfig.adminRoute}/[...path]`,
+        pattern: `${basePath}/[...path]`,
         entrypoint: 'astromech/admin/shell.astro',
         prerender: false,
     });
 
     // API routes (catch-all — must be after auth route)
     injectRoute({
-        pattern: `${apiRoute}/[...path]`,
+        pattern: `${basePath}/api/[...path]`,
         entrypoint: 'astromech/routes/api.ts',
         prerender: false,
     });

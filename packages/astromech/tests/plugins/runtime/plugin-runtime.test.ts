@@ -33,8 +33,7 @@ import { getCronJobs } from '@/cron/registry';
 import { globals } from '@/utilities/registry';
 
 const config: ResolvedConfig = {
-    adminRoute: '/admin',
-    apiRoute: '/api',
+    basePath: '/cms',
     resolvedRoles: {},
     entries: {
         posts: {

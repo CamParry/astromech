@@ -72,8 +72,7 @@ describe('collectPluginFieldTypes', () => {
 
 describe('generateClientTypes with plugin field types', () => {
     const config = {
-        adminRoute: '/admin',
-        apiRoute: '/api',
+        basePath: '/cms',
         entries: {
             posts: {
                 single: 'Post',
@@ -154,8 +153,7 @@ describe('generateClientTypes with plugin field types', () => {
 
 describe('generateClientTypes — plugin entry types', () => {
     const baseConfig = {
-        adminRoute: '/admin',
-        apiRoute: '/api',
+        basePath: '/cms',
         entries: {
             posts: {
                 single: 'Post',
