@@ -108,6 +108,7 @@ astromech permissions --json          # full catalogue entries (description, sou
 | ------------------------------------------------------------ | -------------------------------------------- |
 | `users:create` / `users:list` / `users:get` / `users:delete` | Manage users                                 |
 | `db:init` / `db:status` / `db:generate`                      | Initialise, inspect, and generate migrations |
+| `db:rebaseline`                                              | Re-emit the baseline migration               |
 | `generate:types`                                             | Emit `.d.ts` type definitions                |
 | `generate:manifest`                                          | Write `.astro/astromech.methods.json`        |
 | `index:rebuild`                                              | Rebuild the relationships index              |

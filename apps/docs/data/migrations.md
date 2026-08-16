@@ -124,6 +124,16 @@ Blocks for tables you wrote by hand — anything with no table definition, under
 its `// ── <table> ──` banner — are copied across untouched; if the banners
 aren't there, the command refuses rather than guessing.
 
+The files it writes are generated source, not formatted source, so run your
+formatter afterwards.
+
+The other reason to reach for it is a table that has just gained a definition.
+`snapshot.json` records the state the chain arrived at, so a snapshot written
+before that definition existed doesn't mention the table, and `db:generate`
+reads the absence as "new table" and emits a `CREATE TABLE` for one your
+database already has. Rebaselining rewrites `snapshot.json` from your tables,
+which is what clears it.
+
 This rewrites history, so it is only legal before your first release. Every
 database that already applied the old chain — including yours — has to be
 re-initialised: the ledger names migrations that no longer exist, kysely reports
