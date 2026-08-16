@@ -210,20 +210,30 @@ says above; that is wrong and this supersedes it. Two reasons:
    are constants and pure `.shared` helpers, not behaviour. Moving them down
    removes the inversion without an exemption.
 
-The six symbols that must move down before `config/` can sit at layer 3:
+The symbols that had to move down before `config/` could sit at layer 3.
+Settled in stage 1 by reading each module: none carries a real domain
+dependency (every one imports from `@/types/` only), so the placement of
+`config/` holds. Two entries came out wider than first proposed.
 
-| Symbol                                 | Today                                       | Note                                                                |
-| -------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------- |
-| `BUILT_IN_SUPPORTS`                    | `entries/storage/capabilities.ts`           | 3 files total                                                       |
-| `parseEntryTypeId`, `resolveEntryType` | `entries/type-ids.shared.ts`                | already in the admin browser bundle, so already certified leaf-safe |
-| `CLOUDFLARE_IMAGES_DRIVER`             | `media/serving/image/drivers/cloudflare.ts` | a string constant                                                   |
-| `normaliseWidths`                      | `media/serving/image/url.shared.ts`         | already public API via the root barrel                              |
-| `defaultImageWidths`                   | `media/serving/image/defaults.ts`           | already public API via the root barrel                              |
+| Symbol                                                                            | Was                                         | Now                               |
+| --------------------------------------------------------------------------------- | ------------------------------------------- | --------------------------------- |
+| `QUALIFIED_SEPARATOR`, `parseEntryTypeId`, `qualifyEntryType`, `resolveEntryType` | `entries/type-ids.shared.ts`                | `utilities/entry-type-ids.ts`     |
+| `Capability`, `BUILT_IN_SUPPORTS`                                                 | `entries/storage/capabilities.ts`           | `utilities/entry-capabilities.ts` |
+| `resolveEntryCapabilities`, `assertEntryTypeValid`                                | `entries/storage/capabilities.ts`           | `config/entry-types.ts`           |
+| `CLOUDFLARE_IMAGES_DRIVER`                                                        | `media/serving/image/drivers/cloudflare.ts` | `utilities/image-drivers.ts`      |
+| `normaliseWidths`, `defaultImageWidths`                                           | `url.shared.ts`, `defaults.ts`              | `utilities/image-widths.ts`       |
 
-Proposed homes are `utilities/entry-type-ids.ts` and `utilities/image-widths.ts`,
-but **stage 1 must settle this first** by reading the modules rather than taking
-the table on trust. If a symbol turns out to carry a real domain dependency, the
-placement of `config/` has to be revisited before anything else in the stage.
+The two widenings: `type-ids.shared.ts` moved whole rather than two of its four
+symbols, since the same callers use the rest; and `capabilities.ts` split rather
+than surrendering one constant, because the resolver imported
+`resolveEntryCapabilities`, `assertEntryTypeValid` and the `Capability` type
+from it as well. Those two functions have exactly one caller, so they are
+resolution steps and landed in `config/`. Files in `utilities/` drop the
+`.shared` marker: the directory is already browser-safe by `BROWSER_SAFE`.
+
+`src/config.d.ts` became `src/virtual-modules.d.ts`. It holds only ambient
+`declare module` blocks, but at its old path it shadowed the new `src/config/`
+directory in module resolution.
 
 ## Config enters at boot
 
