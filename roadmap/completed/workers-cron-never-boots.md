@@ -14,21 +14,26 @@ changed is the shape of the problem: with boot on the first request there is now
 exactly one place the runtime is booted from, and `scheduled()` is structurally
 outside it rather than accidentally missing it.
 
-- [ ] **Boot from the scheduled path too.** `handleScheduled` in
-      `packages/astromech/src/cron/index.ts` calls `onTick` directly. It needs
-      the same memoised boot the middleware runs, which means `ensureBooted`
-      moves out of `src/middleware.ts` into something both entry points import.
-      The memo is already `globalThis`-backed via `createRegistry`, so sharing it
-      is a move, not a redesign.
-- [ ] **Export the entry point.** `handleScheduled` is not exported from the root
-      barrel or any subpath, so the usage its own docblock documents
-      (`export default { async scheduled(event, env, ctx) { … } }`) cannot be
-      written by a site today. `runScheduledJobs` is exported and is the same
-      `onTick` call with `new Date()`, so it has the identical boot gap.
-- [ ] **Decide what `startScheduler()` does on Workers.** The middleware's boot
-      starts the node scheduler's timer. A Worker has platform cron and wants no
-      timer, and a site that sets `scheduler` gets its driver started on the
-      first request whether or not that makes sense there.
+- [x] **Boot from the scheduled path too.** Done 2026-08-16. `ensureBooted`
+      moved to `packages/astromech/src/boot/ensure-booted.ts`, keeping the
+      `globalThis`-backed `'boot'` memo, and `handleScheduled` awaits it before
+      `onTick`. It loads `virtual:astromech/config` lazily so the module stays
+      importable in plain Node (a config selecting `cloudflareCron()` reaches
+      it under jiti). `runScheduledJobs` boots too, via dynamic import because
+      `boot/boot.ts` imports the runner and a static import would close the
+      cycle. `tests/cron/scheduled-boot.test.ts` pins the unbooted path and was
+      verified to fail without the fix.
+- [x] **Export the entry point.** Done 2026-08-16, from
+      `astromech/scheduler/cloudflare` beside `cloudflareCron()`, so a Worker
+      wires the driver and the `scheduled()` handler from one import. Not the
+      root barrel: a Worker entry importing that would drag the whole core into
+      the bundle.
+- [x] **Decide what `startScheduler()` does on Workers.** Decided 2026-08-16:
+      the config-free default is chosen by runtime — `defaultScheduler()` in
+      `boot/boot.ts` returns `cloudflareCron()` on Workers (detected by the
+      user agent, via `isWorkersRuntime()`) and `interval()` everywhere else,
+      so a Worker never owns a timer and a site need not set `scheduler` at
+      all. `apps/docs/configuration/scheduler.md` documents the wiring.
 
 ## Adjacent: `process.env` written inside the request path
 
@@ -48,7 +53,6 @@ between two parts of core: on Workers it is a compatibility shim populated from
 bindings, not a plain mutable object a module may assign to, so the write at the
 end of `initRuntime` is not guaranteed to do anything there.
 
-- [ ] **Replace the env var with a registry slot,** or pass `apiRoute` into
-      `getAuth()` from the caller. Either removes the `process.env` write, which
-      is the part that does not survive Workers. The read is no longer the
-      problem.
+Replacing the env var with a registry slot (or passing `apiRoute` into
+`getAuth()`) was not part of this work — it is tracked in
+[../backlog.md](../backlog.md).

@@ -17,6 +17,10 @@ This is a living reference; it grows as the project does.
   block, installing a provider package, `model` versus named `models`, reaching
   a model from your own code with `getModel`, and what the assistant plugin
   needs.
+- [configuration/scheduler.md](configuration/scheduler.md) — scheduled jobs:
+  how a frequent tick and database-stored cadence fit together, the three
+  scheduler drivers (`interval`, `cloudflareCron`, `webhook`), and wiring a
+  Cloudflare Worker's `scheduled()` handler.
 - [content/entry-types.md](content/entry-types.md) — declaring entry types: the
   `entries` record, and `defineEntryType` for splitting a type into its own
   module.

@@ -28,11 +28,16 @@ part of the route conversion, which is noted per item.
 
 ## Contract not honoured
 
-- [ ] **`versions` and `restoreVersion` ignore their declared
+- [x] **`versions` and `restoreVersion` ignore their declared
       `requires: 'versioning'`.** An unversioned type gets `200 []` where every
       other capability-gated route answers 409. A table-driven handler reading
       `requires` from the manifest fixes this by construction, so it is cheapest
-      inside step 2 of the conversion.
+      inside step 2 of the conversion. Fixed 2026-08-15 without waiting for the
+      conversion: both rows now use the checked `entryAccess()`, and with no
+      caller left the `'unchecked'` escape hatch was deleted from
+      `entryAccess`/`entryPrecondition` entirely. The 200-empty-list pin became
+      a 409 pin, and `restoreVersion` gained the unversioned-type test it never
+      had.
 - [x] **`GET /entry-types/:type` 404s a plugin entry type.** It reads
       `Astromech.config.entries[type]` directly instead of `resolveEntryType`, so
       `widgets/widget` has no metadata endpoint even though
@@ -42,23 +47,44 @@ part of the route conversion, which is noted per item.
 
 ## Error handling
 
-- [ ] **`POST /:type/:id/staged`'s catch-all turns every non-`StagedEntryExistsError`
+- [x] **`POST /:type/:id/staged`'s catch-all turns every non-`StagedEntryExistsError`
       throw into a 500**, bypassing `onError`. A `ValidationError` raised on that
       path renders as an internal error rather than the 422 it renders as
-      everywhere else.
-- [ ] **`?dir=` anything but `asc`/`desc` 400s from the OpenAPI route schema**,
+      everywhere else. Fixed 2026-08-15: the catch keeps only the 409 envelope
+      (with `details.stagedId`) and re-raises everything else to `onError`.
+      Nothing pinned the 500, so the fix added a test rather than changing one —
+      injected, because `createStaged` copies stored values and runs no field
+      pipeline, so no config can provoke the error naturally.
+- [x] **`?dir=` anything but `asc`/`desc` 400s from the OpenAPI route schema**,
       which makes `parseQueryParams`' own `dir === 'asc' ? 'asc' : 'desc'`
       fallback unreachable on `GET /:type`. Dead code behind a validator, and
       worth deleting with the rest of `parseQueryParams` in step 2 rather than
-      separately.
+      separately. Fixed 2026-08-15 (`parseQueryParams` was already gone; the
+      fallback had survived in `listArgs`). The dead ternary is now
+      `?? 'desc'`, and the same fallback on `GET /media` and `GET /users` —
+      which had no `dir` enum at all, so `?dir=sideways` silently sorted
+      descending — got the same `z.enum` and now 400s too, per 0029's
+      reject-don't-coerce reasoning. That also put their query strings in the
+      OpenAPI document.
 
 ## Data
 
-- [ ] **`role_slug` defaults to `'admin'`** in
+- [x] **`role_slug` defaults to `'admin'`** in
       `apps/demo/migrations/0000_baseline.ts`, so a user created without an
       explicit role counts toward the last-admin guard and cannot be deleted
       while it is the only one. A demo-side migration, but the default is worth
-      checking against what core's own baseline does.
+      checking against what core's own baseline does. Fixed 2026-08-15/16 in
+      two steps. First the DDL default became `'editor'`. Then the default
+      moved out of the DDL into code: `DEFAULT_ROLE_SLUG` next to
+      `BUILT_IN_ROLES`, supplied by better-auth `user.additionalFields`
+      (`input: false`, so a signup body can never name its own role — its
+      value is discarded, not rejected) and by the create schema's zod
+      default; the column is now `NOT NULL` with no default, so a write path
+      that forgets the role fails loudly. Tightening `roleSlug` to a plain
+      `string` in the Kysely types surfaced that `scripts/seed.ts` was
+      creating two admins while printing "(admin, editor)". A signup test
+      proves the better-auth path writes the default against the defaultless
+      column.
 
 ## Already resolved by the audit
 
