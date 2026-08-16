@@ -20,7 +20,7 @@ import { collectRelationshipEdges, encodeWith } from 'astromech';
 import type { Field, PluginDB } from 'astromech';
 import { redirectsTable } from '@astromech/redirects/tables';
 import { readImageDimensions, contentVersion, sharp } from 'astromech/media/image/sharp';
-import config from './astromech.config.js';
+import config from './astromech.config';
 
 // ProseMirror JSON builders for richtext seed content (StarterKit schema)
 type PmNode = Record<string, unknown>;
@@ -138,7 +138,7 @@ const seededEntries: SeededEntry[] = [];
 async function insertEntries(rows: Record<string, unknown>[]): Promise<void> {
     await db
         .insertInto('entries')
-        .values(rows.map((r) => schema.encodeWith(schema.entriesTable, r) as never))
+        .values(rows.map((r) => schema.encodeWith(schema.entriesTable, r)))
         .execute();
     seededEntries.push(
         ...rows.map((r) => ({
@@ -158,18 +158,17 @@ const INDEX_CHUNK_ROWS = 12;
 /** Derive the relationships index from every seeded entry's field data. */
 async function indexRelationships(): Promise<void> {
     const rows = seededEntries.flatMap((entry) =>
-        collectRelationshipEdges(entryFields(entry.type), entry.fields).map(
-            (edge) =>
-                schema.encodeWith(schema.relationshipsTable, {
-                    sourceId: entry.id,
-                    sourceKind: 'entry' as const,
-                    sourceType: entry.type,
-                    schemaPath: edge.schemaPath,
-                    instancePath: edge.instancePath,
-                    targetId: edge.targetId,
-                    targetKind: edge.targetKind,
-                    sourceStaged: false,
-                }) as never
+        collectRelationshipEdges(entryFields(entry.type), entry.fields).map((edge) =>
+            schema.encodeWith(schema.relationshipsTable, {
+                sourceId: entry.id,
+                sourceKind: 'entry' as const,
+                sourceType: entry.type,
+                schemaPath: edge.schemaPath,
+                instancePath: edge.instancePath,
+                targetId: edge.targetId,
+                targetKind: edge.targetKind,
+                sourceStaged: false,
+            })
         )
     );
 
@@ -197,14 +196,14 @@ async function upsertSetting(key: string, value: unknown): Promise<void> {
                 key,
                 value,
                 updatedAt: now,
-            }) as never
+            })
         )
         .onConflict((oc) =>
             oc.column('key').doUpdateSet(
                 schema.encodeWith(schema.settingsTable, {
                     value,
                     updatedAt: now,
-                }) as never
+                })
             )
         )
         .execute();
@@ -450,8 +449,8 @@ async function seed(): Promise<void> {
     await db
         .insertInto('media')
         .values(
-            (mediaRows as Record<string, unknown>[]).map(
-                (r) => schema.encodeWith(schema.mediaTable, r) as never
+            (mediaRows as Record<string, unknown>[]).map((r) =>
+                schema.encodeWith(schema.mediaTable, r)
             )
         )
         .execute();
@@ -1914,7 +1913,7 @@ async function seed(): Promise<void> {
                     status: '302',
                     enabled: true,
                 },
-            ].map((row) => encodeWith(redirectsTable, row)) as never
+            ].map((row) => encodeWith(redirectsTable, row))
         )
         .execute();
     console.log('  Created 3 redirects\n');

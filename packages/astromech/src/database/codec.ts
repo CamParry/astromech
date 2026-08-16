@@ -36,7 +36,8 @@
  * values (e.g. a setting `value` of `"123"`).
  */
 
-import type { Table } from '@/database/define-table';
+import type { Insertable } from 'kysely';
+import type { KyselyOf, Table } from '@/database/define-table';
 
 // ── Plugin tables (registered at boot) ──────────────────────────────────────
 
@@ -209,18 +210,22 @@ export function decodeWith<T extends Record<string, unknown>>(table: Table, row:
     return out as T;
 }
 
-/** JS → storage for an INSERT: inject app defaults (id/now), then serialize. */
-export function encodeWith(
-    table: Table,
+/**
+ * JS → storage for an INSERT: inject app defaults (id/now), then serialize.
+ * Typed as the table's Kysely insert shape so the result goes straight into
+ * `.values()` without a cast.
+ */
+export function encodeWith<D extends Table>(
+    table: D,
     values: Record<string, unknown>
-): Record<string, unknown> {
+): Insertable<KyselyOf<D>> {
     const out: Record<string, unknown> = { ...values };
     for (const [key, col] of Object.entries(table.columns)) {
         if (col.appDefault && out[key] === undefined && col.default) {
             out[key] = col.default();
         }
     }
-    return serializeTable(table, out);
+    return serializeTable(table, out) as Insertable<KyselyOf<D>>;
 }
 
 /** JS → storage for an UPDATE: serialize what was provided, never default. */

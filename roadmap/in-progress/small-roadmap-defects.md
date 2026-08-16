@@ -20,7 +20,7 @@ is too small to carry a workstream alone. One commit per fix.
       guaranteed to do anything there. Replace the channel with a registry slot,
       or pass `apiRoute` into `getAuth()` from the caller. Deferred from
       `roadmap/completed/workers-cron-never-boots.md`.
-- [ ] **`encodeWith` returns `Record<string, unknown>`.** It should return its
+- [x] **`encodeWith` returns `Record<string, unknown>`.** It should return its
       table's insert shape so callers stop casting the rows they hand to
       `.values()` — `apps/demo/seed.ts` carries the cast today. A signature
       change on one function; moved here from
