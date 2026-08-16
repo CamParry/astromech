@@ -70,20 +70,13 @@ const SQLITE_STORAGE_TYPE: Record<ColumnKind, 'text' | 'integer' | 'real'> = {
     reference: 'text',
 };
 
-/**
- * The storage column type a column renders to, per dialect. Takes the column
- * rather than its kind because a `storage: 'seconds'` timestamp stores an
- * INTEGER where an ISO one stores TEXT.
- */
+/** The storage column type a column renders to, per dialect. */
 export function columnType(
     column: ColumnRuntime,
     dialect: SqlDialect
 ): 'text' | 'integer' | 'real' {
     switch (dialect) {
         case 'sqlite':
-            if (column.kind === 'timestamp' && column.timestampStorage === 'seconds') {
-                return 'integer';
-            }
             return SQLITE_STORAGE_TYPE[column.kind];
     }
 }

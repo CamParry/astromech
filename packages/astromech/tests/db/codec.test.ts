@@ -5,13 +5,13 @@
  * we own, `decode`/`encode`/`encodePatch` exist for exactly two things:
  * `sessions`/`accounts`/`verifications` (no descriptor, because nothing of ours
  * writes them) and plugin tables reached by name. `accounts` stands in for the
- * three here, and better-auth's format is the point: seconds-INTEGER timestamps,
- * not the ISO-TEXT our tables emit. Getting that wrong breaks login, so the
+ * three here, and better-auth's format is the point: ISO-8601 TEXT timestamps,
+ * the format its own adapter writes. Getting that wrong breaks login, so the
  * assertions go down to the stored cells rather than stopping at the round trip.
  *
- * Asserted against a real row (temp-file libsql via the harness) so the DDL's
- * `integer` columns participate — a pure-function round trip would pass even if
- * the codec and the baseline migration disagreed.
+ * Asserted against a real row (temp-file libsql via the harness) so the DDL
+ * participates — a pure-function round trip would pass even if the codec and
+ * the baseline migration disagreed.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -78,18 +78,26 @@ describe('better-auth tables – encode/decode round trip', () => {
         expect(account.refreshTokenExpiresAt).toBeNull();
     });
 
-    it('stores timestamps as SECONDS — the format better-auth owns', async () => {
+    it('stores timestamps as ISO TEXT — the format better-auth writes', async () => {
         const inserted = await insertAccount({});
 
         const stored = await storedAccount(String(inserted.id));
-        expect(stored.createdAt).toBe(Math.floor(CREATED.getTime() / 1000));
-        expect(stored.updatedAt).toBe(Math.floor(CREATED.getTime() / 1000));
+        expect(stored.createdAt).toBe(CREATED.toISOString());
+        expect(stored.updatedAt).toBe(CREATED.toISOString());
+    });
+
+    // Rows predating that understanding hold unix seconds; they still decode.
+    it('decodes a unix-seconds timestamp left by an older writer', () => {
+        const decoded = decode('accounts', {
+            createdAt: Math.floor(CREATED.getTime() / 1000),
+        });
+        expect(decoded.createdAt).toEqual(CREATED);
     });
 
     it('encodePatch serializes what it is given and injects nothing', () => {
         expect(encodePatch('accounts', { scope: 'read', updatedAt: CREATED })).toEqual({
             scope: 'read',
-            updatedAt: Math.floor(CREATED.getTime() / 1000),
+            updatedAt: CREATED.toISOString(),
         });
     });
 

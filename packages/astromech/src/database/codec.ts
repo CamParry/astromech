@@ -10,8 +10,8 @@
  *     `defineTable` table carries per-column `serialize`/`parse`/`default`
  *     fns, so the caller passes the one it already has and the codec needs
  *     no table registry at all. Each column declares its own storage format,
- *     so `users` (seconds-INTEGER timestamps, TEXT ids — better-auth's adapter
- *     writes it too) converts through the same path as an ISO-TEXT table.
+ *     so `users` (TEXT ids and ISO-8601 TEXT timestamps — better-auth's adapter
+ *     writes it too) converts through the same path as any other table.
  *
  *   - **Table-name-keyed** (`decode`/`encode`/`encodePatch`) — for the rows whose
  *     `Table` the caller *cannot* hold. Exactly two cases:
@@ -85,7 +85,11 @@ function sameTable(a: Table, b: Table): boolean {
     return aKeys.length === bKeys.length && aKeys.every((key, i) => key === bKeys[i]);
 }
 
-// ── Seconds-INTEGER tables with no descriptor (better-auth) ─────────────────
+// ── Tables with no descriptor (better-auth) ─────────────────────────────────
+//
+// better-auth's adapter writes ISO-8601 TEXT timestamps, so `ts` parses and
+// serializes ISO. A number on the way in is tolerated for rows written when
+// these columns were assumed to be unix seconds; nothing writes one now.
 type LegacyKind = 'ts' | 'json' | 'bool';
 type LegacyCodec = Record<string, LegacyKind>;
 
@@ -105,8 +109,8 @@ const LEGACY_CODECS: Record<string, LegacyCodec> = {
 // table a caller reaches by name. A name that matches neither passes through
 // untouched (only `undefined` keys are dropped), because there is nothing to
 // convert it by; if that name is one of ours, the caller wants `*With` below.
-// Exported from `astromech/database/schema` for seed scripts, which need the
-// seconds-INTEGER format for `accounts`.
+// Exported from `astromech/database/schema` for seed scripts, which insert into
+// `accounts` directly.
 // ============================================================================
 
 /** Storage → JS for one row of a better-auth or plugin table, keyed by name. */
@@ -122,7 +126,7 @@ export function decode<T extends Record<string, unknown>>(tableName: string, row
     for (const [col, kind] of Object.entries(legacy)) {
         const v = out[col];
         if (v === null || v === undefined) continue;
-        if (kind === 'ts') out[col] = new Date((v as number) * 1000);
+        if (kind === 'ts') out[col] = parseTimestamp(v);
         else if (kind === 'json') out[col] = typeof v === 'string' ? JSON.parse(v) : v;
         else if (kind === 'bool') out[col] = Number(v) === 1;
     }
@@ -253,13 +257,18 @@ function serializeLegacy(
     for (const [col, kind] of Object.entries(kinds)) {
         const v = out[col];
         if (v === null || v === undefined) continue;
-        if (kind === 'ts')
-            out[col] = v instanceof Date ? Math.floor(v.getTime() / 1000) : v;
+        if (kind === 'ts') out[col] = v instanceof Date ? v.toISOString() : v;
         else if (kind === 'json')
             out[col] = typeof v === 'string' ? v : JSON.stringify(v);
         else if (kind === 'bool') out[col] = v ? 1 : 0;
     }
     return stripUndefined(out);
+}
+
+/** Storage → `Date` for a better-auth timestamp: ISO text, or a unix-seconds
+ *  number left by a writer that assumed seconds. */
+function parseTimestamp(value: unknown): Date {
+    return typeof value === 'number' ? new Date(value * 1000) : new Date(String(value));
 }
 
 function stripUndefined(values: Record<string, unknown>): Record<string, unknown> {

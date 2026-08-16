@@ -67,9 +67,9 @@ describe('better-auth email signup', () => {
 
     // The descriptor is generated from, and generates, both the DDL and the
     // codec, so what better-auth's own INSERT puts in each column is what the
-    // descriptor has to describe. Every column below reads back except the
-    // timestamps: see the storage-format test underneath.
+    // descriptor has to describe. This is the check that they agree.
     it('writes a row the descriptor codec reads back', async () => {
+        const before = Date.now();
         await auth.api.signUpEmail({
             body: { email: 'codec@test.dev', password: 'password123', name: 'Codec' },
         });
@@ -90,17 +90,18 @@ describe('better-auth email signup', () => {
         expect(user?.id).toMatch(/^[A-Za-z0-9]{32}$/);
         expect(user?.emailVerified).toBe(false);
         expect(user?.roleSlug).toBe(DEFAULT_ROLE_SLUG);
+        expect(user?.createdAt).toBeInstanceOf(Date);
+        expect(user?.createdAt.getTime()).not.toBeNaN();
+        expect(Math.abs((user?.createdAt.getTime() ?? 0) - before)).toBeLessThan(60_000);
+        expect(Math.abs((user?.updatedAt.getTime() ?? 0) - before)).toBeLessThan(60_000);
     });
 
     /**
-     * `users.created_at` holds two formats: better-auth writes ISO-8601 TEXT,
-     * our own writes unix-seconds INTEGER (`storage: 'seconds'` on the
-     * descriptor). The descriptor's parse reads only the second, so a
-     * better-auth-written row decodes its timestamps to an Invalid Date. This
-     * test pins the formats each writer actually produces; it does not endorse
-     * the mismatch.
+     * Both writers of `users` produce the same cell: better-auth's adapter and
+     * our own storage each write ISO-8601 TEXT. The descriptor declares that
+     * format, so this is what would fail first if either side moved.
      */
-    it('writes ISO-8601 TEXT timestamps, where our own writes store unix seconds', async () => {
+    it('writes ISO-8601 TEXT timestamps, the same format our own writes store', async () => {
         await auth.api.signUpEmail({
             body: { email: 'stamp@test.dev', password: 'password123', name: 'Stamp' },
         });
@@ -117,11 +118,15 @@ describe('better-auth email signup', () => {
         `.execute(db);
 
         expect(rows.map((r) => [r.email, r.kind])).toEqual([
-            ['ours@test.dev', 'integer'],
+            ['ours@test.dev', 'text'],
             ['stamp@test.dev', 'text'],
         ]);
-        expect(String(rows[1]?.value)).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-        expect(Math.abs(Number(rows[0]?.value) * 1000 - Date.now())).toBeLessThan(60_000);
+        for (const row of rows) {
+            expect(String(row.value)).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+            expect(
+                Math.abs(new Date(String(row.value)).getTime() - Date.now())
+            ).toBeLessThan(60_000);
+        }
     });
 
     it('decodes a missing row as undefined', async () => {

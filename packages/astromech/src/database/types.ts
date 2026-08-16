@@ -2,18 +2,17 @@
  * The Kysely `DB` interface — the storage-shaped type surface for the query layer.
  *
  * The 11 tables we own are derived from their `defineTable` objects via
- * `KyselyOf<>`: timestamps are ISO-8601 **TEXT** (`string`) unless the column
- * declares `storage: 'seconds'` (`number`, which `users` does — better-auth's
- * adapter writes it), JSON columns are `string`, booleans are `number` (0/1), and
+ * `KyselyOf<>`: timestamps are ISO-8601 **TEXT** (`string`), JSON columns are
+ * `string`, booleans are `number` (0/1), and
  * `Generated<>` marks any column an app/SQL default fills. These are the *storage*
  * shapes Kysely sees before the row codec turns them into the rich domain Row
  * types (`EntryRow`, …), so storage methods keep returning identical shapes to
  * their callers.
  *
- * `sessions`, `accounts` and `verifications` stay **hand-typed** in their
- * seconds-INTEGER format: nothing of ours writes them, so they have no
- * descriptor and keep the codec's name-keyed seconds/json/bool handling (see
- * `codec.ts`).
+ * `sessions`, `accounts` and `verifications` stay **hand-typed**: nothing of
+ * ours writes them, so they have no descriptor and keep the codec's name-keyed
+ * timestamp/json/bool handling (see `codec.ts`). Their timestamps are the ISO
+ * TEXT better-auth's adapter writes, same as ours.
  *
  * Keys are **camelCase**; the active Kysely instance runs `CamelCasePlugin`, so
  * these map to snake_case DDL columns automatically (result rows come back
@@ -56,7 +55,7 @@ export type DB = {
     _astromech_cron: KyselyOf<typeof cronTable>;
     _astromech_plugins: KyselyOf<typeof pluginsTable>;
 
-    // ── 3 better-auth — hand-typed, seconds-INTEGER ─────────────────────────
+    // ── 3 better-auth — hand-typed ──────────────────────────────────────────
     sessions: SessionsTable;
     accounts: AccountsTable;
     verifications: VerificationsTable;
@@ -67,10 +66,10 @@ export type Db = Kysely<DB> | Transaction<DB>;
 
 type SessionsTable = {
     id: string; // PK (supplied by better-auth)
-    expiresAt: number;
+    expiresAt: string;
     token: string; // unique
-    createdAt: number;
-    updatedAt: number;
+    createdAt: string;
+    updatedAt: string;
     ipAddress: string | null;
     userAgent: string | null;
     userId: string; // FK users.id ON DELETE CASCADE
@@ -84,19 +83,19 @@ type AccountsTable = {
     accessToken: string | null;
     refreshToken: string | null;
     idToken: string | null;
-    accessTokenExpiresAt: number | null;
-    refreshTokenExpiresAt: number | null;
+    accessTokenExpiresAt: string | null;
+    refreshTokenExpiresAt: string | null;
     scope: string | null;
     password: string | null;
-    createdAt: number;
-    updatedAt: number;
+    createdAt: string;
+    updatedAt: string;
 };
 
 type VerificationsTable = {
     id: string; // PK
     identifier: string;
     value: string;
-    expiresAt: number;
-    createdAt: number | null;
-    updatedAt: number | null;
+    expiresAt: string;
+    createdAt: string | null;
+    updatedAt: string | null;
 };

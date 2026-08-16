@@ -56,12 +56,12 @@ describe('tableAdminMeta', () => {
         ]);
     });
 
-    it('projects a seconds-storage timestamp as datetime, like an ISO one', () => {
-        const withSeconds = defineTable('withSeconds', ({ col }) => ({
+    it('projects a timestamp as a datetime field', () => {
+        const withStamp = defineTable('withStamp', ({ col }) => ({
             id: col.id(),
-            createdAt: col.timestamp({ notNull: true, storage: 'seconds' }),
+            createdAt: col.timestamp({ notNull: true }),
         }));
-        expect(tableAdminMeta(withSeconds)).toContainEqual({
+        expect(tableAdminMeta(withStamp)).toContainEqual({
             name: 'createdAt',
             cellKind: 'date',
             fieldType: 'datetime',

@@ -7,8 +7,8 @@ import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 //
 // better-auth's adapter writes this table through its own Kysely instance, so it
 // owns the on-disk FORMAT: TEXT ids (better-auth mints its own; `format: 'uuid'`
-// is what OUR writes mint), seconds-INTEGER timestamps, INTEGER 0/1 booleans,
-// TEXT json. The descriptor DESCRIBES that format rather than changing
+// is what OUR writes mint), ISO-8601 TEXT timestamps, INTEGER 0/1 booleans, TEXT
+// json. The descriptor DESCRIBES that format rather than changing
 // it — `tests/db/baseline-ddl-parity.test.ts` is the proof the two agree — which
 // is what lets our DDL, codec and storage be generated from it like any other
 // table. `sessions`, `accounts` and `verifications` have no descriptor: nothing
@@ -28,13 +28,8 @@ export const usersTable = defineTable('users', ({ col }) => ({
      *  `user.additionalFields`, the users service through its zod schema). A path
      *  that forgets fails here rather than minting a role silently. */
     roleSlug: col.text({ notNull: true }),
-    createdAt: col.timestamp({ notNull: true, defaultNow: true, storage: 'seconds' }),
-    updatedAt: col.timestamp({
-        notNull: true,
-        defaultNow: true,
-        onUpdate: true,
-        storage: 'seconds',
-    }),
+    createdAt: col.timestamp({ notNull: true, defaultNow: true }),
+    updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
 }));
 
 export type UserRow = TableSelect<typeof usersTable>;

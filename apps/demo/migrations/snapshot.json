@@ -996,7 +996,7 @@
           "key": "createdAt",
           "name": "created_at",
           "kind": "timestamp",
-          "type": "integer",
+          "type": "text",
           "notNull": true,
           "primaryKey": false
         },
@@ -1004,7 +1004,7 @@
           "key": "updatedAt",
           "name": "updated_at",
           "kind": "timestamp",
-          "type": "integer",
+          "type": "text",
           "notNull": true,
           "primaryKey": false
         }

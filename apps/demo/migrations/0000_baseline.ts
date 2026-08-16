@@ -31,8 +31,8 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`image\` text,
             \`fields\` text,
             \`role_slug\` text NOT NULL,
-            \`created_at\` integer NOT NULL,
-            \`updated_at\` integer NOT NULL
+            \`created_at\` text NOT NULL,
+            \`updated_at\` text NOT NULL
         )
     `.execute(db);
     await sql`CREATE UNIQUE INDEX \`users_email_unique\` ON \`users\` (\`email\`)`.execute(

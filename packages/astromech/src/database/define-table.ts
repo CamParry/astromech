@@ -22,8 +22,8 @@
  * is types + codec only, so `indexes`/`reference` metadata is stored but unused.
  *
  * Ids are ULID (`ulidx`) unless a column asks for `format: 'uuid'`; timestamps
- * serialize to ISO-8601 TEXT unless a column asks for `storage: 'seconds'`,
- * which stores unix seconds in an INTEGER column. Both dialects (SQLite,
+ * serialize to ISO-8601 TEXT in a text column, which is also the format
+ * better-auth writes into the tables it shares with us. Both dialects (SQLite,
  * Postgres) compare ISO strings correctly (fixed-width, lexicographic).
  */
 
@@ -69,8 +69,6 @@ export type ColumnRuntime = {
     appDefault?: 'ulid' | 'uuid' | 'now';
     /** Timestamp stamped on every update (callers stamp explicitly today). */
     onUpdate: boolean;
-    /** On-disk timestamp format — ISO-8601 TEXT, or unix seconds INTEGER. */
-    timestampStorage?: 'iso' | 'seconds';
     enumValues?: readonly string[];
     reference?: ReferenceSpec;
     /** JS (domain) → storage. */
@@ -127,8 +125,6 @@ type FlagTrue<O, K extends PropertyKey> = O extends Record<K, true> ? true : fal
 /** `true` iff `O` carries key `K` with a concrete (non-`undefined`) value. */
 type HasKey<O, K extends PropertyKey> =
     O extends Record<K, infer V> ? (undefined extends V ? false : true) : false;
-/** `true` iff `O` carries key `K` with the literal value `V`. */
-type OptionIs<O, K extends PropertyKey, V> = O extends Record<K, V> ? true : false;
 type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
 // ============================================================================
@@ -167,9 +163,6 @@ type TimestampOpts = {
     notNull?: boolean;
     defaultNow?: boolean;
     onUpdate?: boolean;
-    /** On-disk format — ISO-8601 TEXT by default, unix seconds INTEGER for
-     *  `'seconds'`. */
-    storage?: 'iso' | 'seconds';
 };
 type EnumOpts<V extends string> = {
     notNull?: boolean;
@@ -211,7 +204,7 @@ type BooleanConfig<O extends BooleanOpts> = {
 };
 type TimestampConfig<O extends TimestampOpts> = {
     data: Date;
-    storage: OptionIs<O, 'storage', 'seconds'> extends true ? number : string;
+    storage: string;
     notNull: FlagTrue<O, 'notNull'>;
     generated: FlagTrue<O, 'defaultNow'>;
     hasDefault: false;
@@ -245,12 +238,10 @@ const boolSerialize = (v: unknown): unknown => (v ? 1 : 0);
 const boolParse = (v: unknown): unknown => Number(v) === 1;
 const isoSerialize = (v: unknown): unknown => (v instanceof Date ? v.toISOString() : v);
 const isoParse = (v: unknown): unknown =>
-    // A seconds-INTEGER value can only reach here from a mis-declared column;
-    // tolerate it rather than producing an Invalid Date.
+    // A number here is a unix-seconds value written by an older `users` row,
+    // back when that table declared seconds storage. Tolerated so those rows
+    // still decode; every writer produces ISO now.
     typeof v === 'number' ? new Date(v * 1000) : new Date(v as string);
-const secondsSerialize = (v: unknown): unknown =>
-    v instanceof Date ? Math.floor(v.getTime() / 1000) : v;
-const secondsParse = (v: unknown): unknown => new Date(Number(v) * 1000);
 
 // ============================================================================
 // `col` factory
@@ -342,7 +333,6 @@ function boolean<const O extends BooleanOpts = Record<never, never>>(
 function timestamp<const O extends TimestampOpts = Record<never, never>>(
     o?: O
 ): Column<TimestampConfig<O>> {
-    const seconds = o?.storage === 'seconds';
     return {
         kind: 'timestamp',
         notNull: !!o?.notNull,
@@ -350,9 +340,8 @@ function timestamp<const O extends TimestampOpts = Record<never, never>>(
         unique: false,
         ...(o?.defaultNow && { appDefault: 'now' as const }),
         onUpdate: !!o?.onUpdate,
-        timestampStorage: seconds ? 'seconds' : 'iso',
-        serialize: seconds ? secondsSerialize : isoSerialize,
-        parse: seconds ? secondsParse : isoParse,
+        serialize: isoSerialize,
+        parse: isoParse,
         ...(o?.defaultNow && { default: () => new Date() }),
     };
 }

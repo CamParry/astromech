@@ -1,6 +1,6 @@
 /**
- * The per-column storage format options — `col.timestamp({ storage: 'seconds' })`
- * and `col.id({ format: 'uuid' })`.
+ * Timestamp and id storage formats: ISO-8601 TEXT timestamps, and
+ * `col.id({ format: 'uuid' })`.
  *
  * These describe a format another writer already owns on disk (better-auth's
  * users table), so the assertions go down to the encoded cell rather than
@@ -17,27 +17,26 @@ const fixture = defineTable('column_formats', ({ col }) => ({
     id: col.id({ format: 'uuid' }),
     ulidId: col.text({ defaultUlid: true }),
     isoAt: col.timestamp({ notNull: true, defaultNow: true }),
-    secondsAt: col.timestamp({ notNull: true, defaultNow: true, storage: 'seconds' }),
 }));
 
-describe('seconds timestamps', () => {
-    it('encodes a Date to unix seconds and decodes it back', () => {
-        const encoded = encodeWith(fixture, { isoAt: WHEN, secondsAt: WHEN });
-        expect(encoded.secondsAt).toBe(Math.floor(WHEN.getTime() / 1000));
+describe('timestamps', () => {
+    it('encodes a Date to ISO text and decodes it back', () => {
+        const encoded = encodeWith(fixture, { isoAt: WHEN });
         expect(encoded.isoAt).toBe(WHEN.toISOString());
 
-        const decoded = decodeWith(fixture, {
-            secondsAt: encoded.secondsAt,
-            isoAt: encoded.isoAt,
-        });
-        expect(decoded.secondsAt).toEqual(WHEN);
+        const decoded = decodeWith(fixture, { isoAt: encoded.isoAt });
         expect(decoded.isoAt).toEqual(WHEN);
     });
 
-    it('serializes an app default (defaultNow) in the declared format', () => {
+    it('serializes an app default (defaultNow) as ISO text', () => {
         const encoded = encodeWith(fixture, {});
-        expect(typeof encoded.secondsAt).toBe('number');
         expect(typeof encoded.isoAt).toBe('string');
+    });
+
+    // Rows written while `users` declared seconds storage still hold a number.
+    it('decodes a unix-seconds number left by an older writer', () => {
+        const decoded = decodeWith(fixture, { isoAt: WHEN.getTime() / 1000 });
+        expect(decoded.isoAt).toEqual(WHEN);
     });
 });
 

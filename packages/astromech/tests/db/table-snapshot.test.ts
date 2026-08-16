@@ -42,7 +42,6 @@ const kinds = defineTable('kinds', ({ col }) => ({
     real: col.real(),
     boolean: col.boolean(),
     timestamp: col.timestamp(),
-    seconds: col.timestamp({ storage: 'seconds' }),
     json: col.json(),
     enum: col.enum(['a', 'b']),
     reference: col.reference('users'),
@@ -60,16 +59,11 @@ describe('columnType', () => {
         expect(columnType(kinds.columns.enum, 'sqlite')).toBe('text');
         expect(columnType(kinds.columns.reference, 'sqlite')).toBe('text');
     });
-
-    it('maps a seconds-storage timestamp to integer', () => {
-        expect(columnType(kinds.columns.seconds, 'sqlite')).toBe('integer');
-    });
 });
 
 describe('toSnapshotTable timestamp storage', () => {
-    it('renders a seconds timestamp as an integer column', () => {
+    it('renders a timestamp as a text column', () => {
         const snap = toSnapshotTable(kinds, 'sqlite');
-        expect(snap.columns.find((c) => c.key === 'seconds')?.type).toBe('integer');
         expect(snap.columns.find((c) => c.key === 'timestamp')?.type).toBe('text');
     });
 });
