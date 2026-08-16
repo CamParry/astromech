@@ -150,30 +150,30 @@ broken.
 
 ## Stage 3 — Config enters at boot
 
-- [ ] Migrate every module-scope `import config from 'virtual:astromech/config'`
+- [x] Migrate every module-scope `import config from 'virtual:astromech/config'`
       (~30 sites across entries, media, users, settings, request-context, cron)
       to `getConfig()` at call time.
-- [ ] Delete `transport/cli/virtual-config-shim.ts` (its `rawConfig` is a Proxy
+- [x] Delete `transport/cli/virtual-config-shim.ts` (its `rawConfig` is a Proxy
       that throws on every read; its `set` trap can mutate live config) and the
       `cliConfig` global. The CLI and MCP call `createAstromech({ config })`
       like everything else.
-- [ ] Delete the `virtual:astromech/config` alias in `tsup.config.ts`'s CLI
+- [x] Delete the `virtual:astromech/config` alias in `tsup.config.ts`'s CLI
       build and in `vitest.config.ts`. **The test harness moves to `setConfig()`**;
       expect a wide test-fixture diff, since the vitest alias is currently how
       every test reaches config.
-- [ ] Delete `setRuntimeConfig` / `getRuntimeConfig` from `cron/registry.ts`.
-- [ ] Export `getAstromech` and `createAstromech` from the root barrel.
+- [x] Delete `setRuntimeConfig` / `getRuntimeConfig` from `cron/registry.ts`.
+- [x] Export `getAstromech` and `createAstromech` from the root barrel.
 - [ ] Investigate Q9 (`users/auth.ts`'s module-scope `let _auth`) while in the
       file, and state the rule for when a module-scope singleton is permitted.
-- [ ] Close the split-brain stage 2 opened: the virtual module computes its own
+- [x] Close the split-brain stage 2 opened: the virtual module computes its own
       `resolveConfig(rawConfig)` eagerly and the `resolve config` phase computes
       another, so a serving process holds two structurally identical
       `ResolvedConfig` objects. Migrating the readers deletes the first. Nothing
       compares one by identity today, which is the only reason it is survivable.
-- [ ] Drop the lazy `import('@/transport/local/index')` in `boot/application.ts`
+- [x] Drop the lazy `import('@/transport/local/index')` in `boot/application.ts`
       and its four-line comment. It is dynamic only because that module imports
       `virtual:` at module scope; this stage removes the cause.
-- [ ] Done when the only `virtual:` importers left are the entry files that
+- [x] Done when the only `virtual:` importers left are the entry files that
       supply config, and `check:node-imports` passes.
 
 **Cautions.** The whole test suite depends on the vitest alias, so this stage

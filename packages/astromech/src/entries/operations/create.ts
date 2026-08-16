@@ -62,6 +62,10 @@ export async function create(params: {
     const publishedAt =
         status === 'published' ? new Date() : (validated.publishAt ?? null);
     const locale = params.locale ?? getDefaultLocale();
+    const slug =
+        validated.slug || titleField
+            ? await storage.uniqueSlug(type, locale, validated.slug ?? slugify(title))
+            : null;
 
     const user = getCurrentUser();
     const fieldDefs = flattenEntryFields(entryType.fields);
@@ -114,12 +118,6 @@ export async function create(params: {
         processed.values as JsonObject
     );
     const processedFields = pruned.values;
-
-    // Set slug
-    const slug =
-        validated.slug || titleField
-            ? await storage.uniqueSlug(type, locale, validated.slug ?? slugify(title))
-            : null;
 
     const data = {
         title,

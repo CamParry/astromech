@@ -18,6 +18,7 @@ import type {
 import { runBootPhases } from '@/boot/lifecycle';
 import { getSchedulerDriver } from '@/cron/registry';
 import { onTick } from '@/cron/runner';
+import { Astromech as services } from '@/transport/local/index';
 import { createRegistry } from '@/utilities/registry';
 
 export type Astromech = {
@@ -88,10 +89,6 @@ export function getAstromech(): Promise<Astromech> {
 /** Run the phases, then assemble the instance from what they registered. */
 async function boot(config: AstromechConfig): Promise<Astromech> {
     const resolved = await runBootPhases(config);
-    // Loaded lazily: this module runs `setPluginClient` / `setPluginMethods` at
-    // module scope and sits in a cycle with `plugins/runtime`, which deadlocks
-    // the bundled SSR server when the edge is static.
-    const { Astromech: services } = await import('@/transport/local/index');
 
     return {
         config: resolved,
