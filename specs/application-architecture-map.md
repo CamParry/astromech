@@ -1,7 +1,7 @@
 # Application architecture map (in-flight)
 
 The design companion to `decisions/0057-one-application-instance-thin-framework-integrations.md`
-and `roadmap/planned/application-instance-and-integrations.md`. Target state,
+and `roadmap/in-progress/application-instance-and-integrations.md`. Target state,
 not current state. The roadmap file holds the work and its order; this file
 holds the shape, the signatures and the field research behind them.
 

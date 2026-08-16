@@ -58,5 +58,5 @@ needs no attacker at all, which is what makes it worth fixing.
 map on every call. That is why the resolved `Role` is cached in the request
 context rather than derived from `user.roleSlug` at the point of use. Computing
 the map once during config resolution is part of
-`roadmap/planned/application-instance-and-integrations.md`, and it removes the
+`roadmap/in-progress/application-instance-and-integrations.md`, and it removes the
 reason the request context carries a second copy of derived state.
