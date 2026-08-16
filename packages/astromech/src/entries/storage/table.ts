@@ -30,7 +30,7 @@
  * set but no searchFields, search is a no-op.
  *
  * sort: field names must match column names (id, createdAt, updatedAt, or any
- * field column); unknown names are skipped silently.
+ * field column); an unknown name throws, as it does for built-in storage.
  *
  * uniqueSlug: not supported — throws with an instructional error.
  * transaction: wraps fn in a Kysely tx, rebinding a new tableStorage instance.
@@ -46,7 +46,7 @@ import {
 import { decodeWith } from '@/database/codec';
 import type { Column, Table } from '@/database/define-table';
 import type { Db } from '@/database/types';
-import { RelationshipFilterUnsupportedError } from '../errors';
+import { RelationshipFilterUnsupportedError, UnknownSortKeyError } from '../errors';
 import type { JsonObject } from '@/types/index';
 import type {
     EntryRecord,
@@ -328,7 +328,9 @@ class TableStorage implements EntryStorage<EntryRecord> {
         return [...fields];
     }
 
-    /** Unknown sort columns are skipped silently (unlike searchFields). */
+    /** An unknown sort column throws, as an unknown searchField does: a typo
+     *  must not quietly answer differently-ordered data
+     *  (`decisions/0029-an-unknown-where-key-throws.md`). */
     private buildOrderBy(params: ListParams): OrderPair[] {
         const cols = this.getColumns();
         const pairs: OrderPair[] = [];
@@ -337,7 +339,9 @@ class TableStorage implements EntryStorage<EntryRecord> {
             const sorts = Array.isArray(params.sort) ? params.sort : [params.sort];
             for (const s of sorts) {
                 for (const [field, dir] of Object.entries(s)) {
-                    if (!(field in cols)) continue;
+                    if (!(field in cols)) {
+                        throw new UnknownSortKeyError(field, Object.keys(cols));
+                    }
                     pairs.push([field, dir === 'asc' ? 'asc' : 'desc']);
                 }
             }

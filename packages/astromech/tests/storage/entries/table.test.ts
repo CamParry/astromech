@@ -16,6 +16,7 @@ import { Astromech } from '@/transport/local/index';
 import type { AstromechConfig, PluginDefinition } from '@/types/index';
 import { tableStorage } from '@/entries/storage/table';
 import { defineTable } from '@/database/define-table';
+import { UnknownSortKeyError } from '@/entries/errors';
 
 // ============================================================================
 // Scratch table definition
@@ -274,6 +275,16 @@ describe('list – sort', () => {
         });
         expect(res.data[0]?.id).toBe(a.id);
         expect(res.data[1]?.id).toBe(b.id);
+    });
+
+    it('throws on a sort key that is not a column', async () => {
+        await storage.create({ type: 'link', fields: { from: '/a', to: '/x' } });
+
+        // Matches built-in storage: a typo must not quietly answer the default
+        // order — see `decisions/0029-an-unknown-where-key-throws.md`.
+        await expect(
+            storage.list({ type: 'link', limit: 'all', sort: { nope: 'asc' } })
+        ).rejects.toThrow(UnknownSortKeyError);
     });
 });
 
