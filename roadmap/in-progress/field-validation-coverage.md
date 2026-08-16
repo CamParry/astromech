@@ -38,6 +38,31 @@ never sees).
       `FieldReads` currently offers only `isUnique`, so this needs a second
       method on it and a matching change wherever the pipeline context is built
       (entries, media, users, settings).
+
+        **Blocked on a decision, not on the code.** Built and reverted on
+        `fix/field-validation-coverage`: the mechanics work (a `referenceStatus`
+        method on `FieldReads`, an `existingEntryTypes` read beside
+        `existingResourceIds`, the `unchecked` guard for a target that is
+        table-backed or names no configured entry type), but rejecting a dangling
+        id contradicts `decisions/0004-relationships-as-a-derived-index.md`:
+        "A dangling id stays in field data until that entry is next written, then
+        the write pipeline drops it." `pruneDanglingRelations` implements exactly
+        that, and it runs AFTER `processFields` — so with the check in place the
+        write is rejected before the cleanup can drop the id, and four
+        `dangling-relations` tests fail. An entry whose target was deleted becomes
+        unsavable rather than self-healing.
+
+        Two ways out, and the choice is a design decision:
+
+        - **Check the type only, never existence.** Pruning already removes an id
+          that resolves to nothing, but it never checks that the id is the
+          DECLARED target type, so a wrong-type reference is the real uncovered
+          gap. Costs nothing in the 0004 model.
+        - **Reject only ids this write INTRODUCES**, and keep pruning the stale
+          ones. Needs the pipeline to tell a newly-written value from a merged-in
+          stored one; `ctx.coerceOnly` is close but the admin's entry form posts
+          every field, so through the admin nothing would read as untouched.
+
 - [x] **`color` and `link` are shape-checked, not format-checked.** `color` must
       be a string but no format is enforced; `link` must be an object with a
       string `url`, which is deliberately not parsed so a relative path or an
