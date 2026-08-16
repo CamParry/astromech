@@ -23,6 +23,7 @@ export default defineConfig([
             middleware: 'src/exports/middleware.ts',
             'database/schema': 'src/exports/database-schema.ts',
             'admin/components/ui/index': 'src/exports/admin/ui.ts',
+            'admin/components/ui/app': 'src/exports/admin/ui-app.ts',
             'admin/components/ui/layout': 'src/exports/admin/ui-layout.ts',
             'admin/components/fields/index': 'src/exports/admin/ui-fields.ts',
             'email/index': 'src/exports/email.ts',

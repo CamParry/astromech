@@ -81,6 +81,8 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
                                     pkgSrc + '/admin/components/fields/index.ts',
                                 'astromech/ui/layout':
                                     pkgSrc + '/admin/components/ui/layout.ts',
+                                'astromech/ui/app':
+                                    pkgSrc + '/admin/components/ui/app.ts',
                                 'astromech/ui': pkgSrc + '/admin/components/ui/index.ts',
                                 '@/': pkgSrc + '/',
                             },

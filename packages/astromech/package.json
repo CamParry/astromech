@@ -126,6 +126,10 @@
         "./ui/layout": {
             "types": "./dist/admin/components/ui/layout.d.ts",
             "default": "./src/exports/admin/ui-layout.ts"
+        },
+        "./ui/app": {
+            "types": "./dist/admin/components/ui/app.d.ts",
+            "default": "./src/exports/admin/ui-app.ts"
         }
     },
     "publishConfig": {
@@ -242,6 +246,10 @@
             "./ui/layout": {
                 "types": "./dist/admin/components/ui/layout.d.ts",
                 "default": "./dist/admin/components/ui/layout.js"
+            },
+            "./ui/app": {
+                "types": "./dist/admin/components/ui/app.d.ts",
+                "default": "./dist/admin/components/ui/app.js"
             }
         }
     },
