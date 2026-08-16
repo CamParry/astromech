@@ -32,6 +32,7 @@
 
 import type { ExpressionBuilder, Updateable } from 'kysely';
 import { getDb } from '@/database/registry';
+import { existingResourceIds } from '@/database/storage/resource-existence';
 import { supportsTransactions } from '@/database/capabilities';
 import { encodePatchWith, decodeWith } from '@/database/codec';
 import { createStorage } from '@/database/storage/create-storage';
@@ -284,6 +285,11 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
                 const txStorage = createBuiltInEntryStorage({ db: trx, defaultLocale });
                 return fn(txStorage, trx);
             });
+    }
+
+    /** Ids with a row in `entries` — trashed and staged rows included. */
+    async function existingIds(ids: string[]): Promise<Set<string>> {
+        return existingResourceIds('entry', ids, handle());
     }
 
     async function uniqueSlug(
@@ -561,6 +567,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
         // without interactive transactions degrades correctly instead of
         // throwing at runtime.
         ...(supportsTransactions() ? { transaction } : {}),
+        existingIds,
         uniqueSlug,
         list,
         get,

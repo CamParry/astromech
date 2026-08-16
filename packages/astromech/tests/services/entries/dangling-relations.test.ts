@@ -18,7 +18,7 @@ import { createRelationshipStorage } from '@/database/storage/relationships';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
 import { tableStorage } from '@/entries/storage/table';
 import { defineTable } from '@/database/define-table';
-import type { StorageDb } from '@/entries/storage/types';
+import type { EntryStorage, StorageDb } from '@/entries/storage/types';
 import type {
     AstromechConfig,
     Entry,
@@ -34,8 +34,37 @@ const linksTable = defineTable('test_links', ({ col }) => ({
     updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
 }));
 
-/** A table-backed entry type: its rows never appear in the `entries` table. */
+const notesTable = defineTable('test_notes', ({ col }) => ({
+    id: col.id(),
+    label: col.text({ notNull: true }),
+    createdAt: col.timestamp({ notNull: true, defaultNow: true }),
+    updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
+}));
+
+/**
+ * The same storage with `existingIds` hidden — a third-party storage predating
+ * the hook. A proxy rather than a spread: `tableStorage` is a class instance and
+ * its methods live on the prototype.
+ */
+function withoutExistingIds(storage: EntryStorage): EntryStorage {
+    return new Proxy(storage, {
+        get: (target, prop, receiver) =>
+            prop === 'existingIds'
+                ? undefined
+                : (Reflect.get(target, prop, receiver) as unknown),
+        has: (target, prop) => prop !== 'existingIds' && Reflect.has(target, prop),
+    });
+}
+
+/** Table-backed entry types: their rows never appear in the `entries` table. */
 function linksPlugin(): PluginDefinition {
+    const tableBacked = {
+        titleField: false as const,
+        statuses: false as const,
+        slug: false as const,
+        trash: false as const,
+        fields: [{ name: 'label', type: 'text', label: 'Label' }] satisfies Field[],
+    };
     return {
         package: '@astromech/links',
         entries: [
@@ -43,12 +72,15 @@ function linksPlugin(): PluginDefinition {
                 type: 'link',
                 single: 'Link',
                 plural: 'Links',
-                titleField: false,
-                statuses: false,
-                slug: false,
-                trash: false,
                 storage: tableStorage(linksTable),
-                fields: [{ name: 'label', type: 'text', label: 'Label' }],
+                ...tableBacked,
+            },
+            {
+                type: 'note',
+                single: 'Note',
+                plural: 'Notes',
+                storage: withoutExistingIds(tableStorage(notesTable)),
+                ...tableBacked,
             },
         ],
     };
@@ -68,6 +100,7 @@ const docFields: Field[] = [
     { name: 'avatar', type: 'media', label: 'Avatar' },
     { name: 'owner', type: 'relationship', label: 'Owner', target: 'users' },
     { name: 'link', type: 'relationship', label: 'Link', target: 'links/link' },
+    { name: 'note', type: 'relationship', label: 'Note', target: 'links/note' },
     { name: 'ghost', type: 'relationship', label: 'Ghost', target: 'not-a-type' },
     {
         name: 'sections',
@@ -93,6 +126,12 @@ beforeEach(async () => {
     const db = await createTestDb();
     setupTestConfig(makeDanglingConfig());
     await sql`CREATE TABLE test_links (
+            id text PRIMARY KEY,
+            label text NOT NULL,
+            created_at text NOT NULL,
+            updated_at text NOT NULL
+        )`.execute(db);
+    await sql`CREATE TABLE test_notes (
             id text PRIMARY KEY,
             label text NOT NULL,
             created_at text NOT NULL,
@@ -170,10 +209,9 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
         expect(updated.fields.author).toBe(target.id);
     });
 
-    // The false-negative guard. `links/link` rows live in `test_links`, so an
-    // existence check against `entries` reports every one of them absent: without
-    // the `hasEntryStorageOverride` skip this id would be silently deleted.
-    it('keeps a reference to a tableStorage-backed entry type', async () => {
+    // `links/link` rows live in `test_links`, so a check against `entries`
+    // reports every one of them absent. Its storage answers for them instead.
+    it('keeps a reference to a live tableStorage-backed row', async () => {
         const link = await api.create({ type: 'links/link', fields: { label: 'One' } });
         const doc = await api.create({
             type: 'doc',
@@ -185,6 +223,34 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
 
         expect(updated.fields.link).toBe(link.id);
         expect(await api.get({ type: 'links/link', id: link.id })).not.toBeNull();
+    });
+
+    it('drops a reference to a deleted tableStorage-backed row', async () => {
+        const link = await api.create({ type: 'links/link', fields: { label: 'One' } });
+        const doc = await api.create({
+            type: 'doc',
+            title: 'Doc',
+            fields: { link: link.id },
+        });
+
+        await api.delete({ type: 'links/link', id: link.id });
+        const updated = await touch(doc.id);
+
+        expect(updated.fields.link).toBeNull();
+    });
+
+    // The false-negative guard, now on the hook rather than on the storage
+    // override: a storage that cannot answer is never asked, and its ids stand.
+    it('keeps a reference whose storage implements no existence check', async () => {
+        const doc = await api.create({
+            type: 'doc',
+            title: 'Doc',
+            fields: { note: '01JQZZZZZZZZZZZZZZZZZZZZZZ' },
+        });
+
+        const updated = await touch(doc.id);
+
+        expect(updated.fields.note).toBe('01JQZZZZZZZZZZZZZZZZZZZZZZ');
     });
 
     // A plugin dropped from the config takes its entry types with it, and its

@@ -58,6 +58,9 @@ import type {
 
 type OrderPair = [column: string, direction: 'asc' | 'desc'];
 
+/** D1 caps a query at 100 bound parameters, and each id binds one. */
+const ID_CHUNK = 100;
+
 /** The wrapper's compiled `where`, the shape a raw clause has to AND onto. */
 type Predicate = ReturnType<QueryHandle<Table>['where']>;
 
@@ -277,6 +280,19 @@ class TableStorage implements EntryStorage<EntryRecord> {
 
     async delete(id: string): Promise<void> {
         await this.storage.deleteMany({ [this.idCol]: id });
+    }
+
+    /** Ids with a row in this table. Chunked — D1 caps a query at 100 binds. */
+    async existingIds(ids: string[]): Promise<Set<string>> {
+        const unique = Array.from(new Set(ids));
+        const found = new Set<string>();
+        for (let i = 0; i < unique.length; i += ID_CHUNK) {
+            const rows = await this.storage.findMany({
+                where: { [this.idCol]: { in: unique.slice(i, i + ID_CHUNK) } },
+            });
+            for (const row of rows) found.add(String(row[this.idCol]));
+        }
+        return found;
     }
 
     /**

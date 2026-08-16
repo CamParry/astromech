@@ -121,6 +121,16 @@ export type EntryStorage<R extends EntryRecord = EntryRecord> = {
     delete(id: string, opts?: { cascadeLocales?: boolean }): Promise<void>;
 
     /**
+     * Which of these ids this storage holds. Ids absent from the result do not
+     * exist. Trashed and staged rows MUST count as existing: the caller drops a
+     * reference on a miss, so a false negative deletes author data.
+     *
+     * Optional. A storage that omits it is never asked, and the dangling-relation
+     * cleanup leaves references to its types alone.
+     */
+    existingIds?(ids: string[]): Promise<Set<string>>;
+
+    /**
      * Run `fn` inside a single transaction. The storage handed to `fn` is bound
      * to the tx; the raw tx db handle is also provided so the entries service can
      * keep core relationship persistence (which lives outside the storage

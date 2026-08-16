@@ -13,20 +13,19 @@ import {
     collectRelationshipDeclarations,
     collectRelationshipEdges,
 } from '@/fields/relationship-edges';
-import type {
-    RelationshipDeclaration,
-    RelationshipEdge,
-    TargetKind,
-} from '@/fields/relationship-edges';
+import type { RelationshipDeclaration, TargetKind } from '@/fields/relationship-edges';
 import { parseInstancePath } from '@/fields/field-path';
 import { RESERVED_KEY } from '@/fields/reserved-keys';
-import { hasEntryStorageOverride } from '../storage/registry';
+import { getEntryStorage, hasEntryStorageOverride } from '../storage/registry';
 import { resolveEntryType } from '../type-ids.shared';
 import type { Field } from '@/types/fields';
 import type { JsonObject } from '@/types/index';
 import type { StorageDb } from '../storage/types';
 
 const TARGET_KINDS = ['entry', 'user', 'media'] as const satisfies readonly TargetKind[];
+
+/** One storage's answer to "which of these ids do you hold". */
+type ExistingIds = (ids: string[]) => Promise<Set<string>>;
 
 /**
  * Field values with dead relation ids removed, plus what was dropped. `values`
@@ -46,17 +45,47 @@ export async function pruneDanglingRelations(
     const candidates = edges.filter((edge) => prunable.has(edge.schemaPath));
     if (candidates.length === 0) return { values, dropped: 0 };
 
-    const dead: RelationshipEdge[] = [];
+    const aliveByKind = new Map<TargetKind, Set<string>>();
     for (const kind of TARGET_KINDS) {
         const ofKind = candidates.filter((edge) => edge.targetKind === kind);
         if (ofKind.length === 0) continue;
-        const alive = await existingResourceIds(
+        aliveByKind.set(
             kind,
-            ofKind.map((edge) => edge.targetId),
-            db
+            await existingResourceIds(
+                kind,
+                ofKind.map((edge) => edge.targetId),
+                db
+            )
         );
-        dead.push(...ofKind.filter((edge) => !alive.has(edge.targetId)));
     }
+
+    // Targets with a storage of their own keep no rows in `entries`, so each
+    // answers for its own ids through the hook the declaration was cleared on.
+    const readsByPath = storageReadsByPath(definitions);
+    const readByTarget = new Map<string, ExistingIds>();
+    for (const reads of readsByPath.values()) {
+        for (const [target, read] of reads) readByTarget.set(target, read);
+    }
+
+    const aliveByTarget = new Map<string, Set<string>>();
+    for (const [target, read] of readByTarget) {
+        const ids = candidates
+            .filter((edge) => readsByPath.get(edge.schemaPath)?.has(target) === true)
+            .map((edge) => edge.targetId);
+        if (ids.length === 0) continue;
+        aliveByTarget.set(target, await read(ids));
+    }
+
+    // An id survives if ANY check that applies to its path reports it existing:
+    // one schema path can declare several targets, and only all of them missing
+    // it makes the reference really dead.
+    const dead = candidates.filter((edge) => {
+        if (aliveByKind.get(edge.targetKind)?.has(edge.targetId) === true) return false;
+        for (const target of readsByPath.get(edge.schemaPath)?.keys() ?? []) {
+            if (aliveByTarget.get(target)?.has(edge.targetId) === true) return false;
+        }
+        return true;
+    });
     if (dead.length === 0) return { values, dropped: 0 };
 
     const next = structuredClone(values);
@@ -91,15 +120,34 @@ function prunableSchemaPaths(definitions: Field[]): Set<string> {
  *   - a target naming no configured entry type cannot be located at all — a
  *     plugin dropped from the config takes its types with it, and its rows may
  *     be in a table this check never reads;
- *   - a `tableStorage`-backed type keeps its rows out of the `entries` table, so
- *     an existence check there reports every one of them absent.
+ *   - a type with a storage of its own keeps its rows out of the `entries`
+ *     table, so it is only checkable through that storage's `existingIds`.
  */
 function isPrunable(declaration: RelationshipDeclaration): boolean {
     if (declaration.targetKind !== 'entry') return true;
     const target = declaration.target;
     if (target === undefined || target === '') return false;
     if (!resolveEntryType(config, target)) return false;
-    return !hasEntryStorageOverride(target);
+    if (!hasEntryStorageOverride(target)) return true;
+    return getEntryStorage(target).existingIds !== undefined;
+}
+
+/** The `existingIds` read of every override-backed target, per schema path. */
+function storageReadsByPath(definitions: Field[]): Map<string, Map<string, ExistingIds>> {
+    const byPath = new Map<string, Map<string, ExistingIds>>();
+    for (const declaration of collectRelationshipDeclarations(definitions)) {
+        const target = declaration.target;
+        if (declaration.targetKind !== 'entry') continue;
+        if (target === undefined || target === '') continue;
+        if (!hasEntryStorageOverride(target)) continue;
+        const storage = getEntryStorage(target);
+        if (storage.existingIds === undefined) continue;
+        const reads =
+            byPath.get(declaration.schemaPath) ?? new Map<string, ExistingIds>();
+        reads.set(target, storage.existingIds.bind(storage));
+        byPath.set(declaration.schemaPath, reads);
+    }
+    return byPath;
 }
 
 /**
