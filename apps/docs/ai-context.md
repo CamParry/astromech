@@ -39,11 +39,11 @@ type AIContextReference = {
 
 ## Declaring one
 
-`useAIContext` comes from `astromech/ui`. It declares the reference for as long
+`useAIContext` comes from `astromech/ui/app`. It declares the reference for as long
 as the component is mounted and withdraws it on unmount:
 
 ```tsx
-import { useAIContext } from 'astromech/ui';
+import { useAIContext } from 'astromech/ui/app';
 
 function MediaDetailPage() {
     const { id } = Route.useParams();
@@ -88,7 +88,7 @@ not remount on navigation, and they throw outside it.
 
 ## Reading it
 
-`useAIContextItems`, also from `astromech/ui`, returns the current items —
+`useAIContextItems`, also from `astromech/ui/app`, returns the current items —
 each an `AIContextItem`, `{ reference, depth, order }` — in registration order.
 `formatAIContextMessage` from `astromech` turns them into the message:
 

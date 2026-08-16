@@ -305,11 +305,11 @@ there is no double-prefix guard — writing `path: '/myplugin/overview'` inside
 `baseKey` of `plugin:myplugin:/myplugin/overview`. The same rule holds for
 `permission`, which takes a bare key (`'view'` → `plugin:<namespace>:view`).
 
-Page components call `useAstromechPlugin()` (from `astromech/ui`) for context:
+Page components call `useAstromechPlugin()` (from `astromech/ui/app`) for context:
 
 ```tsx
 // admin/pages/overview-page.tsx
-import { useAstromechPlugin } from 'astromech/ui';
+import { useAstromechPlugin } from 'astromech/ui/app';
 
 export default function OverviewPage() {
     const { plugin, currentUser, toast, t } = useAstromechPlugin();
@@ -708,8 +708,8 @@ invent its own. `@astromech/assistant` builds its approve/reject panel from it.
 Plugin-declared methods are absent from the list: their `access` is enforced by
 the HTTP RPC route, so there is nothing to scope them with.
 
-> **A plugin imports `astromech` and `astromech/ui`, and nothing else from
-> core.** Everything else arrives on `ctx`. Your config is loaded twice: in the
+> **A plugin imports `astromech`, `astromech/ui` and `astromech/ui/app`, and
+> nothing else from core.** Everything else arrives on `ctx`. Your config is loaded twice: in the
 > running server's module graph, and in plain Node at config time, where the
 > `virtual:astromech/config` that every domain service reaches cannot resolve.
 > Your plugin is loaded with it both times and has to survive the plain-Node one,
