@@ -45,12 +45,20 @@ never sees).
 - [ ] **`slug` normalizes but never rejects.** `coerceSlug` slugifies whatever it
       is given, so a garbage value becomes a garbage slug rather than an error.
       Deliberate today; worth revisiting alongside `text`.
-- [ ] **Unknown keys survive a write.** `processFields` starts from
+- [x] **Unknown keys survive a write.** `processFields` starts from
       `{ ...values }` and iterates only _declared_ fields, so a key belonging to
       no field is copied through untouched. Harmless under full-replace writes
       (the next write drops it), but it becomes permanent under the PATCH-merge
       semantics settled for P4 — see `completed/ai-integration.md`. Projecting
       the merged result through the schema before writing cleans these up.
+      **Done:** `processFields` now projects its input through
+      `projectToSchema` over the layout-flattened definitions, so an undeclared
+      key is dropped silently on every write path rather than only on the three
+      update paths that already called it. Silently, not rejected: the key
+      belongs to no field, so there is no path to report an error under, and the
+      public-shape write-back this protects (P4) legitimately carries keys the
+      schema does not declare. Empty definitions still drop nothing — that means
+      the schema is unknown here, not that there are no fields.
 - [ ] **Validation is write-time only.** Tightening a rule does not invalidate
       rows already stored. There is no revalidation pass or report of rows that
       would now fail.

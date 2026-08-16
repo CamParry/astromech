@@ -309,7 +309,8 @@ describe('update — projection to the schema', () => {
             title: 'T',
             fields: { headline: 'H', legacy: 'left over' },
         });
-        expect(entry.fields.legacy).toBe('left over');
+        // The create write drops it too — the pipeline projects to the schema.
+        expect(entry.fields).not.toHaveProperty('legacy');
 
         const updated = one(
             await api.update({

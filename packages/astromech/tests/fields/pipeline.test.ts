@@ -982,19 +982,56 @@ describe('nested fields', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Passthrough & clean state
+// Unknown keys & clean state
 // ---------------------------------------------------------------------------
 
-describe('passthrough', () => {
-    it('unknown keys in values survive into returned values', async () => {
-        const { values } = await processFields(
-            { title: 'hello', _unknownKey: 'preserved' },
+describe('unknown keys', () => {
+    it('a key matching no declared field is dropped', async () => {
+        const { values, errors } = await processFields(
+            { title: 'hello', _unknownKey: 'dropped' },
             [field({ name: 'title', type: 'text' })],
             fakeCtx()
         );
-        expect(values._unknownKey).toBe('preserved');
+        expect(values).toEqual({ title: 'hello' });
+        expect(errors).toEqual({});
     });
 
+    it('a field declared inside a layout field is kept', async () => {
+        const { values } = await processFields(
+            { title: 'hello', stray: 1 },
+            [
+                field({
+                    name: 'main',
+                    type: 'tabs',
+                    fields: [field({ name: 'title', type: 'text' })],
+                }),
+            ],
+            fakeCtx()
+        );
+        expect(values).toEqual({ title: 'hello' });
+    });
+
+    it('empty definitions drop nothing — the schema is unknown, not empty', async () => {
+        const input = { title: 'hello' };
+        const { values } = await processFields(input, [], fakeCtx());
+        expect(values).toEqual({ title: 'hello' });
+        expect(values).not.toBe(input);
+    });
+
+    it('a declared field absent from the input stays absent', async () => {
+        const { values } = await processFields(
+            { title: 'hello' },
+            [
+                field({ name: 'title', type: 'text' }),
+                field({ name: 'body', type: 'text' }),
+            ],
+            fakeCtx({ operation: 'update' })
+        );
+        expect(values).toEqual({ title: 'hello' });
+    });
+});
+
+describe('clean state', () => {
     it('all-valid input → errors is {}', async () => {
         const { errors } = await processFields(
             { title: 'hello', count: 5 },
