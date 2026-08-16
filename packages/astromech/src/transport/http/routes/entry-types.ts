@@ -20,7 +20,7 @@
 
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { Astromech } from '@/transport/local/index';
-import { resolveEntryType } from '@/entries/type-ids.shared';
+import { resolveEntryType } from '@/utilities/entry-type-ids';
 import { forbidden, notFound } from '@/transport/http/middleware/errors';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { entryPermission } from '@/permissions/index';

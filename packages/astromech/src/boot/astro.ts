@@ -2,7 +2,7 @@
  * Astromech — Astro adapter (thin shell)
  *
  * Bridges astromech.config.ts with Astro's integration API. Boot and
- * config-assembly logic lives in boot/boot, boot/admin-config, and
+ * config-assembly logic lives in boot/boot, config/ and
  * codegen/plugin-client-manifest; this file wires them together.
  *
  * @example
@@ -24,12 +24,12 @@ import { fileURLToPath } from 'node:url';
 import type { AstroIntegration } from 'astro';
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 import type { AstromechConfig, ResolvedConfig } from '@/types/index';
-import { resolveConfig } from '@/boot/config-resolver';
-import { loadConfigFile, resolveConfigPath } from '@/boot/config-loader';
+import { resolveConfig } from '@/config/resolve';
+import { loadConfigFile, resolveConfigPath } from '@/config/load';
 import { registerRoutes } from '@/boot/route-registration';
 import { collectPluginFieldTypes } from '@/plugins/runtime/plugin-fields';
 import { runMigrations } from '@/boot/boot';
-import { buildAdminConfig } from '@/boot/admin-config';
+import { buildAdminConfig } from '@/config/admin-config';
 import { generatePluginClientManifest } from '@/codegen/plugin-client-manifest';
 
 export type AstromechIntegrationOptions = {
@@ -266,7 +266,7 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
  * where a JSON literal destroyed them.
  */
 function liveConfigModule(configPath: string): string {
-    const resolverPath = fileURLToPath(new URL('./config-resolver.js', import.meta.url));
+    const resolverPath = fileURLToPath(new URL('../config/resolve.js', import.meta.url));
     return [
         `import rawConfig from ${specifier(configPath)};`,
         `import { resolveConfig } from ${specifier(resolverPath)};`,

@@ -6,8 +6,8 @@
  */
 
 import { setDb } from '@/database/registry';
-import { resolveConfig } from '@/boot/config-resolver';
-import { loadConfigFile } from '@/boot/config-loader';
+import { resolveConfig } from '@/config/resolve';
+import { loadConfigFile } from '@/config/load';
 import { setCliConfig } from './virtual-config-shim';
 import type { AstromechConfig, ResolvedConfig } from '@/types/index';
 

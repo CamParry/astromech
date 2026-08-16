@@ -4,12 +4,12 @@ import {
     buildVariantUrl,
     isAllowedWidth,
     isImageFormat,
-    normaliseWidths,
     parseImageParams,
     variantPrefix,
     variantStorageKey,
     widthLadder,
 } from '@/media/serving/image/url.shared';
+import { normaliseWidths } from '@/utilities/image-widths';
 
 describe('buildMediaUrl', () => {
     it('produces the canonical original URL', () => {

@@ -34,9 +34,9 @@ import { mediaContract } from '@/media/methods';
 import { settingsContract } from '@/settings/methods';
 import { notificationsContract } from '@/notifications/methods';
 import { entryMethodContracts, type EntryMethodContract } from '@/entries/methods';
-import type { Capability } from '@/entries/storage/capabilities';
+import type { Capability } from '@/utilities/entry-capabilities';
 import type { ResolvedEntryCapabilities } from '@/types/index';
-import { qualifyEntryType } from '@/entries/type-ids.shared';
+import { qualifyEntryType } from '@/utilities/entry-type-ids';
 import {
     resolvePluginIdentity,
     resolvePluginPermission,

@@ -15,7 +15,7 @@
  */
 
 import { registerEntryAccess } from '@/plugins/runtime/entry-access';
-import { qualifyEntryType } from './type-ids.shared';
+import { qualifyEntryType } from '@/utilities/entry-type-ids';
 import { setEntryStorage, resetEntryStorageOverrides } from './storage/registry';
 
 /** Wire the entries implementation into the plugin runtime. Idempotent. */

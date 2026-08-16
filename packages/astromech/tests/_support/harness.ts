@@ -43,7 +43,7 @@ import { decodeWith, encodeWith } from '@/database/codec';
 import type { DB } from '@/database/types';
 import { usersTable, type UserRow } from '@/database/schema';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
-import { resolveConfig } from '@/boot/config-resolver';
+import { resolveConfig } from '@/config/resolve';
 import { setCliConfig } from '@/transport/cli/virtual-config-shim';
 import { setRuntimeConfig } from '@/cron/registry';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';

@@ -7,10 +7,10 @@
 import config from 'virtual:astromech/config';
 import { resolveContentLocale } from '@/utilities/locale';
 import { flattenEntryFields } from '@/fields/flatten';
-import { resolveEntryType } from '../type-ids.shared';
+import { resolveEntryType } from '@/utilities/entry-type-ids';
 import { getEntryStorage } from '../storage/registry';
 import { CapabilityError } from '../errors';
-import type { Capability } from '../storage/capabilities';
+import type { Capability } from '@/utilities/entry-capabilities';
 import type { EntryStorage } from '../storage/types';
 import type { Field } from '@/types/index';
 

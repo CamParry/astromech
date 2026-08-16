@@ -17,7 +17,7 @@ import {
     runAsUser,
     setupTestConfig,
 } from '@tests/harness';
-import { resolveConfig } from '@/boot/config-resolver';
+import { resolveConfig } from '@/config/resolve';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { notificationsContract } from '@/notifications/methods';
 import { notify } from '@/notifications/service';

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildAdminConfig, toAdminEntryType } from '@/boot/admin-config';
-import { resolveConfig } from '@/boot/config-resolver';
+import { buildAdminConfig, toAdminEntryType } from '@/config/admin-config';
+import { resolveConfig } from '@/config/resolve';
 import type {
     AstromechConfig,
     DatabaseDriver,

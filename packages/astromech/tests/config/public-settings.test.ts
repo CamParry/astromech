@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { resolveConfig } from '@/boot/config-resolver';
+import { resolveConfig } from '@/config/resolve';
 import { isPublicSettingKey } from '@/settings/visibility';
 import type { AstromechConfig, DatabaseDriver, StorageDriver } from '@/types/index';
 

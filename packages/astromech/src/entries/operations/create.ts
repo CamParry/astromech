@@ -15,7 +15,7 @@ import { asEntry } from '../internal/records';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility';
 import { UnknownEntryTypeError } from '../errors';
 import { createEntryFieldReads } from '../reads';
-import { resolveEntryType } from '../type-ids.shared';
+import { resolveEntryType } from '@/utilities/entry-type-ids';
 import { entryValidationStage } from '../validation-stage.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { processFields } from '@/fields/pipeline';

@@ -9,7 +9,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import type { Kysely } from 'kysely';
 import type { Updateable } from 'kysely';
 import { createTestDb, makeTestConfig } from '@tests/harness';
-import { resolveConfig } from '@/boot/config-resolver';
+import { resolveConfig } from '@/config/resolve';
 import { registerCronJob } from '@/cron/registry';
 import { interval } from '@/cron/drivers/index';
 import { handleScheduled } from '@/boot/scheduled';

@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { resolveConfig } from '@/boot/config-resolver';
+import { resolveConfig } from '@/config/resolve';
 import type {
     AstromechConfig,
     DatabaseDriver,

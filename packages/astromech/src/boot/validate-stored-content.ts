@@ -33,7 +33,7 @@ import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { entriesTable } from '@/entries/schema';
 import { getEntryStorage, hasEntryStorageOverride } from '@/entries/storage/registry';
 import { createEntryFieldReads } from '@/entries/reads';
-import { qualifyEntryType, resolveEntryType } from '@/entries/type-ids.shared';
+import { qualifyEntryType, resolveEntryType } from '@/utilities/entry-type-ids';
 import { entryValidationStage } from '@/entries/validation-stage.shared';
 import { createMediaStorage } from '@/media/storage';
 import { createUserStorage } from '@/users/storage';

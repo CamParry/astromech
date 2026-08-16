@@ -47,7 +47,7 @@ import {
     updateEntrySchemaFor,
 } from '@/entries/schema';
 import { PublicTrashedReadError, StagedEntryExistsError } from '@/entries/errors';
-import { resolveEntryType } from '@/entries/type-ids.shared';
+import { resolveEntryType } from '@/utilities/entry-type-ids';
 import { ENTRIES_ROUTE_SPECS } from './http-routes.shared';
 import {
     attachHandlers,

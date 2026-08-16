@@ -49,7 +49,7 @@ import type {
     ReferencesFilter,
     SortOption,
 } from '@/types/index';
-import { BUILT_IN_SUPPORTS } from './capabilities';
+import { BUILT_IN_SUPPORTS } from '@/utilities/entry-capabilities';
 import type {
     Capability,
     EntryStorage,

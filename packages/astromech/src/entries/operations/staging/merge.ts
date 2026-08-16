@@ -4,7 +4,7 @@ import { asEntry, loadAndAssertType } from '../../internal/records';
 import { getStagingStorage, isVersioningEnabled } from '../../internal/type-config';
 import { indexEntryRelationships } from '../../internal/relationships';
 import { createEntryFieldReads } from '../../reads';
-import { resolveEntryType } from '../../type-ids.shared';
+import { resolveEntryType } from '@/utilities/entry-type-ids';
 import { entryValidationStage } from '../../validation-stage.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { processFields } from '@/fields/pipeline';
