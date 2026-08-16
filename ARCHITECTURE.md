@@ -42,7 +42,7 @@ transport (http · local · mcp · cli · tools)   delivery — http/client/ is 
 policies                                       permission/confirmation wrappers over the manifest
 entries · media · users · settings ·           domains — siblings, never import each other
   notifications
-plugins/runtime · database · storage ·         capabilities
+plugins/runtime · config · database · storage · capabilities
   email · ai · cron · cloudflare · request-context · fields · permissions
 types · utilities · errors                     pure leaves
 ```
@@ -87,9 +87,15 @@ Key invariants:
   expose `peek()` and no `get()` at all. `createKeyedRegistry` is the same slot keyed
   by string, for the per-type and per-name override maps.
   The namespace also carries a few **process guards** — a cron tick lock and
-  interval handle, the duplicate-admin-UI check, the CLI's config stash — as plain
-  keys read directly rather than through a registry object. They share the
-  duplicate-chunk hazard without sharing the slot shape.
+  interval handle, the duplicate-admin-UI check — as plain keys read directly
+  rather than through a registry object. They share the duplicate-chunk hazard
+  without sharing the slot shape.
+- **Config is read at call time, never at module scope.** `createAstromech`
+  resolves the author's config once and puts it in `config/registry.ts`; every
+  reader calls `getConfig()` inside the function that needs it. A module-scope
+  read runs before the request that boots the application, and the node adapter
+  answers the resulting rejection by holding the socket open — so it presents as
+  a hang, and only `check:boot` sees it.
 - **`utilities/registry.ts` holds the only `declare global`.** Enforced by
   `no-restricted-syntax` in `eslint.config.js`; a new global goes in the namespace.
 - **Leaves are pure.** `types/`, `utilities/`, and `errors/` import only other
@@ -142,7 +148,7 @@ packages/
 │   │   ├── middleware.ts   # Astro middleware entry; boots the runtime on the first request (astromech/middleware)
 │   │   │
 │   │   │   ── entrypoints & composition root ──────────────────────────────────
-│   │   ├── boot/           # composition root — boots & wires all layers; Astro integration (astromech/astro)
+│   │   ├── boot/           # composition root — application.ts (createAstromech/getAstromech) · lifecycle.ts (the ordered phases) · migrations.ts; Astro integration (astromech/astro)
 │   │   ├── routes/         # 3 Astro APIRoute entrypoints injected by the integration (api / auth / media)
 │   │   ├── admin/          # React admin SPA (TanStack Router; deep-imports the *.shared.ts domain leaves) — components/dev/ is import.meta.env.DEV-gated
 │   │   ├── codegen/        # type generator + plugin-client manifest + method manifest (.astro/astromech.methods.json, plus manifest-registry.ts — the boot-generated copy)
@@ -157,13 +163,14 @@ packages/
 │   │   ├── plugins/        # plugins/runtime (hook engine) only — first-party plugins live in packages/plugins/; entry-access · notify-access · client-access are its ports onto the layers above
 │   │   │
 │   │   │   ── domains ────────────────────────────────────────────────────
-│   │   ├── entries/        # entries domain: service (assembler) · operations/ · internal/ · schema · methods · visibility · url.shared · type-ids.shared
+│   │   ├── entries/        # entries domain: service (assembler) · operations/ · internal/ · schema · methods · visibility · url.shared
 │   │   ├── media/          # media domain: service (assembler) · operations/ · internal/ · schema · methods · serving/image/
 │   │   ├── users/          # users domain: service (assembler) · operations/ · internal/ · schema · methods · auth (Better Auth integration)
 │   │   ├── settings/       # settings domain: service · schema · methods · visibility · page-values.shared
 │   │   ├── notifications/  # notifications domain: service (+ notify) · schema · methods · user-scoped storage
 │   │   │
 │   │   │   ── capabilities ───────────────────────────────────────────────
+│   │   ├── config/         # the config pipeline: load (jiti) · resolve (orchestration) + its named steps · validate/ · admin-config · registry (setConfig/getConfig)
 │   │   ├── database/       # Kysely client/drivers + schema.ts aggregator
 │   │   ├── storage/        # blob-storage registry + drivers/ (filesystem, r2, s3)
 │   │   ├── cloudflare/     # binding-name resolution across Workers and Node
@@ -176,7 +183,7 @@ packages/
 │   │   │
 │   │   │   ── pure leaves ────────────────────────────────────────────────
 │   │   ├── types/          # shared TS types — data model, config shape, field/hook contracts, the five domain service contracts, the typed-entry surface
-│   │   ├── utilities/      # pure helpers (strings, dates, entry-fields, rich-text, …)
+│   │   ├── utilities/      # pure helpers (strings, dates, entry-fields, rich-text, entry-type-ids, entry-capabilities, image-widths, image-drivers, …)
 │   │   ├── errors/         # base error classes
 │   │   │
 │   │   │   ── public surface ───────────────────────────────────────────

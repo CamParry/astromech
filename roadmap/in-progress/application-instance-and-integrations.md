@@ -50,6 +50,27 @@ has failed even if the gate is green.
 - Work in a worktree at `../Astromech-worktrees/<branch>`, with `pnpm install`,
   a copy of `apps/demo/.env`, and its own `pnpm run build`.
 
+## Where this stands
+
+Stages 1, 2 and 3 are on `main`. **Stage 4 is next and is unblocked.** One item
+inside stage 3 is outstanding and is left ticked-off-able rather than ticked:
+Q9, the module-scope `let _auth` in `users/auth.ts`, was never investigated and
+no rule was stated for when a module-scope singleton is permitted.
+
+Two things learned the expensive way, both worth carrying into every remaining
+stage:
+
+- **`check:boot` is not optional, and it is the slow one.** Stage 3 passed nine
+  gate checks on a build whose homepage hung: a module-scope config read threw
+  during module evaluation, and the node adapter answered the rejection by
+  holding the socket open. Only `check:boot` requests a page, so only
+  `check:boot` saw it. Budget minutes for it and do not read slowness as failure.
+- **A comment asserting a constraint has to be tested, not reasoned.** A static
+  import in `boot/application.ts` was reverted, and a comment written claiming it
+  deadlocked the SSR server, on inference alone. Rebuilding proved the import
+  fine and the real cause elsewhere. The false comment was the more expensive
+  artefact — it reads exactly like a live constraint.
+
 ## Stage order
 
 Each stage is one commit and should land green on its own. The dependency chain
@@ -366,10 +387,12 @@ genuinely differ (local returns full rows, the wire returns public projections).
 
 ## Stage 14 — Docs and the gate
 
-- [ ] `ARCHITECTURE.md` — layer table and directory map (new `config/`,
-      `integrations/`, the boot layer's narrowed meaning).
-- [ ] `TERMINOLOGY.md` — entries for "application" and "integration"; remove
-      "local API".
+- [ ] `ARCHITECTURE.md` — the `integrations/` layer. `config/`, the narrowed
+      boot layer, the moved leaf symbols and the read-config-at-call-time
+      invariant went in as stages 1–3 landed, because that file is a map of the
+      present and cannot wait for stage 14.
+- [ ] `TERMINOLOGY.md` — an entry for "integration". "Application" is written;
+      "local API" never appeared in the file.
 - [ ] A decision record for what this work changed against 0057 — the spec's
       "What changed after 0057" table is its source.
 - [ ] Reconcile `roadmap/planned/multi-runtime-and-framework-adapters.md` to the

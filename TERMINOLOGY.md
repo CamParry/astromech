@@ -305,6 +305,27 @@ A **`ToolDefinition`** is one manifest method projected into a model-callable to
 
 ---
 
+## Application (the Astromech instance)
+
+The **application** is the booted runtime a process holds: the object
+`createAstromech({ config })` returns and `getAstromech()` reads back. It carries
+the resolved config and the domain services, and it is the one front door — a
+process has exactly one, held in a `globalThis` slot because tsup emits several
+entry chunks and a module-scoped memo would boot twice.
+
+The pair is split on purpose, following Laravel (`bootstrap/app.php` creates,
+`app()` only reads). `createAstromech` initialises and is idempotent: a second
+call with the same config object returns the existing instance, a different one
+throws, and a failed boot clears the slot so the next caller retries.
+`getAstromech()` never creates and throws when the slot is empty. Two functions
+that both initialise would be two front doors, which is what this replaced.
+
+"Application" rather than "app" (which reads as `apps/`, the deployed sites),
+"kernel" (Laravel's `HttpKernel` is a request handler, which this is not) or
+"container" (it resolves nothing; the per-domain registries stay underneath it).
+
+---
+
 ## Approval vs Confirmation
 
 Both stop a mutating call to put it to a human, and they are different mechanisms at different altitudes.
