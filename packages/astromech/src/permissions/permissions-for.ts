@@ -24,7 +24,7 @@ export type Permissions = {
  */
 export function permissionsFor(role: Role | null | undefined): Permissions {
     const allows = (permission: Permission): boolean =>
-        role ? can(role, permission) : false;
+        role != null ? can(role, permission) : false;
 
     return {
         allows,

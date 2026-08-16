@@ -18,11 +18,12 @@
  * dropping the result is what keeps the run read-only. `coerceOnly: new Set()`
  * turns coercion off entirely (defaults, `children()` normalization and
  * validation still run), so a finding never depends on a coercer having
- * rewritten the stored value first.
+ * rewritten the stored value first. The consequence: a stored value a coercer
+ * would repair is reported, so the findings are a SUPERSET of what a write
+ * today would reject.
  *
- * Each domain's context mirrors its own update path, so the report answers
- * "what would a write today reject". `excludeId` matters most: without it every
- * stored row's `unique` rule collides with itself.
+ * Each domain's context otherwise mirrors its own update path. `excludeId`
+ * matters most: without it every stored row's `unique` rule collides with itself.
  */
 
 import config from 'virtual:astromech/config';
@@ -206,7 +207,10 @@ async function checkMedia(report: ValidationReport): Promise<void> {
     const definitions = flattenFieldNodes(config.media?.fields ?? []);
     const resourceValidate = config.media?.validate;
     const storage = createMediaStorage();
-    const rows = await storage.list();
+    // One load for the whole pass: a `unique` rule reads it per row, and the
+    // run writes nothing, so the snapshot cannot go stale under it.
+    const load = memoize(() => storage.list());
+    const rows = await load();
 
     for (const row of rows) {
         report.rowsChecked += 1;
@@ -217,8 +221,10 @@ async function checkMedia(report: ValidationReport): Promise<void> {
                 operation: 'update',
                 host: { kind: 'media', record: row },
                 user: null,
+                // Built per row: `excludeId` is what keeps a row from colliding
+                // with itself, and only the load behind it is shared.
                 reads: fieldReadsFromRecords({
-                    load: () => storage.list(),
+                    load,
                     getId: (record) => record.id,
                     getFields: (record) =>
                         (record.fields ?? {}) as Record<string, unknown>,
@@ -243,7 +249,8 @@ async function checkUsers(report: ValidationReport): Promise<void> {
     const definitions = flattenFieldNodes(config.users?.fields ?? []);
     const resourceValidate = config.users?.validate;
     const storage = createUserStorage();
-    const rows = await storage.list();
+    const load = memoize(() => storage.list());
+    const rows = await load();
 
     for (const row of rows) {
         report.rowsChecked += 1;
@@ -255,7 +262,7 @@ async function checkUsers(report: ValidationReport): Promise<void> {
                 host: { kind: 'user', record: row },
                 user: null,
                 reads: fieldReadsFromRecords({
-                    load: () => storage.list(),
+                    load,
                     getId: (record) => record.id,
                     getFields: (record) =>
                         (record.fields ?? {}) as Record<string, unknown>,
@@ -277,7 +284,8 @@ async function checkUsers(report: ValidationReport): Promise<void> {
 
 /** Settings blobs, with `settings/service.ts`'s context. */
 async function checkSettings(report: ValidationReport): Promise<void> {
-    const rows = await settingsService.all({ full: true });
+    const load = memoize(() => settingsService.all({ full: true }));
+    const rows = await load();
 
     for (const row of rows) {
         const value = row.value;
@@ -304,8 +312,10 @@ async function checkSettings(report: ValidationReport): Promise<void> {
             host: { kind: 'setting', record: null },
             user: null,
             reads: fieldReadsFromRecords({
+                // The filter is per row (it keys on this row's `baseKey`); the
+                // load behind it is the pass's single snapshot.
                 load: async () =>
-                    (await settingsService.all({ full: true })).filter(
+                    (await load()).filter(
                         (setting) =>
                             setting.key === baseKey ||
                             setting.key.startsWith(`${baseKey}:`)
@@ -346,6 +356,12 @@ function collect(
     for (const message of processed.form) {
         report.findings.push({ ...subject, fieldPath: null, message });
     }
+}
+
+/** Run `load` once and hand every later caller the same promise. */
+function memoize<T>(load: () => Promise<T[]>): () => Promise<T[]> {
+    let pending: Promise<T[]> | undefined;
+    return () => (pending ??= load());
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

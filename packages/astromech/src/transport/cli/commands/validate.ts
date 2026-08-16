@@ -30,7 +30,11 @@ export default defineCommand({
         wireNotifyAccess();
         registerPlugins(raw.plugins ?? [], resolved);
 
-        reportFindings(await validateStoredContent(args.type ? { type: args.type } : {}));
+        reportFindings(
+            await validateStoredContent(
+                args.type !== undefined ? { type: args.type } : {}
+            )
+        );
     },
 });
 
