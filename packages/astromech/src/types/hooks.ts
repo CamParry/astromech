@@ -20,15 +20,21 @@ import type { PluginContext } from './plugins';
 // Hook Context Types (core events)
 // ============================================================================
 
+/**
+ * `data` is the row about to be written, not a copy of it: a `beforeCreate`
+ * handler that assigns to it changes what is persisted and what the
+ * relationship index derives from.
+ */
 export type EntryCreateContext = {
     type: string;
     data: {
         title: string;
-        slug?: string;
-        locale?: string;
+        slug: string | null;
+        locale: string;
+        localeGroup?: string;
         fields: JsonObject;
-        status?: EntryStatus;
-        publishAt?: Date | null;
+        status: EntryStatus;
+        publishedAt: Date | null;
         _translateFrom?: string;
     };
     user: User | null;
