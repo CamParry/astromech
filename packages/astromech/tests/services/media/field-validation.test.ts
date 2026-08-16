@@ -126,16 +126,35 @@ describe('mediaService.update — required field', () => {
 });
 
 // ---------------------------------------------------------------------------
-// update: coercion
+// update: slug field
 // ---------------------------------------------------------------------------
 
-describe('mediaService.update — coercion', () => {
-    it('coerces a slug field to slugified form and persists it', async () => {
+describe('mediaService.update — slug field', () => {
+    it('rejects a value that is not already a slug', async () => {
+        const m = await mediaService.upload({ file: textFile() });
+        await expect(
+            mediaService.update({
+                id: m.id,
+                data: {
+                    fields: { caption: 'A photo', slug_field: 'My Image Title' },
+                },
+            })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: {
+                slug_field: [
+                    "Must be lowercase letters, numbers and hyphens: try 'my-image-title'",
+                ],
+            },
+        });
+    });
+
+    it('persists an already-normal slug', async () => {
         const m = await mediaService.upload({ file: textFile() });
         const updated = await mediaService.update({
             id: m.id,
             data: {
-                fields: { caption: 'A photo', slug_field: 'My Image Title' },
+                fields: { caption: 'A photo', slug_field: 'my-image-title' },
             },
         });
         expect(updated.fields?.slug_field).toBe('my-image-title');
@@ -213,7 +232,7 @@ describe('mediaService.update — fields merge', () => {
         });
         const updated = await mediaService.update({
             id: m.id,
-            data: { fields: { slug_field: 'Second Pass' } },
+            data: { fields: { slug_field: 'second-pass' } },
         });
         expect(updated.fields).toMatchObject({
             caption: 'A photo',

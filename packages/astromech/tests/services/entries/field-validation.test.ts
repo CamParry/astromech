@@ -256,15 +256,32 @@ describe('create — defaultValue', () => {
 });
 
 // ============================================================================
-// create: slug coercion
+// create: slug validation
 // ============================================================================
 
-describe('create — slug coercion', () => {
-    it('coerces slug field input to slugified form', async () => {
+describe('create — slug validation', () => {
+    it('rejects a slug value that is not already normalized', async () => {
+        await expect(
+            api.create({
+                type: 'post',
+                title: 'T',
+                fields: { title_text: 'Hello', page_slug: 'My Title' },
+            })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: {
+                page_slug: [
+                    "Must be lowercase letters, numbers and hyphens: try 'my-title'",
+                ],
+            },
+        });
+    });
+
+    it('accepts an already-normalized slug', async () => {
         const entry = await api.create({
             type: 'post',
             title: 'T',
-            fields: { title_text: 'Hello', page_slug: 'My Title' },
+            fields: { title_text: 'Hello', page_slug: 'my-title' },
         });
         expect(entry.fields.page_slug).toBe('my-title');
     });
@@ -313,7 +330,7 @@ describe('create — valid fields', () => {
                 title_text: 'Hello World',
                 contact_email: 'hi@example.com',
                 code: 'abc123',
-                page_slug: 'Some Page',
+                page_slug: 'some-page',
             },
         });
         expect(entry.fields.title_text).toBe('Hello World');

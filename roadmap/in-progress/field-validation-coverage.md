@@ -42,9 +42,16 @@ never sees).
       be a string but no format is enforced; `link` must be an object with a
       string `url`, which is deliberately not parsed so a relative path or an
       anchor stays valid. Both want a real format decision.
-- [ ] **`slug` normalizes but never rejects.** `coerceSlug` slugifies whatever it
+- [x] **`slug` normalizes but never rejects.** `coerceSlug` slugifies whatever it
       is given, so a garbage value becomes a garbage slug rather than an error.
       Deliberate today; worth revisiting alongside `text`.
+      **Done:** the `slug` field type drops its coercer and gains
+      `validateSlug`, which rejects any value `slugify` would have to change and
+      names the normalized form in the message. Coercion could not stay on the
+      field type at all: it runs before validation, so the validator would never
+      see a non-normal value. The entry-level `slug` COLUMN is a different path
+      and still auto-generates through `slugify` in `entries/operations/create.ts`
+      — only the `slug` FIELD type changed.
 - [x] **Unknown keys survive a write.** `processFields` starts from
       `{ ...values }` and iterates only _declared_ fields, so a key belonging to
       no field is copied through untouched. Harmless under full-replace writes

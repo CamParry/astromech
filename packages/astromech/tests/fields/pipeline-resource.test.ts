@@ -132,8 +132,8 @@ describe('resource validation context', () => {
     it('receives the coerced values', async () => {
         let seen: Record<string, unknown> | undefined;
         const { values } = await processFields(
-            { path: 'Hello World' },
-            [field({ name: 'path', type: 'slug' })],
+            { rank: ' 42 ' },
+            [field({ name: 'rank', type: 'number' })],
             fakeCtx({
                 resourceValidate: async (ctx) => {
                     seen = ctx.values;
@@ -141,8 +141,8 @@ describe('resource validation context', () => {
                 },
             })
         );
-        expect(values.path).toBe('hello-world');
-        expect(seen?.path).toBe('hello-world');
+        expect(values.rank).toBe(42);
+        expect(seen?.rank).toBe(42);
     });
 
     it('receives a concrete stage when the caller passed one', async () => {

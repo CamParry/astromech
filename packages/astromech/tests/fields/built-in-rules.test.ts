@@ -5,7 +5,7 @@ import {
     validateEmail,
     coerceUrl,
     validateUrl,
-    coerceSlug,
+    validateSlug,
     isJsonValue,
     validateJson,
     coerceKeyValue,
@@ -119,22 +119,32 @@ describe('validateUrl', () => {
 // slug
 // ---------------------------------------------------------------------------
 
-describe('coerceSlug', () => {
-    it('slugifies a string', () => {
-        expect(coerceSlug('My Post!')).toBe('my-post');
+describe('validateSlug', () => {
+    it('an already-normal slug → true', async () => {
+        expect(await validateSlug(ctx('my-post'))).toBe(true);
+        expect(await validateSlug(ctx('post-2'))).toBe(true);
     });
 
-    it('is idempotent on an already-valid slug', () => {
-        expect(coerceSlug('my-post')).toBe('my-post');
+    it('a value normalization would change → rejected, with the suggestion', async () => {
+        expect(await validateSlug(ctx('My Post!'))).toBe(
+            "Must be lowercase letters, numbers and hyphens: try 'my-post'"
+        );
     });
 
-    it('passes through non-strings unchanged', () => {
-        expect(coerceSlug(42)).toBe(42);
-        expect(coerceSlug(null)).toBe(null);
+    it('leading or trailing hyphens → rejected', async () => {
+        expect(await validateSlug(ctx('-my-post-'))).toBe(
+            "Must be lowercase letters, numbers and hyphens: try 'my-post'"
+        );
     });
 
-    it('all-symbols input → empty string (pipeline treats as empty)', () => {
-        expect(coerceSlug('!!!')).toBe('');
+    it('nothing survives normalization → rejected without a suggestion', async () => {
+        expect(await validateSlug(ctx('!!!'))).toBe(
+            'Must be lowercase letters, numbers and hyphens'
+        );
+    });
+
+    it('a non-string → rejected as text', async () => {
+        expect(await validateSlug(ctx(42))).toBe('Must be text');
     });
 });
 
@@ -237,9 +247,21 @@ describe('processFields integration', () => {
         expect(errors.f).toEqual(['Must be a valid email address']);
     });
 
-    it('slug field with "My Post" → values.f is "my-post" and no error', async () => {
+    it('slug field with "My Post" → errors.f, and the value is left alone', async () => {
         const { values, errors } = await processFields(
             { f: 'My Post' },
+            [{ name: 'f', type: 'slug' }],
+            fakeCtx()
+        );
+        expect(values.f).toBe('My Post');
+        expect(errors.f).toEqual([
+            "Must be lowercase letters, numbers and hyphens: try 'my-post'",
+        ]);
+    });
+
+    it('slug field with an already-normal value → no error', async () => {
+        const { values, errors } = await processFields(
+            { f: 'my-post' },
             [{ name: 'f', type: 'slug' }],
             fakeCtx()
         );

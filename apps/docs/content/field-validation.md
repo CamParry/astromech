@@ -111,11 +111,13 @@ validator is the only thing standing between the input and storage.
 | `email`, `url`                  | A malformed address or URL                                                                           |
 | `json`                          | A value that is not JSON-serializable                                                                |
 | `key-value`                     | Anything that is not an object of key/value pairs                                                    |
+| `slug`                          | A value that is not already lowercase letters, numbers and hyphens                                   |
 | `blocks`                        | An item whose `_type` matches no declared block                                                      |
 
 A field that declares no `options` has nothing to check against, so `select`
-and the other choice types accept any string. `slug` normalizes its value
-rather than rejecting one. `text`, `textarea`, `color`, `link` and the
+and the other choice types accept any string. `slug` rejects a value it would
+have to rewrite, naming the normalized form in the message, rather than
+normalizing behind the author's back. `text`, `textarea`, `color`, `link` and the
 `group`/`repeater`/`tree` containers are checked for **shape** but not for
 format — a `color` must be a string, and a `link` must be an object with a
 `url` key, but neither is checked against a colour or URL grammar. Declare

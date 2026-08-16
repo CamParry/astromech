@@ -39,9 +39,18 @@ export const validateUrl: FieldValidator = async (ctx) => {
 // slug
 // ---------------------------------------------------------------------------
 
-export const coerceSlug = (v: unknown): unknown =>
-    typeof v === 'string' ? slugify(v) : v;
-// No slug validator: coerce normalises to a valid slug (or '' which the pipeline treats as empty).
+/**
+ * A slug is stored exactly as `slugify` would write it, so a value that
+ * normalization would have to change is rejected rather than rewritten. The
+ * suggestion names what the author probably meant.
+ */
+export const validateSlug: FieldValidator = async (ctx) => {
+    if (typeof ctx.value !== 'string') return 'Must be text';
+    const normalized = slugify(ctx.value);
+    if (normalized === ctx.value) return true;
+    const suggestion = normalized === '' ? '' : `: try '${normalized}'`;
+    return `Must be lowercase letters, numbers and hyphens${suggestion}`;
+};
 
 // ---------------------------------------------------------------------------
 // json
