@@ -3,9 +3,11 @@
  * infrastructure sources only, and absent rather than spoofable.
  */
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Hono } from 'hono';
 import { getClientAddress } from '@/transport/http/client-address';
+import { setCliConfig } from '@/transport/cli/virtual-config-shim';
+import type { ResolvedConfig, TrustProxy } from '@/types/index';
 
 /** Serve `GET /` with the resolved address as the body, and call it with `headers`. */
 async function addressFor(headers: Record<string, string>): Promise<string> {
@@ -20,7 +22,16 @@ function pretendWorkers(): void {
     vi.stubGlobal('navigator', { userAgent: 'Cloudflare-Workers' });
 }
 
+/** Put a config carrying only `security.trustProxy` behind the virtual module. */
+function trustProxy(value: TrustProxy): void {
+    setCliConfig({ security: { trustProxy: value } } as unknown as ResolvedConfig);
+}
+
 describe('getClientAddress', () => {
+    beforeEach(() => {
+        setCliConfig({} as unknown as ResolvedConfig);
+    });
+
     afterEach(() => {
         vi.unstubAllGlobals();
     });
@@ -33,14 +44,70 @@ describe('getClientAddress', () => {
         );
     });
 
+    it('reads cf-connecting-ip on Workers without a trustProxy opt-in', async () => {
+        pretendWorkers();
+        trustProxy(false);
+
+        expect(
+            await addressFor({
+                'cf-connecting-ip': '203.0.113.4',
+                'x-forwarded-for': '198.51.100.9',
+            })
+        ).toBe('203.0.113.4');
+    });
+
     it('ignores cf-connecting-ip off Workers', async () => {
         expect(await addressFor({ 'cf-connecting-ip': '203.0.113.4' })).toBe('absent');
     });
 
-    it('never reads x-forwarded-for', async () => {
-        pretendWorkers();
-
+    it('ignores x-forwarded-for by default', async () => {
         expect(await addressFor({ 'x-forwarded-for': '203.0.113.4' })).toBe('absent');
+    });
+
+    it('ignores a spoofed x-forwarded-for when trustProxy is false', async () => {
+        trustProxy(false);
+
+        expect(await addressFor({ 'x-forwarded-for': '203.0.113.4, 10.0.0.1' })).toBe(
+            'absent'
+        );
+    });
+
+    it('takes one entry in from the right when trustProxy is true', async () => {
+        trustProxy(true);
+
+        expect(await addressFor({ 'x-forwarded-for': '1.2.3.4, 10.0.0.1' })).toBe(
+            '1.2.3.4'
+        );
+    });
+
+    it('takes the configured number of entries in from the right', async () => {
+        trustProxy(2);
+
+        expect(
+            await addressFor({ 'x-forwarded-for': '1.2.3.4, 10.0.0.1, 10.0.0.2' })
+        ).toBe('1.2.3.4');
+    });
+
+    it('is absent when the header carries fewer entries than the hop count', async () => {
+        trustProxy(3);
+
+        expect(await addressFor({ 'x-forwarded-for': '1.2.3.4, 10.0.0.1' })).toBe(
+            'absent'
+        );
+    });
+
+    it('trims whitespace and ignores empty entries', async () => {
+        trustProxy(1);
+
+        expect(await addressFor({ 'x-forwarded-for': ' 1.2.3.4 ,, 10.0.0.1 ,' })).toBe(
+            '1.2.3.4'
+        );
+    });
+
+    it('is absent when trustProxy is set but the header is missing', async () => {
+        trustProxy(true);
+
+        expect(await addressFor({})).toBe('absent');
     });
 
     it('is absent when no source carries an address', async () => {

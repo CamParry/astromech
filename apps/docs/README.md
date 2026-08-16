@@ -21,6 +21,10 @@ This is a living reference; it grows as the project does.
   how a frequent tick and database-stored cadence fit together, the three
   scheduler drivers (`interval`, `cloudflareCron`, `webhook`), and wiring a
   Cloudflare Worker's `scheduled()` handler.
+- [configuration/trust-proxy.md](configuration/trust-proxy.md) — where the
+  connecting address of a request comes from, the `security.trustProxy` option
+  for a site behind a proxy, and why the address is counted from the right of
+  `x-forwarded-for`.
 - [content/entry-types.md](content/entry-types.md) — declaring entry types: the
   `entries` record, and `defineEntryType` for splitting a type into its own
   module.

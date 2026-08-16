@@ -479,8 +479,24 @@ export type AstromechConfig = {
             referrerPolicy?: string;
             permissionsPolicy?: string;
         };
+        /**
+         * Whether `x-forwarded-for` may be read for the client address. Default
+         * `false` — on a directly exposed server any client can send the header.
+         *
+         * Each proxy appends the address it saw to the right of the header, so
+         * the rightmost entries come from infrastructure and the leftmost is
+         * whatever the client sent — counting from the right is the only safe
+         * reading. The value is how many proxies sit between the client and this
+         * server (`true` means one), and the address taken is the next entry in
+         * from theirs. Fewer entries than that yields no address rather than a
+         * less trusted one.
+         */
+        trustProxy?: TrustProxy;
     };
 };
+
+/** `false` to never read `x-forwarded-for`, `true` for one proxy, or a hop count. */
+export type TrustProxy = boolean | number;
 
 /**
  * `AstromechConfig` with its defaults applied, minus every capability that is

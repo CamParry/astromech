@@ -7,25 +7,46 @@
 
 import type { Context } from 'hono';
 import { getRuntimeKey } from 'hono/adapter';
+import type { TrustProxy } from '@/types/index';
+import { Astromech } from '@/transport/local/index';
 
 /**
- * Read the connecting address, or undefined when the runtime exposes none.
+ * Read the connecting address, or undefined when no trusted source carries one.
  *
- * `x-forwarded-for` is not read: a Node server exposed directly lets any client
- * send it, so keying on it would let one caller forge an identity per request.
- * A deployment behind a trusted proxy needs an explicit opt-in, and that opt-in
- * is the extension point here — as is Hono's per-runtime `getConnInfo`, which
- * reports the socket address once a host mounts the app with its server env
- * (Astromech's Astro entrypoint calls `app.fetch(request)` with none).
+ * `cf-connecting-ip` needs no opt-in — Cloudflare overwrites it on every request
+ * it proxies. `x-forwarded-for` is read only when the site sets
+ * `security.trustProxy`, since a directly exposed server lets any client send it.
  */
 export function getClientAddress(c: Context): string | undefined {
-    // Cloudflare overwrites `cf-connecting-ip` on every request it proxies, so
-    // the header is trustworthy — but only on the runtime Cloudflare serves.
-    // A Node deployment behind Cloudflare takes the trusted-proxy opt-in above.
+    // Trustworthy only on the runtime Cloudflare serves. A Node deployment
+    // behind Cloudflare takes the `trustProxy` route below instead.
     if (getRuntimeKey() === 'workerd') {
         const connectingIp = c.req.header('cf-connecting-ip');
         if (connectingIp !== undefined && connectingIp !== '') return connectingIp;
     }
 
-    return undefined;
+    const trustProxy: TrustProxy = Astromech.config.security?.trustProxy ?? false;
+    if (trustProxy === false) return undefined;
+
+    return forwardedAddress(
+        c.req.header('x-forwarded-for'),
+        trustProxy === true ? 1 : trustProxy
+    );
+}
+
+/**
+ * Take the entry `hops` places in from the right of `x-forwarded-for` — those
+ * rightmost entries are the trusted proxies, while the leftmost is whatever the
+ * client sent. Undefined when the header carries fewer entries than that: a
+ * misconfigured hop count must fail closed, not fall back to a forgeable entry.
+ */
+function forwardedAddress(header: string | undefined, hops: number): string | undefined {
+    if (header === undefined || hops < 1) return undefined;
+
+    const entries = header
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter((entry) => entry !== '');
+
+    return entries[entries.length - 1 - hops];
 }

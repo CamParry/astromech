@@ -30,18 +30,18 @@ submissions per connecting address per minute, counted before the form is
 loaded and before the spam gate runs. Set `rateLimit` to your own `limit` and
 `windowMs`, or to `false` to turn the limit off.
 
-The key is the **connecting address**, which the HTTP transport derives from
-sources the client cannot set: `cf-connecting-ip` when the site runs on
-Cloudflare Workers, where Cloudflare rewrites the header on every request it
-proxies. `x-forwarded-for` is deliberately not read — nothing stops a client
-from sending it to a server exposed directly — and neither is the `ip` a caller
-puts in `meta`, which is stored but never trusted.
+The key is the **connecting address**, which the HTTP transport derives only
+from sources the client cannot set: `cf-connecting-ip` on Cloudflare Workers,
+and `x-forwarded-for` when the site declares the proxy in front of it with
+`security.trustProxy` — see
+[../configuration/trust-proxy.md](../configuration/trust-proxy.md). The `ip` a
+caller puts in `meta` is stored but never trusted.
 
 A caller with no connecting address is not limited at all. That covers the CLI,
 MCP and your own server-side code calling `submit` in process, and it also
 covers an HTTP deployment where no trusted source of the address exists — a
-self-hosted Node server today. There is no shared bucket for such callers: a
-counter exists only for an address.
+self-hosted server behind a proxy it has not declared. There is no shared bucket
+for such callers: a counter exists only for an address.
 
 The count lives in one process. Several instances (several Workers, or several
 Node processes behind a load balancer) each count their own traffic.
