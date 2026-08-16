@@ -90,7 +90,7 @@ with it, and the fork is:
   memorable.
 
 Neither option is unavailable; both are worse than they look from the file
-count. `roadmap/planned/config-free-component-kit.md` is the work that makes the
+count. `roadmap/completed/config-free-component-kit.md` is the work that makes the
 second one cheap, and it is worth doing whether or not the split ever happens.
 
 ### What happens to `admin/components/dev/`? — nothing
@@ -132,7 +132,7 @@ than by moving 257 files.
 
 ## Prerequisites
 
-1. **`roadmap/planned/config-free-component-kit.md`** — split
+1. **`roadmap/completed/config-free-component-kit.md`** — split
    `astromech/ui`'s barrel into a config-free kit and the config-bound exports.
    Independently landable and verifiable while the admin is still in-package,
    and it turns the `astromech/ui` question above from a design fork into a
