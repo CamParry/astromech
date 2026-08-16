@@ -14,7 +14,7 @@ reaches `virtual:astromech/admin-config` and the fetch client. That is why
 `packages/astromech/scripts/check-node-imports.mjs` deliberately leaves it out
 of `SUBPATHS`.
 
-Splitting the barrel is Payload's shape — `packages/ui` is the kit, and the
+Splitting the barrel is Payload's shape — its ui package is the kit, and the
 things that need the app live in the app.
 
 ## The two halves
