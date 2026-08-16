@@ -40,7 +40,7 @@ export async function create(params: {
     }
 
     // Validate type or throw
-    const { type } = params;
+    const type = params.type;
     const entryType = resolveEntryType(getConfig(), type);
     if (!entryType) throw new UnknownEntryTypeError(type);
 
