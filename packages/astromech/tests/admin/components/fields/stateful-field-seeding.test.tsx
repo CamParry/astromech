@@ -11,8 +11,9 @@
  * arrives, and never resync, or the last-saved value clobbers an edit.
  *
  * `blocks` and `tree` carry that guard through `useBlocksField` / `useTreeField`
- * and are checked here at the component level. `json` and `richtext` do not, and
- * their cases are marked `it.fails` — see `roadmap/in-progress/admin-form-defects.md`.
+ * and `json` carries its own; all three are checked here at the component level.
+ * `richtext` does not, and its case is marked `it.fails` — see
+ * `roadmap/in-progress/admin-form-defects.md`.
  */
 
 import { afterEach, describe, expect, it } from 'vitest';
@@ -233,9 +234,7 @@ describe('json on a fetched entry', () => {
         expect(input('data').value).toBe('{\n  "alpha": 1\n}');
     });
 
-    // `json-field.tsx:11` seeds `useState(initialJson)` on the first render,
-    // where the value is still undefined, and never re-seeds.
-    it.fails('renders the stored JSON when the value arrives late', () => {
+    it('renders the stored JSON when the value arrives late', () => {
         const f = mountField(data, undefined);
 
         f.rerender({ alpha: 1 });
@@ -243,9 +242,7 @@ describe('json on a fetched entry', () => {
         expect(input('data').value).toBe('{\n  "alpha": 1\n}');
     });
 
-    // The empty box commits `null` on blur, so the stored object is gone the
-    // moment the author focuses the field and leaves it.
-    it.fails('does not commit null over the stored JSON on blur', async () => {
+    it('does not commit null over the stored JSON on blur', async () => {
         const user = userEvent.setup();
         const f = mountField(data, undefined);
         f.rerender({ alpha: 1 });

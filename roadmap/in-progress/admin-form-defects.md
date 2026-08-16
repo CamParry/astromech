@@ -128,7 +128,9 @@ it was real and the misattribution is the useful part.
       keys off it. Don't fix it in isolation: it is the accidental prototype for
       `roadmap/planned/named-layout-fields.md`, which decides what a layout
       field's name means.
-- [ ] **`json` renders empty for a stored value, then commits `null` over it.**
+- [x] **`json` renders empty for a stored value, then commits `null` over it.**
+      Fixed 2026-08-16 with the same seed-once guard, plus a blur that writes
+      nothing while the box still holds the stored value's own serialization.
       Found 2026-08-16 extending the field coverage below; the same class as the
       `key-value` defect and the last unguarded one. `json-field.tsx:11` seeds
       `useState(initialJson)` from `value` on the first render — where `value` is
@@ -138,9 +140,9 @@ it was real and the misattribution is the useful part.
       stored object.
     - Verified against the real `EntryEditPage` with a cold query cache, not just
       the field harness: the textarea is empty there too.
-    - Pinned as two `it.fails` cases in
-      `packages/astromech/tests/admin/components/fields/stateful-field-seeding.test.tsx`.
-      Delete the `.fails` when the guard lands.
+    - Pinned by two cases in
+      `packages/astromech/tests/admin/components/fields/stateful-field-seeding.test.tsx`,
+      which ran as `it.fails` until the guard landed and are ordinary tests now.
 - [ ] **`richtext` renders empty for a stored document.** Found the same way and
       the same shape, one layer down in the editor.
       `admin/components/ui/rich-text-editor.tsx:311` passes `content` into
