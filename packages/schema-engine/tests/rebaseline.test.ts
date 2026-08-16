@@ -86,6 +86,32 @@ async function seedDir(
     await writeFile(resolve(dir, 'snapshot.json'), '{}\n', 'utf-8');
 }
 
+/** A later migration module whose `up()` runs one statement. */
+function laterMigration(statement: string): string {
+    return [
+        "import { sql, type Kysely } from 'kysely';",
+        '',
+        'export async function up(db: Kysely<unknown>): Promise<void> {',
+        `    await sql\`${statement}\`.execute(db);`,
+        '}',
+        '',
+    ].join('\n');
+}
+
+/** Every file in `dir`, name → contents, for asserting nothing was written. */
+async function readAll(dir: string): Promise<Record<string, string>> {
+    const files = await readdir(dir);
+    const entries = await Promise.all(
+        files.map(
+            async (file): Promise<[string, string]> => [
+                file,
+                await readFile(resolve(dir, file), 'utf-8'),
+            ]
+        )
+    );
+    return Object.fromEntries(entries);
+}
+
 async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
     const dir = await mkdtemp(join(tmpdir(), 'schema-engine-rebaseline-'));
     try {
@@ -202,6 +228,135 @@ describe('rebaselineMigrations', () => {
             await expect(
                 rebaselineMigrations({ dir, snapshot: widgets, dialect: 'sqlite' })
             ).rejects.toThrow(/before the first/);
+        });
+    });
+
+    describe('refusals — each writes nothing', () => {
+        /** Snapshot every file in `dir`, run `fn`, assert nothing moved. */
+        async function expectUnchanged(
+            dir: string,
+            fn: () => Promise<void>
+        ): Promise<void> {
+            const before = await readAll(dir);
+            await fn();
+            expect(await readAll(dir)).toEqual(before);
+        }
+
+        it('refuses to collapse a later migration that ALTERs a table no descriptor describes', async () => {
+            await withTempDir(async (dir) => {
+                await seedDir(dir, { later: ['0001_touch-legacy'] });
+                await writeFile(
+                    resolve(dir, '0001_touch-legacy.ts'),
+                    laterMigration(
+                        'ALTER TABLE \\`legacy_users\\` ADD COLUMN \\`note\\` text'
+                    ),
+                    'utf-8'
+                );
+
+                await expectUnchanged(dir, async () => {
+                    await expect(
+                        rebaselineMigrations({
+                            dir,
+                            snapshot: widgets,
+                            dialect: 'sqlite',
+                            collapse: true,
+                        })
+                    ).rejects.toThrow(
+                        /ALTER TABLE names "legacy_users", a table no descriptor describes/
+                    );
+                });
+            });
+        });
+
+        it('refuses to collapse a later migration that writes data', async () => {
+            await withTempDir(async (dir) => {
+                await seedDir(dir, { later: ['0001_seed-widgets'] });
+                await writeFile(
+                    resolve(dir, '0001_seed-widgets.ts'),
+                    laterMigration(
+                        "INSERT INTO \\`widgets\\` (\\`id\\`, \\`name\\`) VALUES ('1', 'a')"
+                    ),
+                    'utf-8'
+                );
+
+                await expectUnchanged(dir, async () => {
+                    await expect(
+                        rebaselineMigrations({
+                            dir,
+                            snapshot: widgets,
+                            dialect: 'sqlite',
+                            collapse: true,
+                        })
+                    ).rejects.toThrow(/INSERT on "widgets" is a data statement/);
+                });
+            });
+        });
+
+        it('refuses a statement that trails the last banner', async () => {
+            await withTempDir(async (dir) => {
+                await seedDir(dir, {
+                    body: [
+                        OLD_WIDGETS_BLOCK,
+                        '',
+                        '    await sql`CREATE TABLE \\`orphan\\` (\\`id\\` text)`.execute(db);',
+                    ].join('\n'),
+                });
+
+                await expectUnchanged(dir, async () => {
+                    await expect(
+                        rebaselineMigrations({
+                            dir,
+                            snapshot: widgets,
+                            dialect: 'sqlite',
+                        })
+                    ).rejects.toThrow(/the "widgets" block holds "CREATE TABLE `orphan`/);
+                });
+            });
+        });
+
+        it('refuses a non-CREATE statement inside a block the emitter replaces', async () => {
+            await withTempDir(async (dir) => {
+                await seedDir(dir, {
+                    body: [
+                        OLD_WIDGETS_BLOCK,
+                        "    await sql`INSERT INTO \\`widgets\\` (\\`id\\`) VALUES ('1')`.execute(db);",
+                    ].join('\n'),
+                });
+
+                await expectUnchanged(dir, async () => {
+                    await expect(
+                        rebaselineMigrations({
+                            dir,
+                            snapshot: widgets,
+                            dialect: 'sqlite',
+                        })
+                    ).rejects.toThrow(/the "widgets" block holds "INSERT INTO `widgets`/);
+                });
+            });
+        });
+
+        it('refuses a baseline with a down()', async () => {
+            await withTempDir(async (dir) => {
+                await seedDir(dir);
+                const source = await readFile(resolve(dir, '0000_baseline.ts'), 'utf-8');
+                await writeFile(
+                    resolve(dir, '0000_baseline.ts'),
+                    `${source}\nexport async function down(db: Kysely<unknown>): Promise<void> {\n    await sql\`DROP TABLE \\\`widgets\\\`\`.execute(db);\n}\n`,
+                    'utf-8'
+                );
+
+                await expectUnchanged(dir, async () => {
+                    await expect(
+                        rebaselineMigrations({
+                            dir,
+                            snapshot: widgets,
+                            dialect: 'sqlite',
+                        })
+                    ).rejects.toThrow(
+                        /"export async function down\(.*follows the `up\(\)` body/
+                    );
+                });
+            });
         });
     });
 
