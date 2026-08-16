@@ -484,6 +484,10 @@ function parseTableBlocks(source: string, path: string): TableBlock[] {
  * cannot reproduce. Descriptor-backed DDL is safe to drop — the emitter renders
  * it again from the snapshot — but a statement on a table the snapshot does not
  * describe, or any data statement, exists only in that file.
+ *
+ * `__new_<table>` is the exception: it is the rebuild path's own temp table, and
+ * its `INSERT … SELECT` moves rows between two shapes of a table the emitter
+ * re-renders whole. That is emitter output, not authored intent.
  */
 async function assertCollapsible(path: string, snapshot: Snapshot): Promise<void> {
     const source = await readFileIfExists(path);
@@ -495,7 +499,10 @@ async function assertCollapsible(path: string, snapshot: Snapshot): Promise<void
         'by hand, then rebaseline.';
 
     for (const { statement } of readSqlCalls(source)) {
-        if (isDataStatement(statement.kind)) {
+        const intoRebuildTemp =
+            statement.tables.length > 0 &&
+            statement.tables.every((table) => isRebuildTemp(table, snapshot));
+        if (isDataStatement(statement.kind) && !intoRebuildTemp) {
             const target =
                 statement.tables[0] !== undefined
                     ? `"${statement.tables[0]}"`
@@ -508,6 +515,7 @@ async function assertCollapsible(path: string, snapshot: Snapshot): Promise<void
         }
         for (const table of statement.tables) {
             if (snapshot.tables[table] !== undefined) continue;
+            if (isRebuildTemp(table, snapshot)) continue;
             throw new Error(
                 `cannot collapse "${path}": ${statement.kind} names "${table}", a table ` +
                     `no descriptor describes, so the emitter cannot regenerate it. ${safe}`
@@ -564,6 +572,15 @@ type SqlStatementKind =
 
 type SqlStatement = { text: string; kind: SqlStatementKind; tables: string[] };
 type SqlCall = { statement: SqlStatement; start: number; end: number };
+
+/** `true` for the rebuild path's `__new_<table>` temp, where `<table>` is one
+ *  the snapshot describes — the one name a collapsed migration may hold that
+ *  the snapshot does not list, because the emitter writes it. */
+function isRebuildTemp(table: string, snapshot: Snapshot): boolean {
+    const prefix = '__new_';
+    if (!table.startsWith(prefix)) return false;
+    return snapshot.tables[table.slice(prefix.length)] !== undefined;
+}
 
 /** `INSERT`/`UPDATE`/`DELETE` move rows, which no snapshot records. */
 function isDataStatement(kind: SqlStatementKind): boolean {

@@ -17,6 +17,7 @@ import { createClient } from '@libsql/client';
 import { Kysely, sql } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { rebaselineMigrations } from '../src/generate';
+import { renderMigrationFile } from '../src/render';
 import { serializeSnapshot } from '../src/model';
 import { col, index, snap, table } from './_support/tables';
 
@@ -218,6 +219,44 @@ describe('rebaselineMigrations', () => {
 
             const indexSource = await readFile(resolve(dir, 'index.ts'), 'utf-8');
             expect(indexSource).not.toContain('0001_add-note');
+        });
+    });
+
+    // The rebuild path writes `INSERT INTO __new_widgets … FROM widgets` and
+    // drops/renames around it. That is emitter output for a table the fresh
+    // baseline creates whole, so collapsing past it loses nothing. Rendered by
+    // the real renderer rather than written out here, so the two stay in step.
+    it('--collapse folds a chain containing a table rebuild', async () => {
+        await withTempDir(async (dir) => {
+            await seedDir(dir, { later: ['0001_rebuild-widgets'] });
+            const [widgetsTable] = Object.values(widgets.tables);
+            if (!widgetsTable) throw new Error('fixture has no widgets table');
+            await writeFile(
+                resolve(dir, '0001_rebuild-widgets.ts'),
+                renderMigrationFile(
+                    [
+                        {
+                            kind: 'rebuildTable',
+                            table: widgetsTable,
+                            copy: [{ column: 'id' }, { column: 'name' }],
+                        },
+                    ],
+                    'sqlite'
+                ),
+                'utf-8'
+            );
+
+            const result = await rebaselineMigrations({
+                dir,
+                snapshot: widgets,
+                dialect: 'sqlite',
+                collapse: true,
+            });
+
+            expect(result.deleted).toEqual(['0001_rebuild-widgets.ts']);
+            expect(await readFile(resolve(dir, '0000_baseline.ts'), 'utf-8')).toContain(
+                '── widgets '
+            );
         });
     });
 
