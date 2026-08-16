@@ -29,8 +29,9 @@ const KIND_META: Record<ColumnKind, { cellKind: CellKind; fieldType: FieldTypeNa
     integer: { cellKind: 'number', fieldType: 'number' },
     real: { cellKind: 'number', fieldType: 'number' },
     boolean: { cellKind: 'boolean', fieldType: 'boolean' },
-    // Storage is ISO-TEXT, always carrying time-of-day — 'datetime' fits the
-    // stored precision better than the date-only field type.
+    // Both storage formats (ISO TEXT, unix-seconds INTEGER) carry time-of-day,
+    // so 'datetime' fits the stored precision better than the date-only field
+    // type for either.
     timestamp: { cellKind: 'date', fieldType: 'datetime' },
     json: { cellKind: 'text', fieldType: 'json' },
     enum: { cellKind: 'badge', fieldType: 'select' },

@@ -1,55 +1,37 @@
 /**
  * User storage — the only place Kysely touches the `users` table.
  *
- * **Why this one is hand-rolled rather than composed on `createStorage`:**
- * `users` is one of the four better-auth tables. better-auth's adapter owns the
- * table and its column format (seconds-INTEGER timestamps, uuid ids, INTEGER
- * booleans, json TEXT), so it is deliberately not defined with `defineTable` —
- * and `createStorage` takes a `Table`, so there is nothing for it to wrap. The
- * method vocabulary matches the `Table`-backed factories and every value still
- * crosses the boundary through the string-keyed `users` codec (`LEGACY_CODECS` in
- * `database/codec.ts`). Do not "fix" this by giving `users` a `Table`: that
- * would enrol a better-auth-owned table in our DDL/migration pipeline.
- *
- * The goal being served is "no raw Kysely above `storage/`", not "everything goes
- * through `createStorage`".
+ * Row CRUD goes through `createStorage(usersTable)`, which owns encoding,
+ * `updatedAt` stamping and row decoding. `list`/`count` stay on the raw handle
+ * because the name/email search is an OR, which the flat `where` DSL cannot
+ * express; they compile their DSL-expressible part with the wrapper's own
+ * `where`, handed out by `query()`, so the two share one predicate.
  */
 
-import type { ExpressionBuilder, Insertable, Updateable } from 'kysely';
+import type { ExpressionBuilder, Expression, SqlBool } from 'kysely';
 import { getDb } from '@/database/registry';
-import { decode, encode, encodePatch } from '@/database/codec';
+import { decodeWith } from '@/database/codec';
+import { createStorage, type Patch } from '@/database/storage/create-storage';
 import { createRelationshipStorage } from '@/database/storage/relationships';
-import type { DB, Db } from '@/database/types';
-import type { JsonObject, SortOption } from '@/types/index';
+import { usersTable } from '@/database/schema';
+import type { Db } from '@/database/types';
+import type { TableInsert } from '@/database/define-table';
+import type { SortOption } from '@/types/index';
 import type { UserRow } from './schema';
 
-// ============================================================================
-// Write shapes
-//
-// Optional keys spell `| undefined` explicitly (rather than relying on `?`) so a
-// caller can forward a possibly-undefined value without an `...(x && { x })`
-// spread — the same widening `createStorage`'s `Patch` does, and safe for the
-// same reason: the codec strips undefined keys before the write.
-// ============================================================================
+type UsersEb = ExpressionBuilder<Record<string, Record<string, unknown>>, string>;
 
-export type NewUser = {
-    id?: string | undefined;
-    email: string;
-    name: string;
-    emailVerified?: boolean | undefined;
-    image?: string | null | undefined;
-    fields?: JsonObject | undefined;
-    roleSlug?: string | undefined;
-    createdAt?: Date | undefined;
-    updatedAt?: Date | undefined;
-};
+export type NewUser = TableInsert<typeof usersTable>;
 
-export type UserPatch = {
-    email?: string | undefined;
-    name?: string | undefined;
-    fields?: JsonObject | undefined;
-    roleSlug?: string | undefined;
-};
+/**
+ * An allow-list, not the table's full patch shape: `id` is the key, `createdAt`
+ * is history, and `emailVerified` and `image` belong to better-auth's own flows.
+ * Derived from the descriptor so the value types stay in step with it.
+ */
+export type UserPatch = Pick<
+    Patch<typeof usersTable>,
+    'email' | 'name' | 'fields' | 'roleSlug'
+>;
 
 export type UserListParams = {
     search?: string | undefined;
@@ -83,16 +65,6 @@ function buildOrderBy(
     return clauses.length > 0 ? clauses : [{ col: 'name', dir: 'asc' }];
 }
 
-/** The name/email search OR — shared by `list` and `count` so they cannot drift. */
-function buildUsersWhere(eb: ExpressionBuilder<DB, 'users'>, search?: string) {
-    if (!search) return undefined;
-    return eb.or([eb('name', 'like', `%${search}%`), eb('email', 'like', `%${search}%`)]);
-}
-
-function toRow(raw: Record<string, unknown>): UserRow {
-    return decode('users', raw) as unknown as UserRow;
-}
-
 // ============================================================================
 // Factory
 // ============================================================================
@@ -101,108 +73,85 @@ export type UserStorage = ReturnType<typeof createUserStorage>;
 
 /** Defaults to the registered db; pass a tx handle to scope it to a transaction. */
 export function createUserStorage(db?: Db) {
-    /** Resolved per call so an unbound storage follows `setDb` across a reload. */
-    function handle(): Db {
-        return db ?? getDb();
+    const storage = createStorage(usersTable, db);
+
+    /** The name/email search OR — shared by `list` and `count` so they cannot drift. */
+    function filter(search?: string): (eb: UsersEb) => Expression<SqlBool> {
+        const { where } = storage.query();
+        const dsl = where();
+        return (eb) => {
+            if (!search) return dsl(eb);
+            return eb.and([
+                dsl(eb),
+                eb.or([
+                    eb('name', 'like', `%${search}%`),
+                    eb('email', 'like', `%${search}%`),
+                ]),
+            ]);
+        };
     }
 
     async function list(params?: UserListParams): Promise<UserRow[]> {
-        let q = handle()
-            .selectFrom('users')
-            .selectAll()
-            .where((eb) => buildUsersWhere(eb, params?.search) ?? eb.lit(true));
+        const { db: handle, table } = storage.query();
+        let q = handle.selectFrom(table).selectAll().where(filter(params?.search));
         for (const { col, dir } of buildOrderBy(params?.sort)) {
             q = q.orderBy(col, dir);
         }
         if (params?.limit !== undefined) q = q.limit(params.limit);
         if (params?.offset !== undefined) q = q.offset(params.offset);
         const rows = await q.execute();
-        return rows.map(toRow);
+        return rows.map((row) => decodeWith(usersTable, row));
     }
 
     async function count(params?: { search?: string | undefined }): Promise<number> {
-        const row = await handle()
-            .selectFrom('users')
-            .select((eb) => eb.fn.countAll<number>().as('c'))
-            .where((eb) => buildUsersWhere(eb, params?.search) ?? eb.lit(true))
+        const { db: handle, table } = storage.query();
+        const row = await handle
+            .selectFrom(table)
+            .select((eb) => eb.fn.countAll<number>().as('total'))
+            .where(filter(params?.search))
             .executeTakeFirst();
-        return Number(row?.c ?? 0);
+        return Number(row?.total ?? 0);
     }
 
     async function countByRole(roleSlug: string): Promise<number> {
-        const row = await handle()
-            .selectFrom('users')
-            .select((eb) => eb.fn.countAll<number>().as('c'))
-            .where('roleSlug', '=', roleSlug)
-            .executeTakeFirst();
-        return Number(row?.c ?? 0);
+        return storage.count({ roleSlug });
     }
 
     /** Every user id — the `notify()` broadcast target. */
     async function ids(): Promise<string[]> {
-        const rows = await handle().selectFrom('users').select('id').execute();
-        return rows.map((r) => r.id);
+        const { db: handle, table } = storage.query();
+        const rows = await handle.selectFrom(table).select('id').execute();
+        return rows.map((row) => String(row.id));
     }
 
     /** User ids holding a role — the `notify()` per-role target. */
     async function idsByRole(roleSlug: string): Promise<string[]> {
-        const rows = await handle()
-            .selectFrom('users')
+        const { db: handle, table, where } = storage.query();
+        const rows = await handle
+            .selectFrom(table)
             .select('id')
-            .where('roleSlug', '=', roleSlug)
+            .where(where({ roleSlug }))
             .execute();
-        return rows.map((r) => r.id);
+        return rows.map((row) => String(row.id));
     }
 
     async function get(id: string): Promise<UserRow | null> {
-        const row = await handle()
-            .selectFrom('users')
-            .selectAll()
-            .where('id', '=', id)
-            .limit(1)
-            .executeTakeFirst();
-        return row ? toRow(row) : null;
+        return storage.findOne({ id });
     }
 
     async function create(data: NewUser): Promise<UserRow> {
-        // `encode` fills the app-side defaults better-auth expects for an omitted
-        // id / createdAt / updatedAt, then flips to the legacy column format.
-        const row = await handle()
-            .insertInto('users')
-            .values(encode('users', { ...data }) as unknown as Insertable<DB['users']>)
-            .returningAll()
-            .executeTakeFirst();
-        if (!row) throw new Error('[astromech] users storage: insert returned no row');
-        return toRow(row);
+        return storage.create(data);
     }
 
     /** By primary key. Throws when no row matched. */
     async function update(id: string, patch: UserPatch): Promise<UserRow> {
-        // No `Table` means no `onUpdate` column to drive the stamp, so it is
-        // this factory's job — the same thing `createStorage` does for the tables
-        // that do have one.
-        const row = await handle()
-            .updateTable('users')
-            .set(
-                encodePatch('users', {
-                    ...patch,
-                    updatedAt: new Date(),
-                }) as unknown as Updateable<DB['users']>
-            )
-            .where('id', '=', id)
-            .returningAll()
-            .executeTakeFirst();
-        if (!row) {
-            throw new Error(`[astromech] users storage: no row found for id "${id}"`);
-        }
-        return toRow(row);
+        return storage.update(id, patch);
     }
 
     async function del(id: string): Promise<void> {
-        const active = handle();
         // Relationship rows first: deleting the user row is what orphans them.
-        await createRelationshipStorage(active).deleteByResource(id, 'user');
-        await active.deleteFrom('users').where('id', '=', id).execute();
+        await createRelationshipStorage(db ?? getDb()).deleteByResource(id, 'user');
+        await storage.delete(id);
     }
 
     return {

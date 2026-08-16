@@ -99,7 +99,7 @@ async function upsertAdmin(): Promise<string> {
     await db
         .insertInto('users')
         .values(
-            schema.encode('users', {
+            schema.encodeWith(schema.usersTable, {
                 id: userId,
                 email,
                 name: 'Alex Admin',
@@ -107,7 +107,7 @@ async function upsertAdmin(): Promise<string> {
                 roleSlug: 'admin',
                 createdAt: now,
                 updatedAt: now,
-            }) as never
+            })
         )
         .execute();
 

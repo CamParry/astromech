@@ -95,7 +95,7 @@ function escapeForTemplateLiteral(statement: string): string {
 /** Indent one statement as `await sql\`…\`.execute(db);` in the generated
  *  module's `up()` body — single-line statements inline on one line,
  *  multi-line `CREATE TABLE` statements indented like the baseline. */
-function renderStatementLine(statement: string): string {
+export function renderStatementLine(statement: string): string {
     const escaped = escapeForTemplateLiteral(statement);
     if (!escaped.includes('\n')) {
         return `    await sql\`${escaped}\`.execute(db);`;

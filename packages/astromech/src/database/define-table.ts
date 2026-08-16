@@ -21,8 +21,10 @@
  * map for our tables. DDL emit / snapshot diffing are later steps; this module
  * is types + codec only, so `indexes`/`reference` metadata is stored but unused.
  *
- * Ids are ULID (`ulidx`); timestamps serialize to ISO-8601 TEXT. Both dialects
- * (SQLite, Postgres) compare ISO strings correctly (fixed-width, lexicographic).
+ * Ids are ULID (`ulidx`) unless a column asks for `format: 'uuid'`; timestamps
+ * serialize to ISO-8601 TEXT in a text column, which is also the format
+ * better-auth writes into the tables it shares with us. Both dialects (SQLite,
+ * Postgres) compare ISO strings correctly (fixed-width, lexicographic).
  */
 
 import { ulid } from 'ulidx';
@@ -62,8 +64,9 @@ export type ColumnRuntime = {
     unique: boolean;
     /** SQL-literal DEFAULT (text/integer/real/boolean/enum). The DB fills it. */
     sqlDefault?: string | number | boolean;
-    /** App-generated default (id/defaultUlid → 'ulid', timestamp defaultNow → 'now'). */
-    appDefault?: 'ulid' | 'now';
+    /** App-generated default (id/defaultUlid → 'ulid' or 'uuid', timestamp
+     *  defaultNow → 'now'). */
+    appDefault?: 'ulid' | 'uuid' | 'now';
     /** Timestamp stamped on every update (callers stamp explicitly today). */
     onUpdate: boolean;
     enumValues?: readonly string[];
@@ -150,6 +153,12 @@ type BooleanOpts = {
     notNull?: boolean;
     default?: boolean;
 };
+type IdOpts = {
+    /** Format of the id the app default mints — ULID by default, uuid for a
+     *  table another writer (better-auth) also inserts into. That writer mints
+     *  ids in its own format; the column is text either way. */
+    format?: 'ulid' | 'uuid';
+};
 type TimestampOpts = {
     notNull?: boolean;
     defaultNow?: boolean;
@@ -227,33 +236,35 @@ const jsonSerialize = (v: unknown): unknown => JSON.stringify(v);
 const jsonParse = (v: unknown): unknown => (typeof v === 'string' ? JSON.parse(v) : v);
 const boolSerialize = (v: unknown): unknown => (v ? 1 : 0);
 const boolParse = (v: unknown): unknown => Number(v) === 1;
-const tsSerialize = (v: unknown): unknown => (v instanceof Date ? v.toISOString() : v);
-const tsParse = (v: unknown): unknown =>
-    // Tier-1 timestamps are ISO TEXT after the step-2 flip; tolerate a stray
-    // legacy seconds-INTEGER value defensively.
+const isoSerialize = (v: unknown): unknown => (v instanceof Date ? v.toISOString() : v);
+const isoParse = (v: unknown): unknown =>
+    // A number here is a unix-seconds value written by an older `users` row,
+    // back when that table declared seconds storage. Tolerated so those rows
+    // still decode; every writer produces ISO now.
     typeof v === 'number' ? new Date(v * 1000) : new Date(v as string);
 
 // ============================================================================
 // `col` factory
 // ============================================================================
 
-function id(): Column<{
+function id(o?: IdOpts): Column<{
     data: string;
     storage: string;
     notNull: true;
     generated: true;
     hasDefault: false;
 }> {
+    const uuid = o?.format === 'uuid';
     return {
         kind: 'id',
         notNull: true,
         primaryKey: true,
         unique: false,
-        appDefault: 'ulid',
+        appDefault: uuid ? 'uuid' : 'ulid',
         onUpdate: false,
         serialize: passthrough,
         parse: passthrough,
-        default: () => ulid(),
+        default: uuid ? () => crypto.randomUUID() : () => ulid(),
     };
 }
 
@@ -329,8 +340,8 @@ function timestamp<const O extends TimestampOpts = Record<never, never>>(
         unique: false,
         ...(o?.defaultNow && { appDefault: 'now' as const }),
         onUpdate: !!o?.onUpdate,
-        serialize: tsSerialize,
-        parse: tsParse,
+        serialize: isoSerialize,
+        parse: isoParse,
         ...(o?.defaultNow && { default: () => new Date() }),
     };
 }

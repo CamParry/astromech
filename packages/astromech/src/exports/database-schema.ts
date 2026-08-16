@@ -12,10 +12,10 @@
  * schema never drags a driver's client library into the bundle.
  *
  * Both codec halves are re-exported because a seed touches both kinds of table:
- * `encodeWith`/`decodeWith` take a `Table` and give ISO-TEXT timestamps (our
- * tables — the ones above), while `encode`/`decode` take a table-name
- * string and are the only way to reach the seconds-INTEGER format better-auth
- * owns (`users`, `accounts`, …), which has no `Table` to pass.
+ * `encodeWith`/`decodeWith` take a `Table` and convert in whatever format its
+ * columns declare (the tables above), while `encode`/`decode` take a table-name
+ * string and are the only way to reach `sessions`/`accounts`/`verifications`,
+ * which have no `Table` to pass.
  */
 
 export * from '@/database/schema';

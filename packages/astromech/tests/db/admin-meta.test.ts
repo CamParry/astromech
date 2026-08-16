@@ -56,6 +56,19 @@ describe('tableAdminMeta', () => {
         ]);
     });
 
+    it('projects a timestamp as a datetime field', () => {
+        const withStamp = defineTable('withStamp', ({ col }) => ({
+            id: col.id(),
+            createdAt: col.timestamp({ notNull: true }),
+        }));
+        expect(tableAdminMeta(withStamp)).toContainEqual({
+            name: 'createdAt',
+            cellKind: 'date',
+            fieldType: 'datetime',
+            nullable: false,
+        });
+    });
+
     it('resolves referenceTable for a string reference target', () => {
         const withUserRef = defineTable('withUserRef', ({ col }) => ({
             id: col.id(),

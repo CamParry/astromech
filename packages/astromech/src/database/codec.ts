@@ -6,26 +6,24 @@
  * Two tiers, divided by whether the caller can hold the table's `Table`:
  *
  *   - **Table-keyed** (`decodeWith`/`encodeWith`/`encodePatchWith`) — the
- *     primary path, and the only one used for the 10 tables we own. A
+ *     primary path, and the only one used for the 11 tables we own. A
  *     `defineTable` table carries per-column `serialize`/`parse`/`default`
  *     fns, so the caller passes the one it already has and the codec needs
- *     no table registry at all. Our tables store timestamps as ISO-8601 **TEXT**,
- *     ids/localeGroup as ULID, json as TEXT, bool as INTEGER 0/1.
+ *     no table registry at all. Each column declares its own storage format,
+ *     so `users` (TEXT ids and ISO-8601 TEXT timestamps — better-auth's adapter
+ *     writes it too) converts through the same path as any other table.
  *
  *   - **Table-name-keyed** (`decode`/`encode`/`encodePatch`) — for the rows whose
  *     `Table` the caller *cannot* hold. Exactly two cases:
- *       1. the 4 better-auth tables (`users`, `sessions`, `accounts`,
- *          `verifications`), which are **not** defined with `defineTable` and
- *          never will be: better-auth's adapter owns their format
- *          (seconds-INTEGER timestamps, uuid ids) and flipping it would break
- *          login, so their conversions are hand-listed in `LEGACY_CODECS`. This
- *          is why `users/storage.ts` cannot move onto `createStorage`.
+ *       1. `sessions`, `accounts` and `verifications`, which have no descriptor:
+ *          nothing of ours writes them, better-auth's adapter owns them outright,
+ *          so their conversions are hand-listed in `LEGACY_CODECS`.
  *       2. a plugin table reached by name — resolved through the tables
  *          `registerPlugins` hands to `registerTableCodec` at boot. The
  *          registry is mutable only because the table set is unknown until config
  *          resolves.
  *
- * There was a third tier: a hand-maintained name→`Table` map that let our own 10
+ * There was a third tier: a hand-maintained name→`Table` map that let our own
  * tables be addressed by name as well. Every core call site passes its `Table`
  * now, so it is gone — adding a table no longer means remembering to list it
  * here, and this file imports no table at all (which keeps it a plain
@@ -36,8 +34,8 @@
  * values (e.g. a setting `value` of `"123"`).
  */
 
-import type { Insertable } from 'kysely';
-import type { KyselyOf, Table } from '@/database/define-table';
+import type { Insertable, Updateable } from 'kysely';
+import type { KyselyOf, Table, TableSelect } from '@/database/define-table';
 
 // ── Plugin tables (registered at boot) ──────────────────────────────────────
 
@@ -87,64 +85,48 @@ function sameTable(a: Table, b: Table): boolean {
     return aKeys.length === bKeys.length && aKeys.every((key, i) => key === bKeys[i]);
 }
 
-// ── Legacy seconds-INTEGER tables (better-auth) ──────────────────────────────
+// ── Tables with no descriptor (better-auth) ─────────────────────────────────
+//
+// better-auth's adapter writes ISO-8601 TEXT timestamps, so `ts` parses and
+// serializes ISO. A number on the way in is tolerated for rows written when
+// these columns were assumed to be unix seconds; nothing writes one now.
 type LegacyKind = 'ts' | 'json' | 'bool';
-type AppDefault = 'uuid' | 'now';
-type LegacyCodec = {
-    kinds: Record<string, LegacyKind>;
-    appDefaults: Record<string, AppDefault>;
-};
+type LegacyCodec = Record<string, LegacyKind>;
 
 const LEGACY_CODECS: Record<string, LegacyCodec> = {
-    users: {
-        kinds: {
-            emailVerified: 'bool',
-            fields: 'json',
-            createdAt: 'ts',
-            updatedAt: 'ts',
-        },
-        appDefaults: { id: 'uuid', createdAt: 'now', updatedAt: 'now' },
-    },
-    sessions: {
-        kinds: { expiresAt: 'ts', createdAt: 'ts', updatedAt: 'ts' },
-        appDefaults: {},
-    },
+    sessions: { expiresAt: 'ts', createdAt: 'ts', updatedAt: 'ts' },
     accounts: {
-        kinds: {
-            accessTokenExpiresAt: 'ts',
-            refreshTokenExpiresAt: 'ts',
-            createdAt: 'ts',
-            updatedAt: 'ts',
-        },
-        appDefaults: {},
+        accessTokenExpiresAt: 'ts',
+        refreshTokenExpiresAt: 'ts',
+        createdAt: 'ts',
+        updatedAt: 'ts',
     },
-    verifications: {
-        kinds: { expiresAt: 'ts', createdAt: 'ts', updatedAt: 'ts' },
-        appDefaults: {},
-    },
+    verifications: { expiresAt: 'ts', createdAt: 'ts', updatedAt: 'ts' },
 };
 
 // ============================================================================
-// Table-name-keyed API — the better-auth tables, which have no `Table`, plus any
-// plugin table a caller reaches by name. A name that matches neither passes through
+// Table-name-keyed API — the better-auth tables with no `Table`, plus any plugin
+// table a caller reaches by name. A name that matches neither passes through
 // untouched (only `undefined` keys are dropped), because there is nothing to
 // convert it by; if that name is one of ours, the caller wants `*With` below.
-// Exported from `astromech/database/schema` for seed scripts, which need the
-// seconds-INTEGER format for `users`/`accounts`.
+// Exported from `astromech/database/schema` for seed scripts, which insert into
+// `accounts` directly.
 // ============================================================================
 
 /** Storage → JS for one row of a better-auth or plugin table, keyed by name. */
 export function decode<T extends Record<string, unknown>>(tableName: string, row: T): T {
     if (!row) return row;
     const table = PLUGIN_TABLES.get(tableName);
-    if (table) return decodeWith(table, row);
+    // The name-keyed tier has no `Table` type to derive a row shape from, so a
+    // plugin table's decoded row is returned in the shape the caller passed in.
+    if (table) return decodeWith(table, row) as unknown as T;
     const legacy = LEGACY_CODECS[tableName];
     if (!legacy) return row;
     const out: Record<string, unknown> = { ...row };
-    for (const [col, kind] of Object.entries(legacy.kinds)) {
+    for (const [col, kind] of Object.entries(legacy)) {
         const v = out[col];
         if (v === null || v === undefined) continue;
-        if (kind === 'ts') out[col] = new Date((v as number) * 1000);
+        if (kind === 'ts') out[col] = parseTimestamp(v);
         else if (kind === 'json') out[col] = typeof v === 'string' ? JSON.parse(v) : v;
         else if (kind === 'bool') out[col] = Number(v) === 1;
     }
@@ -152,8 +134,9 @@ export function decode<T extends Record<string, unknown>>(tableName: string, row
 }
 
 /**
- * JS → storage for INSERTs, keyed by name. Injects app-side defaults (id/now) for
- * omitted columns, then serializes. Mirrors Drizzle's `$defaultFn` semantics.
+ * JS → storage for INSERTs, keyed by name. The tables reached this way have no
+ * app-side defaults — better-auth supplies every column it writes — so this is
+ * serialization only.
  */
 export function encode(
     tableName: string,
@@ -163,13 +146,7 @@ export function encode(
     if (table) return encodeWith(table, values);
     const legacy = LEGACY_CODECS[tableName];
     if (!legacy) return stripUndefined(values);
-    const out: Record<string, unknown> = { ...values };
-    for (const [col, kind] of Object.entries(legacy.appDefaults)) {
-        if (out[col] === undefined) {
-            out[col] = kind === 'uuid' ? crypto.randomUUID() : new Date();
-        }
-    }
-    return serializeLegacy(legacy, out);
+    return serializeLegacy(legacy, values);
 }
 
 /**
@@ -197,17 +174,33 @@ export function encodePatch(
 
 /**
  * Storage → JS for one table's row. Call on every row a query returns
- * (selects AND `returningAll`).
+ * (selects AND `returningAll`). Typed as the table's domain row shape, so the
+ * result needs no cast.
+ *
+ * The overloads keep `decodeWith(t, await q.executeTakeFirst())` honest: a
+ * missing row decodes to `undefined`, not to an empty object wearing the row
+ * type.
  */
-export function decodeWith<T extends Record<string, unknown>>(table: Table, row: T): T {
-    if (!row) return row;
+export function decodeWith<D extends Table>(
+    table: D,
+    row: Record<string, unknown>
+): TableSelect<D>;
+export function decodeWith<D extends Table>(
+    table: D,
+    row: Record<string, unknown> | undefined
+): TableSelect<D> | undefined;
+export function decodeWith<D extends Table>(
+    table: D,
+    row: Record<string, unknown> | undefined
+): TableSelect<D> | undefined {
+    if (!row) return undefined;
     const out: Record<string, unknown> = { ...row };
     for (const [key, col] of Object.entries(table.columns)) {
         const v = out[key];
         if (v === null || v === undefined) continue;
         out[key] = col.parse(v);
     }
-    return out as T;
+    return out as TableSelect<D>;
 }
 
 /**
@@ -228,12 +221,15 @@ export function encodeWith<D extends Table>(
     return serializeTable(table, out) as Insertable<KyselyOf<D>>;
 }
 
-/** JS → storage for an UPDATE: serialize what was provided, never default. */
-export function encodePatchWith(
-    table: Table,
+/**
+ * JS → storage for an UPDATE: serialize what was provided, never default. Typed
+ * as the table's Kysely update shape so the result goes straight into `.set()`.
+ */
+export function encodePatchWith<D extends Table>(
+    table: D,
     values: Record<string, unknown>
-): Record<string, unknown> {
-    return serializeTable(table, values);
+): Updateable<KyselyOf<D>> {
+    return serializeTable(table, values) as Updateable<KyselyOf<D>>;
 }
 
 // ============================================================================
@@ -254,20 +250,25 @@ function serializeTable(
 }
 
 function serializeLegacy(
-    c: LegacyCodec,
+    kinds: LegacyCodec,
     values: Record<string, unknown>
 ): Record<string, unknown> {
     const out: Record<string, unknown> = { ...values };
-    for (const [col, kind] of Object.entries(c.kinds)) {
+    for (const [col, kind] of Object.entries(kinds)) {
         const v = out[col];
         if (v === null || v === undefined) continue;
-        if (kind === 'ts')
-            out[col] = v instanceof Date ? Math.floor(v.getTime() / 1000) : v;
+        if (kind === 'ts') out[col] = v instanceof Date ? v.toISOString() : v;
         else if (kind === 'json')
             out[col] = typeof v === 'string' ? v : JSON.stringify(v);
         else if (kind === 'bool') out[col] = v ? 1 : 0;
     }
     return stripUndefined(out);
+}
+
+/** Storage → `Date` for a better-auth timestamp: ISO text, or a unix-seconds
+ *  number left by a writer that assumed seconds. */
+function parseTimestamp(value: unknown): Date {
+    return typeof value === 'number' ? new Date(value * 1000) : new Date(String(value));
 }
 
 function stripUndefined(values: Record<string, unknown>): Record<string, unknown> {

@@ -6,26 +6,6 @@
             "idx": 0,
             "tag": "0000_baseline",
             "when": 1783723008619
-        },
-        {
-            "idx": 1,
-            "tag": "0001_plugins-tracking",
-            "when": 1785001218394
-        },
-        {
-            "idx": 2,
-            "tag": "0002_plugins-tracking-package",
-            "when": 1785182648340
-        },
-        {
-            "idx": 3,
-            "tag": "0003_relationships-index",
-            "when": 1785712265425
-        },
-        {
-            "idx": 4,
-            "tag": "0004_media-title-caption",
-            "when": 1785801600000
         }
     ]
 }

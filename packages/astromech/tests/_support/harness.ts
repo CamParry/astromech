@@ -34,14 +34,14 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { createClient } from '@libsql/client';
 import { Kysely, CamelCasePlugin } from 'kysely';
-import type { Dialect, Insertable, MigrationProvider } from 'kysely';
+import type { Dialect, MigrationProvider } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { setDb } from '@/database/registry';
 import { setDatabaseDriver } from '@/database/driver-registry';
 import { mergeMigrationProviders, migrateToLatest } from '@astromech/schema-engine';
-import { encode, decode } from '@/database/codec';
+import { decodeWith, encodeWith } from '@/database/codec';
 import type { DB } from '@/database/types';
-import type { UserRow } from '@/database/schema';
+import { usersTable, type UserRow } from '@/database/schema';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 import { resolveConfig } from '@/boot/config-resolver';
 import { setCliConfig } from '@/transport/cli/virtual-config-shim';
@@ -295,15 +295,15 @@ export async function createTestUser(
     const row = await db
         .insertInto('users')
         .values(
-            encode('users', {
+            encodeWith(usersTable, {
                 email: overrides.email ?? `user-${crypto.randomUUID()}@test.dev`,
                 name: overrides.name ?? 'Test User',
                 roleSlug: overrides.roleSlug ?? DEFAULT_ROLE_SLUG,
                 ...overrides,
-            }) as unknown as Insertable<DB['users']>
+            })
         )
         .returningAll()
         .executeTakeFirst();
     if (!row) throw new Error('failed to insert test user');
-    return decode('users', row) as unknown as UserRow;
+    return decodeWith(usersTable, row);
 }
