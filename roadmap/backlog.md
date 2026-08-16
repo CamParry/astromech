@@ -4,17 +4,13 @@ Unscheduled work that belongs to no single feature: deferrals, small chores, and
 questions to settle before something else can start.
 
 Not a bug tracker. A live defect in shipped code gets a `roadmap/` file of its own
-so its status can move — `planned/admin-form-defects.md` is the worked example.
+so its status can move — `in-progress/admin-form-defects.md` is the worked example.
 Finished items are deleted rather than ticked; the record of what shipped is in
 `roadmap/completed/`.
 
 ### Admin
 
 - [ ] Investigate admin-page composition — one page rendering **both** a managed form and custom widgets (Sanity-style view tabs, or a custom component mounting managed form regions via a `useSettingsForm` hook). `AdminPage` XOR-validates `fields`/`component` today and was deliberately left open so this is additive (from `completed/unified-admin-pages.md`)
-
-### Boot
-
-- [ ] `initRuntime` still ends with `process.env.ASTROMECH_API_ROUTE = resolvedConfig.apiRoute`, read back inside `getAuth()` (`packages/astromech/src/users/auth.ts`). The read is request-time and correct; the **write** is the problem — on Workers `process.env` is a compatibility shim populated from bindings, not a plain mutable object, so the assignment is not guaranteed to do anything there. Replace the channel with a registry slot, or pass `apiRoute` into `getAuth()` from the caller (deferred from `completed/workers-cron-never-boots.md`)
 
 ### Search
 

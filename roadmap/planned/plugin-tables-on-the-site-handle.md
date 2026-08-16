@@ -25,16 +25,13 @@ interface from a plugin's `Table` objects rather than extending the core one;
 - [ ] Put an augmentable interface on `astromech`'s public surface for them to
       land on, so `db` on a site is typed with core's tables plus the installed
       plugins' without the site naming either.
-- [ ] `encodeWith` returns `Record<string, unknown>` rather than its table's
-      insert shape, so `seed.ts` still casts the rows it hands to `.values()`.
-      Give it the table's insert type and the cast goes away.
+- The `encodeWith` return-type item moved to
+  `roadmap/in-progress/small-roadmap-defects.md` — it is independent of the two
+  checkboxes above.
 
 ## Notes / caveats
 
 - The first two are one change: the emitted declarations are useless without a
   target to merge into, and the target is empty without the emission.
-- The third is independent and smaller, and is worth doing first — it is a
-  signature change on one function, and it removes a cast that currently hides
-  whatever else may be wrong about the rows.
 - Both halves came out of `roadmap/completed/demo-typecheck.md`, which is where
   the demo first exercised this path as a site does.
