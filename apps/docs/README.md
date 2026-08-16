@@ -40,6 +40,9 @@ This is a living reference; it grows as the project does.
 - [data/migrations.md](data/migrations.md) — how migrations are generated from
   your tables, what the generator refuses and why, and the
   hand-authored-ops escape hatch for reshapes it can't derive.
+- [plugins/forms.md](plugins/forms.md) — the options `forms()` takes: spam
+  provider, stored request metadata, and the submission rate limit — what it
+  keys on, who it does not limit, and what a refused submission returns.
 - [plugins/authoring.md](plugins/authoring.md) — write a plugin: the file-layout
   convention, identity, and every surface (custom fields, admin pages, admin
   slots, permissions, service methods, hooks, entry types, database tables, and i18n).
