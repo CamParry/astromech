@@ -105,6 +105,31 @@ re-run, and running it again would just append a duplicate migration.
 A migration that drops data must be able to say why the loss is acceptable. If
 it can't, it's the wrong migration.
 
+## Rewriting the baseline (before you ship)
+
+Some changes are a **re-render**, not a diff: naming foreign-key constraints
+differently changes the SQL every migration emits, but the snapshot records
+schema state, not SQL text, so there is nothing for `db:generate` to diff.
+`db:rebaseline` re-emits `0000_baseline.ts` and `snapshot.json` from your
+current tables:
+
+```bash
+npx astromech db:rebaseline              # baseline only
+npx astromech db:rebaseline --collapse   # fold the whole chain into the baseline
+```
+
+Without `--collapse` it refuses to run when the chain has anything past the
+baseline, because those migrations would replay on top of the file it rewrote.
+Blocks for tables you wrote by hand — anything with no table definition, under
+its `// ── <table> ──` banner — are copied across untouched; if the banners
+aren't there, the command refuses rather than guessing.
+
+This rewrites history, so it is only legal before your first release. Every
+database that already applied the old chain — including yours — has to be
+re-initialised: the ledger names migrations that no longer exist, kysely reports
+`corrupted migrations`, and `db:init` is what throws, so it cannot recover on
+its own. Drop the database and re-run `db:init`.
+
 ## Plugins
 
 Plugins own their own migrations and ship them in the package; a site applies

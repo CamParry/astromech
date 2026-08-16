@@ -13,11 +13,17 @@
  * merge conflict rather than a silent hash mismatch.
  */
 
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { diffSnapshots, type TableOp } from './diff';
-import { renderMigrationFile } from './render';
-import { serializeSnapshot, type Snapshot, type SqlDialect } from './model';
+import { renderMigrationFile, renderStatementLine } from './render';
+import { renderTableStatements } from './ddl';
+import {
+    serializeSnapshot,
+    type Snapshot,
+    type SnapshotTable,
+    type SqlDialect,
+} from './model';
 
 export type GenerateResult =
     | { status: 'no-changes' }
@@ -56,6 +62,16 @@ async function readFileIfExists(path: string): Promise<string | null> {
         return await readFile(path, 'utf-8');
     } catch (err) {
         if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
+        throw err;
+    }
+}
+
+/** A directory's entries, or `[]` when it does not exist. */
+async function readDirIfExists(path: string): Promise<string[]> {
+    try {
+        return await readdir(path);
+    } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'ENOENT') return [];
         throw err;
     }
 }
@@ -282,4 +298,198 @@ export async function generateMigrationFromOps(opts: {
         name: opts.name,
         warnings,
     });
+}
+
+// ============================================================================
+// Rebaseline — re-emit the baseline migration from the current snapshot
+// ============================================================================
+
+export type RebaselineResult = {
+    /** The baseline's journal tag, e.g. `0000_baseline`. */
+    tag: string;
+    /** Tables re-emitted from the snapshot, in file order. */
+    emitted: string[];
+    /** Tables with no snapshot entry, copied verbatim from the old baseline. */
+    preserved: string[];
+    /** Files removed, relative to `dir` (collapse only). */
+    deleted: string[];
+};
+
+/**
+ * Rewrite `<dir>/<baseline>.ts` from `snapshot`, keeping the blocks of any table
+ * the snapshot does not describe, then rewrite `snapshot.json`, `journal.json`
+ * and `index.ts` to match.
+ *
+ * A renderer change is a re-render, not a diff — the snapshot records schema
+ * state, not the SQL text it renders to — so there is no migration the differ
+ * could emit for it. Rewriting history is what closes that gap, and it is legal
+ * only before a release: `collapse` (folding a longer chain into the baseline)
+ * therefore has to be asked for, never inferred.
+ */
+export async function rebaselineMigrations(opts: {
+    dir: string;
+    snapshot: Snapshot;
+    dialect: SqlDialect;
+    collapse?: boolean;
+}): Promise<RebaselineResult> {
+    const { dir, snapshot, dialect } = opts;
+    const { journal } = await readState(dir, dialect);
+    const entries = [...journal.entries].sort((a, b) => a.idx - b.idx);
+    const baseline = entries[0];
+    if (!baseline) {
+        throw new Error(
+            `no baseline to rebaseline: "${resolve(dir, 'journal.json')}" has no entries. ` +
+                'Run `astromech db:generate` to create the chain first.'
+        );
+    }
+
+    const later = entries.slice(1);
+    if (later.length > 0 && opts.collapse !== true) {
+        throw new Error(
+            `the chain has ${later.length} migration(s) past the baseline ` +
+                `(${later.map((e) => e.tag).join(', ')}), so re-emitting the baseline alone ` +
+                'would leave them replaying on top of it. Pass --collapse to fold the whole ' +
+                'chain into a fresh baseline instead.'
+        );
+    }
+
+    const path = resolve(dir, `${baseline.tag}.ts`);
+    const source = await readFileIfExists(path);
+    if (source === null) {
+        throw new Error(`baseline migration "${path}" does not exist`);
+    }
+
+    const blocks = parseTableBlocks(source, path);
+    const emitted: string[] = [];
+    const preserved: string[] = [];
+    const sections: string[] = [];
+    for (const block of blocks) {
+        const table = snapshot.tables[block.name];
+        if (table) {
+            sections.push(renderTableBlock(table));
+            emitted.push(block.name);
+        } else {
+            sections.push(block.source);
+            preserved.push(block.name);
+        }
+    }
+    for (const [name, table] of Object.entries(snapshot.tables)) {
+        if (emitted.includes(name)) continue;
+        sections.push(renderTableBlock(table));
+        emitted.push(name);
+    }
+
+    await writeFile(path, renderBaselineFile(sections), 'utf-8');
+
+    const deleted: string[] = [];
+    if (later.length > 0) {
+        for (const entry of later) {
+            await rm(resolve(dir, `${entry.tag}.ts`), { force: true });
+            deleted.push(`${entry.tag}.ts`);
+        }
+        const ops = await readDirIfExists(resolve(dir, 'ops'));
+        if (ops.length > 0) {
+            await rm(resolve(dir, 'ops'), { recursive: true, force: true });
+            deleted.push(...ops.map((file) => `ops/${file}`));
+        }
+    }
+
+    const collapsed: Journal = {
+        version: 1,
+        dialect,
+        entries: [{ idx: 0, tag: baseline.tag, when: baseline.when }],
+    };
+    await writeFile(
+        resolve(dir, 'journal.json'),
+        `${JSON.stringify(collapsed, null, 2)}\n`,
+        'utf-8'
+    );
+    await writeFile(
+        resolve(dir, 'snapshot.json'),
+        `${serializeSnapshot(snapshot)}\n`,
+        'utf-8'
+    );
+    await syncIndexFile(dir, collapsed.entries);
+
+    return { tag: baseline.tag, emitted, preserved, deleted };
+}
+
+type TableBlock = { name: string; source: string };
+
+const BANNER = /^\s*\/\/ ── (\S+) ─+\s*$/;
+
+/**
+ * Split a baseline's `up()` body into one block per table, keyed by the
+ * `// ── <table> ──` banner each block opens with. Refuses rather than guessing:
+ * a block boundary it cannot see is a hand-authored table it would silently drop.
+ */
+function parseTableBlocks(source: string, path: string): TableBlock[] {
+    const lines = source.split('\n');
+    const start = lines.findIndex((line) => line.startsWith('export async function up('));
+    const end = lines.lastIndexOf('}');
+    if (start === -1 || end <= start) {
+        throw new Error(
+            `cannot rebaseline "${path}": no \`export async function up(\` … \`}\` body found.`
+        );
+    }
+
+    const blocks: TableBlock[] = [];
+    let current: { name: string; lines: string[] } | null = null;
+    for (const line of lines.slice(start + 1, end)) {
+        const banner = BANNER.exec(line);
+        if (banner?.[1] !== undefined) {
+            if (current) blocks.push(toBlock(current));
+            current = { name: banner[1], lines: [line] };
+            continue;
+        }
+        if (!current) {
+            if (line.trim() === '') continue;
+            throw new Error(
+                `cannot rebaseline "${path}": the statement "${line.trim()}" sits before the ` +
+                    'first `// ── <table> ──` banner, so it belongs to no table. Add a banner ' +
+                    'for it, or rebaseline by hand.'
+            );
+        }
+        current.lines.push(line);
+    }
+    if (current) blocks.push(toBlock(current));
+
+    if (blocks.length === 0) {
+        throw new Error(
+            `cannot rebaseline "${path}": it has no \`// ── <table> ──\` banners to split on.`
+        );
+    }
+    return blocks;
+}
+
+function toBlock(current: { name: string; lines: string[] }): TableBlock {
+    const lines = [...current.lines];
+    while (lines[lines.length - 1]?.trim() === '') lines.pop();
+    return { name: current.name, source: lines.join('\n') };
+}
+
+/** One table's section: its banner, then a `sql` statement per DDL statement. */
+function renderTableBlock(table: SnapshotTable): string {
+    const banner = `    // ── ${table.name} `.padEnd(78, '─');
+    return [banner, ...renderTableStatements(table).map(renderStatementLine)].join('\n');
+}
+
+function renderBaselineFile(sections: string[]): string {
+    const today = new Date().toISOString().slice(0, 10);
+    return [
+        '/**',
+        ' * Baseline migration — the whole schema as one forward migration.',
+        ' *',
+        ` * Regenerated by \`astromech db:rebaseline\` on ${today}: a table the`,
+        ' * descriptors describe is emitter output, a table they do not is copied verbatim',
+        ' * from the previous baseline. Rewriting history is legal only before a release.',
+        ' */',
+        '',
+        "import { sql, type Kysely } from 'kysely';",
+        '',
+        'export async function up(db: Kysely<unknown>): Promise<void> {',
+        sections.join('\n\n'),
+        '}',
+        '',
+    ].join('\n');
 }

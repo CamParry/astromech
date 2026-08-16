@@ -1,0 +1,232 @@
+/**
+ * Tests for `rebaselineMigrations` (`src/generate.ts`) — re-emitting a
+ * baseline migration from the current snapshot.
+ *
+ * Each test gets its own `mkdtemp` scratch directory holding a hand-written
+ * baseline: one banner block for a table the snapshot describes, one for a
+ * "foreign" table it does not (the better-auth case), so preservation is
+ * observable. The apply test runs the rewritten chain against a real libsql db.
+ */
+
+import { describe, expect, it } from 'vitest';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { createClient } from '@libsql/client';
+import { Kysely, sql } from 'kysely';
+import { LibsqlDialect } from '@libsql/kysely-libsql';
+import { rebaselineMigrations } from '../src/generate';
+import { serializeSnapshot } from '../src/model';
+import { col, index, snap, table } from './_support/tables';
+
+const FOREIGN_BLOCK = [
+    '    // ── legacy_users ───────────────────────────────────────────────────────',
+    '    // Hand-authored: better-auth owns this table.',
+    '    await sql`',
+    '        CREATE TABLE \\`legacy_users\\` (',
+    '            \\`id\\` text PRIMARY KEY NOT NULL,',
+    '            \\`created_at\\` integer NOT NULL',
+    '        )',
+    '    `.execute(db);',
+].join('\n');
+
+const OLD_WIDGETS_BLOCK = [
+    '    // ── widgets ────────────────────────────────────────────────────────────',
+    '    await sql`',
+    '        CREATE TABLE \\`widgets\\` (',
+    '            \\`id\\` text PRIMARY KEY NOT NULL',
+    '        )',
+    '    `.execute(db);',
+].join('\n');
+
+const widgets = snap(
+    table('widgets', [col.id(), col.text('name', { notNull: true })], {
+        indexes: [index('idx_widgets_name', ['name'])],
+    })
+);
+
+const withGadgets = snap(
+    table('widgets', [col.id(), col.text('name', { notNull: true })]),
+    table('gadgets', [col.id()])
+);
+
+type JournalEntry = { idx: number; tag: string; when: number };
+
+/** Write a migrations directory holding a baseline and `extra` later entries. */
+async function seedDir(
+    dir: string,
+    opts: { body?: string; later?: string[] } = {}
+): Promise<void> {
+    const body = opts.body ?? [OLD_WIDGETS_BLOCK, FOREIGN_BLOCK].join('\n\n');
+    await writeFile(
+        resolve(dir, '0000_baseline.ts'),
+        [
+            '/** Hand-authored baseline. */',
+            "import { sql, type Kysely } from 'kysely';",
+            '',
+            'export async function up(db: Kysely<unknown>): Promise<void> {',
+            body,
+            '}',
+            '',
+        ].join('\n'),
+        'utf-8'
+    );
+
+    const entries: JournalEntry[] = [{ idx: 0, tag: '0000_baseline', when: 1 }];
+    for (const [i, tag] of (opts.later ?? []).entries()) {
+        entries.push({ idx: i + 1, tag, when: i + 2 });
+        await writeFile(resolve(dir, `${tag}.ts`), '// later migration\n', 'utf-8');
+    }
+    await writeFile(
+        resolve(dir, 'journal.json'),
+        `${JSON.stringify({ version: 1, dialect: 'sqlite', entries }, null, 2)}\n`,
+        'utf-8'
+    );
+    await writeFile(resolve(dir, 'snapshot.json'), '{}\n', 'utf-8');
+}
+
+async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
+    const dir = await mkdtemp(join(tmpdir(), 'schema-engine-rebaseline-'));
+    try {
+        await fn(dir);
+    } finally {
+        await rm(dir, { recursive: true, force: true });
+    }
+}
+
+describe('rebaselineMigrations', () => {
+    it('re-emits the described table, copies the foreign block verbatim, appends new tables', async () => {
+        await withTempDir(async (dir) => {
+            await seedDir(dir);
+
+            const result = await rebaselineMigrations({
+                dir,
+                snapshot: withGadgets,
+                dialect: 'sqlite',
+            });
+
+            expect(result.tag).toBe('0000_baseline');
+            expect(result.emitted).toEqual(['widgets', 'gadgets']);
+            expect(result.preserved).toEqual(['legacy_users']);
+            expect(result.deleted).toEqual([]);
+
+            const source = await readFile(resolve(dir, '0000_baseline.ts'), 'utf-8');
+            expect(source).toContain(FOREIGN_BLOCK);
+            expect(source).toContain('\\`name\\` text NOT NULL');
+            expect(source).toContain('db:rebaseline');
+            // File order: the old file's order first, then the new table.
+            expect(source.indexOf('── widgets ')).toBeLessThan(
+                source.indexOf('── legacy_users ')
+            );
+            expect(source.indexOf('── legacy_users ')).toBeLessThan(
+                source.indexOf('── gadgets ')
+            );
+        });
+    });
+
+    it('rewrites snapshot.json to the given snapshot and regenerates index.ts', async () => {
+        await withTempDir(async (dir) => {
+            await seedDir(dir);
+
+            await rebaselineMigrations({ dir, snapshot: widgets, dialect: 'sqlite' });
+
+            expect(await readFile(resolve(dir, 'snapshot.json'), 'utf-8')).toBe(
+                `${serializeSnapshot(widgets)}\n`
+            );
+            const indexSource = await readFile(resolve(dir, 'index.ts'), 'utf-8');
+            expect(indexSource).toContain("import * as m0000 from './0000_baseline';");
+            expect(indexSource).toContain("'0000_baseline': m0000,");
+        });
+    });
+
+    it('refuses a longer chain without --collapse, and writes nothing', async () => {
+        await withTempDir(async (dir) => {
+            await seedDir(dir, { later: ['0001_add-note'] });
+            const before = await readFile(resolve(dir, '0000_baseline.ts'), 'utf-8');
+
+            await expect(
+                rebaselineMigrations({ dir, snapshot: widgets, dialect: 'sqlite' })
+            ).rejects.toThrow(/--collapse/);
+
+            expect(await readFile(resolve(dir, '0000_baseline.ts'), 'utf-8')).toBe(
+                before
+            );
+            expect(await readFile(resolve(dir, 'snapshot.json'), 'utf-8')).toBe('{}\n');
+        });
+    });
+
+    it('--collapse folds the chain: later migrations and ops are deleted, the journal keeps one entry', async () => {
+        await withTempDir(async (dir) => {
+            await seedDir(dir, { later: ['0001_add-note', '0002_drop-note'] });
+            await mkdir(resolve(dir, 'ops'), { recursive: true });
+            await writeFile(
+                resolve(dir, 'ops', '0002-drop-note.ts'),
+                'export default () => [];\n',
+                'utf-8'
+            );
+
+            const result = await rebaselineMigrations({
+                dir,
+                snapshot: widgets,
+                dialect: 'sqlite',
+                collapse: true,
+            });
+
+            expect(result.deleted.sort()).toEqual([
+                '0001_add-note.ts',
+                '0002_drop-note.ts',
+                'ops/0002-drop-note.ts',
+            ]);
+            expect((await readdir(dir)).sort()).toEqual([
+                '0000_baseline.ts',
+                'index.ts',
+                'journal.json',
+                'snapshot.json',
+            ]);
+
+            const journal = JSON.parse(
+                await readFile(resolve(dir, 'journal.json'), 'utf-8')
+            ) as { entries: JournalEntry[] };
+            expect(journal.entries).toEqual([{ idx: 0, tag: '0000_baseline', when: 1 }]);
+
+            const indexSource = await readFile(resolve(dir, 'index.ts'), 'utf-8');
+            expect(indexSource).not.toContain('0001_add-note');
+        });
+    });
+
+    it('refuses a baseline whose blocks it cannot see', async () => {
+        await withTempDir(async (dir) => {
+            await seedDir(dir, { body: '    await sql`SELECT 1`.execute(db);' });
+
+            await expect(
+                rebaselineMigrations({ dir, snapshot: widgets, dialect: 'sqlite' })
+            ).rejects.toThrow(/before the first/);
+        });
+    });
+
+    it('the rewritten baseline applies to a fresh database', async () => {
+        await withTempDir(async (dir) => {
+            await seedDir(dir);
+            await rebaselineMigrations({ dir, snapshot: withGadgets, dialect: 'sqlite' });
+
+            const client = createClient({ url: ':memory:' });
+            const db = new Kysely<unknown>({
+                dialect: new LibsqlDialect({ client: client as never }),
+            });
+            const mod = (await import(
+                pathToFileURL(resolve(dir, '0000_baseline.ts')).href
+            )) as { up: (db: Kysely<unknown>) => Promise<void> };
+            await mod.up(db);
+
+            const { rows } = await sql<{ name: string }>`
+                SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name
+            `.execute(db);
+            expect(rows.map((r) => r.name)).toEqual([
+                'gadgets',
+                'legacy_users',
+                'widgets',
+            ]);
+        });
+    });
+});
