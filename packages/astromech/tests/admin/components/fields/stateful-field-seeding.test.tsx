@@ -10,10 +10,9 @@
  * into state on that render needs a re-seed guard: seed once when real data
  * arrives, and never resync, or the last-saved value clobbers an edit.
  *
- * `blocks` and `tree` carry that guard through `useBlocksField` / `useTreeField`
- * and `json` carries its own; all three are checked here at the component level.
- * `richtext` does not, and its case is marked `it.fails` — see
- * `roadmap/in-progress/admin-form-defects.md`.
+ * `blocks` and `tree` carry that guard through `useBlocksField` / `useTreeField`,
+ * `json` carries its own, and `richtext` seeds the TipTap document from an
+ * effect. All four are checked here at the component level.
  */
 
 import { afterEach, describe, expect, it } from 'vitest';
@@ -284,9 +283,7 @@ describe('richtext on a fetched entry', () => {
         expect(prose()).toBe('Stored prose');
     });
 
-    // `rich-text-editor.tsx:311` passes `content` into `useEditor`, which reads
-    // it once when it builds the editor. A later value never reaches the doc.
-    it.fails('renders the stored document when the value arrives late', async () => {
+    it('renders the stored document when the value arrives late', async () => {
         const f = mountField(body, undefined);
         await settle();
 
@@ -294,5 +291,29 @@ describe('richtext on a fetched entry', () => {
         await settle();
 
         expect(prose()).toBe('Stored prose');
+        // The programmatic seed must not fire `onUpdate`.
+        expect(f.commits).toEqual([]);
+    });
+
+    it('does not resync afterwards, so an in-progress edit survives', async () => {
+        const user = userEvent.setup();
+        const f = mountField(body, undefined);
+        await settle();
+        f.rerender(doc);
+        await settle();
+
+        const content = document.querySelector<HTMLElement>('.am-richtext-content');
+        if (content === null) throw new Error('no editor content');
+        await user.click(content);
+        await user.type(content, 'Edited');
+        await settle();
+        const edited = prose();
+        expect(edited).not.toBe('Stored prose');
+
+        // The last-saved value arriving again must not undo the edit.
+        f.rerender(structuredClone(doc));
+        await settle();
+
+        expect(prose()).toBe(edited);
     });
 });

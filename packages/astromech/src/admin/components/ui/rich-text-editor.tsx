@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent, useEditorState } from '@tiptap/react';
 import type { JSONContent, Editor } from '@tiptap/core';
 import {
@@ -284,6 +284,15 @@ export function RichTextEditor({
     const [linkPopover, setLinkPopover] = useState<LinkPopoverState>({ open: false });
     const { ariaProps } = useFieldControl();
 
+    // TipTap reads `content` once, when it builds the editor: `setOptions`
+    // pushes the other options on later renders but never replaces the
+    // document. An entry edit route fetches its entry, so the first render
+    // carries no value and the stored prose would never appear. Seed it once
+    // when real data arrives, and never resync, or the last-saved document
+    // would clobber an in-progress edit — an author's own keystroke counts as
+    // seeded for the same reason.
+    const seeded = useRef(value !== undefined);
+
     // The focusable control is ProseMirror's contenteditable, not the wrapper
     // `EditorContent` renders, so the error association has to go through
     // `editorProps.attributes`. `useEditor` diffs its options each render and
@@ -306,12 +315,21 @@ export function RichTextEditor({
             },
         },
         onUpdate: ({ editor: ed }: { editor: Editor }) => {
+            seeded.current = true;
             onChange?.(ed.getJSON());
         },
         ...(value !== undefined ? { content: value } : {}),
     };
 
     const editor = useEditor(editorOptions);
+
+    // `emitUpdate: false` keeps the programmatic set out of `onUpdate`, so
+    // seeding the document does not commit it back.
+    useEffect(() => {
+        if (seeded.current || editor === null || value === undefined) return;
+        seeded.current = true;
+        editor.commands.setContent(value, { emitUpdate: false });
+    }, [editor, value]);
 
     // Isolated state reads — avoid full re-render on every transaction.
     const editorState = useEditorState({

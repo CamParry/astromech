@@ -143,8 +143,13 @@ it was real and the misattribution is the useful part.
     - Pinned by two cases in
       `packages/astromech/tests/admin/components/fields/stateful-field-seeding.test.tsx`,
       which ran as `it.fails` until the guard landed and are ordinary tests now.
-- [ ] **`richtext` renders empty for a stored document.** Found the same way and
-      the same shape, one layer down in the editor.
+- [x] **`richtext` renders empty for a stored document.** Fixed 2026-08-16 by
+      seeding the document from an effect —
+      `editor.commands.setContent(value, { emitUpdate: false })`, run once when
+      real data arrives and never after, with a keystroke counting as seeded so
+      an in-progress edit is not clobbered. `emitUpdate: false` keeps the
+      programmatic set out of `onUpdate`, so seeding commits nothing. Found the
+      same way and the same shape, one layer down in the editor.
       `admin/components/ui/rich-text-editor.tsx:311` passes `content` into
       `useEditor`, and TipTap reads `content` once when it builds the editor —
       `setOptions` pushes the other options on later renders but never replaces
@@ -153,7 +158,9 @@ it was real and the misattribution is the useful part.
     - Also verified against the real `EntryEditPage` with a cold cache.
     - Unlike `json` it destroys nothing on its own: the editor only commits from
       `onUpdate`, so an untouched field writes nothing back.
-    - Pinned as an `it.fails` case in the same file.
+    - Pinned in the same file by the case that ran as `it.fails` until the fix
+      landed, plus a no-resync case that types into the editor and pushes the
+      last-saved document back down.
 - [x] Extend render-level coverage to the **field** components. Two files now
       exist to copy from, and they are different tools:
       `tests/admin/components/entries/entry-form-field-seeding.test.tsx` renders a
