@@ -1,5 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig, loadRawConfig } from '../config';
+import { forceArgs, toForceOption } from '../force-args';
 import {
     generateMethodManifest,
     METHOD_MANIFEST_FILENAME,
@@ -19,10 +20,11 @@ export default defineCommand({
             default: `.astro/${METHOD_MANIFEST_FILENAME}`,
         },
         config: { type: 'string', description: 'Path to astromech.config.ts' },
+        ...forceArgs,
     },
     async run({ args }) {
         const rawConfig = await loadRawConfig(args.config);
-        const resolved = await loadConfig(args.config);
+        const resolved = await loadConfig(args.config, toForceOption(args));
         const plugins = rawConfig.plugins ?? [];
         const json = generateMethodManifest(resolved, plugins);
         const outPath = resolve(process.cwd(), args.out);

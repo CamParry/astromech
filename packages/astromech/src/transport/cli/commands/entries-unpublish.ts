@@ -1,5 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config';
+import { forceArgs, toForceOption } from '../force-args';
 import { entriesService } from '@/entries/service';
 import { printResult, printError } from '../output';
 
@@ -13,10 +14,11 @@ export default defineCommand({
         id: { type: 'positional', required: true, description: 'Entry ID' },
         json: { type: 'boolean', default: false, description: 'Output as JSON' },
         config: { type: 'string', description: 'Path to astromech.config.ts' },
+        ...forceArgs,
     },
     async run({ args }) {
         try {
-            await loadConfig(args.config);
+            await loadConfig(args.config, toForceOption(args));
             const entry = await entriesService.unpublish({
                 type: args.type,
                 id: args.id,

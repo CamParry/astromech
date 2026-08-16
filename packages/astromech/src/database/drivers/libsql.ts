@@ -67,6 +67,11 @@ export function libsql(options?: LibsqlOptions) {
         return options?.url ?? process.env.DATABASE_URL ?? 'file:./database.db';
     }
 
+    /** Anything but a `file:` url is Turso or another remote libsql server. */
+    function isRemote(): boolean {
+        return !resolveUrl().startsWith('file:');
+    }
+
     function assertFileUrl(): void {
         const url = resolveUrl();
         if (!url.startsWith('file:')) {
@@ -81,6 +86,7 @@ export function libsql(options?: LibsqlOptions) {
         getInstance,
         createDialect,
         supportsTransactions: true,
+        isRemote,
 
         async dump(): Promise<DbDump> {
             assertFileUrl();

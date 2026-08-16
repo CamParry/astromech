@@ -73,5 +73,9 @@ export function d1(options: D1Options) {
         getInstance,
         createDialect,
         supportsTransactions: false,
+
+        // Always remote: D1 is only reachable through a binding, and nothing
+        // here distinguishes a dev binding from the production database.
+        isRemote: () => true,
     };
 }

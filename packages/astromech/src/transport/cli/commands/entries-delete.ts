@@ -1,5 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config';
+import { toForceOption } from '../force-args';
 import { entriesService } from '@/entries/service';
 
 export default defineCommand({
@@ -7,11 +8,18 @@ export default defineCommand({
     args: {
         type: { type: 'positional', required: true, description: 'Entry type slug' },
         id: { type: 'positional', required: true, description: 'Entry ID' },
-        force: { type: 'boolean', description: 'Skip confirmation', default: false },
+        // One `--force` for both meanings: skip the confirmation prompt, and
+        // allow a remote database. `forceArgs` is not spread in — it would
+        // redeclare this flag.
+        force: {
+            type: 'boolean',
+            description: 'Skip confirmation and allow a remote database.',
+            default: false,
+        },
         config: { type: 'string', description: 'Path to astromech.config.ts' },
     },
     async run({ args }) {
-        await loadConfig(args.config);
+        await loadConfig(args.config, toForceOption(args));
         if (!args.force) {
             const readline = await import('node:readline/promises');
             const rl = readline.createInterface({

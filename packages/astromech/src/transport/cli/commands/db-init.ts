@@ -1,5 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig, loadRawConfig } from '../config';
+import { forceArgs, toForceOption } from '../force-args';
 import { getDb } from '@/database/registry';
 import { migrateToLatest, mergeMigrationProviders } from '@astromech/schema-engine';
 import { collectPluginMigrations } from '@/database/plugin-migrations';
@@ -9,9 +10,10 @@ export default defineCommand({
     meta: { name: 'db:init', description: 'Run database migrations' },
     args: {
         config: { type: 'string', description: 'Path to astromech.config.ts' },
+        ...forceArgs,
     },
     async run({ args }) {
-        await loadConfig(args.config);
+        await loadConfig(args.config, toForceOption(args));
         // `resolveConfig` strips `plugins`, so read the raw config for the
         // plugin definitions (same pattern as generate-types / generate-manifest).
         const rawConfig = await loadRawConfig(args.config);

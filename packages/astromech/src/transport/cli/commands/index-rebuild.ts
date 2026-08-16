@@ -1,5 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig, loadRawConfig } from '../config';
+import { forceArgs, toForceOption } from '../force-args';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { wireEntryAccess } from '@/entries/plugin-access';
 import { wireNotifyAccess } from '@/notifications/plugin-access';
@@ -16,6 +17,7 @@ export default defineCommand({
     },
     args: {
         config: { type: 'string', description: 'Path to astromech.config.ts' },
+        ...forceArgs,
         type: { type: 'string', description: 'Limit to one entry type' },
         check: {
             type: 'boolean',
@@ -24,7 +26,7 @@ export default defineCommand({
         },
     },
     async run({ args }) {
-        const resolved = await loadConfig(args.config);
+        const resolved = await loadConfig(args.config, toForceOption(args));
         // `loadConfig` never touches the plugin runtime, so without this a
         // table-backed plugin entry type would resolve to the built-in storage,
         // its rows would go unread, and a rebuild would delete every edge it has.
