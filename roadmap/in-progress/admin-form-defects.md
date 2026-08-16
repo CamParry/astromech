@@ -128,7 +128,31 @@ it was real and the misattribution is the useful part.
       keys off it. Don't fix it in isolation: it is the accidental prototype for
       `roadmap/planned/named-layout-fields.md`, which decides what a layout
       field's name means.
-- [ ] Extend render-level coverage to the **field** components. Two files now
+- [ ] **`json` renders empty for a stored value, then commits `null` over it.**
+      Found 2026-08-16 extending the field coverage below; the same class as the
+      `key-value` defect and the last unguarded one. `json-field.tsx:11` seeds
+      `useState(initialJson)` from `value` on the first render — where `value` is
+      still `undefined` — and never re-seeds. An entry storing `{alpha: 1}` shows
+      an empty textarea, and `handleBlur` reads `raw.trim() === ''` and commits
+      `onChange(name, null)`, so focusing the field and leaving it destroys the
+      stored object.
+    - Verified against the real `EntryEditPage` with a cold query cache, not just
+      the field harness: the textarea is empty there too.
+    - Pinned as two `it.fails` cases in
+      `packages/astromech/tests/admin/components/fields/stateful-field-seeding.test.tsx`.
+      Delete the `.fails` when the guard lands.
+- [ ] **`richtext` renders empty for a stored document.** Found the same way and
+      the same shape, one layer down in the editor.
+      `admin/components/ui/rich-text-editor.tsx:311` passes `content` into
+      `useEditor`, and TipTap reads `content` once when it builds the editor —
+      `setOptions` pushes the other options on later renders but never replaces
+      the document. The first render carries `content: undefined`, so the stored
+      prose never appears.
+    - Also verified against the real `EntryEditPage` with a cold cache.
+    - Unlike `json` it destroys nothing on its own: the editor only commits from
+      `onUpdate`, so an untouched field writes nothing back.
+    - Pinned as an `it.fails` case in the same file.
+- [x] Extend render-level coverage to the **field** components. Two files now
       exist to copy from, and they are different tools:
       `tests/admin/components/entries/entry-form-field-seeding.test.tsx` renders a
       field tree directly — it pins the `{}`-first-render fact, covers the
@@ -139,6 +163,24 @@ it was real and the misattribution is the useful part.
       the second shape whenever the thing under test is page-level wiring rather
       than a component's own behaviour — a test that rebuilds the wiring it means
       to protect cannot fail when that wiring is removed.
-    - Still uncovered: the rest of the field components, and
-      `tests/admin/hooks/container-field-seeding.test.tsx` still hand-rolls a React
-      root that testing-library could now replace.
+    - Done 2026-08-16. Every registered field type now has render-level
+      coverage, and `tests/admin/hooks/container-field-seeding.test.tsx` uses
+      testing-library instead of a hand-rolled React root. The new files, all
+      under `packages/astromech/tests/admin/components/fields/`:
+        - `leaf-field-controls.test.tsx` — the controlled leaves (`text`,
+          `textarea`, `email`, `url`, `slug`, `date`, `datetime`, `number`,
+          `boolean`, `select`, `multiselect`, `checkbox-group`, `radio-group`,
+          `range`, `color`). Each: the stored value renders, a late value renders
+          on its own, and a change commits under the bare field name.
+        - `stateful-field-seeding.test.tsx` — `blocks` and `tree` at the
+          component level (seed late, no resync, siblings survive an edit), plus
+          the `json` and `richtext` defects above.
+        - `reference-field-loading.test.tsx` — `media` and `relationship`, the
+          two that fetch what the stored id points at. Both answer the seeding
+          fact without the containers' guard, and neither writes over the stored
+          id when its lookup fails.
+        - `plugin-field-loading.test.tsx` — the `React.lazy` path: the spinner,
+          a value arriving either side of the module, the registration's
+          `defaultValue`, and its `validate` message.
+    - `color`'s change path is display-only: `react-colorful` is driven by
+      pointer drags on a gradient that has no layout under happy-dom.
