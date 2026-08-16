@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAstromechPlugin } from 'astromech/ui';
+import { useAstromechPlugin } from 'astromech/ui/app';
 import { Panel } from 'astromech/ui/layout';
 
 export default function RatingsOverviewPage(): React.ReactElement {

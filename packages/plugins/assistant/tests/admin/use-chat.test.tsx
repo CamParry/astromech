@@ -23,7 +23,7 @@ const { sessionsService } = vi.hoisted(() => ({
     },
 }));
 
-vi.mock('astromech/ui', () => ({
+vi.mock('astromech/ui/app', () => ({
     useAIContextItems: () => [],
     useAstromechPlugin: () => ({ serviceKey: 'assistant', service: sessionsService }),
 }));

@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useAIContextItems, useAstromechPlugin } from 'astromech/ui';
+import { useAIContextItems, useAstromechPlugin } from 'astromech/ui/app';
 import { parseChatEvent, splitSseFrames } from './sse';
 import { errorMessage } from '../error-message';
 import type { ChatSession } from '../service/sessions';

@@ -6,7 +6,8 @@
 
 import React from 'react';
 import type { BaseFieldProps } from 'astromech';
-import { useAstromechPlugin, useFieldValue } from 'astromech/ui';
+import { useFieldValue } from 'astromech/ui';
+import { useAstromechPlugin } from 'astromech/ui/app';
 import { SEO_DESCRIPTION_RANGE, SEO_TITLE_RANGE } from '../../utilities/length';
 import './seo-preview-field.css';
 

@@ -7,7 +7,8 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { BadgeVariant } from 'astromech/ui';
-import { Badge, EmptyState, Spinner, Table, useAstromechPlugin } from 'astromech/ui';
+import { Badge, EmptyState, Spinner, Table } from 'astromech/ui';
+import { useAstromechPlugin } from 'astromech/ui/app';
 import type { LengthStatus } from '../../utilities/length';
 import type { SeoOverview } from '../../types';
 import './overview-page.css';

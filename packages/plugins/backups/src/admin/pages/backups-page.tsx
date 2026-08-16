@@ -15,8 +15,8 @@ import {
     PageLoading,
     Spinner,
     Table,
-    useAstromechPlugin,
 } from 'astromech/ui';
+import { useAstromechPlugin } from 'astromech/ui/app';
 import type { BackupRunRow } from '../../tables/runs';
 import type {
     DeleteRunResult,
