@@ -1,5 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig, loadRawConfig } from '../config';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { generateClientTypes } from '@/codegen/type-generator';
 import { collectPluginFieldTypes } from '@/plugins/runtime/plugin-fields';
 import { writeFile, mkdir } from 'node:fs/promises';
@@ -17,10 +18,11 @@ export default defineCommand({
             default: '.astro/astromech.d.ts',
         },
         config: { type: 'string', description: 'Path to astromech.config.ts' },
+        ...allowRemoteArgs,
     },
     async run({ args }) {
         const rawConfig = await loadRawConfig(args.config);
-        const resolved = await loadConfig(args.config);
+        const resolved = await loadConfig(args.config, toAllowRemoteOption(args));
         const plugins = rawConfig.plugins ?? [];
         const types = generateClientTypes(
             resolved,

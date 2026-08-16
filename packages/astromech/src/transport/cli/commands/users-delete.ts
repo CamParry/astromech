@@ -1,5 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { usersService } from '@/users/index';
 
 export default defineCommand({
@@ -7,10 +8,11 @@ export default defineCommand({
     args: {
         id: { type: 'positional', required: true, description: 'User ID' },
         force: { type: 'boolean', description: 'Skip confirmation', default: false },
+        ...allowRemoteArgs,
         config: { type: 'string', description: 'Path to astromech.config.ts' },
     },
     async run({ args }) {
-        await loadConfig(args.config);
+        await loadConfig(args.config, toAllowRemoteOption(args));
         if (!args.force) {
             const readline = await import('node:readline/promises');
             const rl = readline.createInterface({

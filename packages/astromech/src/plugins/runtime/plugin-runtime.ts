@@ -77,7 +77,10 @@ type RegisteredRawRoute = { identity: ResolvedPluginIdentity; route: PluginRawRo
 
 /** The dispatch-table builder `ctx.methods` runs, injected by the Local API. */
 export type PluginMethodsAccess = {
-    tools(role: Role | undefined, options?: { readOnly?: boolean }): ToolDefinition[];
+    tools(
+        role: Role | null | undefined,
+        options?: { readOnly?: boolean }
+    ): ToolDefinition[];
 };
 
 type PluginRuntimeState = {
@@ -406,11 +409,12 @@ async function sendPluginEmail(
  * Build the unified PluginContext for a given plugin and acting user. `db` and
  * every domain are lazy getters so a context can be constructed in environments
  * where they are not yet wired (e.g. unit tests that exercise only hook
- * semantics).
+ * semantics). `clientAddress` is supplied by the HTTP transport only.
  */
 export function createPluginContext(
     identity: ResolvedPluginIdentity,
-    user: User | null
+    user: User | null,
+    clientAddress?: string | undefined
 ): PluginContext {
     const config = state().config;
     const configView = config ? makeConfigView(config) : makeConfigView(emptyConfig());
@@ -428,6 +432,7 @@ export function createPluginContext(
         get role(): Role | null {
             return getCurrentRole();
         },
+        clientAddress,
         // The domains, flattened onto the context. These are the global services
         // — a plugin addresses its own entry types explicitly by their qualified
         // id (`` `${ctx.plugin.namespace}/redirect` ``) rather than through a
@@ -478,8 +483,7 @@ export function createPluginContext(
             // Lazy like `get role()` above: the role is read per call, from the
             // request-scoped store rather than from construction time.
             return {
-                tools: (options) =>
-                    requireMethods().tools(getCurrentRole() ?? undefined, options),
+                tools: (options) => requireMethods().tools(getCurrentRole(), options),
             };
         },
         get database(): PluginDatabase {

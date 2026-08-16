@@ -30,11 +30,13 @@ import { processFields } from '@/fields/pipeline';
 /**
  * Data-dependent checks are server-only and are skipped in silence.
  *
- * `unique` needs a read the browser cannot make. `custom` is a function, so
- * `JSON.stringify` flattens the rule to `{}` on its way into the admin config
- * and the pipeline's `runRule` falls through every branch — inert, but by
- * accident, so don't rely on it silently. Neither is surfaced as a "pending"
- * state: the server runs both on submit and answers with a 422.
+ * `unique` needs a read the browser cannot make, and so does a relationship's
+ * target-type check — omitting the `entryTypes` port is what tells the pipeline
+ * to skip it. `custom` is a function, so `JSON.stringify` flattens the rule to
+ * `{}` on its way into the admin config and the pipeline's `runRule` falls
+ * through every branch — inert, but by accident, so don't rely on it silently.
+ * None is surfaced as a "pending" state: the server runs them all on submit and
+ * answers with a 422.
  */
 const CLIENT_READS: FieldReads = { isUnique: () => Promise.resolve(true) };
 

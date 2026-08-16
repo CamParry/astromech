@@ -1,5 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig, loadRawConfig } from '../config';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import {
     annotateManifest,
@@ -74,12 +75,13 @@ export default defineCommand({
         },
         json: { type: 'boolean', default: false, description: 'Output as JSON' },
         config: { type: 'string', description: 'Path to astromech.config.ts' },
+        ...allowRemoteArgs,
         ...filterArgs,
     },
     async run({ args }) {
         try {
             const rawConfig = await loadRawConfig(args.config);
-            const resolved = await loadConfig(args.config);
+            const resolved = await loadConfig(args.config, toAllowRemoteOption(args));
             const plugins = rawConfig.plugins ?? [];
             const manifest = JSON.parse(
                 generateMethodManifest(resolved, plugins)

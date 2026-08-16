@@ -181,12 +181,12 @@ export function buildDispatch(manifest: ManifestMethod): DispatchResult {
 
 /**
  * The same dispatch, resolved through `scopedServices(role)` so every call is
- * checked against what the role holds. `undefined` means no role — allowed
- * nothing — never a trusted caller; that is what `buildDispatch` is for.
+ * checked against what the role holds. A missing role is allowed nothing — never
+ * a trusted caller; that is what `buildDispatch` is for.
  */
 export function buildScopedDispatch(
     manifest: ManifestMethod,
-    role: Role | undefined
+    role: Role | null | undefined
 ): DispatchResult {
     const handle = scopedHandle(role);
     return buildDispatchWith(manifest, (method) => resolveScopedInvoke(method, handle));
@@ -324,7 +324,7 @@ type ScopedHandle = () => Promise<ScopedServices>;
  * same reason `CORE_SERVICES` is: building the tool list must pull in no service
  * code, and that module imports every domain service eagerly.
  */
-function scopedHandle(role: Role | undefined): ScopedHandle {
+function scopedHandle(role: Role | null | undefined): ScopedHandle {
     let handle: Promise<ScopedServices> | null = null;
     return () => {
         handle ??= import('@/policies/scoped-services').then(({ scopedServices }) =>

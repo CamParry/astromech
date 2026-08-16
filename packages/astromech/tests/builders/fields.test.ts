@@ -184,6 +184,11 @@ describe('field factories — layout fields (name-first, flat, presentational)',
             label: 'Content',
         });
     });
+
+    it('tabs() forwards `private` like its layout siblings', () => {
+        const result = tabs({ private: true, fields: [] });
+        expect(result).toMatchObject({ name: 'tabs', type: 'tabs', private: true });
+    });
 });
 
 describe('t() label descriptor', () => {

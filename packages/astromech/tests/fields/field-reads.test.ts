@@ -51,3 +51,18 @@ describe('fieldReadsFromRecords — isUnique', () => {
         expect(await reads.isUnique(makeField('code'), 'x')).toBe(true);
     });
 });
+
+describe('fieldReadsFromRecords — entryTypes', () => {
+    it('is absent when the caller supplies none', () => {
+        const reads = fieldReadsFromRecords(makeRecords([]));
+        expect(reads.entryTypes).toBeUndefined();
+    });
+
+    it('forwards the supplied lookup', async () => {
+        const reads = fieldReadsFromRecords({
+            ...makeRecords([]),
+            entryTypes: async (ids) => new Map(ids.map((id) => [id, 'post'])),
+        });
+        expect(await reads.entryTypes?.(['a'])).toEqual(new Map([['a', 'post']]));
+    });
+});

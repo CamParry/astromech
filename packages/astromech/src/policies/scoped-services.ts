@@ -264,7 +264,7 @@ export type ScopedServices = {
  * One `permissionsFor` guard backs them all, so the role is resolved once per
  * handle rather than once per call.
  */
-export function scopedServices(role: Role | undefined): ScopedServices {
+export function scopedServices(role: Role | null | undefined): ScopedServices {
     const permissions = permissionsFor(role);
     return {
         users: scopeMethods(usersService, usersContract, permissions, 'users'),

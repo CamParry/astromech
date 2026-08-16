@@ -197,6 +197,27 @@ describe('delete', () => {
 });
 
 // ============================================================================
+// existingIds
+// ============================================================================
+
+describe('existingIds', () => {
+    it('reports the ids this table holds and omits the rest', async () => {
+        const created = await storage.create({
+            type: 'link',
+            fields: { from: '/a', to: '/b' },
+        });
+
+        expect(await storage.existingIds?.([created.id, 'no-such-id'])).toEqual(
+            new Set([created.id])
+        );
+    });
+
+    it('returns an empty set for no ids', async () => {
+        expect(await storage.existingIds?.([])).toEqual(new Set());
+    });
+});
+
+// ============================================================================
 // list — pagination
 // ============================================================================
 

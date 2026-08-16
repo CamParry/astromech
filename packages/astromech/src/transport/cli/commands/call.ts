@@ -12,6 +12,7 @@
 import { defineCommand } from 'citty';
 import { z } from 'zod';
 import { loadConfig, loadRawConfig } from '../config';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { buildDispatch, dispatchArgs } from '@/transport/tools/dispatch';
 import type { ManifestMethod, MethodManifest, ToolDefinition } from '@/types/index';
@@ -28,11 +29,12 @@ export default defineCommand({
         args: { type: 'string', description: 'Arguments as inline JSON or @file' },
         json: { type: 'boolean', default: false, description: 'Report errors as JSON' },
         config: { type: 'string', description: 'Path to astromech.config.ts' },
+        ...allowRemoteArgs,
     },
     async run({ args }) {
         try {
             const rawConfig = await loadRawConfig(args.config);
-            const resolved = await loadConfig(args.config);
+            const resolved = await loadConfig(args.config, toAllowRemoteOption(args));
             const manifest = JSON.parse(
                 generateMethodManifest(resolved, rawConfig.plugins ?? [])
             ) as MethodManifest;

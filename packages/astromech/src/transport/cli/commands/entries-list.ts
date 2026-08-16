@@ -1,5 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { entriesService } from '@/entries/service';
 import { printResult } from '../output';
 
@@ -11,9 +12,10 @@ export default defineCommand({
         limit: { type: 'string', description: 'Max results', default: '20' },
         json: { type: 'boolean', default: false, description: 'Output as JSON' },
         config: { type: 'string', description: 'Path to astromech.config.ts' },
+        ...allowRemoteArgs,
     },
     async run({ args }) {
-        await loadConfig(args.config);
+        await loadConfig(args.config, toAllowRemoteOption(args));
         const limitNum = parseInt(args.limit, 10);
         const { data } = await entriesService.query({
             type: args.type,

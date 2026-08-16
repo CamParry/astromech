@@ -21,6 +21,10 @@ This is a living reference; it grows as the project does.
   how a frequent tick and database-stored cadence fit together, the three
   scheduler drivers (`interval`, `cloudflareCron`, `webhook`), and wiring a
   Cloudflare Worker's `scheduled()` handler.
+- [configuration/trust-proxy.md](configuration/trust-proxy.md) — where the
+  connecting address of a request comes from, the `security.trustProxy` option
+  for a site behind a proxy, and why the address is counted from the end of
+  `x-forwarded-for`.
 - [content/entry-types.md](content/entry-types.md) — declaring entry types: the
   `entries` record, and `defineEntryType` for splitting a type into its own
   module.
@@ -40,11 +44,15 @@ This is a living reference; it grows as the project does.
 - [data/migrations.md](data/migrations.md) — how migrations are generated from
   your tables, what the generator refuses and why, and the
   hand-authored-ops escape hatch for reshapes it can't derive.
+- [plugins/forms.md](plugins/forms.md) — the options `forms()` takes: spam
+  provider, stored request metadata, and the submission rate limit — what it
+  keys on, who it does not limit, and what a refused submission returns.
 - [plugins/authoring.md](plugins/authoring.md) — write a plugin: the file-layout
   convention, identity, and every surface (custom fields, admin pages, admin
   slots, permissions, service methods, hooks, entry types, database tables, and i18n).
 - [cli.md](cli.md) — the `astromech` CLI: entry CRUD + publish, JSON output,
-  method-manifest discovery, and rebuilding the relationships index.
+  method-manifest discovery, rebuilding the relationships index, and reporting
+  stored rows that fail the current validation.
 
 ## Learning from the bundled plugins
 

@@ -149,6 +149,13 @@ export type ValidationStage = 'save' | 'publish';
 export type FieldReads = {
     /** True when no other record in the host scope holds `value` for `field`. */
     isUnique: (field: Field, value: unknown) => Promise<boolean>;
+    /**
+     * The entry type each id resolves to, for the relationship target-type
+     * check. Ids with no entry row are simply absent. Optional: a caller with no
+     * entry access (the admin, a plugin's own reads) omits it and the check is
+     * skipped rather than guessed.
+     */
+    entryTypes?: (ids: string[]) => Promise<Map<string, string>>;
 };
 
 /**

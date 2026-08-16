@@ -12,6 +12,11 @@ astromech <command> [args] [--config path/to/astromech.config.ts]
 `--config` points at your `astromech.config.ts` (defaults to one in the current
 directory). Every command accepts it.
 
+Every command that opens the database refuses a remote one — a `libsql://` URL,
+or any D1 binding — so a command meant for a dev machine cannot reach production
+through whatever `DATABASE_URL` happens to be exported. Pass `--allow-remote`
+when that is what you intend.
+
 ## JSON output
 
 Commands that emit data take `--json`, which prints machine-readable JSON to
@@ -112,6 +117,7 @@ astromech permissions --json          # full catalogue entries (description, sou
 | `generate:types`                                             | Emit `.d.ts` type definitions                |
 | `generate:manifest`                                          | Write `.astro/astromech.methods.json`        |
 | `index:rebuild`                                              | Rebuild the relationships index              |
+| `validate`                                                   | Report stored rows that now fail validation  |
 
 ## Relationships index
 
@@ -129,6 +135,28 @@ astromech index:rebuild --check            # report drift, write nothing, exit 1
 `--check` is the form to run in CI. Without `--type`, a rebuild deletes rows for
 any source it did not enumerate — correct for a full pass, but the reason to
 scope a partial one.
+
+## Validation report
+
+Field rules run when a row is written, so tightening one leaves the rows you
+already stored alone. `validate` walks stored content — entries, media, users
+and settings pages — and reports every row the current rules would reject. It
+writes nothing.
+
+```sh
+astromech validate                 # every row
+astromech validate --type post     # limit to one entry type
+```
+
+Each finding names the row, the field path and the message a write would have
+returned; the command exits 1 when there is at least one, so it can gate a
+deploy. A clean run prints `All rows valid (N rows checked).`
+
+Every row is judged the way a write to it today would be: a draft entry is
+checked for correctness but not completeness, so a half-filled draft is not a
+finding while the same row published is. Fix a reported row by editing and
+saving it — the report has no repair mode, because the value a rule now rejects
+is one only you can choose the replacement for.
 
 ## MCP server (dev-only)
 

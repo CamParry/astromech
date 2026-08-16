@@ -1,6 +1,7 @@
 import { defineCommand } from 'citty';
 import type { Insertable } from 'kysely';
 import { loadConfig } from '../config';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { getDb } from '@/database/registry';
 import { encode } from '@/database/codec';
 import { createUserStorage } from '@/users/storage';
@@ -14,9 +15,10 @@ export default defineCommand({
         password: { type: 'string', description: 'Password' },
         role: { type: 'string', description: 'Role slug', default: 'admin' },
         config: { type: 'string', description: 'Path to astromech.config.ts' },
+        ...allowRemoteArgs,
     },
     async run({ args }) {
-        await loadConfig(args.config);
+        await loadConfig(args.config, toAllowRemoteOption(args));
 
         let { name, email, password } = args;
         const roleSlug = args.role ?? 'admin';

@@ -15,6 +15,7 @@ import {
     type FormsBeforeSubmitPayload,
 } from '../hooks/events';
 import { sendNotifications } from '../notifications/dispatch';
+import { consumeRateLimit } from './rate-limit';
 import type { SpamProvider } from '../spam/types';
 import { SUBMISSION_TYPE } from '../types';
 import type { FormsOptions, SubmissionMeta } from '../types';
@@ -48,11 +49,11 @@ export const FORM_ERROR_KEY = '_form';
 
 /** Build the service surface from the resolved plugin options. */
 export function buildFormsService(
-    options: Required<Pick<FormsOptions, 'storeMeta'>> & {
+    options: Required<Pick<FormsOptions, 'storeMeta' | 'rateLimit'>> & {
         spam?: SpamProvider | undefined;
     }
 ) {
-    const { spam, storeMeta } = options;
+    const { spam, storeMeta, rateLimit } = options;
 
     return {
         get: defineServiceMethod<{ slug: string }, PublicForm | null>({
@@ -85,6 +86,15 @@ export function buildFormsService(
             input: submitInputSchema,
             mutates: true,
             handler: async (input, ctx): Promise<SubmitResult> => {
+                // A caller with no connecting address is a trusted local one
+                // (CLI, MCP, in-process) and goes unmetered. `meta.ip` is not
+                // read here: it is caller-supplied, so keying on it would let a
+                // client mint a fresh counter per request.
+                const address = ctx.clientAddress;
+                if (rateLimit !== false && address !== undefined) {
+                    if (!consumeRateLimit(address, rateLimit)) return formError(TOO_MANY);
+                }
+
                 const form = await loadForm(ctx, input?.slug);
                 if (form === null) return formError(NOT_ACCEPTING);
 
@@ -185,6 +195,8 @@ const submitInputSchema = z.object({
 });
 
 const NOT_ACCEPTING = 'This form is not accepting submissions';
+
+const TOO_MANY = 'Too many submissions — please try again shortly';
 
 /**
  * `processFields` only reaches this port for DB-backed rules, which the form

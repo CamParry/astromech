@@ -38,12 +38,13 @@ export type {
     StoredNotification,
 } from './notifications/types';
 
-const DEFAULT_OPTIONS: Required<Pick<FormsOptions, 'storeMeta'>> = {
+const DEFAULT_OPTIONS: Required<Pick<FormsOptions, 'storeMeta' | 'rateLimit'>> = {
     storeMeta: true,
+    rateLimit: { limit: 20, windowMs: 60_000 },
 };
 
 export const forms = definePlugin((options?: FormsOptions) => {
-    const { storeMeta } = withDefaults(DEFAULT_OPTIONS, options);
+    const { storeMeta, rateLimit } = withDefaults(DEFAULT_OPTIONS, options);
     const spam = options?.spam;
 
     return {
@@ -54,7 +55,7 @@ export const forms = definePlugin((options?: FormsOptions) => {
         tables: [submissionsTable],
         migrations: migrationProvider,
         entries: [formEntryType, submissionEntryType],
-        service: buildFormsService({ storeMeta, spam }),
+        service: buildFormsService({ storeMeta, rateLimit, spam }),
         hookEvents: ['forms:beforeSubmit', 'forms:afterSubmit'],
         // Registered through the same public extension point a third party
         // would use, and only when the site configured a provider.

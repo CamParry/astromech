@@ -78,6 +78,18 @@ describe('uniqueSlug', () => {
     });
 });
 
+describe('existingIds', () => {
+    it('reports live and trashed rows as existing, and nothing else', async () => {
+        const live = await storage.create({ type: 'post', title: 'Live' });
+        const trashed = await storage.create({ type: 'post', title: 'Trashed' });
+        await storage.trash?.trash(trashed.id);
+
+        expect(await storage.existingIds?.([live.id, trashed.id, 'no-such-id'])).toEqual(
+            new Set([live.id, trashed.id])
+        );
+    });
+});
+
 describe('list', () => {
     it('paginates with total', async () => {
         for (let i = 0; i < 5; i++) {

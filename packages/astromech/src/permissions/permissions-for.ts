@@ -22,9 +22,9 @@ export type Permissions = {
  * Compose a permission guard over a role. A missing role (an unauthenticated
  * request on an optional-auth route) is allowed nothing.
  */
-export function permissionsFor(role: Role | undefined): Permissions {
+export function permissionsFor(role: Role | null | undefined): Permissions {
     const allows = (permission: Permission): boolean =>
-        role ? can(role, permission) : false;
+        role != null ? can(role, permission) : false;
 
     return {
         allows,

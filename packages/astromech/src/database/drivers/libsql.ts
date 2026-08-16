@@ -67,6 +67,14 @@ export function libsql(options?: LibsqlOptions) {
         return options?.url ?? process.env.DATABASE_URL ?? 'file:./database.db';
     }
 
+    /**
+     * Remote only when the url names a libsql server. `file:`, `:memory:` and a
+     * bare path are all local databases the developer's machine owns.
+     */
+    function isRemote(): boolean {
+        return /^(libsql|https?|wss?):/i.test(resolveUrl());
+    }
+
     function assertFileUrl(): void {
         const url = resolveUrl();
         if (!url.startsWith('file:')) {
@@ -81,6 +89,7 @@ export function libsql(options?: LibsqlOptions) {
         getInstance,
         createDialect,
         supportsTransactions: true,
+        isRemote,
 
         async dump(): Promise<DbDump> {
             assertFileUrl();

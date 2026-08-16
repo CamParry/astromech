@@ -141,6 +141,15 @@ describe('scopeMethods', () => {
         expect(() => scoped.read()).toThrow(PermissionDeniedError);
     });
 
+    it('treats a null role the same as an absent one', () => {
+        const permissions = permissionsFor(null);
+        expect(permissions.allows('settings:read')).toBe(false);
+        expect(permissions.allowsMethod(contracts.read)).toBe(false);
+
+        const scoped = scopeMethods(makeService(), contracts, permissions, 'settings');
+        expect(() => scoped.read()).toThrow(PermissionDeniedError);
+    });
+
     it('passes non-function values through unchanged', () => {
         const scoped = scopeMethods(
             makeService(),
@@ -371,6 +380,12 @@ describe('scopedServices', () => {
             expect((e as PermissionDeniedError).method).toBe('media.replace');
             expect((e as PermissionDeniedError).permission).toBe('media:upload');
         }
+    });
+
+    it('treats a null role the same as an absent one', () => {
+        const scoped = scopedServices(null);
+
+        expect(() => scoped.users.query()).toThrow(PermissionDeniedError);
     });
 });
 

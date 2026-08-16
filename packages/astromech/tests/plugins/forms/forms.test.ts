@@ -34,6 +34,7 @@ import '@/transport/local/index'; // registers the plugin client (setPluginClien
 import { localPlugins } from '@/transport/local/plugins';
 import { entriesService as localEntries } from '@/entries/service';
 import { forms, turnstile } from '@astromech/forms';
+import { resetRateLimit } from '../../../../plugins/forms/src/service/rate-limit';
 import type { FormsOptions, PublicForm, SubmitResult } from '@astromech/forms';
 import type { DB } from '@/database/types';
 import type {
@@ -107,6 +108,10 @@ async function setup(options?: FormsOptions): Promise<ResolvedConfig> {
     // `FIRST_PARTY_PLUGIN_MIGRATIONS`. Emitting the table from its `Table`
     // here instead would test a table the migrations might not actually
     // produce.
+    // The submit rate limit counts in a process-wide map. These calls carry no
+    // connecting address, so they go unmetered — the reset only clears a
+    // counter another test file may have left behind.
+    resetRateLimit();
     db = await createTestDb();
     recordEmails();
     return setupTestConfig(configWithForms(options));

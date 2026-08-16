@@ -4,7 +4,7 @@
  * Pure functions — no DB imports. Consumed by core-field-types.ts.
  */
 
-import type { Field, FieldValidator } from '@/types/fields';
+import type { Field, FieldValidationContext, FieldValidator } from '@/types/fields';
 import { isUnsafeHref } from './rich-text/safe-links';
 import { slugify } from '@/utilities/strings';
 
@@ -179,19 +179,49 @@ export const validateDate: FieldValidator = async (ctx) => {
 /**
  * A reference is stored as an id, or a list of ids when `multiple`.
  * Rejects a populated entry object, which is what a caller writing back an
- * expanded read would send. Whether the id resolves is not checked here.
+ * expanded read would send, and a relationship id whose entry is of a type other
+ * than the declared `target`. Whether the id resolves is NOT checked: a dangling
+ * id is dropped by the write pipeline, not rejected (decisions/0004).
  */
 export const validateReference: FieldValidator = async (ctx) => {
     const many = ctx.field.multiple === true;
+    const ids: string[] = [];
     if (!many) {
-        return typeof ctx.value === 'string' ? true : referenceMessage(ctx.value, false);
+        if (typeof ctx.value !== 'string') return referenceMessage(ctx.value, false);
+        ids.push(ctx.value);
+    } else {
+        if (!Array.isArray(ctx.value)) return referenceMessage(ctx.value, true);
+        for (const item of ctx.value) {
+            if (typeof item !== 'string') return referenceMessage(item, true);
+            ids.push(item);
+        }
     }
-    if (!Array.isArray(ctx.value)) return referenceMessage(ctx.value, true);
-    for (const item of ctx.value) {
-        if (typeof item !== 'string') return referenceMessage(item, true);
+    return validateTargetType(ctx, ids);
+};
+
+/**
+ * Reject an id that resolves to an entry of the wrong type. An id with no entry
+ * row is left alone: it is either dangling (the pipeline prunes it later) or
+ * held by a storage override this read cannot see, and neither is an error.
+ */
+async function validateTargetType(
+    ctx: FieldValidationContext,
+    ids: string[]
+): Promise<true | string> {
+    const target = ctx.field.target;
+    const read = ctx.reads.entryTypes;
+    if (ctx.field.type !== 'relationship') return true;
+    if (typeof target !== 'string' || target === '') return true;
+    if (read === undefined || ids.length === 0) return true;
+
+    const types = await read(ids);
+    for (const id of ids) {
+        const actual = types.get(id);
+        if (actual === undefined || actual === target) continue;
+        return `"${ctx.field.name}" expects a ${target}, but "${id}" is a ${actual}`;
     }
     return true;
-};
+}
 
 /** Name the populated-object case, since it is the one worth explaining. */
 function referenceMessage(value: unknown, many: boolean): string {

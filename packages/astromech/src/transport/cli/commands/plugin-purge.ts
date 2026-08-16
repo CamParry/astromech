@@ -15,6 +15,7 @@
 import { defineCommand } from 'citty';
 import { sql, type Kysely } from 'kysely';
 import { loadConfig, loadRawConfig } from '../config';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { getDb } from '@/database/registry';
 import { pluginNamespace } from '@/plugins/runtime/plugin-identity';
 import type { DB } from '@/database/types';
@@ -98,6 +99,7 @@ export default defineCommand({
             description: 'Plugin package name, e.g. @astromech/redirects',
         },
         config: { type: 'string', description: 'Path to astromech.config.ts' },
+        ...allowRemoteArgs,
     },
     async run({ args }) {
         const pkg = args.package;
@@ -116,7 +118,7 @@ export default defineCommand({
             process.exit(1);
         }
 
-        await loadConfig(args.config);
+        await loadConfig(args.config, toAllowRemoteOption(args));
         const result = await purgePlugin(getDb(), pkg);
 
         if (result.tables.length === 0) {

@@ -136,9 +136,16 @@ export type PluginContext = {
     user: User | null;
     /**
      * The acting user's role, or null outside a request context. Read from the
-     * request-scoped store, so it is the role `scopedServices` expects.
+     * request-scoped store, and passed straight to `scopedServices`.
      */
     role: Role | null;
+    /**
+     * The connecting address, set by the HTTP transport when the runtime exposes
+     * one it can trust. Absent for a CLI, MCP or in-process caller, and absent
+     * over HTTP where no trustworthy source exists — so it is an identity to
+     * meter traffic by, never proof of who the caller is.
+     */
+    clientAddress?: string | undefined;
     /**
      * The GLOBAL entries service — not scoped, not qualified. A plugin addresses
      * its own types explicitly, built from context rather than an import:

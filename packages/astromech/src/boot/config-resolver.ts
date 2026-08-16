@@ -62,11 +62,60 @@ function validateFieldTree(typeKey: string, nodes: Field[], insideTabs: boolean)
                             `\`tab\` children (got "${child.type}").`
                     );
                 }
-                validateFieldTree(typeKey, child.fields ?? [], false);
             }
+            validateFieldTree(typeKey, children, true);
             continue;
         }
         if (node.fields) validateFieldTree(typeKey, node.fields, false);
+    }
+}
+
+/**
+ * Reject two data fields that write the same key. The value namespace is flat —
+ * layout fields are unwrapped and `main` and `sidebar` share one value object —
+ * so a name repeated at any depth under them silently overwrites in storage.
+ * Layout names are excluded: they carry no value.
+ */
+function assertUniqueDataNames(typeKey: string, fields: ResolvedEntryFields): void {
+    assertUniqueInNamespace(typeKey, [
+        ...dataFieldsWithPath(fields.main, 'main'),
+        ...dataFieldsWithPath(fields.sidebar, 'sidebar'),
+    ]);
+}
+
+type DataFieldPath = { field: Field; path: string };
+
+/** The data fields one value namespace holds, each with where it was authored. */
+function dataFieldsWithPath(nodes: Field[], path: string): DataFieldPath[] {
+    const out: DataFieldPath[] = [];
+    for (const node of nodes) {
+        const nodePath = `${path}.${node.name}`;
+        if (LAYOUT_TYPES.has(node.type)) {
+            out.push(...dataFieldsWithPath(node.fields ?? [], nodePath));
+            continue;
+        }
+        out.push({ field: node, path: nodePath });
+    }
+    return out;
+}
+
+/** Throw on a repeated name, naming both paths, then check each nested namespace. */
+function assertUniqueInNamespace(typeKey: string, fields: DataFieldPath[]): void {
+    const seen = new Map<string, string>();
+    for (const { field, path } of fields) {
+        const first = seen.get(field.name);
+        if (first !== undefined) {
+            throw new Error(
+                `Astromech entry type "${typeKey}": duplicate field name ` +
+                    `"${field.name}" — \`${first}\` and \`${path}\` write the same key.`
+            );
+        }
+        seen.set(field.name, path);
+        // A nested field (group/repeater/blocks) owns one key and nests its
+        // children, so its subtree is a namespace of its own.
+        if (field.fields) {
+            assertUniqueInNamespace(typeKey, dataFieldsWithPath(field.fields, path));
+        }
     }
 }
 
@@ -103,6 +152,7 @@ function toResolvedEntryType(
     const resolvedFields = toResolvedFields(cfg.fields);
     validateFieldTree(typeKey, resolvedFields.main, false);
     validateFieldTree(typeKey, resolvedFields.sidebar, false);
+    assertUniqueDataNames(typeKey, resolvedFields);
 
     // Derive search from searchable fields if not explicitly set.
     let resolvedSearch = cfg.search;
@@ -128,6 +178,7 @@ function resolvePageFields(page: AdminPage): ResolvedEntryFields {
     const fields = toResolvedFields(page.fields);
     validateFieldTree(page.path, fields.main, false);
     validateFieldTree(page.path, fields.sidebar, false);
+    assertUniqueDataNames(page.path, fields);
     return fields;
 }
 

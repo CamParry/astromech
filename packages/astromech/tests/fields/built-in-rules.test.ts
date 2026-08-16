@@ -492,6 +492,86 @@ describe('validateReference', () => {
             'Must be a list of ids'
         );
     });
+
+    // The type check runs only where `entryTypes` is supplied. Existence never
+    // decides a reference: a dangling id is pruned by the write pipeline.
+    describe('target type', () => {
+        const entryTypes = (rows: Record<string, string>) => ({
+            isUnique: async () => true,
+            entryTypes: async (ids: string[]) =>
+                new Map(ids.filter((id) => id in rows).map((id) => [id, rows[id]!])),
+        });
+
+        it('accepts an id of the declared target type', async () => {
+            expect(
+                await validateReference({
+                    ...ctx('abc'),
+                    field: single,
+                    reads: entryTypes({ abc: 'post' }),
+                })
+            ).toBe(true);
+        });
+
+        it('rejects an id resolving to another type', async () => {
+            expect(
+                await validateReference({
+                    ...ctx('abc'),
+                    field: single,
+                    reads: entryTypes({ abc: 'author' }),
+                })
+            ).toBe('"f" expects a post, but "abc" is a author');
+        });
+
+        it('rejects the wrong type inside a multiple list', async () => {
+            expect(
+                await validateReference({
+                    ...ctx(['a', 'b']),
+                    field: many,
+                    reads: entryTypes({ a: 'post', b: 'author' }),
+                })
+            ).toBe('"f" expects a post, but "b" is a author');
+        });
+
+        it('accepts a dangling id — no entry row to disagree with', async () => {
+            expect(
+                await validateReference({
+                    ...ctx('gone'),
+                    field: single,
+                    reads: entryTypes({}),
+                })
+            ).toBe(true);
+        });
+
+        it('skips the check when reads supply no entryTypes', async () => {
+            expect(
+                await validateReference({
+                    ...ctx('abc'),
+                    field: single,
+                    reads: { isUnique: async () => true },
+                })
+            ).toBe(true);
+        });
+
+        it('leaves a media field shape-checked only', async () => {
+            expect(
+                await validateReference({
+                    ...ctx('abc'),
+                    field: { name: 'f', type: 'media' },
+                    reads: entryTypes({ abc: 'post' }),
+                })
+            ).toBe(true);
+        });
+
+        it('skips a relationship declaring no target', async () => {
+            expect(
+                await validateReference({
+                    ...ctx('abc'),
+                    field: { name: 'f', type: 'relationship' },
+                    reads: entryTypes({ abc: 'post' }),
+                })
+            ).toBe(true);
+        });
+    });
 });
 
 // ---------------------------------------------------------------------------

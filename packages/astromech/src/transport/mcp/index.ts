@@ -98,10 +98,11 @@ function describeConfirm(confirm: ConfirmOptions | undefined): string {
 export async function runMcpServer(
     configPath?: string,
     filter: MethodFilter = {},
-    confirm?: ConfirmOptions
+    confirm?: ConfirmOptions,
+    options?: { allowRemote?: boolean }
 ): Promise<void> {
     const raw = await loadRawConfig(configPath);
-    const resolved = await loadConfig(configPath);
+    const resolved = await loadConfig(configPath, options);
     await registerPluginRuntime(raw, resolved);
 
     const manifest = JSON.parse(
@@ -115,6 +116,10 @@ export async function runMcpServer(
         `[astromech mcp] ready: ${tools.length} tools, ${skipped.length} skipped, ` +
             `${excluded.length} excluded by surface, ` +
             `confirm: ${describeConfirm(confirm)}`
+    );
+    console.error(
+        `[astromech mcp] database: ${raw.db.type} ` +
+            `(${raw.db.isRemote?.() === true ? 'remote' : 'local'})`
     );
 
     // Skipped and excluded stay distinct: a skip is a method that could not be

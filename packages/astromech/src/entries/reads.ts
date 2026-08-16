@@ -1,4 +1,5 @@
 import type { EntryStorage } from './storage/types';
+import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { fieldReadsFromRecords } from '@/fields/field-reads';
 import type { FieldReads } from '@/types/fields';
 
@@ -26,5 +27,6 @@ export function createEntryFieldReads(
         getId: (record) => record.id,
         getFields: (record) => (record.fields ?? {}) as Record<string, unknown>,
         excludeId: scope.excludeId,
+        entryTypes: (ids) => existingEntryTypes(ids),
     });
 }
