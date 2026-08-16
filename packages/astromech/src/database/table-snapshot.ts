@@ -38,6 +38,7 @@ import {
 } from '@astromech/schema-engine';
 import type {
     ColumnKind,
+    ColumnRuntime,
     IndexSpec,
     ReferenceTarget,
     Table,
@@ -69,14 +70,21 @@ const SQLITE_STORAGE_TYPE: Record<ColumnKind, 'text' | 'integer' | 'real'> = {
     reference: 'text',
 };
 
-/** The storage column type a column kind renders to, per dialect. */
+/**
+ * The storage column type a column renders to, per dialect. Takes the column
+ * rather than its kind because a `storage: 'seconds'` timestamp stores an
+ * INTEGER where an ISO one stores TEXT.
+ */
 export function columnType(
-    kind: ColumnKind,
+    column: ColumnRuntime,
     dialect: SqlDialect
 ): 'text' | 'integer' | 'real' {
     switch (dialect) {
         case 'sqlite':
-            return SQLITE_STORAGE_TYPE[kind];
+            if (column.kind === 'timestamp' && column.timestampStorage === 'seconds') {
+                return 'integer';
+            }
+            return SQLITE_STORAGE_TYPE[column.kind];
     }
 }
 
@@ -144,7 +152,7 @@ export function toSnapshotTable(table: Table, dialect: SqlDialect): SnapshotTabl
         key,
         name: toSnakeCase(key),
         kind: col.kind,
-        type: columnType(col.kind, dialect),
+        type: columnType(col, dialect),
         notNull: col.notNull,
         primaryKey: col.primaryKey,
         ...(col.sqlDefault !== undefined && {

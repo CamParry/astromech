@@ -56,6 +56,19 @@ describe('tableAdminMeta', () => {
         ]);
     });
 
+    it('projects a seconds-storage timestamp as datetime, like an ISO one', () => {
+        const withSeconds = defineTable('withSeconds', ({ col }) => ({
+            id: col.id(),
+            createdAt: col.timestamp({ notNull: true, storage: 'seconds' }),
+        }));
+        expect(tableAdminMeta(withSeconds)).toContainEqual({
+            name: 'createdAt',
+            cellKind: 'date',
+            fieldType: 'datetime',
+            nullable: false,
+        });
+    });
+
     it('resolves referenceTable for a string reference target', () => {
         const withUserRef = defineTable('withUserRef', ({ col }) => ({
             id: col.id(),
