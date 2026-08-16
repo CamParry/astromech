@@ -1,22 +1,8 @@
-/**
- * API Route Handler
- *
- * Delegates all requests to the Hono app after stripping the base API path.
- * Mounted at `${basePath}/api/[...path]` by Astromech's route registration.
- *
- * The Astro catch-all provides `params.path` as the portion after the base,
- * e.g. for `/cms/api/collections/posts` → params.path = `collections/posts`.
- * We reconstruct an absolute path so Hono's router matches correctly.
- */
+/** The Astro entrypoint for the API catch-all: hand the request to the app. */
 
 import type { APIRoute } from 'astro';
-import { app } from '@/transport/http/index';
+import { getAstromech } from '@/boot/application';
 
 export const prerender = false;
 
-export const ALL: APIRoute = ({ params, request }) => {
-    const path = `/${params.path ?? ''}`;
-    const original = new URL(request.url);
-    const rewritten = new URL(path + original.search, original);
-    return app.fetch(new Request(rewritten, request));
-};
+export const ALL: APIRoute = async ({ request }) => (await getAstromech()).fetch(request);

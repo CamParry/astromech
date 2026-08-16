@@ -52,8 +52,8 @@ has failed even if the gate is green.
 
 ## Where this stands
 
-Stages 1, 2, 3 and 4 are on `main`, and stage 3 is complete. **Stage 5 is next
-and is unblocked.**
+Stages 1 to 5 are on `main`. **Stage 6 is next**, and with 5 landed, stages 6,
+7, 8, 9, 10, 11 and 12 are all unblocked and independent of each other.
 
 Two things learned the expensive way, both worth carrying into every remaining
 stage:
@@ -224,13 +224,13 @@ breaking config change, so `check:config` and `check:boot` both matter here.
 
 The behavioural core of the HTTP work. Files stay where they are.
 
-- [ ] `transport/http/index.ts` exports `createHttpApp(config): OpenAPIHono`
+- [x] `transport/http/index.ts` exports `createHttpApp(config): OpenAPIHono`
       instead of a module-scope `export const app`. Routes register at their
       **real absolute paths** from the resolved config.
-- [ ] The per-request `Astromech.config` reads inside its middlewares become
+- [x] The per-request `Astromech.config` reads inside its middlewares become
       construction-time values, since config now exists when the app is built.
-- [ ] `app.fetch(request)` on the instance, wired in the boot lifecycle.
-- [ ] `src/routes/api.ts` loses the URL surgery and becomes one line. It stays
+- [x] `app.fetch(request)` on the instance, wired in the boot lifecycle.
+- [x] `src/routes/api.ts` loses the URL surgery and becomes one line. It stays
       in `src/routes/` for now; stage 8 moves it.
 
 **Cautions.** This is the stage that makes the surgery deletable. Moving the

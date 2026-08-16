@@ -3,14 +3,13 @@
  * `GET /me` — plus the `requireAuth` boundary they sit either side of.
  *
  * These are the only route tests that mount the whole `transport/http` app, so
- * they are also where the 401 for an unauthenticated request is pinned. The app
- * reads `Astromech.config` at import time, so it is imported after the config
- * is in place.
+ * they are also where the 401 for an unauthenticated request is pinned.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { createHttpApp } from '@/transport/http/index';
 import { Astromech } from '@/transport/local/index';
 import type { Role, User } from '@/types/index';
 
@@ -40,12 +39,14 @@ function signIn(user: User | null): void {
     });
 }
 
+/** The API prefix the current app registered its routes under. */
+let api: string;
+
 async function freshApp(): Promise<OpenAPIHono> {
     await createTestDb();
-    setupTestConfig(makeTestConfig());
-    vi.resetModules();
-    const mod = await import('@/transport/http/index');
-    return mod.app as unknown as OpenAPIHono;
+    const resolved = setupTestConfig(makeTestConfig());
+    api = `${resolved.basePath}/api`;
+    return createHttpApp(resolved) as unknown as OpenAPIHono;
 }
 
 beforeEach(() => {
@@ -53,14 +54,10 @@ beforeEach(() => {
     signIn(null);
 });
 
-afterEach(() => {
-    vi.resetModules();
-});
-
 describe('GET /setup/check', () => {
     it('reports needsSetup: true on an empty install, with no session', async () => {
         const app = await freshApp();
-        const res = await app.request('/setup/check');
+        const res = await app.request(`${api}/setup/check`);
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({ needsSetup: true });
     });
@@ -68,7 +65,7 @@ describe('GET /setup/check', () => {
     it('reports needsSetup: false once a user exists', async () => {
         const app = await freshApp();
         await Astromech.users.create({ email: 'first@test.dev', name: 'First' });
-        const res = await app.request('/setup/check');
+        const res = await app.request(`${api}/setup/check`);
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({ needsSetup: false });
     });
@@ -77,7 +74,7 @@ describe('GET /setup/check', () => {
 describe('GET /me', () => {
     it('401s without a session', async () => {
         const app = await freshApp();
-        const res = await app.request('/me');
+        const res = await app.request(`${api}/me`);
         expect(res.status).toBe(401);
         const body = (await res.json()) as { error: { code: string; message: string } };
         expect(body.error.code).toBe('UNAUTHORIZED');
@@ -92,7 +89,7 @@ describe('GET /me', () => {
         });
         signIn(user);
 
-        const res = await app.request('/me');
+        const res = await app.request(`${api}/me`);
         expect(res.status).toBe(200);
         const body = (await res.json()) as { data: { user: User; role: Role } };
         expect(Object.keys(body.data).sort()).toEqual(['role', 'user']);
@@ -111,7 +108,7 @@ describe('requireAuth covers every mounted domain router', () => {
         ['/notifications'],
     ])('401s %s without a session', async (path) => {
         const app = await freshApp();
-        const res = await app.request(path);
+        const res = await app.request(`${api}${path}`);
         expect(res.status).toBe(401);
     });
 
@@ -120,10 +117,10 @@ describe('requireAuth covers every mounted domain router', () => {
         const user = await Astromech.users.create({ email: 'x@test.dev', name: 'X' });
         signIn(user);
 
-        const res = await app.request('/nope');
+        const res = await app.request(`${api}/nope`);
         expect(res.status).toBe(404);
         const body = (await res.json()) as { error: { code: string; message: string } };
         expect(body.error.code).toBe('NOT_FOUND');
-        expect(body.error.message).toBe('Route GET /nope not found');
+        expect(body.error.message).toBe(`Route GET ${api}/nope not found`);
     });
 });

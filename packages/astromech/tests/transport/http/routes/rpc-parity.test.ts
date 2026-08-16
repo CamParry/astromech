@@ -6,12 +6,9 @@
  * manifest method is either reached or refused with the reason its dispatcher
  * declares, with no third outcome. A method the route quietly 404s or 500s is a
  * method the manifest advertises and the transport cannot serve.
- *
- * The app reads `Astromech.config` at import time, so it is imported after the
- * config and the manifest are in place.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
@@ -19,6 +16,7 @@ import { adminRole, roleWith } from '@tests/mount-router';
 import { setMethodManifest } from '@/codegen/manifest-registry';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { buildScopedDispatch } from '@/transport/tools/dispatch';
+import { createHttpApp } from '@/transport/http/index';
 import { Astromech } from '@/transport/local/index';
 import type {
     AstromechConfig,
@@ -77,6 +75,8 @@ function testConfig(): AstromechConfig {
 
 let manifest: MethodManifest;
 let signedInUser: User;
+/** The API prefix the current app registered its routes under. */
+let api: string;
 
 /** Answer `requireAuth` with `user` under `role`, or with no session at all. */
 function signIn(user: User | null, role: Role): void {
@@ -104,14 +104,13 @@ async function freshApp(role: Role = adminRole): Promise<OpenAPIHono> {
     signedInUser = await Astromech.users.create({ email: 'rpc@test.dev', name: 'RPC' });
     signIn(signedInUser, role);
 
-    vi.resetModules();
-    const mod = await import('@/transport/http/index');
-    return mod.app as unknown as OpenAPIHono;
+    api = `${resolved.basePath}/api`;
+    return createHttpApp(resolved) as unknown as OpenAPIHono;
 }
 
 /** POST one method id, percent-encoded so a qualified entry type id survives. */
 async function call(app: OpenAPIHono, id: string, args: unknown = {}): Promise<Response> {
-    return app.request(`/rpc/${encodeURIComponent(id)}`, {
+    return app.request(`${api}/rpc/${encodeURIComponent(id)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(args),
@@ -122,10 +121,6 @@ type ErrorBody = { error: { code: string; message: string } };
 
 beforeEach(() => {
     mockResolveSessionUser.mockReset();
-});
-
-afterEach(() => {
-    vi.resetModules();
 });
 
 // ============================================================================

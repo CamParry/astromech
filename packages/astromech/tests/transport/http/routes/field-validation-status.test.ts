@@ -103,9 +103,9 @@ function memoryStorage(): StorageDriver {
 }
 
 /**
- * Mount the real routers exactly as `transport/http/index.ts` does — including
- * `app.onError(onError)`, which is the seam under test — behind a stub that
- * injects an admin user/role (Better Auth sessions are out of scope here).
+ * Mount the real routers with the real `app.onError(onError)`, which is the seam
+ * under test, behind a stub that injects an admin user/role (Better Auth
+ * sessions are out of scope here).
  */
 function mountedApp(): OpenAPIHono<{ Variables: AuthVariables }> {
     const app = new OpenAPIHono<{ Variables: AuthVariables }>();

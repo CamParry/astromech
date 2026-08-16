@@ -19,6 +19,7 @@ import { runBootPhases } from '@/boot/lifecycle';
 import { getSchedulerDriver } from '@/cron/registry';
 import { onTick } from '@/cron/runner';
 import { Astromech as services } from '@/transport/local/index';
+import { createHttpApp } from '@/transport/http/index';
 import { createRegistry } from '@/utilities/registry';
 
 export type Astromech = {
@@ -31,6 +32,9 @@ export type Astromech = {
     notifications: NotificationsService;
     plugins: PluginServiceNamespace;
 
+    /** Serve one HTTP request from the application's own routes. */
+    fetch(request: Request): Promise<Response>;
+
     /** Run the cron jobs due at `at`. Defaults to now. */
     scheduled(at?: Date): Promise<void>;
 
@@ -40,9 +44,9 @@ export type Astromech = {
 
 type Slot = { config: AstromechConfig; app: Promise<Astromech> };
 
-// A `globalThis` slot rather than a module-level one: tsup emits several entry
-// chunks, and a module-scoped memo is duplicated per chunk, so two chunks would
-// each boot their own runtime.
+// A `globalThis` slot rather than a module-level one: the package ships two
+// tsup builds and six `exports` subpaths that can resolve to `src` or `dist`, so
+// one module can be instantiated more than once. See `utilities/registry.ts`.
 const slot = createRegistry<Slot>('application', { required: false });
 
 /**
@@ -89,6 +93,7 @@ export function getAstromech(): Promise<Astromech> {
 /** Run the phases, then assemble the instance from what they registered. */
 async function boot(config: AstromechConfig): Promise<Astromech> {
     const resolved = await runBootPhases(config);
+    const http = createHttpApp(resolved);
 
     return {
         config: resolved,
@@ -98,6 +103,7 @@ async function boot(config: AstromechConfig): Promise<Astromech> {
         settings: services.settings,
         notifications: services.notifications,
         plugins: services.plugins,
+        fetch: async (request: Request): Promise<Response> => http.fetch(request),
         scheduled: (at?: Date): Promise<void> => onTick(at ?? new Date()),
         startScheduler: async (): Promise<void> => {
             await getSchedulerDriver()?.start(onTick);
