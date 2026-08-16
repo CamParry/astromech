@@ -128,9 +128,15 @@ that catches a mismatch.
 - [x] `generateMethodManifest` returns the structure, not a string. Boot
       currently `JSON.parse`s what the generator just serialised; serialisation
       moves to the two edges that write files, under one failure policy.
-- [ ] Registry slots split: instance state (db, storage, email, ai, image,
-      scheduler, plugin runtime, manifest, config) becomes typed fields;
-      process-global stays on `globalThis`.
+- [x] Registry slots split. As written this said every registry (db, storage,
+      email, ai, image, scheduler, plugin runtime, manifest, config) becomes a
+      typed field on the instance, which contradicts the spec's constraint that
+      the per-domain registries stay **underneath** the instance. The spec wins
+      by its own precedence rule, and it is also the right answer: `getDb()` as
+      an instance field puts `await getAstromech()` in every storage call site,
+      which is the dependency-injection rework the constraint forbids. Done as:
+      no new untyped global (net −1), the new slot typed, and `config` a typed
+      field on the instance.
 - [x] Delete `boot/ensure-booted.ts`, the deprecated `runScheduledJobs`, the
       MCP's hand-assembled boot sequence, and `boot/plugin-sources.ts` with
       `assertPluginSourcesReachable` (the guard existed to catch half-booted
@@ -159,6 +165,14 @@ broken.
 - [ ] Export `getAstromech` and `createAstromech` from the root barrel.
 - [ ] Investigate Q9 (`users/auth.ts`'s module-scope `let _auth`) while in the
       file, and state the rule for when a module-scope singleton is permitted.
+- [ ] Close the split-brain stage 2 opened: the virtual module computes its own
+      `resolveConfig(rawConfig)` eagerly and the `resolve config` phase computes
+      another, so a serving process holds two structurally identical
+      `ResolvedConfig` objects. Migrating the readers deletes the first. Nothing
+      compares one by identity today, which is the only reason it is survivable.
+- [ ] Drop the lazy `import('@/transport/local/index')` in `boot/application.ts`
+      and its four-line comment. It is dynamic only because that module imports
+      `virtual:` at module scope; this stage removes the cause.
 - [ ] Done when the only `virtual:` importers left are the entry files that
       supply config, and `check:node-imports` passes.
 
