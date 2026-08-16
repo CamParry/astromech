@@ -1,9 +1,15 @@
 # Baseline defects
 
 Live defects in shipped code, found by auditing `roadmap/` and `backlog.md` for
-outstanding work rather than by a bug report. Built on `fix/baseline-defects`.
-Each one is small and independent; they share a file because they share a
-branch, not because they share a cause.
+outstanding work rather than by a bug report. Each one is small and
+independent; they share a file because they shared a branch, not because they
+share a cause.
+
+Two of them were invisible until something tried to assert what the code
+believed. The forms rate limit is the sharper lesson: the first version keyed on
+a caller-supplied field that nothing populates, so it pooled every submission on
+the site into one counter while leaving an attacker who set the field unmetered.
+It passed the gate. Review caught it, not the tests.
 
 - [x] **A `null` role did not typecheck against the scoped surfaces.**
       `ctx.role` on `PluginContext` is `Role | null`, but `scopedServices`,
