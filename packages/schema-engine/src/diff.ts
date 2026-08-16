@@ -242,6 +242,43 @@ function diffTable(
     }
 }
 
+/**
+ * A rebuild of a table another table references `ON DELETE cascade` is refused:
+ * the rebuild's `DROP TABLE` fires those cascades and deletes the children's
+ * rows. `PRAGMA defer_foreign_keys` defers enforcement, not cascade actions, so
+ * nothing at apply time catches it.
+ */
+function cascadeRebuildErrors(
+    rebuildOps: TableOp[],
+    tables: Record<string, SnapshotTable>
+): string[] {
+    const errors: string[] = [];
+    for (const op of rebuildOps) {
+        if (op.kind !== 'rebuildTable') continue;
+        const children = Object.values(tables)
+            .filter(
+                (t) =>
+                    t.name !== op.table.name &&
+                    t.fks.some(
+                        (fk) =>
+                            fk.targetTable === op.table.name &&
+                            fk.onDelete.toLowerCase() === 'cascade'
+                    )
+            )
+            .map((t) => t.name);
+        if (children.length === 0) continue;
+        errors.push(
+            `table "${op.table.name}" needs a rebuild, and ${children
+                .map((name) => `"${name}"`)
+                .join(', ')} reference${children.length === 1 ? 's' : ''} it ` +
+                `ON DELETE cascade — the rebuild's DROP TABLE fires those cascades and ` +
+                `deletes their rows (defer_foreign_keys defers enforcement, not cascade ` +
+                `actions). Hand-author the ops so the children survive`
+        );
+    }
+    return errors;
+}
+
 /** Diff two snapshots into the ordered `TableOp`s (+ errors/warnings) that
  *  carry `prev` to `next`. `prev === null` means "no prior snapshot" — every
  *  table in `next` is a fresh `createTable`. */
@@ -341,6 +378,8 @@ export function diffSnapshots(prev: Snapshot | null, next: Snapshot): DiffResult
 
         diffTable(prevTable, table, acc);
     }
+
+    errors.push(...cascadeRebuildErrors(acc.rebuildOps, nextTables));
 
     return {
         ops: [
