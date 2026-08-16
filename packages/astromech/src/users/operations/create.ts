@@ -2,9 +2,9 @@ import { getConfig } from '@/config/registry';
 import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
 import { ValidationError } from '@/errors/validation';
-import { fieldReadsFromRecords } from '@/fields/field-reads';
+import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenFieldNodes } from '@/fields/flatten';
-import { processFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/pipeline';
 import { getCurrentUser } from '@/request-context/index';
 import type { JsonObject, User } from '@/types/index';
 import { createUserSchema } from '../schema';
@@ -26,14 +26,14 @@ export async function create(params: {
     const config = getConfig();
     const fieldDefs = flattenFieldNodes(config.users?.fields ?? []);
     const resourceValidate = config.users?.validate;
-    const processedFields = await processFields(
+    const processedFields = await parseFields(
         (validated.fields ?? {}) as Record<string, unknown>,
         fieldDefs,
         {
             operation: 'create',
-            host: { kind: 'user', record: null },
+            resource: { kind: 'user', record: null },
             user: getCurrentUser(),
-            reads: fieldReadsFromRecords({
+            lookups: fieldLookupsFromRecords({
                 load: async () => (await query({ limit: 'all' })).data,
                 getId: (r) => r.id,
                 getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
@@ -51,7 +51,7 @@ export async function create(params: {
             processedFields.form
         );
     }
-    // After `processFields` (its minted item ids are what the traversal
+    // After `parseFields` (its minted item ids are what the traversal
     // needs) and before the write, so the index derives from pruned values.
     const { values: fields } = await pruneDanglingRelations(
         fieldDefs,

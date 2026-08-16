@@ -90,7 +90,7 @@ export type ValidationSeverity = 'error' | 'warning';
  * `custom`, which is an imperative server-only validator. `{ required: true }`
  * is intentionally absent: required-ness is the `Field.required` flag,
  * declared in exactly one place. `{ unique: true }` resolves to
- * `ctx.reads.isUnique(field, value)` in the pipeline.
+ * `ctx.lookups.isUnique(field, value)` in the pipeline.
  */
 export type ValidationRule = (
     | { minLength: number }
@@ -138,16 +138,16 @@ export type FieldErrors = Record<string, string[]>;
  * draft can be saved half-finished without losing correctness checks on what
  * IS filled in.
  */
-export type ValidationStage = 'save' | 'publish';
+export type ValidationMode = 'partial' | 'complete';
 
 /**
- * Read access handed to a field validator for async checks (uniqueness,
- * references). Exposes the sanctioned read paths for the field's host domain
+ * Lookups handed to a field validator for async checks (uniqueness,
+ * references). Exposes the sanctioned reads for the field's resource
  * (built on the entry-access port for entries; per-domain reads elsewhere). The
  * common uniqueness case is the one-line `isUnique` helper.
  */
-export type FieldReads = {
-    /** True when no other record in the host scope holds `value` for `field`. */
+export type FieldLookups = {
+    /** True when no other record of the same resource holds `value` for `field`. */
     isUnique: (field: Field, value: unknown) => Promise<boolean>;
     /**
      * The entry type each id resolves to, for the relationship target-type
@@ -159,9 +159,9 @@ export type FieldReads = {
 };
 
 /**
- * Context passed to a `FieldValidator`. Host-generic — works for entries, media,
+ * Context passed to a `FieldValidator`. Resource-generic — works for entries, media,
  * users, and settings, not just entries. Cross-field rules read siblings off
- * `values`; the host record is available raw on `host.record`.
+ * `values`; the current record is available raw on `resource.record`.
  */
 export type FieldValidationContext = {
     /** The field's own value. */
@@ -183,11 +183,11 @@ export type FieldValidationContext = {
      * `custom` validator never has to guess — even though the pipeline's callers
      * may leave it out and take the `'publish'` default.
      */
-    stage: ValidationStage;
-    host: { kind: ResourceType; record: unknown };
+    validation: ValidationMode;
+    resource: { kind: ResourceType; record: unknown };
     user: User | null;
-    /** Read access for async checks. */
-    reads: FieldReads;
+    /** Lookups for async checks. */
+    lookups: FieldLookups;
 };
 
 /**
@@ -219,10 +219,10 @@ export type ResourceValidationContext = {
     values: Record<string, unknown>;
     definitions: Field[];
     operation: 'create' | 'update';
-    stage: ValidationStage;
-    host: { kind: ResourceType; record: unknown };
+    validation: ValidationMode;
+    resource: { kind: ResourceType; record: unknown };
     user: User | null;
-    reads: FieldReads;
+    lookups: FieldLookups;
 };
 
 /**

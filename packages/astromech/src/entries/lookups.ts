@@ -1,20 +1,20 @@
 import type { EntryStorage } from './storage/types';
 import { existingEntryTypes } from '@/database/storage/resource-existence';
-import { fieldReadsFromRecords } from '@/fields/field-reads';
-import type { FieldReads } from '@/types/fields';
+import { fieldLookupsFromRecords } from '@/fields/field-lookups';
+import type { FieldLookups } from '@/types/fields';
 
 /**
- * Field reads for entry validation. `isUnique` checks no OTHER entry of
+ * Field lookups for entry validation. `isUnique` checks no OTHER entry of
  * the same type+locale holds `value` for `field`. NOTE: entry fields live in one
  * JSON column (no per-field index), so this scans the type+locale in memory —
  * fine for now (no core field is unique by default); a JSON-indexed query is a
  * later optimisation.
  */
-export function createEntryFieldReads(
+export function createEntryLookups(
     storage: EntryStorage,
     scope: { type: string; locale: string; excludeId?: string | readonly string[] }
-): FieldReads {
-    return fieldReadsFromRecords({
+): FieldLookups {
+    return fieldLookupsFromRecords({
         load: async () => {
             const { data } = await storage.list({
                 type: scope.type,

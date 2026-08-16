@@ -1,12 +1,12 @@
-import type { Field, FieldReads } from '@/types/fields';
+import type { Field, FieldLookups } from '@/types/fields';
 import { valuesEqual } from '@/utilities/values-equal';
 
 /**
- * Build a FieldReads from a lazy record loader. isUnique scans the loaded
+ * Build a FieldLookups from a lazy record loader. isUnique scans the loaded
  * records for another holding the same value for the field. In-memory — fine
  * while field blobs live in a single JSON column.
  */
-export function fieldReadsFromRecords<R>(opts: {
+export function fieldLookupsFromRecords<R>(opts: {
     load: () => Promise<R[]>;
     getId: (record: R) => string | undefined;
     getFields: (record: R) => Record<string, unknown>;
@@ -21,7 +21,7 @@ export function fieldReadsFromRecords<R>(opts: {
      * the database capability. Omit it and the target-type check is skipped.
      */
     entryTypes?: ((ids: string[]) => Promise<Map<string, string>>) | undefined;
-}): FieldReads {
+}): FieldLookups {
     const excluded =
         opts.excludeId === undefined
             ? []

@@ -7,9 +7,9 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import type { Field, ValidationStage } from '@/types/fields';
+import type { Field, ValidationMode } from '@/types/fields';
 import type { ResourceType } from '@/types/domain';
-import { processFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/pipeline';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -17,19 +17,19 @@ import { processFields } from '@/fields/pipeline';
 
 type CtxOverrides = Partial<{
     operation: 'create' | 'update';
-    stage: ValidationStage;
+    validation: ValidationMode;
     collectWarnings: boolean;
-    host: { kind: ResourceType; record: unknown };
+    resource: { kind: ResourceType; record: unknown };
     user: null;
-    reads: { isUnique: (field: Field, value: unknown) => Promise<boolean> };
+    lookups: { isUnique: (field: Field, value: unknown) => Promise<boolean> };
 }>;
 
 function fakeCtx(overrides: CtxOverrides = {}) {
     return {
         operation: 'create' as const,
-        host: { kind: 'entry' as const, record: {} },
+        resource: { kind: 'entry' as const, record: {} },
         user: null,
-        reads: { isUnique: async () => true },
+        lookups: { isUnique: async () => true },
         ...overrides,
     };
 }
@@ -50,7 +50,7 @@ describe('warning severity', () => {
     });
 
     it('collectWarnings → the failure lands in warnings, not errors', async () => {
-        const { errors, warnings } = await processFields(
+        const { errors, warnings } = await parseFields(
             { slug: 'toolongslug' },
             [slug],
             fakeCtx({ collectWarnings: true })
@@ -60,7 +60,7 @@ describe('warning severity', () => {
     });
 
     it('collectWarnings omitted → nothing is reported at all', async () => {
-        const { errors, warnings } = await processFields(
+        const { errors, warnings } = await parseFields(
             { slug: 'toolongslug' },
             [slug],
             fakeCtx()
@@ -71,7 +71,7 @@ describe('warning severity', () => {
 
     it('collectWarnings false → the warning rule is never evaluated', async () => {
         const ran = vi.fn(async () => 'Advisory');
-        const { warnings } = await processFields(
+        const { warnings } = await parseFields(
             { slug: 'anything' },
             [
                 field({
@@ -93,7 +93,7 @@ describe('warning severity', () => {
 
 describe('one message per severity', () => {
     it('an error rule and a warning rule both report, one message each', async () => {
-        const { errors, warnings } = await processFields(
+        const { errors, warnings } = await parseFields(
             { code: 'ab' },
             [
                 field({
@@ -117,7 +117,7 @@ describe('one message per severity', () => {
 
     it('two failing warning rules → only the first is reported', async () => {
         const second = vi.fn(async () => 'Second');
-        const { warnings } = await processFields(
+        const { warnings } = await parseFields(
             { code: 'ab' },
             [
                 field({
@@ -143,7 +143,7 @@ describe('one message per severity', () => {
 describe('error-only checks suppress warnings', () => {
     it('required + empty → the error, and no warning', async () => {
         const advisory = vi.fn(async () => 'Advisory');
-        const { errors, warnings } = await processFields(
+        const { errors, warnings } = await parseFields(
             { title: '' },
             [
                 field({
@@ -153,7 +153,7 @@ describe('error-only checks suppress warnings', () => {
                     validation: [{ custom: advisory, severity: 'warning' }],
                 }),
             ],
-            fakeCtx({ stage: 'publish', collectWarnings: true })
+            fakeCtx({ validation: 'complete', collectWarnings: true })
         );
         expect(errors.title).toEqual(['This field is required']);
         expect(warnings).toEqual({});
@@ -161,7 +161,7 @@ describe('error-only checks suppress warnings', () => {
     });
 
     it("the type's own validator suppresses a later author warning", async () => {
-        const { errors, warnings } = await processFields(
+        const { errors, warnings } = await parseFields(
             { website: 'not-a-url' },
             [
                 field({
@@ -189,7 +189,7 @@ describe('error-only checks suppress warnings', () => {
 
 describe('nested warnings', () => {
     it('a warning inside a repeater keys by the item path', async () => {
-        const { errors, warnings } = await processFields(
+        const { errors, warnings } = await parseFields(
             { sections: [{ _id: 'a1', title: 'toolongtitle' }] },
             [
                 field({

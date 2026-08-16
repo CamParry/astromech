@@ -15,11 +15,11 @@ import { deepEqual } from '../internal/deep-equal';
 import { runBulk } from '../internal/bulk';
 import { hasEntryHooks, loadEntrySnapshot } from '../internal/hooks';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility';
-import { createEntryFieldReads } from '../reads';
+import { createEntryLookups } from '../lookups';
 import { resolveEntryType } from '@/utilities/entry-type-ids';
-import { entryValidationStage } from '../validation-stage.shared';
+import { entryValidationMode } from '../validation-mode.shared';
 import { flattenEntryFields } from '@/fields/flatten';
-import { processFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/pipeline';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { ValidationError } from '@/errors/index';
 import { getConfig } from '@/config/registry';
@@ -76,17 +76,17 @@ export async function updateOne(
             patch
         );
 
-        const processed = await processFields(merged, fieldDefs, {
+        const processed = await parseFields(merged, fieldDefs, {
             operation: 'update',
             // An update that omits `status` keeps the row's current one, so
             // editing an already-published entry still enforces completeness.
-            stage: entryValidationStage({
+            validation: entryValidationMode({
                 status: validatedData.status ?? currentEntry.status,
                 hasStatuses: entryType ? entryType.capabilities.statuses !== false : true,
             }),
-            host: { kind: 'entry', record: currentEntry },
+            resource: { kind: 'entry', record: currentEntry },
             user: getCurrentUser(),
-            reads: createEntryFieldReads(storage, {
+            lookups: createEntryLookups(storage, {
                 type,
                 locale: currentEntry.locale,
                 excludeId: excludeIds,
@@ -97,7 +97,7 @@ export async function updateOne(
         if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
             throw ValidationError.fromFieldErrors(processed.errors, processed.form);
         }
-        // After `processFields` (its minted item ids are what the traversal
+        // After `parseFields` (its minted item ids are what the traversal
         // needs) and before the write, so the index derives from pruned values.
         const pruned = await pruneDanglingRelations(
             fieldDefs,

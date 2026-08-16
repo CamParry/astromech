@@ -14,7 +14,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Field } from '@/types/fields';
-import { processFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/pipeline';
 import { formEntryType } from '../../../../plugins/forms/src/entries/form';
 
 /** The `form` type declares a plain array; narrow the `EntryFields` union to it. */
@@ -27,15 +27,15 @@ function definitions(): Field[] {
 function ctx() {
     return {
         operation: 'create' as const,
-        host: { kind: 'entry' as const, record: {} },
+        resource: { kind: 'entry' as const, record: {} },
         user: null,
-        reads: { isUnique: async () => true },
+        lookups: { isUnique: async () => true },
     };
 }
 
 /** Validate a form whose `fields` holds one text block with the given `name`. */
 async function nameErrors(name: unknown): Promise<string[] | undefined> {
-    const { errors } = await processFields(
+    const { errors } = await parseFields(
         {
             title: 'Contact',
             fields: [{ _id: 'b1', _type: 'text', name, label: 'Label' }],

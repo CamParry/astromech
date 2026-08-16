@@ -205,7 +205,7 @@ describe('collectRelationshipEdges — nested containers', () => {
 });
 
 describe('collectRelationshipEdges — determinism', () => {
-    // `children()` mints a missing `_id`, so only stored (post-`processFields`)
+    // `children()` mints a missing `_id`, so only stored (post-`parseFields`)
     // data is safe to traverse. Stored data already carries its ids, which is
     // what makes a rebuild reproduce the same rows.
     it('produces identical instance paths on a second run over stored data', () => {

@@ -20,10 +20,10 @@ function ctx(value: unknown): FieldValidationContext {
         field: { name: 'cta', type: 'link' },
         path: [{ kind: 'field', name: 'cta' }],
         operation: 'create',
-        stage: 'publish',
-        host: { kind: 'entry', record: null },
+        validation: 'complete',
+        resource: { kind: 'entry', record: null },
         user: null,
-        reads: { isUnique: async () => true },
+        lookups: { isUnique: async () => true },
     };
 }
 

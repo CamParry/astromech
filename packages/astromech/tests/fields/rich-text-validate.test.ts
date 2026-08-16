@@ -6,7 +6,7 @@ import {
     validateRichText,
 } from '@/fields/rich-text/validate';
 import { renderRichText } from '@/fields/rich-text/index';
-import { processFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/pipeline';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -31,19 +31,19 @@ function ctx(value: unknown, field: Field): FieldValidationContext {
         field,
         path: [{ kind: 'field', name: field.name }],
         operation: 'create',
-        stage: 'publish',
-        host: { kind: 'entry', record: null },
+        validation: 'complete',
+        resource: { kind: 'entry', record: null },
         user: null,
-        reads: { isUnique: async () => true },
+        lookups: { isUnique: async () => true },
     };
 }
 
 function fakeCtx() {
     return {
         operation: 'create' as const,
-        host: { kind: 'entry' as const, record: null },
+        resource: { kind: 'entry' as const, record: null },
         user: null,
-        reads: { isUnique: async () => true },
+        lookups: { isUnique: async () => true },
     };
 }
 
@@ -276,23 +276,23 @@ describe('coerceRichText', () => {
 // Through the pipeline — the validator has to actually fire on a write
 // ---------------------------------------------------------------------------
 
-describe('rich text through processFields', () => {
+describe('rich text through parseFields', () => {
     const fields: Field[] = [{ name: 'body', type: 'richtext' }];
 
     it('accepts a valid document', async () => {
-        const result = await processFields({ body: doc }, fields, fakeCtx());
+        const result = await parseFields({ body: doc }, fields, fakeCtx());
         expect(result.errors).toEqual({});
     });
 
     it('rejects an HTML string', async () => {
-        const result = await processFields({ body: '<p>Hello</p>' }, fields, fakeCtx());
+        const result = await parseFields({ body: '<p>Hello</p>' }, fields, fakeCtx());
         expect(result.errors['body']).toEqual([
             'Must be a rich text document, not an HTML string',
         ]);
     });
 
     it('normalises an empty rendered document to null instead of storing a string', async () => {
-        const result = await processFields({ body: '' }, fields, fakeCtx());
+        const result = await parseFields({ body: '' }, fields, fakeCtx());
         expect(result.errors).toEqual({});
         expect(result.values['body']).toBe(null);
     });
@@ -301,7 +301,7 @@ describe('rich text through processFields', () => {
         const restricted: Field[] = [
             { name: 'body', type: 'richtext', allow: { heading: false } },
         ];
-        const result = await processFields({ body: heading }, restricted, fakeCtx());
+        const result = await parseFields({ body: heading }, restricted, fakeCtx());
         expect(result.errors['body']?.[0]).toMatch(/heading/);
     });
 });
@@ -321,7 +321,7 @@ describe('public-shape write-back', () => {
             string,
             unknown
         >;
-        const result = await processFields(
+        const result = await parseFields(
             overTheWire,
             [{ name: 'body', type: 'richtext' }],
             fakeCtx()
@@ -337,7 +337,7 @@ describe('public-shape write-back', () => {
             string,
             unknown
         >;
-        const result = await processFields(
+        const result = await parseFields(
             overTheWire,
             [{ name: 'body', type: 'richtext' }],
             fakeCtx()

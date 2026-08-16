@@ -16,9 +16,9 @@
  * ## Only ever run this on processed data
  *
  * `children()` mints a missing item `_id` with `crypto.randomUUID()`, so it is
- * non-deterministic on data that has never been through `processFields`. Given
+ * non-deterministic on data that has never been through `parseFields`. Given
  * raw input it would invent ids on every call and produce instance paths that
- * address nothing in storage. Every caller must pass the post-`processFields`
+ * address nothing in storage. Every caller must pass the post-`parseFields`
  * values that were (or are about to be) written — which is also why a rebuild
  * from stored data is safe: stored items already carry their ids.
  *

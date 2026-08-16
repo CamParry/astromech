@@ -14,7 +14,7 @@ import { createMediaStorage } from '../storage';
 
 /**
  * Re-index a media record's relationship fields. `fields` must be
- * post-`processFields` values — item ids are minted during that pass.
+ * post-`parseFields` values — item ids are minted during that pass.
  */
 export async function indexMediaRelationships(
     id: string,
@@ -30,7 +30,7 @@ export async function indexMediaRelationships(
 /**
  * Every media record as a relationship source, with the edges its STORED field
  * data holds. The rebuild side of `indexMediaRelationships`. Stored data has
- * already been through `processFields`, so the traversal mints no ids here.
+ * already been through `parseFields`, so the traversal mints no ids here.
  */
 export async function collectMediaRelationshipSources(): Promise<
     RelationshipIndexSource[]

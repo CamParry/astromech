@@ -18,7 +18,7 @@ import type { JsonObject } from '@/types/index';
 import type { StorageDb } from '../storage/types';
 
 /**
- * Re-index one entry. `fields` must be post-`processFields` values — item ids
+ * Re-index one entry. `fields` must be post-`parseFields` values — item ids
  * are minted during that pass, and instance paths address nothing without them.
  */
 export async function indexEntryRelationships(
@@ -48,7 +48,7 @@ export async function indexEntryRelationships(
  *
  * Never re-derive this from raw input: the traversal mints missing item ids, so
  * it is only deterministic over data that has already been through
- * `processFields`, which stored data has by definition.
+ * `parseFields`, which stored data has by definition.
  */
 export async function collectEntryRelationshipSources(opts?: {
     type?: string;

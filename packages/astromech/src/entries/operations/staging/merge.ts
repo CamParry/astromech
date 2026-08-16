@@ -3,11 +3,11 @@ import { createRelationshipStorage } from '@/database/storage/relationships';
 import { asEntry, loadAndAssertType } from '../../internal/records';
 import { getStagingStorage, isVersioningEnabled } from '../../internal/type-config';
 import { indexEntryRelationships } from '../../internal/relationships';
-import { createEntryFieldReads } from '../../reads';
+import { createEntryLookups } from '../../lookups';
 import { resolveEntryType } from '@/utilities/entry-type-ids';
-import { entryValidationStage } from '../../validation-stage.shared';
+import { entryValidationMode } from '../../validation-mode.shared';
 import { flattenEntryFields } from '@/fields/flatten';
-import { processFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/pipeline';
 import { ValidationError } from '@/errors/index';
 import { getConfig } from '@/config/registry';
 import type { EntryStorage, StorageDb } from '../../storage/types';
@@ -28,22 +28,22 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
     const fieldDefs = entryType ? flattenEntryFields(entryType.fields) : [];
     // The canonical's type governs: the staged row is a copy of it.
     const resourceValidate = entryType?.validate;
-    const processed = await processFields(
+    const processed = await parseFields(
         (staged.fields ?? {}) as Record<string, unknown>,
         fieldDefs,
         {
             operation: 'update',
-            stage: entryValidationStage({
+            validation: entryValidationMode({
                 status: canonical.status,
                 hasStatuses: entryType ? entryType.capabilities.statuses !== false : true,
             }),
-            host: { kind: 'entry', record: canonical },
+            resource: { kind: 'entry', record: canonical },
             user: getCurrentUser(),
             // Two rows hold this content right now and both must be invisible to
             // the uniqueness scan: the canonical (about to be overwritten with
             // it) and the staged row (about to be deleted). Excluding only one
             // makes every `unique` field collide with its own other copy.
-            reads: createEntryFieldReads(storage, {
+            lookups: createEntryLookups(storage, {
                 type,
                 locale: canonical.locale,
                 excludeId: [id, staged.id],

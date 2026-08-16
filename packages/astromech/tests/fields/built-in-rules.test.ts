@@ -24,7 +24,7 @@ import {
     validateGroup,
     validateItemList,
 } from '@/fields/built-in-rules';
-import { processFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/pipeline';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -37,19 +37,19 @@ function ctx(value: unknown): FieldValidationContext {
         field: { name: 'f', type: 'x' },
         path: [{ kind: 'field', name: 'f' }],
         operation: 'create',
-        stage: 'publish',
-        host: { kind: 'entry', record: null },
+        validation: 'complete',
+        resource: { kind: 'entry', record: null },
         user: null,
-        reads: { isUnique: async () => true },
+        lookups: { isUnique: async () => true },
     };
 }
 
 function fakeCtx() {
     return {
         operation: 'create' as const,
-        host: { kind: 'entry' as const, record: null },
+        resource: { kind: 'entry' as const, record: null },
         user: null,
-        reads: { isUnique: async () => true },
+        lookups: { isUnique: async () => true },
     };
 }
 
@@ -235,12 +235,12 @@ describe('validateKeyValue', () => {
 });
 
 // ---------------------------------------------------------------------------
-// processFields integration
+// parseFields integration
 // ---------------------------------------------------------------------------
 
-describe('processFields integration', () => {
+describe('parseFields integration', () => {
     it('email field with invalid value → errors.f', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { f: 'nope' },
             [{ name: 'f', type: 'email' }],
             fakeCtx()
@@ -249,7 +249,7 @@ describe('processFields integration', () => {
     });
 
     it('slug field with "My Post" → errors.f, and the value is left alone', async () => {
-        const { values, errors } = await processFields(
+        const { values, errors } = await parseFields(
             { f: 'My Post' },
             [{ name: 'f', type: 'slug' }],
             fakeCtx()
@@ -261,7 +261,7 @@ describe('processFields integration', () => {
     });
 
     it('slug field with an already-normal value → no error', async () => {
-        const { values, errors } = await processFields(
+        const { values, errors } = await parseFields(
             { f: 'my-post' },
             [{ name: 'f', type: 'slug' }],
             fakeCtx()
@@ -271,7 +271,7 @@ describe('processFields integration', () => {
     });
 
     it('color field with a keyword → errors.f', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { f: 'red' },
             [{ name: 'f', type: 'color' }],
             fakeCtx()
@@ -282,7 +282,7 @@ describe('processFields integration', () => {
     });
 
     it('link field with a javascript: url → errors.f', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { f: { url: 'javascript:alert(1)', label: 'Go' } },
             [{ name: 'f', type: 'link' }],
             fakeCtx()
@@ -291,7 +291,7 @@ describe('processFields integration', () => {
     });
 
     it('key-value field with {a:1,"":2} → values.f deep-equals {a:"1"}', async () => {
-        const { values } = await processFields(
+        const { values } = await parseFields(
             { f: { a: 1, '': 2 } },
             [{ name: 'f', type: 'key-value' }],
             fakeCtx()
@@ -507,7 +507,7 @@ describe('validateReference', () => {
                 await validateReference({
                     ...ctx('abc'),
                     field: single,
-                    reads: entryTypes({ abc: 'post' }),
+                    lookups: entryTypes({ abc: 'post' }),
                 })
             ).toBe(true);
         });
@@ -517,7 +517,7 @@ describe('validateReference', () => {
                 await validateReference({
                     ...ctx('abc'),
                     field: single,
-                    reads: entryTypes({ abc: 'author' }),
+                    lookups: entryTypes({ abc: 'author' }),
                 })
             ).toBe('"f" expects a post, but "abc" is a author');
         });
@@ -527,7 +527,7 @@ describe('validateReference', () => {
                 await validateReference({
                     ...ctx(['a', 'b']),
                     field: many,
-                    reads: entryTypes({ a: 'post', b: 'author' }),
+                    lookups: entryTypes({ a: 'post', b: 'author' }),
                 })
             ).toBe('"f" expects a post, but "b" is a author');
         });
@@ -537,7 +537,7 @@ describe('validateReference', () => {
                 await validateReference({
                     ...ctx('gone'),
                     field: single,
-                    reads: entryTypes({}),
+                    lookups: entryTypes({}),
                 })
             ).toBe(true);
         });
@@ -547,7 +547,7 @@ describe('validateReference', () => {
                 await validateReference({
                     ...ctx('abc'),
                     field: single,
-                    reads: { isUnique: async () => true },
+                    lookups: { isUnique: async () => true },
                 })
             ).toBe(true);
         });
@@ -557,7 +557,7 @@ describe('validateReference', () => {
                 await validateReference({
                     ...ctx('abc'),
                     field: { name: 'f', type: 'media' },
-                    reads: entryTypes({ abc: 'post' }),
+                    lookups: entryTypes({ abc: 'post' }),
                 })
             ).toBe(true);
         });
@@ -567,7 +567,7 @@ describe('validateReference', () => {
                 await validateReference({
                     ...ctx('abc'),
                     field: { name: 'f', type: 'relationship' },
-                    reads: entryTypes({ abc: 'post' }),
+                    lookups: entryTypes({ abc: 'post' }),
                 })
             ).toBe(true);
         });

@@ -96,7 +96,7 @@ Every other field type is a leaf: one data key, no children.
 
 ## Resource
 
-The superordinate noun for the four things that carry fields and run the field pipeline: an **entry**, a **media item**, a **user**, and a **settings page**. `ResourceType` (`packages/astromech/src/types/domain.ts`) is that union, and it types `host.kind` on both validation contexts — the pipeline is host-generic, so a validator can see which kind of resource it is running against.
+The superordinate noun for the four things that carry fields and run the field pipeline: an **entry**, a **media item**, a **user**, and a **settings page**. `ResourceType` (`packages/astromech/src/types/domain.ts`) is that union, and it types `resource.kind` on both validation contexts — the pipeline is resource-generic, so a validator can see which kind of resource it is running against.
 
 A **resource validator** is the whole-resource `validate` an author declares on any of the four: the cross-field rules no single field owns. Each write path reads it straight off `virtual:astromech/config` (`entryType.validate`, `config.media?.validate`, `config.users?.validate`, the matching `admin.pages[].validate`).
 
