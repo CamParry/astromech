@@ -86,3 +86,4 @@ Distinct from the neighbouring directories:
 - [0051](0051-settings-are-content-config-is-code.md) — settings are content, config is code, secrets are env-only, and core ships no settings page
 - [0052](0052-the-gate-executes-the-admin-in-a-browser.md) — the gate loads the admin in headless chromium, mandatory and stopping before login
 - [0053](0053-scheduled-entrypoints-live-in-boot.md) — `handleScheduled` boots the runtime, so it is an entrypoint and lives in `boot/`, not `cron/`
+- [0054](0054-the-kit-keeps-the-ui-name.md) — the component kit keeps the `astromech/ui` name and the config-bound exports move to `astromech/ui/app`

@@ -1,9 +1,8 @@
 /**
- * Gate step: the server-side subpaths a plugin package or an Astro config may
- * import must load under plain Node (`astromech/ui` is browser-only and is not
- * one of them). Each is imported in its own child process, because a failure
- * here is a module-resolution throw the parent cannot recover from. Needs a
- * built `dist`.
+ * Gate step: the subpaths a plugin package or an Astro config may import must
+ * load under plain Node. Each is imported in its own child process, because a
+ * failure here is a module-resolution throw the parent cannot recover from.
+ * Needs a built `dist`.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -17,6 +16,9 @@ const SUBPATHS = [
     'astromech/astro',
     'astromech/fields',
     'astromech/columns',
+    // The component kit. `astromech/ui` resolves to source in this repo and to
+    // dist for npm (decisions/0033), so Node is pointed at what npm publishes.
+    './dist/admin/components/ui/index.js',
 ];
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');

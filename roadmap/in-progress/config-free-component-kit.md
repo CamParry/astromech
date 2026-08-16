@@ -35,23 +35,26 @@ nothing from `@/` outside `admin/components/ui/`.
 
 ## Change
 
-- [ ] Split `admin/components/ui/index.ts` into the kit barrel and an app-surface
+- [x] Split `admin/components/ui/index.ts` into the kit barrel and an app-surface
       barrel, with the config-bound five re-exported from the second.
-- [ ] Decide what each published subpath points at. `astromech/ui`,
-      `astromech/ui/fields` and `astromech/ui/layout` are three subpaths in two
-      `exports` maps; whether the kit takes the `astromech/ui` name and the
-      app surface takes a new one, or the reverse, is the one judgement call
-      here and it should be made against what a plugin author imports most.
-- [ ] Move `assertSingleUiInstance` off the kit barrel. It guards module
-      identity for the context hooks, which the kit barrel does not export once
-      the split lands — with the exception below.
-- [ ] Extend `packages/astromech/scripts/check-node-imports.mjs` to cover the
+      `admin/components/ui/app.ts` holds them.
+- [x] Decide what each published subpath points at. The kit keeps
+      `astromech/ui` and the app surface is `astromech/ui/app`, a fourth
+      subpath in both `exports` maps —
+      `decisions/0054-the-kit-keeps-the-ui-name.md`.
+- [x] Move `assertSingleUiInstance` off the kit barrel. Kept on both barrels
+      instead, because the kit still exports `useFieldValue`: the guard now
+      records its own module URL rather than the caller's, so two barrels are
+      not mistaken for two copies. Reasoning in 0054.
+- [x] Extend `packages/astromech/scripts/check-node-imports.mjs` to cover the
       kit subpath, which becomes loadable under plain Node once nothing in it
       reaches a virtual module. This is the check that keeps the split from
-      silently regressing.
-- [ ] Update the five plugin source files, two test mocks, two `apps/demo`
+      silently regressing. It imports the kit's built entry, which is what npm
+      resolves `astromech/ui` to.
+- [x] Update the five plugin source files, two test mocks, two `apps/demo`
       files and three `apps/docs` pages that import from `astromech/ui`, plus
-      `ARCHITECTURE.md` and `packages/plugins/AGENTS.md`.
+      `ARCHITECTURE.md` and `packages/plugins/AGENTS.md`. Four plugin files and
+      one `apps/demo` file changed; the others import only kit components.
 
 ## The hard case
 

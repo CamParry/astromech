@@ -17,7 +17,6 @@ import type { ChatEntry, UseChat } from '../../src/admin/use-chat';
 let chat: UseChat;
 
 vi.mock('astromech/ui', () => ({
-    useAIContextItems: () => [],
     Button: ({
         variant: _variant,
         size: _size,

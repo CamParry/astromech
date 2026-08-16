@@ -1,3 +1,3 @@
-/** `astromech/ui` — admin UI component library. */
+/** `astromech/ui` — the config-free component kit. */
 
 export * from '@/admin/components/ui/index';

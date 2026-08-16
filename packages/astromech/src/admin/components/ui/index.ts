@@ -1,6 +1,14 @@
+/**
+ * `astromech/ui` — the component kit: everything whose only inputs are its
+ * props, plus `useFieldValue` for custom field renderers. Nothing here reaches
+ * the admin config or the fetch client; the surface that does is `./app`.
+ */
+
 import { assertSingleUiInstance } from '@/admin/support/ui-instance-guard';
 
-assertSingleUiInstance(import.meta.url);
+// `useFieldValue` is a React context hook, so the kit is config-free but not
+// instance-free: a second copy still breaks it.
+assertSingleUiInstance();
 
 export { Button } from './button';
 export type { ButtonProps, ButtonVariant, ButtonSize } from './button';
@@ -80,12 +88,6 @@ export {
 export { ContextMenu, useContextMenu } from './context-menu';
 export type { ContextMenuProps } from './context-menu';
 
-export {
-    CommandPaletteProvider,
-    CommandPalette,
-    useCommandPalette,
-} from './command-palette';
-
 export { NumberField } from './number-field';
 export type { NumberFieldProps } from './number-field';
 
@@ -125,9 +127,6 @@ export type { RangeInputProps } from './range-input';
 export { CheckboxGroup } from './checkbox-group';
 export type { CheckboxGroupProps, CheckboxGroupOption } from './checkbox-group';
 
-export { ApiErrorPanel, dispatchApiErrorEvent } from './api-error-panel';
-export type { ApiErrorEventDetail } from './api-error-panel';
-
 export { UploadButton } from './upload-button';
 export type { UploadButtonProps } from './upload-button';
 
@@ -142,12 +141,5 @@ export { UploadZone } from './upload-zone';
 export { Pagination } from './pagination';
 export type { PaginationProps } from './pagination';
 
-// Plugin runtime context hook (spec §8) — only usable inside plugin surfaces.
-export { useAstromechPlugin } from '../../context/plugin';
-
 // Sibling-value access for custom field renderers (e.g. computed/preview fields).
 export { useFieldValue } from '../fields/field-context';
-
-// AI context: declare what a surface is showing, or read what every surface declared.
-export { useAIContext, useAIContextItems } from '../../context/ai-context';
-export type { AIContextItem } from '@/types/ai-context';
