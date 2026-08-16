@@ -17,6 +17,12 @@ export type FormsOptions = {
     spam?: SpamProvider;
     /** Store ip / userAgent / referer on each submission. Default true. */
     storeMeta?: boolean;
+    /**
+     * Submissions allowed per `meta.ip` per window, counted in process. Default
+     * 20 per minute; `false` turns the limit off. A submission carrying no ip
+     * shares one bucket with every other.
+     */
+    rateLimit?: { limit: number; windowMs: number } | false;
 };
 
 /** The twelve field kinds a form's `fields` blocks compose from. */

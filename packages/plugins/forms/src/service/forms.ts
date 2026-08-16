@@ -15,6 +15,7 @@ import {
     type FormsBeforeSubmitPayload,
 } from '../hooks/events';
 import { sendNotifications } from '../notifications/dispatch';
+import { consumeRateLimit } from './rate-limit';
 import type { SpamProvider } from '../spam/types';
 import { SUBMISSION_TYPE } from '../types';
 import type { FormsOptions, SubmissionMeta } from '../types';
@@ -48,11 +49,11 @@ export const FORM_ERROR_KEY = '_form';
 
 /** Build the service surface from the resolved plugin options. */
 export function buildFormsService(
-    options: Required<Pick<FormsOptions, 'storeMeta'>> & {
+    options: Required<Pick<FormsOptions, 'storeMeta' | 'rateLimit'>> & {
         spam?: SpamProvider | undefined;
     }
 ) {
-    const { spam, storeMeta } = options;
+    const { spam, storeMeta, rateLimit } = options;
 
     return {
         get: defineServiceMethod<{ slug: string }, PublicForm | null>({
@@ -85,6 +86,14 @@ export function buildFormsService(
             input: submitInputSchema,
             mutates: true,
             handler: async (input, ctx): Promise<SubmitResult> => {
+                // The Hono context is not forwarded to a service method, so the
+                // only client identity available is the caller-supplied ip.
+                if (rateLimit !== false) {
+                    const meta = isRecord(input?.meta) ? input.meta : {};
+                    const ip = typeof meta['ip'] === 'string' ? meta['ip'] : UNKNOWN_IP;
+                    if (!consumeRateLimit(ip, rateLimit)) return formError(TOO_MANY);
+                }
+
                 const form = await loadForm(ctx, input?.slug);
                 if (form === null) return formError(NOT_ACCEPTING);
 
@@ -185,6 +194,11 @@ const submitInputSchema = z.object({
 });
 
 const NOT_ACCEPTING = 'This form is not accepting submissions';
+
+const TOO_MANY = 'Too many submissions — please try again shortly';
+
+/** The bucket every submission with no `meta.ip` shares. */
+const UNKNOWN_IP = 'unknown';
 
 /**
  * `processFields` only reaches this port for DB-backed rules, which the form
