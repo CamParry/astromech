@@ -12,7 +12,7 @@ is too small to carry a workstream alone. One commit per fix.
       fix follows the same shape: throw, naming the key and the remediation.
       Noted in `roadmap/planned/field-value-query-indexing.md` as worth closing
       regardless of when field-value indexing ships.
-- [ ] **`initRuntime` writes `process.env.ASTROMECH_API_ROUTE`.** The value is
+- [x] **`initRuntime` writes `process.env.ASTROMECH_API_ROUTE`.** The value is
       read back at request time inside `getAuth()`
       (`packages/astromech/src/users/auth.ts`); the read is fine, the write is
       the defect — on Workers `process.env` is a compatibility shim populated

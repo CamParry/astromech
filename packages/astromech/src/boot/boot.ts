@@ -102,8 +102,6 @@ export async function initRuntime(
         ) as MethodManifest
     );
     await bootPlugins(config.plugins ?? []);
-
-    process.env.ASTROMECH_API_ROUTE = resolvedConfig.apiRoute;
 }
 
 export async function runMigrations(
