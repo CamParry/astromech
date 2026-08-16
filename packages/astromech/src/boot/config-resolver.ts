@@ -42,18 +42,11 @@ function toResolvedFields(fields: EntryFields | undefined): ResolvedEntryFields 
 
 /**
  * Structural-rule validation (spec §3.3), crash-loud naming the entry type:
- * `tab` is only valid as a direct child of `tabs`, `tabs` may only contain `tab`
- * children, and no two fields in one array may share a name.
+ * `tab` is only valid as a direct child of `tabs`, and `tabs` may only contain
+ * `tab` children.
  */
-function validateFieldTree(
-    typeKey: string,
-    nodes: Field[],
-    insideTabs: boolean,
-    path: string
-): void {
-    assertUniqueNames(typeKey, nodes, path);
+function validateFieldTree(typeKey: string, nodes: Field[], insideTabs: boolean): void {
     for (const node of nodes) {
-        const nodePath = `${path}.${node.name}`;
         if (node.type === 'tab' && !insideTabs) {
             throw new Error(
                 `Astromech entry type "${typeKey}": \`tab\` ("${node.name}") must be a ` +
@@ -70,28 +63,59 @@ function validateFieldTree(
                     );
                 }
             }
-            validateFieldTree(typeKey, children, true, nodePath);
+            validateFieldTree(typeKey, children, true);
             continue;
         }
-        if (node.fields) validateFieldTree(typeKey, node.fields, false, nodePath);
+        if (node.fields) validateFieldTree(typeKey, node.fields, false);
     }
 }
 
 /**
- * Reject two fields sharing a name in one `fields` array. Sibling-level only:
- * the same name at a different nesting level, or in another block type, is a
- * distinct key and stays legal.
+ * Reject two data fields that write the same key. The value namespace is flat —
+ * layout fields are unwrapped and `main` and `sidebar` share one value object —
+ * so a name repeated at any depth under them silently overwrites in storage.
+ * Layout names are excluded: they carry no value.
  */
-function assertUniqueNames(typeKey: string, nodes: Field[], path: string): void {
-    const seen = new Set<string>();
+function assertUniqueDataNames(typeKey: string, fields: ResolvedEntryFields): void {
+    assertUniqueInNamespace(typeKey, [
+        ...dataFieldsWithPath(fields.main, 'main'),
+        ...dataFieldsWithPath(fields.sidebar, 'sidebar'),
+    ]);
+}
+
+type DataFieldPath = { field: Field; path: string };
+
+/** The data fields one value namespace holds, each with where it was authored. */
+function dataFieldsWithPath(nodes: Field[], path: string): DataFieldPath[] {
+    const out: DataFieldPath[] = [];
     for (const node of nodes) {
-        if (seen.has(node.name)) {
+        const nodePath = `${path}.${node.name}`;
+        if (LAYOUT_TYPES.has(node.type)) {
+            out.push(...dataFieldsWithPath(node.fields ?? [], nodePath));
+            continue;
+        }
+        out.push({ field: node, path: nodePath });
+    }
+    return out;
+}
+
+/** Throw on a repeated name, naming both paths, then check each nested namespace. */
+function assertUniqueInNamespace(typeKey: string, fields: DataFieldPath[]): void {
+    const seen = new Map<string, string>();
+    for (const { field, path } of fields) {
+        const first = seen.get(field.name);
+        if (first !== undefined) {
             throw new Error(
                 `Astromech entry type "${typeKey}": duplicate field name ` +
-                    `"${node.name}" in \`${path}\`.`
+                    `"${field.name}" — \`${first}\` and \`${path}\` write the same key.`
             );
         }
-        seen.add(node.name);
+        seen.set(field.name, path);
+        // A nested field (group/repeater/blocks) owns one key and nests its
+        // children, so its subtree is a namespace of its own.
+        if (field.fields) {
+            assertUniqueInNamespace(typeKey, dataFieldsWithPath(field.fields, path));
+        }
     }
 }
 
@@ -126,8 +150,9 @@ function toResolvedEntryType(
     assertEntryTypeValid(typeKey, cfg, storageSupports);
 
     const resolvedFields = toResolvedFields(cfg.fields);
-    validateFieldTree(typeKey, resolvedFields.main, false, 'main');
-    validateFieldTree(typeKey, resolvedFields.sidebar, false, 'sidebar');
+    validateFieldTree(typeKey, resolvedFields.main, false);
+    validateFieldTree(typeKey, resolvedFields.sidebar, false);
+    assertUniqueDataNames(typeKey, resolvedFields);
 
     // Derive search from searchable fields if not explicitly set.
     let resolvedSearch = cfg.search;
@@ -151,8 +176,9 @@ function toResolvedEntryType(
 /** Normalize + structurally validate a `fields`-mode host admin page's tree. */
 function resolvePageFields(page: AdminPage): ResolvedEntryFields {
     const fields = toResolvedFields(page.fields);
-    validateFieldTree(page.path, fields.main, false, 'main');
-    validateFieldTree(page.path, fields.sidebar, false, 'sidebar');
+    validateFieldTree(page.path, fields.main, false);
+    validateFieldTree(page.path, fields.sidebar, false);
+    assertUniqueDataNames(page.path, fields);
     return fields;
 }
 

@@ -296,10 +296,108 @@ describe('resolveConfig structural validation', () => {
                 },
                 plugins: [],
             })
-        ).toThrow(/post.*duplicate field name "title" in `main`/);
+        ).toThrow(/post.*duplicate field name "title".*`main.title` and `main.title`/);
     });
 
-    it('throws when two sibling tabs share a name', () => {
+    it('throws when a field inside a tab repeats a top-level name', () => {
+        expect(() =>
+            resolveConfig({
+                db: driver,
+                storage: storageDriver,
+                entries: {
+                    post: {
+                        single: 'Post',
+                        plural: 'Posts',
+                        fields: [
+                            { name: 'title', type: 'text' },
+                            {
+                                name: 'myTabs',
+                                type: 'tabs',
+                                fields: [
+                                    {
+                                        name: 'content',
+                                        type: 'tab',
+                                        fields: [{ name: 'title', type: 'text' }],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                },
+                plugins: [],
+            })
+        ).toThrow(
+            /post.*duplicate field name "title".*`main.title` and `main.myTabs.content.title`/
+        );
+    });
+
+    it('throws when `main` and `sidebar` share a data field name', () => {
+        expect(() =>
+            resolveConfig({
+                db: driver,
+                storage: storageDriver,
+                entries: {
+                    post: {
+                        single: 'Post',
+                        plural: 'Posts',
+                        fields: {
+                            main: [{ name: 'title', type: 'text' }],
+                            sidebar: [{ name: 'title', type: 'text' }],
+                        },
+                    },
+                },
+                plugins: [],
+            })
+        ).toThrow(/post.*duplicate field name "title".*`main.title` and `sidebar.title`/);
+    });
+
+    it('throws when two fields inside one group share a name', () => {
+        expect(() =>
+            resolveConfig({
+                db: driver,
+                storage: storageDriver,
+                entries: {
+                    post: {
+                        single: 'Post',
+                        plural: 'Posts',
+                        fields: [
+                            {
+                                name: 'meta',
+                                type: 'group',
+                                fields: [
+                                    { name: 'title', type: 'text' },
+                                    { name: 'title', type: 'text' },
+                                ],
+                            },
+                        ],
+                    },
+                },
+                plugins: [],
+            })
+        ).toThrow(/post.*duplicate field name "title"/);
+    });
+
+    it('allows two `tabs` containers in one array — layout names hold no value', () => {
+        expect(() =>
+            resolveConfig({
+                db: driver,
+                storage: storageDriver,
+                entries: {
+                    post: {
+                        single: 'Post',
+                        plural: 'Posts',
+                        fields: [
+                            { name: 'tabs', type: 'tabs', fields: [] },
+                            { name: 'tabs', type: 'tabs', fields: [] },
+                        ],
+                    },
+                },
+                plugins: [],
+            })
+        ).not.toThrow();
+    });
+
+    it('allows two sibling tabs sharing a name', () => {
         expect(() =>
             resolveConfig({
                 db: driver,
@@ -322,27 +420,7 @@ describe('resolveConfig structural validation', () => {
                 },
                 plugins: [],
             })
-        ).toThrow(/post.*duplicate field name "content" in `main.myTabs`/);
-    });
-
-    it('throws when two `tabs` fields sit in one array', () => {
-        expect(() =>
-            resolveConfig({
-                db: driver,
-                storage: storageDriver,
-                entries: {
-                    post: {
-                        single: 'Post',
-                        plural: 'Posts',
-                        fields: [
-                            { name: 'tabs', type: 'tabs', fields: [] },
-                            { name: 'tabs', type: 'tabs', fields: [] },
-                        ],
-                    },
-                },
-                plugins: [],
-            })
-        ).toThrow(/post.*duplicate field name "tabs" in `main`/);
+        ).not.toThrow();
     });
 
     it('allows the same name at different nesting levels', () => {
