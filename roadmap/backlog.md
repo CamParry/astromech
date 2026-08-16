@@ -4,7 +4,7 @@ Unscheduled work that belongs to no single feature: deferrals, small chores, and
 questions to settle before something else can start.
 
 Not a bug tracker. A live defect in shipped code gets a `roadmap/` file of its own
-so its status can move — `in-progress/admin-form-defects.md` is the worked example.
+so its status can move — `completed/admin-form-defects.md` is the worked example.
 Finished items are deleted rather than ticked; the record of what shipped is in
 `roadmap/completed/`.
 

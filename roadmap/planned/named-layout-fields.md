@@ -25,7 +25,9 @@ records that the `boxed` rename is compatible with the merge either way.
 `fields/builder.ts` is uniform `type(name, options?)` everywhere except `tabs`,
 which takes options only and hardcodes `name: 'tabs'`. It is the accidental
 prototype for the question above — a layout field with no author-supplied name —
-and it is also a latent bug, tracked as an item in
-`roadmap/planned/admin-form-defects.md`. Whatever this design decides about names
-on layout fields decides what `tabs()` should look like, so the two move
-together.
+and it is also a latent bug: two `tabs()` in one entry type produce two fields
+both named `tabs` (`fields/builder.ts:215-217`) — harmless while a layout
+field's name is inert, and a duplicate-key bug the moment anything keys off it.
+Formerly tracked in `roadmap/completed/admin-form-defects.md`; it moved here
+because whatever this design decides about names on layout fields decides what
+`tabs()` should look like, so the two move together.

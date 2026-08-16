@@ -120,14 +120,10 @@ it was real and the misattribution is the useful part.
     - The guard is the same one `use-blocks-field.ts`, `use-tree-field.ts` and
       `repeater-field.tsx` carry: seed once when real data arrives, never resync
       after, or an in-progress edit is clobbered by the last-saved value.
-- [ ] **`tabs()` takes no name and hardcodes one.** Every other factory is
-      `type(name, options?)`; `fields/builder.ts:215-217` is
-      `tabs(options)` returning `{ name: 'tabs', … }`. Two `tabs()` in one entry
-      type therefore produce two fields both named `tabs` — harmless while a
-      layout field's name is inert, and a duplicate-key bug the moment anything
-      keys off it. Don't fix it in isolation: it is the accidental prototype for
-      `roadmap/planned/named-layout-fields.md`, which decides what a layout
-      field's name means.
+- The `tabs()` hardcoded-name item moved to
+  `roadmap/planned/named-layout-fields.md` on 2026-08-16 — it must not be fixed
+  in isolation, because that design decides what a layout field's name means,
+  and it was the last open item keeping this file from `completed/`.
 - [x] **`json` renders empty for a stored value, then commits `null` over it.**
       Fixed 2026-08-16 with the same seed-once guard, plus a blur that writes
       nothing while the box still holds the stored value's own serialization.
