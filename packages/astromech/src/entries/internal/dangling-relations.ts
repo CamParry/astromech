@@ -62,9 +62,20 @@ export async function pruneDanglingRelations(
     // Targets with a storage of their own keep no rows in `entries`, so each
     // answers for its own ids through the hook the declaration was cleared on.
     const readsByPath = storageReadsByPath(definitions);
+
+    // A supplied `db` is the caller's transaction handle, while a registered
+    // storage is bound to its own — so reading one here answers from a
+    // different snapshot, where a row written earlier in this transaction looks
+    // missing and its live reference gets pruned. Those targets go UNCHECKED
+    // instead: a kept dangling id is dropped by the next write (decisions/0004),
+    // a deleted live one is gone.
+    const insideTransaction = db !== undefined;
+
     const readByTarget = new Map<string, ExistingIds>();
-    for (const reads of readsByPath.values()) {
-        for (const [target, read] of reads) readByTarget.set(target, read);
+    if (!insideTransaction) {
+        for (const reads of readsByPath.values()) {
+            for (const [target, read] of reads) readByTarget.set(target, read);
+        }
     }
 
     const aliveByTarget = new Map<string, Set<string>>();
@@ -82,6 +93,7 @@ export async function pruneDanglingRelations(
     const dead = candidates.filter((edge) => {
         if (aliveByKind.get(edge.targetKind)?.has(edge.targetId) === true) return false;
         for (const target of readsByPath.get(edge.schemaPath)?.keys() ?? []) {
+            if (insideTransaction) return false;
             if (aliveByTarget.get(target)?.has(edge.targetId) === true) return false;
         }
         return true;

@@ -17,6 +17,7 @@ import { createUserStorage } from '@/users/storage';
 import { createRelationshipStorage } from '@/database/storage/relationships';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
 import { tableStorage } from '@/entries/storage/table';
+import { getEntryStorage } from '@/entries/storage/registry';
 import { defineTable } from '@/database/define-table';
 import type { EntryStorage, StorageDb } from '@/entries/storage/types';
 import type {
@@ -318,6 +319,28 @@ describe('pruneDanglingRelations (directly)', () => {
 
         expect(result).toEqual({ values, dropped: 0 });
         expect(result.values).toBe(values);
+    });
+
+    // Inside a transaction the registered storage reads a different snapshot,
+    // where a row written in this transaction is missing — so it is not read at
+    // all and the reference stands.
+    it('keeps a table-backed reference when pruning inside a transaction', async () => {
+        const missing = '01JQZZZZZZZZZZZZZZZZZZZZZZ';
+        const storage = getEntryStorage('doc');
+        if (storage.transaction === undefined) throw new Error('no transactions');
+
+        const outside = await pruneDanglingRelations(docFields, { link: missing });
+        expect(outside).toEqual({ values: { link: null }, dropped: 1 });
+
+        await storage.transaction(async (_txStorage, txDb) => {
+            const inside = await pruneDanglingRelations(
+                docFields,
+                { link: missing },
+                txDb
+            );
+            expect(inside.dropped).toBe(0);
+            expect(inside.values['link']).toBe(missing);
+        });
     });
 
     it('reports how many ids it dropped', async () => {
