@@ -111,15 +111,19 @@ validator is the only thing standing between the input and storage.
 | `email`, `url`                  | A malformed address or URL                                                                           |
 | `json`                          | A value that is not JSON-serializable                                                                |
 | `key-value`                     | Anything that is not an object of key/value pairs                                                    |
+| `slug`                          | A value that is not already lowercase letters, numbers and hyphens                                   |
+| `color`                         | Anything that is not a hex value or an `rgb()`/`rgba()`/`hsl()`/`hsla()` colour                      |
+| `link`                          | A url that does not parse, or one using a `javascript:` or `data:` scheme                            |
 | `blocks`                        | An item whose `_type` matches no declared block                                                      |
 
 A field that declares no `options` has nothing to check against, so `select`
-and the other choice types accept any string. `slug` normalizes its value
-rather than rejecting one. `text`, `textarea`, `color`, `link` and the
-`group`/`repeater`/`tree` containers are checked for **shape** but not for
-format — a `color` must be a string, and a `link` must be an object with a
-`url` key, but neither is checked against a colour or URL grammar. Declare
-`pattern` or a `custom` rule where the format matters.
+and the other choice types accept any string. `slug` rejects a value it would
+have to rewrite, naming the normalized form in the message, rather than
+normalizing behind the author's back. A `link` url is checked as a URL
+reference, so a relative path and an anchor are both valid, and an empty url is
+left to `required` — it means unfilled, not malformed. `text`, `textarea` and
+the `group`/`repeater`/`tree` containers are checked for **shape** but not for
+format. Declare `pattern` or a `custom` rule where the format matters.
 
 Two checks are deliberately **not** made. A `relationship` or `media` value is
 checked for being an id, but nothing confirms the id resolves to a record, or

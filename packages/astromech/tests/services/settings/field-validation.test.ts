@@ -79,13 +79,25 @@ describe('settingsService.set — email field', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Coercion (slug field coerces to lowercase-kebab)
+// Slug field
 // ---------------------------------------------------------------------------
 
-describe('settingsService.set — coercion', () => {
-    it('coerces a slug field value and persists the coerced form', async () => {
-        // 'handle' is type:'slug' which runs coerceSlug → slugify('Hello World') = 'hello-world'
-        await settingsService.set({ key: BASE_KEY, value: { handle: 'Hello World' } });
+describe('settingsService.set — slug field', () => {
+    it('rejects a value that is not already a slug', async () => {
+        await expect(
+            settingsService.set({ key: BASE_KEY, value: { handle: 'Hello World' } })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: {
+                handle: [
+                    "Must be lowercase letters, numbers and hyphens: try 'hello-world'",
+                ],
+            },
+        });
+    });
+
+    it('persists an already-normal slug', async () => {
+        await settingsService.set({ key: BASE_KEY, value: { handle: 'hello-world' } });
         const stored = await settingsService.get({ key: BASE_KEY, full: true });
         expect((stored as Record<string, unknown>)?.handle).toBe('hello-world');
     });

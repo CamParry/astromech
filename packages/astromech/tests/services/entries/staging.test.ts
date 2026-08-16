@@ -418,7 +418,7 @@ describe('mergeStaged — field validation', () => {
         await plantFields(staged.id, {
             headline: 'Hello',
             link: '  https://example.com/  ',
-            page_slug: 'My Page',
+            page_slug: 'my-page',
         });
 
         const merged = await api.mergeStaged({ type: 'post', id: canonical.id });

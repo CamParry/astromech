@@ -90,7 +90,7 @@ describe('group', () => {
     });
 
     it('does not mutate the input value object', async () => {
-        const input = { seo: { title: '  spaced  ' } };
+        const input = { seo: { rank: '  42  ' } };
         const { values } = await processFields(
             {
                 ...input,
@@ -99,15 +99,15 @@ describe('group', () => {
                 field({
                     name: 'seo',
                     type: 'group',
-                    fields: [field({ name: 'title', type: 'slug' })],
+                    fields: [field({ name: 'rank', type: 'number' })],
                 }),
             ],
             fakeCtx()
         );
-        // slug coerce applies inside the group…
-        expect((values.seo as Item).title).toBe('spaced');
+        // number coerce applies inside the group…
+        expect((values.seo as Item).rank).toBe(42);
         // …without touching the caller's object.
-        expect(input.seo.title).toBe('  spaced  ');
+        expect(input.seo.rank).toBe('  42  ');
     });
 
     it('nested group inside a group → dotted path chains', async () => {
@@ -256,13 +256,13 @@ describe('repeater', () => {
 
     it('coerce and default apply inside items', async () => {
         const { values } = await processFields(
-            { sections: [{ _id: 'a1', slug: '  Hello World  ' }] },
+            { sections: [{ _id: 'a1', rank: '  42  ' }] },
             [
                 field({
                     name: 'sections',
                     type: 'repeater',
                     fields: [
-                        field({ name: 'slug', type: 'slug' }),
+                        field({ name: 'rank', type: 'number' }),
                         field({ name: 'active', type: 'boolean' }),
                     ],
                 }),
@@ -271,7 +271,7 @@ describe('repeater', () => {
         );
         expect(items(values, 'sections')[0]).toEqual({
             _id: 'a1',
-            slug: 'hello-world',
+            rank: 42,
             active: false,
         });
     });
@@ -643,8 +643,8 @@ describe('tree', () => {
                 nav: [
                     {
                         _id: 'n1',
-                        slug: 'Top Level',
-                        _children: [{ _id: 'n2', slug: 'Child Node' }],
+                        rank: ' 1 ',
+                        _children: [{ _id: 'n2', rank: ' 2 ' }],
                     },
                 ],
             },
@@ -652,14 +652,14 @@ describe('tree', () => {
                 field({
                     name: 'nav',
                     type: 'tree',
-                    fields: [field({ name: 'slug', type: 'slug' })],
+                    fields: [field({ name: 'rank', type: 'number' })],
                 }),
             ],
             fakeCtx()
         );
         const root = items(values, 'nav')[0];
-        expect(root?.slug).toBe('top-level');
-        expect((root?._children as Item[])[0]?.slug).toBe('child-node');
+        expect(root?.rank).toBe(1);
+        expect((root?._children as Item[])[0]?.rank).toBe(2);
     });
 
     it('does not mutate the input tree', async () => {

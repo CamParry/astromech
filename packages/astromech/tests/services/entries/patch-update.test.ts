@@ -18,10 +18,11 @@ const api = Astromech.entries;
 // ---------------------------------------------------------------------------
 
 /**
- * `page_slug` is typed by the caller so a test can create data under one schema
- * and update it under another — the drift that makes re-coercion observable.
+ * `meta` is typed by the caller so a test can create data under one schema and
+ * update it under another — the drift that makes re-coercion observable. Both
+ * types accept the other's stored value, so only the coercion differs.
  */
-function makePatchConfig(pageSlugType: 'text' | 'slug' = 'slug'): AstromechConfig {
+function makePatchConfig(metaType: 'json' | 'key-value' = 'json'): AstromechConfig {
     const base = makeTestConfig();
     return {
         ...base,
@@ -42,7 +43,8 @@ function makePatchConfig(pageSlugType: 'text' | 'slug' = 'slug'): AstromechConfi
                     { name: 'secret', type: 'text', label: 'Secret', private: true },
                     { name: 'note', type: 'text', label: 'Note' },
                     { name: 'contact_email', type: 'email', label: 'Email' },
-                    { name: 'page_slug', type: pageSlugType, label: 'Page Slug' },
+                    { name: 'page_slug', type: 'slug', label: 'Page Slug' },
+                    { name: 'meta', type: metaType, label: 'Meta' },
                     {
                         name: 'items',
                         type: 'repeater',
@@ -190,16 +192,15 @@ describe('update — public-shape write-back', () => {
 
 describe('update — coercion is scoped to the patch', () => {
     it('leaves an untouched field uncoerced when the schema has drifted', async () => {
-        // Stored while `page_slug` was a plain text field, so the value is not
-        // in slug form.
-        setupTestConfig(makePatchConfig('text'));
+        // Stored while `meta` was a json field, so its values are not strings.
+        setupTestConfig(makePatchConfig('json'));
         const entry = await api.create({
             type: 'post',
             title: 'T',
-            fields: { headline: 'H', page_slug: 'My Page Title' },
+            fields: { headline: 'H', meta: { views: 3 } },
         });
 
-        setupTestConfig(makePatchConfig('slug'));
+        setupTestConfig(makePatchConfig('key-value'));
         const untouched = one(
             await api.update({
                 type: 'post',
@@ -207,17 +208,17 @@ describe('update — coercion is scoped to the patch', () => {
                 data: { fields: { body: 'B' } },
             })
         );
-        expect(untouched.fields.page_slug).toBe('My Page Title');
+        expect(untouched.fields.meta).toEqual({ views: 3 });
 
         // Naming it in the patch coerces it, as on any other write.
         const touched = one(
             await api.update({
                 type: 'post',
                 id: entry.id,
-                data: { fields: { page_slug: 'My Page Title' } },
+                data: { fields: { meta: { views: 3 } } },
             })
         );
-        expect(touched.fields.page_slug).toBe('my-page-title');
+        expect(touched.fields.meta).toEqual({ views: '3' });
     });
 });
 
@@ -309,7 +310,8 @@ describe('update — projection to the schema', () => {
             title: 'T',
             fields: { headline: 'H', legacy: 'left over' },
         });
-        expect(entry.fields.legacy).toBe('left over');
+        // The create write drops it too — the pipeline projects to the schema.
+        expect(entry.fields).not.toHaveProperty('legacy');
 
         const updated = one(
             await api.update({

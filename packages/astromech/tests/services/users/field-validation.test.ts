@@ -94,15 +94,32 @@ describe('usersService.create — defaultValue', () => {
 });
 
 // ---------------------------------------------------------------------------
-// create: coercion
+// create: slug field
 // ---------------------------------------------------------------------------
 
-describe('usersService.create — coercion', () => {
-    it('coerces a slug field to slugified form', async () => {
+describe('usersService.create — slug field', () => {
+    it('rejects a value that is not already a slug', async () => {
+        await expect(
+            usersService.create({
+                email: uniqueEmail(),
+                name: 'Alice',
+                fields: { bio: 'Hi', handle: 'Alice Smith' },
+            })
+        ).rejects.toMatchObject({
+            name: 'ValidationError',
+            fields: {
+                handle: [
+                    "Must be lowercase letters, numbers and hyphens: try 'alice-smith'",
+                ],
+            },
+        });
+    });
+
+    it('accepts and stores an already-normal slug', async () => {
         const user = await usersService.create({
             email: uniqueEmail(),
             name: 'Alice',
-            fields: { bio: 'Hi', handle: 'Alice Smith' },
+            fields: { bio: 'Hi', handle: 'alice-smith' },
         });
         expect(user.fields?.handle).toBe('alice-smith');
     });
@@ -165,7 +182,7 @@ describe('usersService.update — validation', () => {
         });
     });
 
-    it('persists coerced values on valid update', async () => {
+    it('persists validated values on valid update', async () => {
         const user = await usersService.create({
             email: uniqueEmail(),
             name: 'Alice',
@@ -174,7 +191,7 @@ describe('usersService.update — validation', () => {
         const updated = await usersService.update({
             id: user.id,
             data: {
-                fields: { bio: 'Updated', handle: 'New Handle' },
+                fields: { bio: 'Updated', handle: 'new-handle' },
             },
         });
         expect(updated.fields?.handle).toBe('new-handle');

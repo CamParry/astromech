@@ -43,6 +43,11 @@
  * on a key a field already claimed, the field's own error wins as the more
  * specific one.
  *
+ * The values the pipeline returns hold only keys the schema declares: a key
+ * belonging to no declared field is dropped, silently, because it has no field
+ * to report an error against and a PATCH-merge write would otherwise carry it
+ * forever.
+ *
  * `ctx.coerceOnly` names the root fields a patch actually carries. Coercion then
  * runs for those fields and their subtrees only, while defaults, `children()`
  * normalization and validation still run over the whole merged resource. A
@@ -62,6 +67,7 @@ import type {
 import { getFieldType } from './field-type-registry';
 import { formatInstancePath, isValidFieldName } from './field-path';
 import { flattenFieldNodes } from './flatten';
+import { projectToSchema } from './values';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -393,6 +399,11 @@ async function processScope(
  * Run every field definition over `values`, then the resource validator.
  * Returns the coerced values plus blocking `errors`, advisory `warnings` and
  * form-level `form` messages.
+ *
+ * The returned values are projected through the schema first, so a key matching
+ * no declared field is dropped rather than written back. Empty `definitions`
+ * means the schema is unknown here, not that there are no fields, so nothing is
+ * dropped in that case.
  */
 export async function processFields(
     values: Record<string, unknown>,
@@ -404,7 +415,11 @@ export async function processFields(
     warnings: FieldErrors;
     form: string[];
 }> {
-    const result = { ...values };
+    const declared = flattenFieldNodes(definitions);
+    // `projectToSchema` hands back its input when the schema is unknown, and the
+    // pipeline mutates what it is given, so that case still needs a copy.
+    const result =
+        declared.length === 0 ? { ...values } : projectToSchema(values, declared);
     const errors: FieldErrors = {};
     const warnings: FieldErrors = {};
     // Default to `'publish'`, i.e. today's behaviour: media, users and settings

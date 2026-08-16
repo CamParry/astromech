@@ -5,7 +5,7 @@ import {
     validateEmail,
     coerceUrl,
     validateUrl,
-    coerceSlug,
+    validateSlug,
     isJsonValue,
     validateJson,
     coerceKeyValue,
@@ -19,6 +19,7 @@ import {
     validateDate,
     validateReference,
     validateText,
+    validateColor,
     validateLink,
     validateGroup,
     validateItemList,
@@ -119,22 +120,32 @@ describe('validateUrl', () => {
 // slug
 // ---------------------------------------------------------------------------
 
-describe('coerceSlug', () => {
-    it('slugifies a string', () => {
-        expect(coerceSlug('My Post!')).toBe('my-post');
+describe('validateSlug', () => {
+    it('an already-normal slug → true', async () => {
+        expect(await validateSlug(ctx('my-post'))).toBe(true);
+        expect(await validateSlug(ctx('post-2'))).toBe(true);
     });
 
-    it('is idempotent on an already-valid slug', () => {
-        expect(coerceSlug('my-post')).toBe('my-post');
+    it('a value normalization would change → rejected, with the suggestion', async () => {
+        expect(await validateSlug(ctx('My Post!'))).toBe(
+            "Must be lowercase letters, numbers and hyphens: try 'my-post'"
+        );
     });
 
-    it('passes through non-strings unchanged', () => {
-        expect(coerceSlug(42)).toBe(42);
-        expect(coerceSlug(null)).toBe(null);
+    it('leading or trailing hyphens → rejected', async () => {
+        expect(await validateSlug(ctx('-my-post-'))).toBe(
+            "Must be lowercase letters, numbers and hyphens: try 'my-post'"
+        );
     });
 
-    it('all-symbols input → empty string (pipeline treats as empty)', () => {
-        expect(coerceSlug('!!!')).toBe('');
+    it('nothing survives normalization → rejected without a suggestion', async () => {
+        expect(await validateSlug(ctx('!!!'))).toBe(
+            'Must be lowercase letters, numbers and hyphens'
+        );
+    });
+
+    it('a non-string → rejected as text', async () => {
+        expect(await validateSlug(ctx(42))).toBe('Must be text');
     });
 });
 
@@ -237,14 +248,46 @@ describe('processFields integration', () => {
         expect(errors.f).toEqual(['Must be a valid email address']);
     });
 
-    it('slug field with "My Post" → values.f is "my-post" and no error', async () => {
+    it('slug field with "My Post" → errors.f, and the value is left alone', async () => {
         const { values, errors } = await processFields(
             { f: 'My Post' },
             [{ name: 'f', type: 'slug' }],
             fakeCtx()
         );
+        expect(values.f).toBe('My Post');
+        expect(errors.f).toEqual([
+            "Must be lowercase letters, numbers and hyphens: try 'my-post'",
+        ]);
+    });
+
+    it('slug field with an already-normal value → no error', async () => {
+        const { values, errors } = await processFields(
+            { f: 'my-post' },
+            [{ name: 'f', type: 'slug' }],
+            fakeCtx()
+        );
         expect(values.f).toBe('my-post');
         expect(errors.f).toBeUndefined();
+    });
+
+    it('color field with a keyword → errors.f', async () => {
+        const { errors } = await processFields(
+            { f: 'red' },
+            [{ name: 'f', type: 'color' }],
+            fakeCtx()
+        );
+        expect(errors.f).toEqual([
+            'Must be a hex colour such as #3366ff, or an rgb()/hsl() colour',
+        ]);
+    });
+
+    it('link field with a javascript: url → errors.f', async () => {
+        const { errors } = await processFields(
+            { f: { url: 'javascript:alert(1)', label: 'Go' } },
+            [{ name: 'f', type: 'link' }],
+            fakeCtx()
+        );
+        expect(errors.f).toEqual(['A link may not use a javascript: or data: url']);
     });
 
     it('key-value field with {a:1,"":2} → values.f deep-equals {a:"1"}', async () => {
@@ -466,13 +509,68 @@ describe('validateText', () => {
     });
 });
 
+describe('validateColor', () => {
+    it('accepts hex in every length', async () => {
+        expect(await validateColor(ctx('#fff'))).toBe(true);
+        expect(await validateColor(ctx('#ffff'))).toBe(true);
+        expect(await validateColor(ctx('#3366ff'))).toBe(true);
+        expect(await validateColor(ctx('#3366FF80'))).toBe(true);
+    });
+
+    it('accepts the rgb/hsl functions', async () => {
+        expect(await validateColor(ctx('rgb(51, 102, 255)'))).toBe(true);
+        expect(await validateColor(ctx('rgba(51, 102, 255, 0.5)'))).toBe(true);
+        expect(await validateColor(ctx('hsl(220 100% 60%)'))).toBe(true);
+    });
+
+    it('rejects a malformed hex value', async () => {
+        expect(await validateColor(ctx('#12345'))).toBe(
+            'Must be a hex colour such as #3366ff, or an rgb()/hsl() colour'
+        );
+        expect(await validateColor(ctx('3366ff'))).toBe(
+            'Must be a hex colour such as #3366ff, or an rgb()/hsl() colour'
+        );
+    });
+
+    it('rejects a keyword', async () => {
+        expect(await validateColor(ctx('red'))).toBe(
+            'Must be a hex colour such as #3366ff, or an rgb()/hsl() colour'
+        );
+    });
+
+    it('rejects a non-string', async () => {
+        expect(await validateColor(ctx(255))).toBe('Must be text');
+    });
+});
+
 describe('validateLink', () => {
     it('accepts a link with a url', async () => {
         expect(await validateLink(ctx({ url: '/about', label: 'About' }))).toBe(true);
     });
 
-    it('accepts a relative path or an anchor — the url is not parsed', async () => {
+    it('accepts a relative path, an anchor and a mailto', async () => {
         expect(await validateLink(ctx({ url: '#top' }))).toBe(true);
+        expect(await validateLink(ctx({ url: 'about/team' }))).toBe(true);
+        expect(await validateLink(ctx({ url: 'mailto:hi@example.com' }))).toBe(true);
+        expect(await validateLink(ctx({ url: 'https://example.com/a?b=c' }))).toBe(true);
+    });
+
+    it('accepts an empty url — unfilled is `required`’s question', async () => {
+        expect(await validateLink(ctx({ url: '', label: 'About' }))).toBe(true);
+    });
+
+    it('rejects a url that does not parse', async () => {
+        expect(await validateLink(ctx({ url: 'not a url' }))).toBe('Must be a valid URL');
+        expect(await validateLink(ctx({ url: 'https://' }))).toBe('Must be a valid URL');
+    });
+
+    it('rejects an executable scheme, as rich text does', async () => {
+        expect(await validateLink(ctx({ url: 'javascript:alert(1)' }))).toBe(
+            'A link may not use a javascript: or data: url'
+        );
+        expect(await validateLink(ctx({ url: 'data:text/html;base64,PHA+' }))).toBe(
+            'A link may not use a javascript: or data: url'
+        );
     });
 
     it('rejects a bare string', async () => {
