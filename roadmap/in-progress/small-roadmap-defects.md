@@ -4,7 +4,7 @@ Three independent one-file fixes gathered from `backlog.md` and planned-file
 side notes, batched onto one branch (`fix/small-roadmap-defects`) because each
 is too small to carry a workstream alone. One commit per fix.
 
-- [ ] **Unknown sort keys are silently dropped.** `SORTABLE_FIELDS` in
+- [x] **Unknown sort keys are silently dropped.** `SORTABLE_FIELDS` in
       `packages/astromech/src/entries/storage/built-in.ts` is a six-name
       allow-list; anything else is dropped and falls back to `createdAt desc`.
       This is the sort equivalent of what

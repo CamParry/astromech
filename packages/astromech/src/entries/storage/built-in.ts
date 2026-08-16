@@ -39,7 +39,7 @@ import { entriesTable } from '@/database/schema';
 import type { DB, Db } from '@/database/types';
 import type { EntryRow } from '../schema';
 import { createVersionStorage } from './versions';
-import { UnknownWhereKeyError } from '../errors';
+import { UnknownSortKeyError, UnknownWhereKeyError } from '../errors';
 import type {
     Entry,
     EntryStatus,
@@ -61,14 +61,14 @@ import type {
 // Query helpers
 // ============================================================================
 
-const SORTABLE_FIELDS = new Set([
+const SORTABLE_FIELDS: readonly string[] = [
     'title',
     'status',
     'createdAt',
     'updatedAt',
     'publishedAt',
     'slug',
-]);
+];
 
 type OrderPair = [col: keyof DB['entries'] & string, dir: 'asc' | 'desc'];
 
@@ -78,7 +78,9 @@ function buildOrderBy(sort?: SortOption | SortOption[]): OrderPair[] {
     const sorts = Array.isArray(sort) ? sort : [sort];
     const clauses: OrderPair[] = sorts.flatMap((s) =>
         Object.entries(s).flatMap(([field, dir]) => {
-            if (!SORTABLE_FIELDS.has(field)) return [];
+            if (!SORTABLE_FIELDS.includes(field)) {
+                throw new UnknownSortKeyError(field, SORTABLE_FIELDS);
+            }
             return [[field, dir === 'asc' ? 'asc' : 'desc']] as OrderPair[];
         })
     );

@@ -140,16 +140,11 @@ describe('SORTABLE_FIELDS on the query string', () => {
         }
     });
 
-    it('drops a field outside the allowlist rather than rejecting or forwarding it', async () => {
-        // A forwarded `id` would reach Kysely as an order-by column; the route
-        // never lets it, and `entries/storage/built-in.ts` holds the same
-        // allowlist as a second line of defence.
-        const unlisted = await get('?sort=id&dir=asc');
-        expect(unlisted.data.map((e) => e.title).sort()).toEqual([
-            'Alpha',
-            'Beta',
-            'Gamma',
-        ]);
+    it('errors on a field outside the allowlist rather than answering the default order', async () => {
+        // The route forwards the field as given; `entries/storage/built-in.ts`
+        // holds the allowlist and throws `UnknownSortKeyError` on a miss.
+        const unlisted = await app().request('/entries/post?sort=id&dir=asc');
+        expect(unlisted.status).toBe(500);
     });
 });
 
@@ -169,27 +164,18 @@ describe('validateSort on the query body', () => {
         expect(await titlesFor([{ title: 'asc' }])).toEqual(['Alpha', 'Beta', 'Gamma']);
     });
 
-    it('drops keys outside the allowlist, keeping the rest of the object', async () => {
-        expect(await titlesFor({ id: 'asc', title: 'asc' })).toEqual([
-            'Alpha',
-            'Beta',
-            'Gamma',
-        ]);
+    it('errors on a key outside the allowlist, even alongside an allowed one', async () => {
+        const res = await queryBody({ sort: { id: 'asc', title: 'asc' } });
+        expect(res.status).toBe(500);
     });
 
-    it('falls back to the default order when nothing in the object survives', async () => {
-        // The default is `createdAt desc`, and these three rows share a
-        // timestamp, so only the SET is deterministic — the point is that none
-        // of these shapes reaches storage as an order-by clause or errors.
+    it('falls back to the default order for a shape the schema drops', async () => {
+        // These parse as neither a sort object nor a list of them, so the
+        // schema's `catch` drops them before storage sees a field name. The
+        // default is `createdAt desc` and these three rows share a timestamp,
+        // so only the SET is deterministic.
         const all = ['Alpha', 'Beta', 'Gamma'];
-        for (const sort of [
-            { id: 'asc' },
-            { title: 'sideways' },
-            {},
-            'title',
-            null,
-            [],
-        ]) {
+        for (const sort of [{ title: 'sideways' }, {}, 'title', null, []]) {
             expect((await titlesFor(sort)).sort()).toEqual(all);
         }
     });

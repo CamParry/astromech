@@ -181,10 +181,9 @@ const sortObject = z.record(z.string(), sortDirection);
 /**
  * A query's `sort` — one field→direction map, or a list of them.
  *
- * A value that does not parse is DROPPED rather than rejected: asking to order
- * by something the store cannot order by answers the default order, not a 422.
- * `entries/storage/built-in.ts` holds the allowlist that decides which fields
- * survive, and normalises the direction.
+ * A value that does not parse as this shape is DROPPED rather than rejected,
+ * answering the default order. A well-shaped sort naming a field the store
+ * cannot order by throws: `entries/storage/built-in.ts` holds the allowlist.
  */
 export const entrySortSchema = z
     .union([sortObject, z.array(sortObject)])

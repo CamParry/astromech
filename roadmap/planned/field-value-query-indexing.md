@@ -22,11 +22,9 @@ outgrows the shared table.
   remediation, never silently full-scan. On D1 an unindexed scan is billed per
   row read against a single-threaded database, so a silent slow success is
   materially worse than an error.
-- Sorting is a six-name allow-list, `SORTABLE_FIELDS` (`built-in.ts:64-71`);
-  anything else is dropped and falls back to `createdAt desc`. **Still a silent
-  drop** — the sort equivalent of what 0029 fixed for filters, worth closing on
-  the same reasoning regardless of when the rest of this ships. Being fixed via
-  `roadmap/in-progress/small-roadmap-defects.md`.
+- Sorting is a six-name allow-list, `SORTABLE_FIELDS` (`built-in.ts`); anything
+  else throws `UnknownSortKeyError`, on the same reasoning as 0029. Ordering by
+  an indexed field is part of this item.
 - No JSON path handling exists anywhere — a repo-wide grep for `json_extract` /
   `->>` / `jsonb` / `json_each` returns zero hits outside `node_modules`.
 - Table-backed entry types forward `where` into the storage wrapper's full

@@ -17,6 +17,7 @@ import { defineTable } from '@/database/define-table';
 import {
     InvalidReferencesFilterError,
     RelationshipFilterUnsupportedError,
+    UnknownSortKeyError,
     UnknownWhereKeyError,
 } from '@/entries/errors';
 import type { AstromechConfig, PluginDefinition } from '@/types/index';
@@ -379,5 +380,25 @@ describe('where with an unrecognized key', () => {
                 where: { category: 'some-id' },
             })
         ).rejects.toThrow(/category/);
+    });
+});
+
+// ============================================================================
+// Unknown sort key
+// ============================================================================
+
+describe('sort naming a field outside the allowlist', () => {
+    it('throws rather than silently answering the default order', async () => {
+        await api.create({ type: 'post', title: 'Target' });
+
+        await expect(
+            api.query({ type: 'post', full: true, sort: { id: 'asc' } })
+        ).rejects.toThrow(UnknownSortKeyError);
+    });
+
+    it('names the key and the sortable fields', async () => {
+        await expect(
+            api.query({ type: 'post', full: true, sort: [{ id: 'asc' }] })
+        ).rejects.toThrow(/'id'.*Sortable fields are 'title'/s);
     });
 });

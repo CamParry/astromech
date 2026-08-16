@@ -174,6 +174,26 @@ export class UnknownWhereKeyError extends Error {
 }
 
 /**
+ * Thrown when `entries.query`'s `sort` names a field the built-in storage
+ * cannot order by. An unrecognized field was previously discarded, so the
+ * caller got the default `createdAt desc` order with no signal.
+ */
+export class UnknownSortKeyError extends Error {
+    public readonly key: string;
+    public readonly sortableFields: readonly string[];
+
+    constructor(key: string, sortableFields: readonly string[]) {
+        super(
+            `[astromech] entries.query: unrecognized sort key '${key}'. Sortable ` +
+                `fields are ${sortableFields.map((f) => `'${f}'`).join(', ')}.`
+        );
+        this.name = 'UnknownSortKeyError';
+        this.key = key;
+        this.sortableFields = sortableFields;
+    }
+}
+
+/**
  * Thrown when a route or entries-service operation is attempted on an entry type
  * that does not support the required capability.
  */
