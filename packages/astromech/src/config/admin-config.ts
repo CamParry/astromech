@@ -10,7 +10,6 @@ import type {
     ResolvedAdminPage,
     ResolvedEntryType,
 } from '@/types/config';
-import { resolveRoles } from '@/permissions/index';
 import { defaultImageWidths, normaliseWidths } from '@/utilities/image-widths';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import {
@@ -51,7 +50,7 @@ export function buildAdminConfig(
     config: AstromechConfig,
     resolvedConfig: ResolvedConfig
 ): AdminConfig {
-    const resolvedRoles = resolveRoles(config);
+    const resolvedRoles = resolvedConfig.resolvedRoles;
     return {
         plugins: (config.plugins ?? []).map((p) => {
             const identity = resolvePluginIdentity(p);

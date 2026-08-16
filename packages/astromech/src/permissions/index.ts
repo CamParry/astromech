@@ -158,8 +158,11 @@ export function resolveRoles(config: ConfigWithRoles): Record<string, Role> {
 }
 
 /** Look up a single role by slug. Returns the admin role as fallback. */
-export function resolveRole(config: ConfigWithRoles, slug: string): Role {
-    const roles = resolveRoles(config);
+export function resolveRole(
+    config: Pick<ResolvedConfig, 'resolvedRoles'>,
+    slug: string
+): Role {
+    const roles = config.resolvedRoles;
     return (
         roles[slug] ??
         roles['admin'] ?? {

@@ -16,6 +16,7 @@ import { assertPluginsValid, resolvePluginEntries } from '@/config/plugin-entrie
 import { resolvePublicSettingKeys } from '@/config/public-settings';
 import { assertQualifiedRelationshipTargets } from '@/config/validate/relationships';
 import { assertMediaAccessCompatible } from '@/config/validate/media-access';
+import { resolveRoles } from '@/permissions/index';
 
 /** Resolve the config with defaults and plugin merging. */
 export function resolveConfig(config: AstromechConfig): ResolvedConfig {
@@ -78,6 +79,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
             retentionDays: config.trash?.retentionDays ?? 30,
         },
         publicSettingKeys,
+        resolvedRoles: resolveRoles(config),
         timezone: config.timezone ?? 'UTC',
     };
 }

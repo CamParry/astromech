@@ -35,6 +35,7 @@ import { globals } from '@/utilities/registry';
 const config: ResolvedConfig = {
     adminRoute: '/admin',
     apiRoute: '/api',
+    resolvedRoles: {},
     entries: {
         posts: {
             single: 'Post',
