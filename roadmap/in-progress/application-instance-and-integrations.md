@@ -52,10 +52,8 @@ has failed even if the gate is green.
 
 ## Where this stands
 
-Stages 1, 2, 3 and 4 are on `main`. **Stage 5 is next and is unblocked.** One
-item inside stage 3 is outstanding and is left ticked-off-able rather than ticked:
-Q9, the module-scope `let _auth` in `users/auth.ts`, was never investigated and
-no rule was stated for when a module-scope singleton is permitted.
+Stages 1, 2, 3 and 4 are on `main`, and stage 3 is complete. **Stage 5 is next
+and is unblocked.**
 
 Two things learned the expensive way, both worth carrying into every remaining
 stage:
@@ -184,8 +182,10 @@ broken.
       every test reaches config.
 - [x] Delete `setRuntimeConfig` / `getRuntimeConfig` from `cron/registry.ts`.
 - [x] Export `getAstromech` and `createAstromech` from the root barrel.
-- [ ] Investigate Q9 (`users/auth.ts`'s module-scope `let _auth`) while in the
-      file, and state the rule for when a module-scope singleton is permitted.
+- [x] Q9 — `users/auth.ts`'s module-scope `let _auth` and its lazy `Proxy` are
+      replaced by an optional registry slot that `getAuth()` fills on first ask.
+      The rule, now in `ARCHITECTURE.md`, admits no exception: process-wide
+      state lives in a registry slot, memoised values included.
 - [x] Close the split-brain stage 2 opened: the virtual module computes its own
       `resolveConfig(rawConfig)` eagerly and the `resolve config` phase computes
       another, so a serving process holds two structurally identical

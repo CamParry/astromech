@@ -1,10 +1,10 @@
 /**
  * Registry — the one mechanism behind every boot-wired driver slot.
  *
- * Backed by `globalThis`, never a module-level singleton: tsup emits several
- * entry chunks, so a module-scoped variable is duplicated once per chunk and a
- * value written through one copy is invisible through the others. The global is
- * the only slot every chunk shares. The application slot in
+ * Backed by `globalThis`, never a module-level singleton: the package ships two
+ * separate tsup builds, and six `exports` subpaths can resolve to either `src`
+ * or `dist`, so one module can be instantiated more than once in a process. The
+ * global is the only slot every copy shares. The application slot in
  * `src/boot/application.ts` depends on that: two copies of it would boot the
  * runtime twice.
  *

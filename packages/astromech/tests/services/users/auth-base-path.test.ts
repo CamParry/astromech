@@ -8,17 +8,18 @@
 
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { auth } from '@/users/auth';
+import { getAuth } from '@/users/auth';
 
-// `auth` builds itself once, on first access, so the config has to be in place
-// before any test in this file touches it.
+// `getAuth()` builds once and memoises into the registry slot, so the slot is
+// cleared and the config put in place before any test in this file asks for it.
 beforeAll(async () => {
+    delete globalThis.__astromech?.auth;
     await createTestDb();
     setupTestConfig({ ...makeTestConfig(), basePath: '/cms' });
 });
 
 describe('the auth base path', () => {
     it('sits under the configured basePath', () => {
-        expect(auth.options.basePath).toBe('/cms/api/auth');
+        expect(getAuth().options.basePath).toBe('/cms/api/auth');
     });
 });

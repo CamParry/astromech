@@ -9,15 +9,18 @@
  */
 
 import { getConfig } from '@/config/registry';
-import { auth } from './auth';
+import { getAuth } from './auth';
 import { createUserStorage } from './storage';
 import { resolveRole } from '@/permissions/index';
 import type { User, Role } from '@/types/index';
 
+/** What Better Auth's `getSession` resolves to — null when there is no session. */
+type GetSessionResult = Awaited<
+    ReturnType<ReturnType<typeof getAuth>['api']['getSession']>
+>;
+
 /** The session record Better Auth returns alongside the user. */
-type AuthSession = NonNullable<
-    Awaited<ReturnType<typeof auth.api.getSession>>
->['session'];
+type AuthSession = NonNullable<GetSessionResult>['session'];
 
 /**
  * Resolve the Better Auth session into a full user row + role + session, or
@@ -26,7 +29,7 @@ type AuthSession = NonNullable<
 export async function resolveSessionUser(
     headers: Headers
 ): Promise<{ user: User; role: Role; session: AuthSession } | null> {
-    const session = await auth.api.getSession({ headers });
+    const session = await getAuth().api.getSession({ headers });
     if (!session?.user) return null;
 
     // Load the full user row (Better Auth session may not include custom fields)

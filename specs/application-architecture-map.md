@@ -538,10 +538,12 @@ captures them when the work lands.
   conditions. Agreed fix pending feasibility: give the `src/exports/*` shims
   relative imports instead of `@/`, then point `types` at `src` too. Plugin
   tsconfigs clear `paths`, which is why the `@/` imports fail there.
-- **Q9 — module-scope `let` singletons.** `users/auth.ts` holds `let _auth` at
-  module scope, exactly the pattern `utilities/registry.ts` declares unsafe
-  across tsup chunks. Either a latent double-instantiation bug or the premise is
-  overstated for SSR-graph-only modules. Investigate once, then state the rule.
+- **Q9 — module-scope `let` singletons. Answered.** ESM splitting put the one
+  `betterAuth(` call in a shared chunk, so the served build held a single copy
+  and there was no live bug — safe by build configuration, not by design. The
+  second tsup build and the Q8 dev-condition trap both reach the same module, so
+  `let _auth` and its `Proxy` are now an optional registry slot behind
+  `getAuth()`, and module-scope singletons are ruled out in `ARCHITECTURE.md`.
 - **Default visibility shape for host pages.** Decided at the `VisibilityShape`
   seam, not by touching identity. Out of scope here; raise it as its own item if
   the answer is not obvious when the lazy-identity stage lands.

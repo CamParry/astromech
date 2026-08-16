@@ -2,5 +2,5 @@
 export { usersService } from './service';
 export { usersContract } from './methods';
 export { createUserSchema, updateUserSchema } from './schema';
-export { auth } from './auth';
+export { getAuth } from './auth';
 export { resolveSessionUser } from './session';

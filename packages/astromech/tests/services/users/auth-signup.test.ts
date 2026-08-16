@@ -10,7 +10,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { sql, type Kysely } from 'kysely';
 import { createTestDb, setupTestConfig } from '@tests/harness';
-import { auth } from '@/users/auth';
+import { getAuth } from '@/users/auth';
 import { decodeWith } from '@/database/codec';
 import { createUserStorage } from '@/users/storage';
 import { usersTable } from '@/users/schema';
@@ -19,16 +19,18 @@ import type { DB } from '@/database/types';
 
 let db: Kysely<DB>;
 
-// One db for the file: `auth` builds its Kysely instance once, on first access,
-// and holds it — a per-test db would leave it writing to the previous one.
+// One db for the file: `getAuth()` builds its Kysely instance once, on first
+// ask, and memoises it — a per-test db would leave it writing to the previous
+// one. The registry slot is cleared first so no earlier build is reused.
 beforeAll(async () => {
+    delete globalThis.__astromech?.auth;
     db = await createTestDb();
     setupTestConfig();
 });
 
 describe('better-auth email signup', () => {
     it('inserts the default role rather than relying on a column default', async () => {
-        await auth.api.signUpEmail({
+        await getAuth().api.signUpEmail({
             body: { email: 'signup@test.dev', password: 'password123', name: 'Signup' },
         });
 
@@ -53,8 +55,9 @@ describe('better-auth email signup', () => {
             name: 'Escalate',
             roleSlug: 'admin',
         };
-        type SignUpArgs = NonNullable<Parameters<typeof auth.api.signUpEmail>[0]>;
-        await auth.api.signUpEmail({ body } as unknown as SignUpArgs);
+        type SignUpEmail = ReturnType<typeof getAuth>['api']['signUpEmail'];
+        type SignUpArgs = NonNullable<Parameters<SignUpEmail>[0]>;
+        await getAuth().api.signUpEmail({ body } as unknown as SignUpArgs);
 
         const row = await db
             .selectFrom('users')
@@ -70,7 +73,7 @@ describe('better-auth email signup', () => {
     // descriptor has to describe. This is the check that they agree.
     it('writes a row the descriptor codec reads back', async () => {
         const before = Date.now();
-        await auth.api.signUpEmail({
+        await getAuth().api.signUpEmail({
             body: { email: 'codec@test.dev', password: 'password123', name: 'Codec' },
         });
 
@@ -102,7 +105,7 @@ describe('better-auth email signup', () => {
      * format, so this is what would fail first if either side moved.
      */
     it('writes ISO-8601 TEXT timestamps, the same format our own writes store', async () => {
-        await auth.api.signUpEmail({
+        await getAuth().api.signUpEmail({
             body: { email: 'stamp@test.dev', password: 'password123', name: 'Stamp' },
         });
         await createUserStorage().create({

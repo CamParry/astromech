@@ -81,15 +81,22 @@ Key invariants:
   Every driver and override slot shares one mechanism (`utilities/registry.ts`)
   over a single `globalThis.__astromech` namespace, but never a shared type. A hub
   carrying every driver would have to import every domain's types, which is what
-  this DAG exists to prevent. globalThis is not a taste choice — tsup emits several
-  entry chunks and a module-level singleton duplicates across them. `createRegistry`
+  this DAG exists to prevent. globalThis is not a taste choice — the package ships
+  two tsup builds and six `exports` subpaths that can resolve to either `src` or
+  `dist`, so one module can be instantiated more than once in a process and the
+  global is the only slot every copy shares. `createRegistry`
   is a single-value slot: required ones resolve-or-throw, genuinely optional ones
   expose `peek()` and no `get()` at all. `createKeyedRegistry` is the same slot keyed
   by string, for the per-type and per-name override maps.
   The namespace also carries a few **process guards** — a cron tick lock and
   interval handle, the duplicate-admin-UI check — as plain keys read directly
-  rather than through a registry object. They share the duplicate-chunk hazard
+  rather than through a registry object. They share the duplicate-copy hazard
   without sharing the slot shape.
+- **Process-wide state lives in a registry slot; module-scope singletons are not
+  used.** That covers memoised values as well as boot-wired drivers: Better Auth
+  builds on first ask inside `getAuth()` and holds the result in an optional slot
+  (`users/auth.ts`), because a `let` at module scope is per-copy state that a
+  second copy of the module cannot see.
 - **Config is read at call time, never at module scope.** `createAstromech`
   resolves the author's config once and puts it in `config/registry.ts`; every
   reader calls `getConfig()` inside the function that needs it. A module-scope

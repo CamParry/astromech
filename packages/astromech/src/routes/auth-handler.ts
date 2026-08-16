@@ -1,4 +1,4 @@
-import { auth } from '@/users/index';
+import { getAuth } from '@/users/index';
 import type { APIRoute } from 'astro';
 
-export const ALL: APIRoute = ({ request }) => auth.handler(request);
+export const ALL: APIRoute = ({ request }) => getAuth().handler(request);
