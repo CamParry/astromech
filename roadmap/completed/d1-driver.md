@@ -3,10 +3,10 @@
 Split out of `planned/additional-database-drivers.md` on 2026-07-29 when the
 driver was built. The remaining dialects (Postgres, MySQL) stay in that file.
 
-**Status:** built, unit-tested, and **verified against Cloudflare's own D1
-implementation through wrangler's local emulation**, which found and fixed a
-defect that no fake could reach. Still **never executed against remote D1** on
-real infrastructure — that is what keeps this in `in-progress/`.
+**Status:** shipped. Built, unit-tested, verified against Cloudflare's own D1
+implementation through wrangler's local emulation (which found and fixed a
+defect that no fake could reach), and on 2026-08-16 **verified against remote
+D1 on real infrastructure** — the last open item.
 
 ## Built
 
@@ -62,11 +62,17 @@ real infrastructure — that is what keeps this in `in-progress/`.
 
 ## Remaining
 
-- [ ] **Run it against remote D1.** Local emulation is workerd's real D1
-      implementation, so it covers the API surface, but not the network, the
-      row/query size limits, or control-plane behaviour. Needs a Cloudflare
-      account, `wrangler d1 create`, and a deployed Worker — the one step that
-      cannot happen from this repo alone
+- [x] **Run it against remote D1.** Done 2026-08-16. A scratch Worker
+      (imports from the built `dist`, never `src`) was deployed with
+      `wrangler deploy` against a `wrangler d1 create`d database
+      (`astromech-remote-test`, EEUR) and ran the same checks as
+      `tests/cloudflare/d1-local-emulation.test.ts` on real infrastructure:
+      binding resolution through the runtime-detected `cloudflare:workers`
+      dynamic import, CRUD, `meta` mapping (`insertId` bigint, affected-row
+      counts), introspection through the bound `pragma_table_info(?)` under
+      the **remote** authorizer, and a migration chain without a transaction.
+      All passed. The Worker was deleted after the run; the database was kept
+      for future testing
 - [x] Decided: the sequential fallback is the documented contract and a D1
       deployment does **not** refuse to boot —
       `decisions/0028-d1-degrades-rather-than-refusing-to-boot.md`

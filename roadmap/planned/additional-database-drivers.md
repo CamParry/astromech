@@ -1,7 +1,7 @@
 # Additional Database Drivers
 
 D1 was split out of this file on 2026-07-29 when it was built — see
-`in-progress/d1-driver.md`.
+`completed/d1-driver.md`.
 
 ## Other dialects
 
