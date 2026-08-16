@@ -3,33 +3,40 @@ import { defineTable, type TableSelect, type TableInsert } from '@/database/defi
 import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 
 // ============================================================================
-// better-auth tables — users, sessions, accounts, verifications
+// users table (defineTable)
 //
-// These 4 are NOT defined with `defineTable` by design: better-auth's adapter
-// owns their legacy seconds-INTEGER timestamp format, so they are excluded from
-// our `defineTable`-driven DDL/migration pipeline. They are hand-authored in the
-// app's baseline migration (`apps/demo/migrations/0000_baseline.ts`) and
-// hand-typed in their storage shape in `@/database/types.ts` — that file is the
-// storage-shape authority. `UserRow` below is the *domain*-side view of the
-// same table (post-codec: `Date` timestamps, `boolean` flags, parsed json), and
-// must be kept in step with it by hand.
-//
-// `roles` is ours → `defineTable` below.
+// better-auth's adapter writes this table through its own Kysely instance, so it
+// owns the on-disk FORMAT: uuid ids, seconds-INTEGER timestamps, INTEGER 0/1
+// booleans, TEXT json. The descriptor DESCRIBES that format rather than changing
+// it — `tests/db/baseline-ddl-parity.test.ts` is the proof the two agree — which
+// is what lets our DDL, codec and storage be generated from it like any other
+// table. `sessions`, `accounts` and `verifications` have no descriptor: nothing
+// of ours writes them, so they stay hand-authored in the app's baseline.
 // ============================================================================
 
-/** Domain shape of a `users` row, as returned by `decode('users', …)`. */
-export type UserRow = {
-    id: string;
-    email: string;
-    name: string;
-    emailVerified: boolean;
-    image: string | null;
+export const usersTable = defineTable('users', ({ col }) => ({
+    id: col.id({ format: 'uuid' }),
+    email: col.text({ notNull: true, unique: true }),
+    name: col.text({ notNull: true }),
+    emailVerified: col.boolean({ notNull: true, default: false }),
+    image: col.text(),
     /** json column — parsed; callers narrow it themselves. */
-    fields: unknown;
-    roleSlug: string;
-    createdAt: Date;
-    updatedAt: Date;
-};
+    fields: col.json(),
+    /** No SQL default on purpose: `DEFAULT_ROLE_SLUG` is the default in code, and
+     *  every write path supplies it (better-auth signup through
+     *  `user.additionalFields`, the users service through its zod schema). A path
+     *  that forgets fails here rather than minting a role silently. */
+    roleSlug: col.text({ notNull: true }),
+    createdAt: col.timestamp({ notNull: true, defaultNow: true, storage: 'seconds' }),
+    updatedAt: col.timestamp({
+        notNull: true,
+        defaultNow: true,
+        onUpdate: true,
+        storage: 'seconds',
+    }),
+}));
+
+export type UserRow = TableSelect<typeof usersTable>;
 
 // ============================================================================
 // roles table (defineTable) — RBAC is ours, not a better-auth model

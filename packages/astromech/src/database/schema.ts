@@ -2,11 +2,10 @@
  * Aggregate schema surface for Astromech.
  *
  * Re-exports every table's `defineTable` table and row types from its domain
- * module. The 4 better-auth tables (`users`, `sessions`, `accounts`,
- * `verifications`) are not defined with `defineTable` — they stay seconds-INTEGER
- * and are owned by better-auth's adapter — so only their domain-side row types
- * appear here. `relationships` and `cron` are defined here as they have no
- * dedicated domain module. Consumed by `database/types.ts` (assembles the Kysely
+ * module. `sessions`, `accounts` and `verifications` have no descriptor — nothing
+ * of ours writes them, so better-auth's adapter owns them outright and they are
+ * hand-authored in the app's baseline. `relationships` and `cron` are defined
+ * here as they have no dedicated domain module. Consumed by `database/types.ts` (assembles the Kysely
  * `DB`) and `astromech/database/schema`. NOT by `database/codec.ts` — the codec
  * is keyed by `Table`, so every caller passes the one it already holds.
  */
@@ -21,7 +20,7 @@ import {
 // these value imports are ONLY so `CORE_TABLES` (bottom of file) can
 // reference the tables; the `export {...} from` blocks stay the public
 // re-export surface.
-import { rolesTable } from '@/users/schema';
+import { rolesTable, usersTable } from '@/users/schema';
 import {
     entriesTable,
     entryVersionsTable,
@@ -32,10 +31,16 @@ import { settingsTable } from '@/settings/schema';
 import { notificationsTable } from '@/notifications/schema';
 
 // ============================================================================
-// Users / RBAC — the roles table (ours) + the better-auth `users` row type
+// Users / RBAC
 // ============================================================================
 
-export { rolesTable, type RoleRow, type NewRoleRow, type UserRow } from '@/users/schema';
+export {
+    rolesTable,
+    usersTable,
+    type RoleRow,
+    type NewRoleRow,
+    type UserRow,
+} from '@/users/schema';
 
 // ============================================================================
 // Entries
@@ -165,15 +170,17 @@ export type NewPluginTrackingRow = TableInsert<typeof pluginsTable>;
 // ============================================================================
 
 /**
- * The 10 `defineTable`-backed tables the CMS itself owns, in one place. Consumed
+ * The 11 `defineTable`-backed tables the CMS itself owns, in one place. Consumed
  * by the DDL-parity test, the migration generator and `db:generate` — anywhere
  * that needs "every core table `defineTable` owns" without re-listing the
- * imports by hand. Does NOT include the 4 better-auth tables (hand-authored in
- * the app baseline — see `codec.ts`) nor any plugin's tables: plugins own their
- * own tables and generate their own migrations via `plugin:generate`.
+ * imports by hand. Does NOT include `sessions`/`accounts`/`verifications`
+ * (hand-authored in the app baseline — see `codec.ts`) nor any plugin's tables:
+ * plugins own their own tables and generate their own migrations via
+ * `plugin:generate`.
  */
 export const CORE_TABLES: Table[] = [
     rolesTable,
+    usersTable,
     entriesTable,
     entryVersionsTable,
     entryPreviewTokensTable,

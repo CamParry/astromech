@@ -1,936 +1,1024 @@
 {
-    "version": 1,
-    "dialect": "sqlite",
-    "tables": {
-        "_astromech_cron": {
-            "name": "_astromech_cron",
-            "columns": [
-                {
-                    "key": "name",
-                    "name": "name",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": true
-                },
-                {
-                    "key": "schedule",
-                    "name": "schedule",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "enabled",
-                    "name": "enabled",
-                    "kind": "boolean",
-                    "type": "integer",
-                    "notNull": true,
-                    "primaryKey": false,
-                    "default": 1
-                },
-                {
-                    "key": "lastRun",
-                    "name": "last_run",
-                    "kind": "timestamp",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "nextRun",
-                    "name": "next_run",
-                    "kind": "timestamp",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "lock",
-                    "name": "lock",
-                    "kind": "timestamp",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                }
-            ],
-            "fks": [],
-            "indexes": []
+  "version": 1,
+  "dialect": "sqlite",
+  "tables": {
+    "_astromech_cron": {
+      "name": "_astromech_cron",
+      "columns": [
+        {
+          "key": "name",
+          "name": "name",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
         },
-        "_astromech_plugins": {
-            "name": "_astromech_plugins",
-            "columns": [
-                {
-                    "key": "package",
-                    "name": "package",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": true
-                },
-                {
-                    "key": "namespace",
-                    "name": "namespace",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "version",
-                    "name": "version",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "installedAt",
-                    "name": "installed_at",
-                    "kind": "timestamp",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                }
-            ],
-            "fks": [],
-            "indexes": [
-                {
-                    "name": "_astromech_plugins_namespace_unique",
-                    "columns": [
-                        "namespace"
-                    ],
-                    "unique": true
-                }
-            ]
+        {
+          "key": "schedule",
+          "name": "schedule",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
         },
-        "entries": {
-            "name": "entries",
-            "columns": [
-                {
-                    "key": "id",
-                    "name": "id",
-                    "kind": "id",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": true
-                },
-                {
-                    "key": "type",
-                    "name": "type",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "locale",
-                    "name": "locale",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "localeGroup",
-                    "name": "locale_group",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "slug",
-                    "name": "slug",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "title",
-                    "name": "title",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "fields",
-                    "name": "fields",
-                    "kind": "json",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "status",
-                    "name": "status",
-                    "kind": "enum",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false,
-                    "default": "unpublished",
-                    "enumValues": [
-                        "unpublished",
-                        "published",
-                        "scheduled"
-                    ]
-                },
-                {
-                    "key": "stagedFor",
-                    "name": "staged_for",
-                    "kind": "reference",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "publishedAt",
-                    "name": "published_at",
-                    "kind": "timestamp",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "deletedAt",
-                    "name": "deleted_at",
-                    "kind": "timestamp",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "createdAt",
-                    "name": "created_at",
-                    "kind": "timestamp",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "updatedAt",
-                    "name": "updated_at",
-                    "kind": "timestamp",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "createdBy",
-                    "name": "created_by",
-                    "kind": "reference",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "updatedBy",
-                    "name": "updated_by",
-                    "kind": "reference",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                }
-            ],
-            "fks": [
-                {
-                    "column": "staged_for",
-                    "targetTable": "entries",
-                    "targetColumn": "id",
-                    "onDelete": "no action"
-                },
-                {
-                    "column": "created_by",
-                    "targetTable": "users",
-                    "targetColumn": "id",
-                    "onDelete": "no action"
-                },
-                {
-                    "column": "updated_by",
-                    "targetTable": "users",
-                    "targetColumn": "id",
-                    "onDelete": "no action"
-                }
-            ],
-            "indexes": [
-                {
-                    "name": "idx_entries_type",
-                    "columns": [
-                        "type"
-                    ],
-                    "unique": false
-                },
-                {
-                    "name": "idx_entries_status",
-                    "columns": [
-                        "type",
-                        "status"
-                    ],
-                    "unique": false
-                },
-                {
-                    "name": "idx_entries_locale",
-                    "columns": [
-                        "type",
-                        "locale",
-                        "status"
-                    ],
-                    "unique": false
-                },
-                {
-                    "name": "idx_entries_deleted",
-                    "columns": [
-                        "deleted_at"
-                    ],
-                    "unique": false
-                },
-                {
-                    "name": "idx_entries_locale_group",
-                    "columns": [
-                        "locale_group"
-                    ],
-                    "unique": false
-                },
-                {
-                    "name": "idx_entries_staged_for",
-                    "columns": [
-                        "staged_for"
-                    ],
-                    "unique": false
-                },
-                {
-                    "name": "entries_locale_group_locale_unique",
-                    "columns": [
-                        "locale_group",
-                        "locale"
-                    ],
-                    "unique": true
-                },
-                {
-                    "name": "entries_type_locale_slug_unique",
-                    "columns": [
-                        "type",
-                        "locale",
-                        "slug"
-                    ],
-                    "unique": true,
-                    "where": "staged_for IS NULL"
-                }
-            ]
+        {
+          "key": "enabled",
+          "name": "enabled",
+          "kind": "boolean",
+          "type": "integer",
+          "notNull": true,
+          "primaryKey": false,
+          "default": 1
         },
-        "entry_preview_tokens": {
-            "name": "entry_preview_tokens",
-            "columns": [
-                {
-                    "key": "id",
-                    "name": "id",
-                    "kind": "id",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": true
-                },
-                {
-                    "key": "entryId",
-                    "name": "entry_id",
-                    "kind": "reference",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "token",
-                    "name": "token",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "expiresAt",
-                    "name": "expires_at",
-                    "kind": "timestamp",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "createdAt",
-                    "name": "created_at",
-                    "kind": "timestamp",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "createdBy",
-                    "name": "created_by",
-                    "kind": "reference",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                }
-            ],
-            "fks": [
-                {
-                    "column": "entry_id",
-                    "targetTable": "entries",
-                    "targetColumn": "id",
-                    "onDelete": "cascade"
-                },
-                {
-                    "column": "created_by",
-                    "targetTable": "users",
-                    "targetColumn": "id",
-                    "onDelete": "no action"
-                }
-            ],
-            "indexes": [
-                {
-                    "name": "entry_preview_tokens_token_unique",
-                    "columns": [
-                        "token"
-                    ],
-                    "unique": true
-                }
-            ]
+        {
+          "key": "lastRun",
+          "name": "last_run",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
         },
-        "entry_versions": {
-            "name": "entry_versions",
-            "columns": [
-                {
-                    "key": "id",
-                    "name": "id",
-                    "kind": "id",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": true
-                },
-                {
-                    "key": "entryId",
-                    "name": "entry_id",
-                    "kind": "reference",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "versionNumber",
-                    "name": "version_number",
-                    "kind": "integer",
-                    "type": "integer",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "title",
-                    "name": "title",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "slug",
-                    "name": "slug",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "fields",
-                    "name": "fields",
-                    "kind": "json",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "status",
-                    "name": "status",
-                    "kind": "enum",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false,
-                    "enumValues": [
-                        "unpublished",
-                        "published",
-                        "scheduled"
-                    ]
-                },
-                {
-                    "key": "createdAt",
-                    "name": "created_at",
-                    "kind": "timestamp",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "createdBy",
-                    "name": "created_by",
-                    "kind": "reference",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                }
-            ],
-            "fks": [
-                {
-                    "column": "entry_id",
-                    "targetTable": "entries",
-                    "targetColumn": "id",
-                    "onDelete": "cascade"
-                },
-                {
-                    "column": "created_by",
-                    "targetTable": "users",
-                    "targetColumn": "id",
-                    "onDelete": "no action"
-                }
-            ],
-            "indexes": [
-                {
-                    "name": "idx_versions_entry",
-                    "columns": [
-                        "entry_id",
-                        "version_number"
-                    ],
-                    "unique": false
-                }
-            ]
+        {
+          "key": "nextRun",
+          "name": "next_run",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
         },
-        "media": {
-            "name": "media",
-            "columns": [
-                {
-                    "key": "id",
-                    "name": "id",
-                    "kind": "id",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": true
-                },
-                {
-                    "key": "filename",
-                    "name": "filename",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "mimeType",
-                    "name": "mime_type",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "size",
-                    "name": "size",
-                    "kind": "integer",
-                    "type": "integer",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "width",
-                    "name": "width",
-                    "kind": "integer",
-                    "type": "integer",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "height",
-                    "name": "height",
-                    "kind": "integer",
-                    "type": "integer",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "alt",
-                    "name": "alt",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "fields",
-                    "name": "fields",
-                    "kind": "json",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "metadata",
-                    "name": "metadata",
-                    "kind": "json",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "createdAt",
-                    "name": "created_at",
-                    "kind": "timestamp",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "updatedAt",
-                    "name": "updated_at",
-                    "kind": "timestamp",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "createdBy",
-                    "name": "created_by",
-                    "kind": "reference",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "title",
-                    "name": "title",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "caption",
-                    "name": "caption",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                }
-            ],
-            "fks": [
-                {
-                    "column": "created_by",
-                    "targetTable": "users",
-                    "targetColumn": "id",
-                    "onDelete": "no action"
-                }
-            ],
-            "indexes": [
-                {
-                    "name": "idx_media_mime",
-                    "columns": [
-                        "mime_type"
-                    ],
-                    "unique": false
-                },
-                {
-                    "name": "idx_media_created",
-                    "columns": [
-                        "created_at"
-                    ],
-                    "unique": false
-                }
-            ]
-        },
-        "notifications": {
-            "name": "notifications",
-            "columns": [
-                {
-                    "key": "id",
-                    "name": "id",
-                    "kind": "id",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": true
-                },
-                {
-                    "key": "userId",
-                    "name": "user_id",
-                    "kind": "reference",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "type",
-                    "name": "type",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "title",
-                    "name": "title",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "message",
-                    "name": "message",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "href",
-                    "name": "href",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "createdAt",
-                    "name": "created_at",
-                    "kind": "timestamp",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                }
-            ],
-            "fks": [
-                {
-                    "column": "user_id",
-                    "targetTable": "users",
-                    "targetColumn": "id",
-                    "onDelete": "cascade"
-                }
-            ],
-            "indexes": [
-                {
-                    "name": "notifications_user_created_idx",
-                    "columns": [
-                        "user_id",
-                        "created_at"
-                    ],
-                    "unique": false
-                }
-            ]
-        },
-        "relationships": {
-            "name": "relationships",
-            "columns": [
-                {
-                    "key": "sourceId",
-                    "name": "source_id",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "sourceKind",
-                    "name": "source_kind",
-                    "kind": "enum",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false,
-                    "enumValues": [
-                        "entry",
-                        "user",
-                        "media"
-                    ]
-                },
-                {
-                    "key": "sourceType",
-                    "name": "source_type",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "schemaPath",
-                    "name": "schema_path",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "instancePath",
-                    "name": "instance_path",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "targetId",
-                    "name": "target_id",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "targetKind",
-                    "name": "target_kind",
-                    "kind": "enum",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false,
-                    "enumValues": [
-                        "entry",
-                        "user",
-                        "media"
-                    ]
-                },
-                {
-                    "key": "sourceStaged",
-                    "name": "source_staged",
-                    "kind": "boolean",
-                    "type": "integer",
-                    "notNull": true,
-                    "primaryKey": false,
-                    "default": 0
-                }
-            ],
-            "primaryKey": [
-                "source_id",
-                "source_kind",
-                "instance_path",
-                "target_id",
-                "target_kind"
-            ],
-            "fks": [],
-            "indexes": [
-                {
-                    "name": "idx_rel_target",
-                    "columns": [
-                        "target_id",
-                        "target_kind"
-                    ],
-                    "unique": false
-                },
-                {
-                    "name": "idx_rel_filter",
-                    "columns": [
-                        "source_type",
-                        "schema_path",
-                        "target_id"
-                    ],
-                    "unique": false
-                }
-            ]
-        },
-        "roles": {
-            "name": "roles",
-            "columns": [
-                {
-                    "key": "slug",
-                    "name": "slug",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": true
-                },
-                {
-                    "key": "name",
-                    "name": "name",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "permissions",
-                    "name": "permissions",
-                    "kind": "json",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "isBuiltIn",
-                    "name": "is_built_in",
-                    "kind": "boolean",
-                    "type": "integer",
-                    "notNull": true,
-                    "primaryKey": false,
-                    "default": 0
-                },
-                {
-                    "key": "createdAt",
-                    "name": "created_at",
-                    "kind": "timestamp",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "updatedAt",
-                    "name": "updated_at",
-                    "kind": "timestamp",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                }
-            ],
-            "fks": [],
-            "indexes": []
-        },
-        "settings": {
-            "name": "settings",
-            "columns": [
-                {
-                    "key": "key",
-                    "name": "key",
-                    "kind": "text",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": true
-                },
-                {
-                    "key": "value",
-                    "name": "value",
-                    "kind": "json",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "updatedAt",
-                    "name": "updated_at",
-                    "kind": "timestamp",
-                    "type": "text",
-                    "notNull": true,
-                    "primaryKey": false
-                },
-                {
-                    "key": "updatedBy",
-                    "name": "updated_by",
-                    "kind": "reference",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                }
-            ],
-            "fks": [
-                {
-                    "column": "updated_by",
-                    "targetTable": "users",
-                    "targetColumn": "id",
-                    "onDelete": "no action"
-                }
-            ],
-            "indexes": []
+        {
+          "key": "lock",
+          "name": "lock",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
         }
+      ],
+      "fks": [],
+      "indexes": []
+    },
+    "_astromech_plugins": {
+      "name": "_astromech_plugins",
+      "columns": [
+        {
+          "key": "package",
+          "name": "package",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
+        },
+        {
+          "key": "namespace",
+          "name": "namespace",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "version",
+          "name": "version",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "installedAt",
+          "name": "installed_at",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "fks": [],
+      "indexes": [
+        {
+          "name": "_astromech_plugins_namespace_unique",
+          "columns": [
+            "namespace"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    "entries": {
+      "name": "entries",
+      "columns": [
+        {
+          "key": "id",
+          "name": "id",
+          "kind": "id",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
+        },
+        {
+          "key": "type",
+          "name": "type",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "locale",
+          "name": "locale",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "localeGroup",
+          "name": "locale_group",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "slug",
+          "name": "slug",
+          "kind": "text",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "title",
+          "name": "title",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "fields",
+          "name": "fields",
+          "kind": "json",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "status",
+          "name": "status",
+          "kind": "enum",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false,
+          "default": "unpublished",
+          "enumValues": [
+            "unpublished",
+            "published",
+            "scheduled"
+          ]
+        },
+        {
+          "key": "stagedFor",
+          "name": "staged_for",
+          "kind": "reference",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "publishedAt",
+          "name": "published_at",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "deletedAt",
+          "name": "deleted_at",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "createdAt",
+          "name": "created_at",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "updatedAt",
+          "name": "updated_at",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "createdBy",
+          "name": "created_by",
+          "kind": "reference",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "updatedBy",
+          "name": "updated_by",
+          "kind": "reference",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ],
+      "fks": [
+        {
+          "column": "staged_for",
+          "targetTable": "entries",
+          "targetColumn": "id",
+          "onDelete": "no action"
+        },
+        {
+          "column": "created_by",
+          "targetTable": "users",
+          "targetColumn": "id",
+          "onDelete": "no action"
+        },
+        {
+          "column": "updated_by",
+          "targetTable": "users",
+          "targetColumn": "id",
+          "onDelete": "no action"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_entries_type",
+          "columns": [
+            "type"
+          ],
+          "unique": false
+        },
+        {
+          "name": "idx_entries_status",
+          "columns": [
+            "type",
+            "status"
+          ],
+          "unique": false
+        },
+        {
+          "name": "idx_entries_locale",
+          "columns": [
+            "type",
+            "locale",
+            "status"
+          ],
+          "unique": false
+        },
+        {
+          "name": "idx_entries_deleted",
+          "columns": [
+            "deleted_at"
+          ],
+          "unique": false
+        },
+        {
+          "name": "idx_entries_locale_group",
+          "columns": [
+            "locale_group"
+          ],
+          "unique": false
+        },
+        {
+          "name": "idx_entries_staged_for",
+          "columns": [
+            "staged_for"
+          ],
+          "unique": false
+        },
+        {
+          "name": "entries_locale_group_locale_unique",
+          "columns": [
+            "locale_group",
+            "locale"
+          ],
+          "unique": true
+        },
+        {
+          "name": "entries_type_locale_slug_unique",
+          "columns": [
+            "type",
+            "locale",
+            "slug"
+          ],
+          "unique": true,
+          "where": "staged_for IS NULL"
+        }
+      ]
+    },
+    "entry_preview_tokens": {
+      "name": "entry_preview_tokens",
+      "columns": [
+        {
+          "key": "id",
+          "name": "id",
+          "kind": "id",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
+        },
+        {
+          "key": "entryId",
+          "name": "entry_id",
+          "kind": "reference",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "token",
+          "name": "token",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "expiresAt",
+          "name": "expires_at",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "createdAt",
+          "name": "created_at",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "createdBy",
+          "name": "created_by",
+          "kind": "reference",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ],
+      "fks": [
+        {
+          "column": "entry_id",
+          "targetTable": "entries",
+          "targetColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "created_by",
+          "targetTable": "users",
+          "targetColumn": "id",
+          "onDelete": "no action"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "entry_preview_tokens_token_unique",
+          "columns": [
+            "token"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    "entry_versions": {
+      "name": "entry_versions",
+      "columns": [
+        {
+          "key": "id",
+          "name": "id",
+          "kind": "id",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
+        },
+        {
+          "key": "entryId",
+          "name": "entry_id",
+          "kind": "reference",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "versionNumber",
+          "name": "version_number",
+          "kind": "integer",
+          "type": "integer",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "title",
+          "name": "title",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "slug",
+          "name": "slug",
+          "kind": "text",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "fields",
+          "name": "fields",
+          "kind": "json",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "status",
+          "name": "status",
+          "kind": "enum",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false,
+          "enumValues": [
+            "unpublished",
+            "published",
+            "scheduled"
+          ]
+        },
+        {
+          "key": "createdAt",
+          "name": "created_at",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "createdBy",
+          "name": "created_by",
+          "kind": "reference",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ],
+      "fks": [
+        {
+          "column": "entry_id",
+          "targetTable": "entries",
+          "targetColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "created_by",
+          "targetTable": "users",
+          "targetColumn": "id",
+          "onDelete": "no action"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_versions_entry",
+          "columns": [
+            "entry_id",
+            "version_number"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "media": {
+      "name": "media",
+      "columns": [
+        {
+          "key": "id",
+          "name": "id",
+          "kind": "id",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
+        },
+        {
+          "key": "filename",
+          "name": "filename",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "mimeType",
+          "name": "mime_type",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "size",
+          "name": "size",
+          "kind": "integer",
+          "type": "integer",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "width",
+          "name": "width",
+          "kind": "integer",
+          "type": "integer",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "height",
+          "name": "height",
+          "kind": "integer",
+          "type": "integer",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "alt",
+          "name": "alt",
+          "kind": "text",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "fields",
+          "name": "fields",
+          "kind": "json",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "metadata",
+          "name": "metadata",
+          "kind": "json",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "createdAt",
+          "name": "created_at",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "updatedAt",
+          "name": "updated_at",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "createdBy",
+          "name": "created_by",
+          "kind": "reference",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "title",
+          "name": "title",
+          "kind": "text",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "caption",
+          "name": "caption",
+          "kind": "text",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ],
+      "fks": [
+        {
+          "column": "created_by",
+          "targetTable": "users",
+          "targetColumn": "id",
+          "onDelete": "no action"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_media_mime",
+          "columns": [
+            "mime_type"
+          ],
+          "unique": false
+        },
+        {
+          "name": "idx_media_created",
+          "columns": [
+            "created_at"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "notifications": {
+      "name": "notifications",
+      "columns": [
+        {
+          "key": "id",
+          "name": "id",
+          "kind": "id",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
+        },
+        {
+          "key": "userId",
+          "name": "user_id",
+          "kind": "reference",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "type",
+          "name": "type",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "title",
+          "name": "title",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "message",
+          "name": "message",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "href",
+          "name": "href",
+          "kind": "text",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "createdAt",
+          "name": "created_at",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "fks": [
+        {
+          "column": "user_id",
+          "targetTable": "users",
+          "targetColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "notifications_user_created_idx",
+          "columns": [
+            "user_id",
+            "created_at"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "relationships": {
+      "name": "relationships",
+      "columns": [
+        {
+          "key": "sourceId",
+          "name": "source_id",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "sourceKind",
+          "name": "source_kind",
+          "kind": "enum",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false,
+          "enumValues": [
+            "entry",
+            "user",
+            "media"
+          ]
+        },
+        {
+          "key": "sourceType",
+          "name": "source_type",
+          "kind": "text",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "schemaPath",
+          "name": "schema_path",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "instancePath",
+          "name": "instance_path",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "targetId",
+          "name": "target_id",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "targetKind",
+          "name": "target_kind",
+          "kind": "enum",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false,
+          "enumValues": [
+            "entry",
+            "user",
+            "media"
+          ]
+        },
+        {
+          "key": "sourceStaged",
+          "name": "source_staged",
+          "kind": "boolean",
+          "type": "integer",
+          "notNull": true,
+          "primaryKey": false,
+          "default": 0
+        }
+      ],
+      "primaryKey": [
+        "source_id",
+        "source_kind",
+        "instance_path",
+        "target_id",
+        "target_kind"
+      ],
+      "fks": [],
+      "indexes": [
+        {
+          "name": "idx_rel_target",
+          "columns": [
+            "target_id",
+            "target_kind"
+          ],
+          "unique": false
+        },
+        {
+          "name": "idx_rel_filter",
+          "columns": [
+            "source_type",
+            "schema_path",
+            "target_id"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "roles": {
+      "name": "roles",
+      "columns": [
+        {
+          "key": "slug",
+          "name": "slug",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
+        },
+        {
+          "key": "name",
+          "name": "name",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "permissions",
+          "name": "permissions",
+          "kind": "json",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "isBuiltIn",
+          "name": "is_built_in",
+          "kind": "boolean",
+          "type": "integer",
+          "notNull": true,
+          "primaryKey": false,
+          "default": 0
+        },
+        {
+          "key": "createdAt",
+          "name": "created_at",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "updatedAt",
+          "name": "updated_at",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "fks": [],
+      "indexes": []
+    },
+    "settings": {
+      "name": "settings",
+      "columns": [
+        {
+          "key": "key",
+          "name": "key",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
+        },
+        {
+          "key": "value",
+          "name": "value",
+          "kind": "json",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "updatedAt",
+          "name": "updated_at",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "updatedBy",
+          "name": "updated_by",
+          "kind": "reference",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ],
+      "fks": [
+        {
+          "column": "updated_by",
+          "targetTable": "users",
+          "targetColumn": "id",
+          "onDelete": "no action"
+        }
+      ],
+      "indexes": []
+    },
+    "users": {
+      "name": "users",
+      "columns": [
+        {
+          "key": "id",
+          "name": "id",
+          "kind": "id",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
+        },
+        {
+          "key": "email",
+          "name": "email",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "name",
+          "name": "name",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "emailVerified",
+          "name": "email_verified",
+          "kind": "boolean",
+          "type": "integer",
+          "notNull": true,
+          "primaryKey": false,
+          "default": 0
+        },
+        {
+          "key": "image",
+          "name": "image",
+          "kind": "text",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "fields",
+          "name": "fields",
+          "kind": "json",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "roleSlug",
+          "name": "role_slug",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "createdAt",
+          "name": "created_at",
+          "kind": "timestamp",
+          "type": "integer",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "updatedAt",
+          "name": "updated_at",
+          "kind": "timestamp",
+          "type": "integer",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "fks": [],
+      "indexes": [
+        {
+          "name": "users_email_unique",
+          "columns": [
+            "email"
+          ],
+          "unique": true
+        }
+      ]
     }
+  }
 }

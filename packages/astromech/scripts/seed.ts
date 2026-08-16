@@ -655,7 +655,7 @@ async function upsertUser(
     await db
         .insertInto('users')
         .values(
-            schema.encode('users', {
+            schema.encodeWith(schema.usersTable, {
                 id: userId,
                 email,
                 name,
