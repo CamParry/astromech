@@ -36,6 +36,28 @@ export async function existingResourceIds(
     return found;
 }
 
+/**
+ * The entry type each of these ids resolves to, keyed by id. Ids absent from the
+ * result have no row in the `entries` table — dangling, or held by a storage
+ * override — and the caller decides what that means.
+ */
+export async function existingEntryTypes(
+    ids: string[],
+    db: Db = getDb()
+): Promise<Map<string, string>> {
+    const unique = Array.from(new Set(ids));
+    const types = new Map<string, string>();
+    for (let i = 0; i < unique.length; i += ID_CHUNK) {
+        const rows = await db
+            .selectFrom('entries')
+            .select(['id', 'type'])
+            .where('id', 'in', unique.slice(i, i + ID_CHUNK))
+            .execute();
+        for (const row of rows) types.set(row.id, row.type);
+    }
+    return types;
+}
+
 /** One `WHERE id IN (…)` against the table that owns `kind`. */
 async function selectIds(db: Db, kind: TargetKind, ids: string[]): Promise<string[]> {
     switch (kind) {

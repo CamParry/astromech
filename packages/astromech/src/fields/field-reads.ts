@@ -16,6 +16,11 @@ export function fieldReadsFromRecords<R>(opts: {
      * row can legitimately hold the value being written.
      */
     excludeId?: string | readonly string[] | undefined;
+    /**
+     * Entry types by id, supplied by the caller because this module sits below
+     * the database capability. Omit it and the target-type check is skipped.
+     */
+    entryTypes?: ((ids: string[]) => Promise<Map<string, string>>) | undefined;
 }): FieldReads {
     const excluded =
         opts.excludeId === undefined
@@ -33,5 +38,6 @@ export function fieldReadsFromRecords<R>(opts: {
             }
             return true;
         },
+        ...(opts.entryTypes ? { entryTypes: opts.entryTypes } : {}),
     };
 }

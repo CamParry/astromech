@@ -1,3 +1,4 @@
+import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
 import { ValidationError } from '@/errors/validation';
 import { fieldReadsFromRecords } from '@/fields/field-reads';
@@ -35,6 +36,7 @@ export async function create(params: {
                 load: async () => (await query({ limit: 'all' })).data,
                 getId: (r) => r.id,
                 getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
+                entryTypes: (relIds) => existingEntryTypes(relIds),
             }),
             ...(resourceValidate ? { resourceValidate } : {}),
         }

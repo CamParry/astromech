@@ -17,6 +17,7 @@ import { mergeLocaleSetting } from './page-values.shared';
 import { isPublicSettingKey } from './visibility';
 import { processFields } from '@/fields/pipeline';
 import { flattenEntryFields } from '@/fields/flatten';
+import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { fieldReadsFromRecords } from '@/fields/field-reads';
 import { getCurrentUser } from '@/request-context/index';
 import { ValidationError } from '@/errors/validation';
@@ -120,6 +121,7 @@ export const settingsService: SettingsService = {
                         getId: (s) => s.key,
                         getFields: (s) => (isPlainObject(s.value) ? s.value : {}),
                         excludeId: key,
+                        entryTypes: (ids) => existingEntryTypes(ids),
                     }),
                     ...(resourceValidate ? { resourceValidate } : {}),
                 }
