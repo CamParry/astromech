@@ -34,6 +34,7 @@ import {
     validateDate,
     validateReference,
     validateText,
+    validateColor,
     validateLink,
     validateGroup,
     validateItemList,
@@ -370,7 +371,7 @@ export const coreFieldTypes: FieldType[] = [
         type: 'color',
         build: color,
         component: '@/admin/components/fields/color-field',
-        validate: validateText,
+        validate: validateColor,
         tsType: () => 'string',
     },
     {

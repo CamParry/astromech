@@ -19,6 +19,7 @@ import {
     validateDate,
     validateReference,
     validateText,
+    validateColor,
     validateLink,
     validateGroup,
     validateItemList,
@@ -269,6 +270,26 @@ describe('processFields integration', () => {
         expect(errors.f).toBeUndefined();
     });
 
+    it('color field with a keyword → errors.f', async () => {
+        const { errors } = await processFields(
+            { f: 'red' },
+            [{ name: 'f', type: 'color' }],
+            fakeCtx()
+        );
+        expect(errors.f).toEqual([
+            'Must be a hex colour such as #3366ff, or an rgb()/hsl() colour',
+        ]);
+    });
+
+    it('link field with a javascript: url → errors.f', async () => {
+        const { errors } = await processFields(
+            { f: { url: 'javascript:alert(1)', label: 'Go' } },
+            [{ name: 'f', type: 'link' }],
+            fakeCtx()
+        );
+        expect(errors.f).toEqual(['A link may not use a javascript: or data: url']);
+    });
+
     it('key-value field with {a:1,"":2} → values.f deep-equals {a:"1"}', async () => {
         const { values } = await processFields(
             { f: { a: 1, '': 2 } },
@@ -488,13 +509,68 @@ describe('validateText', () => {
     });
 });
 
+describe('validateColor', () => {
+    it('accepts hex in every length', async () => {
+        expect(await validateColor(ctx('#fff'))).toBe(true);
+        expect(await validateColor(ctx('#ffff'))).toBe(true);
+        expect(await validateColor(ctx('#3366ff'))).toBe(true);
+        expect(await validateColor(ctx('#3366FF80'))).toBe(true);
+    });
+
+    it('accepts the rgb/hsl functions', async () => {
+        expect(await validateColor(ctx('rgb(51, 102, 255)'))).toBe(true);
+        expect(await validateColor(ctx('rgba(51, 102, 255, 0.5)'))).toBe(true);
+        expect(await validateColor(ctx('hsl(220 100% 60%)'))).toBe(true);
+    });
+
+    it('rejects a malformed hex value', async () => {
+        expect(await validateColor(ctx('#12345'))).toBe(
+            'Must be a hex colour such as #3366ff, or an rgb()/hsl() colour'
+        );
+        expect(await validateColor(ctx('3366ff'))).toBe(
+            'Must be a hex colour such as #3366ff, or an rgb()/hsl() colour'
+        );
+    });
+
+    it('rejects a keyword', async () => {
+        expect(await validateColor(ctx('red'))).toBe(
+            'Must be a hex colour such as #3366ff, or an rgb()/hsl() colour'
+        );
+    });
+
+    it('rejects a non-string', async () => {
+        expect(await validateColor(ctx(255))).toBe('Must be text');
+    });
+});
+
 describe('validateLink', () => {
     it('accepts a link with a url', async () => {
         expect(await validateLink(ctx({ url: '/about', label: 'About' }))).toBe(true);
     });
 
-    it('accepts a relative path or an anchor — the url is not parsed', async () => {
+    it('accepts a relative path, an anchor and a mailto', async () => {
         expect(await validateLink(ctx({ url: '#top' }))).toBe(true);
+        expect(await validateLink(ctx({ url: 'about/team' }))).toBe(true);
+        expect(await validateLink(ctx({ url: 'mailto:hi@example.com' }))).toBe(true);
+        expect(await validateLink(ctx({ url: 'https://example.com/a?b=c' }))).toBe(true);
+    });
+
+    it('accepts an empty url — unfilled is `required`’s question', async () => {
+        expect(await validateLink(ctx({ url: '', label: 'About' }))).toBe(true);
+    });
+
+    it('rejects a url that does not parse', async () => {
+        expect(await validateLink(ctx({ url: 'not a url' }))).toBe('Must be a valid URL');
+        expect(await validateLink(ctx({ url: 'https://' }))).toBe('Must be a valid URL');
+    });
+
+    it('rejects an executable scheme, as rich text does', async () => {
+        expect(await validateLink(ctx({ url: 'javascript:alert(1)' }))).toBe(
+            'A link may not use a javascript: or data: url'
+        );
+        expect(await validateLink(ctx({ url: 'data:text/html;base64,PHA+' }))).toBe(
+            'A link may not use a javascript: or data: url'
+        );
     });
 
     it('rejects a bare string', async () => {

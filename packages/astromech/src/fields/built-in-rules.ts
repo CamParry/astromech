@@ -5,6 +5,7 @@
  */
 
 import type { Field, FieldValidator } from '@/types/fields';
+import { isUnsafeHref } from './rich-text/safe-links';
 import { slugify } from '@/utilities/strings';
 
 // ---------------------------------------------------------------------------
@@ -202,19 +203,43 @@ function referenceMessage(value: unknown, many: boolean): string {
 }
 
 // ---------------------------------------------------------------------------
-// text — text, textarea, slug, color
+// text — text, textarea
 // ---------------------------------------------------------------------------
 
 export const validateText: FieldValidator = async (ctx) =>
     typeof ctx.value === 'string' ? true : 'Must be text';
 
 // ---------------------------------------------------------------------------
+// color
+// ---------------------------------------------------------------------------
+
+/** The forms the color picker writes and an API caller can reasonably send. */
+const HEX_COLOR_RE = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+const FUNCTIONAL_COLOR_RE = /^(?:rgb|rgba|hsl|hsla)\([^()]*\)$/i;
+
+/**
+ * A color is a hex value (`#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`) or an
+ * `rgb()`/`rgba()`/`hsl()`/`hsla()` function. Keywords like `red` are not
+ * accepted: the field's editor writes hex, and a typo reads as a keyword.
+ */
+export const validateColor: FieldValidator = async (ctx) => {
+    if (typeof ctx.value !== 'string') return 'Must be text';
+    const value = ctx.value.trim();
+    return HEX_COLOR_RE.test(value) || FUNCTIONAL_COLOR_RE.test(value)
+        ? true
+        : 'Must be a hex colour such as #3366ff, or an rgb()/hsl() colour';
+};
+
+// ---------------------------------------------------------------------------
 // link
 // ---------------------------------------------------------------------------
 
+/** A relative url is resolved against this to be parsed at all. */
+const URL_REFERENCE_BASE = 'https://astromech.invalid/';
+
 /**
- * A link holds `{ url, label, target? }`. Only the shape is checked — the url
- * is not parsed, so a `link` is free to hold a relative path or an anchor.
+ * A link holds `{ url, label, target? }`. The url is checked as a URL
+ * reference, so an absolute url, a relative path and an anchor are all valid.
  */
 export const validateLink: FieldValidator = async (ctx) => {
     const v = ctx.value;
@@ -223,6 +248,8 @@ export const validateLink: FieldValidator = async (ctx) => {
     }
     const { url, label, target } = v as Record<string, unknown>;
     if (typeof url !== 'string') return 'A link needs a url';
+    const urlProblem = linkUrlProblem(url);
+    if (urlProblem !== null) return urlProblem;
     if (label !== undefined && typeof label !== 'string') {
         return 'A link label must be text';
     }
@@ -231,6 +258,23 @@ export const validateLink: FieldValidator = async (ctx) => {
     }
     return true;
 };
+
+/**
+ * What is wrong with a link url, or null. An empty url is unfilled rather than
+ * malformed, which is `required`'s question; `javascript:` and `data:` are
+ * refused on the same grounds as a rich-text link.
+ */
+function linkUrlProblem(url: string): string | null {
+    if (url === '') return null;
+    if (isUnsafeHref(url)) return 'A link may not use a javascript: or data: url';
+    if (/\s/.test(url)) return 'Must be a valid URL';
+    try {
+        new URL(url, URL_REFERENCE_BASE);
+        return null;
+    } catch {
+        return 'Must be a valid URL';
+    }
+}
 
 // ---------------------------------------------------------------------------
 // nested fields — group, repeater, blocks, tree

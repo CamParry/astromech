@@ -38,10 +38,18 @@ never sees).
       `FieldReads` currently offers only `isUnique`, so this needs a second
       method on it and a matching change wherever the pipeline context is built
       (entries, media, users, settings).
-- [ ] **`color` and `link` are shape-checked, not format-checked.** `color` must
+- [x] **`color` and `link` are shape-checked, not format-checked.** `color` must
       be a string but no format is enforced; `link` must be an object with a
       string `url`, which is deliberately not parsed so a relative path or an
       anchor stays valid. Both want a real format decision.
+      **Done:** `color` takes hex (`#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`) and
+      the `rgb()`/`rgba()`/`hsl()`/`hsla()` functions. CSS keywords like `red`
+      are refused — the field's editor writes hex, so a keyword is more often a
+      typo than a choice. `link` parses its url as a URL _reference_, against a
+      base, so a relative path and an anchor still pass while `not a url` and
+      `https://` do not; `javascript:` and `data:` are refused through the same
+      `isUnsafeHref` the rich-text link guard uses. An empty url stays valid: it
+      means unfilled, which is `required`'s question, not a malformed value.
 - [x] **`slug` normalizes but never rejects.** `coerceSlug` slugifies whatever it
       is given, so a garbage value becomes a garbage slug rather than an error.
       Deliberate today; worth revisiting alongside `text`.
