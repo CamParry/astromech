@@ -12,7 +12,7 @@ import { buildScopedDispatch, type DispatchResult } from '@/transport/tools/disp
 
 /** Build the tool definitions this role reaches, narrowed by the method filter. */
 export function buildScopedTools(
-    role: Role | undefined,
+    role: Role | null | undefined,
     options?: { readOnly?: boolean }
 ): ToolDefinition[] {
     const manifest = getMethodManifest();
@@ -53,7 +53,7 @@ export function buildScopedTools(
  */
 export function resolveScopedMethod(
     id: string,
-    role: Role | undefined
+    role: Role | null | undefined
 ): { method: ManifestMethod; dispatch: DispatchResult } | undefined {
     const method = getMethodManifest()?.methods.find((entry) => entry.id === id);
     if (method === undefined) return undefined;

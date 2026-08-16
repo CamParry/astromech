@@ -27,7 +27,10 @@ export type AnnotatedManifestMethod = ManifestMethod & {
  * inventing an input. A missing role holds nothing, so every gated method is
  * denied — the same rule `permissionsFor` applies.
  */
-function allowedFor(method: ManifestMethod, role: Role | undefined): boolean | null {
+function allowedFor(
+    method: ManifestMethod,
+    role: Role | null | undefined
+): boolean | null {
     if (method.permissionDynamic === true) return null;
     if (method.permission === null) return true; // ungated
     if (!role) return false;
@@ -37,7 +40,7 @@ function allowedFor(method: ManifestMethod, role: Role | undefined): boolean | n
 /** Annotate every method with whether `role` may call it. */
 export function annotateManifest(
     methods: ManifestMethod[],
-    role: Role | undefined
+    role: Role | null | undefined
 ): AnnotatedManifestMethod[] {
     return methods.map((method) => ({ ...method, allowed: allowedFor(method, role) }));
 }
