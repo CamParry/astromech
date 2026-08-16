@@ -377,11 +377,11 @@ describe('onTick / runDue', () => {
     // Regression: the runner used to read config via
     // `await import('virtual:astromech/config')`, which crashes in the plain-Node
     // scheduler tick (ERR_UNSUPPORTED_ESM_URL_SCHEME — protocol 'virtual:'). It
-    // now reads the resolved config from the cron registry, populated at boot.
-    describe('runtime config source (no virtual: import)', () => {
-        it('10. throws a clear error when the runtime config registry is unset', async () => {
+    // now reads the resolved config from the config registry, filled at boot.
+    describe('config source (no virtual: import)', () => {
+        it('10. throws a clear error when the config registry is unset', async () => {
             // Clear the registry that setupTestConfig populated in beforeEach.
-            delete globalThis.__astromech?.runtimeConfig;
+            delete globalThis.__astromech?.config;
 
             registerCronJob({
                 name: 'test-job',
@@ -390,7 +390,7 @@ describe('onTick / runDue', () => {
             });
 
             await expect(runDue(new Date('2024-06-01T00:00:00.000Z'))).rejects.toThrow(
-                /'runtimeConfig' is not configured\. initRuntime\(\) must run/
+                /'config' is not configured\. Ensure createAstromech/
             );
         });
 

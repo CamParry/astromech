@@ -1,4 +1,4 @@
-import config from 'virtual:astromech/config';
+import { getConfig } from '@/config/registry';
 import { flattenEntryFields } from '@/fields/flatten';
 import { getCurrentUser } from '@/request-context/index';
 import { resolveEntryType } from '@/utilities/entry-type-ids';
@@ -34,7 +34,7 @@ export async function get(params: {
     const shape: VisibilityShape = params.full ? 'full' : 'public';
     const user = getCurrentUser();
     const audience = { roleSlug: user?.roleSlug ?? null, now: new Date() };
-    const entryTypeCfg = resolveEntryType(config, type);
+    const entryTypeCfg = resolveEntryType(getConfig(), type);
     const fields = entryTypeCfg ? flattenEntryFields(entryTypeCfg.fields) : [];
 
     const filtered = applyVisibility(result, { shape, fields, audience });

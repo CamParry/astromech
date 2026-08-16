@@ -1,3 +1,4 @@
+import { getConfig } from '@/config/registry';
 import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
 import { ValidationError } from '@/errors/validation';
@@ -6,10 +7,9 @@ import { flattenFieldNodes } from '@/fields/flatten';
 import { processFields } from '@/fields/pipeline';
 import { getCurrentUser } from '@/request-context/index';
 import type { JsonObject, User } from '@/types/index';
-import config from 'virtual:astromech/config';
 import { createUserSchema } from '../schema';
 import { createUserStorage } from '../storage';
-import { parseWith } from '../internal/parse';
+import { validate } from '../internal/validate';
 import { indexUserRelationships } from '../internal/relationships';
 import { toUser } from '../internal/to-user';
 import { query } from './query';
@@ -21,8 +21,9 @@ export async function create(params: {
     fields?: JsonObject;
     roleSlug?: string;
 }): Promise<User> {
-    const validated = parseWith(createUserSchema, params);
+    const validated = validate(createUserSchema, params);
 
+    const config = getConfig();
     const fieldDefs = flattenFieldNodes(config.users?.fields ?? []);
     const resourceValidate = config.users?.validate;
     const processedFields = await processFields(

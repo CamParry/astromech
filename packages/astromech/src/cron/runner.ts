@@ -13,7 +13,8 @@
 import { Cron } from 'croner';
 import { getDb } from '@/database/registry';
 import { createCronStorage, type CronStorage } from '@/cron/storage';
-import { getCronJobs, getRuntimeConfig } from '@/cron/registry';
+import { getCronJobs } from '@/cron/registry';
+import { getConfig } from '@/config/registry';
 import { globals } from '@/utilities/registry';
 
 /** Claim lease: generous so a normal job never self-expires mid-run. A crashed
@@ -60,7 +61,7 @@ export async function runDue(now: Date): Promise<void> {
     // contract, so the runner still resolves one even though its own queries go
     // through the storage.
     const db = getDb();
-    const config = getRuntimeConfig();
+    const config = getConfig();
     const timezone = config.timezone ?? 'UTC';
     const storage = createCronStorage();
 

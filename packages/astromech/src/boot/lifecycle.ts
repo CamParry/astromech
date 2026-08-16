@@ -20,7 +20,7 @@ import { buildAIConfig } from '@/ai/middleware';
 import { registerBuiltInEntryJobs } from '@/entries/jobs/index';
 import { wireEntryAccess } from '@/entries/plugin-access';
 import { wireNotifyAccess } from '@/notifications/plugin-access';
-import { setSchedulerDriver, setRuntimeConfig } from '@/cron/registry';
+import { setSchedulerDriver } from '@/cron/registry';
 import { cloudflareCron, interval } from '@/cron/drivers/index';
 import { isWorkersRuntime } from '@/cloudflare/bindings';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime';
@@ -70,7 +70,6 @@ export function defaultScheduler(): SchedulerDriver {
 function resolvePhase(config: AstromechConfig): ResolvedConfig {
     const resolved = resolveConfig(config);
     setConfig(resolved);
-    setRuntimeConfig(resolved);
     return resolved;
 }
 

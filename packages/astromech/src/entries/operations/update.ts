@@ -2,7 +2,7 @@ import { getCurrentUser } from '@/request-context/index';
 import { runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime';
 import { updateEntrySchemaFor } from '../schema';
 import { getEntryStorage } from '../storage/registry';
-import { parseWith } from '../internal/parse';
+import { validate } from '../internal/validate';
 import {
     getTitleField,
     isVersioningEnabled,
@@ -22,7 +22,7 @@ import { flattenEntryFields } from '@/fields/flatten';
 import { processFields } from '@/fields/pipeline';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { ValidationError } from '@/errors/index';
-import config from 'virtual:astromech/config';
+import { getConfig } from '@/config/registry';
 import type { EntryStorage, StorageDb } from '../storage/types';
 import type { Entry, EntryUpdateData, JsonObject } from '@/types/index';
 
@@ -34,7 +34,7 @@ export async function updateOne(
     id: string,
     data: EntryUpdateData
 ): Promise<Entry> {
-    const validatedData = parseWith(updateEntrySchemaFor(getTitleField(type)), data);
+    const validatedData = validate(updateEntrySchemaFor(getTitleField(type)), data);
     const currentEntry = await loadAndAssertType(storage, type, id);
 
     // Root field names the caller actually sent — needed after the block too,
@@ -42,7 +42,7 @@ export async function updateOne(
     let patchedFieldNames: string[] = [];
 
     if (validatedData.fields !== undefined) {
-        const entryType = resolveEntryType(config, type);
+        const entryType = resolveEntryType(getConfig(), type);
         const fieldDefs = entryType ? flattenEntryFields(entryType.fields) : [];
 
         // A canonical and its staged copy are one logical entry as far as

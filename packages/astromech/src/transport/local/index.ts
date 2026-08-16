@@ -9,8 +9,8 @@
  * enforcement boundary). It only projects services into a consumption shape.
  */
 
-import config from 'virtual:astromech/config';
-import type { TypedEntriesService } from '@/types/index';
+import { getConfig } from '@/config/registry';
+import type { ResolvedConfig, TypedEntriesService } from '@/types/index';
 import type { AstromechClient } from '@/transport/astromech-client.shared';
 import { usersService } from '@/users/index';
 import { entriesService } from '@/entries/index';
@@ -35,7 +35,9 @@ export const Astromech: AstromechClient = {
     settings: settingsService,
     users: usersService,
     notifications: localNotificationsService,
-    config,
+    get config(): ResolvedConfig {
+        return getConfig();
+    },
     plugins: localPlugins,
     configure(_options: { baseUrl: string }): void {
         // No-op for the Local API — direct DB access does not use a base URL.
@@ -47,8 +49,8 @@ export const Astromech: AstromechClient = {
 // (plugin-runtime → transport/local → plugin-runtime).
 setPluginClient(Astromech);
 
-// Wired here, not at boot: the port's implementation must belong to the module
-// graph that can resolve `virtual:`, and this module is evaluated in it.
+// The plugin runtime sits below the transports, so the implementation of its
+// `tools` port is injected from up here.
 setPluginMethods({ tools: buildScopedTools });
 
 export default Astromech;

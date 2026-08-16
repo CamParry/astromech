@@ -88,10 +88,9 @@ export function getAstromech(): Promise<Astromech> {
 /** Run the phases, then assemble the instance from what they registered. */
 async function boot(config: AstromechConfig): Promise<Astromech> {
     const resolved = await runBootPhases(config);
-    // Loaded lazily because it imports `virtual:astromech/config` at module
-    // scope, and this module has to stay importable in plain Node, where
-    // `virtual:` does not resolve — a config selecting `cloudflareCron()`
-    // reaches it through the scheduler subpath, under jiti.
+    // Loaded lazily: this module runs `setPluginClient` / `setPluginMethods` at
+    // module scope and sits in a cycle with `plugins/runtime`, which deadlocks
+    // the bundled SSR server when the edge is static.
     const { Astromech: services } = await import('@/transport/local/index');
 
     return {

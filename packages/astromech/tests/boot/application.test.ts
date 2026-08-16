@@ -11,8 +11,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb } from '@tests/harness';
 import { createAstromech, getAstromech } from '@/boot/application';
-import { resolveConfig } from '@/config/resolve';
-import { setCliConfig } from '@/transport/cli/virtual-config-shim';
 import { getEntryStorage } from '@/entries/storage/registry';
 import { entriesService } from '@/entries/service';
 import type { EntryStorage } from '@/entries/storage/types';
@@ -90,7 +88,6 @@ describe('createAstromech — host entry storage', () => {
     beforeEach(async () => {
         const db = await createTestDb();
         const config = makeConfig(() => db);
-        setCliConfig(resolveConfig(config));
         // One application per process, and each case builds its own config.
         delete globalThis.__astromech?.application;
         await createAstromech({ config });
@@ -125,7 +122,6 @@ describe('createAstromech — the application slot', () => {
 
     it('returns the same instance for the same config object', async () => {
         const config = makeConfig(() => db);
-        setCliConfig(resolveConfig(config));
 
         const first = await createAstromech({ config });
         const second = await createAstromech({ config });
@@ -135,7 +131,6 @@ describe('createAstromech — the application slot', () => {
 
     it('refuses a second create with a different config object', async () => {
         const config = makeConfig(() => db);
-        setCliConfig(resolveConfig(config));
         await createAstromech({ config });
 
         expect(() => createAstromech({ config: makeConfig(() => db) })).toThrow(
@@ -147,7 +142,6 @@ describe('createAstromech — the application slot', () => {
         expect(() => getAstromech()).toThrow(/no application has been created/);
 
         const config = makeConfig(() => db);
-        setCliConfig(resolveConfig(config));
         const created = await createAstromech({ config });
 
         expect(await getAstromech()).toBe(created);
@@ -157,14 +151,12 @@ describe('createAstromech — the application slot', () => {
         const failing = makeConfig(() => {
             throw new Error('database unreachable');
         });
-        setCliConfig(resolveConfig(failing));
 
         await expect(createAstromech({ config: failing })).rejects.toThrow(
             /database unreachable/
         );
 
         const working = makeConfig(() => db);
-        setCliConfig(resolveConfig(working));
         await expect(createAstromech({ config: working })).resolves.toBeDefined();
     });
 });

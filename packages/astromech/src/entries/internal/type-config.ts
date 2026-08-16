@@ -1,10 +1,10 @@
 /**
  * Config-derived helpers shared across entry operations: locale defaulting,
  * title-field + capability lookups, capability assertions, and field-definition
- * resolution. All read the resolved `virtual:astromech/config`.
+ * resolution. All read the resolved config.
  */
 
-import config from 'virtual:astromech/config';
+import { getConfig } from '@/config/registry';
 import { resolveContentLocale } from '@/utilities/locale';
 import { flattenEntryFields } from '@/fields/flatten';
 import { resolveEntryType } from '@/utilities/entry-type-ids';
@@ -19,20 +19,20 @@ export function getDefaultLocale(): string {
     // locale that entries are tagged with. The storage layer matches locale
     // EXACTLY, so bridge the display tag down its RFC 4647 fallback chain to an
     // available content locale; fall back to the first configured locale.
-    const cfg = config as { defaultLocale?: string; locales?: readonly string[] };
-    const locales = cfg.locales ?? [];
-    const requested = cfg.defaultLocale ?? 'en';
+    const config = getConfig();
+    const locales = config.locales ?? [];
+    const requested = config.defaultLocale ?? 'en';
     return resolveContentLocale(requested, locales) ?? locales[0] ?? requested;
 }
 
 export function getTitleField(typeName: string): 'title' | false {
-    return resolveEntryType(config, typeName)?.titleField ?? 'title';
+    return resolveEntryType(getConfig(), typeName)?.titleField ?? 'title';
 }
 
 export function isVersioningEnabled(typeName: string): boolean {
     return (
         getEntryStorage(typeName).versions !== undefined &&
-        !!resolveEntryType(config, typeName)?.versioning
+        !!resolveEntryType(getConfig(), typeName)?.versioning
     );
 }
 
@@ -40,7 +40,7 @@ export function getNonTranslatableFieldNames(
     typeName: string,
     fieldNames: string[]
 ): string[] {
-    const entryType = resolveEntryType(config, typeName);
+    const entryType = resolveEntryType(getConfig(), typeName);
     if (!entryType?.translatable) return [];
     const nonTranslatable: string[] = [];
     for (const field of flattenEntryFields(entryType.fields)) {
@@ -53,13 +53,13 @@ export function getNonTranslatableFieldNames(
 
 /** Flattened field definitions for an entry type (`[]` if the type is unknown). */
 export function resolveTypeFields(typeName: string): Field[] {
-    const cfg = resolveEntryType(config, typeName);
-    return cfg ? flattenEntryFields(cfg.fields) : [];
+    const entryType = resolveEntryType(getConfig(), typeName);
+    return entryType ? flattenEntryFields(entryType.fields) : [];
 }
 
 /** Enforce a type's configured capability set. */
 export function assertCapability(typeName: string, capability: Capability): void {
-    const caps = resolveEntryType(config, typeName)?.capabilities;
+    const caps = resolveEntryType(getConfig(), typeName)?.capabilities;
     if (caps && !caps[capability]) {
         throw new CapabilityError(typeName, capability);
     }

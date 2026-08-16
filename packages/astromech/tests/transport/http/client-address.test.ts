@@ -6,7 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Hono } from 'hono';
 import { getClientAddress } from '@/transport/http/client-address';
-import { setCliConfig } from '@/transport/cli/virtual-config-shim';
+import { setConfig } from '@/config/registry';
 import type { ResolvedConfig, TrustProxy } from '@/types/index';
 
 /** Serve `GET /` with the resolved address as the body, and call it with `headers`. */
@@ -22,14 +22,14 @@ function pretendWorkers(): void {
     vi.stubGlobal('navigator', { userAgent: 'Cloudflare-Workers' });
 }
 
-/** Put a config carrying only `security.trustProxy` behind the virtual module. */
+/** Publish a config carrying only `security.trustProxy`. */
 function trustProxy(value: TrustProxy): void {
-    setCliConfig({ security: { trustProxy: value } } as unknown as ResolvedConfig);
+    setConfig({ security: { trustProxy: value } } as unknown as ResolvedConfig);
 }
 
 describe('getClientAddress', () => {
     beforeEach(() => {
-        setCliConfig({} as unknown as ResolvedConfig);
+        setConfig({} as unknown as ResolvedConfig);
     });
 
     afterEach(() => {

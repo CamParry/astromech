@@ -23,6 +23,11 @@ import * as zod from 'zod';
 // ============================================================================
 
 export * from '@/types/index';
+// The application: an integration creates it, everything else reads it. Config
+// reaches the runtime through `createAstromech`, so nothing under here carries a
+// `virtual:` import and this barrel still loads in plain Node.
+export { createAstromech, getAstromech } from '@/boot/application';
+export type { Astromech } from '@/boot/application';
 // The contract both transports implement. It lives beside them rather than in
 // `types/`, and reaches the public surface from here so `astromech` still
 // exports it — see `transport/astromech-client.shared.ts`.

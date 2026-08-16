@@ -8,7 +8,7 @@
  * headers, instead of each hand-building its own user shape.
  */
 
-import config from 'virtual:astromech/config';
+import { getConfig } from '@/config/registry';
 import { auth } from './auth';
 import { createUserStorage } from './storage';
 import { resolveRole } from '@/permissions/index';
@@ -47,7 +47,7 @@ export async function resolveSessionUser(
 
     return {
         user,
-        role: resolveRole(config, userRow.roleSlug),
+        role: resolveRole(getConfig(), userRow.roleSlug),
         session: session.session,
     };
 }

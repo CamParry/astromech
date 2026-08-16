@@ -4,12 +4,7 @@ import Seo from '../components/Seo.astro';
 import { Icon } from 'astro-icon/components';
 import '../styles/global.css';
 import type { Locale } from '../lib/site.ts';
-import {
-    localizedPath,
-    stripLocalePrefix,
-    LOCALES,
-    DEFAULT_LOCALE,
-} from '../lib/site.ts';
+import { localizedPath, stripLocalePrefix, locales, defaultLocale } from '../lib/site.ts';
 import { socialIconName } from '../lib/icons.ts';
 
 interface Props {
@@ -22,7 +17,7 @@ interface Props {
 }
 
 const {
-    locale = DEFAULT_LOCALE,
+    locale = defaultLocale(),
     seoType,
     seoSlug,
     seoTitle,
@@ -66,7 +61,7 @@ try {
 type SocialLink = { platform?: string; url?: string };
 const socials = Array.isArray(globals.socials) ? (globals.socials as SocialLink[]) : [];
 
-const otherLocales = LOCALES.filter((l) => l !== locale);
+const otherLocales = locales().filter((l) => l !== locale);
 ---
 
 <!doctype html>
@@ -127,7 +122,7 @@ const otherLocales = LOCALES.filter((l) => l !== locale);
                 {
                     otherLocales.length > 0 && (
                         <div class="flex items-center gap-1 shrink-0">
-                            {LOCALES.map((l) => (
+                            {locales().map((l) => (
                                 <a
                                     href={localizedPath(
                                         stripLocalePrefix(Astro.url.pathname, locale),

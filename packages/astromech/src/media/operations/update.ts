@@ -1,3 +1,4 @@
+import { getConfig } from '@/config/registry';
 import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
 import { ValidationError } from '@/errors/validation';
@@ -7,10 +8,9 @@ import { processFields } from '@/fields/pipeline';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { getCurrentUser } from '@/request-context/index';
 import type { JsonObject, Media } from '@/types/index';
-import config from 'virtual:astromech/config';
 import { updateMediaSchema } from '../schema';
 import { createMediaStorage } from '../storage';
-import { parseWith } from '../internal/parse';
+import { validate } from '../internal/validate';
 import { indexMediaRelationships } from '../internal/relationships';
 import { toMedia } from '../internal/to-media';
 import { get } from './get';
@@ -27,10 +27,11 @@ export async function update(params: {
     }>;
 }): Promise<Media> {
     const { id } = params;
-    const validatedData = parseWith(updateMediaSchema, params.data);
+    const validatedData = validate(updateMediaSchema, params.data);
 
     if (validatedData.fields !== undefined) {
         const current = await get({ id });
+        const config = getConfig();
         const fieldDefs = flattenFieldNodes(config.media?.fields ?? []);
         const resourceValidate = config.media?.validate;
         // `fields` is a patch: an omitted field keeps its stored value, an

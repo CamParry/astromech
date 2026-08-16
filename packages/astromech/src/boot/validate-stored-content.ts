@@ -6,10 +6,7 @@
  * whose field data the CURRENT rules would reject. It writes nothing.
  *
  * Boot owns it because it spans entries, media, users and settings, which no
- * single domain may do — `relationship-index.ts` is the same case. Do NOT
- * import this module from `astro.ts` or `boot.ts`: it pulls in domain services
- * and their `virtual:astromech/config`, which does not resolve during Astro's
- * plain-Node config load.
+ * single domain may do — `relationship-index.ts` is the same case.
  *
  * ## Staying inert
  *
@@ -26,7 +23,7 @@
  * matters most: without it every stored row's `unique` rule collides with itself.
  */
 
-import config from 'virtual:astromech/config';
+import { getConfig } from '@/config/registry';
 import { createStorage } from '@/database/storage/create-storage';
 import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { entriesTable } from '@/entries/schema';
@@ -121,7 +118,7 @@ async function checkEntries(
                 type: typeName,
                 // A table-backed storage need not be locale-aware; the fallback
                 // matches the built-in storage's own.
-                locale: record.locale ?? config.defaultLocale ?? 'en',
+                locale: record.locale ?? getConfig().defaultLocale ?? 'en',
                 status: record.status,
                 fields: record.fields,
                 record,
@@ -142,7 +139,7 @@ async function checkEntryRow(
         record: unknown;
     }
 ): Promise<void> {
-    const entryType = resolveEntryType(config, row.type);
+    const entryType = resolveEntryType(getConfig(), row.type);
     // A row whose type the config no longer declares has no rules to fail.
     if (!entryType) return;
 
@@ -180,6 +177,7 @@ async function checkEntryRow(
 
 /** Entry types whose rows live outside the `entries` table, plugin types qualified. */
 function tableBackedEntryTypes(type: string | undefined): string[] {
+    const config = getConfig();
     const configured = [
         ...Object.keys(config.entries),
         ...Object.entries(config.pluginEntries).flatMap(([plugin, types]) =>
@@ -202,6 +200,7 @@ function tableBackedEntryTypes(type: string | undefined): string[] {
  * `fields`, which both carry identically.
  */
 async function checkMedia(report: ValidationReport): Promise<void> {
+    const config = getConfig();
     const definitions = flattenFieldNodes(config.media?.fields ?? []);
     const resourceValidate = config.media?.validate;
     const storage = createMediaStorage();
@@ -244,6 +243,7 @@ async function checkMedia(report: ValidationReport): Promise<void> {
 
 /** User rows, with `users/operations/update.ts`'s context. */
 async function checkUsers(report: ValidationReport): Promise<void> {
+    const config = getConfig();
     const definitions = flattenFieldNodes(config.users?.fields ?? []);
     const resourceValidate = config.users?.validate;
     const storage = createUserStorage();
@@ -291,7 +291,9 @@ async function checkSettings(report: ValidationReport): Promise<void> {
         const baseKey = row.key.includes(':')
             ? row.key.slice(0, row.key.indexOf(':'))
             : row.key;
-        const page = config.adminPages.find((candidate) => candidate.baseKey === baseKey);
+        const page = getConfig().adminPages.find(
+            (candidate) => candidate.baseKey === baseKey
+        );
         if (!page?.fields) continue;
 
         report.rowsChecked += 1;
@@ -302,7 +304,7 @@ async function checkSettings(report: ValidationReport): Promise<void> {
             Object.prototype.hasOwnProperty.call(value, field.name)
         );
         // `ResolvedAdminPage` drops `validate`, so it comes from the AUTHORED page.
-        const resourceValidate = config.admin?.pages?.find(
+        const resourceValidate = getConfig().admin?.pages?.find(
             (candidate) => candidate.path === page.path
         )?.validate;
         const processed = await processFields(value, definitions, {

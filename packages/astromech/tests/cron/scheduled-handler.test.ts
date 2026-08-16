@@ -15,7 +15,19 @@ import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/schema';
 import type { DB } from '@/database/types';
 import { globals } from '@/utilities/registry';
-import { rawConfig } from 'virtual:astromech/config';
+
+// `handleScheduled` reads the config it creates the application from out of the
+// virtual module, so a test of it has to serve one. `vi.hoisted` so the factory,
+// hoisted above the imports, can close over what `beforeEach` puts here.
+const virtualConfig = vi.hoisted(() => {
+    return {} as { raw?: unknown };
+});
+
+vi.mock('virtual:astromech/config', () => ({
+    get rawConfig() {
+        return virtualConfig.raw;
+    },
+}));
 
 beforeEach(async () => {
     delete globalThis.__astromech?.cronJobs;
@@ -26,12 +38,14 @@ beforeEach(async () => {
     delete globalThis.__astromech?.scheduler;
 
     await createTestDb();
-    setupTestConfig(makeTestConfig());
+    const config = makeTestConfig();
+    setupTestConfig(config);
+    virtualConfig.raw = config;
     // `setupTestConfig` mirrors the boot rather than running it, so the slot
     // `handleScheduled` reads is filled by hand. The created path is covered in
     // `scheduled-boot.test.ts`.
     globals().application = {
-        config: rawConfig,
+        config,
         app: Promise.resolve({ scheduled: (at?: Date) => onTick(at ?? new Date()) }),
     };
 });

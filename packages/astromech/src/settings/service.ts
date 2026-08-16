@@ -8,9 +8,8 @@
  * not as a cross-cutting policy.
  */
 
-import config from 'virtual:astromech/config';
+import { getConfig } from '@/config/registry';
 import type { JsonValue, Setting, SettingsService } from '@/types/index';
-import type { ResolvedConfig } from '@/types/config';
 import { createSettingsStorage } from './storage';
 import type { SettingRow } from './schema';
 import { mergeLocaleSetting } from './page-values.shared';
@@ -38,8 +37,7 @@ export const settingsService: SettingsService = {
     async all(params?: { full?: boolean }): Promise<Setting[]> {
         const rows = await createSettingsStorage().all();
         const full = params?.full ?? false;
-        const publicKeys =
-            (config as { publicSettingKeys?: string[] }).publicSettingKeys ?? [];
+        const publicKeys = getConfig().publicSettingKeys;
         return rows
             .filter((row) => full || isPublicSettingKey(row.key, publicKeys))
             .map(toSetting);
@@ -51,10 +49,10 @@ export const settingsService: SettingsService = {
         full?: boolean;
     }): Promise<JsonValue | null> {
         const { key } = params;
+        const config = getConfig();
         const locale = params.locale ?? config.defaultLocale;
         const full = params.full ?? false;
-        const publicKeys =
-            (config as { publicSettingKeys?: string[] }).publicSettingKeys ?? [];
+        const publicKeys = config.publicSettingKeys;
 
         // On a public read, reject private keys immediately without a DB round-trip.
         if (!full && !isPublicSettingKey(key, publicKeys)) {
@@ -88,10 +86,9 @@ export const settingsService: SettingsService = {
         const { key } = params;
         let effectiveValue = params.value;
 
+        const config = getConfig();
         const baseKey = key.includes(':') ? key.slice(0, key.indexOf(':')) : key;
-        const page = (config as ResolvedConfig).adminPages.find(
-            (p) => p.baseKey === baseKey
-        );
+        const page = config.adminPages.find((p) => p.baseKey === baseKey);
         if (page?.fields && isPlainObject(effectiveValue)) {
             // Validate ONLY the fields present in this key's blob. Translatable pages
             // split global fields (baseKey) from per-locale fields (baseKey:<locale>)
@@ -102,7 +99,7 @@ export const settingsService: SettingsService = {
             );
             // `ResolvedAdminPage` drops `validate` along with everything else
             // it does not project, so it has to come from the AUTHORED page.
-            const resourceValidate = (config as ResolvedConfig).admin?.pages?.find(
+            const resourceValidate = config.admin?.pages?.find(
                 (p) => p.path === page.path
             )?.validate;
             const processed = await processFields(

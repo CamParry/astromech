@@ -23,7 +23,7 @@ import CategoryArchive from '../components/views/CategoryArchive.astro';
 import TagArchive from '../components/views/TagArchive.astro';
 import CustomersList from '../components/views/CustomersList.astro';
 import CaseStudyDetail from '../components/views/CaseStudyDetail.astro';
-import { LOCALES, DEFAULT_LOCALE } from '../lib/site.ts';
+import { locales, defaultLocale } from '../lib/site.ts';
 import {
     getPageBySlug,
     getPostBySlug,
@@ -40,11 +40,11 @@ const rawPath = Astro.params.path ?? '';
 const segments = rawPath.split('/').filter(Boolean);
 
 // Detect and strip a non-default locale prefix
-let locale: Locale = DEFAULT_LOCALE;
+let locale: Locale = defaultLocale();
 if (
     segments.length > 0 &&
-    (LOCALES as readonly string[]).includes(segments[0]) &&
-    segments[0] !== DEFAULT_LOCALE
+    (locales() as readonly string[]).includes(segments[0]) &&
+    segments[0] !== defaultLocale()
 ) {
     locale = segments.shift() as Locale;
 }

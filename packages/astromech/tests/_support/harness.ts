@@ -6,9 +6,8 @@
  * `setDb` so service modules (which call `getDb()` per-op) hit it. Running the real
  * migration chain (rather than a throwaway test-only schema) means every
  * harness-based test also exercises the generated `migrationProvider`.
- * `setupTestConfig` resolves a small but representative config and pushes it
- * onto the CLI config shim, which the vitest alias maps
- * `virtual:astromech/config` onto.
+ * `setupTestConfig` resolves a small but representative config and publishes it
+ * to `config/registry.ts`, which is where every reader takes it from.
  *
  * Why file-based rather than `:memory:`?
  * libsql's `client.transaction()` hands the underlying SQLite connection to the
@@ -44,8 +43,7 @@ import type { DB } from '@/database/types';
 import { usersTable, type UserRow } from '@/database/schema';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 import { resolveConfig } from '@/config/resolve';
-import { setCliConfig } from '@/transport/cli/virtual-config-shim';
-import { setRuntimeConfig } from '@/cron/registry';
+import { setConfig } from '@/config/registry';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { wireEntryAccess } from '@/entries/plugin-access';
 import { runWithContext } from '@/request-context/index';
@@ -252,18 +250,14 @@ export function makeTestConfig(): AstromechConfig {
 }
 
 /**
- * Resolve the test config and push it onto the CLI config shim so
- * `virtual:astromech/config` resolves under vitest. Also resets the plugin
- * runtime (no hooks) unless `plugins` is supplied.
+ * Resolve the test config and publish it, the way the boot lifecycle does. Also
+ * resets the plugin runtime (no hooks) unless `plugins` is supplied.
  */
 export function setupTestConfig(
     config: AstromechConfig = makeTestConfig()
 ): ResolvedConfig {
     const resolved = resolveConfig(config);
-    setCliConfig(resolved);
-    // Mirror initRuntime: the cron runner reads config from this registry, not
-    // from `virtual:astromech/config`.
-    setRuntimeConfig(resolved);
+    setConfig(resolved);
     registerPlugins(config.plugins ?? [], resolved);
     return resolved;
 }

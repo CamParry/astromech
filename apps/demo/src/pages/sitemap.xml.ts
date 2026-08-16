@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import Astromech from 'astromech/local';
-import { LOCALES, localizedPath } from '../lib/site.ts';
+import { locales, localizedPath } from '../lib/site.ts';
 
 export const GET: APIRoute = async ({ site, url: requestUrl }) => {
     // `site` is the origin from `astro.config.mjs`; the request origin only
@@ -14,7 +14,7 @@ export const GET: APIRoute = async ({ site, url: requestUrl }) => {
         for (const url of result.urls) {
             urls.push({ loc: url.loc, lastmod: url.lastmod });
             // emit locale variants
-            for (const locale of LOCALES) {
+            for (const locale of locales()) {
                 const locPath = localizedPath(url.loc, locale);
                 if (locPath !== url.loc) {
                     urls.push({ loc: locPath, lastmod: url.lastmod });

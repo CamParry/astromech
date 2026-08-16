@@ -42,18 +42,3 @@ const scheduler = createRegistry<SchedulerDriver>('scheduler', { required: false
 
 export const setSchedulerDriver = scheduler.set;
 export const getSchedulerDriver = scheduler.peek;
-
-/**
- * Stash the resolved config at boot so readers that cannot import
- * `virtual:astromech/config` still reach it: the cron runner, and better-auth's
- * base path in `users/auth.ts`. `boot/astro.ts` → `boot/boot.js` →
- * `cron/runner.js` puts the runner in the plain-Node graph Astro loads at
- * `astro:config:setup`, where a static `virtual:` import throws
- * `ERR_UNSUPPORTED_ESM_URL_SCHEME` during Astro's own config load.
- */
-const runtimeConfig = createRegistry<ResolvedConfig>('runtimeConfig', {
-    hint: 'initRuntime() must run first.',
-});
-
-export const setRuntimeConfig = runtimeConfig.set;
-export const getRuntimeConfig = runtimeConfig.get;

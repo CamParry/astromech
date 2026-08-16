@@ -4,7 +4,7 @@
  * collector that enumerates every entry as a source.
  */
 
-import config from 'virtual:astromech/config';
+import { getConfig } from '@/config/registry';
 import { createRelationshipStorage } from '@/database/storage/relationships';
 import type { RelationshipIndexSource } from '@/database/storage/relationships';
 import { createStorage } from '@/database/storage/create-storage';
@@ -65,7 +65,7 @@ export async function collectEntryRelationshipSources(opts?: {
  * them as a source holding nothing so their stale rows read as drift.
  */
 function entryEdges(typeName: string, fields: JsonObject): RelationshipEdge[] | null {
-    const entryType = resolveEntryType(config, typeName);
+    const entryType = resolveEntryType(getConfig(), typeName);
     if (!entryType) return null;
     return collectRelationshipEdges(flattenEntryFields(entryType.fields), fields);
 }
@@ -126,6 +126,7 @@ async function tableBackedEntrySources(
 
 /** Every entry type id in the resolved config; plugin types qualified. */
 function configuredEntryTypes(): string[] {
+    const config = getConfig();
     return [
         ...Object.keys(config.entries),
         ...Object.entries(config.pluginEntries).flatMap(([plugin, types]) =>

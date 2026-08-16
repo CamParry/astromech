@@ -2,14 +2,13 @@
  * A Cron Trigger fires `scheduled()`, never `fetch()`, so `handleScheduled` is
  * reached with nothing booted. Its own file because it mocks
  * `virtual:astromech/config` to feed the real boot, where the rest of the suite
- * uses the harness shim.
+ * publishes a resolved config through the harness.
  */
 
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import type { Kysely } from 'kysely';
 import type { Updateable } from 'kysely';
 import { createTestDb, makeTestConfig } from '@tests/harness';
-import { resolveConfig } from '@/config/resolve';
 import { registerCronJob } from '@/cron/registry';
 import { interval } from '@/cron/drivers/index';
 import { handleScheduled } from '@/boot/scheduled';
@@ -21,13 +20,10 @@ import { globals } from '@/utilities/registry';
 // Holds what the mocked virtual module serves. `vi.hoisted` so the mock factory,
 // which is hoisted above the imports, can close over it.
 const virtualConfig = vi.hoisted(() => {
-    return {} as { raw?: unknown; resolved?: unknown };
+    return {} as { raw?: unknown };
 });
 
 vi.mock('virtual:astromech/config', () => ({
-    get default() {
-        return virtualConfig.resolved;
-    },
     get rawConfig() {
         return virtualConfig.raw;
     },
@@ -49,12 +45,11 @@ beforeEach(async () => {
         },
     };
     virtualConfig.raw = raw;
-    virtualConfig.resolved = resolveConfig(raw);
 
     // An uncreated application is exactly what a Cron Trigger hits: every slot
     // boot fills is empty, including the db `createTestDb` just set.
     delete globalThis.__astromech?.db;
-    delete globalThis.__astromech?.runtimeConfig;
+    delete globalThis.__astromech?.config;
     delete globalThis.__astromech?.application;
     delete globalThis.__astromech?.cronJobs;
     delete globalThis.__astromech?.scheduler;

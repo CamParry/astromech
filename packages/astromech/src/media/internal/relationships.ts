@@ -4,7 +4,7 @@
  * rebuild-side collector that enumerates every media record as a source.
  */
 
-import config from 'virtual:astromech/config';
+import { getConfig } from '@/config/registry';
 import { createRelationshipStorage } from '@/database/storage/relationships';
 import type { RelationshipIndexSource } from '@/database/storage/relationships';
 import { collectRelationshipEdges } from '@/fields/relationship-edges';
@@ -20,7 +20,7 @@ export async function indexMediaRelationships(
     id: string,
     fields: JsonObject
 ): Promise<void> {
-    const definitions = flattenFieldNodes(config.media?.fields ?? []);
+    const definitions = flattenFieldNodes(getConfig().media?.fields ?? []);
     await createRelationshipStorage().replaceForSource(
         { id, kind: 'media' },
         collectRelationshipEdges(definitions, fields)
@@ -35,7 +35,7 @@ export async function indexMediaRelationships(
 export async function collectMediaRelationshipSources(): Promise<
     RelationshipIndexSource[]
 > {
-    const definitions = flattenFieldNodes(config.media?.fields ?? []);
+    const definitions = flattenFieldNodes(getConfig().media?.fields ?? []);
     const rows = await createMediaStorage().list();
     return rows.map((row) => ({
         source: { id: row.id, kind: 'media' as const },

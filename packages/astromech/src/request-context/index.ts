@@ -16,12 +16,12 @@
  * `getCurrentUser()` returns `null`. There is deliberately no setter: a setter
  * is what made identity leak across requests.
  *
- * The store itself lives in `request-context/request-context.ts`, which imports no
- * config: this barrel reads `virtual:astromech/config`, and anything loaded
- * during Astro's plain-Node config load must reach the store without it.
+ * The store itself lives in `request-context/request-context.ts`, which imports
+ * nothing from the runtime, so anything loaded during Astro's plain-Node config
+ * load reaches it without dragging a registry in.
  */
 
-import config from 'virtual:astromech/config';
+import { getConfig } from '@/config/registry';
 import { getDb } from '@/database/registry';
 import { getCurrentUser } from '@/request-context/request-context';
 
@@ -36,7 +36,7 @@ export {
 export function getServerContext() {
     return {
         db: getDb(),
-        config,
+        config: getConfig(),
         user: getCurrentUser(),
     };
 }

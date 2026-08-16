@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig([
-    // Library build — virtual:astromech/config is injected by the Astro integration at runtime
+    // Library build — `virtual:astromech/config` is injected by the Astro integration at runtime
     {
         // Sources point ONLY at the curated `src/exports/` layer. Output keys
         // mirror the source layout, and the package.json subpaths mirror them in
@@ -14,10 +14,6 @@ export default defineConfig([
             columns: 'src/exports/columns.ts',
             methods: 'src/exports/methods.ts',
             'boot/astro': 'src/exports/astro.ts',
-            // Not a package.json subpath: the integration writes an absolute
-            // path to this file into `virtual:astromech/config`, so it needs a
-            // stable filename in dist rather than a hashed chunk.
-            'config/resolve': 'src/config/resolve.ts',
             'local/index': 'src/exports/local.ts',
             'fetch/index': 'src/exports/fetch.ts',
             middleware: 'src/exports/middleware.ts',
@@ -63,7 +59,7 @@ export default defineConfig([
         ],
         treeshake: true,
     },
-    // CLI build — virtual:astromech/config is shimmed with the live-config proxy
+    // CLI build — the config arrives as an argument, so no virtual module is involved
     {
         entry: {
             // `bin: astromech` -> dist/cli/index.js stays stable; source moved.
@@ -89,10 +85,5 @@ export default defineConfig([
         ],
         treeshake: true,
         banner: { js: '#!/usr/bin/env node' },
-        esbuildOptions(options) {
-            options.alias = {
-                'virtual:astromech/config': './src/transport/cli/virtual-config-shim.ts',
-            };
-        },
     },
 ]);

@@ -9,7 +9,7 @@ import { entryValidationStage } from '../../validation-stage.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { processFields } from '@/fields/pipeline';
 import { ValidationError } from '@/errors/index';
-import config from 'virtual:astromech/config';
+import { getConfig } from '@/config/registry';
 import type { EntryStorage, StorageDb } from '../../storage/types';
 import type { Entry, JsonObject } from '@/types/index';
 
@@ -24,7 +24,7 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
     // draft stage (it is unpublished), so this is the first write where the
     // canonical's own status decides whether completeness is enforced. Run it
     // BEFORE the transaction opens so a rejection costs no backup version.
-    const entryType = resolveEntryType(config, type);
+    const entryType = resolveEntryType(getConfig(), type);
     const fieldDefs = entryType ? flattenEntryFields(entryType.fields) : [];
     // The canonical's type governs: the staged row is a copy of it.
     const resourceValidate = entryType?.validate;

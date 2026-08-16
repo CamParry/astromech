@@ -8,7 +8,7 @@
 import { setDb } from '@/database/registry';
 import { resolveConfig } from '@/config/resolve';
 import { loadConfigFile } from '@/config/load';
-import { setCliConfig } from './virtual-config-shim';
+import { setConfig } from '@/config/registry';
 import type { AstromechConfig, ResolvedConfig } from '@/types/index';
 
 export async function loadRawConfig(configPath?: string): Promise<AstromechConfig> {
@@ -34,9 +34,7 @@ export async function loadConfig(
     setDb(db);
 
     const resolved = resolveConfig(rawConfig);
-
-    // Populate the virtual:astromech/config shim so local-transport modules work
-    setCliConfig(resolved);
+    setConfig(resolved);
 
     return resolved;
 }

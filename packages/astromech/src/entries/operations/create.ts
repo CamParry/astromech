@@ -3,7 +3,7 @@ import { runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime'
 import { slugify } from '@/utilities/strings';
 import { createEntrySchemaFor } from '../schema';
 import { getEntryStorage } from '../storage/registry';
-import { parseWith } from '../internal/parse';
+import { validate } from '../internal/validate';
 import {
     getDefaultLocale,
     getNonTranslatableFieldNames,
@@ -20,7 +20,7 @@ import { entryValidationStage } from '../validation-stage.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { processFields } from '@/fields/pipeline';
 import { ValidationError } from '@/errors/index';
-import config from 'virtual:astromech/config';
+import { getConfig } from '@/config/registry';
 import type { EntryStorage, StorageDb } from '../storage/types';
 import type { Entry, EntryStatus, JsonObject } from '@/types/index';
 
@@ -34,18 +34,19 @@ export async function create(params: {
     status?: EntryStatus;
     publishAt?: Date | null;
 }): Promise<Entry> {
-    // Write-back guard: reject public-branded fields objects (defense-in-depth).
+    // Reject public-branded fields
     if (params.fields !== undefined && isPublicBranded(params.fields)) {
         throw new PublicShapeWriteError();
     }
+
+    // Validate type or throw
     const { type } = params;
-    // Reject an unresolvable type up front. There are no field definitions to
-    // validate against, so proceeding would write a ghost row stamped with a
-    // type nothing can render or query.
-    const entryType = resolveEntryType(config, type);
+    const entryType = resolveEntryType(getConfig(), type);
     if (!entryType) throw new UnknownEntryTypeError(type);
+
+    // Validate data
     const titleField = getTitleField(type);
-    const validated = parseWith(createEntrySchemaFor(titleField), {
+    const validated = validate(createEntrySchemaFor(titleField), {
         title: params.title,
         slug: params.slug,
         fields: params.fields,
@@ -53,16 +54,13 @@ export async function create(params: {
         publishAt: params.publishAt,
     });
 
-    // Titleless types persist `''` rather than undefined (title column is
-    // notNull) and never derive a slug from the (absent) title. Titled types
-    // are guaranteed a string by the schema; `?? ''` is a no-op narrow there.
-    const title = validated.title ?? '';
-
     const storage = getEntryStorage(type);
+
+    // Set defaults
+    const title = validated.title ?? '';
     const status = validated.status || 'unpublished';
     const publishedAt =
         status === 'published' ? new Date() : (validated.publishAt ?? null);
-
     const locale = params.locale ?? getDefaultLocale();
 
     const user = getCurrentUser();
@@ -117,58 +115,42 @@ export async function create(params: {
     );
     const processedFields = pruned.values;
 
-    let slug: string | null;
-    if (validated.slug) {
-        slug = await storage.uniqueSlug(type, locale, validated.slug);
-    } else if (titleField === false) {
-        // No explicit slug on a titleless type: leave slug null rather than
-        // deriving one from the empty title (avoids "-2" style generated slugs).
-        slug = null;
-    } else {
-        slug = await storage.uniqueSlug(type, locale, slugify(title));
-    }
+    // Set slug
+    const slug =
+        validated.slug || titleField
+            ? await storage.uniqueSlug(type, locale, validated.slug ?? slugify(title))
+            : null;
 
-    const createData = {
+    const data = {
         title,
         slug,
         locale,
+        localeGroup: params.localeGroup,
         fields: processedFields,
         status,
-        publishAt: publishedAt,
+        publishedAt,
     };
-    await runBeforeHooks('entry:beforeCreate', { type, data: createData, user }, user);
 
-    // The row and its derived relationship rows go in together or not at all.
-    // Storages that can't open a transaction fall back to sequential writes.
+    // Run before create hook
+    await runBeforeHooks('entry:beforeCreate', { type, data, user }, user);
+
+    // Save row and it's derived relationships
     const persist = async (
         txStorage: EntryStorage,
         txDb: StorageDb | undefined
     ): Promise<Entry> => {
-        const row = asEntry(
-            await txStorage.create({
-                type,
-                title,
-                slug,
-                locale,
-                // Absent means "start a fresh translation group"; storage's
-                // table mints the ULID.
-                localeGroup: params.localeGroup,
-                fields: processedFields,
-                status,
-                publishedAt,
-            })
-        );
-        await indexEntryRelationships(row, processedFields, type, txDb);
-        return row;
+        const entry = asEntry(await txStorage.create({ type, ...data }));
+        await indexEntryRelationships(entry, data.fields, type, txDb);
+        return entry;
     };
-    const created = storage.transaction
+
+    // Create entry
+    const entry = storage.transaction
         ? await storage.transaction(persist)
         : await persist(storage, undefined);
 
-    await runAfterHooks(
-        'entry:afterCreate',
-        { type, data: createData, user, entry: created },
-        user
-    );
-    return created;
+    // Run after create hook
+    await runAfterHooks('entry:afterCreate', { type, data, user, entry }, user);
+
+    return entry;
 }

@@ -5,7 +5,7 @@
  * token → empty result (the front-end renders a 404).
  */
 
-import config from 'virtual:astromech/config';
+import { getConfig } from '@/config/registry';
 import { flattenEntryFields } from '@/fields/flatten';
 import { resolveEntryType } from '@/utilities/entry-type-ids';
 import { getEntryStorage } from '../../storage/registry';
@@ -32,7 +32,7 @@ export async function runPreviewQuery(
     if (!token || !type) return empty;
 
     const storage = getEntryStorage(type);
-    const entryTypeCfg = resolveEntryType(config, type);
+    const entryTypeCfg = resolveEntryType(getConfig(), type);
     const fields = entryTypeCfg ? flattenEntryFields(entryTypeCfg.fields) : [];
 
     const { data: rows } = await storage.list({
@@ -96,7 +96,7 @@ export async function runPreviewGet(
         target = asEntry(staged);
     }
 
-    const entryTypeCfg = resolveEntryType(config, type);
+    const entryTypeCfg = resolveEntryType(getConfig(), type);
     const fields = entryTypeCfg ? flattenEntryFields(entryTypeCfg.fields) : [];
 
     return projectPreview(target, fields);

@@ -6,18 +6,33 @@ import Astromech from 'astromech/local';
 
 export type Locale = string;
 
+/**
+ * Read at call time, never at module scope: config reaches the runtime through
+ * the boot registry, and a page module is evaluated before the request that
+ * boots it. Memoised because the config cannot change within a process.
+ */
+let cachedLocales: readonly Locale[] | undefined;
+let cachedDefaultLocale: Locale | undefined;
+
 /** Content locales, from `astromech.config.ts`. */
-export const LOCALES: readonly Locale[] = Astromech.config.locales ?? ['en'];
+export function locales(): readonly Locale[] {
+    return (cachedLocales ??= Astromech.config.locales ?? ['en']);
+}
 
 /**
  * `defaultLocale` is a display tag (`en-GB`) and need not be a content locale.
  * Routing matches locales exactly, so fall back to the first configured one.
  */
-const configuredDefault = Astromech.config.defaultLocale;
-export const DEFAULT_LOCALE: Locale =
-    configuredDefault !== undefined && LOCALES.includes(configuredDefault)
-        ? configuredDefault
-        : (LOCALES[0] ?? 'en');
+export function defaultLocale(): Locale {
+    if (cachedDefaultLocale !== undefined) return cachedDefaultLocale;
+    const all = locales();
+    const configured = Astromech.config.defaultLocale;
+    cachedDefaultLocale =
+        configured !== undefined && all.includes(configured)
+            ? configured
+            : (all[0] ?? 'en');
+    return cachedDefaultLocale;
+}
 
 /**
  * Resolve the active locale from a URL pathname.
@@ -25,10 +40,10 @@ export const DEFAULT_LOCALE: Locale =
  */
 export function localeFromPath(pathname: string): Locale {
     const seg = pathname.split('/')[1];
-    if (seg && LOCALES.includes(seg) && seg !== DEFAULT_LOCALE) {
+    if (seg && locales().includes(seg) && seg !== defaultLocale()) {
         return seg;
     }
-    return DEFAULT_LOCALE;
+    return defaultLocale();
 }
 
 /**
@@ -36,7 +51,7 @@ export function localeFromPath(pathname: string): Locale {
  * e.g. `/fr/blog/foo` → `/blog/foo`, `/blog/foo` → `/blog/foo`
  */
 export function stripLocalePrefix(pathname: string, locale: Locale): string {
-    if (locale === DEFAULT_LOCALE) return pathname;
+    if (locale === defaultLocale()) return pathname;
     const prefix = `/${locale}`;
     if (pathname.startsWith(prefix + '/') || pathname === prefix) {
         return pathname.slice(prefix.length) || '/';
@@ -49,7 +64,7 @@ export function stripLocalePrefix(pathname: string, locale: Locale): string {
  * Default locale remains unprefixed.
  */
 export function localizedPath(path: string, locale: Locale): string {
-    if (locale === DEFAULT_LOCALE) return path;
+    if (locale === defaultLocale()) return path;
     const clean = path.startsWith('/') ? path : `/${path}`;
     return `/${locale}${clean}`;
 }
@@ -106,5 +121,5 @@ const dict: Record<UiKey, Record<Locale, string>> = {
 };
 
 export function t(key: UiKey, locale: Locale): string {
-    return dict[key][locale] ?? dict[key][DEFAULT_LOCALE] ?? key;
+    return dict[key][locale] ?? dict[key][defaultLocale()] ?? key;
 }

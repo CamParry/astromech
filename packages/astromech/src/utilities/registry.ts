@@ -27,8 +27,6 @@ type AstromechGlobals = Record<string, unknown> & {
     cronUnscheduledWarned?: Set<string> | undefined;
     /** Module URL of the loaded admin UI barrel, for the duplicate-copy check. */
     uiInstance?: string | undefined;
-    /** The resolved config the CLI's `virtual:astromech/config` shim reads. */
-    cliConfig?: unknown;
 };
 
 declare global {

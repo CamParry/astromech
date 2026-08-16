@@ -85,8 +85,8 @@ jobs:
                   node-version: ${{ env.ACTIVE_LTS }}
                   cache: pnpm
             - run: pnpm install --frozen-lockfile
-            # `index:rebuild` runs the built CLI, whose bundle is the only place
-            # `virtual:astromech/config` is aliased to the CLI config shim.
+            # `index:rebuild` runs the built CLI rather than tsx, so the bundle
+            # has to exist first.
             - run: pnpm run build
             # The check compares the index against the field data it is derived
             # from, so it needs content: against an empty database it scans zero

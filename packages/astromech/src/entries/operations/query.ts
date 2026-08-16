@@ -1,4 +1,4 @@
-import config from 'virtual:astromech/config';
+import { getConfig } from '@/config/registry';
 import { flattenEntryFields } from '@/fields/flatten';
 import { collectRelationshipSchemaPaths } from '@/fields/relationship-edges';
 import { getCurrentUser } from '@/request-context/index';
@@ -43,7 +43,9 @@ export async function query(
     const firstType = types[0] ?? '';
     const storage = getEntryStorage(firstType);
 
-    const singleTypeCfg = singleType ? resolveEntryType(config, singleType) : undefined;
+    const singleTypeCfg = singleType
+        ? resolveEntryType(getConfig(), singleType)
+        : undefined;
 
     // Open Q1 (pagination correctness): for public shape, push the status
     // predicate into the storage where-clause so DB counts are correct.
@@ -89,7 +91,7 @@ export async function query(
         // without a type. Stamp it from the query so every returned entry is
         // complete (consumers build links / resolve icons from `entry.type`).
         if (entry.type === undefined) entry.type = rowType;
-        const rowTypeCfg = resolveEntryType(config, rowType);
+        const rowTypeCfg = resolveEntryType(getConfig(), rowType);
         const rowFields = rowTypeCfg ? flattenEntryFields(rowTypeCfg.fields) : [];
 
         const filtered = applyVisibility(entry, {
@@ -130,7 +132,7 @@ function assertReferencesFilter(value: unknown, types: string[]): void {
     const knownPaths = Array.from(
         new Set(
             types.flatMap((type) => {
-                const typeConfig = resolveEntryType(config, type);
+                const typeConfig = resolveEntryType(getConfig(), type);
                 return typeConfig
                     ? collectRelationshipSchemaPaths(
                           flattenEntryFields(typeConfig.fields)

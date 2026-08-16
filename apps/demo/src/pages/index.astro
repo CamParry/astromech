@@ -4,9 +4,9 @@ import type { Media } from 'astromech';
 import Site from '../layouts/Site.astro';
 import Blocks from '../components/blocks/Blocks.astro';
 import MediaGallery from '../components/MediaGallery.astro';
-import { DEFAULT_LOCALE } from '../lib/site.ts';
+import { defaultLocale } from '../lib/site.ts';
 
-const locale = DEFAULT_LOCALE;
+const locale = defaultLocale();
 
 let homePage = null;
 try {

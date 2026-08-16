@@ -7,7 +7,7 @@
  * `relationships` index (that is `internal/relationships.ts`).
  */
 
-import config from 'virtual:astromech/config';
+import { getConfig } from '@/config/registry';
 import { existingResourceIds } from '@/database/storage/resource-existence';
 import {
     collectRelationshipDeclarations,
@@ -139,7 +139,7 @@ function isPrunable(declaration: RelationshipDeclaration): boolean {
     if (declaration.targetKind !== 'entry') return true;
     const target = declaration.target;
     if (target === undefined || target === '') return false;
-    if (!resolveEntryType(config, target)) return false;
+    if (!resolveEntryType(getConfig(), target)) return false;
     if (!hasEntryStorageOverride(target)) return true;
     return getEntryStorage(target).existingIds !== undefined;
 }

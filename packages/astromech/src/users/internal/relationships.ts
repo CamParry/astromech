@@ -4,7 +4,7 @@
  * collector that enumerates every user as a source.
  */
 
-import config from 'virtual:astromech/config';
+import { getConfig } from '@/config/registry';
 import { createRelationshipStorage } from '@/database/storage/relationships';
 import type { RelationshipIndexSource } from '@/database/storage/relationships';
 import { collectRelationshipEdges } from '@/fields/relationship-edges';
@@ -20,7 +20,7 @@ export async function indexUserRelationships(
     id: string,
     fields: JsonObject
 ): Promise<void> {
-    const definitions = flattenFieldNodes(config.users?.fields ?? []);
+    const definitions = flattenFieldNodes(getConfig().users?.fields ?? []);
     await createRelationshipStorage().replaceForSource(
         { id, kind: 'user' },
         collectRelationshipEdges(definitions, fields)
@@ -35,7 +35,7 @@ export async function indexUserRelationships(
 export async function collectUserRelationshipSources(): Promise<
     RelationshipIndexSource[]
 > {
-    const definitions = flattenFieldNodes(config.users?.fields ?? []);
+    const definitions = flattenFieldNodes(getConfig().users?.fields ?? []);
     const rows = await createUserStorage().list();
     return rows.map((row) => ({
         source: { id: row.id, kind: 'user' as const },

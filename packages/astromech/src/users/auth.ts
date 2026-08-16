@@ -1,16 +1,14 @@
 import { betterAuth } from 'better-auth';
 import type { Auth, BetterAuthOptions } from 'better-auth';
 import { getDatabaseDriver } from '@/database/driver-registry';
-import { getRuntimeConfig } from '@/cron/registry';
+import { getConfig } from '@/config/registry';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 
 let _auth: Auth<BetterAuthOptions> | null = null;
 
 function getAuth(): Auth<BetterAuthOptions> {
     if (!_auth) {
-        // Read at call time, not module scope: `initRuntime` fills the slot
-        // during the first request, which is after this module is evaluated.
-        const { apiRoute } = getRuntimeConfig();
+        const { apiRoute } = getConfig();
         _auth = betterAuth({
             baseURL: import.meta.env.BETTER_AUTH_URL,
             basePath: `${apiRoute}/auth`,

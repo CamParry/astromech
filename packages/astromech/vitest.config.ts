@@ -4,13 +4,6 @@ import { fileURLToPath } from 'node:url';
 export default defineConfig({
     resolve: {
         alias: {
-            // Local-transport modules import `virtual:astromech/config`, injected
-            // by the Astro integration at build time. Under vitest there is no
-            // integration, so alias it to the CLI shim — a live Proxy over the
-            // globalThis config populated by `setCliConfig` (see tests/_support/harness.ts).
-            'virtual:astromech/config': fileURLToPath(
-                new URL('./src/transport/cli/virtual-config-shim.ts', import.meta.url)
-            ),
             // Admin virtual modules, normally injected by the Astro integration.
             'virtual:astromech/admin-config': fileURLToPath(
                 new URL('./tests/_support/admin-config-shim.ts', import.meta.url)

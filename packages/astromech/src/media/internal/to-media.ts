@@ -3,7 +3,7 @@
  * path returns through here, so a `Media.url` is made in exactly one place.
  */
 
-import config from 'virtual:astromech/config';
+import { getConfig } from '@/config/registry';
 import { getStorageDriver } from '@/storage/registry';
 import type { Media } from '@/types/index';
 import type { MediaRow } from '../schema';
@@ -32,6 +32,7 @@ export function toMedia(row: MediaRow): Media {
  * upload path, not the delivery path.
  */
 function resolveMediaUrl(id: string, filename: string): string {
+    const config = getConfig();
     if (config.media.access === 'public') {
         // Optional capability, genuinely absent on some drivers — feature-detect.
         const publicUrl =
