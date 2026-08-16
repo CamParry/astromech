@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { Kysely } from 'kysely';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
 import { usersService } from '@/users/service';
+import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 import type { DB } from '@/database/types';
 
 let db: Kysely<DB>;
@@ -66,7 +67,7 @@ describe('usersService create / get / update / delete', () => {
     it('creates with the default role and decoded timestamps', async () => {
         const created = await usersService.create({ email: 'new@test.dev', name: 'New' });
 
-        expect(created.roleSlug).toBe('editor');
+        expect(created.roleSlug).toBe(DEFAULT_ROLE_SLUG);
         expect(created.createdAt).toBeInstanceOf(Date);
         expect(created.updatedAt).toBeInstanceOf(Date);
         expect(await usersService.get({ id: created.id })).toMatchObject({ name: 'New' });

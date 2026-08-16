@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { adminRole, mountRouter, roleWith, testUser } from '@tests/mount-router';
 import { Astromech } from '@/transport/local/index';
+import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 import { usersRouter } from '@/transport/http/routes/users';
 import type { Role, User } from '@/types/index';
 
@@ -287,10 +288,11 @@ describe('DELETE /users/:id', () => {
         expect(await Astromech.users.get({ id: user.id })).toBeNull();
     });
 
-    // A role-less create takes the column's SQL default. That default must not
-    // be `admin`, or every such user counts toward the last-admin guard.
+    // A role-less create takes `DEFAULT_ROLE_SLUG` from the create schema, not
+    // `admin`, so it does not count toward the last-admin guard.
     it('deletes a user created without a role — the default is not admin', async () => {
         const user = await makeUser('b@test.dev', 'Bob');
+        expect(user.roleSlug).toBe(DEFAULT_ROLE_SLUG);
         expect(user.roleSlug).not.toBe('admin');
 
         const res = await app().request(`/users/${user.id}`, { method: 'DELETE' });

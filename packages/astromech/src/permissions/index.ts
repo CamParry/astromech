@@ -111,6 +111,13 @@ export const BUILT_IN_ROLES = {
 
 export type BuiltInRoleSlug = keyof typeof BUILT_IN_ROLES;
 
+/**
+ * The role a user created without an explicit one gets. `editor` is the
+ * least-privileged built-in — `admin` holds `*`, so defaulting to it would hand
+ * every grant to any write path that forgot to name a role.
+ */
+export const DEFAULT_ROLE_SLUG = 'editor' satisfies BuiltInRoleSlug;
+
 /** Copy of a built-in role's permissions, for spreading into config roles. */
 export function builtInRole(slug: BuiltInRoleSlug): Permission[] {
     const role = BUILT_IN_ROLES[slug];

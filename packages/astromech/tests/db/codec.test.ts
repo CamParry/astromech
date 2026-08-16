@@ -86,6 +86,7 @@ describe('legacy (better-auth) tables – encode/decode round trip', () => {
                 encode('users', {
                     email: 'seconds@test.dev',
                     name: 'Seconds',
+                    roleSlug: 'editor',
                     emailVerified: false,
                     createdAt: CREATED,
                     updatedAt: CREATED,
@@ -108,6 +109,7 @@ describe('legacy (better-auth) tables – encode/decode round trip', () => {
                 encode('users', {
                     email: 'defaults@test.dev',
                     name: 'Defaults',
+                    roleSlug: 'editor',
                 }) as unknown as Insertable<DB['users']>
             )
             .returningAll()

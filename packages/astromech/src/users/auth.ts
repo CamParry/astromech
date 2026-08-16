@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth';
 import type { Auth, BetterAuthOptions } from 'better-auth';
 import { getDatabaseDriver } from '@/database/driver-registry';
+import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 
 let _auth: Auth<BetterAuthOptions> | null = null;
 
@@ -22,6 +23,18 @@ function getAuth(): Auth<BetterAuthOptions> {
                     emailVerified: 'email_verified',
                     createdAt: 'created_at',
                     updatedAt: 'updated_at',
+                },
+                additionalFields: {
+                    // Signup inserts through better-auth's own Kysely instance,
+                    // so the role it writes is declared here rather than left to
+                    // a column default. `input: false` stops a signup body
+                    // naming its own role.
+                    roleSlug: {
+                        type: 'string',
+                        fieldName: 'role_slug',
+                        input: false,
+                        defaultValue: DEFAULT_ROLE_SLUG,
+                    },
                 },
             },
             session: {

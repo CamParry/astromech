@@ -10,7 +10,7 @@ import { collectRelationshipEdges } from 'astromech';
 import type { Field } from 'astromech';
 import * as schema from 'astromech/database/schema';
 import { libsql } from 'astromech/database/libsql';
-import config from '../../../apps/demo/astromech.config.js';
+import config from '../../../apps/demo/astromech.config';
 
 // Resolved against this file, not the cwd: `npm run db:seed` delegates with
 // `-w astromech`, so a relative `./apps/demo/database.db` would not exist.
@@ -47,8 +47,8 @@ async function seed(): Promise<void> {
     // -------------------------------------------------------------------------
     // Users
     // -------------------------------------------------------------------------
-    const adminId = await upsertUser('admin@astromech.dev', 'Alex Admin');
-    await upsertUser('editor@astromech.dev', 'Emma Editor');
+    const adminId = await upsertUser('admin@astromech.dev', 'Alex Admin', 'admin');
+    await upsertUser('editor@astromech.dev', 'Emma Editor', 'editor');
     console.log('  Created 2 users (admin, editor)\n');
 
     // -------------------------------------------------------------------------
@@ -634,7 +634,11 @@ async function seed(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 /** Create a credential user if the email is free; returns the user id either way. */
-async function upsertUser(email: string, name: string): Promise<string> {
+async function upsertUser(
+    email: string,
+    name: string,
+    roleSlug: string
+): Promise<string> {
     const existing = await db
         .selectFrom('users')
         .select('id')
@@ -655,6 +659,7 @@ async function upsertUser(email: string, name: string): Promise<string> {
                 id: userId,
                 email,
                 name,
+                roleSlug,
                 emailVerified: true,
                 createdAt: now,
                 updatedAt: now,

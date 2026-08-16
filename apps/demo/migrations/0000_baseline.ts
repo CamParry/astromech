@@ -38,8 +38,10 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     `.execute(db);
 
     // ── users ──────────────────────────────────────────────────────────────
-    // better-auth's signup inserts a row without `role_slug`, so the SQL default
-    // is what an unnamed role gets: the least-privileged built-in, not `admin`.
+    // `role_slug` carries NO SQL default on purpose: the default is
+    // `DEFAULT_ROLE_SLUG` in code, and every write path supplies it — better-auth
+    // signup through `user.additionalFields`, the users service through its zod
+    // schema. A path that forgets fails here rather than minting a role silently.
     await sql`
         CREATE TABLE \`users\` (
             \`id\` text PRIMARY KEY NOT NULL,
@@ -48,7 +50,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`email_verified\` integer DEFAULT 0 NOT NULL,
             \`image\` text,
             \`fields\` text,
-            \`role_slug\` text DEFAULT 'editor' NOT NULL,
+            \`role_slug\` text NOT NULL,
             \`created_at\` integer NOT NULL,
             \`updated_at\` integer NOT NULL
         )

@@ -1,5 +1,6 @@
 import { z } from '@hono/zod-openapi';
 import { defineTable, type TableSelect, type TableInsert } from '@/database/define-table';
+import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 
 // ============================================================================
 // better-auth tables — users, sessions, accounts, verifications
@@ -58,7 +59,9 @@ export const createUserSchema = z
             .openapi({ example: 'user@example.com' }),
         name: z.string().min(1, 'Name is required').openapi({ example: 'Jane Doe' }),
         fields: z.record(z.string(), z.unknown()).optional(),
-        roleSlug: z.string().optional().openapi({ example: 'editor' }),
+        // Defaulted here, not by the column: a create that names no role gets
+        // the least-privileged built-in rather than whatever the DDL says.
+        roleSlug: z.string().default(DEFAULT_ROLE_SLUG).openapi({ example: 'editor' }),
     })
     .openapi('CreateUser');
 

@@ -42,6 +42,7 @@ import { mergeMigrationProviders, migrateToLatest } from '@astromech/schema-engi
 import { encode, decode } from '@/database/codec';
 import type { DB } from '@/database/types';
 import type { UserRow } from '@/database/schema';
+import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 import { resolveConfig } from '@/boot/config-resolver';
 import { setCliConfig } from '@/transport/cli/virtual-config-shim';
 import { setRuntimeConfig } from '@/cron/registry';
@@ -297,6 +298,7 @@ export async function createTestUser(
             encode('users', {
                 email: overrides.email ?? `user-${crypto.randomUUID()}@test.dev`,
                 name: overrides.name ?? 'Test User',
+                roleSlug: overrides.roleSlug ?? DEFAULT_ROLE_SLUG,
                 ...overrides,
             }) as unknown as Insertable<DB['users']>
         )
