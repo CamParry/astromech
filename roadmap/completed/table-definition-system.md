@@ -40,6 +40,8 @@ at the time, not where it lives now.
 
 Scope = **our 9 tables only** (`roles, entries, entry_versions, entry_preview_tokens, media, settings, notifications, relationships, _astromech_cron`). The **4 better-auth tables** (`users/sessions/accounts/verifications`) stay seconds-INTEGER + hand-typed (better-auth owns their format); **plugin tables** stay Drizzle until step 5.
 
+The seconds-INTEGER belief recorded here was wrong, and `users` has a descriptor now — see `decisions/0056-better-auth-owns-the-users-format-not-its-ddl.md`.
+
 - [x] `defineTable(name, ({col}) => cols, ({index}) => idx)` + `col` factory (options-object) + `enum`/`reference`/`id` (+ ULID dep `ulidx`; `reference` accepts string|descriptor|annotated-thunk for self/auth targets) — `database/define-table.ts`
 - [x] Per-column runtime codec (default/serialize/parse) — descriptor-driven; replaces the `CODECS` map for the 9, keeps a legacy seconds map for auth + `plugin_backups_runs`
 - [x] Type inference: ONE descriptor → both domain Row types (Select/Insert/Update) AND the storage-shaped Kysely `DB` cells (assembled with the 4 hand-typed auth tables)

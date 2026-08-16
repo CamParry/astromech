@@ -24,7 +24,10 @@ its rebinding point — the entries pattern.
       concurrent — the point was to stop hand-writing the count, not to
       serialize it)
 
-**`users` is hand-rolled, deliberately, and this is not a defect to fix.** It is
+**`users` is hand-rolled, deliberately, and this is not a defect to fix.**
+(Both halves of that were later overturned — `users` has a descriptor, and the
+format is ISO text, not seconds. See
+`decisions/0056-better-auth-owns-the-users-format-not-its-ddl.md`.) It is
 one of the four better-auth tables in `LEGACY_CODECS`: seconds-INTEGER
 timestamps, uuid ids, no `defineTable` descriptor. `createStorage` is
 descriptor-driven, so it cannot wrap it. It gets the same method vocabulary with

@@ -6,10 +6,12 @@ revocable command instead of a hand-edit.
 ## The problem
 
 `apps/demo/migrations/0000_baseline.ts` is partly emitter output (the
-descriptor-backed tables) and partly hand-authored (the 4 better-auth tables and
-2 foreign plugin tables, which have no descriptors). Because it is a committed
-file, a change to the DDL **renderer** — as opposed to a change to a descriptor —
-leaves it stale, and the only way to propagate that change is to edit history.
+descriptor-backed tables) and partly hand-authored (the better-auth tables,
+which have no descriptors). Because it is a committed file, a change to the DDL
+**renderer** — as opposed to a change to a descriptor — leaves it stale, and the
+only way to propagate that change is to edit history. A plugin's tables are not
+part of this: each plugin package carries its own generated baseline under
+`packages/plugins/*/migrations/`.
 
 That happened during step 6: naming foreign-key constraints altered the rendered
 `CREATE TABLE` for every table with an FK, so the 12 `FOREIGN KEY` lines in the

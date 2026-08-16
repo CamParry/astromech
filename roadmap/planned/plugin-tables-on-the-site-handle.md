@@ -26,7 +26,7 @@ interface from a plugin's `Table` objects rather than extending the core one;
       land on, so `db` on a site is typed with core's tables plus the installed
       plugins' without the site naming either.
 - The `encodeWith` return-type item moved to
-  `roadmap/in-progress/small-roadmap-defects.md` — it is independent of the two
+  `roadmap/completed/small-roadmap-defects.md` — it is independent of the two
   checkboxes above.
 
 ## Notes / caveats
