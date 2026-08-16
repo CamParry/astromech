@@ -42,11 +42,18 @@ function toResolvedFields(fields: EntryFields | undefined): ResolvedEntryFields 
 
 /**
  * Structural-rule validation (spec §3.3), crash-loud naming the entry type:
- * `tab` is only valid as a direct child of `tabs`, and `tabs` may only contain
- * `tab` children.
+ * `tab` is only valid as a direct child of `tabs`, `tabs` may only contain `tab`
+ * children, and no two fields in one array may share a name.
  */
-function validateFieldTree(typeKey: string, nodes: Field[], insideTabs: boolean): void {
+function validateFieldTree(
+    typeKey: string,
+    nodes: Field[],
+    insideTabs: boolean,
+    path: string
+): void {
+    assertUniqueNames(typeKey, nodes, path);
     for (const node of nodes) {
+        const nodePath = `${path}.${node.name}`;
         if (node.type === 'tab' && !insideTabs) {
             throw new Error(
                 `Astromech entry type "${typeKey}": \`tab\` ("${node.name}") must be a ` +
@@ -62,11 +69,29 @@ function validateFieldTree(typeKey: string, nodes: Field[], insideTabs: boolean)
                             `\`tab\` children (got "${child.type}").`
                     );
                 }
-                validateFieldTree(typeKey, child.fields ?? [], false);
             }
+            validateFieldTree(typeKey, children, true, nodePath);
             continue;
         }
-        if (node.fields) validateFieldTree(typeKey, node.fields, false);
+        if (node.fields) validateFieldTree(typeKey, node.fields, false, nodePath);
+    }
+}
+
+/**
+ * Reject two fields sharing a name in one `fields` array. Sibling-level only:
+ * the same name at a different nesting level, or in another block type, is a
+ * distinct key and stays legal.
+ */
+function assertUniqueNames(typeKey: string, nodes: Field[], path: string): void {
+    const seen = new Set<string>();
+    for (const node of nodes) {
+        if (seen.has(node.name)) {
+            throw new Error(
+                `Astromech entry type "${typeKey}": duplicate field name ` +
+                    `"${node.name}" in \`${path}\`.`
+            );
+        }
+        seen.add(node.name);
     }
 }
 
@@ -101,8 +126,8 @@ function toResolvedEntryType(
     assertEntryTypeValid(typeKey, cfg, storageSupports);
 
     const resolvedFields = toResolvedFields(cfg.fields);
-    validateFieldTree(typeKey, resolvedFields.main, false);
-    validateFieldTree(typeKey, resolvedFields.sidebar, false);
+    validateFieldTree(typeKey, resolvedFields.main, false, 'main');
+    validateFieldTree(typeKey, resolvedFields.sidebar, false, 'sidebar');
 
     // Derive search from searchable fields if not explicitly set.
     let resolvedSearch = cfg.search;
@@ -126,8 +151,8 @@ function toResolvedEntryType(
 /** Normalize + structurally validate a `fields`-mode host admin page's tree. */
 function resolvePageFields(page: AdminPage): ResolvedEntryFields {
     const fields = toResolvedFields(page.fields);
-    validateFieldTree(page.path, fields.main, false);
-    validateFieldTree(page.path, fields.sidebar, false);
+    validateFieldTree(page.path, fields.main, false, 'main');
+    validateFieldTree(page.path, fields.sidebar, false, 'sidebar');
     return fields;
 }
 

@@ -210,5 +210,6 @@ export function tab(name: string, options: TabOptions): Field {
 }
 
 export function tabs(options: TabsOptions): Field {
-    return { name: 'tabs', type: 'tabs', fields: options.fields };
+    const { fields, ...rest } = options;
+    return { name: 'tabs', type: 'tabs', ...rest, fields };
 }
