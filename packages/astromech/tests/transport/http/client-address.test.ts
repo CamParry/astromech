@@ -72,16 +72,30 @@ describe('getClientAddress', () => {
         );
     });
 
-    it('takes one entry in from the right when trustProxy is true', async () => {
+    it('takes the only entry a single proxy appends when trustProxy is true', async () => {
         trustProxy(true);
+
+        expect(await addressFor({ 'x-forwarded-for': '1.2.3.4' })).toBe('1.2.3.4');
+    });
+
+    it('takes the last entry when trustProxy is true', async () => {
+        trustProxy(true);
+
+        expect(await addressFor({ 'x-forwarded-for': '1.2.3.4, 10.0.0.1' })).toBe(
+            '10.0.0.1'
+        );
+    });
+
+    it('takes the nth entry from the end for a chain of n proxies', async () => {
+        trustProxy(2);
 
         expect(await addressFor({ 'x-forwarded-for': '1.2.3.4, 10.0.0.1' })).toBe(
             '1.2.3.4'
         );
     });
 
-    it('takes the configured number of entries in from the right', async () => {
-        trustProxy(2);
+    it('counts a longer chain from the end too', async () => {
+        trustProxy(3);
 
         expect(
             await addressFor({ 'x-forwarded-for': '1.2.3.4, 10.0.0.1, 10.0.0.2' })
@@ -96,8 +110,14 @@ describe('getClientAddress', () => {
         );
     });
 
+    it('is absent when the hop count is below one', async () => {
+        trustProxy(0);
+
+        expect(await addressFor({ 'x-forwarded-for': '1.2.3.4' })).toBe('absent');
+    });
+
     it('trims whitespace and ignores empty entries', async () => {
-        trustProxy(1);
+        trustProxy(2);
 
         expect(await addressFor({ 'x-forwarded-for': ' 1.2.3.4 ,, 10.0.0.1 ,' })).toBe(
             '1.2.3.4'

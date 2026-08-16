@@ -35,10 +35,10 @@ export function getClientAddress(c: Context): string | undefined {
 }
 
 /**
- * Take the entry `hops` places in from the right of `x-forwarded-for` — those
- * rightmost entries are the trusted proxies, while the leftmost is whatever the
- * client sent. Undefined when the header carries fewer entries than that: a
- * misconfigured hop count must fail closed, not fall back to a forgeable entry.
+ * Take the client address from `x-forwarded-for` given `hops` trusted proxies.
+ * Each proxy appends the peer it received the request from, so the last `hops`
+ * entries come from infrastructure and the client's own is at `length - hops`.
+ * Out of range fails closed: never fall back to a forgeable entry.
  */
 function forwardedAddress(header: string | undefined, hops: number): string | undefined {
     if (header === undefined || hops < 1) return undefined;
@@ -48,5 +48,8 @@ function forwardedAddress(header: string | undefined, hops: number): string | un
         .map((entry) => entry.trim())
         .filter((entry) => entry !== '');
 
-    return entries[entries.length - 1 - hops];
+    const index = entries.length - hops;
+    if (index < 0) return undefined;
+
+    return entries[index];
 }

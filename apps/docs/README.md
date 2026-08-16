@@ -23,7 +23,7 @@ This is a living reference; it grows as the project does.
   Cloudflare Worker's `scheduled()` handler.
 - [configuration/trust-proxy.md](configuration/trust-proxy.md) — where the
   connecting address of a request comes from, the `security.trustProxy` option
-  for a site behind a proxy, and why the address is counted from the right of
+  for a site behind a proxy, and why the address is counted from the end of
   `x-forwarded-for`.
 - [content/entry-types.md](content/entry-types.md) — declaring entry types: the
   `entries` record, and `defineEntryType` for splitting a type into its own

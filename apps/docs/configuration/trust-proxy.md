@@ -35,27 +35,36 @@ export default defineConfig({
 | `true`   | One proxy sits between the client and this server. |
 | a number | That many proxies do.                              |
 
+The number must equal the real length of your proxy chain. A single nginx in
+front of Astromech, with the usual
+
+```nginx
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+```
+
+is `trustProxy: true`. Put a CDN in front of that nginx and it becomes `2`.
+
 Set it only when every request reaches Astromech through a proxy you control.
 If a client can also reach the server directly — a container port left open, a
 health-check path, a second hostname — it can send its own `x-forwarded-for`,
 and the value you are counting on is whatever it chose.
 
-## Why the count is from the right
+## Why the count is from the end
 
-Each proxy appends the address it saw to the **right** of `x-forwarded-for`. So
-the rightmost entries are the ones your infrastructure wrote, and the leftmost
-is whatever arrived from outside — which on a forged header is the client's
-invention. Reading from the left, the way `trust proxy: true` does in Express,
-takes that invented entry.
+Each proxy appends the peer it received the request from to the **end** of
+`x-forwarded-for`. One proxy between a client and Astromech therefore produces a
+one-entry header holding the client's address; chain a second in front and the
+header reads `client, proxyA`. So with `n` trusted proxies the client's address
+is the `n`th entry from the end, and everything left of it arrived from outside
+— on a forged header, the client's own invention. Reading from the left, the way
+`trust proxy: true` does in Express, takes that invention.
 
-Astromech therefore counts in from the right, past your proxies' entries, and
-takes the next one. With `trustProxy: true` and a header of
-`1.2.3.4, 10.0.0.1`, the address is `1.2.3.4`.
-
-If the header holds fewer entries than the hop count, Astromech reports no
-address at all rather than falling back to one further left. A hop count that
-does not match your deployment fails closed: features keyed on the address stop
-seeing one, instead of quietly keying on something a client controls.
+A count that does not match your deployment is a defect either way. Too low and
+Astromech reads one of your proxies' addresses as the client's, so every request
+through that proxy shares a key. Too high and it runs off the front of the
+header and reports no address at all, rather than falling back to an entry it
+cannot vouch for: features keyed on the address stop seeing one, instead of
+quietly keying on something a client controls.
 
 The result is not checked for being a well-formed IP address. It is an opaque
 key, and an IPv6 address carrying a port or a zone is still a stable one.

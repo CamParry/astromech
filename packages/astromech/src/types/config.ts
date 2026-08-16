@@ -483,13 +483,13 @@ export type AstromechConfig = {
          * Whether `x-forwarded-for` may be read for the client address. Default
          * `false` — on a directly exposed server any client can send the header.
          *
-         * Each proxy appends the address it saw to the right of the header, so
-         * the rightmost entries come from infrastructure and the leftmost is
+         * Each proxy appends the peer it received the request from, so the
+         * rightmost entries come from infrastructure and the leftmost is
          * whatever the client sent — counting from the right is the only safe
          * reading. The value is how many proxies sit between the client and this
-         * server (`true` means one), and the address taken is the next entry in
-         * from theirs. Fewer entries than that yields no address rather than a
-         * less trusted one.
+         * server (`true` means one) and must match the real chain: with `n`
+         * trusted proxies the client's address is the `n`th entry from the end.
+         * Too high yields no address rather than a less trusted one.
          */
         trustProxy?: TrustProxy;
     };
