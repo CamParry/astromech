@@ -3,6 +3,15 @@
 Make the pre-release freedom to rewrite migration history an explicit,
 revocable command instead of a hand-edit.
 
+Shipped. `db:rebaseline` re-emits the descriptor-backed sections of the baseline
+and rewrites the snapshot; `--collapse` folds a longer chain into a fresh
+baseline. It preserves hand-authored tables verbatim and refuses rather than
+dropping source it cannot re-emit: a later migration that touches a table the
+snapshot does not describe, a data statement that is not a table rebuild's own
+temp-table copy, a statement outside the banner structure, or source after
+`up()`. Its first real use was landing the `users` descriptor — see
+`users-table-descriptor.md`.
+
 ## The problem
 
 `apps/demo/migrations/0000_baseline.ts` is partly emitter output (the
