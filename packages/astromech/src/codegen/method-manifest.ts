@@ -321,14 +321,14 @@ function buildPluginServiceMethods(plugins: PluginDefinition[]): PluginManifestM
 // ============================================================================
 
 /**
- * Generate a JSON method manifest string cataloguing every service method in
- * the resolved config. Returns the JSON as a string (including a trailing
- * newline) — the caller writes it to disk or serves it from a virtual module.
+ * Catalogue every service method in the resolved config. Callers that write the
+ * manifest to disk serialise it with `serialiseMethodManifest`; the rest read
+ * the structure directly.
  */
 export function generateMethodManifest(
     config: ResolvedConfig,
     plugins: PluginDefinition[] = []
-): string {
+): MethodManifest {
     const methods: ManifestMethod[] = [
         ...buildCoreMethods(),
         ...buildEntriesMethods(config, plugins),
@@ -342,6 +342,13 @@ export function generateMethodManifest(
     // between machines would invalidate every downstream prompt cache.
     methods.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
-    const manifest: MethodManifest = { version: 2, methods };
+    return { version: 2, methods };
+}
+
+/**
+ * The manifest as the file both emitters write: the Astro integration hook and
+ * the `generate:manifest` CLI command, byte for byte the same.
+ */
+export function serialiseMethodManifest(manifest: MethodManifest): string {
     return JSON.stringify(manifest, null, 2) + '\n';
 }

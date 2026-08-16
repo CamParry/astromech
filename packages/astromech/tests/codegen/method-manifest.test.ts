@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { generateMethodManifest } from '@/codegen/method-manifest';
+import {
+    generateMethodManifest,
+    serialiseMethodManifest,
+} from '@/codegen/method-manifest';
 import { resolveConfig } from '@/config/resolve';
 import type {
     AstromechConfig,
@@ -107,10 +110,9 @@ const rawConfig: AstromechConfig = {
 
 const resolved = resolveConfig(rawConfig);
 
-/** Parse the manifest JSON once; re-used across all tests. */
+/** The manifest, re-read as loose records so each test can assert on any key. */
 function parseManifest(plugins: PluginDefinition[] = [testPlugin]) {
-    const json = generateMethodManifest(resolved, plugins);
-    return JSON.parse(json) as {
+    return generateMethodManifest(resolved, plugins) as unknown as {
         version: number;
         methods: Record<string, unknown>[];
     };
@@ -133,9 +135,8 @@ function findMethod(
 // ============================================================================
 
 describe('generateMethodManifest', () => {
-    it('should return a JSON string', () => {
-        const result = generateMethodManifest(resolved, []);
-        expect(typeof result).toBe('string');
+    it('should serialise to parseable JSON', () => {
+        const result = serialiseMethodManifest(generateMethodManifest(resolved, []));
         expect(() => JSON.parse(result)).not.toThrow();
     });
 
@@ -150,8 +151,8 @@ describe('generateMethodManifest', () => {
         expect(methods.length).toBeGreaterThan(0);
     });
 
-    it('should append a trailing newline', () => {
-        const result = generateMethodManifest(resolved, []);
+    it('should append a trailing newline when serialised', () => {
+        const result = serialiseMethodManifest(generateMethodManifest(resolved, []));
         expect(result.endsWith('\n')).toBe(true);
     });
 });

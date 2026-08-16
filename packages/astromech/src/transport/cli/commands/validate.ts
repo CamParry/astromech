@@ -1,9 +1,7 @@
 import { defineCommand } from 'citty';
 import { loadConfig, loadRawConfig } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
-import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
-import { wireEntryAccess } from '@/entries/plugin-access';
-import { wireNotifyAccess } from '@/notifications/plugin-access';
+import { createAstromech } from '@/boot/application';
 import {
     validateStoredContent,
     type ValidationFinding,
@@ -21,14 +19,12 @@ export default defineCommand({
         type: { type: 'string', description: 'Limit to one entry type' },
     },
     async run({ args }) {
-        const resolved = await loadConfig(args.config, toAllowRemoteOption(args));
-        // `loadConfig` never touches the plugin runtime, so without this a
-        // table-backed plugin entry type would resolve to the built-in storage
-        // and its rows would go unread.
-        const raw = await loadRawConfig(args.config);
-        wireEntryAccess();
-        wireNotifyAccess();
-        registerPlugins(raw.plugins ?? [], resolved);
+        // `loadConfig` guards the database and fills the config shim; the
+        // application registers the plugin runtime. Without it a table-backed
+        // plugin entry type resolves to the built-in storage and its rows go
+        // unread.
+        await loadConfig(args.config, toAllowRemoteOption(args));
+        await createAstromech({ config: await loadRawConfig(args.config) });
 
         reportFindings(
             await validateStoredContent(

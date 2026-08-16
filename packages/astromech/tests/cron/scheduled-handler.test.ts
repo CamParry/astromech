@@ -9,12 +9,13 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { registerCronJob, setSchedulerDriver, getSchedulerDriver } from '@/cron/registry';
 import { handleScheduled } from '@/boot/scheduled';
 import { interval } from '@/cron/drivers/index';
-import { defaultScheduler } from '@/boot/boot';
-import { runDue } from '@/cron/runner';
+import { defaultScheduler } from '@/boot/lifecycle';
+import { onTick, runDue } from '@/cron/runner';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/schema';
 import type { DB } from '@/database/types';
 import { globals } from '@/utilities/registry';
+import { rawConfig } from 'virtual:astromech/config';
 
 beforeEach(async () => {
     delete globalThis.__astromech?.cronJobs;
@@ -26,13 +27,17 @@ beforeEach(async () => {
 
     await createTestDb();
     setupTestConfig(makeTestConfig());
-    // `setupTestConfig` mirrors the boot, so fill the memo `handleScheduled`
-    // checks. The unbooted path is covered in `scheduled-boot.test.ts`.
-    globals().boot = Promise.resolve();
+    // `setupTestConfig` mirrors the boot rather than running it, so the slot
+    // `handleScheduled` reads is filled by hand. The created path is covered in
+    // `scheduled-boot.test.ts`.
+    globals().application = {
+        config: rawConfig,
+        app: Promise.resolve({ scheduled: (at?: Date) => onTick(at ?? new Date()) }),
+    };
 });
 
 afterEach(() => {
-    delete globalThis.__astromech?.boot;
+    delete globalThis.__astromech?.application;
     delete globalThis.__astromech?.cronJobs;
     globals().cronTickRunning = false;
     globals().cronUnscheduledWarned = new Set<string>();

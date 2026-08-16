@@ -98,9 +98,7 @@ function signIn(user: User | null, role: Role): void {
 async function freshApp(role: Role = adminRole): Promise<OpenAPIHono> {
     await createTestDb();
     const resolved = setupTestConfig(testConfig());
-    manifest = JSON.parse(
-        generateMethodManifest(resolved, [testPlugin])
-    ) as MethodManifest;
+    manifest = generateMethodManifest(resolved, [testPlugin]);
     setMethodManifest(manifest);
 
     signedInUser = await Astromech.users.create({ email: 'rpc@test.dev', name: 'RPC' });

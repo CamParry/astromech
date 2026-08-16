@@ -15,7 +15,7 @@ import { loadConfig, loadRawConfig } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { buildDispatch, dispatchArgs } from '@/transport/tools/dispatch';
-import type { ManifestMethod, MethodManifest, ToolDefinition } from '@/types/index';
+import type { ManifestMethod, ToolDefinition } from '@/types/index';
 import { parseJsonArg, printError } from '../output';
 
 export default defineCommand({
@@ -35,9 +35,7 @@ export default defineCommand({
         try {
             const rawConfig = await loadRawConfig(args.config);
             const resolved = await loadConfig(args.config, toAllowRemoteOption(args));
-            const manifest = JSON.parse(
-                generateMethodManifest(resolved, rawConfig.plugins ?? [])
-            ) as MethodManifest;
+            const manifest = generateMethodManifest(resolved, rawConfig.plugins ?? []);
 
             const { method, tool } = resolveCallable(manifest.methods, args.id);
             const input = dispatchArgs(method, await callArguments(args.args));

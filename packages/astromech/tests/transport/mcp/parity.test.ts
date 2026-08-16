@@ -121,9 +121,7 @@ const resolved = resolveConfig({
     plugins: [testPlugin],
 } satisfies AstromechConfig);
 
-const manifest = JSON.parse(
-    generateMethodManifest(resolved, [testPlugin])
-) as MethodManifest;
+const manifest = generateMethodManifest(resolved, [testPlugin]);
 
 // ============================================================================
 // Tests

@@ -51,11 +51,11 @@ beforeEach(async () => {
     virtualConfig.raw = raw;
     virtualConfig.resolved = resolveConfig(raw);
 
-    // An unbooted runtime is exactly what a Cron Trigger hits: every slot
-    // `initRuntime` fills is empty, including the db `createTestDb` just set.
+    // An uncreated application is exactly what a Cron Trigger hits: every slot
+    // boot fills is empty, including the db `createTestDb` just set.
     delete globalThis.__astromech?.db;
     delete globalThis.__astromech?.runtimeConfig;
-    delete globalThis.__astromech?.boot;
+    delete globalThis.__astromech?.application;
     delete globalThis.__astromech?.cronJobs;
     delete globalThis.__astromech?.scheduler;
     globals().cronTickRunning = false;
@@ -65,7 +65,7 @@ beforeEach(async () => {
 
 afterEach(() => {
     interval().stop?.();
-    delete globalThis.__astromech?.boot;
+    delete globalThis.__astromech?.application;
     delete globalThis.__astromech?.cronJobs;
     delete globalThis.__astromech?.scheduler;
     globals().cronTickRunning = false;

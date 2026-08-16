@@ -1,10 +1,9 @@
 /**
- * The scheduled entrypoints — the paths a host reaches without going through
- * the fetch middleware, so they boot the runtime themselves before ticking.
+ * The scheduled entrypoint — the path a host reaches without going through the
+ * fetch middleware, so it creates the application itself before ticking.
  */
 
-import { ensureBooted } from '@/boot/ensure-booted';
-import { onTick } from '@/cron/runner';
+import { createAstromech } from '@/boot/application';
 
 /**
  * Cloudflare Worker entry calls this from its `scheduled()` handler:
@@ -12,17 +11,12 @@ import { onTick } from '@/cron/runner';
  *   export default { async scheduled(event) { await handleScheduled(event); } };
  */
 export async function handleScheduled(event: { scheduledTime: number }): Promise<void> {
-    // A Cron Trigger fires `scheduled()`, never `fetch()`, so the middleware has
-    // not run and this path boots the runtime itself. Triggers are a dumb
-    // frequent ticker (`* * * * *`); real cadence is core's due-eval.
-    await ensureBooted();
-    await onTick(new Date(event.scheduledTime));
-}
-
-/** @deprecated Back-compat shim — now a due-evaluation tick, not run-everything. */
-export async function runScheduledJobs(): Promise<void> {
-    // Boots first, because a caller reaching a tick this way (a Worker entry, a
-    // script) has not been through the middleware.
-    await ensureBooted();
-    await onTick(new Date());
+    // Loaded lazily so this module stays importable in plain Node, where
+    // `virtual:` does not resolve: a config selecting `cloudflareCron()`
+    // reaches here through the scheduler subpath, under jiti.
+    const { rawConfig } = await import('virtual:astromech/config');
+    const app = await createAstromech({ config: rawConfig });
+    // A Cron Trigger is a dumb frequent ticker (`* * * * *`); the real cadence
+    // is core's due-evaluation.
+    await app.scheduled(new Date(event.scheduledTime));
 }

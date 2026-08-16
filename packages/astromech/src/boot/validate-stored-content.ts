@@ -27,7 +27,6 @@
  */
 
 import config from 'virtual:astromech/config';
-import { assertPluginSourcesReachable } from './plugin-sources';
 import { createStorage } from '@/database/storage/create-storage';
 import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { entriesTable } from '@/entries/schema';
@@ -67,7 +66,6 @@ export type ValidationReport = {
 export async function validateStoredContent(
     opts?: ValidationScope
 ): Promise<ValidationReport> {
-    assertPluginSourcesReachable('the report would miss every row they hold');
     const report: ValidationReport = { rowsChecked: 0, findings: [] };
 
     await checkEntries(report, opts?.type);

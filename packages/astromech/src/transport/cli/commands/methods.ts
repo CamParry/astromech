@@ -7,7 +7,7 @@ import {
     type AnnotatedManifestMethod,
 } from '@/policies/annotate-manifest';
 import { filterMethods, type ExcludedMethod } from '@/policies/method-filter';
-import type { ManifestMethod, MethodManifest, ResolvedConfig } from '@/types/index';
+import type { ManifestMethod, ResolvedConfig } from '@/types/index';
 import { printError } from '../output';
 import { filterArgs, toMethodFilter } from '../filter-args';
 
@@ -82,9 +82,7 @@ export default defineCommand({
             const rawConfig = await loadRawConfig(args.config);
             const resolved = await loadConfig(args.config, toAllowRemoteOption(args));
             const plugins = rawConfig.plugins ?? [];
-            const manifest = JSON.parse(
-                generateMethodManifest(resolved, plugins)
-            ) as MethodManifest;
+            const manifest = generateMethodManifest(resolved, plugins);
 
             let listed: ManifestMethod[] = manifest.methods;
 

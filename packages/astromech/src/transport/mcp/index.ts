@@ -1,54 +1,21 @@
 /**
  * MCP Server Entry
  *
- * Loads config, boots enough of the runtime for a tool call to actually land,
+ * Loads config, creates the application so a tool call actually lands,
  * generates the method manifest, builds the tool list, then connects the server
  * over stdio. All logging goes to stderr — stdout is the JSON-RPC channel.
  */
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { loadConfig, loadRawConfig } from '@/transport/cli/config';
+import { createAstromech } from '@/boot/application';
 import { generateMethodManifest } from '@/codegen/method-manifest';
-import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
-import { wireEntryAccess } from '@/entries/plugin-access';
-import { wireNotifyAccess } from '@/notifications/plugin-access';
 import { filterMethods, type MethodFilter } from '@/policies/method-filter';
 import type { ConfirmOptions } from '@/policies/confirmation';
 import { createMcpServer } from './server';
-import type { AstromechConfig, MethodManifest, ResolvedConfig } from '@/types/index';
 
 /** Above this many exclusions, the per-method lines stop being readable. */
 const EXCLUSION_DETAIL_LIMIT = 20;
-
-/**
- * Make plugin service methods reachable.
- *
- * `loadConfig` sets up the database and the virtual-config shim but never
- * touches the plugin runtime, so until now the plugin registry was empty and
- * any plugin tool would have thrown at call time. Three things are needed, in
- * this order — the same order `boot/boot.ts` uses:
- *
- * - Importing the local transport registers the client that backs `ctx.entries`,
- *   `ctx.media` and friends. It is a module side effect, hence the bare import.
- * - `wireEntryAccess` plugs the entries domain into the port the plugin runtime
- *   mounts entry types through, and `wireNotifyAccess` the port behind
- *   `ctx.notify`. `registerPlugins` throws without the first.
- * - `registerPlugins` indexes the service methods AND registers each plugin
- *   table's codec, without which a plugin method querying its own table decodes
- *   its rows wrong.
- *
- * `bootPlugins` is deliberately NOT called: it runs `setup()` and registers cron
- * jobs, which is boot work a short-lived stdio process has no business doing.
- */
-async function registerPluginRuntime(
-    raw: AstromechConfig,
-    resolved: ResolvedConfig
-): Promise<void> {
-    await import('@/transport/local/index');
-    wireEntryAccess();
-    wireNotifyAccess();
-    registerPlugins(raw.plugins ?? [], resolved);
-}
 
 /**
  * Report what the method filter removed, on stderr.
@@ -102,12 +69,11 @@ export async function runMcpServer(
     options?: { allowRemote?: boolean }
 ): Promise<void> {
     const raw = await loadRawConfig(configPath);
+    // Guards the database and fills the config shim the local transport reads.
     const resolved = await loadConfig(configPath, options);
-    await registerPluginRuntime(raw, resolved);
+    await createAstromech({ config: raw });
 
-    const manifest = JSON.parse(
-        generateMethodManifest(resolved, raw.plugins ?? [])
-    ) as MethodManifest;
+    const manifest = generateMethodManifest(resolved, raw.plugins ?? []);
 
     const { methods, excluded } = filterMethods(manifest.methods, filter);
     const { server, tools, skipped } = createMcpServer({ ...manifest, methods }, confirm);

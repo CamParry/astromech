@@ -104,34 +104,34 @@ that catches a mismatch.
 
 ## Stage 2 — The application instance
 
-- [ ] `boot/application.ts` — `createAstromech({ config })` and `getAstromech()`
+- [x] `boot/application.ts` — `createAstromech({ config })` and `getAstromech()`
       to the spec's signatures. Factory-built object, not a class.
-- [ ] `boot/lifecycle.ts` — the ordered named phases with per-step timing:
+- [x] `boot/lifecycle.ts` — the ordered named phases with per-step timing:
       resolve config → register drivers → register plugins → boot plugins →
       ready. Names chosen once, no aliases ever.
-- [ ] The instance slot lives on the `globalThis` registry, filled
+- [x] The instance slot lives on the `globalThis` registry, filled
       **synchronously** with the in-flight promise before the first await. A
       failed boot clears it so it is retryable; today's `ensure-booted.ts` caches
       a rejected promise forever.
-- [ ] **Verify the virtual config module resolves to one instance across tsup
+- [x] **Verify the virtual config module resolves to one instance across tsup
       chunks.** The "different config throws" guard compares object identity. If
       identity proves unreliable, the guard reuses silently and the reason gets
       recorded rather than left as a mystery.
-- [ ] `boot/migrations.ts` — `runMigrations` with its **catch narrowed to the
+- [x] `boot/migrations.ts` — `runMigrations` with its **catch narrowed to the
       provider load**. A failed `migrateToLatest` currently degrades to a log
       line and lets the dev server or build continue against a stale schema.
-- [ ] Add a boot-time migration drift check: compare applied against available
+- [x] Add a boot-time migration drift check: compare applied against available
       and warn, never mutate.
-- [ ] `app.startScheduler()` leaves the phase list and becomes the serving
+- [x] `app.startScheduler()` leaves the phase list and becomes the serving
       integration's action. Verify `bootPlugins` side effects are acceptable in
       short-lived processes, since the CLI and MCP now run it.
-- [ ] `generateMethodManifest` returns the structure, not a string. Boot
+- [x] `generateMethodManifest` returns the structure, not a string. Boot
       currently `JSON.parse`s what the generator just serialised; serialisation
       moves to the two edges that write files, under one failure policy.
 - [ ] Registry slots split: instance state (db, storage, email, ai, image,
       scheduler, plugin runtime, manifest, config) becomes typed fields;
       process-global stays on `globalThis`.
-- [ ] Delete `boot/ensure-booted.ts`, the deprecated `runScheduledJobs`, the
+- [x] Delete `boot/ensure-booted.ts`, the deprecated `runScheduledJobs`, the
       MCP's hand-assembled boot sequence, and `boot/plugin-sources.ts` with
       `assertPluginSourcesReachable` (the guard existed to catch half-booted
       callers, and boot is now one sequence).

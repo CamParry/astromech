@@ -27,7 +27,6 @@ export * from '@/types/index';
 // `types/`, and reaches the public surface from here so `astromech` still
 // exports it — see `transport/astromech-client.shared.ts`.
 export type { AstromechClient } from '@/transport/astromech-client.shared';
-export { runScheduledJobs } from '@/boot/scheduled';
 // Model access, so a plugin can reach a configured model without taking its own
 // SDK dependency. Absent unless the site configures `ai` — hence `undefined`.
 export { getModel, hasModel } from '@/ai/index';

@@ -22,7 +22,7 @@ import { generateMethodManifest } from '@/codegen/method-manifest';
 import { notificationsContract } from '@/notifications/methods';
 import { notify } from '@/notifications/service';
 import { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch';
-import type { CoreManifestMethod, ManifestMethod, Role } from '@/types/index';
+import type { CoreManifestMethod, Role } from '@/types/index';
 import type { DB } from '@/database/types';
 
 let db: Kysely<DB>;
@@ -45,8 +45,8 @@ const editor: Role = {
 
 /** Every notifications entry in a freshly generated manifest. */
 function notificationMethods(): CoreManifestMethod[] {
-    const manifest = JSON.parse(generateMethodManifest(resolveConfig(makeTestConfig())));
-    return (manifest.methods as ManifestMethod[]).filter(
+    const manifest = generateMethodManifest(resolveConfig(makeTestConfig()));
+    return manifest.methods.filter(
         (m): m is CoreManifestMethod =>
             m.source === 'core' && m.domain === 'notifications'
     );

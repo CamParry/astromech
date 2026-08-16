@@ -28,7 +28,6 @@ import {
     createRelationshipStorage,
     type RelationshipIndexSource,
 } from '@/database/storage/relationships';
-import { assertPluginSourcesReachable } from './plugin-sources';
 import type { RelationshipRow } from '@/database/schema';
 import type { TargetKind } from '@/fields/relationship-edges';
 import { collectEntryRelationshipSources } from '@/entries/internal/relationships';
@@ -59,9 +58,6 @@ export type DriftReport = {
 export async function rebuildRelationshipIndex(
     opts?: RelationshipIndexScope
 ): Promise<RebuildReport> {
-    // A rebuild deletes rows for any source it did not enumerate, so an
-    // unreachable plugin source would cost that plugin its whole edge set.
-    assertPluginSourcesReachable('the rebuild would delete their rows');
     const sources = await collectSources(opts);
     const storage = createRelationshipStorage();
 

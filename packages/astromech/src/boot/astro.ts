@@ -28,7 +28,7 @@ import { resolveConfig } from '@/config/resolve';
 import { loadConfigFile, resolveConfigPath } from '@/config/load';
 import { registerRoutes } from '@/boot/route-registration';
 import { collectPluginFieldTypes } from '@/plugins/runtime/plugin-fields';
-import { runMigrations } from '@/boot/boot';
+import { runMigrations } from '@/boot/migrations';
 import { buildAdminConfig } from '@/config/admin-config';
 import { generatePluginClientManifest } from '@/codegen/plugin-client-manifest';
 
@@ -209,11 +209,13 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
                     ),
                 });
 
-                const { generateMethodManifest, METHOD_MANIFEST_FILENAME } =
-                    await import('@/codegen/method-manifest');
-                const manifestJson = generateMethodManifest(
-                    resolvedConfig,
-                    config.plugins ?? []
+                const {
+                    generateMethodManifest,
+                    serialiseMethodManifest,
+                    METHOD_MANIFEST_FILENAME,
+                } = await import('@/codegen/method-manifest');
+                const manifestJson = serialiseMethodManifest(
+                    generateMethodManifest(resolvedConfig, config.plugins ?? [])
                 );
                 const { writeFile, mkdir } = await import('node:fs/promises');
                 const { fileURLToPath } = await import('node:url');

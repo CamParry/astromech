@@ -3,6 +3,7 @@ import { loadConfig, loadRawConfig } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import {
     generateMethodManifest,
+    serialiseMethodManifest,
     METHOD_MANIFEST_FILENAME,
 } from '@/codegen/method-manifest';
 import { writeFile, mkdir } from 'node:fs/promises';
@@ -26,7 +27,7 @@ export default defineCommand({
         const rawConfig = await loadRawConfig(args.config);
         const resolved = await loadConfig(args.config, toAllowRemoteOption(args));
         const plugins = rawConfig.plugins ?? [];
-        const json = generateMethodManifest(resolved, plugins);
+        const json = serialiseMethodManifest(generateMethodManifest(resolved, plugins));
         const outPath = resolve(process.cwd(), args.out);
         await mkdir(dirname(outPath), { recursive: true });
         await writeFile(outPath, json, 'utf-8');
