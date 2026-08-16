@@ -5,4 +5,4 @@
  */
 
 export * from '@/cron/drivers/cloudflare';
-export { handleScheduled } from '@/cron/index';
+export { handleScheduled } from '@/boot/scheduled';

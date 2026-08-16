@@ -12,7 +12,7 @@ import { createTestDb, makeTestConfig } from '@tests/harness';
 import { resolveConfig } from '@/boot/config-resolver';
 import { registerCronJob } from '@/cron/registry';
 import { interval } from '@/cron/drivers/index';
-import { handleScheduled } from '@/cron/index';
+import { handleScheduled } from '@/boot/scheduled';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/schema';
 import type { DB } from '@/database/types';

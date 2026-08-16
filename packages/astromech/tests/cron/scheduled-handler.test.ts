@@ -7,7 +7,7 @@ import type { Updateable } from 'kysely';
 import type { Kysely } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { registerCronJob, setSchedulerDriver, getSchedulerDriver } from '@/cron/registry';
-import { handleScheduled } from '@/cron/index';
+import { handleScheduled } from '@/boot/scheduled';
 import { interval } from '@/cron/drivers/index';
 import { defaultScheduler } from '@/boot/boot';
 import { runDue } from '@/cron/runner';
