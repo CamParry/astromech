@@ -12,13 +12,13 @@
  */
 
 import { definePlugin } from 'astromech';
-import { ratingPermissions } from './permissions/rating.js';
-import { ratingField } from './fields/rating.js';
-import { overviewPage } from './pages/overview.js';
-import { settingsPage } from './pages/settings.js';
-import { ratingService } from './service/describe.js';
+import { ratingPermissions } from './permissions/rating';
+import { ratingField } from './fields/rating';
+import { overviewPage } from './pages/overview';
+import { settingsPage } from './pages/settings';
+import { ratingService } from './service/describe';
 
-export { RATING_FIELD_TYPE } from './fields/rating.js';
+export { RATING_FIELD_TYPE } from './fields/rating';
 
 export const rating = definePlugin({
     package: 'demo-rating',

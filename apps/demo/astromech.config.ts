@@ -14,8 +14,8 @@ import { seo, seoSection } from '@astromech/seo';
 import { menus } from '@astromech/menus';
 import { backups } from '@astromech/backups';
 import { forms } from '@astromech/forms';
-import { rating } from './src/plugins/rating/index.js';
-import { author } from './src/entries/author.js';
+import { rating } from './src/plugins/rating/index';
+import { author } from './src/entries/author';
 
 // This file is evaluated twice in development — once by plain Node at config
 // time and once in the SSR graph — and exactly once in a serving process. A
