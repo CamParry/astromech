@@ -13,7 +13,7 @@ import type { RelationshipEdge } from '@/fields/relationship-edges';
 import { flattenEntryFields } from '@/fields/flatten';
 import { entriesTable } from '../schema';
 import { getEntryStorage, hasEntryStorageOverride } from '../storage/registry';
-import { qualifyEntryType, resolveEntryType } from '../type-ids.shared';
+import { qualifyEntryType, resolveEntryType } from '@/utilities/entry-type-ids';
 import type { JsonObject } from '@/types/index';
 import type { StorageDb } from '../storage/types';
 

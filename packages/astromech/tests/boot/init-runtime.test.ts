@@ -10,7 +10,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb } from '@tests/harness';
 import { initRuntime } from '@/boot/boot';
-import { resolveConfig } from '@/boot/config-resolver';
+import { resolveConfig } from '@/config/resolve';
 import { setCliConfig } from '@/transport/cli/virtual-config-shim';
 import { getEntryStorage } from '@/entries/storage/registry';
 import { entriesService } from '@/entries/service';

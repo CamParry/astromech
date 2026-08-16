@@ -5,6 +5,8 @@
  * never drift between enforcement and documentation.
  */
 
+import { QUALIFIED_SEPARATOR } from '@/utilities/entry-type-ids';
+
 /** The CRUD+publish actions an entry permission gates. */
 export type EntryAction = 'read' | 'create' | 'update' | 'delete' | 'publish';
 
@@ -21,13 +23,6 @@ export function pluginEntryPermission(
 ): string {
     return `plugin:${permissionNamespace}:entry:${type}:${action}`;
 }
-
-/**
- * Separator between a plugin's namespace and its bare type in a qualified entry
- * type id (`redirects/redirect`). Duplicated from `entries/type-ids.shared.ts`
- * deliberately: `permissions` is a capability and must not import a domain.
- */
-const QUALIFIED_SEPARATOR = '/';
 
 /**
  * Derive the permission an action on `typeId` checks, from the type id alone.

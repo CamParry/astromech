@@ -16,7 +16,7 @@
  */
 
 import type { Db } from '@/database/types';
-import type { Capability } from './capabilities';
+import type { Capability } from '@/utilities/entry-capabilities';
 import type {
     EntryStatus,
     EntryVersion,
@@ -27,7 +27,7 @@ import type {
 
 export type StorageDb = Db;
 
-export type { Capability } from './capabilities';
+export type { Capability } from '@/utilities/entry-capabilities';
 
 /**
  * Universal entry shape a storage returns. The built-in storage returns full

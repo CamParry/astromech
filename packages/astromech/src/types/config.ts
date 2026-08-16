@@ -6,7 +6,7 @@ import type { Dialect, Kysely } from 'kysely';
 import type { DB } from '@/database/types';
 import type { AIConfig } from './ai';
 import type { CellKind } from './resolved';
-import type { Permission } from './domain';
+import type { Permission, Role } from './domain';
 import type {
     EntryFields,
     Field,
@@ -530,6 +530,11 @@ export type ResolvedConfig = Omit<
      * Always present (empty array when nothing is public).
      */
     publicSettingKeys: string[];
+    /**
+     * Built-in roles merged with `roles`, keyed by slug. Computed once at config
+     * resolution so a lookup does not rebuild the map.
+     */
+    resolvedRoles: Record<string, Role>;
     timezone: string;
 };
 

@@ -6,7 +6,6 @@ import {
     annotateManifest,
     type AnnotatedManifestMethod,
 } from '@/policies/annotate-manifest';
-import { resolveRoles } from '@/permissions/index';
 import { filterMethods, type ExcludedMethod } from '@/policies/method-filter';
 import type { ManifestMethod, MethodManifest, ResolvedConfig } from '@/types/index';
 import { printError } from '../output';
@@ -20,7 +19,7 @@ import { filterArgs, toMethodFilter } from '../filter-args';
  * this flag is for. So membership is checked here first.
  */
 function requireRole(config: ResolvedConfig, slug: string) {
-    const roles = resolveRoles(config);
+    const roles = config.resolvedRoles;
     const role = roles[slug];
     if (!role) {
         throw new Error(

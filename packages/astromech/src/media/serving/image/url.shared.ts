@@ -1,3 +1,5 @@
+import { normaliseWidths } from '@/utilities/image-widths';
+
 export type ImageFormat = 'avif' | 'webp';
 
 export type ParsedImageParams = {
@@ -66,11 +68,6 @@ export function variantStorageKey(
 /** The variants/<id>/ prefix used to purge all variants of a media item. */
 export function variantPrefix(id: string): string {
     return `variants/${id}/`;
-}
-
-/** Dedupe + ascending sort. */
-export function normaliseWidths(widths: readonly number[]): number[] {
-    return [...new Set(widths)].sort((a, b) => a - b);
 }
 
 /** The srcset width ladder for a given intrinsic width: the allowlist, deduped+sorted,

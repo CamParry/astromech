@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { EntryType } from '@/types/index';
-import {
-    BUILT_IN_SUPPORTS,
-    resolveEntryCapabilities,
-    assertEntryTypeValid,
-} from '@/entries/storage/capabilities';
+import { BUILT_IN_SUPPORTS } from '@/utilities/entry-capabilities';
+import { resolveEntryCapabilities, assertEntryTypeValid } from '@/config/entry-types';
 
 // ============================================================================
 // resolveEntryCapabilities — defaults

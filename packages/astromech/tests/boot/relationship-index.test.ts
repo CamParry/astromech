@@ -14,7 +14,7 @@ import {
     checkRelationshipIndex,
     rebuildRelationshipIndex,
 } from '@/boot/relationship-index';
-import { resolveConfig } from '@/boot/config-resolver';
+import { resolveConfig } from '@/config/resolve';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { setCliConfig } from '@/transport/cli/virtual-config-shim';
 import { createStorage } from '@/database/storage/create-storage';

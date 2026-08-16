@@ -17,7 +17,7 @@ import type { RelationshipDeclaration, TargetKind } from '@/fields/relationship-
 import { parseInstancePath } from '@/fields/field-path';
 import { RESERVED_KEY } from '@/fields/reserved-keys';
 import { getEntryStorage, hasEntryStorageOverride } from '../storage/registry';
-import { resolveEntryType } from '../type-ids.shared';
+import { resolveEntryType } from '@/utilities/entry-type-ids';
 import type { Field } from '@/types/fields';
 import type { JsonObject } from '@/types/index';
 import type { StorageDb } from '../storage/types';

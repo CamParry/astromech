@@ -26,7 +26,7 @@ vi.mock('@/entries/service', () => ({
         get: async (params: unknown) => params,
     },
 }));
-import { resolveConfig } from '@/boot/config-resolver';
+import { resolveConfig } from '@/config/resolve';
 import { filterMethods } from '@/policies/method-filter';
 import { buildDispatch } from '@/transport/tools/dispatch';
 import { buildTools } from '@/transport/mcp/tools';

@@ -52,6 +52,7 @@ const LAYERS = [
     ['transport', 'policies'],
     ['entries', 'media', 'users', 'settings', 'notifications'],
     [
+        'config',
         'database',
         'storage',
         'email',

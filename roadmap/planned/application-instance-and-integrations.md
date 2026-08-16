@@ -75,24 +75,24 @@ of each other and can land in any order. 13 and 14 come last.
 
 ## Stage 1 — `src/config/`
 
-- [ ] **First, settle the six symbol moves.** `config/` can only sit in the
+- [x] **First, settle the six symbol moves.** `config/` can only sit in the
       capabilities layer once `BUILT_IN_SUPPORTS`, `parseEntryTypeId`,
       `resolveEntryType`, `CLOUDFLARE_IMAGES_DRIVER`, `normaliseWidths` and
       `defaultImageWidths` move down to leaves. The spec's table proposes homes
       but **read the modules rather than trusting it**; if any carries a real
       domain dependency, the placement of `config/` is wrong and has to be
       revisited before anything else in this stage.
-- [ ] Move `boot/config-loader.ts` → `config/load.ts` (jiti loading, unchanged).
-- [ ] Split `boot/config-resolver.ts` (16KB, five jobs) into the named steps in
+- [x] Move `boot/config-loader.ts` → `config/load.ts` (jiti loading, unchanged).
+- [x] Split `boot/config-resolver.ts` (16KB, five jobs) into the named steps in
       the spec's tree. `config/resolve.ts` orchestrates and nothing else.
-- [ ] Move `boot/admin-config.ts` → `config/admin-config.ts`.
-- [ ] `config/registry.ts` — `setConfig` / `getConfig`, the same shape as
+- [x] Move `boot/admin-config.ts` → `config/admin-config.ts`.
+- [x] `config/registry.ts` — `setConfig` / `getConfig`, the same shape as
       `database/registry.ts`.
-- [ ] Compute the role map once during resolution and hold it on
+- [x] Compute the role map once during resolution and hold it on
       `ResolvedConfig`. This is what removes the reason `RequestContext` carries
       a derived `Role`. Do **not** change the fail-open fallback here; that is
       `roadmap/planned/role-resolution-fails-open.md`.
-- [ ] Add `config` to `LAYERS` in `.dependency-cruiser.cjs`, in the capabilities
+- [x] Add `config` to `LAYERS` in `.dependency-cruiser.cjs`, in the capabilities
       tier.
 
 **Cautions.** A move and a split, not a rewrite: no behaviour changes, no

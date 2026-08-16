@@ -45,7 +45,7 @@ export {
 export { withDefaults } from '@/utilities/options';
 export { resolveEntryUrl, resolveEntryPath } from '@/entries/utils/url.shared';
 export type { UrlEntry } from '@/entries/utils/url.shared';
-export { defaultImageWidths } from '@/media/serving/image/defaults';
+export { defaultImageWidths } from '@/utilities/image-widths';
 export { buildImageAttrs } from '@/media/serving/image/build-image-attrs';
 export type {
     ImageAttrs,
