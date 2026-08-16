@@ -1,10 +1,16 @@
 # Application architecture map (in-flight)
 
-The visual companion to `decisions/0057` (proposed) and
-`roadmap/planned/application-instance-and-integrations.md`. Target state, not
-current state; the "what moves" table at the end maps one onto the other. Open
-questions are marked `Q1`–`Q5` and listed at the bottom. Delete this file when
-the reorganization ships.
+The design companion to `decisions/0057-one-application-instance-thin-framework-integrations.md`
+and `roadmap/planned/application-instance-and-integrations.md`. Target state,
+not current state. The roadmap file holds the work and its order; this file
+holds the shape, the signatures and the field research behind them.
+
+Delete this file when the reorganization ships.
+
+**This file supersedes parts of 0057 and of the roadmap.** Where they disagree,
+this file wins and the supersession is listed under "What changed after 0057"
+below, with the reason. 0057 is a decision record and stays as written; a
+follow-up record captures the changes when this work lands.
 
 ## The two processes
 
@@ -17,7 +23,7 @@ flowchart LR
         A[astro.config.mjs] --> B["astromech() integration"]
     end
     subgraph SERVE["Serving process (Vite SSR graph — virtual: resolves)"]
-        C["getAstromech()"] --> D[Astromech instance]
+        C["createAstromech({ config })"] --> D[Astromech instance]
     end
     B -. "injects routes, middleware,\nvirtual config modules" .-> SERVE
 ```
@@ -27,347 +33,560 @@ process is the only one that boots. The integration is the bridge, and its
 output (injected routes, the virtual modules) is how the serving process later
 finds the config.
 
-## Serving process — request flow (target)
+## The application surface
 
-```mermaid
-flowchart TD
-    subgraph HOSTS["Host triggers"]
-        F["fetch (browser / API client)"]
-        S["Cloudflare Cron Trigger — scheduled()"]
-        L["server-side code (Astro pages, actions)"]
-    end
+```ts
+// boot/application.ts
 
-    subgraph INT["integrations/astro/ — glue, four moves max"]
-        MW["onRequest glue\n(hand over Request, map locals)"]
-        RT["injected route entrypoints\n(APIRoute → Hono catch-all)"]
-    end
+export type Astromech = {
+    config: ResolvedConfig;
 
-    subgraph APP["Application — boot/"]
-        GA["getAstromech()\nmemoised on globalThis registry"]
-        HR["app request handling\nsession resolve + runWithContext"]
-        API["Astromech local API\nentries · media · users · settings · notifications · plugins"]
-        SCH["handleScheduled (boot/scheduled.ts)\nstays per decisions/0053"]
-    end
+    entries: TypedEntriesService;
+    media: MediaService;
+    users: UsersService;
+    settings: SettingsService;
+    notifications: NotificationsService;
+    plugins: PluginServiceNamespace;
 
-    subgraph LIFE["Boot lifecycle (runs once, inside getAstromech) — Q4"]
-        B1["register drivers\ndb · storage · email · ai · image"]
-        B2["register plugins"]
-        B3["boot plugins"]
-        B4["start scheduler driver"]
-    end
+    /** Terminal HTTP handler. Every Astromech URL, no rewriting by the caller. */
+    fetch(request: Request): Promise<Response>;
 
-    subgraph TIER2["Second tier"]
-        CRON["cron/ due-eval (onTick)"]
-        PR["plugins/runtime"]
-        DOM["domains: entries · media · users ·\nsettings · notifications"]
-        REG["registries + drivers"]
-        RC["request-context/ (AsyncLocalStorage)"]
-    end
+    /** Run the cron jobs due at `at`. Defaults to now. */
+    scheduled(at?: Date): Promise<void>;
 
-    F --> MW --> GA
-    MW --> HR --> RC
-    F --> RT --> API
-    S --> SCH --> GA
-    SCH --> CRON
-    L --> GA
-    GA --> LIFE
-    API --> DOM
-    B1 --> REG
-    B2 --> PR
-    B3 --> PR
-    B4 --> CRON
-    DOM --> REG
+    /** Establish the request scope around `run`. Called by integrations, not by site code. */
+    withRequest<T>(request: Request, run: () => Promise<T>): Promise<T>;
+
+    /** The acting user for the current request scope, resolved on first ask. */
+    getCurrentUser(): Promise<User | null>;
+    getCurrentRole(): Promise<Role | null>;
+
+    /** The serving integration's terminal action. Idempotent. No-op on Workers. */
+    startScheduler(): Promise<void>;
+};
 ```
 
-Reading it: every host trigger converges on `getAstromech()` — the one front
-door — instead of the four self-booting call sites of the current state. The
-integration layer touches nothing below the application line.
+No `destroy()`. Recorded as a known gap in the roadmap; it arrives when a
+consumer needs it, designed then against the registries that exist then.
 
-## Config-time process — integration flow (target)
+### Creation and access
 
-```mermaid
-flowchart TD
-    AC["astro.config.mjs"] --> I["integrations/astro/ integration"]
-    I --> CL["boot/config-loader (jiti)"]
-    CL --> CR["boot/config-resolver"]
-    I --> RI["route injection (Astro-specific — lives with the integration)"]
-    I --> VW["Vite wiring: aliases, optimizeDeps,\nvirtual config + admin-config + plugin-components"]
-    I --> CG["codegen: client types, method manifest"]
-    I --> MIG["boot/migrations.ts — Q3\n(dev server setup + build done hooks)"]
-    CR --> ADM["boot/admin-config → virtual admin-config"]
+```ts
+// boot/application.ts
+
+/**
+ * Initialise. Fills the globalThis slot SYNCHRONOUSLY with its own in-flight
+ * promise before the first await, so a concurrent second caller always sees a
+ * filled slot and no window exists in which two boots start.
+ *
+ * Idempotent: a second call with the same config object returns the existing
+ * instance. A second call with a DIFFERENT config throws. A failed boot clears
+ * the slot so the next caller retries.
+ */
+export function createAstromech(options: { config: AstromechConfig }): Promise<Astromech>;
+
+/** Accessor. No arguments, never creates. Throws when the slot is empty. */
+export function getAstromech(): Promise<Astromech>;
 ```
 
-`config-loader`, `config-resolver`, `admin-config` and `migrations` are
-framework-agnostic and stay in `boot/`; the integration calls them. Route
-injection and Vite wiring are Astro vocabulary and move with the integration.
+Why the split, and why `create` is the forgiving one: Laravel is the model
+(`bootstrap/app.php` creates, `app()` only ever reads), but Laravel gets one
+entry per **process**, so "already created" cannot arise. A Cloudflare Worker
+exports `fetch` and `scheduled` from one module sharing one isolate, and either
+can be first. That asymmetry is why `create` must be idempotent here and is not
+in Laravel. It is an environment fact, so a comment may state it.
 
-## Layer map (target directories)
+`getAstromech()` does **not** self-boot. Two functions that both initialise
+would be two front doors, which is the disease 0057 exists to cure.
 
-```mermaid
-flowchart TD
-    E["integrations/\n└ astro/ — integration · glue middleware · route entrypoints · route injection"]
-    B["boot/ — composition root\napplication (getAstromech, lifecycle) · migrations · scheduled ·\nconfig-loader · config-resolver · admin-config"]
-    T["transport/ — local · http (Hono) · cli — Q2 · mcp · tools"]
-    D["domains — entries · media · users · settings · notifications"]
-    C["capabilities — cron · ai · email · database · storage · plugins"]
-    U["utilities · request-context · types"]
-    E --> B --> T --> D --> C --> U
+### Where Laravel was deliberately not followed
+
+Laravel splits a cheap synchronous `create()` from an expensive
+`bootstrapWith()` guarded by `hasBeenBootstrapped()`, triggered by the kernel
+inside `handleRequest`/`handleCommand`. That is safe because the kernel is a
+single chokepoint every path goes through.
+
+We have no equivalent. `app.fetch()` and `app.scheduled()` would be chokepoints,
+but `app.entries.find()` called from an Astro page is not. Without one, deferring
+boot means every accessor needs a "booted yet?" branch. So `createAstromech` is
+one async function that does everything.
+
+### Boot phases
+
+Ordered, named, timed. Names chosen once, no aliases ever (Apostrophe's legacy
+aliases are the cautionary tale).
+
+```
+resolve config  →  register drivers  →  register plugins  →  boot plugins  →  ready
 ```
 
-Arrows are "may import"; nothing imports upward (`lint:deps` enforces it).
+`register`/`boot` for the plugin pair is the established two-phase convention
+(Laravel providers, Strapi register/bootstrap) and the split is semantic:
+register declares and binds only; boot may use anything registered.
+
+**Scheduler start is not a phase.** Laravel never owns a timer: `schedule:run`
+is external cron invoking the CLI. Our `interval()` driver exists only because a
+Node deployment has no external cron, which makes starting it a deployment
+decision. It becomes `app.startScheduler()`, called by the integration that
+knows its platform. The CLI and MCP boot fully and never call it.
+
+## Target directory tree
+
+```
+src/
+├── integrations/          NEW — framework and runtime glue (entrypoints layer)
+│   ├── astro/
+│   │   ├── index.ts               astromech(): AstroIntegration
+│   │   ├── vite.ts                alias table, optimizeDeps, define, virtual modules
+│   │   ├── virtual-module.ts      virtualModule(name, load) helper
+│   │   ├── routes.ts              injectRoute calls
+│   │   ├── middleware.ts          onRequest — six lines, one job
+│   │   └── handler.ts             the injected route entrypoint (one line)
+│   └── cloudflare/
+│       └── index.ts               createWorkerEntry(astroEntry)
+├── config/                NEW — the config pipeline (capabilities layer)
+│   ├── index.ts
+│   ├── load.ts                    jiti loading
+│   ├── resolve.ts                 orchestration only
+│   ├── entry-types.ts             toResolvedEntryType, toResolvedFields, collectSearchable
+│   ├── admin-pages.ts             resolveAdminPage, resolvePageFields
+│   ├── plugin-entries.ts          plugin identity validation + namespaced entry types
+│   ├── public-settings.ts         the inline derivation block
+│   ├── admin-config.ts            buildAdminConfig, toAdminEntryType
+│   ├── registry.ts                setConfig / getConfig
+│   └── validate/
+│       ├── field-tree.ts          validateFieldTree, assertUnique*
+│       ├── relationships.ts       assertQualifiedRelationshipTargets
+│       └── media-access.ts        assertMediaAccessCompatible
+├── boot/                  NARROWED — composition root only
+│   ├── application.ts             createAstromech, getAstromech, the Astromech type
+│   ├── lifecycle.ts               the ordered phases with per-step timing
+│   └── migrations.ts              runMigrations, checkMigrationDrift
+├── transport/
+│   ├── http/                      Hono, now BUILT AT BOOT
+│   ├── cli/                       + relationship-index, validate-stored-content
+│   ├── mcp/
+│   └── tools/
+└── (domains, capabilities, leaves unchanged)
+```
+
+Deleted directories: `src/routes/` (into `integrations/astro/`),
+`src/transport/local/` (dissolves into the instance).
+
+### Layer table
+
+`.dependency-cruiser.cjs` `LAYERS` becomes:
+
+```js
+const LAYERS = [
+    ['integrations', 'admin', 'boot', 'codegen'], // was: routes, admin, boot, codegen
+    ['transport', 'policies'],
+    ['entries', 'media', 'users', 'settings', 'notifications'],
+    [
+        'config',
+        'database',
+        'storage',
+        'email',
+        'ai',
+        'cron', // config ADDED here
+        'cloudflare',
+        'request-context',
+        'fields',
+        'permissions',
+        'plugins/runtime',
+    ],
+    ['types', 'utilities', 'errors'],
+];
+```
+
+**`config/` goes in the capabilities layer, not above the domains.** The roadmap
+says above; that is wrong and this supersedes it. Two reasons:
+
+1. Config readers are not only domains. `cron/runner.ts`, `request-context/` and
+   `users/auth.ts` all need it and all sit below the domains. Anything placed
+   above the domains fails for them, which is exactly why `cron/registry.ts`
+   grew `getRuntimeConfig` as a private workaround.
+2. The pipeline has no real dependency on the domains. Its six domain imports
+   are constants and pure `.shared` helpers, not behaviour. Moving them down
+   removes the inversion without an exemption.
+
+The six symbols that must move down before `config/` can sit at layer 3:
+
+| Symbol                                 | Today                                       | Note                                                                |
+| -------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------- |
+| `BUILT_IN_SUPPORTS`                    | `entries/storage/capabilities.ts`           | 3 files total                                                       |
+| `parseEntryTypeId`, `resolveEntryType` | `entries/type-ids.shared.ts`                | already in the admin browser bundle, so already certified leaf-safe |
+| `CLOUDFLARE_IMAGES_DRIVER`             | `media/serving/image/drivers/cloudflare.ts` | a string constant                                                   |
+| `normaliseWidths`                      | `media/serving/image/url.shared.ts`         | already public API via the root barrel                              |
+| `defaultImageWidths`                   | `media/serving/image/defaults.ts`           | already public API via the root barrel                              |
+
+Proposed homes are `utilities/entry-type-ids.ts` and `utilities/image-widths.ts`,
+but **stage 1 must settle this first** by reading the modules rather than taking
+the table on trust. If a symbol turns out to carry a real domain dependency, the
+placement of `config/` has to be revisited before anything else in the stage.
+
+## Config enters at boot
+
+```ts
+// config/registry.ts — the same shape as database/registry.ts
+export const setConfig: (config: ResolvedConfig) => void;
+export const getConfig: () => ResolvedConfig; // throws when unset
+```
+
+`config/` produces the resolved config, boot supplies it to the registry slot,
+every reader takes it from there at **call time**. This generalises the
+miniature that already exists as `cron/registry.ts`'s
+`setRuntimeConfig`/`getRuntimeConfig`, and it is Laravel's shape too:
+`LoadConfiguration` is a bootstrap step and everything afterwards reads
+`config()`.
+
+~30 module-scope `import config from 'virtual:astromech/config'` sites migrate to
+`getConfig()`. When it lands, the only `virtual:` importers left are the entry
+files that **supply** config.
+
+**The role map is computed once during resolution** and held on `ResolvedConfig`.
+Today `resolveRole` calls `resolveRoles(config)`, which rebuilds the entire map
+on every call; that expense is the only reason the request context carries a
+resolved `Role` alongside the user. Fix the derivation and the duplication goes
+away on its own. The fail-open fallback in the same function is filed separately
+as `roadmap/planned/role-resolution-fails-open.md` and is **not** in scope here.
+
+## Request identity
+
+```ts
+// request-context/request-context.ts
+export type RequestContext = {
+    request: Request;
+    user?: User | null; // filled on first resolve, reused for the rest of the request
+};
+
+export function runWithRequest<T>(request: Request, fn: () => Promise<T>): Promise<T>;
+export function getCurrentUser(): Promise<User | null>; // was sync
+export function getCurrentRole(): Promise<Role | null>; // was sync
+```
+
+The store holds the **request**, not resolved identity. Identity derives from it
+on first ask and caches for that request.
+
+What this buys, beyond correctness:
+
+- A request that never asks who the user is costs **zero** database queries.
+  Today the middleware resolves eagerly on every request: two round trips
+  (Better Auth's `getSession`, then the full user row). Media serving reads no
+  identity at all, so a page with twenty images currently does forty queries
+  nobody reads.
+- **Four independent session resolvers collapse to one.** The Astro middleware,
+  Hono's `requireAuth`, Hono's `optionalAuth` and the cron poke route each call
+  `resolveSessionUser` today, each with its own "has someone already done this?"
+  branch. Those branches get deleted, not relocated.
+
+Cost: 21 call sites across 18 files become `await`. All are already inside async
+functions and TypeScript flags every one.
+
+**Nothing is written to `Astro.locals`, and `src/env.d.ts` stops declaring
+`App.Locals`.** The current declaration merges `user` and `session` into Astro's
+global `App.Locals` interface, so a host site declaring its own `user` gets a
+TypeScript conflict and a broken build. Nothing in the repo reads either field.
+A host page reaches identity through the app:
+
+```astro
+---
+const app = await getAstromech();
+const user = await app.getCurrentUser();
+const posts = await app.entries.find('post'); // runs as that user
+---
+```
+
+If Astro-idiomatic sugar is ever wanted, it gets one namespaced key we own
+(`Astro.locals.astromech`), which is Clerk's shape. On evidence, not in
+anticipation.
+
+**Draft visibility is a query concern, not an identity one.**
+`entries/operations/query.ts` already has `VisibilityShape`, `applyVisibility`
+and `markPublic`. Whatever default a host page should get is decided at that
+seam. Do not solve it by blanking the user.
+
+## HTTP surface
+
+**The Hono app is built during boot, not at module scope.** This is the fix that
+matters: `transport/http/index.ts` currently does `export const app = new
+OpenAPIHono()` at import time, before any config exists. That is why its routes
+are registered at bare paths and why `routes/api.ts` performs URL surgery to
+strip the base, and why every middleware inside it reads `Astromech.config`
+lazily from within the handler.
+
+Built at boot, routes register at their **real absolute paths** from the resolved
+config. No `basePath`, no rewriting, and the two-prefix case falls out for free.
+
+```ts
+// transport/http/index.ts
+export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv>;
+```
+
+Mounted inside it:
+
+- The API surface at `${basePath}/api/*`.
+- **Better Auth, catch-all**: `app.on(['GET','POST'], `${basePath}/api/auth/*`, (c) => auth.handler(c.req.raw))`.
+  This deletes the current requirement that the auth route be injected *before\*
+  the API catch-all, an ordering contract nothing enforces.
+- **Media** at `${mediaRoute}/*`, so `app.fetch` really is one terminal handler
+  and media inherits access control and headers.
+
+Astro injects two patterns, both pointing at the same one-line entrypoint:
+
+```ts
+// integrations/astro/handler.ts — the whole file
+export const prerender = false;
+export const ALL: APIRoute = async ({ request }) => (await getAstromech()).fetch(request);
+```
+
+### Routes and `basePath`
+
+```ts
+basePath: '/cms'; // admin UI at `${basePath}`, API at `${basePath}/api`
+mediaRoute: '/_media'; // unchanged
+```
+
+`basePath` replaces `adminRoute` and `apiRoute`, which become derived. `basePath`
+is the established key name (Hono, Better Auth, Next.js). This is a breaking
+config change; `apps/demo` and `apps/docs` move with it.
+
+Two reasons it is worth doing here rather than later:
+
+- `apiRoute` currently defaults to `/api`, which squats on a path plenty of Astro
+  sites want for their own endpoints.
+- One prefix collapses three injected route patterns toward one for the operator
+  surface.
+
+**Media keeps its own top-level prefix**, and the deciding argument is
+operational rather than conceptual. A WAF rule, CDN cache bypass, `robots.txt`
+disallow or IP allowlist on `/cms/*` to protect the admin is an ordinary thing
+to deploy; if media lived under that prefix, every one of them would break every
+image on the public site. Admin and API are session-bound and never cached;
+media is long-cached, public, and ends up in third-party caches and other
+people's links. One prefix cannot carry both policies. CMS ownership is
+satisfied by owning the handler, which `app.fetch` does.
+
+**The underscore convention resolves the naming split.** `_astro/`, `/_next/`,
+`/_nuxt/` all mark "framework-owned machine path". That is for paths a machine
+fetches, not paths a human types. So `/_media` keeps its underscore and `/cms`
+stays plain, because the admin is the one Astromech path people bookmark.
+
+## Integrations
+
+An integration makes four moves: capture the input in the host's native form,
+get the app, hand it over, emit the result. An integration needing a new branch
+in core is reporting a missing application capability.
+
+```ts
+// integrations/astro/middleware.ts — the whole file
+import config from 'virtual:astromech/config';
+import { createAstromech } from '@/boot/application';
+
+export const onRequest: MiddlewareHandler = async (context, next) => {
+    const app = await createAstromech({ config });
+    await app.startScheduler();
+    return app.withRequest(context.request, () => next());
+};
+```
+
+```ts
+// integrations/cloudflare/index.ts
+export function createWorkerEntry(astro: {
+    fetch: ExportedHandlerFetchHandler;
+}): ExportedHandler;
+```
+
+```js
+// the site's src/worker.ts — one file, both handlers
+import astro from './dist/_worker.js';
+import { createWorkerEntry } from 'astromech/cloudflare';
+export default createWorkerEntry(astro);
+```
+
+This is `public/index.php` for the edge, and it removes the hand-written
+`scheduled()` boilerplate the current setup asks of site authors.
+
+`defaultScheduler()` stops sniffing `navigator.userAgent`. The integration knows
+its platform and supplies the default. The sniff stays only for Cloudflare
+binding resolution, where no config can answer.
+
+## Published surface
+
+`astromech/local` retires. `getAstromech` and `createAstromech` ship from the
+root barrel, which the config-at-boot rule makes honest: core modules no longer
+carry graph-bound imports, and `check:node-imports` proves it.
+
+The `AstromechClient` shared contract is deleted. `astromechClient` becomes a
+standalone typed REST wrapper, typed by what the wire actually returns (public
+projections), owning `configure({ baseUrl })`. The local no-op implementation of
+`configure` dies with it: a method implemented only to satisfy a name means the
+contract is fighting the implementation and losing.
+
+Wire-surface parity stays the goal, enforced by mechanism rather than interface
+(method manifest → dispatch), with a parity test where a specific guarantee
+matters, as `decisions/0056-better-auth-owns-the-users-format-not-its-ddl.md` did.
+
+Two moves in the `exports` map, with the published specifiers unchanged:
+
+| Specifier               | Was                         | Becomes                                    |
+| ----------------------- | --------------------------- | ------------------------------------------ |
+| `astromech/astro`       | `dist/boot/astro.js`        | `dist/integrations/astro/index.js`         |
+| `astromech/middleware`  | `src/exports/middleware.ts` | `integrations/astro/middleware.ts`         |
+| `astromech/routes/*.ts` | `src/routes/*.ts`           | `integrations/astro/handler.ts` (one file) |
+| `astromech/local`       | `src/exports/local.ts`      | **retired**                                |
+| `astromech/cloudflare`  | `dist/cloudflare/index.js`  | gains `createWorkerEntry`                  |
+
+**`dist/boot/config-resolver.js` is a landmine.** The generated
+`virtual:astromech/config` module writes an absolute path to it, computed
+relative to the integration's own `import.meta.url`. Moving both the integration
+and the resolver changes that relative path, and the tsup entry key with it. Two
+places, and `check:boot` is the only thing that catches a mismatch.
 
 ## What moves
 
-| Today                                 | Target                                       |
-| ------------------------------------- | -------------------------------------------- |
-| `boot/astro.ts`                       | `integrations/astro/` (integration)          |
-| `src/middleware.ts` (boots + session) | glue in `integrations/astro/` + app handler  |
-| `routes/*.ts`                         | `integrations/astro/` (route entrypoints)    |
-| `boot/route-registration.ts`          | `integrations/astro/`                        |
-| `boot/ensure-booted.ts`               | subsumed by `getAstromech()`                 |
-| `boot/boot.ts` (`initRuntime` etc.)   | application lifecycle + `boot/migrations.ts` |
-| `boot/scheduled.ts`                   | stays; calls `getAstromech()`                |
-| `runScheduledJobs` (deprecated)       | deleted                                      |
+| Today                                                    | Target                                                             |
+| -------------------------------------------------------- | ------------------------------------------------------------------ |
+| `boot/astro.ts`                                          | `integrations/astro/` (split: index, vite, routes)                 |
+| `src/middleware.ts`                                      | `integrations/astro/middleware.ts`                                 |
+| `src/routes/*.ts` (three files)                          | `integrations/astro/handler.ts` (one)                              |
+| `boot/route-registration.ts`                             | `integrations/astro/routes.ts`                                     |
+| `boot/scheduled.ts`                                      | `integrations/cloudflare/index.ts`                                 |
+| `boot/ensure-booted.ts`                                  | subsumed by `createAstromech`                                      |
+| `boot/boot.ts`                                           | `boot/application.ts` + `boot/lifecycle.ts` + `boot/migrations.ts` |
+| `boot/config-loader.ts`                                  | `config/load.ts`                                                   |
+| `boot/config-resolver.ts`                                | `config/` split into named steps                                   |
+| `boot/admin-config.ts`                                   | `config/admin-config.ts`                                           |
+| `boot/relationship-index.ts`                             | `transport/cli/`                                                   |
+| `boot/validate-stored-content.ts`                        | `transport/cli/`                                                   |
+| `boot/plugin-sources.ts`                                 | deleted (boot is one sequence; the guard has nothing to catch)     |
+| `transport/local/index.ts`                               | dissolves into the instance                                        |
+| `transport/astromech-client.shared.ts`                   | deleted                                                            |
+| `transport/cli/virtual-config-shim.ts`                   | deleted                                                            |
+| `runScheduledJobs` (deprecated)                          | deleted                                                            |
+| `cron/registry.ts` `setRuntimeConfig`/`getRuntimeConfig` | `config/registry.ts`                                               |
 
-## Field research findings
+## Renames
 
-Seven systems researched (Laravel, Payload, Better Auth, Hono, Apostrophe,
-Ghost, Directus, Strapi). What recurs, and what to avoid:
+| From                 | To                | Why                                                                                                                             |
+| -------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `wireEntryAccess`    | `setEntryAccess`  | matches the registry setters beside it; "wire" means the transport here (`decisions/0013-chat-transcript-as-content-blocks.md`) |
+| `wireNotifyAccess`   | `setNotifyAccess` | same                                                                                                                            |
+| `resolveSessionUser` | `getSession`      | Better Auth's vocabulary                                                                                                        |
+| `handleScheduled`    | `app.scheduled`   | pairs with `app.fetch`; Cloudflare's own handler name, not a coinage                                                            |
+| `cfg`                | `entryType`       | the `code` skill bans the abbreviation                                                                                          |
+| `pkgSrc`, `mod`      | spelled out       | same                                                                                                                            |
+
+`resolveConfig` / `ResolvedConfig` stay: Vite's own API. Outside config
+resolution, "resolve" must beat a plainer verb.
+
+## What changed after 0057
+
+0057 stays as written. These supersede it, and a follow-up decision record
+captures them when the work lands.
+
+| 0057 / roadmap said                                             | Now                                                                                          | Why                                                                                                                                       |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `getAstromech()` is the memoised factory and the one front door | `createAstromech({ config })` initialises; `getAstromech()` only reads and throws when empty | an argument honoured only on the first call is a trap; Laravel separates the two and so do we                                             |
+| `config/` sits above the domains                                | `config/` sits in the capabilities layer                                                     | readers below the domains (`cron`, `request-context`, `users/auth`) exist, and the pipeline's domain imports are constants, not behaviour |
+| the CLI keeps the `virtual:` shim as environment (Q2)           | the shim is deleted; the CLI calls `createAstromech({ config })`                             | the two statements contradicted; supplying config is what makes the shim unnecessary                                                      |
+| middleware boots the runtime and populates `locals`             | middleware establishes the request scope only                                                | nothing reads `locals`, and declaring `App.Locals` breaks a host that declares its own `user`                                             |
+| session resolved eagerly per request                            | resolved lazily on first ask                                                                 | media and static requests read no identity and should pay nothing                                                                         |
+| `adminRoute` + `apiRoute`                                       | one `basePath`                                                                               | `/api` squats on a path sites want; one operator prefix collapses the injected patterns                                                   |
+| `app.fetch` unspecified; three injected route files             | one terminal handler, Hono built at boot at absolute paths                                   | the URL surgery in `routes/api.ts` is a symptom of the Hono app being constructed before its config exists                                |
+
+## Constraints that must survive
+
+- The instance slot lives on `globalThis` (tsup emits multiple entry chunks; a
+  module-scoped memo duplicates per chunk and boots twice).
+- Request-scoped state never lives on the instance. `request-context/`
+  (AsyncLocalStorage) carries it. Workers isolates, Node processes and dev HMR
+  all reuse one instance across many requests; Laravel needed Octane's
+  clone-per-request sandbox to retrofit this and we avoid needing it.
+- Construction must not arm behaviour: no timers, no I/O on import. Directus
+  starts schedules inside `createApp()`, so importing its app starts timers.
+- The core exposes a request handler, not a server. Precondition failures throw
+  typed errors the integration renders; never `process.exit`.
+- The per-domain registries stay underneath the instance. This is a front door
+  and a lifecycle, not a dependency-injection rework.
+- Two processes, not one. The config-time process cannot resolve `virtual:` and
+  gets no application object; an app that can never start would be a lie.
+- Migrations run by explicit command only (`db:init`, the build/dev hooks), plus
+  a boot-time drift check that warns and never mutates (Directus's shape; Ghost's
+  migrate-on-every-boot is the counter-example).
+
+## Decide during implementation
+
+- **Virtual config module identity across chunks.** `createAstromech`'s
+  "different config throws" guard compares object identity. The virtual module
+  is externalised so the host's Vite should resolve it once, but this codebase
+  has been bitten by chunk duplication before. Verify in stage 2; if identity is
+  not reliable, the guard reuses silently instead and the reason is recorded.
+- **Q8 — the `exports` dev-condition trap.** Six subpaths resolve `types` from
+  `dist` and `default` from `src`, so a source edit is live while its types are
+  whatever the last build emitted. `check:exports` compares key sets, not
+  conditions. Agreed fix pending feasibility: give the `src/exports/*` shims
+  relative imports instead of `@/`, then point `types` at `src` too. Plugin
+  tsconfigs clear `paths`, which is why the `@/` imports fail there.
+- **Q9 — module-scope `let` singletons.** `users/auth.ts` holds `let _auth` at
+  module scope, exactly the pattern `utilities/registry.ts` declares unsafe
+  across tsup chunks. Either a latent double-instantiation bug or the premise is
+  overstated for SSR-graph-only modules. Investigate once, then state the rule.
+- **Default visibility shape for host pages.** Decided at the `VisibilityShape`
+  seam, not by touching identity. Out of scope here; raise it as its own item if
+  the answer is not obvious when the lazy-identity stage lands.
+- **`bootPlugins` in short-lived processes.** Boot is now full and singular, so
+  the CLI and MCP run `bootPlugins` where they previously skipped it. Verify the
+  side effects are acceptable.
+
+## Known gaps, deferred by decision
+
+- **No `destroy()` / teardown.** Every mature system grew one (Apostrophe's
+  `apos.destroy()`, Strapi's `destroy()`); ours arrives when a real consumer
+  needs it (test isolation, an HMR rebuild), designed then against the
+  registries that exist then.
+- **`.dependency-cruiser.cjs` stays.** It did not force any of this and it has
+  caught real defects (0053's upward edges; the browser-boundary rules that keep
+  the config virtual module out of the admin bundle). The signal to watch is its
+  exemption list growing, because accumulating exceptions mean a rule has begun
+  describing the code instead of shaping it.
+
+## Field research
+
+Eight systems (Laravel, Payload, Better Auth, Hono, Apostrophe, Ghost, Directus,
+Strapi). What recurs, and what to avoid:
 
 - **Every mature system boots as an explicit, ordered, named phase list.**
   Laravel's six bootstrappers, Apostrophe's `modulesRegistered` → schemas →
   migrate → `ready` → `run`, Ghost's numbered steps 0–7, Strapi's `register` →
   `bootstrap` → `listen`. None uses one opaque function. Caution from
-  Apostrophe: renamed phases kept legacy aliases (`afterInit`/`modulesReady`)
-  and now teach both forever — pick names once.
+  Apostrophe: renamed phases kept legacy aliases and now teach both forever.
+- **Laravel's entry files create; its accessor never does.** `public/index.php`
+  and `artisan` both require `bootstrap/app.php`, which returns a created
+  application. `app()` resolves `Container::getInstance()` and returns whatever
+  that created. Ambient access, explicit creation.
+- **Laravel's cron is not a separate entry.** System cron runs
+  `php artisan schedule:run` every minute: an ordinary console command through
+  the ordinary CLI entry. `ScheduleRunCommand` snapshots `Date::now()` once into
+  `startedAt` and evaluates every due event against that one value, which is the
+  same reason Cloudflare passes `scheduledTime` rather than letting the handler
+  read the clock.
 - **Two-phase plugin registration (register-all, then boot-all) is universal**
-  (Laravel providers, Apostrophe define/instantiate, Strapi
-  register/bootstrap). Our `registerPlugins`/`bootPlugins` already matches.
+  (Laravel providers, Apostrophe define/instantiate, Strapi register/bootstrap).
 - **Migrations on serving boot is the standalone-CMS pattern and the
-  embedded-CMS trap.** Apostrophe and Ghost migrate every startup; Apostrophe
-  makes it safe (per-migration record + distributed lock + fresh-install marks
-  all as run), Ghost doesn't (N replicas race the migration table). Strapi
-  adds auto schema-sync on boot with no manual CLI. Directus is the model for
-  an embedded CMS: migrate only by explicit command, and at serve start only
-  `validateMigrations()` — warn on drift, never mutate.
+  embedded-CMS trap.** Apostrophe makes it safe (per-migration record +
+  distributed lock + fresh-install marks all run); Ghost doesn't (N replicas
+  race the migration table). Directus is the model for an embedded CMS:
+  migrate by explicit command, validate on serve start.
 - **A constructed object must not arm timers.** Directus starts its core
-  schedules inside `createApp()`, so importing the app starts `setInterval`s —
-  bad for tests and any inspecting process. Ghost starts background services
-  in a deliberately un-awaited step 7, after serving. Strapi's cron has no
-  leader election, so every replica runs every job.
+  schedules inside `createApp()`. Strapi's cron has no leader election, so every
+  replica runs every job.
 - **An embedded core exposes a handler and throws typed errors.** All three
   standalone CMSs bind their own port and two exit the process on a bad
-  precondition (`process.exit` in Directus, `stopWithError` in Strapi). An
-  embedded core can do neither: request handler not server, typed errors the
-  integration renders, no `process.exit`.
-- **One entry, two terminal modes.** Apostrophe's CLI is `node app <task>` —
-  the same entry and full bootstrap as serving, with a single `run(isTask)`
-  event deciding listen-or-exit. Ghost's separate `ghost-cli` package is the
-  heavier alternative.
+  precondition (`process.exit` in Directus, `stopWithError` in Strapi).
 - **Declare, then bind.** Apostrophe modules declare routes as data; a central
-  `compileRoutes` phase binds them to Express once. That is the shape that
-  keeps integrations thin as they multiply: core describes its HTTP surface,
-  each integration binds it. Our Hono catch-all approximates this today.
+  `compileRoutes` phase binds them to Express once. That is the shape that keeps
+  integrations thin as they multiply.
 - **Explicit instance beats both a global and no object.** Strapi's
-  `global.strapi` forbids two instances per process and makes test isolation
-  manual; Ghost's no-object design hand-threads `{ghostServer, config}`
-  through every init function. An explicit instance handed to integrations
-  (Payload's shape, ours) gets the ergonomics without the coupling — with the
-  caveat that our memo must still live on `globalThis` for the tsup
-  multi-chunk reason (a mechanism, not an API: nothing reads
-  `globalThis.astromech`, everything calls `getAstromech()`).
-
-## Naming flags (raised during review)
-
-- **"wire" is out.** It collides with wire-as-protocol ("wire format", 0013's
-  "crosses the wire"). Diagram label is now "register drivers"; code renames:
-  `wireEntryAccess`/`wireNotifyAccess` → `setX`, matching the registry setters
-  around them (`setDb`, `setStorageDriver`).
-- **`register`/`boot` stays as the plugin two-phase pair.** It is the
-  established convention (Laravel providers `register()`/`boot()`, Strapi
-  `register`/`bootstrap`) and the split is semantic: register declares and
-  binds only; boot may use anything registered. "Initialize" names neither
-  phase. Decided once, here.
-- **"resolve" is earned by config, on probation elsewhere.** Vite's own API is
-  `resolveConfig()` → `ResolvedConfig`, so ours stays. `resolveSessionUser`
-  has no such prior art (Better Auth says `getSession`) — rename candidate.
-  Audit rule: outside config resolution, "resolve" must beat a plainer verb.
-
-## Answered questions
-
-- **Q1 — Config-time application object?** No. The config-time process can
-  never boot (no `virtual:`), so an app object there would be a lie — an
-  application that cannot start. It stays plain functions
-  (`loadConfigFile` → `resolveConfig`), which is also Laravel's shape: the
-  builder is not the app.
-- **Q2 — CLI through `getAstromech()`?** Yes. Apostrophe's one-entry /
-  two-terminal-modes is the model; a CLI with its own boot path is a second
-  front door, which is the disease 0057 exists to cure. The `cliConfig` shim
-  stays as environment (how plain Node reaches the config), documented as
-  such.
-- **Q3 — Where may migrations run?** Explicit command only (`db:init`, the
-  build/dev hooks), plus a boot-time drift check that warns and never mutates
-  (Directus's `validateMigrations` shape). Serving-boot auto-migrate is
-  rejected-for-now with the recipe recorded (Apostrophe's record + lock +
-  fresh-install-marks-all-run; the lock is a D1 conditional insert on
-  Workers), so revisiting it starts from the kit, not from scratch.
-- **Q4 — Lifecycle shape?** An ordered named step list with per-step timing.
-  Every researched system uses one; the sole recorded regret anywhere is
-  renaming phases later, so the names are chosen once, from the ecosystem's
-  vocabulary: **register drivers → register plugins → boot plugins → ready →
-  start scheduler**. No aliases, ever.
-- **Q6 — Disposal?** Deferred, recorded as a known gap in the roadmap file.
-  Every mature system grew a `destroy()`; ours arrives when a consumer (test
-  isolation, HMR rebuild) actually needs it, designed then against the
-  registries that exist then.
-
-- **Q5 — Factory and integration names?** Both keep their names. The app is
-  `Astromech`, its factory `getAstromech()` (the `getX` factory shape:
-  `getPayload`, `getContext`). The Astro integration factory stays
-  `astromech()` because that is Astro's own convention — an integration
-  exports a function named for the package (`sitemap()`, `react()`,
-  `tailwind()`). They live in different layers, different processes, and
-  different subpaths.
-- **Q7 — The application is primary; the mirror is dropped.** The app —
-  named `Astromech`, it is the core entity — owns the services, the resolved
-  config and the lifecycle, with full trusted shapes. There is no shared
-  `AstromechClient` contract implemented by two transports: the fetch client
-  becomes a standalone typed REST wrapper (`astromechClient`, 0015), typed by
-  what the wire actually returns (public shapes), owning fetch-only members
-  like `configure`. The evidence that the mirror was wrong: local's `configure`
-  no-op (a method implemented only to satisfy a name — the losing-battle
-  tell), and the contract claiming identical return types where the transports
-  genuinely differ (local: full rows; wire: public projection). Wire-surface
-  parity stays a goal, enforced by mechanism rather than by type: the HTTP
-  surface derives from the same services (method manifest → dispatch), and
-  where a guarantee matters it is a parity test (0056's precedent), not a
-  shared interface. Plugins receive the `ctx` accessor surface, never the
-  app — nothing hands a plugin `destroy()`.
-
-## Round 2 (all folded into 0057)
-
-- **Config enters at boot.** The ambient `virtual:astromech/config` import
-  (~35 module-scope sites) is the underlying disease; config is supplied once
-  at boot and read via the app's accessor thereafter (cron's
-  `setRuntimeConfig` generalised). Root-barrel `getAstromech` becomes honest
-  rather than a lazy-import workaround.
-- **Factory, not class** — decided on merits (`this`-binding; nominal
-  identity fails across our multiple module registries), not convention.
-- **"Local" dropped from the vocabulary** — no mirror, no local/remote pair;
-  `astromech/local` retires, root barrel exports `getAstromech`.
-
-## Entry-layer audit (round 3)
-
-Twelve findings, verified against source. Dispositions:
-
-**Dissolved by the plan as it stands:** the CLI's virtual-config shim (a
-throwing `rawConfig` Proxy, a `set` trap that mutates live config — dies with
-config-at-boot); `getRuntimeConfig` misfiled in `cron/registry.ts` (it is the
-seed of the app's config accessor; `users/auth.ts` already reads it);
-`transport/local`'s module-scope `setPluginClient`/`setPluginMethods` (moves
-into the boot lifecycle, making the package's `"sideEffects": false` claim
-true again — the plugin-runtime ↔ local import cycle they dodge gets an
-explicit port instead of an import order).
-
-**Settled by one right answer, added to the plan:**
-
-- **A failed boot is retryable.** `ensure-booted.ts` memoises a rejected
-  promise forever; `cloudflare/bindings.ts` already clears its slot on
-  failure and Payload does the same. The factory clears the memo on
-  rejection.
-- **Every serving entry goes through `getAstromech()`** — including the three
-  route entrypoints, which today rely on `addMiddleware({ order: 'pre' })`
-  having run first (an ordering contract enforced by nothing). The memo makes
-  the extra call free.
-- **Boot is full and singular; entries differ only at the end.** Today four
-  callers hand-assemble different boot subsets (middleware: full; MCP: copies
-  the order in a comment and skips `bootPlugins`; `index:rebuild`:
-  `registerPlugins` only; other CLI commands: config+db only), and
-  `boot/plugin-sources.ts` exists to catch the resulting failure. Laravel and
-  Apostrophe both answer this the same way: one full bootstrap always, with
-  the terminal action (listen / exit) the only difference. Scheduler start
-  leaves the boot phases and becomes the serving entry's action — the CLI and
-  MCP boot fully and simply never start it. `assertPluginSourcesReachable`
-  and the MCP's hand-copy become deletable. (Verify at implementation that
-  `bootPlugins` side effects are acceptable in short-lived processes.)
-- **Migration failure fails loud.** `runMigrations` swallows everything; the
-  comment justifies swallowing only the provider _load_. Narrow the catch;
-  a failed `migrateToLatest` stops the dev server / build.
-- **Scheduler default comes from config/integration, not a user-agent sniff.**
-  `defaultScheduler()` probes `navigator.userAgent === 'Cloudflare-Workers'`;
-  the integration knows its platform and supplies the default. The sniff
-  stays only for Cloudflare binding resolution, where no config can answer.
-- **The manifest generator returns the structure, not a string.** Boot does
-  `JSON.parse(generateMethodManifest(...))` — a serialize/parse round trip;
-  serialization moves to the two edges that write files. One failure policy.
-- **Registry slots split into instance state vs process-global.** Instance:
-  db, storage, email, ai, image, scheduler, plugin runtime, manifest, config
-  (typed fields — a typo stops creating a silent new slot). Process-global,
-  staying on `globalThis`: the ALS request context, cron interval/tick
-  guards, `cloudflareEnv`, `uiInstance`, the boot memo itself.
-- **`ui-instance-guard` stays** (cheap, caught a real failure); the Vite
-  alias table it detects symptoms of moves into `integrations/astro/` with
-  the rest of the glue.
-
-**Open (discuss):**
-
-- **Q8 — dev `exports` conditions: `types` at `dist`, `default` at `src`** for
-  six subpaths — the stale-dist phantom-error trap by construction (bit us
-  this session), invisible to `check:exports`, which compares key sets, not
-  conditions. `types` can only point at `src` if the export shims stop using
-  `@/` imports (plugin tsconfigs clear `paths`); candidate fix: relative
-  imports in `src/exports/*` shims, then `types` → `src`, trap gone.
-- **Q9 — module-scope `let` singletons vs the registry premise.**
-  `users/auth.ts` holds `let _auth` at module scope — exactly what
-  `utilities/registry.ts` says duplicates per tsup chunk. Either a latent
-  double-instantiation bug or the premise is overstated for SSR-graph-only
-  modules; needs one investigated answer at implementation, then a stated
-  rule.
-
-## `boot/` file-by-file (round 4)
-
-Eleven files, 66KB. Verdicts beyond what the plan already moves:
-
-| File                         | Verdict                                             |
-| ---------------------------- | --------------------------------------------------- |
-| `boot.ts`                    | dissolves → application + `migrations.ts` (planned) |
-| `ensure-booted.ts`           | subsumed by `getAstromech()` (planned)              |
-| `astro.ts`                   | → `integrations/astro/` (planned)                   |
-| `route-registration.ts`      | → `integrations/astro/` (planned)                   |
-| `scheduled.ts`               | → `integrations/cloudflare/` (new)                  |
-| `relationship-index.ts`      | → `transport/cli/` (beside its only caller)         |
-| `validate-stored-content.ts` | → `transport/cli/` (beside its only caller)         |
-| `plugin-sources.ts`          | → `transport/cli/`; deletable once boot is one      |
-|                              | sequence (audit finding 1)                          |
-| `config-loader.ts`           | → `src/config/load.ts`                              |
-| `config-resolver.ts`         | → `src/config/` split into named steps              |
-| `admin-config.ts`            | → `src/config/admin-config.ts`                      |
-
-Two findings the rest of the plan does not touch:
-
-1. **A stale comment, not a rule, held the maintenance passes in `boot/`.**
-   `relationship-index.ts`'s header says boot owns them because they compose
-   three domains "which no domain may do";`.dependency-cruiser.cjs` says the
-   opposite — domains are peers and may read one another, because forbidding
-   it "only pushed the same work somewhere worse". The rule relaxed, the
-   files did not move, and the comment kept the placement looking
-   deliberate. They go to `transport/cli/`, beside their only callers, which
-   needs no new directory and no rule change. Worth generalising: a comment
-   that cites a constraint should be checked against the enforced
-   constraint, because a stale one reads exactly like a live one.
-2. **`config-resolver.ts` is five jobs in one file** (plugin validation,
-   entry-type resolution, field-tree structural rules, admin-page resolution,
-   public-settings derivation) at 16KB. It is the reason `src/config/`
-   earns its own directory rather than a flat move: the split into named
-   step files is what makes the "Step 1…Step 5" narration unnecessary.
-
-On the rule regime itself: it did not force any of this, and it has caught
-real defects (0053's upward edges; the browser-boundary rules that keep
-`virtual:astromech/config` out of the admin bundle). The one thing to watch
-is its exemption list — `NO_UPWARD_EXEMPT` for `cli`/`tools`/`mcp`, plus four
-hand-written no-upward carve-outs. Exceptions accumulating is the signal that
-a rule has started describing the code instead of shaping it; that is the
-trigger to revisit, not a general preference for fewer rules.
-
-Next step: commit the doc set, then the implementation branch. Delete this
-spec when the work ships.
+  `global.strapi` forbids two instances per process; Ghost's no-object design
+  hand-threads `{ghostServer, config}` through every init function.
