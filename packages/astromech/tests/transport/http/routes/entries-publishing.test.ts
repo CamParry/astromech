@@ -4,8 +4,8 @@
  * bulk routes and staging are accounted for.
  *
  * `versions` and `restoreVersion` declare `requires: 'versioning'` in their
- * contract and the routes do not check it, so the unversioned case is pinned
- * here as it behaves today.
+ * contract, so an unversioned type answers the capability 409 both are pinned
+ * on here.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -135,11 +135,12 @@ describe('GET /entries/:type/:id/versions', () => {
         ]);
     });
 
-    it('returns an empty list for an unversioned type — the route does not check the capability', async () => {
+    it('409s an unversioned type on the capability its contract requires', async () => {
         const note = await api.create({ type: 'note', title: 'N', slug: 'n' });
         const res = await app().request(`/entries/note/${note.id}/versions`);
-        expect(res.status).toBe(200);
-        expect(((await res.json()) as { data: EntryVersion[] }).data).toEqual([]);
+        expect(res.status).toBe(409);
+        const body = (await res.json()) as { error: { code: string } };
+        expect(body.error.code).toBe('capability_not_supported');
     });
 });
 
@@ -156,6 +157,16 @@ describe('POST /entries/:type/:id/versions/:versionId/restore', () => {
         const body = (await res.json()) as { data: Entry };
         expect(Object.keys(body)).toEqual(['data']);
         expect(body.data.id).toBe(id);
+    });
+
+    it('409s an unversioned type on the capability its contract requires', async () => {
+        const note = await api.create({ type: 'note', title: 'N2', slug: 'n2' });
+        const res = await app().request(`/entries/note/${note.id}/versions/v1/restore`, {
+            method: 'POST',
+        });
+        expect(res.status).toBe(409);
+        const body = (await res.json()) as { error: { code: string } };
+        expect(body.error.code).toBe('capability_not_supported');
     });
 
     it('404s an unknown type before the version is looked up', async () => {

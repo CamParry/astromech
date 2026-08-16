@@ -36,6 +36,7 @@ import {
 import { setStorageDriver } from '@/storage/registry';
 import { Astromech } from '@/transport/local/index';
 import { onError } from '@/transport/http/middleware/errors';
+import { ValidationError } from '@/errors/validation';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
 import { usersRouter } from '@/transport/http/routes/users';
 import { mediaRouter } from '@/transport/http/routes/media';
@@ -139,6 +140,8 @@ function makeConfig(): AstromechConfig {
                 ...base.entries['post'],
                 single: 'Post',
                 plural: 'Posts',
+                // `POST /entries/post/:id/staged` is gated on this capability.
+                staging: true,
                 fields: [
                     {
                         name: 'contact',
@@ -300,6 +303,37 @@ describe('POST /entries/:type — invalid field value', () => {
 
         expect(res.status).toBe(422);
         const body = (await res.json()) as ErrorBody;
+        expect(body.error.details?.fields).toEqual({
+            contact: ['Must be a valid email address'],
+        });
+    });
+});
+
+describe('POST /entries/:type/:id/staged — a service ValidationError', () => {
+    // The staging route keeps a `try/catch` for its 409 envelope, so the throw
+    // has to get past it to `onError`. `createStaged` copies the canonical's
+    // stored values and runs no field pipeline of its own, so the failure is
+    // injected rather than provoked.
+    it('422s rather than being flattened to a 500 by the route catch', async () => {
+        const app = mountedApp();
+        const created = await app.request('/entries/post', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'S1' }),
+        });
+        const id = ((await created.json()) as { data: { id: string } }).data.id;
+
+        vi.spyOn(Astromech.entries, 'createStaged').mockRejectedValue(
+            ValidationError.fromFieldErrors({
+                contact: ['Must be a valid email address'],
+            })
+        );
+
+        const res = await app.request(`/entries/post/${id}/staged`, { method: 'POST' });
+
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as ErrorBody;
+        expect(body.error.code).toBe('VALIDATION_FAILED');
         expect(body.error.details?.fields).toEqual({
             contact: ['Must be a valid email address'],
         });

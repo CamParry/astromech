@@ -21,7 +21,6 @@ import {
     badRequest,
     forbidden,
     fromZodError,
-    internalError,
     notFound,
     requestSchemaError,
 } from '@/transport/http/middleware/errors';
@@ -33,6 +32,7 @@ import type {
     EntryUpdateData,
     JsonObject,
     ResolvedEntryType,
+    SortDirection,
 } from '@/types/index';
 import {
     ENTRY_METHOD_ACTIONS,
@@ -147,16 +147,15 @@ export const ENTRIES_ROUTES: RestRoute[] = attachHandlers(ENTRIES_ROUTE_SPECS, {
         args: async (c) => ({ ...(await c.req.json()), ...canonicalArgs(c) }),
         precondition: entryAccess(),
     },
-    // `versions` and `restoreVersion` declare `requires: 'versioning'` that these
-    // routes have never enforced — honouring it would add a 409 to an unversioned
-    // type, which answers 200 with an empty list today.
+    // Version history. Both declare `requires: 'versioning'`, so an unversioned
+    // type answers 409 like every other capability-gated route.
     'get /:type/:id/versions': {
         args: canonicalArgs,
-        precondition: entryAccess('unchecked'),
+        precondition: entryAccess(),
     },
     'post /:type/:id/versions/:versionId/restore': {
         args: (c) => ({ ...canonicalArgs(c), versionId: param(c, 'versionId') }),
-        precondition: entryAccess('unchecked'),
+        precondition: entryAccess(),
     },
     'get /:type/:id/incoming-relationships': {
         args: canonicalArgs,
@@ -212,7 +211,8 @@ function listArgs(c: Context<Env>): EntryQueryParams & { type: string } {
     if (q['limit'] === 'all') params.limit = 'all';
     else if (q['limit']) params.limit = Number(q['limit']);
     const sort = q['sort'];
-    if (sort) params.sort = { [sort]: q['dir'] === 'asc' ? 'asc' : 'desc' };
+    // `dir` is already 'asc' or 'desc' — the route schema 400s anything else.
+    if (sort) params.sort = { [sort]: (q['dir'] as SortDirection | undefined) ?? 'desc' };
     // Forward versioning: a preview token bypasses the publish gate for the
     // matched canonical (or its staged change with `staged`). Public shape only.
     if (q['previewToken']) params.previewToken = q['previewToken'];
@@ -312,24 +312,17 @@ function contractsForRequest(c: Context<Env>): ContractCatalogue | undefined {
  * call whatever this returns. What it decides is the ORDER: an unknown type
  * answers 403 to an under-privileged role and 404 to a privileged one, so a
  * caller cannot enumerate the entry types it has no grant for. No contract can
- * stand in for it, because an unresolved type has none. `capability: 'unchecked'`
- * is the one exception, named at its two call sites.
+ * stand in for it, because an unresolved type has none.
  */
-function entryAccess(
-    capability: 'declared' | 'unchecked' = 'declared'
-): (c: Context<Env>, route: RestRoute) => Response | null {
+function entryAccess(): (c: Context<Env>, route: RestRoute) => Response | null {
     return (c, route) => {
         const method = route.id.slice(route.id.indexOf('.') + 1) as EntryMethodName;
-        return entryPrecondition(c, method, capability);
+        return entryPrecondition(c, method);
     };
 }
 
 /** {@link entryAccess}, for the bespoke handlers that make the same checks. */
-function entryPrecondition(
-    c: Context<Env>,
-    method: EntryMethodName,
-    capability: 'declared' | 'unchecked' = 'declared'
-): Response | null {
+function entryPrecondition(c: Context<Env>, method: EntryMethodName): Response | null {
     const type = param(c, 'type');
     const action = ENTRY_METHOD_ACTIONS[method];
     if (!permissionsFor(c.var.role).allows(entryPermission(type, action))) {
@@ -338,7 +331,6 @@ function entryPrecondition(
 
     const resolved = resolveEntryType(Astromech.config, type);
     if (!resolved) return notFound(c, `Entry type '${type}' not found`);
-    if (capability === 'unchecked') return null;
 
     const requires = entryContracts(resolved, type)[method]?.requires;
     if (requires !== undefined && !resolved.capabilities[requires]) {
@@ -595,8 +587,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
     // ========================================================================
 
     // Not in the table: `StagedEntryExistsError` answers a 409 carrying
-    // `details.stagedId`, and a catch-all turns every other throw into a 500
-    // instead of letting `onError` classify it.
+    // `details.stagedId`. Every other throw is re-raised for `onError`.
     router.post('/:type/:id/staged', async (c) => {
         const { type, id } = c.req.param();
         const denied = entryPrecondition(c, 'createStaged');
@@ -606,21 +597,19 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
             const entry = await Astromech.entries.createStaged({ type, id });
             return c.json({ data: entry }, 201);
         } catch (error) {
-            if (error instanceof StagedEntryExistsError) {
-                // The 409 carries the existing staged id so the admin can redirect.
-                return c.json(
-                    {
-                        error: {
-                            code: 'staged_entry_exists',
-                            message: error.message,
-                            status: 409,
-                            details: { stagedId: error.stagedId },
-                        },
+            if (!(error instanceof StagedEntryExistsError)) return raise(error);
+            // The 409 carries the existing staged id so the admin can redirect.
+            return c.json(
+                {
+                    error: {
+                        code: 'staged_entry_exists',
+                        message: error.message,
+                        status: 409,
+                        details: { stagedId: error.stagedId },
                     },
-                    409
-                );
-            }
-            return internalError(c, error instanceof Error ? error.message : undefined);
+                },
+                409
+            );
         }
     });
 }

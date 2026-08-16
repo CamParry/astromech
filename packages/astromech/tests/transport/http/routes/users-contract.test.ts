@@ -92,6 +92,11 @@ describe('GET /users', () => {
         expect(unlisted.status).toBe(200);
     });
 
+    it('400s an unrecognised dir — the route schema rejects it before the handler', async () => {
+        const res = await app().request('/users?sort=name&dir=sideways');
+        expect(res.status).toBe(400);
+    });
+
     it('403s without users:read', async () => {
         const res = await app(roleWith([])).request('/users');
         expect(res.status).toBe(403);
@@ -275,13 +280,21 @@ describe('PUT /users/:id', () => {
 
 describe('DELETE /users/:id', () => {
     it('returns { success: true }', async () => {
-        // Not an admin: `role_slug` defaults to `admin`, so a default-role user
-        // would trip the last-admin guard below.
         const user = await makeUser('a@test.dev', 'Ann', 'editor');
         const res = await app().request(`/users/${user.id}`, { method: 'DELETE' });
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({ success: true });
         expect(await Astromech.users.get({ id: user.id })).toBeNull();
+    });
+
+    // A role-less create takes the column's SQL default. That default must not
+    // be `admin`, or every such user counts toward the last-admin guard.
+    it('deletes a user created without a role — the default is not admin', async () => {
+        const user = await makeUser('b@test.dev', 'Bob');
+        expect(user.roleSlug).not.toBe('admin');
+
+        const res = await app().request(`/users/${user.id}`, { method: 'DELETE' });
+        expect(res.status).toBe(200);
     });
 
     it('403s without users:delete', async () => {

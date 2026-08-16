@@ -71,7 +71,7 @@ type UsersTable = {
     emailVerified: Generated<number>; // SQL default 0
     image: string | null;
     fields: string | null; // json
-    roleSlug: Generated<string>; // SQL default 'admin'
+    roleSlug: Generated<string>; // SQL default 'editor'
     createdAt: Generated<number>; // APP now (seconds)
     updatedAt: Generated<number>; // APP now (seconds)
 };

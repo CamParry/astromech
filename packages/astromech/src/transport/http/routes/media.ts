@@ -13,14 +13,14 @@
  *   DELETE /media/:id          → media.delete
  */
 
-import { OpenAPIHono } from '@hono/zod-openapi';
+import { OpenAPIHono, z } from '@hono/zod-openapi';
 import type { Context } from 'hono';
 import { Astromech } from '@/transport/local/index';
 import { badRequest, forbidden, notFound } from '@/transport/http/middleware/errors';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { mediaContract } from '@/media/methods';
-import type { MediaQueryParams } from '@/types/index';
+import type { MediaQueryParams, SortDirection } from '@/types/index';
 import { MEDIA_ROUTE_SPECS } from './http-routes.shared';
 import {
     attachHandlers,
@@ -36,8 +36,18 @@ const router = new OpenAPIHono<Env>();
 /** Sort fields accepted off the wire. Mirrors the storage allowlist. */
 const SORTABLE_FIELDS = new Set(['filename', 'mimeType', 'size', 'createdAt']);
 
+/** The query string the list route accepts. `dir` is the only one that can fail. */
+const listQuery = z.object({
+    search: z.string().optional(),
+    page: z.string().optional(),
+    limit: z.string().optional(),
+    mimeType: z.string().optional(),
+    sort: z.string().optional(),
+    dir: z.enum(['asc', 'desc']).optional(),
+});
+
 export const MEDIA_ROUTES: RestRoute[] = attachHandlers(MEDIA_ROUTE_SPECS, {
-    'get /': { args: queryArgs },
+    'get /': { args: queryArgs, query: listQuery },
     'get /:id': {
         args: (c) => ({ id: c.req.param('id') }),
         notFound: (c) => `Media '${c.req.param('id')}' not found`,
@@ -72,8 +82,9 @@ function queryArgs(c: Context<Env>): MediaQueryParams {
         params.where = { mimeType };
     }
     const sortField = q['sort'];
+    // `dir` is already 'asc' or 'desc' — the route schema 400s anything else.
     if (sortField && SORTABLE_FIELDS.has(sortField)) {
-        params.sort = { [sortField]: q['dir'] === 'asc' ? 'asc' : 'desc' };
+        params.sort = { [sortField]: (q['dir'] as SortDirection | undefined) ?? 'desc' };
     }
     return params;
 }

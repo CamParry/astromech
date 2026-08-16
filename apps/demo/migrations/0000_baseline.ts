@@ -38,6 +38,8 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     `.execute(db);
 
     // ── users ──────────────────────────────────────────────────────────────
+    // better-auth's signup inserts a row without `role_slug`, so the SQL default
+    // is what an unnamed role gets: the least-privileged built-in, not `admin`.
     await sql`
         CREATE TABLE \`users\` (
             \`id\` text PRIMARY KEY NOT NULL,
@@ -46,7 +48,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`email_verified\` integer DEFAULT 0 NOT NULL,
             \`image\` text,
             \`fields\` text,
-            \`role_slug\` text DEFAULT 'admin' NOT NULL,
+            \`role_slug\` text DEFAULT 'editor' NOT NULL,
             \`created_at\` integer NOT NULL,
             \`updated_at\` integer NOT NULL
         )

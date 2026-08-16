@@ -66,7 +66,7 @@ describe('usersService create / get / update / delete', () => {
     it('creates with the default role and decoded timestamps', async () => {
         const created = await usersService.create({ email: 'new@test.dev', name: 'New' });
 
-        expect(created.roleSlug).toBe('admin');
+        expect(created.roleSlug).toBe('editor');
         expect(created.createdAt).toBeInstanceOf(Date);
         expect(created.updatedAt).toBeInstanceOf(Date);
         expect(await usersService.get({ id: created.id })).toMatchObject({ name: 'New' });

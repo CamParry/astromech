@@ -108,6 +108,11 @@ describe('GET /media', () => {
         ).toEqual(['apple.png', 'photo.png']);
     });
 
+    it('400s an unrecognised dir — the route schema rejects it before the handler', async () => {
+        const res = await app().request('/media?sort=filename&dir=sideways');
+        expect(res.status).toBe(400);
+    });
+
     it('403s without media:read', async () => {
         const res = await app(roleWith([])).request('/media');
         expect(res.status).toBe(403);

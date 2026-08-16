@@ -11,7 +11,7 @@
  *   DELETE /users/:id     → users.delete (bespoke)
  */
 
-import { OpenAPIHono } from '@hono/zod-openapi';
+import { OpenAPIHono, z } from '@hono/zod-openapi';
 import type { Context } from 'hono';
 import { Astromech } from '@/transport/local/index';
 import {
@@ -24,7 +24,7 @@ import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { updateUserSchema, usersContract } from '@/users/index';
 import { createUserStorage } from '@/users/storage';
-import type { JsonObject, UserQueryParams } from '@/types/index';
+import type { JsonObject, SortDirection, UserQueryParams } from '@/types/index';
 import { USERS_ROUTE_SPECS } from './http-routes.shared';
 import {
     attachHandlers,
@@ -40,8 +40,17 @@ const router = new OpenAPIHono<Env>();
 /** Sort fields accepted off the wire. An unlisted one is dropped, not rejected. */
 const SORTABLE_FIELDS = new Set(['name', 'email', 'createdAt', 'updatedAt', 'roleSlug']);
 
+/** The query string the list route accepts. `dir` is the only one that can fail. */
+const listQuery = z.object({
+    search: z.string().optional(),
+    page: z.string().optional(),
+    limit: z.string().optional(),
+    sort: z.string().optional(),
+    dir: z.enum(['asc', 'desc']).optional(),
+});
+
 export const USERS_ROUTES: RestRoute[] = attachHandlers(USERS_ROUTE_SPECS, {
-    'get /': { args: queryArgs },
+    'get /': { args: queryArgs, query: listQuery },
     'post /': { args: (c) => c.req.json<Record<string, unknown>>() },
 });
 
@@ -57,9 +66,9 @@ function queryArgs(c: Context<Env>): UserQueryParams {
     if (q['limit'] === 'all') params.limit = 'all';
     else if (q['limit']) params.limit = Number(q['limit']);
     const sortField = q['sort'];
+    // `dir` is already 'asc' or 'desc' — the route schema 400s anything else.
     if (sortField && SORTABLE_FIELDS.has(sortField)) {
-        const dir = q['dir'] === 'asc' ? 'asc' : 'desc';
-        params.sort = { [sortField]: dir };
+        params.sort = { [sortField]: (q['dir'] as SortDirection | undefined) ?? 'desc' };
     }
     return params;
 }
