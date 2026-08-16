@@ -5,15 +5,19 @@
  * by the entries domain — see `@/entries/index.js`.
  */
 
+import { ensureBooted } from '@/boot/ensure-booted';
 import { onTick } from '@/cron/runner';
 
 /**
  * Cloudflare Worker entry calls this from its `scheduled()` handler:
- *   export default { async scheduled(event, env, ctx) { await handleScheduled(event); } }
- * Platform Cron Triggers are a dumb frequent ticker (set wrangler.toml cron to
- * a frequent cadence, e.g. `* * * * *`); real cadence is core's due-eval.
+ *   import { handleScheduled } from 'astromech/scheduler/cloudflare';
+ *   export default { async scheduled(event) { await handleScheduled(event); } };
  */
 export async function handleScheduled(event: { scheduledTime: number }): Promise<void> {
+    // A Cron Trigger fires `scheduled()`, never `fetch()`, so the middleware has
+    // not run and this path boots the runtime itself. Triggers are a dumb
+    // frequent ticker (`* * * * *`); real cadence is core's due-eval.
+    await ensureBooted();
     await onTick(new Date(event.scheduledTime));
 }
 

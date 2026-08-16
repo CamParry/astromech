@@ -58,7 +58,8 @@ export function setBindingEnv(env: BindingEnv): void {
     bindingEnv.set(Promise.resolve(env));
 }
 
-function isWorkersRuntime(): boolean {
+/** True inside a Cloudflare Worker isolate, by the user agent the runtime sets. */
+export function isWorkersRuntime(): boolean {
     return (
         typeof globalThis.navigator !== 'undefined' &&
         globalThis.navigator.userAgent === 'Cloudflare-Workers'

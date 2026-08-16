@@ -108,5 +108,10 @@ export async function onTick(now: Date = new Date()): Promise<void> {
 
 /** @deprecated Back-compat shim — now a due-evaluation tick, not run-everything. */
 export async function runScheduledJobs(): Promise<void> {
+    // Boots first, because a caller reaching a tick this way (a Worker entry, a
+    // script) has not been through the middleware. Imported lazily: `boot/boot`
+    // imports this module, so a static import would close the cycle.
+    const { ensureBooted } = await import('@/boot/ensure-booted');
+    await ensureBooted();
     await onTick(new Date());
 }

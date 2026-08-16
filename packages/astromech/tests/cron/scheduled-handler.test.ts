@@ -2,13 +2,14 @@
  * Tests for the Cloudflare scheduled handler and scheduler driver wiring.
  */
 
-import { beforeEach, afterEach, describe, expect, it } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import type { Updateable } from 'kysely';
 import type { Kysely } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { registerCronJob, setSchedulerDriver, getSchedulerDriver } from '@/cron/registry';
 import { handleScheduled } from '@/cron/index';
 import { interval } from '@/cron/drivers/index';
+import { defaultScheduler } from '@/boot/boot';
 import { runDue } from '@/cron/runner';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/schema';
@@ -25,9 +26,13 @@ beforeEach(async () => {
 
     await createTestDb();
     setupTestConfig(makeTestConfig());
+    // `setupTestConfig` mirrors the boot, so fill the memo `handleScheduled`
+    // checks. The unbooted path is covered in `scheduled-boot.test.ts`.
+    globals().boot = Promise.resolve();
 });
 
 afterEach(() => {
+    delete globalThis.__astromech?.boot;
     delete globalThis.__astromech?.cronJobs;
     globals().cronTickRunning = false;
     globals().cronUnscheduledWarned = new Set<string>();
@@ -108,5 +113,20 @@ describe('scheduler driver selection', () => {
     it('getSchedulerDriver returns null when no driver is set', () => {
         delete globalThis.__astromech?.scheduler;
         expect(getSchedulerDriver()).toBeNull();
+    });
+});
+
+describe('defaultScheduler', () => {
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it('is the no-op cloudflare driver on Workers', () => {
+        vi.stubGlobal('navigator', { userAgent: 'Cloudflare-Workers' });
+        expect(defaultScheduler().name).toBe('cloudflare');
+    });
+
+    it('is the in-process ticker everywhere else', () => {
+        expect(defaultScheduler().name).toBe('interval');
     });
 });

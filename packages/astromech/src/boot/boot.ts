@@ -12,6 +12,7 @@ import type {
     MethodManifest,
     PluginDefinition,
     ResolvedConfig,
+    SchedulerDriver,
 } from '@/types/index';
 import type { DB } from '@/database/types';
 import { generateMethodManifest } from '@/codegen/method-manifest';
@@ -45,7 +46,8 @@ import {
     getSchedulerDriver,
     setRuntimeConfig,
 } from '@/cron/registry';
-import { interval } from '@/cron/drivers/index';
+import { cloudflareCron, interval } from '@/cron/drivers/index';
+import { isWorkersRuntime } from '@/cloudflare/bindings';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime';
 // The entry-access port, not `@/entries/storage/registry.js`: this module is in
 // the integration's plain-Node import graph, and the registry reaches the
@@ -75,7 +77,7 @@ export async function initRuntime(
         setAIConfig(await buildAIConfig(config.ai));
     }
     registerBuiltInEntryJobs();
-    setSchedulerDriver(config.scheduler ?? interval());
+    setSchedulerDriver(config.scheduler ?? defaultScheduler());
     // Stash the resolved config so the cron runner reads it from the registry
     // instead of importing `virtual:astromech/config`, which it cannot: this
     // module is in the integration's plain-Node import graph and drags
@@ -135,4 +137,13 @@ export async function runMigrations(
 
 export async function startScheduler(): Promise<void> {
     await getSchedulerDriver()?.start(onTick);
+}
+
+/**
+ * The scheduler used when the config names none. On Workers, platform cron
+ * fires `scheduled()` and a Worker must not own a timer, so the no-op
+ * Cloudflare driver stands in for the in-process ticker.
+ */
+export function defaultScheduler(): SchedulerDriver {
+    return isWorkersRuntime() ? cloudflareCron() : interval();
 }
