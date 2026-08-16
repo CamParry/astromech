@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config';
-import { forceArgs, toForceOption } from '../force-args';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { entriesService } from '@/entries/service';
 import { printResult, printError, parseJsonArg } from '../output';
 import type { EntryStatus } from '@/types/index';
@@ -21,11 +21,11 @@ export default defineCommand({
         fields: { type: 'string', description: 'Fields as inline JSON or @file' },
         json: { type: 'boolean', default: false, description: 'Output as JSON' },
         config: { type: 'string', description: 'Path to astromech.config.ts' },
-        ...forceArgs,
+        ...allowRemoteArgs,
     },
     async run({ args }) {
         try {
-            await loadConfig(args.config, toForceOption(args));
+            await loadConfig(args.config, toAllowRemoteOption(args));
 
             const params: Parameters<typeof entriesService.create>[0] = {
                 type: args.type,

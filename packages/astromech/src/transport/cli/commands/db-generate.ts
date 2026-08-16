@@ -16,7 +16,7 @@ import { defineCommand } from 'citty';
 import { createJiti } from 'jiti';
 import { resolve } from 'node:path';
 import { loadConfig } from '../config';
-import { forceArgs, toForceOption } from '../force-args';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { generateMigrations, generateMigrationsFromOps } from '@/database/generate';
 import { CORE_TABLES } from '@/database/schema';
 import type { MigrationOpsAuthor } from '@/database/generate';
@@ -43,7 +43,7 @@ export default defineCommand({
     },
     args: {
         config: { type: 'string', description: 'Path to astromech.config.ts' },
-        ...forceArgs,
+        ...allowRemoteArgs,
         name: { type: 'string', description: 'migration name (kebab-case)' },
         ops: {
             type: 'string',
@@ -53,7 +53,7 @@ export default defineCommand({
         },
     },
     async run({ args }) {
-        await loadConfig(args.config, toForceOption(args));
+        await loadConfig(args.config, toAllowRemoteOption(args));
         const common = {
             dir: resolve(process.cwd(), 'migrations'),
             tables: CORE_TABLES,

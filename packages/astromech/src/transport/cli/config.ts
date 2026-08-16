@@ -18,7 +18,7 @@ export async function loadRawConfig(configPath?: string): Promise<AstromechConfi
 /**
  * Load, guard and resolve the config, and initialise the DB registry.
  *
- * `allowRemote` is `--force`: a remote database is refused by default so a
+ * `allowRemote` is `--allow-remote`: a remote database is refused by default so a
  * command meant for a dev machine cannot hit production by inheriting whatever
  * `DATABASE_URL` happens to be exported.
  */
@@ -42,7 +42,7 @@ export async function loadConfig(
 }
 
 /**
- * Refuse a remote database unless the caller passed `--force`. Feature-detected
+ * Refuse a remote database unless the caller passed `--allow-remote`. Feature-detected
  * like `dump`/`restore`: a driver with no `isRemote` reads as local.
  */
 export function assertLocalDatabase(config: AstromechConfig, allowRemote: boolean): void {
@@ -52,7 +52,7 @@ export function assertLocalDatabase(config: AstromechConfig, allowRemote: boolea
     console.error(
         `[astromech] refusing to open the "${config.db.type}" database: it is remote, ` +
             'and a CLI command run against a remote database writes to whatever it ' +
-            'is pointed at. Re-run with --force if that is what you intend.'
+            'is pointed at. Re-run with --allow-remote if that is what you intend.'
     );
     process.exit(1);
 }

@@ -1,7 +1,7 @@
 import { defineCommand } from 'citty';
 import { filterArgs, toMethodFilter } from '../filter-args';
 import { confirmArgs, toConfirmOptions } from '../confirm-args';
-import { forceArgs, toForceOption } from '../force-args';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import type { MethodFilter } from '@/policies/method-filter';
 import type { ConfirmOptions } from '@/policies/confirmation';
 
@@ -21,7 +21,7 @@ export default defineCommand({
         },
         ...filterArgs,
         ...confirmArgs,
-        ...forceArgs,
+        ...allowRemoteArgs,
     },
     async run({ args }) {
         let mod: { runMcpServer: RunMcpServer };
@@ -50,7 +50,7 @@ export default defineCommand({
             args.config,
             toMethodFilter(args),
             toConfirmOptions(args.confirm),
-            toForceOption(args)
+            toAllowRemoteOption(args)
         );
     },
 });

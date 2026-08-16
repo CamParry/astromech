@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config';
-import { forceArgs, toForceOption } from '../force-args';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { usersService } from '@/users/index';
 
 export default defineCommand({
@@ -8,10 +8,10 @@ export default defineCommand({
     args: {
         id: { type: 'positional', required: true, description: 'User ID' },
         config: { type: 'string', description: 'Path to astromech.config.ts' },
-        ...forceArgs,
+        ...allowRemoteArgs,
     },
     async run({ args }) {
-        await loadConfig(args.config, toForceOption(args));
+        await loadConfig(args.config, toAllowRemoteOption(args));
         const user = await usersService.get({ id: args.id });
         if (!user) {
             console.error('User not found');

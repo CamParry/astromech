@@ -39,7 +39,7 @@ afterEach(() => {
 });
 
 describe('assertLocalDatabase', () => {
-    it('refuses a remote driver, naming the type and --force', () => {
+    it('refuses a remote driver, naming the type and --allow-remote', () => {
         const exit = catchExit();
         const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
@@ -53,10 +53,10 @@ describe('assertLocalDatabase', () => {
         expect(exit).toHaveBeenCalledWith(1);
         const message = String(error.mock.calls[0]?.[0]);
         expect(message).toContain('libsql');
-        expect(message).toContain('--force');
+        expect(message).toContain('--allow-remote');
     });
 
-    it('proceeds against a remote driver when --force was passed', () => {
+    it('proceeds against a remote driver when --allow-remote was passed', () => {
         const exit = catchExit();
 
         expect(() =>

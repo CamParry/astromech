@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig, loadRawConfig } from '../config';
-import { forceArgs, toForceOption } from '../force-args';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { buildPermissionCatalogue } from '@/permissions/catalogue';
 import { printError } from '../output';
 
@@ -17,12 +17,12 @@ export default defineCommand({
         },
         json: { type: 'boolean', default: false, description: 'Output as JSON' },
         config: { type: 'string', description: 'Path to astromech.config.ts' },
-        ...forceArgs,
+        ...allowRemoteArgs,
     },
     async run({ args }) {
         try {
             const rawConfig = await loadRawConfig(args.config);
-            const resolved = await loadConfig(args.config, toForceOption(args));
+            const resolved = await loadConfig(args.config, toAllowRemoteOption(args));
             const plugins = rawConfig.plugins ?? [];
 
             let permissions = buildPermissionCatalogue(resolved, plugins);

@@ -1,16 +1,16 @@
 import { defineCommand } from 'citty';
 import { loadConfig } from '../config';
-import { forceArgs, toForceOption } from '../force-args';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { getDb } from '@/database/registry';
 
 export default defineCommand({
     meta: { name: 'db:status', description: 'Show migration status' },
     args: {
         config: { type: 'string', description: 'Path to astromech.config.ts' },
-        ...forceArgs,
+        ...allowRemoteArgs,
     },
     async run({ args }) {
-        await loadConfig(args.config, toForceOption(args));
+        await loadConfig(args.config, toAllowRemoteOption(args));
         const db = getDb();
         try {
             const rows = await db

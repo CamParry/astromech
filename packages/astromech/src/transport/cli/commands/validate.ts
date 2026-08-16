@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { loadConfig, loadRawConfig } from '../config';
-import { forceArgs, toForceOption } from '../force-args';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { wireEntryAccess } from '@/entries/plugin-access';
 import { wireNotifyAccess } from '@/notifications/plugin-access';
@@ -17,11 +17,11 @@ export default defineCommand({
     },
     args: {
         config: { type: 'string', description: 'Path to astromech.config.ts' },
-        ...forceArgs,
+        ...allowRemoteArgs,
         type: { type: 'string', description: 'Limit to one entry type' },
     },
     async run({ args }) {
-        const resolved = await loadConfig(args.config, toForceOption(args));
+        const resolved = await loadConfig(args.config, toAllowRemoteOption(args));
         // `loadConfig` never touches the plugin runtime, so without this a
         // table-backed plugin entry type would resolve to the built-in storage
         // and its rows would go unread.
