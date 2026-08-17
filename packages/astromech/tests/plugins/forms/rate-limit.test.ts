@@ -9,7 +9,6 @@ import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import { setEmailDriver } from '@/email/registry';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import '@/transport/local/index'; // registers the plugin client (setPluginClient)
 import { entriesService as localEntries } from '@/entries/service';
 import {
     createPluginContext,
@@ -41,7 +40,7 @@ function send(clientAddress?: string): Promise<SubmitResult> {
     ) => Promise<SubmitResult>;
     return handler(
         { slug: 'contact', data: { name: 'Ada' } },
-        createPluginContext(identity, null, clientAddress)
+        createPluginContext(identity, null, null, clientAddress)
     );
 }
 

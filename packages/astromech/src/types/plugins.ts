@@ -134,8 +134,8 @@ export type PluginContext = {
     /** The acting user, or null for unauthenticated / system contexts. */
     user: User | null;
     /**
-     * The acting user's role, or null outside a request context. Read from the
-     * request-scoped store, and passed straight to `scopedServices`.
+     * The acting user's role, or null outside a request context. Fixed when the
+     * context is built, and passed straight to `scopedServices`.
      */
     role: Role | null;
     /**

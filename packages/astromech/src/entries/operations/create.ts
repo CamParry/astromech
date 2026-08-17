@@ -53,7 +53,7 @@ export async function create(params: EntryCreateParams): Promise<Entry> {
 
     // Lookups
     const storage = getEntryStorage(type);
-    const user = getCurrentUser();
+    const user = await getCurrentUser();
 
     // Validation
     const titled = entryType.titleField !== false;
@@ -133,7 +133,7 @@ async function toStoredFields(
             hasStatuses: entryType.capabilities.statuses !== false,
         }),
         resource: { kind: 'entry', record: null },
-        user: getCurrentUser(),
+        user: await getCurrentUser(),
         lookups: createEntryLookups(storage, { type: entryType.id, locale }),
         ...(resourceValidate ? { resourceValidate } : {}),
     });

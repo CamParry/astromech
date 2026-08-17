@@ -108,7 +108,7 @@ export const settingsService: SettingsService = {
                 {
                     operation: 'update',
                     resource: { kind: 'setting', record: null },
-                    user: getCurrentUser(),
+                    user: await getCurrentUser(),
                     lookups: fieldLookupsFromRecords({
                         load: async () =>
                             (await settingsService.all({ full: true })).filter(

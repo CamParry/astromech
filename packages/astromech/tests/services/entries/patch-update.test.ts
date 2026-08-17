@@ -8,10 +8,10 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { Astromech } from '@/transport/local/index';
+import { entriesService } from '@/entries/index';
 import type { AstromechConfig, Entry, JsonObject } from '@/types/index';
 
-const api = Astromech.entries;
+const api = entriesService;
 
 // ---------------------------------------------------------------------------
 // Config

@@ -37,7 +37,7 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
                 hasStatuses: entryType ? entryType.capabilities.statuses !== false : true,
             }),
             resource: { kind: 'entry', record: canonical },
-            user: getCurrentUser(),
+            user: await getCurrentUser(),
             // Two rows hold this content right now and both must be invisible to
             // the uniqueness scan: the canonical (about to be overwritten with
             // it) and the staged row (about to be deleted). Excluding only one

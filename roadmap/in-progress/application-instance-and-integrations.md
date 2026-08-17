@@ -351,43 +351,72 @@ Independent investigation and fix. Nothing else depends on it.
 
 Depends only on stage 5.
 
-- [ ] `RequestContext` becomes `{ request, user? }`. The store holds the
-      request; identity resolves on first ask and caches for that request.
-- [ ] `getCurrentUser()` and `getCurrentRole()` become async — 21 call sites
-      across 18 files, all already inside async functions.
-- [ ] Collapse the four independent session resolvers (Astro middleware, Hono's
+- [x] `RequestContext` becomes `{ request, user?, role? }`. The store holds the
+      request; identity resolves on first ask and caches for that request. The
+      `role?` field is the stopgap `specs/application-architecture-map.md`
+      already names: one resolve returns both, and it goes away when the role map
+      is computed during config resolution.
+- [x] `getCurrentUser()` and `getCurrentRole()` become async — 17
+      `getCurrentUser` and 2 `getCurrentRole` call sites across 17 files, not the
+      21 across 18 this file claimed. Three of them were not already inside async
+      functions: `PluginContext.role`'s synchronous getter, `sessionInput` in
+      `policies/scoped-services.ts`, and `currentUserId` in
+      `transport/local/notifications.ts`.
+- [x] Collapse the four independent session resolvers (Astro middleware, Hono's
       `requireAuth`, Hono's `optionalAuth`, the cron poke route) into one. Their
       "has someone already done this?" branches get **deleted**, not relocated.
-- [ ] The Astro middleware stops writing `Astro.locals` entirely, and
+      What replaces them is a scope, not a resolver: the Astro middleware and
+      `createHttpApp`'s root middleware both call `runWithRequest`, because
+      `Astromech.fetch` is a public entry point and may not require an ambient
+      store.
+- [x] The Astro middleware stops writing `Astro.locals` entirely, and
       `src/env.d.ts` stops declaring `App.Locals`. Nothing reads either, and the
-      declaration merge breaks any host site that declares its own `user`.
-- [ ] `resolveSessionUser` → `getSession` (Better Auth's vocabulary).
+      declaration merge breaks any host site that declares its own `user`. The
+      file survives holding only its `astro/client` reference, which is what
+      types the `import.meta.env` reads across `src/`.
+- [x] `resolveSessionUser` → `getSession` (Better Auth's vocabulary).
+- [x] `Astromech` gains `getCurrentUser()` and `getCurrentRole()`. With
+      `Astro.locals` gone, a host `.astro` page has no other path to identity.
 
 **Cautions.** Do not solve draft visibility by blanking the user.
 `entries/operations/query.ts` already has `VisibilityShape`, `applyVisibility`
 and `markPublic`; whatever a host page should see by default is decided at that
-seam. If it is not obvious when this stage lands, raise it as its own item
-rather than deciding it here.
+seam. It did not come up while this stage landed.
+
+`decisions/0061-identity-resolves-on-demand.md` records the plugin-context
+decision (an eager `role` parameter over a promised `ctx.role`, which would
+break every plugin) and the `scopeMethods` invariant that survived it.
 
 ## Stage 12 — Drop the transport mirror
 
 Depends only on stage 5.
 
-- [ ] Delete the shared `AstromechClient` contract. The app's surface is
+- [x] Delete the shared `AstromechClient` contract. The app's surface is
       primary; the fetch client becomes a standalone typed REST wrapper, typed
       by what the wire actually returns.
-- [ ] `configure({ baseUrl })` moves onto the fetch client and the local no-op
+- [x] `configure({ baseUrl })` is the fetch client's alone and the local no-op
       is deleted. **A method implemented only to satisfy a name means the
-      contract is fighting the implementation and losing.**
-- [ ] `transport/local/index.ts` dissolves into the instance, losing its
-      module-scope `setPluginClient` / `setPluginMethods` side effects, which
-      makes the package's `"sideEffects": false` declaration true again. The
+      contract is fighting the implementation and losing.** The never-assigned
+      `config: null as unknown as ResolvedConfig` on the fetch client went with
+      it — the second member the contract forced.
+- [x] `transport/local/index.ts` dissolves into the instance, losing its
+      module-scope `setPluginClient` / `setPluginMethods` side effects. The
       plugin-runtime ↔ local import cycle they dodge needs an **explicit port**,
-      not an import order.
-- [ ] The `astromech/local` subpath retires, now that the code behind it is
+      not an import order — `boot/plugin-access.ts`, called from
+      `boot/lifecycle.ts` beside the other two wires. This does **not** make
+      `"sideEffects": false` true, as this line originally claimed: the admin
+      registries, the HTTP routers and `transport/cli/index.ts`'s `runMain` are
+      all still module-scope effects. What it removes is the plugin runtime's
+      dependence on one.
+- [x] The `astromech/local` subpath retires, now that the code behind it is
       gone. "Local" leaves the vocabulary; no local/remote pair remains.
-- [ ] Plugins keep receiving the `ctx` surface, never the app itself — nothing
-      hands a plugin `destroy()`.
+      `TERMINOLOGY.md` never had an entry for it.
+- [x] Plugins keep receiving the `ctx` surface, never the app itself.
+      `boot/plugin-access.ts` injects `ClientAccess`'s six handles as a literal;
+      the instance would have carried `config` (live drivers), `fetch`,
+      `scheduled` and `startScheduler`. (There is no `destroy()` on the app, as
+      this line originally said — those four are what leaking it would hand
+      over.)
 
 **Cautions.** Wire parity is enforced by mechanism, not by a shared interface:
 the HTTP surface derives from the same services (method manifest → dispatch),
@@ -395,6 +424,9 @@ and a specific guarantee gets a parity test, as
 `decisions/0056-better-auth-owns-the-users-format-not-its-ddl.md` did. Do not
 re-derive the fetch client's types from the service types; the transports
 genuinely differ (local returns full rows, the wire returns public projections).
+
+`decisions/0062-the-app-is-the-surface-not-a-shared-contract.md` records the
+result.
 
 ## Stage 13 — Moves, renames and the comment pass
 

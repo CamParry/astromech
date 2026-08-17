@@ -41,10 +41,7 @@ import type {
     UsersService,
 } from '@/types/index';
 import { getDb } from '@/database/registry';
-// The request-context LEAF, not `@/request-context/index.js`: that barrel imports
-// `virtual:astromech/config`, which cannot resolve during Astro's plain-Node
-// config load — the path this module is on.
-import { getCurrentRole } from '@/request-context/request-context';
+import { getCurrentRole } from '@/request-context/index';
 import { kyselyTableKey, registerTableCodec } from '@/database/codec';
 import { peekDatabaseDriver } from '@/database/driver-registry';
 import { getStorageDriver } from '@/storage/registry';
@@ -78,7 +75,7 @@ type HookCallback = (eventCtx: unknown, ctx: PluginContext) => Promise<void> | v
 type RegisteredHook = { identity: ResolvedPluginIdentity; handler: HookCallback };
 type RegisteredRawRoute = { identity: ResolvedPluginIdentity; route: PluginRawRoute };
 
-/** The dispatch-table builder `ctx.methods` runs, injected by the Local API. */
+/** The dispatch-table builder `ctx.methods` runs, injected by the composition root. */
 export type PluginMethodsAccess = {
     tools(
         role: Role | null | undefined,
@@ -206,14 +203,14 @@ export async function bootPlugins(defs: PluginDefinition[]): Promise<void> {
                 name: `plugin:${identity.namespace}:${job.name}`,
                 schedule: job.schedule,
                 handler: async () => {
-                    await job.handler(createPluginContext(identity, null));
+                    await job.handler(createPluginContext(identity, null, null));
                 },
             });
         }
 
         if (def.setup) {
             try {
-                await def.setup(createPluginContext(identity, null));
+                await def.setup(createPluginContext(identity, null, null));
             } catch (error) {
                 throw new Error(
                     `Astromech plugin "${def.package}" setup() failed during boot: ` +
@@ -302,7 +299,7 @@ export function getPluginRawRoutes(): RegisteredRawRoute[] {
     return state().rawRoutes;
 }
 
-/** Set by the Local API at module load to break the import cycle. */
+/** Injected by `boot/plugin-access.ts`, which owns the implementation. */
 export function setPluginClient(client: ClientAccess): void {
     state().client = client;
 }
@@ -316,7 +313,7 @@ function requireClient(): ClientAccess {
     return client;
 }
 
-/** Set by the Local API at module load, for the same reason as the client. */
+/** Injected by `boot/plugin-access.ts`, for the same reason as the client. */
 export function setPluginMethods(access: PluginMethodsAccess): void {
     state().methods = access;
 }
@@ -408,14 +405,15 @@ async function sendPluginEmail(
 }
 
 /**
- * Build the unified PluginContext for a given plugin and acting user. `db` and
- * every domain are lazy getters so a context can be constructed in environments
- * where they are not yet wired (e.g. unit tests that exercise only hook
- * semantics). `clientAddress` is supplied by the HTTP transport only.
+ * Build the unified PluginContext for a given plugin, acting user and role.
+ * `db` and every domain are lazy getters so a context can be constructed in
+ * environments where they are not yet wired (e.g. unit tests that exercise only
+ * hook semantics). `clientAddress` is supplied by the HTTP transport only.
  */
 export function createPluginContext(
     identity: ResolvedPluginIdentity,
     user: User | null,
+    role: Role | null,
     clientAddress?: string | undefined
 ): PluginContext {
     const config = state().config;
@@ -429,11 +427,7 @@ export function createPluginContext(
         plugin: identity,
         config: configView,
         user,
-        // Lazy like the domains below: read at access time from the
-        // request-scoped store, which is where `getCurrentUser()` comes from.
-        get role(): Role | null {
-            return getCurrentRole();
-        },
+        role,
         clientAddress,
         // The domains, flattened onto the context. These are the global services
         // — a plugin addresses its own entry types explicitly by their qualified
@@ -482,10 +476,8 @@ export function createPluginContext(
                 ),
         },
         get methods(): PluginMethods {
-            // Lazy like `get role()` above: the role is read per call, from the
-            // request-scoped store rather than from construction time.
             return {
-                tools: (options) => requireMethods().tools(getCurrentRole(), options),
+                tools: (options) => requireMethods().tools(role, options),
             };
         },
         get database(): PluginDatabase {
@@ -534,7 +526,11 @@ async function dispatchBefore(
     for (const { identity, handler } of state().hooks.get(event) ?? []) {
         // The event → handler pairing is enforced at registration
         // (`HookHandlerFor`), not here: the registry stores a union.
-        await (handler as HookHandler)(eventCtx, createPluginContext(identity, user));
+        const role = await getCurrentRole();
+        await (handler as HookHandler)(
+            eventCtx,
+            createPluginContext(identity, user, role)
+        );
     }
 }
 
@@ -548,7 +544,7 @@ async function dispatchAfter(
     user: User | null
 ): Promise<void> {
     for (const { identity, handler } of state().hooks.get(event) ?? []) {
-        const ctx = createPluginContext(identity, user);
+        const ctx = createPluginContext(identity, user, await getCurrentRole());
         try {
             // Same as `dispatchBefore`: pairing is a registration-time guarantee.
             await (handler as HookHandler)(eventCtx, ctx);

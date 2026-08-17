@@ -1,5 +1,5 @@
 ---
-import Astromech from 'astromech/local';
+import { getAstromech } from 'astromech';
 import Seo from '../components/Seo.astro';
 import { Icon } from 'astro-icon/components';
 import '../styles/global.css';
@@ -28,7 +28,8 @@ const {
 // Fetch globals settings
 let globals: Record<string, unknown> = {};
 try {
-    const raw = await Astromech.settings.get({ key: 'globals', locale });
+    const app = await getAstromech();
+    const raw = await app.settings.get({ key: 'globals', locale });
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
         globals = raw as Record<string, unknown>;
     }
@@ -46,13 +47,15 @@ type MenuItem = { label?: string; url?: string; newTab?: boolean; children?: Men
 let mainMenu: MenuItem[] = [];
 let footerMenu: MenuItem[] = [];
 try {
-    const rawMain = await Astromech.plugins.menus.get({ key: 'main', locale });
+    const app = await getAstromech();
+    const rawMain = await app.plugins.menus.get({ key: 'main', locale });
     if (Array.isArray(rawMain)) mainMenu = rawMain as MenuItem[];
 } catch {
     // menus plugin not seeded yet — graceful fallback
 }
 try {
-    const rawFooter = await Astromech.plugins.menus.get({ key: 'footer', locale });
+    const app = await getAstromech();
+    const rawFooter = await app.plugins.menus.get({ key: 'footer', locale });
     if (Array.isArray(rawFooter)) footerMenu = rawFooter as MenuItem[];
 } catch {
     // menus plugin not seeded yet — graceful fallback

@@ -16,7 +16,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { Astromech } from '@/transport/local/index';
+import { settingsService } from '@/settings/index';
 import { settingsRouter } from '@/transport/http/routes/settings';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { Role, User } from '@/types/index';
@@ -53,7 +53,7 @@ describe('settings router — private slashed keys (plugin settings pages)', () 
         await createTestDb();
         // makeTestConfig declares no public settings pages → every key is private.
         setupTestConfig(makeTestConfig());
-        await Astromech.settings.set({ key: KEY, value: VALUE });
+        await settingsService.set({ key: KEY, value: VALUE });
     });
 
     it('returns the private value for an authenticated admin (full shape)', async () => {

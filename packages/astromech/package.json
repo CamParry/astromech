@@ -34,10 +34,6 @@
             "types": "./dist/integrations/astro/index.d.ts",
             "default": "./dist/integrations/astro/index.js"
         },
-        "./local": {
-            "types": "./dist/local/index.d.ts",
-            "default": "./src/exports/local.ts"
-        },
         "./fetch": {
             "types": "./dist/fetch/index.d.ts",
             "default": "./dist/fetch/index.js"
@@ -148,10 +144,6 @@
             "./astro": {
                 "types": "./dist/integrations/astro/index.d.ts",
                 "default": "./dist/integrations/astro/index.js"
-            },
-            "./local": {
-                "types": "./dist/local/index.d.ts",
-                "default": "./dist/local/index.js"
             },
             "./fetch": {
                 "types": "./dist/fetch/index.d.ts",

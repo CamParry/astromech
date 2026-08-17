@@ -46,6 +46,7 @@ import { resolveConfig } from '@/config/resolve';
 import { setConfig } from '@/config/registry';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { wireEntryAccess } from '@/entries/plugin-access';
+import { wirePluginAccess } from '@/boot/plugin-access';
 import { runWithContext } from '@/request-context/index';
 import type {
     AstromechConfig,
@@ -57,9 +58,11 @@ import type {
     User,
 } from '@/types/index';
 
-// Wire the entry-access port (entries → runtime dependency inversion) once for
-// every harness-based test, before any registerPlugins call below.
+// Wire the plugin runtime's ports once for every harness-based test, before any
+// registerPlugins call below, as `runBootPhases` does. `wireNotifyAccess` is
+// left out: no harness-based test emits a notification from a plugin context.
 wireEntryAccess();
+wirePluginAccess();
 
 type Db = Kysely<DB>;
 
@@ -263,11 +266,15 @@ export function setupTestConfig(
 }
 
 /**
- * Run `fn` with `user` as the request-scoped identity. Tests that need no
- * identity need no reset — outside `runWithContext` there simply is no user.
+ * Run `fn` with `user` as the request-scoped identity. Seeding `user` means no
+ * session resolve happens; tests that need no identity need no reset, because
+ * outside a scope there simply is no user.
  */
 export function runAsUser<T>(user: User | null, fn: () => T): T {
-    return runWithContext({ user, role: null }, fn);
+    return runWithContext(
+        { request: new Request('http://localhost/'), user, role: null },
+        fn
+    );
 }
 
 /**

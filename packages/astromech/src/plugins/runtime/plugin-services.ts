@@ -1,11 +1,11 @@
 /**
- * Local plugin service namespace — `Astromech.plugins.<serviceKey>.<method>(input)`.
- * The key is the plugin's service key (`acmeSeo`), matching the HTTP transport's
- * route segment exactly, so the two transports address plugins identically.
+ * The plugin service namespace — `plugins.<serviceKey>.<method>(input)`. The key
+ * is the plugin's service key (`acmeSeo`), matching the HTTP transport's route
+ * segment exactly, so the two transports address plugins identically.
  *
  * Methods resolve against the runtime registry (populated at boot from the live
  * plugin definitions) and call the plugin's handler directly against the DB,
- * with a freshly-built PluginContext. The Local API bypasses `access` checks by
+ * with a freshly-built PluginContext. In-process calls bypass `access` checks by
  * design — the HTTP API is the enforcement boundary.
  *
  * A Proxy resolves names/methods lazily so the registry need not be populated
@@ -13,7 +13,7 @@
  */
 
 import type { PluginContext, PluginServiceNamespace } from '@/types/index';
-import { getCurrentUser } from '@/request-context/index';
+import { getCurrentRole, getCurrentUser } from '@/request-context/index';
 import {
     createPluginContext,
     getPluginIdentity,
@@ -22,7 +22,7 @@ import {
 
 type MethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
 
-export const localPlugins: PluginServiceNamespace = new Proxy(
+export const pluginServices: PluginServiceNamespace = new Proxy(
     {} as PluginServiceNamespace,
     {
         get(_target, keyProp): MethodMap | undefined {
@@ -44,7 +44,11 @@ export const localPlugins: PluginServiceNamespace = new Proxy(
                     return async (input?: unknown): Promise<unknown> =>
                         (method.handler as (i: unknown, c: PluginContext) => unknown)(
                             input,
-                            createPluginContext(resolved, getCurrentUser())
+                            createPluginContext(
+                                resolved,
+                                await getCurrentUser(),
+                                await getCurrentRole()
+                            )
                         );
                 },
             });

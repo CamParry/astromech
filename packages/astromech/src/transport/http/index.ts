@@ -21,8 +21,8 @@ import { cronRouter } from './routes/cron';
 import { pluginsRouter } from './routes/plugins';
 import { notificationsRouter } from './routes/notifications';
 import { rpcRouter } from './routes/rpc';
-import { Astromech } from '@/transport/local/index';
-import { getAuth } from '@/users/index';
+import { runWithRequest } from '@/request-context/index';
+import { getAuth, usersService } from '@/users/index';
 import { handleMediaRequest } from '@/media/serving/handler';
 import type { ResolvedConfig } from '@/types/index';
 
@@ -43,6 +43,15 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
 
     app.onError(onError);
     app.notFound(onNotFound);
+
+    // ========================================================================
+    // Request scope — identity resolves from the request, on first ask
+    // ========================================================================
+
+    // `app.fetch` is a public entry point, so the app establishes its own scope
+    // rather than requiring an ambient one. Nesting inside the Astro
+    // middleware's is free: a request nobody asks about resolves nothing.
+    app.use('*', (c, next) => runWithRequest(c.req.raw, () => next()));
 
     // ========================================================================
     // Security headers — applied to all responses
@@ -113,7 +122,7 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
     // `users.query` — a `users:read` method — ungated, because before the first
     // user exists there is no role to hold the grant.
     app.get(`${api}/setup/check`, async (c) => {
-        const result = await Astromech.users.query({ limit: 'all' });
+        const result = await usersService.query({ limit: 'all' });
         return c.json({ needsSetup: result.data.length === 0 });
     });
 

@@ -106,17 +106,16 @@ async function callServiceMethod(
  * uses, resolved at CALL time. `runMcpServer` registers the plugins at boot; a
  * missing entry means it did not, and says so rather than failing silently.
  *
- * The context carries the current user, which is `null` on this transport — MCP
- * is dev-only and trusted, exactly like the CLI, and a method's declared
- * `access` is not enforced here any more than a core method's permission is.
- * Request-scoped roles and a real permission wrapper are P2; when
- * `getCurrentUser()` starts returning one, this call site needs no change.
+ * The context carries the current user and role, both `null` on this transport
+ * — MCP runs with no request scope, and it is dev-only and trusted, so a
+ * method's declared `access` is not enforced here any more than a core method's
+ * permission is. A real permission wrapper is P2.
  */
 async function invokePluginMethod(
     manifest: PluginManifestMethod,
     args: Record<string, unknown>
 ): Promise<unknown> {
-    const [{ getCurrentUser }, runtime] = await Promise.all([
+    const [{ getCurrentRole, getCurrentUser }, runtime] = await Promise.all([
         import('@/request-context/index'),
         import('@/plugins/runtime/plugin-runtime'),
     ]);
@@ -138,7 +137,11 @@ async function invokePluginMethod(
 
     return (method.handler as (input: unknown, ctx: PluginContext) => Promise<unknown>)(
         args,
-        runtime.createPluginContext(identity, getCurrentUser())
+        runtime.createPluginContext(
+            identity,
+            await getCurrentUser(),
+            await getCurrentRole()
+        )
     );
 }
 

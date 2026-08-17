@@ -5,7 +5,7 @@
  * public `EntriesService` object. All policy (validation, hooks, relationships,
  * versioning/staging, slug, capability gating, bulk dispatch) lives in
  * `operations/**` + `internal/**`; persistence flows through the storage seam.
- * Import from 'astromech/local'.
+ * Consumers reach it as `app.entries`.
  */
 
 import type { EntriesService } from '@/types/index';

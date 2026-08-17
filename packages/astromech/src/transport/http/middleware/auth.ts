@@ -1,17 +1,13 @@
 /**
  * Auth Middleware
  *
- * Attaches the current user + role to the Hono context. Identity itself is
- * resolved by the `users` domain (`resolveSessionUser`) and held in the
- * request-scoped context, so when the Astro middleware has already established
- * one this reuses it rather than resolving the same session a second time. When
- * nothing has (the Hono app mounted on its own), it resolves and establishes
- * the context itself.
+ * Attaches the current user + role to the Hono context, reading both from the
+ * request scope the app's root middleware established. Asking is what resolves
+ * the session, so a route mounted below one of these is the first to pay for it.
  */
 
 import { createMiddleware } from 'hono/factory';
-import { resolveSessionUser } from '@/users/index';
-import { getRequestContext, runWithContext } from '@/request-context/index';
+import { getCurrentRole, getCurrentUser } from '@/request-context/index';
 import { unauthorized } from './errors';
 import type { User, Role } from '@/types/index';
 
@@ -27,20 +23,14 @@ export type AuthVariables = {
  */
 export const requireAuth = createMiddleware<{ Variables: AuthVariables }>(
     async (c, next) => {
-        const existing = getRequestContext();
-        if (existing?.user && existing.role) {
-            c.set('user', existing.user);
-            c.set('role', existing.role);
-            return next();
-        }
-
-        const resolved = await resolveSessionUser(c.req.raw.headers);
-        if (!resolved) {
+        const user = await getCurrentUser();
+        const role = await getCurrentRole();
+        if (user === null || role === null) {
             return unauthorized(c);
         }
-        c.set('user', resolved.user);
-        c.set('role', resolved.role);
-        return runWithContext({ user: resolved.user, role: resolved.role }, () => next());
+        c.set('user', user);
+        c.set('role', role);
+        return next();
     }
 );
 
@@ -51,19 +41,13 @@ export const requireAuth = createMiddleware<{ Variables: AuthVariables }>(
  */
 export const optionalAuth = createMiddleware<{ Variables: Partial<AuthVariables> }>(
     async (c, next) => {
-        const existing = getRequestContext();
-        if (existing?.user && existing.role) {
-            c.set('user', existing.user);
-            c.set('role', existing.role);
+        const user = await getCurrentUser();
+        const role = await getCurrentRole();
+        if (user === null || role === null) {
             return next();
         }
-
-        const resolved = await resolveSessionUser(c.req.raw.headers);
-        if (!resolved) {
-            return next();
-        }
-        c.set('user', resolved.user);
-        c.set('role', resolved.role);
-        return runWithContext({ user: resolved.user, role: resolved.role }, () => next());
+        c.set('user', user);
+        c.set('role', role);
+        return next();
     }
 );

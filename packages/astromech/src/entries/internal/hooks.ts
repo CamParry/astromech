@@ -36,7 +36,7 @@ export async function runUpdateWithHooks<T>(
 ): Promise<T> {
     if (!hasEntryHooks('entry:beforeUpdate', 'entry:afterUpdate')) return op();
 
-    const user = getCurrentUser();
+    const user = await getCurrentUser();
     const before = await Promise.all(ids.map((id) => loadEntrySnapshot(type, id)));
     for (const entry of before) {
         await runBeforeHooks('entry:beforeUpdate', { type, entry, data, user }, user);
@@ -62,7 +62,7 @@ export async function runDeleteWithHooks(
         await op();
         return;
     }
-    const user = getCurrentUser();
+    const user = await getCurrentUser();
     const ids = Array.isArray(id) ? Array.from(id) : [id as string];
     const before = await Promise.all(
         ids.map((entryId) => loadEntrySnapshot(type, entryId))

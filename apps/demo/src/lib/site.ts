@@ -2,21 +2,20 @@
  * Site helpers: locale resolution, path localisation, UI strings.
  */
 
-import Astromech from 'astromech/local';
+// The site's own config, not the application's: `localizedPath` and `t` are
+// called from templates and have to answer synchronously, and `getAstromech()`
+// is a promise. The locale list is authored here, so this is the source.
+import config from '../../astromech.config.ts';
 
 export type Locale = string;
 
-/**
- * Read at call time, never at module scope: config reaches the runtime through
- * the boot registry, and a page module is evaluated before the request that
- * boots it. Memoised because the config cannot change within a process.
- */
+/** Memoised: the config cannot change within a process. */
 let cachedLocales: readonly Locale[] | undefined;
 let cachedDefaultLocale: Locale | undefined;
 
 /** Content locales, from `astromech.config.ts`. */
 export function locales(): readonly Locale[] {
-    return (cachedLocales ??= Astromech.config.locales ?? ['en']);
+    return (cachedLocales ??= config.locales ?? ['en']);
 }
 
 /**
@@ -26,7 +25,7 @@ export function locales(): readonly Locale[] {
 export function defaultLocale(): Locale {
     if (cachedDefaultLocale !== undefined) return cachedDefaultLocale;
     const all = locales();
-    const configured = Astromech.config.defaultLocale;
+    const configured = config.defaultLocale;
     cachedDefaultLocale =
         configured !== undefined && all.includes(configured)
             ? configured
@@ -74,7 +73,7 @@ export function localizedPath(path: string, locale: Locale): string {
  * locale, resolve the slug of the sibling entry for that locale.
  * Returns null if no sibling exists for the target locale.
  *
- * NOTE: the `locales` map returned by Astromech stores `{ [locale]: entryId }`.
+ * NOTE: an entry's `locales` map stores `{ [locale]: entryId }`.
  * To get the slug for a different locale, you need to fetch that entry.
  * This helper just returns the entry id so the caller can fetch it.
  */

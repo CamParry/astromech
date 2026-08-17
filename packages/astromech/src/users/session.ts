@@ -3,9 +3,8 @@
  *
  * The single place a Better Auth session is turned into an Astromech identity
  * (full user row + resolved role). It lives in the `users` domain rather than a
- * transport so every entry point — the Astro middleware, the Hono auth
- * middleware, the cron poke route — resolves the SAME identity from the same
- * headers, instead of each hand-building its own user shape.
+ * transport, and `request-context/` is its one caller: every entry point reads
+ * identity through the request scope instead of hand-building a user shape.
  */
 
 import { getConfig } from '@/config/registry';
@@ -26,7 +25,7 @@ type AuthSession = NonNullable<GetSessionResult>['session'];
  * Resolve the Better Auth session into a full user row + role + session, or
  * null if there is no valid session.
  */
-export async function resolveSessionUser(
+export async function getSession(
     headers: Headers
 ): Promise<{ user: User; role: Role; session: AuthSession } | null> {
     const session = await getAuth().api.getSession({ headers });

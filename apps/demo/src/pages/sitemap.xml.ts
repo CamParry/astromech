@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import Astromech from 'astromech/local';
+import { getAstromech } from 'astromech';
 import { locales, localizedPath } from '../lib/site.ts';
 
 export const GET: APIRoute = async ({ site, url: requestUrl }) => {
@@ -9,7 +9,8 @@ export const GET: APIRoute = async ({ site, url: requestUrl }) => {
     const urls: { loc: string; lastmod: string }[] = [];
 
     try {
-        const result = await Astromech.plugins.seo.sitemap();
+        const app = await getAstromech();
+        const result = await app.plugins.seo.sitemap();
         // For each URL, also emit locale alternates
         for (const url of result.urls) {
             urls.push({ loc: url.loc, lastmod: url.lastmod });

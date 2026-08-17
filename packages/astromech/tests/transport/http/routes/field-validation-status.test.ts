@@ -34,7 +34,8 @@ import {
     setupTestConfig,
 } from '@tests/harness';
 import { setStorageDriver } from '@/storage/registry';
-import { Astromech } from '@/transport/local/index';
+import { entriesService } from '@/entries/index';
+import { mediaService } from '@/media/index';
 import { onError } from '@/transport/http/middleware/errors';
 import { ValidationError } from '@/errors/validation';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
@@ -323,7 +324,7 @@ describe('POST /entries/:type/:id/staged — a service ValidationError', () => {
         });
         const id = ((await created.json()) as { data: { id: string } }).data.id;
 
-        vi.spyOn(Astromech.entries, 'createStaged').mockRejectedValue(
+        vi.spyOn(entriesService, 'createStaged').mockRejectedValue(
             ValidationError.fromFieldErrors({
                 contact: ['Must be a valid email address'],
             })
@@ -442,7 +443,7 @@ describe('users routes — invalid field value', () => {
 
 describe('PUT /media/:id — invalid field value', () => {
     it('422s with details.fields', async () => {
-        const item = await Astromech.media.upload({
+        const item = await mediaService.upload({
             file: new File(['hello' as BlobPart], 'doc.txt', { type: 'text/plain' }),
         });
 

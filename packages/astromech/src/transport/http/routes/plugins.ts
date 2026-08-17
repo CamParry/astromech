@@ -83,7 +83,12 @@ for (const { identity, route } of getPluginRawRoutes()) {
         if (denied) return denied;
         return route.handler(
             c.req.raw,
-            createPluginContext(identity, c.var.user ?? null, getClientAddress(c))
+            createPluginContext(
+                identity,
+                c.var.user ?? null,
+                c.var.role ?? null,
+                getClientAddress(c)
+            )
         );
     });
 }
@@ -113,7 +118,15 @@ pluginsRouter.post('/:name/:method', async (c) => {
     const input = await c.req.json().catch(() => undefined);
     const result = await (
         serviceMethod.handler as (i: unknown, c: PluginContext) => unknown
-    )(input, createPluginContext(identity, c.var.user ?? null, getClientAddress(c)));
+    )(
+        input,
+        createPluginContext(
+            identity,
+            c.var.user ?? null,
+            c.var.role ?? null,
+            getClientAddress(c)
+        )
+    );
     // Build the JSON Response directly: c.json's generic chokes on the
     // recursive JsonValue type. RPC returns the raw handler result.
     return new Response(JSON.stringify(result ?? null), {

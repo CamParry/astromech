@@ -12,7 +12,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { Astromech } from '@/transport/local/index';
+import { entriesService } from '@/entries/index';
 import type { AstromechConfig, PluginDefinition } from '@/types/index';
 import { tableStorage } from '@/entries/storage/table';
 import { defineTable } from '@/database/define-table';
@@ -581,7 +581,7 @@ describe('entries-service integration', () => {
     });
 
     it('create/get/update/delete round-trip via qualified type id', async () => {
-        const created = await Astromech.entries.create({
+        const created = await entriesService.create({
             type: 'links/link',
             fields: { from: '/old', to: '/new', status: '301' },
         });
@@ -591,7 +591,7 @@ describe('entries-service integration', () => {
         expect(created.fields['to']).toBe('/new');
 
         // full: true — admin read; entry is unpublished
-        const fetched = await Astromech.entries.get({
+        const fetched = await entriesService.get({
             type: 'links/link',
             id: created.id,
             full: true,
@@ -599,36 +599,36 @@ describe('entries-service integration', () => {
         expect(fetched?.id).toBe(created.id);
         expect(fetched?.fields['to']).toBe('/new');
 
-        const updated = (await Astromech.entries.update({
+        const updated = (await entriesService.update({
             type: 'links/link',
             id: created.id,
             data: { fields: { from: '/old', to: '/updated', status: '302' } },
-        })) as Awaited<ReturnType<typeof Astromech.entries.create>>;
+        })) as Awaited<ReturnType<typeof entriesService.create>>;
         expect(updated.fields['to']).toBe('/updated');
 
-        await Astromech.entries.delete({ type: 'links/link', id: created.id });
-        const gone = await Astromech.entries.get({ type: 'links/link', id: created.id });
+        await entriesService.delete({ type: 'links/link', id: created.id });
+        const gone = await entriesService.get({ type: 'links/link', id: created.id });
         expect(gone).toBeNull();
     });
 
     it('query honors searchFields from type config', async () => {
-        await Astromech.entries.create({
+        await entriesService.create({
             type: 'links/link',
             fields: { from: '/hello', to: '/world' },
             status: 'published',
         });
-        await Astromech.entries.create({
+        await entriesService.create({
             type: 'links/link',
             fields: { from: '/foo', to: '/bar' },
             status: 'published',
         });
-        await Astromech.entries.create({
+        await entriesService.create({
             type: 'links/link',
             fields: { from: '/baz', to: '/hello-page' },
             status: 'published',
         });
 
-        const res = await Astromech.entries.query({
+        const res = await entriesService.query({
             type: 'links/link',
             search: 'hello',
         });

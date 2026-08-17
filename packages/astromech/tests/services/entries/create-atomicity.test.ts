@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { rmSync } from 'node:fs';
 import { createFileTestDb, setupTestConfig } from '@tests/harness';
-import { Astromech } from '@/transport/local/index';
+import { entriesService } from '@/entries/index';
 import { getDb } from '@/database/registry';
 import type * as RelationshipStorageModule from '@/database/storage/relationships';
 
@@ -30,7 +30,7 @@ vi.mock('@/database/storage/relationships', async (importOriginal) => {
     };
 });
 
-const api = Astromech.entries;
+const api = entriesService;
 
 let dbCounter = 0;
 let dbPath = '';

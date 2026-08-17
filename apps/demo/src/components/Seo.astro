@@ -1,9 +1,9 @@
 ---
 /**
- * SEO head tags. Resolves via Astromech.plugins.seo.meta when type+slug are
+ * SEO head tags. Resolves via `app.plugins.seo.meta` when type+slug are
  * given; falls back to props.
  */
-import Astromech from 'astromech/local';
+import { getAstromech } from 'astromech';
 import type { Locale } from '../lib/site.ts';
 import { localizedPath } from '../lib/site.ts';
 
@@ -49,7 +49,8 @@ let resolvedOgImage = propOgImage ?? null;
 
 if (type && slug) {
     try {
-        const meta = await Astromech.plugins.seo.meta({ type, slug });
+        const app = await getAstromech();
+        const meta = await app.plugins.seo.meta({ type, slug });
         if (meta) {
             resolvedTitle = meta.title ?? resolvedTitle;
             resolvedDescription = meta.description ?? resolvedDescription;

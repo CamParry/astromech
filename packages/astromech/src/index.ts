@@ -28,10 +28,6 @@ export * from '@/types/index';
 // `virtual:` import and this barrel still loads in plain Node.
 export { createAstromech, getAstromech } from '@/boot/application';
 export type { Astromech } from '@/boot/application';
-// The contract both transports implement. It lives beside them rather than in
-// `types/`, and reaches the public surface from here so `astromech` still
-// exports it — see `transport/astromech-client.shared.ts`.
-export type { AstromechClient } from '@/transport/astromech-client.shared';
 // Model access, so a plugin can reach a configured model without taking its own
 // SDK dependency. Absent unless the site configures `ai` — hence `undefined`.
 export { getModel, hasModel } from '@/ai/index';

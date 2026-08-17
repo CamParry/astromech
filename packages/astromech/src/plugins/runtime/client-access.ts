@@ -1,13 +1,12 @@
 /**
  * Client-access port (dependency inversion).
  *
- * The plugin runtime is a capability and must not import the transport layer,
- * where `AstromechClient` is declared. What it actually needs is narrower than
- * that contract: the six service handles it flattens onto `PluginContext`, and
- * none of `config` or `configure`. So the runtime declares that slice here,
- * typed only from the leaves, and the Local API injects an `AstromechClient`
- * into it at module load via `setPluginClient` — structurally, with no import
- * either way.
+ * The plugin runtime is a capability and must not import the domains it hands a
+ * plugin. It declares the slice it needs here instead, typed only from the
+ * leaves: the six service handles it flattens onto `PluginContext`, and nothing
+ * else. `boot/plugin-access.ts` fills the slot via `setPluginClient`, so the
+ * application instance itself — with its `config`, `fetch` and `scheduled` —
+ * never reaches a plugin.
  *
  * Same inversion as `entry-access.ts` and `notify-access.ts`. It carries no
  * registry of its own because the slot already exists on the runtime's state.

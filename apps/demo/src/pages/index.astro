@@ -1,5 +1,5 @@
 ---
-import Astromech from 'astromech/local';
+import { getAstromech } from 'astromech';
 import type { Media } from 'astromech';
 import Site from '../layouts/Site.astro';
 import Blocks from '../components/blocks/Blocks.astro';
@@ -10,7 +10,8 @@ const locale = defaultLocale();
 
 let homePage = null;
 try {
-    const result = await Astromech.entries.query({
+    const app = await getAstromech();
+    const result = await app.entries.query({
         type: 'page',
         where: { slug: 'home' },
         locale,
@@ -26,7 +27,8 @@ const blocks = (homePage?.fields?.content as unknown[] | null | undefined) ?? []
 // Pull a few images from the media library to showcase the responsive <Image>.
 let galleryImages: Media[] = [];
 try {
-    const media = await Astromech.media.query({
+    const app = await getAstromech();
+    const media = await app.media.query({
         where: { mimeType: 'images' },
         limit: 9,
     });

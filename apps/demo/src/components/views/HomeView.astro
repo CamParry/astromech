@@ -1,5 +1,5 @@
 ---
-import Astromech from 'astromech/local';
+import { getAstromech } from 'astromech';
 import Site from '../../layouts/Site.astro';
 import Blocks from '../blocks/Blocks.astro';
 import type { Locale } from '../../lib/site.ts';
@@ -12,7 +12,8 @@ const { locale } = Astro.props;
 
 let homePage = null;
 try {
-    const result = await Astromech.entries.query({
+    const app = await getAstromech();
+    const result = await app.entries.query({
         type: 'page',
         where: { slug: 'home' },
         locale,
@@ -26,7 +27,8 @@ try {
 // fr home page uses slug 'accueil', fall back if 'home' not found
 if (!homePage && locale !== 'en') {
     try {
-        const result = await Astromech.entries.query({
+        const app = await getAstromech();
+        const result = await app.entries.query({
             type: 'page',
             where: { slug: 'accueil' },
             locale,

@@ -10,7 +10,7 @@
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { Astromech } from '@/transport/local/index';
+import { settingsService } from '@/settings/index';
 import { forbidden, notFound } from '@/transport/http/middleware/errors';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { permissionsFor } from '@/permissions/permissions-for';
@@ -59,7 +59,7 @@ router.get('/:key', async (c) => {
     // full shape so private settings (e.g. plugin pages) are editable. The
     // the Client requests base + per-locale keys separately, so no locale
     // merge is needed here.
-    const value = await Astromech.settings.get({ key, full: true });
+    const value = await settingsService.get({ key, full: true });
     if (value === null) return notFound(c, `Setting '${key}' not found`);
     return c.json({ data: { key, value } });
 });

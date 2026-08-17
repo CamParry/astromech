@@ -5,7 +5,7 @@
  * public `MediaService` object. All policy (validation, field processing,
  * relationship indexing, blob writes, delivery-URL resolution) lives in
  * `operations/**` + `internal/**`; persistence flows through the storage seam.
- * Import from 'astromech/local'.
+ * Consumers reach it as `app.media`.
  */
 
 import type { MediaService } from '@/types/index';
