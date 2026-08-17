@@ -1,10 +1,10 @@
 import { getCurrentUser } from '@/request-context/index';
 import { runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime';
-import { updateEntrySchemaFor } from '../schema';
+import { updateEntrySchema } from '../schema';
 import { getEntryStorage } from '../storage/registry';
 import { validate } from '../internal/validate';
 import {
-    getTitleField,
+    isTitled,
     isVersioningEnabled,
     getNonTranslatableFieldNames,
 } from '../internal/type-config';
@@ -34,7 +34,7 @@ export async function updateOne(
     id: string,
     data: EntryUpdateData
 ): Promise<Entry> {
-    const validatedData = validate(updateEntrySchemaFor(getTitleField(type)), data);
+    const validatedData = validate(updateEntrySchema({ titled: isTitled(type) }), data);
     const currentEntry = await loadAndAssertType(storage, type, id);
 
     // Root field names the caller actually sent — needed after the block too,

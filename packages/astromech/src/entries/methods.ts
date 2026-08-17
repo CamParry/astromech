@@ -18,12 +18,12 @@ import { entryPermission, type EntryAction } from '@/permissions/entry-permissio
 import { parseEntryTypeId } from '@/utilities/entry-type-ids';
 import type { Capability } from '@/utilities/entry-capabilities';
 import {
-    createEntrySchemaFor,
+    createEntrySchema,
     duplicateOverridesSchema,
     entrySortSchema,
     previewTokenSchema,
     scheduleEntrySchema,
-    updateEntrySchemaFor,
+    updateEntrySchema,
 } from './schema';
 
 /**
@@ -144,14 +144,14 @@ const limitParam = z.union([z.number(), z.literal('all')]);
  *
  * @param typeId Qualified type id the service is called with — bare for a root
  *   type (`posts`), `<namespace>/<type>` for a plugin type.
- * @param titleField The type's title requirement, which drives the create and
+ * @param titled Whether the type carries a title, which drives the create and
  *   update schemas.
  */
 export function entryMethodContracts(params: {
     typeId: string;
-    titleField: 'title' | false;
+    titled: boolean;
 }): EntryMethodContract[] {
-    const { typeId, titleField } = params;
+    const { typeId, titled } = params;
 
     // Summaries name the BARE type: a plugin type's qualified id is an address,
     // not a label.
@@ -209,14 +209,14 @@ export function entryMethodContracts(params: {
         },
         {
             ...base('create'),
-            input: createEntrySchemaFor(titleField).extend({ type }),
+            input: createEntrySchema({ titled }).extend({ type }),
         },
         {
             ...base('update'),
             // Re-applying the same update lands the same end-state — matches the
             // core `users.update`/`settings.set` idempotent hint.
             idempotent: true,
-            input: z.object({ type, id: ids, data: updateEntrySchemaFor(titleField) }),
+            input: z.object({ type, id: ids, data: updateEntrySchema({ titled }) }),
         },
         {
             ...base('delete'),
