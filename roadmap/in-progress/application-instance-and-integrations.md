@@ -52,7 +52,7 @@ has failed even if the gate is green.
 
 ## Where this stands
 
-Stages 1 to 6 are on `main`. Stages 7, 8, 9, 10, 11 and 12 are all unblocked
+Stages 1 to 7 are on `main`. Stages 8, 9, 10, 11 and 12 are all unblocked
 and independent of each other, so they can land in any order.
 
 Two things learned the expensive way, both worth carrying into every remaining
@@ -256,10 +256,10 @@ nobody has asked for.
 
 Independent of stage 6.
 
-- [ ] Mount media inside the Hono app at `${mediaRoute}/*` so `app.fetch` is
+- [x] Mount media inside the Hono app at `${mediaRoute}/*` so `app.fetch` is
       genuinely one terminal handler and media inherits access control and
       headers.
-- [ ] Delete the separately injected media route handler.
+- [x] Delete the separately injected media route handler.
 
 **Cautions.** Media serving reads no identity today. Bringing it inside the Hono
 app must not silently attach `requireAuth` to it. Verify range requests, ETags
@@ -272,9 +272,9 @@ Mostly a relocation, which is why it comes after the behavioural stages.
 - [ ] Move `boot/astro.ts`, split into `index.ts`, `vite.ts` and `routes.ts`.
 - [ ] Move `boot/route-registration.ts` → `integrations/astro/routes.ts`.
 - [ ] Move `src/middleware.ts` → `integrations/astro/middleware.ts`.
-- [ ] The three `src/routes/*.ts` entrypoints collapse into one
-      `integrations/astro/handler.ts`. Stages 5, 6 and 7 are what make this a
-      collapse rather than a rewrite.
+- [ ] Move `src/routes/handler.ts` → `integrations/astro/handler.ts`. Stages 5,
+      6 and 7 already collapsed the three entrypoints into this one, so what is
+      left here is the move.
 - [ ] Update the `exports` map and the tsup entry keys together; published
       specifiers do not change. Keep `check:exports` green.
 - [ ] Remove `routes` from `LAYERS`, add `integrations`.
@@ -406,3 +406,16 @@ genuinely differ (local returns full rows, the wire returns public projections).
 
 - `roadmap/planned/role-resolution-fails-open.md` — filed, not in scope.
 - Default visibility shape for host-page queries, if stage 11 does not settle it.
+- **`Cross-Origin-Resource-Policy` on media.** Stage 7 put media behind the
+  app-wide `secureHeaders`, whose Hono default is `same-origin`. Media carried
+  no such header before, so a browser on another origin embedding
+  `<img src="…/_media/…">` is now blocked where it previously loaded. That cuts
+  against the reason media keeps its own top-level prefix — it is long-cached,
+  public, and ends up in third-party caches and other people's links. Decide
+  whether media sets `cross-origin`, and whether that follows `media.access`
+  rather than being fixed.
+- **`app.all` on the media prefix.** Carried over verbatim from the Astro
+  route's `export const ALL`, and the handler ignores the method, so a `POST` to
+  a media URL returns the image with a 200. Narrowing to `GET`/`HEAD` and
+  letting `onNotFound` answer the rest is the likely fix; it is a behaviour
+  change and was left out of stage 7 deliberately.

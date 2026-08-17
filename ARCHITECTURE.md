@@ -156,7 +156,7 @@ packages/
 │   │   │
 │   │   │   ── entrypoints & composition root ──────────────────────────────────
 │   │   ├── boot/           # composition root — application.ts (createAstromech/getAstromech) · lifecycle.ts (the ordered phases) · migrations.ts; Astro integration (astromech/astro)
-│   │   ├── routes/         # 2 Astro APIRoute entrypoints injected by the integration (api / media)
+│   │   ├── routes/         # handler.ts — the one Astro APIRoute entrypoint behind every pattern the integration injects (api / media)
 │   │   ├── admin/          # React admin SPA (TanStack Router; deep-imports the *.shared.ts domain leaves) — components/dev/ is import.meta.env.DEV-gated
 │   │   ├── codegen/        # type generator + plugin-client manifest + method manifest (.astro/astromech.methods.json, plus manifest-registry.ts — the boot-generated copy)
 │   │   │

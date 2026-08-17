@@ -23,6 +23,7 @@ import { notificationsRouter } from './routes/notifications';
 import { rpcRouter } from './routes/rpc';
 import { Astromech } from '@/transport/local/index';
 import { getAuth } from '@/users/index';
+import { handleMediaRequest } from '@/media/serving/handler';
 import type { ResolvedConfig } from '@/types/index';
 
 type AppEnv = { Variables: AuthVariables };
@@ -88,6 +89,25 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
     // ========================================================================
     // Public routes (no auth required)
     // ========================================================================
+
+    // Media serving at its own top-level prefix — public and identity-free.
+    // Registered above `requireAuth` so no future widening of that middleware
+    // can reach it. Hono gives no wildcard param, so the `<id>.<ext>` tail comes
+    // off the pathname.
+    const mediaPrefix = `${config.mediaRoute}/`;
+    app.all(`${config.mediaRoute}/*`, (c) => {
+        const url = new URL(c.req.url);
+        const path = url.pathname.slice(mediaPrefix.length);
+        const dot = path.lastIndexOf('.');
+        return handleMediaRequest({
+            id: dot >= 0 ? path.slice(0, dot) : path,
+            ext: dot >= 0 ? path.slice(dot + 1) : '',
+            search: url.searchParams,
+            origin: url.origin,
+            ifNoneMatch: c.req.header('if-none-match') ?? null,
+            range: c.req.header('range') ?? null,
+        });
+    });
 
     // Not in a route table: unauthenticated by design, and it deliberately calls
     // `users.query` — a `users:read` method — ungated, because before the first

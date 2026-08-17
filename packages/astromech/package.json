@@ -46,8 +46,7 @@
             "types": "./dist/middleware.d.ts",
             "default": "./src/exports/middleware.ts"
         },
-        "./routes/api.ts": "./src/routes/api.ts",
-        "./routes/media-handler.ts": "./src/routes/media-handler.ts",
+        "./routes/handler.ts": "./src/routes/handler.ts",
         "./media/image/sharp": {
             "types": "./dist/media/image/drivers/sharp.d.ts",
             "default": "./dist/media/image/drivers/sharp.js"
@@ -165,8 +164,7 @@
                 "types": "./dist/middleware.d.ts",
                 "default": "./dist/middleware.js"
             },
-            "./routes/api.ts": "./src/routes/api.ts",
-            "./routes/media-handler.ts": "./src/routes/media-handler.ts",
+            "./routes/handler.ts": "./src/routes/handler.ts",
             "./media/image/sharp": {
                 "types": "./dist/media/image/drivers/sharp.d.ts",
                 "default": "./dist/media/image/drivers/sharp.js"

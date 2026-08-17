@@ -26,11 +26,11 @@ export function registerRoutes(
     const { basePath, mediaRoute } = resolvedConfig;
 
     // Media serving route — top-level, app-owned canonical media URL
-    // (`${mediaRoute}/<id>.<ext>[?w&f&v]`). Serves originals (stream) and
-    // on-demand, allowlisted image variants.
+    // (`${mediaRoute}/<id>.<ext>[?w&f&v]`). Astro has to route the prefix into
+    // the app; the Hono app serves it.
     injectRoute({
         pattern: `${mediaRoute}/[...path]`,
-        entrypoint: 'astromech/routes/media-handler.ts',
+        entrypoint: 'astromech/routes/handler.ts',
         prerender: false,
     });
 
@@ -44,7 +44,7 @@ export function registerRoutes(
     // API routes (catch-all)
     injectRoute({
         pattern: `${basePath}/api/[...path]`,
-        entrypoint: 'astromech/routes/api.ts',
+        entrypoint: 'astromech/routes/handler.ts',
         prerender: false,
     });
 }
