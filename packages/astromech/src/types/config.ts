@@ -272,7 +272,9 @@ export type ResolvedEntryCapabilities = {
     trash: boolean;
 };
 
-export type ResolvedEntryType = Omit<EntryType, 'storage' | 'fields'> & {
+export type ResolvedEntryType = Omit<EntryType, 'storage' | 'fields' | 'type'> & {
+    /** The addressable id: the root `entries` key, or `{plugin}/{type}` for plugin types. */
+    id: string;
     capabilities: ResolvedEntryCapabilities;
     titleField: 'title' | false;
     fields: ResolvedEntryFields;
