@@ -31,11 +31,10 @@ export type EntryCreateContext = {
         title: string;
         slug: string | null;
         locale: string;
-        localeGroup?: string;
+        localeGroup: string | undefined;
         fields: JsonObject;
         status: EntryStatus;
         publishedAt: Date | null;
-        _translateFrom?: string;
     };
     user: User | null;
 };
@@ -180,6 +179,9 @@ export type HookHandlerFor<E extends HookEvent> = E extends keyof CoreHookHandle
     : E extends keyof AstromechPluginHookEvents
       ? HookHandler<AstromechPluginHookEvents[E]>
       : HookHandler;
+
+/** The context a core event's handlers receive, derived from `CoreHookHandlers`. */
+export type HookContextFor<E extends KnownCoreEvent> = Parameters<CoreHookHandlers[E]>[0];
 
 /** One hook: an event key bound to its handler. */
 export type Hook = {

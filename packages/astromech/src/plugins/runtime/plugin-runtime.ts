@@ -18,6 +18,9 @@ import type { ReactElement } from 'react';
 import type {
     AnyServiceMethod,
     EntriesService,
+    HookContextFor,
+    HookHandler,
+    KnownCoreEvent,
     MediaService,
     NotificationsService,
     PluginContext,
@@ -520,24 +523,26 @@ function emptyConfig(): Omit<PluginConfigView, 'entryTypesWithField'> {
 // ============================================================================
 
 /**
- * Run `before*` hooks for an event. A handler throw propagates to the caller
- * and aborts the operation (validation gate).
+ * Run the gating handlers for an event. A handler throw propagates to the
+ * caller and aborts the operation.
  */
-export async function runBeforeHooks(
+async function dispatchBefore(
     event: string,
     eventCtx: unknown,
     user: User | null
 ): Promise<void> {
     for (const { identity, handler } of state().hooks.get(event) ?? []) {
-        await handler(eventCtx, createPluginContext(identity, user));
+        // The event → handler pairing is enforced at registration
+        // (`HookHandlerFor`), not here: the registry stores a union.
+        await (handler as HookHandler)(eventCtx, createPluginContext(identity, user));
     }
 }
 
 /**
- * Run `after*` hooks for an event. Each handler is swallow-and-logged with
- * plugin attribution; a throw never rolls back committed work.
+ * Run the swallow-and-logged handlers for an event. A throw is logged with
+ * plugin attribution and never rolls back committed work.
  */
-export async function runAfterHooks(
+async function dispatchAfter(
     event: string,
     eventCtx: unknown,
     user: User | null
@@ -545,11 +550,36 @@ export async function runAfterHooks(
     for (const { identity, handler } of state().hooks.get(event) ?? []) {
         const ctx = createPluginContext(identity, user);
         try {
-            await handler(eventCtx, ctx);
+            // Same as `dispatchBefore`: pairing is a registration-time guarantee.
+            await (handler as HookHandler)(eventCtx, ctx);
         } catch (error) {
             ctx.logger.error(`hook "${event}" failed`, error);
         }
     }
+}
+
+/**
+ * Run `before*` hooks for a core event. A handler throw propagates to the
+ * caller and aborts the operation (validation gate).
+ */
+export async function runBeforeHooks<E extends KnownCoreEvent>(
+    event: E,
+    eventCtx: HookContextFor<E>,
+    user: User | null
+): Promise<void> {
+    await dispatchBefore(event, eventCtx, user);
+}
+
+/**
+ * Run `after*` hooks for a core event. Each handler is swallow-and-logged with
+ * plugin attribution; a throw never rolls back committed work.
+ */
+export async function runAfterHooks<E extends KnownCoreEvent>(
+    event: E,
+    eventCtx: HookContextFor<E>,
+    user: User | null
+): Promise<void> {
+    await dispatchAfter(event, eventCtx, user);
 }
 
 /**
@@ -566,8 +596,8 @@ export async function emitEvent(
     user: User | null
 ): Promise<void> {
     if (event.includes(':before')) {
-        await runBeforeHooks(event, payload, user);
+        await dispatchBefore(event, payload, user);
         return;
     }
-    await runAfterHooks(event, payload, user);
+    await dispatchAfter(event, payload, user);
 }
