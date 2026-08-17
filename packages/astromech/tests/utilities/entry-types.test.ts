@@ -6,7 +6,8 @@ import {
 } from '@/utilities/entry-type-ids';
 import type { ResolvedConfig, ResolvedEntryType } from '@/types/index';
 
-const entryType = (single: string): ResolvedEntryType => ({
+const entryType = (id: string, single: string): ResolvedEntryType => ({
+    id,
     single,
     plural: `${single}s`,
     fields: { main: [], sidebar: [] },
@@ -22,9 +23,9 @@ const entryType = (single: string): ResolvedEntryType => ({
 });
 
 const config: Pick<ResolvedConfig, 'entries' | 'pluginEntries'> = {
-    entries: { post: entryType('Post') },
+    entries: { post: entryType('post', 'Post') },
     pluginEntries: {
-        redirects: { redirect: entryType('Redirect') },
+        redirects: { redirect: entryType('redirects/redirect', 'Redirect') },
     },
 };
 

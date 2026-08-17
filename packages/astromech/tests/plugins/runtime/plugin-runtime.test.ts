@@ -39,6 +39,7 @@ const config: ResolvedConfig = {
     resolvedRoles: {},
     entries: {
         posts: {
+            id: 'posts',
             single: 'Post',
             plural: 'Posts',
             fields: {
@@ -59,6 +60,7 @@ const config: ResolvedConfig = {
             titleField: 'title',
         },
         pages: {
+            id: 'pages',
             single: 'Page',
             plural: 'Pages',
             fields: {
