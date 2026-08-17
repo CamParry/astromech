@@ -107,7 +107,7 @@
         "slugPanel": "Slug",
         "statusPanel": "Status",
         "statusField": "Status",
-        "publishAtField": "Publish at",
+        "publishedAtField": "Publish date",
         "unpublished": "Unpublished",
         "published": "Published",
         "scheduled": "Scheduled",

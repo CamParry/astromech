@@ -17,10 +17,12 @@ import type { EntryStatus } from '../../../types/index';
 
 export type PublishPanelProps = {
     status: EntryStatus;
-    publishAt: string;
-    publishedAt?: Date | string | null | undefined;
+    /** Form state for the `datetime-local` input, so a `YYYY-MM-DDTHH:mm` string. */
+    publishedAt: string;
+    /** The saved row's value, shown as text once the entry is published. */
+    entryPublishedAt?: Date | string | null | undefined;
     onStatusChange: (status: EntryStatus) => void;
-    onPublishAtChange: (value: string) => void;
+    onPublishedAtChange: (value: string) => void;
     readOnly?: boolean;
 };
 
@@ -30,10 +32,10 @@ export type PublishPanelProps = {
 
 export function PublishPanel({
     status,
-    publishAt,
     publishedAt,
+    entryPublishedAt,
     onStatusChange,
-    onPublishAtChange,
+    onPublishedAtChange,
     readOnly = false,
 }: PublishPanelProps): React.ReactElement {
     const { t } = useTranslation();
@@ -44,7 +46,8 @@ export function PublishPanel({
         { value: 'scheduled' as EntryStatus, label: t('entries.scheduled') },
     ];
 
-    const formattedPublishedAt = publishedAt != null ? formatDatetime(publishedAt) : null;
+    const formattedPublishedAt =
+        entryPublishedAt != null ? formatDatetime(entryPublishedAt) : null;
 
     return (
         <Panel title={t('entries.statusPanel')}>
@@ -63,14 +66,14 @@ export function PublishPanel({
 
                 {status === 'scheduled' && (
                     <div className="am-field">
-                        <label className="am-field-label" htmlFor="entry-publish-at">
-                            {t('entries.publishAtField')}
+                        <label className="am-field-label" htmlFor="entry-published-at">
+                            {t('entries.publishedAtField')}
                         </label>
                         <Input
-                            id="entry-publish-at"
+                            id="entry-published-at"
                             type="datetime-local"
-                            value={publishAt}
-                            onChange={(e) => onPublishAtChange(e.target.value)}
+                            value={publishedAt}
+                            onChange={(e) => onPublishedAtChange(e.target.value)}
                             disabled={readOnly}
                         />
                     </div>

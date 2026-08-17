@@ -130,7 +130,7 @@ export async function updateOne(
         }
     }
 
-    let publishedAt = validatedData.publishAt;
+    let publishedAt = validatedData.publishedAt;
     if (validatedData.status === 'published' && !currentEntry.publishedAt) {
         publishedAt = new Date();
     }

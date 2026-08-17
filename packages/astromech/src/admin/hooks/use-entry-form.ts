@@ -41,7 +41,7 @@ export type EntryFormValues = {
     title: string;
     slug: string;
     status: EntryStatus;
-    publishAt: string;
+    publishedAt: string;
     fields: Record<string, unknown>;
 };
 
@@ -51,7 +51,7 @@ export type EntryPayload = {
     fields: JsonObject;
     /** Omitted for statuses-off types so the API doesn't 409 on a status write. */
     status?: EntryStatus;
-    publishAt?: Date | null;
+    publishedAt?: Date | null;
 };
 
 type UseEntryFormOptions = {
@@ -72,7 +72,7 @@ type UseEntryFormOptions = {
     hasSlug: boolean;
     /**
      * Whether the statuses capability is on. When off, the payload omits
-     * `status`/`publishAt` so the API doesn't 409 on a statuses-off type.
+     * `status`/`publishedAt` so the API doesn't 409 on a statuses-off type.
      * Defaults to true (titled/standard types are unaffected).
      */
     hasStatuses?: boolean;
@@ -143,7 +143,7 @@ export function useEntryForm({
             title: defaultValues?.title ?? '',
             slug: defaultValues?.slug ?? '',
             status: defaultValues?.status ?? ('unpublished' as EntryStatus),
-            publishAt: defaultValues?.publishAt ?? '',
+            publishedAt: defaultValues?.publishedAt ?? '',
             fields: defaultValues?.fields ?? ({} as Record<string, unknown>),
         },
         onSubmit: async ({ value }) => {
@@ -191,8 +191,8 @@ export function useEntryForm({
         if (hasSlug && values.slug.trim()) {
             payload.slug = values.slug.trim();
         }
-        if (hasStatuses && status === 'scheduled' && values.publishAt) {
-            payload.publishAt = new Date(values.publishAt);
+        if (hasStatuses && status === 'scheduled' && values.publishedAt) {
+            payload.publishedAt = new Date(values.publishedAt);
         }
         return payload;
     }

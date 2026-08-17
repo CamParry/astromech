@@ -97,3 +97,4 @@ Distinct from the neighbouring directories:
 - [0055](0055-storage-does-not-nest-transactions.md) — a tx-bound storage's `transaction()` throws; no savepoint nesting until a consumer exists
 - [0056](0056-better-auth-owns-the-users-format-not-its-ddl.md) — `users` gets a descriptor that describes better-auth's format, and the parity test proves they agree
 - [0057](0057-one-application-instance-thin-framework-integrations.md) — `getAstromech()` fronts one application instance; framework glue lives in `integrations/` and stays thin
+- [0058](0058-one-name-for-the-publish-timestamp.md) — one name for the publish timestamp: the `publishAt` input alias collapses into `publishedAt`

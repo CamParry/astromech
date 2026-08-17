@@ -367,10 +367,10 @@ function fieldCapabilitiesDenied(
     c: Context<Env>,
     type: string,
     resolved: ResolvedEntryType,
-    data: { status?: unknown; publishAt?: unknown; slug?: unknown }
+    data: { status?: unknown; publishedAt?: unknown; slug?: unknown }
 ): Response | null {
     const caps = resolved.capabilities;
-    if (!caps.statuses && (data.status !== undefined || data.publishAt !== undefined)) {
+    if (!caps.statuses && (data.status !== undefined || data.publishedAt !== undefined)) {
         return capabilityDenied(c, type, 'statuses');
     }
     if (!caps.slug && data.slug !== undefined) return capabilityDenied(c, type, 'slug');
@@ -450,7 +450,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
     // POST /entries/:type
     // ========================================================================
 
-    // Not in the table: a per-FIELD capability 409 — `status`/`publishAt` need
+    // Not in the table: a per-FIELD capability 409 — `status`/`publishedAt` need
     // `statuses` and `slug` needs `slug`, which no contract states.
     router.post('/:type', async (c) => {
         const { type } = c.req.param();
@@ -471,7 +471,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         const refused = fieldCapabilitiesDenied(c, type, resolved, parsed.data);
         if (refused) return refused;
 
-        const { title, slug, fields, status, publishAt, locale, localeGroup } =
+        const { title, slug, fields, status, publishedAt, locale, localeGroup } =
             parsed.data;
 
         const entry = await Astromech.entries.create({
@@ -482,7 +482,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
             ...(localeGroup !== undefined && { localeGroup }),
             ...(fields !== undefined && { fields: fields as JsonObject }),
             ...(status !== undefined && { status }),
-            ...(publishAt !== undefined && { publishAt }),
+            ...(publishedAt !== undefined && { publishedAt }),
         });
 
         return c.json({ data: entry }, 201);
@@ -551,7 +551,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         const escalated = publishEscalation(c, type, parsed.data.status);
         if (escalated) return escalated;
 
-        const { title, slug, fields, status, publishAt } = parsed.data;
+        const { title, slug, fields, status, publishedAt } = parsed.data;
         const entry = await Astromech.entries.update({
             type,
             id,
@@ -560,7 +560,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
                 ...(slug !== undefined && { slug }),
                 ...(fields !== undefined && { fields: fields as JsonObject }),
                 ...(status !== undefined && { status }),
-                ...(publishAt !== undefined && { publishAt }),
+                ...(publishedAt !== undefined && { publishedAt }),
             },
         });
 

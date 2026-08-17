@@ -149,7 +149,7 @@ The three values of `EntryStatus`:
 
 - `unpublished` — not publicly visible
 - `published` — live
-- `scheduled` — will transition to published at `publishAt` time
+- `scheduled` — will transition to published at `publishedAt` time
 
 `scheduled` is a status value with no enforcement behind it: nothing performs the
 transition. See `roadmap/completed/versioning-publishing-scheduling.md`.

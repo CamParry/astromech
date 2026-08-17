@@ -14,7 +14,7 @@ export default defineCommand({
         title: { type: 'string', description: 'New title' },
         slug: { type: 'string', description: 'New slug' },
         status: { type: 'string', description: 'New status (draft|published|scheduled)' },
-        publishAt: { type: 'string', description: 'Publish-at ISO datetime' },
+        publishedAt: { type: 'string', description: 'Published-at ISO datetime' },
         fields: { type: 'string', description: 'Fields as inline JSON or @file' },
         data: {
             type: 'string',
@@ -35,7 +35,8 @@ export default defineCommand({
             if (args.title !== undefined) base.title = args.title;
             if (args.slug !== undefined) base.slug = args.slug;
             if (args.status !== undefined) base.status = args.status as EntryStatus;
-            if (args.publishAt !== undefined) base.publishAt = new Date(args.publishAt);
+            if (args.publishedAt !== undefined)
+                base.publishedAt = new Date(args.publishedAt);
             if (args.fields !== undefined) {
                 base.fields = (await parseJsonArg(args.fields)) as JsonObject;
             }

@@ -17,7 +17,7 @@ export default defineCommand({
             type: 'string',
             description: 'Entry status (draft|published|scheduled)',
         },
-        publishAt: { type: 'string', description: 'Publish-at ISO datetime' },
+        publishedAt: { type: 'string', description: 'Published-at ISO datetime' },
         fields: { type: 'string', description: 'Fields as inline JSON or @file' },
         json: { type: 'boolean', default: false, description: 'Output as JSON' },
         config: { type: 'string', description: 'Path to astromech.config.ts' },
@@ -35,7 +35,8 @@ export default defineCommand({
             if (args.slug !== undefined) params.slug = args.slug;
             if (args.locale !== undefined) params.locale = args.locale;
             if (args.status !== undefined) params.status = args.status as EntryStatus;
-            if (args.publishAt !== undefined) params.publishAt = new Date(args.publishAt);
+            if (args.publishedAt !== undefined)
+                params.publishedAt = new Date(args.publishedAt);
             if (args.fields !== undefined) {
                 params.fields = (await parseJsonArg(args.fields)) as JsonObject;
             }

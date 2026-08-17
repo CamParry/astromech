@@ -53,7 +53,7 @@ export type EntryUpdateContext = {
         locale: string;
         fields: JsonObject;
         status: EntryStatus;
-        publishAt: Date | null;
+        publishedAt: Date | null;
     }>;
     user: User | null;
 };

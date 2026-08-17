@@ -75,7 +75,7 @@ beforeEach(async () => {
 describe('every entries route demands one entry action', () => {
     /** [label, action demanded, path, request init]. */
     function cases(): [string, EntryAction, string, RequestInit | undefined][] {
-        const publishAt = '2999-01-01T00:00:00.000Z';
+        const publishedAt = '2999-01-01T00:00:00.000Z';
         return [
             ['GET /:type', 'read', '/post', undefined],
             ['GET /:type/:id', 'read', `/post/${id}`, undefined],
@@ -116,7 +116,7 @@ describe('every entries route demands one entry action', () => {
                 'POST /:type/bulk-schedule',
                 'publish',
                 '/post/bulk-schedule',
-                json({ ids: [id], publishAt }),
+                json({ ids: [id], publishedAt }),
             ],
             ['POST /:type/:id/restore', 'update', `/post/${id}/restore`, json({})],
             ['POST /:type/:id/duplicate', 'create', `/post/${id}/duplicate`, json({})],
@@ -144,7 +144,7 @@ describe('every entries route demands one entry action', () => {
                 'POST /:type/:id/schedule',
                 'publish',
                 `/post/${id}/schedule`,
-                json({ publishAt }),
+                json({ publishedAt }),
             ],
             ['GET /:type/:id/versions', 'read', `/post/${id}/versions`, undefined],
             [

@@ -185,18 +185,18 @@ describe('POST /entries/:type/bulk-unpublish', () => {
 });
 
 describe('POST /entries/:type/bulk-schedule', () => {
-    const publishAt = '2999-01-01T00:00:00.000Z';
+    const publishedAt = '2999-01-01T00:00:00.000Z';
 
     it('schedules every id and returns { data: entries }', async () => {
-        const res = await post('/post/bulk-schedule', { ids, publishAt });
+        const res = await post('/post/bulk-schedule', { ids, publishedAt });
         expect(res.status).toBe(200);
         const body = (await res.json()) as { data: Entry[] };
         expect(Object.keys(body)).toEqual(['data']);
         expect(body.data.map((e) => e.status)).toEqual(['scheduled', 'scheduled']);
     });
 
-    it('422s a publishAt that is not an offset datetime', async () => {
-        const res = await post('/post/bulk-schedule', { ids, publishAt: 'tomorrow' });
+    it('422s a publishedAt that is not an offset datetime', async () => {
+        const res = await post('/post/bulk-schedule', { ids, publishedAt: 'tomorrow' });
         expect(res.status).toBe(422);
         expect(((await res.json()) as { error: { code: string } }).error.code).toBe(
             'VALIDATION_FAILED'
@@ -207,7 +207,7 @@ describe('POST /entries/:type/bulk-schedule', () => {
         const snippet = await api.create({ type: 'snippet', fields: { key: 'k' } });
         const res = await post('/snippet/bulk-schedule', {
             ids: [snippet.id],
-            publishAt,
+            publishedAt,
         });
         expect(res.status).toBe(409);
     });

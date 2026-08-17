@@ -373,8 +373,8 @@ export function useScheduleEntry(
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: (publishAt: Date) =>
-            astromechClient.entries.schedule({ type, id, publishAt }),
+        mutationFn: (publishedAt: Date) =>
+            astromechClient.entries.schedule({ type, id, publishedAt }),
         onSuccess: (entry) => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.get(type, id),

@@ -109,7 +109,8 @@ const slugField = z
     )
     .optional();
 
-const publishAtField = z
+/** A `Date`, or an offset ISO string coerced to one — nullable and optional. */
+const optionalDate = z
     .union([
         z.date(),
         z
@@ -139,7 +140,7 @@ export function createEntrySchema({ titled }: { titled: boolean }) {
                 .optional()
                 .openapi({ example: { body: 'Hello world' } }),
             status: entryStatusEnum.optional(),
-            publishAt: publishAtField,
+            publishedAt: optionalDate,
         })
         .openapi('CreateEntry');
 }
@@ -158,7 +159,7 @@ export function updateEntrySchema({ titled }: { titled: boolean }) {
             slug: slugField,
             fields: z.record(z.string(), z.unknown()).optional(),
             status: entryStatusEnum.optional(),
-            publishAt: publishAtField,
+            publishedAt: optionalDate,
         })
         .openapi('UpdateEntry');
 }
@@ -192,7 +193,7 @@ export const entrySortSchema = z
     });
 
 export const scheduleEntrySchema = z.object({
-    publishAt: z.union([
+    publishedAt: z.union([
         z.date(),
         z
             .string()
@@ -223,4 +224,4 @@ export const duplicateOverridesSchema = z
  * the domain accepts, so a JSON caller (MCP, the AI tool-loop) does not write a
  * string into a date column.
  */
-export const previewTokenSchema = z.object({ expiresAt: publishAtField });
+export const previewTokenSchema = z.object({ expiresAt: optionalDate });

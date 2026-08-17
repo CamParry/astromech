@@ -29,7 +29,7 @@ backlog of emitters to implement.
 
 ### Content & publishing
 
-- [ ] Scheduled entry published (publishAt fired) → author — `entry.published`, href to entry
+- [ ] Scheduled entry published (publishedAt fired) → author — `entry.published`, href to entry
 - [ ] Scheduled publish failed → author + admins
 - [ ] Version restored → entry's actor/last editor
 - [ ] Entry trashed / restored → admins

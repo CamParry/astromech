@@ -128,7 +128,7 @@ describe('validation stage — derived from the status the row will hold', () =>
                 type: 'post',
                 title: 'Later',
                 status: 'scheduled',
-                publishAt: new Date(Date.now() + 60_000),
+                publishedAt: new Date(Date.now() + 60_000),
                 fields: {},
             })
         ).rejects.toMatchObject({

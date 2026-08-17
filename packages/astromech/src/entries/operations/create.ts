@@ -44,7 +44,7 @@ export async function create(params: {
     localeGroup?: string;
     fields?: JsonObject;
     status?: EntryStatus;
-    publishAt?: Date | null;
+    publishedAt?: Date | null;
 }): Promise<Entry> {
     if (params.fields !== undefined && isPublicBranded(params.fields)) {
         throw new PublicShapeWriteError();
@@ -60,7 +60,7 @@ export async function create(params: {
         slug: params.slug,
         fields: params.fields,
         status: params.status,
-        publishAt: params.publishAt,
+        publishedAt: params.publishedAt,
     });
 
     const storage = getEntryStorage(type);
@@ -68,7 +68,7 @@ export async function create(params: {
     const title = validated.title ?? '';
     const status = validated.status ?? 'unpublished';
     const publishedAt =
-        status === 'published' ? new Date() : (validated.publishAt ?? null);
+        status === 'published' ? new Date() : (validated.publishedAt ?? null);
     const locale = params.locale ?? getDefaultLocale();
 
     // A slug needs both permission and a source. A titleless type has no title
