@@ -15,7 +15,7 @@
 
 import { OpenAPIHono, z } from '@hono/zod-openapi';
 import type { Context } from 'hono';
-import { Astromech } from '@/transport/local/index';
+import { mediaService } from '@/media/index';
 import { badRequest, forbidden, notFound } from '@/transport/http/middleware/errors';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { permissionsFor } from '@/permissions/permissions-for';
@@ -100,10 +100,10 @@ router.get('/:id/usage', async (c) => {
     const permissions = permissionsFor(c.var.role);
     if (!permissions.allowsMethod(mediaContract.usedBy)) return forbidden(c);
 
-    const item = await Astromech.media.get({ id });
+    const item = await mediaService.get({ id });
     if (!item) return notFound(c, `Media '${id}' not found`);
 
-    const data = await Astromech.media.usedBy({ id });
+    const data = await mediaService.usedBy({ id });
     return c.json({ data });
 });
 
@@ -124,7 +124,7 @@ router.post('/upload', async (c) => {
         return badRequest(c, 'A file field is required');
     }
 
-    const media = await Astromech.media.upload({ file });
+    const media = await mediaService.upload({ file });
     return c.json({ data: media }, 201);
 });
 
@@ -146,10 +146,10 @@ router.post('/:id/replace', async (c) => {
     }
 
     // The service throws for an unknown id, which would surface as a 500.
-    const item = await Astromech.media.get({ id });
+    const item = await mediaService.get({ id });
     if (!item) return notFound(c, `Media '${id}' not found`);
 
-    const media = await Astromech.media.replace({ id, file });
+    const media = await mediaService.replace({ id, file });
     return c.json({ data: media });
 });
 

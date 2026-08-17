@@ -1,15 +1,15 @@
 /**
- * The Local API's notifications handle.
+ * The notifications service as in-process consumers hold it: the same domain
+ * methods with `userId` filled from the request context, the way the HTTP routes
+ * fill it from `c.var.user`.
  *
- * The client contract omits `userId`, so this adapts it onto the domain service
- * by reading the request context — the same fill the HTTP routes do from
- * `c.var.user`. In-process code is trusted, but a session-scoped method still
- * needs a session: outside a request there is no user for it to act as, and one
- * error says so rather than four stubs claiming the methods do not exist.
+ * In-process code is trusted, but a session-scoped method still needs a session:
+ * outside a request there is no user for it to act as, and one error says so
+ * rather than four stubs claiming the methods do not exist.
  */
 
-import { notificationsService } from '@/notifications/index';
-import { getCurrentUser } from '@/request-context/index';
+import { notificationsService } from '@/notifications/service';
+import { getCurrentUser } from '@/request-context/request-context';
 import type { Notification, NotificationsService } from '@/types/index';
 
 /** The signed-in user's id, or a loud failure naming what is missing. */
@@ -25,7 +25,7 @@ async function currentUserId(): Promise<string> {
     return user.id;
 }
 
-export const localNotificationsService: NotificationsService = {
+export const currentUserNotificationsService: NotificationsService = {
     async list(): Promise<Notification[]> {
         return notificationsService.list({ userId: await currentUserId() });
     },

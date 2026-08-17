@@ -30,8 +30,7 @@ import {
     registerTestPlugins,
     setupTestConfig,
 } from '@tests/harness';
-import '@/transport/local/index'; // registers the plugin client (setPluginClient)
-import { localPlugins } from '@/transport/local/plugins';
+import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { entriesService as localEntries } from '@/entries/service';
 import { forms, turnstile } from '@astromech/forms';
 import { resetRateLimit } from '../../../../plugins/forms/src/service/rate-limit';
@@ -60,7 +59,7 @@ const entriesService = (): EntriesService => localEntries as unknown as EntriesS
 type FormsService = Record<string, (input?: unknown) => Promise<unknown>>;
 
 function callForms(method: string, input?: unknown): Promise<unknown> {
-    const service = localPlugins['forms'] as unknown as FormsService | undefined;
+    const service = pluginServices['forms'] as unknown as FormsService | undefined;
     const fn = service?.[method];
     if (!fn) throw new Error(`forms.${method} not registered`);
     return fn(input);

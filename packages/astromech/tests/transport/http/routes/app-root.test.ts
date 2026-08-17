@@ -11,7 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { createHttpApp } from '@/transport/http/index';
-import { Astromech } from '@/transport/local/index';
+import { usersService } from '@/users/index';
 import type { Role, User } from '@/types/index';
 
 vi.mock('@/users/session', () => ({ getSession: vi.fn() }));
@@ -65,7 +65,7 @@ describe('GET /setup/check', () => {
 
     it('reports needsSetup: false once a user exists', async () => {
         const app = await freshApp();
-        await Astromech.users.create({ email: 'first@test.dev', name: 'First' });
+        await usersService.create({ email: 'first@test.dev', name: 'First' });
         const res = await app.request(`${api}/setup/check`);
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({ needsSetup: false });
@@ -84,7 +84,7 @@ describe('GET /me', () => {
 
     it('returns { data: { user, role } } with a session', async () => {
         const app = await freshApp();
-        const user = await Astromech.users.create({
+        const user = await usersService.create({
             email: 'me@test.dev',
             name: 'Me',
         });
@@ -132,7 +132,7 @@ describe('requireAuth covers every mounted domain router', () => {
 
     it('404s an unknown path with the canonical error envelope', async () => {
         const app = await freshApp();
-        const user = await Astromech.users.create({ email: 'x@test.dev', name: 'X' });
+        const user = await usersService.create({ email: 'x@test.dev', name: 'X' });
         signIn(user);
 
         const res = await app.request(`${api}/nope`);

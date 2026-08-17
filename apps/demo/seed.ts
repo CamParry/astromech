@@ -907,8 +907,8 @@ async function seed(): Promise<void> {
                         right: doc(
                             heading(3, text('Server SDK')),
                             para(
-                                text('Import '),
-                                text('astromech/local', 'code'),
+                                text('Call '),
+                                text('getAstromech()', 'code'),
                                 text(
                                     ' in your Astro pages and query content directly — no HTTP round-trips. Every method is typed from your schema. No code generation step, no build-time magic.'
                                 )
@@ -1391,7 +1391,7 @@ async function seed(): Promise<void> {
                     heading(2, text('Query content')),
                     para(text('In your Astro page:')),
                     codeBlock(
-                        "import Astromech from 'astromech/local';\nconst { data: posts } = await Astromech.entries.query({ type: 'post', locale: 'en' });\n"
+                        "import { getAstromech } from 'astromech';\nconst app = await getAstromech();\nconst { data: posts } = await app.entries.query({ type: 'post', locale: 'en' });\n"
                     ),
                     para(text("That's it. Your CMS is running."))
                 ),

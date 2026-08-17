@@ -1,5 +1,5 @@
 /**
- * Characterization tests for the entry data layer (`Astromech.entries.*`).
+ * Characterization tests for the entry data layer (`entriesService.*`).
  *
  * These pin down CURRENT behavior — not desired behavior — to act as the
  * regression net for the EntryStorage extraction (Phase 2, slice 2b). Where a
@@ -13,13 +13,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { defineHook } from '@/index';
 import { createTestDb, registerTestPlugins, setupTestConfig } from '@tests/harness';
-import { Astromech } from '@/transport/local/index';
+import { entriesService } from '@/entries/index';
 import { getDb } from '@/database/registry';
 import { decodeWith } from '@/database/codec';
 import { entriesTable } from '@/database/schema';
 import type { Entry, PluginDefinition } from '@/types/index';
 
-const api = Astromech.entries;
+const api = entriesService;
 
 beforeEach(async () => {
     await createTestDb();

@@ -1,5 +1,5 @@
 /**
- * Every method on `AstromechClient`, against the request it makes and the shape
+ * Every method on `astromechClient`, against the request it makes and the shape
  * it returns.
  *
  * The client resolves its routes from the shared table rather than holding

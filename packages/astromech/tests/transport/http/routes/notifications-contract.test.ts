@@ -10,7 +10,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { mountRouter, roleWith } from '@tests/mount-router';
-import { Astromech } from '@/transport/local/index';
+import { usersService } from '@/users/index';
 import { notify, notificationsService } from '@/notifications/service';
 import { notificationsRouter } from '@/transport/http/routes/notifications';
 import type { Notification, User } from '@/types/index';
@@ -28,8 +28,8 @@ let stranger: User;
 beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeTestConfig());
-    owner = await Astromech.users.create({ email: 'owner@test.dev', name: 'Owner' });
-    stranger = await Astromech.users.create({
+    owner = await usersService.create({ email: 'owner@test.dev', name: 'Owner' });
+    stranger = await usersService.create({
         email: 'stranger@test.dev',
         name: 'Stranger',
     });

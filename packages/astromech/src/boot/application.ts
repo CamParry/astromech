@@ -21,7 +21,12 @@ import { getCurrentRole, getCurrentUser } from '@/request-context/index';
 import { runBootPhases } from '@/boot/lifecycle';
 import { getSchedulerDriver } from '@/cron/registry';
 import { onTick } from '@/cron/runner';
-import { Astromech as services } from '@/transport/local/index';
+import { entriesService } from '@/entries/index';
+import { mediaService } from '@/media/index';
+import { currentUserNotificationsService } from '@/notifications/index';
+import { settingsService } from '@/settings/index';
+import { usersService } from '@/users/index';
+import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { createHttpApp } from '@/transport/http/index';
 import { createRegistry } from '@/utilities/registry';
 
@@ -106,12 +111,12 @@ async function boot(config: AstromechConfig): Promise<Astromech> {
 
     return {
         config: resolved,
-        entries: services.entries,
-        media: services.media,
-        users: services.users,
-        settings: services.settings,
-        notifications: services.notifications,
-        plugins: services.plugins,
+        entries: entriesService as unknown as TypedEntriesService,
+        media: mediaService,
+        users: usersService,
+        settings: settingsService,
+        notifications: currentUserNotificationsService,
+        plugins: pluginServices,
         getCurrentUser,
         getCurrentRole,
         fetch: async (request: Request): Promise<Response> => http.fetch(request),

@@ -5,7 +5,7 @@
  * entry types, their fields, and display settings.
  *
  * Neither handler is in a REST route table: there is no service method or
- * contract behind either, only `Astromech.config` projected into a metadata
+ * contract behind either, only the resolved config projected into a metadata
  * shape.
  *
  * A type's metadata is its full field configuration, so both handlers gate on
@@ -19,7 +19,7 @@
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { Astromech } from '@/transport/local/index';
+import { getConfig } from '@/config/registry';
 import { resolveEntryType } from '@/utilities/entry-type-ids';
 import { forbidden, notFound } from '@/transport/http/middleware/errors';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
@@ -36,7 +36,7 @@ const router = new OpenAPIHono<Env>();
 
 // No method id, and the response is a bare array rather than an envelope.
 router.get('/', (c) => {
-    const { entries } = Astromech.config;
+    const { entries } = getConfig();
     const permissions = permissionsFor(c.var.role);
 
     const meta = Object.entries(entries)
@@ -71,7 +71,7 @@ router.get('/:type', (c) => {
         return forbidden(c);
     }
 
-    const config = resolveEntryType(Astromech.config, type);
+    const config = resolveEntryType(getConfig(), type);
     if (!config) return notFound(c, `Entry type '${type}' not found`);
 
     return c.json({

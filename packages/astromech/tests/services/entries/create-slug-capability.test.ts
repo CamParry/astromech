@@ -10,10 +10,10 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { Astromech } from '@/transport/local/index';
+import { entriesService } from '@/entries/index';
 import type { AstromechConfig } from '@/types/index';
 
-const api = Astromech.entries;
+const api = entriesService;
 
 /** The shared config plus a titled type with the slug capability off. */
 function configWithSlugOffType(): AstromechConfig {

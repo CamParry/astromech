@@ -10,7 +10,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { adminRole, mountRouter, roleWith } from '@tests/mount-router';
-import { Astromech } from '@/transport/local/index';
+import { settingsService } from '@/settings/index';
 import { settingsRouter } from '@/transport/http/routes/settings';
 import type { Role } from '@/types/index';
 
@@ -25,8 +25,8 @@ beforeEach(async () => {
 
 describe('GET /settings', () => {
     it('returns every setting in a { data } envelope', async () => {
-        await Astromech.settings.set({ key: 'site.title', value: 'Astromech' });
-        await Astromech.settings.set({ key: 'site.tagline', value: 'Small CMS' });
+        await settingsService.set({ key: 'site.title', value: 'Astromech' });
+        await settingsService.set({ key: 'site.tagline', value: 'Small CMS' });
 
         const res = await app().request('/settings');
         expect(res.status).toBe(200);
@@ -54,7 +54,7 @@ describe('GET /settings', () => {
 
 describe('GET /settings/:key', () => {
     it('returns { data: { key, value } } — the key comes from the path', async () => {
-        await Astromech.settings.set({ key: 'site.title', value: 'Astromech' });
+        await settingsService.set({ key: 'site.title', value: 'Astromech' });
 
         const res = await app().request('/settings/site.title');
         expect(res.status).toBe(200);
@@ -89,7 +89,7 @@ describe('PUT /settings/:key', () => {
         const body = (await res.json()) as { data: { key: string; value: unknown } };
         expect(body.data.key).toBe('site.title');
         expect(body.data.value).toBe('New Title');
-        expect(await Astromech.settings.get({ key: 'site.title', full: true })).toBe(
+        expect(await settingsService.get({ key: 'site.title', full: true })).toBe(
             'New Title'
         );
     });

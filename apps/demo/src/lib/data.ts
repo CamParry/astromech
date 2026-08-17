@@ -1,8 +1,8 @@
 /**
- * Thin wrappers around Astromech.entries.query for common page data needs.
+ * Thin wrappers around `app.entries.query` for common page data needs.
  * All swallow errors gracefully — missing data returns null/empty arrays.
  */
-import Astromech from 'astromech/local';
+import { getAstromech } from 'astromech';
 import type { Entry } from 'astromech';
 import type { Locale } from './site.ts';
 
@@ -22,7 +22,8 @@ export async function getPageBySlug(
     preview?: PreviewOptions
 ): Promise<Entry | null> {
     try {
-        const { data } = await Astromech.entries.query({
+        const app = await getAstromech();
+        const { data } = await app.entries.query({
             type: 'page',
             where: { slug },
             locale,
@@ -42,7 +43,8 @@ export async function getPostBySlug(
     preview?: PreviewOptions
 ): Promise<Entry | null> {
     try {
-        const { data } = await Astromech.entries.query({
+        const app = await getAstromech();
+        const { data } = await app.entries.query({
             type: 'post',
             where: { slug },
             locale,
@@ -58,7 +60,8 @@ export async function getPostBySlug(
 
 export async function getPosts(locale: Locale, limit = 20): Promise<Entry[]> {
     try {
-        const { data } = await Astromech.entries.query({
+        const app = await getAstromech();
+        const { data } = await app.entries.query({
             type: 'post',
             locale,
             limit,
@@ -74,7 +77,8 @@ export async function getCaseStudyBySlug(
     locale: Locale
 ): Promise<Entry | null> {
     try {
-        const { data } = await Astromech.entries.query({
+        const app = await getAstromech();
+        const { data } = await app.entries.query({
             type: 'caseStudy',
             where: { slug },
             locale,
@@ -88,7 +92,8 @@ export async function getCaseStudyBySlug(
 
 export async function getCaseStudies(locale: Locale): Promise<Entry[]> {
     try {
-        const { data } = await Astromech.entries.query({
+        const app = await getAstromech();
+        const { data } = await app.entries.query({
             type: 'caseStudy',
             locale,
             limit: 'all',
@@ -104,7 +109,8 @@ export async function getCategoryBySlug(
     locale: Locale
 ): Promise<Entry | null> {
     try {
-        const { data } = await Astromech.entries.query({
+        const app = await getAstromech();
+        const { data } = await app.entries.query({
             type: 'category',
             where: { slug },
             locale,
@@ -118,7 +124,8 @@ export async function getCategoryBySlug(
 
 export async function getTagBySlug(slug: string, locale: Locale): Promise<Entry | null> {
     try {
-        const { data } = await Astromech.entries.query({
+        const app = await getAstromech();
+        const { data } = await app.entries.query({
             type: 'tag',
             where: { slug },
             locale,
@@ -135,7 +142,8 @@ export async function getPostsByCategory(
     locale: Locale
 ): Promise<Entry[]> {
     try {
-        const { data } = await Astromech.entries.query({
+        const app = await getAstromech();
+        const { data } = await app.entries.query({
             type: 'post',
             where: { references: { path: 'category', id: categoryId } },
             locale,
@@ -149,7 +157,8 @@ export async function getPostsByCategory(
 
 export async function getPostsByTag(tagId: string, locale: Locale): Promise<Entry[]> {
     try {
-        const { data } = await Astromech.entries.query({
+        const app = await getAstromech();
+        const { data } = await app.entries.query({
             type: 'post',
             where: { references: { path: 'tags', id: tagId } },
             locale,

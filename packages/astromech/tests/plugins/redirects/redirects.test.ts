@@ -22,35 +22,36 @@ import {
     registerTestPlugins,
     setupTestConfig,
 } from '@tests/harness';
-import '@/transport/local/index'; // registers the plugin client (setPluginClient)
-import { localPlugins } from '@/transport/local/plugins';
+import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { entriesService as localEntries } from '@/entries/service';
 import { redirects } from '@astromech/redirects';
 import type { RedirectMatch } from '@astromech/redirects';
 import type { DB } from '@/database/types';
-import type { AstromechClient } from '@/transport/astromech-client.shared';
 import type {
     AstromechConfig,
     EntriesService,
     PluginDefinition,
+    PluginServiceNamespace,
     ResolvedConfig,
 } from '@/types/index';
 
-// Type-level proof: redirects.lookup carries real Input/Output via self-augmentation.
-async function _serviceTypeProof(client: AstromechClient) {
-    const result: RedirectMatch | null = await client.plugins.redirects.lookup({
+// Type-level proof: redirects.lookup carries real Input/Output via
+// self-augmentation of `PluginServiceNamespace`, which is the type behind
+// `app.plugins` and behind `ctx.plugins` alike.
+async function _serviceTypeProof(plugins: PluginServiceNamespace) {
+    const result: RedirectMatch | null = await plugins.redirects.lookup({
         from: '/x',
     });
     void result;
 }
 void _serviceTypeProof;
 
-// `Astromech.plugins.redirects` — the loosely-typed RPC method map. There is no
+// `pluginServices.redirects` — the loosely-typed RPC method map. There is no
 // per-plugin entries sub-API: a plugin entry type is addressed on the one
 // entries service by its qualified id.
 type RedirectsService = Record<string, (input?: unknown) => Promise<unknown>>;
 const redirectsService = (): RedirectsService =>
-    localPlugins['redirects'] as unknown as RedirectsService;
+    pluginServices['redirects'] as unknown as RedirectsService;
 
 /** The redirect entry type's qualified id — how every caller addresses it. */
 const REDIRECT = 'redirects/redirect';

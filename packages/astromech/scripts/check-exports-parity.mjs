@@ -22,14 +22,6 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
-/**
- * `astromech/local` is the one entry allowed to mix trees. Its `default` must
- * stay on `src` to keep the local API in the host's module graph, and stage 12
- * of `roadmap/in-progress/application-instance-and-integrations.md` deletes the
- * subpath outright. Remove this list with it.
- */
-const mixedTreeExemptions = new Set(['./local']);
-
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const manifest = JSON.parse(readFileSync(resolve(packageRoot, 'package.json'), 'utf8'));
 
@@ -52,7 +44,7 @@ const treeOf = (target) => (target.startsWith('./dist/') ? 'dist' : 'src');
 
 const checkConditions = (mapName, map) => {
     for (const [key, entry] of Object.entries(map)) {
-        if (typeof entry === 'string' || mixedTreeExemptions.has(key)) continue;
+        if (typeof entry === 'string') continue;
         const { types, default: fallback } = entry;
         if (typeof types !== 'string' || typeof fallback !== 'string') continue;
         if (treeOf(types) === treeOf(fallback)) continue;

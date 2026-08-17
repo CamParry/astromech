@@ -9,10 +9,10 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { Astromech } from '@/transport/local/index';
+import { entriesService } from '@/entries/index';
 import type { AstromechConfig, ResourceValidator } from '@/types/index';
 
-const api = Astromech.entries;
+const api = entriesService;
 
 /**
  * `event` cross-checks two dates no single field can see. `flyer` reports on a

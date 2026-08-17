@@ -1,9 +1,10 @@
 import { defineMiddleware, sequence } from 'astro:middleware';
-import Astromech from 'astromech/local';
+import { getAstromech } from 'astromech';
 
 const redirectsMiddleware = defineMiddleware(async (context, next) => {
     try {
-        const match = await Astromech.plugins.redirects.lookup({
+        const app = await getAstromech();
+        const match = await app.plugins.redirects.lookup({
             from: context.url.pathname,
         });
         if (match) {

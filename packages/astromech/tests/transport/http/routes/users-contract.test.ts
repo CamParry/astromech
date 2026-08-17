@@ -10,7 +10,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { adminRole, mountRouter, roleWith, testUser } from '@tests/mount-router';
-import { Astromech } from '@/transport/local/index';
+import { usersService } from '@/users/index';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 import { usersRouter } from '@/transport/http/routes/users';
 import type { Role, User } from '@/types/index';
@@ -21,7 +21,7 @@ function app(role: Role = adminRole, user: User = testUser) {
 
 /** Create a user through the Local API (no permission checks). */
 async function makeUser(email: string, name: string, roleSlug?: string): Promise<User> {
-    return Astromech.users.create({
+    return usersService.create({
         email,
         name,
         ...(roleSlug !== undefined && { roleSlug }),
@@ -285,7 +285,7 @@ describe('DELETE /users/:id', () => {
         const res = await app().request(`/users/${user.id}`, { method: 'DELETE' });
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({ success: true });
-        expect(await Astromech.users.get({ id: user.id })).toBeNull();
+        expect(await usersService.get({ id: user.id })).toBeNull();
     });
 
     // A role-less create takes `DEFAULT_ROLE_SLUG` from the create schema, not

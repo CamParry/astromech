@@ -20,6 +20,7 @@ import { buildAIConfig } from '@/ai/middleware';
 import { registerBuiltInEntryJobs } from '@/entries/jobs/index';
 import { wireEntryAccess } from '@/entries/plugin-access';
 import { wireNotifyAccess } from '@/notifications/plugin-access';
+import { wirePluginAccess } from '@/boot/plugin-access';
 import { resolveSchedulerDriver, setSchedulerDriver } from '@/cron/registry';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { entryAccess } from '@/plugins/runtime/entry-access';
@@ -96,6 +97,7 @@ async function registerDrivers(config: AstromechConfig): Promise<void> {
 function registerPluginRuntime(config: AstromechConfig, resolved: ResolvedConfig): void {
     wireEntryAccess();
     wireNotifyAccess();
+    wirePluginAccess();
     registerPlugins(config.plugins ?? [], resolved);
 
     // Host entry types declaring their own storage, mounted after

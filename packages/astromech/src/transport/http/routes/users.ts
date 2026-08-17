@@ -13,7 +13,7 @@
 
 import { OpenAPIHono, z } from '@hono/zod-openapi';
 import type { Context } from 'hono';
-import { Astromech } from '@/transport/local/index';
+import { usersService } from '@/users/index';
 import {
     badRequest,
     forbidden,
@@ -86,7 +86,7 @@ router.get('/:id', async (c) => {
     if (!permissions.allowsMethod(usersContract.get) && currentUser.id !== id)
         return forbidden(c);
 
-    const user = await Astromech.users.get({ id });
+    const user = await usersService.get({ id });
     if (!user) return notFound(c, `User '${id}' not found`);
     return c.json({ data: user });
 });
@@ -117,7 +117,7 @@ router.put('/:id', async (c) => {
         if (!canUpdateUsers) return forbidden(c);
 
         // Last-admin check: if changing away from 'admin', ensure it's not the last one
-        const targetUser = await Astromech.users.get({ id });
+        const targetUser = await usersService.get({ id });
         if (targetUser && targetUser.roleSlug === 'admin' && roleSlug !== 'admin') {
             const adminCount = await createUserStorage().countByRole('admin');
             if (adminCount <= 1) {
@@ -126,7 +126,7 @@ router.put('/:id', async (c) => {
         }
     }
 
-    const user = await Astromech.users.update({
+    const user = await usersService.update({
         id,
         data: {
             ...(email !== undefined && { email }),
@@ -150,7 +150,7 @@ router.delete('/:id', async (c) => {
     if (!permissions.allowsMethod(usersContract.delete)) return forbidden(c);
 
     // Last-admin check
-    const targetUser = await Astromech.users.get({ id });
+    const targetUser = await usersService.get({ id });
     if (targetUser && targetUser.roleSlug === 'admin') {
         const adminCount = await createUserStorage().countByRole('admin');
         if (adminCount <= 1) {
@@ -158,7 +158,7 @@ router.delete('/:id', async (c) => {
         }
     }
 
-    await Astromech.users.delete({ id });
+    await usersService.delete({ id });
     return c.json({ success: true });
 });
 

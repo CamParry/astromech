@@ -391,21 +391,32 @@ break every plugin) and the `scopeMethods` invariant that survived it.
 
 Depends only on stage 5.
 
-- [ ] Delete the shared `AstromechClient` contract. The app's surface is
+- [x] Delete the shared `AstromechClient` contract. The app's surface is
       primary; the fetch client becomes a standalone typed REST wrapper, typed
       by what the wire actually returns.
-- [ ] `configure({ baseUrl })` moves onto the fetch client and the local no-op
+- [x] `configure({ baseUrl })` is the fetch client's alone and the local no-op
       is deleted. **A method implemented only to satisfy a name means the
-      contract is fighting the implementation and losing.**
-- [ ] `transport/local/index.ts` dissolves into the instance, losing its
-      module-scope `setPluginClient` / `setPluginMethods` side effects, which
-      makes the package's `"sideEffects": false` declaration true again. The
+      contract is fighting the implementation and losing.** The never-assigned
+      `config: null as unknown as ResolvedConfig` on the fetch client went with
+      it — the second member the contract forced.
+- [x] `transport/local/index.ts` dissolves into the instance, losing its
+      module-scope `setPluginClient` / `setPluginMethods` side effects. The
       plugin-runtime ↔ local import cycle they dodge needs an **explicit port**,
-      not an import order.
-- [ ] The `astromech/local` subpath retires, now that the code behind it is
+      not an import order — `boot/plugin-access.ts`, called from
+      `boot/lifecycle.ts` beside the other two wires. This does **not** make
+      `"sideEffects": false` true, as this line originally claimed: the admin
+      registries, the HTTP routers and `transport/cli/index.ts`'s `runMain` are
+      all still module-scope effects. What it removes is the plugin runtime's
+      dependence on one.
+- [x] The `astromech/local` subpath retires, now that the code behind it is
       gone. "Local" leaves the vocabulary; no local/remote pair remains.
-- [ ] Plugins keep receiving the `ctx` surface, never the app itself — nothing
-      hands a plugin `destroy()`.
+      `TERMINOLOGY.md` never had an entry for it.
+- [x] Plugins keep receiving the `ctx` surface, never the app itself.
+      `boot/plugin-access.ts` injects `ClientAccess`'s six handles as a literal;
+      the instance would have carried `config` (live drivers), `fetch`,
+      `scheduled` and `startScheduler`. (There is no `destroy()` on the app, as
+      this line originally said — those four are what leaking it would hand
+      over.)
 
 **Cautions.** Wire parity is enforced by mechanism, not by a shared interface:
 the HTTP surface derives from the same services (method manifest → dispatch),
@@ -413,6 +424,9 @@ and a specific guarantee gets a parity test, as
 `decisions/0056-better-auth-owns-the-users-format-not-its-ddl.md` did. Do not
 re-derive the fetch client's types from the service types; the transports
 genuinely differ (local returns full rows, the wire returns public projections).
+
+`decisions/0062-the-app-is-the-surface-not-a-shared-contract.md` records the
+result.
 
 ## Stage 13 — Moves, renames and the comment pass
 

@@ -75,7 +75,7 @@ type HookCallback = (eventCtx: unknown, ctx: PluginContext) => Promise<void> | v
 type RegisteredHook = { identity: ResolvedPluginIdentity; handler: HookCallback };
 type RegisteredRawRoute = { identity: ResolvedPluginIdentity; route: PluginRawRoute };
 
-/** The dispatch-table builder `ctx.methods` runs, injected by the Local API. */
+/** The dispatch-table builder `ctx.methods` runs, injected by the composition root. */
 export type PluginMethodsAccess = {
     tools(
         role: Role | null | undefined,
@@ -299,7 +299,7 @@ export function getPluginRawRoutes(): RegisteredRawRoute[] {
     return state().rawRoutes;
 }
 
-/** Set by the Local API at module load to break the import cycle. */
+/** Injected by `boot/plugin-access.ts`, which owns the implementation. */
 export function setPluginClient(client: ClientAccess): void {
     state().client = client;
 }
@@ -313,7 +313,7 @@ function requireClient(): ClientAccess {
     return client;
 }
 
-/** Set by the Local API at module load, for the same reason as the client. */
+/** Injected by `boot/plugin-access.ts`, for the same reason as the client. */
 export function setPluginMethods(access: PluginMethodsAccess): void {
     state().methods = access;
 }

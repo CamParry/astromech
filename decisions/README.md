@@ -101,3 +101,4 @@ Distinct from the neighbouring directories:
 - [0059](0059-the-worker-entry-is-a-cloudflare-integration.md) — `createWorkerEntry` returns both Worker handlers from `integrations/cloudflare/`, superseding 0053 on placement
 - [0060](0060-exports-conditions-agree-within-an-entry.md) — an `exports` entry's `types` and `default` resolve into the same tree, and `check:exports` enforces it
 - [0061](0061-identity-resolves-on-demand.md) — the request store holds the request, identity resolves on the first ask, and `App.Locals` is gone
+- [0062](0062-the-app-is-the-surface-not-a-shared-contract.md) — the application is the in-process surface, the fetch client is typed by the wire, and the shared `AstromechClient` contract is deleted

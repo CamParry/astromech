@@ -14,7 +14,6 @@ export default defineConfig([
             columns: 'src/exports/columns.ts',
             methods: 'src/exports/methods.ts',
             'integrations/astro/index': 'src/exports/astro.ts',
-            'local/index': 'src/exports/local.ts',
             'fetch/index': 'src/exports/fetch.ts',
             middleware: 'src/exports/middleware.ts',
             'database/schema': 'src/exports/database-schema.ts',

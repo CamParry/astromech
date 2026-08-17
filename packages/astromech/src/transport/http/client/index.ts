@@ -23,7 +23,6 @@ import {
     type MountedRoute,
     type ResponseEnvelope,
 } from '@/transport/http/routes/http-routes.shared';
-import type { AstromechClient } from '@/transport/astromech-client.shared';
 import type {
     EntriesService,
     Media,
@@ -31,7 +30,6 @@ import type {
     MediaService,
     NotificationsService,
     PluginServiceNamespace,
-    ResolvedConfig,
     Setting,
     SettingsService,
     SortOption,
@@ -494,14 +492,14 @@ const pluginsApi: PluginServiceNamespace = new Proxy({} as PluginServiceNamespac
 // Export Client
 // ============================================================================
 
-export const astromechClient: AstromechClient = {
+export const astromechClient = {
     entries: entriesService as unknown as TypedEntriesService,
     media: mediaService,
     settings: settingsService,
     users: usersService,
     notifications: notificationsService,
-    config: null as unknown as ResolvedConfig, // Placeholder, will be set in middleware
     plugins: pluginsApi,
+    /** Point the client at an API base other than the default. */
     configure({ baseUrl }: { baseUrl: string }): void {
         apiBase = baseUrl;
     },

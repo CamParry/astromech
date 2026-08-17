@@ -17,7 +17,8 @@ import { setMethodManifest } from '@/codegen/manifest-registry';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { buildScopedDispatch } from '@/transport/tools/dispatch';
 import { createHttpApp } from '@/transport/http/index';
-import { Astromech } from '@/transport/local/index';
+import { entriesService } from '@/entries/index';
+import { usersService } from '@/users/index';
 import type {
     AstromechConfig,
     MethodManifest,
@@ -101,7 +102,7 @@ async function freshApp(role: Role = adminRole): Promise<OpenAPIHono> {
     manifest = generateMethodManifest(resolved, [testPlugin]);
     setMethodManifest(manifest);
 
-    signedInUser = await Astromech.users.create({ email: 'rpc@test.dev', name: 'RPC' });
+    signedInUser = await usersService.create({ email: 'rpc@test.dev', name: 'RPC' });
     signIn(signedInUser, role);
 
     api = `${resolved.basePath}/api`;
@@ -220,7 +221,7 @@ describe('POST /rpc/:id', () => {
 
     it('takes the entry type from the id, not from the body', async () => {
         const app = await freshApp();
-        await Astromech.entries.create({ type: 'post', title: 'Hello' });
+        await entriesService.create({ type: 'post', title: 'Hello' });
 
         // `full` is the caller's to pass; `type` is not, and is never in the body.
         const res = await call(app, 'entries.post.query', { full: true });

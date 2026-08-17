@@ -121,13 +121,14 @@ every grantable string your config produces.
 
 ## Looking up a redirect
 
-The `lookup` method is `public` and works identically over the local DB
-(`astromech/local`) and HTTP (`astromech/fetch`):
+The `lookup` method is `public` and works identically in process (the
+application instance) and over HTTP (`astromech/fetch`):
 
 ```ts
-import { Astromech } from 'astromech/local';
+import { getAstromech } from 'astromech';
 
-const match = await Astromech.plugins.redirects.lookup({ from: '/old-path' });
+const app = await getAstromech();
+const match = await app.plugins.redirects.lookup({ from: '/old-path' });
 // → { to: '/new-path', status: '301' } | null
 ```
 
@@ -135,7 +136,7 @@ Redirects are ordinary entries, so manage them through the one entries service.
 A plugin entry type is addressed by its qualified id, `<namespace>/<type>`:
 
 ```ts
-await Astromech.entries.create({
+await app.entries.create({
     type: 'redirects/redirect',
     fields: { from: '/old', to: '/new', status: '301', enabled: true },
 });
@@ -149,10 +150,11 @@ routes outside `/api`, so add a tiny middleware in your framework. For Astro:
 ```ts
 // src/middleware.ts
 import { defineMiddleware } from 'astro:middleware';
-import { Astromech } from 'astromech/local';
+import { getAstromech } from 'astromech';
 
 export const onRequest = defineMiddleware(async (context, next) => {
-    const match = await Astromech.plugins.redirects.lookup({
+    const app = await getAstromech();
+    const match = await app.plugins.redirects.lookup({
         from: context.url.pathname,
     });
     if (match) {

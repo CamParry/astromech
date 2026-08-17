@@ -16,7 +16,8 @@
 
 import { OpenAPIHono, z } from '@hono/zod-openapi';
 import type { Context } from 'hono';
-import { Astromech } from '@/transport/local/index';
+import { getConfig } from '@/config/registry';
+import { entriesService } from '@/entries/index';
 import {
     badRequest,
     forbidden,
@@ -299,7 +300,7 @@ function entryContracts(
 /** Resolve the catalogue for one request — the entry type is a path param. */
 function contractsForRequest(c: Context<Env>): ContractCatalogue | undefined {
     const type = param(c, 'type');
-    const resolved = resolveEntryType(Astromech.config, type);
+    const resolved = resolveEntryType(getConfig(), type);
     return resolved ? entryContracts(resolved, type) : undefined;
 }
 
@@ -329,7 +330,7 @@ function entryPrecondition(c: Context<Env>, method: EntryMethodName): Response |
         return forbidden(c);
     }
 
-    const resolved = resolveEntryType(Astromech.config, type);
+    const resolved = resolveEntryType(getConfig(), type);
     if (!resolved) return notFound(c, `Entry type '${type}' not found`);
 
     const requires = entryContracts(resolved, type)[method]?.requires;
@@ -421,7 +422,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
             // Permission before existence, as on every entries route: a 404 an
             // unpermitted caller can read is a type enumeration.
             if (!permissions.allows(entryPermission(type, 'read'))) return forbidden(c);
-            if (!resolveEntryType(Astromech.config, type)) {
+            if (!resolveEntryType(getConfig(), type)) {
                 return notFound(c, `Entry type '${type}' not found`);
             }
         }
@@ -434,7 +435,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         const sort = entrySortSchema.parse(body.sort);
         try {
             return c.json(
-                await Astromech.entries.query({
+                await entriesService.query({
                     ...body,
                     type: types,
                     full: wantsFull,
@@ -457,7 +458,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         const denied = entryPrecondition(c, 'create');
         if (denied) return denied;
 
-        const resolved = resolveEntryType(Astromech.config, type) as ResolvedEntryType;
+        const resolved = resolveEntryType(getConfig(), type) as ResolvedEntryType;
         const raw = await c.req.json().catch(() => undefined);
         if (raw === undefined) return badRequest(c, 'Invalid JSON body');
 
@@ -474,7 +475,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         const { title, slug, fields, status, publishedAt, locale, localeGroup } =
             parsed.data;
 
-        const entry = await Astromech.entries.create({
+        const entry = await entriesService.create({
             type,
             ...(title !== undefined && { title }),
             ...(slug !== undefined && { slug }),
@@ -499,7 +500,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         const denied = entryPrecondition(c, 'update');
         if (denied) return denied;
 
-        const resolved = resolveEntryType(Astromech.config, type) as ResolvedEntryType;
+        const resolved = resolveEntryType(getConfig(), type) as ResolvedEntryType;
         const raw = await c.req.json().catch(() => undefined);
         if (raw === undefined) return badRequest(c, 'Invalid JSON body');
 
@@ -513,7 +514,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         const escalated = publishEscalation(c, type, data.status);
         if (escalated) return escalated;
 
-        const entries = await Astromech.entries.update({
+        const entries = await entriesService.update({
             type,
             id: ids,
             data: data as EntryUpdateData,
@@ -531,7 +532,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         const denied = entryPrecondition(c, 'update');
         if (denied) return denied;
 
-        const resolved = resolveEntryType(Astromech.config, type) as ResolvedEntryType;
+        const resolved = resolveEntryType(getConfig(), type) as ResolvedEntryType;
         const raw = await c.req.json().catch(() => undefined);
         if (raw === undefined) return badRequest(c, 'Invalid JSON body');
 
@@ -552,7 +553,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         if (escalated) return escalated;
 
         const { title, slug, fields, status, publishedAt } = parsed.data;
-        const entry = await Astromech.entries.update({
+        const entry = await entriesService.update({
             type,
             id,
             data: {
@@ -578,10 +579,10 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         const denied = entryPrecondition(c, 'delete');
         if (denied) return denied;
 
-        const resolved = resolveEntryType(Astromech.config, type) as ResolvedEntryType;
+        const resolved = resolveEntryType(getConfig(), type) as ResolvedEntryType;
         const call = resolved.capabilities.trash
-            ? Astromech.entries.trash
-            : Astromech.entries.delete;
+            ? entriesService.trash
+            : entriesService.delete;
         await call({ type, id, cascadeLocales: cascadeLocales(c) });
         return c.json({ success: true });
     });
@@ -598,7 +599,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         if (denied) return denied;
 
         try {
-            const entry = await Astromech.entries.createStaged({ type, id });
+            const entry = await entriesService.createStaged({ type, id });
             return c.json({ data: entry }, 201);
         } catch (error) {
             if (!(error instanceof StagedEntryExistsError)) return raise(error);

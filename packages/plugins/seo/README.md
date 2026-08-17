@@ -91,12 +91,13 @@ The plugin exposes **data**; your app owns the route. The `sitemap` method is
 ```ts
 // src/pages/sitemap.xml.ts
 import type { APIRoute } from 'astro';
-import { Astromech } from 'astromech/local';
+import { getAstromech } from 'astromech';
 
 const SITE = 'https://example.com';
 
 export const GET: APIRoute = async () => {
-    const { urls } = await Astromech.plugins.seo.sitemap();
+    const app = await getAstromech();
+    const { urls } = await app.plugins.seo.sitemap();
     const body =
         '<?xml version="1.0" encoding="UTF-8"?>\n' +
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
@@ -121,9 +122,10 @@ when no meta title is set, and the default OG image setting:
 ```astro
 ---
 // src/pages/[slug].astro
-import { Astromech } from 'astromech/local';
+import { getAstromech } from 'astromech';
 
-const meta = await Astromech.plugins.seo.meta({
+const app = await getAstromech();
+const meta = await app.plugins.seo.meta({
     type: 'page',
     slug: Astro.params.slug,
 });

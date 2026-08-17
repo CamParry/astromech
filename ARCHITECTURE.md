@@ -108,20 +108,24 @@ Key invariants:
   `no-restricted-syntax` in `eslint.config.js`; a new global goes in the namespace.
 - **Leaves are pure.** `types/`, `utilities/`, and `errors/` import only other
   leaves or third-party packages.
-- **A contract lives with the layer that implements it.** `AstromechClient`
-  (`transport/astromech-client.shared.ts`) composes the five domain services and
-  has exactly two implementations, `transport/local/` and
-  `transport/http/client/`, so it sits beside them rather than in `types/`. It
-  carries the `*.shared.ts` marker because the fetch client holds it. What stays
-  in `types/` is the vocabulary every layer shares: the data model, the config
-  and plugin authoring contracts, fields, hooks, the service contracts and the
-  query primitives.
+- **A contract lives with the layer that implements it.** `types/` holds the
+  vocabulary every layer shares: the data model, the config and plugin authoring
+  contracts, fields, hooks, the service contracts and the query primitives. A
+  contract only one layer implements lives with that layer, and a file the admin
+  bundle also holds carries the `*.shared.ts` marker.
+- **The application is the in-process surface; the fetch client is its own.**
+  `boot/application.ts` composes the domain services onto the instance an
+  integration creates, and `transport/http/client/` is a standalone REST wrapper
+  typed by what the wire returns. Parity between them is enforced by mechanism —
+  the HTTP routes derive from the same services through the method manifest — and
+  by a parity test where a specific guarantee matters
+  (`tests/transport/http/routes/rpc-parity.test.ts`).
 - **Permission enforcement is a property of the handle, not of the transport.**
   `scopedServices(role)` (`policies/scoped-services.ts`) refuses a method the
   role may not call, and every untrusted path composes it: the HTTP REST routes
   dispatch through it, `POST /rpc/:id` reaches it via `buildScopedDispatch`, and
   so does the AI tool-loop. The trusted paths compose nothing and say so —
-  `transport/local` (SSR, hooks, seeding), `transport/cli` including
+  the application instance (SSR, hooks, seeding), `transport/cli` including
   `astromech call`, and the dev-only MCP server, which is why `buildDispatch`
   carries a method's `permission` without checking it. `permissionsFor` stays the
   seam for the route checks carrying logic no contract can state — `users.get`'s
@@ -156,12 +160,12 @@ packages/
 │   │   │
 │   │   │   ── entrypoints & composition root ──────────────────────────────────
 │   │   ├── integrations/   # framework and runtime glue — astro/ (index.ts the integration, astromech/astro · vite.ts · virtual-module.ts · routes.ts the injectRoute calls · middleware.ts, astromech/middleware · handler.ts, the one APIRoute behind every injected pattern) · cloudflare/ (index.ts, createWorkerEntry, astromech/cloudflare)
-│   │   ├── boot/           # composition root — application.ts (createAstromech/getAstromech) · lifecycle.ts (the ordered phases) · migrations.ts
+│   │   ├── boot/           # composition root — application.ts (createAstromech/getAstromech) · lifecycle.ts (the ordered phases) · plugin-access.ts (fills the runtime's client and methods ports) · migrations.ts
 │   │   ├── admin/          # React admin SPA (TanStack Router; deep-imports the *.shared.ts domain leaves) — components/dev/ is import.meta.env.DEV-gated
 │   │   ├── codegen/        # type generator + plugin-client manifest + method manifest (.astro/astromech.methods.json, plus manifest-registry.ts — the boot-generated copy)
 │   │   │
 │   │   │   ── delivery ────────────────────────────────────────────────────
-│   │   ├── transport/      # astromech-client.shared (the AstromechClient contract both transports implement) · local/ (astromech/local) · http/ (Hono routes+middleware, plus client/ — the fetch Client, astromech/fetch) · cli/ · mcp/ · tools/ (tool dispatch + scoped tool surface, shared by MCP and the AI tool-loop)
+│   │   ├── transport/      # http/ (Hono routes+middleware, plus client/ — the fetch Client, astromech/fetch) · cli/ · mcp/ · tools/ (tool dispatch + scoped tool surface, shared by MCP and the AI tool-loop)
 │   │   │
 │   │   │   ── policies ───────────────────────────────────────────────────
 │   │   ├── policies/       # authorization policies over the manifest — what an actor may do, not a per-request guard — enforcement (scoped-services), method filtering, manifest annotation and confirmation; no domain logic here
@@ -230,7 +234,7 @@ Two layers keep a driver out of a plugin's hands, and they do different jobs. `R
 
 **A plugin's server code runs in a different module graph from core's, and `ctx` is the only bridge across it.** This is an invariant, not a convention — the alternative does not merely violate a rule, it throws.
 
-The integration takes a config **path** and the site's `astromech.config.ts` is evaluated twice. Once in **plain Node at config time**, inside `astro:config:setup` (`config/load.ts`), which is what route registration, the admin config, codegen and the build-time migration run read; and once in the **Vite SSR graph**, where `virtual:astromech/config` re-exports the same file. Every `plugin()` factory runs in both, so a plugin package is evaluated in two module registries and module-level state in it is not shared between them. The evaluation that boots is the SSR one: the injected middleware hands that module's `rawConfig` to `createAstromech`, so the registered `PluginDefinition`, with `rawRoutes[].handler`, service methods and hooks hanging off it, is the SSR-graph copy. Core's runtime code is the opposite: every subpath Vite loads — `astromech/middleware`, `astromech/local`, the injected `astromech/routes/handler.ts` and `astromech/admin/shell.astro`, and `astromech/ui*` — resolves through `exports` to package **source**, which `integrations/astro/vite.ts` compiles via the `@/` Vite alias it registers against `pkgSrc`.
+The integration takes a config **path** and the site's `astromech.config.ts` is evaluated twice. Once in **plain Node at config time**, inside `astro:config:setup` (`config/load.ts`), which is what route registration, the admin config, codegen and the build-time migration run read; and once in the **Vite SSR graph**, where `virtual:astromech/config` re-exports the same file. Every `plugin()` factory runs in both, so a plugin package is evaluated in two module registries and module-level state in it is not shared between them. The evaluation that boots is the SSR one: the injected middleware hands that module's `rawConfig` to `createAstromech`, so the registered `PluginDefinition`, with `rawRoutes[].handler`, service methods and hooks hanging off it, is the SSR-graph copy. Core's runtime code is the opposite: every subpath Vite loads — `astromech/middleware`, the injected `astromech/routes/handler.ts` and `astromech/admin/shell.astro`, and `astromech/ui*` — resolves through `exports` to package **source**, which `integrations/astro/vite.ts` compiles via the `@/` Vite alias it registers against `pkgSrc`.
 
 The config-time evaluation is the constraint. A plugin package has to load under plain Node, with no Vite in the process:
 
@@ -243,7 +247,7 @@ So a plugin that imports a core module reaching `virtual:astromech/config` — w
 
 **The rule this produces: a plugin package imports `astromech`, `astromech/ui` and `astromech/ui/app`, and nothing else from core.** `astromech` loads under plain Node, and so does `astromech/ui` — the component kit, whose components take their inputs from their props. `astromech/ui/app` does not: it carries the admin surface that needs the running admin (`useAstromechPlugin`, the `CommandPalette` module, the AI-context hooks, `ApiErrorPanel`), which reaches `virtual:astromech/admin-config` and the fetch client. The rule survives because a plugin's Node-loaded entry never imports it: only the plugin's source-shipped `./admin/*` components do, and those are compiled by the consumer's Vite, where the virtual module resolves. `packages/astromech/scripts/check-node-imports.mjs` spawns Node against the kit's built entry — the file npm resolves `astromech/ui` to — which is the check that keeps the two halves apart. Type-only imports from any subpath are fine, because they erase. Everything else arrives on `ctx`. New platform capabilities are therefore added as a capability port (above), never as a published subpath a plugin is expected to import — `ctx.methods.tools()` is the worked example, and `decisions/0007-plugin-core-boundary.md` holds the mechanism with the rejected alternatives. The **root `astromech` barrel** is the sanctioned third route: it is already the one barrel a plugin may import, so a capability whose surface is a pure function over a registry can ship from there and needs neither a port nor a subpath — `getModel`/`hasModel` do.
 
-A port's implementation must be a **Vite-graph closure**. The precedent is `setPluginClient`: `transport/local/index.ts` calls it at module top level, so whichever graph evaluates that module is the graph the plugin's `ctx.entries` runs in. `setPluginMethods` is wired on the same line. `boot/lifecycle.ts` sits in that graph too, reached through `createAstromech`, which the injected middleware and the Cloudflare `scheduled()` handler both call in the serving process.
+A port's implementation must be a **Vite-graph closure**, and it is registered by an explicit call rather than by an import side effect — the package is `sideEffects: false`, so a bare `import './plugin-access'` is tree-shaken away and the port never registers. `boot/lifecycle.ts` makes the three calls (`wireEntryAccess`, `wireNotifyAccess`, `wirePluginAccess`) in `registerPluginRuntime`, before `registerPlugins`. It is reached through `createAstromech`, which the injected middleware and the Cloudflare `scheduled()` handler both call in the serving process, so the graph that evaluates it is the graph the plugin's `ctx.entries` runs in.
 
 `ssr.noExternal` does **not** fix this, and neither does teaching Node to resolve `virtual:` with module customization hooks. `decisions/0007-plugin-core-boundary.md` records why each fails.
 
@@ -276,7 +280,7 @@ Cadence lives in the **database**, not in deploy config, because schedules are r
 Consumers import from subpaths, never deep into `src/`. The published surface is
 defined by `exports` in `package.json` — that's canonical. In the repo, the
 Astro-loaded subpaths (`./routes/handler.ts`, `./middleware`, `./admin/shell.astro`,
-`./media/Image`, `./local`) resolve to `src/` so a core edit reaches `apps/demo`
+`./media/Image`) resolve to `src/` so a core edit reaches `apps/demo`
 without a rebuild; `astromech/ui*` gets the same effect from the Vite aliases in
 `packages/astromech/src/integrations/astro/vite.ts`, not from the map.
 `publishConfig.exports` restores the full `dist/` map for npm.
@@ -284,9 +288,8 @@ without a rebuild; `astromech/ui*` gets the same effect from the Vite aliases in
 `types` and `default` to resolve into the same tree. The ones to know:
 `astromech` (core helpers + types, incl. the plugin-authoring API — there is no
 separate `plugin-kit` subpath), `astromech/astro` (integration),
-`astromech/local` & `astromech/fetch` (the two API consumers — local exports
-`Astromech`, fetch exports `astromechClient`; both also default-export it),
-`astromech/middleware`,
+`astromech/fetch` (the fetch client — `astromechClient`, also the default
+export), `astromech/middleware`,
 `astromech/methods` (the server-side seam surface — the boot-generated method
 manifest via `getMethodManifest`, plus `buildDispatch`, `buildScopedDispatch`,
 `filterMethods`, `annotateManifest`, `scopedServices`, the confirmation helpers

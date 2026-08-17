@@ -8,7 +8,7 @@
 import type { Context } from 'hono';
 import { getRuntimeKey } from 'hono/adapter';
 import type { TrustProxy } from '@/types/index';
-import { Astromech } from '@/transport/local/index';
+import { getConfig } from '@/config/registry';
 
 /**
  * Read the connecting address, or undefined when no trusted source carries one.
@@ -25,7 +25,7 @@ export function getClientAddress(c: Context): string | undefined {
         if (connectingIp !== undefined && connectingIp !== '') return connectingIp;
     }
 
-    const trustProxy: TrustProxy = Astromech.config.security?.trustProxy ?? false;
+    const trustProxy: TrustProxy = getConfig().security?.trustProxy ?? false;
     if (trustProxy === false) return undefined;
 
     return forwardedAddress(
