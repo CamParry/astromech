@@ -1,6 +1,8 @@
 import { getEntryStorage } from '../../storage/registry';
 import { asEntry, loadAndAssertType } from '../../internal/records';
 import { indexEntryRelationships } from '../../internal/relationships';
+import { uniqueSlugIfChanged } from '../../internal/slug';
+import { snapshotVersion } from '../../internal/versions';
 import type { Entry, JsonObject } from '@/types/index';
 
 export async function restoreVersion(params: {
@@ -19,20 +21,9 @@ export async function restoreVersion(params: {
 
     const currentEntry = await loadAndAssertType(storage, type, id);
 
-    const latestNumber = await storage.versions.latestNumber(id);
-    await storage.versions.create({
-        entryId: id,
-        versionNumber: latestNumber + 1,
-        title: currentEntry.title,
-        slug: currentEntry.slug,
-        fields: currentEntry.fields,
-        createdBy: null,
-    });
+    await snapshotVersion(storage.versions, currentEntry);
 
-    let slug = version.slug;
-    if (slug && slug !== currentEntry.slug) {
-        slug = await storage.uniqueSlug(type, currentEntry.locale, slug, id);
-    }
+    const slug = await uniqueSlugIfChanged(storage, type, currentEntry, version.slug);
 
     const restoredFields = (version.fields as JsonObject) ?? currentEntry.fields;
     const updated = await storage.update(id, {

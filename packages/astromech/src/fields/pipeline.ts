@@ -64,6 +64,7 @@ import type {
     ValidationRule,
     ValidationMode,
 } from '@/types/fields';
+import { ValidationError } from '@/errors/index';
 import { getFieldType } from './field-type-registry';
 import { formatInstancePath, isValidFieldName } from './field-path';
 import { flattenFieldNodes } from './flatten';
@@ -395,6 +396,14 @@ async function processScope(
     }
 }
 
+/** What `parseFields` reports: the coerced values and everything that failed. */
+export type ParsedFields = {
+    values: Record<string, unknown>;
+    errors: FieldErrors;
+    warnings: FieldErrors;
+    form: string[];
+};
+
 /**
  * Run every field definition over `fields`, then the resource validator.
  * Returns the coerced values plus blocking `errors`, advisory `warnings` and
@@ -409,12 +418,7 @@ export async function parseFields(
     fields: Record<string, unknown>,
     definitions: Field[],
     ctx: PipelineContext
-): Promise<{
-    values: Record<string, unknown>;
-    errors: FieldErrors;
-    warnings: FieldErrors;
-    form: string[];
-}> {
+): Promise<ParsedFields> {
     const declared = flattenFieldNodes(definitions);
     // `projectToSchema` hands back its input when the schema is unknown, and the
     // pipeline mutates what it is given, so that case still needs a copy.
@@ -459,4 +463,14 @@ export async function parseFields(
     }
 
     return { values: result, errors, warnings, form };
+}
+
+/**
+ * Throws the parsed result's field and form errors as a 422. Warnings are
+ * advisory and never block a write, so they are not considered here.
+ */
+export function assertNoFieldErrors(parsed: ParsedFields): void {
+    if (Object.keys(parsed.errors).length > 0 || parsed.form.length > 0) {
+        throw ValidationError.fromFieldErrors(parsed.errors, parsed.form);
+    }
 }

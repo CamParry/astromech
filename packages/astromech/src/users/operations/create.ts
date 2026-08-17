@@ -1,10 +1,9 @@
 import { getConfig } from '@/config/registry';
 import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
-import { ValidationError } from '@/errors/validation';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenFieldNodes } from '@/fields/flatten';
-import { parseFields } from '@/fields/pipeline';
+import { assertNoFieldErrors, parseFields } from '@/fields/pipeline';
 import { getCurrentUser } from '@/request-context/index';
 import type { JsonObject, User } from '@/types/index';
 import { createUserSchema } from '../schema';
@@ -42,15 +41,7 @@ export async function create(params: {
             ...(resourceValidate ? { resourceValidate } : {}),
         }
     );
-    if (
-        Object.keys(processedFields.errors).length > 0 ||
-        processedFields.form.length > 0
-    ) {
-        throw ValidationError.fromFieldErrors(
-            processedFields.errors,
-            processedFields.form
-        );
-    }
+    assertNoFieldErrors(processedFields);
     // After `parseFields` (its minted item ids are what the traversal
     // needs) and before the write, so the index derives from pruned values.
     const { values: fields } = await pruneDanglingRelations(

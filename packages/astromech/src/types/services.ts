@@ -99,6 +99,13 @@ export type EntryUpdateData = Partial<{
     publishedAt: Date | null;
 }>;
 
+/** Caller input for `update`: which entries, and the patch to apply to each. */
+export type EntryUpdateParams = {
+    type: string;
+    id: string | readonly string[];
+    data: EntryUpdateData;
+};
+
 /** Overrides accepted by `duplicate` — superset of update plus locale fields. */
 export type EntryDuplicateOverrides = Partial<{
     title: string;
@@ -132,12 +139,8 @@ export type EntriesService = {
 
     create(params: EntryCreateParams): Promise<Entry>;
 
-    update(params: { type: string; id: string; data: EntryUpdateData }): Promise<Entry>;
-    update(params: {
-        type: string;
-        id: readonly string[];
-        data: EntryUpdateData;
-    }): Promise<Entry[]>;
+    update(params: EntryUpdateParams & { id: string }): Promise<Entry>;
+    update(params: EntryUpdateParams & { id: readonly string[] }): Promise<Entry[]>;
 
     duplicate(params: {
         type: string;
