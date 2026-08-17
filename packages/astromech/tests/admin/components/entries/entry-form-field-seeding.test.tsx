@@ -91,7 +91,7 @@ function mountEditPage({ main, sidebar = [], fields }: MountOptions): Harness {
                 title: entry?.title ?? '',
                 slug: '',
                 status: 'unpublished',
-                publishAt: '',
+                publishedAt: '',
                 fields: (entry?.fields as Record<string, unknown>) ?? {},
             },
             saveFn,

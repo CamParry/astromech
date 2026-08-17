@@ -536,15 +536,15 @@ export function EntryNewPage({
                                             {hasStatuses && (
                                                 <form.Field name="status">
                                                     {(statusField) => (
-                                                        <form.Field name="publishAt">
-                                                            {(publishAtField) => (
+                                                        <form.Field name="publishedAt">
+                                                            {(publishedAtField) => (
                                                                 <PublishPanel
                                                                     status={
                                                                         statusField.state
                                                                             .value
                                                                     }
-                                                                    publishAt={
-                                                                        publishAtField
+                                                                    publishedAt={
+                                                                        publishedAtField
                                                                             .state.value
                                                                     }
                                                                     onStatusChange={(s) =>
@@ -552,10 +552,10 @@ export function EntryNewPage({
                                                                             s
                                                                         )
                                                                     }
-                                                                    onPublishAtChange={(
+                                                                    onPublishedAtChange={(
                                                                         v
                                                                     ) =>
-                                                                        publishAtField.handleChange(
+                                                                        publishedAtField.handleChange(
                                                                             v
                                                                         )
                                                                     }

@@ -122,7 +122,7 @@ export type TypedEntriesServiceFor<EntryMap> = {
         localeGroup?: string;
         fields?: Partial<FieldsForMap<EntryMap, T>> & { readonly __shape?: 'full' };
         status?: EntryStatus;
-        publishAt?: Date | null;
+        publishedAt?: Date | null;
     }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>>;
     create(params: {
         type: string;
@@ -133,7 +133,7 @@ export type TypedEntriesServiceFor<EntryMap> = {
         localeGroup?: string;
         fields?: Record<string, unknown>;
         status?: EntryStatus;
-        publishAt?: Date | null;
+        publishedAt?: Date | null;
     }): Promise<Entry>;
 
     // ── update ───────────────────────────────────────────────────────────────
@@ -145,7 +145,7 @@ export type TypedEntriesServiceFor<EntryMap> = {
             slug: string;
             fields: Partial<FieldsForMap<EntryMap, T>> & { readonly __shape?: 'full' };
             status: EntryStatus;
-            publishAt: Date | null;
+            publishedAt: Date | null;
         }>;
     }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>>;
     update<T extends keyof EntryMap>(params: {
@@ -156,7 +156,7 @@ export type TypedEntriesServiceFor<EntryMap> = {
             slug: string;
             fields: Partial<FieldsForMap<EntryMap, T>> & { readonly __shape?: 'full' };
             status: EntryStatus;
-            publishAt: Date | null;
+            publishedAt: Date | null;
         }>;
     }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>[]>;
     update(params: { type: string; id: string; data: EntryUpdateData }): Promise<Entry>;
@@ -213,18 +213,18 @@ export type TypedEntriesServiceFor<EntryMap> = {
     schedule<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
-        publishAt: Date;
+        publishedAt: Date;
     }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>>;
     schedule<T extends keyof EntryMap>(params: {
         type: T;
         id: readonly string[];
-        publishAt: Date;
+        publishedAt: Date;
     }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>[]>;
-    schedule(params: { type: string; id: string; publishAt: Date }): Promise<Entry>;
+    schedule(params: { type: string; id: string; publishedAt: Date }): Promise<Entry>;
     schedule(params: {
         type: string;
         id: readonly string[];
-        publishAt: Date;
+        publishedAt: Date;
     }): Promise<Entry[]>;
 
     // ── restore ──────────────────────────────────────────────────────────────

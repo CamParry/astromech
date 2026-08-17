@@ -313,11 +313,11 @@ const CASES: Case[] = [
             client.entries.schedule({
                 type: 'post',
                 id: 'e1',
-                publishAt: new Date('2030-01-01T00:00:00.000Z'),
+                publishedAt: new Date('2030-01-01T00:00:00.000Z'),
             }),
         url: '/cms/api/entries/post/e1/schedule',
         method: 'POST',
-        body: { publishAt: '2030-01-01T00:00:00.000Z' },
+        body: { publishedAt: '2030-01-01T00:00:00.000Z' },
         result: entry,
     },
     {
@@ -327,11 +327,11 @@ const CASES: Case[] = [
             client.entries.schedule({
                 type: 'post',
                 id: ['e1', 'e2'],
-                publishAt: new Date('2030-01-01T00:00:00.000Z'),
+                publishedAt: new Date('2030-01-01T00:00:00.000Z'),
             }),
         url: '/cms/api/entries/post/bulk-schedule',
         method: 'POST',
-        body: { ids: ['e1', 'e2'], publishAt: '2030-01-01T00:00:00.000Z' },
+        body: { ids: ['e1', 'e2'], publishedAt: '2030-01-01T00:00:00.000Z' },
         result: entries,
     },
     {

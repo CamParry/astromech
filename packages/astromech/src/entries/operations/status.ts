@@ -18,7 +18,7 @@ export async function publish(params: {
     return update({
         type: params.type,
         id: params.id,
-        data: { status: 'published', publishAt: null },
+        data: { status: 'published', publishedAt: null },
     });
 }
 
@@ -30,20 +30,20 @@ export async function unpublish(params: {
     return update({
         type: params.type,
         id: params.id,
-        data: { status: 'unpublished', publishAt: null },
+        data: { status: 'unpublished', publishedAt: null },
     });
 }
 
 export async function schedule(params: {
     type: string;
     id: string | readonly string[];
-    publishAt: Date;
+    publishedAt: Date;
 }): Promise<Entry | Entry[]> {
     assertCapability(params.type, 'statuses');
-    const validated = validate(scheduleEntrySchema, { publishAt: params.publishAt });
+    const validated = validate(scheduleEntrySchema, { publishedAt: params.publishedAt });
     return update({
         type: params.type,
         id: params.id,
-        data: { status: 'scheduled', publishAt: validated.publishAt },
+        data: { status: 'scheduled', publishedAt: validated.publishedAt },
     });
 }

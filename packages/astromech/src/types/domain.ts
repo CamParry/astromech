@@ -46,6 +46,13 @@ export type Entry = {
      * entry (forward versioning). Null/absent = a normal canonical entry.
      */
     stagedFor?: string | null;
+    /**
+     * The publication gate, not a record of when publication happened. While
+     * `status` is `'scheduled'` this holds a time ahead of now, and
+     * `entries/visibility.ts` compares it against the clock: an entry whose
+     * `publishedAt` is in the future is not publicly visible. Null means no gate
+     * is set. `status` is what tells you which side of now the value is on.
+     */
     publishedAt: Date | null;
     deletedAt: Date | null;
     createdAt: Date;

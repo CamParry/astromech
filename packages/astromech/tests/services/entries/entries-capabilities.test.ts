@@ -126,7 +126,7 @@ describe('statuses capability', () => {
     it('schedule throws CapabilityError on statuses-off type', async () => {
         const id = await createEntry('nostatuses');
         await expect(
-            entriesService.schedule({ type: 'nostatuses', id, publishAt: new Date() })
+            entriesService.schedule({ type: 'nostatuses', id, publishedAt: new Date() })
         ).rejects.toThrow(CapabilityError);
     });
 

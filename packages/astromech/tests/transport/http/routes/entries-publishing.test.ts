@@ -83,18 +83,18 @@ describe('POST /entries/:type/:id/schedule', () => {
         const res = await app().request(`/entries/post/${id}/schedule`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ publishAt: '2999-01-01T00:00:00.000Z' }),
+            body: JSON.stringify({ publishedAt: '2999-01-01T00:00:00.000Z' }),
         });
         expect(res.status).toBe(200);
         const body = (await res.json()) as { data: Entry };
         expect(body.data.status).toBe('scheduled');
     });
 
-    it('422s a publishAt that is not an offset datetime', async () => {
+    it('422s a publishedAt that is not an offset datetime', async () => {
         const res = await app().request(`/entries/post/${id}/schedule`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ publishAt: 'soon' }),
+            body: JSON.stringify({ publishedAt: 'soon' }),
         });
         expect(res.status).toBe(422);
         expect(((await res.json()) as { error: { code: string } }).error.code).toBe(
@@ -107,7 +107,7 @@ describe('POST /entries/:type/:id/schedule', () => {
         const res = await app().request(`/entries/snippet/${snippet.id}/schedule`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ publishAt: '2999-01-01T00:00:00.000Z' }),
+            body: JSON.stringify({ publishedAt: '2999-01-01T00:00:00.000Z' }),
         });
         expect(res.status).toBe(409);
     });

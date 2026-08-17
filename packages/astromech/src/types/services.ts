@@ -78,7 +78,7 @@ export type EntryUpdateData = Partial<{
     slug: string;
     fields: JsonObject;
     status: EntryStatus;
-    publishAt: Date | null;
+    publishedAt: Date | null;
 }>;
 
 /** Overrides accepted by `duplicate` — superset of update plus locale fields. */
@@ -126,7 +126,7 @@ export type EntriesService = {
         localeGroup?: string;
         fields?: JsonObject;
         status?: EntryStatus;
-        publishAt?: Date | null;
+        publishedAt?: Date | null;
     }): Promise<Entry>;
 
     update(params: { type: string; id: string; data: EntryUpdateData }): Promise<Entry>;
@@ -172,11 +172,11 @@ export type EntriesService = {
     unpublish(params: { type: string; id: string }): Promise<Entry>;
     unpublish(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
 
-    schedule(params: { type: string; id: string; publishAt: Date }): Promise<Entry>;
+    schedule(params: { type: string; id: string; publishedAt: Date }): Promise<Entry>;
     schedule(params: {
         type: string;
         id: readonly string[];
-        publishAt: Date;
+        publishedAt: Date;
     }): Promise<Entry[]>;
 
     incomingRelationships(params: {

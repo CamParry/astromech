@@ -43,12 +43,12 @@ export async function issuePreviewToken(params: {
     const hash = await hashPreviewToken(token);
     const user = getCurrentUser();
     // Coerced, not trusted: a JSON transport (MCP, the AI tool-loop) sends an
-    // ISO string, and this column is a date. `schedule` validates `publishAt`
+    // ISO string, and this column is a date. `schedule` validates `publishedAt`
     // the same way for the same reason.
     const { expiresAt } = validate(previewTokenSchema, { expiresAt: params.expiresAt });
     // Three cases, and `null` is not the same as absent: an omitted `expiresAt`
     // takes the default TTL, while an explicit `null` still means "never
-    // expires". `previewTokenSchema` permits null (it shares `publishAtField`,
+    // expires". `previewTokenSchema` permits null (it shares `optionalDate`,
     // which is `.nullable().optional()`) and the storage's `isValid` honours it,
     // so the escape hatch stays — it just has to be asked for now, instead of
     // being what every caller silently got.

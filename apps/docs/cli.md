@@ -41,7 +41,7 @@ astromech methods --json
 | `entries:delete <type> <id>`    | Permanently delete (`--force` to skip the prompt) |
 
 `create`/`update` take scalar flags (`--title`, `--slug`, `--locale`,
-`--status`, `--publishAt`) plus `--fields` for field data. `--fields` (and
+`--status`, `--publishedAt`) plus `--fields` for field data. `--fields` (and
 `update`'s `--data`, the update patch) accept inline JSON or `@file` to read
 from disk. Explicit flags override values in `--data`.
 

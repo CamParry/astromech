@@ -464,7 +464,7 @@ describe('publish / unpublish / schedule', () => {
         expect(pub.publishedAt).toBeInstanceOf(Date);
     });
 
-    // CHARACTERIZED: unpublish passes publishAt: null through update, clearing publishedAt.
+    // CHARACTERIZED: unpublish passes publishedAt: null through update, clearing publishedAt.
     it('unpublish sets status to unpublished and clears publishedAt', async () => {
         const e = await api.create({ type: 'post', title: 'P', status: 'published' });
         const un = await api.unpublish({ type: 'post', id: e.id });
@@ -475,7 +475,7 @@ describe('publish / unpublish / schedule', () => {
     it('schedule sets status scheduled and a future publishedAt', async () => {
         const e = await api.create({ type: 'post', title: 'S' });
         const future = new Date(Date.now() + 86_400_000);
-        const sch = await api.schedule({ type: 'post', id: e.id, publishAt: future });
+        const sch = await api.schedule({ type: 'post', id: e.id, publishedAt: future });
         expect(sch.status).toBe('scheduled');
         // Tier-1 timestamps persist as ISO-TEXT (millisecond precision).
         expect(sch.publishedAt?.getTime()).toBe(future.getTime());

@@ -210,7 +210,7 @@ function EntryEditPageBody({
             title: entry?.title ?? '',
             slug: entry?.slug ?? '',
             status: entry?.status ?? ('unpublished' as EntryStatus),
-            publishAt:
+            publishedAt:
                 entry?.publishedAt != null
                     ? new Date(entry.publishedAt).toISOString().slice(0, 16)
                     : '',
@@ -655,18 +655,18 @@ function EntryEditPageBody({
                                             {hasStatuses && !isStaged && (
                                                 <form.Field name="status">
                                                     {(statusField) => (
-                                                        <form.Field name="publishAt">
-                                                            {(publishAtField) => (
+                                                        <form.Field name="publishedAt">
+                                                            {(publishedAtField) => (
                                                                 <PublishPanel
                                                                     status={
                                                                         statusField.state
                                                                             .value
                                                                     }
-                                                                    publishAt={
-                                                                        publishAtField
+                                                                    publishedAt={
+                                                                        publishedAtField
                                                                             .state.value
                                                                     }
-                                                                    publishedAt={
+                                                                    entryPublishedAt={
                                                                         entry?.publishedAt
                                                                     }
                                                                     onStatusChange={(s) =>
@@ -674,10 +674,10 @@ function EntryEditPageBody({
                                                                             s
                                                                         )
                                                                     }
-                                                                    onPublishAtChange={(
+                                                                    onPublishedAtChange={(
                                                                         v
                                                                     ) =>
-                                                                        publishAtField.handleChange(
+                                                                        publishedAtField.handleChange(
                                                                             v
                                                                         )
                                                                     }
